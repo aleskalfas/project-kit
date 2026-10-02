@@ -18,6 +18,8 @@ These tests run the real scripts and the real engine against an in-memory GitHub
 
 from __future__ import annotations
 
+import argparse
+import subprocess
 from pathlib import Path
 from types import ModuleType
 
@@ -25,6 +27,7 @@ import pytest
 
 from tests.pm_lifecycle_world import (
     AUTHORED_BODY,
+    CAPABILITY_ROOT,
     INVOKER,
     MILESTONE,
     Tracker,
@@ -59,14 +62,24 @@ def hist() -> ModuleType:
     return load_script("history.py", "pm_history_forward_cascade")
 
 
+@pytest.fixture(scope="module")
+def cl() -> ModuleType:
+    return load_script("close-issue.py", "pm_close_issue_forward_cascade")
+
+
+@pytest.fixture(scope="module")
+def dw() -> ModuleType:
+    return load_script("done-work.py", "pm_done_work_forward_cascade")
+
+
 @pytest.fixture
 def engine_repo(tmp_path: Path) -> Path:
     return make_engine_repo(tmp_path)
 
 
 @pytest.fixture
-def world(engine_repo: Path, ci, pi, mi, hist, monkeypatch: pytest.MonkeyPatch) -> World:
-    world = World(Tracker(), engine_repo, ci, pi, mi, hist)
+def world(engine_repo: Path, ci, pi, mi, hist, cl, monkeypatch: pytest.MonkeyPatch) -> World:
+    world = World(Tracker(), engine_repo, ci, pi, mi, hist, cl)
     wire(world, monkeypatch)
     return world
 
@@ -217,11 +230,89 @@ def test_running_the_move_again_brings_an_ancestor_left_behind_level(
     assert world.move(task, "in-progress") == 0
 
     out = capsys.readouterr().out
-    assert "[noop] already at target state" in out
+    assert (
+        "[noop] already at target state; reconciling labels if needed.\n"
+        "  Any ancestor behind it is still brought level, with no prompt: "
+        "the forward cascade asks for none.\n"
+    ) in out
     assert world.moves(feature) == []
     assert world.moves(epic) == [("backlog", "in-progress", "start-work")]
     assert world.journal(epic)[0]["reason"] == _reason(task, "at in-progress")
     assert world.moves(task) == []
+
+
+def test_a_dry_run_of_a_move_already_made_previews_the_cascade_and_writes_nothing(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    epic, feature, task = _epic_feature_task(
+        world, epic="backlog", feature="in-progress", task="in-progress"
+    )
+    world.tracker.calls.clear()
+    capsys.readouterr()
+
+    assert world.move(task, "in-progress", "--dry-run") == 0
+
+    out = capsys.readouterr().out
+    assert (
+        f"  #{feature} (feature): in-progress; left alone\n"
+        f"  #{epic} (epic): backlog → in-progress\n"
+    ) in out
+    assert "[dry-run] nothing written." in out
+    assert not [argv for argv in world.tracker.calls if argv[1:3] == ["issue", "edit"]]
+    assert world.moves(epic) == []
+    assert world.labels(epic) == ["state:backlog"]
+
+
+def test_a_move_already_made_with_no_cascade_brings_no_ancestor_level(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    epic, feature, task = _epic_feature_task(
+        world, epic="backlog", feature="in-progress", task="in-progress"
+    )
+    capsys.readouterr()
+
+    assert world.move(task, "in-progress", "--no-cascade") == 0
+
+    out = capsys.readouterr().out
+    assert "[noop] already at target state; reconciling labels if needed.\n" in out
+    assert "brought level" not in out
+    assert "[cascade]" not in out
+    assert world.moves(feature) == world.moves(epic) == []
+    assert world.labels(epic) == ["state:backlog"]
+
+
+@pytest.mark.parametrize("levels", [None, []], ids=["missing", "empty"])
+def test_a_workflow_naming_no_cascade_level_is_said_not_read_as_no_container(
+    world: World,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    levels: list[str] | None,
+) -> None:
+    read_yaml = world.mi._read_yaml
+
+    def read(path: Path, loader):
+        data = read_yaml(path, loader)
+        if path.name == "workflow.yaml":
+            forward = dict(data["cascade"]["forward"])
+            if levels is None:
+                del forward["applies_to_levels"]
+            else:
+                forward["applies_to_levels"] = levels
+            data = {**data, "cascade": {**data["cascade"], "forward": forward}}
+        return data
+
+    monkeypatch.setattr(world.mi, "_read_yaml", read)
+    epic, feature, task = _epic_feature_task(world)
+    capsys.readouterr()
+
+    assert world.promote(task) == 0
+
+    err = capsys.readouterr().err
+    assert (
+        "[warn] the forward cascade does not run: workflow.yaml declares no "
+        "`cascade.forward.applies_to_levels`, so which issue types it moves is not known.\n"
+    ) in err
+    assert world.moves(feature) == world.moves(epic) == []
 
 
 def test_a_rerun_or_a_siblings_moves_add_nothing(
@@ -313,18 +404,47 @@ def test_an_epic_under_a_milestone_is_the_top(world: World, line: str) -> None:
     assert world.labels(bystander) == []
 
 
-def test_a_first_line_that_is_no_parent_ref_is_not_followed(
-    world: World, capsys: pytest.CaptureFixture[str]
+TASK_FORMS = "Feature: #<N> or Umbrella: #<N> or EPIC: #<N> or Milestone: [#<N>](../milestone/<N>)"
+
+
+@pytest.mark.parametrize("line", ["Related: #{n}", "Epic: #{n}", "Feature: #{n} — auth"])
+def test_a_first_line_that_is_not_an_allowed_parent_ref_is_said_and_not_followed(
+    world: World, capsys: pytest.CaptureFixture[str], line: str
 ) -> None:
     feature = _container(world, "[Feature] A feature")
-    task = _task(world, feature, "Related")
+    written = line.format(n=feature)
+    task = world.file_issue(body=f"{written}\n\n{AUTHORED_BODY}")
     capsys.readouterr()
 
     assert world.promote(task) == 0
 
-    assert "[cascade]" not in capsys.readouterr().out
+    out, err = capsys.readouterr()
+    assert "[cascade]" not in out
+    assert (
+        f"[warn] #{task}'s first line `{written}` is not a parent-ref a task may have: "
+        f"{TASK_FORMS}; the forward cascade walks nothing from it.\n"
+    ) in err
     assert world.moves(feature) == []
     assert world.labels(feature) == []
+
+
+def test_an_ancestors_first_line_that_is_not_an_allowed_form_stops_the_walk_above_it(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    epic = _container(world, "[EPIC] An epic")
+    feature = _container(world, "[Feature] A feature", epic, "Epic")
+    task = _task(world, feature)
+    capsys.readouterr()
+
+    assert world.promote(task) == 0
+
+    err = capsys.readouterr().err
+    assert (
+        f"the walk stopped: #{feature}'s first line `Epic: #{epic}` is not a parent-ref a "
+        "feature may have: EPIC: #<N> or Milestone: [#<N>](../milestone/<N>)\n"
+    ) in err
+    assert world.moves(feature) == [("todo", "backlog", "promote-issue")]
+    assert world.moves(epic) == []
 
 
 def test_a_native_parent_other_than_the_first_lines_stops_the_walk(
@@ -342,8 +462,15 @@ def test_a_native_parent_other_than_the_first_lines_stops_the_walk(
     err = capsys.readouterr().err
     assert (
         f"#{feature}'s first line names #{named}, its native parent is #{native}; "
-        "nothing is written to either; the walk stops there."
+        "nothing is written to either parent; the walk stops there.\n"
+        f"  → the native parent wins (DEC-005): `set-field {feature} --parent {native}` "
+        f"rewrites #{feature}'s first line to name it.\n"
     ) in err
+    assert (
+        f"  → run `move-issue {task} --to backlog` again once the cause is fixed: "
+        "the cascade is idempotent, and brings level what is still behind.\n"
+    ) in err
+    # The ancestor whose two parents disagree is moved; nothing above it is.
     assert world.moves(feature) == [("todo", "backlog", "promote-issue")]
     assert world.moves(named) == world.moves(native) == []
     assert world.labels(named) == world.labels(native) == []
@@ -356,7 +483,122 @@ def test_a_native_parent_that_agrees_with_the_first_line_is_followed(world: Worl
 
     assert world.promote(task) == 0
 
-    assert world.moves(epic) == [("todo", "backlog", "promote-issue")]
+    assert world.moves(feature) == world.moves(epic) == [("todo", "backlog", "promote-issue")]
+
+
+# --- the moved issue's own parent is held to its native one ----------------
+
+
+def test_a_moved_issue_whose_native_parent_is_not_its_first_lines_walks_nowhere(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A Task re-parented in GitHub's UI: its first line still names the old
+    Feature. Neither Feature's chain is moved."""
+    epic, named, task = _epic_feature_task(world)
+    native = _container(world, "[Feature] Where the task was moved to", epic, "EPIC")
+    world.tracker.native_parents[task] = native
+    capsys.readouterr()
+
+    assert world.promote(task) == 0
+
+    err = capsys.readouterr().err
+    assert (
+        f"[warn] the forward cascade walks nothing: #{task}'s first line names #{named}, "
+        f"its native parent is #{native}; nothing is written to either parent.\n"
+        f"  → the native parent wins (DEC-005): `set-field {task} --parent {native}` "
+        f"rewrites #{task}'s first line to name it.\n"
+        f"  → run `move-issue {task} --to backlog` again once the two agree: the cascade is "
+        "idempotent, and brings level what is still behind.\n"
+    ) in err
+    assert world.views(task) == ("backlog", "backlog")
+    for number in (named, native, epic):
+        assert world.moves(number) == []
+        assert world.labels(number) == []
+
+
+def test_a_native_parent_under_a_first_line_that_names_none_walks_nowhere(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    feature = _container(world, "[Feature] A feature")
+    task = world.file_issue()
+    world.tracker.native_parents[task] = feature
+    capsys.readouterr()
+
+    assert world.promote(task) == 0
+
+    err = capsys.readouterr().err
+    assert (
+        f"[warn] the forward cascade walks nothing: #{task}'s first line names no parent "
+        f"issue, its native parent is #{feature}; nothing is written to #{feature}.\n"
+        f"  → the native parent wins (DEC-005): `set-field {task} --parent {feature}` "
+        f"rewrites #{task}'s first line to name it.\n"
+    ) in err
+    assert world.moves(feature) == []
+    assert world.labels(feature) == []
+
+
+def test_a_native_parent_in_another_repository_walks_nowhere(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    epic, feature, task = _epic_feature_task(world)
+    world.tracker.native_parents[task] = "other/repo#7"
+    capsys.readouterr()
+
+    assert world.promote(task) == 0
+
+    err = capsys.readouterr().err
+    assert (
+        f"[warn] the forward cascade walks nothing: #{task}'s first line names #{feature}, "
+        "its native parent is other/repo#7; nothing is written to either parent.\n"
+        "  → other/repo#7 is in another repository, which no first-line form can name and "
+        f"the forward cascade does not walk into; if #{feature} is its parent, "
+        f"`set-field {task} --parent {feature}` moves the native link under it.\n"
+    ) in err
+    assert world.moves(feature) == world.moves(epic) == []
+    assert world.labels(feature) == world.labels(epic) == []
+
+
+def test_a_moved_issue_whose_record_cannot_be_read_walks_nowhere(
+    world: World, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    epic, feature, task = _epic_feature_task(world)
+    read = world.mi.containment.read_issue_record
+
+    def unreadable_task(config, *, issue_number):
+        if issue_number == task:
+            return world.mi.containment.UnreadIssue("gh exited 1")
+        return read(config, issue_number=issue_number)
+
+    monkeypatch.setattr(world.mi.containment, "read_issue_record", unreadable_task)
+    capsys.readouterr()
+
+    assert world.promote(task) == 0
+
+    err = capsys.readouterr().err
+    assert (
+        f"[warn] the forward cascade walks nothing: #{task}'s record could not be read to "
+        f"hold its native parent to #{feature}, the parent its first line names "
+        "(gh exited 1).\n"
+    ) in err
+    assert world.moves(feature) == world.moves(epic) == []
+
+
+def test_the_moved_issues_record_is_read_once_and_only_where_a_cascade_runs(
+    world: World,
+) -> None:
+    epic, feature, task = _epic_feature_task(world, task="backlog")
+    world.tracker.calls.clear()
+
+    def record_reads() -> int:
+        record = f"repos/{{owner}}/{{repo}}/issues/{task}"
+        return sum(1 for argv in world.tracker.calls if argv[1] == "api" and argv[-1] == record)
+
+    assert world.move(task, "in-progress", "--no-cascade") == 0
+    assert record_reads() == 0
+
+    assert world.move(task, "review") == 0
+    assert record_reads() == 1
+    assert world.moves(feature) == world.moves(epic) == TODO_TO_IN_PROGRESS
 
 
 def test_an_ancestor_whose_type_cannot_be_told_is_moved_as_before(world: World) -> None:
@@ -460,6 +702,123 @@ def test_an_unreachable_engine_leaves_the_local_reading_in_charge(
     assert world.labels(feature) == world.labels(epic) == ["state:backlog"]
 
 
+def test_an_engine_that_exits_non_zero_for_one_ancestor_has_the_plan_written_for_it(
+    world: World, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`pkit process status` fails for the Feature alone: the Feature is moved as
+    the plan read it from its labels, and the EPIC as the engine places it."""
+    epic, feature, task = _epic_feature_task(world, task="backlog")
+    run = world.run
+
+    def status_fails_for_the_feature(argv, *args, **kwargs):
+        argv = [str(arg) for arg in argv]
+        if argv[:3] == ["pkit", "process", "status"] and str(feature) in argv:
+            return subprocess.CompletedProcess(argv, 1, "", "engine: boom")
+        return run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", status_fails_for_the_feature)
+    capsys.readouterr()
+
+    assert world.move(task, "in-progress") == 0
+
+    assert "[warn]" not in capsys.readouterr().err
+    for number in (feature, epic):
+        assert world.moves(number) == TODO_TO_IN_PROGRESS
+        assert world.labels(number) == ["state:in-progress"]
+
+
+def _between_plan_and_write(world: World, monkeypatch: pytest.MonkeyPatch, task: int, act) -> None:
+    """Run `act` once, after the cascade's plan is read and before its first
+    ancestor write — at the moved issue's own label write."""
+    label_write = world.mi._gh_apply_state_label
+    pending = [act]
+
+    def act_first(number, plan, config):
+        if number == task and pending:
+            pending.pop()()
+        return label_write(number, plan, config)
+
+    monkeypatch.setattr(world.mi, "_gh_apply_state_label", act_first)
+
+
+def test_an_ancestor_moved_since_the_plan_and_still_behind_is_written_from_its_labels_now(
+    world: World, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A sibling is promoted between this move's plan and its cascade: the engine
+    places the Feature in Backlog, not the Todo the plan read, so the Feature is
+    read again and taken on from Backlog alone."""
+    epic, feature, task = _epic_feature_task(world, epic="in-progress", task="backlog")
+    sibling = _task(world, feature)
+    _between_plan_and_write(world, monkeypatch, task, lambda: world.promote(sibling))
+    capsys.readouterr()
+
+    assert world.move(task, "in-progress") == 0
+
+    out = capsys.readouterr().out
+    assert f"  #{feature} (feature): todo → backlog → in-progress\n" in out  # the plan
+    assert f"  #{feature}: backlog → in-progress\n" in out  # what was written
+    assert world.moves(feature) == TODO_TO_IN_PROGRESS
+    assert [e["reason"] for e in world.journal(feature)] == [
+        _reason(sibling, "todo → backlog"),
+        _reason(task, "backlog → in-progress"),
+    ]
+    assert world.labels(feature) == ["state:in-progress"]
+    assert world.moves(epic) == []
+
+
+def test_an_ancestor_moved_since_the_plan_that_cannot_be_read_again_is_not_written(
+    world: World, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    epic, feature, task = _epic_feature_task(world, epic="in-progress", task="backlog")
+    sibling = _task(world, feature)
+    read = world.mi.containment.read_issue_record
+    armed: list[bool] = []
+
+    def read_again_fails(config, *, issue_number):
+        if issue_number == feature and armed:
+            armed.clear()
+            return world.mi.containment.UnreadIssue("gh exited 1")
+        return read(config, issue_number=issue_number)
+
+    def sibling_promoted() -> None:
+        assert world.promote(sibling) == 0
+        armed.append(True)  # the Feature's next read is this move's read again
+
+    monkeypatch.setattr(world.mi.containment, "read_issue_record", read_again_fails)
+    _between_plan_and_write(world, monkeypatch, task, sibling_promoted)
+    capsys.readouterr()
+
+    assert world.move(task, "in-progress") == 0
+
+    err = capsys.readouterr().err
+    assert (
+        f"  #{feature}: not moved: the engine places it at backlog and it could not be read "
+        "again (gh exited 1)\n"
+    ) in err
+    assert f"run `move-issue {task} --to in-progress` again" in err
+    assert world.moves(feature) == [("todo", "backlog", "promote-issue")]
+    assert world.labels(feature) == ["state:backlog"]
+    assert world.moves(epic) == []
+
+
+def test_a_parent_closed_between_plan_and_write_is_left_alone(
+    world: World, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    epic, feature, task = _epic_feature_task(world, task="backlog")
+    _between_plan_and_write(
+        world, monkeypatch, task, lambda: world.tracker.close(feature, "NOT_PLANNED")
+    )
+    capsys.readouterr()
+
+    assert world.move(task, "in-progress") == 0
+
+    out = capsys.readouterr().out
+    assert f"  #{feature}: left alone at done (the engine's reading)\n" in out
+    assert world.moves(feature) == []
+    assert world.labels(feature) == []
+    assert world.moves(epic) == TODO_TO_IN_PROGRESS
+
+
 # --- a write that fails ---------------------------------------------------
 
 
@@ -510,7 +869,9 @@ def test_an_epic_left_in_todo_under_a_started_feature_is_brought_level(
     _no_drift(world, capsys, epic)
 
 
-def test_an_ancestor_ends_with_one_state_label_whatever_it_started_with(world: World) -> None:
+def test_an_ancestor_with_no_state_label_or_a_todo_label_ends_with_one_state_label(
+    world: World,
+) -> None:
     """The Feature has no state label, the EPIC carries `state:todo`: the second
     step is computed from the labels the first left, so neither ends with two."""
     epic, feature, task = _epic_feature_task(world, epic="todo", task="backlog")
@@ -656,13 +1017,33 @@ def test_a_task_the_merge_already_closed_brings_its_ancestors_to_in_progress(
         assert world.journal(number)[0]["reason"] == _reason(task, "review → done")
 
 
-def test_an_issue_already_labelled_done_moves_no_ancestor(
-    world: World, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """A closed issue whose label says Done already gives no origin to tell a
-    finished close from a won't-do one, so the move to Done moves nothing above it."""
+def _done_task(world: World, reason: str | None) -> tuple[int, int, int]:
+    """A Task whose label already reads Done, closed with close reason `reason`
+    (None: the tracker reports none), under a Feature and an EPIC in Todo."""
     epic, feature, task = _epic_feature_task(world, task="done")
-    world.tracker.issues[task]["state"] = "CLOSED"
+    world.tracker.close(task, reason)
+    return epic, feature, task
+
+
+def test_an_issue_labelled_done_and_closed_as_completed_brings_its_ancestors_level(
+    world: World,
+) -> None:
+    epic, feature, task = _done_task(world, "COMPLETED")
+
+    assert world.move(task, "done") == 0
+
+    for number in (feature, epic):
+        assert world.moves(number) == TODO_TO_IN_PROGRESS
+        assert world.journal(number)[0]["reason"] == _reason(task, "at done")
+
+
+@pytest.mark.parametrize(
+    ("reason", "said"), [("NOT_PLANNED", "not planned"), ("DUPLICATE", "duplicate")]
+)
+def test_an_issue_labelled_done_and_closed_otherwise_moves_no_ancestor(
+    world: World, capsys: pytest.CaptureFixture[str], reason: str, said: str
+) -> None:
+    epic, feature, task = _done_task(world, reason)
     capsys.readouterr()
 
     assert world.move(task, "done") == 0
@@ -670,10 +1051,127 @@ def test_an_issue_already_labelled_done_moves_no_ancestor(
     out = capsys.readouterr().out
     assert (
         "[cascade] the forward cascade moves no ancestor: "
-        f"#{task} already reads done, so whether it closed as completed or as won't-do "
-        "cannot be told."
+        f"#{task} closed as {said}, not as completed."
     ) in out
     assert world.moves(feature) == world.moves(epic) == []
+
+
+@pytest.mark.parametrize("closed", [True, False], ids=["closed", "open"])
+def test_an_issue_labelled_done_with_no_close_reason_moves_no_ancestor_and_says_what_will(
+    world: World, capsys: pytest.CaptureFixture[str], closed: bool
+) -> None:
+    """Closed where the tracker reports no reason, or still open with a Done
+    label: completion cannot be told from won't-do, and running the move again
+    would not tell it either, so that is not advised."""
+    epic, feature, task = _epic_feature_task(world, task="done")
+    if closed:
+        world.tracker.close(task, None)
+    capsys.readouterr()
+
+    assert world.move(task, "done") == 0
+
+    out, err = capsys.readouterr()
+    assert (
+        "[cascade] the forward cascade moves no ancestor: "
+        f"#{task} already reads done and no close reason is reported for it, so whether it "
+        "was completed or dropped as won't-do cannot be told; the next forward move under "
+        "its ancestors brings them level."
+    ) in out
+    assert "again" not in out + err
+    assert world.moves(feature) == world.moves(epic) == []
+
+
+def test_a_cascade_cut_short_on_a_merged_task_is_finished_by_running_the_move_again(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The merge closed the Task as completed; the move to Done rewrites its
+    Review label and cascades, and the Feature's write fails. Running the move
+    again finds the label at Done, reads the close reason, and finishes."""
+    epic, feature, task = _reviewed_task_merged(world, closed=True)
+    world.tracker.fail_next.add(str(feature))
+    capsys.readouterr()
+
+    assert world.move(task, "done") == 0
+
+    err = capsys.readouterr().err
+    assert (
+        f"  → run `move-issue {task} --to done` again once the cause is fixed: the cascade "
+        "is idempotent, and brings level what is still behind.\n"
+    ) in err
+    assert world.labels(feature) == []
+    assert world.labels(task) == ["type:task", "state:done"]
+
+    assert world.move(task, "done") == 0
+
+    assert world.moves(feature) == world.moves(epic) == TODO_TO_IN_PROGRESS
+    assert world.journal(feature)[0]["reason"] == _reason(task, "at done")
+
+
+def test_a_cascade_cut_short_on_an_open_task_is_finished_once_it_has_closed(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Moved Review → Done while still open, the Task's re-run finishes the
+    cascade only once it has closed as completed, and the advice says so."""
+    epic, feature, task = _reviewed_task_merged(world, closed=False)
+    world.tracker.fail_next.add(str(feature))
+    capsys.readouterr()
+
+    assert world.move(task, "done") == 0
+
+    assert (
+        f"  → run `move-issue {task} --to done` again once the cause is fixed and #{task} has "
+        "closed as completed: the cascade is idempotent, and brings level what is still "
+        "behind.\n"
+    ) in capsys.readouterr().err
+    assert world.moves(epic) == TODO_TO_IN_PROGRESS  # the walk went on above the Feature
+
+    # Still open, the Task's label reads Done and its finish cannot be told yet.
+    assert world.move(task, "done") == 0
+    assert world.moves(feature) == []
+
+    world.tracker.close(task, "COMPLETED")
+    assert world.move(task, "done") == 0
+
+    assert world.moves(feature) == TODO_TO_IN_PROGRESS
+
+
+def test_the_line_done_work_prints_when_the_move_to_done_fails_finishes_the_cascade(
+    world: World,
+    dw: ModuleType,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The merge closed the Task; done-work's move to Done fails at the label
+    reconcile, before any cascade, and close-issue then writes the Done label.
+    The line done-work prints is a command that runs, and running it brings the
+    Task's ancestors level."""
+    epic, feature, task = _reviewed_task_merged(world, closed=True)
+    monkeypatch.setattr(dw.pr_merge, "delete_remote_branch", lambda *a, **kw: None)
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", lambda *a, **kw: None)
+    world.tracker.fail_next.add("state:review")  # the reconcile removes the Review label
+    capsys.readouterr()
+
+    run = dw._after_merge(
+        argparse.Namespace(
+            issue_number=task, capability_root=CAPABILITY_ROOT, skip_checkbox_gate=False
+        ),
+        pr_number=50,
+        to_close=[task],
+        branch=f"fix/{task}-a-task",
+        cross=False,
+        merged_head="0" * 40,
+        config={},
+    )
+
+    assert run.exit_code == 3
+    assert world.labels(task) == ["type:task", "state:done"]  # close-issue wrote it
+    assert world.moves(feature) == world.moves(epic) == []
+    line = f"re-run `move-issue {task} --to done` to complete the lifecycle transition"
+    assert line in capsys.readouterr().err
+
+    assert world.move(task, "done") == 0
+
+    assert world.moves(feature) == world.moves(epic) == TODO_TO_IN_PROGRESS
 
 
 # --- what the preview and the closing block say -----------------------------

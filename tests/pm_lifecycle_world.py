@@ -98,9 +98,13 @@ class Tracker:
     An issue is read through `gh issue view` and through its REST record
     (`gh api repos/{owner}/{repo}/issues/<n>`), which also carries its native
     parent: `native_parents` maps an issue to the issue it is natively a
-    sub-issue of. `fail_next` holds `gh issue edit` flags whose next edit fails,
-    once, before it changes anything; `views_fail` holds issues whose
-    `gh issue view` fails, as a predicate's read of an unreachable issue does."""
+    sub-issue of, in this repository or — given as `owner/repo#<n>` — in
+    another. A closed issue's `state_reason` is GitHub's close reason enum
+    (`COMPLETED`, `NOT_PLANNED`), set as GitHub sets it: completed for a merged
+    pull request's `Closes #N`, and as `gh issue close --reason` says.
+    `fail_next` holds `gh issue edit` flags whose next edit fails, once, before
+    it changes anything; `views_fail` holds issues whose `gh issue view` fails,
+    as a predicate's read of an unreachable issue does."""
 
     def __init__(self) -> None:
         self.issues: dict[int, dict[str, Any]] = {}
@@ -108,7 +112,7 @@ class Tracker:
         self.timeline: dict[int, list[dict[str, Any]]] = {}
         self.milestones: list[dict[str, Any]] = [MILESTONE]
         self.merged_prs: dict[int, dict[str, Any]] = {}
-        self.native_parents: dict[int, int] = {}
+        self.native_parents: dict[int, int | str] = {}
         self.calls: list[list[str]] = []
         self.fail_next: set[str] = set()
         self.views_fail: set[int] = set()
@@ -127,7 +131,12 @@ class Tracker:
             "url": f"https://github.com/acme/repo/pull/{pr}",
         }
         for number in closes:
-            self.issues[number]["state"] = "CLOSED"
+            self.close(number, "COMPLETED")
+
+    def close(self, number: int, reason: str | None) -> None:
+        """Close the issue with close reason `reason` (None: none reported)."""
+        self.issues[number]["state"] = "CLOSED"
+        self.issues[number]["state_reason"] = reason
 
     def state_of(self, number: int) -> str:
         """The issue's state as the tracker carries it, read with move-issue's
@@ -148,7 +157,8 @@ class Tracker:
             if argv[2] == "edit":
                 return self._edit(argv, number)
             if argv[2] == "close":
-                self.issues[number]["state"] = "CLOSED"
+                reason = _option(argv, "--reason") or "completed"
+                self.close(number, reason.upper().replace(" ", "_"))
                 return _done(argv)
             body = _option(argv, "--body")
             self.comments[number].append(
@@ -190,8 +200,14 @@ class Tracker:
             "milestone": issue["milestone"],
             "repository_url": REPOSITORY_URL,
         }
-        if number in self.native_parents:
-            record["parent_issue_url"] = f"{REPOSITORY_URL}/issues/{self.native_parents[number]}"
+        parent = self.native_parents.get(number)
+        if isinstance(parent, str):
+            repository, parent_number = parent.split("#")
+            record["parent_issue_url"] = (
+                f"https://api.github.com/repos/{repository}/issues/{parent_number}"
+            )
+        elif parent is not None:
+            record["parent_issue_url"] = f"{REPOSITORY_URL}/issues/{parent}"
         return _done(argv, stdout=json.dumps(record))
 
     def reads(self, number: int) -> int:
@@ -226,6 +242,7 @@ class Tracker:
             "title": issue["title"],
             "body": issue["body"],
             "state": issue["state"],
+            "stateReason": issue.get("state_reason") or "",
             "milestone": issue["milestone"],
             "labels": [{"name": name} for name in issue["labels"]],
             "assignees": [{"login": login} for login in issue["assignees"]],
