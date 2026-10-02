@@ -1,7 +1,7 @@
 ---
 id: DEC-054
 title: Use cases reach batch planning and body validation through a data point
-status: proposed
+status: accepted
 date: 2026-10-02
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
