@@ -128,8 +128,9 @@ Or via the dispatcher (per COR-021):
 Exit codes:
   0  applied (or no-op idempotent success; or dry-run reported)
   1  refusal — membership; up-front validation (nothing mutated), including a
-     `--parent` whose issue's native parent could not be read; or a requested
-     axis could not be set on its substrate: the board case cannot be resolved
+     `--parent` whose issue's native parent could not be read, or whose body's
+     first line attempts a DEC-013 integration marker but is malformed; or a
+     requested axis could not be set on its substrate: the board case cannot be resolved
      (no card, no such field, no such option, unsupported field type, or the board
      read failed), or the board and substrate-map disagree about who owns the axis
      (#709 / #724). Every such refusal happens BEFORE any write for that axis, so
@@ -365,6 +366,18 @@ def main() -> int:
                         f"issue type {structural_type!r} declares no parent_ref_form; "
                         "cannot set a parent-ref"
                     )
+        # A first line that attempts a DEC-013 integration marker but is malformed
+        # is not skipped as a marker, so a parent-ref written now would land above
+        # it and move it off the first line — where validate-issue hard-rejects it
+        # (`body.integration-marker`). Refuse as that check does, before any write.
+        malformed_marker = infer.malformed_integration_marker(body)
+        if malformed_marker is not None:
+            errors.append(
+                f"cannot set --parent: the first body line {malformed_marker!r} looks "
+                "like a DEC-013 integration marker but does not match the required "
+                "form `Integration: integration/<slug>`; correct it, or move it off "
+                "the first line, then re-run"
+            )
 
     # The native link follows the first line (DEC-005, #1040). Where the issue
     # sits natively now is read here, as part of validation: a read that fails
@@ -1165,8 +1178,10 @@ def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
     that line already matches a parent-ref shape, it is replaced; otherwise the
     new parent-ref is added — directly below the marker on a marked body, so the
     marker stays the first line with no blank line between the two (#765), and
-    at the top of an unmarked one — with a blank line before the content that
-    follows. Setting the parent to the value already present is a no-op.
+    at the top of an unmarked one, in place of any blank lines leading it — with
+    one blank line before the content that follows. Setting the parent to the
+    value already present is a no-op. A malformed marker is refused before this
+    is reached (`main`), so it is never mistaken for content to write above.
     """
     lines = body.splitlines()
     content = [i for i, ln in enumerate(lines) if ln.strip()]
@@ -1205,8 +1220,10 @@ def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
             message=f"parent: set {parent_ref_line!r} (inserted below the integration marker)",
         )
 
-    # No parent-ref present — prepend one with a blank-line separator.
-    new_body = parent_ref_line + ("\n\n" + body if body.strip() else "\n")
+    # No parent-ref present — prepend one with a blank-line separator. The body's
+    # own leading blank lines are dropped, so the separator is the only one.
+    rest = "".join(body.splitlines(keepends=True)[content[0] :]) if content else ""
+    new_body = parent_ref_line + ("\n\n" + rest if rest else "\n")
     return new_body, FieldResult(
         field="parent",
         ok=True,
