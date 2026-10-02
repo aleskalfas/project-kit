@@ -47,8 +47,10 @@ at in-progress, through declared transitions only — an ancestor in todo
 goes to backlog, then to in-progress, each step its own label write,
 journaled where a journal is kept with the issue's move as the reason.
 A move to done from todo or backlog (won't-do) moves no ancestor. The
-cascade is not an authorisation: it asks for no confirmation, posts no
-comment and fires no hook. It runs on the no-op path too, so running a
+cascade is not an authorisation: it asks for no confirmation, posts no audit
+comment and fires no hook. At the `full` audit projection each ancestor it
+moves gets the provenance comment a governed move gets, naming the move that
+caused it. It runs on the no-op path too, so running a
 move again finishes a cascade a failure left incomplete — for a move to
 done, once the issue has closed as completed — and it does not run where
 the state is not written as a label. See the "forward cascade" section
@@ -73,6 +75,7 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import re
 import subprocess
@@ -142,8 +145,10 @@ TRANSITION_AUDIT_WRITER = "move-issue"
 TRANSITION_AUDIT_KEY_PREFIX = f"{_audit.AUDIT_KEY_PREFIX}{TRANSITION_AUDIT_WRITER}:"
 
 
+@functools.cache
 def _pkit_version() -> str:
-    """Best-effort pkit version for a `full`-projection provenance stamp."""
+    """Best-effort pkit version for a `full`-projection provenance stamp, read
+    once per run however many comments carry it."""
     try:
         proc = subprocess.run(
             ["pkit", "--version"],
@@ -159,16 +164,23 @@ def _pkit_version() -> str:
     return parts[-1] if parts else ""
 
 
-def _render_provenance_comment(invoker, from_state, to_state) -> str:
+def _render_provenance_comment(
+    invoker, from_state, *to_states: str, cause: str | None = None
+) -> str:
     """DEC-049 `full` projection: a provenance-stamped record of a governed move,
     carrying the pkit version — the governed-vs-ungoverned boundary made visible on
     the issue. Absence of such a comment beside a timeline label change flags an
-    out-of-band mutation."""
+    out-of-band mutation.
+
+    A move through several states names each (`todo → backlog → in-progress`), and
+    a move another move caused — a forward-cascaded one — names that ``cause`` on a
+    line of its own, as its journal entry's reason does."""
     actor = getattr(invoker, "github_login", None) or getattr(invoker, "email", None) or "unknown"
     version = _pkit_version()
     stamp = f" — pkit {version}" if version else ""
-    move = f"{from_state} → {to_state}" if from_state else str(to_state)
-    return f"{_AUDIT_MARKER}\n{actor} moved {move} (governed by pkit){stamp}"
+    move = " → ".join(state for state in (from_state, *to_states) if state)
+    comment = f"{_AUDIT_MARKER}\n{actor} moved {move} (governed by pkit){stamp}"
+    return f"{comment}\n{cause}" if cause else comment
 
 
 @dataclass(frozen=True)
@@ -213,8 +225,9 @@ def main() -> int:
         "--bypass-reason",
         default=None,
         help=(
-            "Reason recorded in the audit comment; required (non-empty) "
-            "whenever --bypass is set — a bare --bypass is refused."
+            "Reason recorded in the audit comment and, where a journal is kept, "
+            "on the move's journal entry; required (non-empty) whenever --bypass "
+            "is set — a bare --bypass is refused."
         ),
     )
     parser.add_argument(
@@ -355,6 +368,13 @@ def main() -> int:
     # a `derive` binding the label planner already writes nothing.
     state_on_board = axis_carriage.is_board_carried("state", config, substrate_map)
 
+    # Audit-comment projection (DEC-049): where the project keeps a journal it
+    # records every move regardless; `audit.projection` controls the GitHub
+    # comment projection — `off` posts nothing, `audit` (default) posts only
+    # override justifications, `full` posts a provenance-stamped comment for
+    # every governed move, a forward-cascaded one included.
+    projection = _audit_projection(config)
+
     # What the forward cascade (DEC-006) reads and writes with, for either path.
     cascade_context = _CascadeContext(
         workflow=workflow,
@@ -362,7 +382,8 @@ def main() -> int:
         classification=classification,
         config=config,
         substrate_map=substrate_map,
-        actor=invoker.github_login,
+        invoker=invoker,
+        projection=projection,
         levels=_cascade_levels(workflow),
     )
 
@@ -566,20 +587,16 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    # Audit-comment projection (DEC-049): where the project keeps a journal it
-    # records this move regardless; `audit.projection` controls the GitHub
-    # comment projection —
-    # `off` posts nothing, `audit` (default) posts only override justifications,
-    # `full` posts a provenance-stamped comment for every governed move.
-    projection = _audit_projection(config)
     is_bypass_audit = (
         transition.authorisation == "user"
         and transition.severity == SEVERITY_BYPASSABLE
         and args.bypass
     )
+    # The justification a bypassed gate was overridden with. Non-empty on a
+    # bypass: the bypassable authorisation gate above refuses a --bypass without
+    # a non-empty --bypass-reason. Empty when no gate was bypassed.
+    bypass_reason = (args.bypass_reason or "").strip() if is_bypass_audit else ""
     if projection != "off" and is_bypass_audit:
-        # Reason is guaranteed non-empty here: the bypassable authorisation
-        # gate above refuses a --bypass without a non-empty --bypass-reason.
         # move-issue is the sole writer of the TRANSITION audit comment (DEC-049): it renders the
         # one canonical comment from the schema template; wrappers pass the reason
         # through rather than posting their own (killing the #672 double-post).
@@ -589,14 +606,15 @@ def main() -> int:
         # mutation: a retry of that failed attempt finds its own comment by the
         # idempotency key and skips (#901), while the same transition made again
         # later has a grown landed-move count and posts its own (#954).
-        reason = (args.bypass_reason or "").strip()
         key = _transition_audit_key(
             current_state,
             args.to,
-            reason,
+            bypass_reason,
             _landed_moves(args.issue_number, engine_status, config, substrate_map),
         )
-        audit_comment = _render_audit_comment(capability_root, invoker, reason) + "\n\n" + key
+        audit_comment = (
+            _render_audit_comment(capability_root, invoker, bypass_reason) + "\n\n" + key
+        )
         if not _post_transition_audit_once(args.issue_number, audit_comment, key, config):
             return 3
 
@@ -621,7 +639,15 @@ def main() -> int:
     # `--actor` is the resolved GitHub login of the invoker (not the
     # authorisation token), so the engine's cross-authority gate compares
     # like-with-like against an artifact's `produced_by` login (COR-033 P4).
-    _journal_move(args.issue_number, current_state, args.to, invoker.github_login)
+    # A bypassed move carries its justification as the entry's reason, at every
+    # projection: the journal is the canonical trail where it is kept (DEC-049).
+    _journal_move(
+        args.issue_number,
+        current_state,
+        args.to,
+        invoker.github_login,
+        reason=_bypass_journal_reason(bypass_reason),
+    )
 
     # DEC-049 `full` projection: post a provenance-stamped comment for a governed
     # move not already covered by the bypass audit above, so the governed-vs-
@@ -637,8 +663,8 @@ def main() -> int:
 
     # Forward cascade. Each ancestor step it writes is journaled, where a journal is
     # kept, the way this move was, by the same actor, with this move named as the
-    # reason. Neither a hook nor a comment follows a cascaded step: both below are
-    # this issue's.
+    # reason. No hook follows a cascaded step and no audit comment; at `full` each
+    # ancestor moved gets a provenance comment naming this move.
     if cascade is not None:
         _run_forward_cascade(cascade, cascade_context)
 
@@ -821,6 +847,13 @@ def _transition_audit_key(from_state: str, to_state: str, reason: str, landed_mo
         reason.strip(),
         landed_moves,
     )
+
+
+def _bypass_journal_reason(bypass_reason: str) -> str | None:
+    """The reason a bypassed move is journaled with: the justification its gate was
+    overridden with, which its audit comment carries too — None for a move no gate
+    was bypassed for, whose argv to the engine is then unchanged."""
+    return f"bypass: {bypass_reason}" if bypass_reason else None
 
 
 def _bypass_reason_missing(bypass: bool, bypass_reason: str | None) -> bool:
@@ -1106,6 +1139,23 @@ def _gh_comment(issue_number: int, body: str, config: dict) -> bool:
     return True
 
 
+def _comment_failure(issue_number: int, body: str, config: dict) -> str | None:
+    """Post ``body`` as a comment on the issue through the guarded `gh` path the
+    label write takes: None when it was posted, else what went wrong, on one line."""
+    try:
+        proc = gh_run(
+            ["gh", "issue", "comment", str(issue_number), "--body", body],
+            config,
+            check=False,
+        )
+    except FileNotFoundError:
+        return "`gh` is not on PATH"
+    if proc.returncode == 0:
+        return None
+    said = " ".join((proc.stderr or "").split())
+    return f"gh issue comment exited {proc.returncode}" + (f": {said}" if said else "")
+
+
 def _post_transition_audit_once(issue_number: int, body: str, key: str, config: dict) -> bool:
     """Post the transition audit comment unless that exact comment is already there.
 
@@ -1146,16 +1196,24 @@ def _post_transition_audit_once(issue_number: int, body: str, key: str, config: 
 class _CascadeContext:
     """What the forward cascade reads and writes with, fixed for one run.
 
-    ``levels`` are the issue types it moves (`_cascade_levels`), empty when
-    workflow.yaml declares none."""
+    ``invoker`` is who runs the move, and the cascade's moves are theirs;
+    ``projection`` is the audit projection (DEC-049), at `full` of which each
+    ancestor moved gets a provenance comment. ``levels`` are the issue types it
+    moves (`_cascade_levels`), empty when workflow.yaml declares none."""
 
     workflow: dict
     issue_types: dict
     classification: dict
     config: dict
     substrate_map: axis_labels.SubstrateMap | None
-    actor: str | None
+    invoker: object
+    projection: str
     levels: tuple[str, ...]
+
+    @property
+    def actor(self) -> str | None:
+        """The invoker's GitHub login, which each cascaded move is journaled by."""
+        return getattr(self.invoker, "github_login", None)
 
 
 @dataclass(frozen=True)
@@ -1705,7 +1763,8 @@ def _step_ancestor(
     context: _CascadeContext,
 ) -> _AncestorOutcome:
     """Write each step as its own label edit, computed from the labels as the
-    step before left them, and journal it.
+    step before left them, and journal it; then project the steps that landed
+    (`_project_cascaded_move`).
 
     A step whose label landed is followed by the next whether or not the engine
     took it, so the ancestor never rests between the two writes of one step; a
@@ -1727,6 +1786,7 @@ def _step_ancestor(
         print(f"[cascade] #{number}: {current} → {step}")
         if not _gh_apply_state_label(number, edit, context.config):
             said.append(f"{current} → {step} not written (the label write failed)")
+            _project_cascaded_move(number, reached, reason, context)
             return _AncestorOutcome(
                 number,
                 "; ".join(said) if len(said) > 1 else f"not moved: {said[0]}",
@@ -1741,9 +1801,35 @@ def _step_ancestor(
         all_journaled = all_journaled and bool(journaled)
         reached.append(step)
         current = step
+    _project_cascaded_move(number, reached, reason, context)
     if not all_journaled:
         return _AncestorOutcome(number, "; ".join(said), complete=False)
     return _AncestorOutcome(number, " → ".join(reached))
+
+
+def _project_cascaded_move(
+    number: int, reached: list[str], reason: str, context: _CascadeContext
+) -> None:
+    """At the `full` audit projection, post on ancestor ``number`` the provenance
+    comment a governed move gets (DEC-049), naming the move that caused it.
+
+    One comment for the steps that landed in this run, so an ancestor taken
+    through Backlog to In Progress gets one comment naming both; none when no
+    step landed, and none at any other projection. A step is written once — a
+    re-run finds the ancestor level and moves it no further — so a step is never
+    in two comments. Posted whether or not the engine journaled the steps, as the
+    moved issue's own comment is. A comment that fails to post is one warning
+    line, and the move stands."""
+    if context.projection != _audit.PROJECTION_FULL or len(reached) < 2:
+        return
+    body = _render_provenance_comment(context.invoker, *reached, cause=reason)
+    failure = _comment_failure(number, body, context.config)
+    if failure is not None:
+        print(
+            f"  [warn] #{number}: its provenance comment was not posted ({failure}); "
+            "the move stands.",
+            file=sys.stderr,
+        )
 
 
 def _print_cascade_report(

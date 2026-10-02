@@ -19,9 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-02T00:02:22Z
+      at: 2026-10-02T02:40:02Z
       outcome: unchanged
-      unchanged-because: COR-053 changed in one rationale sentence, on why events take no consent model; this page takes the address form of a connection and the methodology-owned front-matter block from the record, says nothing of consent for events, and both are as they were
+      unchanged-because: the process shape contract's journal entry drops the bypass_reason field nothing wrote and rewords reason's description; this page names _defs/process.schema.json as the process shape contract and pointer target and lists no journal-entry field, so what it says of the shared library still holds
 ---
 
 # Schemas
