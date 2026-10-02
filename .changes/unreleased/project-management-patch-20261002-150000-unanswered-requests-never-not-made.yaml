@@ -2,6 +2,7 @@ component: project-management
 kind: patch
 custom:
   category: Fixed
+  pr: "1303"
   requires_backbone: release
 body: >
   `done-work`, `merge-pr` and `land-work` no longer conclude that a merge or

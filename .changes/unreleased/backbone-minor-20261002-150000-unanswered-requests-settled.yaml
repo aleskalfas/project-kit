@@ -2,6 +2,7 @@ component: backbone
 kind: minor
 custom:
   category: Fixed
+  pr: "1303"
 body: >
   A request to the hosting service that gets no answer is no longer reported
   as refused, and `pkit release merge` no longer waits for ever on a `gh` that
