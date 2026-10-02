@@ -628,6 +628,7 @@ class HostingService:
             "id": self.node_id,
             "state": self.state,
             "mergedAt": self.merged_at or None,
+            "mergeCommit": {"oid": self.merge_commit} if self.merge_commit else None,
             "headRefOid": self.head_oid,
             "headRefName": self.head_ref,
             "isCrossRepository": self.cross_repository,

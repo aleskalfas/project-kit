@@ -36,7 +36,11 @@ Every step of a landing that talks to the hosting service lives here, once:
 - **deleting a merged PR's head branch** (:func:`delete_branch`), only while
   its tip is the head the PR merged at, which the caller names, and no other
   open PR uses it as its head or its base — as one compare-and-delete
-  request.
+  request;
+- **the landing sequence** (:func:`land`), which composes the steps above but
+  the deletion: one reading, the caller's options applied to it, the
+  request, the wait, and the dequeue when the head moved — ending in one
+  document that states how it ended, so no caller derives it.
 
 Merged is what GitHub reports, never what a command's exit implies: on a base
 that requires a queue, a plain merge request enqueues and exits 0, so a caller
@@ -47,14 +51,16 @@ what it refuses, its own steps after the merge, and when the head branch is
 deleted — after those steps. The local branch is the caller's too: it is not
 on the hosting service. project-management's merge verbs reach this module
 through `pkit pull-request` and its JSON documents, since they run as scripts
-that do not import the package; `pkit release merge` imports it.
+that do not import the package; `pkit release merge` lands through
+:func:`land`, by import.
 
 The requests that change the service's state — the merge, the enqueue, the
 dequeue, the branch deletion — run the cross-repository guard (ADR-061 point
 6, `session_guard`): each requires a clearance and the directory it acts in,
 and runs `gh` there, with no client of the caller's, so a caller that imports
 them can neither skip the guard nor clear one directory and act in another.
-The readings and the wait change nothing and run no guard.
+A landing takes one clearance, at its caller's entry, and hands it to each
+request it makes. The readings and the wait change nothing and run no guard.
 
 `gh` is the hosting service's client here. Every call runs it from the
 caller's directory — it resolves the repository from the git remote — with the
@@ -67,7 +73,8 @@ ended. A reading past its bound is unreadable.
 
 A request is refused only on an answer this module recognises as one
 (:func:`_send`): the service's GraphQL errors, `gh`'s `GraphQL:` or `HTTP 4xx`
-line, `gh`'s own refusal before it sent anything, or `gh` not started at all.
+line but a 408, `gh`'s own refusal before it sent anything, or `gh` not
+started at all.
 Anything else — ended at its bound, ended by a signal, a server error, a
 broken connection, nothing back, words this module does not know — is no
 usable answer: the request may have been made, so it is settled by reading
@@ -90,6 +97,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
+from contextvars import ContextVar
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -194,7 +202,9 @@ NOT_MADE = "not-made"
 #: another repository, a fork; the head named is not the head the PR merged
 #: at; the PR, or the open PRs that use its branch, could not be read.
 #: :data:`NOT_READ` is also why a dequeue the service answered is
-#: unconfirmed: the PR could not be read since to see it out of the queue.
+#: unconfirmed: the PR could not be read since to see it out of the queue;
+#: and why a dequeue that sent nothing was not accepted: the PR could not be
+#: read before it, or read out of the queue once and not again to confirm it.
 NOT_MERGED = "not-merged"
 CROSS_REPOSITORY = "cross-repository"
 EXPECT_MISMATCH = "expect-mismatch"
@@ -219,6 +229,7 @@ _PR_FIELDS = """\
       id
       state
       mergedAt
+      mergeCommit { oid }
       headRefOid
       headRefName
       isCrossRepository"""
@@ -347,6 +358,9 @@ class Reading:
     head_ref: str = ""
     #: The PR's head is in another repository than its base: a fork.
     cross_repository: bool = False
+    #: The commit the PR's merge made on its base; empty until it has merged,
+    #: or where the service names none.
+    merge_commit: str = ""
 
     @property
     def merged(self) -> bool:
@@ -410,6 +424,7 @@ class Reading:
             "removal": self.removal.as_json() if self.removal is not None else None,
             "head_ref": self.head_ref,
             "cross_repository": self.cross_repository,
+            "merge_commit": self.merge_commit,
             "merged": self.merged,
             "queued": self.queued,
             "squashes": self.squashes,
@@ -427,7 +442,8 @@ class Outcome:
     #: running. False when it was not: the service refused it, gh could not be
     #: run, two readings since it got no usable answer did not see it made
     #: (:data:`NOT_MADE`), or a dequeue found the PR merged
-    #: (:data:`HAS_MERGED`) or still queued after the service accepted it.
+    #: (:data:`HAS_MERGED`), still queued after the service accepted it, or
+    #: could not read it before it sent anything (:data:`NOT_READ`).
     #: None when whether it was made is not known: no usable answer and no
     #: reading since (:data:`UNANSWERED`), or a dequeue the service accepted
     #: and no reading since to see the PR out (:data:`NOT_READ`) — unconfirmed.
@@ -617,7 +633,9 @@ def dequeue(
     undoes a merge. Out of the queue, it is read once more after
     :data:`SETTLE_INTERVAL_SECONDS` — a PR the queue is merging can read out
     of it and not yet merged — and out again, nothing is sent: it is already
-    out. Queued, the dequeue is sent: `gh pr merge --disable-auto` cancels
+    out. Either reading not taken, nothing is sent and the dequeue is not
+    accepted, :data:`NOT_READ`: whether the PR is in the queue is not known.
+    Queued, the dequeue is sent: `gh pr merge --disable-auto` cancels
     the auto-merge; on a PR already in the queue gh answers "already queued
     to merge" and changes nothing, so such a PR is taken out through GitHub's
     own `dequeuePullRequest`.
@@ -635,7 +653,7 @@ def dequeue(
     try:
         before = read(pr_number, gh=run)
     except Unreadable as exc:
-        return Outcome(False, None, f"PR #{pr_number} could not be read: {exc}")
+        return Outcome(False, None, f"PR #{pr_number} could not be read: {exc}", NOT_READ)
     if not (before.merged or before.queued):
         _sleep(SETTLE_INTERVAL_SECONDS)
         try:
@@ -646,6 +664,7 @@ def dequeue(
                 None,
                 f"PR #{pr_number} read out of the merge queue once, and could not be read "
                 f"again to confirm it: {exc}",
+                NOT_READ,
             )
         if not (before.merged or before.queued):
             return Outcome(True, None)
@@ -667,7 +686,7 @@ def _take_out(pr_number: int, run: GhRunner, reading: Reading) -> _Settled:
         cmd = ["gh", "api", "graphql", "-f", f"query={_DEQUEUE}", "-f", f"id={reading.pr_id}"]
     else:
         cmd = ["gh", "pr", "merge", str(pr_number), "--disable-auto"]
-    sent = _send(_requesting(run), cmd)
+    sent = _send(_requesting(run), cmd, _DEQUEUING.name)
     if sent.ended == _NOT_APPLIED:
         return _Settled(Outcome(False, sent.exit_code, sent.said), None)
     return _settle(pr_number, run, _DEQUEUING, sent)
@@ -738,15 +757,28 @@ _NO_ANSWER = "no-answer"
 
 # The words on gh's standard error that are an answer saying the request was
 # not applied: the service's GraphQL error (`GraphQL: …`), an HTTP 4xx status
-# (`HTTP 422: …`, `gh: … (HTTP 403)`), and gh's own refusal before it sent
-# anything, which it marks with its failure or warning sign (`X Pull request
-# #N is not mergeable: …`, `! Pull request #N is already queued to merge`).
-# Nothing else is taken for an answer.
-_ANSWERED = re.compile(r"^GraphQL: |\bHTTP 4\d\d\b|^[X!] Pull request ", re.MULTILINE)
+# (`HTTP 422: …`, `gh: … (HTTP 403)`) but 408 — a request that timed out on
+# the way, which the service may have acted on — and gh's own refusal before
+# it sent anything, which it marks with its failure or warning sign (`X Pull
+# request #N is not mergeable: …`, `! Pull request #N is already queued to
+# merge`). Nothing else is taken for an answer.
+_ANSWERED = re.compile(r"^GraphQL: |\bHTTP 4(?!08)\d\d\b|^[X!] Pull request ", re.MULTILINE)
 
 
-def _send(run: GhRunner, cmd: list[str]) -> _Sent:
-    """Send a request, telling three ends apart, and date it.
+#: Told of each request — its name, and the command that sends it — just
+#: before it is sent, while a landing runs (:func:`land`): this is the one
+#: place every request passes, so the landing's `requesting` line is out
+#: before `gh` starts. Unset, nothing is told.
+_ON_SEND: ContextVar[Callable[[str, Sequence[str]], None] | None] = ContextVar(
+    "pull_request_landing_on_send", default=None
+)
+
+
+def _send(run: GhRunner, cmd: list[str], name: str) -> _Sent:
+    """Send the request `name`, telling three ends apart, and date it.
+
+    Whoever a landing set to be told (:data:`_ON_SEND`) is told first, before
+    `gh` starts; should that fail, nothing is sent.
 
     Applied: gh exited 0 and the answer names no errors. Not applied, only on
     an answer recognised as one: the GraphQL errors the answer carries, or
@@ -757,6 +789,9 @@ def _send(run: GhRunner, cmd: list[str]) -> _Sent:
     — or any other failure, its words kept in `said`; the request may have
     been applied or not.
     """
+    told = _ON_SEND.get()
+    if told is not None:
+        told(name, cmd)
     at, wall = _monotonic(), _utcnow()
     try:
         proc = run(cmd)
@@ -855,9 +890,17 @@ class _Asked:
         return self.confirmations + 1
 
 
-_MERGING = _Asked("merge", "neither merged nor queued", _merged_or_queued)
-_ENQUEUING = _Asked("enqueue", "neither queued nor merged", _merged_or_queued)
-_DEQUEUING = _Asked("dequeue", "queued", _out_of_the_queue, confirmations=2)
+#: The requests a landing sends, by name — its events' `request`, its end's
+#: `sent` (a merge or an enqueue) — and, with :data:`WAIT`, what a dry run
+#: says it would do (`would`).
+MERGE_REQUEST = "merge"
+ENQUEUE_REQUEST = "enqueue"
+DEQUEUE_REQUEST = "dequeue"
+WAIT = "wait"
+
+_MERGING = _Asked(MERGE_REQUEST, "neither merged nor queued", _merged_or_queued)
+_ENQUEUING = _Asked(ENQUEUE_REQUEST, "neither queued nor merged", _merged_or_queued)
+_DEQUEUING = _Asked(DEQUEUE_REQUEST, "queued", _out_of_the_queue, confirmations=2)
 
 
 @dataclass(frozen=True)
@@ -874,7 +917,7 @@ def _request(pr_number: int, run: GhRunner, cmd: list[str], asked: _Asked) -> Ou
     accepted when gh accepted it; refused, in the words of the answer, when an
     answer said so or gh could not be run; and, with no usable answer, settled
     by reading (:func:`_settle`)."""
-    sent = _send(_requesting(run), cmd)
+    sent = _send(_requesting(run), cmd, asked.name)
     if sent.ended == _APPLIED:
         return Outcome(True, sent.exit_code)
     if sent.ended == _NOT_APPLIED:
@@ -895,7 +938,9 @@ def _settle(pr_number: int, run: GhRunner, asked: _Asked, sent: _Sent) -> _Settl
     answered, else None. Not seen on the second reading or a later one, it was
     not seen made (:data:`NOT_MADE`) — or, for a dequeue the service answered,
     not seen out of the queue — which one reading never concludes, and which
-    is what the readings saw, never that the request was not made. A reading
+    is what the readings saw, never that the request was not made. It takes
+    no more readings than `asked`'s most (:attr:`_Asked.most_readings`), the
+    count its longest is stated for: past them, it was not seen made. A reading
     that cannot be taken leaves it unconfirmed: :data:`UNANSWERED` with no
     usable answer — `accepted` and `exit_code` None, since whether it was
     made, and how gh would have ended, are not known — and :data:`NOT_READ`
@@ -912,7 +957,7 @@ def _settle(pr_number: int, run: GhRunner, asked: _Asked, sent: _Sent) -> _Settl
     taken: list[float] = []
     streak = 0
     reading: Reading | None = None
-    while True:
+    for _ in range(asked.most_readings):
         if taken:
             _sleep(max(SETTLE_INTERVAL_SECONDS, sent.at + SETTLE_WINDOW_SECONDS - _monotonic()))
         taken.append(_monotonic())
@@ -931,6 +976,12 @@ def _settle(pr_number: int, run: GhRunner, asked: _Asked, sent: _Sent) -> _Settl
         streak = 0
         if len(taken) > 1:
             return _Settled(_not_seen(pr_number, asked, sent, taken, reading), reading)
+    # Its most readings taken and its end state not confirmed on them: not
+    # seen made, as on any other sequence that does not confirm it. Every
+    # sequence ends above before this one does; the bound holds the count
+    # the settling's longest is stated for, whatever a judge comes to say.
+    last = cast(Reading, reading)
+    return _Settled(_not_seen(pr_number, asked, sent, taken, last), last)
 
 
 def _lost(pr_number: int, asked: _Asked, sent: _Sent) -> str:
@@ -1255,7 +1306,7 @@ def delete_branch(
         "-f",
         f"after={_NO_COMMIT}",
     ]
-    sent = _send(_requesting(run), cmd)
+    sent = _send(_requesting(run), cmd, "delete-branch")
     if sent.ended == _APPLIED:
         return head.ended(DELETED)
     return _not_deleted(pr_number, head, expect, sent, run)
@@ -1522,6 +1573,767 @@ def wait_limit(seconds: float | None) -> str:
     return f"up to {seconds / 60:g} min"
 
 
+# ---- the landing -------------------------------------------------------------
+#
+# The landing sequence in one call (ADR-061 point 5): the guard's clearance,
+# taken once by the caller and handed down; one reading; the caller's options
+# applied to it, the first matching row of one table; the request, pinned to
+# the head the caller checked; the wait; and, when the head moved, the PR
+# taken out of the queue. It reports each request as the request documents
+# do, and its own end as `ended`, so no caller derives it. It never deletes a
+# branch: when to delete is the caller's.
+
+#: How a landing ended — its end document's `ended`, one of twelve
+#: (:data:`LANDING_ENDS`).
+END_MERGED = "merged"
+END_MERGED_ELSEWHERE = "merged-at-another-head"
+END_CLOSED = "closed"
+END_PLANNED = "planned"
+END_QUEUED = "queued"
+END_UNCONFIRMED = "unconfirmed"
+END_HEAD_MOVED = "head-moved"
+END_DROPPED = "dropped"
+END_NOT_MERGED = "not-merged"
+END_FAILED = "failed"
+END_REFUSED = "refused"
+END_UNREADABLE = "unreadable"
+
+#: Why a landing was refused before any request, besides the guard's
+#: (`session_guard.FOREIGN_REPOSITORY`), in the one order it judges them on a
+#: base that merges through a queue, the squash-commit defaults read last: an
+#: administrator merge asked for there; a direct merge asked for there
+#: (`--direct-only`); a queue that does not squash; a head the queue dropped,
+#: not enqueued again unchanged unless the caller allows it; and squash-commit
+#: defaults that are not the PR's title and body. No option lifts the first,
+#: nor the two that say the queue would not make COR-009's commit (ADR-061
+#: points 5 and 8). :data:`SQUASH_DEFAULTS` is also why a landing is
+#: unreadable when the defaults cannot be read.
+ADMIN_ON_QUEUE = "admin-on-queue"
+QUEUE_NOT_ALLOWED = "queue-not-allowed"
+QUEUE_NOT_SQUASH = "queue-not-squash"
+DROPPED_HEAD = "dropped-head"
+SQUASH_DEFAULTS = "squash-defaults"
+
+#: Each way a landing ends, with the `reason_kind`s it carries — None among
+#: them where the kind alone says it. A reader takes a document with any
+#: other `ended`, or a `reason_kind` its `ended` does not carry, for no
+#: answer (:func:`decode_end`).
+LANDING_ENDS: Mapping[str, frozenset[str | None]] = {
+    END_MERGED: frozenset({None}),
+    END_MERGED_ELSEWHERE: frozenset({None}),
+    END_CLOSED: frozenset({None}),
+    END_PLANNED: frozenset({None}),
+    END_QUEUED: frozenset({None, NOT_READ}),
+    END_UNCONFIRMED: frozenset({UNANSWERED, NOT_READ}),
+    END_HEAD_MOVED: frozenset({None}),
+    END_DROPPED: frozenset({None}),
+    END_NOT_MERGED: frozenset({None}),
+    END_FAILED: frozenset({None, NOT_MADE}),
+    END_REFUSED: frozenset(
+        {
+            session_guard.FOREIGN_REPOSITORY,
+            ADMIN_ON_QUEUE,
+            QUEUE_NOT_ALLOWED,
+            QUEUE_NOT_SQUASH,
+            DROPPED_HEAD,
+            SQUASH_DEFAULTS,
+        }
+    ),
+    END_UNREADABLE: frozenset({None, SQUASH_DEFAULTS}),
+}
+
+#: The ends at which a reading says the PR merged.
+_MERGED_ENDS = (END_MERGED, END_MERGED_ELSEWHERE)
+
+#: What a dry run says it would do (`would`).
+_WOULD = (MERGE_REQUEST, ENQUEUE_REQUEST, WAIT, DEQUEUE_REQUEST)
+
+#: What a landing does with a PR already queued in a queue that would not
+#: make the squash commit (`--queued-bad-shape`): refuse — the PR stays
+#: queued, and may still merge — or wait for it with a warning.
+SHAPE_REFUSE = "refuse"
+SHAPE_WARN = "warn"
+
+#: A landing's `path`: through a merge queue — the last reading shows one on
+#: the base, or the PR was ever in one — or directly.
+PATH_QUEUE = "queue"
+PATH_DIRECT = "direct"
+
+#: Every key of a landing's end document, each present in every one.
+END_KEYS = frozenset(
+    {
+        "schema_version",
+        "pull_request",
+        "event",
+        "dry_run",
+        "ended",
+        "reason_kind",
+        "reason",
+        "would",
+        "path",
+        "checked_head",
+        "merged_head",
+        "merge_commit",
+        "sent",
+        "dequeue",
+        "reading",
+        "shape",
+        "warnings",
+        "guard",
+        "bound_seconds",
+    }
+)
+
+
+@dataclass(frozen=True)
+class LandOptions:
+    """The caller's choices, which a landing applies to the reading it takes
+    just before its request, where no caller can stand (ADR-061 point 5): how
+    long to wait for the queue's merge (`seconds`; None as long as the queue
+    estimates, at most :data:`MAX_WAIT_SECONDS`; 0 reads once); whether a head
+    the queue already dropped is enqueued again; an administrator merge
+    (refused on a base that merges through a queue); a direct merge only
+    (refused on such a base); and what to do with a PR already queued in a
+    queue that would not make the squash commit (:data:`SHAPE_REFUSE`,
+    :data:`SHAPE_WARN`)."""
+
+    seconds: float | None = None
+    allow_dropped_head: bool = False
+    admin: bool = False
+    direct_only: bool = False
+    queued_bad_shape: str = SHAPE_REFUSE
+
+
+@dataclass(frozen=True)
+class Shape:
+    """Whether the squash commit a base's merge queue makes would be the one
+    a PR lands as (COR-009; ADR-061 point 8), as a landing judged it: whether
+    the queue squashes, from the reading; the repository's squash-commit
+    defaults, None where they were not read — an earlier refusal ended the
+    landing, or the queue does not squash — or could not be (`unreadable`,
+    why); and whether it would (`conforms`), None where that is not known."""
+
+    squashes: bool
+    title: str | None = None
+    message: str | None = None
+    conforms: bool | None = None
+    unreadable: str | None = None
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "squashes": self.squashes,
+            "title": self.title,
+            "message": self.message,
+            "conforms": self.conforms,
+            "unreadable": self.unreadable,
+        }
+
+
+@dataclass(frozen=True)
+class Notice:
+    """A warning a landing gives as it goes on: why, by kind —
+    :data:`QUEUE_NOT_SQUASH` or :data:`SQUASH_DEFAULTS` for a PR it waits for
+    in a queue that would not make the squash commit, :data:`NOT_READ` for a
+    reading after a direct merge that could not be taken — and in words."""
+
+    reason_kind: str
+    reason: str
+
+    def as_json(self) -> dict[str, str]:
+        return {"reason_kind": self.reason_kind, "reason": self.reason}
+
+
+@dataclass(frozen=True)
+class Landing:
+    """How a landing ended (:func:`land`), as its end document states it
+    (:meth:`as_json`): `ended` from :data:`LANDING_ENDS`, with its
+    `reason_kind` and, but where it merged or was planned, its `reason` —
+    where a reading the landing needed failed, the reading's failure as the
+    reading states it; what a dry run would do; the head the caller checked;
+    the last reading taken; the merge or the enqueue it sent that the service
+    did not refuse; what taking the PR out of the queue came to; the shape it
+    judged; its warnings; the guard; and the longest it could run with these
+    options."""
+
+    pull_request: int
+    ended: str
+    checked_head: str
+    guard: session_guard.Clearance | session_guard.Refusal
+    bound_seconds: float
+    dry_run: bool = False
+    reason_kind: str | None = None
+    reason: str | None = None
+    #: :data:`MERGE_REQUEST`, :data:`ENQUEUE_REQUEST`, :data:`WAIT` or
+    #: :data:`DEQUEUE_REQUEST` on a planned end; None otherwise.
+    would: str | None = None
+    reading: Reading | None = None
+    #: :data:`MERGE_REQUEST` or :data:`ENQUEUE_REQUEST`: the request this run
+    #: sent that the service did not refuse — made, not seen made, or
+    #: unconfirmed; None when none was, or the one sent was refused.
+    sent: str | None = None
+    #: What taking the PR out of the queue came to, as `pkit pull-request
+    #: dequeue` states it; None where no dequeue was run.
+    dequeue: Outcome | None = None
+    shape: Shape | None = None
+    warnings: tuple[Notice, ...] = ()
+
+    @property
+    def path(self) -> str | None:
+        """:data:`PATH_QUEUE` or :data:`PATH_DIRECT`; None with no reading."""
+        if self.reading is None:
+            return None
+        return PATH_QUEUE if self.reading.has_queue or self.reading.ever_queued else PATH_DIRECT
+
+    @property
+    def merged_head(self) -> str | None:
+        """The head of the reading that said merged — what a caller deletes
+        the head branch at; None but where it merged."""
+        if self.ended not in _MERGED_ENDS or self.reading is None:
+            return None
+        return self.reading.head_oid or None
+
+    @property
+    def merge_commit(self) -> str | None:
+        """The commit the merge made; None but where it merged and the service
+        names one."""
+        if self.ended not in _MERGED_ENDS or self.reading is None:
+            return None
+        return self.reading.merge_commit or None
+
+    def as_json(self) -> dict[str, Any]:
+        """The end document: every key in every document (:data:`END_KEYS`)."""
+        return _document(
+            self.pull_request,
+            event="end",
+            dry_run=self.dry_run,
+            ended=self.ended,
+            reason_kind=self.reason_kind,
+            reason=self.reason,
+            would=self.would,
+            path=self.path,
+            checked_head=self.checked_head,
+            merged_head=self.merged_head,
+            merge_commit=self.merge_commit,
+            sent=self.sent,
+            dequeue=self.dequeue.as_json() if self.dequeue is not None else None,
+            reading=self.reading.as_json() if self.reading is not None else None,
+            shape=self.shape.as_json() if self.shape is not None else None,
+            warnings=[notice.as_json() for notice in self.warnings],
+            guard=self.guard.as_json(),
+            bound_seconds=self.bound_seconds,
+        )
+
+
+#: Told each event of a landing as it happens: its document.
+OnEvent = Callable[[dict[str, Any]], None]
+
+
+def land(
+    pr_number: int,
+    *,
+    head: str,
+    subject: str,
+    cwd: Path,
+    clearance: session_guard.Clearance,
+    options: LandOptions | None = None,
+    dry_run: bool = False,
+    on_event: OnEvent | None = None,
+) -> Landing:
+    """Land PR `pr_number` at `head`, the head the caller's gates checked,
+    with `subject` as the squash commit's subject: the landing sequence, in
+    one call (ADR-061 point 5).
+
+    `clearance` is the cross-repository guard's for `cwd`, taken once by the
+    caller and handed down, so a request made late — taking a PR out of the
+    queue after a long wait — never waits on a question (ADR-061 point 6).
+    One reading, then the first row of the table that matches it, the
+    caller's `options` applied:
+
+    - unreadable, or naming no head: :data:`END_UNREADABLE`; merged:
+      :data:`END_MERGED`, or :data:`END_MERGED_ELSEWHERE` at another head
+      than `head`; closed: :data:`END_CLOSED`;
+    - queued, on any base, at another head: taken out of the queue
+      (:func:`dequeue`), then :data:`END_HEAD_MOVED`; open and not queued at
+      another head: :data:`END_HEAD_MOVED`, nothing sent;
+    - on a base that merges through a queue, the refusals in their one order
+      (:data:`ADMIN_ON_QUEUE` … :data:`SQUASH_DEFAULTS`): refused, nothing
+      sent, the PR left as it is; else queued already, the wait — a shape the
+      caller waits for under :data:`SHAPE_WARN` noted as a warning — and
+      otherwise the enqueue, then the wait;
+    - on a base without a queue — a PR auto-merge holds there among them —
+      the direct squash merge (:func:`squash_merge`, as it is), an
+      administrator one with `options.admin`, then one reading: merged, it
+      ends; not, the wait; not read, a warning, then the wait.
+
+    A request the service refused ends :data:`END_FAILED` in its words; one
+    not seen made, :data:`END_FAILED` with :data:`NOT_MADE`; one unconfirmed,
+    :data:`END_UNCONFIRMED`. The wait ends merged, at `head` or another;
+    queued, the time run out (:data:`END_QUEUED`); out of the queue, or
+    closed, :data:`END_DROPPED` where a queue was seen and
+    :data:`END_NOT_MERGED` where none was; at another head, the PR taken out
+    of the queue, :data:`END_HEAD_MOVED`; and with a reading that cannot be
+    taken, :data:`END_UNCONFIRMED` after a merge it sent — whether it merged
+    is not known — else :data:`END_QUEUED`, both :data:`NOT_READ`.
+
+    A `dry_run` takes the reading, and the squash-commit defaults where the
+    table reaches them, and sends nothing: a row that sends a request or
+    waits ends :data:`END_PLANNED`, saying what it would do; every other row
+    ends as the landing would.
+
+    `on_event` is told each event as it happens, as its document: the
+    readings — the first, the one after a direct merge, each of the wait's
+    that changed — and, for each request, `requesting`, before `gh` starts,
+    and `requested` once it is settled. The landing never deletes a branch.
+    Raises `TypeError` or `ValueError` where `clearance` is not a clearance
+    for `cwd`, and `ValueError` with no `head`.
+    """
+    where = session_guard.require(clearance, cwd)
+    if not head:
+        raise ValueError("a landing is pinned to the head the caller checked, and none was named")
+    lander = _Lander(
+        pr_number,
+        head=head,
+        subject=subject,
+        where=where,
+        clearance=clearance,
+        options=options if options is not None else LandOptions(),
+        dry_run=dry_run,
+        on_event=on_event,
+    )
+    told = _ON_SEND.set(lander.requesting)
+    try:
+        return lander.lands()
+    finally:
+        _ON_SEND.reset(told)
+
+
+def refused_by_the_guard(
+    pr_number: int,
+    *,
+    head: str,
+    refusal: session_guard.Refusal,
+    options: LandOptions | None = None,
+    dry_run: bool = False,
+) -> Landing:
+    """The end of a landing the cross-repository guard refused at its entry:
+    nothing read, nothing sent, the guard's reason — which, for a dry run,
+    says a run at a terminal would ask."""
+    chosen = options if options is not None else LandOptions()
+    return Landing(
+        pr_number,
+        END_REFUSED,
+        head,
+        refusal,
+        landing_longest_seconds(chosen.seconds),
+        dry_run=dry_run,
+        reason_kind=session_guard.FOREIGN_REPOSITORY,
+        reason=refusal.reason,
+    )
+
+
+def landing_longest_seconds(seconds: float | None) -> float:
+    """The longest `pkit pull-request land` can run, waiting `seconds` for the
+    queue's merge (None: :data:`MAX_WAIT_SECONDS`): a function of the options
+    alone, never of a reading — the PR can change before the landing — so a
+    dry run states the figure the landing it plans has. Every leg it can run,
+    each at its longest: the plan's (:func:`planning_longest_seconds` — the
+    guard, one reading, the squash-commit defaults); the merge or the enqueue
+    with the readings that settle it (`longest_seconds`, less the guard the
+    landing runs once); one reading after a direct merge; the wait, and how
+    far it runs past its limit (:func:`wait_overrun_seconds`); and taking the
+    PR out of the queue (`longest_seconds("dequeue")`, less the guard)."""
+    guard = session_guard.LONGEST_SECONDS
+    request = max(longest_seconds(MERGE_REQUEST), longest_seconds(ENQUEUE_REQUEST)) - guard
+    limit = MAX_WAIT_SECONDS if seconds is None else seconds
+    taking_out = longest_seconds(DEQUEUE_REQUEST) - guard
+    return (
+        planning_longest_seconds()
+        + request
+        + _reading_longest()
+        + limit
+        + wait_overrun_seconds()
+        + taking_out
+    )
+
+
+def planning_longest_seconds() -> float:
+    """The longest a dry run of `pkit pull-request land` can run: the guard,
+    one reading, and the repository's squash-commit defaults."""
+    return session_guard.LONGEST_SECONDS + _reading_longest() + _call_longest(GH_READ_SECONDS)
+
+
+class NotAnEnd(ValueError):
+    """A document that is not a landing's end document: no answer."""
+
+
+def decode_end(document: object) -> dict[str, Any]:
+    """`document` as a landing's end document, decoded strictly: every key
+    present (:data:`END_KEYS`), this version, an `ended` from
+    :data:`LANDING_ENDS` with a `reason_kind` it carries, `would` exactly on
+    a planned end, `merged_head` exactly where it merged, `dequeue` only with
+    a head that moved, and `sent` a merge, an enqueue or null. Raises
+    :class:`NotAnEnd` for anything else: no answer, so how the landing ended
+    is not known."""
+    if not isinstance(document, Mapping):
+        raise NotAnEnd("the answer is not a document")
+    doc = cast(Mapping[str, Any], document)
+    missing = sorted(END_KEYS - set(doc))
+    if missing:
+        raise NotAnEnd(f"the end document has no {', '.join(f'`{key}`' for key in missing)}")
+    if doc["schema_version"] != SCHEMA_VERSION or doc["event"] != "end":
+        raise NotAnEnd(
+            f"the document is not a version-{SCHEMA_VERSION} end (`schema_version` "
+            f"{doc['schema_version']!r}, `event` {doc['event']!r})"
+        )
+    ended = doc["ended"]
+    if not isinstance(ended, str) or ended not in LANDING_ENDS:
+        raise NotAnEnd(f"the end document names no way a landing ends (`ended`: {ended!r})")
+    if doc["reason_kind"] not in LANDING_ENDS[ended]:
+        raise NotAnEnd(
+            f"a landing that ends {ended} carries no `reason_kind` {doc['reason_kind']!r}"
+        )
+    would = doc["would"]
+    if not (would in _WOULD if ended == END_PLANNED else would is None):
+        raise NotAnEnd(f"a landing that ends {ended} cannot say it would {would!r}")
+    merged_head = doc["merged_head"]
+    if not (
+        isinstance(merged_head, str) and merged_head
+        if ended in _MERGED_ENDS
+        else merged_head is None
+    ):
+        raise NotAnEnd(f"a landing that ends {ended} cannot name `merged_head` {merged_head!r}")
+    if doc["dequeue"] is not None and ended != END_HEAD_MOVED:
+        raise NotAnEnd(f"a landing that ends {ended} ran no dequeue")
+    if doc["sent"] not in (None, MERGE_REQUEST, ENQUEUE_REQUEST):
+        raise NotAnEnd(f"a landing sends no {doc['sent']!r}")
+    if not isinstance(doc["warnings"], list) or not isinstance(doc["guard"], Mapping):
+        raise NotAnEnd("the end document's `warnings` or `guard` is not what it states")
+    return dict(doc)
+
+
+class _Lander:
+    """One landing as it runs (:func:`land`): what it has read, judged and
+    sent so far, and how it ends."""
+
+    def __init__(
+        self,
+        pr_number: int,
+        *,
+        head: str,
+        subject: str,
+        where: Path,
+        clearance: session_guard.Clearance,
+        options: LandOptions,
+        dry_run: bool,
+        on_event: OnEvent | None,
+    ) -> None:
+        self.pr_number = pr_number
+        self.head = head
+        self.subject = subject
+        self.where = where
+        self.clearance = clearance
+        self.options = options
+        self.dry_run = dry_run
+        self.on_event = on_event
+        self.run = gh_runner(where)
+        self.reading: Reading | None = None
+        self.shape: Shape | None = None
+        self.sent: str | None = None
+        self.warnings: list[Notice] = []
+        # Each request's sends so far, and the requests sent and not yet settled.
+        self.attempts: dict[str, int] = {}
+        self.in_flight: set[str] = set()
+
+    # ---- the sequence ------------------------------------------------------
+
+    def lands(self) -> Landing:
+        """One reading, then the table's first matching row."""
+        n = self.pr_number
+        try:
+            first = read(n, gh=self.run)
+        except Unreadable as exc:
+            return self.end(END_UNREADABLE, reason=str(exc))
+        self.took(first)
+        if not first.head_oid:
+            return self.end(END_UNREADABLE, reason=f"the reading of PR #{n} names no head commit")
+        if first.merged:
+            return self.merged(first)
+        if first.pr_state == "CLOSED":
+            return self.end(END_CLOSED, reason=f"PR #{n} is closed without merging")
+        if first.has_queue:
+            self.shape = Shape(first.squashes, conforms=None if first.squashes else False)
+        if first.head_oid != self.head:
+            if not first.queued:
+                return self.end(
+                    END_HEAD_MOVED,
+                    reason=f"{self.moved(first)}; it is in no merge queue, and nothing was sent",
+                )
+            if self.dry_run:
+                return self.end(END_PLANNED, would=DEQUEUE_REQUEST)
+            return self.take_out()
+        if not first.has_queue:
+            if self.dry_run:
+                return self.end(END_PLANNED, would=MERGE_REQUEST)
+            return self.merge()
+        refused = self.judged(first)
+        if refused is not None:
+            return refused
+        if first.queued:
+            if self.dry_run:
+                return self.end(END_PLANNED, would=WAIT)
+            return self.wait()
+        if self.dry_run:
+            return self.end(END_PLANNED, would=ENQUEUE_REQUEST)
+        return self.enqueue()
+
+    def judged(self, reading: Reading) -> Landing | None:
+        """The landing refused on a base that merges through a queue, in the
+        one order, the squash-commit defaults read last — or None, the shape
+        judged and a warning noted where the caller waits for a bad one."""
+        n, options = self.pr_number, self.options
+        if options.admin:
+            return self.refused(
+                ADMIN_ON_QUEUE,
+                f"PR #{n}'s base merges through a merge queue, the single merge path, and an "
+                "administrator merge would go around it: none is made on such a base",
+            )
+        if options.direct_only:
+            return self.refused(
+                QUEUE_NOT_ALLOWED,
+                f"PR #{n}'s base merges through a merge queue, and the landing was to merge "
+                "directly only",
+            )
+        lenient = reading.queued and options.queued_bad_shape == SHAPE_WARN
+        if not reading.squashes:
+            method = reading.merge_method or "an unreported method"
+            return self.bad_shape(
+                QUEUE_NOT_SQUASH,
+                f"the merge queue on PR #{n}'s base merges by {method}, so it would not make the "
+                "one squash commit a pull request lands as",
+                lenient,
+            )
+        if reading.dropped_head and not options.allow_dropped_head:
+            return self.refused(DROPPED_HEAD, self.dropped(reading))
+        try:
+            title, message = squash_commit_defaults(gh=self.run)
+        except Unreadable as exc:
+            self.shape = Shape(True, unreadable=str(exc))
+            if lenient:
+                self.warnings.append(Notice(SQUASH_DEFAULTS, str(exc)))
+                return None
+            return self.end(END_UNREADABLE, reason_kind=SQUASH_DEFAULTS, reason=str(exc))
+        conforms = (title, message) == (PR_TITLE, PR_BODY)
+        self.shape = Shape(True, title, message, conforms)
+        if conforms:
+            return None
+        return self.bad_shape(
+            SQUASH_DEFAULTS,
+            f"the merge queue composes the squash commit from the repository's defaults, title "
+            f"{title} and message {message}, not {PR_TITLE} and {PR_BODY}",
+            lenient,
+        )
+
+    def merge(self) -> Landing:
+        """The direct squash merge, then one reading: merged, it ends; not —
+        or not read, with a warning — the wait."""
+        outcome = squash_merge(
+            self.pr_number,
+            subject=self.subject,
+            cwd=self.where,
+            clearance=self.clearance,
+            head_oid=self.head,
+            admin=self.options.admin,
+        )
+        stopped = self.unless_made(MERGE_REQUEST, outcome)
+        if stopped is not None:
+            return stopped
+        try:
+            after = read(self.pr_number, gh=self.run)
+        except Unreadable as exc:
+            self.warnings.append(Notice(NOT_READ, str(exc)))
+            return self.wait()
+        self.took(after)
+        if after.merged:
+            return self.merged(after)
+        return self.wait()
+
+    def enqueue(self) -> Landing:
+        """The enqueue, then the wait."""
+        outcome = enqueue(
+            self.pr_number, cwd=self.where, clearance=self.clearance, head_oid=self.head
+        )
+        stopped = self.unless_made(ENQUEUE_REQUEST, outcome)
+        if stopped is not None:
+            return stopped
+        return self.wait()
+
+    def wait(self) -> Landing:
+        """The wait for the merge, and how it ended."""
+        n = self.pr_number
+        try:
+            waited = wait_for_merge(
+                n,
+                timeout_seconds=self.options.seconds,
+                on_change=self.took,
+                head_oid=self.head,
+                gh=self.run,
+            )
+        except Unreadable as exc:
+            if self.sent == MERGE_REQUEST:
+                return self.end(END_UNCONFIRMED, reason_kind=NOT_READ, reason=str(exc))
+            return self.end(END_QUEUED, reason_kind=NOT_READ, reason=str(exc))
+        reading = self.reading = waited.reading
+        if waited.ended == MERGED:
+            return self.merged(reading)
+        if waited.ended == HEAD_MOVED:
+            return self.take_out()
+        if waited.ended == STILL_QUEUED:
+            return self.end(
+                END_QUEUED,
+                reason=f"PR #{n} is still queued as the wait ends ({reading.describe()})",
+            )
+        if reading.has_queue or reading.ever_queued:
+            removal = reading.removal
+            why = f"; GitHub says: {removal.reason}" if removal and removal.reason else ""
+            return self.end(
+                END_DROPPED,
+                reason=f"PR #{n} left the merge queue without merging ({reading.describe()}){why}",
+            )
+        return self.end(
+            END_NOT_MERGED,
+            reason=f"the merge of PR #{n} was made, and PR #{n} reads {reading.describe()}",
+        )
+
+    def take_out(self) -> Landing:
+        """The PR, at another head than the one checked, taken out of the queue."""
+        outcome = dequeue(self.pr_number, cwd=self.where, clearance=self.clearance)
+        self.requested(DEQUEUE_REQUEST, outcome)
+        moved = self.moved(cast(Reading, self.reading))
+        return self.end(END_HEAD_MOVED, reason=moved, dequeue=outcome)
+
+    # ---- its parts -----------------------------------------------------------
+
+    def unless_made(self, name: str, outcome: Outcome) -> Landing | None:
+        """Said what request `name` came to, the landing ended unless it was
+        made: refused on an answer, or not seen made — failed; unconfirmed.
+        A request the service did not refuse is the one this run `sent`."""
+        self.requested(name, outcome)
+        if outcome.accepted is not False or outcome.reason_kind == NOT_MADE:
+            self.sent = name
+        if outcome.accepted:
+            return None
+        if outcome.accepted is None:
+            return self.end(END_UNCONFIRMED, reason_kind=UNANSWERED, reason=outcome.reason)
+        if outcome.reason_kind == NOT_MADE:
+            return self.end(END_FAILED, reason_kind=NOT_MADE, reason=outcome.reason)
+        return self.end(
+            END_FAILED, reason=outcome.reason or f"the {name} of PR #{self.pr_number} was refused"
+        )
+
+    def merged(self, reading: Reading) -> Landing:
+        if reading.head_oid == self.head:
+            return self.end(END_MERGED)
+        return self.end(
+            END_MERGED_ELSEWHERE,
+            reason=f"PR #{self.pr_number} merged at head {reading.head_oid[:7]}, not at "
+            f"{self.head[:7]}, the head that was checked",
+        )
+
+    def refused(self, reason_kind: str, reason: str) -> Landing:
+        return self.end(END_REFUSED, reason_kind=reason_kind, reason=reason)
+
+    def bad_shape(self, reason_kind: str, reason: str, lenient: bool) -> Landing | None:
+        """A queue that would not make the squash commit: refused, or — for a
+        PR the caller waits for in it — a warning."""
+        if not lenient:
+            return self.refused(reason_kind, reason)
+        self.warnings.append(Notice(reason_kind, reason))
+        return None
+
+    def moved(self, reading: Reading) -> str:
+        return (
+            f"a reading finds PR #{self.pr_number} at head {reading.head_oid[:7]}, not at "
+            f"{self.head[:7]}, the head that was checked"
+        )
+
+    def dropped(self, reading: Reading) -> str:
+        removal = reading.removal
+        when = f" at {removal.at}" if removal is not None and removal.at else ""
+        why = f" (GitHub says: {removal.reason})" if removal is not None and removal.reason else ""
+        return (
+            f"the merge queue dropped PR #{self.pr_number} at its current head "
+            f"{reading.head_oid[:7]}{when}{why}; that head is not enqueued again unchanged "
+            "unless the landing allows a dropped head"
+        )
+
+    def took(self, reading: Reading) -> None:
+        """A reading taken, and written."""
+        self.reading = reading
+        self.emit(wait_reading_document(self.pr_number, reading))
+
+    def requesting(self, name: str, cmd: Sequence[str]) -> None:
+        """Written before request `name` is sent (:data:`_ON_SEND`): its pin,
+        and which attempt it is."""
+        attempt = self.attempts.get(name, 0) + 1
+        self.attempts[name] = attempt
+        self.in_flight.add(name)
+        self.emit(
+            _document(
+                self.pr_number,
+                event="requesting",
+                request=name,
+                head=_pinned(cmd),
+                attempt=attempt,
+            )
+        )
+
+    def requested(self, name: str, outcome: Outcome) -> None:
+        """Written once request `name` is settled — only after its
+        `requesting`: a dequeue that sent nothing writes neither."""
+        if name not in self.in_flight:
+            return
+        self.in_flight.discard(name)
+        self.emit(_document(self.pr_number, event="requested", request=name, **outcome.as_json()))
+
+    def emit(self, document: dict[str, Any]) -> None:
+        if self.on_event is not None:
+            self.on_event(document)
+
+    def end(
+        self,
+        ended: str,
+        *,
+        reason_kind: str | None = None,
+        reason: str | None = None,
+        would: str | None = None,
+        dequeue: Outcome | None = None,
+    ) -> Landing:
+        return Landing(
+            self.pr_number,
+            ended,
+            self.head,
+            self.clearance,
+            landing_longest_seconds(self.options.seconds),
+            dry_run=self.dry_run,
+            reason_kind=reason_kind,
+            reason=reason,
+            would=would,
+            reading=self.reading,
+            sent=self.sent,
+            dequeue=dequeue,
+            shape=self.shape,
+            warnings=tuple(self.warnings),
+        )
+
+
+def _pinned(cmd: Sequence[str]) -> str | None:
+    """The head a request is pinned to (`--match-head-commit`); None unpinned."""
+    args = list(cmd)
+    if "--match-head-commit" in args[:-1]:
+        return args[args.index("--match-head-commit") + 1]
+    return None
+
+
 # ---- the documents `pkit pull-request --json` writes --------------------------
 
 
@@ -1757,6 +2569,7 @@ def _reading(pr: Mapping[str, Any]) -> Reading:
         removal=_last_removal(events),
         head_ref=str(pr.get("headRefName") or ""),
         cross_repository=_cross_repository(pr),
+        merge_commit=str(_mapping(pr.get("mergeCommit")).get("oid") or ""),
     )
 
 
