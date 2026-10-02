@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from project_kit import command_runner, run_cache
+from project_kit import command_runner, run_cache, session_guard
 from tests.adopter_repo import (
     AdopterRepo,
     AdopterTemplates,
@@ -33,6 +33,15 @@ def outside_any_run(monkeypatch: pytest.MonkeyPatch) -> None:
     inside a run")."""
     for name in RUN_VARIABLES:
         monkeypatch.delenv(name, raising=False)
+
+
+@pytest.fixture(autouse=True)
+def outside_any_session(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every test starts outside any harness session, whatever started the
+    suite: no session's anchor, so the cross-repository guard a backbone
+    command runs (`session_guard`) answers the same in a session and in CI. A
+    test that needs a session sets the anchor itself."""
+    monkeypatch.delenv(session_guard.CLAUDE_CODE_ANCHOR, raising=False)
 
 
 @pytest.fixture(scope="session")

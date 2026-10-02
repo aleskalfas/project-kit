@@ -36,6 +36,7 @@ from project_kit import (
     pull_request_landing,
     router,
     scratchpads,
+    session_guard,
 )
 from project_kit import refs as refs_mod
 from project_kit.agents import STORYBOARD_FILE, stamp_new_agent
@@ -556,9 +557,10 @@ def pull_request() -> None:
     Where a pull request's base merges through a merge queue, and where the PR
     stands in it; the repository's squash-commit defaults; the direct squash
     merge, the enqueue, the wait for the queue's merge and taking a PR out of
-    the queue. Each runs `gh` from the working directory. `--json` writes each
-    document as one line of JSON, which is how a capability's script calls it.
-    Reference: `.pkit/cli/README.md`, "Pull-request commands".
+    the queue. Each runs `gh` from the working directory; the three that
+    change the service run the cross-repository guard first. `--json` writes
+    each document as one line of JSON, which is how a capability's script
+    calls it. Reference: `.pkit/cli/README.md`, "Pull-request commands".
     """
 
 
@@ -572,17 +574,58 @@ def _pull_request_json_option(command: Callable[..., None]) -> Callable[..., Non
     )(command)
 
 
+def _allow_foreign_repo_option(command: Callable[..., None]) -> Callable[..., None]:
+    return click.option(
+        session_guard.CONFIRM_OPTION,
+        "allow_foreign_repo",
+        is_flag=True,
+        default=False,
+        help="Confirm a change in another repository than the session's anchor's. Without it "
+        "the cross-repository guard asks at a terminal, and refuses where there is none "
+        "(COR-039).",
+    )(command)
+
+
+def _pull_request_cleared(
+    number: int, allow_foreign_repo: bool, as_json: bool
+) -> session_guard.Clearance:
+    """The cross-repository guard's clearance for a change from the working
+    directory; a refusal is written — no request made — and exits 1."""
+    passage = session_guard.clear(Path.cwd(), confirmed=allow_foreign_repo)
+    if isinstance(passage, session_guard.Refusal):
+        if as_json:
+            document = pull_request_landing.refusal_document(number, passage)
+            click.echo(pull_request_landing.render_json(document))
+        else:
+            click.echo(f"error: {passage.reason} Nothing was asked of GitHub.", err=True)
+        raise SystemExit(1)
+    return passage
+
+
+def _cleared_at_entry(
+    directory: Path, allow_foreign_repo: bool, *, unchanged: str, dry_run: bool = False
+) -> session_guard.Clearance:
+    """The cross-repository guard's clearance for a command that changes the
+    hosting service from `directory`, run once at its entry, before anything
+    is read from the service or sent to it (ADR-061 point 6). A refusal exits
+    1 with the guard's reason and `unchanged`, which says what was not done."""
+    passage = session_guard.clear(directory, confirmed=allow_foreign_repo, dry_run=dry_run)
+    if isinstance(passage, session_guard.Refusal):
+        raise click.ClickException(f"{passage.reason} {unchanged}")
+    return passage
+
+
 def _say_outcome(
     number: int,
     outcome: pull_request_landing.Outcome,
+    clearance: session_guard.Clearance,
     as_json: bool,
     done: str,
 ) -> None:
     """Write a request's outcome — `done` when accepted — and exit 1 when it was not."""
     if as_json:
-        click.echo(
-            pull_request_landing.render_json(pull_request_landing.outcome_document(number, outcome))
-        )
+        document = pull_request_landing.outcome_document(number, outcome, clearance)
+        click.echo(pull_request_landing.render_json(document))
     elif outcome.accepted:
         click.echo(done)
     else:
@@ -640,47 +683,67 @@ def pull_request_squash_defaults(as_json: bool) -> None:
 @click.option("--subject", required=True, help="The squash commit's subject: the PR title.")
 @click.option("--head", "head_oid", default="", metavar="SHA", help="Merge only at this head.")
 @click.option("--admin", is_flag=True, default=False, help="Merge around branch protection.")
+@_allow_foreign_repo_option
 @_pull_request_json_option
 def pull_request_merge(
-    number: int, subject: str, head_oid: str, admin: bool, as_json: bool
+    number: int, subject: str, head_oid: str, admin: bool, allow_foreign_repo: bool, as_json: bool
 ) -> None:
     """Squash-merge PR NUMBER directly, with SUBJECT as the commit's subject.
 
     Accepted is not proof of a merge: on a base that requires a queue, gh
     enqueues instead — `pull-request read` says which. Never deletes the head
-    branch. Exit 0 when gh accepted it; 1 otherwise, with gh's reason.
+    branch. The cross-repository guard runs first. Exit 0 when gh accepted it;
+    1 otherwise, with gh's reason or the guard's.
     """
+    clearance = _pull_request_cleared(number, allow_foreign_repo, as_json)
     outcome = pull_request_landing.squash_merge(
-        number, subject=subject, head_oid=head_oid, admin=admin
+        number,
+        subject=subject,
+        cwd=clearance.directory,
+        clearance=clearance,
+        head_oid=head_oid,
+        admin=admin,
     )
-    _say_outcome(number, outcome, as_json, f"gh accepted the squash merge of PR #{number}")
+    _say_outcome(
+        number, outcome, clearance, as_json, f"gh accepted the squash merge of PR #{number}"
+    )
 
 
 @pull_request.command("enqueue")
 @click.argument("number", type=int)
 @click.option("--head", "head_oid", default="", metavar="SHA", help="Enqueue only this head.")
+@_allow_foreign_repo_option
 @_pull_request_json_option
-def pull_request_enqueue(number: int, head_oid: str, as_json: bool) -> None:
+def pull_request_enqueue(
+    number: int, head_oid: str, allow_foreign_repo: bool, as_json: bool
+) -> None:
     """Hand PR NUMBER to its base's merge queue; the queue makes the merge.
 
     The queue squashes by its own method, with a commit composed from the
-    repository's squash-commit defaults. Exit 0 once GitHub took it in; 1
-    otherwise, with gh's reason.
+    repository's squash-commit defaults. The cross-repository guard runs
+    first. Exit 0 once GitHub took it in; 1 otherwise, with gh's reason or the
+    guard's.
     """
-    outcome = pull_request_landing.enqueue(number, head_oid=head_oid)
-    _say_outcome(number, outcome, as_json, f"enqueued PR #{number}")
+    clearance = _pull_request_cleared(number, allow_foreign_repo, as_json)
+    outcome = pull_request_landing.enqueue(
+        number, cwd=clearance.directory, clearance=clearance, head_oid=head_oid
+    )
+    _say_outcome(number, outcome, clearance, as_json, f"enqueued PR #{number}")
 
 
 @pull_request.command("dequeue")
 @click.argument("number", type=int)
+@_allow_foreign_repo_option
 @_pull_request_json_option
-def pull_request_dequeue(number: int, as_json: bool) -> None:
+def pull_request_dequeue(number: int, allow_foreign_repo: bool, as_json: bool) -> None:
     """Take PR NUMBER out of its base's merge queue, and confirm it is out.
 
-    Exit 0 once a reading shows it neither queued nor merged; 1 otherwise.
+    The cross-repository guard runs first. Exit 0 once a reading shows it
+    neither queued nor merged; 1 otherwise.
     """
-    outcome = pull_request_landing.dequeue(number)
-    _say_outcome(number, outcome, as_json, f"PR #{number} is out of the merge queue")
+    clearance = _pull_request_cleared(number, allow_foreign_repo, as_json)
+    outcome = pull_request_landing.dequeue(number, cwd=clearance.directory, clearance=clearance)
+    _say_outcome(number, outcome, clearance, as_json, f"PR #{number} is out of the merge queue")
 
 
 @pull_request.command("wait")
@@ -1450,10 +1513,24 @@ def version_promote() -> None:
     default=False,
     help="After tagging, push the new tag to the `origin` remote.",
 )
-def version_tag(push: bool) -> None:
-    """Tag HEAD as `v<version>` from .pkit/VERSION (per PRJ-002 + PRJ-004)."""
+@_allow_foreign_repo_option
+def version_tag(push: bool, allow_foreign_repo: bool) -> None:
+    """Tag HEAD as `v<version>` from .pkit/VERSION (per PRJ-002 + PRJ-004).
+
+    With `--push` the cross-repository guard runs first, before the tag is
+    made: in another repository than the session's anchor's it asks at a
+    terminal and refuses without one, unless `--allow-foreign-repo` confirms
+    it. A tag made only locally needs no guard.
+    """
     source_kit = _target_kit()
-    tag_version(source_kit, push=push)
+    clearance = (
+        _cleared_at_entry(
+            source_kit.parent, allow_foreign_repo, unchanged="Nothing was tagged or pushed."
+        )
+        if push
+        else None
+    )
+    tag_version(source_kit, push=push, clearance=clearance)
 
 
 @version.command("untag")
@@ -1463,10 +1540,20 @@ def version_tag(push: bool) -> None:
     default=False,
     help="Also delete the tag on the `origin` remote.",
 )
-def version_untag(push: bool) -> None:
-    """Remove the `v<version>` tag matching .pkit/VERSION (local; --push for remote)."""
+@_allow_foreign_repo_option
+def version_untag(push: bool, allow_foreign_repo: bool) -> None:
+    """Remove the `v<version>` tag matching .pkit/VERSION (local; --push for remote).
+
+    With `--push` the cross-repository guard runs first, before either tag is
+    deleted, as for `version tag --push`.
+    """
     source_kit = _target_kit()
-    untag_version(source_kit, push=push)
+    clearance = (
+        _cleared_at_entry(source_kit.parent, allow_foreign_repo, unchanged="No tag was deleted.")
+        if push
+        else None
+    )
+    untag_version(source_kit, push=push, clearance=clearance)
 
 
 @version.command("unbump")
@@ -1552,7 +1639,10 @@ def release_plan(as_json: bool) -> None:
     "authored. A floor a changeset declares is still raised.",
 )
 @click.option("--yes", is_flag=True, default=False, help="Skip the confirmation prompt (CI).")
-def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
+@_allow_foreign_repo_option
+def release_apply(
+    tag: bool, push: bool, no_broaden: bool, yes: bool, allow_foreign_repo: bool
+) -> None:
     """Consume changesets and write versions + changelog (the release write).
 
     The sole main-only writer of version state (PRJ-002 D3). Run from a
@@ -1570,8 +1660,19 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     before anything is written, and one whose range would exclude the backbone
     the release ships (an upper bound `--no-broaden` keeps) is warned of before
     the confirmation. See `.pkit/release/README.md`.
+
+    With `--tag --push` the tag's push changes the hosting service, so the
+    cross-repository guard runs first, before anything is written, as for
+    `version tag --push`.
     """
     source_kit = _target_kit()
+    clearance = (
+        _cleared_at_entry(
+            source_kit.parent, allow_foreign_repo, unchanged="Nothing was written or pushed."
+        )
+        if tag and push
+        else None
+    )
     plan = compute_release(source_kit)
     _print_release_plan(plan)
     _warn_migration_mismatches(source_kit, plan)
@@ -1581,11 +1682,11 @@ def release_apply(tag: bool, push: bool, no_broaden: bool, yes: bool) -> None:
     for warning in check_raised_ranges(plan, broaden=broaden):
         click.echo(f"warning: {warning}", err=True)
     if plan.is_empty:
-        apply_release(source_kit, plan, tag=tag, push=push, broaden=broaden)
+        apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
         return
     if not yes:
         click.confirm("Write these versions and consume the changesets?", abort=True)
-    apply_release(source_kit, plan, tag=tag, push=push, broaden=broaden)
+    apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
 
 
 @release.command("check")
@@ -1767,8 +1868,14 @@ def release_lint(skip: bool | None) -> None:
     help="Where the base merges through a queue: enqueue a head the queue already dropped. "
     "Without it, such a head is refused until new commits are pushed.",
 )
+@_allow_foreign_repo_option
 def release_merge(
-    pr: int, dry_run: bool, no_wait: bool, wait_minutes: float | None, force: bool
+    pr: int,
+    dry_run: bool,
+    no_wait: bool,
+    wait_minutes: float | None,
+    force: bool,
+    allow_foreign_repo: bool,
 ) -> None:
     """Merge a release PR — the sanctioned path for a `chore(release):` PR.
 
@@ -1786,17 +1893,34 @@ def release_merge(
     dropped is not enqueued again without `--force`. It does **not** tag —
     `release-tag.yml` cuts the backbone tag on the resulting push to `main`
     (PRJ-004). Human-gated: a human decides to run it; nothing auto-merges.
+
+    The cross-repository guard runs first, once, for the merge and the branch
+    clean-up alike: in another repository than the session's anchor's it asks
+    at a terminal and refuses without one, unless `--allow-foreign-repo`
+    confirms it; with no session's anchor, as in a pipeline, it does not fire.
+    A dry run never asks: it ends as a run with nobody to ask would, and
+    reports how the guard passed.
     """
     if no_wait and wait_minutes is not None:
         raise click.UsageError("--no-wait and --wait-minutes are mutually exclusive.")
     if wait_minutes is not None and not math.isfinite(wait_minutes):
         raise click.BadParameter("not a number of minutes", param_hint="--wait-minutes")
     wait_seconds = 0.0 if no_wait else (wait_minutes * 60 if wait_minutes is not None else None)
-    source_kit = _target_kit()
+    repo_root = _target_kit().parent
+    passage = _cleared_at_entry(
+        repo_root, allow_foreign_repo, unchanged="Nothing was merged.", dry_run=dry_run
+    )
     report = merge_release_pr(
-        source_kit.parent, pr, dry_run=dry_run, wait_seconds=wait_seconds, force=force
+        repo_root,
+        pr,
+        clearance=passage,
+        dry_run=dry_run,
+        wait_seconds=wait_seconds,
+        force=force,
     )
     click.echo(report.text)
+    if dry_run:
+        click.echo(f"  cross-repository guard: {passage.describe()}")
     if report.exit_code:
         raise SystemExit(report.exit_code)
 
@@ -1809,7 +1933,8 @@ def release_merge(
     default=False,
     help="Print the notes that would be published without calling `gh`.",
 )
-def release_publish_notes(version: str, dry_run: bool) -> None:
+@_allow_foreign_repo_option
+def release_publish_notes(version: str, dry_run: bool, allow_foreign_repo: bool) -> None:
     """Publish a notes-only GitHub Release for `v<version>` from CHANGELOG.md.
 
     Extracts that version's `CHANGELOG.md` section and creates the GitHub
@@ -1819,9 +1944,17 @@ def release_publish_notes(version: str, dry_run: bool) -> None:
     never a file / tarball / wheel channel. Repo is derived from the ambient
     `gh` context (no hardcoded owner/repo). A missing tag is a clear error;
     `--dry-run` prints the notes without calling `gh`.
+
+    The cross-repository guard runs first, as for `release merge`: in another
+    repository than the session's anchor's it asks at a terminal and refuses
+    without one, unless `--allow-foreign-repo` confirms it; with no session's
+    anchor, as in a pipeline, it does not fire. A dry run never asks.
     """
-    source_kit = _target_kit()
-    click.echo(publish_release_notes(source_kit.parent, version, dry_run=dry_run))
+    repo_root = _target_kit().parent
+    passage = _cleared_at_entry(
+        repo_root, allow_foreign_repo, unchanged="Nothing was published.", dry_run=dry_run
+    )
+    click.echo(publish_release_notes(repo_root, version, clearance=passage, dry_run=dry_run))
 
 
 @release.command("check-shareable")

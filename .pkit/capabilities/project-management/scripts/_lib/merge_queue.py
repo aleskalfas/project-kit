@@ -166,6 +166,11 @@ class Wait:
     reading: Reading
 
 
+#: A request's document's `reason_kind` when the backbone's cross-repository
+#: guard refused it, and made no request.
+FOREIGN_REPOSITORY = "foreign-repository"
+
+
 @dataclass(frozen=True)
 class Outcome:
     """What a merge request the backbone made came to (`_lib.pr_merge`)."""
@@ -176,6 +181,15 @@ class Outcome:
     exit_code: int | None
     #: Why it was not accepted, in gh's words or the backbone's.
     reason: str
+    #: :data:`FOREIGN_REPOSITORY` when the backbone's cross-repository guard
+    #: refused the request, which was then not made; "" otherwise — and from a
+    #: backbone whose document does not say.
+    reason_kind: str = ""
+    #: The backbone's guard as its document states it — `verdict` (the
+    #: comparison alone), `undetermined_kind`, `anchor`, `target`, `cleared`
+    #: (how it let the request through; null when it refused) — or None when
+    #: it does not.
+    guard: Mapping[str, Any] | None = None
 
 
 def read(pr_number: int, config: dict[str, Any]) -> Reading:
@@ -252,7 +266,11 @@ def request(args: list[str], config: dict[str, Any]) -> Outcome:
     """A merge request the backbone makes (`merge`, `enqueue`, `dequeue`), and
     what it came to. Raises :class:`Unreadable` when the backbone gives no
     answer, or one that does not say whether the request was accepted — the
-    request may then have been made, or not."""
+    request may then have been made, or not.
+
+    The backbone runs the cross-repository guard before the request; a
+    request it refused is not accepted, with `reason_kind`
+    :data:`FOREIGN_REPOSITORY` and what the guard compared."""
     document = _first(args, config)
     accepted = document.get("accepted")
     if not isinstance(accepted, bool):
@@ -261,10 +279,13 @@ def request(args: list[str], config: dict[str, Any]) -> Outcome:
             f"(`accepted`: {accepted!r})"
         )
     exit_code = document.get("exit_code")
+    guard = document.get("guard")
     return Outcome(
         accepted=accepted,
         exit_code=exit_code if isinstance(exit_code, int) else None,
         reason=str(document.get("reason") or ""),
+        reason_kind=_text(document.get("reason_kind")),
+        guard=guard if isinstance(guard, Mapping) else None,
     )
 
 

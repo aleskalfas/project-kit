@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-02T00:34:56Z
+        at: 2026-10-02T00:55:25Z
         outcome: unchanged
-        unchanged-because: done-work's only change is that its warning after a failed move to Done names the issue in the move-issue line it prints; nothing of a stabilisation, its freeze or its guards changed
+        unchanged-because: the backbone now runs the cross-repository guard on every change it makes on the hosting service; what this page says of the commands and the areas it indexes still holds
 ---
 
 # Glossary

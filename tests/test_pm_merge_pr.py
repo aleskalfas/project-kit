@@ -385,7 +385,7 @@ def _wire_merge_seams(
         calls["ci_audit_head"] = head
         return True
 
-    def _stub_merge(pr_number, *, pr_title, admin, config, head_oid=""):
+    def _stub_merge(pr_number, *, pr_title, admin, config, head_oid="", allow_foreign_repo=False):
         calls["merged"] = True
         calls["merge_kwargs"] = {"pr_title": pr_title, "admin": admin}
         calls["merge_head"] = head_oid
@@ -530,7 +530,7 @@ def test_merge_failure_exits_3_and_skips_hooks_and_cleanup(mp, monkeypatch):
     """A failed remote merge is a gh failure (exit 3); nothing after it runs."""
     calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
 
-    def failing_merge(pr_number, *, pr_title, admin, config, head_oid=""):
+    def failing_merge(pr_number, *, pr_title, admin, config, head_oid="", allow_foreign_repo=False):
         calls["order"].append(("merged", pr_number))
         return False
 
@@ -645,7 +645,7 @@ def _wire_queue(mp, monkeypatch, readings, **seams):
             raise reading
         return reading
 
-    def enqueue(pr_number, *, config, head_oid=""):
+    def enqueue(pr_number, *, config, head_oid="", allow_foreign_repo=False):
         calls["order"].append(("enqueued", pr_number))
         calls["enqueue_head"] = head_oid
         return True
@@ -882,7 +882,9 @@ def test_a_merge_with_no_answer_back_that_merged_fires_the_hooks(mp, monkeypatch
     rather than a re-run refusing it as merged by someone else."""
     calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
 
-    def no_answer_back(pr_number, *, pr_title, admin, config, head_oid=""):
+    def no_answer_back(
+        pr_number, *, pr_title, admin, config, head_oid="", allow_foreign_repo=False
+    ):
         calls["merged"] = True
         calls["order"].append(("merged", pr_number))
         return None
@@ -901,7 +903,9 @@ def test_a_merge_with_no_answer_back_github_cannot_settle_is_owed(mp, monkeypatc
     "nothing merged", which would leave a merge without its hooks."""
     calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
 
-    def no_answer_back(pr_number, *, pr_title, admin, config, head_oid=""):
+    def no_answer_back(
+        pr_number, *, pr_title, admin, config, head_oid="", allow_foreign_repo=False
+    ):
         calls["order"].append(("asked", pr_number))
         return None
 

@@ -6,7 +6,8 @@ mechanic (`pull_request_landing`, #1200). The pure logic is tested directly;
 `merge_release_pr` runs on a fake GitHub (`_Host`) with and without a merge
 queue — no real merge, no network, no hardcoded repo. The post-merge branch
 deletion (`_gh_delete_remote_branch` / `_git_cleanup_local`, #897) is tested
-with `subprocess.run` stubbed.
+with `subprocess.run` stubbed. The cross-repository guard `pkit release merge`
+runs at its entry (#1254) is tested on real repositories.
 """
 
 from __future__ import annotations
@@ -20,8 +21,10 @@ from typing import Any
 
 import click
 import pytest
+from click.testing import CliRunner
 
-from project_kit import release
+from project_kit import cli, release, session_guard
+from tests import sessions
 
 # --- check-rollup summarisation --------------------------------------
 
@@ -453,8 +456,20 @@ def _land(
     monkeypatch.setattr(release.pull_request_landing, "_sleep", sleep)
     monkeypatch.setattr(release.pull_request_landing, "_monotonic", lambda: now[0])
     return release.merge_release_pr(
-        Path("/repo"), 42, wait_seconds=wait_seconds, dry_run=dry_run, force=force
+        Path("/repo"),
+        42,
+        clearance=_cleared(Path("/repo")),
+        wait_seconds=wait_seconds,
+        dry_run=dry_run,
+        force=force,
     )
+
+
+def _cleared(repo_root: Path) -> session_guard.Clearance:
+    """The cross-repository guard's clearance for `repo_root`, outside any session."""
+    cleared = session_guard.clear(repo_root, confirmed=False, interactive=False)
+    assert isinstance(cleared, session_guard.Clearance)
+    return cleared
 
 
 def _merge_green(monkeypatch: pytest.MonkeyPatch, **raw: Any) -> str:
@@ -802,14 +817,16 @@ def test_a_merge_gh_only_enqueued_is_waited_for_not_taken_for_a_merge(
 def test_the_cli_returns_the_reports_exit_and_takes_the_queue_flags(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from click.testing import CliRunner
-
-    from project_kit import cli
-
     asked: list[tuple[float | None, bool]] = []
 
     def merge(
-        repo_root: Path, pr: int, *, dry_run: bool, wait_seconds: float | None, force: bool
+        repo_root: Path,
+        pr: int,
+        *,
+        clearance: session_guard.Clearance,
+        dry_run: bool,
+        wait_seconds: float | None,
+        force: bool,
     ) -> Any:
         asked.append((wait_seconds, force))
         return release.ReleaseMergeReport("[queued] held", 4)
@@ -824,6 +841,96 @@ def test_the_cli_returns_the_reports_exit_and_takes_the_queue_flags(
     assert asked == [(0.0, False), (300.0, False), (None, True)]
     both = runner.invoke(cli.main, ["release", "merge", "42", "--no-wait", "--wait-minutes", "5"])
     assert both.exit_code == 2
+
+
+# --- the cross-repository guard (#1254) -------------------------------
+
+
+def test_a_clearance_for_another_repository_merges_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The clearance covers the repository the guard looked at: one for
+    another stops the run before it reads the PR."""
+    host = _Host(queue=False)
+    monkeypatch.setattr(release.pull_request_landing, "gh_runner", lambda cwd: host)
+    with pytest.raises(ValueError, match="the clearance is for"):
+        release.merge_release_pr(Path("/repo"), 42, clearance=_cleared(Path("/elsewhere")))
+    assert host.commands == []
+
+
+@pytest.fixture
+def cleared_merges(monkeypatch: pytest.MonkeyPatch) -> list[tuple[Path, str, bool]]:
+    """`merge_release_pr` stubbed: each run's repository, how its clearance
+    passed, and whether it was a dry run."""
+    runs: list[tuple[Path, str, bool]] = []
+
+    def merge(
+        repo_root: Path, pr: int, *, clearance: session_guard.Clearance, dry_run: bool, **_: Any
+    ) -> release.ReleaseMergeReport:
+        runs.append((repo_root, clearance.passed, dry_run))
+        return release.ReleaseMergeReport(f"Merged release PR #{pr}.")
+
+    monkeypatch.setattr(cli, "merge_release_pr", merge)
+    return runs
+
+
+@pytest.fixture
+def foreign(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A session rooted in one repository, and `release merge` run in another."""
+    _, target = sessions.rooted_elsewhere(tmp_path, monkeypatch)
+    monkeypatch.setattr(cli, "_target_kit", lambda: target / ".pkit")
+    return target
+
+
+def test_in_another_repository_with_no_terminal_and_no_flag_nothing_merges(
+    foreign: Path, cleared_merges: list[tuple[Path, str, bool]]
+) -> None:
+    result = CliRunner().invoke(cli.main, ["release", "merge", "42"])
+    assert result.exit_code == 1
+    assert "the cross-repository guard refused" in result.stderr
+    assert "--allow-foreign-repo" in result.stderr and "Nothing was merged" in result.stderr
+    assert cleared_merges == []
+
+
+def test_the_flag_confirms_a_release_merge_in_another_repository(
+    foreign: Path, cleared_merges: list[tuple[Path, str, bool]]
+) -> None:
+    result = CliRunner().invoke(cli.main, ["release", "merge", "42", "--allow-foreign-repo"])
+    assert result.exit_code == 0
+    assert cleared_merges == [(foreign, "flag", False)]
+
+
+def test_in_a_pipeline_with_no_anchor_it_needs_no_flag(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    cleared_merges: list[tuple[Path, str, bool]],
+) -> None:
+    target = sessions.repository(tmp_path / "target", "https://github.com/octo/project.git")
+    monkeypatch.setattr(cli, "_target_kit", lambda: target / ".pkit")
+    result = CliRunner().invoke(cli.main, ["release", "merge", "42"])
+    assert result.exit_code == 0
+    assert cleared_merges == [(target, "undetermined", False)]
+
+
+def test_a_dry_run_reports_the_verdict_and_asks_nothing(
+    foreign: Path, cleared_merges: list[tuple[Path, str, bool]]
+) -> None:
+    """A dry run never asks: in another repository without the flag it ends
+    refused, as a run with nobody to ask would, saying what a real run would
+    do; with it, it reports how the guard passed."""
+    refused = CliRunner().invoke(cli.main, ["release", "merge", "42", "--dry-run"])
+    assert refused.exit_code == 1
+    assert "A dry run does not ask; a run at a terminal would ask" in refused.stderr
+    assert "no terminal to ask" not in refused.stderr
+    assert cleared_merges == []
+    flagged = CliRunner().invoke(
+        cli.main, ["release", "merge", "42", "--dry-run", "--allow-foreign-repo"]
+    )
+    assert flagged.exit_code == 0
+    assert "cross-repository guard: another repository than the session's anchor" in (
+        flagged.stdout
+    )
+    assert cleared_merges == [(foreign, "flag", True)]
 
 
 # --- post-merge branch deletion (#897) -------------------------------

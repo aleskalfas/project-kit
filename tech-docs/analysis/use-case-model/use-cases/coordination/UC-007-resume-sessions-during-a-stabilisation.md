@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-02T00:34:58Z
+      at: 2026-10-02T00:55:26Z
       outcome: unchanged
-      unchanged-because: done-work's only change is that its warning after a failed move to Done names the issue in the move-issue line it prints; resuming sessions during a stabilisation, and the guards this use case intends, are untouched
+      unchanged-because: "#1254 has done-work and merge-pr pass the cross-repository confirmation on to the backbone's own guard; resuming sessions, the start and landing guards of a stabilisation (still unbuilt, EPIC #943) and the steps here are unchanged, so it holds"
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation
