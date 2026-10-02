@@ -1,0 +1,63 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit pull-request land <n> --head <sha> --subject <text>` performs the
+  landing sequence in one command. It runs the cross-repository guard once,
+  takes one reading, applies the caller's options to it (`--seconds`,
+  `--allow-dropped-head`, `--admin`, `--direct-only`, `--queued-bad-shape
+  refuse|warn`, `--no-request`, `--allow-foreign-repo`), sends the direct
+  squash merge or the enqueue pinned to `<sha>`, waits, and takes the pull
+  request out of the queue when a reading finds another head. It refuses in
+  one order — `request-not-allowed` (with `--no-request`, which allows no
+  merge and no enqueue: a pull request queued at `<sha>` is waited for, one
+  queued at another head still taken out), then `admin-on-queue`,
+  `queue-not-allowed`, `queue-not-squash`, `dropped-head`, `squash-defaults`,
+  the defaults read last — and no option makes an administrator merge on a
+  base with a queue, or hands a pull request to a queue that would not make
+  its squash commit. Only an open pull request gets a request. It never
+  deletes a branch. With `--json` it writes a `reading`, a `requesting` line
+  before each request is sent, a `requested` line once it is settled, and
+  one `end` document whose `ended` is one of twelve kinds, every key in
+  every document: its `reason_kind`, `sent`, `dequeue`, `shape`, `warnings`
+  (`queue-not-squash`, `squash-defaults`, `unreadable`, `auto-merge-armed`
+  for auto-merge left armed on a pull request it held whose direct merge
+  fails or is unconfirmed, `enqueued-instead` for a direct merge the service
+  queued — for a pull request auto-merge held, a queue entry it did not
+  have), `guard`,
+  `merged_head`, `merge_commit` and `bound_seconds`, the longest the landing
+  can run with those options. A merged end always names `merged_head`.
+  `pull_request_landing.decode_end` decodes the end strictly by its `ended`.
+  A write that fails before any request ends the landing with nothing sent;
+  once a request has gone out, it stops the writing, not the landing.
+  `--dry-run` reads and judges, sends nothing, never asks, and ends
+  `planned` with what it would do. Exits are for a person; callers read the
+  document. `--head` must be a full commit id, and the sequence refuses any
+  other form itself, imported as by command. The reading gains
+  `merge_commit`; `wait_for_merge` gains `on_reading`. `pkit release merge`
+  now lands through the sequence, planning it first, and decides on the
+  decoded end document. Its outcomes change: every landing run reads once
+  more first; a pull request auto-merge holds on a base without a queue is
+  gated and merged directly, and where its requirements are unmet gh refuses
+  the merge, exit 1, with a warning that auto-merge is still armed, which an
+  unconfirmed merge of such a pull request gives too, for the case that the
+  merge was not made; a head that moved between its view and the landing's
+  reading exits 3 with nothing sent, where it used to exit 1; a base changed
+  to one whose queue would not make the release's commit is refused at the
+  landing's reading, exit 1; a queue switched on after its view is enqueued
+  into, the defaults read; a direct merge GitHub queued instead is waited
+  for with the `enqueued-instead` warning in release's words — this run did
+  not judge the commit the queue makes, and what to read to judge it; a
+  release pull request closed without merging after its view exits
+  0, "nothing to merge" — exit 0 does not mean merged, so a script reads
+  `pkit pull-request read <n> --json` — where it used to exit 1; a direct
+  merge that merged at another head deletes the head branch at the head that
+  merged, with a warning; a pull request the plan finds queued that leaves
+  the queue before the landing is refused, nothing sent, exit 1; a head its
+  view names in another form than a full commit id, or a view `gh` answers
+  with something that is not JSON, ends the run having asked nothing.
+  `pkit pull-request` takes an HTTP 408 for no answer, a dequeue that could
+  not read the pull request before sending anything says `reason_kind:
+  unreadable`, and the readings that settle a request stop at their stated
+  most.
