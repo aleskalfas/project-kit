@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 import click
@@ -143,3 +144,65 @@ def test_cli_new_adapter_takes_a_name_reserved_for_capabilities_alone(
     backbone = manifest.read_backbone_manifest(kit_target)
     assert backbone is not None
     assert [c.name for c in backbone.components if c.kind == "adapter"] == [name]
+
+
+# --- a name a capability holds (#1306) --------------------------------
+#
+# An adapter and a capability cannot share a name: the release keys components
+# by name, every registered component's validators are owned by its name, and the
+# wiring resolver reads the registry by name. A capability holds its name once it
+# is registered, or once its directory exists under `.pkit/capabilities/`.
+
+
+def _capability_registered(target: Path, name: str) -> None:
+    backbone = manifest.read_backbone_manifest(target)
+    assert backbone is not None
+    backbone.components.append(
+        manifest.ComponentRegistryEntry(
+            kind="capability", name=name, manifest=f".pkit/capabilities/{name}/manifest.yaml"
+        )
+    )
+    write_backbone_manifest(target, backbone)
+
+
+def _capability_on_disk(target: Path, name: str) -> None:
+    (target / ".pkit" / "capabilities" / name).mkdir(parents=True)
+
+
+@pytest.mark.parametrize(
+    ("hold", "where"),
+    [
+        (_capability_registered, "registered in `.pkit/manifest.yaml`"),
+        (_capability_on_disk, "at `.pkit/capabilities/shared/`"),
+    ],
+)
+def test_cli_new_adapter_refuses_a_name_a_capability_holds(
+    kit_target: Path, hold: Callable[[Path, str], None], where: str
+) -> None:
+    hold(kit_target, "shared")
+    result = CliRunner().invoke(main, ["new", "adapter", "shared"])
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert f"adapter name 'shared' is held by the capability 'shared' {where}" in output
+    assert "an adapter and a capability cannot share a name" in output
+    assert "a release would move only one of the two" in output
+    assert not (kit_target / ".pkit" / "adapters" / "shared").exists()
+    backbone = manifest.read_backbone_manifest(kit_target)
+    assert backbone is not None
+    assert [c.name for c in backbone.components if c.kind == "adapter"] == []
+
+
+def test_register_kit_shipped_component_refuses_a_name_a_capability_holds(
+    kit_target: Path,
+) -> None:
+    _capability_registered(kit_target, "shared")
+    with pytest.raises(click.ClickException, match="is held by the capability 'shared'"):
+        register_kit_shipped_component(
+            kit_target,
+            kind="adapter",
+            name="shared",
+            manifest_path=".pkit/adapters/shared/project/manifest.yaml",
+        )
+    backbone = manifest.read_backbone_manifest(kit_target)
+    assert backbone is not None
+    assert [c.kind for c in backbone.components] == ["capability"]
