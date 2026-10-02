@@ -544,9 +544,15 @@ def main() -> int:
     # closes nothing, over the parent issues and the Milestones alike.
     if not args.no_cascade:
         parent_num = body_parent_ref.parent_issue(body, structural_type, issue_types)
+        unrecognised = body_parent_ref.unrecognised_parent_line(body, structural_type, issue_types)
         if parent_num is not None:
             print(f"\n[cascade] parents to check for eligibility: #{parent_num}")
             _check_parent_eligibility(parent_num, config)
+        elif unrecognised is not None:
+            print(
+                f"\n[warn] #{args.issue_number}'s {unrecognised}; parent check skipped.",
+                file=sys.stderr,
+            )
         else:
             print("\n[cascade] no parent ref found in body; parent check skipped.")
         milestone_nums = issue_milestones(issue)

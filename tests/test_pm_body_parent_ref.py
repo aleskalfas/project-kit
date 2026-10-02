@@ -194,6 +194,47 @@ def test_an_issue_whose_type_cannot_be_told_names_any_labelled_issue(
     assert bpr.parent_issue(body, "spike", {"types": {"spike": {}}}) == parent
 
 
+@pytest.mark.parametrize(
+    ("structural_type", "line"),
+    [
+        ("feature", "Epic: #5"),
+        ("feature", "Feature: #12 — auth"),
+        ("feature", "Umbrella: #7"),
+        ("feature", "EPIC:#5"),
+        ("task", "Related: #45"),
+        ("epic", "Feature: #12"),
+    ],
+)
+def test_a_line_that_looks_like_a_parent_ref_but_is_not_an_allowed_form_is_said(
+    bpr, issue_types, forms, structural_type, line
+) -> None:
+    """A cascade that finds no parent must not say the body names none: the
+    line, and the forms the type allows, are quoted for it to say instead."""
+    body = f"{line}\n\n## What\n"
+    assert bpr.parent_issue(body, structural_type, issue_types) is None
+    assert bpr.unrecognised_parent_line(body, structural_type, issue_types) == (
+        f"first line `{line}` is not a parent-ref a {structural_type} may have: "
+        f"{forms[structural_type]}"
+    )
+
+
+@pytest.mark.parametrize(
+    ("structural_type", "body"),
+    [
+        ("feature", "EPIC: #5\n"),  # an allowed form
+        ("feature", "Milestone: [#3](../milestone/3)\n"),
+        ("epic", "Milestone: #3\n"),  # the deprecated milestone form ends the walk
+        ("task", "## What\nFeature: #5\n"),  # names no parent at all
+        ("task", ""),
+        (None, "Epic: #5\n"),  # no type, so no forms to hold the line to
+    ],
+)
+def test_a_line_with_nothing_to_say_about_it_is_not_said(
+    bpr, issue_types, structural_type, body
+) -> None:
+    assert bpr.unrecognised_parent_line(body, structural_type, issue_types) is None
+
+
 # --- a milestone first line follows a milestone move (#1049) -------------
 
 

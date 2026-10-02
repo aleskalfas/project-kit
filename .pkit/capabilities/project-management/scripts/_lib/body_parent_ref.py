@@ -54,6 +54,12 @@ _ISSUE_OPTION = re.compile(r"^([A-Za-z]+):\s*#<N>\s*$")
 # whose type, and so whose allowed forms, cannot be told (:func:`parent_issue`).
 _ANY_ISSUE_LINE = re.compile(r"^(?P<label>[A-Za-z]+):\s+#(?P<number>\d+)")
 
+# A first line that looks like a parent-ref to a reader, matched loosely — any
+# word, any spacing after the colon, anything after the number — so a line a
+# type's forms do not accept is told apart from a line that names no parent at
+# all (:func:`unrecognised_parent_line`).
+_LOOKS_LIKE_ISSUE_LINE = re.compile(r"^(?P<label>[A-Za-z]+):\s*#\d+")
+
 
 @dataclass(frozen=True)
 class ParentRef:
@@ -144,16 +150,46 @@ def parent_issue(body: str, structural_type: str | None, issue_types: dict) -> i
     ``<Label>: #<N>`` first line names the parent, except a milestone ref in
     either form, so an untyped tree is walked as it always was.
     """
-    types = issue_types.get("types") if isinstance(issue_types, dict) else None
-    entry = types.get(structural_type) if isinstance(types, dict) and structural_type else None
-    form = entry.get("parent_ref_form") if isinstance(entry, dict) else None
-    if isinstance(form, str) and form.strip():
+    form = _parent_ref_form(structural_type, issue_types)
+    if form is not None:
         ref = parse_first_line(body, form)
         return ref.issue_number if ref is not None else None
     m = _ANY_ISSUE_LINE.match(first_line(body))
     if m is None or m.group("label") == MILESTONE_LABEL:
         return None
     return int(m.group("number"))
+
+
+def unrecognised_parent_line(
+    body: str, structural_type: str | None, issue_types: dict
+) -> str | None:
+    """What to say of a first line that looks like a parent-ref but is not one
+    the issue's type allows, or ``None`` when there is nothing to say.
+
+    A cascade that reads ``Epic: #5``, ``Feature: #12 — auth``, or a Feature's
+    ``Umbrella: #7`` finds no parent (:func:`parent_issue`), and must not then
+    report that the body names none: it names one in a form the type does not
+    accept. The sentence quotes the line and the forms the type allows, for the
+    caller to put after the issue's number. ``None`` when the type, and so its
+    forms, cannot be told; when the line is an allowed form; when it is a
+    milestone ref, in either form; and when it does not look like a ref at all.
+    """
+    form = _parent_ref_form(structural_type, issue_types)
+    if form is None:
+        return None
+    line = first_line(body)
+    m = _LOOKS_LIKE_ISSUE_LINE.match(line)
+    if m is None or m.group("label") == MILESTONE_LABEL or parse_first_line(body, form):
+        return None
+    return f"first line `{line}` is not a parent-ref a {structural_type} may have: {form.strip()}"
+
+
+def _parent_ref_form(structural_type: str | None, issue_types: dict) -> str | None:
+    """The `parent_ref_form` ``issue_types`` declares for the type, or ``None``."""
+    types = issue_types.get("types") if isinstance(issue_types, dict) else None
+    entry = types.get(structural_type) if isinstance(types, dict) and structural_type else None
+    form = entry.get("parent_ref_form") if isinstance(entry, dict) else None
+    return form if isinstance(form, str) and form.strip() else None
 
 
 def milestone_line(number: int) -> str:
