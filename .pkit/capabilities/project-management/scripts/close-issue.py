@@ -131,7 +131,13 @@ from _lib.milestone import (
     list_milestone_children,
     resolve_close_trigger,
 )
-from _lib.move_journal import PROCESS_ADDRESS, journal_move, report_unrecorded
+from _lib.move_journal import (
+    PR_MERGE_CLOSE,
+    PROCESS_ADDRESS,
+    journal_move,
+    pr_merge_close_reason,
+    report_unrecorded,
+)
 from _lib.structural_type import infer_structural_type
 
 VALID_MODES = ("wont-do", "pr-merge", "cascade-eligibility-close")
@@ -413,8 +419,11 @@ def main() -> int:
             # GitHub closed the issue and wrote no label: the move to done is
             # recorded here, from where the merge found it — unless its label
             # already says done (done-work's move-issue wrote it, or a re-run).
-            merged_by = f": closed by merged PR #{args.pr}" if args.pr is not None else ""
-            close_move.record(f"pr-merge close{merged_by}")
+            close_move.record(
+                pr_merge_close_reason(args.pr, closed_by_merge=True)
+                if args.pr is not None
+                else PR_MERGE_CLOSE
+            )
         print(f"\n[ok] noted pr-merge close for #{args.issue_number}.")
 
     elif args.mode == "cascade-eligibility-close":
@@ -576,7 +585,13 @@ def main() -> int:
             for mnum in milestone_nums:
                 _check_milestone_eligibility(mnum, config, issue_types, classification)
 
-    # Fire after_close_issue hooks per DEC-024.
+    # Fire after_close_issue hooks per DEC-024. The occurrence is when the issue
+    # was closed: a re-run on the same close reads the same time, so its hook
+    # comment posts nothing new, and a close after a reopen has a time of its
+    # own, so its comment posts (#1243). An issue already closed when this run
+    # began carries the time in the read made then; one this run closed is read
+    # again, and only if a `post-comment` hook is about to post.
+    closed_at = str(issue.get("closedAt") or "") if state == "closed" else ""
     fire_hooks(
         "after_close_issue",
         context={
@@ -587,6 +602,7 @@ def main() -> int:
         },
         config=config,
         capability_root=capability_root,
+        occurrence=lambda: closed_at or _closed_at(args.issue_number, config),
     )
 
     return 0
@@ -680,7 +696,7 @@ def _close_leaf_through_pr(
         substrate_map=substrate_map,
     ):
         return 3
-    close_move.record(f"pr-merge close: completed by merged PR #{args.pr}")
+    close_move.record(pr_merge_close_reason(args.pr, closed_by_merge=False))
     print(f"\n[ok] closed #{issue_number} (pr-merge through PR #{args.pr}, completed).")
     return None
 
@@ -946,7 +962,14 @@ def _find_open_children(parent_num: int, config: dict) -> list[int] | None:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(issue_number, config, fields="title,body,state,labels,milestone")
+    return gh_get_issue(issue_number, config, fields="title,body,state,labels,milestone,closedAt")
+
+
+def _closed_at(issue_number: int, config: dict) -> str:
+    """When the issue was last closed, as GitHub reports it, or "" when it is
+    open or cannot be read."""
+    issue = gh_get_issue(issue_number, config, fields="closedAt")
+    return str((issue or {}).get("closedAt") or "")
 
 
 def _gh_comment(issue_number: int, body: str, config: dict) -> bool:

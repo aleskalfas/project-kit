@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-02T02:25:44Z
+      at: 2026-10-02T03:13:52Z
       outcome: unchanged
-      unchanged-because: a merged pull request's head branch is deleted through the backbone, only at the head that merged; what this page says of the areas and commands it indexes still holds
+      unchanged-because: "done-work's move of its own issue to Done is now journaled with the pull-request-merge reason; the Milestone's stabilisation, release scope and the guards on start-work, done-work and merge-pr (still unbuilt, EPIC #943) are unchanged, so it holds"
 ---
 
 # UC-010 — Stabilise a Milestone for a release

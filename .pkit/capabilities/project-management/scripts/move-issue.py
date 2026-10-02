@@ -232,6 +232,18 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--merged-pr",
+        type=int,
+        default=None,
+        metavar="PR",
+        help=(
+            "With --to done only: the merged PR that completed the issue. Where "
+            "a journal is kept, the move's entry gives it as the reason, worded "
+            "as close-issue words it for the other issues a PR closes "
+            "(`pr-merge close: closed by merged PR #<PR>`). done-work passes it."
+        ),
+    )
+    parser.add_argument(
         "--no-cascade",
         action="store_true",
         help="Skip the forward cascade on the issue's ancestors.",
@@ -257,6 +269,13 @@ def main() -> int:
     )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
+
+    if args.merged_pr is not None and args.to != "done":
+        print(
+            f"error: --merged-pr applies to --to done only (got --to {args.to}).",
+            file=sys.stderr,
+        )
+        return 2
 
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:
@@ -317,6 +336,13 @@ def main() -> int:
     state = str(issue.get("state", "")).lower()
     milestone = issue.get("milestone") or {}
     closed_as = _close_reason(issue)
+    # The reason the move to done is journaled with when a merged PR made it
+    # (`--merged-pr`): an issue already closed is one the merge closed.
+    merge_reason = (
+        move_journal.pr_merge_close_reason(args.merged_pr, closed_by_merge=state == "closed")
+        if args.merged_pr is not None
+        else None
+    )
 
     structural_type = infer_structural_type(
         title, issue_types, classification=classification, labels=labels
@@ -445,6 +471,7 @@ def main() -> int:
                         labels=labels,
                         substrate_map=substrate_map,
                         actor=invoker.github_login,
+                        reason=merge_reason,
                     )
         # The forward cascade is idempotent, so the issue already being in place
         # does not end the walk: re-running a move whose cascade left an ancestor
@@ -642,12 +669,15 @@ def main() -> int:
     # like-with-like against an artifact's `produced_by` login (COR-033 P4).
     # A bypassed move carries its justification as the entry's reason, at every
     # projection: the journal is the canonical trail where it is kept (DEC-049).
+    # A move to done a merged PR made (`--merged-pr`) carries that PR's reason.
+    # No move into done is bypassable in the shipped workflow, so at most one of
+    # the two is given; were both, the bypass's justification is the entry's why.
     _journal_move(
         args.issue_number,
         current_state,
         args.to,
         invoker.github_login,
-        reason=_bypass_journal_reason(bypass_reason),
+        reason=_bypass_journal_reason(bypass_reason) or merge_reason,
     )
 
     # DEC-049 `full` projection: post a provenance-stamped comment for a governed
@@ -671,7 +701,13 @@ def main() -> int:
 
     print(f"\n[ok] transitioned #{args.issue_number}: {current_state} → {args.to}")
 
-    # Fire after_move_issue hooks per DEC-024.
+    # Fire after_move_issue hooks per DEC-024. The occurrence is the issue's
+    # count of landed moves, the one the transition audit key counts by: the
+    # journal's length as read before this move or, where no journal is kept,
+    # the timeline's state-label events, read after it and only if a
+    # `post-comment` hook is about to post. Either has grown by the time the
+    # issue can make the same transition again, so its hook comment posts again
+    # (#1243).
     fire_hooks(
         "after_move_issue",
         context={
@@ -683,6 +719,7 @@ def main() -> int:
         },
         config=config,
         capability_root=capability_root,
+        occurrence=lambda: _landed_moves(args.issue_number, engine_status, config, substrate_map),
     )
 
     return 0
@@ -1008,7 +1045,8 @@ def _landed_moves(
       look alike.
 
     The timeline is read only in the second case, and only on the bypass path
-    that keys an audit comment.
+    that keys an audit comment and for a `post-comment` hook about to post on
+    `after_move_issue`, which names its occurrence by the same count.
     """
     if not _journal_logging_off(status):
         length = _journal_length_from_status(status)
@@ -1041,6 +1079,7 @@ def _journal_closed_issue_relabel(
     labels: list[str],
     substrate_map: axis_labels.SubstrateMap | None,
     actor: str | None,
+    reason: str | None,
 ) -> None:
     """Record the move to done that relabelling a closed issue makes (#1231).
 
@@ -1050,9 +1089,11 @@ def _journal_closed_issue_relabel(
     move on the tracker, and the only one pkit makes: close-issue, which runs
     next, finds the label at done and records nothing. So it is recorded here,
     from where the old label placed the issue (`state_before_close`), as
-    close-issue records a close: not at all when the workflow declares no such
-    move for the issue's type (the engine does not read `applies_to`), which is
-    warned about as a refused move is.
+    close-issue records a close: with ``reason`` — the merged PR's, which
+    done-work passes, is the one close-issue gives the other issues the PR
+    closed — and not at all when the workflow declares no such move for the
+    issue's type (the engine does not read `applies_to`), which is warned about
+    as a refused move is.
     """
     origin = infer.state_before_close(
         milestone=milestone, labels=labels, substrate_map=substrate_map
@@ -1066,7 +1107,7 @@ def _journal_closed_issue_relabel(
             f"declared in workflow.yaml for {structural_type!r}",
         )
         return
-    _journal_move(issue_number, origin, target_state, actor)
+    _journal_move(issue_number, origin, target_state, actor, reason=reason)
 
 
 # ---- gh wrappers ----------------------------------------------------

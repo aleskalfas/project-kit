@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-02T01:25:08Z
+      at: 2026-10-02T03:13:47Z
       outcome: unchanged
-      unchanged-because: "done-work and merge-pr have the backbone delete a merged pull request's head branch only at the head that merged; resuming sessions, the start and landing guards of a stabilisation (still unbuilt, EPIC #943) and the steps here are unchanged, so it holds"
+      unchanged-because: "done-work's move of its own issue to Done after a merge is now journaled with the pull-request-merge reason; resuming sessions, the start and landing guards of a stabilisation (still unbuilt, EPIC #943) and the steps here are unchanged, so it holds"
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation
