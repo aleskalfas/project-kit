@@ -215,6 +215,35 @@ def test_link_parents_sets_relationships(st, issue_types, monkeypatch) -> None:
     assert 2 in issues[1].children
 
 
+def test_a_native_child_elsewhere_is_not_listed_as_the_issue_of_its_number(
+    st, issue_types, monkeypatch
+) -> None:
+    """A native sub-issue in another repository is outside the fetched issues:
+    this repository's issue of the same number is not listed under the parent
+    for it, nor given that parent natively (#1308)."""
+    raw = [
+        {"number": 2, "title": "[Feature] f", "body": "## What\n", "state": "OPEN", "labels": []},
+        {"number": 7, "title": "[Task] t", "body": "## What\n", "state": "OPEN", "labels": []},
+    ]
+    issues = st._parse_issues(raw, issue_types)
+    containment = st.containment
+    monkeypatch.setattr(
+        containment,
+        "read_native_children",
+        lambda _config, *, parent_number: containment.NativeRead(
+            numbers=set(),
+            outcome=containment.NativeReadOutcome.READ,
+            foreign=frozenset({containment.ForeignIssue("acme/other", 7)})
+            if parent_number == 2
+            else frozenset(),
+        ),
+    )
+    st._link_parents(issues, {}, corpus_complete=True, issue_types={})
+    assert issues[2].children == []
+    assert issues[7].parent_number is None
+    assert issues[7].parent_resolution.native is None
+
+
 def test_link_parents_handles_missing_parent_target(st, issue_types, monkeypatch) -> None:
     """Parent ref that doesn't resolve in the loaded set stays unlinked."""
     raw = [

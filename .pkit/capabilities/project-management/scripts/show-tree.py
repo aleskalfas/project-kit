@@ -444,8 +444,10 @@ def _link_parents(
         if not resolution.complete:
             incomplete_parents.append(num)
         for child in resolution.children:
-            if child.number not in issues:
-                continue  # a native child outside the fetched corpus — skip render
+            if child.repository is not None or child.number not in issues:
+                # A native child outside the fetched corpus — one in another
+                # repository among them, never this one's issue of its number.
+                continue
             issue.children.append(child.number)
             issue.child_substrate[child.number] = child.substrate.value
             if child.substrate is containment.ChildSubstrate.NATIVE:
