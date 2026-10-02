@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T02:40:03Z
+      at: 2026-10-02T02:53:18Z
       outcome: unchanged
-      unchanged-because: the process README now names reason as the journal entry's one place for why a move was taken; this page describes the process area in one line, as the shared substrate and the engine behind pkit process, which still holds
+      unchanged-because: the CLI reference gained new decision's --yes and the adr derivation; this page only points at that reference and lists the command families, which are the same
 ---
 
 # project-kit

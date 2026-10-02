@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-10-02T01:43:31Z
+      at: 2026-10-02T02:53:17Z
       outcome: unchanged
-      unchanged-because: The page names capability-author as the skill paired with pkit new capability that walks layout, package metadata and the COR-017 contract; which names a capability may take is the skill's own detail, and the page states none of it.
+      unchanged-because: only decision-author's note on where adr records go changed; the skill's pairing with pkit new decision and the walkthrough this page lists are as described
 ---
 
 # Skills

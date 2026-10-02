@@ -446,7 +446,7 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
 
         monkeypatch.setattr(land.done_work, "_invoke_move_issue", verb("move-issue"))
         monkeypatch.setattr(land.done_work, "_invoke_close_issue", verb("close-issue"))
-        monkeypatch.setattr(land.done_work.pr_merge, "delete_remote_branch", lambda *a, **k: None)
+        monkeypatch.setattr(land.done_work.pr_merge, "delete_branch", lambda *a, **k: None)
         monkeypatch.setattr(land.done_work.pr_merge, "cleanup_local", lambda *a, **k: None)
         return run
 

@@ -455,6 +455,106 @@ def test_a_request_the_backbones_guard_refused_says_so(mq, pkit) -> None:
     assert outcome.guard == guard
 
 
+# --- the head branch's deletion (#1255) -------------------------------------------
+
+
+def _deletion_document(outcome: str, **fields: Any) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "pull_request": 42,
+        "expected": "sha-merged",
+        "outcome": outcome,
+        "branch": "fix/42-x",
+        "tip": None,
+        "reason_kind": None,
+        "reason": None,
+        "merged_head": "sha-merged",
+        "guard": {"verdict": "undetermined", "cleared": "undetermined"},
+        **fields,
+    }
+
+
+def test_a_deletion_reads_how_it_ended_with_the_pinned_gh_host(mq, pkit) -> None:
+    pkit.answers(
+        _deletion_document(
+            "kept", tip="sha-later", reason_kind="tip-moved", reason="its tip is sha-lat"
+        )
+    )
+    deletion = mq.deletion(["42", "--expect", "sha-merged"], {"gh": {"host": "ghe.example"}})
+    assert deletion == mq.BranchDeletion(
+        mq.KEPT, "fix/42-x", "sha-later", "tip-moved", "its tip is sha-lat", "sha-merged"
+    )
+    assert pkit.asked() == [
+        {
+            "argv": ["pull-request", "delete-branch", "42", "--expect", "sha-merged", "--json"],
+            "gh_host": "ghe.example",
+        }
+    ]
+
+
+def test_a_refused_deletion_reads_as_refused_with_why(mq, pkit) -> None:
+    pkit.answers(
+        _deletion_document(
+            "refused",
+            branch=None,
+            reason_kind="foreign-repository",
+            reason="the guard refused",
+            merged_head=None,
+        ),
+        code=1,
+    )
+    deletion = mq.deletion(["42", "--expect", "sha-merged"], {})
+    assert (deletion.outcome, deletion.branch, deletion.reason_kind) == (
+        mq.REFUSED,
+        "",
+        mq.FOREIGN_REPOSITORY,
+    )
+
+
+def test_an_unconfirmed_deletion_reads_as_unconfirmed_with_no_tip(mq, pkit) -> None:
+    """The backbone asked for the deletion and got no usable answer, nor a
+    reading since: whether the branch was deleted is not known, and it states
+    no tip."""
+    pkit.answers(
+        _deletion_document(
+            "unconfirmed",
+            reason_kind="unanswered",
+            reason="the deletion got no usable answer (HTTP 502)",
+        ),
+        code=1,
+    )
+    deletion = mq.deletion(["42", "--expect", "sha-merged"], {})
+    assert deletion == mq.BranchDeletion(
+        mq.UNCONFIRMED,
+        "fix/42-x",
+        "",
+        "unanswered",
+        "the deletion got no usable answer (HTTP 502)",
+        "sha-merged",
+    )
+
+
+@pytest.mark.parametrize(
+    ("document", "why"),
+    [
+        (_deletion_document("landed"), "says no way the deletion ended"),
+        ({k: v for k, v in _deletion_document("gone").items() if k != "tip"}, "has no `tip`"),
+        (_deletion_document("kept", tip=7), "a `tip` that is not text"),
+        (
+            {k: v for k, v in _deletion_document("deleted").items() if k != "merged_head"},
+            "has no `merged_head`",
+        ),
+    ],
+    ids=["unknown-outcome", "missing-field", "field-of-another-type", "no-merged-head"],
+)
+def test_a_deletion_document_pm_cannot_read_is_no_answer(mq, pkit, document, why) -> None:
+    """An unknown `outcome`, or a missing or mistyped field, is no answer: the
+    branch may have been deleted, or not."""
+    pkit.answers(document)
+    with pytest.raises(mq.Unreadable, match=why):
+        mq.deletion(["42", "--expect", "sha-merged"], {})
+
+
 # --- the wait -------------------------------------------------------------------------
 
 
@@ -642,4 +742,11 @@ def test_pm_states_the_backbones_wait_limits_and_endings(mq) -> None:
         landing.PR_TITLE,
         landing.PR_BODY,
         landing.SCHEMA_VERSION,
+    )
+    assert (mq.DELETED, mq.KEPT, mq.GONE, mq.REFUSED, mq.CROSS_REPOSITORY) == (
+        landing.DELETED,
+        landing.KEPT,
+        landing.GONE,
+        landing.REFUSED,
+        landing.CROSS_REPOSITORY,
     )
