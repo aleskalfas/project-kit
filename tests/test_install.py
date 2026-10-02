@@ -16,8 +16,10 @@ from pathlib import Path
 
 import click
 import pytest
+from click.testing import CliRunner
 
 from project_kit import agents_overlay, install
+from project_kit.cli import main
 
 
 @pytest.fixture
@@ -203,6 +205,41 @@ def test_install_kit_refuses_a_source_shipping_an_adapter_under_a_reserved_name(
     assert "the component of the backbone's changesets and the owner of its validators" in message
     assert "Nothing was installed" in message
     assert not (tmp_target / ".pkit").exists()
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_init_refuses_a_source_shipping_an_adapter_and_a_capability_of_one_name(
+    tmp_target: Path, tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Init registers every adapter its source ships, and a capability of that
+    name could then never be installed beside it: an adapter and a capability
+    cannot share a name. `pkit init` refuses such a source, giving the reason,
+    before anything is written (#1306)."""
+    source = tmp_path_factory.mktemp("source") / ".pkit"
+    (source / "decisions").mkdir(parents=True)
+    (source / "adapters" / "claude-code").mkdir(parents=True)
+    (source / "adapters" / "harness").mkdir(parents=True)
+    (source / "capabilities" / "harness").mkdir(parents=True)
+    (source / "capabilities" / "evidence").mkdir(parents=True)
+    monkeypatch.setattr(install, "find_source_kit", lambda: source)
+
+    result = CliRunner().invoke(main, ["init"])
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert "ships an adapter and a capability named 'harness'" in output
+    assert "an adapter and a capability cannot share a name" in output
+    assert "Nothing was installed; one of the two is its source's to rename" in output
+    assert not (tmp_target / ".pkit").exists()
+
+
+def test_the_shipped_source_ships_no_adapter_and_capability_of_one_name() -> None:
+    """The adapters and capabilities this distribution ships are named apart, so
+    `pkit init` takes the source the binary resolves (#1306)."""
+    source = install.find_source_kit()
+    adapters = {p.name for p in (source / "adapters").iterdir() if p.is_dir()}
+    capabilities = {p.name for p in (source / "capabilities").iterdir() if p.is_dir()}
+    assert adapters and capabilities
+    assert adapters.isdisjoint(capabilities), sorted(adapters & capabilities)
 
 
 def test_install_kit_renders_runtime_ignore_gitignore(tmp_target: Path) -> None:

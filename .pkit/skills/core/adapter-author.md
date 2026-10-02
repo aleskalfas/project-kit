@@ -43,6 +43,8 @@ Use the harness's canonical kebab-case name: `claude-code`, `codex`, `cursor`, e
 
 **Reserved name: `backbone`.** `pkit new adapter` refuses it, giving the reason, and `pkit init` refuses a methodology source that ships an adapter under it. `backbone` is the name the backbone carries where a component's carry the component's name, and two of those places read adapters as well as capabilities — the component of the backbone's changesets (`component: backbone` under `.changes/unreleased/`; every `package.yaml` under `.pkit/` is a component there) and the owner of its validators (every registered component's validators are owned by its name) — so an adapter named `backbone` would have its changesets and validators read as the backbone's. An adapter registered under it before it was reserved stays registered; `pkit validate` reports it as an error naming the rename. The other names reserved for capabilities (`core`, `project`, `adr`) collide only where a capability's name is read — decision, agent and schema namespaces, an evidence point's checks — so an adapter may take them.
 
+**Not a capability's name either.** An adapter and a capability cannot share a name: the backbone reads a component by its name alone where it reads both kinds — a changeset names its component and the release keys every `package.yaml` under `.pkit/` by name, so a release would move only one of the two; every registered component's validators are owned by its name, so the two would share one owner; and the wiring resolver reads the component registry by name, so one of the two would be read under the other's kind. `pkit new adapter` refuses a name a capability holds in the project — registered in the backbone manifest, or present at `.pkit/capabilities/<name>/` — giving the reason, as `pkit new capability`, `pkit capabilities install` and `register` refuse a name an adapter holds, and `pkit init` refuses a methodology source that ships an adapter and a capability of one name. A pair registered before the refusal stays registered; `pkit validate` reports it as an error at each of the two, naming its rename.
+
 ### 2. Read the contract
 
 Read `.pkit/decisions/core/COR-005-bundle-pattern.md` ("Adapter structure" and "Universal elements"). Every adapter must ship:
@@ -68,7 +70,7 @@ The command:
 - Creates an empty `migrations/` directory.
 - Registers the adapter in the backbone manifest's `components` registry (so `pkit status` sees it immediately).
 
-The command refuses if an adapter with that name already exists, if the slug isn't kebab-case, or if the name is reserved (`backbone`, see step 1).
+The command refuses if an adapter with that name already exists, if the slug isn't kebab-case, if the name is reserved (`backbone`, see step 1), or if a capability holds it (see step 1).
 
 ### 4. Fill in the README
 

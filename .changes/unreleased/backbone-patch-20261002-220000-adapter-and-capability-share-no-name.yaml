@@ -1,0 +1,28 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+  pr: "1310"
+body: >
+  An adapter and a capability can no longer share a name (#1306). The backbone
+  reads a component by its name alone where it reads both kinds: a changeset
+  names its component and the release keys every `package.yaml` under `.pkit/`
+  by name, so a release would move only one of the two; every registered
+  component's validators are owned by its name, so the two would share one
+  owner; and the wiring resolver reads the component registry by name, so one
+  of the two would be read under the other's kind. The second of the two is
+  refused, giving that reason: `pkit new adapter` refuses a name a capability
+  holds, and `pkit new capability`, `pkit capabilities install` and `register`
+  a name an adapter holds — a component holds its name when `.pkit/manifest.yaml`
+  registers it or its directory exists under `.pkit/adapters/` or
+  `.pkit/capabilities/` — and `pkit init` refuses, before writing anything, a
+  methodology source that ships an adapter and a capability of one name. A
+  project that already has an adapter and a capability registered under one
+  name keeps both registered, and no migration runs, but sees `pkit validate`
+  fail with an error at each one's `component.name` naming its rename: for the
+  capability, `pkit capabilities uninstall <name>` (which keeps an authored
+  capability's files), rename the directory and its `component.name`, and
+  `pkit capabilities register <new-name>`, or, for one a sync restores, its
+  author's rename; for the adapter, its directory, its `component.name` and its
+  entry in `.pkit/manifest.yaml`, or the methodology source's rename for one a
+  sync restores. Renaming either clears both.
