@@ -1,0 +1,17 @@
+component: living-docs
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit living-docs validate` checks a page's body against the structure its
+  kind declares (RS-LDOC-004: pages of a kind follow one format). Each shipped
+  kind declares its structure once, in the capability's
+  `schemas/page-kinds.yaml`: the sections a page carries, each a heading level
+  and, where the kind fixes it, its text, in order unless the kind says
+  otherwise. A reference page carries a title, then at least one level-2
+  section; a signpost carries a title. A page that lacks a section, or carries
+  one out of order, is reported naming the page, its kind, the section and the
+  declared structure, at the severity the status of RS-LDOC-004 gives — an
+  error while the rule is accepted, so `pkit validate` fails. A heading inside
+  fenced code is no section, a page may carry other sections, and a page of a
+  kind that declares no structure is not checked.

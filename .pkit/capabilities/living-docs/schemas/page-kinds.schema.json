@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "page-kinds.schema.json",
+  "title": "Page kinds and their structure — living-docs capability",
+  "description": "Formal shape of the capability's `schemas/page-kinds.yaml`: each page kind it ships, keyed by the kind a page names in its `kind` field, with the structure the kind's pages follow (living-docs DEC-001 point 3; RS-LDOC-004) — the sections a page's body carries, in order unless the kind says otherwise. The one declaration of each kind's structure: the validator, `pkit living-docs validate`, checks every page of the kind against it, at the severity the status of RS-LDOC-004 gives, and a kind not listed is not checked. Capability data, read by the capability's own scripts; not adopter data.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kinds"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "kinds": {
+      "description": "The page kinds, keyed by kind; each kind's template is `templates/<kind>.md`.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/word"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/kind"
+      }
+    }
+  },
+  "$defs": {
+    "word": {
+      "description": "A page kind, as a page's `kind` field names it (`schemas/page.schema.json`).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "kind": {
+      "title": "One kind's structure",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sections"
+      ],
+      "properties": {
+        "sections": {
+          "description": "The sections a page of the kind carries. Each takes a heading of its own; a page may carry other sections besides.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/section"
+          }
+        },
+        "ordered": {
+          "description": "Whether the sections come in the order listed. True unless set to false.",
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "section": {
+      "title": "One section: a heading's level and, where the kind fixes it, its text",
+      "description": "A Markdown ATX heading — one to six `#` — outside fenced code. A section without `text` is one the writer words, as the template's `<placeholder>` heading; text is compared ignoring case, runs of white space and trailing punctuation.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level"
+      ],
+      "properties": {
+        "level": {
+          "description": "The heading's level: the number of `#`.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "text": {
+          "description": "The heading's text, without its `#`.",
+          "type": "string",
+          "pattern": "\\S"
+        }
+      }
+    }
+  }
+}
