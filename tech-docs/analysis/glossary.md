@@ -40,9 +40,9 @@ TERM-integration-branch:
         record:
           - project-management:DEC-013
       revalidated:
-        at: 2026-10-01T15:12:48Z
+        at: 2026-10-02T01:25:02Z
         outcome: unchanged
-        unchanged-because: DEC-013 gains that its merge mechanic is the backbone's, which every command that lands a PR calls; integration branches, which this term defines, are untouched
+        unchanged-because: DEC-013 gains that a merged pull request's head branch is deleted through the backbone's command, after the command's own steps and only at the head that merged; what an integration branch is, which this term defines, is untouched
 TERM-intent-note:
   name: Intent note
   status: active
@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-02T00:55:25Z
+        at: 2026-10-02T01:25:04Z
         outcome: unchanged
-        unchanged-because: the backbone now runs the cross-repository guard on every change it makes on the hosting service; what this page says of the commands and the areas it indexes still holds
+        unchanged-because: "done-work and merge-pr have the backbone delete a merged pull request's head branch, after their own steps and only at the head that merged; what a stabilisation holds back and its guards (still unbuilt, EPIC #943) are unchanged, so the definition holds"
 ---
 
 # Glossary

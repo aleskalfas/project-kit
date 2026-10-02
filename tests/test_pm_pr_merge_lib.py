@@ -2,10 +2,10 @@
 
 One implementation per rule (#882): `done-work` and `merge-pr` both compose
 these three steps rather than carrying a copy. Covers the squash-merge
-command (subject = PR title, no `--delete-branch`), the remote ref delete
-through the API (including the already-deleted answer), and the best-effort
-local cleanup (the default branch the backbone declares, COR-054; every failure
-a warning).
+command (subject = PR title, no `--delete-branch`), the head branch's deletion
+on GitHub, asked of the backbone at the head that merged and said in one line
+whatever it comes to (#1255), and the best-effort local cleanup (the default
+branch the backbone declares, COR-054; every failure a warning).
 """
 
 from __future__ import annotations
@@ -221,103 +221,245 @@ def test_squash_merge_reports_gh_missing(lib, monkeypatch, capsys) -> None:
     assert "`gh` not on PATH" in capsys.readouterr().err
 
 
-# --- delete_remote_branch -------------------------------------------------
+# --- delete_branch: the backbone's deletion (#1255) ----------------------
 
 
-def test_remote_branch_deleted_via_api(lib, monkeypatch, capsys) -> None:
-    """The remote head ref is deleted with `gh api -X DELETE` on the repo's
-    refs endpoint — no dependency on the local checkout."""
-    captured: list[list[str]] = []
+def _deletion(
+    outcome: str,
+    *,
+    branch: str | None = "fix/42-slug",
+    tip: str | None = None,
+    reason_kind: str | None = None,
+    reason: str | None = None,
+    merged_head: str | None = "sha-merged",
+) -> dict[str, Any]:
+    """`pkit pull-request delete-branch`'s document."""
+    return {
+        "schema_version": 1,
+        "pull_request": 42,
+        "expected": "sha-merged",
+        "outcome": outcome,
+        "branch": branch,
+        "tip": tip,
+        "reason_kind": reason_kind,
+        "reason": reason,
+        "merged_head": merged_head,
+        "guard": {
+            "verdict": "same-repo",
+            "undetermined_kind": None,
+            "anchor": "/work/project",
+            "target": "/work/project",
+            "cleared": "same-repo",
+        },
+    }
 
-    def fake_gh_run(args, config, **kwargs):
-        captured.append(list(args))
-        return _ok(args)
 
-    monkeypatch.setattr(lib, "gh_run", fake_gh_run)
-    lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False)
-    assert captured == [
-        [
-            "gh",
-            "api",
-            "-X",
-            "DELETE",
-            "repos/{owner}/{repo}/git/refs/heads/fix/42-slug",
-        ]
+def _backbone_answers(monkeypatch, lib, *documents: dict[str, Any]) -> list[list[str]]:
+    """The backbone's seam (`merge_queue._answers`) answering each call with
+    `documents`; the subcommands asked, in order."""
+    asked: list[list[str]] = []
+
+    def answers(args, config, *, timeout_seconds=None):
+        asked.append(list(args))
+        yield from documents
+
+    monkeypatch.setattr(lib.merge_queue, "_answers", answers)
+    return asked
+
+
+_LATER = "To delete it later: `pkit pull-request delete-branch 42 --expect sha-merged`."
+
+
+@pytest.mark.parametrize("confirmed", [False, True], ids=["unconfirmed", "allow-foreign-repo"])
+def test_the_head_branch_is_deleted_by_the_backbone_at_the_head_that_merged(
+    lib, monkeypatch, capsys, confirmed
+) -> None:
+    """The deletion is the backbone's (`pkit pull-request delete-branch`),
+    asked for at the head the PR merged at, with the operator's confirmation
+    passed on as the merge's is; nothing here asks GitHub itself. What it
+    came to is answered, for the local clean-up."""
+    asked = _backbone_answers(monkeypatch, lib, _deletion("deleted"))
+    assert lib.delete_branch(42, "sha-merged", {}, allow_foreign_repo=confirmed) == "deleted"
+    assert asked == [
+        ["delete-branch", "42", "--expect", "sha-merged", *(["--allow-foreign-repo"] * confirmed)]
     ]
-    assert "deleted remote branch fix/42-slug" in capsys.readouterr().out
+    assert capsys.readouterr().out == "  deleted remote branch fix/42-slug\n"
 
 
-def test_remote_branch_already_gone_is_not_a_warning(lib, monkeypatch, capsys) -> None:
-    """A repository that auto-deletes head branches on merge answers 422
-    'Reference does not exist' — reported as already deleted, not warned."""
-    monkeypatch.setattr(
-        lib,
-        "gh_run",
-        lambda args, config, **kw: subprocess.CompletedProcess(
-            args=args,
-            returncode=1,
-            stdout="",
-            stderr="gh: Reference does not exist (HTTP 422)",
+@pytest.mark.parametrize(
+    ("document", "said"),
+    [
+        (_deletion("gone"), "  remote branch fix/42-slug is not there; nothing to delete\n"),
+        (
+            _deletion(
+                "kept",
+                tip="sha-later",
+                reason_kind="tip-moved",
+                reason="its tip is sha-lat, not sha-mer, the head PR #42 merged at",
+            ),
+            "  kept remote branch fix/42-slug: its tip is sha-lat, not sha-mer, the head PR #42 "
+            f"merged at. {_LATER}\n",
         ),
-    )
-    lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False)
+        (
+            _deletion(
+                "kept",
+                tip="sha-merged",
+                reason_kind="open-pull-request",
+                reason="another open pull request uses this branch as its head (#501)",
+            ),
+            "  kept remote branch fix/42-slug: another open pull request uses this branch as its "
+            f"head (#501). {_LATER}\n",
+        ),
+        (
+            _deletion(
+                "refused",
+                reason_kind="cross-repository",
+                reason="PR #42's head is in another repository, a fork",
+            ),
+            "  remote branch fix/42-slug not deleted: PR #42's head is in another repository, a "
+            "fork\n",
+        ),
+    ],
+    ids=["gone", "tip-moved", "open-pull-request", "fork"],
+)
+def test_a_branch_kept_gone_or_a_forks_is_said_in_one_line_and_never_fails(
+    lib, monkeypatch, capsys, document, said
+) -> None:
+    """One line on standard output; a branch not deleted names the command
+    that deletes it later — but a fork's, which is its owner's to delete."""
+    _backbone_answers(monkeypatch, lib, document)
+    assert lib.delete_branch(42, "sha-merged", {}, allow_foreign_repo=False) == document["outcome"]
     out = capsys.readouterr()
-    assert "remote branch fix/42-slug already deleted" in out.out
-    assert "[warn]" not in out.err
+    assert out.out == said
+    assert out.err == ""
 
 
-def test_remote_branch_delete_failure_is_a_warning(lib, monkeypatch, capsys) -> None:
-    monkeypatch.setattr(
+def test_a_deletion_the_backbone_refused_is_a_warning_naming_the_command(
+    lib, monkeypatch, capsys
+) -> None:
+    """Refused by the backbone's guard, say — the comparisons disagree and the
+    operator confirmed nothing: a warning in the backbone's words, never an
+    error; the merge stands, and the command that deletes the branch later is
+    named, with the flag where the landing was confirmed."""
+    refused = _deletion(
+        "refused",
+        branch=None,
+        reason_kind="foreign-repository",
+        reason="the cross-repository guard refused: …",
+        merged_head=None,
+    )
+    _backbone_answers(monkeypatch, lib, refused)
+    assert lib.delete_branch(42, "sha-merged", {}, allow_foreign_repo=False) == "refused"
+    assert capsys.readouterr().err == (
+        "[warn] the remote head branch not deleted: the cross-repository guard refused: …. "
+        f"{_LATER}\n"
+    )
+    _backbone_answers(monkeypatch, lib, refused)
+    lib.delete_branch(42, "sha-merged", {}, allow_foreign_repo=True)
+    assert capsys.readouterr().err.endswith(
+        "`pkit pull-request delete-branch 42 --expect sha-merged --allow-foreign-repo`.\n"
+    )
+
+
+def test_a_head_other_than_the_merged_one_names_the_head_that_merged(
+    lib, monkeypatch, capsys
+) -> None:
+    """The backbone checks the head against the PR's own: refused, the line
+    names the command at the head the PR merged at, as the backbone read it."""
+    _backbone_answers(
+        monkeypatch,
         lib,
-        "gh_run",
-        lambda args, config, **kw: subprocess.CompletedProcess(
-            args=args,
-            returncode=1,
-            stdout="",
-            stderr="gh: boom (HTTP 500)",
+        _deletion(
+            "refused",
+            reason_kind="expect-mismatch",
+            reason="the head named, sha-merged, is not the head PR #42 merged at, sha-actual",
+            merged_head="sha-actual",
         ),
     )
-    lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False)
+    assert lib.delete_branch(42, "sha-merged", {}, allow_foreign_repo=False) == "refused"
+    assert capsys.readouterr().err.endswith(
+        "To delete it later: `pkit pull-request delete-branch 42 --expect sha-actual`.\n"
+    )
+
+
+def test_an_unconfirmed_deletion_is_one_warning_naming_the_command(
+    lib, monkeypatch, capsys
+) -> None:
+    """Whether the branch was deleted is not known: one line says so and names
+    the command to run again, with what the verb's own re-run does about it;
+    the merge stands."""
+    _backbone_answers(
+        monkeypatch,
+        lib,
+        _deletion(
+            "unconfirmed",
+            reason_kind="unanswered",
+            reason="the deletion got no usable answer (HTTP 502), and the branch could not be "
+            "read since (HTTP 502)",
+        ),
+    )
+    ended = lib.delete_branch(
+        42, "sha-merged", {}, allow_foreign_repo=False, rerun_note="A re-run does not retry it."
+    )
+    assert ended == "unconfirmed"
+    out = capsys.readouterr()
+    assert out.out == ""
+    assert out.err == (
+        "[warn] whether remote branch fix/42-slug was deleted is not known: the deletion got no "
+        "usable answer (HTTP 502), and the branch could not be read since (HTTP 502). "
+        f"{_LATER} A re-run does not retry it.\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "documents",
+    [(), (_deletion("landed"),), ({**_deletion("kept"), "tip": 7},)],
+    ids=["no-answer", "unknown-outcome", "a-field-of-another-type"],
+)
+def test_a_deletion_the_backbone_gives_no_answer_to_is_unconfirmed(
+    lib, monkeypatch, capsys, documents
+) -> None:
+    """No answer, or one that names no way the deletion ended: whether the
+    branch was deleted is not known, and the verb says so, names the command,
+    and goes on."""
+    _backbone_answers(monkeypatch, lib, *documents)
+    assert lib.delete_branch(42, "sha-merged", {}, allow_foreign_repo=False) == "unconfirmed"
     err = capsys.readouterr().err
-    assert "[warn] could not delete remote branch fix/42-slug: gh: boom (HTTP 500)" in err
-    assert "git push origin --delete fix/42-slug" in err
+    assert err.startswith("[warn] whether PR #42's head branch on GitHub was deleted is not known")
+    assert "The merge is durable" in err and err.endswith(f"{_LATER}\n")
 
 
-def test_remote_branch_delete_with_gh_missing_is_a_warning(lib, monkeypatch, capsys) -> None:
-    """Best-effort in every failure mode (#920): `gh` absent from PATH warns
-    and returns normally rather than raising past the already-landed merge."""
-
-    def missing(*a, **k):
-        raise FileNotFoundError("gh")
-
-    monkeypatch.setattr(lib, "gh_run", missing)
-    assert lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False) is None
+def test_with_no_merged_head_known_nothing_is_asked(lib, monkeypatch, capsys) -> None:
+    """The deletion is asked for only at a head that merged: with none known,
+    the branch is kept, and the line says how to find the head and delete it."""
+    asked = _backbone_answers(monkeypatch, lib, _deletion("deleted"))
+    assert lib.delete_branch(42, "", {}, allow_foreign_repo=False) == lib.NOT_ASKED
+    assert asked == []
     err = capsys.readouterr().err
-    assert "[warn] could not delete remote branch fix/42-slug" in err
-    assert "`gh` not on PATH" in err
-    assert "git push origin --delete fix/42-slug" in err
+    assert "the head PR #42 merged at is not known" in err
+    assert "`pkit pull-request read 42`" in err
+    assert "`pkit pull-request delete-branch 42 --expect <that head>`" in err
 
 
-def test_remote_branch_delete_with_unrunnable_gh_is_a_warning(lib, monkeypatch, capsys) -> None:
-    """A `gh` on PATH that cannot be run (not executable, wrong binary) warns
-    too -- the helper's contract is that it never raises (#920)."""
+def test_pm_keeps_no_copy_of_the_remote_deletion(lib) -> None:
+    """The head branch on GitHub is deleted only by the backbone (ADR-061
+    point 1): this library asks GitHub for no deletion itself."""
+    import inspect
 
-    def unrunnable(*a, **k):
-        raise PermissionError(13, "Permission denied")
-
-    monkeypatch.setattr(lib, "gh_run", unrunnable)
-    assert lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False) is None
-    err = capsys.readouterr().err
-    assert "`gh` could not be run" in err
-    assert "git push origin --delete fix/42-slug" in err
+    source = inspect.getsource(lib)
+    assert "git/refs/heads" not in source and "updateRefs" not in source
+    assert not hasattr(lib, "delete_remote_branch") and not hasattr(lib, "gh_run")
 
 
 # --- cleanup_local ---------------------------------------------------------
 
 
-def _fake_git(monkeypatch, lib, *, checkout_stderr="", pull_stderr="", branch_d_stderr=""):
+def _fake_git(
+    monkeypatch, lib, *, checkout_stderr="", pull_stderr="", branch_d_stderr="", tip="sha-head"
+):
     """Stub `subprocess.run` for the local git steps; a non-empty stderr makes
-    that step fail. Returns the argvs seen."""
+    that step fail. The local head, when there is one, is at `tip`, and
+    nothing on it is past the merged head. Returns the argvs seen."""
     seen: list[list[str]] = []
 
     def fake_run(argv, **kwargs):
@@ -328,10 +470,24 @@ def _fake_git(monkeypatch, lib, *, checkout_stderr="", pull_stderr="", branch_d_
             return subprocess.CompletedProcess(argv, 1, stdout="", stderr=pull_stderr)
         if argv[:3] == ["git", "branch", "-D"] and branch_d_stderr:
             return subprocess.CompletedProcess(argv, 1, stdout="", stderr=branch_d_stderr)
+        if argv[:2] == ["git", "rev-parse"]:
+            return subprocess.CompletedProcess(argv, 0 if tip else 1, stdout=f"{tip}\n", stderr="")
+        if argv[:2] == ["git", "rev-list"]:
+            return subprocess.CompletedProcess(argv, 0, stdout="0\n", stderr="")
         return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
 
     monkeypatch.setattr(lib.subprocess, "run", fake_run)
     return seen
+
+
+def _cleanup(lib, branch: str = "fix/42-slug", **kwargs: Any) -> None:
+    """The local clean-up after a remote deletion that ended `deleted`, at the
+    merged head `sha-head`, unless told otherwise."""
+    lib.cleanup_local(
+        branch,
+        {},
+        **{"cross_repository": False, "merged_head": "sha-head", "remote": "deleted", **kwargs},
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -358,14 +514,17 @@ def backbone(lib: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
 def test_cleanup_local_sequence_on_the_declared_default_branch(
     lib: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], backbone: Any
 ) -> None:
-    """checkout <default branch> → pull --ff-only → branch -D <head>; the default
-    branch is the one the backbone declares (COR-054), not a hardcoded main."""
+    """checkout <default branch> → pull --ff-only → branch -D <head>, once the
+    head is found all merged; the default branch is the one the backbone
+    declares (COR-054), not a hardcoded main."""
     backbone("develop")
     seen = _fake_git(monkeypatch, lib)
-    lib.cleanup_local("fix/42-slug", {}, cross_repository=False)
+    _cleanup(lib)
     assert seen == [
         ["git", "checkout", "develop"],
         ["git", "pull", "--ff-only"],
+        ["git", "rev-parse", "--verify", "--quiet", "refs/heads/fix/42-slug"],
+        ["git", "rev-list", "--count", "sha-head..sha-head"],
         ["git", "branch", "-D", "fix/42-slug"],
     ]
     assert "[warn]" not in capsys.readouterr().err
@@ -373,7 +532,7 @@ def test_cleanup_local_sequence_on_the_declared_default_branch(
 
 def test_cleanup_local_defaults_to_main_when_config_is_silent(lib, monkeypatch):
     seen = _fake_git(monkeypatch, lib)
-    lib.cleanup_local("fix/42-slug", {}, cross_repository=False)
+    _cleanup(lib)
     assert seen[0] == ["git", "checkout", "main"]
 
 
@@ -384,7 +543,7 @@ def test_cleanup_local_is_skipped_when_the_backbone_cannot_say(
     the cause, and the merge — already durable — does not fail."""
     backbone(None)
     seen = _fake_git(monkeypatch, lib)
-    lib.cleanup_local("fix/42-slug", {}, cross_repository=False)
+    _cleanup(lib)
     assert seen == []
     err = capsys.readouterr().err
     assert "[warn] the local clean-up is skipped: no pkit here." in err
@@ -396,7 +555,7 @@ def test_cleanup_local_checkout_failure_skips_pull_still_deletes(lib, monkeypatc
     would be wrong), still attempt the branch delete."""
     err_text = "fatal: 'main' is already used by worktree at '/repo/wt-main'"
     seen = _fake_git(monkeypatch, lib, checkout_stderr=err_text)
-    lib.cleanup_local("fix/42-slug", {}, cross_repository=False)
+    _cleanup(lib)
     err = capsys.readouterr().err
     assert f"[warn] git checkout main failed: {err_text}" in err
     assert ["git", "pull", "--ff-only"] not in seen
@@ -405,7 +564,7 @@ def test_cleanup_local_checkout_failure_skips_pull_still_deletes(lib, monkeypatc
 
 def test_cleanup_local_pull_failure_is_a_warning(lib, monkeypatch, capsys):
     seen = _fake_git(monkeypatch, lib, pull_stderr="fatal: Not possible to fast-forward")
-    lib.cleanup_local("fix/42-slug", {}, cross_repository=False)
+    _cleanup(lib)
     assert "[warn] git pull failed: fatal: Not possible to fast-forward" in capsys.readouterr().err
     assert ["git", "branch", "-D", "fix/42-slug"] in seen
 
@@ -415,50 +574,76 @@ def test_cleanup_local_branch_delete_failure_is_a_warning(lib, monkeypatch, caps
     locally — a warning naming git's reason, never an exception."""
     branch_err = "error: cannot delete branch 'fix/42-slug' used by worktree at '/repo/wt-42'"
     _fake_git(monkeypatch, lib, branch_d_stderr=branch_err)
-    lib.cleanup_local("fix/42-slug", {}, cross_repository=False)
+    _cleanup(lib)
     assert f"[warn] git branch -D fix/42-slug failed: {branch_err}" in capsys.readouterr().err
-
-
-def test_delete_remote_branch_never_touches_base_repo_for_a_fork_pr(lib, monkeypatch, capsys):
-    """Security (PR #896 review): a fork PR's head name is chosen by the fork's
-    author and may name an unrelated base-repository branch. The API delete
-    targets the BASE repo, so for a cross-repository PR no gh call is made."""
-    calls: list[list[str]] = []
-    monkeypatch.setattr(
-        lib, "gh_run", lambda args, config, **kw: calls.append(list(args)) or _ok(args)
-    )
-    lib.delete_remote_branch("release/1.x", {}, cross_repository=True)
-    assert calls == []
-    assert "lives in a fork" in capsys.readouterr().out
 
 
 def test_cleanup_local_never_force_deletes_a_same_named_branch_for_a_fork_pr(lib, monkeypatch):
     """A local branch sharing a fork PR's head name is not that PR's head;
     `git branch -D` would discard its unpushed work, so it is not run."""
-    import subprocess
-
-    seen: list[list[str]] = []
-    monkeypatch.setattr(
-        lib.subprocess,
-        "run",
-        lambda argv, **kw: (
-            seen.append(list(argv)) or subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
-        ),
-    )
-    lib.cleanup_local("release/1.x", {}, cross_repository=True)
+    seen = _fake_git(monkeypatch, lib)
+    _cleanup(lib, "release/1.x", cross_repository=True, remote="refused")
     assert ["git", "branch", "-D", "release/1.x"] not in seen
     assert seen[0] == ["git", "checkout", "main"]
 
 
-def test_cross_repository_is_a_required_keyword(lib):
-    """No default: every caller must state whether the PR is cross-repository,
-    so a later caller cannot silently reintroduce the fork-PR deletion hole."""
+@pytest.mark.parametrize("remote", ["deleted", "gone"])
+def test_the_local_branch_goes_once_the_remote_one_is_deleted_or_gone(
+    lib, monkeypatch, capsys, remote
+) -> None:
+    seen = _fake_git(monkeypatch, lib)
+    _cleanup(lib, remote=remote)
+    assert ["git", "branch", "-D", "fix/42-slug"] in seen
+    assert capsys.readouterr().out == ""
+
+
+@pytest.mark.parametrize("remote", ["kept", "refused", "unconfirmed", "not-asked"])
+def test_the_local_branch_stays_while_the_remote_one_was_not_deleted(
+    lib, monkeypatch, capsys, remote
+) -> None:
+    """The local branch goes only with the one on GitHub: kept there, refused,
+    not known to be deleted, or not asked for, it stays here too, said in one
+    line — and its commits are not even compared."""
+    seen = _fake_git(monkeypatch, lib)
+    _cleanup(lib, remote=remote)
+    assert not any(argv[:2] in (["git", "branch"], ["git", "rev-list"]) for argv in seen)
+    assert capsys.readouterr().out == (
+        f"  kept local branch fix/42-slug: its branch on GitHub was not deleted ({remote}), "
+        "and the local one goes only with it (`git branch -D fix/42-slug` once it has)\n"
+    )
+
+
+def test_the_remote_outcome_and_the_merged_head_are_required_keywords(lib):
+    """No defaults: every caller of the local clean-up states what became of
+    the branch on GitHub and the head the PR merged at, so none can delete the
+    local branch on a guess."""
     import inspect
 
-    for fn in (lib.delete_remote_branch, lib.cleanup_local):
-        p = inspect.signature(fn).parameters["cross_repository"]
-        assert p.kind is inspect.Parameter.KEYWORD_ONLY
-        assert p.default is inspect.Parameter.empty
+    parameters = inspect.signature(lib.cleanup_local).parameters
+    for name in ("remote", "merged_head"):
+        assert parameters[name].kind is inspect.Parameter.KEYWORD_ONLY
+        assert parameters[name].default is inspect.Parameter.empty
+
+
+def test_cross_repository_is_a_required_keyword(lib):
+    """No default: every caller of the local clean-up must state whether the
+    PR is cross-repository, so a later caller cannot silently reintroduce the
+    fork-PR deletion hole."""
+    import inspect
+
+    p = inspect.signature(lib.cleanup_local).parameters["cross_repository"]
+    assert p.kind is inspect.Parameter.KEYWORD_ONLY
+    assert p.default is inspect.Parameter.empty
+
+
+def test_the_confirmation_is_a_required_keyword_of_the_deletion(lib):
+    """No default: every caller of the backbone's deletion states whether the
+    operator confirmed a change in another repository, as for the merge."""
+    import inspect
+
+    p = inspect.signature(lib.delete_branch).parameters["allow_foreign_repo"]
+    assert p.kind is inspect.Parameter.KEYWORD_ONLY
+    assert p.default is inspect.Parameter.empty
 
 
 def _guarded_git(monkeypatch, lib, *, tip: str, unmerged: str):
@@ -482,7 +667,7 @@ def _guarded_git(monkeypatch, lib, *, tip: str, unmerged: str):
 
 def test_with_the_merged_head_a_branch_that_all_merged_is_deleted(lib, monkeypatch, capsys):
     seen = _guarded_git(monkeypatch, lib, tip="sha-old", unmerged="0")
-    lib.cleanup_local("fix/42-slug", {}, cross_repository=False, merged_head="sha-head")
+    _cleanup(lib)
     assert ["git", "rev-list", "--count", "sha-head..sha-old"] in seen
     assert ["git", "branch", "-D", "fix/42-slug"] in seen
     assert "[warn]" not in capsys.readouterr().err
@@ -493,16 +678,28 @@ def test_with_the_merged_head_a_branch_holding_more_is_kept(lib, monkeypatch, ca
     """A branch with commits the merge does not hold — work since, or a clone
     that cannot tell — is never force-deleted: `-D` would lose that work."""
     seen = _guarded_git(monkeypatch, lib, tip="sha-newer", unmerged=unmerged)
-    lib.cleanup_local("fix/42-slug", {}, cross_repository=False, merged_head="sha-head")
+    _cleanup(lib)
     assert ["git", "branch", "-D", "fix/42-slug"] not in seen
     err = capsys.readouterr().err
     assert "local branch fix/42-slug (at sha-new) holds commits the merge at sha-hea" in err
     assert "it is kept" in err
 
 
+def test_with_no_merged_head_known_the_local_branch_is_kept(lib, monkeypatch, capsys):
+    """No head to compare with: the branch is kept with a warning, never
+    force-deleted on a guess — as release's twin keeps it."""
+    seen = _guarded_git(monkeypatch, lib, tip="sha-old", unmerged="0")
+    _cleanup(lib, merged_head="", remote="gone")
+    assert not any(argv[:2] in (["git", "branch"], ["git", "rev-list"]) for argv in seen)
+    assert (
+        "[warn] local branch fix/42-slug (at sha-old) holds commits the merge at an unknown "
+        "head does not, or this clone cannot tell; it is kept."
+    ) in capsys.readouterr().err
+
+
 def test_with_the_merged_head_a_clone_without_the_branch_deletes_nothing(lib, monkeypatch, capsys):
     seen = _guarded_git(monkeypatch, lib, tip="", unmerged="")
-    lib.cleanup_local("fix/42-slug", {}, cross_repository=False, merged_head="sha-head")
+    _cleanup(lib)
     assert seen[:2] == [["git", "checkout", "main"], ["git", "pull", "--ff-only"]]
     assert not any(argv[:2] in (["git", "branch"], ["git", "rev-list"]) for argv in seen)
     assert "[warn]" not in capsys.readouterr().err

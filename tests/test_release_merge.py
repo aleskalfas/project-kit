@@ -4,10 +4,12 @@ The gate is split into pure logic (`summarize_checks`, `parse_release_pr`,
 `evaluate_release_pr`) and the landing, which is the backbone's one merge
 mechanic (`pull_request_landing`, #1200). The pure logic is tested directly;
 `merge_release_pr` runs on a fake GitHub (`_Host`) with and without a merge
-queue — no real merge, no network, no hardcoded repo. The post-merge branch
-deletion (`_gh_delete_remote_branch` / `_git_cleanup_local`, #897) is tested
-with `subprocess.run` stubbed. The cross-repository guard `pkit release merge`
-runs at its entry (#1254) is tested on real repositories.
+queue — no real merge, no network, no hardcoded repo. After the merge, the
+head branch is deleted on the fake GitHub by the backbone's deletion
+(`pull_request_landing.delete_branch`, #1255), and locally by
+`_git_cleanup_local` (#897), with `subprocess.run` stubbed. The
+cross-repository guard `pkit release merge` runs at its entry (#1254) is
+tested on real repositories.
 """
 
 from __future__ import annotations
@@ -288,22 +290,21 @@ def test_evaluate_refuses_red_checks() -> None:
 # --- the orchestrator (gh monkeypatched) ------------------------------
 #
 # `_gh_pr_view` answers the PR; the landing's `gh` is `_Host`, a fake GitHub
-# with or without a merge queue; the post-merge steps (`gh api -X DELETE`, the
-# local git clean-up) run through a stubbed `subprocess.run` (`_fake_run`),
-# whose argvs say what was deleted.
+# with or without a merge queue, which also holds the PR's head branch the
+# backbone deletes; the local git clean-up runs through a stubbed
+# `subprocess.run` (`_fake_run`), whose argvs say what was deleted here.
 
 
 def _fake_run(
     monkeypatch: pytest.MonkeyPatch,
     *,
-    api_stderr: str = "",
     checkout_stderr: str = "",
     pull_stderr: str = "",
     branch_d_stderr: str = "",
     local_branch_exists: bool = True,
     unmerged: str = "0",
 ) -> list[list[str]]:
-    """Stub `subprocess.run` for the post-merge steps; a non-empty stderr makes
+    """Stub `subprocess.run` for the local clean-up; a non-empty stderr makes
     that step fail. The local head, when it exists, is at `sha-head`, and holds
     `unmerged` commits past the merged head ("" — this clone cannot tell).
     Returns the argvs seen."""
@@ -312,8 +313,7 @@ def _fake_run(
     def fake(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         seen.append(list(argv))
         failing = (
-            (argv[:3] == ["gh", "api", "-X"] and api_stderr)
-            or (argv[:2] == ["git", "checkout"] and checkout_stderr)
+            (argv[:2] == ["git", "checkout"] and checkout_stderr)
             or (argv[:2] == ["git", "pull"] and pull_stderr)
             or (argv[:3] == ["git", "branch", "-D"] and branch_d_stderr)
         )
@@ -338,11 +338,12 @@ def _entry(position: int, state: str = "AWAITING_CHECKS", **fields: Any) -> dict
     return {"isInMergeQueue": True, "mergeQueueEntry": entry, **fields}
 
 
+_MERGED_AT = "2026-10-01T10:12:00Z"
 _LANDED = {
     "isInMergeQueue": False,
     "mergeQueueEntry": None,
     "state": "MERGED",
-    "mergedAt": "2026-10-01T10:12:00Z",
+    "mergedAt": _MERGED_AT,
 }
 _DROPPED = {
     "isInMergeQueue": False,
@@ -361,13 +362,30 @@ _DROPPED = {
 }
 
 
+#: The head branch's tip on `_Host` follows the PR's head until it is told
+#: otherwise.
+_AT_THE_HEAD = "<at the PR's head>"
+
+
 class _Host:
     """GitHub as the landing's `gh` reaches it: one PR whose base merges
     through a queue or not. Enqueueing takes the PR in; each later reading of a
     queued PR moves it on by the next entry of `progress`. A direct squash
     merge lands at once on a base without a queue — or, with `enqueues`, gh
     only enqueues, and without `lands` gh accepts it and nothing changes — and
-    `unreadable_after` makes every reading after the first `n` fail."""
+    `unreadable_after` makes every reading after the first `n` fail.
+
+    The PR's head branch is at `tip` — the PR's head unless told otherwise;
+    None, gone — and the open PRs `based_on` merge into it. The backbone's
+    deletion reads it (`headRef`), then the PRs based on it, and deletes it
+    with `updateRefs` only while it is at the commit named, all-or-nothing as
+    GitHub does, answering a refusal with an error that says only that
+    something went wrong; `refuse_deletion` makes the service refuse it
+    whatever the tip, with those words; `lose_deletion` makes it apply the
+    deletion and gh fail with no answer (a 502), and `unread_after_deletion`
+    makes the branch unreadable once a deletion was asked for. Each deletion
+    asked for is recorded in `deletions` as the ref and the commit it was
+    asked to be at."""
 
     def __init__(
         self,
@@ -379,6 +397,11 @@ class _Host:
         enqueues: bool = False,
         lands: bool = True,
         unreadable_after: int | None = None,
+        tip: str | None = _AT_THE_HEAD,
+        refuse_deletion: str = "",
+        lose_deletion: bool = False,
+        unread_after_deletion: bool = False,
+        based_on: tuple[int, ...] = (),
         **pr: Any,
     ) -> None:
         self.pr: dict[str, Any] = {
@@ -386,6 +409,8 @@ class _Host:
             "state": "OPEN",
             "mergedAt": None,
             "headRefOid": "sha-head",
+            "headRefName": "release/v1.141.0",
+            "isCrossRepository": False,
             "isMergeQueueEnabled": queue,
             "isInMergeQueue": False,
             "mergeQueue": {"configuration": {"mergeMethod": method}} if queue else None,
@@ -399,13 +424,34 @@ class _Host:
         self.enqueues = enqueues
         self.lands = lands
         self.unreadable_after = unreadable_after
+        self.tip = tip
+        self.refuse_deletion = refuse_deletion
+        self.lose_deletion = lose_deletion
+        self.unread_after_deletion = unread_after_deletion
+        self.based_on = based_on
         self.reads = 0
         self.commands: list[list[str]] = []
+        self.deletions: list[tuple[str, str]] = []
+
+    def branch_tip(self) -> str | None:
+        """Where the PR's head branch is now; None once it is gone."""
+        return str(self.pr["headRefOid"]) if self.tip == _AT_THE_HEAD else self.tip
 
     def __call__(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
         args = list(argv)
         self.commands.append(args)
         query = next((a for a in args if a.startswith("query=")), "")
+        if "updateRefs" in query:
+            return self._delete(args)
+        if "headRef {" in query:
+            return self._read_the_branch(args)
+        if "baseRefName:" in query:
+            based = {
+                "totalCount": len(self.based_on),
+                "nodes": [{"number": number} for number in self.based_on],
+            }
+            answer = {"data": {"repository": {"pullRequests": based}}}
+            return subprocess.CompletedProcess(args, 0, stdout=json.dumps(answer), stderr="")
         if args[:3] == ["gh", "pr", "merge"]:
             if "--auto" in args or (self.enqueues and "--squash" in args):
                 self.pr["isInMergeQueue"] = True
@@ -434,6 +480,40 @@ class _Host:
 
     def merges(self) -> list[list[str]]:
         return [c for c in self.commands if c[:3] == ["gh", "pr", "merge"]]
+
+    def _read_the_branch(self, args: list[str]) -> subprocess.CompletedProcess[str]:
+        if self.unread_after_deletion and self.deletions:
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 502")
+        tip = self.branch_tip()
+        ref = None
+        if tip is not None and not self.pr["isCrossRepository"]:
+            ref = {
+                "target": {"oid": tip},
+                "associatedPullRequests": {"totalCount": 0, "nodes": []},
+            }
+        node = {**self.pr, "repository": {"id": "R_repo"}, "headRef": ref}
+        answer = {"data": {"repository": {"pullRequest": node}}}
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(answer), stderr="")
+
+    def _delete(self, args: list[str]) -> subprocess.CompletedProcess[str]:
+        fields = dict(a.split("=", 1) for a in args if "=" in a and not a.startswith("query="))
+        self.deletions.append((fields["name"], fields["before"]))
+        if self.refuse_deletion:
+            return _graphql_error(args, self.refuse_deletion)
+        if self.branch_tip() is None or self.branch_tip() != fields["before"]:
+            return _graphql_error(args, "Something went wrong")
+        self.tip = None
+        if self.lose_deletion:
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 502: Bad Gateway")
+        answer = {"data": {"updateRefs": {"clientMutationId": None}}}
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(answer), stderr="")
+
+
+def _graphql_error(args: list[str], message: str) -> subprocess.CompletedProcess[str]:
+    """gh's answer to a mutation GitHub answers with an error: the answer, its
+    `errors` naming `message`, gh's own line on standard error, and exit 1."""
+    answer = {"data": {"updateRefs": None}, "errors": [{"message": message}]}
+    return subprocess.CompletedProcess(args, 1, stdout=json.dumps(answer), stderr=f"gh: {message}")
 
 
 def _land(
@@ -472,12 +552,14 @@ def _cleared(repo_root: Path) -> session_guard.Clearance:
     return cleared
 
 
-def _merge_green(monkeypatch: pytest.MonkeyPatch, **raw: Any) -> str:
-    """A green release PR merged directly, on a base without a queue."""
-    return _land(monkeypatch, _Host(queue=False), **raw).text
+def _merge_green(monkeypatch: pytest.MonkeyPatch, host: _Host | None = None, **raw: Any) -> str:
+    """A green release PR merged directly, on a base without a queue — `host`'s,
+    else a fresh one."""
+    return _land(monkeypatch, host if host is not None else _Host(queue=False), **raw).text
 
 
-_DELETE_HEAD = ["gh", "api", "-X", "DELETE", "repos/{owner}/{repo}/git/refs/heads/release/v1.141.0"]
+#: The release PR's head branch, deleted at the head it merged at.
+_DELETED_AT_THE_HEAD = [("refs/heads/release/v1.141.0", "sha-head")]
 
 
 def test_merge_release_pr_squash_merges_a_green_pr(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -524,14 +606,14 @@ def test_merge_release_pr_refuses_non_release(monkeypatch: pytest.MonkeyPatch) -
 def test_a_merged_release_pr_has_only_its_clean_up_run(monkeypatch: pytest.MonkeyPatch) -> None:
     """A merged PR is not merged again: what follows the merge runs — which is
     how a run that returned while the queue held the PR is completed. Its
-    local clean-up keys on the head the PR merged at."""
-    host = _Host(queue=True)
+    clean-up keys on the head the PR merged at, on GitHub and here."""
+    host = _Host(queue=True, state="MERGED", mergedAt=_MERGED_AT, headRefOid="sha-merged")
     seen = _fake_run(monkeypatch)
     report = _land(monkeypatch, host, state="MERGED", headRefOid="sha-merged")
-    assert host.commands == []
+    assert host.merges() == []
     assert report.exit_code == 0
     assert report.text.startswith("PR #42 is already merged.")
-    assert seen[0] == _DELETE_HEAD
+    assert host.deletions == [("refs/heads/release/v1.141.0", "sha-merged")]
     assert ["git", "rev-list", "--count", "sha-merged..sha-head"] in seen
 
 
@@ -572,7 +654,8 @@ def test_with_a_queue_the_pr_is_enqueued_and_its_head_deleted_once_merged(
     ]
     assert report.exit_code == 0
     assert report.text.startswith("Merged release PR #42 (https://github.com/owner/repo/pull/42) ")
-    assert seen[0] == _DELETE_HEAD
+    assert host.deletions == _DELETED_AT_THE_HEAD
+    assert seen[0] == ["git", "checkout", "main"]
     out = capsys.readouterr().out
     assert "  enqueued PR #42 in the merge queue for main" in out
     assert "  queue:   PR #42 position 2 in the queue, awaiting checks, about 5 min" in out
@@ -586,7 +669,7 @@ def test_no_wait_returns_accepted_with_nothing_deleted_and_a_later_run_completes
     seen = _fake_run(monkeypatch)
     report = _land(monkeypatch, host, wait_seconds=0)
     assert report.exit_code == release.EXIT_ACCEPTED == 4
-    assert seen == []
+    assert seen == [] and host.deletions == []
     assert report.text.startswith(
         "[queued] release PR #42 is in the merge queue for main (position 1 in the queue"
     )
@@ -599,13 +682,14 @@ def test_no_wait_returns_accepted_with_nothing_deleted_and_a_later_run_completes
     report = _land(monkeypatch, host)
     assert report.exit_code == 0
     assert len(host.merges()) == 1
-    assert seen[0] == _DELETE_HEAD
+    assert host.deletions == _DELETED_AT_THE_HEAD
     assert "  PR #42 is already in the merge queue for main" in capsys.readouterr().out
 
     # Merged by then: the later run only completes it.
-    seen.clear()
-    report = _land(monkeypatch, _Host(queue=True), state="MERGED")
-    assert report.exit_code == 0 and seen[0] == _DELETE_HEAD
+    merged = _Host(queue=True, state="MERGED", mergedAt=_MERGED_AT)
+    report = _land(monkeypatch, merged, state="MERGED")
+    assert report.exit_code == 0
+    assert merged.merges() == [] and merged.deletions == _DELETED_AT_THE_HEAD
 
 
 def test_a_wait_that_runs_out_keeps_the_head(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -613,7 +697,7 @@ def test_a_wait_that_runs_out_keeps_the_head(monkeypatch: pytest.MonkeyPatch) ->
     seen = _fake_run(monkeypatch)
     report = _land(monkeypatch, host, wait_seconds=60)
     assert report.exit_code == 4
-    assert seen == []
+    assert seen == [] and host.deletions == []
 
 
 def test_a_pr_the_queue_drops_is_reported_and_nothing_deleted(
@@ -627,7 +711,7 @@ def test_a_pr_the_queue_drops_is_reported_and_nothing_deleted(
     assert "left the merge queue for main without merging" in str(exc.value)
     assert "GitHub says: failed checks" in str(exc.value)
     assert "Nothing was deleted" in str(exc.value)
-    assert seen == []
+    assert seen == [] and host.deletions == []
 
 
 def test_a_push_after_the_enqueue_takes_the_pr_out_and_deletes_nothing(
@@ -640,7 +724,7 @@ def test_a_push_after_the_enqueue_takes_the_pr_out_and_deletes_nothing(
     assert "head moved from sha-hea to sha-pus" in str(exc.value)
     assert "it was taken out of the merge queue" in str(exc.value)
     assert any("dequeuePullRequest" in a for c in host.commands for a in c)
-    assert seen == []
+    assert seen == [] and host.deletions == []
 
 
 @pytest.mark.parametrize(
@@ -766,6 +850,7 @@ def test_a_merge_at_a_head_whose_checks_were_not_read_is_warned(
         "were read."
     ) in capsys.readouterr().err
     assert ["git", "rev-list", "--count", "sha-other..sha-head"] in seen
+    assert host.deletions == [("refs/heads/release/v1.141.0", "sha-other")]
 
 
 # --- a direct merge is counted only once GitHub reports it --------------
@@ -781,7 +866,7 @@ def test_an_unconfirmed_direct_merge_deletes_nothing(
     report = _land(monkeypatch, host)
     assert report.exit_code == 4
     assert report.text.startswith("[unconfirmed] gh accepted the merge of release PR #42")
-    assert seen == []
+    assert seen == [] and host.deletions == []
     assert "could not confirm that PR #42 merged: HTTP 502" in capsys.readouterr().err
 
 
@@ -811,7 +896,8 @@ def test_a_merge_gh_only_enqueued_is_waited_for_not_taken_for_a_merge(
     report = _land(monkeypatch, host)
     assert report.exit_code == 0
     assert "GitHub does not report PR #42 merged" in capsys.readouterr().out
-    assert seen[0] == _DELETE_HEAD
+    assert host.deletions == _DELETED_AT_THE_HEAD
+    assert seen[0] == ["git", "checkout", "main"]
 
 
 def test_the_cli_returns_the_reports_exit_and_takes_the_queue_flags(
@@ -933,16 +1019,21 @@ def test_a_dry_run_reports_the_verdict_and_asks_nothing(
     assert cleared_merges == [(foreign, "flag", True)]
 
 
-# --- post-merge branch deletion (#897) -------------------------------
+# --- post-merge branch deletion (#897, #1255) ----------------------------
 
 
-def test_merge_deletes_remote_head_via_api_then_cleans_up_locally(
+def test_merge_deletes_the_remote_head_at_the_merged_head_then_cleans_up_locally(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """The remote head branch is the backbone's to delete — one compare-and-
+    delete at the head that merged, in the repository release merge cleared
+    — then the local clean-up runs here."""
+    host = _Host(queue=False)
     seen = _fake_run(monkeypatch)
-    message = _merge_green(monkeypatch, baseRefName="develop")
+    message = _merge_green(monkeypatch, host, baseRefName="develop")
+    assert host.deletions == _DELETED_AT_THE_HEAD
+    assert host.branch_tip() is None
     assert seen == [
-        ["gh", "api", "-X", "DELETE", "repos/{owner}/{repo}/git/refs/heads/release/v1.141.0"],
         ["git", "checkout", "develop"],  # the PR's own base, not a hardcoded main
         ["git", "pull", "--ff-only"],
         ["git", "rev-parse", "--verify", "--quiet", "refs/heads/release/v1.141.0"],
@@ -996,38 +1087,140 @@ def test_merge_without_a_local_head_copy_skips_the_local_delete_quietly(
     assert "[warn]" not in capsys.readouterr().err
 
 
-def test_remote_head_already_gone_is_not_a_warning(
+def test_remote_head_already_gone_is_said_in_one_line_and_not_asked_again(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    _fake_run(monkeypatch, api_stderr="gh: Reference does not exist (HTTP 422)")
-    message = _merge_green(monkeypatch)
-    assert "remote branch 'release/v1.141.0' already deleted" in message
+    """A repository that deletes head branches as PRs merge: the reading finds
+    the branch gone, and no deletion is asked for."""
+    host = _Host(queue=False, tip=None)
+    _fake_run(monkeypatch)
+    message = _merge_green(monkeypatch, host)
+    assert "  remote branch 'release/v1.141.0' is not there; nothing to delete." in message
+    assert host.deletions == []
     assert "[warn]" not in capsys.readouterr().err
 
 
-def test_remote_head_delete_failure_is_a_warning(
+def test_a_push_to_the_head_after_the_merge_keeps_the_remote_branch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The fifth obligation (ADR-061 point 5): the branch is deleted only at
+    the head that merged, so a push since is not lost — and the landing is
+    not failed for it. The line names the command that deletes it later, and
+    the local branch is kept with it."""
+    host = _Host(queue=False, tip="sha-later")
+    seen = _fake_run(monkeypatch)
+    report = _land(monkeypatch, host)
+    assert report.exit_code == 0
+    assert "Merged release PR #42" in report.text
+    assert (
+        "  kept remote branch 'release/v1.141.0': its tip is sha-lat, not sha-hea, the head "
+        "PR #42 merged at: a push since the merge, or a branch of that name made since, is not "
+        "deleted. To delete it later: `pkit pull-request delete-branch 42 --expect sha-head`."
+    ) in report.text
+    assert (
+        "  kept local branch 'release/v1.141.0': its branch on GitHub was not deleted (kept), "
+        "and the local one goes only with it (`git branch -D release/v1.141.0` once it has)."
+    ) in report.text
+    assert host.deletions == [] and host.branch_tip() == "sha-later"
+    assert not any(argv[:3] == ["git", "branch", "-D"] for argv in seen)
+
+
+def test_a_deletion_the_service_refuses_keeps_the_branch_in_its_words(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    _fake_run(monkeypatch, api_stderr="gh: boom (HTTP 500)")
-    message = _merge_green(monkeypatch)
-    assert "Merged release PR #42" in message
-    err = capsys.readouterr().err
-    assert "[warn] could not delete remote branch release/v1.141.0: gh: boom (HTTP 500)" in err
-    assert "git push origin --delete release/v1.141.0" in err
+    """A branch protected from deletion: the service answers the
+    compare-and-delete with an error that says only that something went
+    wrong, the run says so in one line, with what the service said, and the
+    landing stands."""
+    said = "Something went wrong while executing your query."
+    host = _Host(queue=False, refuse_deletion=said)
+    seen = _fake_run(monkeypatch)
+    report = _land(monkeypatch, host)
+    assert report.exit_code == 0
+    assert (
+        "  kept remote branch 'release/v1.141.0': the service did not delete it: Something went "
+        "wrong while executing your query. To delete it later: `pkit pull-request "
+        "delete-branch 42 --expect sha-head`."
+    ) in report.text
+    assert host.deletions == _DELETED_AT_THE_HEAD and host.branch_tip() == "sha-head"
+    assert not any(argv[:3] == ["git", "branch", "-D"] for argv in seen)
+    assert "[warn]" not in capsys.readouterr().err
+
+
+def test_a_deletion_with_no_answer_and_no_reading_since_is_said_not_known(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The deletion made and its answer lost, and the branch unreadable since:
+    whether it was deleted is not known, one line says so and names the
+    command to run again, the local branch stays, and the landing stands."""
+    host = _Host(queue=False, lose_deletion=True, unread_after_deletion=True)
+    seen = _fake_run(monkeypatch)
+    report = _land(monkeypatch, host)
+    assert report.exit_code == 0
+    assert (
+        "  whether remote branch 'release/v1.141.0' was deleted is not known: the deletion got "
+        "no usable answer (HTTP 502: Bad Gateway), and the branch could not be read since "
+        "(HTTP 502). To delete it later: `pkit pull-request delete-branch 42 --expect "
+        "sha-head`."
+    ) in report.text
+    assert "kept local branch 'release/v1.141.0'" in report.text
+    assert not any(argv[:3] == ["git", "branch", "-D"] for argv in seen)
+
+
+def test_a_direct_merge_at_another_head_is_refused_the_deletion_in_one_line(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The direct path names the head whose checks were read; should the PR
+    have merged at another — someone else merging it, at a head pushed since —
+    the deletion is refused for it, nothing is sent, and the line names the
+    command at the head that did merge."""
+
+    class _MergedElsewhere(_Host):
+        def __call__(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
+            done = super().__call__(argv)
+            if list(argv)[:3] == ["gh", "pr", "merge"]:
+                self.pr["headRefOid"] = "sha-other"
+            return done
+
+    host = _MergedElsewhere(queue=False)
+    seen = _fake_run(monkeypatch)
+    report = _land(monkeypatch, host)
+    assert report.exit_code == 0
+    assert (
+        "  remote branch 'release/v1.141.0' not deleted: the head named, sha-head, is not the "
+        "head PR #42 merged at, sha-other: its head branch is deleted only at that head. To "
+        "delete it later: `pkit pull-request delete-branch 42 --expect sha-other`."
+    ) in report.text
+    assert host.deletions == [] and host.branch_tip() == "sha-other"
+    assert not any(argv[:3] == ["git", "branch", "-D"] for argv in seen)
+
+
+def test_a_branch_other_open_prs_are_based_on_is_kept(monkeypatch: pytest.MonkeyPatch) -> None:
+    host = _Host(queue=False, based_on=(77,))
+    _fake_run(monkeypatch)
+    report = _land(monkeypatch, host)
+    assert report.exit_code == 0
+    assert (
+        "  kept remote branch 'release/v1.141.0': another open pull request is based on this "
+        "branch (#77), and a branch an open pull request merges into is kept."
+    ) in report.text
+    assert host.deletions == []
 
 
 def test_fork_release_pr_never_deletes_a_base_repo_or_local_branch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Security (PR #896 review): the API delete targets the BASE repo, and a
-    fork author chooses the head name — `release/*` included, so the head
-    guard does not cover it. No ref delete, no local `branch -D`."""
+    """Security (PR #896 review): a fork author chooses the head name —
+    `release/*` included, so the head guard does not cover it. The backbone
+    refuses to delete it, asking nothing more than its reading, and no local
+    `branch -D` runs."""
+    host = _Host(queue=False, isCrossRepository=True)
     seen = _fake_run(monkeypatch)
-    message = _merge_green(monkeypatch, isCrossRepository=True)
-    assert not any(argv[:2] == ["gh", "api"] for argv in seen)
+    message = _merge_green(monkeypatch, host, isCrossRepository=True)
+    assert host.deletions == []
     assert not any(argv[:3] == ["git", "branch", "-D"] for argv in seen)
     assert seen[0] == ["git", "checkout", "main"]
-    assert "lives in a fork" in message
+    assert "  remote branch 'release/v1.141.0' not deleted: PR #42's head is in another" in message
 
 
 @pytest.mark.parametrize("unmerged", ["2", ""], ids=["work-since", "cannot-tell"])
@@ -1052,10 +1245,26 @@ def test_the_merged_head_is_a_required_keyword_of_the_local_clean_up() -> None:
     assert p.default is inspect.Parameter.empty
 
 
+def test_what_became_of_the_remote_branch_is_a_required_keyword_of_the_local_clean_up() -> None:
+    """The local branch goes only with the remote one, so the local clean-up's
+    caller must say what became of that one."""
+    p = inspect.signature(release._git_cleanup_local).parameters["remote"]
+    assert p.kind is inspect.Parameter.KEYWORD_ONLY
+    assert p.default is inspect.Parameter.empty
+
+
 def test_cross_repository_is_a_required_keyword() -> None:
-    """No default: every caller must state whether the PR is cross-repository,
-    so a later caller cannot silently reintroduce the fork-PR deletion hole."""
-    for fn in (release._gh_delete_remote_branch, release._git_cleanup_local):
-        p = inspect.signature(fn).parameters["cross_repository"]
-        assert p.kind is inspect.Parameter.KEYWORD_ONLY
-        assert p.default is inspect.Parameter.empty
+    """No default: the local clean-up's caller must state whether the PR is
+    cross-repository, so a later caller cannot silently reintroduce the
+    fork-PR deletion hole."""
+    p = inspect.signature(release._git_cleanup_local).parameters["cross_repository"]
+    assert p.kind is inspect.Parameter.KEYWORD_ONLY
+    assert p.default is inspect.Parameter.empty
+
+
+def test_release_keeps_no_copy_of_the_remote_deletion() -> None:
+    """The head branch on GitHub is deleted only by the backbone's deletion
+    (ADR-061 point 1): release holds no deletion of its own."""
+    assert not hasattr(release, "_gh_delete_remote_branch")
+    source = inspect.getsource(release)
+    assert "git/refs/heads" not in source and "updateRefs" not in source
