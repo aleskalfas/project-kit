@@ -1,0 +1,21 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  A pull request merged directly now lands with its body, as one merged
+  through a queue does: `pkit pull-request merge`, and so `pkit release merge`
+  and the project-management verbs that land through it, no longer pass the
+  subject alone. Just before the merge the command reads the repository's
+  default squash-commit message. Where it is the pull request's body
+  (`PR_BODY`), GitHub composes the commit's body from it at the merge, with
+  whatever GitHub adds to a body it composes. Otherwise, or where the default
+  cannot be read, the command reads the pull request's body and passes it
+  with the merge. GitHub keeps a body passed as it is and adds nothing to it,
+  so under a `COMMIT_MESSAGES` default the commit no longer lists the
+  commits' messages and their co-author trailers; a repository that wants
+  both sets its default message to `PR_BODY`. A body that cannot be read
+  sends no merge: `accepted` is false, with `reason_kind: unreadable`, and
+  the command exits 1. The `--json` document of `merge` gains `body`:
+  `passed`, `composed`, or null when no merge was sent. The subject is still
+  the caller's.
