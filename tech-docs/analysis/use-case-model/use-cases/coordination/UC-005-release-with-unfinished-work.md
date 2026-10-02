@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T23:49:35Z
+      at: 2026-10-02T01:25:06Z
       outcome: unchanged
-      unchanged-because: "#1254 has pkit release merge run the cross-repository guard at its entry and take --allow-foreign-repo; what a release lands, its scope, its gate and the release pull request's merge path in this use case are unchanged, so it holds"
+      unchanged-because: pkit release merge deletes the release pull request's head branch through the backbone's deletion, only at the head that merged; what a release lands, its scope, its gate and the release pull request's merge path are unchanged, so it holds
 ---
 
 # UC-005 — Cut a release while unfinished work remains

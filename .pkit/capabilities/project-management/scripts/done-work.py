@@ -159,11 +159,15 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     default one, where GitHub does not auto-close), its state label is
     reconciled to done, and its closure cascade runs (DEC-006). A failure is
     a warning naming the re-run, and the run exits with it after cleanup.
-  - Best-effort branch cleanup, after the transition: delete the remote head
-    ref through the API (`gh api -X DELETE .../git/refs/heads/<branch>`, no
-    local-checkout dependency), then `git checkout <default_branch>`, `git
-    pull --ff-only`, `git branch -D <branch>`. Each step warns with its reason
-    and continues; none can fail the run.
+  - Best-effort branch cleanup, after the transition and the closes: the
+    head branch deleted on GitHub by the backbone (`pkit pull-request
+    delete-branch <PR> --expect <the head that merged>`), only while its tip
+    is the head that merged — a branch kept, with why, gone, or not known to
+    be deleted is said in one line, naming the command that deletes it later
+    where it was not deleted — then `git checkout <default_branch>`, `git
+    pull --ff-only`, `git branch -D <branch>`, the last only when the branch
+    on GitHub was deleted or is gone and everything on the local one merged.
+    Each step warns with its reason and continues; none can fail the run.
   - `done-work` does NOT roll back the merge if a downstream step
     fails — merge irreversibility is the architectural constraint per
     DEC-026 failure semantics.
@@ -986,8 +990,9 @@ def run(
             f"(dry-run: would post bypass audit (if any), {lead_in_step}{merge_step}"
             f"call move-issue, close and cascade "
             f"{_issue_list(to_close) or 'no issue'} through close-issue, then "
-            f"best-effort cleanup: delete remote branch {branch!r}, checkout "
-            "main + pull, delete the local branch if everything on it merged.)"
+            f"best-effort cleanup: delete remote branch {branch!r} while its tip is the "
+            "head that merged, checkout main + pull, delete the local branch if everything "
+            "on it merged.)"
         )
         return _ended(PLANNED, 0)
 
@@ -1130,10 +1135,12 @@ def _after_merge(
     The merge is durable by now, so nothing here rolls it back: a failed step
     warns with the command that finishes it, and the run exits with it after
     the cleanup (:data:`FOLLOW_UP_OWED`). `branch` is the PR's head branch and
-    `merged_head` the head it merged at: the local branch is deleted only when
-    nothing on it is missing from the merge. `confirmed` is the operator's
-    confirmation of a change in another repository, which the moves and
-    closes are handed (:func:`_run_sibling`).
+    `merged_head` the head it merged at: the branch on GitHub is deleted only
+    while its tip is that head, the local branch only when the one on GitHub
+    was deleted or is gone and nothing on it is missing from the merge.
+    `confirmed` is the operator's confirmation of a change in another
+    repository, which the moves and closes are handed (:func:`_run_sibling`),
+    and the backbone's deletion of the branch.
     """
     # The first step that failed, as its warning says it.
     owed = ""
@@ -1177,12 +1184,15 @@ def _after_merge(
             owed = owed or warning
             close_rc = close_rc or rc
 
-    # Branch cleanup — best-effort, never fatal. The remote head ref goes
-    # through the API so it has no local-checkout dependency; the local steps
-    # warn and continue when the working tree cannot switch to the default
-    # branch (detached HEAD, the default branch held by another worktree).
-    pr_merge.delete_remote_branch(branch, config, cross_repository=cross)
-    pr_merge.cleanup_local(branch, config, cross_repository=cross, merged_head=merged_head)
+    # Branch cleanup — never fatal, after the steps above. The head branch on
+    # GitHub is the backbone's to delete, only while its tip is the head that
+    # merged; the local steps warn and continue when the working tree cannot
+    # switch to the default branch (detached HEAD, the default branch held by
+    # another worktree).
+    remote = pr_merge.delete_branch(pr_number, merged_head, config, allow_foreign_repo=confirmed)
+    pr_merge.cleanup_local(
+        branch, config, cross_repository=cross, merged_head=merged_head, remote=remote
+    )
 
     if move_rc != 0:
         return _ended(FOLLOW_UP_OWED, move_rc, reason=owed)
@@ -1477,8 +1487,9 @@ def _complete_merged_pr(
         print(
             f"(dry-run: would {lead_in_step}call move-issue, close and cascade "
             f"{_issue_list(to_close) or 'no issue'} through close-issue, then "
-            f"best-effort cleanup: delete remote branch {head_branch!r}, checkout "
-            "main + pull, delete the local branch if everything on it merged.)"
+            f"best-effort cleanup: delete remote branch {head_branch!r} while its tip is the "
+            "head that merged, checkout main + pull, delete the local branch if everything "
+            "on it merged.)"
         )
         return _ended(PLANNED, 0)
     if not args.yes and sys.stdin.isatty():

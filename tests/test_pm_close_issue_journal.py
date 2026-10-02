@@ -398,7 +398,7 @@ def test_a_done_work_landing_that_closes_two_issues_journals_each_once(
     primary = _task_in_review(world)
     further = _backlog_task(world)
     world.tracker.merge(PR, [primary, further])
-    monkeypatch.setattr(dw.pr_merge, "delete_remote_branch", lambda *a, **kw: None)
+    monkeypatch.setattr(dw.pr_merge, "delete_branch", lambda *a, **kw: None)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", lambda *a, **kw: None)
     capsys.readouterr()
 
