@@ -674,3 +674,107 @@ def test_gh_comment_call_sites_thread_config() -> None:
             f"positional arg(s) and no `config` keyword; the definition requires "
             f"{required} — `config` was dropped (bug #567)."
         )
+
+
+# --- a body edit holds its first line's parent to the containment graph (#1313) --
+# Parity with validate-issue: the parent a written body's first line names is read
+# — once, only where it names one — and a parent the issue's type may not sit
+# under is a hard-reject finding, refused before the write like any other.
+
+
+def _answer_parent_reads(ei, monkeypatch, titles_by_number: dict[int, str | None]) -> list[int]:
+    import json
+    import subprocess
+
+    asked: list[int] = []
+
+    def fake_gh_run(args, config, **kwargs):
+        number = int(args[3])
+        asked.append(number)
+        title = titles_by_number[number]
+        if title is None:
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="gh: HTTP 502")
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps({"title": title}), stderr="")
+
+    monkeypatch.setattr(ei.containment_graph, "gh_run", fake_gh_run)
+    return asked
+
+
+def test_validate_a_body_under_a_parent_the_type_may_not_sit_under_is_a_hard_reject(
+    ei, monkeypatch, issue_types, titles, body_format
+) -> None:
+    asked = _answer_parent_reads(ei, monkeypatch, {7: "[Task] another task"})
+    findings = ei._validate(
+        title="[Task] A task filed under another task",
+        body="Feature: #7\n\n## What\nx\n",
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        issue_number=42,
+        read_parent=lambda n: ei.containment_graph.read_parent(n, {}, issue_types),
+    )
+
+    assert asked == [7]
+    found = [f for f in findings if f.label == "body.parent-ref.containment"]
+    assert [f.severity for f in found] == ["hard-reject"]
+
+
+def _run_edit(ei, monkeypatch, argv: list[str], body: str) -> tuple[int, list]:
+    from types import SimpleNamespace
+
+    issue = {
+        "title": "[Task] Evidence points are keyed so two providers can report one",
+        "body": body,
+        "state": "OPEN",
+        "labels": [{"name": "type:feature"}],
+        "milestone": None,
+    }
+    writes: list = []
+    monkeypatch.setattr(sys, "argv", ["edit-issue", "42", *argv, "--yes"])
+    monkeypatch.setattr(ei, "resolve_capability_root", lambda _explicit: CAP_ROOT)
+    monkeypatch.setattr(ei.bootstrap_gate, "enforce", lambda *a, **k: True)
+    monkeypatch.setattr(ei.session_guard, "enforce", lambda **k: True)
+    monkeypatch.setattr(ei, "load_adopter_config", lambda _root: {})
+    monkeypatch.setattr(ei, "_read_members", lambda *a: [])
+    monkeypatch.setattr(
+        ei, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+    )
+    monkeypatch.setattr(ei, "check_membership", lambda *a: SimpleNamespace(allowed=True))
+    monkeypatch.setattr(ei, "_gh_get_issue", lambda _n, _config: issue)
+    monkeypatch.setattr(ei, "_gh_apply_edit", lambda *a, **k: writes.append(k) or True)
+    monkeypatch.setattr(ei, "_gh_comment", lambda *a, **k: writes.append(a) or True)
+    return ei.main(), writes
+
+
+_SECTIONS = "## What\nx\n\n## Acceptance criteria\n- [ ] y\n\n## Doc impact\n- [ ] z\n"
+
+
+def test_main_refuses_a_body_edit_naming_a_parent_the_type_may_not_sit_under(
+    ei, monkeypatch, capsys
+) -> None:
+    asked = _answer_parent_reads(ei, monkeypatch, {7: "[Docs] a kind-prefixed task"})
+    rc, writes = _run_edit(
+        ei, monkeypatch, ["--body", f"Feature: #7\n\n{_SECTIONS}"], f"Feature: #1\n\n{_SECTIONS}"
+    )
+
+    assert rc == 1
+    assert writes == []
+    assert asked == [7]
+    out = capsys.readouterr()
+    assert "[hard-reject] body.parent-ref.containment:" in out.out
+    assert "a task may not sit under #7, which is a task" in out.out
+
+
+def test_main_title_only_edit_reads_no_parent(ei, monkeypatch) -> None:
+    """A title-only edit validates no body (#583), so no parent is read."""
+    asked = _answer_parent_reads(ei, monkeypatch, {})
+    rc, writes = _run_edit(
+        ei,
+        monkeypatch,
+        ["--title", "[Task] Evidence points are keyed so two providers report one"],
+        f"Feature: #7\n\n{_SECTIONS}",
+    )
+
+    assert rc == 0
+    assert asked == []
+    assert len(writes) == 1

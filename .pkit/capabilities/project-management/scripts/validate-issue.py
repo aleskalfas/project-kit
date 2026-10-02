@@ -13,6 +13,14 @@ classification axes presence + uniqueness, parent-ref first line. Emits findings
 tagged by the severity tokens from validation-severity.yaml (hard-
 reject / bypassable-with-audit / warning).
 
+The parent the first line names is held to issue-types.yaml's containment graph
+([project-management:DEC-005-linking-and-containment]): an issue already under a
+parent its type may not sit under is reported at hard-reject — never rewritten —
+under either hierarchy mode. That needs the parent's type, so the parent is read,
+once and bounded, only where the first line names one; a parent that cannot be
+read is reported at warning as not checked, never as a violation
+(`_lib/containment_graph`).
+
 Which substrate carries each classification axis — and therefore what the
 presence gate may demand — is asked of `_lib/axis_carriage`, never of the board
 flag directly ([project-management:DEC-051-axis-carriage-activation] decision
@@ -41,6 +49,7 @@ import argparse
 import json
 import re
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -56,6 +65,7 @@ from _lib import (
     body_parent_ref,
     bootstrap_gate,
     classification_rules,
+    containment_graph,
     title_rules,
 )
 from _lib import lifecycle_inference as infer
@@ -194,6 +204,16 @@ def main() -> int:
         phase=args.phase,
         hierarchy=hierarchy,
         substrate_map=substrate_map,
+        issue_number=args.issue_number,
+        # The parent's type is read as this issue's own is: through the
+        # substrate-map's vocabulary where one is present.
+        read_parent=lambda number: containment_graph.read_parent(
+            number,
+            config,
+            issue_types,
+            classification=classification,
+            substrate_map=substrate_map,
+        ),
     )
 
     if args.json:
@@ -229,7 +249,13 @@ def _validate_issue(
     phase: str = PHASE_TRANSITION,
     hierarchy: str = axis_labels.HIERARCHY_GATED,
     substrate_map: axis_labels.SubstrateMap | None = None,
+    issue_number: int | None = None,
+    read_parent: Callable[[int], containment_graph.ParentRead] | None = None,
 ) -> list[Finding]:
+    """The issue's findings. ``read_parent`` reads a parent's type for the
+    containment check (``issue_number`` tells a first line naming the issue
+    itself); without it the check — the one finding that reads another issue —
+    is not made."""
     findings: list[Finding] = []
     title = str(issue.get("title", ""))
     body = str(issue.get("body") or "")
@@ -770,6 +796,24 @@ def _validate_issue(
                                 f"parent-refs are recorded but not required.",
                             )
                         )
+
+        # The parent the first line names, held to the containment graph
+        # (DEC-005): an issue already under a parent its type may not sit under
+        # is reported at hard-reject, as a filing is refused — whatever the
+        # hierarchy mode, since the graph carries no knob to soften (DEC-036 D4)
+        # — and is not rewritten. The parent is read only where the first line
+        # names one, in any form; one that cannot be read is reported as not
+        # checked, at warning. Skipped where the marker is malformed, as the form
+        # check is: the line read would not be the parent-ref.
+        if read_parent is not None and malformed_marker is None:
+            for severity, label, detail in containment_graph.first_line_findings(
+                body,
+                structural_type,
+                issue_types,
+                issue_number=issue_number,
+                read=read_parent,
+            ):
+                findings.append(Finding(severity, label, detail))
 
         # Residual-placeholder detection per DEC-031.
         if capability_root is not None:

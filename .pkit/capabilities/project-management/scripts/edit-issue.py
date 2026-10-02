@@ -19,6 +19,12 @@ predate the current body schema), and a body-only edit validates the new
 body but not the untouched title. This lets a legacy issue take a clean
 title edit without a full body rewrite.
 
+A body edit holds the parent its first line names to the containment graph,
+as validate-issue does ([project-management:DEC-005-linking-and-containment],
+`_lib/containment_graph`): a parent the issue's type may not sit under is a
+hard-reject finding, and a parent that cannot be read a warning that it was
+not checked. The parent is read once, only where the first line names one.
+
 `--milestone <number|title>` moves the issue to an OPEN milestone, resolved
 exactly as `create-issue --milestone` resolves it; `--clear-milestone`
 detaches it (#1049). The native Milestone field is written through the
@@ -63,6 +69,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -77,6 +84,7 @@ from _lib import (
     axis_labels,
     body_parent_ref,
     bootstrap_gate,
+    containment_graph,
     provenance,
     session_guard,
     title_rules,
@@ -387,6 +395,16 @@ def main() -> int:
             classification=classification,
             check_title=title_changed,
             check_body=body_changed,
+            issue_number=args.issue_number,
+            read_parent=(
+                (
+                    lambda number: containment_graph.read_parent(
+                        number, config, issue_types, classification=classification
+                    )
+                )
+                if body_changed
+                else None
+            ),
         )
         _print_findings(findings)
 
@@ -719,8 +737,15 @@ def _validate(
     classification: dict | None = None,
     check_title: bool = True,
     check_body: bool = True,
+    issue_number: int | None = None,
+    read_parent: Callable[[int], containment_graph.ParentRead] | None = None,
 ) -> list[Finding]:
     """Apply the body + title validators used by validate-issue.py.
+
+    ``read_parent`` reads a parent's type for the containment check, as
+    validate-issue's does (``issue_number`` tells a first line naming the issue
+    itself); without it that check — the one that reads another issue — is not
+    made.
 
     ``check_title`` / ``check_body`` scope the findings to the field(s) being
     changed (#583). Both default True (full validation, unchanged for callers
@@ -831,6 +856,19 @@ def _validate(
                             f"form {parent_ref_form!r}; got {first_line!r}.",
                         )
                     )
+
+        # The parent the first line names, held to the containment graph
+        # (DEC-005), parity with validate-issue: hard-reject where the issue's
+        # type may not sit under it, a warning where it cannot be read.
+        if read_parent is not None and malformed_marker is None:
+            for severity, label, detail in containment_graph.first_line_findings(
+                body,
+                structural_type,
+                issue_types,
+                issue_number=issue_number,
+                read=read_parent,
+            ):
+                findings.append(Finding(severity, label, detail))
 
     # Universal body rules.
     if re.search(r"^# [^#]", body, flags=re.MULTILINE):

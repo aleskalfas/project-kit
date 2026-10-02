@@ -2461,3 +2461,203 @@ def test_board_with_an_unsupported_axis_demands_nothing(
     assert "classification.priority.unverified" not in found
     assert "classification.workstream.missing" not in found
     assert "classification.workstream.unverified" not in found
+
+
+# --- an existing issue under a parent its type may not sit under (#1313) --------
+# validate-issue reports it — the issue is never rewritten — at hard-reject, as
+# DEC-005 refuses the filing; the parent's type costs a read, made only where the
+# first line names a parent, and a parent that cannot be read is reported as not
+# checked rather than as a violation. The read goes through the real
+# `containment_graph.read_parent`, its one gh call answered here.
+
+
+def _answer_parent_reads(vi, monkeypatch, titles_by_number: dict[int, str | None]) -> list[int]:
+    """Answer `gh issue view <N> --json title` from ``titles_by_number`` (None: the
+    read fails); return the numbers read."""
+    import json
+    import subprocess
+
+    asked: list[int] = []
+
+    def fake_gh_run(args, config, **kwargs):
+        number = int(args[3])
+        asked.append(number)
+        title = titles_by_number[number]
+        if title is None:
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="gh: HTTP 502")
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps({"title": title}), stderr="")
+
+    monkeypatch.setattr(vi.containment_graph, "gh_run", fake_gh_run)
+    return asked
+
+
+def _validate_with_parent_reads(vi, issue, *, issue_types, titles, body_format, config, **kw):
+    return vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=config,
+        issue_number=42,
+        read_parent=lambda n: vi.containment_graph.read_parent(n, config, issue_types),
+        **kw,
+    )
+
+
+_VALID_TASK_BODY = "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+
+
+def _task(first_line: str) -> dict:
+    return _make_issue(
+        title="[Task] Install the Claude Code CLI inside the sandbox",
+        body=f"{first_line}\n\n{_VALID_TASK_BODY}",
+        labels=["type:feature", "priority:Medium", "workstream:cli"],
+    )
+
+
+def test_an_issue_under_a_parent_its_type_may_not_sit_under_is_a_hard_reject(
+    vi, monkeypatch, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    asked = _answer_parent_reads(vi, monkeypatch, {7: "[Task] another task"})
+    findings = _validate_with_parent_reads(
+        vi,
+        _task("Feature: #7"),
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+    )
+
+    assert asked == [7], "one read, of the parent the first line names"
+    found = [f for f in findings if f.label == "body.parent-ref.containment"]
+    assert [f.severity for f in found] == [vi.SEVERITY_HARD_REJECT]
+    assert found[0].detail.startswith(
+        "the first line names #7 as the parent, and a task may not sit under #7, which is a task"
+    )
+    assert "body.parent-ref" not in _labels(findings), "the line's form is fine"
+
+
+@pytest.mark.parametrize("phase", ["create", "transition"])
+@pytest.mark.parametrize("hierarchy", ["gated", "advisory"])
+def test_the_violation_is_hard_at_every_phase_and_hierarchy(
+    vi, monkeypatch, issue_types, titles, body_format, label_fallback_config, phase, hierarchy
+) -> None:
+    """The containment graph carries no knob: `hierarchy: advisory` softens only
+    whether a parent is required (DEC-036 D4), and no phase softens it either."""
+    _answer_parent_reads(vi, monkeypatch, {7: "[Feature] a capability"})
+    findings = _validate_with_parent_reads(
+        vi,
+        _make_issue(
+            title="[Feature] A capability under a capability",
+            body="EPIC: #7\n\n## What\nx\n",
+            labels=["type:feature", "priority:Medium", "workstream:cli"],
+        ),
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+        phase=phase,
+        hierarchy=hierarchy,
+    )
+    found = [f for f in findings if f.label == "body.parent-ref.containment"]
+    assert [f.severity for f in found] == [vi.SEVERITY_HARD_REJECT]
+
+
+def test_a_parent_that_cannot_be_read_is_reported_unchecked_not_violated(
+    vi, monkeypatch, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    _answer_parent_reads(vi, monkeypatch, {7: None})
+    findings = _validate_with_parent_reads(
+        vi,
+        _task("Umbrella: #7"),
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+    )
+
+    assert "body.parent-ref.containment" not in _labels(findings)
+    unchecked = [f for f in findings if f.label == "body.parent-ref.containment-unchecked"]
+    assert [f.severity for f in unchecked] == [vi.SEVERITY_WARNING]
+    assert unchecked[0].detail == (
+        "the first line names #7 as the parent, but #7 could not be read (gh exited 1: "
+        "gh: HTTP 502), so whether a task may sit under it cannot be checked."
+    )
+
+
+@pytest.mark.parametrize(
+    ("first_line", "parent_title"),
+    [("Feature: #7", "[Feature] a capability"), ("Feature: #7", "no type prefix")],
+    ids=["allowed", "untyped"],
+)
+def test_an_allowed_or_untyped_parent_draws_no_containment_finding(
+    vi,
+    monkeypatch,
+    issue_types,
+    titles,
+    body_format,
+    label_fallback_config,
+    first_line,
+    parent_title,
+) -> None:
+    _answer_parent_reads(vi, monkeypatch, {7: parent_title})
+    findings = _validate_with_parent_reads(
+        vi,
+        _task(first_line),
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+    )
+    assert not [f for f in findings if f.label.startswith("body.parent-ref.containment")]
+
+
+@pytest.mark.parametrize(
+    "first_line",
+    ["Milestone: [#5](../milestone/5)", "Milestone: #5", "Feature: #42", "## What"],
+    ids=["milestone", "old-milestone", "names-itself", "no-parent"],
+)
+def test_no_parent_is_read_where_the_first_line_names_no_parent_issue(
+    vi, monkeypatch, issue_types, titles, body_format, label_fallback_config, first_line
+) -> None:
+    asked = _answer_parent_reads(vi, monkeypatch, {})
+    _validate_with_parent_reads(
+        vi,
+        _task(first_line),
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+    )
+    assert asked == []
+
+
+def test_main_reports_an_existing_violation_and_exits_blocking(vi, tmp_path, monkeypatch, capsys):
+    """Through main(): the parent is read with the real reader, the violation is
+    in the JSON findings, and the exit code is the blocking one."""
+    import json
+    import shutil
+    from types import SimpleNamespace
+
+    root = tmp_path / ".pkit" / "capabilities" / "project-management"
+    shutil.copytree(
+        REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "schemas", root / "schemas"
+    )
+    (root / "project").mkdir(parents=True)
+    (root / "project" / "config.yaml").write_text(
+        "schema_version: 1\ndefault_branch: main\nworkstreams: [cli]\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(vi, "resolve_capability_root", lambda _explicit: root)
+    monkeypatch.setattr(vi.bootstrap_gate, "enforce", lambda *a, **k: True)
+    monkeypatch.setattr(vi, "check_membership", lambda *a: SimpleNamespace(allowed=True))
+    monkeypatch.setattr(vi, "_gh_get_issue", lambda _n, _config: _task("Feature: #7"))
+    asked = _answer_parent_reads(vi, monkeypatch, {7: "[Bug] a kind-prefixed task"})
+    monkeypatch.setattr(sys, "argv", ["validate-issue", "42", "--json"])
+
+    rc = vi.main()
+
+    out = json.loads(capsys.readouterr().out)
+    containment = [f for f in out["findings"] if f["label"] == "body.parent-ref.containment"]
+    assert asked == [7]
+    assert [f["severity"] for f in containment] == ["hard-reject"]
+    assert rc == 1
