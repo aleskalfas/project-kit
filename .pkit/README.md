@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T02:25:43Z
+      at: 2026-10-02T03:05:33Z
       outcome: unchanged
-      unchanged-because: a merged pull request's head branch is deleted through the backbone, only at the head that merged; what this page says of the areas and commands it indexes still holds
+      unchanged-because: the process README now names reason as the journal entry's one place for why a move was taken; this page describes the process area in one line, as the shared substrate and the engine behind pkit process, which still holds
 ---
 
 # project-kit

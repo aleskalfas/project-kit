@@ -81,10 +81,13 @@ def test_stamp_capability_refuses_invalid_slug(kit_target: Path) -> None:
 
 
 # Each reserved name, with a phrase of the reason its refusal gives: `core` names
-# the core schemas area (#919); `project` names the project's own entries (#1269).
+# core's own decision records, agents and schemas area (#919, #1289); `project`
+# names the project's own entries (#1269); `adr` names the project's architecture
+# decision records (#1289).
 RESERVED = [
-    ("core", "names the core schemas area"),
+    ("core", "the namespace of the core decision records and agents, and the core schemas area"),
     ("project", "indistinguishable from the project itself"),
+    ("adr", "the namespace of the project's architecture decision records"),
 ]
 
 

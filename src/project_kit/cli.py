@@ -6638,7 +6638,15 @@ def new() -> None:
 @new.command("decision")
 @click.argument("namespace")
 @click.argument("slug")
-def new_decision(namespace: str, slug: str) -> None:
+@click.option(
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="adr only: consent without a prompt to recording the derived adr-records location "
+    "over a folder that already holds documents. Without it a terminal is asked once; a "
+    "non-interactive run refuses.",
+)
+def new_decision(namespace: str, slug: str, yes: bool) -> None:
     """Stamp a new decision-record stub.
 
     Namespaces:
@@ -6649,6 +6657,13 @@ def new_decision(namespace: str, slug: str) -> None:
 
     Any NAMESPACE that is not core/project/adr is interpreted as a
     capability name; the command refuses if no such capability exists.
+
+    For adr with <adr-records> unset, the location is derived from the internal
+    documentation root and recorded in the overlay before the record is stamped
+    (COR-049 point 5); the command says what it recorded. Over a folder that
+    already holds documents the recording takes consent: a terminal is asked
+    once, `--yes` consents without a prompt, and a non-interactive run without
+    `--yes` refuses, exit 1, recording and stamping nothing.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -6657,7 +6672,7 @@ def new_decision(namespace: str, slug: str) -> None:
         raise click.ClickException(
             f"{target_root}/.pkit/ does not exist. Run 'pkit init' from this project's root first."
         )
-    target = stamp_decision(target_root, namespace=namespace, slug=slug)
+    target = stamp_decision(target_root, namespace=namespace, slug=slug, yes=yes)
     try:
         rel = target.relative_to(target_root)
     except ValueError:
