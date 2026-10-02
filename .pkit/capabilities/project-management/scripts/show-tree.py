@@ -54,8 +54,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, bootstrap_gate, containment, session_guard
-from _lib import lifecycle_inference as infer
+from _lib import axis_labels, body_parent_ref, bootstrap_gate, containment, session_guard
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -82,6 +81,17 @@ class Issue:
     # Per-child substrate provenance from the containment read-seam: maps a
     # child number to "native" / "textual" (native-wins on conflict, DEC-005).
     child_substrate: dict[int, str] = field(default_factory=dict)
+    # How this issue's native parent and its first line stand, as the
+    # containment seam compares them (`containment.compare_parents`); None until
+    # `_link_parents` has run.
+    parent_resolution: containment.ParentResolution | None = None
+    # Whether the native parent the resolution holds is the issue's native
+    # parent as the tracker has it — one seen in a native child set, or none on
+    # an instance without sub-issues — rather than "none seen" (`_link_parents`).
+    native_parent_known: bool = False
+    # What the render says of a child listed under this issue beyond its
+    # substrate: a native parent elsewhere, a first line not in an allowed form.
+    child_marks: dict[int, tuple[str, ...]] = field(default_factory=dict)
 
 
 @dataclass
@@ -200,10 +210,12 @@ def main() -> int:
     issues = _parse_issues(issues_raw, issue_types, classification)
     prs = _parse_prs(prs_raw)
 
-    # Build parent relationships through the containment read-seam (native-where-
-    # present / textual-otherwise / native-wins per DEC-005) — show-tree does NOT
-    # parse body parent-refs directly (ADR-026 one-read-seam discipline).
-    incomplete_parents = _link_parents(issues, config, corpus_complete=corpus.complete)
+    # Build parent relationships through the containment read-seam (native and
+    # first-line children together, native-wins per DEC-005) — show-tree does NOT
+    # parse body parent-refs directly (ADR-035, the one-read-seam discipline).
+    incomplete_parents = _link_parents(
+        issues, config, corpus_complete=corpus.complete, issue_types=issue_types
+    )
     # Two independent reasons the view may be short, and both must label it: the
     # corpus was bounded, or the seam could not vouch for some parent's child set
     # (an unreadable native panel). Either one makes "no other children" and
@@ -355,9 +367,13 @@ def _parse_prs(raw: list) -> dict[int, PR]:
     return out
 
 
-def _link_parents(issues: dict[int, Issue], config: dict, *, corpus_complete: bool) -> list[int]:
-    """Populate parent_number + children + child_substrate via the containment
-    read-seam (``_lib.containment.resolve_children``).
+def _link_parents(
+    issues: dict[int, Issue], config: dict, *, corpus_complete: bool, issue_types: dict
+) -> list[int]:
+    """Populate children + child_substrate via the containment read-seam
+    (``_lib.containment.resolve_children``), then each issue's parent through
+    the seam's comparison of its native parent with its first line
+    (``_lib.containment.compare_parents``).
 
     Returns the parents whose child set the seam could not vouch for, so the
     caller can label the render. The corpus's own completeness is passed IN
@@ -365,22 +381,41 @@ def _link_parents(issues: dict[int, Issue], config: dict, *, corpus_complete: bo
     whole gets an incomplete verdict for every parent, which would make the
     label meaningless by always firing.
 
-    For each candidate parent the seam resolves its children native-where-present
-    / textual-otherwise with native-wins (DEC-005); show-tree never parses body
-    parent-refs itself (ADR-026 one-read-seam discipline). The corpus
+    For each candidate parent the seam resolves its children — its native
+    sub-issues together with every issue whose first line names it, native-wins
+    on a child present both ways (DEC-005); show-tree never parses body
+    parent-refs itself (ADR-035's one-read-seam discipline). The corpus
     (``{number: body}``) is handed to the seam so the textual side costs no API
     calls — the seam's only per-call cost is one native ``…/sub_issues`` GET per
     candidate parent.
 
+    No issue's parent is read upward: each issue's native parent is the
+    candidate parent whose native child set holds it, and the seam compares that
+    with the issue's first line. ``parent_number`` is the parent the seam
+    resolves — the native one wherever one was seen, else the first line's — so
+    it does not depend on the order parents are walked in. A child the native
+    parent and the first line place under different parents is listed under
+    both, and under the first line's parent with a mark naming its native
+    parent; a first line in a form the issue's type does not allow is marked
+    where the child is listed under the parent it names.
+
+    An issue whose native parent no resolved child set holds has none *seen*,
+    which is not the same as none: the parent may be in another repository,
+    outside the fetched issues (a closed parent under ``--state open``, one past
+    ``--limit``), behind a native panel that could not be read, or an issue whose
+    sub-issues were not read (below). So each issue's ``native_parent_known``
+    says whether its native parent is known — seen in a native child set, or
+    none on an instance the seam found without sub-issues — and is False
+    wherever a missing one only means none was seen.
+
     Cost bound: the native read is issued only for *candidate parents* — issues
-    that are structural containers (epic/feature/umbrella/task) OR are named as a
-    parent by some issue's textual ref — not for every corpus issue. A leaf that
-    is neither cannot hold children under the methodology, so skipping its native
-    read cannot drop a child. (The write seam always writes BOTH substrates, so a
-    native sub-issue also carries a textual ref and thus marks its parent a
-    candidate; a hypothetical native-only child under an otherwise-leaf parent is
-    the sole uncovered edge — accepted to keep the walk from issuing one native
-    call per corpus issue.)
+    of a structural type (epic/feature/umbrella/task) OR named as a parent by
+    some issue's first line — not for every corpus issue. An issue that is
+    neither, an untyped one no first line names, has its native sub-issues
+    unread, so a native child of it is not seen: one linked in the tracker's own
+    UI, or one whose first line names a milestone (as `create-issue --parent N
+    --milestone M` files it) or nothing. Accepted to keep the walk from issuing
+    one native call per corpus issue; such a child's native parent is not known.
     """
     corpus = {num: issue.body for num, issue in issues.items()}
     incomplete_parents: list[int] = []
@@ -391,6 +426,8 @@ def _link_parents(issues: dict[int, Issue], config: dict, *, corpus_complete: bo
         if parent is not None
     }
     container_types = {"epic", "feature", "umbrella", "task"}
+    native_parents: dict[int, int] = {}
+    native_supported: list[bool] = []
     for num, issue in issues.items():
         is_candidate = issue.structural_type in container_types or num in textual_parents
         if not is_candidate:
@@ -398,6 +435,7 @@ def _link_parents(issues: dict[int, Issue], config: dict, *, corpus_complete: bo
         resolution = containment.resolve_children(
             config, parent_number=num, corpus=corpus, corpus_complete=corpus_complete
         )
+        native_supported.append(resolution.native_supported)
         # A per-parent verdict can be incomplete even when the corpus is whole:
         # an UNREADABLE native panel for THIS parent means children may exist
         # unseen. Uncollected, the render would look complete while one parent's
@@ -408,10 +446,59 @@ def _link_parents(issues: dict[int, Issue], config: dict, *, corpus_complete: bo
         for child in resolution.children:
             if child.number not in issues:
                 continue  # a native child outside the fetched corpus — skip render
-            issues[child.number].parent_number = num
             issue.children.append(child.number)
             issue.child_substrate[child.number] = child.substrate.value
+            if child.substrate is containment.ChildSubstrate.NATIVE:
+                native_parents[child.number] = num
+    # No native substrate at all: every native read found the endpoint absent,
+    # so an issue with no native parent seen has none.
+    no_native_substrate = bool(native_supported) and not any(native_supported)
+    for number, issue in issues.items():
+        native = native_parents.get(number)
+        resolution = containment.compare_parents(
+            number,
+            body_parent_ref.read_first_line(issue.body, issue.structural_type, issue_types),
+            containment.NativeParent(native) if native is not None else None,
+        )
+        issue.parent_resolution = resolution
+        issue.native_parent_known = native is not None or no_native_substrate
+        parent = resolution.parent
+        if parent is not None and number in _children_of(issues, parent.number):
+            issue.parent_number = parent.number
+        _mark_listing(issues, resolution)
     return incomplete_parents
+
+
+def _children_of(issues: dict[int, Issue], number: int) -> list[int]:
+    """The children the render lists under issue ``number`` — none for an issue
+    outside the fetched corpus."""
+    parent = issues.get(number)
+    return parent.children if parent is not None else []
+
+
+def _mark_listing(issues: dict[int, Issue], resolution: containment.ParentResolution) -> None:
+    """Mark the child ``resolution`` resolves where it is listed under the
+    parent its first line names: with its native parent, where that is another
+    issue, and with the line's form, where the issue's type does not allow it."""
+    child, named = resolution.issue, resolution.named
+    if named is None or child not in _children_of(issues, named):
+        return
+    marks: list[str] = []
+    native = resolution.native
+    if resolution.kind is containment.ParentKind.DISAGREE and native is not None:
+        marks.append(f"native parent {native.ref}")
+    if resolution.line.form is body_parent_ref.LineForm.NON_CONFORMING:
+        marks.append("first line not an allowed form")
+    if marks:
+        issues[named].child_marks[child] = tuple(marks)
+
+
+def _listing_marks(parent: Issue, child: int) -> tuple[str, ...]:
+    """What the render says of ``child`` listed under ``parent``: ``textual``
+    for a child held there by its first line alone, then the marks
+    :func:`_mark_listing` set."""
+    textual = ("textual",) if parent.child_substrate.get(child) == "textual" else ()
+    return textual + parent.child_marks.get(child, ())
 
 
 def _refresh_children_views(issues: dict[int, Issue], capability_root: Path, config: dict) -> None:
@@ -457,22 +544,12 @@ def _refresh_children_views(issues: dict[int, Issue], capability_root: Path, con
 
 
 def _first_parent_ref(body: str) -> int | None:
-    """The parent number on a body's first non-blank parent-ref line, for the
-    candidate-parent pre-scan only — the seam still owns authoritative
-    resolution. Kept minimal and local to bounding which parents get a native
-    read; it never decides the rendered child set."""
-    if not body:
-        return None
-    body = infer.strip_integration_marker(body)  # DEC-013 marker above parent-ref (#763)
-    for line in body.splitlines():
-        s = line.strip()
-        if not s:
-            continue
-        m = re.match(r"^([A-Za-z]+):\s+#(\d+)", s)
-        if not m:
-            return None
-        return int(m.group(2))
-    return None
+    """The issue a body's first line names as its parent, for the
+    candidate-parent pre-scan only — read as the seam's textual side reads it
+    (`body_parent_ref.named_issue`), so every parent a child set can hold is a
+    candidate. It bounds which parents get a native read; it never decides the
+    rendered child set."""
+    return body_parent_ref.named_issue(body)
 
 
 # ---- orphan detection -----------------------------------------------
@@ -540,6 +617,35 @@ def _issue_to_dict(issue: Issue) -> dict:
         "child_substrate": {
             str(n): issue.child_substrate.get(n, "textual") for n in sorted(issue.children)
         },
+        # How the issue's native parent and its first line stand: `disagree`
+        # marks two parents, `non-conforming` a first line in a form the issue's
+        # type does not allow.
+        "parent_resolution": _resolution_to_dict(
+            issue.parent_resolution, native_known=issue.native_parent_known
+        ),
+    }
+
+
+def _resolution_to_dict(
+    resolution: containment.ParentResolution | None, *, native_known: bool
+) -> dict | None:
+    """How an issue's two records of its parent stand, for the JSON render.
+
+    ``native_parent_known`` tells a ``native_parent`` of ``null`` that means
+    none from one that means none was seen (`_link_parents`): where it is false,
+    the native parent is not known, and ``kind`` — read from what was seen —
+    says nothing of it. ``first_line_names_itself`` marks a first line naming
+    the issue itself, which names no parent."""
+    if resolution is None:
+        return None
+    native = resolution.native
+    return {
+        "kind": resolution.kind.value,
+        "native_parent": native.number if native is not None else None,
+        "native_parent_known": native_known,
+        "first_line_parent": resolution.named,
+        "first_line_form": resolution.line.form.value,
+        "first_line_names_itself": resolution.names_itself,
     }
 
 
@@ -587,16 +693,18 @@ def _print_branch(
     prs: dict[int, PR],
     num: int,
     depth: int,
-    substrate: str | None = None,
+    marks: tuple[str, ...] = (),
 ) -> None:
     issue = issues[num]
     prefix = "  " * depth + ("- " if depth else "")
     type_marker = f"[{issue.structural_type or '?'}]"
     state_marker = f"({issue.state})"
     ms = f" — milestone: {issue.milestone}" if issue.milestone else ""
-    # Only annotate textual-only links — native is the canonical default, so the
-    # marker calls out the projection-only children (DEC-005) without noise.
-    sub_marker = "  [textual]" if substrate == "textual" else ""
+    # Only annotate what departs from the canonical default — a native child
+    # whose first line agrees — so the marks call out projection-only children
+    # (DEC-005), a native parent elsewhere and a malformed first line, without
+    # noise (`_listing_marks`).
+    sub_marker = "  " + " ".join(f"[{mark}]" for mark in marks) if marks else ""
     print(f"{prefix}{type_marker} #{num} {state_marker} {issue.title}{ms}{sub_marker}")
     # Linked PRs.
     linked = [p for p in prs.values() if num in p.closes]
@@ -604,7 +712,7 @@ def _print_branch(
         sub = "  " * (depth + 1) + "↪ "
         print(f"{sub}PR #{p.number} ({p.state}) — {p.title}")
     for child in sorted(issue.children):
-        _print_branch(issues, prs, child, depth + 1, issue.child_substrate.get(child))
+        _print_branch(issues, prs, child, depth + 1, _listing_marks(issue, child))
 
 
 # ---- markdown renderer ----------------------------------------------
@@ -638,18 +746,18 @@ def _md_branch(
     prs: dict[int, PR],
     num: int,
     depth: int,
-    substrate: str | None = None,
+    marks: tuple[str, ...] = (),
 ) -> None:
     issue = issues[num]
     indent = "  " * depth
     state = " *(closed)*" if issue.state == "closed" else ""
-    sub_marker = " _(textual)_" if substrate == "textual" else ""
+    sub_marker = "".join(f" _({mark})_" for mark in marks)
     print(f"{indent}- **[{issue.structural_type or '?'}] #{num}**{state} {issue.title}{sub_marker}")
     linked = [p for p in prs.values() if num in p.closes]
     for p in linked:
         print(f"{indent}  - PR #{p.number} ({p.state}) {p.title}")
     for child in sorted(issue.children):
-        _md_branch(issues, prs, child, depth + 1, issue.child_substrate.get(child))
+        _md_branch(issues, prs, child, depth + 1, _listing_marks(issue, child))
 
 
 # ---- gh wrappers ----------------------------------------------------

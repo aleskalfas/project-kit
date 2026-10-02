@@ -59,7 +59,8 @@ import re
 from _lib import axis_labels, default_branch
 from _lib.checkbox_gate import unticked_boxes  # noqa: F401 — re-export
 
-# Canonical state ordering (matches move-issue's `order` lists).
+# Canonical state ordering — the one move-issue's forward checks and the forward
+# cascade read.
 STATE_ORDER = ["todo", "backlog", "in-progress", "review", "done"]
 
 
@@ -186,22 +187,40 @@ def state_before_close(
     *,
     milestone: dict | None,
     labels: list[str],
+    closed: bool,
     substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> str | None:
-    """The lifecycle state an issue held before it closed: the move to `done` a
-    close makes starts here (#1231).
+    """Where an issue was in the lifecycle before it closed — the state the move
+    to `done` a close makes starts from (#1231) — or None where nothing says.
 
-    A closed issue reads as `done` whatever else it carries, so this is
-    :func:`infer_current_state` read as if the issue were still open — its state
-    label, else its milestone, else `todo` — whether or not it has closed since.
-    On an open issue it is the issue's position; on one GitHub closed when a pull
-    request merged, it is where the issue was when the merge closed it, for as
-    long as nothing has written its label to `done` since.
+    The one reading of it, for each reader of that move: close-issue's journal
+    entry, move-issue's entry for relabelling an issue GitHub closed, and the
+    forward cascade, which tells a finished issue from a won't-do one by where
+    it came from. A closed issue reads as `done` whatever else it carries, so
+    this is :func:`infer_current_state` read as if the issue were still open:
 
-    None under a `derive`-bound `state`: open/closed is then the only state the
-    issue carries, so nothing records where in the lifecycle it was.
+    - its state label, where it has one — on an issue GitHub closed when a pull
+      request merged, where the merge found it, for as long as nothing has
+      written its label to `done` since;
+    - else, where it has a milestone, `backlog` — **inferred**, as an open
+      issue's position is: nothing recorded it there, so an issue a merge closed
+      from Review whose only mark was a milestone reads as backlog all the same;
+    - else, on an issue still open, `todo`: its position, as the engine detects
+      it;
+    - else None: an issue already closed with neither a state label nor a
+      milestone carries nothing of where it was, and `todo` would read its close
+      as a won't-do. A reader that needs to know then turns to the close reason.
+
+    None, too, under a `derive`-bound `state`: open/closed is then the only state
+    the issue carries, so nothing records where in the lifecycle it was.
     """
     if axis_labels.state_derive_binding(substrate_map) is not None:
+        return None
+    if (
+        closed
+        and not milestone
+        and axis_labels.resolve_read("state", labels, substrate_map) is None
+    ):
         return None
     return infer_current_state(
         state="open", milestone=milestone, labels=labels, substrate_map=substrate_map
@@ -258,9 +277,9 @@ def strip_integration_marker(body: str) -> str:
 
     The marker is the first body line, above the parent-ref (DEC-013). Parent-ref
     recognizers call this first so the marker doesn't shadow the parent-ref — the
-    single source of truth for the skip (the recognition is otherwise duplicated
-    across `validate-issue`, `body_parent_ref` — which both cascades read —
-    `show-tree`, `containment`). No-op when absent."""
+    single source of truth for the skip (the recognition itself lives in
+    `body_parent_ref`, which every reader of an issue's parent goes through, and
+    in `validate-issue` / `edit-issue`'s own form check). No-op when absent."""
     if not body:
         return body
     lines = body.splitlines()
@@ -330,38 +349,6 @@ def resolve_base_branch(config: dict, body: str, *, explicit: str | None = None)
     if slug:
         return f"integration/{slug}"
     return default_branch.name(config)
-
-
-def parent_ref(child_body: str) -> int | None:
-    """The parent issue number named on a child body's FIRST parent-ref line
-    (e.g. `EPIC: #42` -> 42), or None when the body declares no parent-ref.
-
-    The methodology's hierarchy source of truth: one parent-ref line by
-    convention, on the first non-blank line. A leading DEC-013 `Integration:`
-    marker is skipped first (#763). The first non-blank line thereafter must
-    match `<Word>: #<n>`; otherwise the body names no parent. Read without the
-    child's type; the cascades walk up through `body_parent_ref.parent_issue`,
-    which reads the line against the forms the issue's type allows."""
-    if not child_body:
-        return None
-    for line in strip_integration_marker(child_body).splitlines():
-        s = line.strip()
-        if not s:
-            continue
-        m = re.match(r"^([A-Za-z]+):\s+#(\d+)", s)
-        if not m:
-            return None
-        return int(m.group(2))
-    return None
-
-
-def names_parent(child_body: str, parent_number: int) -> bool:
-    """True when a child issue body's first parent-ref line points at
-    `parent_number` (e.g. `EPIC: #42`).
-
-    Reads the line as :func:`parent_ref` does (one parent-ref line by
-    convention, on the first non-blank lines)."""
-    return parent_ref(child_body) == parent_number
 
 
 def state_is_active(state: str) -> bool:

@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -39,7 +40,6 @@ CAP = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 CAP_SCRIPTS = CAP / "scripts"
 sys.path.insert(0, str(CAP_SCRIPTS))
 
-from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import lifecycle_predicates as predicates  # noqa: E402
 
 # --- the binding shape (workflow.yaml process.cascade) --------------------
@@ -107,9 +107,10 @@ def test_done_state_is_terminal_the_fold_target() -> None:
 
 
 def test_members_returns_all_children_open_and_closed(monkeypatch) -> None:
-    """The candidate set is EVERY child (open and closed), reusing the same body
-    parent-ref walk close-issue's `_find_open_children` uses. The full set is
-    intentional: the engine resolves each member's outcome and the `all`-over-
+    """The candidate set is EVERY child (open and closed), resolved through the
+    containment seam close-issue's `_find_open_children` uses — native sub-issues
+    and first-line parent-refs together (stubbed textual-only here). The full set
+    is intentional: the engine resolves each member's outcome and the `all`-over-
     `done` fold treats an open child as unresolved (holds the fold)."""
     issues = [
         {"number": 10, "state": "open", "body": "Feature: #5\n\n## What"},
@@ -208,10 +209,10 @@ def test_members_indeterminate_when_the_native_read_failed(monkeypatch) -> None:
 
 
 def test_membership_true_when_child_declares_a_parent(monkeypatch) -> None:
-    _stub_fetch_issue(monkeypatch, {"body": "Feature: #5\n\n## What"})
+    _stub_record(monkeypatch, "Feature: #5\n\n## What")
     out = predicates.cascade_membership(10)
     assert out["result"] is True
-    assert out["detail"]["parent_ref"] == 5
+    assert out["detail"] == {"parent_ref": 5, "parent_kind": "textual-only"}
 
 
 @pytest.mark.parametrize(
@@ -226,12 +227,20 @@ def test_membership_true_when_the_first_line_names_no_issue(monkeypatch, body: s
     says (#1304): a native child may name no issue there, and a determinate "not
     a member" would make the engine drop it and let its container close while it
     is open. What the first line names stays in `detail`, as an account."""
-    _stub_fetch_issue(monkeypatch, {"body": body})
+    _stub_record(monkeypatch, body, native=5)
     out = predicates.cascade_membership(10)
     assert out["result"] is True
     assert predicates.INDETERMINATE_KEY not in out
-    assert out["detail"]["parent_ref"] is None
-    assert "names no issue" in out["reason"]
+    assert out["detail"] == {"parent_ref": None, "parent_kind": "native-only"}
+    assert "names no issue, its native parent is #5" in out["reason"]
+
+
+def test_membership_names_both_parents_of_a_disagreeing_child(monkeypatch) -> None:
+    _stub_record(monkeypatch, "Feature: #5\n\n## What", native=7)
+    out = predicates.cascade_membership(10)
+    assert out["result"] is True
+    assert out["detail"] == {"parent_ref": 5, "parent_kind": "disagree"}
+    assert "its first line names #5, its native parent is #7" in out["reason"]
 
 
 def test_membership_indeterminate_on_gh_failure(monkeypatch) -> None:
@@ -240,20 +249,53 @@ def test_membership_indeterminate_on_gh_failure(monkeypatch) -> None:
     # broken-read-HOLDS bullet at the predicate level.
     monkeypatch.setattr(predicates, "_capability_root", lambda: REPO_ROOT)
     monkeypatch.setattr(predicates, "_config", lambda _root: {})
-    monkeypatch.setattr(predicates, "_fetch_issue", lambda _n, _c, _f: None)
+    monkeypatch.setattr(
+        predicates.containment,
+        "read_issue_record",
+        lambda _config, *, issue_number: predicates.containment.UnreadIssue("gh exited 1"),
+    )
     out = predicates.cascade_membership(10)
     assert out.get(predicates.INDETERMINATE_KEY) is True
 
 
+def test_membership_reads_the_candidate_once_through_its_record(monkeypatch) -> None:
+    """The membership step's one read is the containment seam's record read,
+    which carries the native parent — it replaces the `gh issue view --json body`
+    the step made before, one for one (#1281)."""
+    monkeypatch.setattr(predicates, "_capability_root", lambda: REPO_ROOT)
+    monkeypatch.setattr(predicates, "_config", lambda _root: {})
+    calls: list[list[str]] = []
+
+    def fake_gh(args, _config, **_kwargs):
+        calls.append(list(args))
+        record = {
+            "number": 10,
+            "body": "Feature: #5\n",
+            "parent_issue_url": "https://api.github.com/repos/o/r/issues/5",
+            "repository_url": "https://api.github.com/repos/o/r",
+        }
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(record), stderr="")
+
+    monkeypatch.setattr(predicates.containment, "gh_run", fake_gh)
+    monkeypatch.setattr(predicates, "gh_run", fake_gh)
+    out = predicates.cascade_membership(10)
+    assert calls == [["gh", "api", "repos/{owner}/{repo}/issues/10"]]
+    assert out["detail"] == {"parent_ref": 5, "parent_kind": "agreed"}
+
+
 def test_members_and_find_open_children_share_one_hierarchy_source() -> None:
     """`cascade_members` and close-issue's `_find_open_children` must agree on
-    the member set — both walk `infer.names_parent` over the body parent-ref.
-    Pin that they read one source (so the rebound fold == pm's pre-rebind set)."""
-    body = "EPIC: #42\n\n## What\nx"
-    # cascade_members uses infer.names_parent; _find_open_children resolves
-    # through containment, whose textual side reads the same first parent-ref line.
-    assert infer.names_parent(body, 42) is True
-    assert infer.parent_ref(body) == 42
+    the member set — both resolve the parent's children through the containment
+    seam (`resolve_children`), whose textual side reads each first line through
+    `body_parent_ref.named_issue`, the reading `cascade_membership`'s account
+    takes too. Pin that it names the parent in any form."""
+    containment = predicates.containment
+    for line in ("EPIC: #42", "Epic: #42", "EPIC:#42", "Feature: #42 — auth"):
+        body = f"{line}\n\n## What\nx"
+        assert containment._body_names_parent(body, 42) is True, line
+        assert predicates.body_parent_ref.named_issue(body) == 42, line
+    # A milestone's number is never an issue's.
+    assert containment._body_names_parent("Milestone: #42\n", 42) is False
 
 
 # --- the close-issue wrapper reads the engine fold (children-half) --------
@@ -347,10 +389,20 @@ def test_engine_fold_none_on_unparseable_json(ci, monkeypatch) -> None:
 # --- stubs ----------------------------------------------------------------
 
 
-def _stub_fetch_issue(monkeypatch, issue: dict) -> None:
+def _stub_record(monkeypatch, body: str, *, native: int | None = None) -> None:
+    """The candidate's record as the containment seam reads it: `body`, under
+    native parent `native` (none by default)."""
+    containment = predicates.containment
     monkeypatch.setattr(predicates, "_capability_root", lambda: REPO_ROOT)
     monkeypatch.setattr(predicates, "_config", lambda _root: {})
-    monkeypatch.setattr(predicates, "_fetch_issue", lambda _n, _c, _f: issue)
+    parent = containment.NativeParent(native) if native is not None else None
+    monkeypatch.setattr(
+        containment,
+        "read_issue_record",
+        lambda _config, *, issue_number: containment.IssueRecord(
+            issue={"body": body}, parent=parent
+        ),
+    )
 
 
 def _stub_list_issues(monkeypatch, issues: list[dict], *, native: set[int] | None = None) -> None:

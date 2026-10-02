@@ -1,0 +1,8 @@
+component: backbone
+kind: none
+body: >
+  The process engine's docstrings and the process README describe a cascade's
+  `membership` predicate as ADR-023 has it: handed the candidate alone, never
+  the parent, it confirms the candidate can be read and is still a member of
+  the relation, and parent-scoping is the `members` predicate's alone. Wording
+  only; the fold is unchanged.

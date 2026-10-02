@@ -15,7 +15,7 @@ pkit:
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051, ADR-062]
     revalidated:
-      at: 2026-10-02T03:17:05Z
+      at: 2026-10-02T10:23:11Z
       outcome: updated
 ---
 
@@ -90,7 +90,7 @@ process:
   cascade:                         # core (optional, COR-037)  fold ONE child process's member outcomes into a gate
     runs:    <capability>:<id>     # core      the one named child process whose members are folded
     members:    <predicate>        # core      parent-scoped candidate-member SOURCE (returns { members: [...] }); the engine never enumerates the child's subjects
-    membership: <predicate>        # core      per-subject "does THIS subject belong to this parent?" test (run one at a time)
+    membership: <predicate>        # core      per-candidate re-confirm, given the candidate alone and never the parent: it can be read, and is still a member (run one at a time)
     reducer:
       op:        all | count       # core      all = every member reached `outcome`  |  count = at least `threshold` did
       outcome:   <child-state>     # core      the child OUTCOME each member is folded against
@@ -287,7 +287,7 @@ process:
   cascade:                               # the parent's child → parent fold declaration
     runs:    <capability>:<process-id>   # the one named child process whose members are folded
     members:    <predicate>              # parent-scoped candidate-member SOURCE — returns { members: ["id", ...] }
-    membership: <predicate>              # per-subject "does THIS subject belong to this parent?" test
+    membership: <predicate>              # per-candidate re-confirm, given the candidate alone: it can be read, and is still a member
     reducer:
       op:        all | count             # all = every member reached `outcome`  |  count = at least `threshold` did
       outcome:   <child-terminal-state>  # the child OUTCOME each member is folded against
@@ -306,7 +306,7 @@ process:
         kind: cascade-outcome            # the ENGINE folds the `cascade` declaration — no predicate, no per-gate outcome
 ```
 
-- **The binding supplies the set; the engine folds.** The engine does **not** hold or discover a containment tree. It obtains the parent-scoped candidate member ids from the `members` predicate (run **once**, threaded with **this** parent subject, returning `{ members: [...] }` — read live, determinate at the instant, never a stored or open-ended global listing), then confirms each candidate with the per-subject `membership` predicate (run **one subject at a time** through the single-subject runner — "does this subject belong to this parent?"). The `members` predicate is the **candidate-set seam** — content-free and binding-supplied, mirroring how detection gets its inputs; the engine never receives or holds a global subject list.
+- **The binding supplies the set; the engine folds.** The engine does **not** hold or discover a containment tree. It obtains the parent-scoped candidate member ids from the `members` predicate (run **once**, threaded with **this** parent subject, returning `{ members: [...] }` — read live, determinate at the instant, never a stored or open-ended global listing), then confirms each candidate with the per-subject `membership` predicate (run **one subject at a time** through the single-subject runner, threaded with the candidate alone). The `membership` predicate never receives the parent, so it cannot re-scope to it: it confirms the candidate can be read and is still a member of the relation, and parent-scoping is the `members` predicate's alone ([ADR-023](../../tech-docs/architecture/decisions/ADR-023-cascade-fold-strategy.md) section 1). The `members` predicate is the **candidate-set seam** — content-free and binding-supplied, mirroring how detection gets its inputs; the engine never receives or holds a global subject list.
 - **Two fold operations.** `all` — every member reached the reducer's named `outcome`. `count` — at least `threshold` members reached it (a saturation floor). One enumerate-and-fold machine, two reducers. Richer reducers (ratios / weighted / custom) stay **deferred** (they land when a binding needs one).
 - **Fail-closed.** Any member whose outcome is **unresolved/indeterminate** (still moving, parked, indeterminate) holds the whole fold **unresolved** — the gate stays shut, never a false "all reached X". An **indeterminate membership test** (the `membership` predicate errored / timed out for a candidate) likewise holds the whole fold **unresolved** — symmetric with an unresolved member outcome — rather than silently dropping the candidate (a dropped candidate would look like "fewer members" and could let an `all` vacuously pass); a determinate `result: false` still cleanly **excludes** a real non-member. The **empty set** (a parent with no members of that child yet) is **fail-closed too**: an `all`/`count` over zero members does **not** vacuously open the gate (a determinate "not yet", never true) — and it covers **both** "no candidates existed" and "candidates existed but none were members" (the two intentionally collapse; neither opens the gate).
 - **The aggregate wait — `awaiting-cascade-outcome`.** A cascade-gated parent parks on an auto-clearing overlay reusing COR-034's model (no `resume_when` — the live fold *is* its condition), clearing the instant the fold resolves open and a legal move exists. **Acyclic by construction:** the parent waits only on its members' already-resolved **terminal** outcomes, and a terminal subject waits on nothing, so the aggregate wait cannot join a wait cycle — the deferred `deadlock` reason is safe here by construction, not by hope.

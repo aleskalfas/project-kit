@@ -77,8 +77,10 @@ line MINIMALLY and only here: the engine does NOT hold or discover a containment
 tree — it asks the binding for the parent-scoped candidate member ids through the
 capability-supplied `members` predicate (run ONCE, threaded with the parent
 subject, returning `{members: [...]}`), then confirms each candidate one subject
-at a time via the per-subject `membership` predicate ("does THIS subject belong to
-this parent?"). Each confirmed member's outcome is resolved by COR-036's
+at a time via the per-subject `membership` predicate, threaded with the candidate
+alone and never the parent: it confirms the candidate can be read and is still a
+member of the relation, and cannot re-scope to this parent (ADR-023 section 1).
+Each confirmed member's outcome is resolved by COR-036's
 single-inner resolution (the per-subject step, reused — not a rival path), and the
 reducer FOLDS them: `all` = every member reached the named outcome; `count` = at
 least `threshold` did. The fold is FAIL-CLOSED on members — any member whose
@@ -1390,8 +1392,11 @@ class ProcessEngine:
           candidate member ids from the capability-supplied `members` predicate
           (run ONCE, threaded with THIS parent subject), then confirms each
           candidate with the per-subject `membership` predicate (run one subject
-          at a time through the existing single-subject runner — "does this
-          subject belong to this parent?"). The engine never receives or holds a
+          at a time through the existing single-subject runner, threaded with
+          the candidate alone — it never receives the parent, so it confirms the
+          candidate can be read and is still a member of the relation, and
+          parent-scoping is the `members` predicate's alone; ADR-023 section 1).
+          The engine never receives or holds a
           global subject list; it asks the binding for this parent's candidates
           and tests them one at a time. (The `members` predicate is the
           candidate-set SEAM: content-free and binding-supplied, mirroring how
@@ -1495,8 +1500,9 @@ class ProcessEngine:
         total = 0
         for member_id in candidates:
             # Confirm membership one subject at a time (COR-032's line: the engine
-            # never holds a tree; it asks "does THIS subject belong to this
-            # parent?" per candidate).
+            # never holds a tree). The test is handed the candidate alone, never
+            # this parent: it confirms the candidate can be read and is still a
+            # member of the relation (ADR-023 section 1).
             belongs = self._cascade_member_belongs(membership_predicate, member_id)
             if belongs.indeterminate:
                 # PRECEDENCE GUARD (COR-037 amended): indeterminate membership
@@ -1663,11 +1669,13 @@ class ProcessEngine:
     def _cascade_member_belongs(
         self, membership_predicate: dict[str, Any], member_id: str
     ) -> PredicateOutcome:
-        """Confirm one candidate belongs to this parent (COR-037), asking the
-        per-subject `membership` predicate "does THIS subject belong to this
-        parent?". Run through a per-member runner so the predicate is threaded
-        with the candidate's subject id (single-subject, one at a time — the
-        engine never holds a tree).
+        """Confirm one candidate the `members` predicate listed (COR-037),
+        asking the per-subject `membership` predicate. Run through a per-member
+        runner so the predicate is threaded with the candidate's subject id
+        alone (single-subject, one at a time — the engine never holds a tree):
+        it never receives this parent, so it confirms the candidate can be read
+        and is still a member of the relation, and cannot re-scope to the parent
+        (ADR-023 section 1).
 
         Returns the raw `PredicateOutcome` so the caller can act on the three
         distinct answers (COR-037, fail-closed): a determinate `result=True`

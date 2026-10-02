@@ -52,7 +52,7 @@ def _link_parents_textual_only(st, issues, monkeypatch) -> None:
             numbers=set(), outcome=st.containment.NativeReadOutcome.UNSUPPORTED
         ),
     )
-    st._link_parents(issues, {}, corpus_complete=True)
+    st._link_parents(issues, {}, corpus_complete=True, issue_types={})
 
 
 @pytest.fixture

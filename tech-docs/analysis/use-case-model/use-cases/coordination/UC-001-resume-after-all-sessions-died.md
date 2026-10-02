@@ -22,9 +22,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T22:17:10Z
+      at: 2026-10-02T10:23:16Z
       outcome: unchanged
-      unchanged-because: "#803 makes create-issue run every title check titles.yaml declares before filing, a refusal or a warning by rule; it reads no instance identity, ownership claim or audit trail, and the start-work state check merged from main is untouched, so the use case holds"
+      unchanged-because: create-issue now writes its first-line parent-ref through one shared line writer, labelled with the parent's own type; it reads no instance identity, ownership claim or audit trail and makes no claim, so resuming a clone after every session died is unchanged
 ---
 
 # UC-001 — Resume a clone after every session died

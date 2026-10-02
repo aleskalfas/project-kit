@@ -560,7 +560,12 @@ def test_dry_run_reports_a_child_under_another_native_parent_as_a_conflict(
         "#90; not linked (an issue has one native parent)"
     ) in out.out
     assert "#108  would link under #90" in out.out
-    assert "`pkit pm set-field <N> --parent <P>`" in out.out
+    # The native parent wins (DEC-005), in the containment seam's words.
+    assert (
+        "    → the native parent wins (DEC-005): `set-field 101 --parent 95` rewrites #101's "
+        "first line to name it.\n"
+    ) in out.out
+    assert "your call" not in out.out
     assert "plan: 1 would link, 1 conflict (another native parent)" in out.out
     assert "unsupported" not in out.out
     assert fake.writes == []
@@ -679,14 +684,31 @@ def test_an_unrecognised_title_has_no_parent_line(lp, schemas):
     assert "type prefix is not recognised" in entry.detail
 
 
-def test_a_parent_the_type_may_not_have_is_no_parent_line(lp, schemas):
-    """An EPIC's only parent form is a milestone: `Feature:` on its first line is
-    not a parent-ref for it, and must not become an EPIC-under-Feature link."""
+def test_a_parent_the_type_may_not_have_is_named_non_conforming_and_not_linked(lp, schemas):
+    """An EPIC's only parent form is a milestone: `Feature: #2` on its first line
+    names #2 for every reader, in a form an EPIC may not have, and must not become
+    an EPIC-under-Feature link. It is reported as the seam reads it — naming its
+    parent, non-conforming — not as no parent line (#1281)."""
     entry = _classify(
         lp, schemas, [_issue(1, "[EPIC] e", "Feature: #2\n"), _issue(2, "[Feature] f", "")], 1
     )
-    assert entry.outcome is lp.Outcome.NO_PARENT_LINE
-    assert "not a parent-ref form for type 'epic'" in entry.detail
+    assert entry.outcome is lp.Outcome.NON_CONFORMING
+    assert entry.detail == (
+        "names #2 as its parent, non-conforming — 'Feature: #2' is not a parent-ref form for "
+        "type 'epic'; not linked"
+    )
+    assert entry.parent is None, "nothing is planned to link"
+
+
+@pytest.mark.parametrize("line", ["Epic: #2", "Feature: #2 — auth", "Feature:#2"])
+def test_a_task_line_in_a_form_it_may_not_have_names_its_parent_non_conforming(
+    lp, schemas, line: str
+) -> None:
+    rows = [_issue(1, "[Task] t", f"{line}\n"), _issue(2, "[Feature] f", "")]
+    entry = _classify(lp, schemas, rows, 1)
+    assert entry.outcome is lp.Outcome.NON_CONFORMING
+    assert entry.detail.startswith("names #2 as its parent, non-conforming — ")
+    assert "no parent line" not in entry.detail
 
 
 def test_an_empty_body_and_a_self_reference_have_no_parent_line(lp, schemas):

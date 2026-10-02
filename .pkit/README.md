@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T11:03:50Z
+      at: 2026-10-02T10:23:13Z
       outcome: unchanged
-      unchanged-because: the CLI README now documents pkit pull-request land, the landing sequence in one command, and that release merge lands through it; this page maps the cli area as the pkit command-line surface in one line, which still holds
+      unchanged-because: "The process area's row says what the area is: the shared process substrate a capability binds its process to, and the engine behind pkit process. The process README's change corrects how a cascade's membership predicate is glossed, which this index does not describe, so the row still holds."
 ---
 
 # project-kit
