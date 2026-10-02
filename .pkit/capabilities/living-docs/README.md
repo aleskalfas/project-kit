@@ -12,7 +12,7 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-02T01:52:19Z
+      at: 2026-10-02T02:09:35Z
       outcome: updated
 ---
 
