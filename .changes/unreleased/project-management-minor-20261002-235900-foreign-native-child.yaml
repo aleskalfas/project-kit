@@ -31,7 +31,9 @@ body: >
   `owner/repo#<n>` in a code span, which GitHub does not link, so the view
   leaves nothing on that issue's timeline. `close-issue <N>
   --mode=cascade-eligibility-close` now says what holds a container, from its
-  own read of the children: open children, each named — one elsewhere with its
+  own read of the children and the engine's word for a read only the engine
+  made (a members list or a candidate's membership it could not read): open
+  children, each named — one elsewhere with its
   repository — with what releases the container, for a child elsewhere its
   closing there or the removal of its link in this repository by the command
   the refusal prints (`gh api -X DELETE repos/{owner}/{repo}/issues/<N>/sub_issue
