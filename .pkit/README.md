@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T01:59:26Z
+      at: 2026-10-02T02:11:20Z
       outcome: unchanged
-      unchanged-because: The CLI and process references now say that pkit validate's process member also reports an inferred definition whose states name one detection predicate; this index still names the command surface and the process substrate those references document, and no command or area it lists was added, renamed or removed.
+      unchanged-because: The CLI reference gains pull-request delete-branch's outcomes, its refusal of a head other than the merged one, its exit-code table, and validate's report of inferred process definitions from main; this index points at that reference by area and lists no pull-request subcommand, and no command or area it names was added, renamed or removed, so it holds
 ---
 
 # project-kit
