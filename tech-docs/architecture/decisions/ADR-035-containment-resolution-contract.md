@@ -19,7 +19,10 @@ seam unions the two substrates with **native-wins** dedup so a repo holding
 children created under
 either substrate resolves correctly, and it says whether the set it returns is the
 *complete* one — a gate that closes a container cannot act on a child set that might
-be short. That is the whole decision; everything below is the rigor behind it.
+be short. The same seam answers the edge from the child's end — "what is this
+issue's parent" — by holding the issue's native parent to the parent its first line
+names and saying how the two stand, so everything that walks upward follows one
+parent. That is the whole decision; everything below is the rigor behind it.
 
 [project-management:DEC-039](../../../.pkit/capabilities/project-management/decisions/DEC-039-containment-substrate-selection.md)
 decided the *rule* — containment is a **selectable substrate** (native sub-issues
@@ -46,27 +49,38 @@ to the Track-2 textual-view Feature, EPIC #343, citing DEC-039).
 resolution point (`resolve_children` in `_lib/containment.py`) answering "what are
 this parent's children, via which substrate, and is that answer complete,"
 native-where-present / textual-otherwise, with **native-wins** and **an honest
-completeness verdict** as seam invariants — and **one write construction point** per
+completeness verdict** as seam invariants, and answering from the child's end
+(`resolve_parent`) "what is this issue's parent, and do its native link and its
+first line agree" — and **one write construction point** per
 containment substrate (the native sub-issue link; the render-on-demand textual
 children-comment), each under the grep/AST sole-constructor guard ADR-031
-established. No consumer re-derives containment by parsing body parent-refs itself
+established. No consumer re-derives containment by parsing body parent-refs itself,
+or holds a native parent to a first line itself
 (ADR-026's one-reader discipline, applied to the containment axis); no script
 string-builds a containment write inline (ADR-031's sole-constructor discipline,
 applied to a third substrate).
 
 **The load-bearing invariants — one read seam with native-wins and honest
 determinacy, one write constructor per substrate.** Four parts, structural only
-together: (i) **every containment consumer resolves children only by asking the
+together: (i) **every containment consumer resolves the edge only by asking the
 seam** — `show-tree`, the [project-management:DEC-034](../../../.pkit/capabilities/project-management/decisions/DEC-034-cascade-slot-binding.md)
 closure-fold child-walk, and `close-issue`'s open-children walk all route through
-`resolve_children`; none re-parses body parent-refs directly, so there is one
+`resolve_children` for a parent's children, and the forward cascade, the closure
+cascade's eligibility report, the fold's per-candidate step and `show-tree` route
+through `resolve_parent` for an issue's parent; none re-parses body parent-refs
+directly or compares a native parent with a first line itself, so there is one
 place containment is resolved and one place native-wins is enforced; (ii) **the
 seam unions the two substrates with native-wins dedup** — a child present under
 both substrates resolves to NATIVE, a child present only textually resolves to
 TEXTUAL, and a native child the textual scan missed is still NATIVE; this is
 DEC-005's native-wins rule lifted from a single-substrate tie-break to a
 **mixed-mode reconciliation** invariant (a repo may hold children created under
-either substrate after a forward switch, and the seam unions them deterministically);
+either substrate after a forward switch, and the seam unions them deterministically),
+and a child is identified by the repository it lives in as well as its number — a
+native sub-issue in another repository is never taken for this repository's issue
+of the same number, and holds a close gate like any other child wherever the
+parent's sub-issue list names it (point 5 states the limit: one the list leaves
+out is not seen);
 (iii) **the seam reports whether its answer is complete, and an incomplete answer is
 an indeterminacy rather than a child set** — the native read distinguishes
 *unsupported* (no native substrate, so textual is the whole answer) from *unreadable*
@@ -131,7 +145,11 @@ the child set; every gate consumer holds on an incomplete answer rather than act
 on it. **Every consumer acquires through the seam**, and the two that are not gates
 answer an incomplete corpus differently according to what each emits: the tree render
 labels itself partial and continues, the children-view refresh refuses to write. The
-sites below name where each one stands against that contract.
+seam resolves the edge from the child's end as well: `resolve_parent` reads an
+issue's own record once and holds the native parent it carries to the parent its
+first line names, and the first line is read for both directions by one reader
+(`_lib/body_parent_ref`). The sites below name where each one stands against that
+contract.
 
 As project-kit's own capability-architecture record, concrete site names
 are in scope (per [PRJ-005](../../../.pkit/decisions/project/PRJ-005-adopt-adrs.md));
@@ -141,22 +159,54 @@ Feature (EPIC #343), citing DEC-039. The sites:
 
 1. **`resolve_children`** (`_lib/containment.py`) — the one read seam, and the one
    corpus fetcher. Native side: one `GET …/sub_issues` per parent
-   (`read_native_children`), three-valued — `READ`, a determinate `UNSUPPORTED`,
-   or an indeterminate `UNREADABLE`. A non-zero exit is classified in one place
+   (`read_native_children`) — with one read of the parent's own record only
+   where the listed entries name repositories and none says which is this one
+   (point 2) — three-valued: `READ`, a determinate `UNSUPPORTED`, or an
+   indeterminate `UNREADABLE`. A non-zero exit is classified in one place
    (`_classify_native_failure`): a conclusive status (410) is `UNSUPPORTED`
    outright; an ambiguous 404 is `UNSUPPORTED` only when a probe of the parent
    issue itself succeeds, attributing the 404 to the sub-resource rather than to
    the repository; everything else — a 422 whatever its message says, a probe
    that fails or cannot run, a missing `gh`, an unparseable payload — is
-   `UNREADABLE`. Textual side: every issue in the corpus whose body
-   first-line parent-ref names the parent, where the corpus is either fetched by the
+   `UNREADABLE`. A read that answers places each sub-issue it lists by holding
+   the repository its entry names to this repository's own name: this
+   repository's children by number, a sub-issue in another repository by that
+   repository and its number (`ForeignIssue`), which the resolved set carries as
+   a child with its `repository`, named `owner/repo#<n>` (point 2). An answer
+   whose entries cannot be placed — one names a repository the hosting service
+   could not have spelled, or this repository's own name could not be read — is
+   `UNREADABLE` too. Textual side: every issue in the corpus whose first body line
+   names the parent — in any form, as `_lib/body_parent_ref` reads it, a milestone
+   ref naming no issue — where the corpus is either fetched by the
    seam (`fetch_issue_corpus`, *truncated* when the **requested** `limit` is struck —
    `CORPUS_CEILING` is that parameter's default and the value a gate takes, while a
    renderer may deliberately ask for less and is then judged against its own ask) or
    supplied by the caller *with* a completeness claim — a corpus handed over without
-   one is not vouched for. Union with native-wins dedup, returned with `complete` /
-   `incomplete_reason`. **The sole resolver — consumers route through it.**
-2. **`show-tree`** — the parent → children tree renderer. **Converged — resolves
+   one is not vouched for. Union with native-wins dedup among this repository's
+   issues, the children in other repositories beside them, returned with
+   `complete` / `incomplete_reason`. **The sole resolver — consumers route through
+   it.**
+2. **`resolve_parent`** (`_lib/containment.py`) — the same seam asked from the
+   child's end, and the one place an issue's native parent is held to its first
+   line. It reads the issue's own record once (`read_issue_record`: the native
+   parent the record carries, and the body) or takes a record the caller already
+   holds; reads the first line through `_lib/body_parent_ref`, which says which
+   issue the line names and whether it names it in a form the issue's type allows
+   (for an issue whose type cannot be told, any `<Label>: #<N>` line); and returns
+   a `ParentResolution` — the parent, and which of six ways the two records stand
+   (point 1). Where the record cannot be read the result is *unread*, and the
+   first line is read from the body the caller holds, so the parent it names is
+   reported all the same. The comparison alone is `compare_parents`, for a caller that
+   has the native parent from child sets it already resolved. The seam words the
+   fact and its remedy once — which parent each record names, and that the native
+   one wins and the first line is rewritten to name it — and a consumer adds only
+   its own consequence. **The sole resolver of an issue's parent — four consumers
+   route through it:** the forward cascade (`move-issue`), for the moved issue and
+   for each ancestor, from the one read the walk makes of it; the closure
+   cascade's eligibility report (`close-issue`, site 5); the fold's per-candidate
+   step (`cascade_membership`, site 4); and `show-tree` (site 3), through
+   `compare_parents`.
+3. **`show-tree`** — the parent → children tree renderer. **Converged — resolves
    *and* acquires through the seam;** it asks `fetch_issue_corpus` at the operator's
    `--limit` (default 500) and `--state` — the view controls the seam admits for a
    renderer — and the verdict on *that ask* is one of the two containment facts the
@@ -166,7 +216,7 @@ Feature (EPIC #343), citing DEC-039. The sites:
    `incomplete_reason` beside it in JSON, while a complete render carries no mark
    at all — which is what makes the mark informative. A renderer rather than a gate,
    so point 5 licenses it to use an incomplete answer *labelled*; its own write
-   trigger does not inherit that licence (site 6). The second fact is each parent's
+   trigger does not inherit that licence (site 7). The second fact is each parent's
    own `ChildResolution`: `_link_parents` forwards the corpus's completeness claim
    into the seam and returns the parents it could not vouch for, so an *unreadable*
    native panel marks the render partial even when the corpus was whole. The note
@@ -177,26 +227,84 @@ Feature (EPIC #343), citing DEC-039. The sites:
    established. A third cause sits outside containment: a PR list that strikes the
    same `--limit` also marks the render partial, its reason appended to either
    containment reason with "; " rather than ranked against it, because the PR list
-   is independent of the tree.
-3. **The DEC-034 closure-fold child-walk** (`_lib/lifecycle_predicates.py`) — the
-   cascade membership read. **Converged — resolves *and* acquires through the seam;**
+   is independent of the tree. Each issue's parent is the seam's as well:
+   `_link_parents` takes an issue's native parent from the native child sets it
+   has already resolved and hands it to `compare_parents` with the issue's first
+   line, so the render reads no issue upward and places each issue under the
+   parent the seam resolves — the native one wherever one was seen. A child whose
+   first line names one parent under a native link to another is placed under its
+   native parent and also listed under the other, marked with the native parent
+   it has; a first line in a form the issue's type does not allow is marked
+   wherever the child is listed under the parent that line names, whether or not
+   a native link agrees with it; and the JSON says how each issue's two records
+   stand. A native parent in another repository is in no child set the render
+   resolves, so there the render follows the first line and asserts nothing about
+   the native link. A native child in another repository is not among the issues
+   the render fetched, so the tree shows it as a leaf under its parent — named
+   `owner/repo#<n>` and marked as in another repository, with no state, since
+   the render reads nothing there — and the JSON lists it apart from the
+   parent's `children`, under `children_in_other_repositories`.
+4. **The DEC-034 closure-fold child-walk** (`_lib/lifecycle_predicates.py`) — the
+   read of the cascade's member set. **Converged — resolves *and* acquires through the seam;**
    `cascade_members` asks `resolve_children` with no corpus of its own and maps an
-   incomplete resolution to indeterminate. Its sibling `parent_has_active_descendant`
+   incomplete resolution to indeterminate. It hands the engine each child under a
+   subject id of its own — the number for a child in this repository,
+   `owner/repo#<n>` for one in another (`member_id`, read back by `read_subject`)
+   — so no per-member step reads a child elsewhere as this repository's issue of
+   that number. Its sibling `parent_has_active_descendant`
    takes the corpus from `fetch_issue_corpus` and holds on an incomplete one; it
-   filters by the textual ref itself because it needs each row's state, labels and
-   milestone to infer position — which the child set does not carry.
-4. **`close-issue`** — the open-children walk behind the refused-cascade hint
-   (`_find_open_children`). **Converged — resolves *and* acquires through the seam;**
+   filters by the first-line ref itself, through the same first-line reader,
+   because it needs each row's state, labels and milestone to infer position —
+   which the child set does not carry. The fold's
+   per-candidate step, `cascade_membership`, reads each child in this repository
+   that `cascade_members` listed through `resolve_parent` (site 2) — one read of
+   the child's record, the child taken as untyped, since which issue a line names
+   and how the two records stand do not depend on its type — and answers
+   indeterminate for one it cannot read; it reports the issue the child's first
+   line names and how the two records stand as an account, and takes no second
+   reading of whether the child has a parent (point 5). A child in another
+   repository is a member on the seam's word and is not read at that step, since
+   no first line in this repository can name it; the member-state read that
+   follows (`classify_state`) reads its record once, in its own repository
+   (`read_issue_record`, given the repository), by the tracker's open/closed
+   alone — closed is `done`, open is none of the lifecycle's states and holds the
+   fold, and a record that cannot be read there is indeterminate (point 5).
+5. **`close-issue`** — the open-children walk behind the refusal of a held
+   container (`_find_open_children`). **Converged — resolves *and* acquires through the seam;**
    it takes the corpus from `fetch_issue_corpus` (it needs each row's state to filter
-   the resolved children to the still-open ones), hands it to `resolve_children`
-   *with* its completeness claim, and refuses rather than reporting a child set when
-   the resolution is incomplete.
-5. **`link_sub_issue` / `add_sub_issue_args`** (`_lib/containment.py`) — the one
+   the resolved children of this repository to the still-open ones), hands it to
+   `resolve_children` *with* its completeness claim, reads a child in another
+   repository from its own record there — by open/closed, as the fold reads it —
+   and names no child from a resolution that is incomplete. The fold is the
+   decision; the refusal says what held it, from its own read of the children,
+   and keeps two causes apart (point 5): open children, each named — one in
+   another repository as `owner/repo#<n>`, with the command that removes its
+   sub-issue link from this repository — with what releases the container; and
+   a read that failed — the child set not read in full, a child whose state
+   could not be read, or a fold the engine's own counts show stopped on a read
+   before it counted a member that holds it (`_stopped_on_a_read`) — with the
+   engine's reason, left out where open children were found and the reason may
+   name one of them. Both found, both are said. A child in another repository
+   that could not be read is given its two ways out — made readable, or its link
+   removed — and the advice to run again goes with every other failed read.
+   Neither found, the engine's reason is given under a header that claims no
+   cause. Its closure-cascade report resolves the closed
+   issue's parent through `resolve_parent` (site 2) and checks for eligibility
+   every parent in this repository whose child set holds the issue — its native
+   parent and the parent its first line names, one or both — so the report and
+   the gate name the same parents; how the two records stand is said after the
+   checks.
+6. **`link_sub_issue` / `add_sub_issue_args`** (`_lib/containment.py`) — the one
    native containment write construction point; `create-issue` and `link-parent`
    link through it, `set-field --parent` re-parents through its sibling
    `move_sub_issue` (the same add, posted with `replace_parent`), and any further
    parent-link mutation reuses it. Each of the three reads the `containment`
-   write selector first and attempts no native write in textual mode. **The sole
+   write selector first and attempts no native write in textual mode. Each finds
+   the first line it links from or rewrites through `_lib/body_parent_ref` (site
+   2): where `create-issue` or `link-parent` takes the parent from the first line,
+   it links only from a line in a form the issue's type allows, and the line
+   `set-field --parent` replaces is the line every reader takes as the
+   parent-ref, in whatever form it stands. **The sole
    constructor of the native containment write.** Its `UNSUPPORTED` verdict comes
    from the read side's classification point, not from a predicate of its own, so the two paths
    cannot hold different notions of "unsupported" — a write that fails on a
@@ -204,7 +312,7 @@ Feature (EPIC #343), citing DEC-039. The sites:
    degrading to the textual spine, and one GitHub refuses with a 422 is reported
    as what the refusal says (a link already in place, a `CONFLICT`, or `FAILED`
    with GitHub's message), never as `UNSUPPORTED`.
-6. **`refresh_children_comment`** (`_lib/containment.py`) and its two triggers — the
+7. **`refresh_children_comment`** (`_lib/containment.py`) and its two triggers — the
    one construction point for the textual parent-side children view, and the only
    containment write rendered *from* a resolved child set. `create-issue --parent`
    refreshes it once the child-side textual ref is written; `show-tree
@@ -223,8 +331,10 @@ Feature (EPIC #343), citing DEC-039. The sites:
 The architecturally-significant pins, each carrying an alternative DEC-039 already
 rejected or this ADR holds against:
 
-1. **One containment read seam** (the consumers ask `resolve_children`) vs. each
-   consumer re-deriving children by parsing body parent-refs itself — the exact
+1. **One containment read seam** (the consumers ask `resolve_children` for a
+   parent's children and `resolve_parent` for an issue's parent) vs. each
+   consumer re-deriving the edge itself — parsing body parent-refs, or holding a
+   native parent to a first line, by a rule of its own — the exact
    re-derivation ADR-026's one-reader discipline forbids, applied here to
    containment.
 2. **Native-wins as a seam invariant** spanning mixed-substrate repos vs. a
@@ -257,10 +367,15 @@ and start asking *one seam* "what are this parent's children?" The seam answers
 with the union of the two substrates, native-wins on conflict, degrading to
 textual-only where native is unsupported — and it says whether that answer is the
 whole story, because a child set that might be short is not an answer a close gate
-can act on. And every containment *write* — the native link, the textual children
+can act on. Asked from the child's end — "what is this issue's parent?" — the same
+seam holds the issue's native parent to the parent its first line names: the native
+one is the parent, and the seam says whether the two agree. And every containment
+*write* — the native link, the textual children
 view — is constructed in *one place* per substrate, never string-built inline. What
 a consumer may then *do* with an incomplete answer depends on what it emits: a render
-may show it labelled, a write may not publish it at all.
+may show it labelled, a write may not publish it at all. The same split governs a
+parent the two records disagree on: a consumer that only reads follows the native
+parent and says so, a consumer that writes on the parent waits until they agree.
 
 ### 1. One containment read seam — resolution lives in exactly one auditable place
 
@@ -269,8 +384,9 @@ may show it labelled, a write may not publish it at all.
 the DEC-034 closure-fold child-walk, and `close-issue`'s open-children walk all
 resolve through it; none re-parses body parent-refs directly. The seam takes a
 parent number, and either acquires the corpus itself or accepts one the caller
-supplies *with* its completeness claim (point 5); it returns the resolved child set,
-the substrate each child came from, and how determinate that answer is.
+supplies *with* its completeness claim (point 5); it returns the resolved child set
+— each child with the repository it lives in (point 2) — the substrate each child
+came from, and how determinate that answer is.
 
 This is ADR-026's one-reader discipline applied to the containment axis: the
 indirection (corpus acquisition + native panel read + textual body-ref scan +
@@ -279,9 +395,46 @@ audited, tested, and reasoned about as a unit, and no second consumer re-derives
 what one seam already resolves. A consumer re-parsing
 body parent-refs itself would (a) duplicate the native-panel read and the dedup
 logic, and (b) give native-wins N places to drift instead of one to audit —
-exactly the scatter the single seam exists to prevent. The seam owns the textual
-projection too (`_body_names_parent`), so a consumer routing through it never
-re-parses a body itself.
+exactly the scatter the single seam exists to prevent. The first line is read in
+one place too — `_lib/body_parent_ref`, which the seam calls for the textual side
+of a child set — so a consumer routing through the seam never re-parses a body
+itself.
+
+**The edge is resolved from either end by the seam.** "What is this issue's
+parent?" is answered by `resolve_parent`, the upward counterpart of
+`resolve_children`: it reads the issue's own record once — the native parent it
+carries and the body whose first line names one — or takes a record the caller
+already holds, and returns the parent together with how the two records stand:
+agreeing, native alone, first line alone, disagreeing, none, or unread. The native
+parent is the parent wherever one was read (DEC-005); where none was, the parent
+is the one the first line names. *Unread* is the record that could not be read:
+the native parent is then not known, the first line is taken from the body the
+caller holds, and the result names the parent that line names and says the two
+were not compared. The forward cascade, the closure cascade's eligibility
+report, the fold's per-candidate step and the tree renderer resolve a parent only
+through it — the renderer through the comparison alone, with each issue's native
+parent taken from the native child sets it has already resolved, so it reads
+nothing upward. None compares a first line with a native parent itself.
+
+**One reader of the first line.** Which issue a first line names, and whether it
+names it in a form the issue's type allows, is read in one place
+(`_lib/body_parent_ref`), and the seam reads through it in both directions — so
+the issue a line names is the same for `resolve_parent`, for the textual side of
+`resolve_children`, and for every consumer. A line reading `<Label>: #<N>` names
+issue N whatever its label, the spacing after the colon, or what follows the
+number; a milestone ref, in either of its forms, names none. Two things that match such a
+line are not readings of an issue's parent and sit outside the rule: the check of
+a body's shape before it is written (filing and editing), and the Milestone
+axis's count of milestone refs toward a Milestone's children. Likewise the
+scripts that write the native link read where the child sits natively before
+they write — the idempotency of point 3, not a resolution of the parent. A guard
+(`tests/test_pm_parent_reading_guard.py`) holds both halves: outside those named
+exemptions, no script but the reader carries a pattern that matches a parent-ref
+line, and none but the seam compares a native parent. The guard sees what it keys
+on — a parent-ref regex, and the two ways a native parent is compared (the seam's
+own predicate, or the record's raw parent field) — so a reading assembled by
+other means is outside it, and is caught by review against this point rather
+than by the test.
 
 ### 2. Native-wins as a seam invariant — and mixed-mode reconciliation
 
@@ -299,9 +452,46 @@ invariant**:
   repo correctly, not assume one substrate.
 - **The seam unions them with native-wins dedup.** The resolved child set is the
   *union* of the native panel and the textual body-ref scan, deduped by issue
-  number, with NATIVE winning any child present both ways. A native child absent
-  from the corpus scan is still NATIVE (the native panel is authoritative even for
-  a child the textual scan missed); a textual-only child is TEXTUAL.
+  number among this repository's issues, with NATIVE winning any child present
+  both ways. A native child absent from the corpus scan is still NATIVE (the
+  native panel is authoritative even for a child the textual scan missed); a
+  textual-only child is TEXTUAL.
+- **A child is identified by its repository and its number, never by its number
+  alone.** A native sub-issue may live in another repository, and the native read
+  places each sub-issue it lists: one whose repository is its parent's is this
+  repository's; one in another repository is a child with that repository, named
+  `owner/repo#<n>`. It resolves as NATIVE — no first line here can name it — and
+  it is a different issue from this repository's issue of the same number: the
+  two are never deduplicated against each other and neither is read for the
+  other, so a parent may hold both. Placement holds the repository a listed
+  entry names to this repository's own name. An entry naming this repository
+  is this repository's, whatever else it lacks; one naming another is a child
+  there; one naming no repository gives no evidence of another one and is this
+  repository's. This repository's name comes from the answer itself — an
+  entry's `parent_issue_url` names the parent asked about, which is this
+  repository's issue — and, only where entries name repositories and none
+  carries it, from one read of the parent's own record. No entry is placed on
+  a guess: where that read fails, or an entry names a repository the hosting
+  service could not have spelled, the native read is `UNREADABLE` (point 5),
+  because taking an entry for a local issue on no evidence is the misreading
+  this rule exists to prevent. The same strictness holds where a child's id is
+  read back (`read_subject`): one whose repository name the hosting service
+  could not have spelled, or whose number is not ASCII digits, names no issue,
+  and no request is addressed to such a repository name. The edge
+  reads the same from the child's end: an issue's native parent in another
+  repository is carried with its repository and is never this repository's issue
+  of that number. What a consumer may do across that boundary — a child
+  elsewhere holds a close gate, and nothing is written there — is point 5's.
+- **A first line naming one parent under a native link to another holds both.**
+  Native-wins decides which parent the issue *has*; it does not remove the issue
+  from the child set of the parent its first line names, where it resolves as
+  TEXTUAL, so a close gate on either parent waits for it. The disagreement ends
+  when the first line is rewritten to name the native parent (DEC-005), not by
+  the seam dropping one of the two. A first line in a form the issue's type does
+  not allow is read the same way: it names its parent for every child set and
+  gate, and is reported as non-conforming rather than passed over. No child set
+  holds an issue under itself: a first line naming the issue itself counts it
+  nowhere.
 - **Native support is a property of the read, not of the repo.** When the native
   `GET …/sub_issues` establishes the substrate **unsupported** — a conclusive status
   (410 gone: an older GHES, the feature off), or a 404 the seam
@@ -355,7 +545,7 @@ to a third (containment) substrate:
   …/sub_issues` argv inline. A link and a re-parent are the same write: the
   re-parent (`move_sub_issue`) is the add posted with `replace_parent`, built by
   the same `add_sub_issue_args`. Every script that writes a parent link (Context,
-  site 5) goes through this point, and any further parent-link mutation (promote,
+  site 6) goes through this point, and any further parent-link mutation (promote,
   a batch re-parent) reuses it.
 - **The render-on-demand textual children view** (`refresh_children_comment`) is
   likewise a single construction point: one writer renders the parent-side children
@@ -512,8 +702,10 @@ The contract therefore carries a determinacy channel:
   textual-only child would be.
 - ***Unsupported* is the only failed native read that still counts as complete —
   so it must be earned, not assumed.** It is the one verdict that converts a call
-  that did not answer into a whole answer, which makes it the seam's single
-  fail-open surface. It is reached two ways and no other: a conclusive status (a
+  that did not answer into a whole answer, which makes it the single fail-open
+  surface among the seam's own verdicts (a sub-issue the hosting service does
+  not list is the other way a whole answer can be short, and is the limit named
+  below). It is reached two ways and no other: a conclusive status (a
   410), or a 404 the parent-issue probe attributes to the sub-resource. No other
   status reaches it, and no wording grants it. `gh`'s code-less "Not Found" is read
   as the 404 it stands for, which sends the failure to the probe and settles nothing
@@ -525,7 +717,65 @@ The contract therefore carries a determinacy channel:
   is never reported as a confident child set and never as "no children" — the
   fail-closed posture the process substrate requires (COR-033), which the cascade
   slot states explicitly for membership: indeterminate membership overrides the
-  `on_empty` policy (COR-037).
+  `on_empty` policy (COR-037). A gate's refusal is bounded as any consumer's
+  account is (below): a container held by an open child and a container held by
+  a read that failed are different facts, and the refusal says each one it
+  established — both, where both hold — and claims no cause where it
+  established neither. A remedy goes only with the fact it asserts: the advice
+  to run again goes with a failed read and never with an open child, and a
+  child in another repository that could not be read is given its two ways out
+  instead — made readable, or its link removed — since a run under the same
+  access fails on it the same way.
+- **No second reading removes a member the seam returned.** The cascade's
+  per-candidate membership test confirms a candidate in this repository can be
+  read — one it cannot read holds the fold indeterminate — and does not re-derive
+  whether it has a parent. A natively linked child's first line may name no issue
+  at all (a sub-issue linked in the tracker's UI, or one whose first line is its
+  milestone ref), so a test that looked for a parent there would answer a
+  determinate "not a member", the fold would drop the child, and the container
+  would close over it while it is open — the silently short child set this point
+  exists to prevent, produced after the seam vouched for a whole one.
+- **A child in another repository holds a gate like any other child — read where
+  it lives, never written.** It is in the container's child set on the native
+  panel's word (point 2), so a gate that left it out would close the container
+  over work the tracker's own panel shows under it. A gate consumer reads its
+  state from its record in its own repository, and reads one thing: the
+  tracker's own open or closed. Closed is done — the one reading every binding
+  of the state axis shares (ADR-026 point 5), whatever the reason for the close
+  (DEC-034). Open holds: the child is in none of this lifecycle's states, because
+  the labels, the milestone and the substrate map that place an issue in one are
+  this repository's encoding and say nothing of an issue elsewhere. A child the
+  sub-issue list names whose record cannot be read there — no access, not found,
+  a failed read — leaves the gate indeterminate, the answer an unreadable member
+  of this repository gets; the membership test takes a child elsewhere on the
+  seam's word, and the read of its state is what establishes whether it can be
+  read. Nothing is written in that repository: the child is not closed, moved,
+  labelled or commented on from here, and a children view written here names it
+  in a form the tracker does not link, so no reference to it lands on its
+  timeline — its repository's issues are under its own governance (COR-039) —
+  and what releases the container is the child closing there, or its sub-issue
+  link being removed from this repository's side, by a command the refusal
+  prints and nothing here runs. This is one rule with the parent in another
+  repository, below:
+  **across a repository boundary a consumer reads what a decision about an issue
+  *here* needs, and decides and writes nothing *there*.** A container here waits
+  on a child elsewhere, so that child's state is read; whether a parent elsewhere
+  may close is its own repository's question, so that parent is named, never
+  checked and never moved.
+- **The limit: a gate sees a child elsewhere only as an entry of the container's
+  sub-issue list.** What it guarantees: a child that list names holds the
+  container, whether or not its record can then be read. What it cannot see: the
+  hosting service may leave out of the list a sub-issue in a repository this
+  reader may not see, and a child left out is in no child set — the read that
+  omitted it answers `READ`, the resolution is complete, and the container can
+  close over it. Nothing detects the omission: no entry and no status marks it,
+  and the seam makes no second read to look for it. The parent's own record
+  carries a count of its sub-issues (`sub_issues_summary.total`); whether that
+  count includes a sub-issue the reader may not see is not established, and the
+  seam does not hold it to the entries listed. So the completeness this point
+  vouches for is of what the hosting service listed to this reader, and a
+  container with children elsewhere is closed soundly only by a reader who can
+  see every repository they live in.
 - **For a non-gate consumer the posture turns on what it emits: a read may label,
   a write must refuse.** One verdict, two admissible answers, and the discriminator
   is not the consumer's rank but whether its output outlives the command. A consumer
@@ -562,6 +812,34 @@ The contract therefore carries a determinacy channel:
   an indeterminacy into a confident diagnosis, and is wrong in exactly the case the
   signal exists for while reading correctly on every well-credentialed repo, which
   is why it is pinned here rather than left to each site's wording.
+- **A parent the two records do not agree on gets the same split: a read follows
+  and labels, a write waits.** How an issue's native parent and its first line
+  stand is a second thing the seam reports beside its answer, and the posture
+  again turns on what the consumer does with it. A consumer that *writes* on the
+  resolved parent — the forward cascade, which moves each ancestor's state — acts
+  only where the two records name the same issue, or where a first line in a form
+  the issue's type allows is the only record (every parented issue, on an instance
+  without sub-issues). Anywhere else — a native parent no first line names, two
+  that disagree, a native parent in another repository, a lone first line in a
+  form the type does not allow, a record that could not be read — it writes
+  nothing on the parent in doubt or above it, and says what settles it: where a
+  native parent is in play, that it wins and the first line is rewritten to name
+  it; where a lone first line is not in an allowed form, the forms the type
+  allows. A first line in a form the type does not allow, under a native parent
+  naming the same issue, is followed, with a note. A consumer that only *reads* —
+  the closure cascade's eligibility report, the fold, the tree renderer — follows
+  the native parent, counts the parent the first line names as well, and labels
+  the disagreement. The report checks every parent in this repository the fold
+  counts the issue under, so the report and the gate cannot name different
+  parents; a native parent in another repository it names and does not check —
+  whether that parent may close is its own repository's question, the rule above
+  read from the child's end; and where the record could not be read it checks
+  the parent the first line names and says the native one was not compared. The asymmetry is the one above: a
+  gate that counts a child under both parents can only hold longer, and a
+  report's wrong line is read beside its caveat, while state written on the wrong
+  chain of ancestors stays there. Each consumer states the fact and the remedy in
+  the seam's words and adds only its own consequence, so one disagreement is not
+  described three ways.
 - **The seam owns acquisition, not only resolution.** Completeness is a property of
   *how the corpus was fetched*, so the fetch belongs behind the seam: the seam
   supplies the corpus read (paginate to exhaustion, under a *default* ceiling set far
@@ -624,6 +902,13 @@ textual mechanism that can answer a gate.
   `migrate`-family op) is deferred by DEC-039, not pinned here. This ADR pins that
   the seam *reads* a mixed-substrate repo correctly (point 2); back-filling one
   substrate from the other is a separate operation.
+- **Not the containment graph.** Which type may sit under which (DEC-005's
+  `can_contain` / `parent_issue_types`) is a rule on filing and re-parenting. The
+  seam resolves the parent an issue *has*, whatever the two issues' types, and
+  never drops a child from a set for sitting under a parent the graph does not
+  allow. A first line's *form* — whether it is one the child's type offers — is
+  reported, and decides only whether a writing consumer may act on a lone first
+  line (point 5).
 - **Not a DEC-005 supersession.** DEC-005's native ideal and the upstream MET-004
   ideal stand; DEC-039 *refined* DEC-005 to native-*where-available* and this ADR
   pins how that refined rule resolves. Native-wins is DEC-005's rule, lifted to a
@@ -645,6 +930,55 @@ consumer arriving (the closure-fold, after `show-tree` and `close-issue`) is wha
 earns the extraction under COR-007's recurrence test rather than speculative
 generality.
 
+**Why an issue's parent is resolved behind the same seam.** The edge a parent's
+child set is built from and the edge an upward walk follows are one edge, recorded
+twice — a native link and a first line. A consumer that reads only one of the two,
+or reads the first line by a rule of its own, answers a different question from the
+seam's: a cascade that follows only a first line in a form the type allows, beside
+a gate that counts any line naming the parent, leaves a child the gate waits for
+whose own close never reports on that parent; a walk that follows the first line
+where the native link names another parent writes state on a chain the tracker's
+own panel does not show. Resolving the parent in the seam, through the reader the
+child set's textual side uses, makes "the parents whose child sets hold this issue"
+and "the parents this issue's close reports on" the same list by construction. It
+adds no read a consumer was not already making: the record that carries the native
+parent is the read each consumer makes of the issue, and the tree renderer has
+every native parent in the child sets it resolved.
+
+**Why a writer waits where a reader follows.** DEC-005 settles which parent an
+issue has when its two records disagree — the native one — and how the
+disagreement ends: the first line is rewritten to match. Until it is, a reader
+loses nothing by following the native parent and counting the other, because its
+output says which is which and a gate holding for a child under both parents can
+only hold longer, never close early. A writer is placed differently. State written
+on an ancestor outlives the command, and where the native link is the record that
+was wrong — a link made by mistake, settled by moving it under the first line's
+parent — a walk that had followed it leaves a chain of ancestors advanced by work
+that was never under them. So the writer acts on agreement, or on a lone first line
+in an allowed form, and otherwise leaves the chain as it stands and names the
+command that settles it. It is point 5's read-labels / write-refuses asymmetry on a
+second indeterminacy: stale beats confidently wrong.
+
+**Why a child in another repository holds the gate, and is read by open/closed
+alone.** The native panel is the canonical record of a container's children
+(DEC-005), and the tracker lets it list an issue that lives elsewhere. Read by its
+number alone, that child is this repository's issue of the same number — an
+unrelated issue whose state then decides the gate; left out, it is open work the
+panel shows under a container that closes anyway. Either is the silently short
+child set of point 5, reached through identity instead of through a failed read, so
+the child counts, under its own repository. What the gate needs of it is one fact
+— whether it has reached the terminal — and that is the one reading every binding
+of the state axis shares: closed is done (ADR-026 point 5). Anything finer is read
+from labels and a milestone through this repository's substrate map, which declares
+how *this* tracker encodes state; held to an issue elsewhere it is evidence about
+nothing, and a label there that happens to spell this lifecycle's terminal would
+release a gate here on a coincidence. Open/closed is the part of the reading that
+means the same in every repository, and every finer reading agrees with it on a
+closed issue, so the rule can only hold a gate longer, never open one early.
+Nothing is written there because that repository's issues are under its own
+governance (COR-039): a container here may wait on a child elsewhere, but closing,
+moving or labelling that child is its own repository's act.
+
 **Why native-wins as a seam invariant, and why mixed-mode reconciliation matters.**
 DEC-039's selector is a forward switch, so a real repo can hold children under both
 substrates at once — the migration is not atomic, and an instance can gain
@@ -663,7 +997,7 @@ load-bearing for field/milestone writes and ADR-026 for labels: a single auditab
 point makes the invariant *structural* (there is no other way to build the write)
 rather than *remembered* (do not string-build the wrong `gh api …/sub_issues` argv
 at each parent-link site). With a parent link written at creation, after the fact
-and on a re-parent (Context, site 5), and promote or a batch re-parent able to join
+and on a re-parent (Context, site 6), and promote or a batch re-parent able to join
 them, the un-converged world would have a
 parent-link write buildable at every mutation site — N places for the guard to fail
 to cover, N for a future author to mis-spell the API call. One constructor and one
@@ -727,6 +1061,25 @@ for the predicate to be right about.
   gives native-wins three places to drift, and lets consumers disagree about a
   parent's child set in a mixed-substrate repo. The one-reader discipline (ADR-026)
   on the containment axis is the fix.
+- **Each consumer holds an issue's native parent to its first line itself**, or
+  reads the first line by a pattern of its own (no upward seam). Rejected — the
+  readings part on exactly the lines that matter (a form the type does not allow,
+  a missing space, a milestone ref whose number is taken for an issue's), so the
+  gate, its report, the forward walk and the tree come to name different parents
+  for one issue. One resolver over one first-line reader makes them the same by
+  construction.
+- **Let a writing consumer follow the native parent through a disagreement**
+  (native wins, so walk it). Rejected for a write — native-wins says which parent
+  the issue has, not that the link was meant, and state written up a chain the
+  operator then moves the issue out of stays written. The reader follows the
+  native parent and labels it; the writer waits for the two records to agree.
+- **Leave a native child in another repository out of the gate**, or **read its
+  state through this lifecycle's labels.** Both rejected — the first closes a
+  container over open work the tracker's own panel lists under it; the second
+  reads another repository's labels through a map that declares only this
+  tracker's encoding, so a gate here could open on a label that means nothing
+  there. The child counts, and is read by the tracker's own open/closed, which
+  means the same in every repository.
 - **Native-wins as a per-consumer tie-break** rather than a seam invariant.
   Rejected — `show-tree` and the closure-fold could resolve different child sets
   during the forward-switch mixed window; the cascade fold would read a membership
@@ -815,22 +1168,45 @@ for the predicate to be right about.
   realized by the merged **#345**, the *acquisition + determinacy* half by **#865**,
   the *attributed unsupported verdict* by **#869**, and the last two consumers'
   convergence onto seam acquisition by **#863** (Context).
+- **The seam resolves the edge from either end** — `resolve_parent` answers "what
+  is this issue's parent" from one read of the issue's record, or from a record the
+  caller holds (`compare_parents` where the caller has the native parent from child
+  sets already resolved): the native parent is the parent wherever one was read,
+  and how the two records stand — agreeing, native alone, first line alone,
+  disagreeing, none, unread — comes back beside it. The forward cascade, the
+  closure cascade's eligibility report, the fold's per-candidate step and
+  `show-tree` resolve a parent only through it, and the first line is read in one
+  place (`_lib/body_parent_ref`) for both directions. A grep/AST guard
+  (`tests/test_pm_parent_reading_guard.py`) holds both halves: no script but the
+  reader matches a parent-ref line — the body-shape checks of `validate-issue` and
+  `edit-issue` and the Milestone axis's reader (`_lib/milestone`) excepted — and
+  none but the seam compares a native parent — `link-parent` and `set-field`,
+  which read where a child sits natively before they write the link, excepted. One
+  parametrised suite (`tests/test_pm_parent_resolution_parity.py`) drives every
+  consumer over the same pairs of records and pins that they name the same parents.
 - **Native-wins is a seam invariant over the union of both substrates** — a child
   present both ways is NATIVE, a textual-only child is TEXTUAL, a native child the
   corpus scan missed is still NATIVE; native support is a property of the *read* (an
   *unsupported* substrate degrades to textual-only, an *unreadable* panel does not,
   and an empty native read is not a fallback trigger). This makes a
   **mixed-substrate (forward-switched) repo** resolve deterministically for every
-  consumer.
+  consumer. The dedup is among this repository's issues: a native child in
+  another repository is carried with its repository, named `owner/repo#<n>`, and
+  is never this repository's issue of the same number. A child whose first line
+  names one parent under a native link to another is in both parents' child sets
+  — NATIVE in one, TEXTUAL in the other — and a first line in a form the child's
+  type does not allow counts the child all the same.
 - **The seam reports determinacy, and an incomplete resolution is indeterminate** —
   the native read distinguishes *unsupported* (determinate; textual is the whole
   answer) from *unreadable* (indeterminate), the textual scan reports *complete* vs
   *truncated*, and either indeterminacy makes the whole resolution incomplete. A gate
   consumer maps an incomplete resolution to indeterminate, never to a child set and
-  never to "no children". The seam owns corpus acquisition so the ceiling semantics
-  live in one place: `CORPUS_CEILING` is the default `limit` and the value a gate
-  takes, a renderer may ask for less, and *truncated* is measured against whatever
-  was requested.
+  never to "no children". No second reading downstream removes a child the seam
+  returned: the cascade's per-candidate membership test confirms a child in this
+  repository can be read and does not ask whether it has a parent. The seam owns
+  corpus acquisition so the ceiling semantics live in one place: `CORPUS_CEILING`
+  is the default `limit` and the value a gate takes, a renderer may ask for less,
+  and *truncated* is measured against whatever was requested.
 - **A non-gate consumer's posture on that verdict turns on what it emits** — a
   consumer that only renders may proceed provided it marks the output partial in
   every format (and leaves a complete render unmarked, so the mark means something);
@@ -844,12 +1220,37 @@ for the predicate to be right about.
   children-view refresh refuses at both of its triggers, including on a corpus that
   could not be read at all — rendering that as an empty children list is
   indistinguishable from a parent with none.
+- **A consumer's posture on two records that do not agree turns on whether it
+  writes** — a consumer that writes on the resolved parent (the forward cascade)
+  acts only where the native parent and the first line name the same issue, or
+  where a first line in a form the issue's type allows is the only record, and
+  otherwise writes nothing on the parent in doubt or above it and says what
+  settles it; a consumer that only reads (the closure cascade's report, the fold,
+  `show-tree`) follows the native parent, counts the first line's parent as well,
+  and labels the disagreement. The closure cascade reports on exactly the parents
+  in this repository the fold counts the issue under.
+- **Across a repository boundary a consumer reads and never writes** — a native
+  child in another repository that the container's sub-issue list names holds a
+  close gate like any other child: its state
+  is read from its record in its own repository, by the tracker's open/closed
+  alone (closed is done, open holds), one that cannot be read there leaves the
+  gate indeterminate, and nothing is written there. A sub-issue the hosting
+  service does not list to this reader is not seen at all: the container can
+  close over it, and nothing detects that (point 5's limit). A native parent in
+  another repository is named, and neither checked for eligibility nor moved.
+  `close-issue`'s refusal of a held container says what held it — open children,
+  each named with what releases the container, a read that failed, or both —
+  and claims no cause where it found neither; the advice to run again goes only
+  with a failed read, and a child elsewhere that could not be read is given its
+  two ways out instead. `show-tree` shows a child elsewhere as a labelled leaf,
+  its state unread. One suite drives the engine and the shipped
+  predicates over a child elsewhere (`tests/test_pm_closure_cascade_foreign_child.py`).
 - **The *unsupported* verdict is attributed, never inferred from a failed call** —
   reached by a conclusive status (410, which an invisible repository cannot
   produce) or by a 404 that a probe of the parent issue pins on the sub-resource
   rather than on the repository; every failure the seam cannot attribute, including
   one it could not probe and any 422, is *unreadable*, and no wording in a response
-  grants the verdict. This is the seam's one fail-open surface
+  grants the verdict. This is the one fail-open surface among the seam's verdicts
   (an unsupported read still counts as complete), so it costs one extra request on
   the failure path rather than a status match. **Both the read and the write path
   route through that single classification point** — one definition of "unsupported",
@@ -898,10 +1299,14 @@ for the predicate to be right about.
   new boundary (the containment read seam) and ADR-031's sole-constructor + grep/AST
   guard discipline at a new substrate (the containment write), with both prior
   invariants staying scoped to their own substrates. Composes with DEC-034 (the
-  closure-fold reads its membership through the seam). Does not restate DEC-039;
-  cites it as the decision.
+  closure-fold reads its membership through the seam) and with
+  [project-management:DEC-006](../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)
+  (the forward cascade follows each ancestor's parent as the seam resolves it, and
+  the closure cascade reports on the parents the seam's child sets hold the issue
+  under). Does not restate DEC-039; cites it as the decision.
 - **Acceptance.** `accepted` — the maintainer sign-off on DEC-039 (refine DEC-005 +
   extend DEC-036) covers the direction, and this ADR is the architect-owned contract
   pinning how that accepted rule resolves (PRJ-005). It introduces no abstraction
   beyond the seam #344/#345 already established — the determinacy channel is a
-  property that seam must carry, not a new boundary — and supersedes nothing.
+  property that seam must carry, and the upward resolution is that seam asked from
+  the child's end, not a new boundary — and supersedes nothing.

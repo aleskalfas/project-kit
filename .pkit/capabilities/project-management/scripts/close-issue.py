@@ -33,7 +33,9 @@ logic is shared with ``move-issue`` via ``_lib.labels.reconcile_state_labels_to_
 so there is no duplicated label-mutation code.
 
 After closing, every path runs the closure cascade (DEC-006), which reports and
-never closes: each parent issue the body's first line names is checked for
+never closes: each parent issue in this repository the close gate counts the
+issue under — its native parent and the parent its first line names, as the
+containment seam resolves them (``containment.resolve_parent``) — is checked for
 close eligibility, and so is each Milestone the issue sits in (its native
 Milestone field, or a ``Milestone: [#<n>](../milestone/<n>)`` body ref). A
 content-based (or ``either``) Milestone whose every child issue is closed is
@@ -46,10 +48,13 @@ the path ``move-issue`` records its moves through (``_lib.move_journal``,
 ``pkit process move --from``; #1231): after the close and its label reconcile,
 one move from the state the issue held before the close, with the close mode
 as the entry's reason. That state is read from the issue as fetched at the
-start, before anything is written (``lifecycle_inference.state_before_close``):
-its state label, else its milestone, else Todo — read as if it were open, so
-an issue GitHub closed when a pull request merged reads where the merge found
-it. An issue whose label already says done was moved there by whoever wrote
+start, before anything is written (``lifecycle_inference.state_before_close``,
+the reading the forward cascade takes too): its state label, else its
+milestone (Backlog, inferred), else — for an issue still open — Todo, read as if
+it were open, so an issue GitHub closed when a pull request merged reads where
+the merge found it. An issue GitHub closed with neither a state label nor a
+milestone carries nothing of where it was, and its close is not recorded from a
+guessed Todo. An issue whose label already says done was moved there by whoever wrote
 the label — ``move-issue``, or an earlier run of this script — and is not
 recorded again, so a re-run adds nothing. Whether the move is recorded is the
 engine's: it appends to the journal where the project keeps one and records
@@ -88,7 +93,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -100,9 +104,14 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import audit as _audit
-from _lib import axis_labels, bootstrap_gate, containment, session_guard
+from _lib import (
+    axis_labels,
+    bootstrap_gate,
+    containment,
+    engine_said,
+    session_guard,
+)
 from _lib import lifecycle_inference as infer
-from _lib.body_parent_ref import MILESTONE_LABEL
 
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
 # shared with done-work, merge-pr and the engine's gate-checkboxes-ticked
@@ -126,7 +135,13 @@ from _lib.milestone import (
     list_milestone_children,
     resolve_close_trigger,
 )
-from _lib.move_journal import PROCESS_ADDRESS, journal_move, report_unrecorded
+from _lib.move_journal import (
+    PR_MERGE_CLOSE,
+    PROCESS_ADDRESS,
+    journal_move,
+    pr_merge_close_reason,
+    report_unrecorded,
+)
 from _lib.structural_type import infer_structural_type
 
 VALID_MODES = ("wont-do", "pr-merge", "cascade-eligibility-close")
@@ -408,8 +423,11 @@ def main() -> int:
             # GitHub closed the issue and wrote no label: the move to done is
             # recorded here, from where the merge found it — unless its label
             # already says done (done-work's move-issue wrote it, or a re-run).
-            merged_by = f": closed by merged PR #{args.pr}" if args.pr is not None else ""
-            close_move.record(f"pr-merge close{merged_by}")
+            close_move.record(
+                pr_merge_close_reason(args.pr, closed_by_merge=True)
+                if args.pr is not None
+                else PR_MERGE_CLOSE
+            )
         print(f"\n[ok] noted pr-merge close for #{args.issue_number}.")
 
     elif args.mode == "cascade-eligibility-close":
@@ -460,53 +478,27 @@ def main() -> int:
         #
         #   opened == True   -> every child reached `done` (or childless via
         #                       on_empty: satisfied) -> children-half satisfied.
-        #   opened == False, indeterminate == False
-        #                    -> a determinate "not yet": an open child holds the
-        #                       fold (matches "open child blocks eligibility",
-        #                       DEC-016 roll-forward included) -> refuse.
-        #   indeterminate == True
-        #                    -> the fold could not be resolved (a reachable engine
-        #                       that could not fold: broken members/membership read
-        #                       or an unresolved member); HOLD fail-closed -> refuse
-        #                       (never fail-open), per COR-037 precedence.
+        #   opened == False  -> held; refuse. The engine marks the fold
+        #                       indeterminate for an open child as well as for a
+        #                       read it could not make (COR-037: an unresolved
+        #                       member holds the fold unresolved), so the refusal
+        #                       reads the children itself and says what it found
+        #                       (`_refuse_held`): open children, named with what
+        #                       releases the container; children that could not
+        #                       be read, named with their remedy; both, each with
+        #                       its own.
         #   fold is None     -> `pkit` itself was unreachable (could not even invoke
-        #                       the engine); also HOLD fail-closed -> refuse.
-        # Both indeterminate and None are fail-closed holds; they differ only in
-        # exit code (1 = engine reachable but refused/held; 3 = engine unreachable),
-        # so callers/CI can tell a policy refusal from an environment failure. Keep
-        # the 3-vs-1 split: it is a deliberate two-failure-surface contract, not noise.
+        #                       the engine); HOLD fail-closed -> refuse.
+        # The two differ in exit code (1 = engine reachable but held; 3 = engine
+        # unreachable), so callers/CI can tell a policy refusal from an environment
+        # failure. Keep the 3-vs-1 split: it is a deliberate two-failure-surface
+        # contract, not noise.
         fold = _engine_cascade_fold(args.issue_number)
-        if fold is None or fold.get("indeterminate"):
-            reason = fold.get("reason") if isinstance(fold, dict) else None
-            print(
-                "\n[refused] could not resolve the children-half of cascade "
-                "eligibility (held fail-closed):",
-                file=sys.stderr,
-            )
-            print(
-                f"  → {reason or 'the process engine could not fold the children.'}",
-                file=sys.stderr,
-            )
-            print(
-                "  → re-run once `gh` is reachable and every child's state is "
-                "readable; the container holds until the fold resolves.",
-                file=sys.stderr,
-            )
-            return 3 if fold is None else 1
+        if fold is None:
+            _say_read_failed(args.issue_number, None, _OpenChildren())
+            return 3
         if not fold.get("opened"):
-            print("\n[refused] not cascade-eligible — not every child has closed:")
-            print(f"  · fold: {fold.get('reason', '')}")
-            # Diagnostic colour only (the engine fold above is the DECISION): list
-            # the still-open children so the user knows what to close.
-            open_children = _find_open_children(args.issue_number, config)
-            for n in open_children or []:
-                print(f"  - #{n}")
-            print(
-                "\n  → close every child first; the container becomes eligible "
-                "when the last child closes.",
-                file=sys.stderr,
-            )
-            return 1
+            return _refuse_held(args.issue_number, fold, config)
 
         if args.dry_run:
             print(
@@ -545,16 +537,7 @@ def main() -> int:
     # Closure cascade — semi-automatic per DEC-006: it reports eligibility and
     # closes nothing, over the parent issues and the Milestones alike.
     if not args.no_cascade:
-        parent_nums = _walk_parent_chain(body)
-        if parent_nums:
-            print(
-                f"\n[cascade] parents to check for eligibility: "
-                f"{', '.join(f'#{n}' for n in parent_nums)}"
-            )
-            for pnum in parent_nums:
-                _check_parent_eligibility(pnum, config)
-        else:
-            print("\n[cascade] no parent ref found in body; parent check skipped.")
+        _report_parents(args.issue_number, body, structural_type, issue_types, config)
         milestone_nums = issue_milestones(issue)
         if milestone_nums:
             print(
@@ -564,7 +547,13 @@ def main() -> int:
             for mnum in milestone_nums:
                 _check_milestone_eligibility(mnum, config, issue_types, classification)
 
-    # Fire after_close_issue hooks per DEC-024.
+    # Fire after_close_issue hooks per DEC-024. The occurrence is when the issue
+    # was closed: a re-run on the same close reads the same time, so its hook
+    # comment posts nothing new, and a close after a reopen has a time of its
+    # own, so its comment posts (#1243). An issue already closed when this run
+    # began carries the time in the read made then; one this run closed is read
+    # again, and only if a `post-comment` hook is about to post.
+    closed_at = str(issue.get("closedAt") or "") if state == "closed" else ""
     fire_hooks(
         "after_close_issue",
         context={
@@ -575,6 +564,7 @@ def main() -> int:
         },
         config=config,
         capability_root=capability_root,
+        occurrence=lambda: closed_at or _closed_at(args.issue_number, config),
     )
 
     return 0
@@ -668,7 +658,7 @@ def _close_leaf_through_pr(
         substrate_map=substrate_map,
     ):
         return 3
-    close_move.record(f"pr-merge close: completed by merged PR #{args.pr}")
+    close_move.record(pr_merge_close_reason(args.pr, closed_by_merge=False))
     print(f"\n[ok] closed #{issue_number} (pr-merge through PR #{args.pr}, completed).")
     return None
 
@@ -706,7 +696,8 @@ class _CloseMove:
 
     issue_number: int
     #: Where the issue was before the close (`state_before_close`), or None when
-    #: nothing records it (a `derive`-bound state).
+    #: nothing records it (a `derive`-bound state, or an issue already closed
+    #: with neither a state label nor a milestone).
     from_state: str | None
     #: Why the move is not recorded although it is one: the workflow declares
     #: no `from_state → done` for the issue's type. Empty when it does.
@@ -728,7 +719,10 @@ class _CloseMove:
         """The move closing ``issue`` makes, read from the issue as fetched —
         before this run writes anything."""
         from_state = infer.state_before_close(
-            milestone=issue.get("milestone"), labels=labels, substrate_map=substrate_map
+            milestone=issue.get("milestone"),
+            labels=labels,
+            closed=str(issue.get("state", "")).lower() == "closed",
+            substrate_map=substrate_map,
         )
         undeclared = ""
         if from_state is not None and from_state != DONE_STATE:
@@ -763,6 +757,79 @@ class _CloseMove:
 
 
 # ---- parent eligibility ---------------------------------------------
+
+# What the closure cascade does not do with a native parent in another
+# repository, as the containment seam's remedy line says it (`remedy(abroad=…)`).
+_NO_CHECK_ABROAD = "the closure cascade does not check"
+
+
+def _report_parents(
+    issue_number: int, body: str, structural_type: str | None, issue_types: dict, config: dict
+) -> None:
+    """The closure cascade over the closed issue's parent issues.
+
+    The parent is resolved by the containment seam from one read of the
+    issue's record (`containment.resolve_parent`), and every parent in this
+    repository the close gate counts the issue under — its native parent and the
+    issue its first line names, one or both — is checked for eligibility, so the
+    report and the gate cannot disagree. How the two records stand is said after
+    the checks, in the seam's words: a first line in a form the issue's type does
+    not allow (the parent it names is checked all the same), a native parent
+    with no first line naming it, two that disagree, a native parent in another
+    repository (which is not checked), or a record that could not be read (the
+    first line's parent is checked, and the native one was not compared). An
+    issue with neither record names no parent to check, and a first line naming
+    the issue itself names none: that is said, and nothing is checked from it.
+    """
+    resolution = containment.resolve_parent(
+        config,
+        issue_number=issue_number,
+        structural_type=structural_type,
+        issue_types=issue_types,
+        body=body,
+    )
+    parents = resolution.local_parents
+    if parents:
+        print(
+            f"\n[cascade] parents to check for eligibility: {', '.join(f'#{n}' for n in parents)}"
+        )
+        for parent in parents:
+            _check_parent_eligibility(parent, config)
+    if resolution.self_note is not None:
+        print(
+            f"\n[warn] {resolution.self_note}; the closure cascade checks no parent from it.",
+            file=sys.stderr,
+        )
+    kind = resolution.kind
+    if kind is containment.ParentKind.NONE:
+        print(
+            "\n[cascade] no parent issue: neither a native parent nor one named on the first "
+            "line; parent check skipped."
+        )
+        return
+    if resolution.form_note is not None:
+        print(
+            f"\n[warn] {resolution.form_note}; #{resolution.named} is checked as its parent "
+            "all the same.",
+            file=sys.stderr,
+        )
+    if kind is containment.ParentKind.UNREAD:
+        consequence = (
+            f"#{resolution.named} is checked, and the native parent was not compared"
+            if resolution.named is not None
+            else "parent check skipped"
+        )
+        print(f"\n[warn] {resolution.fact}; {consequence}.", file=sys.stderr)
+        return
+    if resolution.fact is None:
+        return
+    native = resolution.native
+    if kind is containment.ParentKind.NATIVE_ONLY and native is not None and not native.repository:
+        print(f"\n[note] {resolution.fact}.")
+        print(f"  {resolution.remedy(abroad=_NO_CHECK_ABROAD)}")
+        return
+    print(f"\n[warn] {resolution.fact}.", file=sys.stderr)
+    print(f"  {resolution.remedy(abroad=_NO_CHECK_ABROAD)}", file=sys.stderr)
 
 
 def _check_parent_eligibility(parent_num: int, config: dict) -> None:
@@ -884,34 +951,214 @@ def _engine_cascade_fold(parent_num: int) -> dict | None:
     return cascade if isinstance(cascade, dict) else None
 
 
-def _find_open_children(parent_num: int, config: dict) -> list[int] | None:
-    """Return the OPEN children of a container — diagnostic colour for the
-    refused-cascade message only (the ENGINE fold is the decision).
+@dataclass(frozen=True)
+class _OpenChildren:
+    """A container's children as the refusal reads them: the open ones, the
+    ones whose state could not be read (each with why), and why the child set
+    itself could not be read in full, when it could not."""
+
+    open: tuple[containment.ResolvedChild, ...] = ()
+    unread: tuple[tuple[containment.ResolvedChild, str], ...] = ()
+    incomplete: str | None = None
+
+
+def _refuse_held(parent_num: int, fold: dict, config: dict) -> int:
+    """Say what holds a container the engine's fold did not open; exit code 1.
+
+    The fold is the decision; this says what held it, from what the containment
+    seam's reading of the children finds (:func:`_find_open_children`) — not
+    from the engine's reason, which names whichever member the fold stopped at,
+    so it cannot tell an open child from a read that failed when both are there.
+    Open children are the "held by open children" block, each with what
+    releases the container (:func:`_say_held_open`). Children that could not be
+    read, or a child set that could not be read in full, are the "a read failed"
+    block, each with its remedy (:func:`_say_read_failed`) — and so is a fold
+    the engine says stopped on a read before it counted a member that holds it
+    (:func:`_stopped_on_a_read`), a failure no read here can see. Both found,
+    both blocks are said; the engine's reason goes in the second only where it
+    names the read that failed, not where it may name an open child. Neither
+    found, the engine's reason is said under a header that claims no cause
+    (:func:`_say_held_unexplained`).
+    """
+    children = _find_open_children(parent_num, config)
+    stopped_on_a_read = _stopped_on_a_read(fold)
+    failed = bool(children.unread or children.incomplete) or stopped_on_a_read
+    if children.open:
+        _say_held_open(parent_num, children)
+    if failed:
+        _say_read_failed(
+            parent_num, fold, children, engine_reason=stopped_on_a_read or not children.open
+        )
+    if not children.open and not failed:
+        _say_held_unexplained(parent_num, fold)
+    return 1
+
+
+def _stopped_on_a_read(fold: dict) -> bool:
+    """Whether the engine's fold stopped on a read before it counted a member
+    that holds it — unresolved, with every member it counted done (``reached``
+    equal to ``total``): its members list, or a candidate's membership, could
+    not be read. The engine counts a member only once its membership is read, so
+    the one it stopped at is never an open child here."""
+    reached, total = fold.get("reached"), fold.get("total")
+    return (
+        fold.get("indeterminate") is True
+        and isinstance(reached, int)
+        and isinstance(total, int)
+        and reached == total
+    )
+
+
+def _say_held_open(parent_num: int, children: _OpenChildren) -> None:
+    """The refusal for a container held by open children: each named, a child in
+    another repository with its repository, and what releases the container."""
+    print(
+        f"\n[refused] not cascade-eligible — #{parent_num} is held by its open child(ren):",
+        file=sys.stderr,
+    )
+    for child in children.open:
+        print(f"  - {_child_named(child)}", file=sys.stderr)
+    print(
+        f"  → close each open child; #{parent_num} becomes eligible when the last one closes.",
+        file=sys.stderr,
+    )
+    for child in children.open:
+        if child.repository is not None:
+            first, *rest = _released_abroad(parent_num, child)
+            print(f"  → {first}", file=sys.stderr)
+            for line in rest:
+                print(f"    {line}", file=sys.stderr)
+
+
+def _say_read_failed(
+    parent_num: int, fold: dict | None, children: _OpenChildren, *, engine_reason: bool = True
+) -> None:
+    """The refusal for a container held because a read failed: the engine's
+    reason (unless ``engine_reason`` is false, where open children were found
+    and the reason may name one of them), what the predicate the fold could not
+    evaluate said, and each read of the children that failed. A child in
+    another repository that could not be read is given its two ways out — made
+    readable, or its link removed from here — since a run repeated under the
+    same access fails the same way; the re-run advice goes with every other
+    failed read. ``fold`` is ``None`` where the engine could not be run at all."""
+    print(
+        "\n[refused] could not resolve the children-half of cascade "
+        "eligibility (held fail-closed):",
+        file=sys.stderr,
+    )
+    if fold is None:
+        print("  → the process engine could not fold the children.", file=sys.stderr)
+    elif engine_reason:
+        print(f"  → {fold.get('reason') or 'the fold did not open.'}", file=sys.stderr)
+    # What a predicate the fold could not evaluate said, as the engine
+    # reports it (`stderr_tail`).
+    said = fold.get("stderr_tail") if fold is not None else None
+    for line in engine_said.said_lines(said, "    "):
+        print(line, file=sys.stderr)
+    if children.incomplete:
+        print(
+            f"  → #{parent_num}'s children could not be read in full: {children.incomplete}",
+            file=sys.stderr,
+        )
+    for child, why in children.unread:
+        if child.repository is None:
+            print(f"  → {child.ref} could not be read: {why}", file=sys.stderr)
+            continue
+        print(f"  → {_child_named(child)}, could not be read: {why}", file=sys.stderr)
+        for line in _unread_abroad(parent_num, child):
+            print(f"    {line}", file=sys.stderr)
+    abroad_only = bool(children.unread) and all(
+        child.repository is not None for child, _ in children.unread
+    )
+    if fold is None or children.incomplete or not abroad_only or _stopped_on_a_read(fold):
+        print(
+            "  → re-run once `gh` is reachable and every child's state is "
+            "readable; the container holds until the fold resolves.",
+            file=sys.stderr,
+        )
+
+
+def _say_held_unexplained(parent_num: int, fold: dict) -> None:
+    """The refusal where the engine's fold did not open and the children read
+    here show neither an open child nor a read that failed: the engine's reason
+    and what a predicate said, under a header that claims no cause."""
+    print(
+        f"\n[refused] not cascade-eligible — the process engine's fold over #{parent_num}'s "
+        "children did not open:",
+        file=sys.stderr,
+    )
+    print(f"  → {fold.get('reason') or 'the engine gave no reason.'}", file=sys.stderr)
+    for line in engine_said.said_lines(fold.get("stderr_tail"), "    "):
+        print(line, file=sys.stderr)
+    print(
+        f"  → the children read here are closed and readable; #{parent_num} holds until "
+        "the fold opens.",
+        file=sys.stderr,
+    )
+
+
+def _child_named(child: containment.ResolvedChild) -> str:
+    """``#11``, or ``owner/repo#42, a sub-issue in another repository``."""
+    if child.repository is None:
+        return child.ref
+    return f"{child.ref}, a sub-issue in another repository"
+
+
+def _unlink_command(parent_num: int, child: containment.ResolvedChild) -> str:
+    """The command that removes a child's sub-issue link from the parent, run in
+    this repository — printed, never run (`containment.remove_sub_issue_command`)."""
+    return containment.remove_sub_issue_command(
+        parent_number=parent_num, child_database_id=child.database_id
+    )
+
+
+def _released_abroad(parent_num: int, child: containment.ResolvedChild) -> list[str]:
+    """What releases a container from an open child in another repository, where
+    pm writes nothing: the child closing there, or its link removed from this
+    repository, by the command on the second line."""
+    return [
+        f"{child.ref} holds #{parent_num} until it is closed in {child.repository}, or "
+        f"its sub-issue link under #{parent_num} is removed, in this repository, with:",
+        f"  {_unlink_command(parent_num, child)}",
+    ]
+
+
+def _unread_abroad(parent_num: int, child: containment.ResolvedChild) -> list[str]:
+    """The two ways out for a child in another repository that could not be
+    read: made readable, or its link removed from this repository."""
+    return [
+        f"two ways out: make {child.ref} readable to the account `gh` uses here, then "
+        f"run this again; or remove its sub-issue link under #{parent_num}, in this "
+        "repository, with:",
+        f"  {_unlink_command(parent_num, child)}",
+    ]
+
+
+def _find_open_children(parent_num: int, config: dict) -> _OpenChildren:
+    """Read which of a container's children are OPEN — what the refusal of a
+    held container names (the ENGINE fold is the decision).
 
     Children are resolved through the SAME containment read-seam
     (``_lib.containment.resolve_children``) the engine's ``cascade_members``
-    predicate and ``show-tree`` use — native sub-issues where present, textual
-    child-side parent-refs otherwise, native-wins (DEC-005). Routing this through
-    the one seam is the ADR-026 point: no consumer re-derives containment by
-    re-parsing body parent-refs. The seam returns ALL children; this helper
-    filters to the still-OPEN ones for the "what to close first" hint.
+    predicate and ``show-tree`` use — native sub-issues together with child-side
+    first-line parent-refs, native-wins on a child present both ways (DEC-005).
+    Routing this through the one seam is the ADR-035 point: no consumer
+    re-derives containment by re-parsing body parent-refs. A child in this
+    repository is read from the issue list; a native sub-issue in another
+    repository from its own record there — one read, by its open/closed alone,
+    as the fold reads it, and never taken for this repository's issue of the
+    same number.
 
-    Diagnostic only: the engine fold is the decision, and the sole caller reaches
-    this after that fold has already refused. Empty list = all children closed
-    (or none). None means "cannot say" — a gh failure, or a resolution the seam
-    could not vouch for — and the hint is omitted rather than shown short.
+    A child set the seam could not vouch for is ``incomplete`` and no child is
+    named from it — a short list is not served as the whole one (#846); a child
+    whose state could not be read is ``unread``, with why.
     """
     # Acquisition belongs to the seam (ADR-035 §5). This used to fetch 500 rows
-    # and compute open children with NO truncation check, so past 500 issues the
-    # hint could omit still-open children — or list none at all — while the user
-    # read it as the full set of what to close. It never closed anything: the
-    # engine fold is the decision and it had already refused (see the call site).
-    # A short list presented as a whole one is still worth refusing over (#846).
+    # with NO truncation check, so past 500 issues the list could omit
+    # still-open children while the user read it as the full set (#846).
     corpus = containment.fetch_issue_corpus(config, fields="number,state,body")
     if corpus is None:
-        print("error: gh issue list failed.", file=sys.stderr)
-        return None
-    states = corpus.states
+        return _OpenChildren(incomplete="the issue list could not be read (gh failure)")
     resolution = containment.resolve_children(
         config,
         parent_number=parent_num,
@@ -919,22 +1166,40 @@ def _find_open_children(parent_num: int, config: dict) -> list[int] | None:
         corpus_complete=corpus.complete,
     )
     if not resolution.complete:
-        print(
-            f"error: cannot determine #{parent_num}'s open children — "
-            f"{resolution.incomplete_reason}. Refusing rather than closing over "
-            "a child that may exist.",
-            file=sys.stderr,
+        return _OpenChildren(incomplete=resolution.incomplete_reason)
+    states = corpus.states
+    open_children: list[containment.ResolvedChild] = []
+    unread: list[tuple[containment.ResolvedChild, str]] = []
+    for child in resolution.children:
+        if child.repository is None:
+            state = states.get(child.number)
+            if state is None:
+                unread.append((child, "it is not among the issues the issue list returned"))
+            elif state != "closed":
+                open_children.append(child)
+            continue
+        record = containment.read_issue_record(
+            config, issue_number=child.number, repository=child.repository
         )
-        return None
-    open_children = [n for n in resolution.numbers if states.get(n) != "closed"]
-    return sorted(open_children)
+        if isinstance(record, containment.UnreadIssue):
+            unread.append((child, record.detail))
+        elif record.issue.get("state") != "CLOSED":
+            open_children.append(child)
+    return _OpenChildren(open=tuple(open_children), unread=tuple(unread))
 
 
 # ---- gh wrappers ----------------------------------------------------
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(issue_number, config, fields="title,body,state,labels,milestone")
+    return gh_get_issue(issue_number, config, fields="title,body,state,labels,milestone,closedAt")
+
+
+def _closed_at(issue_number: int, config: dict) -> str:
+    """When the issue was last closed, as GitHub reports it, or "" when it is
+    open or cannot be read."""
+    issue = gh_get_issue(issue_number, config, fields="closedAt")
+    return str((issue or {}).get("closedAt") or "")
 
 
 def _gh_comment(issue_number: int, body: str, config: dict) -> bool:
@@ -977,32 +1242,6 @@ def _gh_close_issue(issue_number: int, *, reason: str = "completed", config: dic
         )
         return False
     return True
-
-
-def _walk_parent_chain(body: str) -> list[int]:
-    """Extract parent issue numbers from the body's parent-ref first line. A
-    leading DEC-013 `Integration:` marker is skipped first (#763).
-
-    A milestone ref is not an issue parent — its number names a Milestone —
-    so the deprecated plain `Milestone: #<n>` form yields nothing here; the
-    cascade reaches Milestones through `issue_milestones` instead.
-    """
-    if not body:
-        return []
-    body = infer.strip_integration_marker(body)
-    out: list[int] = []
-    for line in body.splitlines():
-        s = line.strip()
-        if not s:
-            if out:
-                break
-            continue
-        m = re.match(r"^([A-Za-z]+):\s+#(\d+)", s)
-        if not m or m.group(1) == MILESTONE_LABEL:
-            break
-        out.append(int(m.group(2)))
-        break
-    return out
 
 
 def _read_yaml(path: Path, yaml_loader: YAML) -> dict:

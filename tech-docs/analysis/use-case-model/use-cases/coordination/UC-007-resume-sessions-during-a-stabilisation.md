@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T22:17:11Z
+      at: 2026-10-02T04:21:13Z
       outcome: unchanged
-      unchanged-because: DEC-014's example of a warning now names the Task title's length floor, as DEC-011 states it; what this page takes from the severity model — which findings refuse, which need an audited bypass and which warn — is unchanged
+      unchanged-because: "done-work and merge-pr now say a merge the backbone did not see made may still show, and merge-pr owes its after-merge steps after any request it sent and did not see merged, so a re-run completes a merge that shows late; a resumed session still lands in-scope work as usual and holds out-of-scope work, and the stabilisation guards (still unbuilt, EPIC #943) are unchanged, so every step holds"
 ---
 
 # UC-007 — Resume sessions killed during a stabilisation

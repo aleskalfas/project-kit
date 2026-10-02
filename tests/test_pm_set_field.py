@@ -2,7 +2,8 @@
 
 Covers label resolution + idempotent diff for priority/workstream, the
 parent-ref body rewrite (replace / prepend / no-op, and below a DEC-013
-integration marker that stays the first line — #765), value-vocabulary reads,
+integration marker that stays the first line — #765; a malformed marker is
+refused before anything is written — #1241), value-vocabulary reads,
 the BOARD single-select write (#724 — name → id resolution, and the five
 refusals that each name what the board actually offers), and the honesty posture
 inherited from #709: a requested axis that was not written is `[refused]` with a
@@ -719,9 +720,16 @@ def test_plan_parent_preserves_milestone_link_form_recognised(sf) -> None:
         ("Feature: #1\n\n## What\nx\n", "Feature: #9\n\n## What\nx\n"),
         ("\n\nFeature: #1\n\n## What\nx\n", "\n\nFeature: #9\n\n## What\nx\n"),
         ("## What\nx\n", "Feature: #9\n\n## What\nx\n"),
+        ("\n \n\n## What\nx\n", "Feature: #9\n\n## What\nx\n"),
         ("", "Feature: #9\n"),
     ],
-    ids=["replace", "replace-after-leading-blanks", "prepend", "empty-body"],
+    ids=[
+        "replace",
+        "replace-after-leading-blanks",
+        "prepend",
+        "prepend-over-leading-blanks",
+        "empty-body",
+    ],
 )
 def test_plan_parent_unmarked_body_exact_rewrite(sf, body, expected) -> None:
     new_body, result = sf._plan_parent(body, "Feature: #9")
@@ -797,7 +805,7 @@ def test_plan_parent_under_marker_reads_back_marker_first(sf, body) -> None:
     lines = [ln.strip() for ln in new_body.splitlines()]
     first = next(i for i, ln in enumerate(lines) if ln)
     assert lines[first : first + 2] == [_MARKER, "Feature: #9"]
-    assert sf.infer.parent_ref(new_body) == 9
+    assert sf.body_parent_ref.named_issue(new_body) == 9
     assert sf.infer.integration_slug(new_body) == "foo"
 
 
@@ -825,8 +833,89 @@ def test_is_parent_ref_recognises_forms(sf) -> None:
     assert sf._is_parent_ref("Feature: #1")
     assert sf._is_parent_ref("Milestone: [#6](../milestone/6)")
     assert sf._is_parent_ref("Milestone: #6")
+    assert sf._is_parent_ref("Epic:#5")
+    assert sf._is_parent_ref("Feature: #1   ")
     assert not sf._is_parent_ref("## What")
     assert not sf._is_parent_ref("just prose")
+    # A line naming an issue and saying more is not a parent-ref and nothing else.
+    assert not sf._is_parent_ref("Feature: #12 — auth")
+    assert not sf._is_parent_ref("Note: #45 was closed in favour of this one")
+
+
+# --- `--parent` never deletes what an author wrote (#1281) -----------------
+#
+# Only a first line that is a parent-ref and nothing else is replaced. A first
+# line naming an issue and saying more is kept, and the new parent-ref is
+# written above it: every reader reads only the first line, so it reads the new
+# one, and nothing the author wrote is lost. The plan line says which was done.
+
+_TAILED_LINES = [
+    "Feature: #12 — auth",
+    "Fixes: #12 by moving the reader into the seam, so the cascade reads one parent",
+    "Note: #45 was closed in favour of this one; its discussion still applies here.",
+]
+
+
+@pytest.mark.parametrize("line", _TAILED_LINES)
+def test_plan_parent_keeps_a_first_line_that_names_an_issue_and_says_more(sf, line) -> None:
+    body = f"{line}\n\n## What\nx\n"
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == f"Feature: #9\n\n{line}\n\n## What\nx\n"
+    assert sf.body_parent_ref.named_issue(new_body) == 9
+    assert result.changed is True
+    named = sf.body_parent_ref.named_issue(f"{line}\n")
+    assert result.message == (
+        f"parent: set 'Feature: #9' (prepended, above {line!r}, which names #{named} and says "
+        "more, so it is kept)"
+    )
+
+
+@pytest.mark.parametrize("line", ["Feature: #12", "Epic:#5", "Feature: #12  ", "Milestone: #3"])
+def test_plan_parent_replaces_a_first_line_that_is_only_a_parent_ref(sf, line) -> None:
+    body = f"{line}\n\n## What\nx\n"
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == "Feature: #9\n\n## What\nx\n"
+    assert result.message == f"parent: set 'Feature: #9' (was {line.strip()!r})"
+
+
+@pytest.mark.parametrize("line", _TAILED_LINES)
+def test_plan_parent_under_marker_keeps_a_tailed_line_below_the_new_ref(sf, line) -> None:
+    for between in ("", "\n"):
+        body = f"{_MARKER}\n{between}{line}\n\n## What\nx\n"
+        new_body, result = sf._plan_parent(body, "Feature: #9")
+        assert new_body == f"{_MARKER}\nFeature: #9\n\n{line}\n\n## What\nx\n", between
+        assert sf.infer.integration_slug(new_body) == "foo"
+        assert sf.body_parent_ref.named_issue(new_body) == 9
+        assert "(inserted below the integration marker, above " in result.message
+        assert "so it is kept)" in result.message
+
+
+def test_plan_parent_under_marker_replaces_a_bare_ref_directly_below_it(sf) -> None:
+    body = f"{_MARKER}\nEpic:#5\n\n## What\nx\n"
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == f"{_MARKER}\nFeature: #9\n\n## What\nx\n"
+    assert result.message == "parent: set 'Feature: #9' (was 'Epic:#5')"
+
+
+@pytest.mark.parametrize("marker", ["", f"{_MARKER}\r\n"])
+def test_plan_parent_on_a_crlf_body_keeps_a_tailed_line_and_replaces_a_bare_one(sf, marker) -> None:
+    tailed = f"{marker}Feature: #12 — auth\r\n\r\n## What\r\nx\r\n"
+    new_body, result = sf._plan_parent(tailed, "Feature: #9")
+    lines = [ln for ln in new_body.splitlines() if ln.strip()]
+    expected_first = [_MARKER] if marker else []
+    assert lines[: len(expected_first) + 2] == [
+        *expected_first,
+        "Feature: #9",
+        "Feature: #12 — auth",
+    ]
+    assert sf.body_parent_ref.named_issue(new_body) == 9
+    assert "so it is kept)" in result.message
+
+    bare = f"{marker}Feature: #12\r\n\r\n## What\r\nx\r\n"
+    new_body, result = sf._plan_parent(bare, "Feature: #9")
+    lines = [ln for ln in new_body.splitlines() if ln.strip()]
+    assert lines[: len(expected_first) + 2] == [*expected_first, "Feature: #9", "## What"]
+    assert result.message == "parent: set 'Feature: #9' (was 'Feature: #12')"
 
 
 # --- the board READ orchestration (#724) -------------------------------------
@@ -1002,17 +1091,19 @@ def _run_main(
     issue: dict,
     board_state=None,
     board_write_ok: bool = True,
+    others: dict[int, dict] | None = None,
 ) -> dict:
     """Drive `sf.main()` with the gh seams stubbed; return rc + captured writes.
 
     `board_state` stubs the board READ (its own tests cover the orchestration), so
     a main() test states the board situation as data. Board writes are captured
     rather than issued; `board_write_ok=False` makes the write fail at the point of
-    writing (the exit-3 path).
+    writing (the exit-3 path). `issue` answers every issue read but those
+    `others` answers by number (a `--parent`'s title read).
     """
     captured: dict = {"labels": [], "titles": [], "bodies": [], "board": []}
 
-    monkeypatch.setattr(sf, "gh_get_issue", lambda *a, **k: issue)
+    monkeypatch.setattr(sf, "gh_get_issue", lambda n, *a, **k: (others or {}).get(n, issue))
     if board_state is not None:
         monkeypatch.setattr(sf, "_read_board_state", lambda config, **k: board_state)
 
@@ -1510,6 +1601,113 @@ def test_main_parent_moves_the_native_link_with_the_first_line(
     assert "moved #42 from #7 to #9 as a native sub-issue" in out
 
 
+def _stage_with_shipped_types(tmp_path: Path) -> Path:
+    """A staged capability root carrying the shipped `issue-types.yaml`."""
+    root = _stage_capability_root(tmp_path, has_board=False)
+    shipped = SCRIPTS.parent / "schemas" / "issue-types.yaml"
+    (root / "schemas" / "issue-types.yaml").write_text(
+        shipped.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    return root
+
+
+@pytest.mark.parametrize(
+    ("parent_title", "line"),
+    [
+        ("[Umbrella] A bucket", "Umbrella: #9"),
+        ("[EPIC] A thesis", "EPIC: #9"),
+        ("no type prefix", "Feature: #9"),
+    ],
+)
+def test_main_parent_names_the_parent_by_its_own_type(
+    sf, tmp_path, monkeypatch, capsys, parent_title: str, line: str
+) -> None:
+    """#1281: the first line carries the parent's own label where the type's form
+    offers it — a Task set under an Umbrella reads `Umbrella: #9`, not the form's
+    first option — and the first option where the parent's type cannot be told."""
+    root = _stage_with_shipped_types(tmp_path)
+    monkeypatch.setattr(sf.containment, "_gh_call", _NativeTracker())
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--parent", "9"],
+        issue=_task_issue("## What\nx\n"),
+        others={9: {"title": parent_title}},
+    )
+
+    assert captured["rc"] == 0
+    assert captured["bodies"][0].startswith(f"{line}\n")
+    assert "[warn]" not in capsys.readouterr().out
+
+
+def test_main_parent_a_task_may_not_sit_under_is_named_in_the_first_form_with_a_warning(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """A parent whose own label the type's forms do not offer is named in the
+    first option, and the plan says so — set-field names the parent rather than
+    refuse, as no containment gate exists."""
+    root = _stage_with_shipped_types(tmp_path)
+    monkeypatch.setattr(sf.containment, "_gh_call", _NativeTracker())
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--parent", "9"],
+        issue=_task_issue("## What\nx\n"),
+        others={9: {"title": "[Task] another task"}},
+    )
+
+    assert captured["rc"] == 0
+    assert captured["bodies"][0].startswith("Feature: #9\n")
+    assert "  [warn] parent: `Task: #<N>` is not a parent-ref this type may have" in (
+        capsys.readouterr().out
+    )
+
+
+def test_main_parent_on_an_epic_names_a_milestone_and_says_so(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """An EPIC's container is a milestone: `--parent 9` writes `Milestone: #9`,
+    which names milestone 9 and no issue, so the warning says the line names
+    milestone 9, not issue #9 — and no issue #9 is read or linked."""
+    root = _stage_with_shipped_types(tmp_path)
+    native = _NativeTracker()
+    monkeypatch.setattr(sf.containment, "_gh_call", native)
+
+    class _Reads(dict):
+        """Every issue number read, through `_run_main`'s `others`."""
+
+        def __init__(self, answers: dict) -> None:
+            super().__init__(answers)
+            self.numbers: list[int] = []
+
+        def get(self, key, default=None):
+            self.numbers.append(key)
+            return super().get(key, default)
+
+    reads = _Reads({9: {"title": "[Umbrella] an issue numbered like the milestone"}})
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--parent", "9"],
+        issue={**_TASK_ISSUE, "title": "[EPIC] a thesis"},
+        others=reads,
+    )
+
+    assert captured["rc"] == 0
+    assert 9 not in reads.numbers, "an EPIC's number is a milestone's: issue #9 is not read"
+    assert captured["bodies"][0].startswith("Milestone: #9\n")
+    out = capsys.readouterr().out
+    assert (
+        "  [warn] parent: this type's container is a milestone, never an issue "
+        "(Milestone: [#<N>](../milestone/<N>)), so the first line `Milestone: #9` names "
+        "milestone 9, not issue #9.\n"
+    ) in out
+    assert native.calls == [], "a milestone is not a sub-issue parent: nothing native is read"
+
+
 def test_main_parent_on_a_marked_body_keeps_the_marker_first(
     sf, tmp_path, monkeypatch, capsys
 ) -> None:
@@ -1524,6 +1722,66 @@ def test_main_parent_on_a_marked_body_keeps_the_marker_first(
     assert captured["bodies"][0].startswith(
         "Integration: integration/foo\nFeature: #9\n\n## What\nx\n"
     )
+
+
+@pytest.mark.parametrize(
+    "first_line",
+    [
+        "Integration: integration/Foo_Bar!!",
+        "Integration:integration/foo",
+        "Integration: #7",
+    ],
+    ids=["bad-slug", "no-space-after-key", "parent-ref-shaped"],
+)
+@pytest.mark.parametrize("extra", [(), ("--dry-run",)], ids=["write", "dry-run"])
+def test_main_parent_on_a_malformed_marker_refuses_and_writes_nothing(
+    sf, tmp_path, monkeypatch, capsys, first_line, extra
+) -> None:
+    """A first line that attempts the DEC-013 marker but is malformed is not
+    skipped as one, so a parent-ref written above it would move it off the first
+    line, past validate-issue's hard-reject. The verb refuses up front instead:
+    it names the line and the required form, exits 1, and touches neither the
+    body nor the native link — it does not even read the native parent."""
+    native = _NativeTracker({7: {42}})
+    body = f"{first_line}\nFeature: #7\n\n## What\nx\n"
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body=body, extra=extra)
+    out, err = capsys.readouterr()
+
+    assert captured["rc"] == 1
+    assert native.calls == [] and captured["bodies"] == []
+    assert native.native == {7: {42}}
+    assert (
+        f"[refused] cannot set --parent: the first body line {first_line!r} looks like a "
+        "DEC-013 integration marker but does not match the required form "
+        "`Integration: integration/<slug>`"
+    ) in out
+    assert "validation failed before any mutation; nothing written" in err
+
+
+def test_main_parent_on_a_valid_marker_is_not_refused(sf, tmp_path, monkeypatch, capsys) -> None:
+    """The refusal is for a malformed marker only: a body opening with a valid one,
+    after leading blank lines, is re-parented below it as before."""
+    native = _NativeTracker({7: {42}})
+    body = "\n\nIntegration: integration/foo\nFeature: #7\n\n## What\nx\n"
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body=body)
+
+    assert captured["rc"] == 0
+    assert "[refused]" not in capsys.readouterr().out
+    assert captured["bodies"][0].startswith(
+        "\n\nIntegration: integration/foo\nFeature: #9\n\n## What\nx\n"
+    )
+
+
+def test_main_parent_prepended_over_leading_blank_lines_adds_no_extra_blank_line(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """An unmarked body with leading blank lines and no parent-ref gets the
+    parent-ref as its first line and exactly one blank line before its content."""
+    native = _NativeTracker()
+    captured = _run_parent(sf, monkeypatch, tmp_path, native=native, body="\n\n\n## What\nx\n")
+
+    assert captured["rc"] == 0
+    assert captured["bodies"][0].startswith("Feature: #9\n\n## What\nx\n")
 
 
 def test_main_parent_dry_run_plans_the_move_and_writes_nothing(

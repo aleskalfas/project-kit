@@ -53,7 +53,7 @@ src/project_kit/data_validate.py reportPrivateUsage 6
 src/project_kit/data_validate.py reportUnknownArgumentType 3
 src/project_kit/data_validate.py reportUnknownMemberType 15
 src/project_kit/data_validate.py reportUnknownVariableType 15
-src/project_kit/decisions.py reportUnknownMemberType 2
+src/project_kit/decisions.py reportUnknownMemberType 1
 src/project_kit/decisions.py reportUnknownVariableType 1
 src/project_kit/dispatcher.py reportUnknownArgumentType 3
 src/project_kit/dispatcher.py reportUnknownMemberType 5
@@ -111,9 +111,9 @@ src/project_kit/process_dependencies.py reportUnknownMemberType 4
 src/project_kit/process_graph.py reportUnknownMemberType 8
 src/project_kit/process_graph.py reportUnknownVariableType 8
 src/project_kit/process_health.py reportPrivateUsage 1
-src/project_kit/process_health.py reportUnknownArgumentType 8
-src/project_kit/process_health.py reportUnknownMemberType 12
-src/project_kit/process_health.py reportUnknownVariableType 12
+src/project_kit/process_health.py reportUnknownArgumentType 6
+src/project_kit/process_health.py reportUnknownMemberType 10
+src/project_kit/process_health.py reportUnknownVariableType 10
 src/project_kit/process_journal.py reportUnknownMemberType 3
 src/project_kit/process_journal.py reportUnknownVariableType 1
 src/project_kit/project_config.py reportUnknownArgumentType 9
@@ -127,12 +127,12 @@ src/project_kit/refs.py reportUnknownMemberType 12
 src/project_kit/refs.py reportUnknownVariableType 32
 src/project_kit/refs.py reportUnnecessaryIsInstance 1
 src/project_kit/release.py reportArgumentType 2
-src/project_kit/release.py reportMissingTypeArgument 8
+src/project_kit/release.py reportMissingTypeArgument 7
 src/project_kit/release.py reportOptionalMemberAccess 1
 src/project_kit/release.py reportPrivateUsage 2
-src/project_kit/release.py reportUnknownArgumentType 9
+src/project_kit/release.py reportUnknownArgumentType 8
 src/project_kit/release.py reportUnknownMemberType 13
-src/project_kit/release.py reportUnknownParameterType 7
+src/project_kit/release.py reportUnknownParameterType 6
 src/project_kit/release.py reportUnknownVariableType 12
 src/project_kit/report.py reportMissingTypeArgument 4
 src/project_kit/report.py reportUnknownArgumentType 25

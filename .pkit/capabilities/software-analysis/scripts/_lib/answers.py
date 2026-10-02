@@ -5,8 +5,10 @@ that record each outcome on its artefact. For a verdict that comes to an
 outcome — a proposal (`_lib/resolve.py`), or a reading with the outcome it
 leans to — this gives what the person does first — an edit, a defect to
 report — and the commands, each as the person types it and with no consent
-flag: every writer asks once, as it is built to. The commands follow the capability README's
-table of four outcomes onto the core's two answers (DEC-001 point 5).
+flag: the friction writers each ask once, as they are built to, and the record
+stamp has no prompt and writes what its command line says. The commands follow
+the capability README's table of four outcomes onto the core's two answers
+(DEC-001 point 5).
 
 Where the words are the agent's to draft or the person's to supply, a
 placeholder stands (`_lib/placeholder.py`), and the writers refuse it until it

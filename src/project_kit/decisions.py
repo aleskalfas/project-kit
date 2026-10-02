@@ -10,9 +10,12 @@ the `decision-author` skill's job per COR-005's "Skill / command pairing".
 
 The `adr` namespace (per COR-025) extends this surface: ADR records live
 outside `.pkit/` at the adopter-declared `<adr-records>` overlay location
-(`.pkit/agents/project/overlay.yaml` → `adr-records[0]`). The stamping
-command resolves the path from the overlay; refuses if missing, points
-inside `.pkit/`, or doesn't exist on disk.
+(`.pkit/agents/project/overlay.yaml` → `adr-records[0]`). An explicit value
+wins, and the stamping command refuses it if it points inside `.pkit/` or
+doesn't exist on disk. While the category is unset, the command derives the
+location from the internal documentation root and records it in the overlay
+before the first record lands there (COR-049 points 3 to 5) — asking first
+when the folder already holds documents.
 
 Beyond the three fixed namespaces, the command accepts a **capability
 name** (Feature #162): `pkit new decision <capability> <slug>` stamps a
@@ -26,12 +29,14 @@ from __future__ import annotations
 import datetime as _dt
 import re
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import click
 from ruamel.yaml import YAML
 
+from project_kit import agents_overlay, docs_roots
 from project_kit.capability_namespace import resolve_capability_dir
 
 # The three fixed namespaces. A `new decision` namespace argument that is none
@@ -43,6 +48,9 @@ Namespace = str
 _FIXED_NAMESPACES: tuple[str, ...] = ("core", "project", "adr")
 
 _OVERLAY_PATH = Path(".pkit") / "agents" / "project" / "overlay.yaml"
+
+#: The overlay category the `adr` namespace stamps into (COR-024 / COR-025).
+_ADR_CATEGORY = "adr-records"
 
 _SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
@@ -67,29 +75,42 @@ author: {author}
 """
 
 
-def stamp_decision(target_root: Path, namespace: Namespace, slug: str) -> Path:
+def stamp_decision(
+    target_root: Path,
+    namespace: Namespace,
+    slug: str,
+    *,
+    yes: bool = False,
+    say: Callable[[str], None] = click.echo,
+) -> Path:
     """Stamp a new decision-record stub.
 
     `core`/`project` namespaces stamp under `<target>/.pkit/decisions/<namespace>/`
-    with `COR`/`PRJ` prefix. `adr` namespace resolves the target directory via
-    `resolve_adr_records_dir(target_root)` and stamps with `ADR` prefix. Any
-    other `namespace` value is treated as a **capability name** (Feature #162):
-    the record stamps under `.pkit/capabilities/<namespace>/decisions/` with the
-    `DEC` prefix, numbered independently within that capability.
+    with `COR`/`PRJ` prefix. `adr` namespace stamps with `ADR` prefix at the
+    overlay's explicit `adr-records`, resolved as `resolve_adr_records_dir` does;
+    while that category is unset, at the location derived from the internal
+    documentation root, which is recorded in the overlay first and said through
+    `say` (`_record_derived_adr_records`; `yes` is the consent that recording
+    takes over a folder already holding documents). Any other `namespace` value
+    is treated as a **capability name** (Feature #162): the record stamps under
+    `.pkit/capabilities/<namespace>/decisions/` with the `DEC` prefix, numbered
+    independently within that capability.
 
     Returns the stamped file path. Raises `click.ClickException` for any
     user-facing precondition failure (invalid slug, missing decisions dir,
-    duplicate slug, overlay misconfiguration, unknown capability). Writes the
-    file synchronously.
+    duplicate slug, overlay misconfiguration, unknown capability, no consent to
+    the recording), and `click.Abort` when the recording is declined at the
+    prompt. Writes the file synchronously.
     """
     if not _SLUG_RE.match(slug):
         raise click.ClickException(
             "slug must be kebab-case (lowercase letters, digits, single hyphens)."
         )
 
+    derived: str | None = None  # an adr location to record before stamping, if derived
     if namespace == "adr":
         prefix = "ADR"
-        decisions_dir = resolve_adr_records_dir(target_root)
+        decisions_dir, derived = _adr_records_dir_for_stamp(target_root)
     elif namespace in ("core", "project"):
         prefix = "COR" if namespace == "core" else "PRJ"
         decisions_dir = target_root / ".pkit" / "decisions" / namespace
@@ -107,6 +128,10 @@ def stamp_decision(target_root: Path, namespace: Namespace, slug: str) -> Path:
     next_num = _next_number(decisions_dir, prefix)
     nnn = f"{next_num:03d}"
 
+    notice = None
+    if derived is not None:
+        notice = _record_derived_adr_records(target_root, derived, slug, yes=yes)
+
     target = decisions_dir / f"{prefix}-{nnn}-{slug}.md"
     today = _today()
     author = _resolve_author()
@@ -115,6 +140,9 @@ def stamp_decision(target_root: Path, namespace: Namespace, slug: str) -> Path:
         DECISION_TEMPLATE.format(prefix=prefix, nnn=nnn, today=today, author=author),
         encoding="utf-8",
     )
+    if notice is not None:
+        say(notice)
+        say(f"run `pkit sync` to deploy the agent(s) that reference {_ADR_CATEGORY}.")
     return target
 
 
@@ -128,10 +156,19 @@ def resolve_adr_records_dir(target_root: Path) -> Path:
     — never auto-creates the directory (typos shouldn't become directories;
     path placement is a deliberate decision).
 
+    This is the readers' resolution: it derives nothing from the documentation
+    roots (COR-049 point 3). Only the stamp chooses a location for an unset
+    category (`stamp_decision`).
+
     Per-agent overrides for `adr-records` are not consulted here; the
     canonical write target is the top-level overlay key. Adopters who
     set conflicting per-agent overrides should reconcile them by hand.
     """
+    return _explicit_adr_records_dir(target_root, _load_overlay(target_root))
+
+
+def _load_overlay(target_root: Path) -> dict[str, Any]:
+    """The agents overlay's top-level mapping, refusing a missing or malformed file."""
     overlay_path = target_root / _OVERLAY_PATH
     if not overlay_path.is_file():
         raise click.ClickException(
@@ -145,16 +182,24 @@ def resolve_adr_records_dir(target_root: Path) -> Path:
         raise click.ClickException(f"failed to parse {_OVERLAY_PATH}: {exc}") from exc
     if not isinstance(data, dict):
         raise click.ClickException(f"{_OVERLAY_PATH}: expected a mapping at top level.")
+    return data
 
-    adr_records = data.get("adr-records")
+
+def _missing_adr_records() -> click.ClickException:
+    return click.ClickException(
+        f"overlay key 'adr-records' is missing or empty in {_OVERLAY_PATH}. "
+        "Add a path like:\n\n"
+        "  adr-records:\n"
+        "    - docs/architecture/decisions/\n\n"
+        "See COR-024 (overlay placeholder) and COR-025 (ADR decision space)."
+    )
+
+
+def _explicit_adr_records_dir(target_root: Path, data: dict[str, Any]) -> Path:
+    """The directory the overlay's `adr-records` names, refused at each gate."""
+    adr_records = data.get(_ADR_CATEGORY)
     if not adr_records:
-        raise click.ClickException(
-            f"overlay key 'adr-records' is missing or empty in {_OVERLAY_PATH}. "
-            "Add a path like:\n\n"
-            "  adr-records:\n"
-            "    - docs/architecture/decisions/\n\n"
-            "See COR-024 (overlay placeholder) and COR-025 (ADR decision space)."
-        )
+        raise _missing_adr_records()
     if not isinstance(adr_records, list) or not isinstance(adr_records[0], str):
         raise click.ClickException(
             f"overlay key 'adr-records' must be a non-empty list of path strings "
@@ -162,14 +207,7 @@ def resolve_adr_records_dir(target_root: Path) -> Path:
         )
 
     first_path = adr_records[0].rstrip("/")
-    candidate = (target_root / first_path).resolve()
-    pkit_root = (target_root / ".pkit").resolve()
-    if candidate == pkit_root or pkit_root in candidate.parents:
-        raise click.ClickException(
-            f"adr-records path {first_path!r} is inside .pkit/. ADR records must live "
-            "outside .pkit/ — they describe the adopter's project, not the methodology "
-            "(per COR-025)."
-        )
+    candidate = _outside_pkit(target_root, first_path)
 
     if not candidate.is_dir():
         raise click.ClickException(
@@ -178,6 +216,72 @@ def resolve_adr_records_dir(target_root: Path) -> Path:
         )
 
     return candidate
+
+
+def _outside_pkit(target_root: Path, rel: str, *, derived_from: Path | None = None) -> Path:
+    """`rel` resolved under the project root, refused when it lies inside `.pkit/`:
+    ADR records describe the adopter's project, not the methodology (COR-025).
+    `derived_from` names the internal root a derived path came from, for the message."""
+    candidate = (target_root / rel).resolve()
+    pkit_root = (target_root / ".pkit").resolve()
+    if candidate == pkit_root or pkit_root in candidate.parents:
+        origin = (
+            f" (derived from the internal documentation root, {derived_from.as_posix()})"
+            if derived_from is not None
+            else ""
+        )
+        raise click.ClickException(
+            f"adr-records path {rel!r}{origin} is inside .pkit/. ADR records must live "
+            "outside .pkit/ — they describe the adopter's project, not the methodology "
+            "(per COR-025)."
+        )
+    return candidate
+
+
+def _adr_records_dir_for_stamp(target_root: Path) -> tuple[Path, str | None]:
+    """Where `new decision adr` stamps, and the location it records first, if any.
+
+    An `adr-records` key in the overlay is explicit and wins, resolved and refused
+    as the readers resolve it (`resolve_adr_records_dir`); the second value is then
+    None. With no such key the location is derived from the internal documentation
+    root (COR-049 points 3 and 4) and returned as its repository-relative path too,
+    for the stamp to record (point 5). The derived folder may not exist yet.
+    """
+    data = _load_overlay(target_root)
+    if _ADR_CATEGORY in data:
+        return _explicit_adr_records_dir(target_root, data), None
+    rel = docs_roots.conventional_locations(target_root)[_ADR_CATEGORY]
+    internal = docs_roots.resolve_roots(target_root).internal
+    return _outside_pkit(target_root, rel, derived_from=internal), rel
+
+
+def _record_derived_adr_records(target_root: Path, rel: str, slug: str, *, yes: bool) -> str:
+    """Record the derived `adr-records` location before the first record is stamped
+    there, and create the folder (COR-049 point 5). Returns the recording notice.
+
+    Over a folder that already holds documents, recording the category puts them
+    within reach of every agent that references it, so it takes the consent
+    `agents adopt` asks: `yes`, else one question at a terminal, else a refusal
+    naming this command with `--yes`. Declined or refused, nothing is recorded and
+    nothing is stamped. Over a folder that is absent or holds nothing, running the
+    command is the consent.
+    """
+    if agents_overlay.holds_entries(target_root / rel):
+        agents_overlay.recording_consent(
+            target_root,
+            [(_ADR_CATEGORY, rel)],
+            [],
+            yes=yes,
+            rerun=f"pkit new decision adr {slug} --yes",
+        ).confirm("Record it")
+    if not docs_roots.record_location(
+        target_root, docs_roots.BACKBONE, _ADR_CATEGORY, rel, by="pkit new decision adr"
+    ):
+        # The overlay names the category elsewhere (a per-agent override), so it is
+        # not recorded here; stamp nothing at a location left unrecorded.
+        raise _missing_adr_records()
+    (target_root / rel).mkdir(parents=True, exist_ok=True)
+    return docs_roots.recording_notice(target_root, docs_roots.BACKBONE, _ADR_CATEGORY, rel)
 
 
 def _resolve_capability_decisions_dir(target_root: Path, capability: str) -> Path:

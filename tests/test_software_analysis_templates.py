@@ -33,6 +33,9 @@ SCHEMAS = CAPABILITY / "schemas"
 SHA1 = "78981922613b2afb6025042ff6bd878ac1994e85"
 SHA256 = "4f9be057f0ea5d2ba72fd2c810e8d7b9aa98b469f9a6c4d6d0e2a2d3e1c4b5a6"
 
+#: An executed check's name, as a filler gives it.
+CHECK = "pytest-bridge.test-run.test-sandbox"
+
 
 def _stems() -> list[str]:
     return sorted(
@@ -103,18 +106,51 @@ def test_the_schemas_are_one_per_kind_and_valid() -> None:
         "",
     ],
 )
-def test_an_evidence_id_is_an_artefact_id_and_a_commit(artefact: str) -> None:
+def test_an_evidence_id_is_an_artefact_id_a_commit_and_a_check(artefact: str) -> None:
     """A pattern cannot refer to another, so the evidence id spells the four id
-    shapes again beside them: held in step, it admits `<artefact>@<commit>` exactly
-    when the artefact id does."""
+    shapes again beside them: held in step, it admits `<artefact>@<commit>#<check>`
+    exactly when the artefact id does — and never without its check."""
     definitions = _schema("analysis")["$defs"]
     evidence_id = re.compile(definitions["evidence-id"]["pattern"])
     is_artefact = any(
         re.match(definitions[f"{kind}-id"]["pattern"], artefact)
         for kind in ("actor", "term", "use-case", "journey")
     )
-    assert bool(evidence_id.match(f"{artefact}@{SHA1}")) is is_artefact
-    assert not evidence_id.match(f"{artefact}@HEAD")
+    assert bool(evidence_id.match(f"{artefact}@{SHA1}#{CHECK}")) is is_artefact
+    assert not evidence_id.match(f"{artefact}@{SHA1}")
+    assert not evidence_id.match(f"{artefact}@{SHA1}#")
+    assert not evidence_id.match(f"{artefact}@HEAD#{CHECK}")
+
+
+@pytest.mark.parametrize(
+    ("name", "admitted"),
+    [
+        ("project", True),
+        ("pytest-bridge.test-run.test-sandbox", True),
+        ("trace-runner.2024-walk", True),  # a later word may begin with a digit
+        ("trace-runner.v2", True),
+        ("pytest-bridge.test_run", False),  # an underscore: slug the test's name
+        ("Pytest-bridge.run", False),
+        ("pytest-bridge.Run", False),
+        ("2-bridge.run", False),  # the first word begins with a letter
+        ("pytest-bridge..run", False),  # an empty word
+        ("pytest-bridge.", False),
+        (".run", False),
+        ("pytest-bridge/run", False),
+        ("pytest-bridge:run", False),
+        ("tests/test_run.py::test_sandbox", False),
+        ("", False),
+    ],
+)
+def test_a_check_name_is_dotted_lower_case_words(name: str, admitted: bool) -> None:
+    """Lower-case words of letters, digits and hyphens joined by dots, the first
+    beginning with a letter (DEC-001 point 7) — in the check name and in the evidence
+    id's copy of it alike."""
+    definitions = _schema("analysis")["$defs"]
+    assert bool(re.match(definitions["check-name"]["pattern"], name)) is admitted
+    assert bool(re.match(definitions["evidence-id"]["pattern"], f"UC-007@{SHA1}#{name}")) is (
+        admitted
+    )
 
 
 @pytest.mark.parametrize(
@@ -136,7 +172,7 @@ def test_a_commit_is_written_by_its_full_name(name: str, full: bool) -> None:
     in the commit shape and in the evidence id's copy of it alike."""
     definitions = _schema("analysis")["$defs"]
     assert bool(re.match(definitions["commit"]["pattern"], name)) is full
-    assert bool(re.match(definitions["evidence-id"]["pattern"], f"UC-007@{name}")) is full
+    assert bool(re.match(definitions["evidence-id"]["pattern"], f"UC-007@{name}#{CHECK}")) is full
 
 
 #: The definitions the evidence point's companion carries as copies of the shared ones.
@@ -148,6 +184,7 @@ COPIED = (
     "journey-id",
     "artefact-id",
     "commit",
+    "check-name",
     "evidence-id",
 )
 
@@ -259,7 +296,7 @@ def test_the_revalidation_record_template_shows_an_evidence_copy() -> None:
     start = lines.index(next(line for line in lines if line.startswith("# evidence:")))
     shown = load("\n".join(line.removeprefix("# ") for line in lines[start:]))
     (entry,) = shown["evidence"]
-    assert entry["id"] == f"{entry['artefact']}@{entry['commit']}"
+    assert entry["id"] == f"{entry['artefact']}@{entry['commit']}#{entry['check']}"
     record = {**_template("revalidation-record"), "evidence": shown["evidence"]}
     assert entry["artefact"] in record["outcomes"]
     assert _schema_errors("revalidation-record", record) == []

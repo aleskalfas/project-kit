@@ -239,8 +239,15 @@ def main(argv: list[str] | None = None) -> int:
     if not membership.allowed:
         print(membership.refusal_message, file=sys.stderr)
         return EXIT_UNREADABLE
-    if not session_guard.enforce(override=args.allow_foreign_repo):
+    guard = session_guard.enforce(override=args.allow_foreign_repo)
+    if not guard:
         return EXIT_UNREADABLE
+    # A confirmation given here — the flag, or a yes at the terminal — is
+    # passed on to the verbs it composes, so their guards pass by it and the
+    # operator is asked once; and only then (`_passed_through`). A flag the
+    # operator gave stays given, whatever this comparison found.
+    if session_guard.confirmed(guard):
+        args.allow_foreign_repo = True
     try:
         return _land(args, config)
     except _Stop as stop:
@@ -830,14 +837,21 @@ def _done_work_failed(
     failure: str, issue: int, head: _Head | None, config: dict[str, Any], *, merging: bool
 ) -> tuple[int, str]:
     """The code and the line for a done-work run that raised: what happened to
-    the PR is read from GitHub — when the run was one that could merge it."""
+    the PR is read from GitHub — when the run was one that could merge it.
+    One reading that does not find it merged says what it found, never that
+    it did not merge: a request done-work sent before it raised may still
+    show, and the re-run reads the PR first."""
     if head is None:
         return EXIT_RETRY, (
             f"merge: stopped — done-work failed ({failure}) completing #{issue}'s merged PR. "
             f"Run `land-work {issue}` again to complete it"
         )
     number = head.pr_number
-    reading = _read_pr(number, config) if merging else _Checks(state="OPEN")
+    if not merging:
+        return EXIT_RETRY, (
+            f"merge: not merged — done-work failed ({failure}). Run `land-work {issue}` again"
+        )
+    reading = _read_pr(number, config)
     if reading.problem:
         return EXIT_ACCEPTED, (
             f"merge: unconfirmed — done-work failed ({failure}), and whether PR #{number} "
@@ -849,8 +863,11 @@ def _done_work_failed(
             f"merge: merged{_as_commit(number, config)}, but done-work failed after the merge "
             f"({failure}). Run `land-work {issue}` again to complete #{issue}"
         )
+    state = reading.state.lower() or "of no reported state"
     return EXIT_RETRY, (
-        f"merge: not merged — done-work failed ({failure}). Run `land-work {issue}` again"
+        f"merge: not seen merged — done-work failed ({failure}), and one reading since finds "
+        f"PR #{number} {state}. Run `land-work {issue}` again: it reads the PR first, and "
+        "completes it if it has merged"
     )
 
 
@@ -929,7 +946,11 @@ def _request_failed(head: _Head, reason: str, config: dict[str, Any]) -> tuple[i
 
 
 def _accepted(head: _Head, *, queued: bool, config: dict[str, Any]) -> tuple[int, str]:
-    """done-work's queued or unconfirmed end, said as GitHub now reports the PR."""
+    """done-work's queued or unconfirmed end, said as GitHub now reports the PR.
+
+    A queued PR read neither merged nor queued left the queue: not merged. An
+    unconfirmed one read so stays unconfirmed — its request may still show,
+    and one reading never says it was not made."""
     issue, number = head.issue, head.pr_number
     again = f"run `land-work {issue}` again once it merges"
     try:
@@ -951,6 +972,15 @@ def _accepted(head: _Head, *, queued: bool, config: dict[str, Any]) -> tuple[int
         )
     if reading.queued:
         return EXIT_ACCEPTED, f"merge: queued — PR #{number} {reading.describe()}; {again}"
+    if not queued:
+        # An unconfirmed merge or enqueue may still show: one reading of neither
+        # does not say it was not made (ADR-061 point 7), so it stays unconfirmed.
+        return EXIT_ACCEPTED, (
+            f"merge: unconfirmed — PR #{number} reads neither merged nor queued "
+            f"({reading.describe()}), which does not tell whether the request was made; read "
+            f"it with `pkit pull-request read {number}`, and run `land-work {issue}` again: "
+            "it merges the PR if it has not merged"
+        )
     return EXIT_RETRY, (
         f"merge: not merged — PR #{number} is neither merged nor in the merge queue "
         f"({reading.describe()}); run `land-work {issue}` again to merge it"

@@ -53,7 +53,10 @@ its standard output:
 `{"summary": [...], "findings": [{"severity", "location", "message"}, ...]}`;
 diagnostics go to standard error. No answer — a leaf without the declaration,
 an abnormal exit, a timeout, output that is not exactly that document — is an
-*error finding*, never a clean pass: the umbrella fails closed. An exit that is
+*error finding*, never a clean pass: the umbrella fails closed. The finding
+names how the run ended, and an exit shows what the command said on standard
+error — the runner's shared tail, bounded and stripped of escape sequences and
+control characters, on the finding's one line. An exit that is
 uv's report of a dependency missing from its cache is named for what it is, an
 environment not provisioned, with `pkit sync` — which provisions it — as the fix.
 A `pkit` reading command the validator starts stays inside its bound — a
@@ -144,6 +147,10 @@ UV_OFFLINE_MISSES = (
 
 # The no-answer of a query whose environment is not provisioned, and its fix.
 NOT_PROVISIONED = "environment not provisioned — run `pkit sync`"
+
+# Between the lines of what a query that exited said on standard error, laid on
+# the one line its no-answer is (`why_no_answer`).
+TAIL_LINE_JOIN = " | "
 
 # Where a capability's validators sort when their entries name no `order`:
 # after every backbone member, in capability order.
@@ -445,7 +452,11 @@ def why_no_answer(run: CommandRun, reference: str) -> str:
     """Why a query run did not answer: the message of a validator's no-answer
     finding, and the reason a command filler is inert (`data_points`). An
     environment not provisioned is named as such, with its fix, rather than as
-    the exit it shows as."""
+    the exit it shows as. An exit shows what the command said on standard
+    error: the shared tail (`CommandRun.stderr_tail` — its last lines,
+    bounded, escape sequences and control characters removed), on the one line
+    a finding's message and a filler's reason are, its lines joined by
+    `TAIL_LINE_JOIN`."""
     if run.ending is Ending.NOT_STARTED:
         return f"command {reference!r} could not start: {run.detail}"
     if run.ending is Ending.TIMED_OUT:
@@ -456,9 +467,8 @@ def why_no_answer(run: CommandRun, reference: str) -> str:
             "uv's cache, and a query runs offline)."
         )
     if run.ending is Ending.ABNORMAL_EXIT:
-        detail = run.stderr.strip().splitlines()
-        tail = f": {detail[-1]}" if detail else "."
-        return f"command {reference!r} exited {run.returncode}{tail}"
+        said = TAIL_LINE_JOIN.join(line.strip() for line in run.stderr_tail.splitlines())
+        return f"command {reference!r} exited {run.returncode}" + (f": {said}" if said else ".")
     return _not_a_document(reference)
 
 

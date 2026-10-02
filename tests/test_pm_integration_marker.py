@@ -7,13 +7,14 @@ reading the parent-ref off the first content line, or a marked descendant would
 fail parent-ref recognition (the bug this file guards against).
 
 The recognizers, all backed by `lifecycle_inference.strip_integration_marker`:
-  - infer.parent_ref               (lifecycle_inference.py)
-  - containment._body_names_parent (containment.py)
-  - move-issue._walk_parent_chain  (exercised in test_pm_move_issue.py)
-  - close-issue._walk_parent_chain (same helper)
+  - body_parent_ref.named_issue    (the textual side of every child set, and
+                                    show-tree's candidate-parent scan)
+  - containment._body_names_parent (containment.py, through named_issue)
+  - body_parent_ref.read_first_line (containment.resolve_parent;
+                                    test_pm_body_parent_ref.py)
   - validate-issue first_line      (exercised in test_pm_validate_issue.py)
   - create-issue first_line        (same helper)
-  - show-tree._first_parent_ref    (same helper)
+  - show-tree._first_parent_ref    (through named_issue)
 """
 
 import importlib.util
@@ -56,6 +57,11 @@ def infer():
 @pytest.fixture(scope="module")
 def containment():
     return _load("pm_containment_marker_ut", LIB / "containment.py")
+
+
+@pytest.fixture(scope="module")
+def bpr():
+    return _load("pm_body_parent_ref_marker_ut", LIB / "body_parent_ref.py")
 
 
 # --- schema is the contract (drift guard) ----------------------------------
@@ -154,20 +160,20 @@ def test_malformed_predicate_returns_none_for_empty_body(infer) -> None:
     assert infer.malformed_integration_marker("") is None
 
 
-# --- infer.parent_ref ------------------------------------------------------
+# --- body_parent_ref.named_issue -------------------------------------------
 
 
-def test_parent_ref_reads_through_the_marker(infer) -> None:
+def test_parent_ref_reads_through_the_marker(bpr) -> None:
     body = f"{MARKER}\nEPIC: #508\n\n## What\nx"
-    assert infer.parent_ref(body) == 508
+    assert bpr.named_issue(body) == 508
 
 
-def test_parent_ref_unaffected_without_marker(infer) -> None:
-    assert infer.parent_ref("EPIC: #508\n\n## What\nx") == 508
+def test_parent_ref_unaffected_without_marker(bpr) -> None:
+    assert bpr.named_issue("EPIC: #508\n\n## What\nx") == 508
 
 
-def test_parent_ref_none_when_no_parent(infer) -> None:
-    assert infer.parent_ref("## What\nno parent") is None
+def test_parent_ref_none_when_no_parent(bpr) -> None:
+    assert bpr.named_issue("## What\nno parent") is None
 
 
 # --- containment._body_names_parent ----------------------------------------

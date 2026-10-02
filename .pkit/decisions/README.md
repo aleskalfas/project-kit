@@ -12,9 +12,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053]
     revalidated:
-      at: 2026-10-01T22:00:52Z
+      at: 2026-10-02T02:38:09Z
       outcome: unchanged
-      unchanged-because: COR-053 changed only point 9's statement of a subscriber's limits; this spec covers records, their container and refining them in place, nothing of subscribers, so it holds
+      unchanged-because: "the page says ADRs stamp at the overlay-resolved path, which still holds: with adr-records unset the command now records the derived path in the overlay before stamping there; the stub shape, numbering and namespaces this page describes are unchanged, and the CLI reference carries the derivation"
 ---
 
 # Decision records

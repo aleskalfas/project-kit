@@ -48,7 +48,8 @@ defines, combines the point's fillers into one value by its declaration:
   as the fixes and never a base, under the point's inert policy. State that
   does not exist yet is the filler's to answer empty; history cut short of
   what it needs, the filler's to detect. Each filler that was asked carries
-  what it declared and the commit it was read at (`Filler.reads`), which the
+  what it declared and the commit it was read at — or that there is none yet,
+  or none this clone can read (`Filler.reads`) — which the
   status report, `pkit connections resolve` and the `connections` member's
   report lines name (COR-052 point 7). A `reads` value this reading does not
   understand is the packages member's error, and the filler is not started.
@@ -67,6 +68,11 @@ point's (the wiring's `[project filler version]` finding), a value the point's
 schema refuses, removals on a `single` point. A file under the fillers prefix
 whose path names no point is warned; one whose point no active provider
 defines is inert — its envelope checked, its value never read.
+
+How each resolution ended is one value of a closed set (`Outcome`), given where
+the resolution decides that ending, together with the sentence that says why
+for people: a reader of the point's document dispatches on the value, never on
+the sentence.
 
 `resolve_data_points` reads the repository and the one wiring;
 `shared_resolution` computes it once per run of `pkit validate`
@@ -155,13 +161,38 @@ class FillerState(Enum):
     PASSED_OVER = "passed over"  # not asked: another answers first, not selected, not delivered
 
 
+class Outcome(Enum):
+    """How the resolution of a data point ended: one value from a closed set, which
+    the document `pkit connections resolve --json` prints carries beside `why`, the
+    sentence for people. Each is given where the resolution decides that ending,
+    with its sentence, so a reader dispatches on this and never on the wording.
+
+    A point that resolves with an inert filler among several is `resolved`: each
+    filler's state says what became of it. A contribution that is not delivered —
+    its capability provides a role for which it is not the selected provider
+    (COR-053 point 1) — is not a declared filler, so a point it alone would fill
+    is `unfilled`."""
+
+    RESOLVED = "resolved"  # the point has a value, perhaps empty
+    UNDEFINED = "undefined"  # no active provider defines it (`undefined_document`)
+    UNFILLED = "unfilled"  # no filler is declared and the point has no default
+    NO_ANSWER = "no-answer"  # every filler meant to answer is inert
+    INERT_FAIL = "inert-fail"  # a filler meant to answer is inert, under the `fail` policy
+    COLLISION = "collision"  # entries of its fillers collide under its combination
+    SELECTION_NEEDED = "selection-needed"  # `single`, several contribute, none is selected
+    SELECTION_UNMATCHED = "selection-unmatched"  # the selection names no contributor
+    DEFINER_DEFECT = "definer-defect"  # its definer's declaration cannot be applied
+
+
 @dataclass(frozen=True)
 class FillerRead:
     """One state a command filler declares it reads beyond the working tree, and
     where it was read (COR-052 points 6 and 7).
 
     `history`: `ref` is `HEAD` and `commit` its commit — None in a repository
-    with no commit yet — and `shallow` whether the clone's history is cut short.
+    with no commit yet, and both None when git cannot read HEAD here, history
+    that exists and was not read (`default_branch.Head`) — and `shallow`
+    whether the clone's history is cut short.
     `settled`: `ref` is the reference the default branch was read from and
     `commit` its commit; with no commit, `ref` is the branch's name when it has
     none yet (`DefaultBranch.unborn`) and None when it resolves to no commit
@@ -233,12 +264,16 @@ class ResolvedPoint:
     inert_policy: str
     participation: str | None  # the default's, when the point declares one
     fillers: tuple[Filler, ...]
-    resolved: bool
+    outcome: Outcome  # how the resolution ended
     value: Any = None
     origin: str = ""  # `single`: the filler that answered
     entries: tuple[Entry, ...] = ()  # `union` / `additive`: the value's entries
     removals: tuple[Removal, ...] = ()
-    why: str = ""  # why it is unresolved
+    why: str = ""  # why it is unresolved, for people; the outcome is the contract
+
+    @property
+    def resolved(self) -> bool:
+        return self.outcome is Outcome.RESOLVED
 
 
 @dataclass(frozen=True)
@@ -438,10 +473,10 @@ def _no_answer(reason: str, *, reported: bool = False) -> _Answer:
 @dataclass(frozen=True)
 class _State:
     """What a filler may read beyond the working tree, as one run reads it (COR-052
-    point 6): HEAD's commit (None with no commit yet), whether the clone is shallow,
-    and the default branch, resolved as a standing value reads it."""
+    point 6): HEAD — its commit, none yet, or why git cannot read it — whether the
+    clone is shallow, and the default branch, resolved as a standing value reads it."""
 
-    head: str | None
+    head: default_branch.Head
     shallow: bool
     branch: default_branch.DefaultBranch
 
@@ -524,7 +559,7 @@ class _Run:
         value reads it — read once per run, when a filler first declares `reads`."""
         if self.state is None:
             self.state = _State(
-                head=default_branch.commit_of(self.root, "HEAD"),
+                head=default_branch.head(self.root),
                 shallow=default_branch.is_shallow(self.root),
                 branch=default_branch.resolve(self.root, standing=True),
             )
@@ -535,7 +570,9 @@ class _Run:
         state = self.read_state()
         reads: list[FillerRead] = []
         if validators.READS_HISTORY in states:
-            reads.append(FillerRead(validators.READS_HISTORY, HEAD, state.head, state.shallow))
+            head = state.head
+            ref = HEAD if head.commit is not None or head.unborn else None
+            reads.append(FillerRead(validators.READS_HISTORY, ref, head.commit, state.shallow))
         if validators.READS_SETTLED in states:
             branch = state.branch
             if branch.commit is not None:
@@ -646,12 +683,16 @@ class _Point:
             policy=self.policy,
             inert_policy=self.inert_policy,
             participation=self.default[1] if self.default is not None else None,
-            **self._outcome(),
+            **self._ending(),
         )
 
-    def _outcome(self) -> dict[str, Any]:
+    def _ending(self) -> dict[str, Any]:
+        """How the point resolves: its fillers, its outcome, and its value or why not."""
         if self.policy not in cx.COMBINATIONS:
-            return self._unresolved(f"it declares an unknown combination policy {self.policy!r}")
+            return self._unresolved(
+                Outcome.DEFINER_DEFECT,
+                f"it declares an unknown combination policy {self.policy!r}",
+            )
         active = self.run.schemas.get(self.address)
         if active is None or active.validator is None:
             why = active.unavailable if active is not None else "no point schema is loaded"
@@ -662,7 +703,7 @@ class _Point:
                 f"point does not resolve until it can.",
                 validators.Severity.WARNING,
             )
-            return self._unresolved(f"its schema cannot be applied: {why}")
+            return self._unresolved(Outcome.DEFINER_DEFECT, f"its schema cannot be applied: {why}")
         self.validator = active.validator
         return self._single() if self.policy == cx.SINGLE else self._merged()
 
@@ -969,16 +1010,19 @@ class _Point:
             self._pass_over_default(default)
 
         if self.inert and self.inert_policy == FAIL:
-            return self._unresolved(_FAIL_WHY)
+            return self._unresolved(Outcome.INERT_FAIL, _FAIL_WHY)
         if answerer is not None:
             return self._resolved(
                 value=cast(_Answer, answerer.answer).value, origin=answerer.origin
             )
         if selected is not None and not any(c.name == selected for c in chain):
             return self._unresolved(
-                f"the contributor selection names {selected!r}, which does not contribute to it"
+                Outcome.SELECTION_UNMATCHED,
+                f"the contributor selection names {selected!r}, which does not contribute to it",
             )
-        return self._unresolved("no filler answered" if chain or behind else _UNFILLED)
+        if chain or behind:
+            return self._unresolved(Outcome.NO_ANSWER, _NO_ANSWER)
+        return self._unresolved(Outcome.UNFILLED, _UNFILLED)
 
     def _single_ambiguous(self, project: _Candidate | None) -> dict[str, Any]:
         """Several contributions and no selection: only the project filler, which
@@ -990,7 +1034,7 @@ class _Point:
         answerer = self._ask_in_order([project] if project is not None else [])
         if answerer is not None and not (self.inert and self.inert_policy == FAIL):
             return self._resolved(value=cast(_Answer, answerer.answer).value, origin=PROJECT)
-        return self._unresolved(_AMBIGUOUS)
+        return self._unresolved(Outcome.SELECTION_NEEDED, _AMBIGUOUS)
 
     def _ask_in_order(self, chain: list[_Candidate]) -> _Candidate | None:
         """Ask each in turn until one answers; the rest are passed over. Under
@@ -1035,11 +1079,13 @@ class _Point:
         if default is not None and default not in asking:
             self._pass_over_default(default)
         if self.inert and self.inert_policy == FAIL:
-            return self._unresolved(_FAIL_WHY)
+            return self._unresolved(Outcome.INERT_FAIL, _FAIL_WHY)
         taken = [c for c in asking if cast(_Answer, c.answer).answered]
-        if not taken:
-            return self._unresolved("no filler answered" if asking else _UNFILLED)
-        return self._merge(taken)
+        if taken:
+            return self._merge(taken)
+        if asking:
+            return self._unresolved(Outcome.NO_ANSWER, _NO_ANSWER)
+        return self._unresolved(Outcome.UNFILLED, _UNFILLED)
 
     def _merge(self, taken: list[_Candidate]) -> dict[str, Any]:
         """The answers of `taken`, in precedence order, merged by the point's policy.
@@ -1079,7 +1125,9 @@ class _Point:
             self._collision(collision, project)
         if collisions:
             clash = "; ".join(f"{c.id!r} ({c.first}, {c.second})" for c in collisions)
-            return self._unresolved(f"entries collide: {clash}", removals=records)
+            return self._unresolved(
+                Outcome.COLLISION, f"entries collide: {clash}", removals=records
+            )
         return self._resolved(
             value=[e.value for e in entries], entries=tuple(entries), removals=records
         )
@@ -1128,12 +1176,13 @@ class _Point:
         )
         self.fillers.append(default.filler(FillerState.PASSED_OVER, reason))
 
-    def _resolved(self, **outcome: Any) -> dict[str, Any]:
+    def _resolved(self, **fields: Any) -> dict[str, Any]:
         self._report_inert(resolved=True)
-        return {"fillers": tuple(self.fillers), "resolved": True, **outcome}
+        return {"fillers": tuple(self.fillers), "outcome": Outcome.RESOLVED, **fields}
 
-    def _unresolved(self, why: str, **outcome: Any) -> dict[str, Any]:
-        """No value, never a partial one: a filler that answered is not taken."""
+    def _unresolved(self, outcome: Outcome, why: str, **fields: Any) -> dict[str, Any]:
+        """No value, never a partial one: a filler that answered is not taken. The
+        ending's outcome and its sentence are given together, where it is decided."""
         self._report_inert(resolved=False)
         fillers = tuple(
             dataclasses.replace(f, state=FillerState.PASSED_OVER, reason=_UNUSED)
@@ -1141,7 +1190,7 @@ class _Point:
             else f
             for f in self.fillers
         )
-        return {"fillers": fillers, "resolved": False, "why": why, **outcome}
+        return {"fillers": fillers, "outcome": outcome, "why": why, **fields}
 
     def _report_inert(self, *, resolved: bool) -> None:
         """One finding per inert capability filler or default (COR-052 point 6): an
@@ -1327,6 +1376,7 @@ def _supplies(entry: Mapping[str, Any], counterpart: cx.Counterpart) -> str:
 _AMBIGUOUS = "several capabilities contribute and none is selected"
 _STOPPED = "not asked: a filler before it is inert, and the point's inert policy is `fail`"
 _FAIL_WHY = "a filler meant to answer is inert, and the point's inert policy is `fail`"
+_NO_ANSWER = "no filler answered"
 _UNFILLED = "unfilled: no filler is declared and the point has no default"
 _UNUSED = "answered, but the point does not resolve"
 
@@ -1384,6 +1434,8 @@ def reads_described(reads: Iterable[FillerRead]) -> str:
 
 def _read_described(read: FillerRead) -> str:
     if read.state == validators.READS_HISTORY:
+        if read.ref is None:
+            return f"history (git cannot read {HEAD} here)"
         if read.commit is None:
             return f"history ({read.ref}, no commit yet)"
         shallow = ", shallow clone" if read.shallow else ""
@@ -1432,18 +1484,28 @@ def shared_point(target_root: Path, address: str) -> ResolvedPoint | None:
 FROM_RESOLUTION = "resolution"
 FROM_RUN_CACHE = "run-cache"
 
+#: The version of the document `point_document` and `undefined_document` return,
+#: under the rule every reading document follows (the CLI README, "Friction
+#: checks"): raised when a key a reader relies on changes its meaning or goes, or a
+#: value of `outcome` does; never for a key added, nor for a value of `outcome`
+#: added, which a reader already reads as "could not tell".
+DOCUMENT_SCHEMA_VERSION = 1
+
 
 def point_document(point: ResolvedPoint, *, source: str = FROM_RESOLUTION) -> dict[str, Any]:
     """One resolved data point as the stable document `pkit connections resolve
     --json` prints — the read a capability's own script uses to consume a point
     it defines, without importing this package (the CLI README, "Connections
     commands"). Everything the status report shows, as data: `value` is None
-    when the point does not resolve, and never a partial value. `from` says
-    whether this command resolved it or read the run's resolution. Each filler's
-    `reads` names, for a command filler that declares it reads beyond the
-    working tree and was asked, each state and where it was read (`FillerRead`):
-    `{state, ref, commit}`, and `shallow` on `history`."""
+    when the point does not resolve, and never a partial value. `outcome` is how
+    the resolution ended (`Outcome`), the contract a reader dispatches on; `why`
+    is its sentence. `from` says whether this command resolved it or read the
+    run's resolution. Each filler's `reads` names, for a command filler that
+    declares it reads beyond the working tree and was asked, each state and where
+    it was read (`FillerRead`): `{state, ref, commit}`, and `shallow` on
+    `history`."""
     return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
         "address": point.address,
         "defined": True,
         "from": source,
@@ -1452,6 +1514,7 @@ def point_document(point: ResolvedPoint, *, source: str = FROM_RESOLUTION) -> di
         "inert_policy": point.inert_policy,
         "participation": point.participation,
         "resolved": point.resolved,
+        "outcome": point.outcome.value,
         "why": point.why,
         "value": point.value if point.resolved else None,
         "origin": point.origin,
@@ -1509,7 +1572,7 @@ def point_from_document(document: Mapping[str, Any]) -> ResolvedPoint:
             )
             for f in document["fillers"]
         ),
-        resolved=document["resolved"],
+        outcome=Outcome(document["outcome"]),
         value=document["value"],
         origin=document["origin"],
         entries=tuple(
@@ -1526,10 +1589,12 @@ def point_from_document(document: Mapping[str, Any]) -> ResolvedPoint:
 def undefined_document(address: str, why: str) -> dict[str, Any]:
     """The document for an address no active provider defines as a data point."""
     return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
         "address": address,
         "defined": False,
         "from": FROM_RESOLUTION,
         "resolved": False,
+        "outcome": Outcome.UNDEFINED.value,
         "why": why,
         "value": None,
     }

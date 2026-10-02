@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -52,7 +53,7 @@ def _link_parents_textual_only(st, issues, monkeypatch) -> None:
             numbers=set(), outcome=st.containment.NativeReadOutcome.UNSUPPORTED
         ),
     )
-    st._link_parents(issues, {}, corpus_complete=True)
+    st._link_parents(issues, {}, corpus_complete=True, issue_types={})
 
 
 @pytest.fixture
@@ -213,6 +214,145 @@ def test_link_parents_sets_relationships(st, issue_types, monkeypatch) -> None:
     assert issues[1].parent_number is None
     assert 3 in issues[2].children
     assert 2 in issues[1].children
+
+
+def test_a_native_child_elsewhere_is_not_listed_as_the_issue_of_its_number(
+    st, issue_types, monkeypatch
+) -> None:
+    """A native sub-issue in another repository is outside the fetched issues:
+    this repository's issue of the same number is not listed under the parent
+    for it, nor given that parent natively (#1308)."""
+    issues = _tree_with_a_child_elsewhere(st, issue_types, monkeypatch)
+    assert issues[2].children == []
+    assert [child.ref for child in issues[2].children_elsewhere] == ["acme/other#7"]
+    assert issues[7].parent_number is None
+    assert issues[7].parent_resolution.native is None
+
+
+def _tree_with_a_child_elsewhere(st, issue_types, monkeypatch) -> dict:
+    """#2, a Feature whose only child is `acme/other#7`, natively; and this
+    repository's #7, a Task under nothing."""
+    raw = [
+        {"number": 2, "title": "[Feature] f", "body": "## What\n", "state": "OPEN", "labels": []},
+        {"number": 7, "title": "[Task] t", "body": "## What\n", "state": "OPEN", "labels": []},
+    ]
+    issues = st._parse_issues(raw, issue_types)
+    containment = st.containment
+    monkeypatch.setattr(
+        containment,
+        "read_native_children",
+        lambda _config, *, parent_number: containment.NativeRead(
+            numbers=set(),
+            outcome=containment.NativeReadOutcome.READ,
+            foreign=frozenset({containment.ForeignIssue("acme/other", 7, 4207)})
+            if parent_number == 2
+            else frozenset(),
+        ),
+    )
+    st._link_parents(issues, {}, corpus_complete=True, issue_types={})
+    return issues
+
+
+def test_a_child_elsewhere_is_a_labelled_leaf_in_every_format(
+    st, issue_types, monkeypatch, capsys
+) -> None:
+    """What holds a container is shown where the operator looks for it: the
+    child elsewhere is a leaf under its parent, named with its repository and
+    claiming no state, in text, markdown and JSON (#1308)."""
+    issues = _tree_with_a_child_elsewhere(st, issue_types, monkeypatch)
+
+    st._print_text(issues, {}, {}, issues)
+    text = capsys.readouterr().out
+    st._print_markdown(issues, {}, {}, issues)
+    markdown = capsys.readouterr().out
+    as_json = st._issue_to_dict(issues[2])
+
+    assert "[feature] #2 (open) [Feature] f\n  - acme/other#7  [in another repository]\n" in text
+    assert "- **[feature] #2** [Feature] f\n  - `acme/other#7` _(in another repository)_\n" in (
+        markdown
+    )
+    assert as_json["children"] == []
+    assert as_json["children_in_other_repositories"] == [
+        {"ref": "acme/other#7", "repository": "acme/other", "number": 7}
+    ]
+    # This repository's #7 is its own root, not the child elsewhere.
+    assert "[task] #7 (open) [Task] t\n" in text
+    assert st._issue_to_dict(issues[7])["children_in_other_repositories"] == []
+
+
+def test_a_parent_whose_only_child_is_elsewhere_gets_its_view_refreshed(
+    st, issue_types, monkeypatch
+) -> None:
+    """`--refresh-children-views` refreshes the parent `create-issue` and
+    `link-parent` refresh: its only child is in another repository (#1308)."""
+    issues = _tree_with_a_child_elsewhere(st, issue_types, monkeypatch)
+    refreshed: list[int] = []
+
+    def refresh(_config, *, parent_number, **_kw):
+        refreshed.append(parent_number)
+        return st.containment.RefreshResult(st.containment.RefreshOutcome.UNCHANGED, detail="")
+
+    monkeypatch.setattr(st.axis_labels, "containment_mode", lambda _root: "textual")
+    monkeypatch.setattr(st.containment, "refresh_children_comment", refresh)
+    st._refresh_children_views(issues, Path("."), {})
+
+    assert refreshed == [2]
+
+
+def test_the_refreshed_view_leaves_nothing_in_the_other_repository(
+    st, issue_types, monkeypatch
+) -> None:
+    """The view written for #2 names `acme/other#7` in a code span, which GitHub
+    does not link, and every write is addressed to this repository (#1308)."""
+    issues = _tree_with_a_child_elsewhere(st, issue_types, monkeypatch)
+    calls: list[list[str]] = []
+
+    def gh(args, _config):
+        calls.append(list(args))
+        if "POST" in args:
+            return subprocess.CompletedProcess(args, 0, "{}", "")
+        if args[-1].endswith("/comments"):
+            return subprocess.CompletedProcess(args, 0, "[]", "")
+        raise AssertionError(f"unexpected gh call: {args}")
+
+    monkeypatch.setattr(st.axis_labels, "containment_mode", lambda _root: "textual")
+    monkeypatch.setattr(st.containment, "_gh_call", gh)
+    st._refresh_children_views(issues, Path("."), {})
+
+    (write,) = [call for call in calls if "POST" in call]
+    assert write[4] == "repos/{owner}/{repo}/issues/2/comments"
+    assert "- `acme/other#7`\n" in write[-1]
+    assert not re.search(r"(?<!`)acme/other#7", write[-1])
+
+
+def test_a_native_child_naming_this_repository_without_an_anchor_is_in_the_tree(
+    st, issue_types, monkeypatch
+) -> None:
+    """A tracker whose sub-issue entries name their repository and omit
+    `parent_issue_url`: #7, listed under #2 as this repository's, is #2's child
+    in the tree, under #2 natively (#1308)."""
+    here = "https://api.github.com/repos/acme/widget"
+    raw = [
+        {"number": 2, "title": "[Feature] f", "body": "## What\n", "state": "OPEN", "labels": []},
+        {"number": 7, "title": "[Task] t", "body": "## What\n", "state": "OPEN", "labels": []},
+    ]
+    issues = st._parse_issues(raw, issue_types)
+
+    def gh(args, _config):
+        if args[-1] == "repos/{owner}/{repo}/issues/2/sub_issues":
+            listed = [{"number": 7, "repository_url": here}]
+            return subprocess.CompletedProcess(args, 0, json.dumps(listed), "")
+        if args[-1].endswith("/sub_issues"):
+            return subprocess.CompletedProcess(args, 0, "[]", "")
+        if args[-2:] == ["--jq", ".repository_url"]:
+            return subprocess.CompletedProcess(args, 0, here + "\n", "")
+        raise AssertionError(f"unexpected gh call: {args}")
+
+    monkeypatch.setattr(st.containment, "_gh_call", gh)
+    st._link_parents(issues, {}, corpus_complete=True, issue_types={})
+    assert issues[2].children == [7]
+    assert issues[2].child_substrate == {7: "native"}
+    assert issues[7].parent_number == 2
 
 
 def test_link_parents_handles_missing_parent_target(st, issue_types, monkeypatch) -> None:

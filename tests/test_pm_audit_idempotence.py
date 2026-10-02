@@ -560,9 +560,9 @@ def _wire_done_work(dw, monkeypatch) -> None:
     monkeypatch.setattr(dw, "_check_pr_placeholder", lambda body, n, root: [])
     monkeypatch.setattr(dw, "_gh_get_status_rollup", lambda n, config: _RED)
     _direct_merge(dw, monkeypatch)
-    monkeypatch.setattr(dw.pr_merge, "delete_remote_branch", lambda b, c, **kw: None)
+    monkeypatch.setattr(dw.pr_merge, "delete_branch", lambda n, h, c, **kw: None)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", lambda b, c, **kw: None)
-    monkeypatch.setattr(dw, "_invoke_move_issue", lambda n, target, root: 0)
+    monkeypatch.setattr(dw, "_invoke_move_issue", lambda n, target, root, **kw: 0)
     monkeypatch.setattr(dw, "_invoke_close_issue", lambda n, pr, root, **kw: 0)
     monkeypatch.setattr(
         sys,
@@ -607,7 +607,7 @@ def _wire_merge_pr(mp, monkeypatch) -> None:
         lambda n, body, closing, config: {},
     )
     _direct_merge(mp, monkeypatch)
-    monkeypatch.setattr(mp.pr_merge, "delete_remote_branch", lambda b, c, **kw: None)
+    monkeypatch.setattr(mp.pr_merge, "delete_branch", lambda n, h, c, **kw: None)
     monkeypatch.setattr(mp.pr_merge, "cleanup_local", lambda b, c, **kw: None)
     monkeypatch.setattr(mp, "fire_hooks", lambda name, **kw: None)
     # The clone's after-merge record (#1011) is not this file's subject; never

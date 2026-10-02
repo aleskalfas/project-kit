@@ -18,11 +18,15 @@ on merge. This module realises that outcome in three steps a verb composes:
      nothing else. On a base that merges through a queue (#1011,
      `_lib.merge_queue`), the queue makes the merge: :func:`enqueue` hands
      the PR to it and :func:`land` waits for it.
-  2. :func:`delete_remote_branch` — the head ref goes through the API, which
-     needs nothing from the working tree. Best-effort.
+  2. :func:`delete_branch` — the head branch on GitHub, deleted by the
+     backbone (`pkit pull-request delete-branch`) only while its tip is the
+     head that merged. Whatever it comes to is said in one line — naming the
+     command that deletes it later where it was not deleted — and never
+     fails the verb; it is answered for step 3.
   3. :func:`cleanup_local` — `checkout <default>`, `pull --ff-only`,
-     `branch -D <head>`. Every step warns with git's reason and continues;
-     none can fail the verb.
+     `branch -D <head>`, the last only when the branch on GitHub was deleted
+     or is gone and everything on the local one merged. Every step warns with
+     git's reason and continues; none can fail the verb.
 
 A verb runs its own irreversible-merge follow-up (done-work's issue
 transition, merge-pr's after-merge hooks) between 1 and 2, so no best-effort
@@ -30,25 +34,36 @@ step stands between the merge and the thing that must not be skipped — and
 only once :func:`land` reports the PR merged, as GitHub says it, never as a
 command's exit code implies.
 
-The merge requests themselves — the squash merge, the enqueue, the wait for
-the queue and taking a PR out of it — are the backbone's (`pkit
-pull-request`, read through `_lib.merge_queue`): the one mechanic the
-backbone's `pkit release merge` lands a release PR with too (#1200). What this
-module decides is the verbs' own: when to land, what to refuse, and what
-follows the merge.
+The requests themselves — the squash merge, the enqueue, the wait for the
+queue, taking a PR out of it and deleting the head branch — are the
+backbone's (`pkit pull-request`, read through `_lib.merge_queue`): the one
+mechanic the backbone's `pkit release merge` lands a release PR with too
+(#1200). What this module decides is the verbs' own: when to land, what to
+refuse, and what follows the merge.
+
+The backbone runs the cross-repository guard before each request that changes
+the service (ADR-061 point 6), with no terminal to ask: the verb's own guard
+ran first. A request carries `--allow-foreign-repo` exactly when the operator
+confirmed at the verb — gave the flag on its command line, or answered yes at
+its prompt (:attr:`MergeRequest.allow_foreign_repo`) — so the operator is
+asked once and nothing is confirmed that they did not confirm. Should the
+backbone still refuse — its comparison and the verb's disagree, and the
+operator confirmed nothing — the landing is :data:`REFUSED`, naming both
+verdicts, and nothing was requested.
 """
 
 from __future__ import annotations
 
 import argparse
 import math
+import os
 import subprocess
 import sys
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, replace
 from typing import Any
 
 from _lib import default_branch, merge_queue
-from _lib.gh import gh_run
 
 # How a landing ended (:class:`Landing`): the four ends of a wait for the
 # queue; a merge or an enqueue that no reading since could confirm; and three
@@ -61,8 +76,6 @@ UNCONFIRMED = "unconfirmed"
 REFUSED = "refused"
 UNREADABLE = "unreadable"
 FAILED = "failed"
-
-_ALREADY_DELETED_MARKER = "Reference does not exist"
 
 # ---- step 1: the merge ------------------------------------------------------
 
@@ -86,6 +99,52 @@ class MergeRequest:
     #: How long to wait for a queue's merge: None follows the queue's estimate
     #: (`merge_queue.wait_for_merge`), 0 returns at once.
     wait_seconds: float | None = None
+    #: How the verb's own cross-repository guard let it proceed
+    #: (`session_guard.how_passed`); "" when it does not say.
+    guard_passed: str = ""
+    #: The operator confirmed a change in another repository at the verb — the
+    #: flag on its command line, or a yes at its prompt
+    #: (`session_guard.confirmed`): the backbone is told so, and only then.
+    allow_foreign_repo: bool = False
+
+
+class GuardRefused(Exception):
+    """The backbone's cross-repository guard refused a request, which it did
+    not make; `outcome` is its answer."""
+
+    def __init__(self, outcome: merge_queue.Outcome) -> None:
+        super().__init__(outcome.reason)
+        self.outcome = outcome
+
+
+class Unconfirmed(Exception):
+    """The backbone could not tell whether a request was made: it got no
+    answer, and the PR could not be read since (`reason_kind`
+    `unanswered`); `outcome` is its answer, `reason` says what it found."""
+
+    def __init__(self, outcome: merge_queue.Outcome) -> None:
+        super().__init__(outcome.reason)
+        self.outcome = outcome
+
+
+class NotSeenMade(Exception):
+    """The backbone's request got no answer, and two readings since did not
+    see it made (`reason_kind` `not-made`): what they saw, not that it was not
+    made — the service may still apply it. `outcome` is its answer."""
+
+    def __init__(self, outcome: merge_queue.Outcome) -> None:
+        super().__init__(outcome.reason)
+        self.outcome = outcome
+
+
+class AlreadyMerged(Exception):
+    """Taking the PR out of the queue found it merged (`reason_kind`
+    `merged`), which no dequeue undoes; `reason` says at which head, as the
+    backbone read it."""
+
+    def __init__(self, outcome: merge_queue.Outcome) -> None:
+        super().__init__(outcome.reason)
+        self.outcome = outcome
 
 
 @dataclass(frozen=True)
@@ -95,16 +154,23 @@ class Landing:
     `outcome` is :data:`MERGED`; :data:`STILL_QUEUED`, the PR was handed to
     the queue and has not been seen merged; :data:`UNCONFIRMED`, gh accepted a
     direct merge, or a merge or an enqueue got no answer back, and GitHub
-    could not be read since, so whether it merged is not known;
-    :data:`LEFT` or :data:`HEAD_MOVED`, nothing merged; or :data:`REFUSED`,
-    :data:`UNREADABLE` or :data:`FAILED`, no merge made and nothing enqueued.
+    could not be read since — or, with no answer from the backbone at all,
+    one reading found the PR neither merged nor queued — so whether it merged
+    is not known;
+    :data:`LEFT` or :data:`HEAD_MOVED`, not seen merged; or :data:`REFUSED`,
+    :data:`UNREADABLE` or :data:`FAILED`, not seen merged, and — but for a
+    request not seen made — nothing asked that GitHub did not refuse.
     `reading` is the last reading taken, None when the wait lost sight of the
     PR; `message` says what happened where the outcome alone does not.
+    `requested`: this run sent a merge or an enqueue the service did not
+    refuse — it accepted it, or gave no answer that said — so the PR may yet
+    merge from it, whatever the landing came to.
     """
 
     outcome: str
     reading: merge_queue.Reading | None = None
     message: str = ""
+    requested: bool = False
 
 
 def land(request: MergeRequest, config: dict[str, Any]) -> Landing:
@@ -122,9 +188,13 @@ def land(request: MergeRequest, config: dict[str, Any]) -> Landing:
     but merged is waited for as a queued PR. When GitHub cannot be read after
     gh accepted a direct merge, the PR may have merged or been enqueued, and
     the landing is :data:`UNCONFIRMED`, never taken for a queued PR. A merge
-    or an enqueue that gets no answer back may have been made all the same,
-    so it is never taken for one that failed: the PR is read before anything
-    is decided (:func:`_unanswered`).
+    or an enqueue that got no answer the backbone settles by reading: made,
+    it is taken as made; not seen made on two readings, it is :data:`FAILED`
+    with the request counted as sent (`requested`), since the service may
+    still apply it; the PR not readable since, the landing is
+    :data:`UNCONFIRMED`. One the backbone gave no answer back to at all may
+    have been made all the same, so it is never taken for one that failed:
+    the PR is read before anything is decided (:func:`_unanswered`).
     """
     number = request.pr_number
     try:
@@ -147,25 +217,58 @@ def land(request: MergeRequest, config: dict[str, Any]) -> Landing:
     if reading.has_queue:
         if reading.queued:
             print(f"  PR #{number} is already in the merge queue for {request.base}")
-        else:
-            enqueued = enqueue(number, config=config, head_oid=request.head_oid)
-            if enqueued is None:
-                return _unanswered(request, config, merged_directly=False)
-            if not enqueued:
-                return Landing(FAILED, reading)
-            print(f"  enqueued PR #{number} in the merge queue for {request.base}")
-        return _wait(request, config)
-    merged = squash_merge(
-        number,
-        pr_title=request.pr_title,
-        admin=request.admin,
-        config=config,
-        head_oid=request.head_oid,
-    )
+            return _wait(request, config)
+        try:
+            enqueued = enqueue(
+                number,
+                config=config,
+                head_oid=request.head_oid,
+                allow_foreign_repo=request.allow_foreign_repo,
+            )
+        except GuardRefused as refused:
+            return Landing(REFUSED, reading, _guard_refusal(request, refused, "enqueue"))
+        except Unconfirmed as unknown:
+            return _requested(_unconfirmed(request, unknown))
+        except NotSeenMade:
+            return Landing(FAILED, reading, requested=True)
+        if enqueued is None:
+            return _requested(_unanswered(request, config, merged_directly=False))
+        if not enqueued:
+            return Landing(FAILED, reading)
+        print(f"  enqueued PR #{number} in the merge queue for {request.base}")
+        return _requested(_wait(request, config))
+    try:
+        merged = squash_merge(
+            number,
+            pr_title=request.pr_title,
+            admin=request.admin,
+            config=config,
+            head_oid=request.head_oid,
+            allow_foreign_repo=request.allow_foreign_repo,
+        )
+    except GuardRefused as refused:
+        return Landing(REFUSED, reading, _guard_refusal(request, refused, "merge"))
+    except Unconfirmed as unknown:
+        return _requested(_unconfirmed(request, unknown))
+    except NotSeenMade:
+        return Landing(FAILED, reading, requested=True)
     if merged is None:
-        return _unanswered(request, config, merged_directly=True)
+        return _requested(_unanswered(request, config, merged_directly=True))
     if not merged:
         return Landing(FAILED, reading)
+    return _requested(_after_a_direct_merge(request, config))
+
+
+def _requested(landing: Landing) -> Landing:
+    """`landing`, after a merge or an enqueue this run sent that the service
+    did not refuse: the PR may yet merge from it."""
+    return replace(landing, requested=True)
+
+
+def _after_a_direct_merge(request: MergeRequest, config: dict[str, Any]) -> Landing:
+    """A direct merge gh accepted, or a reading showed made: merged only once
+    GitHub reports it, else waited for as a queued PR."""
+    number = request.pr_number
     try:
         after = merge_queue.read(number, config)
     except merge_queue.Unreadable as exc:
@@ -187,27 +290,48 @@ def land(request: MergeRequest, config: dict[str, Any]) -> Landing:
     return _wait(request, config, merged_directly=True)
 
 
+def _unconfirmed(request: MergeRequest, unknown: Unconfirmed) -> Landing:
+    """A merge or an enqueue the backbone could not settle: it got no answer,
+    and GitHub could not be read since. The landing is :data:`UNCONFIRMED` —
+    whether the PR merged, or entered the queue, is not known — and what
+    follows the merge is owed to a re-run; the message names the reading
+    that tells."""
+    number = request.pr_number
+    return Landing(
+        UNCONFIRMED,
+        message=(
+            f"{unknown.outcome.reason}. Read where PR #{number} stands with "
+            f"`pkit pull-request read {number}`"
+        ),
+    )
+
+
 def _unanswered(request: MergeRequest, config: dict[str, Any], *, merged_directly: bool) -> Landing:
-    """A merge — `merged_directly` — or an enqueue the backbone gave no answer to.
+    """A merge — `merged_directly` — or an enqueue the backbone gave no answer
+    to at all: its run ended with no document, at this capability's bound.
 
     The request may have been made — the run may have ended after gh
-    accepted it — so the PR is read before anything is decided: merged, it is
-    the merge; in the queue, it is waited for; neither, the request was not
-    made and nothing merged. When the PR cannot be read the landing is
-    :data:`UNCONFIRMED`: whether it merged, or entered the queue, is not
-    known, and what follows the merge is owed to a re-run.
+    accepted it — so the PR is read before anything is decided, and only the
+    end state the backbone's settling would accept decides: merged, it is the
+    merge; in the queue, it is waited for. Anything else is
+    :data:`UNCONFIRMED`, never "not made": that a request was not made is
+    concluded only from two readings running (ADR-061 point 7), which the
+    backbone takes when it answers, and one reading here is not enough. The
+    PR not readable is :data:`UNCONFIRMED` too. Either way what follows the
+    merge is owed to a re-run, and the message names the reading that tells.
     """
     number = request.pr_number
     asked = "merge" if merged_directly else "enqueue"
+    unanswered = f"the {asked} of PR #{number} into {request.base} got no answer back"
+    read_it = f"Read where PR #{number} stands with `pkit pull-request read {number}`"
     try:
         after = merge_queue.read(number, config)
     except merge_queue.Unreadable as exc:
         return Landing(
             UNCONFIRMED,
             message=(
-                f"the {asked} of PR #{number} into {request.base} got no answer back, and "
-                f"GitHub could not be read since to tell whether it merged or entered the "
-                f"merge queue: {exc}"
+                f"{unanswered}, and GitHub could not be read since to tell whether it merged "
+                f"or entered the merge queue: {exc}. {read_it}"
             ),
         )
     if after.merged:
@@ -216,12 +340,13 @@ def _unanswered(request: MergeRequest, config: dict[str, Any], *, merged_directl
     if after.queued:
         print(f"  PR #{number} is in the merge queue for {request.base} ({after.describe()})")
         return _wait(request, config, merged_directly=merged_directly)
-    print(
-        f"error: GitHub reports PR #{number} neither merged nor queued ({after.describe()}): "
-        f"the {asked} was not made, and nothing merged.",
-        file=sys.stderr,
+    return Landing(
+        UNCONFIRMED,
+        after,
+        f"{unanswered}, and one reading since finds it neither merged nor queued "
+        f"({after.describe()}), which does not tell whether the {asked} was made: the "
+        f"{asked} may still show. {read_it}",
     )
-    return Landing(FAILED, after)
 
 
 def squash_merge(
@@ -231,9 +356,14 @@ def squash_merge(
     admin: bool,
     config: dict[str, Any],
     head_oid: str = "",
+    allow_foreign_repo: bool = False,
 ) -> bool | None:
     """Squash-merge the PR with the PR title as the landed commit subject —
     the backbone's direct merge (`pkit pull-request merge`).
+
+    `allow_foreign_repo` passes the operator's confirmation of a change in
+    another repository on to the backbone's guard; raises
+    :class:`GuardRefused` when that guard refused the merge, unmade.
 
     `head_oid`, when given, is the head commit the caller's gate checked: the
     merge is pinned to it, so a push between the gate and the merge fails the
@@ -241,11 +371,15 @@ def squash_merge(
     the PR title: GitHub's default for a single-commit PR is the commit
     message, which would defeat the title gate (DEC-013; fixes #33).
 
-    Returns True when gh accepted the merge, False when it did not (an error
-    line is printed), and None when the backbone gave no answer back (a
-    warning is printed): the merge may have been made, and :func:`land` reads
-    the PR before it decides. True is not proof of a merge either: on a base
-    that requires a merge queue gh enqueues and exits 0, which is why
+    Returns True when the merge was made — gh accepted it, or it got no answer
+    and a reading since showed it — False when it was refused (an error line
+    is printed, gh's refusal), and None when the backbone gave no answer back
+    (a warning is printed): the merge may have been made, and :func:`land`
+    reads the PR before it decides. Raises :class:`Unconfirmed` when the
+    backbone could not tell whether it was made, and :class:`NotSeenMade`,
+    an error line printed, when its two readings did not see it made. True is
+    not proof of a merge either: on a
+    base that requires a merge queue gh enqueues and exits 0, which is why
     :func:`land` reads the PR afterwards. The head branch is never deleted
     here — see the module docstring.
     """
@@ -257,7 +391,7 @@ def squash_merge(
         args += ["--head", head_oid]
     if admin:
         args.append("--admin")
-    return _request(args, config)
+    return _request(_confirming(args, allow_foreign_repo), config)
 
 
 def enqueue(
@@ -265,10 +399,12 @@ def enqueue(
     *,
     config: dict[str, Any],
     head_oid: str = "",
+    allow_foreign_repo: bool = False,
 ) -> bool | None:
     """Put the PR in its base branch's merge queue (#1011), pinned to the head
     the caller's gates checked — the backbone's enqueue (`pkit pull-request
-    enqueue`, `gh pr merge <N> --auto`).
+    enqueue`, `gh pr merge <N> --auto`). `allow_foreign_repo` and
+    :class:`GuardRefused` as for :func:`squash_merge`.
 
     The queue makes the merge (`_lib.merge_queue`): it runs the base's required
     checks on the merge it is about to make and merges once they pass, by its
@@ -278,10 +414,11 @@ def enqueue(
     instead. A PR whose own required checks are still running is taken in once
     they pass. Never `--admin`, which merges around the queue.
 
-    Returns True once GitHub has taken the PR in, False when it did not (an
+    Returns True once GitHub has taken the PR in, False when it refused (an
     error line is printed), and None when the backbone gave no answer back (a
-    warning is printed): the PR may have entered the queue all the same. The
-    PR has not merged when this returns.
+    warning is printed): the PR may have entered the queue all the same.
+    Raises :class:`Unconfirmed` and :class:`NotSeenMade` as
+    :func:`squash_merge` does. The PR has not merged when this returns.
     """
     if pr_number is None:
         print("error: no PR number to enqueue.", file=sys.stderr)
@@ -289,22 +426,53 @@ def enqueue(
     args = ["enqueue", str(pr_number)]
     if head_oid:
         args += ["--head", head_oid]
-    return _request(args, config)
+    return _request(_confirming(args, allow_foreign_repo), config)
 
 
-def dequeue(pr_number: int, config: dict[str, Any]) -> bool:
+def dequeue(
+    pr_number: int, config: dict[str, Any], *, allow_foreign_repo: bool = False
+) -> bool | None:
     """Take the PR out of its base's merge queue — or, while auto-merge still
     holds it until its checks pass, cancel that — and confirm it is out: the
     backbone's dequeue (`pkit pull-request dequeue`), which reads the PR first.
+    `allow_foreign_repo` as for :func:`squash_merge`.
 
-    Returns True once a reading shows the PR neither queued nor merged; False,
-    with the reason printed, otherwise.
+    Returns True once two readings running show the PR neither queued nor
+    merged; False, with the reason printed, otherwise — the backbone's guard
+    refusing it among them, when the command that takes the PR out is printed
+    with the flag that confirms it, since running the verb again does not
+    repeat the dequeue; and None, with why printed, when whether the PR left
+    the queue is not known: the backbone gave no answer back, or could not
+    tell, the PR not readable since the dequeue. Raises
+    :class:`AlreadyMerged`, printing nothing, when the PR has merged: what
+    to say of that is the caller's.
     """
+    args = _confirming(["dequeue", str(pr_number)], allow_foreign_repo)
     try:
-        outcome = merge_queue.request(["dequeue", str(pr_number)], config)
+        outcome = merge_queue.request(args, config)
     except merge_queue.Unreadable as exc:
         print(
-            f"error: could not take PR #{pr_number} out of the merge queue: {exc}", file=sys.stderr
+            f"error: whether PR #{pr_number} left the merge queue is not known — the backbone "
+            f"gave no answer back: {exc}",
+            file=sys.stderr,
+        )
+        return None
+    if outcome.accepted is None:
+        print(
+            f"error: whether PR #{pr_number} left the merge queue is not known: {outcome.reason}",
+            file=sys.stderr,
+        )
+        return None
+    if outcome.reason_kind == merge_queue.HAS_MERGED:
+        raise AlreadyMerged(outcome)
+    if outcome.reason_kind == merge_queue.FOREIGN_REPOSITORY:
+        print(
+            f"error: the backbone's cross-repository guard refused to take PR #{pr_number} out "
+            f"of the merge queue, and nothing was asked of GitHub: "
+            f"{_backbones_comparison(outcome)}. To take it out there, run "
+            f"`pkit pull-request dequeue {pr_number} --allow-foreign-repo` from "
+            f"{os.getcwd()}, or use the PR's merge box.",
+            file=sys.stderr,
         )
         return False
     if not outcome.accepted:
@@ -431,16 +599,36 @@ def _wait(
             f"PR #{number}'s head moved from {request.head_oid[:7]} to "
             f"{wait.reading.head_oid[:7]} after its gates checked it"
         )
-        if dequeue(number, config):
+        try:
+            out = dequeue(number, config, allow_foreign_repo=request.allow_foreign_repo)
+        except AlreadyMerged as merged:
+            return Landing(
+                HEAD_MOVED,
+                wait.reading,
+                f"{moved}, and it merged before it could be taken out of the merge queue: "
+                f"{merged.outcome.reason}. The commits pushed after its gates checked it may be "
+                "in that merge; look at it.",
+            )
+        how = (
+            f"in the PR's merge box, or `gh pr merge {number} --disable-auto` while it waits "
+            "to enter."
+        )
+        if out:
             message = (
                 f"{moved}; it was taken out of the merge queue, so nothing they did not "
                 "check merges."
             )
+        elif out is None:
+            message = (
+                f"{moved}, and whether taking it out of the merge queue worked is not known: "
+                "it may still merge commits nothing checked. Read where it stands with "
+                f"`pkit pull-request read {number}`; if it is still queued, take it out "
+                f"yourself — {how}"
+            )
         else:
             message = (
                 f"{moved}, and taking it out of the merge queue failed: it may still "
-                "merge commits nothing checked. Take it out yourself — in the PR's merge "
-                f"box, or `gh pr merge {number} --disable-auto` while it waits to enter."
+                f"merge commits nothing checked. Take it out yourself — {how}"
             )
         return Landing(HEAD_MOVED, wait.reading, message)
     return Landing(wait.ended, wait.reading)
@@ -459,8 +647,12 @@ def _merged(request: MergeRequest, reading: merge_queue.Reading) -> Landing:
 
 def _request(args: list[str], config: dict[str, Any]) -> bool | None:
     """Ask the backbone to make a merge request: True when it was accepted;
-    False, with gh's reason printed, when it was not; None, with why printed,
-    when no answer came back — the request may have been made all the same."""
+    False, with gh's reason printed, when it was refused; None, with why
+    printed, when no answer came back — the request may have been made all
+    the same. Raises :class:`GuardRefused` when the backbone's guard refused
+    it, :class:`Unconfirmed` when the backbone could not tell whether it was
+    made, and :class:`NotSeenMade`, the backbone's words printed, when its
+    two readings did not see it made."""
     try:
         outcome = merge_queue.request(args, config)
     except merge_queue.Unreadable as exc:
@@ -473,6 +665,13 @@ def _request(args: list[str], config: dict[str, Any]) -> bool | None:
         return None
     if outcome.accepted:
         return True
+    if outcome.reason_kind == merge_queue.FOREIGN_REPOSITORY:
+        raise GuardRefused(outcome)
+    if outcome.accepted is None:
+        raise Unconfirmed(outcome)
+    if outcome.reason_kind == merge_queue.NOT_MADE:
+        print(f"error: {outcome.reason}.", file=sys.stderr)
+        raise NotSeenMade(outcome)
     if outcome.exit_code is None:
         print(f"error: {outcome.reason}.", file=sys.stderr)
     else:
@@ -481,6 +680,40 @@ def _request(args: list[str], config: dict[str, Any]) -> bool | None:
             file=sys.stderr,
         )
     return False
+
+
+def _confirming(args: list[str], allow_foreign_repo: bool) -> list[str]:
+    """`args`, with the operator's confirmation of a change in another
+    repository passed on to the backbone's guard when there is one."""
+    return [*args, "--allow-foreign-repo"] if allow_foreign_repo else args
+
+
+def _backbones_comparison(outcome: merge_queue.Outcome) -> str:
+    """What the backbone's guard compared, as its document states it: its
+    verdict, and the session's anchor and the target where it names them."""
+    guard: Mapping[str, Any] = outcome.guard or {}
+    verdict = str(guard.get("verdict") or "another repository")
+    anchor, target = guard.get("anchor"), guard.get("target")
+    where = f" (the session's anchor {anchor}, the target {target})" if anchor and target else ""
+    return f"its comparison reads {verdict}{where}"
+
+
+def _guard_refusal(request: MergeRequest, refused: GuardRefused, asked: str) -> str:
+    """Why the landing stopped when the backbone's cross-repository guard
+    refused a request this verb's own guard had let through with no
+    confirmation from the operator: the two comparisons disagree. Names both
+    verdicts; nothing was requested."""
+    ours = request.guard_passed or "a pass it did not report"
+    return (
+        f"[refused] the backbone's cross-repository guard refused the {asked} of PR "
+        f"#{request.pr_number}: {_backbones_comparison(refused.outcome)}, where this verb's "
+        f"own guard passed it as {ours}. The two comparisons disagree, and with no "
+        "confirmation a disagreement refuses: nothing was asked of GitHub.\n"
+        "          → if the change is meant for that repository, run the verb again with "
+        "--allow-foreign-repo, which it passes on; otherwise run it from a session rooted "
+        "in the target repository. Either way, report the disagreement — the two "
+        "comparisons are held to answer alike."
+    )
 
 
 # ---- the merge verbs' queue flags -------------------------------------------
@@ -557,59 +790,106 @@ def minutes(value: str) -> float:
     return minutes
 
 
-# ---- steps 2 and 3: the clean-up -------------------------------------------
+# ---- steps 2 and 3: the head branch, on GitHub and here ----------------------
 
 
-def delete_remote_branch(
-    branch: str,
+#: What became of the head branch on GitHub when no deletion was asked for:
+#: the head the PR merged at is not known (:func:`delete_branch`).
+NOT_ASKED = "not-asked"
+
+#: The ends of the deletion on GitHub after which the local branch may go
+#: too: the branch there was deleted, or is not there.
+_REMOTE_GONE = (merge_queue.DELETED, merge_queue.GONE)
+
+
+def delete_branch(
+    pr_number: int,
+    merged_head: str,
     config: dict[str, Any],
     *,
-    cross_repository: bool,
-) -> None:
-    """Delete the PR's remote head ref through the API — best-effort.
+    allow_foreign_repo: bool,
+    rerun_note: str = "",
+) -> str:
+    """Delete the merged PR's head branch on GitHub — the backbone's deletion
+    (`pkit pull-request delete-branch`), only while the branch's tip is
+    `merged_head`, the head the PR merged at, so a push since the merge is not
+    lost — and answer what became of it, for :func:`cleanup_local`.
 
-    `cross_repository` is required and has no default: the ref is deleted in
-    the BASE repository (`{owner}/{repo}` resolves there), so for a PR whose
-    head lives in a fork the head-branch name is chosen by the fork's author
-    and may name an unrelated branch of the base repo. Such a PR's head is
-    never deleted here — the fork owns its branch. Every caller must state
-    which case it is in, so a later caller cannot reintroduce the hole.
+    The backbone reads the PR and decides: a PR whose head is in a fork, that
+    has not merged, or whose head is not `merged_head` is refused; a branch
+    whose tip moved, that another open PR uses as its head or its base, or
+    that GitHub will not delete is kept; one not there is gone; and one asked
+    for with no usable answer and no reading since is unconfirmed. What it came
+    to is said in one line — a refusal other than a fork's, and an unconfirmed
+    one, as a warning — and nothing here fails the verb: the merge is durable.
+    Where the branch was not deleted, the line names the command that deletes
+    it later, then `rerun_note` — what the verb's own re-run does about it,
+    when the verb has something to say.
 
-    The API call needs nothing from the working tree, so a detached HEAD or a
-    default branch held by another worktree cannot fail it. A ref that is
-    already gone (a repository that auto-deletes head branches on merge) is
-    reported, not warned about. Every other failure, `gh` missing from PATH
-    included, is a warning; this never raises.
+    Answers the backbone's `outcome` (`merge_queue.DELETED`, `GONE`, `KEPT`,
+    `REFUSED`, `UNCONFIRMED`); `UNCONFIRMED` too when the backbone gave no
+    answer, and :data:`NOT_ASKED` when no merged head is known.
+    `allow_foreign_repo` passes the operator's confirmation of a change in
+    another repository on to the backbone's guard, as for :func:`squash_merge`.
     """
-    if cross_repository:
+    if not merged_head:
         print(
-            f"  head branch {branch} lives in a fork; not deleting a "
-            f"base-repository ref of that name"
+            f"[warn] the head PR #{pr_number} merged at is not known, so its head branch on "
+            "GitHub is kept. " + _delete_later(pr_number, "", allow_foreign_repo, rerun_note),
+            file=sys.stderr,
         )
-        return
+        return NOT_ASKED
+    args = _confirming([str(pr_number), "--expect", merged_head], allow_foreign_repo)
     try:
-        proc = gh_run(
-            ["gh", "api", "-X", "DELETE", f"repos/{{owner}}/{{repo}}/git/refs/heads/{branch}"],
-            config,
-            check=False,
+        deletion = merge_queue.deletion(args, config)
+    except merge_queue.Unreadable as exc:
+        print(
+            f"[warn] whether PR #{pr_number}'s head branch on GitHub was deleted is not known: "
+            f"{exc}. The merge is durable. "
+            + _delete_later(pr_number, merged_head, allow_foreign_repo, rerun_note),
+            file=sys.stderr,
         )
-    except FileNotFoundError:
-        reason = "`gh` not on PATH"
-    except OSError as exc:  # on PATH but not runnable: permissions, bad binary
-        reason = f"`gh` could not be run ({exc})"
-    else:
-        if proc.returncode == 0:
-            print(f"  deleted remote branch {branch}")
-            return
-        reason = proc.stderr.strip()
-        if _ALREADY_DELETED_MARKER in reason:
-            print(f"  remote branch {branch} already deleted")
-            return
-    print(
-        f"[warn] could not delete remote branch {branch}: {reason}. The merge "
-        f"is durable; delete it by hand (`git push origin --delete {branch}`).",
-        file=sys.stderr,
+        return merge_queue.UNCONFIRMED
+    branch = f"remote branch {deletion.branch}" if deletion.branch else "the remote head branch"
+    # The service's words may end a sentence of their own.
+    reason = deletion.reason.rstrip(".")
+    later = _delete_later(
+        pr_number, deletion.merged_head or merged_head, allow_foreign_repo, rerun_note
     )
+    if deletion.outcome == merge_queue.DELETED:
+        print(f"  deleted {branch}")
+    elif deletion.outcome == merge_queue.GONE:
+        print(f"  {branch} is not there; nothing to delete")
+    elif deletion.outcome == merge_queue.KEPT:
+        print(f"  kept {branch}: {reason}. {later}")
+    elif deletion.outcome == merge_queue.UNCONFIRMED:
+        print(
+            f"[warn] whether {branch} was deleted is not known: {reason}. {later}",
+            file=sys.stderr,
+        )
+    elif deletion.reason_kind == merge_queue.CROSS_REPOSITORY:
+        print(f"  {branch} not deleted: {reason}")
+    else:
+        print(f"[warn] {branch} not deleted: {reason}. {later}", file=sys.stderr)
+    return deletion.outcome
+
+
+def _delete_later(pr_number: int, head: str, allow_foreign_repo: bool, rerun_note: str) -> str:
+    """The sentence that names the command deleting the branch later, at
+    `head` — or, with none known, how to find it — then `rerun_note`."""
+    flag = " --allow-foreign-repo" if allow_foreign_repo else ""
+    if head:
+        sentence = (
+            f"To delete it later: `pkit pull-request delete-branch {pr_number} --expect "
+            f"{head}{flag}`."
+        )
+    else:
+        sentence = (
+            f"To delete it later, read the head it merged at (`pkit pull-request read "
+            f"{pr_number}`, `head_oid`), then run `pkit pull-request delete-branch {pr_number} "
+            f"--expect <that head>{flag}`."
+        )
+    return f"{sentence} {rerun_note}" if rerun_note else sentence
 
 
 def cleanup_local(
@@ -617,7 +897,8 @@ def cleanup_local(
     config: dict[str, Any],
     *,
     cross_repository: bool,
-    merged_head: str = "",
+    merged_head: str,
+    remote: str,
 ) -> None:
     """Switch to the default branch, fast-forward it, delete the local head — best-effort.
 
@@ -632,11 +913,14 @@ def cleanup_local(
     branch is not the one checked out here. `-D` (not `-d`) because a
     squash-merged branch is never an ancestor of the base branch.
 
-    With `merged_head`, the head the PR merged at, the local branch is deleted
-    only when everything on it merged: its tip is that head or behind it. A
-    branch holding commits the merge does not — work since, or a clone that
-    cannot tell — is kept with a warning, and a clone without the branch has
-    nothing to delete.
+    The local branch goes only with the one on GitHub: it is deleted only when
+    `remote`, what became of that one (:func:`delete_branch`), is deleted or
+    gone. One kept, refused, unconfirmed or not asked for keeps the local
+    branch too, said in one line. And it is deleted only when everything on
+    it merged: its tip is `merged_head`, the head the PR merged at, or behind
+    it. A branch holding commits the merge does not — work since, a clone that
+    cannot tell, or no merged head known — is kept with a warning, and a clone
+    without the branch has nothing to delete.
 
     For a cross-repository PR the local delete is skipped: a local branch
     sharing the fork branch's name is not that PR's head, and `-D` would
@@ -675,22 +959,28 @@ def cleanup_local(
             )
     if cross_repository:
         return
-    if merged_head:
-        tip = _git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}").stdout.strip()
-        if not tip:
-            return
-        # The commits on the branch the merged head does not hold: none, and
-        # everything on it merged. A head this clone does not have fails the
-        # count, which keeps the branch too.
-        unmerged = _git("rev-list", "--count", f"{merged_head}..{tip}")
-        if unmerged.returncode != 0 or unmerged.stdout.strip() != "0":
-            print(
-                f"[warn] local branch {branch} (at {tip[:7]}) holds commits the merge at "
-                f"{merged_head[:7]} does not, or this clone cannot tell; it is kept. "
-                f"Delete it yourself once nothing on it is needed (`git branch -D {branch}`).",
-                file=sys.stderr,
-            )
-            return
+    tip = _git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}").stdout.strip()
+    if not tip:
+        return
+    if remote not in _REMOTE_GONE:
+        print(
+            f"  kept local branch {branch}: its branch on GitHub was not deleted ({remote}), "
+            f"and the local one goes only with it (`git branch -D {branch}` once it has)"
+        )
+        return
+    # The commits on the branch the merged head does not hold: none, and
+    # everything on it merged. A head this clone does not have — or none
+    # known — fails the count, which keeps the branch too.
+    unmerged = _git("rev-list", "--count", f"{merged_head}..{tip}") if merged_head else None
+    if unmerged is None or unmerged.returncode != 0 or unmerged.stdout.strip() != "0":
+        print(
+            f"[warn] local branch {branch} (at {tip[:7]}) holds commits the merge at "
+            f"{merged_head[:7] or 'an unknown head'} does not, or this clone cannot tell; it "
+            f"is kept. Delete it yourself once nothing on it is needed "
+            f"(`git branch -D {branch}`).",
+            file=sys.stderr,
+        )
+        return
     proc = _git("branch", "-D", branch)
     if proc.returncode != 0:
         print(

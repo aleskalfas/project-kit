@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 import click
 import pytest
+from click.testing import CliRunner
 
-from project_kit.manifest import BackboneManifest, write_backbone_manifest
+from project_kit.cli import main
+from project_kit.manifest import (
+    BackboneManifest,
+    ComponentRegistryEntry,
+    read_backbone_manifest,
+    write_backbone_manifest,
+)
 from project_kit.scaffolds import stamp_capability
 
 
@@ -78,11 +86,77 @@ def test_stamp_capability_refuses_invalid_slug(kit_target: Path) -> None:
         stamp_capability(kit_target, name="Bad_Name")
 
 
-def test_stamp_capability_refuses_reserved_name_core(kit_target: Path) -> None:
-    """`core` names the core schemas area, so it is refused and nothing is written (#919)."""
-    with pytest.raises(click.ClickException, match="'core' is reserved"):
-        stamp_capability(kit_target, name="core")
-    assert not (kit_target / ".pkit" / "capabilities" / "core").exists()
+# Each reserved name, with a phrase of the reason its refusal gives: `core` names
+# core's own decision records, agents and schemas area (#919, #1289); `project`
+# names the project's own entries (#1269); `adr` names the project's architecture
+# decision records (#1289); `backbone` names the four places the backbone's name is
+# read as a component's (#1292).
+RESERVED = [
+    ("core", "the namespace of the core decision records and agents, and the core schemas area"),
+    ("project", "indistinguishable from the project itself"),
+    ("adr", "the namespace of the project's architecture decision records"),
+    (
+        "backbone",
+        "the component of the backbone's changesets, the owner of its validators, the component "
+        "its rule sets are cited with, and the component its documentation locations are "
+        "recorded under",
+    ),
+]
+
+
+@pytest.mark.parametrize(("name", "reason"), RESERVED)
+def test_stamp_capability_refuses_a_reserved_name(kit_target: Path, name: str, reason: str) -> None:
+    """A reserved name is refused with its reason, and nothing is written."""
+    with pytest.raises(click.ClickException, match=f"'{name}' is reserved") as refused:
+        stamp_capability(kit_target, name=name)
+    assert reason in refused.value.message
+    assert not (kit_target / ".pkit" / "capabilities" / name).exists()
+
+
+@pytest.mark.parametrize(("name", "reason"), RESERVED)
+def test_cli_new_capability_refuses_a_reserved_name(
+    kit_target: Path, name: str, reason: str
+) -> None:
+    result = CliRunner().invoke(main, ["new", "capability", name])
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert f"capability name '{name}' is reserved" in output
+    assert reason in output
+    assert not (kit_target / ".pkit" / "capabilities" / name).exists()
+
+
+# A backbone command holds its top-level name before any capability, so a
+# capability named after one could never surface its commands as `pkit <name> …`
+# (#1300). The commands are read from the dispatcher when asked, never listed here.
+
+
+@pytest.mark.parametrize("name", ["validate", "status", "sync", "capabilities"])
+def test_stamp_capability_refuses_a_backbone_command_name(kit_target: Path, name: str) -> None:
+    with pytest.raises(
+        click.ClickException, match=f"is the backbone command `pkit {name}`"
+    ) as refused:
+        stamp_capability(kit_target, name=name)
+    assert f"could never surface its commands as `pkit {name} …`" in refused.value.message
+    assert not (kit_target / ".pkit" / "capabilities" / name).exists()
+
+
+def test_stamp_capability_reads_the_backbone_commands_when_asked(
+    kit_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A command the backbone gains is refused as soon as it is one."""
+    assert "gather" not in main.commands
+    monkeypatch.setitem(main.commands, "gather", click.Command("gather"))
+    with pytest.raises(click.ClickException, match="is the backbone command `pkit gather`"):
+        stamp_capability(kit_target, name="gather")
+
+
+def test_cli_new_capability_refuses_a_backbone_command_name(kit_target: Path) -> None:
+    result = CliRunner().invoke(main, ["new", "capability", "validate"])
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert "capability name 'validate' is the backbone command `pkit validate`" in output
+    assert "which every capability name and alias yields to" in output
+    assert not (kit_target / ".pkit" / "capabilities" / "validate").exists()
 
 
 def test_stamp_capability_refuses_when_pkit_missing(tmp_path: Path) -> None:
@@ -119,3 +193,46 @@ def test_stamp_capability_does_not_register_in_backbone_manifest(kit_target: Pat
     assert backbone is not None
     names_of_capability_kind = [c.name for c in backbone.components if c.kind == "capability"]
     assert "evidence" not in names_of_capability_kind
+
+
+# --- a name an adapter holds (#1306) -----------------------------------
+#
+# An adapter and a capability cannot share a name: the release keys components
+# by name, every registered component's validators are owned by its name, and the
+# wiring resolver reads the registry by name. An adapter holds its name once it
+# is registered, or once its directory exists under `.pkit/adapters/`.
+
+
+def _adapter_registered(target: Path, name: str) -> None:
+    backbone = read_backbone_manifest(target)
+    assert backbone is not None
+    backbone.components.append(
+        ComponentRegistryEntry(
+            kind="adapter", name=name, manifest=f".pkit/adapters/{name}/project/manifest.yaml"
+        )
+    )
+    write_backbone_manifest(target, backbone)
+
+
+def _adapter_on_disk(target: Path, name: str) -> None:
+    (target / ".pkit" / "adapters" / name).mkdir(parents=True)
+
+
+@pytest.mark.parametrize(
+    ("hold", "where"),
+    [
+        (_adapter_registered, "registered in `.pkit/manifest.yaml`"),
+        (_adapter_on_disk, "at `.pkit/adapters/shared/`"),
+    ],
+)
+def test_cli_new_capability_refuses_a_name_an_adapter_holds(
+    kit_target: Path, hold: Callable[[Path, str], None], where: str
+) -> None:
+    hold(kit_target, "shared")
+    result = CliRunner().invoke(main, ["new", "capability", "shared"])
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert f"capability name 'shared' is held by the adapter 'shared' {where}" in output
+    assert "an adapter and a capability cannot share a name" in output
+    assert "the two would share one owner" in output
+    assert not (kit_target / ".pkit" / "capabilities" / "shared").exists()

@@ -366,47 +366,172 @@ def test_install_refuses_when_already_installed(kit_target: Path, kit_source: Pa
         caps.install_capability(kit_target, source)
 
 
-# --- reserved names (#919) -----------------------------------------
+# --- reserved names (#919, #1269, #1289, #1292) ---------------------
 #
-# `core` routes schemas to the core schemas area, so a capability named
-# `core` would have its schemas silently unreachable. Every path that brings
-# a capability into a project refuses it, naming the reservation.
+# `core` is the namespace of the core decision records and agents and routes
+# schemas to the core schemas area, so a capability named `core` could have no
+# decision records or agents stamped and would have its schemas silently
+# unreachable. `project` is the name the project's own entries carry where a
+# capability's carry the capability's (its decision records' and agents'
+# namespace, the opening name of its checks in an evidence point), so a
+# capability named `project` would be indistinguishable from the project.
+# `adr` is the namespace of the project's architecture decision records, so a
+# capability named `adr` could have no decision records stamped. `backbone` is
+# the name the backbone's changesets, validators, rule sets and documentation
+# locations are read under, so a capability named `backbone` would have its own
+# read as the backbone's. Every path that brings a capability into a project
+# refuses each, naming the reservation and its reason.
+
+RESERVED = [
+    ("core", "the namespace of the core decision records and agents, and the core schemas area"),
+    ("project", "indistinguishable from the project itself"),
+    ("adr", "the namespace of the project's architecture decision records"),
+    (
+        "backbone",
+        "the component of the backbone's changesets, the owner of its validators, the component "
+        "its rule sets are cited with, and the component its documentation locations are "
+        "recorded under",
+    ),
+]
 
 
-def test_install_refuses_reserved_name_core(kit_target: Path, kit_source: Path) -> None:
-    _stage_capability_in_source(kit_source, "core")
-    source = caps.find_capability_in_source(kit_source, "core")
+@pytest.mark.parametrize(("name", "reason"), RESERVED)
+def test_install_refuses_a_reserved_name(
+    kit_target: Path, kit_source: Path, name: str, reason: str
+) -> None:
+    _stage_capability_in_source(kit_source, name)
+    source = caps.find_capability_in_source(kit_source, name)
     assert source is not None
-    with pytest.raises(click.ClickException, match="'core' is reserved"):
+    with pytest.raises(click.ClickException, match=f"'{name}' is reserved") as refused:
         caps.install_capability(kit_target, source)
-    assert not caps.is_installed(kit_target, "core")
-    assert not (kit_target / ".pkit" / "capabilities" / "core").exists()
+    assert reason in refused.value.message
+    assert not caps.is_installed(kit_target, name)
+    assert not (kit_target / ".pkit" / "capabilities" / name).exists()
 
 
-def test_register_incubated_refuses_reserved_name_core(kit_target: Path) -> None:
-    _stage_capability_in_repo(kit_target, "core")
-    source = caps.find_capability_in_repo(kit_target, "core")
+@pytest.mark.parametrize(("name", "reason"), RESERVED)
+def test_register_incubated_refuses_a_reserved_name(
+    kit_target: Path, name: str, reason: str
+) -> None:
+    _stage_capability_in_repo(kit_target, name)
+    source = caps.find_capability_in_repo(kit_target, name)
     assert source is not None
-    with pytest.raises(click.ClickException, match="'core' is reserved"):
+    with pytest.raises(click.ClickException, match=f"'{name}' is reserved") as refused:
         caps.register_incubated_capability(kit_target, source)
-    assert not caps.is_installed(kit_target, "core")
+    assert reason in refused.value.message
+    assert not caps.is_installed(kit_target, name)
 
 
+@pytest.mark.parametrize(("name", "reason"), RESERVED)
 @pytest.mark.parametrize("verb", ["install", "register"])
-def test_cli_refuses_reserved_name_core(
-    kit_target: Path, kit_source: Path, monkeypatch, verb: str
+def test_cli_refuses_a_reserved_name(
+    kit_target: Path, kit_source: Path, monkeypatch, verb: str, name: str, reason: str
 ) -> None:
     """The CLI names the reservation rather than reporting the capability as missing."""
-    _stage_capability_in_source(kit_source, "core")
-    _stage_capability_in_repo(kit_target, "core")
+    _stage_capability_in_source(kit_source, name)
+    _stage_capability_in_repo(kit_target, name)
     from project_kit import cli as cli_mod
 
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
-    result = CliRunner().invoke(main, ["capabilities", verb, "core"])
+    result = CliRunner().invoke(main, ["capabilities", verb, name])
     assert result.exit_code != 0
-    assert "capability name 'core' is reserved" in result.output
-    assert "core schemas area" in result.output
-    assert not caps.is_installed(kit_target, "core")
+    output = " ".join(result.output.split())
+    assert f"capability name '{name}' is reserved" in output
+    assert reason in output
+    assert not caps.is_installed(kit_target, name)
+
+
+# --- a name an adapter holds (#1306) ---------------------------------
+#
+# An adapter and a capability cannot share a name: the release keys components
+# by name, every registered component's validators are owned by its name, and the
+# wiring resolver reads the registry by name. The adopter is initialised with the
+# `claude-code` adapter registered, so a capability of that name would be the
+# second of a pair, and every path that registers a capability refuses it.
+
+_ADAPTER = "claude-code"
+_HELD = f"capability name '{_ADAPTER}' is held by the adapter '{_ADAPTER}'"
+
+
+def _adapter_registered(target_root: Path) -> bool:
+    backbone = read_backbone_manifest(target_root)
+    assert backbone is not None
+    return any(c.kind == "adapter" and c.name == _ADAPTER for c in backbone.components)
+
+
+def test_install_refuses_a_name_an_adapter_holds(kit_target: Path, kit_source: Path) -> None:
+    assert _adapter_registered(kit_target)
+    _stage_capability_in_source(kit_source, _ADAPTER)
+    source = caps.find_capability_in_source(kit_source, _ADAPTER)
+    assert source is not None
+    with pytest.raises(click.ClickException, match=_HELD) as refused:
+        caps.install_capability(kit_target, source)
+    assert "an adapter and a capability cannot share a name" in refused.value.message
+    assert not caps.is_installed(kit_target, _ADAPTER)
+    assert not (kit_target / ".pkit" / "capabilities" / _ADAPTER).exists()
+
+
+def test_register_incubated_refuses_a_name_an_adapter_holds(kit_target: Path) -> None:
+    _stage_capability_in_repo(kit_target, _ADAPTER)
+    source = caps.find_capability_in_repo(kit_target, _ADAPTER)
+    assert source is not None
+    with pytest.raises(click.ClickException, match=_HELD):
+        caps.register_incubated_capability(kit_target, source)
+    assert not caps.is_installed(kit_target, _ADAPTER)
+
+
+@pytest.mark.parametrize("verb", ["install", "register"])
+def test_cli_refuses_a_name_an_adapter_holds(
+    kit_target: Path, kit_source: Path, monkeypatch: pytest.MonkeyPatch, verb: str
+) -> None:
+    """The CLI names the adapter that holds the name and why the two cannot share it."""
+    assert _adapter_registered(kit_target)
+    _stage_capability_in_source(kit_source, _ADAPTER)
+    _stage_capability_in_repo(kit_target, _ADAPTER)
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    result = CliRunner().invoke(main, ["capabilities", verb, _ADAPTER])
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert f"{_HELD} registered in `.pkit/manifest.yaml`" in output
+    assert "an adapter and a capability cannot share a name" in output
+    assert "a release would move only one of the two" in output
+    assert not caps.is_installed(kit_target, _ADAPTER)
+
+
+def _with_commands(cap_dir: Path) -> None:
+    """Give a staged capability a `commands:` block, so it surfaces a namespace."""
+    (cap_dir / "scripts").mkdir(exist_ok=True)
+    (cap_dir / "scripts" / "run.py").write_text("", encoding="utf-8")
+    package = cap_dir / "package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8")
+        + "commands:\n  run:\n    script: scripts/run.py\n    help: Run it.\n",
+        encoding="utf-8",
+    )
+
+
+# A capability named after a backbone command is refused only by `pkit new
+# capability`: the backbone's commands grow with its releases, so an upgrade can
+# take a name that was free when the capability shipped, and install and register
+# take it — `pkit validate` reports the namespace the command shadows (#1300).
+
+
+def test_install_takes_a_name_a_backbone_command_holds(kit_target: Path, kit_source: Path) -> None:
+    _with_commands(_stage_capability_in_source(kit_source, "status"))
+    source = caps.find_capability_in_source(kit_source, "status")
+    assert source is not None
+    caps.install_capability(kit_target, source)
+    assert caps.is_installed(kit_target, "status")
+
+
+def test_register_takes_a_name_a_backbone_command_holds(kit_target: Path) -> None:
+    _with_commands(_stage_capability_in_repo(kit_target, "status"))
+    source = caps.find_capability_in_repo(kit_target, "status")
+    assert source is not None
+    caps.register_incubated_capability(kit_target, source)
+    assert caps.is_installed(kit_target, "status")
 
 
 def test_install_dry_run_writes_nothing(kit_target: Path, kit_source: Path) -> None:

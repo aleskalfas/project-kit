@@ -13,7 +13,7 @@ pkit:
         - .github/workflows/release-tag.yml
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
     revalidated:
-      at: 2026-10-01T19:29:51Z
+      at: 2026-10-02T11:03:47Z
       outcome: updated
 ---
 
@@ -306,8 +306,8 @@ PR** a human merges — it is *not* auto-run on every merge.
 |---|---|---|
 | `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). |
 | `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
-| `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. |
-| `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes without calling `gh`. |
+| `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. Runs the cross-repository guard first; `--allow-foreign-repo` confirms a merge in another repository than the session's anchor's. |
+| `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes without calling `gh`. Runs the cross-repository guard first; `--allow-foreign-repo` confirms publishing in another repository than the session's anchor's. |
 | `pkit release check` | no | The CI guard (below). |
 | `pkit release check-shareable <component>` | no | Pre-sharing lint: is a capability ready to be consumed externally-sourced (COR-041)? (below). |
 
@@ -438,6 +438,18 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
 
 `pkit release merge <pr>`:
 
+- **Runs the cross-repository guard first** (COR-039; ADR-061 point 6). Once,
+  at its entry, before it reads the PR, it compares the session's anchor with
+  the repository it runs in, and the clearance covers everything the run
+  changes there — the merge or the enqueue, a dequeue, the head branch's
+  deletion and the local clean-up. In another repository than the session's
+  anchor's it asks at a terminal, and refuses where there is none, merging
+  nothing; `--allow-foreign-repo` confirms the merge. With no anchor — a
+  release run from a pipeline — there is no session to compare with, the
+  guard does not fire, and no flag is needed. `--dry-run` asks nothing: it
+  reports how the guard passed, or ends refused, saying a run at a terminal
+  would ask. The guard and its residual gaps are the CLI reference's
+  (`.pkit/cli/README.md`, "Pull-request commands").
 - **Guards to release PRs only.** It refuses unless the PR's head branch is
   `release/*` **and** its title is a `chore(release):` one — a non-release PR is
   refused with a pointer back to `pkit project-management merge-pr`. It is not a
@@ -445,22 +457,88 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
 - **Checks preconditions.** The PR must be open, mergeable, and have all
   required checks green; a conflicting, red, or still-running PR is refused with
   a clear reason.
+- **Lands through `pkit pull-request land`'s sequence**, by import, and holds
+  no copy of it (`.pkit/cli/README.md`, "Pull-request commands"):
+  - it plans first: the landing as a dry run, pinned to the head its gates
+    read, with `--force` as the landing's `--allow-dropped-head` and
+    `--queued-bad-shape warn`;
+  - a plan that finds the PR merged, or closed, or cannot read it, or finds
+    it already queued — at the checked head, waited for, or at another
+    head, taken out of the queue — skips the gates;
+  - the landing after a plan that skipped the gates allows no merge and no
+    enqueue (`--no-request`): a PR that left the queue between the plan and
+    the landing is refused, nothing sent, exit 1, and a re-run plans afresh
+    and gates;
+  - every other plan runs the gates first, then the plan's own refusal,
+    then the landing, which reads the PR again just before its request;
+  - `--dry-run` reports from the plan and lands nothing;
+  - how the landing ended is read from its end document, decoded strictly
+    as a caller of the command decodes it, never from an exit code or the
+    landing's in-memory end; an end that does not decode ends the run,
+    exit 1, nothing deleted; every word of the report is release's own.
+- **Exits by how the landing ended.**
+  - `0` — merged, after the clean-up; or closed, nothing to merge. Exit 0
+    does not mean merged.
+  - `4` — queued, or unconfirmed: nothing deleted, a re-run completes it.
+  - `3` — the head moved; the queue dropped the PR; or, no queue seen,
+    GitHub never reports it merged once it was merged or queued; nothing
+    deleted.
+  - `1` — refused, unreadable or failed; a gate refused; or the landing's
+    end did not decode.
+- **What landing through the sequence changed**, one outcome each:
+  - Every run that lands reads the PR once more first: the plan's reading,
+    and the squash-commit defaults where the base has a queue.
+  - A PR auto-merge holds on a base without a queue is gated, then merged
+    directly; it used to be taken for a queued PR and waited for without
+    the gates. Its base's requirements met, it merges, exit 0.
+  - The same PR, its base's requirements unmet, is refused by gh: exit 1,
+    with a warning that auto-merge is still armed and will merge it,
+    unpinned, once they are met.
+  - A head that moved between release's view and the landing's reading
+    exits 3, nothing sent; the pinned request used to fail, exit 1.
+  - A base changed after release's view, to one whose queue would not make
+    the release's commit, is refused at the landing's reading, exit 1; the
+    PR used to be enqueued there.
+  - A queue switched on after release's view is found at the landing's
+    reading: the defaults are read, and the PR is enqueued; it used to be
+    merged directly, which gh turned into an enqueue nothing had judged.
+  - A release PR closed without merging after release's view now exits 0,
+    "nothing to merge"; gh's refused merge used to exit 1. Exit 0 does not
+    mean the release merged: a script that needs to know reads the PR —
+    `pkit pull-request read <n> --json`, its `reading.merged` — never the
+    exit code.
+  - A direct merge GitHub reports merged at another head than the checked
+    one deletes the head branch at the head that merged, with a warning,
+    exit 0; it used to name the checked head, so the deletion was refused
+    and the branch kept.
+  - A PR the plan finds queued that leaves the queue before the landing's
+    reading is refused, nothing sent, exit 1; release used to wait for it
+    and report it dropped, exit 3.
 - **Merges** per the project's merge convention: one squash commit on the
   base branch whose subject is the PR title, pinned to the head whose checks
   it read, head branch deleted on merge. The merge is the backbone's one merge
   mechanic (`pkit pull-request`), the one project-management's merge verbs
   land issue PRs with. A merge command that succeeds is not taken for a
   merge: the PR is read again, and only once GitHub reports it merged is the
-  head branch deleted — through the API rather than gh's local checkout,
-  then a best-effort local cleanup (switch to the base, fast-forward, delete
-  the local head), so a run from a worktree or a detached HEAD completes once
-  the merge lands. The local head is deleted only when everything on it
-  merged — its tip is the head the PR merged at, or behind it; a local head
-  holding commits past it, or one this clone cannot compare, is kept with a
-  warning. A merge at a head other than the one whose checks were read is
-  warned about. A head that lives in a fork is never deleted — its name is
-  the fork author's choice and could name an unrelated branch here. No
-  `Closes #N` requirement — a release PR has none.
+  head branch deleted — on GitHub by the backbone's deletion (`pkit
+  pull-request delete-branch`'s, imported), only while its tip is the head
+  the PR merged at, in one compare-and-delete request, so a push made after
+  the merge is not lost; then a best-effort local cleanup (switch to the
+  base, fast-forward, delete the local head), so a run from a worktree or a
+  detached HEAD completes once the merge lands. What became of the remote
+  branch is said in one line and does not fail the run: kept — its tip
+  moved, another open PR uses it as its head or as its base, or GitHub
+  refuses to delete it — not there, or asked for with no answer that tells
+  whether it was deleted; where it was not deleted, the line names the
+  command that deletes it later (`pkit pull-request delete-branch <n>
+  --expect <sha>`). The local head goes only with the remote one — it is
+  deleted only once that one was deleted or is gone, and kept, said in one
+  line, otherwise — and only when everything on it merged: its tip is the
+  head the PR merged at, or behind it; a local head holding commits past it,
+  or one this clone cannot compare, is kept with a warning. A merge at a head other than
+  the one whose checks were read is warned about. A head that lives in a fork
+  is never deleted — its name is the fork author's choice and could name an
+  unrelated branch here. No `Closes #N` requirement — a release PR has none.
 - **Lands through the merge queue** where the base has one, rather than
   around it. The queue makes the squash commit itself, by its own merge
   method and from the repository's squash-commit defaults, ignoring what a
@@ -477,7 +555,7 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   checked head, prints where it stands (`position 2 in the queue, awaiting
   checks, about 5 min to merge`), and waits for the merge — as long as the
   queue estimates plus 2 minutes, at most 30, or `--wait-minutes`. Then:
-  - **merged** — the head branch is deleted, exit 0;
+  - **merged** — the head branch is deleted (at the head that merged), exit 0;
   - **still queued** when the wait ends, or with `--no-wait` at once — exit
     4, nothing deleted; the PR is accepted, and the same command run again
     once it has merged deletes the head branch. A run on a PR already in the
@@ -497,6 +575,25 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   confirm the merge the run exits 4 with nothing deleted, for a re-run to
   complete. A direct merge gh accepted that GitHub never reports merged
   exits 3, naming the PR's state — nothing is deleted.
+
+  Every `gh` call is bounded, the reading of the release PR among them, so
+  no stuck call holds the run. A merge or an enqueue that gets no answer is
+  settled by reading the PR (`.pkit/cli/README.md`, "Pull-request
+  commands"): made, the run goes on as it would; not seen made on two
+  readings, it refuses, exit 1, saying what the readings saw and that this
+  run saw nothing merged — never that nothing merged, since GitHub may still
+  apply the request — and naming the reading (`pkit pull-request read <n>`)
+  and the re-run that tell; and when GitHub cannot be read since, the run
+  says so plainly — what was asked, that whether it was made is not known,
+  and the command that reads the PR — claiming neither that the release
+  merged nor that it did not, and exits 4 with nothing deleted, for a run
+  once GitHub answers to complete. A run that cannot read the release PR —
+  its view answered with something that is not JSON among it — or how its
+  base merges, before it asks anything says that this run asked nothing; so
+  does one whose view names the head in another form than a full commit id,
+  which the landing refuses before it reads. When the head moved while the PR was queued and the queue merged
+  it before it could be taken out, the run says it merged, and at which head,
+  exit 3, nothing deleted; a re-run deletes the head branch.
 - **Does not tag.** `release-tag.yml` cuts the backbone tag on the resulting
   push to `main` (VERSION-driven, PRJ-004); the merge and the tag stay split.
 - **Is idempotent**: on a closed PR it reports there is nothing to merge, and
@@ -529,6 +626,13 @@ publishes it as the body of a GitHub Release for tag `v<version>`.
 - **Project-neutral.** The repo is derived from the ambient `gh` context (the
   git remote in the working directory), with no hardcoded owner/repo — the same
   discipline as `pkit release merge`.
+- **Runs the cross-repository guard first**, at its entry, as `pkit release
+  merge` does: in another repository than the session's anchor's it asks at a
+  terminal and refuses without one, publishing nothing, unless
+  `--allow-foreign-repo` confirms it; in a pipeline, with no anchor, it needs no
+  flag. `--dry-run` never asks. So does `pkit version tag --push` — and
+  `version untag --push`, and `release apply --tag --push` — before the tag
+  is made or pushed; a tag made only locally runs no guard.
 
 It slots into the sequence after the tag is cut:
 

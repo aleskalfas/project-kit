@@ -311,7 +311,7 @@ def test_a_filler_that_reads_beyond_the_working_tree_names_what_and_at_which_com
             ),
             filler("notes"),
         ),
-        resolved=True,
+        outcome=dp.Outcome.RESOLVED,
         value=[],
     )
     contract = "query contract declared: no network, trusted, not enforced"

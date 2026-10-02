@@ -648,6 +648,8 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
     _refuse_if_already_initialised(ctx)
     _refuse_if_source_kit_missing(ctx)
     _refuse_if_target_is_source(ctx)
+    _refuse_reserved_adapter_names(ctx)
+    _refuse_shared_component_names(ctx)
 
     click.echo(f"Installing project-kit into {target_root}")
     click.echo(f"  source: {source_kit}")
@@ -855,6 +857,55 @@ def _refuse_if_target_is_source(ctx: InstallContext) -> None:
             f"source and target are the same project ({ctx.target_root}).\n"
             f"       project-kit self-hosts directly; running pkit init on project-kit\n"
             f"       itself is a no-op."
+        )
+
+
+def _refuse_reserved_adapter_names(ctx: InstallContext) -> None:
+    """Refuse a source that ships an adapter under a reserved name, before anything
+    is written: init installs every adapter the source ships and registers it
+    under its directory's name (`_stamp_backbone_manifest`), so it would register
+    that one too. The reasons are `pkit new adapter`'s (`scaffolds.RESERVED_ADAPTER_NAMES`);
+    the rename is the source's. Local import: the scaffolds import the dispatcher,
+    which imports this module."""
+    from project_kit.scaffolds import RESERVED_ADAPTER_NAMES
+
+    adapters = ctx.source_kit / "adapters"
+    if not adapters.is_dir():
+        return
+    for adapter_dir in sorted(p for p in adapters.iterdir() if p.is_dir()):
+        reason = RESERVED_ADAPTER_NAMES.get(adapter_dir.name)
+        if reason is not None:
+            raise click.ClickException(
+                f"the methodology source at {ctx.source_kit} ships adapter "
+                f"{adapter_dir.name!r} under a reserved name: {reason}. Nothing was "
+                f"installed; the adapter is its source's to rename."
+            )
+
+
+def _refuse_shared_component_names(ctx: InstallContext) -> None:
+    """Refuse a source that ships an adapter and a capability of one name, before
+    anything is written: init registers every adapter the source ships, and the
+    capability of that name could then never be installed beside it
+    (`capabilities.refuse_name_held_by_other_kind`). Names are read as the
+    directories under the source's `adapters/` and `capabilities/`, as init
+    registers an adapter under its directory's name; the reason is
+    `capabilities.SHARED_NAME_REASON`, and the rename is the source's. Local
+    import: the dispatcher imports this module, and the capabilities module stays
+    off its path."""
+    from project_kit.capabilities import SHARED_NAME_REASON
+
+    def names(area: str) -> set[str]:
+        directory = ctx.source_kit / area
+        if not directory.is_dir():
+            return set()
+        return {p.name for p in directory.iterdir() if p.is_dir()}
+
+    shared = sorted(names("adapters") & names("capabilities"))
+    if shared:
+        raise click.ClickException(
+            f"the methodology source at {ctx.source_kit} ships an adapter and a capability "
+            f"named {shared[0]!r}: {SHARED_NAME_REASON}. Nothing was installed; one of the "
+            f"two is its source's to rename."
         )
 
 

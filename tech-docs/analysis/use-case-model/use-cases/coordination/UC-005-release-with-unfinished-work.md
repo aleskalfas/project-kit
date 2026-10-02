@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T21:40:40Z
+      at: 2026-10-02T11:03:53Z
       outcome: unchanged
-      unchanged-because: DEC-014's example of a warning now names the Task title's length floor, as DEC-011 states it; what this page takes from the severity model — which findings refuse, which need an audited bypass and which warn — is unchanged
+      unchanged-because: pkit release merge now lands through the backbone's landing sequence, planning it first; a merge or an enqueue that got no answer ends unconfirmed, exit 4 with nothing deleted, only where the pull request cannot be read since, and not seen made, exit 1, where two readings do not see it made, a later run completing either; this use case describes what a release carries, its gate and deferrals, and that the release pull request lands at step 7, so every step and variant holds
 ---
 
 # UC-005 — Cut a release while unfinished work remains

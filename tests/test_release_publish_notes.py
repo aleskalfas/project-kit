@@ -6,17 +6,22 @@ The logic splits into a pure CHANGELOG-section extractor
 The extractor is tested directly; `publish_release_notes` is tested with
 `subprocess.run` monkeypatched so the argv passed to `gh` is asserted on — no
 real Release, no network, no hardcoded repo — which is how "notes only, no
-artifact" is *proven* rather than assumed.
+artifact" is *proven* rather than assumed. The cross-repository guard the
+command runs at its entry (#1254) is tested through the CLI on real
+repositories.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import click
 import pytest
+from click.testing import CliRunner
 
-from project_kit import release
+from project_kit import cli, release, session_guard
+from tests import sessions
 
 # --- CHANGELOG-section extraction (pure) -----------------------------
 
@@ -110,6 +115,13 @@ def _write_changelog(tmp_path: Path) -> Path:
     return tmp_path
 
 
+def _cleared(repo_root: Path) -> session_guard.Clearance:
+    """The cross-repository guard's clearance for `repo_root`, outside any session."""
+    cleared = session_guard.clear(repo_root, confirmed=False, interactive=False)
+    assert isinstance(cleared, session_guard.Clearance)
+    return cleared
+
+
 def _create_cmd(calls: list[dict]) -> list[str]:
     return next(c["cmd"] for c in calls if c["cmd"][:3] == ["gh", "release", "create"])
 
@@ -121,7 +133,7 @@ def test_publish_creates_notes_only_release(
     calls: list[dict] = []
     monkeypatch.setattr(release.subprocess, "run", _fake_run_factory(False, calls))
 
-    message = release.publish_release_notes(repo_root, "1.141.0")
+    message = release.publish_release_notes(repo_root, "1.141.0", clearance=_cleared(repo_root))
 
     create = _create_cmd(calls)
     notes = release.extract_changelog_section(_TWO_SECTION_CHANGELOG, "1.141.0")
@@ -152,7 +164,7 @@ def test_publish_updates_when_release_exists(
     calls: list[dict] = []
     monkeypatch.setattr(release.subprocess, "run", _fake_run_factory(True, calls))
 
-    message = release.publish_release_notes(repo_root, "1.141.0")
+    message = release.publish_release_notes(repo_root, "1.141.0", clearance=_cleared(repo_root))
 
     # Idempotent: an existing Release is edited, never re-created.
     assert not any(c["cmd"][:3] == ["gh", "release", "create"] for c in calls)
@@ -171,7 +183,9 @@ def test_publish_dry_run_does_not_call_gh(tmp_path: Path, monkeypatch: pytest.Mo
 
     monkeypatch.setattr(release.subprocess, "run", boom)
 
-    message = release.publish_release_notes(repo_root, "1.141.0", dry_run=True)
+    message = release.publish_release_notes(
+        repo_root, "1.141.0", clearance=_cleared(repo_root), dry_run=True
+    )
 
     assert "[dry-run]" in message
     assert "no artifact" in message
@@ -182,7 +196,7 @@ def test_publish_missing_version_errors(tmp_path: Path, monkeypatch: pytest.Monk
     repo_root = _write_changelog(tmp_path)
     monkeypatch.setattr(release.subprocess, "run", lambda *a, **k: pytest.fail("must not call gh"))
     with pytest.raises(click.ClickException) as exc:
-        release.publish_release_notes(repo_root, "9.9.9")
+        release.publish_release_notes(repo_root, "9.9.9", clearance=_cleared(repo_root))
     assert "no section for version '9.9.9'" in str(exc.value)
 
 
@@ -194,8 +208,83 @@ def test_publish_derives_repo_from_ambient_gh_context(
     calls: list[dict] = []
     monkeypatch.setattr(release.subprocess, "run", _fake_run_factory(False, calls))
 
-    release.publish_release_notes(repo_root, "1.141.0")
+    release.publish_release_notes(repo_root, "1.141.0", clearance=_cleared(repo_root))
 
     for call in calls:
         assert call["kwargs"]["cwd"] == repo_root  # ambient context = the working dir
         assert "--repo" not in call["cmd"]  # no owner/repo baked in
+
+
+# --- the cross-repository guard (#1254) -------------------------------
+
+
+@pytest.fixture
+def published(monkeypatch: pytest.MonkeyPatch) -> list[tuple[Path, str, bool]]:
+    """`publish_release_notes` stubbed: each run's repository, how its
+    clearance passed, and whether it was a dry run. A run the guard refused
+    reaches none of it, so nothing is read from GitHub or sent to it."""
+    runs: list[tuple[Path, str, bool]] = []
+
+    def publish(
+        repo_root: Path, version: str, *, clearance: session_guard.Clearance, dry_run: bool
+    ) -> str:
+        runs.append((repo_root, clearance.passed, dry_run))
+        return f"Published notes-only GitHub Release v{version}."
+
+    monkeypatch.setattr(cli, "publish_release_notes", publish)
+    return runs
+
+
+@pytest.fixture
+def foreign(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A session rooted in one repository, and `publish-notes` run in another."""
+    _, target = sessions.rooted_elsewhere(tmp_path, monkeypatch)
+    monkeypatch.setattr(cli, "_target_kit", lambda: target / ".pkit")
+    return target
+
+
+def _publish(*args: str) -> Any:
+    return CliRunner().invoke(cli.main, ["release", "publish-notes", "1.141.0", *args])
+
+
+@pytest.mark.parametrize("dry_run", [[], ["--dry-run"]], ids=["run", "dry-run"])
+def test_in_another_repository_with_no_terminal_and_no_flag_nothing_is_published(
+    foreign: Path, published: list[tuple[Path, str, bool]], dry_run: list[str]
+) -> None:
+    result = _publish(*dry_run)
+    assert result.exit_code == 1
+    assert "the cross-repository guard refused" in result.stderr
+    assert "--allow-foreign-repo" in result.stderr and "Nothing was published" in result.stderr
+    assert published == []
+
+
+def test_the_flag_confirms_publishing_in_another_repository(
+    foreign: Path, published: list[tuple[Path, str, bool]]
+) -> None:
+    result = _publish("--allow-foreign-repo")
+    assert result.exit_code == 0
+    assert published == [(foreign, "flag", False)]
+
+
+def test_with_no_anchor_it_publishes_undetermined(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, published: list[tuple[Path, str, bool]]
+) -> None:
+    """A pipeline — `release-tag.yml` runs it — has no session's anchor: the
+    guard does not fire, and needs no flag."""
+    target = sessions.repository(tmp_path / "target", "https://github.com/octo/project.git")
+    monkeypatch.setattr(cli, "_target_kit", lambda: target / ".pkit")
+    result = _publish()
+    assert result.exit_code == 0
+    assert published == [(target, "undetermined", False)]
+
+
+def test_a_publish_without_the_guards_clearance_asks_github_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A clearance for another directory stops it before `gh` is asked."""
+    repo_root = _write_changelog(tmp_path)
+    monkeypatch.setattr(release.subprocess, "run", lambda *a, **k: pytest.fail("asked gh"))
+    with pytest.raises(ValueError, match="the clearance is for"):
+        release.publish_release_notes(
+            repo_root, "1.141.0", clearance=_cleared(tmp_path / "elsewhere")
+        )
