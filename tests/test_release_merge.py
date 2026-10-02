@@ -1069,12 +1069,23 @@ def test_a_merge_gh_only_enqueued_is_waited_for_not_taken_for_a_merge(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """On a base that requires a queue, `gh pr merge --squash` enqueues and
-    exits 0: the run reads the PR, sees it unmerged, and waits for it."""
+    exits 0: the run reads the PR, sees it unmerged, and waits for it — and
+    passes the landing's warning on in its own words: the queue composed the
+    release's commit, which this run did not judge, and what to read."""
     host = _Host(queue=False, enqueues=True, progress=[_entry(1), _LANDED])
     seen = _fake_run(monkeypatch)
     report = _land(monkeypatch, host)
     assert report.exit_code == 0
-    assert "GitHub does not report PR #42 merged" in capsys.readouterr().out
+    said = capsys.readouterr()
+    assert "GitHub does not report PR #42 merged" in said.out
+    assert (
+        "[warn] GitHub queued release PR #42 in the merge queue for main instead of merging it, "
+        "so the queue composes the release's commit, and this run did not judge it: a release "
+        "lands as one squash commit under its PR title over its PR body only where the queue "
+        "squashes and the repository's squash-commit defaults are PR_TITLE and PR_BODY. Read "
+        "them with `pkit pull-request read 42` and `pkit pull-request squash-defaults`, and, "
+        "once it has merged, the commit it made on main."
+    ) in said.err
     assert host.deletions == _DELETED_AT_THE_HEAD
     assert seen[0] == ["git", "checkout", "main"]
 

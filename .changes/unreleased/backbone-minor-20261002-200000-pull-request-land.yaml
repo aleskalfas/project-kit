@@ -42,12 +42,14 @@ body: >
   gated and merged directly, and where its requirements are unmet gh refuses
   the merge, exit 1, with a warning that auto-merge is still armed, which an
   unconfirmed merge of such a pull request gives too, for the case that the
-  merge was not made; a head
-  that moved between its view and the landing's reading exits 3 with
-  nothing sent, where it used to exit 1; a base changed to one whose queue
-  would not make the release's commit is refused at the landing's reading,
-  exit 1; a queue switched on after its view is enqueued into, the defaults
-  read; a release pull request closed without merging after its view exits
+  merge was not made; a head that moved between its view and the landing's
+  reading exits 3 with nothing sent, where it used to exit 1; a base changed
+  to one whose queue would not make the release's commit is refused at the
+  landing's reading, exit 1; a queue switched on after its view is enqueued
+  into, the defaults read; a direct merge GitHub queued instead is waited
+  for with the `enqueued-instead` warning in release's words — this run did
+  not judge the commit the queue makes, and what to read to judge it; a
+  release pull request closed without merging after its view exits
   0, "nothing to merge" — exit 0 does not mean merged, so a script reads
   `pkit pull-request read <n> --json` — where it used to exit 1; a direct
   merge that merged at another head deletes the head branch at the head that

@@ -2062,6 +2062,17 @@ class _ReleaseLanding:
                     f"auto-merge off in its merge box, or run `gh pr merge {number} "
                     "--disable-auto`."
                 )
+            elif notice["reason_kind"] == pull_request_landing.ENQUEUED_INSTEAD:
+                _warn(
+                    f"GitHub queued release PR #{number} in the merge queue for {self.base} "
+                    "instead of merging it, so the queue composes the release's commit, and "
+                    "this run did not judge it: a release lands as one squash commit under its "
+                    "PR title over its PR body only where the queue squashes and the "
+                    "repository's squash-commit defaults are PR_TITLE and PR_BODY. Read them "
+                    f"with `pkit pull-request read {number}` and `pkit pull-request "
+                    f"squash-defaults`, and, once it has merged, the commit it made on "
+                    f"{self.base}."
+                )
         return self.reported(end)
 
     def _decoded(self, landed: pull_request_landing.Landing, *, then: str) -> _End:
