@@ -1301,6 +1301,12 @@ def test_a_capability_registered_under_a_reserved_name_is_an_error_naming_the_fi
     [
         ("project", "indistinguishable from the project itself"),
         ("adr", "the namespace of the project's architecture decision records"),
+        (
+            "backbone",
+            "the component of the backbone's changesets, the owner of its validators, the "
+            "component its rule sets are cited with, and the component its documentation "
+            "locations are recorded under",
+        ),
     ],
 )
 def test_pkit_validate_fails_on_a_capability_registered_under_a_reserved_name(

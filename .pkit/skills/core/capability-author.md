@@ -67,11 +67,12 @@ Use a kebab-case noun that names the *discipline*, not the implementation. Examp
 
 The name becomes the directory name, the value of `component.name` in `package.yaml`, and the prefix in citations: `[<capability-name>:DEC-NNN-<slug>]`.
 
-**Reserved names: `core`, `project` and `adr`.** `pkit new capability`, `pkit capabilities install`, and `pkit capabilities register` all refuse each, giving the reason:
+**Reserved names: `core`, `project`, `adr` and `backbone`.** `pkit new capability`, `pkit capabilities install`, and `pkit capabilities register` all refuse each, giving the reason:
 
 - `core` is the name core's own entries carry where a capability's carry the capability's name — the namespace of the core decision records and agents (`pkit new decision core …`, `pkit new agent core …`), and the core schemas area (`.pkit/schemas/`) wherever a schemas verb takes an owner — so a capability named `core` could have no decision records or agents stamped, and its `schemas/` would be silently unreachable.
 - `project` is the name the project's own entries carry where a capability's carry the capability's name — the namespace of the project's decision records and agents (`pkit new decision project …`, `pkit new agent project …`), and the opening name of the project's checks in an evidence point (the software-analysis and living-docs capabilities' DEC-001, point 7) — so a capability named `project` would be indistinguishable from the project itself.
 - `adr` is the namespace of the project's architecture decision records, which `pkit new decision adr …` stamps before any capability name is tried, so a capability named `adr` could have no decision records stamped.
+- `backbone` is the name the backbone carries where a component's carry the component's name — the component of the backbone's changesets (`component: backbone` under `.changes/unreleased/`), the owner of its validators (beside a capability's `<capability>:<name>`), the component its rule sets are cited with (`backbone:<SET>`), and the component its documentation locations are recorded under — so a capability named `backbone` would have its changesets, validators, rule sets and documentation locations read as the backbone's.
 
 A capability registered under any of these names before it was reserved stays registered; `pkit validate` reports it as an error naming the rename.
 
@@ -100,7 +101,7 @@ The command:
 
 Unlike bundles and adapters, the capability is **not** registered in the backbone manifest by the scaffolding step. Capabilities are kit-shipped from the source-of-edit's perspective; adopters register them per-project via `pkit capabilities install <name>`.
 
-The command refuses if a capability with that name already exists, if the slug isn't kebab-case, or if the name is reserved (`core`, `project` or `adr`, see step 1).
+The command refuses if a capability with that name already exists, if the slug isn't kebab-case, or if the name is reserved (`core`, `project`, `adr` or `backbone`, see step 1).
 
 ### 4. Fill in the README
 
