@@ -805,7 +805,7 @@ def test_plan_parent_under_marker_reads_back_marker_first(sf, body) -> None:
     lines = [ln.strip() for ln in new_body.splitlines()]
     first = next(i for i, ln in enumerate(lines) if ln)
     assert lines[first : first + 2] == [_MARKER, "Feature: #9"]
-    assert sf.infer.parent_ref(new_body) == 9
+    assert sf.body_parent_ref.named_issue(new_body) == 9
     assert sf.infer.integration_slug(new_body) == "foo"
 
 

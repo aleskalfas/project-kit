@@ -503,6 +503,58 @@ def test_a_native_parent_that_agrees_with_the_first_line_is_followed(world: Worl
     assert world.moves(feature) == world.moves(epic) == [("todo", "backlog", "promote-issue")]
 
 
+def test_a_line_its_type_does_not_allow_is_followed_where_the_native_parent_agrees(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """#1281: the one change to the walk. A first line in a form the issue's type
+    does not allow, under a native parent naming the same issue, is the parent
+    both records agree on: the walk follows it, with a note, for the moved issue
+    and for an ancestor alike."""
+    epic = _container(world, "[EPIC] An epic")
+    feature = _container(world, "[Feature] A feature", epic, "Epic")
+    task = world.file_issue(body=f"Feature: #{feature} — auth\n\n{AUTHORED_BODY}")
+    world.tracker.native_parents[feature] = epic
+    world.tracker.native_parents[task] = feature
+    capsys.readouterr()
+
+    assert world.promote(task) == 0
+
+    out, err = capsys.readouterr()
+    assert world.moves(feature) == world.moves(epic) == [("todo", "backlog", "promote-issue")]
+    assert (
+        f"[note] #{task}'s first line `Feature: #{feature} — auth` is not a parent-ref a task "
+        f"may have: {TASK_FORMS}; its native parent agrees, so the forward cascade walks to it.\n"
+    ) in out
+    assert (
+        f"  [note] #{feature}'s first line `Epic: #{epic}` is not a parent-ref a feature may "
+        "have: EPIC: #<N> or Umbrella: #<N> or Milestone: [#<N>](../milestone/<N>); its native "
+        "parent agrees, so the walk follows it.\n"
+    ) in out
+    assert "the walk stops there" not in err
+
+
+def test_an_untyped_line_outside_the_label_form_is_said_and_not_followed(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An ancestor whose type cannot be told and whose first line is `Epic:#5`
+    names #5, and the walk says why it stops there rather than ending silently."""
+    epic = _container(world, "[EPIC] An epic")
+    brownfield = world.file_issue(
+        body=f"Epic:#{epic}\n\n{CONTAINER_BODY}", title="Payments work", labels=()
+    )
+    task = _task(world, brownfield)
+    capsys.readouterr()
+
+    assert world.promote(task) == 0
+
+    assert (
+        f"  [warn] #{brownfield}'s first line `Epic:#{epic}` is not in the parent-ref form "
+        "`<Label>: #<N>`; the walk stops there.\n"
+    ) in capsys.readouterr().err
+    assert world.moves(brownfield) == [("todo", "backlog", "promote-issue")]
+    assert world.moves(epic) == []
+
+
 # --- the moved issue's own parent is held to its native one ----------------
 
 

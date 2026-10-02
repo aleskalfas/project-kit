@@ -1181,10 +1181,10 @@ def _retitle_prefix(title: str, target_prefix: str) -> str | None:
 def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
     """Rewrite the body's first parent-ref line to `parent_ref_line` (idempotent).
 
-    A parent-ref is the first non-blank body line in one of the recognised forms
-    (`<Label>: #<N>` or `Milestone: [#<N>](../milestone/<N>)`), read past a
-    leading DEC-013 `Integration:` marker, which sits directly above it. When
-    that line already matches a parent-ref shape, it is replaced; otherwise the
+    A parent-ref is the first non-blank body line naming a parent
+    (`<Label>: #<N>`, in any form, or `Milestone: [#<N>](../milestone/<N>)`;
+    `_is_parent_ref`), read past a leading DEC-013 `Integration:` marker, which
+    sits directly above it. When that line names a parent, it is replaced; otherwise the
     new parent-ref is added — directly below the marker on a marked body, so the
     marker stays the first line with no blank line between the two (#765), and
     at the top of an unmarked one, in place of any blank lines leading it — with
@@ -1285,17 +1285,13 @@ def _plan_native_parent(holder: containment.NativeParent | None, parent: int) ->
     )
 
 
-_PARENT_REF_RES = (
-    re.compile(r"^Milestone:\s+\[#(\d+)\]\(\.\./milestone/\1\)\s*$"),
-    re.compile(r"^Milestone:\s+#\d+\s*$"),
-    re.compile(r"^[A-Za-z]+:\s+#\d+\s*$"),
-)
-
-
 def _is_parent_ref(line: str) -> bool:
-    """True when `line` is one of the recognised parent-ref forms (parity with edit-issue)."""
-    s = line.strip()
-    return any(rx.match(s) for rx in _PARENT_REF_RES)
+    """True when `line` names a parent — an issue, in any form, or a milestone,
+    in either — as `body_parent_ref` reads a first line for every reader of an
+    issue's parent, so the line `--parent` replaces is the line they read as the
+    parent-ref (a loose `Epic: #5` included)."""
+    read = body_parent_ref.read_first_line(line, None, {})
+    return read.form is not body_parent_ref.LineForm.NONE
 
 
 # ---- schema / config readers (mirroring create-issue + edit-issue) --------

@@ -41,8 +41,10 @@ silent (per [project-management:DEC-051-axis-carriage-activation]):
 
 The forward cascade per DEC-006 fires upward on a forward move: the
 script walks from the issue to the top of its hierarchy, one parent at a
-time through the parent each first line names (`_lib/body_parent_ref`),
-and brings each ancestor that is behind up to the issue's state, capped
+time as the containment seam resolves each (`containment.resolve_parent`:
+on only where the native parent and the first line agree, or a first line
+in an allowed form is the only record), and brings each ancestor that is
+behind up to the issue's state, capped
 at in-progress, through declared transitions only — an ancestor in todo
 goes to backlog, then to in-progress, each step its own label write,
 journaled where a journal is kept with the issue's move as the reason.
@@ -1293,13 +1295,15 @@ class _Ancestor:
 class _CascadePlan:
     """The forward cascade one move makes: the ancestors it reached, lowest
     first, why the walk ended below the top when it did, and — where it ended at
-    two parents that disagree — how to settle them."""
+    two parents that disagree — how to settle them. ``notes`` say of each
+    ancestor walked through whose first line is not a form its type allows."""
 
     mover: _MovedIssue
     target: str
     ancestors: tuple[_Ancestor, ...]
     stop: str | None
     settle: str | None = None
+    notes: tuple[str, ...] = ()
 
     @property
     def reason(self) -> str:
@@ -1517,46 +1521,18 @@ def _label_names(issue: dict) -> list[str]:
     ]
 
 
-def _parents_disagree(
-    number: int, named: int | None, native: containment.NativeParent | None
-) -> str | None:
-    """What to say when issue ``number``'s native parent is not the parent its
-    first line names (``named``), or None when they agree or it has no native
-    parent — a tracker that reports none leaves the first line the only record.
-    """
-    if native is None or (named is not None and native.is_issue(named)):
-        return None
-    if named is None:
-        return (
-            f"#{number}'s first line names no parent issue, its native parent is {native.ref}; "
-            f"nothing is written to {native.ref}"
-        )
-    return (
-        f"#{number}'s first line names #{named}, its native parent is {native.ref}; "
-        "nothing is written to either parent"
-    )
+# What the forward cascade does not do with a native parent in another
+# repository, as the containment seam's remedy line says it (`remedy(abroad=…)`).
+_NO_WALK_ABROAD = "the forward cascade does not walk into"
 
 
-def _settle_parents(number: int, named: int | None, native: containment.NativeParent) -> str:
-    """How to settle the disagreement `_parents_disagree` reports: the native
-    parent wins and the first line is rewritten to name it
-    ([project-management:DEC-005-linking-and-containment]) — which no first-line
-    form can do for a native parent in another repository."""
-    if native.repository is None:
-        return (
-            f"→ the native parent wins (DEC-005): `set-field {number} --parent {native.number}` "
-            f"rewrites #{number}'s first line to name it."
-        )
-    move_link = (
-        f"; if #{named} is its parent, `set-field {number} --parent {named}` moves the native "
-        "link under it"
-        if named is not None
-        else ""
-    )
-    return (
-        f"→ {native.ref} is in another repository, which no first-line form can name and the "
-        f"forward cascade does not walk into{move_link}."
-    )
+def _nothing_written(resolution: containment.ParentResolution) -> str:
+    """The forward cascade's consequence of two records that do not agree: it
+    writes to neither parent — or, where the first line names none, to the
+    native one."""
+    if resolution.named is None and resolution.native is not None:
+        return f"nothing is written to {resolution.native.ref}"
+    return "nothing is written to either parent"
 
 
 def _plan_forward_cascade(
@@ -1565,19 +1541,23 @@ def _plan_forward_cascade(
     """Walk from the moved issue's ``parent`` to the top of its hierarchy,
     reading each ancestor once.
 
-    Each step up follows the parent the ancestor's first line names
-    (`body_parent_ref.parent_issue`). The read of an ancestor also carries its
-    native parent, so where that differs from the parent its first line names
-    the walk stops there: the ancestor is moved, and nothing above it — the
-    native parent wins, and the first line is to be rewritten to name it
-    (DEC-005). The walk also stops at an ancestor it cannot read, at one that is
-    recognisably not a container (one whose type cannot be told is moved, as an
-    untyped tree always was), at one it has already passed, and at one whose
-    first line looks like a parent-ref its type does not allow. An ancestor at
-    or past the target is left alone and the walk goes on above it, so a chain
-    an earlier move left behind is brought level.
+    Each step up follows the ancestor's parent as the containment seam resolves
+    it from that one read (`containment.resolve_parent`): the walk goes on only
+    where the ancestor's native parent and its first line name the same issue,
+    or a first line in a form its type allows is the only record. Anywhere else
+    it stops at the ancestor — which is moved, and nothing above it: where the
+    two records disagree, or only the native one names a parent, the native
+    parent wins and the first line is to be rewritten to name it (DEC-005); where
+    a first line its type does not allow is the only record, it is to be
+    corrected. A first line its type does not allow, under a native parent that
+    agrees with it, is followed, with a note. The walk also stops at an ancestor
+    it cannot read, at one that is recognisably not a container (one whose type
+    cannot be told is moved, as an untyped tree always was), and at one it has
+    already passed. An ancestor at or past the target is left alone and the walk
+    goes on above it, so a chain an earlier move left behind is brought level.
     """
     ancestors: list[_Ancestor] = []
+    notes: list[str] = []
     visited = {mover.number}
     child, number = mover.number, parent
     stop = settle = None
@@ -1609,19 +1589,35 @@ def _plan_forward_cascade(
         )
         steps = _cascade_steps(context.workflow, state, target, kind, context.levels)
         ancestors.append(_Ancestor(number, kind, tuple(labels), state, steps))
-        body = str(issue.get("body") or "")
-        unrecognised = body_parent_ref.unrecognised_parent_line(body, kind, context.issue_types)
-        if unrecognised is not None:
-            stop = f"#{number}'s {unrecognised}"
+        resolution = containment.resolve_parent(
+            context.config,
+            issue_number=number,
+            structural_type=kind,
+            issue_types=context.issue_types,
+            record=record,
+        )
+        if resolution.kind is containment.ParentKind.NONE:
             break
-        named = body_parent_ref.parent_issue(body, kind, context.issue_types)
-        disagreement = _parents_disagree(number, named, record.parent)
-        if disagreement is not None and record.parent is not None:
-            stop, settle = disagreement, _settle_parents(number, named, record.parent)
+        if not resolution.walks:
+            if resolution.fact is not None:
+                stop = f"{resolution.fact}; {_nothing_written(resolution)}"
+                settle = resolution.remedy(abroad=_NO_WALK_ABROAD)
+            else:
+                stop = resolution.form_note
             break
-        child, number = number, named
+        if resolution.form_note is not None:
+            notes.append(
+                f"{resolution.form_note}; its native parent agrees, so the walk follows it"
+            )
+        above = resolution.parent
+        child, number = number, above.number if above is not None else None
     return _CascadePlan(
-        mover=mover, target=target, ancestors=tuple(ancestors), stop=stop, settle=settle
+        mover=mover,
+        target=target,
+        ancestors=tuple(ancestors),
+        stop=stop,
+        settle=settle,
+        notes=tuple(notes),
     )
 
 
@@ -1639,7 +1635,7 @@ def _preview_forward_cascade(mover: _MovedIssue, context: _CascadeContext) -> _C
     cascade moves, or the walk has nowhere to start (`_first_parent`) — each
     said in a line, except an issue with no parent at all.
     """
-    named = body_parent_ref.parent_issue(mover.body, mover.structural_type, context.issue_types)
+    named = body_parent_ref.named_issue(mover.body)
     target = _forward_cascade_target(mover)
     if target is None:
         if mover.target == "done" and named is not None:
@@ -1658,7 +1654,7 @@ def _preview_forward_cascade(mover: _MovedIssue, context: _CascadeContext) -> _C
             file=sys.stderr,
         )
         return None
-    parent = _first_parent(mover, named, context)
+    parent = _first_parent(mover, context)
     if parent is None:
         return None
     plan = _plan_forward_cascade(mover, parent, target, context)
@@ -1671,6 +1667,8 @@ def _preview_forward_cascade(mover: _MovedIssue, context: _CascadeContext) -> _C
         else:
             what = f"{ancestor.state}; left alone"
         print(f"  {_describe_ancestor(ancestor)}: {what}")
+    for note in plan.notes:
+        print(f"  [note] {note}.")
     if plan.stop is not None:
         print(f"  [warn] {plan.stop}; the walk stops there.", file=sys.stderr)
     if plan.settle is not None:
@@ -1678,48 +1676,63 @@ def _preview_forward_cascade(mover: _MovedIssue, context: _CascadeContext) -> _C
     return plan
 
 
-def _first_parent(mover: _MovedIssue, named: int | None, context: _CascadeContext) -> int | None:
-    """The parent the walk starts from — ``named``, the one the moved issue's
-    first line names — or None when it starts nowhere.
+def _first_parent(mover: _MovedIssue, context: _CascadeContext) -> int | None:
+    """The parent the walk starts from — the moved issue's parent, as the
+    containment seam resolves it (`containment.resolve_parent`) — or None when
+    it starts nowhere.
 
-    The moved issue's native parent is held to its first line as each
-    ancestor's is: read once, here, where a cascade is otherwise set to run.
-    Where they disagree the walk starts nowhere, and nothing is written to
-    either parent's chain. It starts nowhere, too, from a first line that looks
-    like a parent-ref the issue's type does not allow, and from one whose native
-    parent cannot be read to compare. Each is said in a warning, the last two
-    with how to finish; an issue whose first line names no parent and which has
-    no native one has nothing to say.
+    The moved issue's record is read once, here, where a cascade is otherwise
+    set to run. The walk starts only where its native parent and its first line
+    name the same issue — a first line its type does not allow is then followed,
+    with a note — or where a first line in a form its type allows is the only
+    record. Where the two disagree, or only the native one names a parent, it
+    starts nowhere, and nothing is written to either parent's chain; it starts
+    nowhere, too, from a first line its type does not allow with nothing to hold
+    it to, and from one whose native parent cannot be read to compare. Each is
+    said in a warning, with how to finish where running the move again can; an
+    issue whose first line names no parent and which has no native one has
+    nothing to say.
     """
     number = mover.number
-    unrecognised = body_parent_ref.unrecognised_parent_line(
-        mover.body, mover.structural_type, context.issue_types
+    resolution = containment.resolve_parent(
+        context.config,
+        issue_number=number,
+        structural_type=mover.structural_type,
+        issue_types=context.issue_types,
+        body=mover.body,
     )
-    if unrecognised is not None:
+    if resolution.walks:
+        if resolution.form_note is not None:
+            print(
+                f"\n[note] {resolution.form_note}; its native parent agrees, so the forward "
+                "cascade walks to it."
+            )
+        return resolution.parent.number if resolution.parent is not None else None
+    if resolution.kind is containment.ParentKind.NONE:
+        return None
+    if resolution.kind in (containment.ParentKind.TEXTUAL_ONLY, containment.ParentKind.UNREAD) and (
+        resolution.form_note is not None
+    ):
         print(
-            f"\n[warn] #{number}'s {unrecognised}; the forward cascade walks nothing from it.",
+            f"\n[warn] {resolution.form_note}; the forward cascade walks nothing from it.",
             file=sys.stderr,
         )
         return None
-    record = containment.read_issue_record(context.config, issue_number=number)
-    if isinstance(record, containment.UnreadIssue):
-        if named is None:
-            return None
-        print(
-            f"\n[warn] the forward cascade walks nothing: #{number}'s record could not be read "
-            f"to hold its native parent to #{named}, the parent its first line names "
-            f"({record.detail}).",
-            file=sys.stderr,
-        )
-        print(f"  {_finish_advice(mover, '`gh` answers')}", file=sys.stderr)
+    if resolution.kind is containment.ParentKind.UNREAD:
+        if resolution.named is not None:
+            print(
+                f"\n[warn] the forward cascade walks nothing: {resolution.fact}.", file=sys.stderr
+            )
+            print(f"  {_finish_advice(mover, '`gh` answers')}", file=sys.stderr)
         return None
-    disagreement = _parents_disagree(number, named, record.parent)
-    if disagreement is not None and record.parent is not None:
-        print(f"\n[warn] the forward cascade walks nothing: {disagreement}.", file=sys.stderr)
-        print(f"  {_settle_parents(number, named, record.parent)}", file=sys.stderr)
-        print(f"  {_finish_advice(mover, 'the two agree')}", file=sys.stderr)
-        return None
-    return named
+    print(
+        f"\n[warn] the forward cascade walks nothing: {resolution.fact}; "
+        f"{_nothing_written(resolution)}.",
+        file=sys.stderr,
+    )
+    print(f"  {resolution.remedy(abroad=_NO_WALK_ABROAD)}", file=sys.stderr)
+    print(f"  {_finish_advice(mover, 'the two agree')}", file=sys.stderr)
+    return None
 
 
 def _engine_position(issue_number: int) -> tuple[bool, str | None, tuple[str, ...]]:

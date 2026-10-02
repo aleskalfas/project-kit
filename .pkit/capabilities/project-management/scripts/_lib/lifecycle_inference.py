@@ -258,9 +258,9 @@ def strip_integration_marker(body: str) -> str:
 
     The marker is the first body line, above the parent-ref (DEC-013). Parent-ref
     recognizers call this first so the marker doesn't shadow the parent-ref — the
-    single source of truth for the skip (the recognition is otherwise duplicated
-    across `validate-issue`, `body_parent_ref` — which both cascades read —
-    `show-tree`, `containment`). No-op when absent."""
+    single source of truth for the skip (the recognition itself lives in
+    `body_parent_ref`, which every reader of an issue's parent goes through, and
+    in `validate-issue` / `edit-issue`'s own form check). No-op when absent."""
     if not body:
         return body
     lines = body.splitlines()
@@ -330,38 +330,6 @@ def resolve_base_branch(config: dict, body: str, *, explicit: str | None = None)
     if slug:
         return f"integration/{slug}"
     return default_branch.name(config)
-
-
-def parent_ref(child_body: str) -> int | None:
-    """The parent issue number named on a child body's FIRST parent-ref line
-    (e.g. `EPIC: #42` -> 42), or None when the body declares no parent-ref.
-
-    The methodology's hierarchy source of truth: one parent-ref line by
-    convention, on the first non-blank line. A leading DEC-013 `Integration:`
-    marker is skipped first (#763). The first non-blank line thereafter must
-    match `<Word>: #<n>`; otherwise the body names no parent. Read without the
-    child's type; the cascades walk up through `body_parent_ref.parent_issue`,
-    which reads the line against the forms the issue's type allows."""
-    if not child_body:
-        return None
-    for line in strip_integration_marker(child_body).splitlines():
-        s = line.strip()
-        if not s:
-            continue
-        m = re.match(r"^([A-Za-z]+):\s+#(\d+)", s)
-        if not m:
-            return None
-        return int(m.group(2))
-    return None
-
-
-def names_parent(child_body: str, parent_number: int) -> bool:
-    """True when a child issue body's first parent-ref line points at
-    `parent_number` (e.g. `EPIC: #42`).
-
-    Reads the line as :func:`parent_ref` does (one parent-ref line by
-    convention, on the first non-blank lines)."""
-    return parent_ref(child_body) == parent_number
 
 
 def state_is_active(state: str) -> bool:

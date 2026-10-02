@@ -44,7 +44,7 @@ CAP_SCRIPTS = CAP_SRC / "scripts"
 if str(CAP_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(CAP_SCRIPTS))
 
-from _lib import lifecycle_inference as infer  # noqa: E402
+from _lib import body_parent_ref  # noqa: E402
 
 from project_kit.process import CascadeResolution, ProcessEngine, load_definition  # noqa: E402
 
@@ -205,7 +205,7 @@ def test_an_open_native_child_naming_no_issue_holds_its_container(
     child_body = _ROUTES[route]()
     # The route's own premise: the child's first line names no issue, so only
     # the native link makes it a child of #5.
-    assert infer.parent_ref(child_body) is None
+    assert body_parent_ref.named_issue(child_body) is None
     issues = {
         CONTAINER: _container(),
         10: _issue("CLOSED", "Feature: #5\n\n## What\n", ["type:task"]),

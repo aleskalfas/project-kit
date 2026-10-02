@@ -39,7 +39,6 @@ CAP = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 CAP_SCRIPTS = CAP / "scripts"
 sys.path.insert(0, str(CAP_SCRIPTS))
 
-from _lib import lifecycle_inference as infer  # noqa: E402
 from _lib import lifecycle_predicates as predicates  # noqa: E402
 
 # --- the binding shape (workflow.yaml process.cascade) --------------------
@@ -247,13 +246,17 @@ def test_membership_indeterminate_on_gh_failure(monkeypatch) -> None:
 
 def test_members_and_find_open_children_share_one_hierarchy_source() -> None:
     """`cascade_members` and close-issue's `_find_open_children` must agree on
-    the member set — both walk `infer.names_parent` over the body parent-ref.
-    Pin that they read one source (so the rebound fold == pm's pre-rebind set)."""
-    body = "EPIC: #42\n\n## What\nx"
-    # cascade_members uses infer.names_parent; _find_open_children resolves
-    # through containment, whose textual side reads the same first parent-ref line.
-    assert infer.names_parent(body, 42) is True
-    assert infer.parent_ref(body) == 42
+    the member set — both resolve the parent's children through the containment
+    seam (`resolve_children`), whose textual side reads each first line through
+    `body_parent_ref.named_issue`, the reading `cascade_membership`'s account
+    takes too. Pin that it names the parent in any form."""
+    containment = predicates.containment
+    for line in ("EPIC: #42", "Epic: #42", "EPIC:#42", "Feature: #42 — auth"):
+        body = f"{line}\n\n## What\nx"
+        assert containment._body_names_parent(body, 42) is True, line
+        assert predicates.body_parent_ref.named_issue(body) == 42, line
+    # A milestone's number is never an issue's.
+    assert containment._body_names_parent("Milestone: #42\n", 42) is False
 
 
 # --- the close-issue wrapper reads the engine fold (children-half) --------

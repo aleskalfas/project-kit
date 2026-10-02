@@ -41,7 +41,7 @@ _HERE = Path(__file__).parent.parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from _lib import axis_labels, containment
+from _lib import axis_labels, body_parent_ref, containment
 from _lib import lifecycle_inference as infer
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import resolve_capability_root
@@ -240,7 +240,7 @@ def parent_has_active_descendant(parent_number: int) -> dict[str, Any]:
     active: list[int] = []
     for child in children:
         body = str(child.get("body") or "")
-        if not infer.names_parent(body, parent_number):
+        if body_parent_ref.named_issue(body) != parent_number:
             continue
         child_state = infer.infer_current_state(
             state=str(child.get("state", "")).lower(),
@@ -353,7 +353,7 @@ def cascade_membership(child_number: int) -> dict[str, Any]:
     issue = _fetch_issue(child_number, config, "body")
     if issue is None:
         return _indeterminate(f"could not read issue #{child_number} (gh failure)")
-    parent = infer.parent_ref(str(issue.get("body") or ""))
+    parent = body_parent_ref.named_issue(str(issue.get("body") or ""))
     first_line = f"names #{parent}" if parent is not None else "names no issue"
     return {
         "result": True,

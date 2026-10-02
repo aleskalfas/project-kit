@@ -54,8 +54,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, bootstrap_gate, containment, session_guard
-from _lib import lifecycle_inference as infer
+from _lib import axis_labels, body_parent_ref, bootstrap_gate, containment, session_guard
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -457,22 +456,12 @@ def _refresh_children_views(issues: dict[int, Issue], capability_root: Path, con
 
 
 def _first_parent_ref(body: str) -> int | None:
-    """The parent number on a body's first non-blank parent-ref line, for the
-    candidate-parent pre-scan only — the seam still owns authoritative
-    resolution. Kept minimal and local to bounding which parents get a native
-    read; it never decides the rendered child set."""
-    if not body:
-        return None
-    body = infer.strip_integration_marker(body)  # DEC-013 marker above parent-ref (#763)
-    for line in body.splitlines():
-        s = line.strip()
-        if not s:
-            continue
-        m = re.match(r"^([A-Za-z]+):\s+#(\d+)", s)
-        if not m:
-            return None
-        return int(m.group(2))
-    return None
+    """The issue a body's first line names as its parent, for the
+    candidate-parent pre-scan only — read as the seam's textual side reads it
+    (`body_parent_ref.named_issue`), so every parent a child set can hold is a
+    candidate. It bounds which parents get a native read; it never decides the
+    rendered child set."""
+    return body_parent_ref.named_issue(body)
 
 
 # ---- orphan detection -----------------------------------------------

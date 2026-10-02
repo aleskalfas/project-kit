@@ -212,7 +212,7 @@ def test_a_line_that_looks_like_a_parent_ref_but_is_not_an_allowed_form_is_said(
     line, and the forms the type allows, are quoted for it to say instead."""
     body = f"{line}\n\n## What\n"
     assert bpr.parent_issue(body, structural_type, issue_types) is None
-    assert bpr.unrecognised_parent_line(body, structural_type, issue_types) == (
+    assert bpr.read_first_line(body, structural_type, issue_types).note == (
         f"first line `{line}` is not a parent-ref a {structural_type} may have: "
         f"{forms[structural_type]}"
     )
@@ -232,7 +232,7 @@ def test_a_line_that_looks_like_a_parent_ref_but_is_not_an_allowed_form_is_said(
 def test_a_line_with_nothing_to_say_about_it_is_not_said(
     bpr, issue_types, structural_type, body
 ) -> None:
-    assert bpr.unrecognised_parent_line(body, structural_type, issue_types) is None
+    assert bpr.read_first_line(body, structural_type, issue_types).note is None
 
 
 # --- a milestone first line follows a milestone move (#1049) -------------
