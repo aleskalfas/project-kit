@@ -115,7 +115,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Any
 
@@ -189,6 +189,55 @@ class NativeParent:
     def is_issue(self, number: int | str) -> bool:
         """True when this parent is issue ``number`` of this repository."""
         return self.repository is None and self.number == int(number)
+
+
+# An owner and a repository name as the hosting service spells them: ASCII
+# letters, digits, `-`, `_` and `.`. A name is read into a request's path, where
+# any other text could address something else — a space, a `#`, a `/`, or `..`,
+# a step out of the path — so text outside this alphabet names no repository,
+# and what carries it is unreadable (`is_repository_name`).
+_NAME = r"[A-Za-z0-9_.-]+"
+_REPOSITORY_NAME = re.compile(rf"{_NAME}/{_NAME}")
+_FOREIGN_REF = re.compile(rf"(?P<repo>{_NAME}/{_NAME})#(?P<number>[0-9]+)")
+
+
+def is_repository_name(text: str) -> bool:
+    """Whether ``text`` is ``owner/repo`` in the hosting service's alphabet,
+    neither name made of dots alone nor carrying ``..``."""
+    if _REPOSITORY_NAME.fullmatch(text) is None:
+        return False
+    return all(name.strip(".") and ".." not in name for name in text.split("/"))
+
+
+@dataclass(frozen=True, order=True)
+class ForeignIssue:
+    """An issue in another repository: ``owner/repo`` and its number there.
+
+    A native sub-issue may live in another repository. It is identified by
+    both, so it is never taken for this repository's issue of the same number.
+    ``database_id`` is its id as the parent's sub-issue list gives it — what
+    removing its link from the parent takes (:func:`remove_sub_issue_args`) —
+    ``None`` where the list carried none; it is not part of its identity.
+    """
+
+    repository: str
+    number: int
+    database_id: int | None = field(default=None, compare=False)
+
+    @property
+    def ref(self) -> str:
+        """How it is named: ``owner/repo#42``."""
+        return f"{self.repository}#{self.number}"
+
+    @classmethod
+    def parse(cls, text: str) -> ForeignIssue | None:
+        """The issue ``owner/repo#42`` names, or ``None`` for any other text —
+        the inverse of :attr:`ref`. A repository name outside the hosting
+        service's alphabet (:func:`is_repository_name`) names none."""
+        m = _FOREIGN_REF.fullmatch(text.strip())
+        if m is None or not is_repository_name(m.group("repo")):
+            return None
+        return cls(m.group("repo"), int(m.group("number")))
 
 
 @dataclass(frozen=True)
@@ -366,6 +415,41 @@ def list_sub_issues_args(*, parent_number: int | str) -> list[str]:
     ]
 
 
+def remove_sub_issue_args(
+    *, parent_number: int | str, child_database_id: int | str | None
+) -> list[str]:
+    """Construct the ``gh api …/sub_issue`` removal (DELETE) argv — for an
+    operator to run, never run here.
+
+    GitHub's documented removal, ``DELETE /repos/{owner}/{repo}/issues/{parent}
+    /sub_issue`` with ``{"sub_issue_id": <child database id>}``, takes the link
+    off the parent, in the parent's repository; it is how a container here is
+    released from a child in another repository without writing there. pm prints
+    it (:func:`remove_sub_issue_command`) and runs no removal itself. A child
+    whose id is not known is given ``<id>``, to be read from the parent's
+    sub-issue list (:func:`list_sub_issues_args`).
+    """
+    child = "<id>" if child_database_id is None else child_database_id
+    return [
+        "gh",
+        "api",
+        "-X",
+        "DELETE",
+        f"repos/{{owner}}/{{repo}}/issues/{parent_number}/sub_issue",
+        "-F",
+        f"sub_issue_id={child}",
+    ]
+
+
+def remove_sub_issue_command(
+    *, parent_number: int | str, child_database_id: int | str | None
+) -> str:
+    """:func:`remove_sub_issue_args` as one line to run in this repository."""
+    return " ".join(
+        remove_sub_issue_args(parent_number=parent_number, child_database_id=child_database_id)
+    )
+
+
 # The child's record answers both questions linking asks of it: its database id
 # and its current native parent. GitHub's REST issue carries the parent as
 # `parent_issue_url` and omits it when there is none; `repository_url` is read
@@ -373,7 +457,14 @@ def list_sub_issues_args(*, parent_number: int | str) -> list[str]:
 # same-numbered issue here. One value per line, the id first.
 _LINK_STATE_JQ = '.id, (.parent_issue_url // ""), .repository_url'
 _ISSUE_URL = re.compile(r"/repos/(?P<repo>[^/]+/[^/]+)/issues/(?P<number>\d+)/?$")
-_REPOSITORY_URL = re.compile(r"/repos/(?P<repo>[^/]+/[^/]+)/?$")
+_REPOSITORY_URL = re.compile(rf"/repos/(?P<repo>{_NAME}/{_NAME})/?\Z")
+
+
+def _url_repository(url: str) -> str | None:
+    """The ``owner/repo`` a ``repository_url`` names, or ``None`` where it names
+    none the hosting service could have spelled (:func:`is_repository_name`)."""
+    m = _REPOSITORY_URL.search(url)
+    return m.group("repo") if m is not None and is_repository_name(m.group("repo")) else None
 
 
 def read_link_state(config: dict[str, Any], *, issue_number: int | str) -> IssueLinkState | None:
@@ -427,7 +518,7 @@ class IssueRecord:
     in that shape: ``title``, ``body``, ``labels`` (``{"name": …}`` objects),
     ``state`` (``OPEN`` / ``CLOSED``) and ``milestone``. ``parent`` is the issue's
     native parent, ``None`` when it has none (or when the instance's issue record
-    does not carry the field).
+    does not carry the field); its ``repository`` is relative to the issue's own.
     """
 
     issue: dict[str, Any]
@@ -453,7 +544,7 @@ class UnreadIssue:
 
 
 def read_issue_record(
-    config: dict[str, Any], *, issue_number: int | str
+    config: dict[str, Any], *, issue_number: int | str, repository: str | None = None
 ) -> IssueRecord | UnreadIssue:
     """Read an issue and its native parent in one call.
 
@@ -463,15 +554,24 @@ def read_issue_record(
     ``parent_issue_url``. A walk up the hierarchy that compares an issue's
     textual parent with its native one therefore costs no second call per issue.
 
+    ``repository`` (``owner/repo``) reads an issue in another repository — a
+    native sub-issue that lives there (:class:`ForeignIssue`) — instead of this
+    one. It is a read: nothing in this module writes to another repository.
+
     :class:`UnreadIssue` on any failure — missing ``gh``, a non-zero exit (with
     what gh said), output that is not an issue's record — for a pull request,
     which the endpoint also answers for, and for a record numbered other than
     ``issue_number``: GitHub redirects the read of an issue transferred to
     another repository, and gh follows the redirect to an issue that is not the
-    one asked for.
+    one asked for. A ``repository`` outside the hosting service's alphabet
+    (:func:`is_repository_name`) is unread, and no request is made for it.
     """
+    if repository is not None and not is_repository_name(repository):
+        return UnreadIssue(f"{repository!r} is not a repository name")
+    name = f"{repository}#{issue_number}" if repository else f"#{issue_number}"
+    where = repository or "{owner}/{repo}"
     try:
-        proc = _gh_call(["gh", "api", f"repos/{{owner}}/{{repo}}/issues/{issue_number}"], config)
+        proc = _gh_call(["gh", "api", f"repos/{where}/issues/{issue_number}"], config)
     except FileNotFoundError:
         return UnreadIssue("`gh` is not on PATH")
     if proc.returncode != 0:
@@ -484,13 +584,13 @@ def read_issue_record(
     if not isinstance(record, dict):
         return UnreadIssue("gh's answer was not an issue's record")
     if "pull_request" in record:
-        return UnreadIssue(f"#{issue_number} is a pull request")
+        return UnreadIssue(f"{name} is a pull request")
     number = record.get("number")
     if not isinstance(number, int) or isinstance(number, bool):
         return UnreadIssue("gh's answer was not an issue's record")
     if number != int(issue_number):
         return UnreadIssue(
-            f"the record gh returned is #{number}'s, not #{issue_number}'s "
+            f"the record gh returned is #{number}'s, not {name}'s "
             "(an issue transferred elsewhere, whose read was redirected)"
         )
     labels = [
@@ -520,8 +620,8 @@ def _parse_native_parent(parent_url: str, repository_url: str) -> NativeParent |
     m = _ISSUE_URL.search(parent_url)
     if not m:
         return None
-    here = _REPOSITORY_URL.search(repository_url)
-    same = here is not None and here.group("repo").lower() == m.group("repo").lower()
+    here = _url_repository(repository_url)
+    same = here is not None and here.lower() == m.group("repo").lower()
     return NativeParent(
         number=int(m.group("number")),
         repository=None if same else m.group("repo"),
@@ -1092,11 +1192,34 @@ class ResolvedChild:
     ``number`` is the child issue number (the methodology's stable key, shared by
     both substrates — the native sub-issues payload carries ``number`` and the
     textual parent-ref names ``#<number>``). Dedup across the two substrates is by
-    ``number``; ``substrate`` records who won (NATIVE on conflict per DEC-005).
+    ``number`` within this repository; ``substrate`` records who won (NATIVE on
+    conflict per DEC-005).
+
+    ``repository`` is ``owner/repo`` for a native sub-issue that lives in another
+    repository, ``None`` for a child in this one. A child elsewhere is NATIVE (no
+    first line here can name it) and is a different issue from this repository's
+    issue of the same number: :attr:`ref` names it with its repository. Its
+    ``database_id`` is :attr:`ForeignIssue.database_id`, carried so a report can
+    say how its link is removed from here; ``None`` for a child in this one.
     """
 
     number: int
     substrate: ChildSubstrate
+    repository: str | None = None
+    database_id: int | None = field(default=None, compare=False)
+
+    @property
+    def ref(self) -> str:
+        """How a report names the child: ``#11``, or ``owner/repo#42``."""
+        return f"{self.repository}#{self.number}" if self.repository else f"#{self.number}"
+
+    @property
+    def written(self) -> str:
+        """How a write into an issue or a comment names the child: ``#11``, which
+        GitHub links; ``owner/repo#42`` in a code span, which it does not — a
+        link would add a cross-reference to that issue's timeline, a trace in a
+        repository nothing here writes to."""
+        return f"`{self.ref}`" if self.repository else self.ref
 
 
 @dataclass(frozen=True)
@@ -1104,8 +1227,10 @@ class ChildResolution:
     """The resolved child set for one parent, plus how it was resolved.
 
     Fields:
-      children          — the resolved children, sorted by number, deduped across
-                          substrates with native-wins.
+      children          — the resolved children, deduped across substrates with
+                          native-wins: this repository's sorted by number, then
+                          native sub-issues in other repositories, sorted by
+                          repository and number.
       native_supported  — False only when the seam established that the
                           instance has **no native substrate** (a 410, or an
                           attributed 404 — never a 422); the result is then
@@ -1133,18 +1258,29 @@ class ChildResolution:
 
     @property
     def numbers(self) -> list[int]:
-        """All child numbers (union, native-wins dedup), sorted."""
-        return [c.number for c in self.children]
+        """The numbers of the children in this repository (union, native-wins
+        dedup), sorted — never a child in another repository (:attr:`foreign`)."""
+        return [c.number for c in self.children if c.repository is None]
 
     @property
     def native_numbers(self) -> list[int]:
-        """Child numbers that resolved from the NATIVE substrate, sorted."""
-        return sorted(c.number for c in self.children if c.substrate is ChildSubstrate.NATIVE)
+        """This repository's child numbers that resolved from the NATIVE
+        substrate, sorted."""
+        return sorted(
+            c.number
+            for c in self.children
+            if c.substrate is ChildSubstrate.NATIVE and c.repository is None
+        )
 
     @property
     def textual_numbers(self) -> list[int]:
         """Child numbers that resolved from the TEXTUAL substrate only, sorted."""
         return sorted(c.number for c in self.children if c.substrate is ChildSubstrate.TEXTUAL)
+
+    @property
+    def foreign(self) -> tuple[ResolvedChild, ...]:
+        """The native sub-issues that live in another repository."""
+        return tuple(c for c in self.children if c.repository is not None)
 
 
 class NativeReadOutcome(Enum):
@@ -1153,14 +1289,16 @@ class NativeReadOutcome(Enum):
     ``UNSUPPORTED`` and ``UNREADABLE`` both yield no child set, but they mean
     opposite things for completeness and must not be collapsed (ADR-035 §5):
 
-    * ``READ`` — the endpoint answered. The set is authoritative, empty included.
+    * ``READ`` — the endpoint answered. The set is authoritative for what the
+      hosting service lists to this reader, empty included; a sub-issue it
+      leaves out for this reader is not seen (``read_native_children``).
     * ``UNSUPPORTED`` — this instance has no native substrate at all, so the
       textual projection genuinely IS the whole answer, and degrading to it is a
       *determinate* result. Reached two ways and no other: a 410, or a 404 the
       probe attributes to the endpoint. No other status reaches it and no
       wording does — a 422 is UNREADABLE whatever it says (#808). It is the
-      seam's only fail-open surface, so it has to be earned rather than
-      inferred (#869).
+      only fail-open surface among the seam's own verdicts, so it has to be
+      earned rather than inferred (#869).
     * ``UNREADABLE`` — auth, network, a transient 5xx, a 422 GitHub answered
       with, an unparseable payload, or no ``gh`` on PATH: a native child set may
       exist and was not seen. Absence of the tool is not evidence about the
@@ -1176,17 +1314,25 @@ class NativeReadOutcome(Enum):
 
 @dataclass(frozen=True)
 class NativeRead:
-    """A native read's child numbers plus how the read went.
+    """A native read's children plus how the read went.
+
+    ``numbers`` are the children in this repository; ``foreign`` the sub-issues
+    that live in another repository, each with its repository, so none is taken
+    for this repository's issue of the same number.
 
     ``said`` is what the failed call said (:class:`Said` — GitHub's error body,
     or gh's own line), carried so a consumer reporting an unreadable read can
     quote it rather than guess at the cause. ``None`` for a read that answered,
-    or a failure with no words.
+    or a failure with no words. ``why`` is pm's own reading of an answer it
+    could not use — a listed sub-issue it could not place in a repository —
+    ``None`` otherwise.
     """
 
     numbers: set[int]
     outcome: NativeReadOutcome
     said: Said | None = None
+    foreign: frozenset[ForeignIssue] = frozenset()
+    why: str | None = None
 
     @property
     def supported(self) -> bool:
@@ -1195,6 +1341,26 @@ class NativeRead:
 
 def read_native_children(config: dict[str, Any], *, parent_number: int | str) -> NativeRead:
     """The native child set, with the outcome that produced it.
+
+    Each sub-issue is placed in its repository by comparing the repository its
+    entry names (``repository_url``) with this repository's own name: the same
+    name is this repository's, whatever else the entry lacks, and goes to
+    ``numbers``; another name goes to ``foreign``; an entry naming none is this
+    repository's, the number-only shape. This repository's name is taken from
+    the answer itself where it can be — an entry's ``parent_issue_url`` names
+    the parent asked about, which is this repository's issue, and the hosting
+    service puts it on every entry — so placing costs no call. Only where an
+    entry names a repository and none carries that anchor is it read from the
+    parent's own record (:func:`_this_repository`), once per read; a parent
+    record that cannot be read leaves the read unreadable, since no entry can
+    then be placed.
+
+    What this read cannot see. The set is what the hosting service lists to
+    this reader, and it may leave out a sub-issue in a repository the reader
+    cannot see; nothing in the answer marks the omission. So a child this list
+    names holds a gate whether or not its own record can then be read — one
+    that cannot leaves the fold indeterminate — but a child the list leaves out
+    is not in the set at all, and a gate over it opens.
 
     Prefer this over :func:`read_native_child_numbers`, which cannot distinguish
     "no native substrate here" from "I could not reach it".
@@ -1221,13 +1387,88 @@ def read_native_children(config: dict[str, Any], *, parent_number: int | str) ->
     if payload is None:
         # The endpoint answered and we could not read it: a child set may exist.
         return NativeRead(numbers=set(), outcome=NativeReadOutcome.UNREADABLE)
-    numbers: set[int] = set()
+    listed: list[tuple[dict[str, Any], str | None]] = []
     for entry in payload:
-        if isinstance(entry, dict):
-            raw = entry.get("number")
-            if isinstance(raw, int):
-                numbers.add(raw)
-    return NativeRead(numbers=numbers, outcome=NativeReadOutcome.READ)
+        if not isinstance(entry, dict) or not isinstance(entry.get("number"), int):
+            continue
+        named = str(entry.get("repository_url") or "")
+        repository = _url_repository(named) if named else None
+        if named and repository is None:
+            # A listed child no repository could hold: unplaced, a child set may
+            # hold it, so the read is not a child set.
+            return NativeRead(
+                numbers=set(),
+                outcome=NativeReadOutcome.UNREADABLE,
+                why=(
+                    f"a sub-issue of #{parent_number} names a repository the hosting "
+                    f"service could not have spelled ({named!r}), so it cannot be placed"
+                ),
+            )
+        listed.append((entry, repository))
+    here: str | None = None
+    if any(repository is not None for _entry, repository in listed):
+        here = _anchored_repository(payload, parent_number) or _this_repository(
+            config, parent_number
+        )
+        if here is None:
+            return NativeRead(
+                numbers=set(),
+                outcome=NativeReadOutcome.UNREADABLE,
+                why=(
+                    f"#{parent_number}'s sub-issues name their repositories, and this "
+                    f"repository's own name could not be read from #{parent_number}'s "
+                    "record, so none of them can be placed"
+                ),
+            )
+    numbers: set[int] = set()
+    foreign: set[ForeignIssue] = set()
+    for entry, repository in listed:
+        if repository is None or here is None or repository.lower() == here.lower():
+            numbers.add(entry["number"])
+        else:
+            database_id = entry.get("id")
+            if not isinstance(database_id, int) or isinstance(database_id, bool):
+                database_id = None
+            foreign.add(ForeignIssue(repository, entry["number"], database_id))
+    return NativeRead(numbers=numbers, outcome=NativeReadOutcome.READ, foreign=frozenset(foreign))
+
+
+def _anchored_repository(payload: list, parent_number: int | str) -> str | None:
+    """This repository's name as the sub-issues answer states it: the repository
+    of the parent an entry's ``parent_issue_url`` names, where that is the parent
+    asked about — an issue of this repository. ``None`` when no entry says so."""
+    for entry in payload:
+        if not isinstance(entry, dict):
+            continue
+        m = _ISSUE_URL.search(str(entry.get("parent_issue_url") or ""))
+        if m is not None and int(m.group("number")) == int(parent_number):
+            if is_repository_name(m.group("repo")):
+                return m.group("repo")
+    return None
+
+
+def _this_repository(config: dict[str, Any], parent_number: int | str) -> str | None:
+    """This repository's name as the parent's own record states it — the
+    repository the seam's requests are addressed to — or ``None`` when the
+    record cannot be read or names none. One call, made only where a sub-issues
+    answer names repositories and carries no ``parent_issue_url`` to anchor them
+    (:func:`read_native_children`)."""
+    try:
+        proc = _gh_call(
+            [
+                "gh",
+                "api",
+                f"repos/{{owner}}/{{repo}}/issues/{parent_number}",
+                "--jq",
+                ".repository_url",
+            ],
+            config,
+        )
+    except FileNotFoundError:
+        return None
+    if proc.returncode != 0:
+        return None
+    return _url_repository((proc.stdout or "").strip())
 
 
 class SubIssueReads:
@@ -1260,7 +1501,8 @@ class SubIssueReads:
 def read_native_child_numbers(
     config: dict[str, Any], *, parent_number: int | str
 ) -> set[int] | None:
-    """Return the issue NUMBERS of the parent's native sub-issues.
+    """Return the issue NUMBERS of the parent's native sub-issues in this
+    repository (a sub-issue in another repository is not among them).
 
     Reads ``GET /repos/{owner}/{repo}/issues/{parent}/sub_issues`` (paginated)
     through the gh helper (DEC-023 host/owner pinning), the same endpoint the
@@ -1431,7 +1673,9 @@ def resolve_children(
       3. Union with **native-wins dedup**: a child present both ways is NATIVE; a
          child present only textually is TEXTUAL; a native child not in the
          corpus is still NATIVE (mixed-mode — the native panel is authoritative
-         even for a child the textual scan missed).
+         even for a child the textual scan missed). A native sub-issue in another
+         repository is a child with its repository (:attr:`ResolvedChild.repository`),
+         never this repository's issue of the same number.
       4. Determinacy — an incomplete corpus or an unreadable native read makes
          the whole resolution incomplete. A non-empty native panel does **not**
          rescue a truncated textual scan: the rows never fetched are exactly
@@ -1493,7 +1737,7 @@ def resolve_children(
     if fetch_failed:
         incomplete_reason = "the issue list could not be read at all (gh failure)"
     elif native.outcome is NativeReadOutcome.UNREADABLE:
-        incomplete_reason = _quoting(
+        incomplete_reason = native.why or _quoting(
             "the native sub-issues read failed and the failure could not be "
             "attributed to an absent endpoint, so a native child set may exist and "
             "was not seen",
@@ -1511,6 +1755,17 @@ def resolve_children(
     for number in textual_set - native_set:  # native-wins: skip textual dupes
         resolved.append(ResolvedChild(number=number, substrate=ChildSubstrate.TEXTUAL))
     resolved.sort(key=lambda c: c.number)
+    # A sub-issue in another repository is another issue than this repository's
+    # of the same number: it is neither deduped against one nor read as one.
+    resolved.extend(
+        ResolvedChild(
+            number=child.number,
+            substrate=ChildSubstrate.NATIVE,
+            repository=child.repository,
+            database_id=child.database_id,
+        )
+        for child in sorted(native.foreign)
+    )
     return ChildResolution(
         children=tuple(resolved),
         native_supported=native_supported,
@@ -1906,10 +2161,14 @@ def render_children_comment_body(
          rendered markdown);
       2. a visible heading + do-not-edit notice so a human reading the rendered
          comment also knows not to hand-edit it;
-      3. one bullet per resolved child — ``- #<n>`` (GitHub auto-links the issue
-         reference), with the child's title appended when ``titles`` carries it,
-         and a ``(textual)`` provenance marker on a textual-only child (native is
-         the default and unmarked, matching ``show-tree``).
+      3. one bullet per resolved child, named as :attr:`ResolvedChild.written`
+         names it — ``- #<n>`` (GitHub auto-links it), or ``- `owner/repo#<n>```
+         in a code span for a sub-issue in another repository, which GitHub
+         does not link, so writing the view leaves no trace on that issue —
+         with a child's title appended when ``titles`` carries it (``titles`` is
+         this repository's, so a child elsewhere is listed without one), and a
+         ``(textual)`` provenance marker on a textual-only child (native is the
+         default and unmarked, matching ``show-tree``).
 
     Children are listed in the resolution's order (sorted by number — the seam
     already sorts). An empty child set renders an explicit "no children" line so a
@@ -1930,8 +2189,8 @@ def render_children_comment_body(
         lines.append("_No children._")
     else:
         for child in resolution.children:
-            title = titles.get(child.number)
-            label = f"#{child.number}" + (f" — {title}" if title else "")
+            title = titles.get(child.number) if child.repository is None else None
+            label = child.written + (f" — {title}" if title else "")
             marker = "  _(textual)_" if child.substrate is ChildSubstrate.TEXTUAL else ""
             lines.append(f"- {label}{marker}")
     return "\n".join(lines) + "\n"

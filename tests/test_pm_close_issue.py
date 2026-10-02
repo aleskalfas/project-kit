@@ -132,8 +132,8 @@ def _fake_gh_list(ci, monkeypatch, rows, *, returncode=0, complete=True) -> None
     """Stub the corpus at the containment seam, which now owns acquisition.
 
     `returncode=1` models a failed query (the seam returns None); `complete=False`
-    models a struck ceiling — which `_find_open_children` must refuse rather than
-    answer from, since a child may sit in the rows it never fetched.
+    models a struck ceiling — which `_find_open_children` must not answer from,
+    since a child may sit in the rows it never fetched.
     """
     containment = ci.containment
     monkeypatch.setattr(
@@ -164,7 +164,9 @@ def test_find_open_children_returns_only_open_children_of_parent(ci, monkeypatch
         {"number": 13, "state": "OPEN", "body": "## What\nno ref"},
     ]
     _fake_gh_list(ci, monkeypatch, rows)
-    assert ci._find_open_children(5, {}) == [10]
+    children = ci._find_open_children(5, {})
+    assert [child.ref for child in children.open] == ["#10"]
+    assert (children.unread, children.incomplete) == ((), None)
 
 
 def test_find_open_children_empty_when_all_children_closed(ci, monkeypatch) -> None:
@@ -173,12 +175,15 @@ def test_find_open_children_empty_when_all_children_closed(ci, monkeypatch) -> N
         {"number": 11, "state": "CLOSED", "body": "Feature: #5"},
     ]
     _fake_gh_list(ci, monkeypatch, rows)
-    assert ci._find_open_children(5, {}) == []
+    children = ci._find_open_children(5, {})
+    assert (children.open, children.unread, children.incomplete) == ((), (), None)
 
 
-def test_find_open_children_returns_none_on_gh_failure(ci, monkeypatch) -> None:
+def test_find_open_children_says_the_list_failed_on_gh_failure(ci, monkeypatch) -> None:
     _fake_gh_list(ci, monkeypatch, [], returncode=1)
-    assert ci._find_open_children(5, {}) is None
+    children = ci._find_open_children(5, {})
+    assert children.open == ()
+    assert children.incomplete == "the issue list could not be read (gh failure)"
 
 
 def test_find_open_children_refuses_a_truncated_corpus(ci, monkeypatch) -> None:
@@ -188,11 +193,14 @@ def test_find_open_children_refuses_a_truncated_corpus(ci, monkeypatch) -> None:
     engine fold has already refused the close, to list what the user must close
     first. Before #846 it fetched 500 rows with no truncation check, so past 500
     issues it could omit still-open children — or show none — while reading as
-    the complete set. `None` suppresses the hint, which is the honest answer.
+    the complete set. Naming no child, and saying the set was not read in full,
+    is the honest answer.
     """
     rows = [{"number": 10, "state": "OPEN", "body": "Feature: #5\n\n## What"}]
     _fake_gh_list(ci, monkeypatch, rows, complete=False)
-    assert ci._find_open_children(5, {}) is None
+    children = ci._find_open_children(5, {})
+    assert children.open == ()
+    assert "not enumerated to exhaustion" in children.incomplete
 
 
 # ---- regression #60 — label reconciliation on close --------------------
