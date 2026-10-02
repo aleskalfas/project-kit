@@ -10,24 +10,50 @@ body: >
   close gate's membership step and `show-tree` all read it. The forward cascade
   follows a first line its type does not allow where the native parent names
   the same issue, with a note, and still stops where the two disagree or such a
-  line is the only record. The closure cascade checks every parent the close
-  gate counts the closed issue under: a natively linked child's native parent,
-  where it reported no parent; the parent a first line in a form the type does
-  not allow names, with a warning, where it skipped the check; and both parents
-  where the two records disagree, with the `set-field` line that settles them.
-  A native parent in another repository is named and not checked. `show-tree`'s
-  `parent_number` is the native parent wherever one was seen, a child listed
-  under a first-line parent other than its native one is marked
-  `[native parent #<P>]`, a first line not in an allowed form is marked, and
-  the JSON gains `parent_resolution`. The close gate reads a first line as the
-  cascades do: `Epic:#5` (no space) now names #5 and holds it open, and the
-  deprecated `Milestone: #3` no longer names issue #3. `cascade-membership`
-  reads the candidate's REST record in place of `gh issue view` and adds
-  `parent_kind` to its detail. A Feature may name an Umbrella
+  line is the only record; where the record could not be read and the line is
+  not an allowed form, it says both. The closure cascade checks every parent the
+  close gate counts the closed issue under: a natively linked child's native
+  parent, where it reported no parent; the parent a first line in a form the
+  type does not allow names, with a warning, where it skipped the check; and
+  both parents where the two records disagree, with the `set-field` line that
+  settles them. A native parent in another repository is named and not checked.
+  A first line naming the issue itself names no parent: no child set holds the
+  issue under itself, and every reader says so rather than taking the issue for
+  its own parent. `show-tree`'s `parent_number` is the native parent wherever
+  one was seen, a child listed under a first-line parent other than its native
+  one is marked `[native parent #<P>]`, a first line not in an allowed form is
+  marked, and the JSON gains `parent_resolution`, whose `native_parent_known`
+  says whether a `native_parent` of `null` means none or only none seen (a
+  parent in another repository, outside `--state` or `--limit`, behind an
+  unreadable panel), and whose `first_line_names_itself` marks a self-naming
+  line. The close gate reads a first line as the cascades do: `Epic:#5` (no
+  space) now names #5 and holds it open, and the deprecated `Milestone: #3` no
+  longer names issue #3 — so an EPIC whose first line is `Milestone: #9`, as
+  `set-field --parent 9` writes on one, no longer counts toward issue #9's close
+  gate: it never was issue #9's child, the old reader misread a milestone's
+  number for an issue's. `cascade-membership` reads the candidate's REST record
+  in place of `gh issue view` and adds `parent_kind` to its detail; that read
+  refuses a pull-request number and an issue whose read was redirected to
+  another, so such a candidate now holds the fold indeterminate rather than
+  counting as read — the safe direction. A Feature may name an Umbrella
   (`Umbrella: #<N>`) and is walked through it to the EPIC, and `create-issue`
   and `set-field --parent` label the first line with the parent's own type, so
-  a Task set under an Umbrella reads `Umbrella: #<N>`; `set-field --parent`
-  replaces a loose first line such as `Feature: #12 — auth` rather than writing
-  the new one above it. A move to done that finds an issue closed with neither
-  a state label nor a milestone reads its close reason, so one closed as
-  completed brings its ancestors level.
+  a Task set under an Umbrella reads `Umbrella: #<N>`. `set-field --parent`
+  replaces a first line only when it is a parent-ref and nothing else; a first
+  line that names an issue and says more (`Feature: #12 — auth`, a sentence
+  opening `Note: #45 …`) is kept, the new parent-ref is written above it, and
+  the plan line says which was done. For an EPIC, whose container is a
+  milestone, `--parent N` names milestone N: the warning says the first line
+  names milestone N, not issue #N, and where an EPIC has a native parent the
+  line that would settle it says its container is a milestone instead of
+  offering a rewrite that names nothing. `create-issue` refuses `--parent`
+  beside a first line naming another issue in any form, a loose one under
+  `hierarchy: advisory` included. `link-parent` reports a first line in a form
+  the type does not allow as naming its parent, non-conforming (a new outcome,
+  `parent line not an allowed form`), not as no parent line, and follows each
+  conflict with the seam's line: the native parent wins. A move to done, and
+  the journal entries for a close, read one origin: an issue closed with
+  neither a state label nor a milestone is told apart by its close reason, so
+  one closed as completed brings its ancestors level and its close is not
+  journaled from a guessed Todo; one with only a milestone reads Backlog,
+  inferred, for both.
