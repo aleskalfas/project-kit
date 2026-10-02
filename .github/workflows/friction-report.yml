@@ -1,0 +1,83 @@
+name: friction-report
+
+# The whole-repository friction check (COR-050 point 6; ADR-055 point 5), where
+# a person reads it (#1266). The change check guards a pull request; friction no
+# pull request touches — an anchor changed outside its artefact's own change,
+# debt older than the gate — is found only here. Every artefact is judged
+# against the current history: stale and deferred debt with their origins, the
+# other findings, unanchored artefacts and uncovered surface.
+#
+# It reports and never fails on what it finds (COR-050 point 12): `pkit friction
+# check --all` exits 0 whatever it finds, and so do the renderer and the
+# publisher. The run fails only when the check could not run or its findings
+# could not be published, and its log says why. It is no required status.
+#
+# The findings go to one tracking issue, kept by `scripts/friction_tracking_issue.py`:
+# its body rewritten in place when the findings change, closed when nothing is
+# outstanding, reopened when findings return — never a comment per run, never a
+# second issue. The run's step summary carries the same body.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Daily, 05:41 UTC: debt no merge brings to light still reaches the issue.
+    - cron: "41 5 * * *"
+  workflow_dispatch: {}
+
+# Read the repository; keep the one issue. No secret beyond the built-in token.
+permissions:
+  contents: read
+  issues: write
+
+# One run at a time, none cancelled: two at once could each find no issue and
+# open one.
+concurrency:
+  group: friction-report
+  cancel-in-progress: false
+
+jobs:
+  friction-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history, back to every revalidation point)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Each artefact's file is walked back to its revalidation point; a shallow
+      # clone would report the points beyond it as unreachable instead of
+      # judging them. Stop here rather than publish that.
+      - name: Confirm the full history
+        run: |
+          if [ "$(git rev-parse --is-shallow-repository)" != "false" ]; then
+            echo "::error::The clone is shallow; the whole-repository friction check needs the full history (fetch-depth: 0)."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install project (clean resolve)
+        run: uv sync
+
+      - name: Whole-repository friction check (reports, never fails)
+        run: uv run pkit friction check --all --json > "$RUNNER_TEMP/friction.json"
+
+      # The body and the count of outstanding findings, rendered by living-docs'
+      # `friction-report` from the document above; the body also goes to the
+      # run's step summary.
+      - name: Render the findings
+        run: |
+          uv run pkit living-docs friction-report --report "$RUNNER_TEMP/friction.json" --json > "$RUNNER_TEMP/friction-report.json"
+          jq -r .body "$RUNNER_TEMP/friction-report.json" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish to the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uv run python scripts/friction_tracking_issue.py "$RUNNER_TEMP/friction-report.json"
