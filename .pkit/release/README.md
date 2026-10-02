@@ -307,7 +307,7 @@ PR** a human merges — it is *not* auto-run on every merge.
 | `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). |
 | `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
 | `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. Runs the cross-repository guard first; `--allow-foreign-repo` confirms a merge in another repository than the session's anchor's. |
-| `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes without calling `gh`. |
+| `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes without calling `gh`. Runs the cross-repository guard first; `--allow-foreign-repo` confirms publishing in another repository than the session's anchor's. |
 | `pkit release check` | no | The CI guard (below). |
 | `pkit release check-shareable <component>` | no | Pre-sharing lint: is a capability ready to be consumed externally-sourced (COR-041)? (below). |
 
@@ -541,6 +541,13 @@ publishes it as the body of a GitHub Release for tag `v<version>`.
 - **Project-neutral.** The repo is derived from the ambient `gh` context (the
   git remote in the working directory), with no hardcoded owner/repo — the same
   discipline as `pkit release merge`.
+- **Runs the cross-repository guard first**, at its entry, as `pkit release
+  merge` does: in another repository than the session's anchor's it asks at a
+  terminal and refuses without one, publishing nothing, unless
+  `--allow-foreign-repo` confirms it; in a pipeline, with no anchor, it needs no
+  flag. `--dry-run` never asks. So does `pkit version tag --push` — and
+  `version untag --push`, and `release apply --tag --push` — before the tag
+  is made or pushed; a tag made only locally runs no guard.
 
 It slots into the sequence after the tag is cut:
 
