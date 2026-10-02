@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T13:02:21Z
+      at: 2026-10-02T14:53:54Z
       outcome: unchanged
-      unchanged-because: the CLI README now documents pkit pull-request land — its options, --no-request among them, its one refusal order and its strictly decoded end document — and that release merge lands through it; the process README's change corrects how a cascade's membership predicate is glossed; this page maps the cli area as the pkit command-line surface and the process area as the shared process substrate, one line each, which still hold
+      unchanged-because: the lifecycle, CLI and schemas references gained the anchor-kind registration under friction.kinds and how a registered resolver runs; this index names each area and what it holds in one line, none of which mentions anchor kinds or resolvers, so every line still holds
 ---
 
 # project-kit

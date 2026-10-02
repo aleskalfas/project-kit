@@ -12,9 +12,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053]
     revalidated:
-      at: 2026-10-02T02:38:09Z
+      at: 2026-10-02T15:17:05Z
       outcome: unchanged
-      unchanged-because: "the page says ADRs stamp at the overlay-resolved path, which still holds: with adr-records unset the command now records the derived path in the overlay before stamping there; the stub shape, numbering and namespaces this page describes are unchanged, and the CLI reference carries the derivation"
+      unchanged-because: rule-set validation now resolves a rule's cited source through its kind's resolver and fails a source whose resolver names no file (missing-source); this page's rule-set section says only that validation checks each rule set's schema, join, ids, origins, successors and inheritance, and sends every check to the schemas reference; it names no source kind and no resolver, and a cited source is part of an origin, so the list still holds
 ---
 
 # Decision records
