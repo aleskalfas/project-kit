@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T03:37:55Z
+      at: 2026-10-02T04:21:03Z
       outcome: unchanged
-      unchanged-because: The page maps the lifecycle area to packaging and register mechanics and the cli area to the command surface; both READMEs still cover those subjects and only gained backbone among the names the capability commands refuse and packages validation reports.
+      unchanged-because: the CLI README now says a pull-request request is refused only on an answer recognised as one, states the settling window and the dequeue's own ends, and the lifecycle README how gh is started; this page maps the cli area as the pkit command-line surface and the lifecycle area as packaging and dependency architecture, one line each, which still holds
 ---
 
 # project-kit

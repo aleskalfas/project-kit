@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-02T03:13:52Z
+      at: 2026-10-02T04:21:18Z
       outcome: unchanged
-      unchanged-because: "done-work's move of its own issue to Done is now journaled with the pull-request-merge reason; the Milestone's stabilisation, release scope and the guards on start-work, done-work and merge-pr (still unbuilt, EPIC #943) are unchanged, so it holds"
+      unchanged-because: "done-work and merge-pr now say a merge the backbone did not see made may still show, and merge-pr owes its after-merge steps after any request it sent and did not see merged; the Milestone's stabilisation, release scope and the guards on start-work, done-work and merge-pr (still unbuilt, EPIC #943) are unchanged, so it holds"
 ---
 
 # UC-010 — Stabilise a Milestone for a release

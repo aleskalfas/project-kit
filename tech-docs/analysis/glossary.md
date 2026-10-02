@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-02T03:13:44Z
+        at: 2026-10-02T04:21:08Z
         outcome: unchanged
-        unchanged-because: "done-work now names the merged pull request when it moves its issue to Done, so that move's journal entry carries the pull-request-merge reason; stabilisation's phase, its intended stabilize-milestone line and its start and landing guards (still unbuilt, EPIC #943) are untouched, so the definition holds"
+        unchanged-because: done-work and merge-pr now say a merge the backbone did not see made may still show, and merge-pr owes its after-merge steps after any request it sent and did not see merged; the term defines the phase of a release Milestone in which work in flight continues, nothing new starts outside release scope and the default branch receives only release scope, which those words do not touch, so it holds
 ---
 
 # Glossary
