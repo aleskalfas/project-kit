@@ -111,7 +111,7 @@ from typing import Any, Protocol, cast
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from project_kit import docs_roots, lifecycle_ownership
+from project_kit import command_runner, docs_roots, lifecycle_ownership, validators
 from project_kit.backbone_schemas import CONTAINER_KEY, as_written
 from project_kit.line_breaks import line_break, universal_newlines
 from project_kit.manifest import read_backbone_manifest
@@ -1323,6 +1323,13 @@ def rule_set_files(target_root: Path, places: Sequence[RuleSetPlace]) -> dict[Pa
 #: The anchor kinds the backbone resolves itself (COR-050 point 2).
 CORE_ANCHOR_KINDS: tuple[str, ...] = ("path", "record", "artefact")
 
+#: The list of a capability's `friction` block that registers anchor kinds: a
+#: mapping from a kind to its entry, whose `command` names the `commands:` leaf
+#: that resolves an anchor of the kind (COR-050 point 2; the lifecycle README's
+#: package-metadata reference).
+KINDS_KEY = "kinds"
+KIND_COMMAND_KEY = "command"
+
 
 @dataclass(frozen=True)
 class ResolverCommand:
@@ -1331,13 +1338,24 @@ class ResolverCommand:
     `query_contract` is whether the command's registry entry declares the
     query contract (COR-050 point 2; ADR-057 point 3 realises the declaration):
     bounded, deterministic, read-only and needing no network. The declaration
-    grants nothing; it is a claim the backbone requires and trusts.
+    grants nothing; it is a claim the backbone requires and trusts. `script`
+    is the leaf's script, `None` when `command` names no leaf of the
+    capability's `commands:` tree. `shared_with` names the other installed
+    capabilities that register the same kind: a kind registered twice is
+    refused, whichever registered it first (`unresolved_kind_reason`).
     """
 
     kind: str
     capability: str
     command: str
     query_contract: bool = False
+    script: Path | None = None
+    shared_with: tuple[str, ...] = ()
+
+    @property
+    def registrants(self) -> tuple[str, ...]:
+        """Every installed capability that registers the kind, in name order."""
+        return (self.capability, *self.shared_with)
 
 
 def refuse_resolver_without_query_contract(resolver: ResolverCommand) -> str | None:
@@ -1359,29 +1377,76 @@ def refuse_resolver_without_query_contract(resolver: ResolverCommand) -> str | N
     )
 
 
-def registered_anchor_kinds(target_root: Path) -> dict[str, ResolverCommand]:
-    """The anchor kinds installed capabilities register, by kind.
+def declared_anchor_kinds(package: Mapping[str, Any]) -> Iterator[tuple[str, str]]:
+    """`(kind, command reference)` for each anchor kind a package registers under
+    `friction.kinds`, in written order. Read forgivingly: an entry that is not a
+    mapping with a text `command` registers nothing here — the packages member
+    reports it."""
+    kinds = _mapping_or_empty(package.get(FRICTION_KEY)).get(KINDS_KEY)
+    for kind, entry in _mapping_or_empty(kinds).items():
+        reference = _mapping_or_empty(entry).get(KIND_COMMAND_KEY)
+        if isinstance(reference, str) and reference.strip():
+            yield kind, reference
 
-    Where registered kinds are looked up. No package metadata declares an
-    anchor kind yet — the kind registry arrives with its own change — so this
-    is empty and every kind outside `CORE_ANCHOR_KINDS` is unresolved.
+
+def registered_anchor_kinds(target_root: Path) -> dict[str, ResolverCommand]:
+    """The anchor kinds installed capabilities register, by kind — the one
+    registry every engine reads (ADR-057 point 2).
+
+    Each installed capability's `friction.kinds` (`declared_anchor_kinds`),
+    with the leaf its entry names in the capability's `commands:` tree and
+    whether that leaf declares the query contract. A kind the backbone
+    resolves itself is never registered: the backbone's own resolution stands,
+    and the packages member refuses the entry. A kind two or more capabilities
+    register is kept once, naming them all (`ResolverCommand.shared_with`), so
+    an anchor of it reads as refused rather than as resolved by either.
     """
-    del target_root  # read from each capability's package metadata once kinds are declared
-    return {}
+    found: dict[str, list[ResolverCommand]] = {}
+    for name in installed_capability_names(target_root):
+        component_dir = target_root / CAPABILITIES_DIR / name
+        package, _problem = _load_mapping(component_dir / command_runner.PACKAGE_FILE)
+        commands = command_runner.commands_of(
+            component_dir, package.get(command_runner.COMMANDS_KEY)
+        )
+        for kind, reference in declared_anchor_kinds(package):
+            if kind in CORE_ANCHOR_KINDS:
+                continue
+            leaf = command_runner.resolve_command(commands, reference)
+            found.setdefault(kind, []).append(
+                ResolverCommand(
+                    kind=kind,
+                    capability=name,
+                    command=reference,
+                    query_contract=(
+                        leaf is not None and leaf.entry.get(validators.QUERY_CONTRACT_KEY) is True
+                    ),
+                    script=None if leaf is None else leaf.script,
+                )
+            )
+    return {
+        kind: replace(first, shared_with=tuple(r.capability for r in rest))
+        for kind, (first, *rest) in found.items()
+    }
 
 
 def unresolved_kind_reason(kind: str, registry: Mapping[str, ResolverCommand]) -> str | None:
     """`None` when the backbone resolves `kind`; otherwise why nothing does.
 
-    A registered kind passes `refuse_resolver_without_query_contract` before its
-    resolver could run; one that passes is still unresolved, since registered
-    resolvers are not run yet — failing closed (COR-050 point 2).
+    A kind two capabilities register is refused, for both. A registered kind
+    passes `refuse_resolver_without_query_contract` before its resolver could
+    run; one that passes is still unresolved, since registered resolvers are
+    not run yet — failing closed (COR-050 point 2).
     """
     if kind in CORE_ANCHOR_KINDS:
         return None
     resolver = registry.get(kind)
     if resolver is None:
         return "no installed component registers a resolver for it"
+    if resolver.shared_with:
+        return (
+            f"the capabilities {', '.join(resolver.registrants)} each register it, and a kind "
+            f"registered more than once is refused: none of their resolvers runs"
+        )
     refusal = refuse_resolver_without_query_contract(resolver)
     if refusal is not None:
         return refusal

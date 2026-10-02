@@ -27,8 +27,10 @@ Pointer:
    command script exists, a declared point sits under a provided role, an
    accepted data point's companion schema exists under `schemas/`, every
    filler / emitter / subscriber command exists in `commands:`, every filler
-   command and every validator's command declares the query contract
-   (`query-contract: true`; COR-052 point 6, ADR-057 point 3 and ADR-058), a
+   command, every validator's command and every anchor kind's resolver
+   (`friction.kinds`, COR-050 point 2) exists there and declares the query
+   contract (`query-contract: true`; COR-052 point 6, ADR-057 point 3 and
+   ADR-058), an anchor kind the backbone resolves itself is refused, a
    command that declares what it reads beyond the working tree (`reads`, the
    same point) declares the query contract too — its values are the schema's
    to check — a contribution names `command` or `value` but not both,
@@ -50,7 +52,7 @@ Pointer:
    a synced copy's component together with the backbone, and moves an
    externally sourced one's pin.
 
-Three checks across packages are this pass's, over the installed components
+Four checks across packages are this pass's, over the installed components
 only. An `aliases` entry another name shadows — a backbone command, another
 capability's name, or the same alias a capability earlier in the manifest
 declares — is a WARNING at the entry, read from the table the dispatcher binds
@@ -69,7 +71,11 @@ another declaration's place, or sharing files with its own component's place,
 another held folder or a rule-set folder — is an ERROR at its `friction.held`
 entry, read from friction discovery's one judgment of it
 (`friction_discovery.held_folders`), which also leaves it holding nothing:
-every held file has one holder, and no declaration empties another's.
+every held file has one holder, and no declaration empties another's. And an
+anchor kind two or more installed capabilities register (COR-050 point 2) is
+an ERROR at each one's `friction.kinds` entry, read from the one anchor-kind
+registry (`friction_discovery.registered_anchor_kinds`), which refuses the
+kind for every registrant: no registration wins.
 
 Two checks of the registry are this pass's too. A component registered under a
 name the lifecycle reserves for its kind is an ERROR at its `component.name`,
@@ -606,7 +612,56 @@ def _repository_findings(
                 _check_relative(
                     findings, f"/friction/surface/{index}", value, "a repository-relative path"
                 )
+        findings.extend(_anchor_kind_findings(cast("Mapping[Any, Any]", friction), leaves))
 
+    return findings
+
+
+def _anchor_kind_findings(
+    friction: Mapping[Any, Any], command_leaves: Mapping[tuple[str, ...], Mapping[Any, Any]]
+) -> list[PackageFinding]:
+    """The anchor kinds a package registers under `friction.kinds` (COR-050 point 2): a
+    kind the backbone resolves itself is refused, and each entry names a `commands:`
+    leaf that declares the query contract, as a validator's and a filler's do
+    (ADR-057 point 3). A kind another installed capability registers too is a check
+    across packages (`_shared_anchor_kind_findings`)."""
+    from project_kit import friction_discovery as fd  # discovery reads package metadata too
+
+    findings: list[PackageFinding] = []
+    _error = _error_appender(findings)
+    kinds = friction.get(fd.KINDS_KEY)
+    if not isinstance(kinds, Mapping):
+        return findings  # absent, or the shape pass reports the type
+    for kind, entry in cast("Mapping[Any, Any]", kinds).items():
+        path = f"/friction/{fd.KINDS_KEY}/{_token(kind)}"
+        if kind in fd.CORE_ANCHOR_KINDS:
+            _error(
+                path,
+                f"anchor kind {kind!r} is one the backbone resolves itself "
+                f"({', '.join(fd.CORE_ANCHOR_KINDS)}), so its registration is refused: register "
+                f"the kind under a name of its own (COR-050 point 2).",
+            )
+            continue
+        reference: Any = (
+            cast("Mapping[Any, Any]", entry).get(fd.KIND_COMMAND_KEY)
+            if isinstance(entry, Mapping)
+            else None
+        )
+        if not isinstance(reference, str):
+            continue  # the shape pass reports the type
+        leaf = resolve_command(command_leaves, reference)
+        if leaf is None:
+            _error(
+                f"{path}/command",
+                f"anchor kind {kind!r}: {undeclared_command(reference, command_leaves)}",
+            )
+        elif leaf.get(QUERY_CONTRACT_KEY) is not True:
+            _error(
+                f"{path}/command",
+                f"anchor kind {kind!r} names command {reference!r} as its resolver, which does "
+                f"not declare the query contract (`{QUERY_CONTRACT_KEY}: true` on its "
+                f"`commands:` entry); a resolver runs only when it declares it (COR-050 point 2).",
+            )
     return findings
 
 
@@ -930,8 +985,10 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
     capability's report, a name the lifecycle reserves
     (`_reserved_name_findings`), a namespace a backbone command shadows
     (`_shadowed_name_findings`), the aliases of it another name shadows
-    (`_shadowed_alias_findings`) and the held folders of it that overstep their
-    bounds (`_held_folder_findings`), and to each adapter's, a name the
+    (`_shadowed_alias_findings`), the held folders of it that overstep their
+    bounds (`_held_folder_findings`) and the anchor kinds it registers that
+    another capability registers too (`_shared_anchor_kind_findings`), and to
+    each adapter's, a name the
     lifecycle reserves for adapters (`_reserved_adapter_name_findings`); and to
     both reports of an adapter and a capability registered under one name, that
     name (`_shared_name_findings`)."""
@@ -942,6 +999,7 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
     shadowed = _shadowed_alias_findings(target_root, static)
     unreachable = set(shadowed_capability_names(target_root, static))
     unbounded = _held_folder_findings(target_root)
+    kinds_shared = _shared_anchor_kind_findings(target_root)
     shared = _shared_component_names(target_root)
     reports: list[PackageReport] = []
     for entry, component_dir, package in _registered_packages(target_root):
@@ -963,6 +1021,7 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
                     *_shadowed_name_findings(entry.name, provenance, unreachable),
                     *shadowed.get(entry.name, []),
                     *unbounded.get(entry.name, []),
+                    *kinds_shared.get(entry.name, []),
                 ],
             )
         elif entry.kind == "adapter":
@@ -1159,6 +1218,32 @@ def _held_folder_findings(target_root: Path) -> dict[str, list[PackageFinding]]:
                 f"component's place, another held folder or a rule-set folder (COR-050 point 1).",
             )
         )
+    return out
+
+
+def _shared_anchor_kind_findings(target_root: Path) -> dict[str, list[PackageFinding]]:
+    """Each anchor kind two or more installed capabilities register, as an error at
+    every one of their `friction.kinds` entries, keyed by the capability
+    (COR-050 point 2). Read from the one registry the engines read
+    (`registered_anchor_kinds`), so what is reported is exactly what an anchor
+    of the kind finds refused: no registration wins."""
+    from project_kit import friction_discovery as fd  # discovery reads package metadata too
+
+    out: dict[str, list[PackageFinding]] = {}
+    for kind, resolver in fd.registered_anchor_kinds(target_root).items():
+        if not resolver.shared_with:
+            continue
+        for capability in resolver.registrants:
+            others = ", ".join(c for c in resolver.registrants if c != capability)
+            out.setdefault(capability, []).append(
+                PackageFinding(
+                    f"/friction/{fd.KINDS_KEY}/{_token(kind)}",
+                    Severity.ERROR,
+                    f"anchor kind {kind!r} is registered by {others} too, and a kind registered "
+                    f"more than once is refused for every registrant: an anchor of it is "
+                    f"unresolved until one registration remains (COR-050 point 2).",
+                )
+            )
     return out
 
 
