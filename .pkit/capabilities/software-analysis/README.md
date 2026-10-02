@@ -12,7 +12,7 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-02T00:02:19Z
+      at: 2026-10-02T00:27:22Z
       outcome: updated
 ---
 
@@ -152,9 +152,10 @@ outcomes:                       # each artefact covered, withdrawn ones included
   UC-003: holds                 # holds | analysis-stale | code-regressed | gap-found
   JRN-001: analysis-stale
 evidence:                       # optional: the executed results drawn on, each copied whole from the evidence point
-  - id: UC-003@78981922613b2afb6025042ff6bd878ac1994e85   # <artefact>@<commit>: its own two fields
+  - id: UC-003@78981922613b2afb6025042ff6bd878ac1994e85#pytest-bridge.test-run.test-sandbox   # <artefact>@<commit>#<check>: its own three fields
     artefact: UC-003
     commit: "78981922613b2afb6025042ff6bd878ac1994e85"
+    check: pytest-bridge.test-run.test-sandbox
     result: passed              # supports UC-003's `holds`
     ran: tests/test_run.py::test_sandbox
 ```
@@ -176,14 +177,17 @@ The body gives each artefact's outcome with its justification, then the gaps and
 - **a journey whose use-case anchors do not match its steps** — the message names the anchors to write;
 - **a revalidation record** whose front matter does not fit its schema, or whose outcomes cite an id that is no artefact of the analysis (withdrawn ones are fine);
 - **a revalidation record copying evidence for an artefact it gives no outcome**: evidence supports an outcome and never replaces it, so the record is incomplete whatever the evidence says;
-- **an evidence entry whose `id` is not its own `<artefact>@<commit>`** — the entry's `artefact` and `commit` joined by `@`: the id is the pair the result is for, and which of the two is meant cannot be told, so nothing else is read from that entry.
+- **an evidence entry whose `id` is not its own `<artefact>@<commit>#<check>`** — the entry's `artefact`, `commit` and `check`: the id is the three parts the result is for, and whether the id or those fields are meant cannot be told, so nothing else is read from that entry;
+- **a journey's evidence naming a step that is no use case of the analysis** — a journey's `steps` are the use cases its run passed through. Withdrawn ones are fine, and the journey's steps as they stand now are never compared: the record is history.
 
 It warns, and never fails, on:
 
 - **a result at odds with its outcome** — a `failed` result copied for an artefact whose outcome is `holds`, or a `passed` one for `code-regressed`: a passing result supports *holds* and a failing one is a regression's proof, so the outcome or the evidence is likely wrong;
-- **a copy that differs from what the evidence point now holds under its id**: the copy strayed from its source, or the result at that commit was reported again otherwise.
+- **a copy that differs from what the evidence point now holds under its id**: the copy strayed from its source, or the result at that commit was reported again otherwise;
+- **a capability's entry of the evidence point whose `check` opens with another name than the capability's** — a capability's checks open with its own name, so its results stand beside another filler's and only a real double claim collides. Your own entries are exempt: writing under a capability's check is how you replace that capability's entry (Connections, below);
+- **an entry of the evidence point whose `id` is not its own `<artefact>@<commit>#<check>`**, whoever supplied it: a record that copies it is held to its own three fields.
 
-It says nothing of an id the point no longer holds, or of a point that does not resolve: the record's copy is the evidence, and a filler that stops reporting an old commit is ordinary. It reads the point, through `pkit connections resolve`, only when some record copies evidence.
+It says nothing of an id the point no longer holds, or of a point that does not resolve: the record's copy is the evidence, and a filler that stops reporting an old commit is ordinary. It reads the point, through `pkit connections resolve`, only when some record copies evidence — so a project with no such record sees neither warning on the point's own entries.
 
 It reports, and never fails on, **an open regression**: a record's `code-regressed` artefact that has not been revalidated since the record — its `at` falls on no later day (UTC) than the record's date. The defect the record names is still open, or its fix was never revalidated against the artefact. It is worked out from the records and the artefacts each time, never kept in a ledger.
 
@@ -314,19 +318,24 @@ Declared in the package metadata's `connections` block (COR-053), as the decisio
 ```yaml
 schema_version: 1
 value:
-  - id: UC-003@78981922613b2afb6025042ff6bd878ac1994e85   # <artefact>@<commit>: the pair the entry is for
+  - id: UC-003@78981922613b2afb6025042ff6bd878ac1994e85#project.test-run.test-sandbox   # <artefact>@<commit>#<check>: the three parts the entry is for
     artefact: UC-003
     commit: "78981922613b2afb6025042ff6bd878ac1994e85"    # the version the result is true of, by its full name; quoted, as digits alone read as a number
+    check: project.test-run.test-sandbox    # the executed check, as you name it: your own open with `project`
     result: passed                # passed | failed
-    ran: tests/test_run.py::test_sandbox    # what was run, so it can be found and run again
+    ran: tests/test_run.py::test_sandbox    # what was run, exactly, so it can be found and run again
     steps: ["1", "2", "2a"]       # optional: the steps and variants it went through
     where: https://ci.example/runs/42       # optional: where the result can be read
     by: the pipeline              # optional: who or what ran it
 ```
 
-The entry's shape is `schemas/revalidation-evidence.schema.json`. It reads alone, since two providers of one point are compared by that file alone (COR-053 point 5), so it carries a copy of the id shapes whose one home is `schemas/analysis.schema.json`; a test holds the copy equal to its source. A commit is written by its **full name** — 40 hexadecimal digits, or 64 under SHA-256 — and a short name such as `7898192` is refused, so a pair has one spelling and a record's copy is compared with the entry it came from exactly. The point is `union`: entries from every filler merge by id, and yours replaces a capability's with the same id, or drops one with `remove` and a reason. The id is the artefact and the commit alone, so two results for the same artefact at the same commit share one id. From two capabilities — one running the tests and another tracing the journeys, say — that is a collision under `union`: the point does not resolve, its reason naming both, until your filler gives the id itself (COR-052 point 4); and a result your filler gives replaces a capability's for the same pair. That stands until the key is refined to tell such results apart. No default takes part, so while nothing fills it the point is unresolved — `pkit connections resolve pkit::analysis:revalidation-evidence --json` says `unfilled`, and nothing fails on it. Its inert policy is `fallback`: evidence advises, so a filler that cannot answer is warned, and the rest still count.
+The entry's shape is `schemas/revalidation-evidence.schema.json`. It reads alone, since two providers of one point are compared by that file alone (COR-053 point 5), so it carries a copy of the id and check-name shapes whose one home is `schemas/analysis.schema.json`; a test holds the copy equal to its source. A commit is written by its **full name** — 40 hexadecimal digits, or 64 under SHA-256 — and a short name such as `7898192` is refused, so a commit has one spelling and a record's copy is compared with the entry it came from exactly. `steps` is a set: for a use case, the steps and variants the run went through, by number and letter; for a journey, the use cases it passed through, by id, each once; an actor or a term has none.
 
-**Evidence informs a revalidation and never replaces it.** A revalidation record copies the entries it drew on under `evidence` (The artefacts, above): a passing result as support for *holds*, a failing one as a regression's proof. The record still gives each artefact its outcome — the check fails a record that copies evidence for an artefact without one — and only a revalidation or a deferral recorded on the artefact clears friction (COR-050).
+An entry is one result, keyed by three parts: the artefact, the commit and the **check** — the name its filler gives one executed check, kept from commit to commit. It is lower-case words of letters, digits and hyphens joined by dots, the first beginning with a letter; underscores, slashes, colons and capitals are refused, so a filler slugs a test's name (`tests/test_run.py::test_sandbox` → `pytest-bridge.test-run.test-sandbox`) and keeps the exact name in `ran`. A capability's checks open with the capability's own name, and yours with `project`. So two fillers' results for one artefact at one commit — one capability running the tests and another tracing the journeys, say — stand side by side, and only two that claim one check collide. One filler never supplies an id twice — the whole filler is inert if it does — so a filler gives each result its own check.
+
+The point is `union`: entries from every filler merge by id, and yours replaces a capability's with the same id — write it under that capability's check, and say who wrote it in `by` — or drops one with `remove` and a reason. The point advises, yet a collision is not an inert filler: two capabilities claiming one check for one artefact at one commit leave the point unresolved, and `pkit validate` fails on it until your filler gives that id or removes it — `fallback` gives no relief. A standing clash of names between two capabilities collides again at every commit both report, and an override is per id, so the lasting fix is theirs: each opens with its own name. The opening name is a convention, never refused: `pkit analysis validate` warns on a capability's entry whose `check` opens with another name, and never on yours (Checking, above). Nothing checks that an entry's commit still exists: after a squash merge or a rebase an entry may name a commit no history holds, and that is ordinary — a filler decides how long it keeps reporting a commit, and a record's copy stays whatever becomes of it. No default takes part, so while nothing fills it the point is unresolved — `pkit connections resolve pkit::analysis:revalidation-evidence --json` says `unfilled`, and nothing fails on it. Its inert policy is `fallback`: evidence advises, so a filler that cannot answer is warned, and the rest still count.
+
+**Evidence informs a revalidation and never replaces it.** A revalidation record copies the entries it drew on under `evidence` (The artefacts, above): a passing result as support for *holds*, a failing one as a regression's proof. The record still gives each artefact its outcome — the check fails a record that copies evidence for an artefact without one — and only a revalidation or a deferral recorded on the artefact clears friction (COR-050). A routine revalidation that writes no record keeps no copy: its justification on the artefact says in its own words why the description holds, and naming a result is not a justification (DEC-001 point 7).
 
 **Contributes to `pkit::documentation:readers`** (version 1), the documentation role's point for who reads the documentation: one reader per actor in force, through the `fill-readers` command.
 
@@ -346,7 +355,7 @@ An install plan predicts the wiring, not the data (COR-053 point 7): it shows th
 
 ## What's shipped now, what's next
 
-Shipped: the decision; the analysis location and its places; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, and the readers contribution with its filler, `pkit analysis fill-readers`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, and executable use cases.
+Shipped: the decision; the analysis location and its places; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, and the readers contribution with its filler, `pkit analysis fill-readers`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
 
 ## Citing this capability's decisions
 
