@@ -33,6 +33,7 @@ from click.testing import CliRunner
 from project_kit import cli, session_guard
 from project_kit import pull_request_landing as landing
 from tests import hosting_fake as fake
+from tests import landing_end_cases as cases
 from tests import sessions
 
 Completed = subprocess.CompletedProcess[str]
@@ -90,15 +91,27 @@ def _land(
     events: list[dict[str, Any]] | None = None,
     **options: Any,
 ) -> landing.Landing:
-    return landing.land(
-        PR,
-        head=HEAD,
-        subject="fix: land it",
-        options=landing.LandOptions(**options),
-        dry_run=dry_run,
-        on_event=events.append if events is not None else None,
-        **here,
+    """The landing of PR at HEAD; its end decoded, as every one is here."""
+    return _decoded(
+        landing.land(
+            PR,
+            head=HEAD,
+            subject="fix: land it",
+            options=landing.LandOptions(**options),
+            dry_run=dry_run,
+            on_event=events.append if events is not None else None,
+            **here,
+        )
     )
+
+
+def _decoded(end: landing.Landing) -> landing.Landing:
+    """`end`, its document decoded as a reader decodes it (`decode_end`) —
+    every end a landing states, the wait's and the settling's among them,
+    decodes as it is."""
+    document = end.as_json()
+    assert landing.decode_end(json.loads(json.dumps(document))) == document
+    return end
 
 
 def _requests(service: fake.HostingService) -> str:
@@ -689,6 +702,49 @@ def _close_it(service: fake.HostingService) -> None:
     service.close()
 
 
+def _merged_naming_no_head(service: fake.HostingService) -> None:
+    service.merge_now()
+    service.head_oid = ""
+
+
+@pytest.mark.parametrize(
+    ("setup", "sent"),
+    [
+        (lambda s: s.after(fake.MERGE, _merged_naming_no_head), landing.MERGE_REQUEST),
+        (lambda s: _enqueued(s, fake.at(1), _merged_naming_no_head), landing.ENQUEUE_REQUEST),
+        (
+            lambda s: (
+                _queued_at_the_head(s),
+                setattr(s, "progress", [fake.unchanged(), _merged_naming_no_head]),
+            ),
+            None,
+        ),
+    ],
+    ids=["after-a-direct-merge", "in-the-wait-after-an-enqueue", "in-the-wait-found-queued"],
+)
+def test_a_merged_reading_that_names_no_head_is_unconfirmed(
+    setup: Callable[[fake.HostingService], Any],
+    sent: str | None,
+    here: dict[str, Any],
+    host: fake.HostingService,
+) -> None:
+    """A landing never states a merge without the head it merged at, which
+    a caller deletes the head branch at: such a reading ends unconfirmed,
+    `unreadable`, whatever was sent."""
+    setup(host)
+    end = _land(here)
+    assert (end.ended, end.reason_kind, end.sent, end.merged_head) == (
+        landing.END_UNCONFIRMED,
+        landing.NOT_READ,
+        sent,
+        None,
+    )
+    assert end.reason == (
+        "a reading says PR #496 merged and names no head commit: at which head it merged is not "
+        "known"
+    )
+
+
 def test_a_reading_after_a_direct_merge_that_fails_is_one_warning_then_the_wait(
     here: dict[str, Any], host: fake.HostingService
 ) -> None:
@@ -974,7 +1030,7 @@ def test_a_stream_closed_after_an_enqueue_does_not_abandon_the_landing(
     PR handed to the queue is left unwatched."""
     _moves_while_queued(host)
     stream = _Closing(_after_a_requesting)
-    end = landing.land(PR, head=HEAD, subject="x", on_event=stream, **here)
+    end = _decoded(landing.land(PR, head=HEAD, subject="x", on_event=stream, **here))
     assert [(line["event"], line.get("request")) for line in stream.written] == [
         ("reading", None),
         ("requesting", "enqueue"),
@@ -1078,73 +1134,51 @@ def test_an_end_document_missing_a_key_is_no_answer(key: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("changed", "says"),
-    [
-        ({"ended": "landed"}, "names no way a landing ends"),
-        ({"ended": None}, "names no way a landing ends"),
-        ({"reason_kind": "not-made"}, "carries no `reason_kind`"),
-        ({"would": "merge"}, "cannot say it would"),
-        ({"merged_head": None}, "cannot name `merged_head`"),
-        ({"dequeue": {"accepted": True}}, "ran no dequeue"),
-        ({"sent": "dequeue"}, "sends no"),
-        ({"schema_version": 2}, "not a version-1 end"),
-        ({"event": "reading"}, "not a version-1 end"),
-        ({"warnings": None}, "`warnings` or `guard`"),
-    ],
+    ("why", "document"), cases.VALID_DOCUMENTS, ids=[why for why, _ in cases.VALID_DOCUMENTS]
 )
-def test_an_end_document_decodes_strictly_by_its_ended(changed: dict[str, Any], says: str) -> None:
-    """An unknown `ended`, or a key its `ended` does not carry, is no answer."""
-    with pytest.raises(landing.NotAnEnd, match=says):
-        landing.decode_end({**_a_valid_end(), **changed})
+def test_every_end_a_landing_can_state_decodes_as_it_is(why: str, document: dict[str, Any]) -> None:
+    """The shared table of end documents (`tests.landing_end_cases`), which
+    every decoder of the end is held to."""
+    assert landing.decode_end(json.loads(json.dumps(document))) == document
 
 
 @pytest.mark.parametrize(
-    ("ended", "reason_kind", "would"),
-    [
-        (landing.END_PLANNED, None, None),
-        (landing.END_REFUSED, None, None),
-        (landing.END_UNCONFIRMED, None, None),
-        (landing.END_QUEUED, landing.NOT_MADE, None),
-        (landing.END_HEAD_MOVED, None, landing.MERGE_REQUEST),
-    ],
+    ("why", "document"), cases.INVALID_DOCUMENTS, ids=[why for why, _ in cases.INVALID_DOCUMENTS]
 )
-def test_each_ended_carries_only_its_own_reason_kinds_and_would(
-    ended: str, reason_kind: str | None, would: str | None
-) -> None:
-    document = {
-        **_a_valid_end(),
-        "ended": ended,
-        "reason_kind": reason_kind,
-        "would": would,
-        "merged_head": None,
-    }
+def test_no_document_that_is_no_end_decodes(why: str, document: object) -> None:
+    """Decoding is strict by `ended`: anything else is no answer."""
     with pytest.raises(landing.NotAnEnd):
         landing.decode_end(document)
 
 
-def test_the_closed_sets_of_ends_and_their_reason_kinds() -> None:
-    assert dict(landing.LANDING_ENDS) == {
-        "merged": {None},
-        "merged-at-another-head": {None},
-        "closed": {None},
-        "planned": {None},
-        "queued": {None, "unreadable"},
-        "unconfirmed": {"unanswered", "unreadable"},
-        "head-moved": {None},
-        "dropped": {None},
-        "not-merged": {None},
-        "failed": {None, "not-made"},
-        "refused": {
-            "foreign-repository",
-            "request-not-allowed",
-            "admin-on-queue",
-            "queue-not-allowed",
-            "queue-not-squash",
-            "dropped-head",
-            "squash-defaults",
-        },
-        "unreadable": {None, "squash-defaults"},
+def test_the_decoder_takes_exactly_the_ends_a_landing_can_state() -> None:
+    """Every `ended`, every `reason_kind`, every `sent`: a document decodes
+    exactly where the table says a landing can end so."""
+    for ended in cases.ENDED:
+        for reason_kind in cases.REASON_KINDS:
+            for sent in cases.SENT:
+                document = cases.document(ended, reason_kind, sent)
+                try:
+                    landing.decode_end(document)
+                except landing.NotAnEnd:
+                    decoded = False
+                else:
+                    decoded = True
+                assert decoded is ((ended, reason_kind, sent) in cases.VALID), (
+                    ended,
+                    reason_kind,
+                    sent,
+                )
+
+
+def test_the_closed_sets_are_the_shared_tables() -> None:
+    assert dict(landing.LANDING_ENDS) == cases.ENDED
+    stated = {
+        (ended, reason_kind, sent)
+        for (ended, reason_kind), sents in landing.LANDING_SENT.items()
+        for sent in sents
     }
+    assert stated == cases.VALID
 
 
 # ---- the bound ---------------------------------------------------------------------------
@@ -1232,7 +1266,7 @@ def test_the_landing_compares_and_pins_the_head_lower_cased(
     here: dict[str, Any], host: fake.HostingService
 ) -> None:
     events: list[dict[str, Any]] = []
-    end = landing.land(PR, head=HEAD.upper(), subject="x", on_event=events.append, **here)
+    end = _decoded(landing.land(PR, head=HEAD.upper(), subject="x", on_event=events.append, **here))
     assert (end.ended, end.checked_head, end.merged_head) == (landing.END_MERGED, HEAD, HEAD)
     [requesting] = [e for e in events if e["event"] == "requesting"]
     assert requesting["head"] == HEAD

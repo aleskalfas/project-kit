@@ -661,7 +661,19 @@ On a base without a queue, `--direct-only`, `--allow-dropped-head` and `--queued
 - The `[warn]` line as a request with no usable answer starts settling stays on standard error.
 - Without `--json`, each event and the end are said as a person reads them; warnings go to standard error.
 
-**The end document.** Every key is in every document. Decoding is strict per `ended` (`pull_request_landing.decode_end`): an unknown `ended`, a `reason_kind` its `ended` does not carry, or a missing key is no answer.
+**The end document.** Every key is in every document. Decoding is strict per `ended` (`pull_request_landing.decode_end`); anything else is no answer:
+
+- a missing key, another `schema_version`, or an `event` other than `end`;
+- an unknown `ended`, or a `reason_kind` its `ended` does not carry;
+- `dry_run` not a boolean, or `false` on a `planned` end;
+- `checked_head` not a full commit id, lower-cased; `bound_seconds` not a number;
+- `reason` not `null` on `merged` and `planned`, or not words on any other end;
+- `would` or `merged_head` where the tables below have none, or missing where they have one;
+- a `sent` its end and `reason_kind` cannot carry (the twelve ends, below);
+- a `dequeue` on any end but `head-moved`, or not in `dequeue`'s keys and types;
+- a `reading` that is `null` where one was taken, or one where the guard refused.
+
+The tests hold the decoder to one shared table of valid and invalid end documents (`tests/landing_end_cases.py`), which project-management's decoder is to be held to as well.
 
 | Key | Value | `null` when |
 |---|---|---|
@@ -695,17 +707,22 @@ On a base without a queue, `--direct-only`, `--allow-dropped-head` and `--queued
 | `merged-at-another-head` | a reading says merged at another head | `null` | `null`, or what was sent |
 | `closed` | the first reading finds it closed unmerged | `null` | `null` |
 | `planned` | a dry run: a request or a wait would follow | `null` | `null` |
-| `queued` | handed to the queue, and not seen merged or out | `null`, `unreadable` | `null`, `enqueue` |
-| `unconfirmed` | whether its merge or enqueue was made, or its direct merge has merged, is not known | `unanswered`, `unreadable` | `merge`, `enqueue` |
+| `queued` | handed to the queue, and not seen merged or out | `null` | `null`, `enqueue`, or a `merge` the service queued instead |
+| `queued` | the same, a wait reading lost | `unreadable` | `null`, `enqueue` |
+| `unconfirmed` | whether its merge or enqueue was made is not known | `unanswered` | `merge`, `enqueue` |
+| `unconfirmed` | whether its direct merge has merged is not known: a wait reading lost | `unreadable` | `merge` |
+| `unconfirmed` | a reading says merged and names no head, so at which head is not known | `unreadable` | `null`, or what was sent |
 | `head-moved` | a reading at another head; `dequeue` says what taking it out came to | `null` | `null`, or what was sent |
 | `dropped` | out of the queue on two readings, a queue seen | `null` | `null`, or what was sent |
 | `not-merged` | out on two readings, or closed, no queue seen | `null` | `merge` |
+| `not-merged` | the same, the base having lost its queue during the wait | `null` | `enqueue`, or `null` for a PR found queued |
 | `failed` | its merge or enqueue did not land it | `null`, `not-made` | `null` when refused; set for `not-made` |
 | `refused` | stopped before any request | `foreign-repository` (the guard's); `request-not-allowed`, `admin-on-queue`, `queue-not-allowed`, `queue-not-squash`, `dropped-head`, `squash-defaults` (the refusal order's) | `null` |
 | `unreadable` | a reading needed before a request could not be taken; nothing sent | `null`, `squash-defaults` | `null` |
 
 - A head move whose dequeue finds the PR merged stays `head-moved`, with `dequeue.reason_kind: merged`.
 - `closed` always means nothing was sent: a PR that closes after a request ends `dropped` or `not-merged`.
+- `merged` and `merged-at-another-head` always name `merged_head`: a merged reading that names no head ends `unconfirmed`, `unreadable`.
 
 **Exit codes are for a person; callers read the document.**
 

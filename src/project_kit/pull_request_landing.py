@@ -1653,8 +1653,46 @@ LANDING_ENDS: Mapping[str, frozenset[str | None]] = {
     END_UNREADABLE: frozenset({None, SQUASH_DEFAULTS}),
 }
 
+_ANY_SENT: frozenset[str | None] = frozenset({None, MERGE_REQUEST, ENQUEUE_REQUEST})
+_NONE_SENT: frozenset[str | None] = frozenset({None})
+
+#: The request each end can state as `sent` — the merge or the enqueue this
+#: run sent that the service did not refuse — by its `ended` and
+#: `reason_kind`. A reader takes a document whose `sent` its end cannot
+#: carry for no answer (:func:`decode_end`). `queued` carries a merge the
+#: service queued instead; `not-merged` a request, or none, before the base
+#: lost its queue; `unconfirmed`, `unreadable`, any where a reading says
+#: merged and names no head.
+LANDING_SENT: Mapping[tuple[str, str | None], frozenset[str | None]] = {
+    (END_MERGED, None): _ANY_SENT,
+    (END_MERGED_ELSEWHERE, None): _ANY_SENT,
+    (END_CLOSED, None): _NONE_SENT,
+    (END_PLANNED, None): _NONE_SENT,
+    (END_QUEUED, None): _ANY_SENT,
+    (END_QUEUED, NOT_READ): frozenset({None, ENQUEUE_REQUEST}),
+    (END_UNCONFIRMED, UNANSWERED): frozenset({MERGE_REQUEST, ENQUEUE_REQUEST}),
+    (END_UNCONFIRMED, NOT_READ): _ANY_SENT,
+    (END_HEAD_MOVED, None): _ANY_SENT,
+    (END_DROPPED, None): _ANY_SENT,
+    (END_NOT_MERGED, None): _ANY_SENT,
+    (END_FAILED, None): _NONE_SENT,
+    (END_FAILED, NOT_MADE): frozenset({MERGE_REQUEST, ENQUEUE_REQUEST}),
+    **{(END_REFUSED, kind): _NONE_SENT for kind in LANDING_ENDS[END_REFUSED]},
+    (END_UNREADABLE, None): _NONE_SENT,
+    (END_UNREADABLE, SQUASH_DEFAULTS): _NONE_SENT,
+}
+
 #: The ends at which a reading says the PR merged.
 _MERGED_ENDS = (END_MERGED, END_MERGED_ELSEWHERE)
+
+#: The ends that may come with no reading — the guard refused, nothing read;
+#: the first reading failed — and the one that must.
+_UNREAD_ENDS = ((END_REFUSED, session_guard.FOREIGN_REPOSITORY), (END_UNREADABLE, None))
+_NOTHING_READ = (END_REFUSED, session_guard.FOREIGN_REPOSITORY)
+
+#: What a landing states of taking a PR out of the queue: `pkit pull-request
+#: dequeue`'s keys.
+_DEQUEUE_KEYS = frozenset({"accepted", "exit_code", "reason", "reason_kind"})
 
 #: What a dry run says it would do (`would`).
 _WOULD = (MERGE_REQUEST, ENQUEUE_REQUEST, WAIT, DEQUEUE_REQUEST)
@@ -2015,13 +2053,18 @@ class NotAnEnd(ValueError):
 
 
 def decode_end(document: object) -> dict[str, Any]:
-    """`document` as a landing's end document, decoded strictly: every key
-    present (:data:`END_KEYS`), this version, an `ended` from
-    :data:`LANDING_ENDS` with a `reason_kind` it carries, `would` exactly on
-    a planned end, `merged_head` exactly where it merged, `dequeue` only with
-    a head that moved, and `sent` a merge, an enqueue or null. Raises
-    :class:`NotAnEnd` for anything else: no answer, so how the landing ended
-    is not known."""
+    """`document` as a landing's end document, decoded strictly by its
+    `ended`: every key present (:data:`END_KEYS`), this version; an `ended`
+    from :data:`LANDING_ENDS` with a `reason_kind` it carries; `dry_run` a
+    boolean, true on a planned end; `checked_head` a full commit id;
+    `bound_seconds` a number; `reason` null exactly where it ended `merged`
+    or `planned`, words on every other end; `would` exactly on a planned end;
+    `merged_head` exactly where it merged; `sent` one its end can carry
+    (:data:`LANDING_SENT`); `dequeue` only with a head that moved, in
+    `pkit pull-request dequeue`'s keys and types; and `reading` null only
+    where nothing could be read — the guard refused, which reads nothing,
+    or the first reading failed. Raises :class:`NotAnEnd` for anything else:
+    no answer, so how the landing ended is not known."""
     if not isinstance(document, Mapping):
         raise NotAnEnd("the answer is not a document")
     doc = cast(Mapping[str, Any], document)
@@ -2036,10 +2079,17 @@ def decode_end(document: object) -> dict[str, Any]:
     ended = doc["ended"]
     if not isinstance(ended, str) or ended not in LANDING_ENDS:
         raise NotAnEnd(f"the end document names no way a landing ends (`ended`: {ended!r})")
-    if doc["reason_kind"] not in LANDING_ENDS[ended]:
-        raise NotAnEnd(
-            f"a landing that ends {ended} carries no `reason_kind` {doc['reason_kind']!r}"
-        )
+    reason_kind = doc["reason_kind"]
+    if reason_kind not in LANDING_ENDS[ended]:
+        raise NotAnEnd(f"a landing that ends {ended} carries no `reason_kind` {reason_kind!r}")
+    _decode_types(doc)
+    if ended == END_PLANNED and doc["dry_run"] is not True:
+        raise NotAnEnd("a landing that ends planned is a dry run")
+    reason = doc["reason"]
+    if not (
+        reason is None if ended in (END_MERGED, END_PLANNED) else isinstance(reason, str) and reason
+    ):
+        raise NotAnEnd(f"a landing that ends {ended} cannot give the `reason` {reason!r}")
     would = doc["would"]
     if not (would in _WOULD if ended == END_PLANNED else would is None):
         raise NotAnEnd(f"a landing that ends {ended} cannot say it would {would!r}")
@@ -2050,13 +2100,63 @@ def decode_end(document: object) -> dict[str, Any]:
         else merged_head is None
     ):
         raise NotAnEnd(f"a landing that ends {ended} cannot name `merged_head` {merged_head!r}")
-    if doc["dequeue"] is not None and ended != END_HEAD_MOVED:
-        raise NotAnEnd(f"a landing that ends {ended} ran no dequeue")
-    if doc["sent"] not in (None, MERGE_REQUEST, ENQUEUE_REQUEST):
-        raise NotAnEnd(f"a landing sends no {doc['sent']!r}")
+    sent = doc["sent"]
+    if sent not in LANDING_SENT[(ended, reason_kind)]:
+        raise NotAnEnd(f"a landing that ends {ended} ({reason_kind}) cannot have sent {sent!r}")
+    _decode_dequeue(ended, doc["dequeue"])
+    _decode_reading(ended, reason_kind, doc["reading"])
     if not isinstance(doc["warnings"], list) or not isinstance(doc["guard"], Mapping):
         raise NotAnEnd("the end document's `warnings` or `guard` is not what it states")
     return dict(doc)
+
+
+def _decode_types(doc: Mapping[str, Any]) -> None:
+    """The end's `dry_run`, `checked_head` and `bound_seconds`, by type."""
+    if not isinstance(doc["dry_run"], bool):
+        raise NotAnEnd(f"the end's `dry_run` is not a boolean: {doc['dry_run']!r}")
+    head = doc["checked_head"]
+    if not (isinstance(head, str) and full_object_id(head) == head):
+        raise NotAnEnd(f"the end's `checked_head` is not a full commit id: {head!r}")
+    bound = doc["bound_seconds"]
+    if isinstance(bound, bool) or not isinstance(bound, int | float):
+        raise NotAnEnd(f"the end's `bound_seconds` is not a number: {bound!r}")
+
+
+def _decode_dequeue(ended: str, dequeue: object) -> None:
+    """The end's `dequeue`: null, or — only with a head that moved — what
+    `pkit pull-request dequeue` states, in its keys and types."""
+    if dequeue is None:
+        return
+    if ended != END_HEAD_MOVED:
+        raise NotAnEnd(f"a landing that ends {ended} ran no dequeue")
+    if not isinstance(dequeue, Mapping):
+        raise NotAnEnd(f"the end's `dequeue` is not a document: {dequeue!r}")
+    out = cast(Mapping[str, Any], dequeue)
+    accepted, exit_code = out.get("accepted"), out.get("exit_code")
+    reason_kind = out.get("reason_kind")
+    if not (
+        frozenset(out) == _DEQUEUE_KEYS
+        and (accepted is None or isinstance(accepted, bool))
+        and (exit_code is None or (isinstance(exit_code, int) and not isinstance(exit_code, bool)))
+        and isinstance(out["reason"], str)
+        and (reason_kind is None or isinstance(reason_kind, str))
+    ):
+        raise NotAnEnd(
+            f"the end's `dequeue` is not what `pkit pull-request dequeue` states: {out!r}"
+        )
+
+
+def _decode_reading(ended: str, reason_kind: str | None, reading: object) -> None:
+    """The end's `reading`: null where nothing could be read — always for a
+    landing the guard refused — else the last reading, a document."""
+    if reading is None:
+        if (ended, reason_kind) not in _UNREAD_ENDS:
+            raise NotAnEnd(f"a landing that ends {ended} took a reading, and names none")
+        return
+    if (ended, reason_kind) == _NOTHING_READ:
+        raise NotAnEnd("a landing the guard refused read nothing, and names a reading")
+    if not isinstance(reading, Mapping):
+        raise NotAnEnd(f"the end's `reading` is not a document: {reading!r}")
 
 
 class _Lander:
@@ -2300,6 +2400,17 @@ class _Lander:
         )
 
     def merged(self, reading: Reading) -> Landing:
+        """A reading that says merged: at the checked head, or at another —
+        and one that names no head is no merge the landing can state, since
+        a caller deletes the head branch at the head it names: unconfirmed,
+        at which head it merged not known."""
+        if not reading.head_oid:
+            return self.end(
+                END_UNCONFIRMED,
+                reason_kind=NOT_READ,
+                reason=f"a reading says PR #{self.pr_number} merged and names no head commit: "
+                "at which head it merged is not known",
+            )
         if reading.head_oid == self.head:
             return self.end(END_MERGED)
         return self.end(

@@ -472,8 +472,10 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   - every other plan runs the gates first, then the plan's own refusal,
     then the landing, which reads the PR again just before its request;
   - `--dry-run` reports from the plan and lands nothing;
-  - how the landing ended is read from its end document, never from an
-    exit code, and every word of the report is release's own.
+  - how the landing ended is read from its end document, decoded strictly
+    as a caller of the command decodes it, never from an exit code or the
+    landing's in-memory end; an end that does not decode ends the run,
+    exit 1, nothing deleted; every word of the report is release's own.
 - **Exits by how the landing ended.**
   - `0` — merged, after the clean-up; or closed, nothing to merge.
   - `4` — queued, or unconfirmed: nothing deleted, a re-run completes it.

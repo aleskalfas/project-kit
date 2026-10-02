@@ -18,6 +18,7 @@ Release lands through the backbone's landing sequence (`pull_request_landing.lan
 from __future__ import annotations
 
 import ast
+import dataclasses
 import inspect
 import json
 import subprocess
@@ -1652,6 +1653,51 @@ def test_a_refused_merge_of_a_pr_auto_merge_holds_warns_that_it_is_still_armed(
         f"{HEAD[:7]}, the head that was checked. To keep release PR #42 from merging so, turn "
         "auto-merge off in its merge box, or run `gh pr merge 42 --disable-auto`."
     ) in capsys.readouterr().err
+
+
+def test_release_decides_on_the_decoded_end_document(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The plan and the landing each reach release as their end document
+    states them, decoded strictly — never as the landing's in-memory end."""
+    decoded: list[str] = []
+    decode = release.pull_request_landing.decode_end
+
+    def recording(document: object) -> dict[str, Any]:
+        end = decode(document)
+        decoded.append(end["ended"])
+        return end
+
+    monkeypatch.setattr(release.pull_request_landing, "decode_end", recording)
+    _fake_run(monkeypatch)
+    assert _land(monkeypatch, _Host(queue=False)).exit_code == 0
+    assert decoded == ["planned", "merged"]
+
+
+def test_release_acts_on_no_end_its_document_cannot_carry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A merged end whose reading names no head — the state release once
+    fell back on its own view's head for — is one the document cannot
+    carry: should a landing state it, the run ends, exit 1, and nothing is
+    deleted at a head nobody read."""
+    land = release.pull_request_landing.land
+
+    def merged_naming_no_head(*args: Any, **kwargs: Any) -> Any:
+        end = land(*args, **kwargs)
+        if kwargs["dry_run"] or end.reading is None:
+            return end
+        return dataclasses.replace(end, reading=dataclasses.replace(end.reading, head_oid=""))
+
+    monkeypatch.setattr(release.pull_request_landing, "land", merged_naming_no_head)
+    host = _Host(queue=False)
+    seen = _fake_run(monkeypatch)
+    with pytest.raises(click.ClickException) as exc:
+        _land(monkeypatch, host)
+    assert exc.value.exit_code == 1
+    assert exc.value.message.startswith(
+        "the landing of release PR #42 ended in a document that states no end (a landing that "
+        "ends merged cannot name `merged_head` None). Nothing was deleted."
+    )
+    assert host.deletions == [] and seen == []
 
 
 # --- no request no gate saw, after a plan that skipped the gates (#1258) ----------

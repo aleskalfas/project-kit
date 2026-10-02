@@ -1834,6 +1834,18 @@ class ReleaseMergeReport:
 EXIT_ACCEPTED = 4
 
 
+#: A landing's end as its end document states it, decoded strictly
+#: (`pull_request_landing.decode_end`): what release decides on, so it acts
+#: on no state the document cannot carry.
+_End = Mapping[str, Any]
+
+
+def _reading(end: _End) -> Mapping[str, Any]:
+    """The last reading the landing took, as its end document states it;
+    empty where it names none."""
+    return cast(Mapping[str, Any], end["reading"] or {})
+
+
 class ReleaseNotMerged(click.ClickException):
     """The release PR left the merge queue without merging, or its head moved
     after its checks were read: nothing merged, nothing deleted."""
@@ -1909,45 +1921,43 @@ def merge_release_pr(
     landing = _ReleaseLanding(pr, repo_root, clearance, wait_seconds, force, say)
     plan = landing.planned()
     number, base = pr.number, pr.base_ref or "the base branch"
-    if plan.ended in (pull_request_landing.END_MERGED, pull_request_landing.END_MERGED_ELSEWHERE):
-        reading = cast(pull_request_landing.Reading, plan.reading)
+    ended, would, reading = plan["ended"], plan["would"], _reading(plan)
+    if ended in (pull_request_landing.END_MERGED, pull_request_landing.END_MERGED_ELSEWHERE):
         headline = (
             f"PR #{number} is already merged"
             if pr.state == "MERGED"
-            else f"PR #{number} has merged ({reading.describe()})"
+            else f"PR #{number} has merged ({reading['description']})"
         )
         return _after_the_merge(
             pr,
             repo_root,
             headline,
-            merged_head=plan.merged_head or pr.head_oid,
+            merged_head=plan["merged_head"],
             clearance=clearance,
             dry_run=dry_run,
         )
-    if plan.ended == pull_request_landing.END_CLOSED:
+    if ended == pull_request_landing.END_CLOSED:
         return ReleaseMergeReport(f"PR #{number} is closed (not merged) — nothing to merge.")
-    if plan.ended == pull_request_landing.END_UNREADABLE and plan.reason_kind is None:
+    if ended == pull_request_landing.END_UNREADABLE and plan["reason_kind"] is None:
         raise click.ClickException(
-            f"cannot tell how {base} merges: {plan.reason}. This run asked nothing."
+            f"cannot tell how {base} merges: {plan['reason']}. This run asked nothing."
         )
-    if plan.would == pull_request_landing.WAIT:
+    if would == pull_request_landing.WAIT:
         _warn_of_the_queues_commit(pr, plan)
         if dry_run:
-            reading = cast(pull_request_landing.Reading, plan.reading)
             return ReleaseMergeReport(
                 f"[dry-run] PR #{number} is in the merge queue for {base} "
-                f"({reading.describe()}); would {_wait_phrase(wait_seconds)}, then delete branch "
-                f"{pr.head_ref!r}; nothing changed."
+                f"({reading['description']}); would {_wait_phrase(wait_seconds)}, then delete "
+                f"branch {pr.head_ref!r}; nothing changed."
             )
         say(f"  PR #{number} is already in the merge queue for {base}")
         landing.waiting("the queue to merge it")
         return landing.lands(gated=False)
-    if plan.would == pull_request_landing.DEQUEUE_REQUEST:
+    if would == pull_request_landing.DEQUEUE_REQUEST:
         if dry_run:
-            reading = cast(pull_request_landing.Reading, plan.reading)
             return ReleaseMergeReport(
                 f"[dry-run] PR #{number} is in the merge queue for {base} at head "
-                f"{reading.head_oid[:7]}, not at {pr.head_oid[:7]}, the head whose checks were "
+                f"{reading['head_oid'][:7]}, not at {pr.head_oid[:7]}, the head whose checks were "
                 "read; would take it out of the queue; nothing changed."
             )
         return landing.lands(gated=False)
@@ -1955,10 +1965,10 @@ def merge_release_pr(
     decision = evaluate_release_pr(pr)
     if decision.action != "merge":
         raise click.ClickException(decision.message)
-    if plan.ended != pull_request_landing.END_PLANNED:
+    if ended != pull_request_landing.END_PLANNED:
         return landing.reported(plan)
     if dry_run:
-        if plan.would == pull_request_landing.ENQUEUE_REQUEST:
+        if would == pull_request_landing.ENQUEUE_REQUEST:
             return ReleaseMergeReport(
                 f"[dry-run] would enqueue PR #{number} ({pr.title!r}) in the merge queue for "
                 f"{base}, {_wait_phrase(wait_seconds)}, then delete branch {pr.head_ref!r}; "
@@ -1968,11 +1978,10 @@ def merge_release_pr(
             f"[dry-run] would squash-merge PR #{number} ({pr.title!r}) and delete branch "
             f"{pr.head_ref!r}; nothing merged."
         )
-    reading = cast(pull_request_landing.Reading, plan.reading)
-    if plan.would == pull_request_landing.ENQUEUE_REQUEST and reading.dropped_head:
-        removal = reading.removal
-        when = f" at {removal.at}" if removal is not None else ""
-        why = f": {removal.reason}" if removal is not None and removal.reason else ""
+    if would == pull_request_landing.ENQUEUE_REQUEST and reading["dropped_head"]:
+        removal = reading["removal"]
+        when = f" at {removal['at']}" if removal is not None else ""
+        why = f": {removal['reason']}" if removal is not None and removal["reason"] else ""
         say(
             f"  the merge queue dropped PR #{number} at this head{when}{why}; enqueuing it again "
             "(--force)"
@@ -2014,39 +2023,61 @@ class _ReleaseLanding:
         self.readings = 0
         self.after_a_merge = False
 
-    def planned(self) -> pull_request_landing.Landing:
-        """The landing as a dry run: read and judged, nothing sent. A head
-        the landing refuses — release's view names it in another form than a
-        full commit id — ends the run, having asked nothing."""
+    def planned(self) -> _End:
+        """The landing as a dry run — read and judged, nothing sent — as its
+        end document states it. A head the landing refuses — release's view
+        names it in another form than a full commit id — ends the run,
+        having asked nothing."""
         number = self.pr.number
         try:
-            return self._land(dry_run=True)
+            planned = self._land(dry_run=True)
         except ValueError as exc:
             raise click.ClickException(
                 f"the landing refuses the head `gh pr view {number}` names for PR #{number}: "
                 f"{exc}. This run asked nothing."
             ) from None
+        return self._decoded(planned, then="This run asked nothing.")
 
     def lands(self, *, gated: bool = True) -> ReleaseMergeReport:
-        """The landing, and release's report of how it ended. A landing that
-        follows a plan that skipped the gates (`gated` false) allows no merge
-        and no enqueue (`no_request`): a PR that left the queue between the
-        plan and the landing gets no request no gate of this run saw."""
-        landed = self._land(dry_run=False, no_request=not gated)
+        """The landing, and release's report of how it ended, from its end
+        document. A landing that follows a plan that skipped the gates
+        (`gated` false) allows no merge and no enqueue (`no_request`): a PR
+        that left the queue between the plan and the landing gets no request
+        no gate of this run saw."""
         number = self.pr.number
-        for notice in landed.warnings:
-            if notice.reason_kind == pull_request_landing.NOT_READ:
+        end = self._decoded(
+            self._land(dry_run=False, no_request=not gated),
+            then=f"Nothing was deleted. Read where it stands with `pkit pull-request read "
+            f"{number}` before running {self.rerun} again.",
+        )
+        for notice in cast(list[Mapping[str, Any]], end["warnings"]):
+            if notice["reason_kind"] == pull_request_landing.NOT_READ:
                 _warn(
-                    f"could not confirm that PR #{number} merged: {notice.reason}. Reading it "
+                    f"could not confirm that PR #{number} merged: {notice['reason']}. Reading it "
                     "again."
                 )
-            elif notice.reason_kind == pull_request_landing.AUTO_MERGE_ARMED:
+            elif notice["reason_kind"] == pull_request_landing.AUTO_MERGE_ARMED:
                 _warn(
-                    f"{notice.reason}. To keep release PR #{number} from merging so, turn "
+                    f"{notice['reason']}. To keep release PR #{number} from merging so, turn "
                     f"auto-merge off in its merge box, or run `gh pr merge {number} "
                     "--disable-auto`."
                 )
-        return self.reported(landed)
+        return self.reported(end)
+
+    def _decoded(self, landed: pull_request_landing.Landing, *, then: str) -> _End:
+        """`landed`'s end as a reader of its document gets it — written, read
+        back and decoded strictly (`pull_request_landing.decode_end`) — so
+        release decides on nothing the document cannot carry. An end that
+        does not decode ends the run, saying `then`."""
+        try:
+            return pull_request_landing.decode_end(
+                json.loads(pull_request_landing.render_json(landed.as_json()))
+            )
+        except pull_request_landing.NotAnEnd as exc:
+            raise click.ClickException(
+                f"the landing of release PR #{self.pr.number} ended in a document that states no "
+                f"end ({exc}). {then}"
+            ) from None
 
     def _land(self, *, dry_run: bool, no_request: bool = False) -> pull_request_landing.Landing:
         return pull_request_landing.land(
@@ -2107,37 +2138,37 @@ class _ReleaseLanding:
 
     # ---- how it ended -------------------------------------------------------
 
-    def reported(self, landed: pull_request_landing.Landing) -> ReleaseMergeReport:
+    def reported(self, end: _End) -> ReleaseMergeReport:
         """Release's report of how the landing ended, in release's words,
-        from the end's facts: merged, the clean-up, exit 0; closed, nothing to
-        merge; queued or unconfirmed, :data:`EXIT_ACCEPTED`, nothing deleted.
-        Raises `click.ClickException` for a landing refused, unreadable or
-        failed, and :class:`ReleaseNotMerged` for one whose head moved, that
-        the queue dropped, or that gh merged and GitHub never reports
-        merged."""
+        from its end document's facts: merged, the clean-up, exit 0; closed,
+        nothing to merge; queued or unconfirmed, :data:`EXIT_ACCEPTED`,
+        nothing deleted. Raises `click.ClickException` for a landing refused,
+        unreadable or failed, and :class:`ReleaseNotMerged` for one whose
+        head moved, that the queue dropped, or that GitHub never reports
+        merged after a request was made."""
         pr, base, rerun = self.pr, self.base, self.rerun
         number = pr.number
-        ended = landed.ended
+        ended, reason, sent = end["ended"], end["reason"], end["sent"]
         if ended in (pull_request_landing.END_MERGED, pull_request_landing.END_MERGED_ELSEWHERE):
             through = (
-                " through the merge queue" if landed.path == pull_request_landing.PATH_QUEUE else ""
+                " through the merge queue" if end["path"] == pull_request_landing.PATH_QUEUE else ""
             )
             return _after_the_merge(
                 pr,
                 self.repo_root,
                 f"Merged release PR #{number} ({pr.url}){through}.",
-                merged_head=landed.merged_head or pr.head_oid,
+                merged_head=end["merged_head"],
                 clearance=self.clearance,
             )
         if ended == pull_request_landing.END_CLOSED:
             return ReleaseMergeReport(f"PR #{number} is closed (not merged) — nothing to merge.")
-        reading = landed.reading
-        described = reading.describe() if reading is not None else "not read"
+        reading = _reading(end)
+        described = reading.get("description") or "not read"
         if ended == pull_request_landing.END_QUEUED:
-            if landed.reason_kind == pull_request_landing.NOT_READ:
+            if end["reason_kind"] == pull_request_landing.NOT_READ:
                 return ReleaseMergeReport(
                     f"[queued] release PR #{number} was handed to the merge queue for {base}, and "
-                    f"whether it has merged since could not be read: {landed.reason}. Its head "
+                    f"whether it has merged since could not be read: {reason}. Its head "
                     f"branch is kept; run {rerun} again once it has merged to delete it.",
                     EXIT_ACCEPTED,
                 )
@@ -2148,48 +2179,73 @@ class _ReleaseLanding:
                 EXIT_ACCEPTED,
             )
         if ended == pull_request_landing.END_UNCONFIRMED:
-            if landed.reason_kind == pull_request_landing.UNANSWERED:
-                return _unconfirmed(pr, landed.reason or "")
+            if end["reason_kind"] == pull_request_landing.UNANSWERED:
+                return _unconfirmed(pr, reason)
+            if sent == pull_request_landing.MERGE_REQUEST:
+                return ReleaseMergeReport(
+                    f"[unconfirmed] gh accepted the merge of release PR #{number} into {base}, "
+                    f"but GitHub could not be read to confirm that it merged: {reason}. Nothing "
+                    f"was deleted. Run {rerun} again once GitHub answers: it deletes the head "
+                    "branch once the PR has merged.",
+                    EXIT_ACCEPTED,
+                )
             return ReleaseMergeReport(
-                f"[unconfirmed] gh accepted the merge of release PR #{number} into {base}, but "
-                f"GitHub could not be read to confirm that it merged: {landed.reason}. Nothing "
-                f"was deleted. Run {rerun} again once GitHub answers: it deletes the head branch "
-                "once the PR has merged.",
+                f"[unconfirmed] whether release PR #{number} has merged into {base}, and at which "
+                f"head, is not known: {reason}. Nothing was deleted. Run {rerun} again once "
+                "GitHub answers: it deletes the head branch once the PR has merged.",
                 EXIT_ACCEPTED,
             )
         if ended == pull_request_landing.END_FAILED:
-            if landed.reason_kind == pull_request_landing.NOT_MADE:
-                raise _not_seen_made(pr, landed.reason or "")
+            if end["reason_kind"] == pull_request_landing.NOT_MADE:
+                raise _not_seen_made(pr, reason)
             if self.request == pull_request_landing.ENQUEUE_REQUEST:
                 raise click.ClickException(
-                    f"`gh pr merge {number} --auto` failed: {landed.reason}. Nothing was merged."
+                    f"`gh pr merge {number} --auto` failed: {reason}. Nothing was merged."
                 )
-            raise click.ClickException(f"`gh pr merge {number}` failed: {landed.reason}")
+            raise click.ClickException(f"`gh pr merge {number}` failed: {reason}")
         if ended == pull_request_landing.END_HEAD_MOVED:
-            raise _head_moved(pr, landed, rerun)
+            raise _head_moved(pr, end, rerun)
         if ended == pull_request_landing.END_DROPPED:
-            removal = reading.removal if reading is not None else None
-            why = (
-                f" GitHub says: {removal.reason}." if removal is not None and removal.reason else ""
-            )
+            removal = reading.get("removal")
+            why = f" GitHub says: {removal['reason']}." if removal and removal["reason"] else ""
             raise ReleaseNotMerged(
                 f"release PR #{number} left the merge queue for {base} without merging, as far as "
                 f"the queue reports ({described}).{why} Nothing was deleted. Fix what made the "
                 f"queue drop it, then run {rerun} again."
             )
         if ended == pull_request_landing.END_NOT_MERGED:
-            closed = reading is not None and reading.pr_state == "CLOSED"
+            closed = reading.get("pr_state") == "CLOSED"
             state = "closed without merging" if closed else "still open"
-            raise ReleaseNotMerged(
-                f"gh accepted the merge of release PR #{number} into {base}, but GitHub reports "
-                f"it {state}. Nothing was deleted; look at the PR, then run {rerun} again."
-            )
+            raise ReleaseNotMerged(f"{_not_merged(number, base, sent, state)} {rerun} again.")
         if ended in (pull_request_landing.END_REFUSED, pull_request_landing.END_UNREADABLE):
-            raise click.ClickException(_landing_refusal(pr, landed))
+            raise click.ClickException(_landing_refusal(pr, end))
         raise click.ClickException(
             f"the landing of release PR #{number} ended {ended!r}, which this command does not "
             f"know. Read where it stands with `pkit pull-request read {number}`."
         )
+
+
+def _not_merged(number: int, base: str, sent: str | None, state: str) -> str:
+    """Release PR `number` out of the queue on two readings with no queue
+    seen (the landing's not-merged): what this run sent — a direct merge;
+    an enqueue, or nothing, before `base` lost its queue — and how GitHub
+    reports it, `state`; up to the re-run it names."""
+    if sent == pull_request_landing.MERGE_REQUEST:
+        asked = (
+            f"gh accepted the merge of release PR #{number} into {base}, but GitHub reports "
+            f"it {state}"
+        )
+    elif sent == pull_request_landing.ENQUEUE_REQUEST:
+        asked = (
+            f"gh accepted the enqueue of release PR #{number} into {base}, and GitHub now "
+            f"reports it {state}, with no merge queue on {base}"
+        )
+    else:
+        asked = (
+            f"release PR #{number} was waited for in the merge queue for {base}, and GitHub "
+            f"now reports it {state}, with no merge queue on {base}"
+        )
+    return f"{asked}. Nothing was deleted; look at the PR, then run"
 
 
 def _unconfirmed(pr: ReleasePrState, reason: str) -> ReleaseMergeReport:
@@ -2228,46 +2284,43 @@ def _not_seen_made(pr: ReleasePrState, reason: str) -> click.ClickException:
     )
 
 
-def _head_moved(
-    pr: ReleasePrState, landed: pull_request_landing.Landing, rerun: str
-) -> ReleaseNotMerged:
+def _head_moved(pr: ReleasePrState, end: _End, rerun: str) -> ReleaseNotMerged:
     """The release PR's head moved after its checks were read: what taking it
     out of the merge queue came to, from the landing's `dequeue`. Nothing
     was deleted; exit 3."""
     number = pr.number
-    reading = cast(pull_request_landing.Reading, landed.reading)
     moved = (
         f"release PR #{number}'s head moved from {pr.head_oid[:7]} to "
-        f"{reading.head_oid[:7]} after its checks were read"
+        f"{_reading(end)['head_oid'][:7]} after its checks were read"
     )
-    out = landed.dequeue
+    out = cast(Mapping[str, Any] | None, end["dequeue"])
     if out is None:
         return ReleaseNotMerged(
             f"{moved}; it is in no merge queue, and nothing was merged or deleted. Run {rerun} "
             "again once the new head is green."
         )
-    if out.accepted:
+    if out["accepted"]:
         return ReleaseNotMerged(
             f"{moved}; it was taken out of the merge queue, so nothing unchecked merges. "
             f"Nothing was deleted; run {rerun} again once the new head is green."
         )
-    if out.accepted is None or out.reason_kind == pull_request_landing.NOT_READ:
+    if out["accepted"] is None or out["reason_kind"] == pull_request_landing.NOT_READ:
         return ReleaseNotMerged(
             f"{moved}, and whether taking it out of the merge queue worked is not known "
-            f"({out.reason}): it may still merge commits nothing checked. Read where it "
+            f"({out['reason']}): it may still merge commits nothing checked. Read where it "
             f"stands with `pkit pull-request read {number}`; if it is still queued, take it "
             f"out yourself — in the PR's merge box, or `gh pr merge {number} --disable-auto` "
             "while it waits to enter. Nothing was deleted."
         )
-    if out.reason_kind == pull_request_landing.HAS_MERGED:
+    if out["reason_kind"] == pull_request_landing.HAS_MERGED:
         return ReleaseNotMerged(
             f"{moved}, and it merged before it could be taken out of the merge queue: "
-            f"{out.reason}. The commits pushed after its checks were read may be in that "
+            f"{out['reason']}. The commits pushed after its checks were read may be in that "
             f"merge; look at it. Nothing was deleted; run {rerun} again to delete the head "
             "branch now the PR has merged."
         )
     return ReleaseNotMerged(
-        f"{moved}, and taking it out of the merge queue failed ({out.reason}): it may "
+        f"{moved}, and taking it out of the merge queue failed ({out['reason']}): it may "
         "still merge commits nothing checked. Take it out yourself — in the PR's merge "
         f"box, or `gh pr merge {number} --disable-auto` while it waits to enter. Nothing "
         "was deleted."
@@ -2295,7 +2348,7 @@ def release_pr_refusal(pr: ReleasePrState) -> ReleaseMergeDecision | None:
     return None
 
 
-def _landing_refusal(pr: ReleasePrState, landed: pull_request_landing.Landing) -> str:
+def _landing_refusal(pr: ReleasePrState, end: _End) -> str:
     """Why the release PR's landing was refused, or could not read what it
     needed, in release's words, from the landing's facts — the queue's commit
     shape and the head it dropped, as the landing judged them.
@@ -2309,11 +2362,11 @@ def _landing_refusal(pr: ReleasePrState, landed: pull_request_landing.Landing) -
     make, or a maintainer may have taken it out on purpose — the rule
     project-management's merge verbs keep."""
     base = pr.base_ref or "the base branch"
-    kind = landed.reason_kind
-    if landed.ended == pull_request_landing.END_UNREADABLE and kind is None:
-        return f"cannot tell how {base} merges: {landed.reason}. This run asked nothing."
+    kind, reading = end["reason_kind"], _reading(end)
+    if end["ended"] == pull_request_landing.END_UNREADABLE and kind is None:
+        return f"cannot tell how {base} merges: {end['reason']}. This run asked nothing."
     if kind == pull_request_landing.REQUEST_NOT_ALLOWED:
-        described = landed.reading.describe() if landed.reading is not None else "not read"
+        described = reading.get("description") or "not read"
         return (
             f"release PR #{pr.number} left the merge queue for {base} between this run's plan "
             f"and its landing (it now reads {described}). The plan found it queued and skipped "
@@ -2322,23 +2375,22 @@ def _landing_refusal(pr: ReleasePrState, landed: pull_request_landing.Landing) -
             "and runs its gates before it merges or enqueues anything."
         )
     if kind in (pull_request_landing.QUEUE_NOT_SQUASH, pull_request_landing.SQUASH_DEFAULTS):
-        problem, remedy = _squash_commit_problem(landed, base)
+        problem, remedy = _squash_commit_problem(end, base)
         then = f"{remedy}, then re-run. " if remedy else ""
         return f"{problem}. {then}Nothing was enqueued."
-    reading = landed.reading
-    removal = reading.removal if reading is not None else None
-    if kind == pull_request_landing.DROPPED_HEAD and reading is not None and removal is not None:
-        why = f"GitHub says: {removal.reason}" if removal.reason else "GitHub gives no reason"
+    removal = reading.get("removal")
+    if kind == pull_request_landing.DROPPED_HEAD and removal is not None:
+        why = f"GitHub says: {removal['reason']}" if removal["reason"] else "GitHub gives no reason"
         return (
             f"the merge queue on {base} dropped the PR at its current head "
-            f"{reading.head_oid[:7]} at {removal.at} ({why}); the same head is not enqueued "
+            f"{reading['head_oid'][:7]} at {removal['at']} ({why}); the same head is not enqueued "
             "again unchanged. Fix what made the queue drop it and push, then re-run; or pass "
             "--force to enqueue this head again. Nothing was enqueued."
         )
-    return f"{landed.reason}. Nothing was merged."
+    return f"{end['reason']}. Nothing was merged."
 
 
-def _squash_commit_problem(landed: pull_request_landing.Landing, base: str) -> tuple[str, str]:
+def _squash_commit_problem(end: _End, base: str) -> tuple[str, str]:
     """Why the squash commit `base`'s queue makes would not be the release's,
     and what fixes it, from the shape the landing judged; ("", "") when it
     would be, or none was judged.
@@ -2347,27 +2399,26 @@ def _squash_commit_problem(landed: pull_request_landing.Landing, base: str) -> t
     the queue must squash and the defaults must be the PR title and body;
     defaults that cannot be read are a problem too, with no fix to name but
     reading them again."""
-    shape = landed.shape
+    shape = cast(Mapping[str, Any] | None, end["shape"])
     if shape is None:
         return "", ""
-    if not shape.squashes:
-        reading = landed.reading
-        method = (reading.merge_method if reading is not None else "") or "an unreported method"
+    if not shape["squashes"]:
+        method = _reading(end).get("merge_method") or "an unreported method"
         return (
             f"the merge queue on {base} merges by {method}, and a release lands as one "
             "squash commit whose subject is the PR title",
             "Set the queue's merge method to squash in the repository's branch rules",
         )
-    if shape.unreadable is not None:
+    if shape["unreadable"] is not None:
         return (
             f"the repository's squash-commit defaults, which the merge queue on {base} "
-            f"composes the squash commit from, cannot be read: {shape.unreadable}",
+            f"composes the squash commit from, cannot be read: {shape['unreadable']}",
             "",
         )
-    if shape.conforms is False:
+    if shape["conforms"] is False:
         return (
             f"the merge queue on {base} composes the squash commit from the repository's "
-            f"defaults, title {shape.title} and message {shape.message}, and a release lands "
+            f"defaults, title {shape['title']} and message {shape['message']}, and a release lands "
             "under its PR title over its PR body",
             "Set them with `gh api -X PATCH repos/{owner}/{repo} -f "
             "squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=PR_BODY`",
@@ -2375,7 +2426,7 @@ def _squash_commit_problem(landed: pull_request_landing.Landing, base: str) -> t
     return "", ""
 
 
-def _warn_of_the_queues_commit(pr: ReleasePrState, plan: pull_request_landing.Landing) -> None:
+def _warn_of_the_queues_commit(pr: ReleasePrState, plan: _End) -> None:
     """A release PR already in a queue that would not make the release's
     commit lands as the queue composes it: said, with how to land it as a
     release lands."""
