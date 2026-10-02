@@ -1,21 +1,25 @@
 """project-kit's tracking issue for the whole-repository friction check (#1266).
 
-`.github/workflows/friction-report.yml` runs the check daily and after every
-push to `main`, with the full history; `scripts/friction_report_body.py` renders
-its findings; `scripts/friction_tracking_issue.py` keeps one GitHub issue in
-step with them. A schedule cannot be run from here, so:
+`.github/workflows/friction-report.yml` runs the check on `main` with the full
+history, after every push and once a day; `scripts/friction_report_body.py`
+renders its findings; `scripts/friction_tracking_issue.py` keeps one GitHub
+issue in step with them (ADR-055 point 5). A schedule cannot be run from here,
+so:
 
 - the **publisher** runs as the workflow runs it — a subprocess, `gh` found on
   the path — against a fake `gh` that keeps issues and labels in a file and logs
-  every call, over publications the real renderer made: findings open the issue,
-  the same findings change nothing, none close it, their return reopens it; an
-  issue that quotes the marker is never taken for it; and a run that cannot read
-  its publication or that `gh` refuses fails saying why;
+  every call, over publications the real renderer made. The issue is open
+  exactly while a finding needs an answer; the same findings change nothing; it
+  is the token's own issue with the marker or the label, whichever sign a hand
+  removed put back; a person's issue is never taken for it; a second one, a
+  listing that may be incomplete, a publication it cannot read or a call `gh`
+  refuses fails the run, saying why;
 - one run goes **end to end** over a real history: the real check, the real
   renderer, the publisher;
-- the **workflow** is read as YAML: its triggers, its least privilege, the full
-  history it fetches and checks before the check runs, nothing it fails on but
-  the check or the publication, and no finding reaching a shell line.
+- the **workflow** is read as YAML: its triggers, that only `main` publishes,
+  its least privilege, the full history it fetches and checks before the check
+  runs, nothing it fails on but the check or the publication, and no finding
+  reaching a shell line.
 """
 
 from __future__ import annotations
@@ -29,6 +33,7 @@ from typing import Any
 
 import pytest
 from ruamel.yaml import YAML
+from scripts import friction_tracking_issue as publisher
 
 from project_kit import friction_repository as fr
 from tests.adopter_repo import MakeAdopterRepo
@@ -39,13 +44,20 @@ PUBLISHER = REPO / "scripts" / "friction_tracking_issue.py"
 RENDERER = REPO / "scripts" / "friction_report_body.py"
 WORKFLOW = REPO / ".github" / "workflows" / "friction-report.yml"
 
-MARKER = "<!-- pkit-friction-report -->"
-LABEL = "friction-report"
+MARKER = publisher.MARKER
+NOTICE = publisher.NOTICE
+LABEL = publisher.LABEL
 BOT = "app/github-actions"
 
 #: A `gh` that keeps issues and labels in the JSON file `FAKE_GH_STATE` names,
 #: answers the calls the publisher makes as `gh` does, and logs every call.
-#: `FAKE_GH_FAIL` names one call (`issue edit`, say) that fails.
+#: `FAKE_GH_FAIL` names one call (`issue edit`, say) that fails. The listing is
+#: `gh`'s own by author: it finds the token's issues under the name
+#: `github-actions[bot]`, gives their author as `app/github-actions`, newest
+#: first, no more than `--limit`; a label filter, which would go through the
+#: search index, is refused. With `FAKE_GH_LISTS_EVERY_AUTHOR` it ignores the
+#: author it is asked for, so the publisher's own reading of the author is what
+#: keeps a person's issue out.
 FAKE_GH = r"""
 import json, os, sys
 
@@ -72,18 +84,26 @@ def issue(number):
     return next(i for i in state["issues"] if i["number"] == int(number))
 
 
+def field(i, name):
+    return [{"name": label} for label in i["labels"]] if name == "labels" else i[name]
+
+
 if " ".join(args[:2]) == os.environ.get("FAKE_GH_FAIL"):
     done(code=1, err="HTTP 502: Bad Gateway\n")
 command = args[:2]
 if command == ["issue", "list"]:
-    label, author, fields = opt("--label"), opt("--author"), opt("--json").split(",")
+    if "--label" in args or "--search" in args:
+        done(code=2, err="fake gh: a label or search filter goes through the search index\n")
+    listed_as = {"github-actions[bot]": "app/github-actions"}.get(opt("--author"), opt("--author"))
+    every_author = os.environ.get("FAKE_GH_LISTS_EVERY_AUTHOR")
+    states = {"all": ("OPEN", "CLOSED"), "closed": ("CLOSED",)}.get(opt("--state"), ("OPEN",))
+    fields = opt("--json").split(",")
     listed = [
-        {field: i[field] for field in fields}
+        {name: field(i, name) for name in fields}
         for i in sorted(state["issues"], key=lambda i: -i["number"])
-        if (label is None or label in i["labels"])
-        and (author is None or i["author"]["login"] == author)
+        if (every_author or i["author"]["login"] == listed_as) and i["state"] in states
     ]
-    done(json.dumps(listed))
+    done(json.dumps(listed[: int(opt("--limit") or 30)]))
 if command == ["issue", "create"]:
     label = opt("--label")
     if label not in state["labels"]:
@@ -98,8 +118,14 @@ if command == ["issue", "create"]:
     )
     done(f"https://github.com/owner/repo/issues/{number}\n")
 if command == ["issue", "edit"]:
-    with open(opt("--body-file"), encoding="utf-8") as f:
-        issue(args[2])["body"] = f.read()
+    if opt("--body-file"):
+        with open(opt("--body-file"), encoding="utf-8") as f:
+            issue(args[2])["body"] = f.read()
+    label = opt("--add-label")
+    if label:
+        if label not in state["labels"]:
+            done(code=1, err=f"could not add label: '{label}' not found\n")
+        issue(args[2])["labels"].append(label)
     done()
 if command == ["issue", "close"]:
     issue(args[2])["state"] = "CLOSED"
@@ -135,7 +161,7 @@ class FakeGh:
     def save(self, state: dict[str, Any]) -> None:
         self.state_file.write_text(json.dumps(state), encoding="utf-8")
 
-    def seed(self, body: str, *, labels: list[str], author: str, state: str = "OPEN") -> int:
+    def seed(self, body: str, *, labels: list[str], author: str = BOT, state: str = "OPEN") -> int:
         current = self.load()
         number = current["next"]
         current["next"] += 1
@@ -149,11 +175,12 @@ class FakeGh:
                 "author": {"login": author, "is_bot": author.startswith("app/")},
             }
         )
+        current["labels"] = sorted({*current["labels"], *labels})
         self.save(current)
         return number
 
-    def issues(self) -> list[dict[str, Any]]:
-        return self.load()["issues"]
+    def issues(self) -> dict[int, dict[str, Any]]:
+        return {issue["number"]: issue for issue in self.load()["issues"]}
 
     def writes(self) -> list[list[str]]:
         """Every call that changes something: all but the reading of the issue list."""
@@ -192,11 +219,11 @@ def _document(findings: list[dict[str, Any]], unanchored: tuple[str, ...] = ()) 
     }
 
 
-def _stale(location: str, day: str = "2026-09-30") -> dict[str, Any]:
+def _finding(kind: str, location: str, message: str, day: str) -> dict[str, Any]:
     return {
         "artefact": location,
         "location": location,
-        "kind": "stale",
+        "kind": kind,
         "anchor": {"kind": "path", "value": "src/cli/**"},
         "origin": {
             "commit": "a" * 40,
@@ -204,8 +231,17 @@ def _stale(location: str, day: str = "2026-09-30") -> dict[str, Any]:
             "date": f"{day}T09:00:00+00:00",
             "change": "x",
         },
-        "message": f'changed after its revalidation point: first in aaaaaaa "x" (Alice, {day})',
+        "message": message,
     }
+
+
+def _stale(location: str, day: str = "2026-09-30") -> dict[str, Any]:
+    message = f'changed after its revalidation point: first in aaaaaaa "x" (Alice, {day})'
+    return _finding("stale", location, message, day)
+
+
+def _deferred(location: str, day: str = "2026-09-30") -> dict[str, Any]:
+    return _finding("deferred", location, "deferred: after the engine settles", day)
 
 
 def _render(directory: Path, document: dict[str, Any]) -> Path:
@@ -224,10 +260,17 @@ def _render(directory: Path, document: dict[str, Any]) -> Path:
     return publication
 
 
-def _publish(gh: FakeGh, publication: Path) -> subprocess.CompletedProcess[str]:
-    """The publisher as the workflow runs it, with the fake `gh` first on the path."""
-    env = {**os.environ, "PATH": f"{gh.bin}{os.pathsep}{os.environ['PATH']}"}
-    env["FAKE_GH_STATE"] = str(gh.state_file)
+def _publish(gh: FakeGh, publication: Path, **environment: str) -> subprocess.CompletedProcess[str]:
+    """The publisher as the workflow runs it, with the fake `gh` first on the path and
+    no step summary to write to — the suite's own, when it runs in a workflow — unless
+    `environment` names one."""
+    env = {
+        **os.environ,
+        "PATH": f"{gh.bin}{os.pathsep}{os.environ['PATH']}",
+        "FAKE_GH_STATE": str(gh.state_file),
+        "GITHUB_STEP_SUMMARY": "",
+        **environment,
+    }
     return subprocess.run(
         [sys.executable, str(PUBLISHER), str(publication)],
         cwd=gh.directory,
@@ -244,16 +287,23 @@ def _run(gh: FakeGh, document: dict[str, Any]) -> subprocess.CompletedProcess[st
     return proc
 
 
+def _body(gh: FakeGh) -> str:
+    """The body the last rendering publishes: the marker, the notice, the rendering."""
+    rendered = json.loads((gh.directory / "friction-report.json").read_text(encoding="utf-8"))
+    return f"{MARKER}\n{NOTICE}\n\n{rendered['body']}"
+
+
 # --- the issue's life ----------------------------------------------------------------------
 
 
 def test_findings_open_one_labelled_issue_whose_body_is_the_rendering(gh: FakeGh) -> None:
     proc = _run(gh, _document([_stale("docs/guide.md")], unanchored=("docs/plain.md",)))
     assert "opened the tracking issue: https://github.com/owner/repo/issues/1" in proc.stdout
-    (issue,) = gh.issues()
+    (issue,) = gh.issues().values()
     assert issue["state"] == "OPEN" and issue["labels"] == [LABEL]
-    rendered = json.loads((gh.directory / "friction-report.json").read_text(encoding="utf-8"))
-    assert issue["body"] == f"{MARKER}\n{rendered['body']}"
+    assert issue["body"] == _body(gh)
+    assert issue["body"].splitlines()[:2] == [MARKER, NOTICE]
+    assert "rewrites this body, and edits to it are lost" in NOTICE
     assert "- `docs/guide.md` · `path:src/cli/**` · since `2026-09-30`" in issue["body"]
     assert "- `docs/plain.md`" in issue["body"]
     assert gh.load()["labels"] == [LABEL]
@@ -274,7 +324,7 @@ def test_changed_findings_rewrite_the_body_in_place(gh: FakeGh) -> None:
     _run(gh, _document([_stale("docs/guide.md")]))
     gh.forget_calls()
     _run(gh, _document([_stale("docs/guide.md"), _stale("docs/notes.md")]))
-    (issue,) = gh.issues()
+    (issue,) = gh.issues().values()
     assert "`docs/notes.md`" in issue["body"] and issue["state"] == "OPEN"
     assert [call[:2] for call in gh.writes()] == [["issue", "edit"]]
 
@@ -284,9 +334,9 @@ def test_nothing_to_answer_closes_it_saying_so_and_findings_reopen_it(gh: FakeGh
 
     gh.forget_calls()
     closing = _run(gh, _document([], unanchored=("docs/plain.md",)))
-    (issue,) = gh.issues()
+    (issue,) = gh.issues().values()
     assert issue["state"] == "CLOSED"
-    assert issue["body"].startswith(f"{MARKER}\n**Nothing needs an answer.**")
+    assert "\n\n**Nothing needs an answer.**" in issue["body"]
     assert "- `docs/plain.md`" in issue["body"]  # the measures stay in it
     assert [call[:2] for call in gh.writes()] == [["issue", "edit"], ["issue", "close"]]
     assert "closed it: nothing needs an answer" in closing.stdout
@@ -297,7 +347,7 @@ def test_nothing_to_answer_closes_it_saying_so_and_findings_reopen_it(gh: FakeGh
 
     gh.forget_calls()
     reopening = _run(gh, _document([_stale("docs/notes.md")]))
-    (issue,) = gh.issues()
+    (issue,) = gh.issues().values()
     assert issue["state"] == "OPEN" and "`docs/notes.md`" in issue["body"]
     assert [call[:2] for call in gh.writes()] == [["issue", "edit"], ["issue", "reopen"]]
     assert "reopened it" in reopening.stdout
@@ -305,27 +355,26 @@ def test_nothing_to_answer_closes_it_saying_so_and_findings_reopen_it(gh: FakeGh
 
 def test_nothing_to_answer_and_no_issue_opens_none(gh: FakeGh) -> None:
     proc = _run(gh, _document([], unanchored=("docs/plain.md",)))
-    assert gh.issues() == [] and gh.writes() == []
+    assert gh.issues() == {} and gh.writes() == []
     assert "nothing needs an answer and there is no tracking issue" in proc.stdout
 
 
-@pytest.mark.parametrize(
-    ("labels", "author", "first_line"),
-    [
-        ([LABEL], "someone", MARKER),  # a person's issue quoting the marker, labelled
-        ([], BOT, MARKER),  # the automation's, without its label
-        ([LABEL], BOT, "Quoting it: <!-- pkit-friction-report -->"),  # marker not its first line
-    ],
-)
-def test_an_issue_that_only_quotes_the_marker_is_never_taken_for_it(
-    gh: FakeGh, labels: list[str], author: str, first_line: str
-) -> None:
-    other = gh.seed(f"{first_line}\nSomething else.", labels=labels, author=author)
-    _run(gh, _document([_stale("docs/guide.md")]))
-    issues = {issue["number"]: issue for issue in gh.issues()}
-    assert issues[other]["body"] == f"{first_line}\nSomething else."
-    assert issues[other]["state"] == "OPEN"
-    assert len(issues) == 2  # its own was opened beside it
+def test_a_deferral_opens_no_issue_and_holds_none_open(gh: FakeGh) -> None:
+    """A deferral is an answer: listed in the body, and never what the issue is open for."""
+    proc = _run(gh, _document([_deferred("docs/notes.md")]))
+    assert gh.issues() == {} and gh.writes() == []
+    assert "nothing needs an answer and there is no tracking issue" in proc.stdout
+
+    _run(gh, _document([_stale("docs/guide.md"), _deferred("docs/notes.md")]))
+    (issue,) = gh.issues().values()
+    assert issue["state"] == "OPEN"
+
+    _run(gh, _document([_deferred("docs/guide.md"), _deferred("docs/notes.md")]))
+    (issue,) = gh.issues().values()
+    assert issue["state"] == "CLOSED"
+    assert "**Nothing needs an answer.**" in issue["body"]
+    deferred = issue["body"].split("### Deferred", 1)[1].split("###", 1)[0]
+    assert "- `docs/guide.md`" in deferred and "- `docs/notes.md`" in deferred
 
 
 def test_an_existing_label_is_kept_as_it_is(gh: FakeGh) -> None:
@@ -333,22 +382,165 @@ def test_an_existing_label_is_kept_as_it_is(gh: FakeGh) -> None:
     state["labels"] = [LABEL]
     gh.save(state)
     _run(gh, _document([_stale("docs/guide.md")]))
-    assert gh.issues()[0]["labels"] == [LABEL]
+    (issue,) = gh.issues().values()
+    assert issue["labels"] == [LABEL]
+
+
+# --- which issue it is ---------------------------------------------------------------------
+
+
+def test_the_listing_is_by_author_alone_and_reads_every_state(gh: FakeGh) -> None:
+    """No label filter: that listing goes through the search index, which lags a write."""
+    _run(gh, _document([_stale("docs/guide.md")]))
+    (listing,) = [call for call in gh.load()["calls"] if call[:2] == ["issue", "list"]]
+    assert listing[2:] == [
+        "--author",
+        "github-actions[bot]",
+        "--state",
+        "all",
+        "--limit",
+        "1000",
+        "--json",
+        "number,state,body,labels,author",
+    ]
+
+
+def test_a_note_above_the_marker_does_not_make_a_second_issue(gh: FakeGh) -> None:
+    document = _document([_stale("docs/guide.md")])
+    _run(gh, document)
+    state = gh.load()
+    state["issues"][0]["body"] = "A note someone wrote on top.\n\n" + state["issues"][0]["body"]
+    gh.save(state)
+
+    gh.forget_calls()
+    proc = _run(gh, document)
+    (issue,) = gh.issues().values()  # the same one: none opened beside it
+    assert issue["body"] == _body(gh)  # rewritten, the note gone as the notice says
+    assert [call[:2] for call in gh.writes()] == [["issue", "edit"]]
+    assert "tracking issue #1: rewrote its body" in proc.stdout
+
+
+def test_a_removed_label_is_put_back(gh: FakeGh) -> None:
+    document = _document([_stale("docs/guide.md")])
+    _run(gh, document)
+    state = gh.load()
+    state["issues"][0]["labels"] = []
+    gh.save(state)
+
+    gh.forget_calls()
+    proc = _run(gh, document)
+    (issue,) = gh.issues().values()
+    assert issue["labels"] == [LABEL] and issue["body"] == _body(gh)
+    assert gh.writes()[-1] == ["issue", "edit", "1", "--add-label", LABEL]
+    assert "tracking issue #1: put its label back" in proc.stdout
+
+
+def test_a_removed_marker_is_put_back(gh: FakeGh) -> None:
+    document = _document([_stale("docs/guide.md")])
+    _run(gh, document)
+    state = gh.load()
+    state["issues"][0]["body"] = "Someone replaced the whole body."
+    gh.save(state)
+
+    gh.forget_calls()
+    proc = _run(gh, document)
+    (issue,) = gh.issues().values()
+    assert issue["body"] == _body(gh) and issue["body"].startswith(f"{MARKER}\n")
+    assert "tracking issue #1: rewrote its body" in proc.stdout
+
+
+@pytest.mark.parametrize(
+    ("labels", "author", "body"),
+    [
+        ([LABEL], "someone", f"{MARKER}\nA person's issue with both signs."),
+        ([], BOT, "The token's own issue, with neither sign."),
+    ],
+)
+def test_an_issue_that_is_not_the_tracking_issue_is_never_touched(
+    gh: FakeGh, labels: list[str], author: str, body: str
+) -> None:
+    other = gh.seed(body, labels=labels, author=author)
+    _run(gh, _document([_stale("docs/guide.md")]))
+    issues = gh.issues()
+    assert issues[other]["body"] == body and issues[other]["state"] == "OPEN"
+    assert len(issues) == 2  # its own was opened beside it
+
+
+def test_another_authors_issue_the_listing_returns_is_not_taken(gh: FakeGh) -> None:
+    """The author is read here too, not left to the listing's filter."""
+    body = f"{MARKER}\nA person's issue with both signs."
+    other = gh.seed(body, labels=[LABEL], author="someone")
+    proc = _publish(
+        gh,
+        _render(gh.directory, _document([_stale("docs/guide.md")])),
+        FAKE_GH_LISTS_EVERY_AUTHOR="1",
+    )
+    assert proc.returncode == 0, proc.stderr
+    issues = gh.issues()
+    assert issues[other]["body"] == body
+    assert len(issues) == 2 and "opened the tracking issue" in proc.stdout
+
+
+def test_two_tracking_issues_fail_the_run_naming_both_with_the_oldest_kept_in_step(
+    gh: FakeGh,
+) -> None:
+    oldest = gh.seed(f"{MARKER}\nAn earlier body.", labels=[LABEL], state="CLOSED")
+    newer_body = "A second one, found by its label."
+    newer = gh.seed(newer_body, labels=[LABEL])
+    summary = gh.directory / "summary.md"
+
+    proc = _publish(
+        gh,
+        _render(gh.directory, _document([_stale("docs/guide.md")])),
+        GITHUB_STEP_SUMMARY=str(summary),
+    )
+    assert proc.returncode == 1
+    issues = gh.issues()
+    assert issues[oldest]["body"] == _body(gh) and issues[oldest]["state"] == "OPEN"
+    assert issues[newer]["body"] == newer_body and issues[newer]["state"] == "OPEN"
+    assert len(issues) == 2  # none opened, none closed
+    for said in (proc.stderr, summary.read_text(encoding="utf-8")):
+        assert f"there is more than one tracking issue: #{oldest}, #{newer}." in said
+        assert f"#{oldest}, the oldest, was kept in step" in said
+        assert f"Close #{newer} and remove the marker line `{MARKER}`" in said
+        assert f"the `{LABEL}` label" in said
+    assert "more than one" not in issues[oldest]["body"]  # never in the issue
+
+
+def test_a_listing_at_its_limit_fails_the_run_and_opens_nothing(gh: FakeGh) -> None:
+    """As many issues as were asked for: one more may exist, the tracking issue among them."""
+    state = gh.load()
+    state["issues"] = [
+        {
+            "number": number,
+            "title": "another of the token's issues",
+            "body": "",
+            "state": "CLOSED",
+            "labels": [],
+            "author": {"login": BOT, "is_bot": True},
+        }
+        for number in range(1, publisher.LISTING_LIMIT + 1)
+    ]
+    state["next"] = publisher.LISTING_LIMIT + 1
+    gh.save(state)
+
+    proc = _publish(gh, _render(gh.directory, _document([_stale("docs/guide.md")])))
+    assert proc.returncode == 1
+    assert "the listing may be incomplete" in proc.stderr
+    assert gh.writes() == [] and len(gh.issues()) == publisher.LISTING_LIMIT
 
 
 # --- when it fails -------------------------------------------------------------------------
 
 
-def test_a_refused_call_fails_the_run_saying_why(
-    gh: FakeGh, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_a_refused_call_fails_the_run_saying_why(gh: FakeGh) -> None:
     _run(gh, _document([_stale("docs/guide.md")]))
     publication = _render(gh.directory, _document([]))
-    monkeypatch.setenv("FAKE_GH_FAIL", "issue edit")
-    proc = _publish(gh, publication)
+    proc = _publish(gh, publication, FAKE_GH_FAIL="issue edit")
     assert proc.returncode == 1
     assert "`gh issue edit` exited 1: HTTP 502: Bad Gateway" in proc.stderr
-    assert gh.issues()[0]["state"] == "OPEN"  # nothing after the refusal was done
+    (issue,) = gh.issues().values()
+    assert issue["state"] == "OPEN"  # nothing after the refusal was done
 
 
 @pytest.mark.parametrize(
@@ -372,6 +564,17 @@ def test_a_publication_it_cannot_read_fails_the_run_and_calls_nothing(
     assert gh.load()["calls"] == []
 
 
+def test_a_body_no_utf8_can_hold_is_published_escaped(gh: FakeGh) -> None:
+    """A publication the renderer did not make, carrying a lone surrogate: no crash."""
+    publication = gh.directory / "friction-report.json"
+    made = {"schema_version": 1, "needs_answer": 1, "body": "- docs/caf\udce9.md\n"}
+    publication.write_text(json.dumps(made), encoding="utf-8")
+    proc = _publish(gh, publication)
+    assert proc.returncode == 0, proc.stderr
+    (issue,) = gh.issues().values()
+    assert r"- docs/caf\udce9.md" in issue["body"]
+
+
 # --- end to end ----------------------------------------------------------------------------
 
 
@@ -385,16 +588,26 @@ def test_a_real_history_end_to_end(make_adopter_repo: MakeAdopterRepo, gh: FakeG
         return json.loads(fr.render_json(fr.run_repository_check(root)))
 
     _run(gh, check())
-    (issue,) = gh.issues()
+    (issue,) = gh.issues().values()
     assert issue["state"] == "OPEN" and "- `docs/guide.md` · `path:src/cli/**`" in issue["body"]
+
+    # Deferred with a reason: answered, so the issue closes, the deferral listed in it.
+    timeline.commit(
+        "defer the guide",
+        {"docs/guide.md": guide(deferred=[("path", "src/cli/**", "after the release")])},
+    )
+    _run(gh, check())
+    (issue,) = gh.issues().values()
+    assert issue["state"] == "CLOSED" and "**Nothing needs an answer.**" in issue["body"]
+    assert "after the release" in issue["body"].split("### Deferred", 1)[1]
 
     timeline.commit(
         "revalidate the guide",
         {"docs/guide.md": guide(at="2026-11-01T00:00:00Z", because="the CLI reads the same")},
     )
     _run(gh, check())
-    (issue,) = gh.issues()
-    assert issue["state"] == "CLOSED" and "**Nothing needs an answer.**" in issue["body"]
+    (issue,) = gh.issues().values()
+    assert issue["state"] == "CLOSED" and "### Deferred" not in issue["body"]
 
 
 # --- the workflow --------------------------------------------------------------------------
