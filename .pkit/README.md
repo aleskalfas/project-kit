@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T00:55:24Z
+      at: 2026-10-02T01:25:00Z
       outcome: unchanged
-      unchanged-because: The CLI reference now names every backbone command the cross-repository guard runs on and the fields of its documents; this index only points at that reference and describes no command's behaviour, so it holds
+      unchanged-because: The CLI reference gains pull-request delete-branch and the reading's head_ref and cross_repository; this index only points at that reference and names no pull-request subcommand, so it holds
 ---
 
 # project-kit

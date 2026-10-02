@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-02T00:55:28Z
+      at: 2026-10-02T01:25:12Z
       outcome: unchanged
-      unchanged-because: "#1254 has done-work and merge-pr pass the cross-repository confirmation on to the backbone's own guard; release scope, the stabilisation and its guards (still unbuilt, EPIC #943) are unchanged, so it holds"
+      unchanged-because: "done-work and merge-pr have the backbone delete a merged pull request's head branch only at the head that merged; release scope, the stabilisation and its guards (still unbuilt, EPIC #943) are unchanged, so it holds"
 ---
 
 # UC-010 — Stabilise a Milestone for a release
