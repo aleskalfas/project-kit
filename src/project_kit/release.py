@@ -2214,10 +2214,11 @@ def _after_the_merge(
     `merged_head` is the head the PR merged at: the remote branch is deleted
     only while its tip is that head (`pull_request_landing.delete_branch`,
     under the `clearance` the run took at its entry), the local branch only
-    when nothing on it is missing from the merge, and a merge at a head other
-    than the one whose checks were read is warned about. A branch kept or
-    already gone is said in one line; neither fails the run, whose merge is
-    durable.
+    when the remote one was deleted or is gone and nothing on the local one is
+    missing from the merge, and a merge at a head other than the one whose
+    checks were read is warned about. What became of the remote branch is
+    said in one line, naming the command that deletes it later where it was
+    not deleted; none of it fails the run, whose merge is durable.
     """
     if dry_run:
         return ReleaseMergeReport(
@@ -2232,13 +2233,14 @@ def _after_the_merge(
         pr.number, expect=merged_head, cwd=repo_root, clearance=clearance
     )
     notes = [
-        f"{deletion.describe()}.",
+        _deletion_note(pr.number, merged_head, deletion, clearance),
         *_git_cleanup_local(
             pr.head_ref,
             pr.base_ref or "main",
             repo_root,
             cross_repository=pr.cross_repository,
             merged_head=merged_head,
+            remote=deletion.outcome,
         ),
     ]
     return ReleaseMergeReport(
@@ -2250,6 +2252,31 @@ def _after_the_merge(
                 "to main (VERSION-driven).",
             ]
         )
+    )
+
+
+def _deletion_note(
+    number: int,
+    merged_head: str,
+    deletion: pull_request_landing.BranchDeletion,
+    clearance: session_guard.Clearance,
+) -> str:
+    """What became of the release PR's head branch on the service, as the
+    report's line: where it was not deleted — kept, refused other than for a
+    fork, or unconfirmed — the line names the command that deletes it later,
+    at the head the PR merged at, confirming another repository only where
+    this run's was."""
+    said = f"{deletion.describe()}."
+    if deletion.outcome in (pull_request_landing.DELETED, pull_request_landing.GONE):
+        return said
+    if deletion.reason_kind == pull_request_landing.CROSS_REPOSITORY:
+        return said
+    head = deletion.merged_head or merged_head
+    confirmed = clearance.passed in (session_guard.FLAG, session_guard.TERMINAL)
+    flag = f" {session_guard.CONFIRM_OPTION}" if confirmed else ""
+    return (
+        f"{said} To delete it later: `pkit pull-request delete-branch {number} --expect "
+        f"{head}{flag}`."
     )
 
 
@@ -2304,6 +2331,7 @@ def _git_cleanup_local(
     *,
     cross_repository: bool,
     merged_head: str,
+    remote: str,
 ) -> list[str]:
     """Switch to the base branch, fast-forward it, delete the local head — best-effort.
 
@@ -2321,6 +2349,9 @@ def _git_cleanup_local(
     warned about. `-D` (not `-d`) because a squash-merged branch is never an
     ancestor of the base.
 
+    The local branch goes only with the remote one: it is deleted only when
+    `remote`, how the deletion on the service ended, is deleted or gone; one
+    kept, refused or unconfirmed keeps the local branch too, said in one line.
     `merged_head` is the head the PR merged at, and is required: the local
     branch is deleted only when everything on it merged — its tip is that
     head or behind it. A branch holding commits the merge does not — work
@@ -2356,6 +2387,12 @@ def _git_cleanup_local(
     tip = _git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}").stdout.strip()
     if not tip:
         return notes  # no local copy (the usual case: CI opened the release PR)
+    if remote not in (pull_request_landing.DELETED, pull_request_landing.GONE):
+        notes.append(
+            f"kept local branch {branch!r}: its branch on GitHub was not deleted ({remote}), "
+            f"and the local one goes only with it (`git branch -D {branch}` once it has)."
+        )
+        return notes
     # The commits on the branch the merged head does not hold: none, and
     # everything on it merged. A head this clone does not have fails the
     # count, which keeps the branch too.

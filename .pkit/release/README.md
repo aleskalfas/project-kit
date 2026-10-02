@@ -468,12 +468,17 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   the PR merged at, in one compare-and-delete request, so a push made after
   the merge is not lost; then a best-effort local cleanup (switch to the
   base, fast-forward, delete the local head), so a run from a worktree or a
-  detached HEAD completes once the merge lands. A remote branch kept — its
-  tip moved, another open PR uses it, or GitHub refuses to delete it — or
-  already gone is said in one line and does not fail the run. The local head
-  is deleted only when everything on it merged — its tip is the head the PR
-  merged at, or behind it; a local head holding commits past it, or one this
-  clone cannot compare, is kept with a warning. A merge at a head other than
+  detached HEAD completes once the merge lands. What became of the remote
+  branch is said in one line and does not fail the run: kept — its tip
+  moved, another open PR uses it as its head or as its base, or GitHub
+  refuses to delete it — not there, or asked for with no answer that tells
+  whether it was deleted; where it was not deleted, the line names the
+  command that deletes it later (`pkit pull-request delete-branch <n>
+  --expect <sha>`). The local head goes only with the remote one — it is
+  deleted only once that one was deleted or is gone, and kept, said in one
+  line, otherwise — and only when everything on it merged: its tip is the
+  head the PR merged at, or behind it; a local head holding commits past it,
+  or one this clone cannot compare, is kept with a warning. A merge at a head other than
   the one whose checks were read is warned about. A head that lives in a fork
   is never deleted — its name is the fork author's choice and could name an
   unrelated branch here. No `Closes #N` requirement — a release PR has none.
