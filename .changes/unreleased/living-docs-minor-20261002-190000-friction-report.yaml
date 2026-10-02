@@ -1,0 +1,21 @@
+component: living-docs
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit living-docs friction-report` renders the core's whole-repository
+  friction check (COR-050 point 6) as one Markdown body to publish where people
+  read it: stale debt with the anchor that changed, the change it first changed
+  in and since when; deferrals with their reason and since when; the other
+  findings, with `left-out` apart; and the unanchored and uncovered-surface
+  measures. `--json` prints `{schema_version, outstanding, body}`, where
+  `outstanding` counts every finding but `left-out` and never the measures. The
+  same findings always give the same body, so a publisher that compares bodies
+  changes nothing when nothing changed; what the findings carry is set as code,
+  so it mentions and links nobody; and lists are shortened to keep the body
+  within 60 000 characters. It reads the check through `pkit friction check
+  --all --json`, or with `--report <file>` from a file that command wrote,
+  refuses a document of a version it does not read, and exits 0 whatever the
+  check found. A query: read-only, offline; it publishes nothing itself. The
+  README's "Kept true after merging" section describes it and how a project
+  wires publication.
