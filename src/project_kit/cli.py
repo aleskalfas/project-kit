@@ -633,12 +633,17 @@ def _say_outcome(
     clearance: session_guard.Clearance,
     as_json: bool,
     done: str,
+    documented: Callable[
+        [int, pull_request_landing.Outcome, session_guard.Clearance], dict[str, Any]
+    ] = pull_request_landing.outcome_document,
 ) -> None:
     """Write a request's outcome — `done` when accepted — and exit 1 when it
     was not, or whether it was is not known (unconfirmed): that one names the
-    reading that tells."""
+    reading that tells. `documented` is the subcommand's document of an
+    outcome; a request's (`pull_request_landing.outcome_document`) by
+    default."""
     if as_json:
-        document = pull_request_landing.outcome_document(number, outcome, clearance)
+        document = documented(number, outcome, clearance)
         click.echo(pull_request_landing.render_json(document))
     elif outcome.accepted:
         click.echo(done)
@@ -710,16 +715,24 @@ def pull_request_merge(
 ) -> None:
     """Squash-merge PR NUMBER directly, with SUBJECT as the commit's subject.
 
-    Accepted is not proof of a merge: on a base that requires a queue, gh
-    enqueues instead — `pull-request read` says which. Never deletes the head
-    branch. The cross-repository guard runs first. A merge that gets no
-    usable answer is settled by reading: made once the PR reads merged or
-    queued; not seen made once two readings, the second 40 s or more after
-    it was sent, find neither; unconfirmed when the PR cannot be read. Exit
-    0 when made; 1 otherwise — refused, with gh's reason or the guard's, not
-    seen made, or unconfirmed.
+    The commit's body is the PR's body: composed by GitHub at the merge where
+    the repository's default squash-commit message is the PR's body, else
+    read just before the merge and passed with it; a body that cannot be read
+    sends no merge. Accepted is not proof of a merge: on a base that requires
+    a queue, gh enqueues instead — `pull-request read` says which. Never
+    deletes the head branch. The cross-repository guard runs first. A merge
+    that gets no usable answer is settled by reading: made once the PR reads
+    merged or queued; not seen made once two readings, the second 40 s or
+    more after it was sent, find neither; unconfirmed when the PR cannot be
+    read. Exit 0 when made; 1 otherwise — refused, with gh's reason or the
+    guard's, its body unreadable, not seen made, or unconfirmed.
     """
-    clearance = _pull_request_cleared(number, allow_foreign_repo, as_json)
+    clearance = _pull_request_cleared(
+        number,
+        allow_foreign_repo,
+        as_json,
+        refused=lambda refusal: pull_request_landing.merge_refusal_document(number, refusal),
+    )
     outcome = pull_request_landing.squash_merge(
         number,
         subject=subject,
@@ -729,7 +742,12 @@ def pull_request_merge(
         admin=admin,
     )
     _say_outcome(
-        number, outcome, clearance, as_json, _made(outcome, f"the squash merge of PR #{number}")
+        number,
+        outcome,
+        clearance,
+        as_json,
+        _made(outcome, f"the squash merge of PR #{number}"),
+        pull_request_landing.merge_document,
     )
 
 
