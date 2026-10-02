@@ -7323,7 +7323,7 @@ def process_cascade(address: str, subject: str | None, as_json: bool) -> None:
                         "reason": resolution.reason,
                         # What a predicate the fold could not evaluate said
                         # (null when none failed, or it said nothing).
-                        "stderr_tail": resolution.stderr_tail or None,
+                        "stderr_tail": process_mod.json_tail(resolution.stderr_tail),
                     }
                 },
                 indent=2,
