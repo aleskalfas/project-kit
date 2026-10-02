@@ -118,7 +118,7 @@ def test_mutator_refuses_before_doing_anything(tmp_path: Path) -> None:
     cap = _project(tmp_path)
     proc = _run(
         "create-issue.py",
-        ["--type", "task", "--title", "x", "--workstream", "ws", "--parent", "1", "--dry-run"],
+        ["--type", "epic", "--title", "x", "--workstream", "ws", "--dry-run"],
         cap=cap,
     )
     assert proc.returncode == 2, proc.stderr
@@ -258,7 +258,7 @@ def test_bootstrapped_project_is_unaffected(tmp_path: Path) -> None:
     _bootstrap(cap)
     proc = _run(
         "create-issue.py",
-        ["--type", "task", "--title", "x", "--workstream", "ws", "--parent", "1", "--dry-run"],
+        ["--type", "epic", "--title", "x", "--workstream", "ws", "--dry-run"],
         cap=cap,
     )
     assert REFUSAL_MARKER not in proc.stderr, proc.stderr

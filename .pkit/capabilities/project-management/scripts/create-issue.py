@@ -17,7 +17,12 @@ An issue parent — `--parent`, or when that is absent the EPIC / Feature /
 Umbrella the body's first line names — is also set as GitHub's native
 sub-issue parent (DEC-005), subject to the substrate-map's `containment`
 selector (DEC-039). `--parent` and a first line naming a different issue are
-refused before anything is filed.
+refused before anything is filed. So is a parent whose type the new issue's
+type may not sit under (the containment graph in `issue-types.yaml`, DEC-005,
+read through `_lib/containment_graph`), and a parent that cannot be read to
+tell; a parent whose type cannot be told from its title is filed under with a
+warning. An EPIC's `--parent` names a milestone, its container, not an issue:
+nothing is read, checked or linked for it.
 
 For board-substrate adopters (per DEC-019 +
 `schemas/mandatory-issue-state.yaml`), the new issue is also added to
@@ -74,12 +79,13 @@ from _lib import (
     bootstrap_gate,
     classification_rules,
     containment,
+    containment_graph,
     provenance,
     session_guard,
     title_rules,
 )
 from _lib.containment import LinkOutcome, link_sub_issue
-from _lib.gh import gh_project_run, gh_run, load_adopter_config
+from _lib.gh import gh_project_run, load_adopter_config
 from _lib.hooks import fire_hooks
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -92,7 +98,6 @@ from _lib.placeholder_detection import (
     PHASE_CREATE,
     detect_placeholder_residuals,
 )
-from _lib.structural_type import infer_structural_type
 from _lib.substrate_writes import milestone_create_args
 
 VALID_STRUCTURAL_TYPES = ("epic", "feature", "umbrella", "task")
@@ -157,12 +162,14 @@ def main() -> int:
             "When omitted, the issue parent the body's first line names "
             "(an EPIC / Feature / Umbrella ref) is linked instead; a "
             "Milestone first line links nothing. Refused when it and the "
-            "body's first line name different issues. create-issue enforces "
-            "parent-*requiredness* "
-            "only (whether a parent-ref is required for this type, degradable "
-            "via the hierarchy mode); it does NOT gate issue-types.yaml's "
-            "containment graph at filing — the containment_invariants are a "
-            "prose invariant, not a create-time gate."
+            "body's first line name different issues, and — before anything "
+            "is written, --dry-run included — when the parent's type is not "
+            "one this --type may sit under (issue-types.yaml's "
+            "parent_issue_types, DEC-005; no override) or the parent cannot "
+            "be read to tell; a parent whose type cannot be told from its "
+            "title is accepted with a warning. Whether a parent is required "
+            "at all degrades with the hierarchy mode; the containment check "
+            "does not. For an EPIC the number names a milestone, not an issue."
         ),
     )
     parser.add_argument(
@@ -503,17 +510,25 @@ def main() -> int:
     #
     # For path 2 the parent-ref label is made faithful to the parent's REAL
     # structural type (#356): a Task under EPIC #128 opens `EPIC: #128`, not the
-    # first label in parent_ref_form. The parent type is detected from its title
-    # prefix via the same `_infer_structural_type` the validator / show / tree
-    # scripts use; on any detection failure the label degrades to parent_ref_form's
-    # first option (the prior behaviour), and a parent whose label is not one of
-    # the type's forms is named in the first option with a warning
-    # (`body_parent_ref.issue_parent_line`, the writer set-field shares).
+    # first label in parent_ref_form. The parent's type is read from its title
+    # once, and held to the containment graph before the body is composed
+    # (`_checked_parent`): a parent this type may not sit under, or one that
+    # cannot be read to tell, is refused here, before anything is written
+    # (DEC-005, hard-reject); an untyped one is named in parent_ref_form's first
+    # option, with a warning. The line itself is written by
+    # `body_parent_ref.issue_parent_line`, the writer set-field shares. An EPIC's
+    # `--parent` names a milestone, its container, never an issue — nothing is
+    # read, checked or linked for it, and the writer says so.
+    takes_an_issue_parent = containment_graph.takes_an_issue_parent(issue_types, args.type)
     parent_label = None
-    if args.parent is not None:
-        parent_type = _detect_parent_structural_type(args.parent, config, issue_types)
-        if parent_type is not None:
-            parent_label = _parent_ref_label(issue_types, parent_type)
+    checked_parent: int | None = None
+    if args.parent is not None and takes_an_issue_parent:
+        parent_read = _checked_parent(args.parent, args.type, config, issue_types, classification)
+        if parent_read is None:
+            return 2
+        checked_parent = args.parent
+        if parent_read.structural_type is not None:
+            parent_label = _parent_ref_label(issue_types, parent_read.structural_type)
     parent_line = _parent_line(
         type_entry,
         parent_num=args.parent,
@@ -523,6 +538,12 @@ def main() -> int:
     expected_parent_ref = parent_line.line
     if parent_line.warning is not None and args.body_file is None:
         print(f"[warn] {parent_line.warning}.", file=sys.stderr)
+    elif args.parent is not None and not takes_an_issue_parent and args.body_file is not None:
+        print(
+            f"[warn] {args.type}'s container is a milestone, never an issue: --parent "
+            f"{args.parent} links nothing, and the body's first line is filed as written.",
+            file=sys.stderr,
+        )
     if args.body_file is not None:
         if not args.body_file.is_file():
             print(
@@ -614,7 +635,16 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
-    parent_number = args.parent if args.parent is not None else first_line_parent
+    parent_number = (
+        args.parent if args.parent is not None and takes_an_issue_parent else first_line_parent
+    )
+    # Without a `--parent` naming an issue, the new issue's parent is the issue
+    # its first line names — in any form, as every reader takes it — and that
+    # parent is held to the containment graph the same way, before anything is
+    # filed.
+    if named_parent is not None and named_parent != checked_parent:
+        if _checked_parent(named_parent, args.type, config, issue_types, classification) is None:
+            return 2
 
     # Residual-placeholder check at create-phase (DEC-031).
     # Emits warnings when the composed body is still the raw skeleton so
@@ -1236,38 +1266,33 @@ def _parent_ref_label(issue_types: dict, parent_type: str) -> str | None:
     return body_parent_ref.type_label(issue_types, parent_type)
 
 
-def _detect_parent_structural_type(parent_num: int, config: dict, issue_types: dict) -> str | None:
-    """Best-effort read of a parent issue's structural type from its title (#356).
+def _checked_parent(
+    number: int,
+    child_type: str,
+    config: dict,
+    issue_types: dict,
+    classification: dict,
+) -> containment_graph.ParentRead | None:
+    """Read parent ``number`` and hold it to the containment graph for a new
+    issue of ``child_type`` ([project-management:DEC-005-linking-and-containment]).
 
-    Reads the parent's title via ``gh issue view`` and infers the structural type
-    so the body's parent-ref label matches the parent's REAL type. Returns ``None``
-    on any failure (gh absent, non-zero exit, non-JSON, missing/unknown title
-    prefix); the caller then degrades to the ``parent_ref_form``'s first option.
-    Quiet by design — a failed detection is a graceful degrade, not an error.
+    Returns the read — after a warning where the parent's type cannot be told
+    from its title, an untyped issue being outside the graph — or ``None`` after
+    saying why the filing is refused: the parent's type is one ``child_type`` may
+    not sit under, or the parent could not be read to tell. The type is read
+    with the kind-driven Task prefixes (``[Bug]``, ``[Docs]``, …), so a Task
+    under any Task is refused, as set-field reads it.
     """
-    try:
-        proc = gh_run(
-            ["gh", "issue", "view", str(parent_num), "--json", "title"],
-            config,
-            check=False,
-        )
-    except (FileNotFoundError, OSError):
+    parent = containment_graph.read_parent(
+        number, config, issue_types, classification=classification
+    )
+    check = containment_graph.check_parent(issue_types, child_type, parent)
+    if check.refuses:
+        print(f"error: {check.message}. Nothing was filed.", file=sys.stderr)
         return None
-    if proc.returncode != 0:
-        return None
-    try:
-        payload = json.loads(proc.stdout)
-    except (json.JSONDecodeError, ValueError):
-        return None
-    title = payload.get("title") if isinstance(payload, dict) else None
-    if not isinstance(title, str):
-        return None
-    # Prefix-only BY DESIGN: this infers a *parent's* structural type, and
-    # containers (EPIC/Feature/Umbrella) never carry kind prefixes. Passing
-    # `classification` here would resolve a kind-prefixed Task as a candidate
-    # parent, which the containment graph then rejects anyway — a behaviour
-    # change, not a fix. Do not "align" this in a future parity pass (#793).
-    return infer_structural_type(title, issue_types)
+    if check.message is not None:
+        print(f"[warn] {check.message}.", file=sys.stderr)
+    return parent
 
 
 def _parent_ref_form_matchers(parent_ref_form: str) -> list[re.Pattern[str]]:

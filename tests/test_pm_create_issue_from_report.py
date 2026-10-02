@@ -17,6 +17,7 @@ importlib; `main()` is driven against a staged minimal capability tree with
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -124,7 +125,9 @@ def _stage_capability_tree(tmp_path: Path) -> Path:
 def _dispatcher(create_url: str, *, pkit_rc: int = 0, pkit_stderr: str = ""):
     """A fake subprocess.run answering the gh calls main() makes AND recording
     every argv — including a `pkit report link` invocation, whose outcome is
-    configurable. Returns (fake_run, calls) where `calls` is every argv seen.
+    configurable. `--parent 1` is read as a Feature, which a Task may sit under
+    (create-issue holds a parent to the containment graph, and refuses one it
+    cannot read). Returns (fake_run, calls) where `calls` is every argv seen.
     """
     calls: list[list[str]] = []
 
@@ -144,6 +147,8 @@ def _dispatcher(create_url: str, *, pkit_rc: int = 0, pkit_stderr: str = ""):
             return proc
         if "issue" in cmd and "create" in cmd:
             proc.stdout = create_url + "\n"
+        elif "issue" in cmd and "view" in cmd:
+            proc.stdout = json.dumps({"title": "[Feature] the parent"})
         elif "repo" in cmd and "view" in cmd:
             proc.stdout = "acme/repo"
         elif "api" in cmd and "user" in joined:

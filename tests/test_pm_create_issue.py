@@ -141,15 +141,6 @@ def _ISSUE_TYPES() -> dict:
     }
 
 
-def test_infer_structural_type_from_title_prefix(ci) -> None:
-    types = _ISSUE_TYPES()
-    assert ci.infer_structural_type("[EPIC] Big thesis", types) == "epic"
-    assert ci.infer_structural_type("[Feature] A capability", types) == "feature"
-    assert ci.infer_structural_type("[Umbrella] A bucket", types) == "umbrella"
-    assert ci.infer_structural_type("[Bug] something", types) is None  # not a prefix
-    assert ci.infer_structural_type("no prefix at all", types) is None
-
-
 def test_parent_ref_label_matches_parent_type(ci) -> None:
     types = _ISSUE_TYPES()
     assert ci._parent_ref_label(types, "epic") == "EPIC"
@@ -172,36 +163,6 @@ def test_parent_ref_line_label_none_falls_back_to_first_option(ci) -> None:
         "parent_ref_form": "Feature: #<N> or Umbrella: #<N> or EPIC: #<N>",
     }
     assert ci._parent_ref_line(type_entry, 128, parent_label=None) == "Feature: #128"
-
-
-def test_detect_parent_structural_type_reads_title_and_infers(ci, monkeypatch) -> None:
-    class _Proc:
-        returncode = 0
-        stdout = '{"title": "[EPIC] A grand thesis"}'
-        stderr = ""
-
-    monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
-    assert ci._detect_parent_structural_type(128, {}, _ISSUE_TYPES()) == "epic"
-
-
-def test_detect_parent_structural_type_none_on_gh_failure(ci, monkeypatch) -> None:
-    class _Proc:
-        returncode = 1
-        stdout = ""
-        stderr = "boom"
-
-    monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
-    assert ci._detect_parent_structural_type(128, {}, _ISSUE_TYPES()) is None
-
-
-def test_detect_parent_structural_type_none_on_non_json(ci, monkeypatch) -> None:
-    class _Proc:
-        returncode = 0
-        stdout = "not json"
-        stderr = ""
-
-    monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
-    assert ci._detect_parent_structural_type(128, {}, _ISSUE_TYPES()) is None
 
 
 # --- body-file first-line acceptance (#356, criterion 5) -------------------
@@ -382,6 +343,12 @@ def test_adopter_workstreams_skips_non_string_entries(ci) -> None:
 # main() runs against a staged capability tree carrying the SHIPPED titles.yaml,
 # with every gh call faked; a refused title must stop before `gh issue create`.
 
+# How the fakes below answer `gh issue view <N> --json title`, the read
+# create-issue makes of a parent to hold it to the containment graph (#1313): an
+# EPIC, which every type but an EPIC may sit under. A parent create-issue cannot
+# read refuses the filing, so a fake that answered nothing would refuse them all.
+_PARENT_VIEW = json.dumps({"title": "[EPIC] the parent"})
+
 _SHIPPED_TITLES = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "schemas" / "titles.yaml"
 )
@@ -439,6 +406,8 @@ def _file_task(ci, tmp_path, monkeypatch, title: str) -> tuple[int, list[list[st
         calls.append(list(cmd))
         if "issue" in cmd and "create" in cmd:
             _Proc.stdout = "https://github.com/acme/repo/issues/55\n"
+        elif "issue" in cmd and "view" in cmd:
+            _Proc.stdout = _PARENT_VIEW
         return _Proc()
 
     monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
@@ -880,6 +849,8 @@ def test_main_board_path_uses_cached_node_id_no_project_view(ci, tmp_path, monke
         elif "project" in cmd and "view" in cmd:
             project_view_calls["n"] += 1
             proc.stdout = '{"id": "PVT_live", "number": 7}'
+        elif "issue" in cmd and "view" in cmd:
+            proc.stdout = _PARENT_VIEW
         elif "repo" in cmd and "view" in cmd:
             proc.stdout = "acme/repo"
         return proc
@@ -1041,7 +1012,8 @@ def _gh_command_dispatcher(create_url: str):
 
     Routes on the gh subcommand: `issue create` → the created URL; `project
     item-add` → the new item node id; `project view` → the project node id;
-    `repo view` → owner/name. Any other gh call returns a benign empty success.
+    `repo view` → owner/name; `issue view` → a parent's title (`_PARENT_VIEW`). Any
+    other gh call returns a benign empty success.
     """
 
     def fake_run(cmd, *args, **kwargs):
@@ -1058,6 +1030,8 @@ def _gh_command_dispatcher(create_url: str):
             proc.stdout = '{"id": "PVTI_newitem", "title": "x"}'
         elif "project" in cmd and "view" in cmd:
             proc.stdout = '{"id": "PVT_project", "number": 7}'
+        elif "issue" in cmd and "view" in cmd:
+            proc.stdout = _PARENT_VIEW
         elif "repo" in cmd and "view" in cmd:
             proc.stdout = "acme/repo"
         elif "api" in cmd and "user" in joined:
@@ -2665,7 +2639,8 @@ _MILESTONE_ROWS = [{"number": 5, "title": "Milestone 5: the release"}]
 
 def _dispatcher_with_milestone(create_url: str):
     """fake subprocess.run: `issue create` → the URL; the open-milestones read →
-    milestone #5; everything else a benign empty success."""
+    milestone #5; a parent's title read → `_PARENT_VIEW`; everything else a
+    benign empty success."""
 
     def fake_run(cmd, *args, **kwargs):
         class _Proc:
@@ -2679,6 +2654,8 @@ def _dispatcher_with_milestone(create_url: str):
             proc.stdout = create_url + "\n"
         elif "milestones" in joined:
             proc.stdout = json.dumps(_MILESTONE_ROWS)
+        elif "issue" in cmd and "view" in cmd:
+            proc.stdout = _PARENT_VIEW
         elif "repo" in cmd and "view" in cmd:
             proc.stdout = "acme/repo"
         elif "api" in cmd and "user" in joined:
@@ -2889,3 +2866,301 @@ def test_body_first_line_parent_in_textual_mode_skips_link_and_refreshes_view(
     assert rc == 0
     assert link_calls == [], "native link must not fire under containment: textual"
     assert refreshed == [{"parent": 77, "mode": "textual"}]
+
+
+# --- the containment graph refuses a parent the type may not sit under (#1313) --
+# DEC-005 refuses a filing that breaks issue-types.yaml's containment graph
+# before anything is written (hard-reject, no override). The pairings come from
+# the shipped schema: every type that takes an issue parent, against every type,
+# refused where the parent's type is not among the child's `parent_issue_types`.
+
+
+def _shipped_issue_types() -> dict:
+    from ruamel.yaml import YAML
+
+    shipped = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "schemas"
+    return YAML(typ="safe").load((shipped / "issue-types.yaml").read_text(encoding="utf-8"))
+
+
+_TYPES = _shipped_issue_types()["types"]
+_PAIRINGS = [
+    (child, parent)
+    for child, entry in sorted(_TYPES.items())
+    if any(p != "milestone" for p in entry["parent_issue_types"])
+    for parent in sorted(_TYPES)
+]
+_IMPOSSIBLE = [(c, p) for c, p in _PAIRINGS if p not in _TYPES[c]["parent_issue_types"]]
+_ALLOWED = [(c, p) for c, p in _PAIRINGS if p in _TYPES[c]["parent_issue_types"]]
+
+
+def _type_prefix(structural_type: str) -> str:
+    entry = _TYPES[structural_type]
+    prefix = entry["title_prefix"]
+    return prefix.upper() if entry.get("title_case") == "upper" else prefix
+
+
+def _a(noun: str) -> str:
+    return f"{'an' if noun[0] in 'aeiou' else 'a'} {noun}"
+
+
+def _file_under(
+    ci,
+    tmp_path,
+    monkeypatch,
+    *,
+    child: str,
+    parent_title: str | None,
+    extra: tuple[str, ...] = ("--parent", "9"),
+    root: Path | None = None,
+):
+    """Run create-issue for a new `child` with #9 answering `parent_title` (None: a
+    read of it fails). Returns (rc, the created issue's fields, link calls, every
+    gh argv run)."""
+    root = root or _stage_real_schema_tree(tmp_path)
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, *args, **kwargs):
+        class _Proc:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        proc = _Proc()
+        calls.append([str(c) for c in cmd])
+        joined = " ".join(str(c) for c in cmd)
+        if "issue" in cmd and "create" in cmd:
+            proc.stdout = "https://github.com/acme/repo/issues/500\n"
+        elif "issue" in cmd and "view" in cmd:
+            if parent_title is None:
+                proc.returncode = 1
+                proc.stderr = "gh: HTTP 502"
+            else:
+                proc.stdout = json.dumps({"title": parent_title})
+        elif "milestones" in joined:
+            proc.stdout = json.dumps(_MILESTONE_ROWS)
+        elif "repo" in cmd and "view" in cmd:
+            proc.stdout = "acme/repo"
+        elif "api" in cmd and "user" in joined:
+            proc.stdout = "filer-login"
+        return proc
+
+    monkeypatch.setattr(ci.subprocess, "run", fake_run)
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    link_calls: list[dict] = []
+
+    def fake_link(config, *, parent_number, child_number):
+        link_calls.append({"parent": parent_number, "child": child_number})
+        return _FakeLink(f"linked #{child_number} under #{parent_number}", ok=True)
+
+    monkeypatch.setattr(ci, "link_sub_issue", fake_link)
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys,
+        "argv",
+        [
+            "create-issue.py",
+            "--type",
+            child,
+            "--title",
+            "a filing under a parent",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
+            "--yes",
+            *extra,
+        ],
+    )
+    return ci.main(), created, link_calls, calls
+
+
+def _nothing_written(created: dict, link_calls: list, calls: list[list[str]]) -> bool:
+    """No issue filed, no native link, no label or body written, no comment."""
+    writes = [c for c in calls if {"create", "edit", "comment", "item-add"} & set(c)]
+    return created == {} and link_calls == [] and writes == []
+
+
+def test_the_shipped_schema_defines_impossible_and_allowed_pairings() -> None:
+    assert ("task", "task") in _IMPOSSIBLE and ("feature", "feature") in _IMPOSSIBLE
+    assert ("umbrella", "feature") in _IMPOSSIBLE
+    assert ("task", "epic") in _ALLOWED and ("feature", "umbrella") in _ALLOWED
+
+
+@pytest.mark.parametrize(("child", "parent"), _IMPOSSIBLE)
+@pytest.mark.parametrize("dry_run", [False, True], ids=["write", "dry-run"])
+def test_parent_flag_of_a_type_the_child_may_not_sit_under_is_refused(
+    ci, tmp_path, monkeypatch, capsys, child: str, parent: str, dry_run: bool
+) -> None:
+    """Refused before anything is written, `--dry-run` alike: the message names
+    the child's type, the parent's, and the forms the child's type allows."""
+    extra = ("--parent", "9", *(("--dry-run",) if dry_run else ()))
+    rc, created, link_calls, calls = _file_under(
+        ci,
+        tmp_path,
+        monkeypatch,
+        child=child,
+        parent_title=f"[{_type_prefix(parent)}] x",
+        extra=extra,
+    )
+    out, err = capsys.readouterr()
+
+    assert rc == 2
+    assert _nothing_written(created, link_calls, calls)
+    assert "[dry-run]" not in out and "about to create issue" not in out
+    assert f"error: {_a(child)} may not sit under #9, which is {_a(parent)}" in err
+    assert f"`{_TYPES[child]['parent_ref_form']}`" in err
+    assert "Nothing was filed." in err
+
+
+@pytest.mark.parametrize(("child", "parent"), _ALLOWED)
+def test_parent_flag_of_a_type_the_child_may_sit_under_is_filed_and_linked(
+    ci, tmp_path, monkeypatch, capsys, child: str, parent: str
+) -> None:
+    rc, created, link_calls, _calls = _file_under(
+        ci, tmp_path, monkeypatch, child=child, parent_title=f"[{_type_prefix(parent)}] x"
+    )
+
+    assert rc == 0
+    assert created["body"].lstrip().split("\n", 1)[0] == f"{_type_prefix(parent)}: #9"
+    assert link_calls == [{"parent": 9, "child": 500}]
+    assert "[warn]" not in capsys.readouterr().err
+
+
+def test_a_kind_prefixed_task_is_read_as_a_task_and_refused_as_a_parent(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """A Task's title may carry its kind's prefix (`[Bug]`, `[Docs]`, …): the
+    parent is read as the Task it is, and a Task under it is refused."""
+    rc, created, link_calls, calls = _file_under(
+        ci, tmp_path, monkeypatch, child="task", parent_title="[Bug] a kind-prefixed task"
+    )
+
+    assert rc == 2
+    assert _nothing_written(created, link_calls, calls)
+    assert "a task may not sit under #9, which is a task" in capsys.readouterr().err
+
+
+def test_parent_whose_type_cannot_be_told_is_filed_under_with_a_warning(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """An untyped parent is outside the containment graph: the filing goes ahead,
+    the first line takes the form's first option, and a warning says nothing was
+    checked — a legacy tree stays linkable."""
+    rc, created, link_calls, _calls = _file_under(
+        ci, tmp_path, monkeypatch, child="task", parent_title="no type prefix"
+    )
+
+    assert rc == 0
+    assert created["body"].lstrip().split("\n", 1)[0] == "Feature: #9"
+    assert link_calls == [{"parent": 9, "child": 500}]
+    assert (
+        "[warn] #9's type cannot be told from its title, so whether a task may sit under "
+        "it was not checked"
+    ) in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("dry_run", [False, True], ids=["write", "dry-run"])
+def test_parent_that_cannot_be_read_is_refused(
+    ci, tmp_path, monkeypatch, capsys, dry_run: bool
+) -> None:
+    """Nothing can be checked against a parent that cannot be read: refused, as
+    an unreadable milestone is, before anything is written."""
+    extra = ("--parent", "9", *(("--dry-run",) if dry_run else ()))
+    rc, created, link_calls, calls = _file_under(
+        ci, tmp_path, monkeypatch, child="task", parent_title=None, extra=extra
+    )
+
+    assert rc == 2
+    assert _nothing_written(created, link_calls, calls)
+    assert (
+        "error: #9 could not be read (gh exited 1: gh: HTTP 502), so whether a task may "
+        "sit under it cannot be checked. Nothing was filed."
+    ) in capsys.readouterr().err
+
+
+def test_first_line_parent_of_a_type_the_child_may_not_sit_under_is_refused(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """Without --parent the parent is the issue the body's first line names, and
+    it is held to the graph the same way."""
+    root = _stage_real_schema_tree(tmp_path)
+    body_file = tmp_path / "body.md"
+    body_file.write_text("Feature: #9\n\n## What\n\nthe work\n", encoding="utf-8")
+    rc, created, link_calls, calls = _file_under(
+        ci,
+        tmp_path,
+        monkeypatch,
+        child="task",
+        parent_title="[Task] another task",
+        extra=("--body-file", str(body_file), "--milestone", "5"),
+        root=root,
+    )
+
+    assert rc == 2
+    assert _nothing_written(created, link_calls, calls)
+    assert "a task may not sit under #9, which is a task" in capsys.readouterr().err
+
+
+def test_containment_stays_hard_under_hierarchy_advisory(ci, tmp_path, monkeypatch, capsys) -> None:
+    """`hierarchy: advisory` relaxes whether a parent is required, never which
+    type may sit under which (DEC-036 D4): a Task under a Task is still refused."""
+    root = _stage_real_schema_tree(tmp_path)
+    _write_hierarchy_advisory_map(root)
+    rc, created, link_calls, calls = _file_under(
+        ci, tmp_path, monkeypatch, child="task", parent_title="[Task] another", root=root
+    )
+
+    assert rc == 2
+    assert _nothing_written(created, link_calls, calls)
+    assert "a task may not sit under #9, which is a task" in capsys.readouterr().err
+
+
+def test_an_epics_parent_flag_names_a_milestone_and_is_neither_read_nor_linked(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """An EPIC's container is a milestone: `--parent 9` writes `Milestone: #9`,
+    which names milestone 9 and no issue. No containment refusal fires, issue #9
+    is not read, and no native link is made under it — so the warning's words,
+    milestone 9 and not issue #9, hold."""
+    rc, created, link_calls, calls = _file_under(
+        ci, tmp_path, monkeypatch, child="epic", parent_title="[Task] an issue numbered 9"
+    )
+    out, err = capsys.readouterr()
+
+    assert rc == 0
+    assert ["gh", "issue", "view", "9", "--json", "title"] not in calls, "#9 is not read"
+    assert link_calls == []
+    assert created["body"].lstrip().split("\n", 1)[0] == "Milestone: #9"
+    assert (
+        "[warn] this type's container is a milestone, never an issue "
+        "(Milestone: [#<N>](../milestone/<N>)), so the first line `Milestone: #9` names "
+        "milestone 9, not issue #9."
+    ) in err
+    assert "parent:" not in out
+
+
+def test_an_epics_parent_flag_beside_a_body_file_links_nothing_and_says_so(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    body_file = tmp_path / "body.md"
+    body_file.write_text("## Outcome\n\nthe thesis\n", encoding="utf-8")
+    rc, created, link_calls, _calls = _file_under(
+        ci,
+        tmp_path,
+        monkeypatch,
+        child="epic",
+        parent_title="[Task] an issue numbered 9",
+        extra=("--parent", "9", "--body-file", str(body_file)),
+    )
+
+    assert rc == 0
+    assert link_calls == []
+    assert created["body"].startswith("## Outcome")
+    assert "--parent 9 links nothing" in capsys.readouterr().err

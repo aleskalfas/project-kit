@@ -29,7 +29,8 @@ a line naming a parent in a form the type does not offer (`Epic: #5`,
 non-conforming. A milestone ref, in either form, names no issue.
 
 The line writer :func:`issue_parent_line` writes the line `create-issue` and
-`set-field --parent` put on a body, labelled with the parent's own type.
+`set-field --parent` put on a body, labelled with the parent's own type, once
+`containment_graph` has held the parent to the containment graph.
 """
 
 from __future__ import annotations
@@ -339,10 +340,11 @@ def issue_parent_line(
     — when it is one of the forms ``parent_ref_form`` allows, so a Task filed
     under an Umbrella opens `Umbrella: #<N>`. Where the parent's type is not
     known (``parent_label`` is ``None``) the line takes the form's first option.
-    It takes the first option, too, where the parent's label is not among the
-    forms, and says so in ``warning``: DEC-005 requires a parent the type may
-    not sit under to be refused, and until that refusal is built a writer
-    names the parent this way and warns.
+    A parent the type may not sit under never reaches this writer: DEC-005
+    refuses it, and `create-issue` and `set-field --parent` refuse it before
+    they call here (`containment_graph.check_parent`). A label the forms do not
+    offer — which only a caller that skipped that check can pass — takes the
+    first option too, and ``warning`` says so.
 
     Where the first option names a milestone the number is a milestone's: a
     type whose only parent-ref names a milestone (an EPIC) sits under a
