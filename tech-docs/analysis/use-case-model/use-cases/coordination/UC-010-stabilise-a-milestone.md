@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-02T00:35:04Z
+      at: 2026-10-02T00:55:28Z
       outcome: unchanged
-      unchanged-because: done-work's only change is that its warning after a failed move to Done names the issue in the move-issue line it prints; stabilising a Milestone, and the guard on done-work this use case intends, are untouched
+      unchanged-because: "#1254 has done-work and merge-pr pass the cross-repository confirmation on to the backbone's own guard; release scope, the stabilisation and its guards (still unbuilt, EPIC #943) are unchanged, so it holds"
 ---
 
 # UC-010 — Stabilise a Milestone for a release
