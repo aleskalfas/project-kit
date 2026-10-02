@@ -235,6 +235,34 @@ def test_a_line_with_nothing_to_say_about_it_is_not_said(
     assert bpr.read_first_line(body, structural_type, issue_types).note is None
 
 
+# --- the word a line names its parent under (#1313) -------------------------
+
+
+@pytest.mark.parametrize(
+    ("structural_type", "body", "label"),
+    [
+        ("task", "Feature: #42\n", "Feature"),  # conforming
+        ("feature", "Epic: #5\n", "Epic"),  # non-conforming, a type's word misspelt
+        ("feature", "Feature: #12 — auth\n", "Feature"),  # non-conforming, says more
+        ("epic", "Supersedes: #120\n", "Supersedes"),
+        (None, "Related: #45\n", "Related"),  # untyped: any word conforms
+        ("task", "Milestone: [#5](../milestone/5)\n", "Milestone"),
+        ("epic", "Milestone: #5\n", "Milestone"),
+        ("task", "## What\nFeature: #5\n", None),
+        ("task", "", None),
+    ],
+)
+def test_the_reading_keeps_the_word_the_line_names_its_parent_under(
+    bpr, issue_types, structural_type, body, label
+) -> None:
+    assert bpr.read_first_line(body, structural_type, issue_types).label == label
+
+
+def test_the_type_labels_are_each_shipped_types_own_word(bpr, issue_types) -> None:
+    assert bpr.type_labels(issue_types) == {"EPIC", "Feature", "Umbrella", "Task"}
+    assert bpr.type_labels({}) == frozenset()
+
+
 # --- a milestone first line follows a milestone move (#1049) -------------
 
 

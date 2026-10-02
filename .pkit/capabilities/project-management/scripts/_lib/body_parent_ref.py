@@ -26,7 +26,12 @@ after the colon, anything after the number. Whether it does so in a form the
 issue's own type allows is a second fact, told apart by :func:`read_first_line`:
 a line naming a parent in a form the type does not offer (`Epic: #5`,
 `Feature: #12 — auth`) still names that parent, and is reported as
-non-conforming. A milestone ref, in either form, names no issue.
+non-conforming. A milestone ref, in either form, names no issue. The word a
+line names its parent under is kept beside it (``FirstLine.label``): under an
+issue type's own word (:func:`type_labels`) the line asserts a parent, which a
+refusal on the containment graph holds to the graph; under any other
+(`Related: #45`) it names the issue every reader takes as the parent, but
+asserts none.
 
 The line writer :func:`issue_parent_line` writes the line `create-issue` and
 `set-field --parent` put on a body, labelled with the parent's own type, once
@@ -105,7 +110,10 @@ class FirstLine:
     allows, for the caller to put after the issue's number. ``issue_form`` says
     whether the issue's type has a form that names an issue at all: False for a
     type whose only parent-ref names a milestone (an EPIC, whose container is a
-    milestone), True where the type cannot be told.
+    milestone), True where the type cannot be told. ``label`` is the word the
+    line names its parent under, as written — ``Feature``, ``Epic``,
+    ``Related``, ``Milestone`` — and ``None`` for a line naming no parent; which
+    labels are an issue type's own is :func:`type_labels`'.
     """
 
     form: LineForm
@@ -113,6 +121,7 @@ class FirstLine:
     number: int | None = None
     note: str | None = None
     issue_form: bool = True
+    label: str | None = None
 
     @property
     def issue(self) -> int | None:
@@ -215,10 +224,17 @@ def named_issue(body: str) -> int | None:
     conforming or not, this finds the same one, so a child set and a parent
     resolution never disagree on which issue a line names.
     """
-    m = _NAMES_AN_ISSUE.match(first_line(body))
+    named = _named_issue_ref(first_line(body))
+    return named[1] if named is not None else None
+
+
+def _named_issue_ref(line: str) -> tuple[str, int] | None:
+    """``(label, number)`` where ``line`` names an issue (:func:`named_issue`),
+    else ``None`` — a milestone's number is never an issue's."""
+    m = _NAMES_AN_ISSUE.match(line)
     if m is None or m.group("label") == MILESTONE_LABEL:
         return None
-    return int(m.group("number"))
+    return m.group("label"), int(m.group("number"))
 
 
 def read_first_line(body: str, structural_type: str | None, issue_types: dict) -> FirstLine:
@@ -243,22 +259,25 @@ def read_first_line(body: str, structural_type: str | None, issue_types: dict) -
     issue_form = form is None or bool(_issue_option_labels(form))
     milestone = first_line_milestone(body)
     if milestone is not None:
-        return FirstLine(LineForm.MILESTONE, line, milestone, issue_form=issue_form)
-    number = named_issue(body)
-    if number is None:
+        return FirstLine(
+            LineForm.MILESTONE, line, milestone, issue_form=issue_form, label=MILESTONE_LABEL
+        )
+    named = _named_issue_ref(line)
+    if named is None:
         return FirstLine(LineForm.NONE, line, issue_form=issue_form)
+    label, number = named
     if form is not None:
         ref = parse_first_line(body, form)
         if ref is not None and not ref.milestone:
-            return FirstLine(LineForm.CONFORMING, line, number, issue_form=issue_form)
+            return FirstLine(LineForm.CONFORMING, line, number, issue_form=issue_form, label=label)
         note = (
             f"first line `{line}` is not a parent-ref a {structural_type} may have: {form.strip()}"
         )
-        return FirstLine(LineForm.NON_CONFORMING, line, number, note, issue_form)
+        return FirstLine(LineForm.NON_CONFORMING, line, number, note, issue_form, label)
     if _ANY_ISSUE_LINE.match(line):
-        return FirstLine(LineForm.CONFORMING, line, number)
+        return FirstLine(LineForm.CONFORMING, line, number, label=label)
     note = f"first line `{line}` is not in the parent-ref form `<Label>: #<N>`"
-    return FirstLine(LineForm.NON_CONFORMING, line, number, note)
+    return FirstLine(LineForm.NON_CONFORMING, line, number, note, label=label)
 
 
 def is_only_a_parent_ref(line: str) -> bool:
@@ -328,6 +347,21 @@ def type_label(issue_types: dict, structural_type: str) -> str | None:
     if entry.get("title_case", "title") == "upper":
         rendered = rendered.upper()
     return rendered or None
+
+
+def type_labels(issue_types: dict) -> frozenset[str]:
+    """Every label a parent-ref names an issue type's parent with: each declared
+    type's own (:func:`type_label`) — ``EPIC``, ``Feature``, ``Umbrella``,
+    ``Task`` in the shipped schema. A first line under one of them says the
+    issue it names is a parent of that type, in a form the issue's type allows or
+    not; a line under any other word (``Related: #45``, ``Supersedes: #120``)
+    names an issue every reader takes as the parent, but says nothing of a type.
+    Matched exactly, as the forms are."""
+    types = issue_types.get("types") if isinstance(issue_types, dict) else None
+    if not isinstance(types, dict):
+        return frozenset()
+    labels = (type_label(issue_types, str(name)) for name in types)
+    return frozenset(label for label in labels if label)
 
 
 def issue_parent_line(
