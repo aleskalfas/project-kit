@@ -1,0 +1,33 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  An issue's parent is read one way everywhere. The containment seam's new
+  `resolve_parent` returns an issue's parent — the native one wherever the
+  tracker reports it, else the issue its first line names — with how the two
+  records stand, and the forward cascade, `close-issue`'s closure cascade, the
+  close gate's membership step and `show-tree` all read it. The forward cascade
+  follows a first line its type does not allow where the native parent names
+  the same issue, with a note, and still stops where the two disagree or such a
+  line is the only record. The closure cascade checks every parent the close
+  gate counts the closed issue under: a natively linked child's native parent,
+  where it reported no parent; the parent a first line in a form the type does
+  not allow names, with a warning, where it skipped the check; and both parents
+  where the two records disagree, with the `set-field` line that settles them.
+  A native parent in another repository is named and not checked. `show-tree`'s
+  `parent_number` is the native parent wherever one was seen, a child listed
+  under a first-line parent other than its native one is marked
+  `[native parent #<P>]`, a first line not in an allowed form is marked, and
+  the JSON gains `parent_resolution`. The close gate reads a first line as the
+  cascades do: `Epic:#5` (no space) now names #5 and holds it open, and the
+  deprecated `Milestone: #3` no longer names issue #3. `cascade-membership`
+  reads the candidate's REST record in place of `gh issue view` and adds
+  `parent_kind` to its detail. A Feature may name an Umbrella
+  (`Umbrella: #<N>`) and is walked through it to the EPIC, and `create-issue`
+  and `set-field --parent` label the first line with the parent's own type, so
+  a Task set under an Umbrella reads `Umbrella: #<N>`; `set-field --parent`
+  replaces a loose first line such as `Feature: #12 — auth` rather than writing
+  the new one above it. A move to done that finds an issue closed with neither
+  a state label nor a milestone reads its close reason, so one closed as
+  completed brings its ancestors level.
