@@ -10,17 +10,25 @@ body: >
   make is bounded: 15 seconds for a reading and 30 for a request that changes
   the service, after which `gh` alone is ended. `gh` now runs in the
   command's own process group, so a caller that ends that group ends a `gh`
-  request in flight too. When `merge`, `enqueue` or `dequeue` gets no answer
-  (`gh` ended at its bound, or a 5xx, a reset or nothing back), the command
-  reads the pull request. If the request's end state shows (merged or queued;
-  out of the queue for a dequeue), it was made: `accepted` is true and
-  `exit_code` null. If it does not show on two readings 10 seconds apart, it
-  was not made: `accepted` false, with `reason_kind: not-made`. If the pull
-  request cannot be read, the request is unconfirmed: `accepted` null, with
-  `reason_kind: unanswered`, and the command exits 1 and names `pkit
-  pull-request read <n>`. A request the service answered with an error stays
-  a refusal in the service's words. These are additions, so `schema_version`
-  stays 1. `pkit release merge` reports an unconfirmed merge or enqueue
-  plainly, claiming neither that the release merged nor that it did not, and
-  exits 4 with nothing deleted. A request settled as not made is refused
-  with exit 1.
+  request in flight too. A request is taken as refused only on an answer the
+  backbone recognises: GraphQL errors, a `GraphQL:` line, an HTTP 4xx, or
+  `gh`'s own refusal before it sent anything. Anything else, a `gh` ended by
+  a signal included, is no usable answer. Then `merge`, `enqueue` or
+  `dequeue` says on standard error that the request is in flight, and reads
+  the pull request. If the request's end state shows (merged or queued, or
+  dropped by the queue since it was sent; out of the queue on two readings
+  for a dequeue), it was made: `accepted` is true. If two readings, the
+  second at least 40 seconds after the request, do not see it, it was not
+  seen made: `accepted` is false, with `reason_kind: not-made`, and the
+  reason says what the readings saw rather than that it was not made. A
+  dequeue not seen made is sent once more. If the pull request cannot be
+  read, the request is unconfirmed: `accepted` is null, with `reason_kind:
+  unanswered`, and the command exits 1 and names `pkit pull-request read
+  <n>`. `dequeue` now confirms a pull request out of the queue on two
+  readings even when the service answered it. One it finds merged has
+  `reason_kind: merged`, and one the service accepted that cannot be read
+  since is unconfirmed, with `reason_kind: unreadable`. `pkit release merge`
+  reports an unconfirmed merge or enqueue plainly, claiming neither that the
+  release merged nor that it did not, and exits 4 with nothing deleted. A
+  request not seen made exits 1, saying this run saw nothing merged and
+  naming the reading and the re-run that tell.
