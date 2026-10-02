@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Changed
+  pr: "1310"
 body: >
   An adapter and a capability can no longer share a name (#1306). The backbone
   reads a component by its name alone where it reads both kinds: a changeset
