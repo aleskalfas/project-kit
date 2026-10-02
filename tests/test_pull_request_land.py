@@ -1,5 +1,5 @@
-"""Tests for the landing sequence — `pull_request_landing.land` (#1258;
-ADR-061 points 5, 7 and 8).
+"""Tests for the landing sequence — `pull_request_landing.land` and `pkit
+pull-request land` (#1258; ADR-061 points 5, 7 and 8).
 
 The state-by-option table, cell by cell, through the shared fake of the hosting
 service (`tests.hosting_fake`), as a landing and as its dry run; the one
@@ -7,23 +7,31 @@ refusal order and the two stops no option lifts; each way the wait ends, and
 each way a request with no usable answer settles, for the merge and the
 enqueue; a head that moved before any request and during the wait, with each
 thing taking the PR out of the queue came to; the events; the end document —
-every key in every one, decoded strictly by its `ended` — and its bound.
+every key in every one, decoded strictly by its `ended` — and its bound; the
+command, its exits and its input rule; and the line written before a request,
+on a real process killed while `gh` holds the request.
 """
 
 from __future__ import annotations
 
 import json
+import os
+import select
+import signal
 import subprocess
+import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import pytest
+from click.testing import CliRunner
 
+from project_kit import cli, session_guard
 from project_kit import pull_request_landing as landing
-from project_kit import session_guard
 from tests import hosting_fake as fake
+from tests import sessions
 
 Completed = subprocess.CompletedProcess[str]
 
@@ -1022,3 +1030,285 @@ def test_a_landing_needs_a_clearance_for_where_it_acts(
     with pytest.raises(ValueError, match="none was named"):
         landing.land(PR, head="", subject="x", **here)
     assert host.requests == []
+
+
+# ---- `pkit pull-request land` --------------------------------------------------------
+
+
+@pytest.fixture
+def served(
+    host: fake.HostingService, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> fake.HostingService:
+    """`host` as the command's `gh`, run outside any session."""
+    monkeypatch.delenv(session_guard.CLAUDE_CODE_ANCHOR, raising=False)
+    monkeypatch.chdir(tmp_path)
+    return host
+
+
+def _invoke(*args: str) -> Any:
+    return CliRunner().invoke(cli.main, ["pull-request", "land", str(PR), *args])
+
+
+def _lines(output: str) -> list[dict[str, Any]]:
+    return [json.loads(line) for line in output.splitlines() if line.strip()]
+
+
+_ARGS = ("--head", HEAD, "--subject", "fix: land it")
+
+
+def test_land_writes_its_events_then_one_end(served: fake.HostingService) -> None:
+    result = _invoke(*_ARGS, "--json")
+    assert result.exit_code == 0
+    lines = _lines(result.stdout)
+    assert [line["event"] for line in lines] == [
+        "reading",
+        "requesting",
+        "requested",
+        "reading",
+        "end",
+    ]
+    end = lines[-1]
+    assert set(end) == landing.END_KEYS
+    assert (end["ended"], end["sent"], end["merged_head"]) == ("merged", "merge", HEAD)
+    assert landing.decode_end(end) == end
+
+
+@pytest.mark.parametrize(
+    ("setup", "args", "code", "ended"),
+    [
+        (_open_without_a_queue, [], 0, "merged"),
+        (_merged_at_another_head, [], 0, "merged-at-another-head"),
+        (_open_without_a_queue, ["--dry-run"], 0, "planned"),
+        (lambda s: _enqueued(s, fake.at(3, "QUEUED")), ["--seconds", "0"], 4, "queued"),
+        (lambda s: s.after(fake.MERGE, _fail_every_read), [], 4, "unconfirmed"),
+        (_open_at_another_head, [], 3, "head-moved"),
+        (lambda s: _enqueued(s, fake.at(1), fake.drops()), [], 3, "dropped"),
+        (lambda s: s.after(fake.MERGE, _unmerge), [], 3, "not-merged"),
+        (_closed, [], 1, "closed"),
+        (_dropped_at_the_head, [], 1, "refused"),
+        (_unreadable, [], 1, "unreadable"),
+        (
+            lambda s: s.fail(fake.MERGE, stderr="GraphQL: Pull request is not mergeable"),
+            [],
+            1,
+            "failed",
+        ),
+    ],
+)
+def test_land_exits_by_how_it_ended_for_a_person(
+    served: fake.HostingService,
+    setup: Callable[[fake.HostingService], Any],
+    args: list[str],
+    code: int,
+    ended: str,
+) -> None:
+    setup(served)
+    result = _invoke(*_ARGS, *args, "--json")
+    assert result.exit_code == code
+    assert _lines(result.stdout)[-1]["ended"] == ended
+
+
+@pytest.mark.parametrize("head", ["abc1234", HEAD[:39], "not-a-sha", ""])
+def test_land_takes_a_full_commit_id_and_reads_nothing_otherwise(
+    served: fake.HostingService, head: str
+) -> None:
+    """An abbreviated head would read as a PR at another head, and take a
+    healthy PR out of the queue: a usage error, exit 2, nothing read."""
+    result = _invoke("--head", head, "--subject", "fix: land it", "--json")
+    assert result.exit_code == 2
+    assert "is not a full commit id" in result.stderr
+    assert served.requests == []
+
+
+def test_land_takes_a_commit_id_in_any_case_and_pins_it_lower_cased(
+    served: fake.HostingService,
+) -> None:
+    result = _invoke("--head", HEAD.upper(), "--subject", "fix: land it", "--json")
+    assert result.exit_code == 0
+    assert _lines(result.stdout)[1]["head"] == HEAD
+
+
+def test_land_says_its_events_and_end_to_a_person(served: fake.HostingService) -> None:
+    result = _invoke(*_ARGS)
+    assert result.exit_code == 0
+    assert result.stdout == (
+        f"PR #{PR} not in the queue\n"
+        f"sending the merge of PR #{PR} at {HEAD[:7]}\n"
+        f"the merge of PR #{PR}: made\n"
+        f"PR #{PR} merged at 2026-10-01T10:12:00Z\n"
+        f"PR #{PR}: merged\n"
+    )
+
+
+def test_a_warning_is_said_on_standard_error_to_a_person(served: fake.HostingService) -> None:
+    _queued_at_the_head(served)
+    _bad_shape(served)
+    result = _invoke(*_ARGS, "--queued-bad-shape", "warn")
+    assert result.exit_code == 0
+    assert result.stderr.startswith("[warn] the merge queue on PR #496's base merges by MERGE")
+
+
+@pytest.fixture
+def foreign(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, host: fake.HostingService) -> Path:
+    """A session rooted in one repository, the command run from another."""
+    _, target = sessions.rooted_elsewhere(tmp_path, monkeypatch)
+    monkeypatch.chdir(target)
+    return target
+
+
+@pytest.mark.parametrize("dry_run", [False, True], ids=["run", "dry-run"])
+def test_a_landing_the_guard_refuses_writes_only_its_end_and_reads_nothing(
+    foreign: Path, host: fake.HostingService, dry_run: bool
+) -> None:
+    result = _invoke(*_ARGS, "--json", *(["--dry-run"] if dry_run else []))
+    assert result.exit_code == 1
+    [end] = _lines(result.stdout)
+    assert (end["ended"], end["reason_kind"], end["guard"]["cleared"]) == (
+        "refused",
+        "foreign-repository",
+        None,
+    )
+    assert end["guard"]["verdict"] == "diverged"
+    assert (end["reading"], end["path"], end["dry_run"]) == (None, None, dry_run)
+    assert landing.decode_end(end) == end
+    if dry_run:
+        assert "a run at a terminal would ask" in end["reason"]
+    assert host.requests == []
+
+
+def test_a_dry_run_in_another_repository_with_the_flag_reads_and_plans(
+    foreign: Path, host: fake.HostingService
+) -> None:
+    result = _invoke(*_ARGS, "--json", "--dry-run", "--allow-foreign-repo")
+    assert result.exit_code == 0
+    end = _lines(result.stdout)[-1]
+    assert (end["ended"], end["would"], end["guard"]["cleared"]) == ("planned", "merge", "flag")
+    assert _requests(host) == "read"
+
+
+def test_a_dry_run_never_asks_where_a_landing_would(
+    foreign: Path, host: fake.HostingService, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """At a terminal, in another repository without the flag, the landing
+    asks — and the dry run does not: it ends refused, as a run with nobody to
+    ask would."""
+    asked: list[bool] = []
+    monkeypatch.setattr(session_guard, "_at_a_terminal", lambda interactive, out: True)
+    monkeypatch.setattr(session_guard, "_answer", lambda: asked.append(True) or "n")
+    planned = _invoke(*_ARGS, "--json", "--dry-run")
+    assert (planned.exit_code, asked) == (1, [])
+    landed = _invoke(*_ARGS, "--json")
+    assert (landed.exit_code, asked) == (1, [True])
+    assert host.requests == []
+
+
+# ---- the line before a request, on a real process killed between the two --------------
+
+# A stand-in `gh` on PATH. It answers the reading with the PR open on a base
+# without a queue, at the head the test names; on the merge it writes one line
+# into the stream the landing writes to — so the order of the two is the order
+# in one pipe — leaves a marker, and holds the request until it is killed.
+_HOLDING_GH = """\
+import json, os, sys, time
+if sys.argv[1:3] == ["pr", "merge"]:
+    with open(os.environ["FAKE_GH_STREAM"], "w", encoding="utf-8") as stream:
+        stream.write("gh: the merge reached gh\\n")
+    with open(os.environ["FAKE_GH_MARKER"], "w", encoding="utf-8") as marker:
+        marker.write(" ".join(sys.argv[1:]))
+    time.sleep(300)
+    sys.exit(0)
+pr = {
+    "id": "PR_node", "state": "OPEN", "mergedAt": None, "mergeCommit": None,
+    "headRefOid": os.environ["FAKE_GH_HEAD"], "headRefName": "fix/42-land-it",
+    "isCrossRepository": False, "isMergeQueueEnabled": False, "isInMergeQueue": False,
+    "mergeQueue": None, "mergeQueueEntry": None, "autoMergeRequest": None,
+    "timelineItems": {"nodes": []},
+}
+print(json.dumps({"data": {"repository": {"pullRequest": pr}}}))
+"""
+
+# How long the test waits for each line before it fails: no line is slept for.
+_LINE_DEADLINE_SECONDS = 60.0
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="a named pipe and a process group")
+def test_a_landing_killed_while_gh_holds_the_merge_has_written_requesting_and_nothing_after(
+    tmp_path: Path,
+) -> None:
+    """The real `pkit pull-request land --json`, its standard output a pipe,
+    and a `gh` that holds the merge. (1) While `gh` holds it, the complete
+    `requesting` line is read from the pipe — an unflushed line fails here,
+    by the deadline. (2) It names the merge, the pin and the first attempt.
+    (3) The line `gh` writes into the same pipe as the merge reaches it comes
+    after it: the request reached `gh` only after the line was out. (4) Once
+    the landing is killed, with its `gh`, nothing more comes: no `requested`,
+    no `end`, no partial line."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    gh = bin_dir / "gh"
+    gh.write_text(f"#!{sys.executable}\n{_HOLDING_GH}", encoding="utf-8")
+    gh.chmod(0o755)
+    stream_path = tmp_path / "stream"
+    os.mkfifo(stream_path)
+    marker = tmp_path / "marker"
+    reader = os.open(stream_path, os.O_RDONLY | os.O_NONBLOCK)
+    writer = os.open(stream_path, os.O_WRONLY)
+    env = {
+        key: value for key, value in os.environ.items() if key != session_guard.CLAUDE_CODE_ANCHOR
+    }
+    env.update(
+        PATH=f"{bin_dir}{os.pathsep}{env.get('PATH', '')}",
+        FAKE_GH_STREAM=str(stream_path),
+        FAKE_GH_MARKER=str(marker),
+        FAKE_GH_HEAD=HEAD,
+    )
+    argv = [sys.executable, "-m", "project_kit", "pull-request", "land", str(PR), *_ARGS, "--json"]
+    with (tmp_path / "stderr").open("w", encoding="utf-8") as stderr:
+        process = subprocess.Popen(
+            argv,
+            cwd=tmp_path,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            stdout=writer,
+            stderr=stderr,
+            start_new_session=True,
+        )
+    os.close(writer)
+    buffer = b""
+    try:
+        lines: list[bytes] = []
+        while len(lines) < 3:
+            ready, _, _ = select.select([reader], [], [], _LINE_DEADLINE_SECONDS)
+            assert ready, f"no complete line within the deadline; read so far: {buffer!r}"
+            chunk = os.read(reader, 65536)
+            assert chunk, f"the stream ended early: {buffer!r}"
+            buffer += chunk
+            *complete, buffer = buffer.split(b"\n")
+            lines += complete
+        reading, requesting, reached = (lines + [b""] * 3)[:3]
+        assert json.loads(reading)["event"] == "reading"
+        assert json.loads(requesting) == {
+            "schema_version": 1,
+            "pull_request": PR,
+            "event": "requesting",
+            "request": "merge",
+            "head": HEAD,
+            "attempt": 1,
+        }
+        assert reached == b"gh: the merge reached gh"
+        assert lines[3:] == []
+        assert marker.read_text(encoding="utf-8").startswith(f"pr merge {PR} --squash")
+        assert process.poll() is None  # gh still holds the merge
+    finally:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.wait()
+    rest = buffer
+    while True:
+        ready, _, _ = select.select([reader], [], [], _LINE_DEADLINE_SECONDS)
+        assert ready, "the stream did not end once the landing was killed"
+        chunk = os.read(reader, 65536)
+        if not chunk:
+            break
+        rest += chunk
+    os.close(reader)
+    assert rest == b""

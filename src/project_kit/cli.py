@@ -13,7 +13,7 @@ import math
 import os
 import shlex
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -559,8 +559,9 @@ def pull_request() -> None:
     Where a pull request's base merges through a merge queue, and where the PR
     stands in it; the repository's squash-commit defaults; the direct squash
     merge, the enqueue, the wait for the queue's merge, taking a PR out of
-    the queue, and deleting a merged PR's head branch. Each runs `gh` from the
-    working directory; the four that change the service run the
+    the queue, and deleting a merged PR's head branch; and the landing
+    sequence, `land`, which composes them but the deletion. Each runs `gh`
+    from the working directory; the five that change the service run the
     cross-repository guard first. `--json` writes each document as one line of
     JSON, which is how a capability's script calls it. Reference:
     `.pkit/cli/README.md`, "Pull-request commands".
@@ -899,6 +900,186 @@ def pull_request_wait(number: int, head_oid: str, seconds: float | None, as_json
         click.echo(f"ended: {wait.ended}")
     if wait.ended != pull_request_landing.MERGED:
         raise SystemExit(4 if wait.ended == pull_request_landing.STILL_QUEUED else 3)
+
+
+#: `pull-request land`'s exit by how the landing ended: for a person at a
+#: terminal only — no caller decides on it; callers read the end document.
+_LAND_EXITS: Mapping[str, int] = {
+    pull_request_landing.END_MERGED: 0,
+    pull_request_landing.END_MERGED_ELSEWHERE: 0,
+    pull_request_landing.END_PLANNED: 0,
+    pull_request_landing.END_QUEUED: 4,
+    pull_request_landing.END_UNCONFIRMED: 4,
+    pull_request_landing.END_HEAD_MOVED: 3,
+    pull_request_landing.END_DROPPED: 3,
+    pull_request_landing.END_NOT_MERGED: 3,
+}
+
+
+@pull_request.command("land")
+@click.argument("number", type=int)
+@click.option(
+    "--head",
+    "head_oid",
+    required=True,
+    metavar="SHA",
+    help="The head the caller's gates checked, in full (40 or 64 hexadecimal characters): every "
+    "request is pinned to it, and a reading at another head ends the landing.",
+)
+@click.option("--subject", required=True, help="The squash commit's subject: the PR title.")
+@click.option(
+    "--seconds",
+    type=click.FloatRange(min=0),
+    default=None,
+    help="How long to wait for the queue's merge; 0 reads once. Default: "
+    f"{pull_request_landing.wait_limit(None)}.",
+)
+@click.option(
+    "--allow-dropped-head",
+    is_flag=True,
+    default=False,
+    help="Enqueue a head the merge queue already dropped. Without it, such a head is refused.",
+)
+@click.option(
+    "--admin",
+    is_flag=True,
+    default=False,
+    help="Merge around branch protection, on a base without a merge queue; refused on a base "
+    "with one.",
+)
+@click.option(
+    "--direct-only",
+    is_flag=True,
+    default=False,
+    help="Refuse a base that merges through a merge queue.",
+)
+@click.option(
+    "--queued-bad-shape",
+    type=click.Choice([pull_request_landing.SHAPE_REFUSE, pull_request_landing.SHAPE_WARN]),
+    default=pull_request_landing.SHAPE_REFUSE,
+    show_default=True,
+    help="A PR already in a queue that would not make its squash commit: refuse, leaving it "
+    "queued, or wait for it with a warning.",
+)
+@_allow_foreign_repo_option
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Read and judge, request nothing and never ask: end planned, saying what it would do.",
+)
+@_pull_request_json_option
+def pull_request_land(
+    number: int,
+    head_oid: str,
+    subject: str,
+    seconds: float | None,
+    allow_dropped_head: bool,
+    admin: bool,
+    direct_only: bool,
+    queued_bad_shape: str,
+    allow_foreign_repo: bool,
+    dry_run: bool,
+    as_json: bool,
+) -> None:
+    """Land PR NUMBER at SHA: the landing sequence, in one command.
+
+    The cross-repository guard runs once, at the entry. Then one reading;
+    the options applied to it; the direct squash merge, with SUBJECT, or the
+    enqueue, each pinned to SHA; the wait for the merge; and, where a reading
+    finds another head, the PR taken out of the queue. Never deletes a
+    branch. Writes each event — a reading, `requesting` before each request
+    is sent, `requested` once it is settled — and one end document saying
+    how the landing ended. Exit 0 when merged or planned; 4 when queued or
+    unconfirmed; 3 when the head moved, or the PR left the queue or was not
+    merged; 1 otherwise; 2 when SHA is not a full commit id. A caller reads
+    the end document, never the exit.
+    """
+    expected = pull_request_landing.full_object_id(head_oid)
+    if not expected:
+        raise click.BadParameter(
+            f"{head_oid!r} is not a full commit id (40 or 64 hexadecimal characters)",
+            param_hint="--head",
+        )
+    if seconds is not None and not math.isfinite(seconds):
+        raise click.BadParameter("not a number of seconds", param_hint="--seconds")
+    options = pull_request_landing.LandOptions(
+        seconds=seconds,
+        allow_dropped_head=allow_dropped_head,
+        admin=admin,
+        direct_only=direct_only,
+        queued_bad_shape=queued_bad_shape,
+    )
+
+    def written(document: dict[str, Any]) -> None:
+        if as_json:
+            click.echo(pull_request_landing.render_json(document))
+        else:
+            _say_landing_event(document)
+
+    passage = session_guard.clear(Path.cwd(), confirmed=allow_foreign_repo, dry_run=dry_run)
+    if isinstance(passage, session_guard.Refusal):
+        landing = pull_request_landing.refused_by_the_guard(
+            number, head=expected, refusal=passage, options=options, dry_run=dry_run
+        )
+    else:
+        landing = pull_request_landing.land(
+            number,
+            head=expected,
+            subject=subject,
+            cwd=passage.directory,
+            clearance=passage,
+            options=options,
+            dry_run=dry_run,
+            on_event=written,
+        )
+    written(landing.as_json())
+    code = _LAND_EXITS.get(landing.ended, 1)
+    if code:
+        raise SystemExit(code)
+
+
+def _say_landing_event(document: Mapping[str, Any]) -> None:
+    """One event of a landing, as a person reads it: a reading, a request sent
+    and what it came to, and how the landing ended — its warnings on standard
+    error."""
+    number = document["pull_request"]
+    event = document["event"]
+    if event == "reading":
+        click.echo(f"PR #{number} {document['reading']['description']}")
+    elif event == "requesting":
+        pinned = f" at {document['head'][:7]}" if document["head"] else ""
+        again = " once more" if document["attempt"] > 1 else ""
+        click.echo(f"sending the {document['request']} of PR #{number}{pinned}{again}")
+    elif event == "requested":
+        click.echo(f"the {document['request']} of PR #{number}: {_came_to(document)}")
+    else:
+        _say_landing_end(document)
+
+
+def _came_to(outcome: Mapping[str, Any]) -> str:
+    """What a request came to, as a phrase."""
+    if outcome["accepted"]:
+        return "made"
+    if outcome["accepted"] is None:
+        return f"whether it was made is not known: {outcome['reason']}"
+    return f"not accepted: {outcome['reason'] or 'refused'}"
+
+
+def _say_landing_end(document: Mapping[str, Any]) -> None:
+    """How a landing ended, as a person reads it."""
+    line = f"PR #{document['pull_request']}: {document['ended']}"
+    if document["reason_kind"]:
+        line += f" ({document['reason_kind']})"
+    if document["would"]:
+        line += f" — would {document['would']}"
+    if document["reason"]:
+        line += f": {document['reason']}"
+    click.echo(line)
+    if document["dequeue"] is not None:
+        click.echo(f"  taking it out of the merge queue: {_came_to(document['dequeue'])}")
+    for warning in document["warnings"]:
+        click.echo(f"[warn] {warning['reason']}", err=True)
 
 
 def _graph_format_options(command: Callable[..., None]) -> Callable[..., None]:
