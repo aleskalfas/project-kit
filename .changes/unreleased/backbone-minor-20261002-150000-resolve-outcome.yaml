@@ -1,0 +1,30 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The document `pkit connections resolve <address> --json` prints gains
+  `outcome`: how the resolution of the point ended, as one value from a closed
+  set, beside `why`, which stays the sentence for people. `resolved` — the
+  point has a value, which may be empty (an inert filler among several that
+  answered leaves it `resolved`; each filler's `state` says so); `undefined` —
+  no active provider defines the point (`defined: false`); `unfilled` — no
+  filler is declared and the point has no default (a contribution not
+  delivered, because its capability is not the selected provider of its role,
+  declares nothing); `no-answer` — every filler meant to answer was inert;
+  `inert-fail` — a filler meant to answer was inert under the `fail` inert
+  policy; `collision` — the fillers' entries collide under the point's
+  combination; `selection-needed` — several capabilities contribute to a
+  `single` point and none is selected; `selection-unmatched` — the
+  contributor selection names a capability that does not contribute to the
+  point; `definer-defect` — the definer's own declaration cannot be applied
+  (its companion schema, or a combination policy the backbone does not know).
+  A reader dispatches on `outcome`, never on `why`'s wording, and reads a
+  value it does not know as "could not tell" — never as `resolved`, never as
+  `unfilled`. The structured fields alone could not tell a collision from a
+  point nothing fills: a point that does not resolve lists every filler that
+  answered as `passed over`. The document also gains `schema_version` (`1`),
+  under the rule every reading document follows: raised when a key or an
+  `outcome` value a reader relies on changes its meaning or goes, never for
+  one added; a document without it reads as version 1. The human output is
+  unchanged.
