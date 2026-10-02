@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-02T01:25:06Z
+      at: 2026-10-02T03:22:05Z
       outcome: unchanged
-      unchanged-because: pkit release merge deletes the release pull request's head branch through the backbone's deletion, only at the head that merged; what a release lands, its scope, its gate and the release pull request's merge path are unchanged, so it holds
+      unchanged-because: pkit release merge now bounds each gh call and reports a merge or an enqueue that got no answer as unconfirmed, exit 4 with nothing deleted, for a later run to complete; this use case describes what a release carries, its gate and deferrals, and that the release pull request lands at step 7, which an unconfirmed landing still reaches on that later run, so every step and variant holds
 ---
 
 # UC-005 — Cut a release while unfinished work remains

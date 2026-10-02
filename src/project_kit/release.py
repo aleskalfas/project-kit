@@ -34,7 +34,7 @@ from typing import Any
 
 import click
 
-from project_kit import pull_request_landing, session_guard, versioning
+from project_kit import command_runner, pull_request_landing, session_guard, versioning
 from project_kit.changesets import (
     BACKBONE,
     FLOOR_FIELD,
@@ -1827,8 +1827,10 @@ class ReleaseMergeReport:
 
 #: `pkit release merge`'s exit when the merge was accepted but has not been
 #: seen to land — a merge queue holds the PR, or GitHub could not be read to
-#: confirm a direct merge. Nothing was deleted; the same command run again once
-#: the PR has merged deletes the head branch.
+#: confirm a direct merge — or when a merge or an enqueue got no answer and
+#: GitHub could not be read since, so whether it was made is not known.
+#: Nothing was deleted; the same command run again once GitHub answers lands
+#: the PR if it has not, and deletes the head branch once it has merged.
 EXIT_ACCEPTED = 4
 
 
@@ -1867,6 +1869,14 @@ def merge_release_pr(
     neither can fail the run, so a detached-HEAD or worktree run still
     completes (#897).
 
+    Every `gh` call is bounded, so no stuck call holds the run. A merge or an
+    enqueue that gets no answer the landing module settles by reading: made,
+    the run goes on as it would; not seen made on two readings, it is refused
+    saying this run saw nothing merged — never that nothing merged — with the
+    reading and the re-run that tell; unconfirmed — GitHub not readable since
+    — the report says so plainly, claiming neither a merge nor its absence,
+    and exits :data:`EXIT_ACCEPTED` with nothing deleted.
+
     A PR already in the queue is waited for, not gated or enqueued again, with
     a warning when the queue would not make the release's squash commit; a
     merged one has only its clean-up run, so a run that returned while the PR
@@ -1903,7 +1913,7 @@ def merge_release_pr(
         queue = pull_request_landing.read(pr.number, gh=gh)
     except pull_request_landing.Unreadable as exc:
         raise click.ClickException(
-            f"cannot tell how {base} merges: {exc}. Nothing was merged."
+            f"cannot tell how {base} merges: {exc}. This run asked nothing."
         ) from None
     if queue.merged:
         return _after_the_merge(
@@ -1955,6 +1965,10 @@ def merge_release_pr(
         enqueued = pull_request_landing.enqueue(
             pr.number, cwd=repo_root, clearance=clearance, head_oid=pr.head_oid
         )
+        if enqueued.accepted is None:
+            return _unconfirmed(pr, enqueued)
+        if enqueued.reason_kind == pull_request_landing.NOT_MADE:
+            raise _not_seen_made(pr, enqueued)
         if not enqueued.accepted:
             raise click.ClickException(
                 f"`gh pr merge {pr.number} --auto` failed: {enqueued.reason}. Nothing was merged."
@@ -1974,6 +1988,10 @@ def merge_release_pr(
         clearance=clearance,
         head_oid=pr.head_oid,
     )
+    if merged.accepted is None:
+        return _unconfirmed(pr, merged)
+    if merged.reason_kind == pull_request_landing.NOT_MADE:
+        raise _not_seen_made(pr, merged)
     if not merged.accepted:
         raise click.ClickException(f"`gh pr merge {pr.number}` failed: {merged.reason}")
     try:
@@ -1997,6 +2015,44 @@ def merge_release_pr(
         "for a queued PR."
     )
     return _await_the_queue(pr, repo_root, gh, clearance, wait_seconds, say, merged_directly=True)
+
+
+def _unconfirmed(pr: ReleasePrState, outcome: pull_request_landing.Outcome) -> ReleaseMergeReport:
+    """The report of a merge or an enqueue of the release PR that got no
+    answer, with the PR unreadable since (`pull_request_landing`'s
+    unconfirmed): what was asked and that whether it was made is not known,
+    claiming neither that the release merged nor that it did not, and the
+    command that reads the PR. Nothing was deleted; exit
+    :data:`EXIT_ACCEPTED`, as for a direct merge GitHub could not be read to
+    confirm, so a run once GitHub answers completes the landing."""
+    number = pr.number
+    base = pr.base_ref or "the base branch"
+    return ReleaseMergeReport(
+        f"[unconfirmed] {outcome.reason}. Whether release PR #{number} merged into {base}, "
+        f"or entered its merge queue, is not known, and nothing was deleted. Read where it "
+        f"stands with `pkit pull-request read {number}`, then run `pkit release merge "
+        f"{number}` again: it reads the PR first, lands it if it has not, and deletes the head "
+        "branch once it has merged.",
+        EXIT_ACCEPTED,
+    )
+
+
+def _not_seen_made(
+    pr: ReleasePrState, outcome: pull_request_landing.Outcome
+) -> click.ClickException:
+    """The refusal of a merge or an enqueue of the release PR that got no
+    answer, and that two readings since did not see made
+    (`pull_request_landing`'s not-made): what the readings saw, that this run
+    saw nothing merged — never that nothing merged, since the service may
+    still apply the request — and the reading and the re-run that tell. Exit
+    1, as a refusal: nothing was deleted."""
+    number = pr.number
+    return click.ClickException(
+        f"{outcome.reason}. This run saw nothing merged, and nothing was deleted. Read where "
+        f"release PR #{number} stands with `pkit pull-request read {number}`, then run `pkit "
+        f"release merge {number}` again: it reads the PR first, lands it if it has not, and "
+        "deletes the head branch once it has merged."
+    )
 
 
 def release_pr_refusal(pr: ReleasePrState) -> ReleaseMergeDecision | None:
@@ -2176,6 +2232,21 @@ def _await_the_queue(
                 f"{moved}; it was taken out of the merge queue, so nothing unchecked merges. "
                 f"Nothing was deleted; run {rerun} again once the new head is green."
             )
+        if out.accepted is None:
+            raise ReleaseNotMerged(
+                f"{moved}, and whether taking it out of the merge queue worked is not known "
+                f"({out.reason}): it may still merge commits nothing checked. Read where it "
+                f"stands with `pkit pull-request read {number}`; if it is still queued, take it "
+                f"out yourself — in the PR's merge box, or `gh pr merge {number} --disable-auto` "
+                "while it waits to enter. Nothing was deleted."
+            )
+        if out.reason_kind == pull_request_landing.HAS_MERGED:
+            raise ReleaseNotMerged(
+                f"{moved}, and it merged before it could be taken out of the merge queue: "
+                f"{out.reason}. The commits pushed after its checks were read may be in that "
+                f"merge; look at it. Nothing was deleted; run {rerun} again to delete the head "
+                "branch now the PR has merged."
+            )
         raise ReleaseNotMerged(
             f"{moved}, and taking it out of the merge queue failed ({out.reason}): it may "
             "still merge commits nothing checked. Take it out yourself — in the PR's merge "
@@ -2288,23 +2359,29 @@ def _wait_phrase(seconds: float | None) -> str:
 
 
 def _gh_pr_view(pr_number: int, repo_root: Path) -> dict:
-    """`gh pr view <n> --json …` from `repo_root`, parsed to a dict."""
+    """`gh pr view <n> --json …` from `repo_root`, parsed to a dict — bounded
+    as the landing's readings are (`pull_request_landing.GH_READ_SECONDS`),
+    through the command runner's one bounded start, so a `gh` that never
+    answers ends the run rather than holding it."""
     fields = (
         "number,title,state,headRefName,headRefOid,baseRefName,isCrossRepository,"
         "mergeable,url,statusCheckRollup"
     )
     try:
-        result = subprocess.run(
+        result = command_runner.run_bounded(
             ["gh", "pr", "view", str(pr_number), "--json", fields],
-            capture_output=True,
-            text=True,
             cwd=repo_root,
-            check=False,
+            seconds=pull_request_landing.GH_READ_SECONDS,
         )
     except FileNotFoundError as exc:
         raise click.ClickException(
             "`gh` is not on PATH — install the GitHub CLI to merge a release PR."
         ) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise click.ClickException(
+            f"`gh pr view {pr_number}` did not answer within {exc.timeout:g} s, and was ended. "
+            "This run asked nothing."
+        ) from None
     if result.returncode != 0:
         raise click.ClickException(f"`gh pr view {pr_number}` failed: {result.stderr.strip()}")
     return json.loads(result.stdout)

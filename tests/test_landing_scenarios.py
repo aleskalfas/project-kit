@@ -100,9 +100,10 @@ class Cell:
 
     `outcome` — done-work: its `DoneWorkRun` kind and exit, and `retry` when
     it says running again can help; merge-pr: its exit, and the record it left
-    in the clone (`record=owed` or `record=ran`); release: its exit, or
-    `hangs` when a request that is never answered holds the run; land-work:
-    its exit and the gist of its last step line.
+    in the clone (`record=owed` or `record=ran`); release: its exit — before
+    #1256, `hangs` when a request that is never answered held the run;
+    land-work: its exit and the gist of its last step line. A scenario that
+    runs the caller again says each run's end in turn (`a → b`).
     `requests` — the landing's requests the service received, in order
     (`hosting_fake.LANDING`; `read×3` is three running).
     `after` — the steps after the merge ran: done-work's move to Done and its
@@ -239,6 +240,9 @@ class World:
     #: project-management's copy of the guard's comparison finds the session's
     #: own repository, whatever the backbone's finds: the two disagree.
     pm_reads_same_repository: bool = False
+    #: How many times the caller is run, one after the other, on the same
+    #: service and clone: a re-run sees what the runs before it left.
+    runs: int = 1
 
     def elsewhere(self) -> Path:
         """Another repository on the machine, the anchor of a session rooted there."""
@@ -409,6 +413,46 @@ def _unanswered_then_queued(world: World) -> None:
 
 def _unanswered_then_neither(world: World) -> None:
     world.host.never_receive(fake.MERGE)
+
+
+def _merged_after_the_readings(world: World) -> None:
+    """The merge gets no answer and the two readings that settle it do not
+    see it made; the service applies it just after the second of them, and
+    the caller is run again."""
+    world.runs = 2
+
+    def late(host: fake.HostingService) -> None:
+        host.after(fake.READ, lambda service: service.merge_now(), nth=host.seen(fake.READ) + 2)
+
+    world.host.never_receive(fake.MERGE)
+    world.host.before(fake.MERGE, late)
+
+
+def _unanswered_then_unreadable(world: World) -> None:
+    world.host.lose_reply(fake.MERGE)
+    world.host.after(fake.MERGE, _fail_every_read)
+
+
+def _enqueue_unanswered_then_unreadable(world: World) -> None:
+    _queue(world)
+    world.host.lose_reply(fake.ENQUEUE)
+    world.host.after(fake.ENQUEUE, _fail_every_read)
+
+
+def _killed_mid_merge_made(world: World) -> None:
+    world.host.kill_mid_request(fake.MERGE, made=True)
+
+
+def _killed_mid_merge_unmade(world: World) -> None:
+    world.host.kill_mid_request(fake.MERGE, made=False)
+
+
+def _fail_the_next_read(host: fake.HostingService) -> None:
+    host.fail(fake.READ)
+
+
+def _read_fails_once_after_a_merge(world: World) -> None:
+    world.host.after(fake.MERGE, _fail_the_next_read)
 
 
 def _made_then_gh_failed(world: World) -> None:
@@ -657,6 +701,52 @@ _NOT_READ_AGAIN = (
 _MADE_THEN_FAILED = (
     "accident: a request gh reports failed after the service made it is taken for a failed "
     "one, so what follows the merge does not run"
+)
+_SETTLED_MADE = (
+    "the backbone's bound ends the `gh` that never answers, and its reading since finds the "
+    "request made: the landing goes on as made (#1256); the caller reads once more after a "
+    "merge it is told was made"
+)
+_LOST_ANSWER_SETTLED = (
+    "a 502 is an answer lost on the way, not the service's refusal: the backbone reads the PR "
+    "merged since, and the landing goes on as merged (#1256)"
+)
+_SETTLED_NOT_MADE = (
+    "neither merged nor queued on two readings, the second the window after the request: the "
+    "backbone says the merge was not seen made — what the readings saw — and the caller stops "
+    "as for a failed request, its re-run reading the PR first (#1256)"
+)
+_OUT_ON_TWO_READINGS = (
+    "out of the queue rests on two readings running, as the wait's does: the dequeue is "
+    "confirmed by a second reading, no sooner than the window after it was sent (#1256)"
+)
+_OWED_ON_A_SENT_REQUEST = (
+    "merge-pr records the after-merge steps as owed whenever its run sent a merge or an "
+    "enqueue GitHub did not refuse and did not see merged, so its re-run completes a merge "
+    "that shows later (#1256)"
+)
+_MERGED_LATE = (
+    "the merge got no answer, two readings did not see it made, and the service applied it "
+    "just after them: every caller's re-run reads the PR first and completes it — merge-pr's "
+    "because its first run left the after-merge steps owed (#1256)"
+)
+_SETTLED_UNCONFIRMED = (
+    "unconfirmed, exit 4, nothing after the merge run: before #1256 pm's own reading after no "
+    "document failed; since, the backbone's bound ends the `gh`, its reading fails, and pm "
+    "takes the unconfirmed from its document, reading nothing more — the same requests"
+)
+_RELEASE_UNCONFIRMED = (
+    "the bound ends the `gh` that never answers, and with GitHub unreadable since the report "
+    "is unconfirmed — what was asked, that whether it was made is not known, the reading that "
+    "tells — exit 4, nothing deleted (#1256)"
+)
+_KILLED_ONE_READING = (
+    "pm's bound ended the `pkit` group, the `gh` in it, so no document came back; one reading "
+    "neither merged nor queued is unconfirmed, never 'not made' (#1256)"
+)
+_NO_ONE_LEFT = NotToday(
+    "imports the landing module: a kill ends its own run, with nothing left to read what the "
+    "request came to"
 )
 
 SCENARIOS: tuple[Scenario, ...] = (
@@ -974,6 +1064,26 @@ SCENARIOS: tuple[Scenario, ...] = (
             stopped("3", "read defaults enqueue read×3 dequeue read"),
             stopped("3 merge: stopped", "read defaults read defaults enqueue read×3 dequeue read"),
         ),
+        after={
+            DONE_WORK: stopped(
+                "head-moved 3",
+                "read defaults read defaults enqueue read×3 dequeue read×2",
+                note=_OUT_ON_TWO_READINGS,
+            ),
+            MERGE_PR: stopped(
+                "3 record=owed",
+                "read defaults read defaults enqueue read×3 dequeue read×2",
+                note=f"{_OUT_ON_TWO_READINGS}; {_OWED_ON_A_SENT_REQUEST}",
+            ),
+            RELEASE: stopped(
+                "3", "read defaults enqueue read×3 dequeue read×2", note=_OUT_ON_TWO_READINGS
+            ),
+            LAND_WORK: stopped(
+                "3 merge: stopped",
+                "read defaults read defaults enqueue read×3 dequeue read×2",
+                note=_OUT_ON_TWO_READINGS,
+            ),
+        },
     ),
     Scenario(
         "head-moves-dequeue-fails",
@@ -985,6 +1095,13 @@ SCENARIOS: tuple[Scenario, ...] = (
             stopped("3", "read defaults enqueue read×3 dequeue"),
             stopped("3 merge: stopped", "read defaults read defaults enqueue read×3 dequeue"),
         ),
+        after={
+            MERGE_PR: stopped(
+                "3 record=owed",
+                "read defaults read defaults enqueue read×3 dequeue",
+                note=_OWED_ON_A_SENT_REQUEST,
+            ),
+        },
     ),
     Scenario(
         "queued-at-another-head-on-a-rerun",
@@ -996,6 +1113,25 @@ SCENARIOS: tuple[Scenario, ...] = (
             stopped("3", "read defaults read×2 dequeue read"),
             stopped("3 merge: stopped", "read defaults read defaults read×2 dequeue read"),
         ),
+        after={
+            DONE_WORK: stopped(
+                "head-moved 3",
+                "read defaults read defaults read×2 dequeue read×2",
+                note=_OUT_ON_TWO_READINGS,
+            ),
+            MERGE_PR: stopped(
+                "3",
+                "read defaults read defaults read×2 dequeue read×2",
+                note=f"{_OUT_ON_TWO_READINGS}; this run sent no request — the PR was queued "
+                "already — so nothing is owed",
+            ),
+            RELEASE: stopped("3", "read defaults read×2 dequeue read×2", note=_OUT_ON_TWO_READINGS),
+            LAND_WORK: stopped(
+                "3 merge: stopped",
+                "read defaults read defaults read×2 dequeue read×2",
+                note=_OUT_ON_TWO_READINGS,
+            ),
+        },
     ),
     # ---- merged or closed by someone else -----------------------------------------------
     Scenario(
@@ -1150,9 +1286,20 @@ SCENARIOS: tuple[Scenario, ...] = (
             merged("0 merge: merged", "read×2 merge read delete-ref"),
         ),
         after={
-            DONE_WORK: _deleted("merged 0", "read×2 merge read branch based-on delete-ref"),
-            MERGE_PR: _deleted("0 record=ran", "read×2 merge read branch based-on delete-ref"),
-            LAND_WORK: _deleted("0 merge: merged", "read×2 merge read branch based-on delete-ref"),
+            DONE_WORK: _deleted(
+                "merged 0", "read×2 merge read×2 branch based-on delete-ref", note=_SETTLED_MADE
+            ),
+            MERGE_PR: _deleted(
+                "0 record=ran", "read×2 merge read×2 branch based-on delete-ref", note=_SETTLED_MADE
+            ),
+            RELEASE: _deleted(
+                "0", "read merge read×2 branch based-on delete-ref", note=_SETTLED_MADE
+            ),
+            LAND_WORK: _deleted(
+                "0 merge: merged",
+                "read×2 merge read×2 branch based-on delete-ref",
+                note=_SETTLED_MADE,
+            ),
         },
     ),
     Scenario(
@@ -1173,6 +1320,9 @@ SCENARIOS: tuple[Scenario, ...] = (
                 "0 record=ran",
                 "read defaults read defaults enqueue read×2 branch based-on delete-ref",
             ),
+            RELEASE: _deleted(
+                "0", "read defaults enqueue read×2 branch based-on delete-ref", note=_SETTLED_MADE
+            ),
             LAND_WORK: _deleted(
                 "0 merge: merged",
                 "read defaults read defaults enqueue read×2 branch based-on delete-ref",
@@ -1189,6 +1339,81 @@ SCENARIOS: tuple[Scenario, ...] = (
             stopped("hangs", "read merge", note=_HANGS),
             stopped("7 merge: not merged", "read×2 merge read", note=_ONE_READING),
         ),
+        after={
+            DONE_WORK: stopped("refused 3 retry", "read×2 merge read×2", note=_SETTLED_NOT_MADE),
+            MERGE_PR: stopped(
+                "3 record=owed",
+                "read×2 merge read×2",
+                note=f"{_SETTLED_NOT_MADE}; {_OWED_ON_A_SENT_REQUEST}",
+            ),
+            RELEASE: stopped("1", "read merge read×2", note=_SETTLED_NOT_MADE),
+            LAND_WORK: stopped(
+                "7 merge: not merged", "read×2 merge read×2", note=_SETTLED_NOT_MADE
+            ),
+        },
+    ),
+    Scenario(
+        "request-unanswered-then-merged-late",
+        "The merge never answers, and two readings do not see it made; the service applies it "
+        "just after them, and the caller is run again.",
+        _merged_after_the_readings,
+        Row(
+            _deleted(
+                "refused 3 retry → merged 0",
+                "read×2 merge read×2 branch based-on delete-ref",
+                note=_MERGED_LATE,
+            ),
+            _deleted(
+                "3 record=owed → 0 record=ran",
+                "read×2 merge read×3 branch based-on delete-ref",
+                note=_MERGED_LATE,
+            ),
+            _deleted("1 → 0", "read merge read×2 branch based-on delete-ref", note=_MERGED_LATE),
+            _deleted(
+                "7 merge: merged meanwhile → 0 merge: #42 completed through its merged PR",
+                "read×2 merge read×2 branch based-on delete-ref",
+                note=f"{_MERGED_LATE}; land-work's own reading after done-work's end already "
+                "finds it merged, and asks for the re-run",
+            ),
+        ),
+    ),
+    Scenario(
+        "request-unanswered-then-unreadable",
+        "The merge is made and its answer never comes back; GitHub cannot be read since.",
+        _unanswered_then_unreadable,
+        Row(
+            stopped("unconfirmed 4", "read×2 merge read", note=_SETTLED_UNCONFIRMED),
+            stopped("4 record=owed", "read×2 merge read", note=_SETTLED_UNCONFIRMED),
+            stopped("hangs", "read merge", note=_HANGS),
+            stopped("4 merge: unconfirmed", "read×2 merge read×2", note=_SETTLED_UNCONFIRMED),
+        ),
+        after={RELEASE: stopped("4", "read merge read", note=_RELEASE_UNCONFIRMED)},
+    ),
+    Scenario(
+        "enqueue-unanswered-then-unreadable",
+        "The enqueue is made and its answer never comes back; GitHub cannot be read since.",
+        _enqueue_unanswered_then_unreadable,
+        Row(
+            stopped(
+                "unconfirmed 4",
+                "read defaults read defaults enqueue read",
+                note=_SETTLED_UNCONFIRMED,
+            ),
+            stopped(
+                "4 record=owed",
+                "read defaults read defaults enqueue read",
+                note=_SETTLED_UNCONFIRMED,
+            ),
+            stopped("hangs", "read defaults enqueue", note=_HANGS),
+            stopped(
+                "4 merge: unconfirmed",
+                "read defaults read defaults enqueue read×2",
+                note=_SETTLED_UNCONFIRMED,
+            ),
+        ),
+        after={
+            RELEASE: stopped("4", "read defaults enqueue read", note=_RELEASE_UNCONFIRMED),
+        },
     ),
     Scenario(
         "request-made-then-gh-failed",
@@ -1204,6 +1429,61 @@ SCENARIOS: tuple[Scenario, ...] = (
                 note="it reads the PR merged, and asks for a re-run",
             ),
         ),
+        after={
+            DONE_WORK: _deleted(
+                "merged 0",
+                "read×2 merge read×2 branch based-on delete-ref",
+                note=_LOST_ANSWER_SETTLED,
+            ),
+            MERGE_PR: _deleted(
+                "0 record=ran",
+                "read×2 merge read×2 branch based-on delete-ref",
+                note=_LOST_ANSWER_SETTLED,
+            ),
+            RELEASE: _deleted(
+                "0", "read merge read×2 branch based-on delete-ref", note=_LOST_ANSWER_SETTLED
+            ),
+            LAND_WORK: _deleted(
+                "0 merge: merged",
+                "read×2 merge read×2 branch based-on delete-ref",
+                note=_LOST_ANSWER_SETTLED,
+            ),
+        },
+    ),
+    Scenario(
+        "killed-mid-request-then-merged",
+        "The landing's `pkit` is killed while gh waits on the merge, which the service made.",
+        _killed_mid_merge_made,
+        Row(
+            _deleted(
+                "merged 0",
+                "read×2 merge read branch based-on delete-ref",
+                note="no document: pm reads the PR merged, and that is the merge",
+            ),
+            _deleted("0 record=ran", "read×2 merge read branch based-on delete-ref"),
+            _NO_ONE_LEFT,
+            _deleted("0 merge: merged", "read×2 merge read branch based-on delete-ref"),
+        ),
+    ),
+    Scenario(
+        "killed-mid-request-then-neither",
+        "The landing's `pkit` is killed while gh waits on the merge, which the service never got.",
+        _killed_mid_merge_unmade,
+        Row(
+            stopped("refused 3 retry", "read×2 merge read", note=_ONE_READING),
+            stopped("3", "read×2 merge read", note=_ONE_READING),
+            _NO_ONE_LEFT,
+            stopped("7 merge: not merged", "read×2 merge read", note=_ONE_READING),
+        ),
+        after={
+            DONE_WORK: stopped("unconfirmed 4", "read×2 merge read", note=_KILLED_ONE_READING),
+            MERGE_PR: stopped("4 record=owed", "read×2 merge read", note=_KILLED_ONE_READING),
+            LAND_WORK: stopped(
+                "4 merge: unconfirmed",
+                "read×2 merge read×2",
+                note=f"{_KILLED_ONE_READING}; land-work's own reading since keeps it unconfirmed",
+            ),
+        },
     ),
     Scenario(
         "read-fails-after-a-direct-merge",
@@ -1225,6 +1505,22 @@ SCENARIOS: tuple[Scenario, ...] = (
             stopped("4 record=owed", "read defaults read defaults enqueue read"),
             stopped("4", "read defaults enqueue read"),
             stopped("4 merge: queued", "read defaults read defaults enqueue read×2"),
+        ),
+    ),
+    Scenario(
+        "read-fails-once-after-a-direct-merge",
+        "gh accepts the direct merge, the next reading fails, and the one after reads it merged.",
+        _read_fails_once_after_a_merge,
+        Row(
+            _deleted(
+                "merged 0",
+                "read×2 merge read×2 branch based-on delete-ref",
+                note="one failed reading after an accepted merge is read again, never taken "
+                "for a merge or for none",
+            ),
+            _deleted("0 record=ran", "read×2 merge read×2 branch based-on delete-ref"),
+            _deleted("0", "read merge read×2 branch based-on delete-ref"),
+            _deleted("0 merge: merged", "read×2 merge read×2 branch based-on delete-ref"),
         ),
     ),
     Scenario(
@@ -2118,24 +2414,28 @@ def land(
         dw = scripts.done_work
         _stub_gates(monkeypatch, dw, cap)
         _stub_done_work(monkeypatch, dw, run)
-        ended = dw.run([str(ISSUE), "--yes", *argv])
-        outcome = f"{ended.kind} {ended.exit_code}" + (" retry" if ended.retry else "")
-        after = f"move #{ISSUE} to done" in run.moves
+
+        def once() -> str:
+            ended = dw.run([str(ISSUE), "--yes", *argv])
+            return f"{ended.kind} {ended.exit_code}" + (" retry" if ended.retry else "")
+
     elif caller == MERGE_PR:
         mp = scripts.merge_pr
         _stub_gates(monkeypatch, mp, cap)
         monkeypatch.setattr(mp, "fire_hooks", lambda event, **kwargs: run.hooks.append(event))
         monkeypatch.setattr(sys, "argv", ["merge-pr.py", str(PR), "--yes", *argv])
-        code = mp.main()
-        record = _record(clone)
-        outcome = f"{code}" + (f" record={record}" if record else "")
-        after = "after_merge_pr" in run.hooks
+
+        def once() -> str:
+            code = mp.main()
+            record = _record(clone)
+            return f"{code}" + (f" record={record}" if record else "")
+
     elif caller == RELEASE:
         monkeypatch.setattr(cli, "_target_kit", lambda: clone.root / ".pkit")
-        outcome = _release(["release", "merge", str(PR), *argv])
-        # Release's one step after the merge is the branch clean-up, which
-        # starts by checking out the base.
-        after = bool(clone.checkouts)
+
+        def once() -> str:
+            return _release(["release", "merge", str(PR), *argv])
+
     else:
         lw = scripts.land_work
         _stub_gates(monkeypatch, lw, cap)
@@ -2143,10 +2443,22 @@ def land(
         _stub_done_work(monkeypatch, lw.done_work, run)
         monkeypatch.setattr(lw, "_sleep", clock.sleep)
         monkeypatch.setattr(lw, "_monotonic", clock)
-        code = lw.main([str(ISSUE), "--yes", *argv])
-        out = capsys.readouterr().out
-        steps = [line for line in out.splitlines() if line.split(":", 1)[0] in _STEPS]
-        outcome = f"{code} {_gist(steps[-1])}" if steps else f"{code}"
+
+        def once() -> str:
+            code = lw.main([str(ISSUE), "--yes", *argv])
+            out = capsys.readouterr().out
+            steps = [line for line in out.splitlines() if line.split(":", 1)[0] in _STEPS]
+            return f"{code} {_gist(steps[-1])}" if steps else f"{code}"
+
+    # Each run's end, a re-run's after the run before it.
+    outcome = " → ".join(once() for _ in range(world.runs))
+    if caller == MERGE_PR:
+        after = "after_merge_pr" in run.hooks
+    elif caller == RELEASE:
+        # Release's one step after the merge is the branch clean-up, which
+        # starts by checking out the base.
+        after = bool(clone.checkouts)
+    else:
         after = f"move #{ISSUE} to done" in run.moves
     unknown = [request.argv for request in host.requests if request.kind == fake.UNKNOWN]
     assert not unknown, f"the fake answered requests it does not model: {unknown}"
@@ -2163,14 +2475,13 @@ def land(
 
 
 def _release(args: list[str]) -> str:
-    """`pkit release merge` through the CLI in this process, and its exit —
-    `hangs` when a request the service never answers holds it. It runs with
-    the scenario's own standard input, a terminal where the scenario has one,
-    which a `CliRunner` would replace with its own."""
+    """`pkit release merge` through the CLI in this process, and its exit. It
+    runs with the scenario's own standard input, a terminal where the scenario
+    has one, which a `CliRunner` would replace with its own. A request the
+    service never answers no longer holds it: the backbone's bound on `gh`
+    ends it (#1256)."""
     try:
         cli.main.main(args, prog_name="pkit", standalone_mode=False)
-    except fake.NoAnswer:
-        return "hangs"
     except click.ClickException as exc:
         exc.show()
         return str(exc.exit_code)

@@ -455,6 +455,49 @@ def test_a_request_the_backbones_guard_refused_says_so(mq, pkit) -> None:
     assert outcome.guard == guard
 
 
+def _settled_document(accepted: bool | None, reason_kind: str | None) -> dict[str, Any]:
+    """The backbone's document of a request that got no answer, settled by reading."""
+    return {
+        "schema_version": 1,
+        "pull_request": 42,
+        "accepted": accepted,
+        "exit_code": None,
+        "reason": "the merge of PR #42 got no answer (…)",
+        "reason_kind": reason_kind,
+        "guard": {"verdict": "undetermined", "cleared": "undetermined"},
+    }
+
+
+@pytest.mark.parametrize(
+    ("accepted", "reason_kind"),
+    [(False, "not-made"), (None, "unanswered")],
+    ids=["not-made", "unconfirmed"],
+)
+def test_a_request_the_backbone_settled_by_reading_reads_as_it_settled(
+    mq, pkit, accepted, reason_kind
+) -> None:
+    """Not made on two readings running is not accepted; unconfirmed —
+    `accepted` null, `unanswered` — is the one answer that says whether the
+    request was made is not known, and is read as such, not as no answer."""
+    pkit.answers(_settled_document(accepted, reason_kind), code=1)
+    outcome = mq.request(["merge", "42", "--subject", "fix: x"], {})
+    assert (outcome.accepted, outcome.exit_code, outcome.reason_kind) == (
+        accepted,
+        None,
+        reason_kind,
+    )
+    assert (mq.NOT_MADE, mq.UNANSWERED) == (landing.NOT_MADE, landing.UNANSWERED)
+
+
+@pytest.mark.parametrize("reason_kind", [None, "not-made", "foreign-repository"])
+def test_a_null_accepted_without_unanswered_is_no_answer(mq, pkit, reason_kind) -> None:
+    """Only the unconfirmed answer may leave `accepted` null: any other null
+    is an answer pm cannot read, and the PR is read before anything is decided."""
+    pkit.answers(_settled_document(None, reason_kind), code=1)
+    with pytest.raises(mq.Unreadable, match="does not say whether the request was accepted"):
+        mq.request(["merge", "42", "--subject", "fix: x"], {})
+
+
 # --- the head branch's deletion (#1255) -------------------------------------------
 
 
@@ -642,6 +685,9 @@ elif args[:2] == ["pr", "merge"] and "--auto" in args:
     state["mergeQueueEntry"] = {"position": 1, "state": "QUEUED", "estimatedTimeToMerge": 120}
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(state, fh)
+    if os.environ.get("FAKE_GH_LOSE_THE_ANSWER"):
+        sys.stderr.write("HTTP 502: Bad Gateway (https://api.github.com/graphql)\\n")
+        sys.exit(1)
 else:
     sys.stderr.write(f"unexpected gh call: {args}\\n")
     sys.exit(1)
@@ -651,12 +697,25 @@ else:
 _NOTICE = "pkit: source checkout here but its dispatcher is not executable — running this binary"
 
 
-def test_a_round_trip_through_the_backbones_command(mq, tmp_path, monkeypatch, capsys) -> None:
-    """pm's real runner runs the backbone's real command, which runs `gh`: the
-    reading, an enqueue and two waits — a stream of documents read as it
-    comes, each of the version pm reads; a wait that exits 4 with its answer;
-    the router's notice on standard error passed on, once; and the pinned
-    host reaching `gh` on every call."""
+# The PR the fake `gh` starts from: open, on a base that merges through a queue.
+_OPEN_ON_A_QUEUE: dict[str, Any] = {
+    "id": "PR_node",
+    "state": "OPEN",
+    "mergedAt": None,
+    "headRefOid": "sha-head",
+    "isMergeQueueEnabled": True,
+    "isInMergeQueue": False,
+    "mergeQueue": {"configuration": {"mergeMethod": "SQUASH"}},
+    "mergeQueueEntry": None,
+    "autoMergeRequest": None,
+    "timelineItems": {"nodes": []},
+}
+
+
+def _real_backbone(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Path]:
+    """A `pkit` on PATH that says the router's notice and runs the backbone's
+    real command, and the fake `gh` it runs, keeping the PR in a file: the
+    PR's state file and `gh`'s log."""
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     pkit = bin_dir / "pkit"
@@ -669,26 +728,26 @@ def test_a_round_trip_through_the_backbones_command(mq, tmp_path, monkeypatch, c
     for script in (pkit, gh):
         script.chmod(0o755)
     state = tmp_path / "pr.json"
-    pr: dict[str, Any] = {
-        "id": "PR_node",
-        "state": "OPEN",
-        "mergedAt": None,
-        "headRefOid": "sha-head",
-        "isMergeQueueEnabled": True,
-        "isInMergeQueue": False,
-        "mergeQueue": {"configuration": {"mergeMethod": "SQUASH"}},
-        "mergeQueueEntry": None,
-        "autoMergeRequest": None,
-        "timelineItems": {"nodes": []},
-    }
-    state.write_text(json.dumps(pr), encoding="utf-8")
+    state.write_text(json.dumps(_OPEN_ON_A_QUEUE), encoding="utf-8")
     log = tmp_path / "gh.log"
     log.touch()
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
     monkeypatch.setenv("FAKE_GH_STATE", str(state))
     monkeypatch.setenv("FAKE_GH_LOG", str(log))
     monkeypatch.delenv("GH_HOST", raising=False)
+    monkeypatch.delenv("FAKE_GH_LOSE_THE_ANSWER", raising=False)
     monkeypatch.chdir(tmp_path)
+    return state, log
+
+
+def test_a_round_trip_through_the_backbones_command(mq, tmp_path, monkeypatch, capsys) -> None:
+    """pm's real runner runs the backbone's real command, which runs `gh`: the
+    reading, an enqueue and two waits — a stream of documents read as it
+    comes, each of the version pm reads; a wait that exits 4 with its answer;
+    the router's notice on standard error passed on, once; and the pinned
+    host reaching `gh` on every call."""
+    state, log = _real_backbone(tmp_path, monkeypatch)
+    pr = _OPEN_ON_A_QUEUE
     config = {"gh": {"host": "ghe.example"}}
 
     reading = mq.read(42, config)
@@ -721,7 +780,59 @@ def test_a_round_trip_through_the_backbones_command(mq, tmp_path, monkeypatch, c
     assert capsys.readouterr().err == f"{_NOTICE}\n"
 
 
+def test_the_backbones_line_that_a_request_is_in_flight_reaches_the_operator(
+    mq, tmp_path, monkeypatch, capsys
+) -> None:
+    """The backbone says on standard error, as it starts settling a request
+    whose answer was lost, that the request is in flight and how long reading
+    it may take (#1256): pm passes the `[warn]` line on as the run writes it —
+    what done-work and merge-pr print — and takes the request, read made since,
+    as accepted."""
+    _real_backbone(tmp_path, monkeypatch)
+    monkeypatch.setenv("FAKE_GH_LOSE_THE_ANSWER", "1")
+    outcome = mq.request(["enqueue", "42", "--head", "sha-head"], {})
+    assert (outcome.accepted, outcome.exit_code) == (True, None)
+    passed_on = capsys.readouterr().err.splitlines()
+    assert passed_on[0] == _NOTICE
+    assert passed_on[1].startswith(
+        "[warn] the enqueue of PR #42 got no usable answer (HTTP 502: Bad Gateway "
+        "(https://api.github.com/graphql)): reading where PR #42 stands to tell whether it "
+        "was made — the second reading no sooner than 40 s after it was sent, up to "
+    )
+    assert len(passed_on) == 2
+
+
 # --- one statement of the backbone's terms -----------------------------------------
+
+# The room pm's bound leaves above the backbone's longest run of a subcommand:
+# starting `pkit` — the interpreter, the dispatcher, the CLI's imports — before
+# the backbone's first call, and reading its document after its last.
+_PKIT_START_UP_SECONDS = 20.0
+
+
+def test_the_backbones_longest_run_sits_below_pms_bound_on_each_subcommand(mq) -> None:
+    """pm ends a `pkit pull-request` run at its bound for the subcommand, with
+    the `gh` in it (#1256). The backbone states the longest each subcommand
+    can run from its own constants — every `gh` call at its bound and ended
+    there, every reading at its most calls, the readings that settle a request
+    with no answer and the window before the second, a dequeue sent twice, the
+    cross-repository guard's git questions where the subcommand runs it — and
+    pm's bound holds that figure with room to start `pkit`, so the backbone's
+    document, settled, comes back before pm stops waiting."""
+    assert set(mq.TIMEOUT_SECONDS) == {
+        "read",
+        "squash-defaults",
+        "merge",
+        "enqueue",
+        "dequeue",
+        "delete-branch",
+    }
+    for subcommand, bound in mq.TIMEOUT_SECONDS.items():
+        longest = landing.longest_seconds(subcommand)
+        assert longest + _PKIT_START_UP_SECONDS <= bound, (subcommand, longest, bound)
+    # A wait may run past its own limit by the backbone's overrun: inside pm's
+    # margin on a wait, with the same room.
+    assert landing.wait_overrun_seconds() + _PKIT_START_UP_SECONDS <= mq.WAIT_MARGIN_SECONDS
 
 
 def test_pm_states_the_backbones_wait_limits_and_endings(mq) -> None:

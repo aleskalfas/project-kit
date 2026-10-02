@@ -13,9 +13,8 @@ pkit:
         - .github/workflows/release-tag.yml
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
     revalidated:
-      at: 2026-10-02T04:06:06Z
-      outcome: unchanged
-      unchanged-because: The page says a changeset names backbone or a kit-shipped component and that the valid set is rediscovered from each package.yaml; the change to changesets.py adds the adapter reservation table to a comment and leaves component discovery as the page describes it
+      at: 2026-10-02T04:50:39Z
+      outcome: updated
 ---
 
 # Release flow — changesets + the release step
@@ -519,6 +518,23 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   confirm the merge the run exits 4 with nothing deleted, for a re-run to
   complete. A direct merge gh accepted that GitHub never reports merged
   exits 3, naming the PR's state — nothing is deleted.
+
+  Every `gh` call is bounded, the reading of the release PR among them, so
+  no stuck call holds the run. A merge or an enqueue that gets no answer is
+  settled by reading the PR (`.pkit/cli/README.md`, "Pull-request
+  commands"): made, the run goes on as it would; not seen made on two
+  readings, it refuses, exit 1, saying what the readings saw and that this
+  run saw nothing merged — never that nothing merged, since GitHub may still
+  apply the request — and naming the reading (`pkit pull-request read <n>`)
+  and the re-run that tell; and when GitHub cannot be read since, the run
+  says so plainly — what was asked, that whether it was made is not known,
+  and the command that reads the PR — claiming neither that the release
+  merged nor that it did not, and exits 4 with nothing deleted, for a run
+  once GitHub answers to complete. A run that cannot read the release PR, or
+  how its base merges, before it asks anything says that this run asked
+  nothing. When the head moved while the PR was queued and the queue merged
+  it before it could be taken out, the run says it merged, and at which head,
+  exit 3, nothing deleted; a re-run deletes the head branch.
 - **Does not tag.** `release-tag.yml` cuts the backbone tag on the resulting
   push to `main` (VERSION-driven, PRJ-004); the merge and the tag stay split.
 - **Is idempotent**: on a closed PR it reports there is nothing to merge, and

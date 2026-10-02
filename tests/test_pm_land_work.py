@@ -1055,6 +1055,25 @@ def test_a_queued_pr_seen_neither_merged_nor_queued_is_known_not_merged(
     assert last.endswith(f"); run `land-work {ISSUE}` again to merge it")
 
 
+def test_an_unconfirmed_merge_seen_neither_merged_nor_queued_stays_unconfirmed(
+    world, capsys, monkeypatch
+) -> None:
+    """Whether the merge was made is not known, and one reading of neither does
+    not settle it — the request may still show (#1256): it stays unconfirmed,
+    exit 4, naming the reading that tells, never "not merged"."""
+    run = world()
+    run.github.unreadable_after_merge = True
+    _then(run, monkeypatch, lambda: setattr(run.github, "unreadable_after_merge", False))
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == 4
+    assert out.splitlines()[-1] == (
+        f"merge: unconfirmed — PR #{PR} reads neither merged nor queued (not in the queue), "
+        f"which does not tell whether the request was made; read it with `pkit pull-request "
+        f"read {PR}`, and run `land-work {ISSUE}` again: it merges the PR if it has not merged"
+    )
+    assert run.after_merge == []
+
+
 def test_done_work_raising_still_ends_with_a_step_line(world, capsys, monkeypatch) -> None:
     run = world()
 
@@ -1064,8 +1083,12 @@ def test_done_work_raising_still_ends_with_a_step_line(world, capsys, monkeypatc
     monkeypatch.setattr(run.land.done_work, "run", boom)
     rc, out, _err = run.run("--yes", capsys=capsys)
     assert rc == run.land.EXIT_RETRY
+    # One reading after done-work raised says what it found, never "not merged":
+    # a request done-work sent may still show, and the re-run reads it first.
     assert out.splitlines()[-1] == (
-        f"merge: not merged — done-work failed (RuntimeError: boom). Run `land-work {ISSUE}` again"
+        f"merge: not seen merged — done-work failed (RuntimeError: boom), and one reading since "
+        f"finds PR #{PR} open. Run `land-work {ISSUE}` again: it reads the PR first, and "
+        "completes it if it has merged"
     )
 
 

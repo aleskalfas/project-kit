@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-02T03:48:58Z
+      at: 2026-10-02T04:21:16Z
       outcome: unchanged
-      unchanged-because: done-work now journals its own issue's move to Done with the pull-request-merge reason close-issue gives the other issues; integration branches, the pull-request target and the merge path this use case walks are unchanged, so it holds
+      unchanged-because: done-work and merge-pr now say a merge the backbone did not see made may still show, and merge-pr's re-run completes one that shows late; the integration branch, the pull-request target and the landing this use case walks are unchanged, so it holds
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation

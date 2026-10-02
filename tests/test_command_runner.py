@@ -18,6 +18,12 @@
   and nothing is swept when every nested run ended by itself; a `uv run
   --script` interpreter stays in the group;
 - a variable a policy drops never reaches the command, whoever set it (#1145);
+- a tool the backbone runs itself, `gh` (#1256): it runs in its caller's group
+  and session, from the directory given, with nothing on standard input, and
+  is answered whatever its exit; past its bound it alone is ended — asked to
+  stop, killed after the grace — and the caller's group is left be; an
+  interrupt ends it too; and a kill of the caller's group reaches it in
+  flight, as project-management's kill of `pkit` does;
 - the predicate policy passes the subject and `--json` and leaves the
   environment as it is but for the run's deadline: no offline marker, a
   predicate may reach the network;
@@ -28,6 +34,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
@@ -673,6 +680,147 @@ def test_the_predicate_policy_stops_a_grandchild_at_the_bound(
     assert isinstance(runner.run_raw({"run": "probe"}), PredicateFailure)
     assert time.monotonic() - started < 15
     _assert_gone(int((runner.capability_dir / "scripts" / "probe.py.pid").read_text()))
+
+
+# --- a tool the backbone runs itself: `gh` (#1256) ----------------------------------
+
+# A tool that records its pid where its one argument says, then outlives any bound
+# a test sets — `gh` waiting on an answer that never comes. A shell, which starts
+# fast, `exec`s the sleep, so the pid recorded is the tool's own.
+_HANGS = 'echo $$ > "$0"; exec sleep 60'
+
+
+def _recorded_pid(path: Path) -> int:
+    for _ in range(100):
+        if path.is_file() and path.read_text().strip():
+            return int(path.read_text())
+        time.sleep(0.1)
+    pytest.fail(f"{path.name} was never written")
+
+
+def test_a_tool_runs_in_the_callers_group_and_answers_whatever_its_exit(tmp_path: Path) -> None:
+    """No session or group of its own — whoever ends the caller's group ends it
+    too — from the directory given, with nothing on standard input; its exit
+    and both streams are answered as they are."""
+    told = command_runner.run_bounded(
+        [
+            sys.executable,
+            "-c",
+            "import json, os, sys\n"
+            "print(json.dumps({'pgid': os.getpgrp(), 'sid': os.getsid(0), 'cwd': os.getcwd(),"
+            " 'stdin': sys.stdin.read()}))\n"
+            "print('said', file=sys.stderr)\n"
+            "sys.exit(3)\n",
+        ],
+        cwd=tmp_path,
+        seconds=30,
+    )
+    assert (told.returncode, told.stderr) == (3, "said\n")
+    document = json.loads(told.stdout)
+    assert (document["pgid"], document["sid"]) == (os.getpgrp(), os.getsid(0))
+    assert Path(document["cwd"]).resolve() == tmp_path.resolve()
+    assert document["stdin"] == ""
+
+
+def test_a_tool_that_cannot_start_raises_as_a_start_does(tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError):
+        command_runner.run_bounded([str(tmp_path / "no-such-gh")], cwd=tmp_path, seconds=30)
+
+
+# Serial: the tool must record its pid inside the bound, which a machine busy
+# with other test workers can miss.
+@pytest.mark.serial
+def test_a_tool_past_its_bound_is_ended_alone_and_its_caller_s_group_left_be(
+    tmp_path: Path,
+) -> None:
+    """The bound ends the tool and nothing else of the group it shares with its
+    caller: a sibling in that group — this test's process among them — runs
+    on."""
+    sibling = subprocess.Popen(["sleep", "60"])
+    try:
+        record = tmp_path / "gh.pid"
+        started = time.monotonic()
+        with pytest.raises(subprocess.TimeoutExpired) as raised:
+            command_runner.run_bounded(
+                ["sh", "-c", _HANGS, str(record)], cwd=tmp_path, seconds=2, grace_seconds=1
+            )
+        assert time.monotonic() - started < 15  # not the tool's sixty seconds
+        assert raised.value.timeout == 2
+        _assert_gone(_recorded_pid(record))
+        assert sibling.poll() is None, "the bound reached the caller's group"
+    finally:
+        sibling.kill()
+        sibling.wait()
+
+
+@pytest.mark.parametrize(
+    ("script", "ended_by"),
+    [
+        ("echo ready; exec sleep 60", -signal.SIGTERM),
+        ("trap '' TERM; echo ready; exec sleep 60", -signal.SIGKILL),
+    ],
+    ids=["stops-when-asked", "ignores-the-request"],
+)
+def test_a_tool_is_asked_to_stop_and_killed_only_after_the_grace(
+    script: str, ended_by: int
+) -> None:
+    """Ended past its bound, a tool is first asked to stop — enough to close a
+    connection — and killed only when it has not stopped once the grace is
+    over; its pipes are closed unread."""
+    process = subprocess.Popen(
+        ["sh", "-c", script],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    assert process.stdout is not None
+    assert process.stdout.readline() == "ready\n"  # the trap is set
+    command_runner._end_tool(process, 0.5)
+    assert process.returncode == ended_by
+    assert process.stdout.closed and process.stderr is not None and process.stderr.closed
+
+
+def test_an_interrupt_ends_the_tool_before_it_propagates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    record = tmp_path / "gh.pid"
+
+    def interrupted(
+        self: subprocess.Popen[str], input: str | None = None, timeout: float | None = None
+    ) -> None:
+        _recorded_pid(record)
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(subprocess.Popen, "communicate", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        command_runner.run_bounded(["sh", "-c", _HANGS, str(record)], cwd=tmp_path, seconds=30)
+    _assert_gone(_recorded_pid(record))
+
+
+def test_a_kill_of_the_callers_group_reaches_the_tool_in_flight(tmp_path: Path) -> None:
+    """project-management starts `pkit` in a session of its own and, at its
+    bound, kills that group: the `gh` request `pkit` is waiting on is in the
+    group, so it ends too, and nothing acts on the PR after pm read it."""
+    record = tmp_path / "gh.pid"
+    pkit = tmp_path / "pkit.py"
+    pkit.write_text(
+        "import sys\n"
+        "from project_kit import command_runner\n"
+        f"command_runner.run_bounded(['sh', '-c', {_HANGS!r}, {str(record)!r}], cwd=None, "
+        "seconds=60)\n",
+        encoding="utf-8",
+    )
+    caller = subprocess.Popen([sys.executable, str(pkit)], cwd=tmp_path, start_new_session=True)
+    try:
+        tool = _recorded_pid(record)
+        assert os.getpgid(tool) == caller.pid  # in the group pm's caller leads
+        os.killpg(caller.pid, signal.SIGKILL)
+        caller.wait()
+        _assert_gone(tool)
+    finally:
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(caller.pid, signal.SIGKILL)
 
 
 # --- what a no-answer shows (#752) ------------------------------------------------

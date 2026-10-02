@@ -95,6 +95,16 @@ CONFIRM_OPTION = "--allow-foreign-repo"
 # How long one git question may take before it counts as a fault.
 _GIT_TIMEOUT_SECONDS = 5.0
 
+#: The most git questions one comparison asks (:func:`evaluate`): three of
+#: each side — the session's anchor and the target — its top level, its
+#: common directory and its `origin`.
+GIT_QUESTIONS = 6
+
+#: The longest the guard's comparison can take, every git question at its
+#: bound. A guard that asks at a terminal waits on the person besides; one
+#: with no terminal never asks.
+LONGEST_SECONDS = GIT_QUESTIONS * _GIT_TIMEOUT_SECONDS
+
 
 @dataclass(frozen=True)
 class Comparison:

@@ -79,15 +79,20 @@ shared with `done-work`; #882):
 A merged PR has nothing left to gate (#1011). `merge-pr <N>` on one runs only
 the hooks and the clean-up above, and only for a merge whose after-merge steps
 are still owed: one the merge queue made — the run that enqueued it returned
-first — or one a run from this clone left unconfirmed (exit 4). The clean-up
+first — or one a run from this clone sent and did not see merged. The clean-up
 keys on the head the PR merged at, as GitHub reports it. A record in the
 clone's git directory (`pkit/merge-pr/<N>.json`) says which runs owe the steps
-and which ran them: a run that exits 4 records the steps as owed, and the run
-that fires the hooks records that it did, so a further run from this clone does
-nothing and says so. A PR merged without a queue and with nothing owed from
-this clone — someone else merged it — is refused, as before. The record is the
-clone's, not GitHub's: another clone finds none, and completes a PR the queue
-merged by firing the hooks again, which DEC-024's idempotent hooks allow.
+and which ran them: a run records the steps as owed whenever it returns with
+the PR queued, or having sent a merge or an enqueue GitHub did not refuse and
+did not see merged — accepted and unconfirmed (exit 4), or not seen made on
+the backbone's two readings (exit 3), which the service may still apply. The
+run that fires the hooks records that it did, replacing an owed record, so a
+retry that merges the PR as a first run would clears what an earlier run
+left owed, and a further run from this clone does nothing and says so. A PR
+merged without a queue and with nothing owed from this clone — someone else
+merged it — is refused, as before. The record is the clone's, not GitHub's:
+another clone finds none, and completes a PR the queue merged by firing the
+hooks again, which DEC-024's idempotent hooks allow.
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/merge-pr.py 99
@@ -103,7 +108,9 @@ Exit codes:
   2  usage error (PR not found)
   3  gh failure: the merge failed or the queue could not be read; the PR left
      the merge queue without merging, or was taken out of it because its head
-     moved
+     moved; or a merge or an enqueue got no answer and was not seen made on
+     two readings — owed to a re-run from this clone, which completes it if
+     the PR has merged since
   4  accepted, a re-run from this clone completes it: the PR is in the merge
      queue and has not been seen merged, or gh accepted the merge — or a
      merge or an enqueue got no answer back — and GitHub could not be read to
@@ -455,9 +462,14 @@ def main() -> int:
         ),
         config,
     )
-    if landing.outcome in (pr_merge.STILL_QUEUED, pr_merge.UNCONFIRMED):
-        # The run returns with what follows the merge owed (exit 4): recorded,
-        # so a re-run from this clone completes it however the PR merges.
+    if landing.outcome != pr_merge.MERGED and (
+        landing.requested or landing.outcome in (pr_merge.STILL_QUEUED, pr_merge.UNCONFIRMED)
+    ):
+        # The run returns with what follows the merge owed: the PR is queued,
+        # or this run sent a merge or an enqueue GitHub did not refuse and did
+        # not see merged — not seen made, unconfirmed, or anything else — which
+        # may yet merge it. Recorded, so a re-run from this clone completes it
+        # however the PR merges, rather than refusing a merge it made.
         try:
             _write_record(args.pr_number, _OWED, head)
         except _Unrecorded as exc:
@@ -567,7 +579,8 @@ def _not_merged(pr_number: int, base: str, landing: pr_merge.Landing) -> int:
     not then confirm — one gh accepted, or a merge or an enqueue that got no
     answer back: the run recorded the after-merge steps as owed, so
     `merge-pr` run again from this clone completes them once the PR has
-    merged. Everything else merged nothing.
+    merged. A request not seen made (exit 3) is owed too, said so: the
+    service may still apply it. Everything else merged nothing.
     """
     reading = landing.reading
     where = f" ({reading.describe()})" if reading is not None else ""
@@ -599,6 +612,15 @@ def _not_merged(pr_number: int, base: str, landing: pr_merge.Landing) -> int:
         return 1
     if landing.outcome == pr_merge.UNREADABLE:
         print(f"error: {landing.message}. Nothing was merged.", file=sys.stderr)
+        return 3
+    if landing.outcome == pr_merge.FAILED and landing.requested:
+        print(
+            f"error: the merge of PR #{pr_number} was not seen made (the backbone's reason is "
+            "above), and may still show. Nothing after the merge has run. Run "
+            f"`merge-pr {pr_number}` again from this clone: if the PR has merged by then, it "
+            "fires the after-merge hooks and cleans up the branch; if not, it merges it.",
+            file=sys.stderr,
+        )
         return 3
     if landing.outcome == pr_merge.HEAD_MOVED:
         print(

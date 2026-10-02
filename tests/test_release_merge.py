@@ -9,7 +9,8 @@ head branch is deleted on the fake GitHub by the backbone's deletion
 (`pull_request_landing.delete_branch`, #1255), and locally by
 `_git_cleanup_local` (#897), with `subprocess.run` stubbed. The
 cross-repository guard `pkit release merge` runs at its entry (#1254) is
-tested on real repositories.
+tested on real repositories. A request that gets no answer runs on the shared
+fake (`tests.hosting_fake`), ended at its bound and settled by reading (#1256).
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ import pytest
 from click.testing import CliRunner
 
 from project_kit import cli, release, session_guard
+from tests import hosting_fake as fake
 from tests import sessions
 
 # --- check-rollup summarisation --------------------------------------
@@ -518,7 +520,7 @@ def _graphql_error(args: list[str], message: str) -> subprocess.CompletedProcess
 
 def _land(
     monkeypatch: pytest.MonkeyPatch,
-    host: _Host,
+    host: release.pull_request_landing.GhRunner,
     *,
     wait_seconds: float | None = None,
     dry_run: bool = False,
@@ -763,7 +765,7 @@ def test_an_unreadable_queue_merges_nothing(monkeypatch: pytest.MonkeyPatch) -> 
     host = _Host(queue=True, unreadable_after=0)
     with pytest.raises(click.ClickException) as exc:
         _land(monkeypatch, host)
-    assert "cannot tell how main merges: HTTP 502. Nothing was merged." in str(exc.value)
+    assert "cannot tell how main merges: HTTP 502. This run asked nothing." in str(exc.value)
     assert host.merges() == []
 
 
@@ -868,6 +870,169 @@ def test_an_unconfirmed_direct_merge_deletes_nothing(
     assert report.text.startswith("[unconfirmed] gh accepted the merge of release PR #42")
     assert seen == [] and host.deletions == []
     assert "could not confirm that PR #42 merged: HTTP 502" in capsys.readouterr().err
+
+
+def _no_answer(*, queue: bool, ends: str) -> tuple[fake.HostingService, Any]:
+    """The shared fake GitHub holding the release PR, whose merge — or, with a
+    `queue`, enqueue — never gets an answer, as the landing's `gh` reaches it
+    through its bounded start: ended at its bound. Since, the PR reads open
+    (`not-made`) or cannot be read (`unconfirmed`)."""
+    host = fake.HostingService(
+        number=42,
+        title="chore(release): v1.141.0",
+        head_ref="release/v1.141.0",
+        head_oid="sha-head",
+    )
+    if queue:
+        host.set_base(fake.Base(queue=True))
+    kind = fake.ENQUEUE if queue else fake.MERGE
+    host.never_receive(kind)
+    if ends == "unconfirmed":
+        host.before(kind, lambda service: service.fail(fake.READ, count=None))
+
+    def bounded(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
+        try:
+            return host(argv)
+        except fake.NoAnswer:
+            raise subprocess.TimeoutExpired(list(argv), 30.0) from None
+
+    return host, bounded
+
+
+@pytest.mark.parametrize("queue", [False, True], ids=["merge", "enqueue"])
+def test_a_request_with_no_answer_github_cannot_settle_is_reported_unconfirmed(
+    monkeypatch: pytest.MonkeyPatch, queue: bool
+) -> None:
+    """The run does not hang on a `gh` that never answers: its bound ends it.
+    With GitHub unreadable since, the report says what was asked and that
+    whether it was made is not known, names the reading that tells, claims
+    neither that the release merged nor that it did not, deletes nothing, and
+    exits 4 as an unconfirmed direct merge does (#1256)."""
+    host, bounded = _no_answer(queue=queue, ends="unconfirmed")
+    seen = _fake_run(monkeypatch)
+    report = _land(monkeypatch, bounded)
+    asked = "enqueue" if queue else "merge"
+    assert report.exit_code == release.EXIT_ACCEPTED == 4
+    assert report.text == (
+        f"[unconfirmed] the {asked} of PR #42 got no usable answer (`gh` did not answer within "
+        f"30 s, and was ended), and PR #42 could not be read since (HTTP 502: Bad Gateway): "
+        f"whether the {asked} was made is not known. Whether release PR #42 merged into main, or "
+        "entered its merge queue, is not known, and nothing was deleted. Read where it stands "
+        "with `pkit pull-request read 42`, then run `pkit release merge 42` again: it reads "
+        "the PR first, lands it if it has not, and deletes the head branch once it has merged."
+    )
+    assert fake.BRANCH not in host.kinds() and fake.DELETE_REF not in host.kinds()
+    assert seen == []
+
+
+@pytest.mark.parametrize("queue", [False, True], ids=["merge", "enqueue"])
+def test_a_request_with_no_answer_read_open_twice_is_not_seen_made_and_says_only_that(
+    monkeypatch: pytest.MonkeyPatch, queue: bool
+) -> None:
+    """Two readings find the PR neither merged nor queued: the run refuses,
+    exit 1, saying what the readings saw and that this run saw nothing merged
+    — never that nothing merged, since the service may still apply the
+    request — and naming the reading and the re-run, as its unconfirmed
+    report does."""
+    host, bounded = _no_answer(queue=queue, ends="not-made")
+    _fake_run(monkeypatch)
+    with pytest.raises(click.ClickException) as exc:
+        _land(monkeypatch, bounded)
+    asked = "enqueue" if queue else "merge"
+    found = "neither queued nor merged" if queue else "neither merged nor queued"
+    assert exc.value.exit_code == 1
+    assert exc.value.message == (
+        f"the {asked} of PR #42 got no usable answer (`gh` did not answer within 30 s, and was "
+        f"ended), and was not seen made on two readings 40 s apart, the second 40 s after it "
+        f"was sent: PR #42 reads {found} (not in the queue). This run saw nothing merged, and "
+        "nothing was deleted. Read where release PR #42 stands with `pkit pull-request read "
+        "42`, then run `pkit release merge 42` again: it reads the PR first, lands it if it "
+        "has not, and deletes the head branch once it has merged."
+    )
+    assert "Nothing was merged" not in exc.value.message
+    assert host.kinds()[-3:] == [fake.ENQUEUE if queue else fake.MERGE, fake.READ, fake.READ]
+
+
+def test_the_release_prs_own_reading_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`gh pr view` runs through the command runner's one bounded start, as the
+    landing's readings do; past its bound the run ends, having asked nothing."""
+    started: list[tuple[list[str], Path | None, float]] = []
+
+    def hung(argv: Sequence[str], *, cwd: Path | None, seconds: float) -> Any:
+        started.append((list(argv)[:3], cwd, seconds))
+        raise subprocess.TimeoutExpired(list(argv), seconds)
+
+    monkeypatch.setattr(release.command_runner, "run_bounded", hung)
+    with pytest.raises(
+        click.ClickException,
+        match=r"did not answer within 15 s, and was ended\. This run asked nothing\.",
+    ):
+        release._gh_pr_view(42, Path("/repo"))
+    assert started == [
+        (["gh", "pr", "view"], Path("/repo"), release.pull_request_landing.GH_READ_SECONDS)
+    ]
+
+
+def test_a_dequeue_whose_end_is_not_known_after_a_head_moved_says_so(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The head moved while the PR was queued, and taking it out got no answer
+    GitHub could settle: the run says whether it left the queue is not known,
+    never that taking it out failed, and names the reading that tells."""
+    host = fake.HostingService(
+        number=42,
+        title="chore(release): v1.141.0",
+        head_ref="release/v1.141.0",
+        head_oid="sha-head",
+    )
+    host.set_base(fake.Base(queue=True))
+    host.progress = [fake.at(1), fake.pushes("sha-pushed")]
+    host.never_receive(fake.DEQUEUE)
+    host.before(fake.DEQUEUE, lambda service: service.fail(fake.READ, count=None))
+
+    def bounded(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
+        try:
+            return host(argv)
+        except fake.NoAnswer:
+            raise subprocess.TimeoutExpired(list(argv), 30.0) from None
+
+    _fake_run(monkeypatch)
+    with pytest.raises(release.ReleaseNotMerged) as exc:
+        _land(monkeypatch, bounded)
+    message = str(exc.value)
+    assert "whether taking it out of the merge queue worked is not known" in message
+    assert "Read where it stands with `pkit pull-request read 42`" in message
+    assert "failed" not in message
+
+
+def test_a_head_that_moved_on_a_pr_the_queue_merged_meanwhile_says_it_merged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The head moved while the PR was queued, and the queue merged it before
+    it could be taken out: the run says it merged, at which head — never "it
+    may still merge… take it out yourself", which is no longer true — and that
+    a re-run deletes the head branch."""
+    host = fake.HostingService(
+        number=42,
+        title="chore(release): v1.141.0",
+        head_ref="release/v1.141.0",
+        head_oid="sha-head",
+    )
+    host.set_base(fake.Base(queue=True))
+    host.progress = [fake.at(1), fake.pushes("sha-pushed")]
+    host.before(fake.READ, lambda service: service.merge_now(), nth=4)
+    _fake_run(monkeypatch)
+    with pytest.raises(release.ReleaseNotMerged) as exc:
+        _land(monkeypatch, host)
+    message = str(exc.value)
+    assert message.startswith(
+        "release PR #42's head moved from sha-hea to sha-pus after its checks were read, and it "
+        "merged before it could be taken out of the merge queue: PR #42 has merged at head "
+        "sha-pus (merged at "
+    )
+    assert "take it out yourself" not in message
+    assert "run `pkit release merge 42` again to delete the head branch" in message
+    assert fake.DEQUEUE not in host.kinds()
 
 
 def test_a_direct_merge_never_seen_merged_on_a_base_without_a_queue_names_no_queue(
