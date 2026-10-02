@@ -2,11 +2,14 @@
 
 These are the READ-ONLY checks the process engine (COR-033) runs to resolve a
 keyed issue's position and to evaluate its gates. The engine invokes each as a
-plain subprocess `[script, <issue-number>, --json]` through the backbone's command runner — its own
-process group, killed at the 30-second bound; see the process README's predicate-runner section —
-(no shell, no `with` args
-threaded — see the per-state detector scripts for how the target state is
-fixed), reads structured JSON on stdout, and acts on it:
+plain subprocess `[script, <subject>, --json]` through the backbone's command
+runner — its own process group, killed at the 30-second bound; see the process
+README's predicate-runner section — (no shell, no `with` args threaded — see the
+per-state detector scripts for how the target state is fixed), reads structured
+JSON on stdout, and acts on it. The subject is an issue number, or — for a
+closure-fold member that is a native sub-issue in another repository, which
+`cascade_members` lists so — `owner/repo#<n>`, which `detect-state` and
+`cascade-membership` accept (`read_subject`):
 
   classified detection (the lifecycle's one classifier, `detect-state`)
                                  -> {state: str|null, reason: str, detail?: {}}
@@ -33,6 +36,7 @@ not itself executable.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -153,7 +157,27 @@ def _inferred_state(issue_number: int) -> str | dict[str, Any]:
     )
 
 
-def classify_state(issue_number: int) -> dict[str, Any]:
+def read_subject(subject: str) -> int | containment.ForeignIssue | None:
+    """The issue a predicate's subject id names: ``"11"`` is this repository's
+    #11, ``"owner/repo#42"`` an issue in another repository — the id the
+    closure fold gives a native sub-issue that lives there (`cascade_members`)
+    — and anything else names none: a number is ASCII digits only, and a
+    repository name is spelled in the hosting service's alphabet
+    (`containment.is_repository_name`)."""
+    text = subject.strip()
+    if re.fullmatch(r"[0-9]+", text):
+        return int(text)
+    return containment.ForeignIssue.parse(text)
+
+
+def member_id(child: containment.ResolvedChild) -> str:
+    """The subject id the closure fold gives a child: its number, or
+    ``owner/repo#<n>`` for one in another repository (`read_subject` reads it
+    back)."""
+    return child.ref if child.repository is not None else str(child.number)
+
+
+def classify_state(issue: int | containment.ForeignIssue) -> dict[str, Any]:
     """The issue lifecycle's classifier — which state is the issue in?
 
     The lifecycle's five states all name it under `mode: classified` (COR-033
@@ -166,7 +190,13 @@ def classify_state(issue_number: int) -> dict[str, Any]:
     detectors say by each answering false. When the issue cannot be read it
     returns the indeterminate payload; the script says why on standard error and
     exits non-zero.
+
+    An issue in another repository is read by its open/closed alone
+    (`_classify_foreign`).
     """
+    if isinstance(issue, containment.ForeignIssue):
+        return _classify_foreign(issue)
+    issue_number = issue
     inferred = _inferred_state(issue_number)
     if isinstance(inferred, dict):
         return inferred
@@ -183,6 +213,49 @@ def classify_state(issue_number: int) -> dict[str, Any]:
             "issue lifecycle"
         ),
         "detail": {"inferred_state": inferred},
+    }
+
+
+def _classify_foreign(issue: containment.ForeignIssue) -> dict[str, Any]:
+    """Which lifecycle state a native sub-issue in another repository is in.
+
+    Its record is read in its own repository — one read, through the
+    containment seam; nothing is ever written there. That repository need not
+    follow this lifecycle, so its labels are not read: the tracker's own
+    open/closed is. Closed reads `done`, as a closed issue does by every
+    reader's precedence; open is none of the lifecycle's states, which holds a
+    fold over it as any open child does. A record that cannot be read — no
+    access, not found, a failed read — is the indeterminate payload, said why
+    on standard error.
+    """
+    capability_root = _capability_root()
+    if capability_root is None:
+        return _indeterminate("project-management capability not found")
+    config = _config(capability_root)
+    record = containment.read_issue_record(
+        config, issue_number=issue.number, repository=issue.repository
+    )
+    if isinstance(record, containment.UnreadIssue):
+        print(f"could not read {issue.ref}: {record.detail}", file=sys.stderr)
+        return _indeterminate(f"could not read {issue.ref}, an issue in another repository")
+    detail = {"repository": issue.repository, "tracker_state": record.issue["state"].lower()}
+    if record.issue["state"] == "CLOSED":
+        done = infer.infer_current_state(state="closed", milestone={}, labels=[])
+        return {
+            "state": done,
+            "reason": (
+                f"{issue.ref} is closed in its own repository, which is read by its "
+                "open/closed alone"
+            ),
+            "detail": detail,
+        }
+    return {
+        "state": None,
+        "reason": (
+            f"{issue.ref} is open in its own repository, which is read by its open/closed "
+            "alone: an open issue there is in none of the issue lifecycle's states"
+        ),
+        "detail": detail,
     }
 
 
@@ -276,6 +349,11 @@ def cascade_members(parent_number: int) -> dict[str, Any]:
     parallel with `show-tree`; there is one reader of "what are this parent's
     children?", and this is it for the fold.
 
+    A native sub-issue that lives in another repository is a member like any
+    other child, under its own id `owner/repo#<n>` (`member_id`), so it is never
+    read as this repository's issue of the same number: the engine's per-member
+    steps read its state in its own repository (`classify_state`).
+
     The full set (not just open children) is intentional: the engine resolves
     EACH member's lifecycle outcome and the `all`-over-`done` reducer folds them.
     A closed child resolves to the terminal `done`; an open child resolves to a
@@ -309,19 +387,19 @@ def cascade_members(parent_number: int) -> dict[str, Any]:
         return _indeterminate(
             f"the child set for #{parent_number} may be incomplete: {resolution.incomplete_reason}"
         )
-    members = [str(n) for n in resolution.numbers]
+    members = [member_id(child) for child in resolution.children]
     return {
         "members": members,
         "reason": (
             f"#{parent_number} has {len(members)} child member(s): "
-            f"{', '.join('#' + m for m in members)}"
+            f"{', '.join(child.ref for child in resolution.children)}"
             if members
             else f"#{parent_number} has no child members"
         ),
     }
 
 
-def cascade_membership(child_number: int) -> dict[str, Any]:
+def cascade_membership(child: int | containment.ForeignIssue) -> dict[str, Any]:
     """COR-037 cascade `membership` predicate for the closure fold (DEC-034):
     the per-subject step the engine takes for each candidate `cascade_members`
     listed.
@@ -353,10 +431,27 @@ def cascade_membership(child_number: int) -> dict[str, Any]:
     native parent stand (`agreed`, `native-only`, `textual-only`, `disagree`,
     `none`). The candidate is read untyped: which issue a line names, and so the
     kind, does not depend on the type.
+
+    A candidate in another repository (`owner/repo#<n>`, a native sub-issue that
+    lives there) is a member on the seam's word and is not read here: no first
+    line in this repository can name it, so this read would add nothing, and
+    whether its record can be read is settled by the one read of its state the
+    engine's next step makes (`classify_state`), which holds the fold
+    indeterminate when it cannot. `detail.repository` names its repository.
     """
     capability_root = _capability_root()
     if capability_root is None:
         return _indeterminate("project-management capability not found")
+    if isinstance(child, containment.ForeignIssue):
+        return {
+            "result": True,
+            "reason": (
+                f"{child.ref} is a member: the members list holds it (a native sub-issue in "
+                "another repository, whose state is read there)"
+            ),
+            "detail": {"repository": child.repository},
+        }
+    child_number = child
     config = _config(capability_root)
     resolution = containment.resolve_parent(
         config, issue_number=child_number, structural_type=None, issue_types={}

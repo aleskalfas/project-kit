@@ -26,11 +26,13 @@
 # is in, by move-issue's exact inference precedence (closed→done; first
 # state:* label; milestone→backlog; else todo) — behaviour parity is the
 # acceptance bar (DEC-033). The engine runs it once per reading of an
-# issue's position. Its answer makes at most one state true, so the
-# state ORDER below decides nothing among these five; it still orders
-# the engine's reading (the first state whose detection is true is the
-# position). The per-state `detect-<state>` commands stay registered, for
-# direct use; this definition does not name them.
+# issue's position. A closure-fold member in another repository (subject
+# id `owner/repo#<n>`, below) is read there by open/closed alone: closed
+# is done, open is none of these states. Its answer makes at most one
+# state true, so the state ORDER below decides nothing among these five;
+# it still orders the engine's reading (the first state whose detection
+# is true is the position). The per-state `detect-<state>` commands stay
+# registered, for direct use; this definition does not name them.
 
 schema_version: 4
 
@@ -43,6 +45,9 @@ source:
 process:
   id: issue-lifecycle
   version: 5
+  # A subject id is an issue number — or, for a closure-fold member that is a
+  # native sub-issue in another repository, `owner/repo#<n>` (`cascade-members`
+  # gives it; `cascade-membership` and `detect-state` accept it).
   subject:
     cardinality: keyed
     key: issue-number
@@ -359,9 +364,12 @@ process:
   cascade:
     runs: project-management:issue-lifecycle   # children are issues — the same keyed process
     members:
-      run: cascade-members         # parent-scoped: every child of the parent (the candidate set)
+      run: cascade-members         # parent-scoped: every child of the parent (the candidate set),
+                                   # each id an issue number, or `owner/repo#<n>` for a native
+                                   # sub-issue in another repository
     membership:
-      run: cascade-membership      # per-subject: the candidate can be read (never drops a listed child)
+      run: cascade-membership      # per-subject: the candidate can be read (never drops a listed child);
+                                   # a candidate in another repository is a member on the list's word
     reducer:
       op: all                      # every child must have reached the terminal `done`
       outcome: done                # the terminal state reached by BOTH pr-merge completion AND won't-do
