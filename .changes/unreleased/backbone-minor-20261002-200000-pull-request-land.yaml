@@ -1,0 +1,34 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit pull-request land <n> --head <sha> --subject <text>` performs the
+  landing sequence in one command. It runs the cross-repository guard once,
+  takes one reading, applies the caller's options to it (`--seconds`,
+  `--allow-dropped-head`, `--admin`, `--direct-only`, `--queued-bad-shape
+  refuse|warn`, `--allow-foreign-repo`), sends the direct squash merge or the
+  enqueue pinned to `<sha>`, waits, and takes the pull request out of the
+  queue when a reading finds another head. It refuses in one order —
+  `admin-on-queue`, `queue-not-allowed`, `queue-not-squash`, `dropped-head`,
+  `squash-defaults`, the defaults read last — and no option makes an
+  administrator merge on a base with a queue, or hands a pull request to a
+  queue that would not make its squash commit. It never deletes a branch.
+  With `--json` it writes a `reading`, a `requesting` line before each
+  request is sent, a `requested` line once it is settled, and one `end`
+  document whose `ended` is one of twelve kinds, every key in every document:
+  its `reason_kind`, `sent`, `dequeue`, `shape`, `warnings`, `guard`,
+  `merged_head`, `merge_commit` and `bound_seconds`, the longest the landing
+  can run with those options. `--dry-run` reads and judges, sends nothing,
+  never asks, and ends `planned` with what it would do. Exits are for a
+  person; callers read the document. `--head` must be a full commit id. The
+  reading gains `merge_commit`. `pkit release merge` now lands through the
+  sequence, planning it first: a head that moved between its view of the
+  pull request and the landing's reading exits 3 with nothing sent, where it
+  used to exit 1 on the refused merge; a pull request auto-merge holds on a
+  base without a queue is gated and merged directly, where it used to be
+  waited for without the gates; and a view `gh` answers with something that
+  is not JSON ends the run, having asked nothing. `pkit pull-request`
+  takes an HTTP 408 for no answer, a dequeue that could not read the pull
+  request before sending anything says `reason_kind: unreadable`, and the
+  readings that settle a request stop at their stated most.
