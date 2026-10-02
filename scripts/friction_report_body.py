@@ -148,7 +148,10 @@ def read_document(text: str | bytes, source: str) -> Mapping[str, Any]:
 
 
 def needing_answer(document: Mapping[str, Any]) -> list[Mapping[str, Any]]:
-    """The findings of `document` that need an answer: all but `NO_ANSWER_NEEDED`."""
+    """The findings of `document` that need an answer: all but `NO_ANSWER_NEEDED`,
+    and none while the check is dormant."""
+    if document.get("dormant"):
+        return []
     return [f for f in _findings(document) if f["kind"] not in NO_ANSWER_NEEDED]
 
 
@@ -212,27 +215,27 @@ def render(document: Mapping[str, Any], limits: Mapping[str, int | None] | None 
 
 @dataclass
 class _Cut:
-    """Shortens lists to their group's limit, counting the entries it leaves out."""
+    """Shortens lists to their group's limit, counting the entries it does not show."""
 
     limits: Mapping[str, int | None]
-    left_out: int = 0
+    not_shown: int = 0
 
     def __call__(self, entries: Sequence[str], group: str) -> list[str]:
         limit = self.limits.get(group)
         if limit is None or len(entries) <= limit:
             return list(entries)
         more = len(entries) - limit
-        self.left_out += more
+        self.not_shown += more
         return [*entries[:limit], f"- … {more} not shown here: {WHOLE}"]
 
     def notice(self) -> list[str]:
         """The lines that say the body was shortened; none when it was not. Asked for
         once every list is made, and set above them."""
-        if not self.left_out:
+        if not self.not_shown:
             return []
-        entries = "entry is" if self.left_out == 1 else "entries are"
+        entries = "entry is" if self.not_shown == 1 else "entries are"
         return [
-            f"_Shortened to fit the body's size: {self.left_out} {entries} not shown. {WHOLE}._",
+            f"_Shortened to fit the body's size: {self.not_shown} {entries} not shown. {WHOLE}._",
             "",
         ]
 
