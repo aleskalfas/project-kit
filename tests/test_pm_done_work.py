@@ -457,16 +457,18 @@ def test_main_hands_pr_title_to_the_shared_merge(dw, monkeypatch) -> None:
 def test_the_merge_carries_the_confirmation_the_guard_got_and_no_other(
     dw, monkeypatch, passed, flag, passed_on
 ) -> None:
-    """The backbone runs its own cross-repository guard on the merge, with no
-    terminal: done-work tells it the operator confirmed exactly when they did
-    at done-work — the flag on its command line, whatever its own comparison
-    found, or a yes at its prompt (#1254)."""
+    """The backbone runs its own cross-repository guard on the merge and on
+    the head branch's deletion, with no terminal: done-work tells it the
+    operator confirmed exactly when they did at done-work — the flag on its
+    command line, whatever its own comparison found, or a yes at its prompt
+    (#1254, #1255)."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
     passage = dw.session_guard.Passage(True, passed, flag=flag)
     monkeypatch.setattr(dw.session_guard, "enforce", lambda **kw: passage)
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
     assert rc == 0
     assert calls["merge_allow_foreign_repo"] is passed_on
+    assert [confirmed for *_, confirmed in calls["deletions"]] == [passed_on]
 
 
 @pytest.mark.parametrize(
@@ -1037,11 +1039,12 @@ def _wire_main_seams(
         calls["order"].append(("closed", issue_number))
         return 0
 
-    def _stub_delete_remote(branch, config, **kwargs):
-        calls.setdefault("cross", []).append(kwargs.get("cross_repository"))
-        calls["order"].append(("remote_delete", branch))
+    def _stub_delete_branch(pr_number, merged_head, config, *, allow_foreign_repo):
+        calls.setdefault("deletions", []).append((pr_number, merged_head, allow_foreign_repo))
+        calls["order"].append(("remote_delete", merged_head))
 
     def _stub_cleanup_local(branch, config, **kwargs):
+        calls.setdefault("cross", []).append(kwargs.get("cross_repository"))
         calls.setdefault("merged_heads", []).append(kwargs.get("merged_head"))
         calls["order"].append(("local_cleanup", branch))
 
@@ -1050,7 +1053,7 @@ def _wire_main_seams(
     # The merge mechanic is `_lib.pr_merge`'s (shared with merge-pr); stub it
     # on the module done-work calls through.
     monkeypatch.setattr(dw.pr_merge, "squash_merge", _stub_merge)
-    monkeypatch.setattr(dw.pr_merge, "delete_remote_branch", _stub_delete_remote)
+    monkeypatch.setattr(dw.pr_merge, "delete_branch", _stub_delete_branch)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", _stub_cleanup_local)
     monkeypatch.setattr(dw, "_invoke_move_issue", _stub_move)
     monkeypatch.setattr(dw, "_invoke_close_issue", _stub_close)
@@ -1617,7 +1620,8 @@ def test_abbreviated_canonical_flag_cannot_evade_the_ambiguity_refusal(
 # merge has landed — and the script used to abort there, never calling
 # move-issue, so GitHub showed the issue closed while pm state said Review.
 # The fix: merge without `--delete-branch`, transition immediately, then clean
-# up (remote ref via the API, local steps) as warnings that never abort. The
+# up (the remote branch by the backbone at the head that merged, #1255; the
+# local steps) as warnings that never abort. The
 # mechanic itself (`_lib.pr_merge`) is unit-tested in test_pm_pr_merge_lib.py;
 # these tests cover done-work's sequencing of it.
 
@@ -1636,7 +1640,7 @@ def test_transition_runs_immediately_after_merge_before_cleanup(dw, monkeypatch)
         ("merged", None),
         ("moved", None),
         ("closed", 42),
-        ("remote_delete", "fix/42-slug"),
+        ("remote_delete", "sha-head"),
         ("local_cleanup", "fix/42-slug"),
     ]
 
@@ -1688,7 +1692,7 @@ def test_detached_head_worktree_completes_merge_and_transition(
     assert rc == 0
     assert calls["merged"] is True
     assert calls["moved"] is True
-    assert ("remote_delete", "fix/42-slug") in calls["order"]
+    assert ("remote_delete", "sha-head") in calls["order"]
     assert f"[warn] git checkout main failed: {_DETACHED_HEAD_ERR}" in err
     assert _script_error_lines(err) == []
     # The pull is skipped when main could not be checked out; the local head
@@ -1722,7 +1726,7 @@ def test_main_held_by_other_worktree_completes_merge_and_transition(
     assert rc == 0
     assert calls["merged"] is True
     assert calls["moved"] is True
-    assert ("remote_delete", "fix/42-slug") in calls["order"]
+    assert ("remote_delete", "sha-head") in calls["order"]
     assert f"[warn] git checkout main failed: {_MAIN_HELD_ELSEWHERE_ERR}" in err
     assert f"[warn] git branch -D fix/42-slug failed: {branch_err}" in err
     assert _script_error_lines(err) == []
@@ -1912,7 +1916,7 @@ def test_a_failed_close_warns_with_the_rerun_and_the_rest_still_run(
         ("moved", None),
         ("closed", 42),
         ("closed", 43),
-        ("remote_delete", "fix/42-slug"),
+        ("remote_delete", "sha-head"),
         ("local_cleanup", "fix/42-slug"),
     ]
 
@@ -2179,7 +2183,7 @@ def test_an_in_progress_issue_moves_to_review_before_the_merge(
         ("merged", None),
         ("moved", "done"),
         ("closed", 42),
-        ("remote_delete", "fix/42-slug"),
+        ("remote_delete", "sha-head"),
         ("local_cleanup", "fix/42-slug"),
     ]
     assert "lead-in: in-progress → review before the merge" in captured.out
@@ -2721,7 +2725,7 @@ def _wire_queue(
 _AFTER_THE_MERGE = [
     ("moved", None),
     ("closed", 42),
-    ("remote_delete", "fix/42-slug"),
+    ("remote_delete", "sha-head"),
     ("local_cleanup", "fix/42-slug"),
 ]
 
@@ -3257,7 +3261,7 @@ def test_a_later_run_on_a_stale_local_branch_completes_it_and_keeps_the_branch(
     assert ["git", "rev-list", "--count", "sha-head..sha-newer"] in seen
     assert ["git", "branch", "-D", "fix/42-slug"] not in seen
     assert "local branch fix/42-slug (at sha-new) holds commits the merge at sha-hea" in err
-    assert ("remote_delete", "fix/42-slug") in run.calls["order"]
+    assert ("remote_delete", "sha-head") in run.calls["order"]
 
 
 def test_a_later_run_refuses_an_issue_reopened_since_the_merge(

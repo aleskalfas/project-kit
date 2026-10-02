@@ -12,8 +12,9 @@ this first and hand the PR to the queue (`_lib.pr_merge.land`).
 
 **The reading is the backbone's** ([project-management:DEC-013-branch-and-pr-conventions],
 "Merge mechanics"). The backbone's `pkit pull-request` reads GitHub, waits for
-the queue's merge and makes the merge requests — for these verbs and for the
-backbone's own release merge alike, so the mechanic lives once. This module
+the queue's merge, makes the merge requests and deletes a merged PR's head
+branch — for these verbs and for the backbone's own release merge alike, so
+the mechanic lives once. This module
 asks it by subprocess and reads its JSON documents, as `_lib.default_branch`
 reads `pkit repository base`; it never queries GitHub for a queue itself.
 The command runs with the `gh` environment the adopter's config pins
@@ -57,14 +58,16 @@ VERSION = 1
 #: How long pm waits for each of the backbone's answers, by subcommand, in
 #: seconds: a reading or the squash-commit defaults is one `gh` read, two
 #: when the host knows no merge queues; a merge or an enqueue is gh's merge
-#: request; a dequeue is a reading, the request and a reading again. A run
-#: that has not answered by then is ended with everything it started.
+#: request; a dequeue is a reading, the request and a reading again, and so is
+#: a branch deletion the service refuses. A run that has not answered by then
+#: is ended with everything it started.
 TIMEOUT_SECONDS: Mapping[str, float] = {
     "read": 60.0,
     "squash-defaults": 60.0,
     "merge": 120.0,
     "enqueue": 120.0,
     "dequeue": 180.0,
+    "delete-branch": 180.0,
 }
 
 #: A wait is bounded by its own limit — the seconds asked for, else the
@@ -192,6 +195,38 @@ class Outcome:
     guard: Mapping[str, Any] | None = None
 
 
+#: How the backbone's deletion of a merged PR's head branch ended
+#: (:class:`BranchDeletion`): deleted at the head that merged; kept, with why;
+#: gone before it was asked for; or refused, the deletion not asked for.
+DELETED = "deleted"
+KEPT = "kept"
+GONE = "gone"
+REFUSED = "refused"
+_DELETION_ENDS = (DELETED, KEPT, GONE, REFUSED)
+
+#: The `reason_kind` of a deletion refused because the PR's head is in a fork.
+CROSS_REPOSITORY = "cross-repository"
+
+
+@dataclass(frozen=True)
+class BranchDeletion:
+    """What the backbone's deletion of a merged PR's head branch came to, as
+    its document states it (`_lib.pr_merge.delete_branch`)."""
+
+    #: :data:`DELETED`, :data:`KEPT`, :data:`GONE` or :data:`REFUSED`.
+    outcome: str
+    #: The head branch, by name; "" when the backbone did not read it.
+    branch: str
+    #: The branch's tip, when it was kept; "" otherwise.
+    tip: str
+    #: Why it was kept or refused, in the backbone's terms (`tip-moved`,
+    #: `open-pull-request`, `deletion-refused`; :data:`CROSS_REPOSITORY`,
+    #: :data:`FOREIGN_REPOSITORY`, …); "" otherwise.
+    reason_kind: str
+    #: The same, in words.
+    reason: str
+
+
 def read(pr_number: int, config: dict[str, Any]) -> Reading:
     """Where PR `pr_number` stands with its base branch's merge queue, as the
     backbone reads it for the working directory's repository. Raises
@@ -286,6 +321,43 @@ def request(args: list[str], config: dict[str, Any]) -> Outcome:
         reason=str(document.get("reason") or ""),
         reason_kind=_text(document.get("reason_kind")),
         guard=guard if isinstance(guard, Mapping) else None,
+    )
+
+
+# The fields of a deletion's document, each a string or null.
+_DELETION_FIELDS = ("branch", "tip", "reason_kind", "reason")
+
+
+def deletion(args: list[str], config: dict[str, Any]) -> BranchDeletion:
+    """The backbone's deletion of a merged PR's head branch (`delete-branch`,
+    with `args` after the subcommand's name), and what it came to. Raises
+    :class:`Unreadable` when the backbone gives no answer, or one that names
+    no way the deletion ended or lacks one of its fields — the branch may then
+    have been deleted, or not.
+
+    The backbone runs the cross-repository guard before it reads the PR; a
+    deletion it refused there is :data:`REFUSED`, its `reason_kind`
+    :data:`FOREIGN_REPOSITORY`."""
+    document = _first(["delete-branch", *args], config)
+    ended = document.get("outcome")
+    if ended not in _DELETION_ENDS:
+        raise Unreadable(
+            f"the backbone's answer says no way the deletion ended (`outcome`: {ended!r})"
+        )
+    for key in _DELETION_FIELDS:
+        if key not in document:
+            raise Unreadable(f"the backbone's answer about the deletion has no `{key}`")
+        if document[key] is not None and not isinstance(document[key], str):
+            raise Unreadable(
+                f"the backbone's answer about the deletion has a `{key}` that is not text: "
+                f"{document[key]!r}"
+            )
+    return BranchDeletion(
+        outcome=str(ended),
+        branch=_text(document.get("branch")),
+        tip=_text(document.get("tip")),
+        reason_kind=_text(document.get("reason_kind")),
+        reason=_text(document.get("reason")),
     )
 
 

@@ -18,8 +18,10 @@ on merge. This module realises that outcome in three steps a verb composes:
      nothing else. On a base that merges through a queue (#1011,
      `_lib.merge_queue`), the queue makes the merge: :func:`enqueue` hands
      the PR to it and :func:`land` waits for it.
-  2. :func:`delete_remote_branch` — the head ref goes through the API, which
-     needs nothing from the working tree. Best-effort.
+  2. :func:`delete_branch` — the head branch on GitHub, deleted by the
+     backbone (`pkit pull-request delete-branch`) only while its tip is the
+     head that merged. Whatever it comes to is said in one line and never
+     fails the verb.
   3. :func:`cleanup_local` — `checkout <default>`, `pull --ff-only`,
      `branch -D <head>`. Every step warns with git's reason and continues;
      none can fail the verb.
@@ -30,12 +32,12 @@ step stands between the merge and the thing that must not be skipped — and
 only once :func:`land` reports the PR merged, as GitHub says it, never as a
 command's exit code implies.
 
-The merge requests themselves — the squash merge, the enqueue, the wait for
-the queue and taking a PR out of it — are the backbone's (`pkit
-pull-request`, read through `_lib.merge_queue`): the one mechanic the
-backbone's `pkit release merge` lands a release PR with too (#1200). What this
-module decides is the verbs' own: when to land, what to refuse, and what
-follows the merge.
+The requests themselves — the squash merge, the enqueue, the wait for the
+queue, taking a PR out of it and deleting the head branch — are the
+backbone's (`pkit pull-request`, read through `_lib.merge_queue`): the one
+mechanic the backbone's `pkit release merge` lands a release PR with too
+(#1200). What this module decides is the verbs' own: when to land, what to
+refuse, and what follows the merge.
 
 The backbone runs the cross-repository guard before each request that changes
 the service (ADR-061 point 6), with no terminal to ask: the verb's own guard
@@ -60,7 +62,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from _lib import default_branch, merge_queue
-from _lib.gh import gh_run
 
 # How a landing ended (:class:`Landing`): the four ends of a wait for the
 # queue; a merge or an enqueue that no reading since could confirm; and three
@@ -73,8 +74,6 @@ UNCONFIRMED = "unconfirmed"
 REFUSED = "refused"
 UNREADABLE = "unreadable"
 FAILED = "failed"
-
-_ALREADY_DELETED_MARKER = "Reference does not exist"
 
 # ---- step 1: the merge ------------------------------------------------------
 
@@ -656,59 +655,57 @@ def minutes(value: str) -> float:
     return minutes
 
 
-# ---- steps 2 and 3: the clean-up -------------------------------------------
+# ---- steps 2 and 3: the head branch, on GitHub and here ----------------------
 
 
-def delete_remote_branch(
-    branch: str,
+def delete_branch(
+    pr_number: int,
+    merged_head: str,
     config: dict[str, Any],
     *,
-    cross_repository: bool,
+    allow_foreign_repo: bool,
 ) -> None:
-    """Delete the PR's remote head ref through the API — best-effort.
+    """Delete the merged PR's head branch on GitHub — the backbone's deletion
+    (`pkit pull-request delete-branch`), only while the branch's tip is
+    `merged_head`, the head the PR merged at, so a push since the merge is not
+    lost.
 
-    `cross_repository` is required and has no default: the ref is deleted in
-    the BASE repository (`{owner}/{repo}` resolves there), so for a PR whose
-    head lives in a fork the head-branch name is chosen by the fork's author
-    and may name an unrelated branch of the base repo. Such a PR's head is
-    never deleted here — the fork owns its branch. Every caller must state
-    which case it is in, so a later caller cannot reintroduce the hole.
-
-    The API call needs nothing from the working tree, so a detached HEAD or a
-    default branch held by another worktree cannot fail it. A ref that is
-    already gone (a repository that auto-deletes head branches on merge) is
-    reported, not warned about. Every other failure, `gh` missing from PATH
-    included, is a warning; this never raises.
+    The backbone reads the PR and decides: a PR whose head is in a fork, or
+    that has not merged, is refused; a branch whose tip moved, that another
+    open PR uses, or that GitHub will not delete is kept; one already gone is
+    gone. What it came to is said in one line — a refusal other than a fork's
+    as a warning — and nothing here fails the verb: the merge is durable.
+    `allow_foreign_repo` passes the operator's confirmation of a change in
+    another repository on to the backbone's guard, as for :func:`squash_merge`.
     """
-    if cross_repository:
+    if not merged_head:
         print(
-            f"  head branch {branch} lives in a fork; not deleting a "
-            f"base-repository ref of that name"
+            f"[warn] the head PR #{pr_number} merged at is not known, so its head branch on "
+            "GitHub is kept: delete it once nothing on it is needed.",
+            file=sys.stderr,
         )
         return
+    args = _confirming([str(pr_number), "--expect", merged_head], allow_foreign_repo)
     try:
-        proc = gh_run(
-            ["gh", "api", "-X", "DELETE", f"repos/{{owner}}/{{repo}}/git/refs/heads/{branch}"],
-            config,
-            check=False,
+        deletion = merge_queue.deletion(args, config)
+    except merge_queue.Unreadable as exc:
+        print(
+            f"[warn] whether PR #{pr_number}'s head branch on GitHub was deleted is not known: "
+            f"{exc}. The merge is durable; delete the branch once nothing on it is needed.",
+            file=sys.stderr,
         )
-    except FileNotFoundError:
-        reason = "`gh` not on PATH"
-    except OSError as exc:  # on PATH but not runnable: permissions, bad binary
-        reason = f"`gh` could not be run ({exc})"
+        return
+    branch = f"remote branch {deletion.branch}" if deletion.branch else "the remote head branch"
+    if deletion.outcome == merge_queue.DELETED:
+        print(f"  deleted {branch}")
+    elif deletion.outcome == merge_queue.GONE:
+        print(f"  {branch} already deleted")
+    elif deletion.outcome == merge_queue.KEPT:
+        print(f"  kept {branch}: {deletion.reason}")
+    elif deletion.reason_kind == merge_queue.CROSS_REPOSITORY:
+        print(f"  {branch} not deleted: {deletion.reason}")
     else:
-        if proc.returncode == 0:
-            print(f"  deleted remote branch {branch}")
-            return
-        reason = proc.stderr.strip()
-        if _ALREADY_DELETED_MARKER in reason:
-            print(f"  remote branch {branch} already deleted")
-            return
-    print(
-        f"[warn] could not delete remote branch {branch}: {reason}. The merge "
-        f"is durable; delete it by hand (`git push origin --delete {branch}`).",
-        file=sys.stderr,
-    )
+        print(f"[warn] {branch} not deleted: {deletion.reason}", file=sys.stderr)
 
 
 def cleanup_local(

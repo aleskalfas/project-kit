@@ -2,10 +2,10 @@
 
 One implementation per rule (#882): `done-work` and `merge-pr` both compose
 these three steps rather than carrying a copy. Covers the squash-merge
-command (subject = PR title, no `--delete-branch`), the remote ref delete
-through the API (including the already-deleted answer), and the best-effort
-local cleanup (the default branch the backbone declares, COR-054; every failure
-a warning).
+command (subject = PR title, no `--delete-branch`), the head branch's deletion
+on GitHub, asked of the backbone at the head that merged and said in one line
+whatever it comes to (#1255), and the best-effort local cleanup (the default
+branch the backbone declares, COR-054; every failure a warning).
 """
 
 from __future__ import annotations
@@ -221,95 +221,165 @@ def test_squash_merge_reports_gh_missing(lib, monkeypatch, capsys) -> None:
     assert "`gh` not on PATH" in capsys.readouterr().err
 
 
-# --- delete_remote_branch -------------------------------------------------
+# --- delete_branch: the backbone's deletion (#1255) ----------------------
 
 
-def test_remote_branch_deleted_via_api(lib, monkeypatch, capsys) -> None:
-    """The remote head ref is deleted with `gh api -X DELETE` on the repo's
-    refs endpoint — no dependency on the local checkout."""
-    captured: list[list[str]] = []
+def _deletion(
+    outcome: str,
+    *,
+    branch: str | None = "fix/42-slug",
+    tip: str | None = None,
+    reason_kind: str | None = None,
+    reason: str | None = None,
+) -> dict[str, Any]:
+    """`pkit pull-request delete-branch`'s document."""
+    return {
+        "schema_version": 1,
+        "pull_request": 42,
+        "expected": "sha-merged",
+        "outcome": outcome,
+        "branch": branch,
+        "tip": tip,
+        "reason_kind": reason_kind,
+        "reason": reason,
+        "guard": {
+            "verdict": "same-repo",
+            "undetermined_kind": None,
+            "anchor": "/work/project",
+            "target": "/work/project",
+            "cleared": "same-repo",
+        },
+    }
 
-    def fake_gh_run(args, config, **kwargs):
-        captured.append(list(args))
-        return _ok(args)
 
-    monkeypatch.setattr(lib, "gh_run", fake_gh_run)
-    lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False)
-    assert captured == [
-        [
-            "gh",
-            "api",
-            "-X",
-            "DELETE",
-            "repos/{owner}/{repo}/git/refs/heads/fix/42-slug",
-        ]
+def _backbone_answers(monkeypatch, lib, *documents: dict[str, Any]) -> list[list[str]]:
+    """The backbone's seam (`merge_queue._answers`) answering each call with
+    `documents`; the subcommands asked, in order."""
+    asked: list[list[str]] = []
+
+    def answers(args, config, *, timeout_seconds=None):
+        asked.append(list(args))
+        yield from documents
+
+    monkeypatch.setattr(lib.merge_queue, "_answers", answers)
+    return asked
+
+
+@pytest.mark.parametrize("confirmed", [False, True], ids=["unconfirmed", "allow-foreign-repo"])
+def test_the_head_branch_is_deleted_by_the_backbone_at_the_head_that_merged(
+    lib, monkeypatch, capsys, confirmed
+) -> None:
+    """The deletion is the backbone's (`pkit pull-request delete-branch`),
+    asked for at the head the PR merged at, with the operator's confirmation
+    passed on as the merge's is; nothing here asks GitHub itself."""
+    asked = _backbone_answers(monkeypatch, lib, _deletion("deleted"))
+    assert lib.delete_branch(42, "sha-merged", {}, allow_foreign_repo=confirmed) is None
+    assert asked == [
+        ["delete-branch", "42", "--expect", "sha-merged", *(["--allow-foreign-repo"] * confirmed)]
     ]
-    assert "deleted remote branch fix/42-slug" in capsys.readouterr().out
+    assert capsys.readouterr().out == "  deleted remote branch fix/42-slug\n"
 
 
-def test_remote_branch_already_gone_is_not_a_warning(lib, monkeypatch, capsys) -> None:
-    """A repository that auto-deletes head branches on merge answers 422
-    'Reference does not exist' — reported as already deleted, not warned."""
-    monkeypatch.setattr(
-        lib,
-        "gh_run",
-        lambda args, config, **kw: subprocess.CompletedProcess(
-            args=args,
-            returncode=1,
-            stdout="",
-            stderr="gh: Reference does not exist (HTTP 422)",
+@pytest.mark.parametrize(
+    ("document", "said"),
+    [
+        (_deletion("gone"), "  remote branch fix/42-slug already deleted\n"),
+        (
+            _deletion(
+                "kept",
+                tip="sha-later",
+                reason_kind="tip-moved",
+                reason="its tip is sha-lat, not sha-mer, the head PR #42 merged at",
+            ),
+            "  kept remote branch fix/42-slug: its tip is sha-lat, not sha-mer, the head PR #42 "
+            "merged at\n",
         ),
-    )
-    lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False)
+        (
+            _deletion(
+                "kept",
+                tip="sha-merged",
+                reason_kind="open-pull-request",
+                reason="another open pull request uses this branch (#501)",
+            ),
+            "  kept remote branch fix/42-slug: another open pull request uses this branch (#501)\n",
+        ),
+        (
+            _deletion(
+                "refused",
+                reason_kind="cross-repository",
+                reason="PR #42's head is in another repository, a fork",
+            ),
+            "  remote branch fix/42-slug not deleted: PR #42's head is in another repository, a "
+            "fork\n",
+        ),
+    ],
+    ids=["gone", "tip-moved", "open-pull-request", "fork"],
+)
+def test_a_branch_kept_gone_or_a_forks_is_said_in_one_line_and_never_fails(
+    lib, monkeypatch, capsys, document, said
+) -> None:
+    _backbone_answers(monkeypatch, lib, document)
+    assert lib.delete_branch(42, "sha-merged", {}, allow_foreign_repo=False) is None
     out = capsys.readouterr()
-    assert "remote branch fix/42-slug already deleted" in out.out
-    assert "[warn]" not in out.err
+    assert out.out == said
+    assert out.err == ""
 
 
-def test_remote_branch_delete_failure_is_a_warning(lib, monkeypatch, capsys) -> None:
-    monkeypatch.setattr(
+def test_a_deletion_the_backbone_refused_is_a_warning(lib, monkeypatch, capsys) -> None:
+    """Refused by the backbone's guard, say — the comparisons disagree and the
+    operator confirmed nothing: a warning in the backbone's words, never an
+    error; the merge stands."""
+    _backbone_answers(
+        monkeypatch,
         lib,
-        "gh_run",
-        lambda args, config, **kw: subprocess.CompletedProcess(
-            args=args,
-            returncode=1,
-            stdout="",
-            stderr="gh: boom (HTTP 500)",
+        _deletion(
+            "refused",
+            branch=None,
+            reason_kind="foreign-repository",
+            reason="the cross-repository guard refused: …",
         ),
     )
-    lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False)
+    assert lib.delete_branch(42, "sha-merged", {}, allow_foreign_repo=False) is None
     err = capsys.readouterr().err
-    assert "[warn] could not delete remote branch fix/42-slug: gh: boom (HTTP 500)" in err
-    assert "git push origin --delete fix/42-slug" in err
+    assert err == (
+        "[warn] the remote head branch not deleted: the cross-repository guard refused: …\n"
+    )
 
 
-def test_remote_branch_delete_with_gh_missing_is_a_warning(lib, monkeypatch, capsys) -> None:
-    """Best-effort in every failure mode (#920): `gh` absent from PATH warns
-    and returns normally rather than raising past the already-landed merge."""
-
-    def missing(*a, **k):
-        raise FileNotFoundError("gh")
-
-    monkeypatch.setattr(lib, "gh_run", missing)
-    assert lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False) is None
+@pytest.mark.parametrize(
+    "documents",
+    [(), (_deletion("landed"),), ({**_deletion("kept"), "tip": 7},)],
+    ids=["no-answer", "unknown-outcome", "a-field-of-another-type"],
+)
+def test_a_deletion_the_backbone_gives_no_answer_to_is_a_warning(
+    lib, monkeypatch, capsys, documents
+) -> None:
+    """No answer, or one that names no way the deletion ended: whether the
+    branch was deleted is not known, and the verb says so and goes on."""
+    _backbone_answers(monkeypatch, lib, *documents)
+    assert lib.delete_branch(42, "sha-merged", {}, allow_foreign_repo=False) is None
     err = capsys.readouterr().err
-    assert "[warn] could not delete remote branch fix/42-slug" in err
-    assert "`gh` not on PATH" in err
-    assert "git push origin --delete fix/42-slug" in err
+    assert err.startswith("[warn] whether PR #42's head branch on GitHub was deleted is not known")
+    assert "The merge is durable" in err
 
 
-def test_remote_branch_delete_with_unrunnable_gh_is_a_warning(lib, monkeypatch, capsys) -> None:
-    """A `gh` on PATH that cannot be run (not executable, wrong binary) warns
-    too -- the helper's contract is that it never raises (#920)."""
+def test_with_no_merged_head_known_nothing_is_asked(lib, monkeypatch, capsys) -> None:
+    """The deletion is asked for only at a head that merged: with none known,
+    the branch is kept and the verb says so."""
+    asked = _backbone_answers(monkeypatch, lib, _deletion("deleted"))
+    lib.delete_branch(42, "", {}, allow_foreign_repo=False)
+    assert asked == []
+    assert "the head PR #42 merged at is not known" in capsys.readouterr().err
 
-    def unrunnable(*a, **k):
-        raise PermissionError(13, "Permission denied")
 
-    monkeypatch.setattr(lib, "gh_run", unrunnable)
-    assert lib.delete_remote_branch("fix/42-slug", {}, cross_repository=False) is None
-    err = capsys.readouterr().err
-    assert "`gh` could not be run" in err
-    assert "git push origin --delete fix/42-slug" in err
+def test_pm_keeps_no_copy_of_the_remote_deletion(lib) -> None:
+    """The head branch on GitHub is deleted only by the backbone (ADR-061
+    point 1): this library asks GitHub for no deletion itself."""
+    import inspect
+
+    source = inspect.getsource(lib)
+    assert "git/refs/heads" not in source and "updateRefs" not in source
+    assert not hasattr(lib, "delete_remote_branch") and not hasattr(lib, "gh_run")
 
 
 # --- cleanup_local ---------------------------------------------------------
@@ -419,19 +489,6 @@ def test_cleanup_local_branch_delete_failure_is_a_warning(lib, monkeypatch, caps
     assert f"[warn] git branch -D fix/42-slug failed: {branch_err}" in capsys.readouterr().err
 
 
-def test_delete_remote_branch_never_touches_base_repo_for_a_fork_pr(lib, monkeypatch, capsys):
-    """Security (PR #896 review): a fork PR's head name is chosen by the fork's
-    author and may name an unrelated base-repository branch. The API delete
-    targets the BASE repo, so for a cross-repository PR no gh call is made."""
-    calls: list[list[str]] = []
-    monkeypatch.setattr(
-        lib, "gh_run", lambda args, config, **kw: calls.append(list(args)) or _ok(args)
-    )
-    lib.delete_remote_branch("release/1.x", {}, cross_repository=True)
-    assert calls == []
-    assert "lives in a fork" in capsys.readouterr().out
-
-
 def test_cleanup_local_never_force_deletes_a_same_named_branch_for_a_fork_pr(lib, monkeypatch):
     """A local branch sharing a fork PR's head name is not that PR's head;
     `git branch -D` would discard its unpushed work, so it is not run."""
@@ -451,14 +508,24 @@ def test_cleanup_local_never_force_deletes_a_same_named_branch_for_a_fork_pr(lib
 
 
 def test_cross_repository_is_a_required_keyword(lib):
-    """No default: every caller must state whether the PR is cross-repository,
-    so a later caller cannot silently reintroduce the fork-PR deletion hole."""
+    """No default: every caller of the local clean-up must state whether the
+    PR is cross-repository, so a later caller cannot silently reintroduce the
+    fork-PR deletion hole."""
     import inspect
 
-    for fn in (lib.delete_remote_branch, lib.cleanup_local):
-        p = inspect.signature(fn).parameters["cross_repository"]
-        assert p.kind is inspect.Parameter.KEYWORD_ONLY
-        assert p.default is inspect.Parameter.empty
+    p = inspect.signature(lib.cleanup_local).parameters["cross_repository"]
+    assert p.kind is inspect.Parameter.KEYWORD_ONLY
+    assert p.default is inspect.Parameter.empty
+
+
+def test_the_confirmation_is_a_required_keyword_of_the_deletion(lib):
+    """No default: every caller of the backbone's deletion states whether the
+    operator confirmed a change in another repository, as for the merge."""
+    import inspect
+
+    p = inspect.signature(lib.delete_branch).parameters["allow_foreign_repo"]
+    assert p.kind is inspect.Parameter.KEYWORD_ONLY
+    assert p.default is inspect.Parameter.empty
 
 
 def _guarded_git(monkeypatch, lib, *, tip: str, unmerged: str):

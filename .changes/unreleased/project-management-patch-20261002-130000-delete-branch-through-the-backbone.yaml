@@ -1,0 +1,19 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  requires_backbone: release
+body: >
+  `done-work` and `merge-pr` no longer delete a merged pull request's head
+  branch on GitHub themselves. After their own steps that follow the merge,
+  they ask the backbone (`pkit pull-request delete-branch`), which deletes the
+  branch only while its tip is the head the pull request merged at. A push
+  made to the branch after the merge was deleted with it, and completing an
+  old pull request could delete the branch of a newer one that reused its
+  name; now such a branch is kept, and so is one another open pull request
+  uses, which the deletion would have closed. A branch kept or already gone
+  is said in one line and never fails the verb, and the operator's
+  cross-repository confirmation is passed on to the backbone's guard as it is
+  for the merge. The local clean-up is unchanged. Upgrade the capability
+  together with the backbone: it needs the release that has `pkit
+  pull-request delete-branch`.
