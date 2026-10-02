@@ -463,16 +463,20 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   mechanic (`pkit pull-request`), the one project-management's merge verbs
   land issue PRs with. A merge command that succeeds is not taken for a
   merge: the PR is read again, and only once GitHub reports it merged is the
-  head branch deleted — through the API rather than gh's local checkout,
-  then a best-effort local cleanup (switch to the base, fast-forward, delete
-  the local head), so a run from a worktree or a detached HEAD completes once
-  the merge lands. The local head is deleted only when everything on it
-  merged — its tip is the head the PR merged at, or behind it; a local head
-  holding commits past it, or one this clone cannot compare, is kept with a
-  warning. A merge at a head other than the one whose checks were read is
-  warned about. A head that lives in a fork is never deleted — its name is
-  the fork author's choice and could name an unrelated branch here. No
-  `Closes #N` requirement — a release PR has none.
+  head branch deleted — on GitHub by the backbone's deletion (`pkit
+  pull-request delete-branch`'s, imported), only while its tip is the head
+  the PR merged at, in one compare-and-delete request, so a push made after
+  the merge is not lost; then a best-effort local cleanup (switch to the
+  base, fast-forward, delete the local head), so a run from a worktree or a
+  detached HEAD completes once the merge lands. A remote branch kept — its
+  tip moved, another open PR uses it, or GitHub refuses to delete it — or
+  already gone is said in one line and does not fail the run. The local head
+  is deleted only when everything on it merged — its tip is the head the PR
+  merged at, or behind it; a local head holding commits past it, or one this
+  clone cannot compare, is kept with a warning. A merge at a head other than
+  the one whose checks were read is warned about. A head that lives in a fork
+  is never deleted — its name is the fork author's choice and could name an
+  unrelated branch here. No `Closes #N` requirement — a release PR has none.
 - **Lands through the merge queue** where the base has one, rather than
   around it. The queue makes the squash commit itself, by its own merge
   method and from the repository's squash-commit defaults, ignoring what a
@@ -489,7 +493,7 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   checked head, prints where it stands (`position 2 in the queue, awaiting
   checks, about 5 min to merge`), and waits for the merge — as long as the
   queue estimates plus 2 minutes, at most 30, or `--wait-minutes`. Then:
-  - **merged** — the head branch is deleted, exit 0;
+  - **merged** — the head branch is deleted (at the head that merged), exit 0;
   - **still queued** when the wait ends, or with `--no-wait` at once — exit
     4, nothing deleted; the PR is accepted, and the same command run again
     once it has merged deletes the head branch. A run on a PR already in the

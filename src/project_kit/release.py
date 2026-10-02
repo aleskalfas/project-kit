@@ -1860,11 +1860,12 @@ def merge_release_pr(
     not at all — saying through `say` where the PR stands. A head the queue
     already dropped is not enqueued again unless `force`: the queue, or a
     maintainer, took it out for a reason. Without a queue it squash-merges
-    directly, pinned to the same head. Either way the head branch is deleted,
-    through the API and then locally — both best-effort, so a detached-HEAD
-    or worktree run still completes (#897), and the local branch only when
-    nothing on it is missing from the merge — once GitHub reports the PR
-    merged.
+    directly, pinned to the same head. Either way the head branch is deleted
+    once GitHub reports the PR merged: on the service through
+    `pull_request_landing.delete_branch`, only while its tip is the head that
+    merged, then locally, only when nothing on it is missing from the merge —
+    neither can fail the run, so a detached-HEAD or worktree run still
+    completes (#897).
 
     A PR already in the queue is waited for, not gated or enqueued again, with
     a warning when the queue would not make the release's squash commit; a
@@ -1890,6 +1891,7 @@ def merge_release_pr(
             repo_root,
             f"PR #{pr.number} is already merged",
             merged_head=pr.head_oid,
+            clearance=clearance,
             dry_run=dry_run,
         )
     if pr.state == "CLOSED":
@@ -1909,6 +1911,7 @@ def merge_release_pr(
             repo_root,
             f"PR #{pr.number} has merged ({queue.describe()})",
             merged_head=queue.head_oid or pr.head_oid,
+            clearance=clearance,
             dry_run=dry_run,
         )
     if queue.queued:
@@ -1986,6 +1989,7 @@ def merge_release_pr(
             repo_root,
             f"Merged release PR #{pr.number} ({pr.url}).",
             merged_head=pr.head_oid,
+            clearance=clearance,
         )
     say(
         f"  gh pr merge returned, but GitHub does not report PR #{pr.number} merged: {base} "
@@ -2152,6 +2156,7 @@ def _await_the_queue(
             repo_root,
             f"Merged release PR #{number} ({pr.url}){through}.",
             merged_head=reading.head_oid or pr.head_oid,
+            clearance=clearance,
         )
     if wait.ended == pull_request_landing.STILL_QUEUED:
         return ReleaseMergeReport(
@@ -2200,14 +2205,19 @@ def _after_the_merge(
     headline: str,
     *,
     merged_head: str,
+    clearance: session_guard.Clearance,
     dry_run: bool = False,
 ) -> ReleaseMergeReport:
-    """What follows the merge — the head branch deleted through the API, then the
-    local clean-up — once GitHub reports the PR merged.
+    """What follows the merge — the head branch deleted on the service, then
+    the local clean-up — once GitHub reports the PR merged.
 
-    `merged_head` is the head the PR merged at: the local branch is deleted
-    only when nothing on it is missing from the merge, and a merge at a head
-    other than the one whose checks were read is warned about.
+    `merged_head` is the head the PR merged at: the remote branch is deleted
+    only while its tip is that head (`pull_request_landing.delete_branch`,
+    under the `clearance` the run took at its entry), the local branch only
+    when nothing on it is missing from the merge, and a merge at a head other
+    than the one whose checks were read is warned about. A branch kept or
+    already gone is said in one line; neither fails the run, whose merge is
+    durable.
     """
     if dry_run:
         return ReleaseMergeReport(
@@ -2218,8 +2228,11 @@ def _after_the_merge(
             f"release PR #{pr.number} merged at head {merged_head[:7]}, not at "
             f"{pr.head_oid[:7]}, the head whose checks were read."
         )
+    deletion = pull_request_landing.delete_branch(
+        pr.number, expect=merged_head, cwd=repo_root, clearance=clearance
+    )
     notes = [
-        _gh_delete_remote_branch(pr.head_ref, repo_root, cross_repository=pr.cross_repository),
+        f"{deletion.describe()}.",
         *_git_cleanup_local(
             pr.head_ref,
             pr.base_ref or "main",
@@ -2270,65 +2283,18 @@ def _gh_pr_view(pr_number: int, repo_root: Path) -> dict:
     return json.loads(result.stdout)
 
 
-# The merge itself is `pull_request_landing`'s, the one mechanic the
-# project-management capability's merge verbs call too. The head-branch
-# clean-up below still mirrors that capability's `scripts/_lib/pr_merge.py`
-# (delete_remote_branch / cleanup_local): the capability's scripts run as
-# standalone `uv run --script`s that do not import `project_kit`. Keep the two
-# in step: a fix to either (the fork-PR guard, the already-deleted answer, the
-# merged-head guard on the local delete) belongs in both.
-
-_REF_ALREADY_DELETED_MARKER = "Reference does not exist"
+# The merge and the head branch's deletion on the service are
+# `pull_request_landing`'s, the one mechanic the project-management
+# capability's merge verbs call too. The local clean-up below still mirrors
+# that capability's `scripts/_lib/pr_merge.py` (cleanup_local): the
+# capability's scripts run as standalone `uv run --script`s that do not import
+# `project_kit`, and the local branch is not on the hosting service. Keep the
+# two in step: a fix to either (the fork-PR guard, the merged-head guard on the
+# local delete) belongs in both.
 
 
 def _warn(message: str) -> None:
     click.echo(f"[warn] {message}", err=True)
-
-
-def _gh_delete_remote_branch(branch: str, repo_root: Path, *, cross_repository: bool) -> str:
-    """Delete the PR's remote head ref through the API — best-effort.
-
-    Returns a status line for the report ("" after a warning). Mirrors the
-    project-management capability's `_lib/pr_merge.delete_remote_branch` (see
-    the note on keeping the two in step, above `_REF_ALREADY_DELETED_MARKER`).
-
-    `cross_repository` is required and has no default: the ref is deleted in
-    the BASE repository (`{owner}/{repo}` resolves there), so for a PR whose
-    head lives in a fork the head-branch name is chosen by the fork's author
-    and may name an unrelated base-repo branch. Such a head is never deleted
-    here. The `release/*` head guard does not cover this — a fork can name its
-    branch `release/…` too.
-
-    The API call needs nothing from the working tree. A ref that is already
-    gone (a repository that auto-deletes head branches on merge) is reported,
-    not warned about.
-    """
-    if cross_repository:
-        return (
-            f"head branch {branch!r} lives in a fork; not deleting a "
-            "base-repository ref of that name."
-        )
-    try:
-        result = subprocess.run(
-            ["gh", "api", "-X", "DELETE", f"repos/{{owner}}/{{repo}}/git/refs/heads/{branch}"],
-            capture_output=True,
-            text=True,
-            cwd=repo_root,
-            check=False,
-        )
-    except FileNotFoundError:
-        _warn(f"`gh` not on PATH; delete remote branch {branch} by hand.")
-        return ""
-    if result.returncode == 0:
-        return f"deleted remote branch {branch!r}."
-    stderr = result.stderr.strip()
-    if _REF_ALREADY_DELETED_MARKER in stderr:
-        return f"remote branch {branch!r} already deleted."
-    _warn(
-        f"could not delete remote branch {branch}: {stderr}. The merge is "
-        f"durable; delete it by hand (`git push origin --delete {branch}`)."
-    )
-    return ""
 
 
 def _git_cleanup_local(
@@ -2344,7 +2310,7 @@ def _git_cleanup_local(
     Returns status lines for the report; every failing step warns with git's
     reason and continues, so none can fail the run. Mirrors the
     project-management capability's `_lib/pr_merge.cleanup_local` (see the
-    note on keeping the two in step, above `_REF_ALREADY_DELETED_MARKER`),
+    note on keeping the two in step, above `_warn`),
     except the branch returned to is the PR's own base (`baseRefName`) — the
     backbone reads no capability config.
 
