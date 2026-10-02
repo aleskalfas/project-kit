@@ -411,6 +411,17 @@ def _unanswered_then_neither(world: World) -> None:
     world.host.never_receive(fake.MERGE)
 
 
+def _unanswered_then_unreadable(world: World) -> None:
+    world.host.lose_reply(fake.MERGE)
+    world.host.after(fake.MERGE, _fail_every_read)
+
+
+def _enqueue_unanswered_then_unreadable(world: World) -> None:
+    _queue(world)
+    world.host.lose_reply(fake.ENQUEUE)
+    world.host.after(fake.ENQUEUE, _fail_every_read)
+
+
 def _killed_mid_merge_made(world: World) -> None:
     world.host.kill_mid_request(fake.MERGE, made=True)
 
@@ -686,6 +697,20 @@ _LOST_ANSWER_SETTLED = (
 _SETTLED_NOT_MADE = (
     "neither merged nor queued on two readings running, the interval apart: the backbone says "
     "the merge was not made, and nothing merged (#1256)"
+)
+_SETTLED_UNCONFIRMED = (
+    "unconfirmed, exit 4, nothing after the merge run: before #1256 pm's own reading after no "
+    "document failed; since, the backbone's bound ends the `gh`, its reading fails, and pm "
+    "takes the unconfirmed from its document, reading nothing more — the same requests"
+)
+_RELEASE_UNCONFIRMED = (
+    "the bound ends the `gh` that never answers, and with GitHub unreadable since the report "
+    "is unconfirmed — what was asked, that whether it was made is not known, the reading that "
+    "tells — exit 4, nothing deleted (#1256)"
+)
+_KILLED_ONE_READING = (
+    "pm's bound ended the `pkit` group, the `gh` in it, so no document came back; one reading "
+    "neither merged nor queued is unconfirmed, never 'not made' (#1256)"
 )
 _NO_ONE_LEFT = NotToday(
     "imports the landing module: a kill ends its own run, with nothing left to read what the "
@@ -1246,6 +1271,44 @@ SCENARIOS: tuple[Scenario, ...] = (
         },
     ),
     Scenario(
+        "request-unanswered-then-unreadable",
+        "The merge is made and its answer never comes back; GitHub cannot be read since.",
+        _unanswered_then_unreadable,
+        Row(
+            stopped("unconfirmed 4", "read×2 merge read", note=_SETTLED_UNCONFIRMED),
+            stopped("4 record=owed", "read×2 merge read", note=_SETTLED_UNCONFIRMED),
+            stopped("hangs", "read merge", note=_HANGS),
+            stopped("4 merge: unconfirmed", "read×2 merge read×2", note=_SETTLED_UNCONFIRMED),
+        ),
+        after={RELEASE: stopped("4", "read merge read", note=_RELEASE_UNCONFIRMED)},
+    ),
+    Scenario(
+        "enqueue-unanswered-then-unreadable",
+        "The enqueue is made and its answer never comes back; GitHub cannot be read since.",
+        _enqueue_unanswered_then_unreadable,
+        Row(
+            stopped(
+                "unconfirmed 4",
+                "read defaults read defaults enqueue read",
+                note=_SETTLED_UNCONFIRMED,
+            ),
+            stopped(
+                "4 record=owed",
+                "read defaults read defaults enqueue read",
+                note=_SETTLED_UNCONFIRMED,
+            ),
+            stopped("hangs", "read defaults enqueue", note=_HANGS),
+            stopped(
+                "4 merge: unconfirmed",
+                "read defaults read defaults enqueue read×2",
+                note=_SETTLED_UNCONFIRMED,
+            ),
+        ),
+        after={
+            RELEASE: stopped("4", "read defaults enqueue read", note=_RELEASE_UNCONFIRMED),
+        },
+    ),
+    Scenario(
         "request-made-then-gh-failed",
         "The merge is made, then gh exits with a 502.",
         _made_then_gh_failed,
@@ -1305,6 +1368,15 @@ SCENARIOS: tuple[Scenario, ...] = (
             _NO_ONE_LEFT,
             stopped("7 merge: not merged", "read×2 merge read", note=_ONE_READING),
         ),
+        after={
+            DONE_WORK: stopped("unconfirmed 4", "read×2 merge read", note=_KILLED_ONE_READING),
+            MERGE_PR: stopped("4 record=owed", "read×2 merge read", note=_KILLED_ONE_READING),
+            LAND_WORK: stopped(
+                "4 merge: unconfirmed",
+                "read×2 merge read×2",
+                note=f"{_KILLED_ONE_READING}; land-work's own reading since keeps it unconfirmed",
+            ),
+        },
     ),
     Scenario(
         "read-fails-after-a-direct-merge",

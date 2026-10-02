@@ -455,6 +455,49 @@ def test_a_request_the_backbones_guard_refused_says_so(mq, pkit) -> None:
     assert outcome.guard == guard
 
 
+def _settled_document(accepted: bool | None, reason_kind: str | None) -> dict[str, Any]:
+    """The backbone's document of a request that got no answer, settled by reading."""
+    return {
+        "schema_version": 1,
+        "pull_request": 42,
+        "accepted": accepted,
+        "exit_code": None,
+        "reason": "the merge of PR #42 got no answer (…)",
+        "reason_kind": reason_kind,
+        "guard": {"verdict": "undetermined", "cleared": "undetermined"},
+    }
+
+
+@pytest.mark.parametrize(
+    ("accepted", "reason_kind"),
+    [(False, "not-made"), (None, "unanswered")],
+    ids=["not-made", "unconfirmed"],
+)
+def test_a_request_the_backbone_settled_by_reading_reads_as_it_settled(
+    mq, pkit, accepted, reason_kind
+) -> None:
+    """Not made on two readings running is not accepted; unconfirmed —
+    `accepted` null, `unanswered` — is the one answer that says whether the
+    request was made is not known, and is read as such, not as no answer."""
+    pkit.answers(_settled_document(accepted, reason_kind), code=1)
+    outcome = mq.request(["merge", "42", "--subject", "fix: x"], {})
+    assert (outcome.accepted, outcome.exit_code, outcome.reason_kind) == (
+        accepted,
+        None,
+        reason_kind,
+    )
+    assert (mq.NOT_MADE, mq.UNANSWERED) == (landing.NOT_MADE, landing.UNANSWERED)
+
+
+@pytest.mark.parametrize("reason_kind", [None, "not-made", "foreign-repository"])
+def test_a_null_accepted_without_unanswered_is_no_answer(mq, pkit, reason_kind) -> None:
+    """Only the unconfirmed answer may leave `accepted` null: any other null
+    is an answer pm cannot read, and the PR is read before anything is decided."""
+    pkit.answers(_settled_document(None, reason_kind), code=1)
+    with pytest.raises(mq.Unreadable, match="does not say whether the request was accepted"):
+        mq.request(["merge", "42", "--subject", "fix: x"], {})
+
+
 # --- the head branch's deletion (#1255) -------------------------------------------
 
 
@@ -722,6 +765,55 @@ def test_a_round_trip_through_the_backbones_command(mq, tmp_path, monkeypatch, c
 
 
 # --- one statement of the backbone's terms -----------------------------------------
+
+# The most `gh` calls one backbone reading makes: the full read and — where the
+# API does not know one of its fields — the probe for merge queues and the read
+# without the queue's fields (`pull_request_landing.read`).
+_CALLS_PER_READING = 3
+
+
+def _longest(subcommand: str) -> float:
+    """The longest the backbone's own `gh` calls for `subcommand` can take end
+    to end, each up to its bound and every reading at its longest — an upper
+    bound, which the backbone's code keeps to (`pull_request_landing`)."""
+    reading = _CALLS_PER_READING * landing.GH_READ_SECONDS
+    # The two readings that settle a request with no answer, and the interval.
+    settling = 2 * reading + landing.SETTLE_INTERVAL_SECONDS
+    return {
+        "read": reading,
+        "squash-defaults": landing.GH_READ_SECONDS,
+        "merge": landing.GH_REQUEST_SECONDS + settling,
+        "enqueue": landing.GH_REQUEST_SECONDS + settling,
+        # A reading, the request, then a reading — or the two that settle it.
+        "dequeue": reading + landing.GH_REQUEST_SECONDS + settling,
+        # The branch and the open PRs based on it, the request, the branch again.
+        "delete-branch": 3 * landing.GH_READ_SECONDS + landing.GH_REQUEST_SECONDS,
+    }[subcommand]
+
+
+def test_the_backbones_bounds_on_gh_sit_below_pms_bound_on_each_subcommand(mq) -> None:
+    """pm ends a `pkit pull-request` run at its bound for the subcommand, with
+    the `gh` in it (#1256). Each of the backbone's own bounds on a `gh` call is
+    strictly below every such bound, and so is the longest a subcommand's calls
+    can take together — the readings and the interval that settle a request
+    with no answer among them — so the backbone's document, settled, comes
+    back before pm stops waiting."""
+    assert set(mq.TIMEOUT_SECONDS) == {
+        "read",
+        "squash-defaults",
+        "merge",
+        "enqueue",
+        "dequeue",
+        "delete-branch",
+    }
+    for subcommand, bound in mq.TIMEOUT_SECONDS.items():
+        assert bound > landing.GH_READ_SECONDS, subcommand
+        assert bound > landing.GH_REQUEST_SECONDS, subcommand
+        assert bound > _longest(subcommand), (subcommand, _longest(subcommand), bound)
+    # A wait may run past its limit by the reading in flight at its deadline,
+    # the interval and one more reading: inside pm's margin on a wait.
+    overrun = 2 * _CALLS_PER_READING * landing.GH_READ_SECONDS + landing.POLL_SECONDS
+    assert overrun < mq.WAIT_MARGIN_SECONDS
 
 
 def test_pm_states_the_backbones_wait_limits_and_endings(mq) -> None:

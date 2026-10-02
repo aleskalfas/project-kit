@@ -3073,7 +3073,8 @@ def test_a_merge_with_no_answer_back_github_cannot_settle_is_unconfirmed(
     assert (
         "[unconfirmed] the merge of PR #496 into the base branch got no answer back, and "
         "GitHub could not be read since to tell whether it merged or entered the merge "
-        "queue: HTTP 502. Nothing after the merge has run, and #42 stays in Review."
+        "queue: HTTP 502. Read where PR #496 stands with `pkit pull-request read 496`. "
+        "Nothing after the merge has run, and #42 stays in Review."
     ) in out
 
 

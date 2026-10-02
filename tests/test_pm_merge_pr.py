@@ -980,7 +980,8 @@ def test_a_merge_with_no_answer_back_github_cannot_settle_is_owed(mp, monkeypatc
     assert (
         "[unconfirmed] the merge of PR #99 into the base branch got no answer back, and "
         "GitHub could not be read since to tell whether it merged or entered the merge "
-        "queue: HTTP 502. Nothing after the merge has run."
+        "queue: HTTP 502. Read where PR #99 stands with `pkit pull-request read 99`. Nothing "
+        "after the merge has run."
     ) in out
     assert calls["records"][99] == mp._Record(mp._OWED, "sha-head", "2026-10-01T12:00:00+00:00")
 

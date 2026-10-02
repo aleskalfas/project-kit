@@ -936,7 +936,11 @@ def _request_failed(head: _Head, reason: str, config: dict[str, Any]) -> tuple[i
 
 
 def _accepted(head: _Head, *, queued: bool, config: dict[str, Any]) -> tuple[int, str]:
-    """done-work's queued or unconfirmed end, said as GitHub now reports the PR."""
+    """done-work's queued or unconfirmed end, said as GitHub now reports the PR.
+
+    A queued PR read neither merged nor queued left the queue: not merged. An
+    unconfirmed one read so stays unconfirmed — its request may still show,
+    and one reading never says it was not made."""
     issue, number = head.issue, head.pr_number
     again = f"run `land-work {issue}` again once it merges"
     try:
@@ -958,6 +962,15 @@ def _accepted(head: _Head, *, queued: bool, config: dict[str, Any]) -> tuple[int
         )
     if reading.queued:
         return EXIT_ACCEPTED, f"merge: queued — PR #{number} {reading.describe()}; {again}"
+    if not queued:
+        # An unconfirmed merge or enqueue may still show: one reading of neither
+        # does not say it was not made (ADR-061 point 7), so it stays unconfirmed.
+        return EXIT_ACCEPTED, (
+            f"merge: unconfirmed — PR #{number} reads neither merged nor queued "
+            f"({reading.describe()}), which does not tell whether the request was made; read "
+            f"it with `pkit pull-request read {number}`, and run `land-work {issue}` again: "
+            "it merges the PR if it has not merged"
+        )
     return EXIT_RETRY, (
         f"merge: not merged — PR #{number} is neither merged nor in the merge queue "
         f"({reading.describe()}); run `land-work {issue}` again to merge it"

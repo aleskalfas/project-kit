@@ -1081,21 +1081,117 @@ def test_a_request_with_no_answer_back_github_cannot_settle_is_unconfirmed(
     assert landing.outcome == lib.UNCONFIRMED
     assert landing.message == (
         f"the {asked} of PR #42 into main got no answer back, and GitHub could not be read "
-        "since to tell whether it merged or entered the merge queue: HTTP 502"
+        "since to tell whether it merged or entered the merge queue: HTTP 502. Read where "
+        "PR #42 stands with `pkit pull-request read 42`"
     )
 
 
-def test_a_merge_with_no_answer_back_that_github_reports_open_was_not_made(
-    lib, monkeypatch, capsys
+@pytest.mark.parametrize(
+    ("first", "asked"),
+    [({"has_queue": False}, "merge"), ({}, "enqueue")],
+    ids=["merge", "enqueue"],
+)
+def test_a_request_with_no_answer_back_that_github_reports_open_is_unconfirmed_not_unmade(
+    lib, monkeypatch, capsys, first, asked
 ) -> None:
-    _Queue(lib, monkeypatch, [_reading(lib, has_queue=False)])
+    """With no answer from the backbone at all, one reading neither merged nor
+    queued does not say the request was not made — that takes two readings
+    running (ADR-061 point 7), which the backbone takes when it answers. The
+    landing is unconfirmed, naming the reading that tells, and nothing calls
+    it failed."""
+    _Queue(lib, monkeypatch, [_reading(lib, **first)])
     _no_answer_back(lib, monkeypatch)
     landing = lib.land(_request(lib), {})
+    assert landing.outcome == lib.UNCONFIRMED
+    assert landing.message == (
+        f"the {asked} of PR #42 into main got no answer back, and one reading since finds it "
+        f"neither merged nor queued (not in the queue), which does not tell whether the "
+        f"{asked} was made: the {asked} may still show. Read where PR #42 stands with "
+        "`pkit pull-request read 42`"
+    )
+    assert "not made" not in capsys.readouterr().err
+
+
+def _settled(lib, accepted: bool | None, kind: str) -> Any:
+    """The backbone's answer to a request that got no answer, settled by
+    reading: not made (`accepted` false), or unconfirmed (`accepted` null)."""
+    reason = (
+        "the merge of PR #42 got no answer (HTTP 502: Bad Gateway), and two readings since, "
+        "10 s apart, find PR #42 neither merged nor queued (not in the queue): the merge was "
+        "not made"
+        if kind == "not-made"
+        else "the merge of PR #42 got no answer (HTTP 502: Bad Gateway), and PR #42 could not "
+        "be read since (HTTP 502): whether the merge was made is not known"
+    )
+    return lib.merge_queue.Outcome(accepted, None, reason, reason_kind=kind)
+
+
+@pytest.mark.parametrize(
+    ("first", "asked"), [({"has_queue": False}, "merge"), ({}, "enqueue")], ids=["merge", "enqueue"]
+)
+def test_a_request_the_backbone_settled_as_not_made_is_a_failure_in_its_words(
+    lib, monkeypatch, capsys, first, asked
+) -> None:
+    """Two readings running found the request not made: nothing merged, and
+    the verb may run again — the backbone's words say why."""
+    _Queue(lib, monkeypatch, [_reading(lib, **first)])
+    answered = _answering(lib, monkeypatch, _settled(lib, False, "not-made"))
+    landing = lib.land(_request(lib), {})
     assert landing.outcome == lib.FAILED
-    assert (
-        "error: GitHub reports PR #42 neither merged nor queued (not in the queue): the merge "
-        "was not made, and nothing merged."
-    ) in capsys.readouterr().err
+    assert [args[0] for args in answered] == [asked]
+    assert "the merge was not made." in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("first", "asked"), [({"has_queue": False}, "merge"), ({}, "enqueue")], ids=["merge", "enqueue"]
+)
+def test_a_request_the_backbone_could_not_settle_is_unconfirmed_without_reading_again(
+    lib, monkeypatch, first, asked
+) -> None:
+    """The backbone could not tell whether the request was made: pm takes its
+    word — unconfirmed — reads nothing more, and names the reading that
+    tells."""
+    queue = _Queue(lib, monkeypatch, [_reading(lib, **first)])
+    read = queue.read
+    readings: list[int] = []
+
+    def counted(pr_number, config):
+        readings.append(pr_number)
+        return read(pr_number, config)
+
+    monkeypatch.setattr(lib.merge_queue, "read", counted)
+    _answering(lib, monkeypatch, _settled(lib, None, "unanswered"))
+    landing = lib.land(_request(lib), {})
+    assert landing.outcome == lib.UNCONFIRMED
+    assert readings == [42]  # the reading before the request, and none after
+    assert landing.message == (
+        "the merge of PR #42 got no answer (HTTP 502: Bad Gateway), and PR #42 could not be "
+        "read since (HTTP 502): whether the merge was made is not known. Read where PR #42 "
+        "stands with `pkit pull-request read 42`"
+    )
+
+
+@pytest.mark.parametrize(
+    "answer",
+    ["unconfirmed", "no-answer-back"],
+)
+def test_a_dequeue_whose_end_is_not_known_says_so_and_how_to_read_it(
+    lib, monkeypatch, answer
+) -> None:
+    """Whether the PR left the queue is not known — the backbone could not
+    tell, or gave no answer back: the landing says so, never that taking it
+    out failed, and names the reading that tells."""
+    moved = _reading(lib, head_oid="sha-pushed", in_queue=True)
+    _Queue(lib, monkeypatch, [_reading(lib, in_queue=True), moved])
+    if answer == "unconfirmed":
+        _answering(lib, monkeypatch, _settled(lib, None, "unanswered"))
+    else:
+        _no_answer_back(lib, monkeypatch)
+    landing = lib.land(_request(lib), {})
+    assert landing.outcome == lib.HEAD_MOVED
+    assert "whether taking it out of the merge queue worked is not known" in landing.message
+    assert "`pkit pull-request read 42`; if it is still queued, take it out" in landing.message
+    assert "failed" not in landing.message
 
 
 def test_a_merge_at_a_head_the_gates_did_not_check_is_warned(lib, monkeypatch, capsys) -> None:
