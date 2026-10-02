@@ -1,0 +1,3 @@
+component: software-analysis
+kind: none
+body: Internal — the README is revalidated unchanged against the core record's rule for what a command filler may read beyond the working tree (#1145); its filler reads the working tree only and declares no `reads`, and nothing you run changes.

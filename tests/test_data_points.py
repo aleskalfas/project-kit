@@ -649,12 +649,16 @@ def _command_contributor(
     *,
     contract: bool = True,
     address: str = READERS,
+    reads: Any = None,
 ) -> None:
     """A capability contributing through the command `export`, whose script records
-    its arguments and the offline marker in the run log, then runs `body`."""
+    its arguments and the offline marker in the run log, then runs `body`. `reads`,
+    when given, is the leaf's declaration of what it reads beyond the working tree."""
     leaf: dict[str, Any] = {"script": "scripts/export.py", "help": "Export the readers."}
     if contract:
         leaf["query-contract"] = True
+    if reads is not None:
+        leaf["reads"] = reads
     entry = {"point": address, "schema_version": 1, "command": "export"}
     _stage(
         repo,
@@ -810,6 +814,170 @@ def test_validate_runs_each_command_filler_once(repo: AdopterRepo) -> None:
     assert len(_runs(repo)) == 1
 
 
+# --- what a command filler reads beyond the working tree (COR-052 point 6; #1145) ----
+
+EMPTY = {"schema_version": 1, "value": []}
+
+
+def _reads_line(resolution: dp.DataResolution) -> list[str]:
+    """The `connections` member's lines naming what a filler read."""
+    return [line for line in dp.summary_lines(resolution) if " reads " in line]
+
+
+def test_a_filler_s_reads_come_from_its_leaf_and_name_the_commits_read(
+    repo: AdopterRepo,
+) -> None:
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER), reads=["settled", "history"])
+    head = repo.commit("initial")
+    resolution = _resolve(repo)
+    point = resolution.point(READERS)
+    assert point is not None and point.resolved and point.value == ["developer"]
+    (filler,) = point.fillers
+    # In canonical order, whatever order the leaf declares them in; no remote, so the
+    # default branch is the local one.
+    assert filler.reads == (
+        dp.FillerRead("history", "HEAD", head, False),
+        dp.FillerRead("settled", "main", head),
+    )
+    assert _reads_line(resolution) == [
+        f"{READERS}: evidence (command 'export') reads history (HEAD {head[:12]}) and the "
+        f"default branch (main at {head[:12]})"
+    ]
+    assert len(_runs(repo)) == 1
+
+
+def test_a_filler_that_declares_no_reads_names_none(repo: AdopterRepo) -> None:
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER))
+    resolution = _resolve(repo)
+    point = resolution.point(READERS)
+    assert point is not None and point.fillers[0].reads == ()
+    assert _reads_line(resolution) == []
+
+
+def test_a_shallow_clone_is_named_beside_the_history_read(repo: AdopterRepo) -> None:
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER), reads=["history"])
+    head = repo.commit("initial")
+    # Git's own mark of a shallow clone: the commits whose parents it does not hold.
+    (repo.root / ".git" / "shallow").write_text(f"{head}\n", encoding="utf-8")
+    resolution = _resolve(repo)
+    assert _reads_line(resolution) == [
+        f"{READERS}: evidence (command 'export') reads history (HEAD {head[:12]}, shallow clone)"
+    ]
+    point = resolution.point(READERS)
+    assert point is not None
+    assert point.fillers[0].reads == (dp.FillerRead("history", "HEAD", head, True),)
+
+
+@pytest.mark.parametrize(("inert", "severity"), [("fail", E), ("fallback", W)])
+def test_a_filler_reading_a_default_branch_this_clone_lacks_is_not_started(
+    repo: AdopterRepo, inert: str, severity: validators.Severity
+) -> None:
+    """A remote holds the default branch and its copy was never fetched: the filler
+    is not started, and the fixes are the fetch and the declaration — never a base,
+    which does not reach a filler."""
+    _provider(repo, inert=inert)
+    _command_contributor(repo, "evidence", _printing(EMPTY), reads=["settled"])
+    repo.commit("initial")
+    repo.git("remote", "add", "origin", "https://example.invalid/project.git")
+    resolution = _resolve(repo)
+    assert _runs(repo) == []  # never started
+    point = resolution.point(READERS)
+    assert point is not None and not point.resolved and point.value is None
+    (filler,) = point.fillers
+    assert filler.state is dp.FillerState.INERT
+    assert filler.reason.startswith(
+        "its command 'export' reads the default branch, and the default branch 'main' "
+        "resolves to no commit here: 'origin/main' names none — fetch it (`git fetch origin "
+        "main`), or declare the right one (`repository.default-branch` in "
+    )
+    assert filler.reason.endswith("; a base named for the run does not reach a filler")
+    assert "--base" not in filler.reason and "PKIT_CHECK_BASE" not in filler.reason
+    assert "refs/heads/main" not in filler.reason
+    assert filler.reads == (dp.FillerRead("settled", None, None),)
+    (finding,) = resolution.findings
+    assert finding.severity is severity
+    assert filler.reason in finding.message
+    assert _reads_line(resolution) == [
+        f"{READERS}: evidence (command 'export') reads the default branch (it resolves to no "
+        "commit here)"
+    ]
+
+
+def test_an_unborn_default_branch_starts_the_filler_and_empty_is_its_answer(
+    repo: AdopterRepo,
+) -> None:
+    """No commit and no remote: the state does not exist yet, so the filler runs and
+    answers empty. Once a remote holds the branch this clone has not fetched, the
+    state exists and cannot be reached: no answer, never an empty one."""
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(EMPTY), reads=["history", "settled"])
+    resolution = _resolve(repo)
+    point = resolution.point(READERS)
+    assert point is not None and point.resolved and point.value == [] and point.entries == ()
+    assert point.fillers[0].reads == (
+        dp.FillerRead("history", "HEAD", None, False),
+        dp.FillerRead("settled", "main", None),
+    )
+    assert _reads_line(resolution) == [
+        f"{READERS}: evidence (command 'export') reads history (HEAD, no commit yet) and the "
+        "default branch (main, no commit yet)"
+    ]
+    assert len(_runs(repo)) == 1
+
+    repo.git("remote", "add", "origin", "https://example.invalid/project.git")
+    unreachable = _point(repo)
+    assert not unreachable.resolved and unreachable.value is None
+    assert unreachable.fillers[0].state is dp.FillerState.INERT
+    assert len(_runs(repo)) == 1  # not started a second time
+
+
+def test_a_reads_the_backbone_does_not_understand_is_never_run(repo: AdopterRepo) -> None:
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER), reads=["future"])
+    point = _point(repo)
+    (filler,) = point.fillers
+    assert filler.state is dp.FillerState.INERT
+    assert filler.reason == (
+        "its command 'export' declares a `reads` that is not a list of distinct states among "
+        "history, settled, so it is not run"
+    )
+    assert filler.reads == ()
+    assert _runs(repo) == []
+
+
+def test_a_filler_never_sees_the_base_a_pipeline_names(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _provider(repo)
+    _command_contributor(
+        repo,
+        "evidence",
+        "base = os.environ.get('PKIT_CHECK_BASE')\n"
+        + "print(json.dumps({'schema_version': 1, 'value': [base or 'none']}))\n",
+        reads=["settled"],
+    )
+    repo.commit("initial")
+    monkeypatch.setenv("PKIT_CHECK_BASE", "integration")
+    assert _point(repo).value == ["none"]
+
+
+def test_what_a_filler_read_reads_back_from_the_point_s_document(repo: AdopterRepo) -> None:
+    """The run cache keeps a point as its document: what each filler read survives."""
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(ANSWER), reads=["history", "settled"])
+    head = repo.commit("initial")
+    point = _point(repo)
+    document = dp.point_document(point)
+    assert document["fillers"][0]["reads"] == [
+        {"state": "history", "ref": "HEAD", "commit": head, "shallow": False},
+        {"state": "settled", "ref": "main", "commit": head},
+    ]
+    assert dp.point_from_document(json.loads(json.dumps(document))) == point
+
+
 # --- the status report (COR-052 point 7) ------------------------------------------------
 
 
@@ -951,6 +1119,7 @@ def test_resolve_prints_the_point_as_the_status_report_resolves_it(repo: Adopter
                 "state": "taken",
                 "reason": "",
                 "query_contract": None,
+                "reads": [],
             },
             {
                 "source": "contribution",
@@ -959,6 +1128,7 @@ def test_resolve_prints_the_point_as_the_status_report_resolves_it(repo: Adopter
                 "state": "taken",
                 "reason": "",
                 "query_contract": True,
+                "reads": [],
             },
             {
                 "source": "default",
@@ -967,6 +1137,7 @@ def test_resolve_prints_the_point_as_the_status_report_resolves_it(repo: Adopter
                 "state": "taken",
                 "reason": "",
                 "query_contract": None,
+                "reads": [],
             },
         ],
     }

@@ -596,8 +596,12 @@ def _data_point_lines(point: ResolvedPoint) -> list[str]:
     A command filler says whether its command declares the query contract —
     needing no network among its limits — which is declared and trusted, never
     enforced (COR-050 point 2): nothing holds a command to no network (ADR-057
-    point 4).
+    point 4). One that reads beyond the working tree, once asked, says what it
+    read and at which commit, since its answer depends on them (COR-052 point
+    7).
     """
+    from project_kit.data_points import reads_described
+
     default = f" · default {point.participation}" if point.participation else ""
     outcome = "resolved" if point.resolved else f"unresolved: {point.why}"
     lines = [
@@ -625,7 +629,8 @@ def _data_point_lines(point: ResolvedPoint) -> list[str]:
                 if filler.query_contract
                 else "no query-contract declaration"
             )
-            how = f"{filler.name} ({filler.supplies}; {declared})"
+            reads = f"; reads {reads_described(filler.reads)}" if filler.reads else ""
+            how = f"{filler.name} ({filler.supplies}; {declared}{reads})"
         reason = f" — {filler.reason}" if filler.reason else ""
         lines.append(f"{_LIST_INDENT}{'filler':<8} {how}: {filler.state.value}{reason}")
     return lines
