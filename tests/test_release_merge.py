@@ -11,14 +11,18 @@ head branch is deleted on the fake GitHub by the backbone's deletion
 cross-repository guard `pkit release merge` runs at its entry (#1254) is
 tested on real repositories. A request that gets no answer runs on the shared
 fake (`tests.hosting_fake`), ended at its bound and settled by reading (#1256).
+Release lands through the backbone's landing sequence (`pull_request_landing.land`,
+#1258), planned first as a dry run, and holds no copy of its steps.
 """
 
 from __future__ import annotations
 
+import ast
+import dataclasses
 import inspect
 import json
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +33,14 @@ from click.testing import CliRunner
 from project_kit import cli, release, session_guard
 from tests import hosting_fake as fake
 from tests import sessions
+
+#: The release PR's heads, as full commit ids — the only form the landing
+#: takes its head in — each named by the shared fake (`hosting_fake.oid`).
+HEAD = fake.HEAD
+PUSHED = fake.oid("pushed")
+MERGED = fake.oid("merged")
+OTHER = fake.oid("other")
+LATER = fake.oid("later")
 
 # --- check-rollup summarisation --------------------------------------
 
@@ -197,7 +209,7 @@ def _raw(**overrides: object) -> dict:
         "title": "chore(release): v1.141.0",
         "state": "OPEN",
         "headRefName": "release/v1.141.0",
-        "headRefOid": "sha-head",
+        "headRefOid": HEAD,
         "baseRefName": "main",
         "isCrossRepository": False,
         "url": "https://github.com/owner/repo/pull/42",
@@ -307,7 +319,7 @@ def _fake_run(
     unmerged: str = "0",
 ) -> list[list[str]]:
     """Stub `subprocess.run` for the local clean-up; a non-empty stderr makes
-    that step fail. The local head, when it exists, is at `sha-head`, and holds
+    that step fail. The local head, when it exists, is at `HEAD`, and holds
     `unmerged` commits past the merged head ("" — this clone cannot tell).
     Returns the argvs seen."""
     seen: list[list[str]] = []
@@ -324,7 +336,7 @@ def _fake_run(
         if argv[:2] == ["git", "rev-parse"]:
             if not local_branch_exists:
                 return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
-            return subprocess.CompletedProcess(argv, 0, stdout="sha-head\n", stderr="")
+            return subprocess.CompletedProcess(argv, 0, stdout=f"{HEAD}\n", stderr="")
         if argv[:2] == ["git", "rev-list"]:
             if not unmerged:
                 return subprocess.CompletedProcess(argv, 128, stdout="", stderr="bad revision")
@@ -357,7 +369,7 @@ _DROPPED = {
                 "__typename": "RemovedFromMergeQueueEvent",
                 "createdAt": "2026-10-01T10:05:00Z",
                 "reason": "failed checks",
-                "beforeCommit": {"oid": "sha-head"},
+                "beforeCommit": {"oid": HEAD},
             },
         ]
     },
@@ -410,7 +422,7 @@ class _Host:
             "id": "PR_node",
             "state": "OPEN",
             "mergedAt": None,
-            "headRefOid": "sha-head",
+            "headRefOid": HEAD,
             "headRefName": "release/v1.141.0",
             "isCrossRepository": False,
             "isMergeQueueEnabled": queue,
@@ -561,7 +573,7 @@ def _merge_green(monkeypatch: pytest.MonkeyPatch, host: _Host | None = None, **r
 
 
 #: The release PR's head branch, deleted at the head it merged at.
-_DELETED_AT_THE_HEAD = [("refs/heads/release/v1.141.0", "sha-head")]
+_DELETED_AT_THE_HEAD = [("refs/heads/release/v1.141.0", HEAD)]
 
 
 def test_merge_release_pr_squash_merges_a_green_pr(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -581,7 +593,7 @@ def test_merge_release_pr_squash_merges_a_green_pr(monkeypatch: pytest.MonkeyPat
             "--subject",
             "chore(release): v1.141.0",
             "--match-head-commit",
-            "sha-head",
+            HEAD,
         ]
     ]
     assert report.exit_code == 0
@@ -609,21 +621,24 @@ def test_a_merged_release_pr_has_only_its_clean_up_run(monkeypatch: pytest.Monke
     """A merged PR is not merged again: what follows the merge runs — which is
     how a run that returned while the queue held the PR is completed. Its
     clean-up keys on the head the PR merged at, on GitHub and here."""
-    host = _Host(queue=True, state="MERGED", mergedAt=_MERGED_AT, headRefOid="sha-merged")
+    host = _Host(queue=True, state="MERGED", mergedAt=_MERGED_AT, headRefOid=MERGED)
     seen = _fake_run(monkeypatch)
-    report = _land(monkeypatch, host, state="MERGED", headRefOid="sha-merged")
+    report = _land(monkeypatch, host, state="MERGED", headRefOid=MERGED)
     assert host.merges() == []
     assert report.exit_code == 0
     assert report.text.startswith("PR #42 is already merged.")
-    assert host.deletions == [("refs/heads/release/v1.141.0", "sha-merged")]
-    assert ["git", "rev-list", "--count", "sha-merged..sha-head"] in seen
+    assert host.deletions == [("refs/heads/release/v1.141.0", MERGED)]
+    assert ["git", "rev-list", "--count", f"{MERGED}..{HEAD}"] in seen
 
 
 def test_a_closed_release_pr_merges_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
-    host = _Host(queue=False)
+    """Closed is taken from the landing's plan, not from release's own view
+    (#1258): one reading, and nothing asked of GitHub but it."""
+    host = _Host(queue=False, state="CLOSED")
     seen = _fake_run(monkeypatch)
     report = _land(monkeypatch, host, state="CLOSED")
-    assert host.commands == [] and seen == []
+    assert [command[:3] for command in host.commands] == [["gh", "api", "graphql"]]
+    assert seen == []
     assert "closed (not merged)" in report.text
 
 
@@ -651,9 +666,7 @@ def test_with_a_queue_the_pr_is_enqueued_and_its_head_deleted_once_merged(
     host = _Host(queue=True, progress=[_entry(2), _entry(1, "MERGEABLE"), _LANDED])
     seen = _fake_run(monkeypatch)
     report = _land(monkeypatch, host)
-    assert host.merges() == [
-        ["gh", "pr", "merge", "42", "--auto", "--match-head-commit", "sha-head"]
-    ]
+    assert host.merges() == [["gh", "pr", "merge", "42", "--auto", "--match-head-commit", HEAD]]
     assert report.exit_code == 0
     assert report.text.startswith("Merged release PR #42 (https://github.com/owner/repo/pull/42) ")
     assert host.deletions == _DELETED_AT_THE_HEAD
@@ -719,11 +732,11 @@ def test_a_pr_the_queue_drops_is_reported_and_nothing_deleted(
 def test_a_push_after_the_enqueue_takes_the_pr_out_and_deletes_nothing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    host = _Host(queue=True, progress=[_entry(2), _entry(1, headRefOid="sha-pushed")])
+    host = _Host(queue=True, progress=[_entry(2), _entry(1, headRefOid=PUSHED)])
     seen = _fake_run(monkeypatch)
     with pytest.raises(release.ReleaseNotMerged) as exc:
         _land(monkeypatch, host)
-    assert "head moved from sha-hea to sha-pus" in str(exc.value)
+    assert f"head moved from {HEAD[:7]} to {PUSHED[:7]}" in str(exc.value)
     assert "it was taken out of the merge queue" in str(exc.value)
     assert any("dequeuePullRequest" in a for c in host.commands for a in c)
     assert seen == [] and host.deletions == []
@@ -781,7 +794,7 @@ def test_a_head_the_queue_dropped_is_not_enqueued_again_without_force(
         _land(monkeypatch, host)
     message = str(exc.value)
     assert (
-        "the merge queue on main dropped the PR at its current head sha-hea at "
+        f"the merge queue on main dropped the PR at its current head {HEAD[:7]} at "
         "2026-10-01T10:05:00Z (GitHub says: failed checks); the same head is not enqueued "
         "again unchanged"
     ) in message
@@ -792,9 +805,7 @@ def test_a_head_the_queue_dropped_is_not_enqueued_again_without_force(
     _fake_run(monkeypatch)
     report = _land(monkeypatch, host, force=True)
     assert report.exit_code == 0
-    assert host.merges() == [
-        ["gh", "pr", "merge", "42", "--auto", "--match-head-commit", "sha-head"]
-    ]
+    assert host.merges() == [["gh", "pr", "merge", "42", "--auto", "--match-head-commit", HEAD]]
     assert (
         "  the merge queue dropped PR #42 at this head at 2026-10-01T10:05:00Z: failed checks; "
         "enqueuing it again (--force)"
@@ -842,17 +853,17 @@ def test_a_merge_at_a_head_whose_checks_were_not_read_is_warned(
     host = _Host(
         queue=True,
         isInMergeQueue=True,
-        progress=[_entry(1), {**_LANDED, "headRefOid": "sha-other"}],
+        progress=[_entry(1), {**_LANDED, "headRefOid": OTHER}],
     )
     seen = _fake_run(monkeypatch)
     report = _land(monkeypatch, host)
     assert report.exit_code == 0
     assert (
-        "[warn] release PR #42 merged at head sha-oth, not at sha-hea, the head whose checks "
-        "were read."
+        f"[warn] release PR #42 merged at head {OTHER[:7]}, not at {HEAD[:7]}, the head whose "
+        "checks were read."
     ) in capsys.readouterr().err
-    assert ["git", "rev-list", "--count", "sha-other..sha-head"] in seen
-    assert host.deletions == [("refs/heads/release/v1.141.0", "sha-other")]
+    assert ["git", "rev-list", "--count", f"{OTHER}..{HEAD}"] in seen
+    assert host.deletions == [("refs/heads/release/v1.141.0", OTHER)]
 
 
 # --- a direct merge is counted only once GitHub reports it --------------
@@ -862,8 +873,9 @@ def test_an_unconfirmed_direct_merge_deletes_nothing(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """gh accepts the direct merge and GitHub cannot be read since: the PR may
-    have merged or been enqueued, so nothing is deleted and a re-run completes."""
-    host = _Host(queue=False, unreadable_after=1)
+    have merged or been enqueued, so nothing is deleted and a re-run completes.
+    The plan's reading and the landing's own come before the merge (#1258)."""
+    host = _Host(queue=False, unreadable_after=2)
     seen = _fake_run(monkeypatch)
     report = _land(monkeypatch, host)
     assert report.exit_code == 4
@@ -881,7 +893,7 @@ def _no_answer(*, queue: bool, ends: str) -> tuple[fake.HostingService, Any]:
         number=42,
         title="chore(release): v1.141.0",
         head_ref="release/v1.141.0",
-        head_oid="sha-head",
+        head_oid=HEAD,
     )
     if queue:
         host.set_base(fake.Base(queue=True))
@@ -983,10 +995,10 @@ def test_a_dequeue_whose_end_is_not_known_after_a_head_moved_says_so(
         number=42,
         title="chore(release): v1.141.0",
         head_ref="release/v1.141.0",
-        head_oid="sha-head",
+        head_oid=HEAD,
     )
     host.set_base(fake.Base(queue=True))
-    host.progress = [fake.at(1), fake.pushes("sha-pushed")]
+    host.progress = [fake.at(1), fake.pushes(PUSHED)]
     host.never_receive(fake.DEQUEUE)
     host.before(fake.DEQUEUE, lambda service: service.fail(fake.READ, count=None))
 
@@ -1016,19 +1028,21 @@ def test_a_head_that_moved_on_a_pr_the_queue_merged_meanwhile_says_it_merged(
         number=42,
         title="chore(release): v1.141.0",
         head_ref="release/v1.141.0",
-        head_oid="sha-head",
+        head_oid=HEAD,
     )
     host.set_base(fake.Base(queue=True))
-    host.progress = [fake.at(1), fake.pushes("sha-pushed")]
-    host.before(fake.READ, lambda service: service.merge_now(), nth=4)
+    host.progress = [fake.at(1), fake.pushes(PUSHED)]
+    # The dequeue's own first reading: after the plan's, the landing's, and
+    # the wait's two (#1258).
+    host.before(fake.READ, lambda service: service.merge_now(), nth=5)
     _fake_run(monkeypatch)
     with pytest.raises(release.ReleaseNotMerged) as exc:
         _land(monkeypatch, host)
     message = str(exc.value)
     assert message.startswith(
-        "release PR #42's head moved from sha-hea to sha-pus after its checks were read, and it "
-        "merged before it could be taken out of the merge queue: PR #42 has merged at head "
-        "sha-pus (merged at "
+        f"release PR #42's head moved from {HEAD[:7]} to {PUSHED[:7]} after its checks were "
+        "read, and it merged before it could be taken out of the merge queue: PR #42 has merged "
+        f"at head {PUSHED[:7]} (merged at "
     )
     assert "take it out yourself" not in message
     assert "run `pkit release merge 42` again to delete the head branch" in message
@@ -1055,12 +1069,23 @@ def test_a_merge_gh_only_enqueued_is_waited_for_not_taken_for_a_merge(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """On a base that requires a queue, `gh pr merge --squash` enqueues and
-    exits 0: the run reads the PR, sees it unmerged, and waits for it."""
+    exits 0: the run reads the PR, sees it unmerged, and waits for it — and
+    passes the landing's warning on in its own words: the queue composed the
+    release's commit, which this run did not judge, and what to read."""
     host = _Host(queue=False, enqueues=True, progress=[_entry(1), _LANDED])
     seen = _fake_run(monkeypatch)
     report = _land(monkeypatch, host)
     assert report.exit_code == 0
-    assert "GitHub does not report PR #42 merged" in capsys.readouterr().out
+    said = capsys.readouterr()
+    assert "GitHub does not report PR #42 merged" in said.out
+    assert (
+        "[warn] GitHub queued release PR #42 in the merge queue for main instead of merging it, "
+        "so the queue composes the release's commit, and this run did not judge it: a release "
+        "lands as one squash commit under its PR title over its PR body only where the queue "
+        "squashes and the repository's squash-commit defaults are PR_TITLE and PR_BODY. Read "
+        "them with `pkit pull-request read 42` and `pkit pull-request squash-defaults`, and, "
+        "once it has merged, the commit it made on main."
+    ) in said.err
     assert host.deletions == _DELETED_AT_THE_HEAD
     assert seen[0] == ["git", "checkout", "main"]
 
@@ -1202,7 +1227,7 @@ def test_merge_deletes_the_remote_head_at_the_merged_head_then_cleans_up_locally
         ["git", "checkout", "develop"],  # the PR's own base, not a hardcoded main
         ["git", "pull", "--ff-only"],
         ["git", "rev-parse", "--verify", "--quiet", "refs/heads/release/v1.141.0"],
-        ["git", "rev-list", "--count", "sha-head..sha-head"],  # nothing past the merged head
+        ["git", "rev-list", "--count", f"{HEAD}..{HEAD}"],  # nothing past the merged head
         ["git", "branch", "-D", "release/v1.141.0"],
     ]
     assert "deleted remote branch 'release/v1.141.0'" in message
@@ -1272,21 +1297,21 @@ def test_a_push_to_the_head_after_the_merge_keeps_the_remote_branch(
     the head that merged, so a push since is not lost — and the landing is
     not failed for it. The line names the command that deletes it later, and
     the local branch is kept with it."""
-    host = _Host(queue=False, tip="sha-later")
+    host = _Host(queue=False, tip=LATER)
     seen = _fake_run(monkeypatch)
     report = _land(monkeypatch, host)
     assert report.exit_code == 0
     assert "Merged release PR #42" in report.text
     assert (
-        "  kept remote branch 'release/v1.141.0': its tip is sha-lat, not sha-hea, the head "
-        "PR #42 merged at: a push since the merge, or a branch of that name made since, is not "
-        "deleted. To delete it later: `pkit pull-request delete-branch 42 --expect sha-head`."
+        f"  kept remote branch 'release/v1.141.0': its tip is {LATER[:7]}, not {HEAD[:7]}, the "
+        "head PR #42 merged at: a push since the merge, or a branch of that name made since, is "
+        f"not deleted. To delete it later: `pkit pull-request delete-branch 42 --expect {HEAD}`."
     ) in report.text
     assert (
         "  kept local branch 'release/v1.141.0': its branch on GitHub was not deleted (kept), "
         "and the local one goes only with it (`git branch -D release/v1.141.0` once it has)."
     ) in report.text
-    assert host.deletions == [] and host.branch_tip() == "sha-later"
+    assert host.deletions == [] and host.branch_tip() == LATER
     assert not any(argv[:3] == ["git", "branch", "-D"] for argv in seen)
 
 
@@ -1305,9 +1330,9 @@ def test_a_deletion_the_service_refuses_keeps_the_branch_in_its_words(
     assert (
         "  kept remote branch 'release/v1.141.0': the service did not delete it: Something went "
         "wrong while executing your query. To delete it later: `pkit pull-request "
-        "delete-branch 42 --expect sha-head`."
+        f"delete-branch 42 --expect {HEAD}`."
     ) in report.text
-    assert host.deletions == _DELETED_AT_THE_HEAD and host.branch_tip() == "sha-head"
+    assert host.deletions == _DELETED_AT_THE_HEAD and host.branch_tip() == HEAD
     assert not any(argv[:3] == ["git", "branch", "-D"] for argv in seen)
     assert "[warn]" not in capsys.readouterr().err
 
@@ -1326,38 +1351,41 @@ def test_a_deletion_with_no_answer_and_no_reading_since_is_said_not_known(
         "  whether remote branch 'release/v1.141.0' was deleted is not known: the deletion got "
         "no usable answer (HTTP 502: Bad Gateway), and the branch could not be read since "
         "(HTTP 502). To delete it later: `pkit pull-request delete-branch 42 --expect "
-        "sha-head`."
+        f"{HEAD}`."
     ) in report.text
     assert "kept local branch 'release/v1.141.0'" in report.text
     assert not any(argv[:3] == ["git", "branch", "-D"] for argv in seen)
 
 
-def test_a_direct_merge_at_another_head_is_refused_the_deletion_in_one_line(
-    monkeypatch: pytest.MonkeyPatch,
+def test_a_direct_merge_at_another_head_deletes_at_the_head_that_merged_with_a_warning(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The direct path names the head whose checks were read; should the PR
-    have merged at another — someone else merging it, at a head pushed since —
-    the deletion is refused for it, nothing is sent, and the line names the
-    command at the head that did merge."""
+    """Should the PR have merged at another head than the one whose checks
+    were read — someone else merging it, at a head pushed since — the landing
+    ends merged at another head, and release deletes the branch at the head
+    that merged (`merged_head`), as its wait path always did (#1258): the
+    fifth obligation, that the branch goes only at the head that merged,
+    holds. The merge at another head is warned about."""
 
     class _MergedElsewhere(_Host):
         def __call__(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
             done = super().__call__(argv)
             if list(argv)[:3] == ["gh", "pr", "merge"]:
-                self.pr["headRefOid"] = "sha-other"
+                self.pr["headRefOid"] = OTHER
             return done
 
     host = _MergedElsewhere(queue=False)
     seen = _fake_run(monkeypatch)
     report = _land(monkeypatch, host)
     assert report.exit_code == 0
+    assert "  deleted remote branch 'release/v1.141.0'." in report.text
+    assert host.deletions == [("refs/heads/release/v1.141.0", OTHER)]
+    assert host.branch_tip() is None
     assert (
-        "  remote branch 'release/v1.141.0' not deleted: the head named, sha-head, is not the "
-        "head PR #42 merged at, sha-other: its head branch is deleted only at that head. To "
-        "delete it later: `pkit pull-request delete-branch 42 --expect sha-other`."
-    ) in report.text
-    assert host.deletions == [] and host.branch_tip() == "sha-other"
-    assert not any(argv[:3] == ["git", "branch", "-D"] for argv in seen)
+        f"[warn] release PR #42 merged at head {OTHER[:7]}, not at {HEAD[:7]}, the head whose "
+        "checks were read."
+    ) in capsys.readouterr().err
+    assert ["git", "rev-list", "--count", f"{OTHER}..{HEAD}"] in seen
 
 
 def test_a_branch_other_open_prs_are_based_on_is_kept(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1399,8 +1427,8 @@ def test_a_local_head_holding_commits_past_the_merge_is_kept(
     assert ["git", "branch", "-D", "release/v1.141.0"] not in seen
     assert "deleted local branch" not in message
     assert (
-        "[warn] local branch release/v1.141.0 (at sha-hea) holds commits the merge at sha-hea "
-        "does not, or this clone cannot tell; it is kept."
+        f"[warn] local branch release/v1.141.0 (at {HEAD[:7]}) holds commits the merge at "
+        f"{HEAD[:7]} does not, or this clone cannot tell; it is kept."
     ) in capsys.readouterr().err
 
 
@@ -1433,3 +1461,369 @@ def test_release_keeps_no_copy_of_the_remote_deletion() -> None:
     assert not hasattr(release, "_gh_delete_remote_branch")
     source = inspect.getsource(release)
     assert "git/refs/heads" not in source and "updateRefs" not in source
+
+
+# --- landing through the backbone's sequence (#1258) ------------------------------
+
+#: The landing's own steps, which release reaches only through `land`.
+_THE_LANDINGS_STEPS = (
+    "read",
+    "squash_commit_defaults",
+    "squash_merge",
+    "enqueue",
+    "wait_for_merge",
+    "dequeue",
+)
+
+
+def test_release_holds_no_copy_of_the_landing_sequence() -> None:
+    """`pkit release merge` lands through `pull_request_landing.land` and
+    references none of the steps it composes (ADR-061 point 5)."""
+    tree = ast.parse(inspect.getsource(release))
+    used = {
+        node.attr
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "pull_request_landing"
+    }
+    imported = {
+        alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and (node.module or "").endswith("pull_request_landing")
+        for alias in node.names
+    }
+    assert "land" in used
+    assert not (used | imported) & set(_THE_LANDINGS_STEPS)
+
+
+def test_release_plans_then_lands_through_land_with_its_own_options(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The plan first — a dry run — then the landing, both pinned to the head
+    release's gates read, with `--force` as `allow_dropped_head` and a bad
+    shape on a queued PR waited for with a warning."""
+    calls: list[tuple[bool, Any]] = []
+    land = release.pull_request_landing.land
+
+    def recording(*args: Any, **kwargs: Any) -> Any:
+        calls.append((kwargs["dry_run"], kwargs["options"]))
+        assert kwargs["head"] == HEAD and kwargs["subject"] == "chore(release): v1.141.0"
+        return land(*args, **kwargs)
+
+    monkeypatch.setattr(release.pull_request_landing, "land", recording)
+    _fake_run(monkeypatch)
+    report = _land(monkeypatch, _Host(queue=False), force=True, wait_seconds=60)
+    assert report.exit_code == 0
+    options = release.pull_request_landing.LandOptions(
+        seconds=60, allow_dropped_head=True, queued_bad_shape="warn"
+    )
+    assert calls == [(True, options), (False, options)]
+
+
+def test_no_caller_decides_on_the_landings_exit_code(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Release reads how the landing ended from its end, never from the
+    command's exit: with every exit the command would give taken away,
+    release ends as it did."""
+    monkeypatch.setattr(cli, "_LAND_EXITS", {})
+    _fake_run(monkeypatch)
+    assert _land(monkeypatch, _Host(queue=False)).exit_code == 0
+    queued = _land(monkeypatch, _Host(queue=True, progress=[_entry(1)]), wait_seconds=0)
+    assert queued.exit_code == release.EXIT_ACCEPTED
+    with pytest.raises(release.ReleaseNotMerged):
+        _land(monkeypatch, _Host(queue=True, progress=[_entry(1), _DROPPED]))
+    assert "_LAND_EXITS" not in inspect.getsource(release)
+
+
+def test_a_view_gh_answers_with_no_json_object_ends_the_run_having_asked_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def answered(argv: Sequence[str], *, cwd: Path | None, seconds: float) -> Any:
+        return subprocess.CompletedProcess(list(argv), 0, stdout="<html>busy</html>", stderr="")
+
+    monkeypatch.setattr(release.command_runner, "run_bounded", answered)
+    with pytest.raises(click.ClickException) as exc:
+        release._gh_pr_view(42, Path("/repo"))
+    assert exc.value.message == (
+        "`gh pr view 42` answered with something that is not a JSON object ('<html>busy</html>'). "
+        "This run asked nothing."
+    )
+
+
+def test_a_head_that_moved_between_the_view_and_the_landing_exits_3_with_nothing_sent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Release's gates read one head, the landing's reading finds another:
+    nothing is sent — before #1258 the pinned request failed, exit 1 — and the
+    run exits 3, as release's exit 3 says of a head that moved."""
+    host = _Host(queue=False, headRefOid=PUSHED)
+    seen = _fake_run(monkeypatch)
+    with pytest.raises(release.ReleaseNotMerged) as exc:
+        _land(monkeypatch, host)
+    assert exc.value.exit_code == 3
+    assert str(exc.value) == (
+        f"release PR #42's head moved from {HEAD[:7]} to {PUSHED[:7]} after its checks were "
+        "read; it is in no merge queue, and nothing was merged or deleted. Run `pkit release "
+        "merge 42` again once the new head is green."
+    )
+    assert host.merges() == [] and seen == []
+
+
+@pytest.mark.parametrize("queued_at", [HEAD, PUSHED], ids=["the-head", "another-head"])
+def test_a_pr_already_queued_skips_the_gates(
+    monkeypatch: pytest.MonkeyPatch, queued_at: str
+) -> None:
+    """A plan that waits, or takes the PR out of the queue, runs no gate:
+    red checks do not stop it."""
+    progress = [_entry(1), _LANDED] if queued_at == HEAD else []
+    host = _Host(queue=True, isInMergeQueue=True, headRefOid=queued_at, progress=progress)
+    _fake_run(monkeypatch)
+    red = [{"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}]
+    if queued_at == HEAD:
+        assert _land(monkeypatch, host, statusCheckRollup=red).exit_code == 0
+    else:
+        with pytest.raises(release.ReleaseNotMerged, match="taken out of the merge queue"):
+            _land(monkeypatch, host, statusCheckRollup=red)
+
+
+def test_a_dry_run_on_a_pr_queued_at_another_head_says_it_would_take_it_out(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    host = _Host(queue=True, isInMergeQueue=True, headRefOid=PUSHED)
+    report = _land(monkeypatch, host, dry_run=True)
+    assert report.text == (
+        f"[dry-run] PR #42 is in the merge queue for main at head {PUSHED[:7]}, not at "
+        f"{HEAD[:7]}, the head whose checks were read; would take it out of the queue; nothing "
+        "changed."
+    )
+    assert not any("dequeuePullRequest" in arg for command in host.commands for arg in command)
+
+
+def test_a_dequeue_that_could_not_read_the_pr_says_whether_it_left_is_not_known(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Taking the PR out could not read it before sending anything: not a
+    dequeue that failed — whether it is still queued is not known."""
+    host = fake.HostingService(
+        number=42,
+        title="chore(release): v1.141.0",
+        head_ref="release/v1.141.0",
+        head_oid=HEAD,
+    )
+    host.set_base(fake.Base(queue=True))
+    host.progress = [fake.at(1), fake.pushes(PUSHED)]
+    host.after(fake.READ, lambda service: service.fail(fake.READ, count=None), nth=4)
+    _fake_run(monkeypatch)
+    with pytest.raises(release.ReleaseNotMerged) as exc:
+        _land(monkeypatch, host)
+    message = str(exc.value)
+    assert "whether taking it out of the merge queue worked is not known" in message
+    assert "failed" not in message
+    assert fake.DEQUEUE not in host.kinds()
+
+
+@pytest.mark.parametrize("head", [HEAD[:7], "sha-head"], ids=["abbreviated", "not-a-commit-id"])
+def test_a_head_the_landing_refuses_ends_the_run_having_asked_nothing(
+    monkeypatch: pytest.MonkeyPatch, head: str
+) -> None:
+    """The landing takes its head as a full commit id, and refuses any other
+    form before it reads, imported as by command (ADR-061 point 5): a view
+    that names the head otherwise ends release's run, exit 1, never a
+    traceback, with nothing read."""
+    host = _Host(queue=False, headRefOid=head)
+    with pytest.raises(click.ClickException) as exc:
+        _land(monkeypatch, host, headRefOid=head)
+    assert exc.value.exit_code == 1
+    assert exc.value.message == (
+        f"the landing refuses the head `gh pr view 42` names for PR #42: a landing is pinned to "
+        f"the head the caller checked, named as a full commit id (40 or 64 hexadecimal "
+        f"characters), and {head!r} is not one. This run asked nothing."
+    )
+    assert host.commands == []
+
+
+def test_a_refused_merge_of_a_pr_auto_merge_holds_warns_that_it_is_still_armed(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """On a base without a queue, auto-merge holds the release PR for
+    requirements that are not met, so gh refuses the plain merge: exit 1,
+    with the landing's warning that auto-merge will merge it, unpinned, and
+    how to turn it off."""
+    host = fake.HostingService(
+        number=42, title="chore(release): v1.141.0", head_ref="release/v1.141.0"
+    )
+    host.auto_merge, host.requirements_met = True, False
+    _fake_run(monkeypatch)
+    with pytest.raises(click.ClickException) as exc:
+        _land(monkeypatch, host)
+    assert exc.value.exit_code == 1
+    assert exc.value.message.startswith("`gh pr merge 42` failed: X Pull request #42 is not")
+    assert (
+        "[warn] auto-merge is still enabled on PR #42: GitHub merges it on its own once the "
+        "base's requirements are met, at whatever head it has then — not pinned to "
+        f"{HEAD[:7]}, the head that was checked. To keep release PR #42 from merging so, turn "
+        "auto-merge off in its merge box, or run `gh pr merge 42 --disable-auto`."
+    ) in capsys.readouterr().err
+
+
+def test_an_unconfirmed_merge_of_a_pr_auto_merge_holds_warns_it_may_still_be_armed(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Auto-merge holds the release PR, and its direct merge gets no answer
+    with GitHub unreadable since: exit 4, unconfirmed, with the landing's
+    warning that, if the merge was not made, auto-merge is still armed."""
+    host, bounded = _no_answer(queue=False, ends="unconfirmed")
+    host.auto_merge = True
+    _fake_run(monkeypatch)
+    report = _land(monkeypatch, bounded)
+    assert report.exit_code == release.EXIT_ACCEPTED
+    assert report.text.startswith("[unconfirmed] the merge of PR #42 got no usable answer")
+    assert (
+        "[warn] whether the merge of PR #42 was made is not known; if it was not, auto-merge is "
+        "still enabled on it: GitHub merges it on its own once the base's requirements are met, "
+        f"at whatever head it has then — not pinned to {HEAD[:7]}, the head that was checked. To "
+        "keep release PR #42 from merging so, turn auto-merge off in its merge box, or run `gh "
+        "pr merge 42 --disable-auto`."
+    ) in capsys.readouterr().err
+
+
+def test_release_decides_on_the_decoded_end_document(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The plan and the landing each reach release as their end document
+    states them, decoded strictly — never as the landing's in-memory end."""
+    decoded: list[str] = []
+    decode = release.pull_request_landing.decode_end
+
+    def recording(document: object) -> dict[str, Any]:
+        end = decode(document)
+        decoded.append(end["ended"])
+        return end
+
+    monkeypatch.setattr(release.pull_request_landing, "decode_end", recording)
+    _fake_run(monkeypatch)
+    assert _land(monkeypatch, _Host(queue=False)).exit_code == 0
+    assert decoded == ["planned", "merged"]
+
+
+def test_release_acts_on_no_end_its_document_cannot_carry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A merged end whose reading names no head — the state release once
+    fell back on its own view's head for — is one the document cannot
+    carry: should a landing state it, the run ends, exit 1, and nothing is
+    deleted at a head nobody read."""
+    land = release.pull_request_landing.land
+
+    def merged_naming_no_head(*args: Any, **kwargs: Any) -> Any:
+        end = land(*args, **kwargs)
+        if kwargs["dry_run"] or end.reading is None:
+            return end
+        return dataclasses.replace(end, reading=dataclasses.replace(end.reading, head_oid=""))
+
+    monkeypatch.setattr(release.pull_request_landing, "land", merged_naming_no_head)
+    host = _Host(queue=False)
+    seen = _fake_run(monkeypatch)
+    with pytest.raises(click.ClickException) as exc:
+        _land(monkeypatch, host)
+    assert exc.value.exit_code == 1
+    assert exc.value.message.startswith(
+        "the landing of release PR #42 ended in a document that states no end (a landing that "
+        "ends merged cannot name `merged_head` None). Nothing was deleted."
+    )
+    assert host.deletions == [] and seen == []
+
+
+# --- no request no gate saw, after a plan that skipped the gates (#1258) ----------
+
+
+def _release_pr(*, queued: bool = True, held: bool = False) -> fake.HostingService:
+    """The release PR on the shared fake, on a base that merges through a
+    queue: in the queue at the checked head, or — `held` — held by auto-merge
+    until it may enter."""
+    host = fake.HostingService(
+        number=42,
+        title="chore(release): v1.141.0",
+        head_ref="release/v1.141.0",
+    )
+    host.set_base(fake.Base(queue=True))
+    if held:
+        host.auto_merge = True
+    elif queued:
+        host.enter_queue()
+        host.entry = (1, "MERGEABLE")
+    return host
+
+
+def _switch_the_queue_off(host: fake.HostingService) -> None:
+    host.set_base(fake.Base())
+    host.in_queue, host.entry = False, None
+
+
+@pytest.mark.parametrize(
+    ("held", "leaves", "force"),
+    [
+        (False, lambda host: host.drop(), True),
+        (True, lambda host: setattr(host, "auto_merge", False), False),
+        (False, _switch_the_queue_off, False),
+    ],
+    ids=["dropped-with-force", "auto-merge-switched-off", "queue-switched-off"],
+)
+def test_a_pr_that_left_the_queue_after_a_gateless_plan_gets_no_request(
+    monkeypatch: pytest.MonkeyPatch,
+    held: bool,
+    leaves: Callable[[fake.HostingService], None],
+    force: bool,
+) -> None:
+    """The plan finds the PR queued at the checked head and skips the gates;
+    it leaves the queue before the landing reads it. The landing allows no
+    request, so nothing is merged or enqueued that no gate of this run saw:
+    exit 1, saying so, and that a re-run plans afresh and gates."""
+    host = _release_pr(held=held)
+    host.after(fake.READ, leaves)
+    seen = _fake_run(monkeypatch)
+    with pytest.raises(click.ClickException) as exc:
+        _land(monkeypatch, host, force=force)
+    assert exc.value.exit_code == 1
+    assert not isinstance(exc.value, release.ReleaseNotMerged)
+    message = exc.value.message
+    assert message.startswith(
+        "release PR #42 left the merge queue for main between this run's plan and its landing"
+    )
+    assert "the landing sent nothing" in message
+    assert "Run `pkit release merge 42` again: it plans afresh, and runs its gates" in message
+    assert not {fake.MERGE, fake.MERGE_ADMIN, fake.ENQUEUE} & set(host.kinds())
+    assert seen == []
+
+
+def test_a_pr_still_queued_at_the_landing_is_waited_for_as_before(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    host = _release_pr()
+    host.progress = [fake.at(1, "MERGEABLE"), fake.lands()]
+    _fake_run(monkeypatch)
+    report = _land(monkeypatch, host)
+    assert report.exit_code == 0
+    assert not {fake.MERGE, fake.MERGE_ADMIN, fake.ENQUEUE} & set(host.kinds())
+    assert host.remote_deletion() == "deleted"
+
+
+def test_a_landing_after_a_gateless_plan_allows_no_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The landing that follows a plan of a wait asks `land` for no request;
+    one that follows a gated plan allows them."""
+    asked: list[tuple[bool, bool]] = []
+    land = release.pull_request_landing.land
+
+    def recording(*args: Any, **kwargs: Any) -> Any:
+        asked.append((kwargs["dry_run"], kwargs["options"].no_request))
+        return land(*args, **kwargs)
+
+    monkeypatch.setattr(release.pull_request_landing, "land", recording)
+    _fake_run(monkeypatch)
+    queued = _release_pr()
+    queued.progress = [fake.at(1, "MERGEABLE"), fake.lands()]
+    _land(monkeypatch, queued)
+    assert asked == [(True, False), (False, True)]
+    asked.clear()
+    _land(monkeypatch, _Host(queue=False))
+    assert asked == [(True, False), (False, False)]
