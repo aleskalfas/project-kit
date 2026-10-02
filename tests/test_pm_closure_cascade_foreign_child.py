@@ -959,11 +959,14 @@ def test_the_lifecycle_world_refuses_a_subject_it_does_not_hold(subject: str) ->
     repository's issues only: a member elsewhere, or an id naming no issue, is
     refused with why — never a crash on `int()`."""
     from types import SimpleNamespace
+    from typing import cast
 
-    from project_kit.process import PredicateFailure
+    from project_kit.process import PredicateFailure, PredicateRunner
     from tests.pm_lifecycle_world import answer_from_tracker
 
-    answer = answer_from_tracker(SimpleNamespace(subject=subject), "detect-state", None)  # type: ignore[arg-type]
+    # The world reads the runner's subject alone.
+    runner = cast(PredicateRunner, SimpleNamespace(subject=subject))
+    answer = answer_from_tracker(runner, "detect-state", None)
 
     assert isinstance(answer, PredicateFailure)
     assert answer.cause == "exited 2"
