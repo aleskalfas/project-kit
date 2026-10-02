@@ -5557,8 +5557,10 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
     )
 
     # A reserved name is refused before lookup, so the refusal names the
-    # reservation rather than reporting the capability as missing.
+    # reservation rather than reporting the capability as missing; so is a name
+    # an adapter holds, which no capability may share.
     caps.refuse_reserved_capability_name(name)
+    caps.refuse_name_held_by_other_kind(target_root, "capability", name)
 
     capability_source = caps.find_capability_in_source(source_kit, name)
     if capability_source is None:
@@ -5801,8 +5803,10 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
         own_code_does=None,
     )
 
-    # A reserved name is refused before resolution, as in `install`.
+    # A reserved name is refused before resolution, as in `install`, and so is a
+    # name an adapter holds.
     caps.refuse_reserved_capability_name(name)
+    caps.refuse_name_held_by_other_kind(target_root, "capability", name)
 
     # Resolve the capability, preferring the in-repo (incubated) source.
     # Consulting both trees lets us surface the COR-031 boundary case where

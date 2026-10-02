@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T09:51:38Z
+      at: 2026-10-02T07:46:44Z
       outcome: unchanged
-      unchanged-because: the CLI README now says a direct pull-request merge carries the PR's body, how the body goes by the repository's squash-commit default, and the gap a caller's body gates keep; this page maps the cli area as the pkit command-line surface, one line, which still holds
+      unchanged-because: the CLI README now says which verbs refuse a name an adapter or a capability already holds, and the lifecycle README how validation reports a pair registered under one name; this page maps the cli area as the pkit command-line surface and the lifecycle area as packaging and dependency architecture, one line each, which still holds
 ---
 
 # project-kit

@@ -1392,6 +1392,83 @@ def test_pkit_validate_fails_on_an_adapter_registered_under_a_reserved_name(
     assert "the component of the backbone's changesets and the owner of its validators" in output
 
 
+# --- an adapter and a capability of one name (#1306) ---------------------------
+#
+# The adopter is initialised with the `claude-code` adapter registered; a capability
+# registered by hand under that name is a pair installed before the refusal. Each of
+# the two carries an error at its `component.name`, naming its own rename; nothing
+# is unregistered.
+
+
+@pytest.mark.parametrize(
+    ("origin", "fix"),
+    [
+        # The project's own capability: it renames it.
+        (
+            ORIGIN_INCUBATED_IN_REPO,
+            "Rename it: unregister it with `pkit capabilities uninstall claude-code`",
+        ),
+        # Restored to its pin on every sync (COR-041): the rename is its author's.
+        (ORIGIN_EXTERNALLY_SOURCED, "A sync restores this package, so the rename is its author's"),
+    ],
+)
+def test_an_adapter_and_a_capability_of_one_name_are_an_error_at_each_naming_the_rename(
+    make_adopter_repo: MakeAdopterRepo, origin: str, fix: str
+) -> None:
+    adopter = make_adopter_repo()
+    _registered_under(adopter.root, "claude-code", origin)
+
+    result = pv.validate_installed_packages(adopter.root)
+    findings = {
+        (report.file.parent.parent.name, f.path): f
+        for report in result.reports
+        for f in report.findings
+    }
+    assert result.errors == 2 and result.warnings == 0, list(findings)
+
+    at_capability = findings[("capabilities", "/component/name")]
+    assert at_capability.severity is pv.Severity.ERROR
+    message = " ".join(at_capability.message.split())
+    assert message.startswith(
+        "capability 'claude-code' shares its name with the adapter 'claude-code': "
+        "an adapter and a capability cannot share a name"
+    )
+    assert "The adapter carries this error too, and renaming either clears both." in message
+    assert fix in message
+
+    at_adapter = findings[("adapters", "/component/name")]
+    assert at_adapter.severity is pv.Severity.ERROR
+    message = " ".join(at_adapter.message.split())
+    assert message.startswith(
+        "adapter 'claude-code' shares its name with the capability 'claude-code': "
+        f"{caps.SHARED_NAME_REASON}."
+    )
+    assert "its directory `.pkit/adapters/claude-code/`, its `component.name`" in message
+
+    backbone = read_backbone_manifest(adopter.root)
+    assert backbone is not None
+    assert {c.kind for c in backbone.components if c.name == "claude-code"} == {
+        "adapter",
+        "capability",
+    }
+
+
+def test_pkit_validate_fails_on_an_adapter_and_a_capability_of_one_name(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo()
+    _registered_under(adopter.root, "claude-code", ORIGIN_INCUBATED_IN_REPO)
+
+    result = CliRunner().invoke(main, ["validate", "--no-refs"])
+    assert result.exit_code == 1, result.output
+    assert "error    .pkit/adapters/claude-code/package.yaml:/component/name" in result.output
+    assert "error    .pkit/capabilities/claude-code/package.yaml:/component/name" in result.output
+    output = " ".join(result.output.split())
+    assert "→ adapter 'claude-code' shares its name with the capability 'claude-code':" in output
+    assert "→ capability 'claude-code' shares its name with the adapter 'claude-code':" in output
+    assert "`pkit capabilities register <new-name>`" in output
+
+
 # --- a capability a backbone command shadows (#1300) ---------------------------
 
 _WITH_COMMANDS = "commands:\n  publish:\n    script: scripts/publish.py\n    help: Publish.\n"
