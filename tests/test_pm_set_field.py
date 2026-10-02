@@ -1108,22 +1108,28 @@ def _run_main(
     a main() test states the board situation as data. Board writes are captured
     rather than issued; `board_write_ok=False` makes the write fail at the point of
     writing (the exit-3 path). `issue` answers every issue read but those
-    `others` answers by number — a `--parent`'s title read, made through
-    `containment_graph`; an `others` answer of None is a read that fails.
+    `others` answers by number — a `--parent`'s record read, made through the
+    containment seam (`containment.read_issue_record`); an `others` answer of
+    None is a read that fails, and one carrying `not_an_issue` names a pull
+    request.
     """
     captured: dict = {"labels": [], "titles": [], "bodies": [], "board": []}
 
     monkeypatch.setattr(sf, "gh_get_issue", lambda n, *a, **k: (others or {}).get(n, issue))
 
-    def fake_parent_read(args, config, **kwargs):
-        # The one read containment_graph makes: `gh issue view <N> --json title`.
-        answer = (others or {}).get(int(args[3]), issue)
+    def fake_record_read(config, *, issue_number):
+        answer = (others or {}).get(int(issue_number), issue)
         if answer is None:
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="gh: HTTP 502")
-        stdout = json.dumps({"title": answer.get("title", "")})
-        return subprocess.CompletedProcess(args, 0, stdout=stdout, stderr="")
+            said = sf.containment.Said("HTTP 502: Bad Gateway", sf.containment.SPEAKER_GH)
+            return sf.containment.UnreadIssue("gh exited 1", said)
+        if answer.get("not_an_issue"):
+            return sf.containment.UnreadIssue(
+                f"#{issue_number} is a pull request", not_an_issue=True
+            )
+        record = {"title": answer.get("title", ""), "labels": answer.get("labels", [])}
+        return sf.containment.IssueRecord(issue=record, parent=None)
 
-    monkeypatch.setattr(sf.containment_graph, "gh_run", fake_parent_read)
+    monkeypatch.setattr(sf.containment, "read_issue_record", fake_record_read)
     if board_state is not None:
         monkeypatch.setattr(sf, "_read_board_state", lambda config, **k: board_state)
 
@@ -1665,13 +1671,32 @@ _IMPOSSIBLE = [(c, p) for c, p in _PAIRINGS if p not in _SHIPPED[c]["parent_issu
 _ALLOWED = [(c, p) for c, p in _PAIRINGS if p in _SHIPPED[c]["parent_issue_types"]]
 
 
-def _run_typed_parent(sf, monkeypatch, tmp_path, child: str, parent_title, extra=()):
+def _run_typed_parent(
+    sf,
+    monkeypatch,
+    tmp_path,
+    child: str,
+    parent_title,
+    extra=(),
+    *,
+    parent: dict | None = None,
+    map_text: str | None = None,
+):
     """`set-field 42 --parent 9` on a `child` issue, #9 answering `parent_title`
-    (None: #9 cannot be read), against the shipped schema."""
+    (None: #9 cannot be read) — or the whole `parent` answer — against the
+    shipped schema, under `map_text` as the substrate map where one is given."""
     root = _stage_with_shipped_types(tmp_path)
+    if map_text is not None:
+        (root / "project" / "substrate-map.yaml").write_text(
+            f"schema_version: 1\n{map_text}", encoding="utf-8"
+        )
     native = _NativeTracker()
     monkeypatch.setattr(sf.containment, "_gh_call", native)
-    answer = None if parent_title is None else {"title": parent_title}
+    answer = (
+        parent
+        if parent is not None
+        else (None if parent_title is None else {"title": parent_title})
+    )
     captured = _run_main(
         sf,
         monkeypatch,
@@ -1759,9 +1784,95 @@ def test_main_parent_that_cannot_be_read_is_refused(
     assert captured["rc"] == 1
     assert captured["bodies"] == [] and native.calls == []
     assert (
-        "[refused] cannot set --parent: #9 could not be read (gh exited 1: gh: HTTP 502), "
-        "so whether a task may sit under it cannot be checked"
+        '[refused] cannot set --parent: #9 could not be read (gh exited 1. gh said: "HTTP '
+        '502: Bad Gateway"), so whether a task may sit under it cannot be checked'
     ) in out
+
+
+def test_main_parent_naming_a_pull_request_is_refused(sf, tmp_path, monkeypatch, capsys) -> None:
+    """A pull request is no parent: the whole call is refused, exit 1, nothing
+    written, and the message says what the number names."""
+    captured, native = _run_typed_parent(
+        sf, monkeypatch, tmp_path, "task", None, parent={"not_an_issue": True}
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 1
+    assert captured["bodies"] == [] and native.calls == []
+    assert (
+        "[refused] cannot set --parent: #9 is not an issue in this repository — #9 is a "
+        "pull request — so a task cannot sit under it"
+    ) in out
+
+
+def test_main_parent_untitled_but_kind_labelled_is_a_task_in_greenfield(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    captured, _native = _run_typed_parent(
+        sf,
+        monkeypatch,
+        tmp_path,
+        "task",
+        None,
+        parent={"title": "Login crashes", "labels": [{"name": "type:bug"}]},
+    )
+
+    assert captured["rc"] == 1
+    assert "a task may not sit under #9, which is a task" in capsys.readouterr().out
+
+
+_STORY_MAP = (
+    "axes:\n  type:\n    title-prefix:\n      remap: {feature: '[Story]', task: '[Task]'}\n"
+)
+_TYPE_BY_LABEL_MAP = "axes:\n  type:\n    label:\n      remap: {bug: 'kind/bug'}\n"
+
+
+@pytest.mark.parametrize(
+    ("parent_title", "verdict"),
+    [("[Task] another task", "refused"), ("[Story] a story", "allowed")],
+)
+def test_main_parent_under_a_story_map_is_typed_by_the_maps_prefixes(
+    sf, tmp_path, monkeypatch, capsys, parent_title, verdict
+) -> None:
+    """Under a map binding `type` to `[Story]` / `[Task]`, both types are told by
+    the map's prefixes: a Task under a `[Task]` is refused, under a `[Story]` — a
+    Feature — it is set and named `Feature: #9`."""
+    captured, _native = _run_typed_parent(
+        sf, monkeypatch, tmp_path, "task", parent_title, map_text=_STORY_MAP
+    )
+    out = capsys.readouterr().out
+
+    if verdict == "refused":
+        assert captured["rc"] == 1
+        assert "a task may not sit under #9, which is a task" in out
+    else:
+        assert captured["rc"] == 0
+        assert captured["bodies"][0].startswith("Feature: #9\n")
+        assert "[warn]" not in out
+
+
+@pytest.mark.parametrize(
+    "parent",
+    [
+        {"title": "[Bug] Login crashes"},
+        {"title": "Login crashes", "labels": [{"name": "type:bug"}]},
+    ],
+    ids=["kind-prefixed", "kind-labelled"],
+)
+def test_main_parent_under_a_map_not_carrying_type_in_titles_is_not_refused(
+    sf, tmp_path, monkeypatch, capsys, parent
+) -> None:
+    """A map whose `type` is not title-carried tells no type — not the issue's,
+    not the parent's: the kit's prefixes and labels are not read on a mapped
+    tracker, so the pair is outside the graph, set with one warning."""
+    captured, _native = _run_typed_parent(
+        sf, monkeypatch, tmp_path, "task", None, parent=parent, map_text=_TYPE_BY_LABEL_MAP
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 0
+    assert out.count("[warn] parent:") == 1
+    assert "this issue's type cannot be told, so whether it may sit under #9 was not checked" in out
 
 
 def test_main_parent_refusal_refuses_the_whole_request(sf, tmp_path, monkeypatch) -> None:

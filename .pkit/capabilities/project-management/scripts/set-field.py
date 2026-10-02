@@ -51,11 +51,15 @@ seam (`_lib.containment.move_sub_issue`; never a raw `gh` call here):
   * The parent is held to the containment graph first
     ([project-management:DEC-005-linking-and-containment]; `_lib.containment_graph`):
     a parent whose type the issue's type may not sit under (a Task under a
-    Task), or one that cannot be read to tell, refuses the whole call before
-    anything is read natively or written — `--dry-run` alike, with no override.
-    A parent whose type cannot be told from its title is accepted with a
-    warning. An EPIC's `--parent` names a milestone, never an issue, so no
-    issue is read or checked for it.
+    Task), a number that names a pull request or a transferred issue, or a
+    parent that cannot be read to tell, refuses the whole call before anything
+    is read natively or written — `--dry-run` alike; there is no `--bypass`,
+    and no `--force`. The parent is read through the containment seam, and
+    both types are told as every check tells them
+    (`containment_graph.issue_type`): under a substrate map only by the map's
+    title-prefix binding. Where either type cannot be told, the parent is
+    accepted with a warning. An EPIC's `--parent` names a milestone, never an
+    issue, so no issue is read or checked for it.
 
 It does NOT reinvent classification rules — kind/priority/workstream resolve
 through the SAME seam create-issue uses (`axis_labels.resolve_write`, honouring
@@ -137,8 +141,9 @@ Or via the dispatcher (per COR-021):
 Exit codes:
   0  applied (or no-op idempotent success; or dry-run reported)
   1  refusal — membership; up-front validation (nothing mutated), including a
-     `--parent` of a type the issue's type may not sit under, or that could not
-     be read to tell, or whose issue's native parent could not be read, or whose body's
+     `--parent` of a type the issue's type may not sit under, naming a pull
+     request, or that could not be read to tell, or whose issue's native parent
+     could not be read, or whose body's
      first line attempts a DEC-013 integration marker but is malformed; or a
      requested axis could not be set on its substrate: the board case cannot be resolved
      (no card, no such field, no such option, unsupported field type, or the board
@@ -375,7 +380,14 @@ def main() -> int:
                 # type may not sit under, or one that cannot be read to tell, is
                 # refused here, with everything else in the request.
                 check, parent_label = _parent_check(
-                    args.parent, structural_type, config, issue_types, classification
+                    args.parent,
+                    structural_type,
+                    config,
+                    issue_types,
+                    classification,
+                    substrate_map,
+                    child_title=title,
+                    child_labels=current_labels,
                 )
                 if check is not None and check.refuses:
                     errors.append(f"cannot set --parent: {check.message}")
@@ -1384,23 +1396,44 @@ def _parent_check(
     config: dict,
     issue_types: dict,
     classification: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
+    *,
+    child_title: str,
+    child_labels: list[str],
 ) -> tuple[containment_graph.ParentCheck | None, str | None]:
-    """Issue ``parent_num`` held to the containment graph for an issue of
-    ``structural_type`` ([project-management:DEC-005-linking-and-containment]),
-    and the label a first line names it with: its type's own
-    (`body_parent_ref.type_label`), read from its title as the issue's own type
-    is read, kind-driven Task prefixes included. The label is ``None`` — the
-    form's first option is written — where the parent's type cannot be told.
+    """Issue ``parent_num`` held to the containment graph for the issue being
+    re-parented ([project-management:DEC-005-linking-and-containment]), and the
+    label a first line names it with: its type's own
+    (`body_parent_ref.type_label`). The label is ``None`` — the form's first
+    option is written — where the parent's type cannot be told.
+
+    The parent is read through the containment seam, and both types are told by
+    `containment_graph.issue_type` — the issue's from ``child_title`` and
+    ``child_labels`` — in ``substrate_map``'s vocabulary where a map is
+    present, so the check judges a pair as `validate-issue` judges it.
+    ``structural_type`` is the issue's type as this verb reads it for the form
+    it writes.
 
     ``(None, None)`` for a type whose forms name no issue (an EPIC), and for a
     type that declares no form to write: an EPIC's number is a milestone's, so
     issue ``parent_num`` is not its parent and is not read."""
     if not containment_graph.takes_an_issue_parent(issue_types, structural_type):
         return None, None
-    parent = containment_graph.read_parent_title(
-        parent_num, config, issue_types, classification=classification
+    child_type = containment_graph.issue_type(
+        child_title,
+        issue_types,
+        classification=classification,
+        substrate_map=substrate_map,
+        labels=child_labels,
     )
-    check = containment_graph.check_parent(issue_types, structural_type, parent)
+    parent = containment_graph.read_parent(
+        parent_num,
+        config,
+        issue_types,
+        classification=classification,
+        substrate_map=substrate_map,
+    )
+    check = containment_graph.check_parent(issue_types, child_type, parent)
     parent_type = parent.structural_type
     return check, body_parent_ref.type_label(issue_types, parent_type) if parent_type else None
 
@@ -1591,9 +1624,10 @@ def _build_parser() -> argparse.ArgumentParser:
             "moves the native sub-issue link. Refused before anything is written "
             "(--dry-run included) when the parent's type is not one this issue's "
             "type may sit under (issue-types.yaml's parent_issue_types, DEC-005; "
-            "no override), or the parent cannot be read to tell; a parent whose "
-            "type cannot be told from its title is accepted with a warning. For "
-            "an EPIC the number names a milestone, not an issue."
+            "no --bypass, and no --force), when the number names a pull request, "
+            "or when the parent cannot be read to tell; where either type cannot "
+            "be told the parent is accepted with a warning. For an EPIC the "
+            "number names a milestone, not an issue."
         ),
     )
     parser.add_argument(
