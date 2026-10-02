@@ -881,23 +881,27 @@ class AdoptResult:
     notices: tuple[str, ...] = ()
 
 
-def _holds_entries(folder: Path) -> bool:
+def holds_entries(folder: Path) -> bool:
     """Whether `folder` is a directory holding any entry at all — a document, a
-    sub-folder, a hidden file. One that is absent or empty holds nothing."""
+    sub-folder, a hidden file. One that is absent or empty holds nothing: recording
+    an overlay category over it hands no document over (COR-049 point 5)."""
     return folder.is_dir() and any(folder.iterdir())
 
 
-def _adopt_consent(
+def recording_consent(
     target_root: Path,
-    agent_name: str,
     held: list[tuple[str, str]],
     rest: list[tuple[str, str]],
     *,
     yes: bool,
+    rerun: str,
+    preview: str | None = None,
 ) -> project_config.Consent:
-    """The consent `adopt` asks for one run that records over folders holding documents
-    (COR-049 point 5): what each recording puts within an agent's reach, and the rest of
-    the run, which waits on the same answer."""
+    """The consent a command asks for one run that records overlay categories over
+    folders holding documents (COR-049 point 5): what each recording puts within an
+    agent's reach, and the rest of the run, which waits on the same answer. `rerun`
+    is the command with `--yes` a refusal names; `preview`, one that shows the change
+    without writing it."""
     reaching = agents_reaching(target_root)
 
     def listing(pairs: list[tuple[str, str]]) -> str:
@@ -916,10 +920,10 @@ def _adopt_consent(
         )
     return project_config.Consent(
         yes=yes,
-        rerun=f"pkit agents adopt {shlex.quote(agent_name)} --yes",
+        rerun=rerun,
         target=OVERLAY_PATH.as_posix(),
         rule="COR-049 point 5",
-        preview="pkit agents reconcile",
+        preview=preview,
         detail=detail,
     )
 
@@ -1038,10 +1042,17 @@ def adopt_agent(
     # occupied. A dir that exists but holds nothing is treated as absent.
     overlay_additions = [(cat, conventional[cat]) for cat in undefined]  # guarded above
     absent = {cat for cat, conv_path in overlay_additions if not (target_root / conv_path).is_dir()}
-    held = [(c, p) for c, p in overlay_additions if _holds_entries(target_root / p)]
+    held = [(c, p) for c, p in overlay_additions if holds_entries(target_root / p)]
     if held:
         rest = [pair for pair in overlay_additions if pair not in held]
-        _adopt_consent(target_root, agent_name, held, rest, yes=yes).confirm("Record them")
+        recording_consent(
+            target_root,
+            held,
+            rest,
+            yes=yes,
+            rerun=f"pkit agents adopt {shlex.quote(agent_name)} --yes",
+            preview="pkit agents reconcile",
+        ).confirm("Record them")
 
     dirs_created: list[str] = []
     dirs_seeded: list[str] = []
