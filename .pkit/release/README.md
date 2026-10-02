@@ -13,9 +13,8 @@ pkit:
         - .github/workflows/release-tag.yml
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
     revalidated:
-      at: 2026-10-02T04:06:06Z
-      outcome: unchanged
-      unchanged-because: The page says a changeset names backbone or a kit-shipped component and that the valid set is rediscovered from each package.yaml; the change to changesets.py adds the adapter reservation table to a comment and leaves component discovery as the page describes it
+      at: 2026-10-02T04:50:39Z
+      outcome: updated
 ---
 
 # Release flow — changesets + the release step
