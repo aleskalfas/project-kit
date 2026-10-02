@@ -15,9 +15,8 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-02T00:02:19Z
-      outcome: unchanged
-      unchanged-because: "COR-053 changed in one rationale sentence, on why events take no consent model: it now names the two writes the consent rule covers; this page says nothing of consent for events, and what it takes from the record — connection points, roles and their wiring — is as it was"
+      at: 2026-10-02T00:34:54Z
+      outcome: updated
 ---
 
 # project-management capability
