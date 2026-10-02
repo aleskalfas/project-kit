@@ -11,6 +11,7 @@ a warning).
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -945,3 +946,94 @@ def test_the_queue_flags_set_the_wait(lib, argv, seconds, phrase) -> None:
 def test_a_wait_the_flags_cannot_mean_is_a_usage_error(lib, argv) -> None:
     with pytest.raises(SystemExit):
         _flags(lib, argv)
+
+
+# --- the backbone's cross-repository guard (#1254) ------------------------------------
+
+
+def _answering(lib, monkeypatch, outcome: Any) -> list[list[str]]:
+    """The backbone's requests answered with `outcome`; returns those asked."""
+    asked: list[list[str]] = []
+
+    def request(args, config):
+        asked.append(list(args))
+        return outcome
+
+    monkeypatch.setattr(lib.merge_queue, "request", request)
+    return asked
+
+
+@pytest.mark.parametrize("confirmed", [True, False])
+@pytest.mark.parametrize(
+    ("first", "kind"), [({"has_queue": False}, "merge"), ({}, "enqueue")], ids=["merge", "enqueue"]
+)
+def test_the_confirmation_is_passed_on_exactly_when_the_operator_gave_it(
+    lib, monkeypatch, confirmed, first, kind
+) -> None:
+    """The backbone asks nobody: the verb's guard did. It is told the operator
+    confirmed a change in another repository exactly when they did at the
+    verb (`MergeRequest.allow_foreign_repo`, which the verb sets from its
+    guard's `confirmed`) — whatever the verb's comparison found — and never
+    otherwise."""
+    _Queue(lib, monkeypatch, [_reading(lib, **first)])
+    asked = _answering(lib, monkeypatch, lib.merge_queue.Outcome(False, 1, "stop here"))
+    lib.land(_request(lib, guard_passed="same-repo", allow_foreign_repo=confirmed), {})
+    assert [args[0] for args in asked] == [kind]
+    assert ("--allow-foreign-repo" in asked[0]) is confirmed
+
+
+@pytest.mark.parametrize("confirmed", [True, False])
+def test_the_dequeue_passes_the_confirmation_on_too(lib, monkeypatch, confirmed) -> None:
+    asked = _answering(lib, monkeypatch, lib.merge_queue.Outcome(True, 0, ""))
+    assert lib.dequeue(42, {}, allow_foreign_repo=confirmed)
+    assert asked == [["dequeue", "42", *(["--allow-foreign-repo"] if confirmed else [])]]
+
+
+def _guard_refused(lib) -> Any:
+    """The backbone's answer to a request its cross-repository guard refused."""
+    return lib.merge_queue.Outcome(
+        False,
+        None,
+        "the cross-repository guard refused: …",
+        reason_kind="foreign-repository",
+        guard={
+            "verdict": "diverged",
+            "undetermined_kind": None,
+            "anchor": "/work/project",
+            "target": "/work/other",
+            "cleared": None,
+        },
+    )
+
+
+def test_when_the_two_comparisons_disagree_the_landing_is_refused_naming_both(
+    lib, monkeypatch
+) -> None:
+    """The verb's guard passed the target as the session's own repository, the
+    operator confirmed nothing, and the backbone's reads another: the backbone
+    refused, made no request, and the landing is refused — never failed,
+    never retried as if gh had said no — saying how the operator confirms it."""
+    _Queue(lib, monkeypatch, [_reading(lib, has_queue=False)])
+    asked = _answering(lib, monkeypatch, _guard_refused(lib))
+    landing = lib.land(_request(lib, guard_passed="same-repo"), {})
+    assert landing.outcome == lib.REFUSED
+    assert [args[0] for args in asked] == ["merge"]
+    assert "its comparison reads diverged" in landing.message
+    assert "the session's anchor /work/project, the target /work/other" in landing.message
+    assert "this verb's own guard passed it as same-repo" in landing.message
+    assert "nothing was asked of GitHub" in landing.message
+    assert "run the verb again with --allow-foreign-repo, which it passes on" in landing.message
+
+
+def test_a_dequeue_the_backbones_guard_refused_names_the_command_that_takes_it_out(
+    lib, monkeypatch, capsys
+) -> None:
+    """Running the verb again does not repeat a dequeue, so the error names
+    the command that takes the PR out, with the flag that confirms the change
+    there — a hint the operator can follow as given."""
+    _answering(lib, monkeypatch, _guard_refused(lib))
+    assert lib.dequeue(42, {}) is False
+    err = capsys.readouterr().err
+    assert "the backbone's cross-repository guard refused to take PR #42 out" in err
+    assert "its comparison reads diverged" in err
+    assert f"`pkit pull-request dequeue 42 --allow-foreign-repo` from {os.getcwd()}" in err

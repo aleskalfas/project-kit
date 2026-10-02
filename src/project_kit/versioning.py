@@ -13,6 +13,11 @@ run `git tag` + `git push` manually; this collapses both into a single
 explicit command without bundling bump + commit + tag (each stays its
 own step per COR-004's anchoring principle).
 
+A push to `origin` — the tag's, or its deletion's — changes the hosting
+service, so it runs only with the cross-repository guard's clearance for the
+repository (`session_guard`, ADR-061 point 6); a tag made or removed only
+locally needs none.
+
 Rollback (`unbump_version`, `untag_version`) is the symmetric inverse:
 `untag` removes the local (and optionally remote) tag; `unbump`
 narrows back the broadened `requires_backbone` upper bounds and
@@ -54,6 +59,7 @@ from typing import Literal
 import click
 from packaging.version import Version
 
+from project_kit import session_guard
 from project_kit.migrations import parse_version_tuple
 
 Segment = Literal["patch", "minor", "major"]
@@ -323,16 +329,21 @@ def unbump_version(source_kit: Path) -> tuple[str, str]:
     return current, new_version
 
 
-def untag_version(source_kit: Path, push: bool = False) -> str:
+def untag_version(
+    source_kit: Path, push: bool = False, *, clearance: session_guard.Clearance | None = None
+) -> str:
     """Remove the local `v<version>` tag matching `.pkit/VERSION`.
 
     With `push=True`, also runs `git push origin :refs/tags/<tag>`
-    to delete the remote tag. Refuses if the tag does not exist
-    locally. Without `--push`, prints a hint with the exact
-    remote-delete command.
+    to delete the remote tag; that needs `clearance`, the cross-repository
+    guard's for the repository, checked before anything is deleted.
+    Refuses if the tag does not exist locally. Without `--push`, prints a
+    hint with the exact remote-delete command.
 
     Returns the tag name (e.g., `v1.0.0`).
     """
+    if push:
+        session_guard.require(clearance, source_kit.parent)
     version_file = source_kit / "VERSION"
     if not version_file.is_file():
         raise click.ClickException(f"source kit has no VERSION file at {version_file}")
@@ -628,13 +639,16 @@ def _extract_range(text: str, match_start: int) -> str:
     return text[quote_start:quote_end]
 
 
-def tag_version(source_kit: Path, push: bool = False) -> str:
+def tag_version(
+    source_kit: Path, push: bool = False, *, clearance: session_guard.Clearance | None = None
+) -> str:
     """Tag HEAD as `v<version>` where `<version>` is read from `.pkit/VERSION`.
 
     Returns the tag name (e.g., `v1.0.0`). Raises `click.ClickException`
     on any precondition failure (missing VERSION, invalid version, tag
     already exists, not in a git repo). When `push=True`, also pushes
-    the tag to `origin`.
+    the tag to `origin`; that needs `clearance`, the cross-repository
+    guard's for the repository, checked before the tag is made.
 
     The annotation message is `"v<version>"` plus the body of the most
     recent commit (so the tag carries a hint of what the bump was for).
@@ -642,6 +656,8 @@ def tag_version(source_kit: Path, push: bool = False) -> str:
     Accepts pre-release versions (`v1.2.0rc1`); the tag form stays
     `v<version>` literally per PRJ-004.
     """
+    if push:
+        session_guard.require(clearance, source_kit.parent)
     version_file = source_kit / "VERSION"
     if not version_file.is_file():
         raise click.ClickException(f"source kit has no VERSION file at {version_file}")

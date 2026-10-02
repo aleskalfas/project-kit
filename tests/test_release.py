@@ -15,10 +15,11 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from project_kit import changesets, release, versioning
+from project_kit import changesets, cli, release, session_guard, versioning
 from project_kit.cli import main
 from project_kit.manifest import read_backbone_manifest
 from project_kit.migrations import parse_version_tuple
+from tests import sessions
 from tests.adopter_repo import GitRepo
 
 
@@ -219,6 +220,80 @@ def test_apply_empty_plan_is_noop(tmp_path: Path) -> None:
     plan = release.compute_release(source_kit)
     assert plan.is_empty
     release.apply_release(source_kit, plan, tag=True)  # must not raise
+    assert (source_kit / "VERSION").read_text().strip() == "1.5.0"
+
+
+# --- The cross-repository guard on a pushed tag (#1254) -------------------------
+
+
+@pytest.fixture
+def applied(monkeypatch: pytest.MonkeyPatch) -> list[str | None]:
+    """`apply_release` stubbed: how each run's clearance passed, None for a
+    run that pushes nothing and so carries none."""
+    runs: list[str | None] = []
+
+    def apply(
+        source_kit: Path,
+        plan: release.ReleasePlan,
+        *,
+        clearance: session_guard.Clearance | None,
+        **_: object,
+    ) -> None:
+        runs.append(clearance.passed if clearance is not None else None)
+
+    monkeypatch.setattr(cli, "apply_release", apply)
+    return runs
+
+
+def test_apply_pushing_a_tag_from_another_repository_is_refused_before_anything_is_written(
+    tmp_path: Path, tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`--tag --push` changes the hosting service: in another repository than
+    the session's, with no terminal and no flag, the guard refuses at the
+    entry — no version, changelog or changeset is touched, and nothing pushed."""
+    source_kit = _make_kit(tmp_path)
+    _add(source_kit, "backbone", "minor", "x", "a.yaml")
+    sessions.rooted_elsewhere(tmp_path_factory.mktemp("session"), monkeypatch)
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(main, ["release", "apply", "--tag", "--push", "--yes"])
+    assert result.exit_code == 1
+    assert "the cross-repository guard refused" in result.stderr
+    assert "Nothing was written or pushed" in result.stderr
+    assert (source_kit / "VERSION").read_text().strip() == "1.5.0"
+    assert list(changesets.unreleased_dir(tmp_path).glob("*.yaml"))
+
+
+@pytest.mark.parametrize(
+    ("args", "passed"),
+    [
+        (["--tag", "--push", "--allow-foreign-repo"], "flag"),
+        (["--tag"], None),
+    ],
+    ids=["pushed-with-the-flag", "tagged-only-locally"],
+)
+def test_apply_from_another_repository_goes_with_the_flag_or_without_a_push(
+    args: list[str],
+    passed: str | None,
+    tmp_path: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+    applied: list[str | None],
+) -> None:
+    source_kit = _make_kit(tmp_path)
+    _add(source_kit, "backbone", "minor", "x", "a.yaml")
+    sessions.rooted_elsewhere(tmp_path_factory.mktemp("session"), monkeypatch)
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(main, ["release", "apply", *args, "--yes"])
+    assert result.exit_code == 0, result.output
+    assert applied == [passed]
+
+
+def test_apply_pushing_a_tag_without_the_guards_clearance_writes_nothing(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    _add(source_kit, "backbone", "minor", "x", "a.yaml")
+    plan = release.compute_release(source_kit)
+    with pytest.raises(TypeError, match="needs a clearance"):
+        release.apply_release(source_kit, plan, tag=True, push=True)
     assert (source_kit / "VERSION").read_text().strip() == "1.5.0"
 
 

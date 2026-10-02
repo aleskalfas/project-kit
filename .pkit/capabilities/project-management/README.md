@@ -15,9 +15,8 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-02T00:02:19Z
-      outcome: unchanged
-      unchanged-because: "COR-053 changed in one rationale sentence, on why events take no consent model: it now names the two writes the consent rule covers; this page says nothing of consent for events, and what it takes from the record — connection points, roles and their wiring — is as it was"
+      at: 2026-10-02T00:38:36Z
+      outcome: updated
 ---
 
 # project-management capability
@@ -338,6 +337,8 @@ For the standard development flow, seven verb-subject commands compose over `mov
 The queue is the only path to such a base, and the squash commit it makes must still be the convention's. Refused before anything is posted or enqueued: `--admin`, which would merge around the queue; `--bypass-ci` (see the CI-status gate below); a queue whose merge method is not squash; and a repository whose default squash-commit title and message are not the PR title and body — the queue composes its commit from those and ignores what the merge command passes ([project-management:DEC-013-branch-and-pr-conventions], "Merge mechanics"). Set them with `gh api -X PATCH repos/{owner}/{repo} -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=PR_BODY`. Where the base has no queue — or the GitHub host's API knows no merge queues — both verbs merge directly, as they always have.
 
 The reading, the merge and the enqueue, the wait and the dequeue are the backbone's one merge mechanic — `pkit pull-request`, which the verbs run in the environment the `gh:` block pins — the same one `pkit release merge` lands a release PR with ([project-management:DEC-013-branch-and-pr-conventions], "Merge mechanics"). A backbone that predates it leaves the verbs unable to read how the base merges, so they merge nothing until it is upgraded (`pkit upgrade`); the error names the `pkit` that ran. Each call is bounded — a minute for a reading, two for a merge or an enqueue, a wait's own limit plus five minutes — and one that does not answer in time is stopped with everything it started.
+
+**The backbone guards the changes it makes.** `pkit pull-request merge`, `enqueue` and `dequeue` run the cross-repository guard (COR-039) themselves before the request, with no terminal to ask: the verbs run them with no input. So the verb's own guard, which runs first, is the one that asks. When the operator confirmed at the verb — gave `--allow-foreign-repo` on its command line, whatever its own comparison found, or answered yes at its prompt — the verb passes `--allow-foreign-repo` on, and never otherwise, so the operator is asked once and nothing is confirmed that they did not confirm. It goes to the backbone with the merge, and to the verbs `done-work` starts — the move ahead of the merge, and after it the move to Done and each close — so a confirmed landing is not refused, or asked about again, halfway. `land-work` passes a confirmation on to `done-work` the same way, so a run at a terminal asks once, not twice. Should the backbone's guard refuse all the same — its comparison of the session's anchor with the target and the capability's disagree, and the operator confirmed nothing — the landing stops refused (exit 1), naming both verdicts, with nothing asked of GitHub: a disagreement with no confirmation refuses, and the flag, passed on, settles it. The capability keeps its copy of that comparison until it reads the backbone's by command (#1220); a test holds the two to one table of cases.
 
 All seven are idempotent at the level of observable state — re-running after a partial failure recovers cleanly, and a re-run does not repeat an audit comment the failed attempt already posted.
 

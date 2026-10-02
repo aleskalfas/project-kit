@@ -603,9 +603,16 @@ def run(
         return _ended(REFUSED, 1, membership.refusal_message)
 
     # Foreign-repo mutation guard (COR-039 / ADR-034) — gate before the PR
-    # merge / state transition: target repo (cwd) vs session anchor.
-    if not session_guard.enforce(override=args.allow_foreign_repo):
+    # merge / state transition: target repo (cwd) vs session anchor. The
+    # operator's confirmation here — the flag, or a yes at the prompt — goes
+    # with every change this run hands on: the merge, to the backbone's own
+    # guard, and the moves and closes it starts, to theirs; so a confirmed
+    # landing is not refused, or asked about again, halfway. Nothing else is
+    # confirmed for them.
+    guard = session_guard.enforce(override=args.allow_foreign_repo)
+    if not guard:
         return _ended(REFUSED, 1, reason="the foreign-repository guard refused (see above)")
+    confirmed = session_guard.confirmed(guard)
 
     branch = _find_issue_branch(args.issue_number)
     if composed and branch is not None:
@@ -659,6 +666,7 @@ def run(
                 capability_root=capability_root,
                 yaml_loader=yaml_loader,
                 config=config,
+                confirmed=confirmed,
             )
         if composed and issue_merges.problem:
             return _ended(
@@ -1055,6 +1063,7 @@ def run(
             args.issue_number,
             lead_in.to_state,
             args.capability_root,
+            confirmed=confirmed,
         )
         if lead_in_rc != 0:
             return _ended(
@@ -1085,6 +1094,8 @@ def run(
             bypass_ci=bool(args.bypass_ci),
             force=args.force,
             wait_seconds=pr_merge.wait_seconds(args),
+            guard_passed=session_guard.how_passed(guard),
+            allow_foreign_repo=confirmed,
         ),
         config,
     )
@@ -1098,6 +1109,7 @@ def run(
         cross=bool(pr.get("isCrossRepository")),
         merged_head=_merged_head(landing, gate_result.head_oid or pr_head),
         config=config,
+        confirmed=confirmed,
     )
 
 
@@ -1110,6 +1122,7 @@ def _after_merge(
     cross: bool,
     merged_head: str,
     config: dict,
+    confirmed: bool,
 ) -> DoneWorkRun:
     """Everything that follows the merge: issue N to Done, each issue the
     merge closed closed and cascaded, then the best-effort branch cleanup.
@@ -1118,7 +1131,9 @@ def _after_merge(
     warns with the command that finishes it, and the run exits with it after
     the cleanup (:data:`FOLLOW_UP_OWED`). `branch` is the PR's head branch and
     `merged_head` the head it merged at: the local branch is deleted only when
-    nothing on it is missing from the merge.
+    nothing on it is missing from the merge. `confirmed` is the operator's
+    confirmation of a change in another repository, which the moves and
+    closes are handed (:func:`_run_sibling`).
     """
     # The first step that failed, as its warning says it.
     owed = ""
@@ -1126,7 +1141,9 @@ def _after_merge(
     # before any branch cleanup. The merge is irreversible and GitHub's
     # `Closes #N` has already closed the issue, so a best-effort step failing
     # ahead of this call would strand the pm state at Review (#878).
-    move_rc = _invoke_move_issue(args.issue_number, "done", args.capability_root)
+    move_rc = _invoke_move_issue(
+        args.issue_number, "done", args.capability_root, confirmed=confirmed
+    )
     if move_rc != 0:
         owed = (
             f"[warn] PR merged but move-issue exited {move_rc}. The merge is "
@@ -1147,6 +1164,7 @@ def _after_merge(
             pr_number,
             args.capability_root,
             skip_checkbox_gate=args.skip_checkbox_gate,
+            confirmed=confirmed,
         )
         if rc != 0:
             warning = (
@@ -1391,6 +1409,7 @@ def _complete_merged_pr(
     capability_root: Path,
     yaml_loader: YAML,
     config: dict,
+    confirmed: bool,
 ) -> DoneWorkRun:
     """What follows the merge, for a PR already merged (#1011).
 
@@ -1408,7 +1427,8 @@ def _complete_merged_pr(
 
     The issues to close are those the PR body names that were not closed
     before the merge — GitHub closes the rest as it merges, and close-issue's
-    pr-merge close reconciles and cascades them either way.
+    pr-merge close reconciles and cascades them either way. `confirmed` as for
+    :func:`_after_merge`.
     """
     pr_number = int(merged_pr["number"])
     merged_at = str(merged_pr.get("mergedAt") or "")
@@ -1466,7 +1486,9 @@ def _complete_merged_pr(
         if reply not in ("y", "yes"):
             return _ended(DECLINED, 0, "aborted.")
     if lead_in is not None:
-        lead_in_rc = _invoke_move_issue(issue_number, lead_in.to_state, args.capability_root)
+        lead_in_rc = _invoke_move_issue(
+            issue_number, lead_in.to_state, args.capability_root, confirmed=confirmed
+        )
         if lead_in_rc != 0:
             return _ended(
                 FOLLOW_UP_OWED,
@@ -1483,6 +1505,7 @@ def _complete_merged_pr(
         cross=bool(merged_pr.get("isCrossRepository")),
         merged_head=str(merged_pr.get("headRefOid") or ""),
         config=config,
+        confirmed=confirmed,
     )
 
 
@@ -3188,11 +3211,14 @@ def _issue_list(numbers) -> str:
     return ", ".join(f"#{n}" for n in numbers)
 
 
-def _invoke_move_issue(issue_number: int, target: str, capability_root_arg: Path | None) -> int:
+def _invoke_move_issue(
+    issue_number: int, target: str, capability_root_arg: Path | None, *, confirmed: bool
+) -> int:
     return _run_sibling(
         "move-issue.py",
         [str(issue_number), "--to", target],
         capability_root_arg,
+        confirmed=confirmed,
     )
 
 
@@ -3202,6 +3228,7 @@ def _invoke_close_issue(
     capability_root_arg: Path | None,
     *,
     skip_checkbox_gate: bool,
+    confirmed: bool,
 ) -> int:
     """Close one issue the merge closed, through the merged PR (#1086).
 
@@ -3216,19 +3243,29 @@ def _invoke_close_issue(
     argv = [str(issue_number), "--mode", "pr-merge", "--pr", str(pr_number)]
     if skip_checkbox_gate:
         argv.append("--skip-checkbox-gate")
-    return _run_sibling("close-issue.py", argv, capability_root_arg)
+    return _run_sibling("close-issue.py", argv, capability_root_arg, confirmed=confirmed)
 
 
 def _run_sibling(
     script: str,
     argv: list[str],
     capability_root_arg: Path | None,
+    *,
+    confirmed: bool,
 ) -> int:
     """Run a sibling pm verb non-interactively (`--yes`), passing the capability
-    root through; its output streams into this run's. Returns its exit code."""
+    root through; its output streams into this run's. Returns its exit code.
+
+    `confirmed` is this run's confirmation of a change in another repository
+    — the operator's flag, or a yes at its prompt — which the sibling is
+    handed as `--allow-foreign-repo`, so its own guard neither refuses nor
+    asks again what the operator confirmed here; and it is handed nothing
+    else."""
     cmd = [sys.executable, str(_HERE / script), *argv, "--yes"]
     if capability_root_arg is not None:
         cmd += ["--capability-root", str(capability_root_arg)]
+    if confirmed:
+        cmd.append("--allow-foreign-repo")
     proc = subprocess.run(cmd, check=False)
     return proc.returncode
 
