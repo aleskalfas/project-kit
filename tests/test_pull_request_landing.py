@@ -5,7 +5,10 @@ Covers the one GraphQL read (what it asks, how each answer reads, an API that
 knows no merge queues against one that lacks only some other field, a failed
 read), what the queue's last word on a PR says about its head, the
 repository's squash-commit defaults, the merge requests (the direct squash
-merge, the enqueue, the dequeue), the bounded wait for the queue's merge
+merge, the enqueue, the dequeue) and one that gets no answer, settled by
+reading — made, not made on two readings running, or unconfirmed — while one
+the service refused stays a refusal (#1256), every `gh` call bounded by its
+kind, the bounded wait for the queue's merge
 (merged, left, closed, head moved, timed out — on a fixed deadline or the
 queue's own estimate), and the noun's documents and exit codes — on a fake
 `gh` and a fake clock.
@@ -23,7 +26,7 @@ from typing import Any
 import pytest
 from click.testing import CliRunner
 
-from project_kit import cli, session_guard
+from project_kit import cli, command_runner, session_guard
 from project_kit import pull_request_landing as landing
 from tests import hosting_fake as fake
 from tests import sessions
@@ -498,6 +501,254 @@ def test_a_merged_pr_cannot_be_dequeued(
     acting(_gh([_MERGED]))
     outcome = landing.dequeue(42, **here)
     assert not outcome.accepted and "has merged" in outcome.reason
+
+
+# --- a request with no answer (#1256) ------------------------------------------------
+
+
+def _bounded(host: fake.HostingService) -> landing.GhRunner:
+    """`host` as the module's own `gh` reaches it, through the bounded start: a
+    request it never answers is ended at its bound."""
+
+    def run(argv: Sequence[str]) -> Completed:
+        try:
+            return host(argv)
+        except fake.NoAnswer:
+            raise subprocess.TimeoutExpired(list(argv), landing.GH_REQUEST_SECONDS) from None
+
+    return run
+
+
+@pytest.fixture
+def slept(monkeypatch: pytest.MonkeyPatch) -> list[float]:
+    """The module's sleeps, recorded and never slept."""
+    sleeps: list[float] = []
+    monkeypatch.setattr(landing, "_sleep", sleeps.append)
+    return sleeps
+
+
+def _queue(host: fake.HostingService) -> fake.HostingService:
+    host.set_base(fake.Base(queue=True))
+    return host
+
+
+def _ask(request_: str, here: dict[str, Any]) -> landing.Outcome:
+    if request_ == "merge":
+        return landing.squash_merge(496, subject="fix: land it", head_oid=fake.HEAD, **here)
+    if request_ == "enqueue":
+        return landing.enqueue(496, head_oid=fake.HEAD, **here)
+    return landing.dequeue(496, **here)
+
+
+_ENDED_AT_ITS_BOUND = "`gh` did not answer within 30 s, and was ended"
+
+
+@pytest.mark.parametrize(
+    ("setup", "request_"),
+    [
+        (lambda host: host.lose_reply(fake.MERGE), "merge"),
+        (lambda host: _queue(host).lose_reply(fake.MERGE), "merge"),
+        (lambda host: _queue(host).lose_reply(fake.ENQUEUE), "enqueue"),
+        (lambda host: host.error_after(fake.MERGE), "merge"),
+        (lambda host: host.error_after(fake.MERGE, stderr=""), "merge"),
+        (
+            lambda host: host.error_after(
+                fake.MERGE,
+                stderr='Post "https://api.github.com/graphql": read tcp 10.0.0.2:51234->'
+                "140.82.112.6:443: read: connection reset by peer",
+            ),
+            "merge",
+        ),
+        (lambda host: _queue(host).error_after(fake.ENQUEUE, stderr="unexpected EOF"), "enqueue"),
+    ],
+    ids=[
+        "merge-ended-at-its-bound-reads-merged",
+        "merge-on-a-queue-ended-at-its-bound-reads-queued",
+        "enqueue-ended-at-its-bound-reads-queued",
+        "merge-answered-502-reads-merged",
+        "merge-answered-nothing-reads-merged",
+        "merge-reset-reads-merged",
+        "enqueue-eof-reads-queued",
+    ],
+)
+def test_a_request_with_no_answer_whose_end_state_one_reading_finds_was_made(
+    setup: Callable[[fake.HostingService], Any],
+    request_: str,
+    here: dict[str, Any],
+    acting: Callable[[landing.GhRunner], None],
+    slept: list[float],
+) -> None:
+    """Ended at its bound, or its answer lost on the way — a server error, a
+    reset, nothing back — the request may have been made: one reading at its
+    end state (merged; queued — a merge on a base that requires a queue
+    enqueues) says it was, with no exit code of gh's to report."""
+    host = fake.HostingService()
+    setup(host)
+    acting(_bounded(host))
+    assert _ask(request_, here) == landing.Outcome(True, None)
+    assert host.kinds() == [fake.ENQUEUE if request_ == "enqueue" else fake.MERGE, fake.READ]
+    assert slept == []
+
+
+def test_a_request_the_service_was_still_making_shows_in_the_second_reading(
+    here: dict[str, Any], acting: Callable[[landing.GhRunner], None], slept: list[float]
+) -> None:
+    host = fake.HostingService()
+    host.never_receive(fake.MERGE)
+    host.after(fake.READ, lambda service: service.merge_now())
+    acting(_bounded(host))
+    assert _ask("merge", here) == landing.Outcome(True, None)
+    assert host.kinds() == [fake.MERGE, fake.READ, fake.READ]
+    assert slept == [landing.SETTLE_INTERVAL_SECONDS]
+
+
+@pytest.mark.parametrize(
+    ("request_", "setup", "found"),
+    [
+        ("merge", lambda host: host, "neither merged nor queued (not in the queue)"),
+        ("enqueue", _queue, "neither queued nor merged (not in the queue)"),
+        ("dequeue", lambda host: _queue(host).enter_queue(), "still queued (in the queue)"),
+    ],
+)
+def test_a_request_with_no_answer_read_short_of_its_end_twice_running_was_not_made(
+    request_: str,
+    setup: Callable[[fake.HostingService], Any],
+    found: str,
+    here: dict[str, Any],
+    acting: Callable[[landing.GhRunner], None],
+    slept: list[float],
+) -> None:
+    """Never received, nothing back: two readings running, the interval apart,
+    find its end state not reached — only then is it not made (ADR-061 point
+    7), not accepted with `reason_kind` `not-made`, and no exit code of gh's."""
+    host = fake.HostingService()
+    setup(host)
+    kind = {"merge": fake.MERGE, "enqueue": fake.ENQUEUE, "dequeue": fake.DEQUEUE}[request_]
+    host.never_receive(kind)
+    acting(_bounded(host))
+    outcome = _ask(request_, here)
+    assert (outcome.accepted, outcome.exit_code, outcome.reason_kind) == (
+        False,
+        None,
+        landing.NOT_MADE,
+    )
+    assert outcome.reason == (
+        f"the {request_} of PR #496 got no answer ({_ENDED_AT_ITS_BOUND}), and two readings "
+        f"since, 10 s apart, find PR #496 {found}: the {request_} was not made"
+    )
+    assert host.kinds()[-3:] == [kind, fake.READ, fake.READ]
+    assert slept == [landing.SETTLE_INTERVAL_SECONDS]
+
+
+@pytest.mark.parametrize("readable", [0, 1], ids=["no-reading", "one-reading-then-none"])
+@pytest.mark.parametrize("request_", ["merge", "enqueue", "dequeue"])
+def test_a_request_with_no_answer_and_no_reading_to_settle_it_is_unconfirmed(
+    request_: str,
+    readable: int,
+    here: dict[str, Any],
+    acting: Callable[[landing.GhRunner], None],
+    slept: list[float],
+) -> None:
+    """A reading that cannot be taken leaves the request unconfirmed:
+    `accepted` and `exit_code` None — whether it was made, and how gh would
+    have ended, are not known — `reason_kind` `unanswered`, and a reason that
+    states no refusal."""
+    host = fake.HostingService()
+    if request_ != "merge":
+        _queue(host)
+    if request_ == "dequeue":
+        host.enter_queue()
+    kind = {"merge": fake.MERGE, "enqueue": fake.ENQUEUE, "dequeue": fake.DEQUEUE}[request_]
+    host.never_receive(kind)
+
+    def unreadable_since(service: fake.HostingService) -> None:
+        service.fail(fake.READ, first=service.seen(fake.READ) + 1 + readable, count=None)
+
+    host.before(kind, unreadable_since)
+    acting(_bounded(host))
+    outcome = _ask(request_, here)
+    assert (outcome.accepted, outcome.exit_code, outcome.reason_kind) == (
+        None,
+        None,
+        landing.UNANSWERED,
+    )
+    assert outcome.reason == (
+        f"the {request_} of PR #496 got no answer ({_ENDED_AT_ITS_BOUND}), and PR #496 could "
+        f"not be read since (HTTP 502: Bad Gateway): whether the {request_} was made is not "
+        "known"
+    )
+    assert slept == [landing.SETTLE_INTERVAL_SECONDS] * readable
+
+
+def test_a_dequeue_with_no_answer_that_reads_merged_since_was_not_accepted(
+    here: dict[str, Any], acting: Callable[[landing.GhRunner], None], slept: list[float]
+) -> None:
+    """The queue merged the PR while it was being taken out: no dequeue undoes
+    that, so it is not accepted, saying so — not a request that was not made."""
+    host = _queue(fake.HostingService())
+    host.enter_queue()
+    host.never_receive(fake.DEQUEUE)
+    host.before(fake.READ, lambda service: service.merge_now(), nth=2)
+    acting(_bounded(host))
+    outcome = _ask("dequeue", here)
+    assert (outcome.accepted, outcome.reason_kind) == (False, "")
+    assert outcome.reason.startswith("PR #496 has merged (merged at ")
+
+
+@pytest.mark.parametrize(
+    "stderr",
+    [
+        "GraphQL: Head branch was modified. Review and try the merge again. (mergePullRequest)",
+        "GraphQL: Pull request is not mergeable (mergePullRequest)",
+        "HTTP 403: Resource not accessible by integration (https://api.github.com/graphql)",
+        "X Pull request #496 is not mergeable: the base branch policy prohibits the merge.",
+    ],
+)
+def test_a_request_the_service_answered_with_an_error_is_refused_in_its_words_unread(
+    stderr: str,
+    here: dict[str, Any],
+    acting: Callable[[landing.GhRunner], None],
+    slept: list[float],
+) -> None:
+    """The service said no: a refusal with its words, as before — never taken
+    for a request with no answer, and nothing is read to settle it."""
+    host = fake.HostingService()
+    host.fail(fake.MERGE, stderr=stderr)
+    acting(_bounded(host))
+    assert _ask("merge", here) == landing.Outcome(False, 1, stderr)
+    assert host.kinds() == [fake.MERGE]
+    assert slept == []
+
+
+def test_a_reading_gh_does_not_answer_within_its_bound_is_unreadable() -> None:
+    def hung(argv: Sequence[str]) -> Completed:
+        raise subprocess.TimeoutExpired(list(argv), landing.GH_READ_SECONDS)
+
+    with pytest.raises(landing.Unreadable, match=r"`gh` did not answer within 15 s, and was ended"):
+        landing.read(496, gh=hung)
+
+
+def test_the_modules_own_gh_is_bounded_by_the_kind_of_each_call(
+    here: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every `gh` call goes through the command runner's one bounded start,
+    from the directory the request acts in: a reading bounded as a reading, a
+    request as a request."""
+    host = _queue(fake.HostingService())
+    host.enter_queue()
+    started: list[tuple[Path | None, float]] = []
+
+    def bounded(argv: Sequence[str], *, cwd: Path | None, seconds: float) -> Completed:
+        started.append((cwd, seconds))
+        return host(argv)
+
+    monkeypatch.setattr(command_runner, "run_bounded", bounded)
+    assert landing.dequeue(496, **here).accepted
+    landing.read(496)
+    where = Path(here["cwd"]).resolve()
+    read, request = landing.GH_READ_SECONDS, landing.GH_REQUEST_SECONDS
+    assert host.kinds() == [fake.READ, fake.DEQUEUE, fake.READ, fake.READ]
+    assert started == [(where, read), (where, request), (where, read), (None, read)]
 
 
 # --- the guard on the requests ---------------------------------------------------
@@ -1250,6 +1501,79 @@ def test_a_refused_request_exits_1(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result.exit_code == 1
     [document] = _lines(result.stdout)
     assert document["reason"] == "not mergeable" and document["reason_kind"] is None
+
+
+def _unanswered_host(monkeypatch: pytest.MonkeyPatch, ends: str) -> fake.HostingService:
+    """The noun's `gh`: the shared fake, whose merge gets no answer and which,
+    since, reads the PR merged (`made`), open twice (`not-made`) or not at all
+    (`unconfirmed`); the interval not slept."""
+    host = fake.HostingService()
+    if ends == "made":
+        host.lose_reply(fake.MERGE)
+    else:
+        host.never_receive(fake.MERGE)
+    if ends == "unconfirmed":
+        host.before(fake.MERGE, lambda service: service.fail(fake.READ, count=None))
+    monkeypatch.setattr(landing, "gh_runner", lambda cwd: _bounded(host))
+    monkeypatch.setattr(landing, "_sleep", lambda seconds: None)
+    return host
+
+
+@pytest.mark.parametrize(
+    ("ends", "code", "accepted", "reason_kind"),
+    [
+        ("made", 0, True, None),
+        ("not-made", 1, False, "not-made"),
+        ("unconfirmed", 1, None, "unanswered"),
+    ],
+)
+def test_a_merge_with_no_answer_writes_how_it_settled_and_exits_by_it(
+    monkeypatch: pytest.MonkeyPatch,
+    ends: str,
+    code: int,
+    accepted: bool | None,
+    reason_kind: str | None,
+) -> None:
+    """Made: accepted, exit 0, no exit code of gh's. Not made on two readings
+    running: not accepted, `not-made`, exit 1. Unconfirmed: `accepted` null —
+    the one null it takes, saying whether it was made is not known —
+    `unanswered`, exit 1, as `delete-branch`'s unconfirmed exits."""
+    _unanswered_host(monkeypatch, ends)
+    result = _invoke("merge", "496", "--subject", "fix: land it", "--json")
+    assert result.exit_code == code
+    [document] = _lines(result.stdout)
+    assert (document["accepted"], document["exit_code"], document["reason_kind"]) == (
+        accepted,
+        None,
+        reason_kind,
+    )
+    assert set(document) == {
+        "schema_version",
+        "pull_request",
+        "accepted",
+        "exit_code",
+        "reason",
+        "reason_kind",
+        "guard",
+    }
+
+
+def test_a_merge_with_no_answer_says_how_it_settled_to_a_person(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _unanswered_host(monkeypatch, "made")
+    made = _invoke("merge", "496", "--subject", "fix: land it")
+    assert made.stdout == (
+        "the squash merge of PR #496 got no answer, and a reading since shows it made\n"
+    )
+    _unanswered_host(monkeypatch, "unconfirmed")
+    unknown = _invoke("merge", "496", "--subject", "fix: land it")
+    assert unknown.exit_code == 1
+    assert unknown.stderr == (
+        f"error: the merge of PR #496 got no answer ({_ENDED_AT_ITS_BOUND}), and PR #496 could "
+        "not be read since (HTTP 502: Bad Gateway): whether the merge was made is not known. "
+        "Read where PR #496 stands: `pkit pull-request read 496`.\n"
+    )
 
 
 @pytest.mark.parametrize(

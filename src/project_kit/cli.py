@@ -634,12 +634,20 @@ def _say_outcome(
     as_json: bool,
     done: str,
 ) -> None:
-    """Write a request's outcome — `done` when accepted — and exit 1 when it was not."""
+    """Write a request's outcome — `done` when accepted — and exit 1 when it
+    was not, or whether it was is not known (unconfirmed): that one names the
+    reading that tells."""
     if as_json:
         document = pull_request_landing.outcome_document(number, outcome, clearance)
         click.echo(pull_request_landing.render_json(document))
     elif outcome.accepted:
         click.echo(done)
+    elif outcome.accepted is None:
+        click.echo(
+            f"error: {outcome.reason}. Read where PR #{number} stands: "
+            f"`pkit pull-request read {number}`.",
+            err=True,
+        )
     else:
         click.echo(f"error: {outcome.reason or 'gh refused it'}", err=True)
     if not outcome.accepted:
@@ -704,8 +712,11 @@ def pull_request_merge(
 
     Accepted is not proof of a merge: on a base that requires a queue, gh
     enqueues instead — `pull-request read` says which. Never deletes the head
-    branch. The cross-repository guard runs first. Exit 0 when gh accepted it;
-    1 otherwise, with gh's reason or the guard's.
+    branch. The cross-repository guard runs first. A merge that gets no
+    answer is settled by reading: made once the PR reads merged or queued;
+    not made once two readings running find neither; unconfirmed when the PR
+    cannot be read. Exit 0 when made; 1 otherwise — refused, with gh's reason
+    or the guard's, not made, or unconfirmed.
     """
     clearance = _pull_request_cleared(number, allow_foreign_repo, as_json)
     outcome = pull_request_landing.squash_merge(
@@ -717,8 +728,16 @@ def pull_request_merge(
         admin=admin,
     )
     _say_outcome(
-        number, outcome, clearance, as_json, f"gh accepted the squash merge of PR #{number}"
+        number, outcome, clearance, as_json, _made(outcome, f"the squash merge of PR #{number}")
     )
+
+
+def _made(outcome: pull_request_landing.Outcome, request: str) -> str:
+    """What a person is told of an accepted merge or enqueue: gh accepted it,
+    or it got no answer and a reading since shows it made."""
+    if outcome.exit_code is None:
+        return f"{request} got no answer, and a reading since shows it made"
+    return f"gh accepted {request}"
 
 
 @pull_request.command("enqueue")
@@ -733,14 +752,20 @@ def pull_request_enqueue(
 
     The queue squashes by its own method, with a commit composed from the
     repository's squash-commit defaults. The cross-repository guard runs
-    first. Exit 0 once GitHub took it in; 1 otherwise, with gh's reason or the
-    guard's.
+    first. An enqueue that gets no answer is settled by reading, as a merge
+    is. Exit 0 once GitHub took it in; 1 otherwise — refused, with gh's reason
+    or the guard's, not made, or unconfirmed.
     """
     clearance = _pull_request_cleared(number, allow_foreign_repo, as_json)
     outcome = pull_request_landing.enqueue(
         number, cwd=clearance.directory, clearance=clearance, head_oid=head_oid
     )
-    _say_outcome(number, outcome, clearance, as_json, f"enqueued PR #{number}")
+    done = (
+        f"enqueued PR #{number}"
+        if outcome.exit_code is not None
+        else _made(outcome, f"the enqueue of PR #{number}")
+    )
+    _say_outcome(number, outcome, clearance, as_json, done)
 
 
 @pull_request.command("dequeue")
@@ -750,8 +775,11 @@ def pull_request_enqueue(
 def pull_request_dequeue(number: int, allow_foreign_repo: bool, as_json: bool) -> None:
     """Take PR NUMBER out of its base's merge queue, and confirm it is out.
 
-    The cross-repository guard runs first. Exit 0 once a reading shows it
-    neither queued nor merged; 1 otherwise.
+    The cross-repository guard runs first. A dequeue that gets no answer is
+    settled by reading: made once the PR reads out of the queue; not made
+    once two readings running find it still queued; unconfirmed when it
+    cannot be read. Exit 0 once a reading shows it neither queued nor merged;
+    1 otherwise — refused, not made, or unconfirmed.
     """
     clearance = _pull_request_cleared(number, allow_foreign_repo, as_json)
     outcome = pull_request_landing.dequeue(number, cwd=clearance.directory, clearance=clearance)
@@ -1956,8 +1984,11 @@ def release_merge(
     squash commit whose subject is the PR title — through the base's merge queue
     where it has one — deleting the head branch once GitHub reports the PR
     merged (best-effort; never a fork's head). Exit 4 when the queue still holds
-    the PR, or a direct merge could not be confirmed: running it again once the
-    PR has merged deletes the head branch. Exit 3 when the queue dropped the PR
+    the PR, or a direct merge could not be confirmed, or a merge or an enqueue
+    got no answer and GitHub could not be read since — whether it was made is
+    not known: running it again once GitHub answers lands the PR if it has not,
+    and deletes the head branch once it has merged. Every `gh` call is bounded,
+    so no stuck call holds the run. Exit 3 when the queue dropped the PR
     or its head moved; nothing is deleted then. A head the queue already
     dropped is not enqueued again without `--force`. It does **not** tag —
     `release-tag.yml` cuts the backbone tag on the resulting push to `main`

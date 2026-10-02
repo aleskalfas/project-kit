@@ -100,9 +100,9 @@ class Cell:
 
     `outcome` — done-work: its `DoneWorkRun` kind and exit, and `retry` when
     it says running again can help; merge-pr: its exit, and the record it left
-    in the clone (`record=owed` or `record=ran`); release: its exit, or
-    `hangs` when a request that is never answered holds the run; land-work:
-    its exit and the gist of its last step line.
+    in the clone (`record=owed` or `record=ran`); release: its exit — before
+    #1256, `hangs` when a request that is never answered held the run;
+    land-work: its exit and the gist of its last step line.
     `requests` — the landing's requests the service received, in order
     (`hosting_fake.LANDING`; `read×3` is three running).
     `after` — the steps after the merge ran: done-work's move to Done and its
@@ -411,6 +411,22 @@ def _unanswered_then_neither(world: World) -> None:
     world.host.never_receive(fake.MERGE)
 
 
+def _killed_mid_merge_made(world: World) -> None:
+    world.host.kill_mid_request(fake.MERGE, made=True)
+
+
+def _killed_mid_merge_unmade(world: World) -> None:
+    world.host.kill_mid_request(fake.MERGE, made=False)
+
+
+def _fail_the_next_read(host: fake.HostingService) -> None:
+    host.fail(fake.READ)
+
+
+def _read_fails_once_after_a_merge(world: World) -> None:
+    world.host.after(fake.MERGE, _fail_the_next_read)
+
+
 def _made_then_gh_failed(world: World) -> None:
     world.host.error_after(fake.MERGE)
 
@@ -657,6 +673,23 @@ _NOT_READ_AGAIN = (
 _MADE_THEN_FAILED = (
     "accident: a request gh reports failed after the service made it is taken for a failed "
     "one, so what follows the merge does not run"
+)
+_SETTLED_MADE = (
+    "the backbone's bound ends the `gh` that never answers, and its reading since finds the "
+    "request made: the landing goes on as made (#1256); the caller reads once more after a "
+    "merge it is told was made"
+)
+_LOST_ANSWER_SETTLED = (
+    "a 502 is an answer lost on the way, not the service's refusal: the backbone reads the PR "
+    "merged since, and the landing goes on as merged (#1256)"
+)
+_SETTLED_NOT_MADE = (
+    "neither merged nor queued on two readings running, the interval apart: the backbone says "
+    "the merge was not made, and nothing merged (#1256)"
+)
+_NO_ONE_LEFT = NotToday(
+    "imports the landing module: a kill ends its own run, with nothing left to read what the "
+    "request came to"
 )
 
 SCENARIOS: tuple[Scenario, ...] = (
@@ -1150,9 +1183,20 @@ SCENARIOS: tuple[Scenario, ...] = (
             merged("0 merge: merged", "read×2 merge read delete-ref"),
         ),
         after={
-            DONE_WORK: _deleted("merged 0", "read×2 merge read branch based-on delete-ref"),
-            MERGE_PR: _deleted("0 record=ran", "read×2 merge read branch based-on delete-ref"),
-            LAND_WORK: _deleted("0 merge: merged", "read×2 merge read branch based-on delete-ref"),
+            DONE_WORK: _deleted(
+                "merged 0", "read×2 merge read×2 branch based-on delete-ref", note=_SETTLED_MADE
+            ),
+            MERGE_PR: _deleted(
+                "0 record=ran", "read×2 merge read×2 branch based-on delete-ref", note=_SETTLED_MADE
+            ),
+            RELEASE: _deleted(
+                "0", "read merge read×2 branch based-on delete-ref", note=_SETTLED_MADE
+            ),
+            LAND_WORK: _deleted(
+                "0 merge: merged",
+                "read×2 merge read×2 branch based-on delete-ref",
+                note=_SETTLED_MADE,
+            ),
         },
     ),
     Scenario(
@@ -1173,6 +1217,9 @@ SCENARIOS: tuple[Scenario, ...] = (
                 "0 record=ran",
                 "read defaults read defaults enqueue read×2 branch based-on delete-ref",
             ),
+            RELEASE: _deleted(
+                "0", "read defaults enqueue read×2 branch based-on delete-ref", note=_SETTLED_MADE
+            ),
             LAND_WORK: _deleted(
                 "0 merge: merged",
                 "read defaults read defaults enqueue read×2 branch based-on delete-ref",
@@ -1189,6 +1236,14 @@ SCENARIOS: tuple[Scenario, ...] = (
             stopped("hangs", "read merge", note=_HANGS),
             stopped("7 merge: not merged", "read×2 merge read", note=_ONE_READING),
         ),
+        after={
+            DONE_WORK: stopped("refused 3 retry", "read×2 merge read×2", note=_SETTLED_NOT_MADE),
+            MERGE_PR: stopped("3", "read×2 merge read×2", note=_SETTLED_NOT_MADE),
+            RELEASE: stopped("1", "read merge read×2", note=_SETTLED_NOT_MADE),
+            LAND_WORK: stopped(
+                "7 merge: not merged", "read×2 merge read×2", note=_SETTLED_NOT_MADE
+            ),
+        },
     ),
     Scenario(
         "request-made-then-gh-failed",
@@ -1203,6 +1258,52 @@ SCENARIOS: tuple[Scenario, ...] = (
                 "read×2 merge",
                 note="it reads the PR merged, and asks for a re-run",
             ),
+        ),
+        after={
+            DONE_WORK: _deleted(
+                "merged 0",
+                "read×2 merge read×2 branch based-on delete-ref",
+                note=_LOST_ANSWER_SETTLED,
+            ),
+            MERGE_PR: _deleted(
+                "0 record=ran",
+                "read×2 merge read×2 branch based-on delete-ref",
+                note=_LOST_ANSWER_SETTLED,
+            ),
+            RELEASE: _deleted(
+                "0", "read merge read×2 branch based-on delete-ref", note=_LOST_ANSWER_SETTLED
+            ),
+            LAND_WORK: _deleted(
+                "0 merge: merged",
+                "read×2 merge read×2 branch based-on delete-ref",
+                note=_LOST_ANSWER_SETTLED,
+            ),
+        },
+    ),
+    Scenario(
+        "killed-mid-request-then-merged",
+        "The landing's `pkit` is killed while gh waits on the merge, which the service made.",
+        _killed_mid_merge_made,
+        Row(
+            _deleted(
+                "merged 0",
+                "read×2 merge read branch based-on delete-ref",
+                note="no document: pm reads the PR merged, and that is the merge",
+            ),
+            _deleted("0 record=ran", "read×2 merge read branch based-on delete-ref"),
+            _NO_ONE_LEFT,
+            _deleted("0 merge: merged", "read×2 merge read branch based-on delete-ref"),
+        ),
+    ),
+    Scenario(
+        "killed-mid-request-then-neither",
+        "The landing's `pkit` is killed while gh waits on the merge, which the service never got.",
+        _killed_mid_merge_unmade,
+        Row(
+            stopped("refused 3 retry", "read×2 merge read", note=_ONE_READING),
+            stopped("3", "read×2 merge read", note=_ONE_READING),
+            _NO_ONE_LEFT,
+            stopped("7 merge: not merged", "read×2 merge read", note=_ONE_READING),
         ),
     ),
     Scenario(
@@ -1225,6 +1326,22 @@ SCENARIOS: tuple[Scenario, ...] = (
             stopped("4 record=owed", "read defaults read defaults enqueue read"),
             stopped("4", "read defaults enqueue read"),
             stopped("4 merge: queued", "read defaults read defaults enqueue read×2"),
+        ),
+    ),
+    Scenario(
+        "read-fails-once-after-a-direct-merge",
+        "gh accepts the direct merge, the next reading fails, and the one after reads it merged.",
+        _read_fails_once_after_a_merge,
+        Row(
+            _deleted(
+                "merged 0",
+                "read×2 merge read×2 branch based-on delete-ref",
+                note="one failed reading after an accepted merge is read again, never taken "
+                "for a merge or for none",
+            ),
+            _deleted("0 record=ran", "read×2 merge read×2 branch based-on delete-ref"),
+            _deleted("0", "read merge read×2 branch based-on delete-ref"),
+            _deleted("0 merge: merged", "read×2 merge read×2 branch based-on delete-ref"),
         ),
     ),
     Scenario(
@@ -2163,14 +2280,13 @@ def land(
 
 
 def _release(args: list[str]) -> str:
-    """`pkit release merge` through the CLI in this process, and its exit —
-    `hangs` when a request the service never answers holds it. It runs with
-    the scenario's own standard input, a terminal where the scenario has one,
-    which a `CliRunner` would replace with its own."""
+    """`pkit release merge` through the CLI in this process, and its exit. It
+    runs with the scenario's own standard input, a terminal where the scenario
+    has one, which a `CliRunner` would replace with its own. A request the
+    service never answers no longer holds it: the backbone's bound on `gh`
+    ends it (#1256)."""
     try:
         cli.main.main(args, prog_name="pkit", standalone_mode=False)
-    except fake.NoAnswer:
-        return "hangs"
     except click.ClickException as exc:
         exc.show()
         return str(exc.exit_code)

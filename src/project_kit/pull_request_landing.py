@@ -58,7 +58,22 @@ The readings and the wait change nothing and run no guard.
 
 `gh` is the hosting service's client here. Every call runs it from the
 caller's directory — it resolves the repository from the git remote — with the
-caller's environment, so a host pinned through `GH_HOST` reaches it.
+caller's environment, so a host pinned through `GH_HOST` reaches it, through
+the command runner's one bounded start (`command_runner.run_bounded`): in the
+caller's process group, so a caller that ends the group `pkit` runs in ends a
+`gh` in flight too, and bounded per call — :data:`GH_READ_SECONDS` for a
+reading, :data:`GH_REQUEST_SECONDS` for a request — past which `gh` alone is
+ended. A reading past its bound is unreadable.
+
+A request that got no answer — ended at its bound, or whose answer was lost on
+the way (a server error, a broken connection, nothing back) — may have been
+made, so it is settled by reading (:func:`_settle`): its end state reached, it
+was made; not reached on two readings running, :data:`SETTLE_INTERVAL_SECONDS`
+apart, it was not made (:data:`NOT_MADE`), which one reading never concludes;
+a reading that cannot be taken leaves it unconfirmed (:data:`UNANSWERED`),
+stating nothing it does not know (ADR-061 point 5, the third obligation, and
+point 7). A request the service answered with an error is refused, in the
+service's words, and never taken for one with no answer.
 """
 
 from __future__ import annotations
@@ -72,7 +87,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
-from project_kit import session_guard
+from project_kit import command_runner, session_guard
 
 #: The version of the documents `pkit pull-request --json` writes; a reader
 #: refuses one it does not know.
@@ -85,6 +100,20 @@ SQUASH = "SQUASH"
 #: composes the squash commit from them, not from the merge command.
 PR_TITLE = "PR_TITLE"
 PR_BODY = "PR_BODY"
+
+#: The bound on one `gh` call, by kind: a reading — one GraphQL query, or one
+#: REST read — and a request that changes the service — `gh pr merge`, which
+#: makes several calls of its own, or a GraphQL mutation. Past it `gh` is
+#: ended: a reading is then unreadable, and a request has no answer
+#: (:func:`_settle`). Each, with whatever a subcommand may still do after it,
+#: stays below the bound project-management puts on that subcommand
+#: (`_lib/merge_queue.py`'s `TIMEOUT_SECONDS`), so its document comes back.
+GH_READ_SECONDS = 15.0
+GH_REQUEST_SECONDS = 30.0
+
+#: How long a request with no answer waits between the two readings that
+#: settle it, so a request the service was still making shows in the second.
+SETTLE_INTERVAL_SECONDS = 10.0
 
 #: How long the wait sleeps between two readings.
 POLL_SECONDS = 15.0
@@ -115,11 +144,18 @@ UNCONFIRMED = "unconfirmed"
 #: open PR uses the branch as its head or as its base; the service answered
 #: the deletion with an error (a protected branch, say); or the deletion got
 #: no usable answer and a reading since finds the branch still at the head
-#: that merged. :data:`UNANSWERED` is also why a deletion is unconfirmed.
+#: that merged. :data:`UNANSWERED` is also why a deletion, a merge, an
+#: enqueue or a dequeue is unconfirmed: it got no usable answer, and the PR
+#: could not be read since.
 TIP_MOVED = "tip-moved"
 OPEN_PULL_REQUEST = "open-pull-request"
 DELETION_REFUSED = "deletion-refused"
 UNANSWERED = "unanswered"
+
+#: Why a merge, an enqueue or a dequeue was not accepted though the service
+#: refused nothing: it got no usable answer, and two readings running since
+#: find its end state not reached (:func:`_settle`).
+NOT_MADE = "not-made"
 
 #: Why a deletion was refused, besides the cross-repository guard's
 #: (`session_guard.FOREIGN_REPOSITORY`): the PR has not merged; its head is in
@@ -348,15 +384,29 @@ class Reading:
 class Outcome:
     """What a request to the hosting service came to."""
 
-    accepted: bool
-    #: `gh`'s exit code; None when it could not be run, or the request was
-    #: judged on a reading rather than on gh's exit.
+    #: True once it was made: gh accepted it, or a reading since it got no
+    #: answer finds its end state reached. False when it was not: the service
+    #: refused it, gh could not be run, or two readings running since it got
+    #: no answer find its end state not reached (:data:`NOT_MADE`). None when
+    #: whether it was made is not known — no answer, and no reading since
+    #: (:data:`UNANSWERED`): it is unconfirmed.
+    accepted: bool | None
+    #: `gh`'s exit code; None when it could not be run, was ended at its
+    #: bound, or the request was judged on a reading rather than on gh's exit.
     exit_code: int | None = 0
-    #: Why it was not accepted: gh's own words, or why gh could not run.
+    #: Why it was not accepted, or why whether it was is not known: gh's own
+    #: words, why gh could not run, or what the readings since found.
     reason: str = ""
+    #: :data:`NOT_MADE` or :data:`UNANSWERED`; "" otherwise.
+    reason_kind: str = ""
 
     def as_json(self) -> dict[str, Any]:
-        return {"accepted": self.accepted, "exit_code": self.exit_code, "reason": self.reason}
+        return {
+            "accepted": self.accepted,
+            "exit_code": self.exit_code,
+            "reason": self.reason,
+            "reason_kind": self.reason_kind or None,
+        }
 
 
 @dataclass(frozen=True)
@@ -369,19 +419,34 @@ class Wait:
     reading: Reading
 
 
+@dataclass(frozen=True)
+class _Gh:
+    """The module's own `gh`: run from `cwd` — None, the working directory —
+    in this process's environment, through the command runner's one bounded
+    start, so it stays in this process's group and is ended alone past its
+    bound: :data:`GH_REQUEST_SECONDS` when its calls are `requests` that
+    change the service, else :data:`GH_READ_SECONDS`. Raises
+    `subprocess.TimeoutExpired` past it."""
+
+    cwd: Path | None = None
+    requests: bool = False
+
+    def __call__(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
+        seconds = GH_REQUEST_SECONDS if self.requests else GH_READ_SECONDS
+        return command_runner.run_bounded(argv, cwd=self.cwd, seconds=seconds)
+
+
 def run_gh(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
-    """Run `gh` from the working directory, in this process's environment."""
-    return subprocess.run(list(argv), capture_output=True, text=True, check=False)
+    """Run `gh` from the working directory, in this process's environment,
+    bounded as a reading (:data:`GH_READ_SECONDS`)."""
+    return _Gh()(argv)
 
 
 def gh_runner(cwd: Path) -> GhRunner:
     """A runner of `gh` from `cwd`, for a caller whose repository is not the
-    working directory's."""
-
-    def run(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(list(argv), capture_output=True, text=True, cwd=cwd, check=False)
-
-    return run
+    working directory's: bounded as a reading, and as a request where it makes
+    one (:func:`_requesting`)."""
+    return _Gh(cwd)
 
 
 # ---- reading -----------------------------------------------------------------
@@ -454,7 +519,9 @@ def squash_merge(
     the merge alone.
 
     Accepted is not proof of a merge: on a base that requires a queue, gh
-    enqueues and exits 0. Read the PR afterwards (:func:`read`).
+    enqueues and exits 0. Read the PR afterwards (:func:`read`). A merge that
+    got no answer is settled by reading (:func:`_settle`): made once the PR
+    reads merged or queued.
     """
     run = _acting(clearance, cwd)
     cmd = ["gh", "pr", "merge", str(pr_number), "--squash", "--subject", subject]
@@ -462,7 +529,7 @@ def squash_merge(
         cmd += ["--match-head-commit", head_oid]
     if admin:
         cmd.append("--admin")
-    return _request(run, cmd)
+    return _request(pr_number, run, cmd, _MERGING)
 
 
 def enqueue(
@@ -481,12 +548,14 @@ def enqueue(
     squash-commit defaults instead. With `--auto`, a PR whose own required
     checks are still running is taken in once they pass. Never `--admin`,
     which merges around the queue. The PR has not merged when this returns.
+    An enqueue that got no answer is settled by reading (:func:`_settle`):
+    made once the PR reads queued or merged.
     """
     run = _acting(clearance, cwd)
     cmd = ["gh", "pr", "merge", str(pr_number), "--auto"]
     if head_oid:
         cmd += ["--match-head-commit", head_oid]
-    return _request(run, cmd)
+    return _request(pr_number, run, cmd, _ENQUEUING)
 
 
 def dequeue(
@@ -502,7 +571,9 @@ def dequeue(
     `gh pr merge --disable-auto` cancels the auto-merge; on a PR already in
     the queue gh answers "already queued to merge" and changes nothing, so
     such a PR is taken out through GitHub's own `dequeuePullRequest`. Accepted
-    once a reading shows the PR neither queued nor merged.
+    once a reading shows the PR neither queued nor merged. A dequeue that got
+    no answer is settled by reading (:func:`_settle`): made once the PR reads
+    out of the queue.
     """
     run = _acting(clearance, cwd)
     try:
@@ -517,9 +588,11 @@ def dequeue(
         cmd = ["gh", "api", "graphql", "-f", f"query={_DEQUEUE}", "-f", f"id={before.pr_id}"]
     else:
         cmd = ["gh", "pr", "merge", str(pr_number), "--disable-auto"]
-    outcome = _request(run, cmd)
-    if not outcome.accepted:
-        return outcome
+    sent = _send(_requesting(run), cmd)
+    if sent.ended == _NOT_APPLIED:
+        return Outcome(False, sent.exit_code, sent.said)
+    if sent.ended == _NO_ANSWER:
+        return _settle(pr_number, run, _DEQUEUING, sent.said)
     try:
         after = read(pr_number, gh=run)
     except Unreadable as exc:
@@ -528,7 +601,95 @@ def dequeue(
         )
     if after.merged or after.queued:
         return Outcome(False, None, f"PR #{pr_number} is still {after.describe()}")
-    return Outcome(True, outcome.exit_code)
+    return Outcome(True, sent.exit_code)
+
+
+# ---- a request with no answer ------------------------------------------------
+
+
+def _merged_or_queued(pr_number: int, reading: Reading) -> Outcome | None:
+    """What a reading since a merge or an enqueue got no answer settles: made
+    once the PR reads merged or queued — a merge on a base that requires a
+    queue enqueues — else nothing."""
+    return Outcome(True, None) if reading.merged or reading.queued else None
+
+
+def _out_of_the_queue(pr_number: int, reading: Reading) -> Outcome | None:
+    """What a reading since a dequeue got no answer settles: made once the PR
+    reads out of the queue; not accepted once it has merged, which no dequeue
+    undoes; nothing while it reads queued."""
+    if reading.merged:
+        return Outcome(False, None, f"PR #{pr_number} has merged ({reading.describe()})")
+    return None if reading.queued else Outcome(True, None)
+
+
+@dataclass(frozen=True)
+class _Asked:
+    """A request, as :func:`_settle` reads what it came to: its name; how the
+    PR reads while the request's end state is not reached; and what one
+    reading settles (`judge`), None when it settles nothing."""
+
+    name: str
+    unsettled: str
+    judge: Callable[[int, Reading], Outcome | None]
+
+
+_MERGING = _Asked("merge", "neither merged nor queued", _merged_or_queued)
+_ENQUEUING = _Asked("enqueue", "neither queued nor merged", _merged_or_queued)
+_DEQUEUING = _Asked("dequeue", "still queued", _out_of_the_queue)
+
+
+def _request(pr_number: int, run: GhRunner, cmd: list[str], asked: _Asked) -> Outcome:
+    """Send a request on `run`, bounded as a request, and say what it came to:
+    accepted when gh accepted it; refused, in the service's words, when the
+    service answered with an error or gh could not be run; and, with no
+    usable answer, settled by reading (:func:`_settle`)."""
+    sent = _send(_requesting(run), cmd)
+    if sent.ended == _APPLIED:
+        return Outcome(True, sent.exit_code)
+    if sent.ended == _NOT_APPLIED:
+        return Outcome(False, sent.exit_code, sent.said)
+    return _settle(pr_number, run, asked, sent.said)
+
+
+def _settle(pr_number: int, run: GhRunner, asked: _Asked, said: str) -> Outcome:
+    """What a request that got no usable answer — `said` says why — came to,
+    as the PR reads since (ADR-061 point 5, the third obligation; point 7).
+
+    A reading at the request's end state settles it (`asked.judge`). Neither,
+    the PR is read again after :data:`SETTLE_INTERVAL_SECONDS`, since a
+    request the service was still making shows in a later reading; neither
+    again, the request was not made (:data:`NOT_MADE`) — which one reading
+    never concludes. A reading that cannot be taken leaves it unconfirmed
+    (:data:`UNANSWERED`): `accepted` and `exit_code` None, since whether it
+    was made, and how gh would have ended, are not known.
+    """
+    lost = f"the {asked.name} of PR #{pr_number} got no answer ({said})"
+    found = ""
+    for attempt in range(2):
+        if attempt:
+            _sleep(SETTLE_INTERVAL_SECONDS)
+        try:
+            reading = read(pr_number, gh=run)
+        except Unreadable as exc:
+            return Outcome(
+                None,
+                None,
+                f"{lost}, and PR #{pr_number} could not be read since ({exc}): whether the "
+                f"{asked.name} was made is not known",
+                UNANSWERED,
+            )
+        settled = asked.judge(pr_number, reading)
+        if settled is not None:
+            return settled
+        found = reading.describe()
+    return Outcome(
+        False,
+        None,
+        f"{lost}, and two readings since, {SETTLE_INTERVAL_SECONDS:g} s apart, find PR "
+        f"#{pr_number} {asked.unsettled} ({found}): the {asked.name} was not made",
+        NOT_MADE,
+    )
 
 
 # ---- the head branch ---------------------------------------------------------
@@ -626,21 +787,34 @@ class _HeadBranch:
 
 @dataclass(frozen=True)
 class _Sent:
-    """What the deletion's request came to (:func:`_mutation`): `ended` is
+    """What a request came to as gh ended (:func:`_send`): `ended` is
     :data:`_APPLIED`, :data:`_NOT_APPLIED` or :data:`_NO_ANSWER`; `said` is
-    what the service answered, or why there is no answer from it."""
+    what the service answered, or why there is no answer from it; `exit_code`
+    is gh's, None when it could not be run or was ended at its bound."""
 
     ended: str
     said: str = ""
+    exit_code: int | None = None
 
 
-# How a mutation ended (:class:`_Sent`): applied; not applied — the service
-# answered with errors, so it did not apply it, or gh could not be run and
-# nothing was sent; or no usable answer — gh failed with nothing from the
-# service in it (a 502, a reset), so it may have been applied or not.
+# How a request ended (:class:`_Sent`): applied; not applied — the service
+# answered with an error, so it did not apply it, or gh could not be run and
+# nothing was sent; or no usable answer — gh was ended at its bound, or failed
+# with nothing from the service in it (a 502, a reset), so it may have been
+# applied or not.
 _APPLIED = "applied"
 _NOT_APPLIED = "not-applied"
 _NO_ANSWER = "no-answer"
+
+# What gh says when the service's answer was lost on the way rather than
+# given: a server error (HTTP 5xx), or a connection that broke — reset, closed
+# early, timed out — once the request may have reached the service.
+_LOST_ANSWER = re.compile(
+    r"HTTP 5\d\d|connection reset|unexpected EOF|\bEOF\b|i/o timeout|timeout exceeded|"
+    r"TLS handshake timeout|context deadline exceeded|broken pipe|stream error|GOAWAY|"
+    r"server closed",
+    re.IGNORECASE,
+)
 
 
 def full_object_id(value: str) -> str:
@@ -726,7 +900,7 @@ def delete_branch(
         "-f",
         f"after={_NO_COMMIT}",
     ]
-    sent = _mutation(run, cmd)
+    sent = _send(_requesting(run), cmd)
     if sent.ended == _APPLIED:
         return head.ended(DELETED)
     return _not_deleted(pr_number, head, expect, sent, run)
@@ -1031,12 +1205,13 @@ def outcome_document(
     pr_number: int, outcome: Outcome, clearance: session_guard.Clearance
 ) -> dict[str, Any]:
     """The document of a request — `merge`, `enqueue`, `dequeue` — and of the
-    guard that let it be made: `reason_kind` null, `guard` how it cleared."""
+    guard that let it be made: `accepted` null when whether it was made is
+    not known (unconfirmed); `reason_kind` `not-made`, `unanswered` or null;
+    `guard` how it cleared."""
     return {
         "schema_version": SCHEMA_VERSION,
         "pull_request": pr_number,
         **outcome.as_json(),
-        "reason_kind": None,
         "guard": clearance.as_json(),
     }
 
@@ -1132,37 +1307,35 @@ def _acting(clearance: session_guard.Clearance, cwd: Path) -> GhRunner:
     return gh_runner(session_guard.require(clearance, cwd))
 
 
+def _requesting(run: GhRunner) -> GhRunner:
+    """`run` for a request: the module's own `gh` bounded as a request is
+    (:data:`GH_REQUEST_SECONDS`); a runner handed in, as it is."""
+    return _Gh(run.cwd, requests=True) if isinstance(run, _Gh) else run
+
+
 def _run(run: GhRunner, cmd: list[str]) -> subprocess.CompletedProcess[str]:
-    """Run `cmd`, raising :class:`Unreadable` when `gh` cannot be run."""
+    """Run a reading, raising :class:`Unreadable` when `gh` cannot be run or
+    does not answer within its bound."""
     try:
         return run(cmd)
     except FileNotFoundError as exc:
         raise Unreadable("`gh` not on PATH") from exc
     except OSError as exc:  # on PATH but not runnable: permissions, bad binary
         raise Unreadable(f"`gh` could not be run ({exc})") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise Unreadable(f"`gh` did not answer within {exc.timeout:g} s, and was ended") from None
 
 
-def _request(run: GhRunner, cmd: list[str]) -> Outcome:
-    """Run a request; its outcome, with gh's reason when it was refused."""
-    try:
-        proc = run(cmd)
-    except FileNotFoundError:
-        return Outcome(False, None, "`gh` not on PATH")
-    except OSError as exc:
-        return Outcome(False, None, f"`gh` could not be run ({exc})")
-    if proc.returncode != 0:
-        return Outcome(False, proc.returncode, (proc.stderr or "").strip())
-    return Outcome(True, proc.returncode)
-
-
-def _mutation(run: GhRunner, cmd: list[str]) -> _Sent:
-    """Run a GraphQL mutation, telling three ends apart.
+def _send(run: GhRunner, cmd: list[str]) -> _Sent:
+    """Send a request, telling three ends apart.
 
     Applied: gh exited 0 and the answer names no errors. Not applied: the
-    answer carries errors — the service answered, and a mutation it answers
-    with errors it did not apply — or gh could not be run, so nothing was
-    sent. No usable answer: gh failed with no errors from the service in its
-    answer (a 502, a reset), so the mutation may have been applied or not.
+    service answered with an error, which it did not apply — the GraphQL
+    errors its answer carries, or what gh says it answered (a refusal, a
+    4xx) — or gh could not be run, so nothing was sent. No usable answer: gh
+    was ended at its bound, or failed with nothing from the service in its
+    answer — no words at all, a server error (a 502), a broken connection (a
+    reset) — so the request may have been applied or not.
     """
     try:
         proc = run(cmd)
@@ -1170,13 +1343,18 @@ def _mutation(run: GhRunner, cmd: list[str]) -> _Sent:
         return _Sent(_NOT_APPLIED, "`gh` not on PATH, so nothing was sent")
     except OSError as exc:
         return _Sent(_NOT_APPLIED, f"`gh` could not be run ({exc}), so nothing was sent")
+    except subprocess.TimeoutExpired as exc:
+        return _Sent(_NO_ANSWER, f"`gh` did not answer within {exc.timeout:g} s, and was ended")
     errors = _mapping(_json(proc.stdout)).get("errors")
     named = _list(errors)
     if named:
-        return _Sent(_NOT_APPLIED, _error_text(proc.stderr, named))
+        return _Sent(_NOT_APPLIED, _error_text(proc.stderr, named), proc.returncode)
     if proc.returncode == 0 and not errors:
-        return _Sent(_APPLIED)
-    return _Sent(_NO_ANSWER, (proc.stderr or "").strip() or "gh answered nothing")
+        return _Sent(_APPLIED, exit_code=0)
+    said = (proc.stderr or "").strip()
+    if proc.returncode != 0 and said and not _LOST_ANSWER.search(said):
+        return _Sent(_NOT_APPLIED, said, proc.returncode)
+    return _Sent(_NO_ANSWER, said or "gh answered nothing", proc.returncode)
 
 
 def _cross_repository(pr: Mapping[str, Any]) -> bool:

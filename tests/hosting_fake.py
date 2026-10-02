@@ -12,20 +12,23 @@ its own code. This module answers all of it in this process, from one model:
   the remote branches, a protected one, and other open PRs on a branch or
   based on one. A
   queued PR moves on by one :data:`Step` per reading. A request can be
-  refused, fail after it was made, or get no answer — made and the reply lost,
-  or never received (:class:`NoAnswer`) — and a second actor can act before or
-  after any request (:meth:`HostingService.before`, :meth:`~HostingService.after`).
+  refused, fail after it was made, get no answer — made and the reply lost,
+  or never received (:class:`NoAnswer`): `gh` hangs on it until its bound
+  ends it — or be killed mid-request, made or not, with the whole run that
+  sent it (:class:`Killed`); and a second actor can act before or after any
+  request (:meth:`HostingService.before`, :meth:`~HostingService.after`).
   Every request is recorded, in order (:attr:`HostingService.requests`).
 - :class:`LocalClone` is the clone the run is in: its branches and commits,
   and other repositories on the machine, which the cross-repository guards —
   project-management's and the backbone's — compare by their `git -C`
   answers, or find git not answering.
-- :func:`install` routes every `subprocess.run` of `gh` and `git` to them, runs
-  from the clone and sets the session anchor explicitly — the suite itself
-  often runs inside a session that sets it. :func:`route_backbone` runs
-  project-management's backbone seam in this process (`tests.pull_request_backbone`),
-  ending a request the service never answers as the capability's bound ends
-  it.
+- :func:`install` routes every `subprocess.run` of `gh` and `git` to them, and
+  the backbone's bounded start of `gh` (`command_runner.run_bounded`), which
+  ends a `gh` that never gets an answer at its bound; it runs from the clone
+  and sets the session anchor explicitly — the suite itself often runs inside
+  a session that sets it. :func:`route_backbone` runs project-management's
+  backbone seam in this process (`tests.pull_request_backbone`), ending a run
+  killed mid-request as the capability's bound ends it: with no document.
 
 It merges what `test_pm_done_work.py`'s `_QUEUE_FAKE_GH` (a `gh` on PATH keeping
 one PR and its queue) and `test_release_merge.py`'s `_Host` (the backbone's
@@ -46,7 +49,7 @@ from typing import Any
 
 import pytest
 
-from project_kit import session_guard
+from project_kit import command_runner, session_guard
 from tests import pull_request_backbone
 
 Completed = subprocess.CompletedProcess[str]
@@ -104,6 +107,12 @@ ERROR_AFTER = "made, then gh failed"
 LOST_REPLY = "made, no answer"
 #: The request never reached the service, and nothing came back (:class:`NoAnswer`).
 NEVER_RECEIVED = "not made, no answer"
+#: The request was made, and the run that sent it was killed before the
+#: answer came back (:class:`Killed`).
+KILLED_MADE = "made, then killed"
+#: The run that sent the request was killed before it reached the service
+#: (:class:`Killed`).
+KILLED_UNMADE = "not made, killed"
 
 _MERGED_AT = "2026-10-01T10:12:00Z"
 _MERGE_COMMIT = "c0ffee" + "0" * 34
@@ -131,7 +140,14 @@ HEAD = oid("head")
 
 class NoAnswer(Exception):
     """`gh` sent the request, or tried to, and no answer came back: the run
-    waits on it until something ends it."""
+    waits on it until something ends it — the backbone's bound on the call
+    (:func:`install`)."""
+
+
+class Killed(Exception):
+    """The run that sent a request was killed mid-request — `gh` with it, as
+    project-management's kill of the `pkit` process group ends it: nothing in
+    the run answers any more (:func:`route_backbone`)."""
 
 
 Step = Callable[["HostingService"], None]
@@ -370,6 +386,11 @@ class HostingService:
         comes back."""
         self._add_fault(kind, None, 1, NEVER_RECEIVED, "")
 
+    def kill_mid_request(self, kind: str, *, made: bool) -> None:
+        """The run that sends the next request of `kind` is killed while gh
+        waits on it — after the service made it, or before it reached it."""
+        self._add_fault(kind, None, 1, KILLED_MADE if made else KILLED_UNMADE, "")
+
     def before(self, kind: str, action: Step, *, nth: int = 1) -> None:
         """Run `action` — a second actor, say — just before the `nth` request
         of `kind` is answered."""
@@ -422,10 +443,12 @@ class HostingService:
         self.requests.append(request)
         self._fire(kind, nth, before=True)
         fault = next((f for f in self._faults if f.matches(kind, nth)), None)
-        if fault is not None and fault.effect in (REFUSED, NEVER_RECEIVED):
+        if fault is not None and fault.effect in (REFUSED, NEVER_RECEIVED, KILLED_UNMADE):
             request.result = fault.effect
             if fault.effect == NEVER_RECEIVED:
                 raise NoAnswer(f"`gh {' '.join(args[:3])}` got no answer")
+            if fault.effect == KILLED_UNMADE:
+                raise Killed(f"killed while `gh {' '.join(args[:3])}` waited")
             return _done(args, 1, stderr=fault.stderr)
         answered = self._answer(kind, args, request)
         self._fire(kind, nth, before=False)
@@ -434,6 +457,8 @@ class HostingService:
         request.result = fault.effect
         if fault.effect == LOST_REPLY:
             raise NoAnswer(f"`gh {' '.join(args[:3])}` got no answer")
+        if fault.effect == KILLED_MADE:
+            raise Killed(f"killed while `gh {' '.join(args[:3])}` waited")
         return _done(args, 1, stderr=fault.stderr)
 
     def _fire(self, kind: str, nth: int, *, before: bool) -> None:
@@ -899,7 +924,13 @@ def install(
     terminal, standard error on the same terminal (:class:`Screen`) — and the
     session anchor at `anchor` — None unsets it, as outside any session. Any
     other program a run starts fails the test: the scenario must not reach
-    past the fakes."""
+    past the fakes.
+
+    The backbone starts `gh` through its one bounded start
+    (`command_runner.run_bounded`): a request the service never answers
+    (:class:`NoAnswer`) hangs there until its bound ends it, which raises
+    `subprocess.TimeoutExpired` as the real start does — at once, since no
+    test waits out a real bound."""
 
     def run(args: Sequence[str], *_: Any, **kwargs: Any) -> Completed:
         argv = [str(arg) for arg in args]
@@ -913,7 +944,17 @@ def install(
             raise subprocess.CalledProcessError(done.returncode, argv, done.stdout, done.stderr)
         return done
 
+    def bounded(argv: Sequence[str], *, seconds: float, **_: Any) -> Completed:
+        args = [str(arg) for arg in argv]
+        if args[:1] != ["gh"]:
+            raise AssertionError(f"the backbone's bounded start ran {args}, which no fake answers")
+        try:
+            return host(args)
+        except NoAnswer:
+            raise subprocess.TimeoutExpired(args, seconds) from None
+
     monkeypatch.setattr(subprocess, "run", run)
+    monkeypatch.setattr(command_runner, "run_bounded", bounded)
     monkeypatch.chdir(clone.root)
     monkeypatch.setattr("sys.stdin", stdin)
     if stdin.isatty():
@@ -952,10 +993,11 @@ def route_backbone(
     """Run project-management's `pkit pull-request` seam (`mq._answers`) in this
     process, on the `gh` :func:`install` answers and `clock`.
 
-    A request the service never answers (:class:`NoAnswer`) ends the run as
-    project-management's bound ends it: no document, the reading pm takes as
-    no answer. `rewrite`, handed the subcommand's arguments and each document,
-    stands in for a backbone that answers otherwise.
+    A run killed mid-request (:class:`Killed`) ends as project-management's
+    bound ends it, the `pkit` process group killed with the `gh` in it: no
+    document, the reading pm takes as no answer. `rewrite`, handed the
+    subcommand's arguments and each document, stands in for a backbone that
+    answers otherwise.
     """
     pull_request_backbone.in_process(monkeypatch, mq, sleep=clock.sleep, clock=clock)
     inner = mq._answers
@@ -967,7 +1009,7 @@ def route_backbone(
         try:
             for document in inner(args, config, timeout_seconds=timeout_seconds):
                 yield rewrite(args, document) if rewrite is not None else document
-        except NoAnswer:
+        except Killed:
             raise mq.Unreadable(
                 f"`pkit pull-request {args[0]}` gave no answer within {bound:g} s, and was stopped"
             ) from None
