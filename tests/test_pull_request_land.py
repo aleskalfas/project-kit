@@ -30,7 +30,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from project_kit import cli, session_guard
+from project_kit import cli, command_runner, session_guard
 from project_kit import pull_request_landing as landing
 from tests import hosting_fake as fake
 from tests import landing_end_cases as cases
@@ -470,6 +470,184 @@ def test_a_refused_merge_of_a_pr_nothing_holds_gives_no_warning(
     host.requirements_met = False
     end = _land(here)
     assert (end.ended, end.warnings) == (landing.END_FAILED, ())
+
+
+# ---- the reading the rows match ------------------------------------------------------
+
+
+def test_a_first_reading_that_names_no_head_is_unreadable(
+    here: dict[str, Any], host: fake.HostingService
+) -> None:
+    host.head_oid = ""
+    end = _land(here)
+    assert (end.ended, end.reason_kind, end.reason) == (
+        landing.END_UNREADABLE,
+        None,
+        "the reading of PR #496 names no head commit",
+    )
+    assert end.reading is not None and _requests(host) == "read"
+
+
+@pytest.mark.parametrize(
+    "setup", [lambda s: None, _queued_at_another_head], ids=["open-row", "dequeue-row"]
+)
+def test_a_reading_that_names_no_state_gets_no_request(
+    setup: Callable[[fake.HostingService], Any], here: dict[str, Any], host: fake.HostingService
+) -> None:
+    """The rows that send match an open PR, not one that is merely neither
+    merged nor closed: a reading naming no state is unreadable."""
+    setup(host)
+    host.state = ""
+    end = _land(here)
+    assert (end.ended, end.reason_kind) == (landing.END_UNREADABLE, None)
+    assert end.reason == (
+        "the reading of PR #496 names it neither open, closed nor merged (its state: none)"
+    )
+    assert _requests(host) == "read"
+
+
+@pytest.mark.parametrize(
+    ("defaults", "ended", "reason_kind", "asked"),
+    [
+        (
+            ("COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES"),
+            landing.END_REFUSED,
+            landing.SQUASH_DEFAULTS,
+            "read defaults",
+        ),
+        (None, landing.END_UNREADABLE, landing.SQUASH_DEFAULTS, "read defaults"),
+    ],
+    ids=["defaults-not-the-convention", "defaults-unreadable"],
+)
+def test_a_pr_queued_at_the_head_under_refuse_is_judged_by_the_defaults(
+    defaults: tuple[str, str] | None,
+    ended: str,
+    reason_kind: str,
+    asked: str,
+    here: dict[str, Any],
+    host: fake.HostingService,
+) -> None:
+    """Queued at H in a queue that squashes, `--queued-bad-shape refuse`:
+    defaults that are not the PR's title and body refuse, the PR left
+    queued; defaults that cannot be read leave it unreadable — nothing sent
+    either way."""
+    _queued_at_the_head(host)
+    host.squash_defaults = defaults
+    end = _land(here, queued_bad_shape=landing.SHAPE_REFUSE)
+    assert (end.ended, end.reason_kind, end.sent, _requests(host)) == (
+        ended,
+        reason_kind,
+        None,
+        asked,
+    )
+    assert host.in_queue
+
+
+# ---- what the landing hands on unasked --------------------------------------------------
+
+
+def test_land_resets_its_hook_whether_it_returns_or_raises(
+    here: dict[str, Any], host: fake.HostingService
+) -> None:
+    """The line before each request is told through a hook the landing sets
+    for its own run only."""
+    stream = _Closing(lambda written, document: document["event"] == "requesting")
+    with pytest.raises(BrokenPipeError):
+        landing.land(PR, head=HEAD, subject="x", on_event=stream, **here)
+    assert landing._ON_SEND.get() is None
+    assert _land(here).ended == landing.END_MERGED
+    assert landing._ON_SEND.get() is None
+
+
+@pytest.mark.parametrize("seconds", [None, 60.0], ids=["merged-in-the-wait", "time-ran-out"])
+def test_a_direct_merge_the_service_queued_instead_is_warned_of(
+    seconds: float | None, here: dict[str, Any], host: fake.HostingService
+) -> None:
+    """The reading after the direct merge finds the PR queued: the service
+    queued it, so the queue composes the commit, and no reading judged its
+    shape. Merged or still queued at the end, the landing says so."""
+    host.merge_enqueues = True
+    host.progress = [fake.at(1), fake.lands()] if seconds is None else [fake.at(3, "QUEUED")]
+    end = _land(here, seconds=seconds)
+    assert end.ended == (landing.END_MERGED if seconds is None else landing.END_QUEUED)
+    assert (end.sent, end.path, end.shape) == (landing.MERGE_REQUEST, landing.PATH_QUEUE, None)
+    assert end.warnings == (
+        landing.Notice(
+            landing.ENQUEUED_INSTEAD,
+            "the service queued PR #496 instead of merging it: the queue composes the squash "
+            "commit, and its shape was not judged",
+        ),
+    )
+
+
+def _queue_switched_off(service: fake.HostingService) -> None:
+    service.set_base(fake.Base())
+    service.auto_merge = False
+
+
+@pytest.mark.parametrize(
+    ("setup", "sent", "made"),
+    [
+        (
+            lambda s: s.after(fake.MERGE, _unmerge),
+            landing.MERGE_REQUEST,
+            "the merge of PR #496 was made",
+        ),
+        (
+            lambda s: (
+                _queue(s),
+                setattr(s, "checks_pending", True),
+                s.after(fake.ENQUEUE, _queue_switched_off),
+            ),
+            landing.ENQUEUE_REQUEST,
+            "the enqueue of PR #496 was made",
+        ),
+        (
+            lambda s: (
+                _queue(s),
+                setattr(s, "auto_merge", True),
+                s.after(fake.READ, _queue_switched_off),
+            ),
+            None,
+            "nothing was sent: PR #496 was waited for as it was found queued",
+        ),
+    ],
+    ids=["after-a-direct-merge", "after-an-enqueue", "found-queued"],
+)
+def test_not_merged_says_what_was_sent(
+    setup: Callable[[fake.HostingService], Any],
+    sent: str | None,
+    made: str,
+    here: dict[str, Any],
+    host: fake.HostingService,
+) -> None:
+    """Out of the queue on two readings, no queue seen — the base having lost
+    its queue during the wait, where a merge was not what was sent."""
+    setup(host)
+    end = _land(here)
+    assert (end.ended, end.sent) == (landing.END_NOT_MERGED, sent)
+    assert end.reason is not None and end.reason.startswith(f"{made}, and PR #496 reads ")
+    assert end.reason.endswith(", with no merge queue seen")
+
+
+def test_a_wait_reading_that_fails_ends_on_the_last_one_taken(
+    here: dict[str, Any], host: fake.HostingService
+) -> None:
+    """Not the last one written: a reading that changed nothing a person
+    reads is still the landing's last."""
+    _queued_at_the_head(host)
+
+    def renamed(service: fake.HostingService) -> None:
+        service.node_id = "PR_renamed"
+
+    host.progress = [fake.unchanged(), fake.unchanged(), renamed]
+    host.fail(fake.READ, first=4, count=None)
+    events: list[dict[str, Any]] = []
+    end = _land(here, events=events)
+    assert (end.ended, end.reason_kind) == (landing.END_QUEUED, landing.NOT_READ)
+    assert end.reading is not None and end.reading.pr_id == "PR_renamed"
+    written = [e["reading"]["pr_id"] for e in events if e["event"] == "reading"]
+    assert written == ["PR_node", "PR_node"]
 
 
 # ---- the refusal order and the stops no option lifts -------------------------------
@@ -1207,6 +1385,63 @@ def test_the_dry_run_plans_within_its_own_bound() -> None:
     """The dry run's longest — the guard, one reading, the defaults — with
     the constants as they stand."""
     assert landing.planning_longest_seconds() == 98.0
+
+
+_REQUEST_KINDS = frozenset({fake.MERGE, fake.MERGE_ADMIN, fake.ENQUEUE, fake.DISABLE_AUTO})
+
+
+def test_the_longest_landing_ends_within_its_bound(
+    here: dict[str, Any],
+    host: fake.HostingService,
+    clock: fake.Clock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """On the injected clock, every `gh` call taking its bound and the grace
+    after it, every reading as long as its most calls: a direct merge with
+    no usable answer, made on the second settling reading; the reading after
+    it; the wait to its limit, the PR held by auto-merge, its head moving on
+    the reading in flight at the deadline; and the dequeue, sent twice, each
+    settled on its most readings. With the guard at the entry, it ends
+    within `bound_seconds`."""
+    seconds = 60.0
+    grace = command_runner.END_GRACE_SECONDS
+    a_reading = landing.CALLS_PER_READING * (landing.GH_READ_SECONDS + grace)
+    a_request = landing.GH_REQUEST_SECONDS + grace
+    reads: list[float] = []
+    pushed: list[int] = []
+
+    def before_a_read(service: fake.HostingService) -> None:
+        n = len(reads)
+        if n == 3:  # the settling's second reading: the merge made, held by auto-merge
+            service.auto_merge = True
+        waiting = n >= 5 and not pushed
+        if waiting and clock.now + a_reading >= reads[4] + seconds:
+            service.push(PUSHED)
+            pushed.append(n)
+        if pushed:
+            # After the push: the dequeue's first reading, then three to settle
+            # each of its two sends — queued, out, queued; queued, out, out.
+            after = n - pushed[0]
+            service.auto_merge = {3: False, 4: True, 6: False}.get(after, service.auto_merge)
+
+    def at_its_bound(argv: Sequence[str]) -> Completed:
+        kind = fake._kind([str(arg) for arg in argv][1:])
+        if kind == fake.READ:
+            reads.append(clock.now)
+            before_a_read(host)
+        clock.now += a_request if kind in _REQUEST_KINDS else a_reading
+        return host(argv)
+
+    host.fail(fake.MERGE, stderr="HTTP 502: Bad Gateway")
+    host.fail(fake.DISABLE_AUTO, count=None, stderr="HTTP 502: Bad Gateway")
+    monkeypatch.setattr(landing, "gh_runner", lambda cwd: at_its_bound)
+    end = _land(here, seconds=seconds)
+    elapsed = session_guard.LONGEST_SECONDS + clock.now
+    assert (end.ended, end.sent) == (landing.END_HEAD_MOVED, landing.MERGE_REQUEST)
+    assert end.dequeue is not None and end.dequeue.accepted is True
+    assert "it was sent once more" in end.dequeue.reason
+    assert host.kinds().count(fake.DISABLE_AUTO) == 2
+    assert elapsed <= end.bound_seconds == landing.landing_longest_seconds(seconds)
 
 
 @pytest.mark.parametrize("seconds", [None, 0.0, 120.0])

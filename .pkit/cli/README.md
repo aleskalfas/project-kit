@@ -579,6 +579,7 @@ The landing sequence, in one command (ADR-061 point 5). It composes the steps ab
 | The PR at the reading | The landing |
 |---|---|
 | unreadable, or naming no head | `unreadable` |
+| naming no state the landing knows: neither open, closed nor merged | `unreadable`, nothing sent |
 | merged at `H` | `merged` |
 | merged at another head | `merged-at-another-head` |
 | closed | `closed` |
@@ -592,6 +593,8 @@ The landing sequence, in one command (ADR-061 point 5). It composes the steps ab
 - "Queued" is in the queue, or held by auto-merge until it may enter. A PR auto-merge holds at `H` on a base without a queue takes the last row: the direct merge is sent, not a wait.
 - Auto-merge holds a PR because its base's requirements are not met. Where they are met by the merge, it goes through. Where they are not, `gh` refuses a plain merge in words the module knows for a refusal: the landing ends `failed`, `sent: null`, with an `auto-merge-armed` warning that auto-merge is still enabled on the PR and will merge it, unpinned, once the requirements are met. What the service does here was not established by a real call; it is the test fake's model.
 - After a direct merge, one reading: merged, it ends; not merged, the wait; not read, one warning, then the wait.
+- That reading finding the PR queued: the service queued it instead of merging it. An `enqueued-instead` warning says so, and that the queue's commit shape was not judged; then the wait.
+- The rows that send match an open PR: the reading names it `OPEN`.
 - `--admin` passes the direct merge through as an administrator merge.
 - `--no-request`: the caller allows no merge and no enqueue in this landing. A PR queued at `H` is waited for, and one queued at another head is still taken out: the dequeue protects. A row that would send a merge or an enqueue, on any base, ends `refused`, `request-not-allowed`, nothing sent; the dry run ends the same, not `planned`.
 
@@ -690,7 +693,7 @@ The tests hold the decoder to one shared table of valid and invalid end document
 | `dequeue` | `accepted`, `exit_code`, `reason`, `reason_kind`, as `dequeue` states them | no dequeue run |
 | `reading` | the last reading the landing took, as `read` states it | none taken |
 | `shape` | `squashes`, `title`, `message`, `conforms`, `unreadable` | see below |
-| `warnings` | a list of `reason_kind` and `reason` | never; `[]` when none |
+| `warnings` | a list of `reason_kind` (the warnings, below) and `reason` | never; `[]` when none |
 | `guard` | `verdict`, `undetermined_kind`, `anchor`, `target`, `cleared` | never |
 | `bound_seconds` | the longest the landing can run (below) | never |
 
@@ -698,6 +701,14 @@ The tests hold the decoder to one shared table of valid and invalid end document
 - `shape` is `null` with no reading, on a base without a queue, and for a PR merged or closed at the reading judged.
 - `shape`'s `title` and `message` are `null` where the defaults were not read — an earlier refusal ended the landing, or the queue does not squash — or could not be, `unreadable` saying why. `conforms` is `null` where it is not known.
 - `guard.verdict` is the comparison alone, never an override. `cleared` is `null` exactly when the guard refused.
+- `reading` is the last reading taken, whether or not it was written: a wait whose next reading fails ends on it.
+
+**The warnings**, by `reason_kind`, a closed set:
+
+- `queue-not-squash`, `squash-defaults` — a PR waited for, under `--queued-bad-shape warn`, in a queue that would not make its squash commit; `squash-defaults` also where the defaults could not be read.
+- `unreadable` — the reading after a direct merge could not be taken.
+- `auto-merge-armed` — a direct merge refused on a PR auto-merge holds: it stays armed.
+- `enqueued-instead` — a direct merge the service queued instead.
 
 **The twelve ends.**
 

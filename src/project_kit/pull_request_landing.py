@@ -1503,6 +1503,7 @@ def wait_for_merge(
     interval_seconds: float = POLL_SECONDS,
     sleep: Callable[[float], None] | None = None,
     clock: Callable[[], float] | None = None,
+    on_reading: Callable[[Reading], None] | None = None,
 ) -> Wait:
     """Read the queue until the PR merges, leaves it, or the time runs out.
 
@@ -1519,11 +1520,11 @@ def wait_for_merge(
     at the deadline is followed by one more after the interval. With
     `head_oid`, the head the caller checked, a reading whose head differs ends
     the wait at once (:data:`HEAD_MOVED`): commits nobody checked must not
-    merge, and the caller takes the PR out (:func:`dequeue`). `on_change` is
-    handed each reading whose description differs from the one before, once
-    the wait has judged it: what a reading ends — the head check among it —
-    never waits on a write. Raises :class:`Unreadable` when a reading cannot
-    be taken.
+    merge, and the caller takes the PR out (:func:`dequeue`). `on_reading`,
+    when given, is handed each reading as it is taken; `on_change` each
+    whose description differs from the one before, once the wait has judged
+    it: what a reading ends — the head check among it — never waits on a
+    write. Raises :class:`Unreadable` when a reading cannot be taken.
     """
     run = _runner(gh)
     pause = sleep if sleep is not None else _sleep
@@ -1535,6 +1536,8 @@ def wait_for_merge(
     estimated = timeout_seconds is not None
     while True:
         reading = read(pr_number, gh=run)
+        if on_reading is not None:
+            on_reading(reading)
         ended = _wait_ended(reading, head_oid, seen_out)
         if reading.describe() != last_description:
             last_description = reading.describe()
@@ -1786,8 +1789,15 @@ class Shape:
 #: Why a landing warns (:class:`Notice`), besides :data:`QUEUE_NOT_SQUASH`,
 #: :data:`SQUASH_DEFAULTS` and :data:`NOT_READ`: a direct merge refused on a
 #: PR auto-merge still holds, which it merges on its own, unpinned, once the
-#: base's requirements are met.
+#: base's requirements are met; and a direct merge the service queued
+#: instead, whose queue's commit shape no reading judged.
 AUTO_MERGE_ARMED = "auto-merge-armed"
+ENQUEUED_INSTEAD = "enqueued-instead"
+
+#: Every kind of warning a landing gives (:class:`Notice`).
+LANDING_WARNINGS = frozenset(
+    {QUEUE_NOT_SQUASH, SQUASH_DEFAULTS, NOT_READ, AUTO_MERGE_ARMED, ENQUEUED_INSTEAD}
+)
 
 
 @dataclass(frozen=True)
@@ -1797,7 +1807,8 @@ class Notice:
     in a queue that would not make the squash commit, :data:`NOT_READ` for a
     reading after a direct merge that could not be taken,
     :data:`AUTO_MERGE_ARMED` for a refused direct merge of a PR auto-merge
-    holds — and in words."""
+    holds, :data:`ENQUEUED_INSTEAD` for a direct merge the service queued —
+    and in words."""
 
     reason_kind: str
     reason: str
@@ -1914,7 +1925,9 @@ def land(
 
     - unreadable, or naming no head: :data:`END_UNREADABLE`; merged:
       :data:`END_MERGED`, or :data:`END_MERGED_ELSEWHERE` at another head
-      than `head`; closed: :data:`END_CLOSED`;
+      than `head`; closed: :data:`END_CLOSED`; neither open, closed nor
+      merged — a reading that names no state — :data:`END_UNREADABLE`, so
+      only an open PR gets a request;
     - queued, on any base, at another head: taken out of the queue
       (:func:`dequeue`), then :data:`END_HEAD_MOVED`; open and not queued at
       another head: :data:`END_HEAD_MOVED`, nothing sent;
@@ -2213,6 +2226,12 @@ class _Lander:
             return self.merged(first)
         if first.pr_state == "CLOSED":
             return self.end(END_CLOSED, reason=f"PR #{n} is closed without merging")
+        if first.pr_state != "OPEN":
+            return self.end(
+                END_UNREADABLE,
+                reason=f"the reading of PR #{n} names it neither open, closed nor merged (its "
+                f"state: {first.pr_state or 'none'})",
+            )
         if first.has_queue:
             self.shape = Shape(first.squashes, conforms=None if first.squashes else False)
         if first.head_oid != self.head:
@@ -2324,6 +2343,14 @@ class _Lander:
         self.took(after)
         if after.merged:
             return self.merged(after)
+        if after.queued and not held:
+            self.warnings.append(
+                Notice(
+                    ENQUEUED_INSTEAD,
+                    f"the service queued PR #{self.pr_number} instead of merging it: the queue "
+                    "composes the squash commit, and its shape was not judged",
+                )
+            )
         return self.wait()
 
     def enqueue(self) -> Landing:
@@ -2337,13 +2364,16 @@ class _Lander:
         return self.wait()
 
     def wait(self) -> Landing:
-        """The wait for the merge, and how it ended."""
+        """The wait for the merge, and how it ended. Each reading it takes is
+        the landing's last; each that changed is written. A reading that
+        cannot be taken ends it on the last one that could."""
         n = self.pr_number
         try:
             waited = wait_for_merge(
                 n,
                 timeout_seconds=self.options.seconds,
-                on_change=self.took,
+                on_change=self.written,
+                on_reading=self.saw,
                 head_oid=self.head,
                 gh=self.run,
             )
@@ -2368,9 +2398,14 @@ class _Lander:
                 END_DROPPED,
                 reason=f"PR #{n} left the merge queue without merging ({reading.describe()}){why}",
             )
+        made = (
+            f"the {self.sent} of PR #{n} was made"
+            if self.sent is not None
+            else f"nothing was sent: PR #{n} was waited for as it was found queued"
+        )
         return self.end(
             END_NOT_MERGED,
-            reason=f"the merge of PR #{n} was made, and PR #{n} reads {reading.describe()}",
+            reason=f"{made}, and PR #{n} reads {reading.describe()}, with no merge queue seen",
         )
 
     def take_out(self) -> Landing:
@@ -2457,7 +2492,14 @@ class _Lander:
 
     def took(self, reading: Reading) -> None:
         """A reading taken, and written."""
+        self.saw(reading)
+        self.written(reading)
+
+    def saw(self, reading: Reading) -> None:
+        """A reading taken: the landing's last."""
         self.reading = reading
+
+    def written(self, reading: Reading) -> None:
         self.emit(wait_reading_document(self.pr_number, reading))
 
     def requesting(self, name: str, cmd: Sequence[str]) -> None:
