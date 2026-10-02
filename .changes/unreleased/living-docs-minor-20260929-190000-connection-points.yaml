@@ -8,7 +8,8 @@ body: >
   `schemas/readers.schema.json`: entries `{id, description}`) is `union`, with a
   built-in `user` and `maintainer` always included, and inert policy `fail`;
   `pkit::documentation:reading-evidence` (version 1,
-  `schemas/reading-evidence.schema.json`: entries keyed `<path>@<commit>`) is
+  `schemas/reading-evidence.schema.json`: entries keyed
+  `<path>@<commit>#<check>`, the commit by its full name) is
   `union`, with no default, and inert policy `fallback`. The validator now
   resolves each page's `reader` against the readers point and fails a page whose
   reader the point does not hold, naming the readers it does; a readers point

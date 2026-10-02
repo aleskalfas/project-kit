@@ -158,21 +158,38 @@ def test_the_readers_schema_refuses_a_malformed_entry(entry: Any) -> None:
     assert not _schema(CAPABILITY, "readers.schema.json").is_valid([entry])
 
 
+#: A commit's full name under SHA-1, and under SHA-256.
+SHA1 = "78981922613b2afb6025042ff6bd878ac1994e85"
+SHA256 = "4f9be057f0ea5d2ba72fd2c810e8d7b9aa98b469f9a6c4d6d0e2a2d3e1c4b5a6"
+
 EVIDENCE_ENTRY = {
-    "id": "docs/guide.md@1a2b3c4",
+    "id": f"docs/guide.md@{SHA1}#guide-walker.install",
     "path": "docs/guide.md",
-    "commit": "1a2b3c4",
+    "commit": SHA1,
+    "check": "guide-walker.install",
     "outcome": "passed",
     "description": "A simulated user followed the guide end to end.",
 }
 
 
-def test_the_reading_evidence_schema_keys_an_entry_by_page_and_commit() -> None:
+def test_the_reading_evidence_schema_keys_an_entry_by_page_commit_and_check() -> None:
+    """Three parts (DEC-001 point 7): two fillers' results for one page at one
+    commit stand side by side under their own checks; the commit by its full name."""
     schema = _schema(CAPABILITY, "reading-evidence.schema.json")
     assert schema.is_valid([EVIDENCE_ENTRY])
+    other = {**EVIDENCE_ENTRY, "id": f"docs/guide.md@{SHA1}#project.read-aloud"}
+    assert schema.is_valid([EVIDENCE_ENTRY, {**other, "check": "project.read-aloud"}])
+    sha256 = {**EVIDENCE_ENTRY, "id": f"docs/guide.md@{SHA256}#guide-walker.install"}
+    assert schema.is_valid([{**sha256, "commit": SHA256}])
     for broken in (
         {**EVIDENCE_ENTRY, "id": "docs/guide.md"},
+        {**EVIDENCE_ENTRY, "id": f"docs/guide.md@{SHA1}"},  # no check
+        {**EVIDENCE_ENTRY, "id": f"docs/guide.md@{SHA1[:7]}#guide-walker.install"},
+        {**EVIDENCE_ENTRY, "commit": SHA1[:7]},  # a short name: one commit, one spelling
         {**EVIDENCE_ENTRY, "commit": "HEAD"},
+        {k: v for k, v in EVIDENCE_ENTRY.items() if k != "check"},
+        {**EVIDENCE_ENTRY, "check": "guide_walker.install"},
+        {**EVIDENCE_ENTRY, "check": "Guide-walker"},
         {**EVIDENCE_ENTRY, "outcome": "flaky"},
         {k: v for k, v in EVIDENCE_ENTRY.items() if k != "path"},
         {**EVIDENCE_ENTRY, "extra": 1},

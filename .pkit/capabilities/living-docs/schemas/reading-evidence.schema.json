@@ -2,25 +2,30 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "reading-evidence.schema.json",
   "title": "Reading evidence — the value of pkit::documentation:reading-evidence, version 1",
-  "description": "The data point's companion schema (COR-052 point 5; living-docs DEC-001 point 7): the results of executed checks that follow the documentation — a simulated reader running a guide against the system, say. This capability runs no such check; the results arrive from a capability that does, or from the project's own filler file. One entry per page or path and commit, keyed by the pair: its `id` is `<path>@<commit>`. The point is `union`, no default takes part, and its inert policy is `fallback`, because the evidence advises: it informs a reader-review and never replaces one (DEC-001 point 6). The version rises only on a change that breaks existing fillers.",
+  "description": "The data point's companion schema (COR-052 point 5; living-docs DEC-001 point 7): the results of executed checks that follow the documentation — a simulated reader running a guide against the system, say. This capability runs no such check; the results arrive from a capability that does, or from the project's own filler file. One entry per result, keyed by three parts — the page or path, the commit and the check: its `id` is `<path>@<commit>#<check>`. So two fillers' results for one page or path at one commit stand side by side, and only two that claim one check collide. The point is `union`, no default takes part, and its inert policy is `fallback`, because the evidence advises: it informs a reader-review and never replaces one (DEC-001 point 6). The version rises only on a change that breaks existing fillers.",
   "type": "array",
   "items": { "$ref": "#/$defs/evidence" },
   "$defs": {
     "commit": {
-      "description": "A commit, by its full or abbreviated hexadecimal name.",
+      "description": "A commit, by its full hexadecimal name in lower case: 40 digits under SHA-1, 64 under SHA-256. An abbreviated name is refused, so a commit has one spelling.",
       "type": "string",
-      "pattern": "^[0-9a-f]{7,64}$"
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+    },
+    "check-name": {
+      "description": "The name of an executed check: lower-case words of letters, digits and hyphens, joined by dots, the first beginning with a letter (`guide-walker.install-guide`). Underscores, slashes, colons and capitals are refused; the name stands after the `#` of an entry's id.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z0-9][a-z0-9-]*)*$"
     },
     "evidence": {
       "description": "The result of one executed check, for one page or path at one commit.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "path", "commit", "outcome"],
+      "required": ["id", "path", "commit", "check", "outcome"],
       "properties": {
         "id": {
-          "description": "The entry's key, the pair it is for: `<path>@<commit>`.",
+          "description": "The entry's key, the three parts it is for: `<path>@<commit>#<check>`, the entry's own `path`, `commit` and `check`.",
           "type": "string",
-          "pattern": "^\\S+@[0-9a-f]{7,64}$"
+          "pattern": "^\\S+@(?:[0-9a-f]{40}|[0-9a-f]{64})#[a-z][a-z0-9-]*(?:\\.[a-z0-9][a-z0-9-]*)*$"
         },
         "path": {
           "description": "What the check followed: a page, by its repository-relative path, or a reader path through several pages, by a gitignore-style pattern matching them.",
@@ -28,8 +33,12 @@
           "minLength": 1
         },
         "commit": {
-          "description": "The commit the check ran against.",
+          "description": "The commit the check ran against, by its full name.",
           "$ref": "#/$defs/commit"
+        },
+        "check": {
+          "description": "The executed check that gave the result: the name its filler gives it, kept from commit to commit, one per result it reports for a page or path at one commit — one filler never supplies an id twice, and the whole filler is inert if it does. By convention it opens with the filler's own name: a capability's, or `project` for a project file's (DEC-001 point 7).",
+          "$ref": "#/$defs/check-name"
         },
         "outcome": {
           "description": "`passed`: the reader could follow it. `failed`: they could not.",

@@ -12,12 +12,17 @@ contributes the analysis' actors to the documentation role's readers point,
   may name one, and an actors file that cannot be read leaves the readers
   point unresolved rather than answer without them;
 - the evidence point through the real backbone — a project filler's entries
-  resolve against the companion schema, a malformed one is the project's error
-  — and in the check: a record copies the evidence it draws on, whole, as
-  support for an outcome and never in place of one; an entry's id is its own
-  pair; a result at odds with its outcome, or a copy that differs from what the
-  point now holds, only warns, since evidence advises; and an id the point no
-  longer holds says nothing, since the record is history.
+  resolve against the companion schema, a malformed one is the project's error;
+  an entry is keyed by artefact, commit and check (#1143), so two fillers'
+  results for one artefact at one commit stand side by side, and only two that
+  claim one check collide, which the project settles — and in the check: a
+  record copies the evidence it draws on, whole, as support for an outcome and
+  never in place of one; an entry's id is its own three fields; a journey's
+  steps are use cases of the analysis; a result at odds with its outcome, or a
+  copy that differs from what the point now holds, only warns, since evidence
+  advises; an id the point no longer holds says nothing, since the record is
+  history; and the point's own entries warn on an id not their own and on a
+  capability's check that opens with another name.
 
 The capability's scripts are pointed at this interpreter in the adopter copy,
 and the `pkit` they read through is the real CLI under this interpreter
@@ -40,12 +45,19 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
 from project_kit.cli import main
+from project_kit.manifest import (
+    ComponentRegistryEntry,
+    read_backbone_manifest,
+    write_backbone_manifest,
+)
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ACTORS,
     CAPABILITY,
+    JOURNEYS,
     REPO,
     SA,
+    USE_CASES,
     VALIDATE,
     installed,
     load,
@@ -192,10 +204,14 @@ def test_the_filler_answers_the_point_and_version_the_package_declares() -> None
     assert _constant(readers, "POINT_VERSION") == contribution["schema_version"]
 
 
+#: An executed check's name, as a filler gives it: a test's name, slugged.
+SANDBOX = "pytest-bridge.test-run.test-sandbox"
+
 EVIDENCE_ENTRY = {
-    "id": f"UC-003@{SHA}",
+    "id": f"UC-003@{SHA}#{SANDBOX}",
     "artefact": "UC-003",
     "commit": SHA,
+    "check": SANDBOX,
     "result": "passed",
     "ran": "tests/test_run.py::test_sandbox",
     "steps": ["1", "2", "2a"],
@@ -204,25 +220,70 @@ EVIDENCE_ENTRY = {
 }
 
 
-def test_the_evidence_schema_keys_an_entry_by_artefact_and_commit() -> None:
+def _keyed(entry: Mapping[str, Any], **fields: Any) -> dict[str, Any]:
+    """`entry` with `fields` changed and its id written from its own three fields."""
+    changed = {**entry, **fields}
+    return {**changed, "id": f"{changed['artefact']}@{changed['commit']}#{changed['check']}"}
+
+
+def test_the_evidence_schema_keys_an_entry_by_artefact_commit_and_check() -> None:
     schema = _validator(CAPABILITY, "revalidation-evidence.schema.json")
     assert list(schema.iter_errors([EVIDENCE_ENTRY])) == []
-    required = {k: EVIDENCE_ENTRY[k] for k in ("id", "artefact", "commit", "result", "ran")}
+    required = {
+        k: EVIDENCE_ENTRY[k] for k in ("id", "artefact", "commit", "check", "result", "ran")
+    }
     assert list(schema.iter_errors([required])) == []
+    # `by` stays: who ran it — or, on an entry the project writes in a capability's stead,
+    # who wrote it.
+    assert schema.is_valid([{**EVIDENCE_ENTRY, "by": "Alex, rerun by hand"}])
+    # A later word may begin with a digit; the check's other words are the filler's own.
+    assert schema.is_valid([_keyed(EVIDENCE_ENTRY, check="trace-runner.2026-walk")])
     for broken in (
         {**EVIDENCE_ENTRY, "id": "UC-003"},
-        {**EVIDENCE_ENTRY, "id": f"UC-3@{SHA}"},
+        {**EVIDENCE_ENTRY, "id": f"UC-3@{SHA}#{SANDBOX}"},
+        {**EVIDENCE_ENTRY, "id": f"UC-003@{SHA}"},  # no check
+        {**EVIDENCE_ENTRY, "id": f"UC-003@{SHA}#"},
+        {k: v for k, v in EVIDENCE_ENTRY.items() if k != "check"},
         {**EVIDENCE_ENTRY, "artefact": "user"},
         {**EVIDENCE_ENTRY, "commit": "HEAD"},
-        {**EVIDENCE_ENTRY, "commit": SHA[:7]},  # a short name: one pair, one spelling
-        {**EVIDENCE_ENTRY, "id": f"UC-003@{SHA[:7]}"},
+        {**EVIDENCE_ENTRY, "commit": SHA[:7]},  # a short name: one commit, one spelling
+        {**EVIDENCE_ENTRY, "id": f"UC-003@{SHA[:7]}#{SANDBOX}"},
+        _keyed(EVIDENCE_ENTRY, check="pytest-bridge.test_run"),  # an underscore
+        _keyed(EVIDENCE_ENTRY, check="Pytest-bridge.test-run"),  # a capital
+        _keyed(EVIDENCE_ENTRY, check="2-bridge.test-run"),  # a leading digit
+        _keyed(EVIDENCE_ENTRY, check="pytest-bridge..test-run"),  # an empty word
+        _keyed(EVIDENCE_ENTRY, check="tests/test_run.py::test_sandbox"),  # not slugged
         {**EVIDENCE_ENTRY, "result": "flaky"},
         {**EVIDENCE_ENTRY, "ran": ""},
-        {**EVIDENCE_ENTRY, "steps": ["two"]},
         {k: v for k, v in EVIDENCE_ENTRY.items() if k != "ran"},
         {**EVIDENCE_ENTRY, "outcome": "holds"},
     ):
         assert not schema.is_valid([broken]), broken
+
+
+@pytest.mark.parametrize(
+    ("artefact", "steps", "admitted"),
+    [
+        ("UC-003", ["1", "2", "2a"], True),  # a use case: steps and variants
+        ("UC-003", ["two"], False),
+        ("UC-003", ["UC-001"], False),
+        ("UC-003", ["2", "2"], False),  # a set
+        ("JRN-001", ["UC-001", "UC-002"], True),  # a journey: the use cases it passed through
+        ("JRN-001", ["1", "2"], False),
+        ("JRN-001", ["UC-001", "UC-001"], False),  # each once
+        ("ACT-tester", ["1"], False),  # an actor or a term has none
+        ("TERM-sandbox", ["UC-001"], False),
+    ],
+)
+def test_the_evidence_steps_are_a_set_by_the_artefact_s_kind(
+    artefact: str, steps: list[str], admitted: bool
+) -> None:
+    schema = _validator(CAPABILITY, "revalidation-evidence.schema.json")
+    entry = _keyed(EVIDENCE_ENTRY, artefact=artefact, steps=steps)
+    assert schema.is_valid([entry]) is admitted, entry
+    if artefact.startswith(("ACT-", "TERM-")):
+        bare = {k: v for k, v in _keyed(EVIDENCE_ENTRY, artefact=artefact).items() if k != "steps"}
+        assert schema.is_valid([bare])
 
 
 # --- the contribution to the readers point (DEC-001 point 8) ---------------------------------
@@ -398,18 +459,68 @@ def test_an_actors_file_that_cannot_be_read_leaves_the_readers_unresolved(
 # --- the evidence point (DEC-001 point 7) ----------------------------------------------------
 
 
+#: The check the project's own entries are reported under: its own opening name.
+RUN = "project.run-suite"
+
+
 def _evidence(*entries: Mapping[str, Any]) -> str:
     return json.dumps({"schema_version": 1, "value": list(entries)}, indent=2) + "\n"
 
 
-def _entry(artefact: str, commit: str = SHA, result: str = "passed") -> dict[str, str]:
+def _id(artefact: str, commit: str = SHA, check: str = RUN) -> str:
+    return f"{artefact}@{commit}#{check}"
+
+
+def _entry(
+    artefact: str, commit: str = SHA, result: str = "passed", check: str = RUN
+) -> dict[str, Any]:
     return {
-        "id": f"{artefact}@{commit}",
+        "id": _id(artefact, commit, check),
         "artefact": artefact,
         "commit": commit,
+        "check": check,
         "result": result,
         "ran": f"tests/test_{artefact.lower().replace('-', '_')}.py",
     }
+
+
+def _reporter(repo: AdopterRepo, name: str, *entries: Mapping[str, Any]) -> None:
+    """A capability of the test's own, registered in place, reporting `entries` to the
+    evidence point as its value: a filler of executed results, which software-analysis
+    never is (DEC-001 point 7). Staged again, it reports the new entries instead."""
+    root = repo.pkit / "capabilities" / name
+    (root / "scripts").mkdir(parents=True, exist_ok=True)
+    (root / "scripts" / "noop.py").write_text("", encoding="utf-8")
+    package = {
+        "schema_version": 2,
+        "component": {"kind": "capability", "name": name, "version": "0.1.0"},
+        "description": f"Reports executed results as {name}.",
+        "requires_backbone": ">=0.0.0",
+        "commands": {"noop": {"script": "scripts/noop.py", "help": "Nothing."}},
+        "connections": {
+            "extensions": {
+                "contributes": [{"point": EVIDENCE, "schema_version": 1, "value": list(entries)}]
+            }
+        },
+    }
+    (root / "package.yaml").write_text(json.dumps(package, indent=2), encoding="utf-8")
+    backbone = read_backbone_manifest(repo.root)
+    assert backbone is not None
+    if not any(component.name == name for component in backbone.components):
+        backbone.components.append(
+            ComponentRegistryEntry(
+                kind="capability",
+                name=name,
+                manifest=f".pkit/capabilities/{name}/project/manifest.yaml",
+                origin="incubated-in-repo",
+            )
+        )
+        write_backbone_manifest(repo.root, backbone)
+
+
+def _validate_connections() -> Any:
+    """`pkit validate --only connections`, in the adopter."""
+    return CliRunner().invoke(main, ["--color", "never", "validate", "--only", "connections"])
 
 
 def test_the_evidence_point_resolves_from_the_project_filler(project: AdopterRepo) -> None:
@@ -425,16 +536,108 @@ def test_the_evidence_point_resolves_from_the_project_filler(project: AdopterRep
     assert resolved["resolved"], resolved["why"]
     assert (resolved["policy"], resolved["inert_policy"]) == ("union", "fallback")
     assert [(e["id"], e["origin"]) for e in resolved["entries"]] == [
-        (f"UC-001@{SHA}", "project filler"),
-        (f"UC-002@{SHA}", "project filler"),
+        (_id("UC-001"), "project filler"),
+        (_id("UC-002"), "project filler"),
     ]
     # An entry its schema refuses is the project's error, whatever the inert policy.
     project.write({EVIDENCE_FILLER: _evidence({**_entry("UC-001"), "result": "flaky"})})
-    result = CliRunner().invoke(main, ["--color", "never", "validate", "--only", "connections"])
+    result = _validate_connections()
     assert result.exit_code == 1
     assert EVIDENCE_FILLER in result.output
     assert "'flaky' is not one of ['passed', 'failed']" in result.output
     assert not _resolve(EVIDENCE)["resolved"]
+
+
+# Each check a filler of the test's own runs, by the filler's name, as it names them.
+BRIDGE = "pytest-bridge.test-run.test-sandbox"
+TIMEOUT = "pytest-bridge.test-run.test-timeout"
+TRACE = "trace-runner.walk"
+
+
+def _held(resolved: Mapping[str, Any]) -> list[tuple[str, str]]:
+    return [(e["id"], e["origin"]) for e in resolved["entries"]]
+
+
+def test_two_fillers_report_one_artefact_at_one_commit_side_by_side(
+    project: AdopterRepo,
+) -> None:
+    """A test runner and a trace runner covering one use case at one commit: each
+    result under the filler's own check, so both stand and nothing collides."""
+    _reporter(project, "pytest-bridge", _entry("UC-001", check=BRIDGE))
+    _reporter(project, "trace-runner", _entry("UC-001", check=TRACE, result="failed"))
+    resolved = _resolve(EVIDENCE)
+    assert resolved["resolved"], resolved["why"]
+    assert _held(resolved) == [
+        (_id("UC-001", check=BRIDGE), "pytest-bridge"),
+        (_id("UC-001", check=TRACE), "trace-runner"),
+    ]
+    result = _validate_connections()
+    assert result.exit_code == 0, result.output
+    assert "0 error(s), 0 warning(s)." in result.output
+
+
+def test_two_fillers_claiming_one_check_collide_until_the_project_settles_it(
+    project: AdopterRepo,
+) -> None:
+    """Only a real double claim collides: the point is unresolved and `pkit validate`
+    fails, `fallback` notwithstanding — the inert policy is about a filler that cannot
+    answer, and both answered. An entry of the project's own under that id replaces
+    both."""
+    claimed = _entry("UC-001", check=BRIDGE)
+    _reporter(project, "pytest-bridge", claimed)
+    _reporter(project, "trace-runner", {**claimed, "result": "failed"})
+    resolved = _resolve(EVIDENCE)
+    assert resolved["inert_policy"] == "fallback"
+    assert not resolved["resolved"]
+    assert resolved["why"] == (
+        f"entries collide: {_id('UC-001', check=BRIDGE)!r} (pytest-bridge, trace-runner)"
+    )
+    result = _validate_connections()
+    assert result.exit_code == 1
+    assert (
+        f"'pytest-bridge' and 'trace-runner' both supply entry {_id('UC-001', check=BRIDGE)!r} "
+        f"to union point {EVIDENCE!r}"
+    ) in " ".join(result.output.split())
+
+    settled = {**claimed, "result": "failed", "by": "Alex, rerun by hand"}
+    project.write({EVIDENCE_FILLER: _evidence(settled)})
+    resolved = _resolve(EVIDENCE)
+    assert resolved["resolved"], resolved["why"]
+    (entry,) = resolved["entries"]
+    assert (entry["id"], entry["origin"], entry["replaces"], entry["value"]) == (
+        _id("UC-001", check=BRIDGE),
+        "project filler",
+        ["pytest-bridge", "trace-runner"],
+        settled,
+    )
+    assert _validate_connections().exit_code == 0
+
+
+def test_one_filler_gives_each_result_its_own_check(project: AdopterRepo) -> None:
+    """Two results of one filler for one artefact at one commit stand under two
+    checks. Under one check the filler supplies an id twice: the whole filler is inert
+    — all its evidence gone — and warned, and the other fillers still count."""
+    sandbox, timeout = _entry("UC-001", check=BRIDGE), _entry("UC-001", check=TIMEOUT)
+    _reporter(project, "pytest-bridge", sandbox, {**timeout, "result": "failed"})
+    _reporter(project, "trace-runner", _entry("UC-001", check=TRACE))
+    assert _held(_resolve(EVIDENCE)) == [
+        (_id("UC-001", check=BRIDGE), "pytest-bridge"),
+        (_id("UC-001", check=TIMEOUT), "pytest-bridge"),
+        (_id("UC-001", check=TRACE), "trace-runner"),
+    ]
+
+    _reporter(project, "pytest-bridge", sandbox, {**sandbox, "result": "failed"})
+    resolved = _resolve(EVIDENCE)
+    assert resolved["resolved"], resolved["why"]
+    assert _held(resolved) == [(_id("UC-001", check=TRACE), "trace-runner")]
+    bridge = next(f for f in resolved["fillers"] if f["name"] == "pytest-bridge")
+    assert bridge["state"] == "inert"
+    assert f"entry id {_id('UC-001', check=BRIDGE)!r} appears twice" in bridge["reason"]
+    result = _validate_connections()
+    assert result.exit_code == 0, result.output
+    output = " ".join(result.output.split())
+    assert f"the contribution of 'pytest-bridge' to {EVIDENCE!r} is inert" in output
+    assert "the point resolves from the remaining fillers" in output
 
 
 def _record(outcomes: Mapping[str, str], evidence: list[Any] | None = None) -> str:
@@ -471,7 +674,7 @@ def test_a_record_copies_evidence_as_support_for_an_outcome(seeded: AdopterRepo)
         f"evidence ({EVIDENCE}): 2 held; 2 copied entry(ies) compared with it."
     )
     # The full entry, `steps`, `where` and `by` included, is a copy like any other.
-    full = {**EVIDENCE_ENTRY, "id": f"UC-001@{SHA}", "artefact": "UC-001"}
+    full = _keyed(EVIDENCE_ENTRY, artefact="UC-001")
     seeded.write({EVIDENCE_FILLER: _evidence(full), RECORD: _record({"UC-001": "holds"}, [full])})
     assert _check(seeded)["findings"] == []
 
@@ -489,7 +692,7 @@ def test_evidence_never_replaces_an_outcome(seeded: AdopterRepo) -> None:
     assert _findings(_check(seeded), "error") == [
         (
             f"{RECORD}:/evidence/1",
-            f"cites evidence UC-002@{SHA} for UC-002, to which it gives no outcome: evidence "
+            f"cites evidence {_id('UC-002')} for UC-002, to which it gives no outcome: evidence "
             "supports a revalidation's outcome and never replaces it — give UC-002 its "
             "outcome, or drop the evidence (DEC-001 point 7)",
         )
@@ -503,21 +706,26 @@ def test_evidence_never_replaces_an_outcome(seeded: AdopterRepo) -> None:
         f"{RECORD}:/evidence/0/commit",
         f"{RECORD}:/evidence/0/id",
     ]
-    seeded.write({RECORD: _record({"UC-001": "holds"}, [f"UC-001@{SHA}"])})
+    seeded.write({RECORD: _record({"UC-001": "holds"}, [_id("UC-001")])})
     ((location, message),) = _findings(_check(seeded), "error")
     assert location == f"{RECORD}:/evidence/0"
     assert "is not of type 'object'" in message
 
 
-def test_an_evidence_entry_s_id_is_its_own_artefact_and_commit(seeded: AdopterRepo) -> None:
-    """The id is the pair the result is for: an entry whose id names another pair is
-    an error naming the entry, and nothing more is read from it — which of the two
-    is meant cannot be told."""
-    miskeyed = {**_entry("UC-001"), "id": f"UC-001@{OTHER}"}
+@pytest.mark.parametrize(
+    ("commit", "check"), [(OTHER, RUN), (SHA, "project.other-run")], ids=["commit", "check"]
+)
+def test_an_evidence_entry_s_id_is_its_own_three_fields(
+    seeded: AdopterRepo, commit: str, check: str
+) -> None:
+    """The id is the artefact, commit and check the result is for: an entry whose id
+    names another commit or another check is an error naming the entry, and nothing
+    more is read from it — whether the id or the fields are meant cannot be told."""
+    miskeyed = {**_entry("UC-001"), "id": _id("UC-001", commit, check)}
     seeded.write(
         {
             # The point holds the id with other content: no second finding for one mistake.
-            EVIDENCE_FILLER: _evidence(_entry("UC-001", commit=OTHER, result="failed")),
+            EVIDENCE_FILLER: _evidence(_entry("UC-001", commit, "failed", check)),
             RECORD: _record({"UC-002": "holds"}, [miskeyed]),
         }
     )
@@ -526,12 +734,43 @@ def test_an_evidence_entry_s_id_is_its_own_artefact_and_commit(seeded: AdopterRe
     assert _findings(document, "error") == [
         (
             f"{RECORD}:/evidence/0",
-            f"the evidence entry UC-001@{OTHER} is for UC-001@{SHA} by its own `artefact` and "
-            "`commit`: an entry's id is the pair it is for, `<artefact>@<commit>` — write "
-            f"`id: UC-001@{SHA}`, or correct the fields (DEC-001 point 7)",
+            f"the evidence entry {_id('UC-001', commit, check)} is for {_id('UC-001')} by its "
+            "own `artefact`, `commit` and `check`: an entry's id is the three parts it is for, "
+            f"`<artefact>@<commit>#<check>` — write `id: {_id('UC-001')}`, or correct the "
+            "fields (DEC-001 point 7)",
         )
     ]
     assert run_script(seeded, VALIDATE).returncode == 1
+
+
+def _withdraw(repo: AdopterRepo, rel: str) -> None:
+    path = repo.root / rel
+    text = path.read_text(encoding="utf-8")
+    assert "status: active" in text
+    repo.write({rel: text.replace("status: active", "status: withdrawn", 1)})
+
+
+def test_a_journey_s_evidence_names_use_cases_of_the_analysis(seeded: AdopterRepo) -> None:
+    """A journey's steps are the use cases its run passed through: one the analysis
+    does not hold is an error at that step; a withdrawn one is history, and stands."""
+    walked = _entry("JRN-001", check=TRACE)
+    walked["steps"] = ["UC-001", "UC-009", "UC-002"]
+    seeded.write({RECORD: _record({"JRN-001": "holds"}, [walked])})
+    assert _findings(_check(seeded), "error") == [
+        (
+            f"{RECORD}:/evidence/0/steps/1",
+            "no use case UC-009 in the analysis: a journey's evidence names the use cases its "
+            "run passed through, by id, withdrawn ones included (DEC-001 points 4 and 6; "
+            "`schemas/revalidation-evidence.schema.json`)",
+        )
+    ]
+    # Withdrawn since the run, the journey and its second use case with it: the record
+    # still cites them, and its evidence with them.
+    _withdraw(seeded, f"{JOURNEYS}/JRN-001-first-run.md")
+    _withdraw(seeded, f"{USE_CASES}/UC-002-read-report.md")
+    walked["steps"] = ["UC-001", "UC-002"]
+    seeded.write({RECORD: _record({"JRN-001": "holds"}, [walked])})
+    assert _findings(_check(seeded), "error") == []
 
 
 @pytest.mark.parametrize(
@@ -559,7 +798,8 @@ def test_a_result_at_odds_with_its_outcome_warns(
         [
             (
                 f"{RECORD}:/evidence/0",
-                f"cites a {result} result, UC-001@{SHA}, for UC-001, whose outcome is {outcome}: "
+                f"cites a {result} result, {_id('UC-001')}, for UC-001, whose outcome is "
+                f"{outcome}: "
                 "a passing result supports holds and a failing one is a regression's proof "
                 "(DEC-001 point 7) — check UC-001's outcome against the evidence",
             )
@@ -582,12 +822,57 @@ def test_a_copy_that_differs_from_the_point_warns(seeded: AdopterRepo) -> None:
     assert _findings(document, "warning") == [
         (
             f"{RECORD}:/evidence/0",
-            f"its copy of UC-001@{SHA} differs from the entry {EVIDENCE} now holds under that "
+            f"its copy of {_id('UC-001')} differs from the entry {EVIDENCE} now holds under that "
             "id, in ran, where: the record keeps the evidence it drew on, so either the copy "
             "strayed from its source — correct it — or the result at that commit was reported "
             "again otherwise — revalidate UC-001 against it (DEC-001 point 7)",
         )
     ]
+    assert run_script(seeded, VALIDATE).returncode == 0
+
+
+def test_the_point_s_own_entries_warn_on_a_check_or_id_not_their_own(
+    seeded: AdopterRepo,
+) -> None:
+    """Wherever the check reads the point — when a record copies evidence — each entry
+    the point holds is read too. A capability's entry whose check opens with another
+    name warns: the opening name is a convention, never refused. The project's entry
+    under a capability's check does not — that is how the project replaces a
+    capability's entry. An entry whose id is not its own three fields warns, whoever
+    supplied it."""
+    borrowed = _entry("UC-001", check=TRACE)  # pytest-bridge reporting under trace-runner's name
+    _reporter(seeded, "pytest-bridge", borrowed, _entry("UC-002", check=BRIDGE, result="failed"))
+    # The project replaces pytest-bridge's UC-002 entry, under pytest-bridge's check.
+    replacing = {**_entry("UC-002", check=BRIDGE), "by": "Alex, rerun by hand"}
+    smoke = "project.smoke"
+    miskeyed = {**_entry("UC-001", check=smoke), "id": _id("UC-001", OTHER, smoke)}
+    seeded.write(
+        {
+            EVIDENCE_FILLER: _evidence(replacing, miskeyed),
+            RECORD: _record({"UC-002": "holds"}, [replacing]),
+        }
+    )
+    document = _check(seeded)
+    assert _findings(document, "error") == []
+    assert _findings(document, "warning") == [
+        (
+            f"{EVIDENCE}#{_id('UC-001', check=TRACE)}",
+            f"'pytest-bridge' reports it under the check {TRACE}, which opens with "
+            "'trace-runner': a capability's checks open with its own name, so two fillers' "
+            "results for one artefact at one commit stand side by side and only a real double "
+            "claim collides — 'pytest-bridge' names its checks pytest-bridge.… (DEC-001 point 7)",
+        ),
+        (
+            f"{EVIDENCE}#{_id('UC-001', OTHER, smoke)}",
+            f"the project's filler supplies it for {_id('UC-001', check=smoke)} by its own "
+            "`artefact`, `commit` and `check`: an entry's id is the three parts it is for, "
+            "`<artefact>@<commit>#<check>`, and a record that copies it is held to that — its "
+            f"filler writes `id: {_id('UC-001', check=smoke)}`, or corrects the fields "
+            "(DEC-001 point 7)",
+        ),
+    ]
+    held = {e["id"]: e for e in _resolve(EVIDENCE)["entries"]}
+    assert held[_id("UC-002", check=BRIDGE)]["replaces"] == ["pytest-bridge"]
     assert run_script(seeded, VALIDATE).returncode == 0
 
 
