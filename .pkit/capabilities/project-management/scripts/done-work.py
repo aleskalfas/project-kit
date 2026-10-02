@@ -1130,8 +1130,8 @@ def _after_merge(
     if move_rc != 0:
         owed = (
             f"[warn] PR merged but move-issue exited {move_rc}. The merge is "
-            "durable; re-run `move-issue --to done` to complete the "
-            "lifecycle transition."
+            f"durable; re-run `move-issue {args.issue_number} --to done` to complete "
+            "the lifecycle transition."
         )
         print(owed, file=sys.stderr)
 

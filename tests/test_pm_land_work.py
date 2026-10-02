@@ -999,8 +999,8 @@ def test_a_step_after_the_merge_failing_is_merged_and_owed(world, capsys, monkey
     assert rc == run.land.EXIT_RETRY == 7
     assert out.splitlines()[-1] == (
         f"merge: merged as {'c' * 7}, but a step after the merge failed: [warn] PR merged "
-        "but move-issue exited 1. The merge is durable; re-run `move-issue --to done` to "
-        f"complete the lifecycle transition. — run `land-work {ISSUE}` again to complete "
+        f"but move-issue exited 1. The merge is durable; re-run `move-issue {ISSUE} --to done` "
+        f"to complete the lifecycle transition. — run `land-work {ISSUE}` again to complete "
         f"#{ISSUE}"
     )
     monkeypatch.setattr(run.land.done_work, "_invoke_move_issue", lambda *a: 0)
