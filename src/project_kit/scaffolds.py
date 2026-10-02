@@ -26,7 +26,10 @@ from typing import Literal
 
 import click
 
-from project_kit.capabilities import refuse_reserved_capability_name
+from project_kit.capabilities import (
+    refuse_name_held_by_other_kind,
+    refuse_reserved_capability_name,
+)
 from project_kit.changesets import BACKBONE
 from project_kit.dispatcher import static_command_names
 from project_kit.manifest import (
@@ -273,14 +276,16 @@ def stamp_capability(target_root: Path, name: str) -> CapabilityScaffoldResult:
 
     Refuses if `name` is not kebab-case, is reserved
     (`capabilities.RESERVED_CAPABILITY_NAMES`), is a backbone command's
-    (`_refuse_backbone_command_name`), or a capability with that name already
-    exists.
+    (`_refuse_backbone_command_name`), is an adapter's
+    (`capabilities.refuse_name_held_by_other_kind`), or a capability with that
+    name already exists.
     """
     _validate_kebab_case(name, "capability name")
     refuse_reserved_capability_name(name)
     _refuse_backbone_command_name(name)
 
     pkit_dir = _require_pkit_dir(target_root)
+    refuse_name_held_by_other_kind(target_root, "capability", name)
     caps_dir = pkit_dir / "capabilities"
     caps_dir.mkdir(parents=True, exist_ok=True)
 
@@ -384,12 +389,14 @@ def stamp_adapter(target_root: Path, name: str) -> AdapterScaffoldResult:
     """Scaffold a new adapter at `.pkit/adapters/<name>/`.
 
     Refuses if `name` is not kebab-case, is reserved (`RESERVED_ADAPTER_NAMES`),
-    or an adapter with the same name already exists.
+    is a capability's (`capabilities.refuse_name_held_by_other_kind`), or an
+    adapter with the same name already exists.
     """
     _validate_kebab_case(name, "adapter name")
     refuse_reserved_adapter_name(name)
 
     pkit_dir = _require_pkit_dir(target_root)
+    refuse_name_held_by_other_kind(target_root, "adapter", name)
     adapters_dir = pkit_dir / "adapters"
     if not adapters_dir.is_dir():
         raise click.ClickException(
@@ -585,9 +592,11 @@ def register_kit_shipped_component(
     manual edit needed.
 
     No-op if the backbone manifest doesn't exist (e.g. before `pkit init`).
-    Refuses a reserved name (`refuse_reserved_adapter_name`).
+    Refuses a reserved name (`refuse_reserved_adapter_name`) and a name a
+    capability holds (`capabilities.refuse_name_held_by_other_kind`).
     """
     refuse_reserved_adapter_name(name)
+    refuse_name_held_by_other_kind(target_root, kind, name)
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
         return

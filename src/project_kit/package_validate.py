@@ -71,7 +71,7 @@ entry, read from friction discovery's one judgment of it
 (`friction_discovery.held_folders`), which also leaves it holding nothing:
 every held file has one holder, and no declaration empties another's.
 
-One check of the registry is this pass's too: a component registered under a
+Two checks of the registry are this pass's too. A component registered under a
 name the lifecycle reserves for its kind is an ERROR at its `component.name`,
 giving the refusal's reason and the rename that lasts — one registered before
 its name was reserved stays registered until it is renamed. A capability's
@@ -79,7 +79,11 @@ reserved names (`capabilities.RESERVED_CAPABILITY_NAMES`) are the ones
 `pkit new capability`, `capabilities install` and `capabilities register`
 refuse, and the rename follows where the package comes from; an adapter's
 (`scaffolds.RESERVED_ADAPTER_NAMES`) are the ones `pkit new adapter` and
-`pkit init` refuse.
+`pkit init` refuse. And an adapter and a capability registered under one name
+are an ERROR at each one's `component.name`, giving the reason those verbs
+refuse the second of the two with (`capabilities.SHARED_NAME_REASON`) and the
+rename of the one it is at — renaming either clears both; a pair registered
+before the refusal stays registered until one is renamed.
 
 The other checks across packages — roles and their providers, counterparts
 against point versions, mandatory marks and cycles, fingerprints, the version
@@ -118,7 +122,7 @@ from project_kit.backbone_schemas import (
     load_backbone_schema,
     render_unknown_key,
 )
-from project_kit.capabilities import RESERVED_CAPABILITY_NAMES
+from project_kit.capabilities import RESERVED_CAPABILITY_NAMES, SHARED_NAME_REASON
 from project_kit.command_runner import command_leaves, resolve_command
 from project_kit.dispatcher import (
     ALIASES_KEY,
@@ -928,7 +932,9 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
     (`_shadowed_name_findings`), the aliases of it another name shadows
     (`_shadowed_alias_findings`) and the held folders of it that overstep their
     bounds (`_held_folder_findings`), and to each adapter's, a name the
-    lifecycle reserves for adapters (`_reserved_adapter_name_findings`)."""
+    lifecycle reserves for adapters (`_reserved_adapter_name_findings`); and to
+    both reports of an adapter and a capability registered under one name, that
+    name (`_shared_name_findings`)."""
     schema, note = load_package_schema(target_root)
     ownership = lifecycle_ownership.load_ownership(target_root)
     journal = process_journal.read_settings(target_root)
@@ -936,6 +942,7 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
     shadowed = _shadowed_alias_findings(target_root, static)
     unreachable = set(shadowed_capability_names(target_root, static))
     unbounded = _held_folder_findings(target_root)
+    shared = _shared_component_names(target_root)
     reports: list[PackageReport] = []
     for entry, component_dir, package in _registered_packages(target_root):
         provenance = package_provenance(target_root, package, entry.origin, ownership)
@@ -952,13 +959,20 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
                 report,
                 [
                     *_reserved_name_findings(entry.name, provenance),
+                    *_shared_name_findings(entry, provenance, shared),
                     *_shadowed_name_findings(entry.name, provenance, unreachable),
                     *shadowed.get(entry.name, []),
                     *unbounded.get(entry.name, []),
                 ],
             )
         elif entry.kind == "adapter":
-            report = _with_pass(report, _reserved_adapter_name_findings(entry.name))
+            report = _with_pass(
+                report,
+                [
+                    *_reserved_adapter_name_findings(entry.name),
+                    *_shared_name_findings(entry, provenance, shared),
+                ],
+            )
         reports.append(report)
     return PackagesPass(reports=tuple(reports), schema_note=note)
 
@@ -1042,10 +1056,57 @@ def _reserved_adapter_name_findings(name: str) -> list[PackageFinding]:
         PackageFinding(
             "/component/name",
             Severity.ERROR,
-            f"adapter name {name!r} is reserved: {reason}. Rename it where it is authored: its "
-            f"directory `.pkit/adapters/{name}/`, its `component.name`, and its entry in the "
-            f"`components` of `.pkit/manifest.yaml`; an adapter a sync restores is renamed by "
-            f"the methodology source that ships it.",
+            f"adapter name {name!r} is reserved: {reason}. {_adapter_rename_fix(name)}",
+        )
+    ]
+
+
+def _adapter_rename_fix(name: str) -> str:
+    """The rename of an adapter: no verb unregisters one, so it is renamed by hand
+    where it is authored; one a sync restores is the methodology source's to
+    rename."""
+    return (
+        f"Rename it where it is authored: its directory `.pkit/adapters/{name}/`, its "
+        f"`component.name`, and its entry in the `components` of `.pkit/manifest.yaml`; an "
+        f"adapter a sync restores is renamed by the methodology source that ships it."
+    )
+
+
+def _shared_component_names(target_root: Path) -> frozenset[str]:
+    """The names the backbone manifest registers both an adapter and a capability
+    under."""
+    backbone = read_backbone_manifest(target_root)
+    if backbone is None:
+        return frozenset()
+    adapters = {c.name for c in backbone.components if c.kind == "adapter"}
+    capabilities = {c.name for c in backbone.components if c.kind == "capability"}
+    return frozenset(adapters & capabilities)
+
+
+def _shared_name_findings(
+    entry: ComponentRegistryEntry, provenance: Provenance, shared: Collection[str]
+) -> list[PackageFinding]:
+    """A component registered under a name a component of the other kind is
+    registered under too (one of `shared`), as an error at its `component.name`:
+    the reason `pkit new adapter`, `pkit new capability`, `capabilities install`
+    and `capabilities register` refuse the second of the two with
+    (`capabilities.SHARED_NAME_REASON`), and the rename of this one — a capability's
+    as for a reserved name (`_rename_fix`), an adapter's by hand
+    (`_adapter_rename_fix`). Both of the two carry it, and renaming either clears
+    both."""
+    if entry.name not in shared:
+        return []
+    if entry.kind == "capability":
+        other, fix = "adapter", _rename_fix(entry.name, provenance)
+    else:
+        other, fix = "capability", _adapter_rename_fix(entry.name)
+    return [
+        PackageFinding(
+            "/component/name",
+            Severity.ERROR,
+            f"{entry.kind} {entry.name!r} shares its name with the {other} {entry.name!r}: "
+            f"{SHARED_NAME_REASON}. The {other} carries this error too, and renaming either "
+            f"clears both. {fix}",
         )
     ]
 

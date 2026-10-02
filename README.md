@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-10-02T04:06:09Z
+      at: 2026-10-02T07:46:37Z
       outcome: unchanged
-      unchanged-because: The page says init announces its target and asks first off the current folder before writing anything; the refusal of a methodology source shipping an adapter under a reserved name also comes before anything is written, so what the page says of init still holds
+      unchanged-because: The page says init announces its target and asks first off the current folder before writing anything; the refusal of a methodology source shipping an adapter and a capability of one name also comes before anything is written, so what the page says of init still holds
 ---
 
 # project-kit

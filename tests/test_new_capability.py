@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 import click
@@ -9,7 +10,12 @@ import pytest
 from click.testing import CliRunner
 
 from project_kit.cli import main
-from project_kit.manifest import BackboneManifest, write_backbone_manifest
+from project_kit.manifest import (
+    BackboneManifest,
+    ComponentRegistryEntry,
+    read_backbone_manifest,
+    write_backbone_manifest,
+)
 from project_kit.scaffolds import stamp_capability
 
 
@@ -187,3 +193,46 @@ def test_stamp_capability_does_not_register_in_backbone_manifest(kit_target: Pat
     assert backbone is not None
     names_of_capability_kind = [c.name for c in backbone.components if c.kind == "capability"]
     assert "evidence" not in names_of_capability_kind
+
+
+# --- a name an adapter holds (#1306) -----------------------------------
+#
+# An adapter and a capability cannot share a name: the release keys components
+# by name, every registered component's validators are owned by its name, and the
+# wiring resolver reads the registry by name. An adapter holds its name once it
+# is registered, or once its directory exists under `.pkit/adapters/`.
+
+
+def _adapter_registered(target: Path, name: str) -> None:
+    backbone = read_backbone_manifest(target)
+    assert backbone is not None
+    backbone.components.append(
+        ComponentRegistryEntry(
+            kind="adapter", name=name, manifest=f".pkit/adapters/{name}/project/manifest.yaml"
+        )
+    )
+    write_backbone_manifest(target, backbone)
+
+
+def _adapter_on_disk(target: Path, name: str) -> None:
+    (target / ".pkit" / "adapters" / name).mkdir(parents=True)
+
+
+@pytest.mark.parametrize(
+    ("hold", "where"),
+    [
+        (_adapter_registered, "registered in `.pkit/manifest.yaml`"),
+        (_adapter_on_disk, "at `.pkit/adapters/shared/`"),
+    ],
+)
+def test_cli_new_capability_refuses_a_name_an_adapter_holds(
+    kit_target: Path, hold: Callable[[Path, str], None], where: str
+) -> None:
+    hold(kit_target, "shared")
+    result = CliRunner().invoke(main, ["new", "capability", "shared"])
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert f"capability name 'shared' is held by the adapter 'shared' {where}" in output
+    assert "an adapter and a capability cannot share a name" in output
+    assert "the two would share one owner" in output
+    assert not (kit_target / ".pkit" / "capabilities" / "shared").exists()

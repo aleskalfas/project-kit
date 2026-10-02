@@ -441,6 +441,65 @@ def test_cli_refuses_a_reserved_name(
     assert not caps.is_installed(kit_target, name)
 
 
+# --- a name an adapter holds (#1306) ---------------------------------
+#
+# An adapter and a capability cannot share a name: the release keys components
+# by name, every registered component's validators are owned by its name, and the
+# wiring resolver reads the registry by name. The adopter is initialised with the
+# `claude-code` adapter registered, so a capability of that name would be the
+# second of a pair, and every path that registers a capability refuses it.
+
+_ADAPTER = "claude-code"
+_HELD = f"capability name '{_ADAPTER}' is held by the adapter '{_ADAPTER}'"
+
+
+def _adapter_registered(target_root: Path) -> bool:
+    backbone = read_backbone_manifest(target_root)
+    assert backbone is not None
+    return any(c.kind == "adapter" and c.name == _ADAPTER for c in backbone.components)
+
+
+def test_install_refuses_a_name_an_adapter_holds(kit_target: Path, kit_source: Path) -> None:
+    assert _adapter_registered(kit_target)
+    _stage_capability_in_source(kit_source, _ADAPTER)
+    source = caps.find_capability_in_source(kit_source, _ADAPTER)
+    assert source is not None
+    with pytest.raises(click.ClickException, match=_HELD) as refused:
+        caps.install_capability(kit_target, source)
+    assert "an adapter and a capability cannot share a name" in refused.value.message
+    assert not caps.is_installed(kit_target, _ADAPTER)
+    assert not (kit_target / ".pkit" / "capabilities" / _ADAPTER).exists()
+
+
+def test_register_incubated_refuses_a_name_an_adapter_holds(kit_target: Path) -> None:
+    _stage_capability_in_repo(kit_target, _ADAPTER)
+    source = caps.find_capability_in_repo(kit_target, _ADAPTER)
+    assert source is not None
+    with pytest.raises(click.ClickException, match=_HELD):
+        caps.register_incubated_capability(kit_target, source)
+    assert not caps.is_installed(kit_target, _ADAPTER)
+
+
+@pytest.mark.parametrize("verb", ["install", "register"])
+def test_cli_refuses_a_name_an_adapter_holds(
+    kit_target: Path, kit_source: Path, monkeypatch: pytest.MonkeyPatch, verb: str
+) -> None:
+    """The CLI names the adapter that holds the name and why the two cannot share it."""
+    assert _adapter_registered(kit_target)
+    _stage_capability_in_source(kit_source, _ADAPTER)
+    _stage_capability_in_repo(kit_target, _ADAPTER)
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    result = CliRunner().invoke(main, ["capabilities", verb, _ADAPTER])
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert f"{_HELD} registered in `.pkit/manifest.yaml`" in output
+    assert "an adapter and a capability cannot share a name" in output
+    assert "a release would move only one of the two" in output
+    assert not caps.is_installed(kit_target, _ADAPTER)
+
+
 def _with_commands(cap_dir: Path) -> None:
     """Give a staged capability a `commands:` block, so it surfaces a namespace."""
     (cap_dir / "scripts").mkdir(exist_ok=True)

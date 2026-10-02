@@ -78,6 +78,8 @@ A capability registered under any of these names before it was reserved stays re
 
 **Not a backbone command's name either.** The dispatcher reads an installed capability's name as a top-level command, and a backbone command (`validate`, `status`, `sync`, `capabilities`, … — `pkit --help` lists them) holds its name first, so a capability named after one could never surface its commands as `pkit <name> …`. `pkit new capability` refuses such a name, reading the commands from the dispatcher when it runs. `pkit capabilities install` and `register` do not: the backbone gains commands with its releases, so an upgrade can take a name that was free when a capability shipped, and refusing it then would break the installation of something that worked. Instead `pkit validate` reports an installed capability that ships a `commands:` block under a backbone command's name as an error naming the rename; one with no `commands:` block surfaces no namespace and is not reported.
 
+**Not an adapter's name either.** An adapter and a capability cannot share a name: the backbone reads a component by its name alone where it reads both kinds — a changeset names its component and the release keys every `package.yaml` under `.pkit/` by name, so a release would move only one of the two; every registered component's validators are owned by its name, so the two would share one owner; and the wiring resolver reads the component registry by name, so one of the two would be read under the other's kind. `pkit new capability`, `pkit capabilities install` and `register` refuse a name an adapter holds in the project — registered in the backbone manifest, or present at `.pkit/adapters/<name>/` — giving the reason, as `pkit new adapter` refuses a name a capability holds. A pair registered before the refusal stays registered; `pkit validate` reports it as an error at each of the two, naming its rename.
+
 ### 2. Read the contract
 
 Read `.pkit/decisions/core/COR-017-capability-pattern.md`. Every capability ships:
@@ -103,7 +105,7 @@ The command:
 
 Unlike bundles and adapters, the capability is **not** registered in the backbone manifest by the scaffolding step. Capabilities are kit-shipped from the source-of-edit's perspective; adopters register them per-project via `pkit capabilities install <name>`.
 
-The command refuses if a capability with that name already exists, if the slug isn't kebab-case, if the name is reserved (`core`, `project`, `adr` or `backbone`), or if it is a backbone command's (see step 1).
+The command refuses if a capability with that name already exists, if the slug isn't kebab-case, if the name is reserved (`core`, `project`, `adr` or `backbone`), if it is a backbone command's, or if an adapter holds it (see step 1).
 
 ### 4. Fill in the README
 

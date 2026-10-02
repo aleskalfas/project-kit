@@ -45,6 +45,7 @@ from project_kit.changesets import BACKBONE
 from project_kit.manifest import (
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
+    ComponentKind,
     ComponentManifest,
     ComponentRegistryEntry,
     read_backbone_manifest,
@@ -125,6 +126,29 @@ RESERVED_CAPABILITY_NAMES: dict[str, str] = {
     ),
 }
 
+# Why an adapter and a capability may not share a name, shown in each refusal and
+# finding: the backbone reads a component by its name alone in places that read
+# both kinds. A changeset names its component (`changesets.Changeset.component`)
+# and the release keys every `package.yaml` under `.pkit/` by name
+# (`changesets.discover_components`, `release.compute_release`), so one of the two
+# would be moved and the other never; every registered component's validators
+# are owned by its name (`validators.capability_validators`), so the two would
+# share one owner; and the wiring resolver reads the component registry by name
+# (`connections._installed_components`), so one of the two would be read under
+# the other's kind.
+SHARED_NAME_REASON = (
+    "an adapter and a capability cannot share a name, because the backbone reads a "
+    "component by its name alone where it reads both kinds: a changeset names its "
+    "component by name and the release keys every `package.yaml` under `.pkit/` by name, "
+    "so a release would move only one of the two; every registered component's "
+    "validators are owned by its name, so the two would share one owner; and the wiring "
+    "resolver reads the component registry by name, so one of the two would be read "
+    "under the other's kind"
+)
+
+# Where a component of each kind lives in a project tree, relative to `.pkit/`.
+_COMPONENT_AREAS: dict[ComponentKind, str] = {"adapter": "adapters", "capability": "capabilities"}
+
 # A capability's top-level `project/` subtree is adopter-owned (the
 # no-shared-files invariant, COR-001): never overwritten or removed on
 # refresh, and never seeded from the source either — the source's own
@@ -197,6 +221,37 @@ def refuse_reserved_capability_name(name: str) -> None:
         raise click.ClickException(
             f"capability name {name!r} is reserved: {reason}. Choose another name."
         )
+
+
+def refuse_name_held_by_other_kind(target_root: Path, kind: ComponentKind, name: str) -> None:
+    """Refuse a component of `kind` a name a component of the other kind holds.
+
+    The other kind holds the name when the backbone manifest registers a component
+    of that kind under it — `is_installed`'s reading — or its directory exists at
+    `.pkit/<area>/<name>/` — the reading `pkit new adapter` and `pkit new
+    capability` refuse an existing one by — so an unregistered capability authored
+    in the tree holds its name too: its `package.yaml` is a component of the
+    changesets all the same. Called where a component is named into a project —
+    `pkit new adapter` (its stamp and its registration), `pkit new capability`, and
+    every path that registers a capability (`_refuse_unregistrable`) — before any
+    file is written or any registry entry is made. The reason is
+    `SHARED_NAME_REASON`.
+    """
+    other: ComponentKind = "capability" if kind == "adapter" else "adapter"
+    backbone = read_backbone_manifest(target_root)
+    directory = f".pkit/{_COMPONENT_AREAS[other]}/{name}/"
+    if backbone is not None and any(
+        c.kind == other and c.name == name for c in backbone.components
+    ):
+        where = "registered in `.pkit/manifest.yaml`"
+    elif (target_root / directory).exists():
+        where = f"at `{directory}`"
+    else:
+        return
+    raise click.ClickException(
+        f"{kind} name {name!r} is held by the {other} {name!r} {where}: "
+        f"{SHARED_NAME_REASON}. Choose another name."
+    )
 
 
 def find_capability_in_source(source_kit: Path, name: str) -> CapabilitySource | None:
@@ -745,7 +800,8 @@ def install_capability(
 
     Refuses to install if the capability is already installed in the
     adopter — caller must check first via `is_installed` — if its name
-    is reserved (`refuse_reserved_capability_name`), or if the source is the
+    is reserved (`refuse_reserved_capability_name`) or an adapter holds it
+    (`refuse_name_held_by_other_kind`), or if the source is the
     destination (`_refuse_copy_onto_itself`; `register_capability_in_source`
     registers that one).
     """
@@ -804,7 +860,8 @@ def register_incubated_capability(
     nothing to selectively omit.
 
     Refuses if the capability is already registered or its name is
-    reserved (`refuse_reserved_capability_name`). Guards that the
+    reserved (`refuse_reserved_capability_name`) or an adapter's
+    (`refuse_name_held_by_other_kind`). Guards that the
     resolved source genuinely lives at the in-repo destination — the copy
     primitive (`refresh_owned_tree`) is *not* safe for source == dest, and
     this path must never reach it; the guard makes that structural rather
@@ -854,9 +911,9 @@ def register_capability_in_source(
     backbone manifest alone, as an incubated capability's does (COR-031 D2).
     Deploy is the caller's, as after `install_capability`.
 
-    Refuses, as `install_capability` does, a reserved or already-registered
-    name; and a source that is not the destination, which `install_capability`
-    copies in.
+    Refuses, as `install_capability` does, a reserved, adapter-held or
+    already-registered name; and a source that is not the destination, which
+    `install_capability` copies in.
 
     Returns the in-place path: ``<target_root>/.pkit/capabilities/<name>/``.
     """
@@ -1429,13 +1486,15 @@ def _is_valid_name(name: str) -> bool:
 
 
 def _refuse_unregistrable(target_root: Path, name: str) -> None:
-    """Refuse a reserved name or an already-registered capability.
+    """Refuse a reserved name, a name an adapter holds, or an already-registered
+    capability.
 
     The pre-flight every path that registers a capability runs first:
     `install_capability`, `register_incubated_capability` and
     `register_capability_in_source`.
     """
     refuse_reserved_capability_name(name)
+    refuse_name_held_by_other_kind(target_root, "capability", name)
     if is_installed(target_root, name):
         raise click.ClickException(
             f"capability {name!r} is already installed. "
