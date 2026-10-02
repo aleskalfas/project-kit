@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T02:25:43Z
+      at: 2026-10-02T02:53:25Z
       outcome: unchanged
-      unchanged-because: a merged pull request's head branch is deleted through the backbone, only at the head that merged; what this page says of the areas and commands it indexes still holds
+      unchanged-because: the lifecycle, CLI and process pages now say what a health finding, a validator's no-answer and a filler's reason show of an unevaluable predicate; this page's map of those areas and of the commands it indexes is unchanged
 ---
 
 # project-kit
