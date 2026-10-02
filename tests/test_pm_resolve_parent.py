@@ -64,29 +64,41 @@ def _resolve(
 # --- the matrix ------------------------------------------------------------
 
 
+_HERE = containment.NativeParent
+_ABROAD = containment.NativeParent(7, "other/repo")
+
+
 @pytest.mark.parametrize(
     ("body", "native", "kind", "form", "parent", "walks"),
     [
-        ("Feature: #5\n", 5, Kind.AGREED, Form.CONFORMING, 5, True),
-        ("Epic: #5\n", 5, Kind.AGREED, Form.NON_CONFORMING, 5, True),
-        ("Feature: #5\n", None, Kind.TEXTUAL_ONLY, Form.CONFORMING, 5, True),
-        ("Feature: #5 — auth\n", None, Kind.TEXTUAL_ONLY, Form.NON_CONFORMING, 5, False),
-        ("## What\n", 7, Kind.NATIVE_ONLY, Form.NONE, 7, False),
-        ("Milestone: [#3](../milestone/3)\n", 7, Kind.NATIVE_ONLY, Form.MILESTONE, 7, False),
-        ("Feature: #5\n", 7, Kind.DISAGREE, Form.CONFORMING, 7, False),
-        ("Feature: #5\n", "other/repo#5", Kind.DISAGREE, Form.CONFORMING, 5, False),
+        ("Feature: #5\n", 5, Kind.AGREED, Form.CONFORMING, _HERE(5), True),
+        ("Epic: #5\n", 5, Kind.AGREED, Form.NON_CONFORMING, _HERE(5), True),
+        ("Feature: #5\n", None, Kind.TEXTUAL_ONLY, Form.CONFORMING, _HERE(5), True),
+        ("Feature: #5 — auth\n", None, Kind.TEXTUAL_ONLY, Form.NON_CONFORMING, _HERE(5), False),
+        ("## What\n", 7, Kind.NATIVE_ONLY, Form.NONE, _HERE(7), False),
+        ("Milestone: [#3](../milestone/3)\n", 7, Kind.NATIVE_ONLY, Form.MILESTONE, _HERE(7), False),
+        ("Feature: #5\n", 7, Kind.DISAGREE, Form.CONFORMING, _HERE(7), False),
+        # A native parent in another repository, numbered unlike the first line's:
+        # the parent is the native one, there — not #5 here, nor #7 here.
+        ("Feature: #5\n", "other/repo#7", Kind.DISAGREE, Form.CONFORMING, _ABROAD, False),
         ("## What\n", None, Kind.NONE, Form.NONE, None, False),
         ("Milestone: #3\n", None, Kind.NONE, Form.MILESTONE, None, False),
-        ("Integration: integration/big\nFeature: #5\n", 5, Kind.AGREED, Form.CONFORMING, 5, True),
+        (
+            "Integration: integration/big\nFeature: #5\n",
+            5, Kind.AGREED, Form.CONFORMING, _HERE(5), True,
+        ),
     ],
-)
+)  # fmt: skip
 def test_each_record_pair_resolves_to_one_kind_and_one_parent(
-    body: str, native, kind, form, parent: int | None, walks: bool
+    body: str, native, kind, form, parent: containment.NativeParent | None, walks: bool
 ) -> None:
     resolution = _resolve(body, native)
     assert resolution.kind is kind
     assert resolution.line.form is form
-    assert (resolution.parent.number if resolution.parent else None) == parent
+    assert resolution.parent == parent
+    if parent is not None:
+        assert resolution.parent is not None
+        assert resolution.parent.repository == parent.repository
     assert resolution.walks is walks
 
 

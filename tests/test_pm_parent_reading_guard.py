@@ -11,15 +11,19 @@ and show-tree another — so this guard makes the single reading structural:
   line (`<Label>: #<N>`, `Milestone: [#<N>](…)`). `validate-issue` and
   `edit-issue` are allow-listed: they check a body's shape (label-agnostic,
   tail-strict) before it is written, a form check rather than a reading of the
-  parent. So is `_lib/milestone`, which counts a body's milestone refs toward a
-  Milestone's children: the Milestone axis, not an issue's parent.
+  parent — on the first line `body_parent_ref.first_line` gives them, so which
+  line is checked is the reader's. So is `_lib/milestone`, which counts a
+  body's milestone refs toward a Milestone's children: the Milestone axis, not
+  an issue's parent.
 - no script outside the containment seam compares a native parent itself
   (`NativeParent.is_issue`, or a raw `parent_issue_url`). `link-parent` and
   `set-field` are allow-listed: they write the native link, and check where the
   child sits natively before they do (DEC-026's value-equality) — a write's
   idempotency, not a reading of the parent.
 
-Each failure says what to call instead.
+Each failure says what to call instead. An allow-listed script is held to the
+number of hits it carries today, so a second reading or comparison added to it
+fails the guard too, rather than riding in under the first one's exemption.
 """
 
 from __future__ import annotations
@@ -28,6 +32,8 @@ import ast
 import re
 from collections.abc import Iterator
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
@@ -38,10 +44,13 @@ SEAM = "_lib/containment.py"
 # Scripts that check a body's first-line shape before it is written, and the
 # Milestone axis's reader, which counts a body's `Milestone: [#<N>](…)` refs on
 # any line toward a Milestone's children — a milestone's membership, not an
-# issue's parent.
-PATTERN_ALLOWED = {"validate-issue.py", "edit-issue.py", "_lib/milestone.py"}
-# Scripts that write the native link and check where the child sits first.
-NATIVE_COMPARE_ALLOWED = {"link-parent.py", "set-field.py"}
+# issue's parent. Each with the number of parent-ref patterns it carries: the
+# two form checks' three forms (milestone link, old milestone, `<Label>: #<N>`),
+# and the Milestone axis's one link form.
+PATTERN_ALLOWED = {"validate-issue.py": 3, "edit-issue.py": 3, "_lib/milestone.py": 1}
+# Scripts that write the native link and check where the child sits first, each
+# with the one comparison it makes.
+NATIVE_COMPARE_ALLOWED = {"link-parent.py": 1, "set-field.py": 1}
 
 # A regex source that matches a parent-ref line: a colon, optional or required
 # whitespace, `#` (or a milestone link's `[#`) and a captured or matched number.
@@ -145,11 +154,22 @@ def test_no_script_but_the_reader_matches_a_parent_ref_line_itself() -> None:
 
 
 def test_the_reader_and_the_allow_listed_form_checks_do_match_one() -> None:
-    """The guard sees what it guards: each allow-listed file still carries a
-    parent-ref regex, so an allow-list entry that no longer earns its place is
-    noticed."""
+    """The guard sees what it guards: the reader and each allow-listed file still
+    carry a parent-ref regex, so an allow-list entry that no longer earns its
+    place is noticed."""
     for name in (READER, *sorted(PATTERN_ALLOWED)):
         assert _parent_ref_patterns(SCRIPTS / name), name
+
+
+@pytest.mark.parametrize("name", sorted(PATTERN_ALLOWED))
+def test_an_allow_listed_form_check_carries_no_second_reading(name: str) -> None:
+    """An allow-listed script is exempt for the form check it makes, not for any
+    parent-ref pattern: one added beside it is a second reading, and fails."""
+    hits = _parent_ref_patterns(SCRIPTS / name)
+    assert len(hits) == PATTERN_ALLOWED[name], (
+        f"{name} carries {len(hits)} parent-ref pattern(s), allow-listed for "
+        f"{PATTERN_ALLOWED[name]}:\n  " + "\n  ".join(hits) + f"\n{_READ_INSTEAD}."
+    )
 
 
 def test_no_script_but_the_seam_compares_a_native_parent_itself() -> None:
@@ -169,3 +189,14 @@ def test_no_script_but_the_seam_compares_a_native_parent_itself() -> None:
 def test_the_seam_and_the_allow_listed_linkers_do_compare_one() -> None:
     for name in (SEAM, *sorted(NATIVE_COMPARE_ALLOWED)):
         assert _native_comparisons(SCRIPTS / name), name
+
+
+@pytest.mark.parametrize("name", sorted(NATIVE_COMPARE_ALLOWED))
+def test_an_allow_listed_linker_makes_no_second_comparison(name: str) -> None:
+    """A linker is exempt for the one idempotency check it makes before it
+    writes; a second comparison of a native parent beside it fails."""
+    hits = _native_comparisons(SCRIPTS / name)
+    assert len(hits) == NATIVE_COMPARE_ALLOWED[name], (
+        f"{name} compares a native parent {len(hits)} time(s), allow-listed for "
+        f"{NATIVE_COMPARE_ALLOWED[name]}:\n  " + "\n  ".join(hits) + f"\n{_COMPARE_INSTEAD}."
+    )
