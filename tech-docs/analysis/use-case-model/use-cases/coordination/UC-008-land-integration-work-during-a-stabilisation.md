@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T21:25:33Z
+      at: 2026-10-02T00:35:01Z
       outcome: unchanged
-      unchanged-because: "#1195 only moves done-work's reviewer-resolution wiring into one shared function the gate, review-pr and show-pr call; the gate's decision, the merge path and the integration base are unchanged, so this use case holds"
+      unchanged-because: done-work's only change is that its warning after a failed move to Done names the issue in the move-issue line it prints; the gate, the merge path and the integration base this use case relies on are unchanged
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation

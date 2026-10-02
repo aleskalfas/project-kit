@@ -25,6 +25,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -53,6 +54,7 @@ MERGER = "a-reviewer"
 REASON = "the maintainer asked for it in session"
 MILESTONE = {"number": 7, "title": "Sprint 1"}
 AUDIT_MARKER = "<!-- pkit-audit -->"
+REPOSITORY_URL = "https://api.github.com/repos/acme/repo"
 
 AUTHORED_BODY = (
     "## What\n\nA task filed to be promoted.\n\n"
@@ -93,8 +95,16 @@ class Tracker:
     comments and their label timeline, all posted as the invoker, its one open
     milestone, and its merged pull requests.
 
+    An issue is read through `gh issue view` and through its REST record
+    (`gh api repos/{owner}/{repo}/issues/<n>`), which also carries its native
+    parent: `native_parents` maps an issue to the issue it is natively a
+    sub-issue of, in this repository or — given as `owner/repo#<n>` — in
+    another. A closed issue's `state_reason` is GitHub's close reason enum
+    (`COMPLETED`, `NOT_PLANNED`), set as GitHub sets it: completed for a merged
+    pull request's `Closes #N`, and as `gh issue close --reason` says.
     `fail_next` holds `gh issue edit` flags whose next edit fails, once, before
-    it changes anything."""
+    it changes anything; `views_fail` holds issues whose `gh issue view` fails,
+    as a predicate's read of an unreachable issue does."""
 
     def __init__(self) -> None:
         self.issues: dict[int, dict[str, Any]] = {}
@@ -102,8 +112,10 @@ class Tracker:
         self.timeline: dict[int, list[dict[str, Any]]] = {}
         self.milestones: list[dict[str, Any]] = [MILESTONE]
         self.merged_prs: dict[int, dict[str, Any]] = {}
+        self.native_parents: dict[int, int | str] = {}
         self.calls: list[list[str]] = []
         self.fail_next: set[str] = set()
+        self.views_fail: set[int] = set()
 
     def merge(self, pr: int, closes: list[int], merged_by: str = MERGER) -> None:
         """Merge pull request `pr`, whose body closes `closes`, as `merged_by`,
@@ -119,7 +131,12 @@ class Tracker:
             "url": f"https://github.com/acme/repo/pull/{pr}",
         }
         for number in closes:
-            self.issues[number]["state"] = "CLOSED"
+            self.close(number, "COMPLETED")
+
+    def close(self, number: int, reason: str | None) -> None:
+        """Close the issue with close reason `reason` (None: none reported)."""
+        self.issues[number]["state"] = "CLOSED"
+        self.issues[number]["state_reason"] = reason
 
     def state_of(self, number: int) -> str:
         """The issue's state as the tracker carries it, read with move-issue's
@@ -140,7 +157,8 @@ class Tracker:
             if argv[2] == "edit":
                 return self._edit(argv, number)
             if argv[2] == "close":
-                self.issues[number]["state"] = "CLOSED"
+                reason = _option(argv, "--reason") or "completed"
+                self.close(number, reason.upper().replace(" ", "_"))
                 return _done(argv)
             body = _option(argv, "--body")
             self.comments[number].append(
@@ -162,7 +180,44 @@ class Tracker:
             return _done(argv, stdout=json.dumps(self.timeline[number]))
         if argv[1] == "api" and argv[-1].endswith("/milestones?state=open"):
             return _done(argv, stdout=json.dumps(self.milestones))
+        record = re.fullmatch(r"repos/\{owner\}/\{repo\}/issues/(\d+)", argv[-1])
+        if argv[1] == "api" and record:
+            return self._record(argv, int(record.group(1)))
         raise AssertionError(f"unexpected gh call: {argv}")
+
+    def _record(self, argv: list[str], number: int) -> subprocess.CompletedProcess[str]:
+        """The issue's REST record, as `gh api` prints it."""
+        issue = self.issues.get(number)
+        if issue is None:
+            return _done(argv, 1, stderr="gh: Not Found (HTTP 404)")
+        record = {
+            "id": 1000 + number,
+            "number": number,
+            "title": issue["title"],
+            "body": issue["body"],
+            "state": issue["state"].lower(),
+            "labels": [{"name": name} for name in issue["labels"]],
+            "milestone": issue["milestone"],
+            "repository_url": REPOSITORY_URL,
+        }
+        parent = self.native_parents.get(number)
+        if isinstance(parent, str):
+            repository, parent_number = parent.split("#")
+            record["parent_issue_url"] = (
+                f"https://api.github.com/repos/{repository}/issues/{parent_number}"
+            )
+        elif parent is not None:
+            record["parent_issue_url"] = f"{REPOSITORY_URL}/issues/{parent}"
+        return _done(argv, stdout=json.dumps(record))
+
+    def reads(self, number: int) -> int:
+        """How many times the issue was read, through either read."""
+        return sum(
+            1
+            for argv in self.calls
+            if argv[1:4] == ["issue", "view", str(number)]
+            or (argv[1] == "api" and argv[-1] == f"repos/{{owner}}/{{repo}}/issues/{number}")
+        )
 
     def _create(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
         number = len(self.issues) + 1
@@ -180,11 +235,14 @@ class Tracker:
         return _done(argv, stdout=f"https://github.com/acme/repo/issues/{number}\n")
 
     def _view(self, argv: list[str], number: int, fields: str):
+        if number in self.views_fail:
+            return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
         issue = self.issues[number]
         record = {
             "title": issue["title"],
             "body": issue["body"],
             "state": issue["state"],
+            "stateReason": issue.get("state_reason") or "",
             "milestone": issue["milestone"],
             "labels": [{"name": name} for name in issue["labels"]],
             "assignees": [{"login": login} for login in issue["assignees"]],
@@ -296,13 +354,15 @@ class World:
             self.pi.main,
         )
 
-    def move(self, number: int, target: str) -> int:
+    def move(self, number: int, target: str, *options: str) -> int:
+        """Run move-issue on the issue with `options` (`--dry-run`, …)."""
         return _with_argv(
             [
                 "move-issue.py",
                 str(number),
                 "--to",
                 target,
+                *options,
                 "--capability-root",
                 str(CAPABILITY_ROOT),
                 "--yes",

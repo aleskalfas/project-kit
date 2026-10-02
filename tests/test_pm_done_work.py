@@ -2217,6 +2217,14 @@ if args[:2] == ["api", "graphql"] and any("closedByPullRequestsReferences" in a 
     }
     print(json.dumps({"data": {"repository": {"issue": issue}}}))
     sys.exit(0)
+if args[:1] == ["api"] and args[1].startswith("repos/{owner}/{repo}/issues/"):
+    number = args[1].rsplit("/", 1)[1]
+    if number.isdigit():
+        issue = state["issues"].get(number)
+        if issue is None:
+            sys.exit(1)
+        print(json.dumps(dict(issue, number=int(number), state=issue["state"].lower())))
+        sys.exit(0)
 if args[:1] == ["api"]:
     print("octocat")
 sys.exit(0)

@@ -39,8 +39,20 @@ silent (per [project-management:DEC-051-axis-carriage-activation]):
     carried by open/closed, and a degraded one by nothing); the wrapper's other
     domain side-effects still fire.
 
-Cascade per DEC-006 fires upward on forward transitions; the script
-walks the parent chain via the issue body's parent-ref line.
+The forward cascade per DEC-006 fires upward on a forward move: the
+script walks from the issue to the top of its hierarchy, one parent at a
+time through the parent each first line names (`_lib/body_parent_ref`),
+and brings each ancestor that is behind up to the issue's state, capped
+at in-progress, through declared transitions only — an ancestor in todo
+goes to backlog, then to in-progress, each step its own label write,
+journaled where a journal is kept with the issue's move as the reason.
+A move to done from todo or backlog (won't-do) moves no ancestor. The
+cascade is not an authorisation: it asks for no confirmation, posts no
+comment and fires no hook. It runs on the no-op path too, so running a
+move again finishes a cascade a failure left incomplete — for a move to
+done, once the issue has closed as completed — and it does not run where
+the state is not written as a label. See the "forward cascade" section
+near the end of this file.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -51,7 +63,8 @@ Or via the dispatcher (per COR-021):
   pkit project-management move-issue 42 --to in-progress
 
 Exit codes:
-  0  transitioned (or dry-run reported)
+  0  transitioned, already there, or dry-run reported — a forward cascade
+     left incomplete is a warning, not a failure: the issue's move stands
   1  membership refusal / authorisation refusal
   2  usage error (unknown state, illegal transition, issue not found)
   3  gh failure
@@ -76,7 +89,10 @@ from _lib import audit as _audit
 from _lib import (
     axis_carriage,
     axis_labels,
+    body_parent_ref,
     bootstrap_gate,
+    composed_move,
+    containment,
     move_journal,
     session_guard,
     state_timeline,
@@ -204,7 +220,7 @@ def main() -> int:
     parser.add_argument(
         "--no-cascade",
         action="store_true",
-        help="Skip the forward-cascade walk on parent issues.",
+        help="Skip the forward cascade on the issue's ancestors.",
     )
     parser.add_argument(
         "--capability-root",
@@ -286,6 +302,7 @@ def main() -> int:
     ]
     state = str(issue.get("state", "")).lower()
     milestone = issue.get("milestone") or {}
+    closed_as = _close_reason(issue)
 
     structural_type = infer_structural_type(
         title, issue_types, classification=classification, labels=labels
@@ -338,6 +355,29 @@ def main() -> int:
     # a `derive` binding the label planner already writes nothing.
     state_on_board = axis_carriage.is_board_carried("state", config, substrate_map)
 
+    # What the forward cascade (DEC-006) reads and writes with, for either path.
+    cascade_context = _CascadeContext(
+        workflow=workflow,
+        issue_types=issue_types,
+        classification=classification,
+        config=config,
+        substrate_map=substrate_map,
+        actor=invoker.github_login,
+        levels=_cascade_levels(workflow),
+    )
+
+    def moved_issue(origin: str | None) -> _MovedIssue:
+        """This issue as the forward cascade reads it, moved from ``origin``."""
+        return _MovedIssue(
+            number=args.issue_number,
+            body=body,
+            structural_type=structural_type,
+            origin=origin,
+            target=args.to,
+            closed=state == "closed",
+            closed_as=closed_as,
+        )
+
     # Idempotency check: issue is already at the requested state.
     #
     # Must run BEFORE the transition-table lookup so that callers (e.g.
@@ -353,6 +393,11 @@ def main() -> int:
         print(f"  current:      {current_state}")
         print(f"  target:       {args.to}")
         print("\n[noop] already at target state; reconciling labels if needed.")
+        if not args.no_cascade:
+            print(
+                "  Any ancestor behind it is still brought level, with no prompt: "
+                "the forward cascade asks for none."
+            )
         if not args.dry_run and not state_on_board:
             plan = _compute_plan(
                 issue_number=args.issue_number,
@@ -379,6 +424,25 @@ def main() -> int:
                         substrate_map=substrate_map,
                         actor=invoker.github_login,
                     )
+        # The forward cascade is idempotent, so the issue already being in place
+        # does not end the walk: re-running a move whose cascade left an ancestor
+        # behind brings that ancestor level. An issue already at done came there
+        # from where its old label places it — a merge's close leaves review —
+        # which tells a finished issue from a won't-do one; where the label
+        # already reads done, its close reason tells them apart instead.
+        if not args.no_cascade:
+            origin = (
+                infer.state_before_close(
+                    milestone=milestone, labels=labels, substrate_map=substrate_map
+                )
+                if args.to == "done"
+                else None
+            )
+            cascade = _preview_forward_cascade(moved_issue(origin), cascade_context)
+            if cascade is not None and args.dry_run:
+                print("\n[dry-run] nothing written.")
+            elif cascade is not None:
+                _run_forward_cascade(cascade, cascade_context)
         return 0
 
     # Look up the transition.
@@ -487,15 +551,10 @@ def main() -> int:
     )
     _print_plan(plan)
 
-    # Cascade preview.
-    cascade_targets: list[int] = []
+    # Cascade preview: each ancestor's steps, read before anything is written.
+    cascade = None
     if not args.no_cascade and _is_forward(workflow, current_state, args.to):
-        cascade_targets = _walk_parent_chain(body)
-        if cascade_targets:
-            print(
-                f"\n[cascade] forward cascade will visit parents: "
-                f"{', '.join(f'#{n}' for n in cascade_targets)}"
-            )
+        cascade = _preview_forward_cascade(moved_issue(current_state), cascade_context)
 
     if args.dry_run:
         print("\n[dry-run] gh would be invoked; nothing written.")
@@ -576,24 +635,12 @@ def main() -> int:
             config,
         )
 
-    # Forward cascade. Each parent it moves is journaled the way this move was,
-    # by the same actor, with this move named as the reason.
-    if cascade_targets and not args.no_cascade:
-        cascade_reason = _cascade_reason(args.issue_number, current_state, args.to)
-        for parent_num in cascade_targets:
-            ok = _cascade_parent(
-                parent_num,
-                args.to,
-                config,
-                substrate_map,
-                actor=invoker.github_login,
-                reason=cascade_reason,
-            )
-            if not ok:
-                print(
-                    f"[warn] cascade on #{parent_num} did not complete cleanly.",
-                    file=sys.stderr,
-                )
+    # Forward cascade. Each ancestor step it writes is journaled, where a journal is
+    # kept, the way this move was, by the same actor, with this move named as the
+    # reason. Neither a hook nor a comment follows a cascaded step: both below are
+    # this issue's.
+    if cascade is not None:
+        _run_forward_cascade(cascade, cascade_context)
 
     print(f"\n[ok] transitioned #{args.issue_number}: {current_state} → {args.to}")
 
@@ -803,7 +850,7 @@ def _infer_current_state(
     todo). The same resolver backs the process detectors, so move-issue's local
     inference and the engine's detection agree by construction — behaviour
     parity (DEC-033). Kept as a thin local alias so the rest of this script (and
-    `_cascade_parent`) reads naturally.
+    the forward cascade's walk) reads naturally.
 
     Map-aware (ADR-026 §5): pass the adopter's `substrate_map` so this local
     fallback agrees with the engine's (now map-aware) detection under a present
@@ -814,30 +861,6 @@ def _infer_current_state(
     return infer.infer_current_state(
         state=state, milestone=milestone, labels=labels, substrate_map=substrate_map
     )
-
-
-def _walk_parent_chain(body: str) -> list[int]:
-    """Extract parent issue numbers from the body's first non-blank lines.
-
-    Recognises forms like `EPIC: #42`, `Feature: #99`, `Umbrella: #5`. A leading
-    DEC-013 `Integration:` marker is skipped first (#763).
-    """
-    if not body:
-        return []
-    body = infer.strip_integration_marker(body)
-    out: list[int] = []
-    for line in body.splitlines():
-        s = line.strip()
-        if not s:
-            if out:
-                break
-            continue
-        m = re.match(r"^([A-Za-z]+):\s+#(\d+)", s)
-        if not m:
-            break
-        out.append(int(m.group(2)))
-        break  # parent-ref is one line by convention
-    return out
 
 
 # ---- process-engine delegation (DEC-033 D4/D5) ----------------------
@@ -1019,8 +1042,28 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(
         issue_number,
         config,
-        fields="title,body,labels,assignees,state,milestone,url",
+        fields="title,body,labels,assignees,state,stateReason,milestone,url",
     )
+
+
+# The close reason that says an issue finished its work. GitHub reports it for an
+# issue closed as completed, which is how a merged pull request's `Closes #N`
+# closes one; close-issue's won't-do closes as "not planned".
+CLOSED_COMPLETED = "completed"
+
+
+def _close_reason(issue: dict) -> str | None:
+    """The reason a closed issue was closed with, as the tracker reports it —
+    ``completed``, ``not planned``, ``duplicate`` — or None for an open issue,
+    or one closed where the tracker reports no reason.
+
+    ``gh issue view --json stateReason`` spells it as GitHub's GraphQL enum
+    (``COMPLETED``, ``NOT_PLANNED``), and as an empty string where there is none.
+    """
+    if str(issue.get("state", "")).lower() != "closed":
+        return None
+    reason = str(issue.get("stateReason") or "").strip().lower().replace("_", " ")
+    return reason or None
 
 
 def _gh_apply_state_label(issue_number: int, plan: Plan, config: dict) -> bool:
@@ -1085,13 +1128,107 @@ def _post_transition_audit_once(issue_number: int, body: str, key: str, config: 
     )
 
 
+# ---- forward cascade (DEC-006) ----------------------------------------
+#
+# A container's state follows the work under it: when an issue moves forward,
+# each ancestor — its parent, that parent's parent, and so on to the top — that
+# is behind is brought up to the issue's state, capped at in-progress. The walk
+# is planned before anything is written, from one read of each ancestor, and
+# printed as the preview. The engine is asked where an ancestor is only when the
+# plan moves it, to revalidate that plan against a sibling's move made since. An
+# ancestor the engine answers it cannot place is not written, and the walk stops
+# there; where the engine cannot be reached at all (`pkit` missing, or exiting
+# non-zero), the plan read from the labels is written. That narrows the race
+# with a concurrent sibling; it does not close it.
+
+
+@dataclass(frozen=True)
+class _CascadeContext:
+    """What the forward cascade reads and writes with, fixed for one run.
+
+    ``levels`` are the issue types it moves (`_cascade_levels`), empty when
+    workflow.yaml declares none."""
+
+    workflow: dict
+    issue_types: dict
+    classification: dict
+    config: dict
+    substrate_map: axis_labels.SubstrateMap | None
+    actor: str | None
+    levels: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _MovedIssue:
+    """The issue whose move the forward cascade follows, as the cascade reads it.
+
+    ``origin`` is where its move started: the state it held before, or, for an
+    issue already at the target, where its old label places it — None when
+    nothing records that. ``closed_as`` is the close reason the tracker reports
+    for it (`_close_reason`)."""
+
+    number: int
+    body: str
+    structural_type: str | None
+    origin: str | None
+    target: str
+    closed: bool
+    closed_as: str | None
+
+
+@dataclass(frozen=True)
+class _Ancestor:
+    """One ancestor as the plan read it: where its labels and milestone place it,
+    and the states it moves through to reach the target, in order — empty when
+    it is at or past the target, None when the workflow declares no way there."""
+
+    number: int
+    structural_type: str | None
+    labels: tuple[str, ...]
+    state: str
+    steps: tuple[str, ...] | None
+
+
+@dataclass(frozen=True)
+class _CascadePlan:
+    """The forward cascade one move makes: the ancestors it reached, lowest
+    first, why the walk ended below the top when it did, and — where it ended at
+    two parents that disagree — how to settle them."""
+
+    mover: _MovedIssue
+    target: str
+    ancestors: tuple[_Ancestor, ...]
+    stop: str | None
+    settle: str | None = None
+
+    @property
+    def reason(self) -> str:
+        """The reason each cascaded step is journaled with (`_cascade_reason`)."""
+        return _cascade_reason(self.mover)
+
+
+@dataclass(frozen=True)
+class _AncestorOutcome:
+    """What the cascade did to one ancestor, as the closing block says it.
+
+    ``complete`` is False when the ancestor was not fully moved and journaled;
+    ``behind`` when it was left behind the target in a way running the move again
+    can repair; ``stops_walk`` when nothing above it is moved."""
+
+    number: int
+    said: str
+    complete: bool = True
+    behind: bool = False
+    stops_walk: bool = False
+
+
 def _cascade_forward_target(child_target: str) -> str:
     """Return the container-safe forward-cascade target for a given child state.
 
     The forward cascade is scoped to todo → backlog → in-progress (DEC-006,
     amendment #38). Containers do not enter Review — Review models an open PR
     for a leaf Task; a container has no PR of its own. When a child reaches
-    review or done, ancestors are bumped to at most in-progress.
+    review or done, ancestors are brought to at most in-progress.
     """
     _FORWARD_CASCADE_CAP = "in-progress"
     order = ["todo", "backlog", "in-progress", "review", "done"]
@@ -1103,90 +1240,534 @@ def _cascade_forward_target(child_target: str) -> str:
     return order[min(child_idx, cap_idx)]
 
 
-def _cascade_reason(child_number: int, child_from: str, child_to: str) -> str:
-    """The reason a forward-cascaded parent move is journaled with: the child's
-    move that caused it (#1214)."""
-    return f"forward cascade from #{child_number}: {child_from} → {child_to}"
+# Where an issue's move to done comes from when it finished work, not abandoned
+# it: a move to done from todo or backlog is a won't-do close.
+_COMPLETING_ORIGINS = ("in-progress", "review")
 
 
-def _cascade_parent(
-    parent_num: int,
-    target_state: str,
-    config: dict,
-    substrate_map: axis_labels.SubstrateMap | None = None,
-    *,
-    actor: str | None,
-    reason: str,
-) -> bool:
-    """Forward cascade — bump parent if it's behind.
+def _forward_cascade_target(mover: _MovedIssue) -> str | None:
+    """The state the forward cascade brings ancestors up to after ``mover``'s
+    move, or None when it brings up none.
 
-    Conservative implementation: read parent state; if parent is behind
-    the capped cascade target, label-edit it forward. Bypasses authorisation
-    gates per DEC-006 ("forward cascade is automatic").
+    A move to done brings ancestors up only when it finished work
+    (`_finished_work`)."""
+    if mover.target == "done" and not _finished_work(mover):
+        return None
+    target = _cascade_forward_target(mover.target)
+    return target if target in ("backlog", "in-progress") else None
 
-    The cascade target is capped at in-progress for containers: Review is a
-    leaf/Task state and a container must never auto-enter it (DEC-006,
-    amendment #38). A child moving to review or done bumps its ancestors to
-    at most in-progress.
 
-    A parent it moves is a governed move like the child's own, so it is
-    journaled the same way (#1214; DEC-049's one entry per governed move): after
-    the label write, through `_journal_move`, from the state the parent held
-    before it, by `actor`, with `reason` naming the child's move. A move the
-    engine refuses warns exactly as the child's would. A parent already at or
-    beyond the target is left alone and journaled nothing, so a re-run, or a
-    sibling's later move, adds no second entry.
-    """
-    parent = _gh_get_issue(parent_num, config)
-    if parent is None:
+def _finished_work(mover: _MovedIssue) -> bool:
+    """Whether a move to done finished the issue's work rather than dropped it.
+
+    It did from in-progress or review, and did not from todo or backlog — a
+    won't-do close. Where the issue's label already reads done, so where it
+    came from is not recorded, its close reason tells: completed finished it;
+    any other reason, or none reported, does not say it did."""
+    if mover.origin in _COMPLETING_ORIGINS:
+        return True
+    if mover.origin in ("todo", "backlog"):
         return False
-    parent_labels = [
-        lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
-        for lbl in (parent.get("labels") or [])
-    ]
-    parent_state = _infer_current_state(
-        state=str(parent.get("state", "")).lower(),
-        milestone=parent.get("milestone") or {},
-        labels=parent_labels,
-        substrate_map=substrate_map,
+    return mover.closed_as == CLOSED_COMPLETED
+
+
+def _no_cascade_to_done(mover: _MovedIssue) -> str:
+    """Why a move to done brings no ancestor up (`_finished_work`)."""
+    if mover.origin in ("todo", "backlog"):
+        return f"a move to done from {mover.origin} is a won't-do close"
+    if mover.closed_as is not None:
+        return f"#{mover.number} closed as {mover.closed_as}, not as completed"
+    return (
+        f"#{mover.number} already reads done and no close reason is reported for it, so "
+        "whether it was completed or dropped as won't-do cannot be told; the next forward "
+        "move under its ancestors brings them level"
     )
-    # Cap the cascade target: containers top out at in-progress.
-    cascade_target = _cascade_forward_target(target_state)
-    # Under a derive binding the forward cascade is an INTENTIONAL no-op: parent_state
-    # is the collapsed `open`/`blocked` (not in STATE_ORDER), so `_state_is_behind`
-    # returns False and we exit here — and even if reached, `_compute_plan` would
-    # DEGRADE the `state:*` write (no kit label written under a derive map). This is
-    # correct (the open-ish collapse means there is no meaningful forward bump, and
-    # you cannot write a kit `state:*` label under derive); do NOT "fix" the
-    # ValueError-tolerant `_state_is_behind` into a crash on these derived ids.
-    if not _state_is_behind(parent_state, cascade_target):
-        return True  # already at or beyond the capped target.
-    plan = _compute_plan(
-        issue_number=parent_num,
-        current_state=parent_state,
-        target_state=cascade_target,
-        # Same carriage question as the child's own move, asked the same way. It
-        # was hardcoded False ("cascade only fires for label substrate"), which
-        # was not true of the code: the cascade runs after the board branch too,
-        # so a board adopter's parents were label-written by a path whose own
-        # comment said it could not be reached.
-        state_on_board=axis_carriage.is_board_carried("state", config, substrate_map),
-        labels=parent_labels,
-        substrate_map=substrate_map,
+
+
+def _cascade_reason(mover: _MovedIssue) -> str:
+    """The reason each forward-cascaded step is journaled with: the move of the
+    issue that caused it (#1214), or, where the issue was already in place, the
+    state it holds."""
+    if mover.origin is None or mover.origin == mover.target:
+        return f"forward cascade from #{mover.number}: at {mover.target}"
+    return f"forward cascade from #{mover.number}: {mover.origin} → {mover.target}"
+
+
+def _rerun_condition(mover: _MovedIssue) -> str | None:
+    """What must hold, beyond its cause being fixed, for running ``mover``'s
+    move again to finish a cascade cut short: "" for nothing more, None when
+    running it again cannot finish it.
+
+    Running a move again finishes the cascade from the no-op path, where a move
+    to done brings ancestors up only for an issue closed as completed
+    (`_finished_work`). An issue still open must close first; one closed for
+    another reason, or with none reported, never brings them up that way."""
+    if mover.target != "done" or mover.closed_as == CLOSED_COMPLETED:
+        return ""
+    if not mover.closed:
+        return f"#{mover.number} has closed as completed"
+    return None
+
+
+def _finish_advice(mover: _MovedIssue, cause: str) -> str:
+    """The line saying how to finish a cascade cut short, once ``cause`` holds."""
+    condition = _rerun_condition(mover)
+    if condition is None:
+        return (
+            "→ the next forward move under these ancestors brings them level; running "
+            f"this move again would not, as #{mover.number} reads done without a close "
+            "reported as completed."
+        )
+    when = " and ".join(part for part in (cause, condition) if part)
+    return (
+        f"→ run `move-issue {mover.number} --to {mover.target}` again once {when}: the "
+        "cascade is idempotent, and brings level what is still behind."
     )
-    print(f"[cascade] bumping parent #{parent_num}: {parent_state} → {cascade_target}")
-    if not _gh_apply_state_label(parent_num, plan, config):
-        return False
-    _journal_move(parent_num, parent_state, cascade_target, actor, reason=reason)
-    return True
 
 
 def _state_is_behind(current: str, target: str) -> bool:
+    """Whether ``current`` comes before ``target`` in the lifecycle order.
+
+    False for a state outside it — the collapsed ``open`` / ``blocked`` a
+    `derive` binding reads — so such an ancestor is left alone, never moved."""
     order = ["todo", "backlog", "in-progress", "review", "done"]
     try:
         return order.index(current) < order.index(target)
     except ValueError:
         return False
+
+
+def _cascade_levels(workflow: dict) -> tuple[str, ...]:
+    """The issue types the forward cascade moves: `cascade.forward`'s
+    `applies_to_levels` in workflow.yaml, as type names — empty when the list is
+    missing or names none, which the cascade reports as the schema error it is
+    rather than reading every parent as no container."""
+    cascade = workflow.get("cascade") if isinstance(workflow, dict) else None
+    forward = cascade.get("forward") if isinstance(cascade, dict) else None
+    tokens = forward.get("applies_to_levels") if isinstance(forward, dict) else None
+    levels = []
+    for token in tokens or []:
+        m = re.fullmatch(r"\[issue-types:([a-z0-9-]+)\]", str(token))
+        if m:
+            levels.append(m.group(1))
+    return tuple(levels)
+
+
+def _cascade_steps(
+    workflow: dict, current: str, target: str, structural_type: str | None, levels: tuple[str, ...]
+) -> tuple[str, ...] | None:
+    """The states an ancestor at ``current`` moves through to reach ``target``,
+    in order, each a transition workflow.yaml declares for its type: empty when
+    it is at or past the target, None when no declared path leads there.
+
+    The shortest declared path (`composed_move.moves_before`) and then the
+    target, so an ancestor in todo goes to backlog first: no todo → in-progress
+    is declared, and the engine records only declared moves. An ancestor whose
+    type cannot be told takes the path every type the cascade moves declares.
+    """
+    if not _state_is_behind(current, target):
+        return ()
+    paths = {
+        _declared_path(workflow, current, target, kind)
+        for kind in ((structural_type,) if structural_type else levels)
+    }
+    if len(paths) != 1:
+        return None
+    return paths.pop()
+
+
+def _declared_path(
+    workflow: dict, current: str, target: str, structural_type: str
+) -> tuple[str, ...] | None:
+    """The states on the shortest declared path from ``current`` to ``target``
+    for ``structural_type``, the target last; None when none leads there."""
+    before = composed_move.moves_before(workflow, current, target, structural_type)
+    if before or target in infer.legal_targets(workflow, current, structural_type):
+        return (*before, target)
+    return None
+
+
+def _cascade_not_run(context: _CascadeContext, target: str) -> str | None:
+    """Why the forward cascade does not run, or None when it does.
+
+    It writes an ancestor's state as a label, so it runs only where the kit
+    writes the state as one: the kit's own `state:*` labels, or an adopter's
+    `label:` binding that has a value for every state the walk may write. Where
+    a board carries the state, a derivation, the title, or nothing, no label is
+    written and nothing would be recorded for an ancestor.
+    """
+    config, substrate_map = context.config, context.substrate_map
+    if not state_timeline.label_carries_state(config, substrate_map):
+        where = axis_carriage.describe("state", config, substrate_map)
+        return f"state is carried {where}, and the forward cascade writes state only as a label"
+    order = infer.STATE_ORDER
+    for state in order[order.index("backlog") : order.index(target) + 1]:
+        if not isinstance(axis_labels.resolve_write("state", state, substrate_map), str):
+            return f"the state label binding has no value for {state!r}"
+    return None
+
+
+def _label_names(issue: dict) -> list[str]:
+    return [
+        lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
+        for lbl in (issue.get("labels") or [])
+    ]
+
+
+def _parents_disagree(
+    number: int, named: int | None, native: containment.NativeParent | None
+) -> str | None:
+    """What to say when issue ``number``'s native parent is not the parent its
+    first line names (``named``), or None when they agree or it has no native
+    parent — a tracker that reports none leaves the first line the only record.
+    """
+    if native is None or (named is not None and native.is_issue(named)):
+        return None
+    if named is None:
+        return (
+            f"#{number}'s first line names no parent issue, its native parent is {native.ref}; "
+            f"nothing is written to {native.ref}"
+        )
+    return (
+        f"#{number}'s first line names #{named}, its native parent is {native.ref}; "
+        "nothing is written to either parent"
+    )
+
+
+def _settle_parents(number: int, named: int | None, native: containment.NativeParent) -> str:
+    """How to settle the disagreement `_parents_disagree` reports: the native
+    parent wins and the first line is rewritten to name it
+    ([project-management:DEC-005-linking-and-containment]) — which no first-line
+    form can do for a native parent in another repository."""
+    if native.repository is None:
+        return (
+            f"→ the native parent wins (DEC-005): `set-field {number} --parent {native.number}` "
+            f"rewrites #{number}'s first line to name it."
+        )
+    move_link = (
+        f"; if #{named} is its parent, `set-field {number} --parent {named}` moves the native "
+        "link under it"
+        if named is not None
+        else ""
+    )
+    return (
+        f"→ {native.ref} is in another repository, which no first-line form can name and the "
+        f"forward cascade does not walk into{move_link}."
+    )
+
+
+def _plan_forward_cascade(
+    mover: _MovedIssue, parent: int, target: str, context: _CascadeContext
+) -> _CascadePlan:
+    """Walk from the moved issue's ``parent`` to the top of its hierarchy,
+    reading each ancestor once.
+
+    Each step up follows the parent the ancestor's first line names
+    (`body_parent_ref.parent_issue`). The read of an ancestor also carries its
+    native parent, so where that differs from the parent its first line names
+    the walk stops there: the ancestor is moved, and nothing above it — the
+    native parent wins, and the first line is to be rewritten to name it
+    (DEC-005). The walk also stops at an ancestor it cannot read, at one that is
+    recognisably not a container (one whose type cannot be told is moved, as an
+    untyped tree always was), at one it has already passed, and at one whose
+    first line looks like a parent-ref its type does not allow. An ancestor at
+    or past the target is left alone and the walk goes on above it, so a chain
+    an earlier move left behind is brought level.
+    """
+    ancestors: list[_Ancestor] = []
+    visited = {mover.number}
+    child, number = mover.number, parent
+    stop = settle = None
+    while number is not None:
+        if number in visited:
+            stop = f"#{child} names #{number} as its parent, which the walk has passed already"
+            break
+        visited.add(number)
+        record = containment.read_issue_record(context.config, issue_number=number)
+        if isinstance(record, containment.UnreadIssue):
+            stop = f"#{number}, named as #{child}'s parent, could not be read: {record.detail}"
+            break
+        issue = record.issue
+        labels = _label_names(issue)
+        kind = infer_structural_type(
+            str(issue.get("title", "")),
+            context.issue_types,
+            classification=context.classification,
+            labels=labels,
+        )
+        if kind is not None and kind not in context.levels:
+            stop = f"#{number}, named as #{child}'s parent, is a {kind}, not a container"
+            break
+        state = _infer_current_state(
+            state=str(issue.get("state", "")).lower(),
+            milestone=issue.get("milestone") or {},
+            labels=labels,
+            substrate_map=context.substrate_map,
+        )
+        steps = _cascade_steps(context.workflow, state, target, kind, context.levels)
+        ancestors.append(_Ancestor(number, kind, tuple(labels), state, steps))
+        body = str(issue.get("body") or "")
+        unrecognised = body_parent_ref.unrecognised_parent_line(body, kind, context.issue_types)
+        if unrecognised is not None:
+            stop = f"#{number}'s {unrecognised}"
+            break
+        named = body_parent_ref.parent_issue(body, kind, context.issue_types)
+        disagreement = _parents_disagree(number, named, record.parent)
+        if disagreement is not None and record.parent is not None:
+            stop, settle = disagreement, _settle_parents(number, named, record.parent)
+            break
+        child, number = number, named
+    return _CascadePlan(
+        mover=mover, target=target, ancestors=tuple(ancestors), stop=stop, settle=settle
+    )
+
+
+def _describe_ancestor(ancestor: _Ancestor) -> str:
+    kind = f" ({ancestor.structural_type})" if ancestor.structural_type else ""
+    return f"#{ancestor.number}{kind}"
+
+
+def _preview_forward_cascade(mover: _MovedIssue, context: _CascadeContext) -> _CascadePlan | None:
+    """Plan the forward cascade a move makes and print it: each ancestor with
+    the steps it will take, or why it is left alone, and where the walk stops.
+
+    None when there is nothing to run: the move brings no ancestor up, the kit
+    does not write the state as a label, the workflow names no level the
+    cascade moves, or the walk has nowhere to start (`_first_parent`) — each
+    said in a line, except an issue with no parent at all.
+    """
+    named = body_parent_ref.parent_issue(mover.body, mover.structural_type, context.issue_types)
+    target = _forward_cascade_target(mover)
+    if target is None:
+        if mover.target == "done" and named is not None:
+            why = _no_cascade_to_done(mover)
+            print(f"\n[cascade] the forward cascade moves no ancestor: {why}.")
+        return None
+    not_run = _cascade_not_run(context, target)
+    if not_run is not None:
+        if named is not None:
+            print(f"\n[cascade] the forward cascade does not run: {not_run}.")
+        return None
+    if not context.levels:
+        print(
+            "\n[warn] the forward cascade does not run: workflow.yaml declares no "
+            "`cascade.forward.applies_to_levels`, so which issue types it moves is not known.",
+            file=sys.stderr,
+        )
+        return None
+    parent = _first_parent(mover, named, context)
+    if parent is None:
+        return None
+    plan = _plan_forward_cascade(mover, parent, target, context)
+    print(f"\n[cascade] forward cascade — each ancestor brought up to {target}:")
+    for ancestor in plan.ancestors:
+        if ancestor.steps is None:
+            what = f"{ancestor.state}; workflow.yaml declares no way to {target}"
+        elif ancestor.steps:
+            what = " → ".join((ancestor.state, *ancestor.steps))
+        else:
+            what = f"{ancestor.state}; left alone"
+        print(f"  {_describe_ancestor(ancestor)}: {what}")
+    if plan.stop is not None:
+        print(f"  [warn] {plan.stop}; the walk stops there.", file=sys.stderr)
+    if plan.settle is not None:
+        print(f"  {plan.settle}", file=sys.stderr)
+    return plan
+
+
+def _first_parent(mover: _MovedIssue, named: int | None, context: _CascadeContext) -> int | None:
+    """The parent the walk starts from — ``named``, the one the moved issue's
+    first line names — or None when it starts nowhere.
+
+    The moved issue's native parent is held to its first line as each
+    ancestor's is: read once, here, where a cascade is otherwise set to run.
+    Where they disagree the walk starts nowhere, and nothing is written to
+    either parent's chain. It starts nowhere, too, from a first line that looks
+    like a parent-ref the issue's type does not allow, and from one whose native
+    parent cannot be read to compare. Each is said in a warning, the last two
+    with how to finish; an issue whose first line names no parent and which has
+    no native one has nothing to say.
+    """
+    number = mover.number
+    unrecognised = body_parent_ref.unrecognised_parent_line(
+        mover.body, mover.structural_type, context.issue_types
+    )
+    if unrecognised is not None:
+        print(
+            f"\n[warn] #{number}'s {unrecognised}; the forward cascade walks nothing from it.",
+            file=sys.stderr,
+        )
+        return None
+    record = containment.read_issue_record(context.config, issue_number=number)
+    if isinstance(record, containment.UnreadIssue):
+        if named is None:
+            return None
+        print(
+            f"\n[warn] the forward cascade walks nothing: #{number}'s record could not be read "
+            f"to hold its native parent to #{named}, the parent its first line names "
+            f"({record.detail}).",
+            file=sys.stderr,
+        )
+        print(f"  {_finish_advice(mover, '`gh` answers')}", file=sys.stderr)
+        return None
+    disagreement = _parents_disagree(number, named, record.parent)
+    if disagreement is not None and record.parent is not None:
+        print(f"\n[warn] the forward cascade walks nothing: {disagreement}.", file=sys.stderr)
+        print(f"  {_settle_parents(number, named, record.parent)}", file=sys.stderr)
+        print(f"  {_finish_advice(mover, 'the two agree')}", file=sys.stderr)
+        return None
+    return named
+
+
+def _engine_position(issue_number: int) -> tuple[bool, str | None]:
+    """(reached, state): whether the engine answered, and the position it gave —
+    None from an engine that answered is a position it cannot tell."""
+    status = _engine_status(issue_number)
+    if status is None:
+        return False, None
+    return True, _position_from_status(status)
+
+
+def _run_forward_cascade(plan: _CascadePlan, context: _CascadeContext) -> None:
+    """Make the planned cascade, ancestor by ancestor, lowest first, and end with
+    one block saying what became of each.
+
+    An ancestor the cascade fails to move does not stop it: one above it may be
+    ahead of it. The block is a warning when anything is left undone; the issue's
+    own move stands either way, and running it again repairs what a re-run can.
+    """
+    outcomes: list[_AncestorOutcome] = []
+    unreached: list[int] = []
+    for ancestor in plan.ancestors:
+        if outcomes and outcomes[-1].stops_walk:
+            unreached.append(ancestor.number)
+            continue
+        outcomes.append(_cascade_ancestor(ancestor, plan, context))
+    _print_cascade_report(plan, outcomes, unreached)
+
+
+def _cascade_ancestor(
+    ancestor: _Ancestor, plan: _CascadePlan, context: _CascadeContext
+) -> _AncestorOutcome:
+    """Bring one ancestor up to the target, as planned unless the engine says
+    the plan is stale."""
+    number = ancestor.number
+    if ancestor.steps is None:
+        return _AncestorOutcome(
+            number,
+            f"not moved: workflow.yaml declares no way from {ancestor.state} to {plan.target}",
+            complete=False,
+        )
+    if not ancestor.steps:
+        return _AncestorOutcome(number, f"left alone at {ancestor.state}")
+    origin, steps, labels = ancestor.state, ancestor.steps, list(ancestor.labels)
+    reached, engine_state = _engine_position(number)
+    if reached and engine_state is None:
+        return _AncestorOutcome(
+            number,
+            "not moved: the engine cannot tell where it is, so the walk stops here",
+            complete=False,
+            behind=True,
+            stops_walk=True,
+        )
+    if engine_state is not None and engine_state != origin:
+        steps = _cascade_steps(
+            context.workflow, engine_state, plan.target, ancestor.structural_type, context.levels
+        )
+        if steps is None:
+            return _AncestorOutcome(
+                number,
+                f"not moved: workflow.yaml declares no way from {engine_state} to {plan.target}",
+                complete=False,
+            )
+        if not steps:
+            return _AncestorOutcome(number, f"left alone at {engine_state} (the engine's reading)")
+        # Moved since the plan read it: write from its labels as they are now.
+        record = containment.read_issue_record(context.config, issue_number=number)
+        if isinstance(record, containment.UnreadIssue):
+            return _AncestorOutcome(
+                number,
+                f"not moved: the engine places it at {engine_state} and it could not be read "
+                f"again ({record.detail})",
+                complete=False,
+                behind=True,
+            )
+        origin, labels = engine_state, _label_names(record.issue)
+    return _step_ancestor(number, origin, steps, labels, plan.reason, context)
+
+
+def _step_ancestor(
+    number: int,
+    origin: str,
+    steps: tuple[str, ...],
+    labels: list[str],
+    reason: str,
+    context: _CascadeContext,
+) -> _AncestorOutcome:
+    """Write each step as its own label edit, computed from the labels as the
+    step before left them, and journal it.
+
+    A step whose label landed is followed by the next whether or not the engine
+    took it, so the ancestor never rests between the two writes of one step; a
+    write that fails ends the ancestor there, at the state the step before left
+    it in, carrying that state's label alone."""
+    reached = [origin]
+    said: list[str] = []
+    all_journaled = True
+    current = origin
+    for step in steps:
+        edit = _compute_plan(
+            issue_number=number,
+            current_state=current,
+            target_state=step,
+            state_on_board=False,
+            labels=labels,
+            substrate_map=context.substrate_map,
+        )
+        print(f"[cascade] #{number}: {current} → {step}")
+        if not _gh_apply_state_label(number, edit, context.config):
+            said.append(f"{current} → {step} not written (the label write failed)")
+            return _AncestorOutcome(
+                number,
+                "; ".join(said) if len(said) > 1 else f"not moved: {said[0]}",
+                complete=False,
+                behind=True,
+            )
+        labels = [lbl for lbl in labels if lbl != edit.remove_label]
+        if edit.add_label and edit.add_label not in labels:
+            labels.append(edit.add_label)
+        journaled = _journal_move(number, current, step, context.actor, reason=reason)
+        said.append(f"{current} → {step}" if journaled else f"{current} → {step} (not journaled)")
+        all_journaled = all_journaled and bool(journaled)
+        reached.append(step)
+        current = step
+    if not all_journaled:
+        return _AncestorOutcome(number, "; ".join(said), complete=False)
+    return _AncestorOutcome(number, " → ".join(reached))
+
+
+def _print_cascade_report(
+    plan: _CascadePlan, outcomes: list[_AncestorOutcome], unreached: list[int]
+) -> None:
+    """The cascade's closing block: every ancestor's outcome, a warning when
+    anything was left undone, and how to repair what can be repaired — two
+    parents that disagree settled, and the rest by running the move again where
+    that finishes it (`_finish_advice`)."""
+    complete = plan.stop is None and not unreached and all(o.complete for o in outcomes)
+    stream = sys.stdout if complete else sys.stderr
+    head = "[cascade]" if complete else "[warn]"
+    status = "" if complete else ", not completed"
+    print(f"\n{head} forward cascade from #{plan.mover.number}{status}:", file=stream)
+    for outcome in outcomes:
+        print(f"  #{outcome.number}: {outcome.said}", file=stream)
+    for number in unreached:
+        print(f"  #{number}: not reached", file=stream)
+    if plan.stop is not None:
+        print(f"  the walk stopped: {plan.stop}", file=stream)
+    if plan.settle is not None:
+        print(f"  {plan.settle}", file=stream)
+    if unreached or plan.settle is not None or any(o.behind for o in outcomes):
+        print(f"  {_finish_advice(plan.mover, 'the cause is fixed')}", file=stream)
 
 
 # ---- I/O helpers ----------------------------------------------------
