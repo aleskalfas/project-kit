@@ -16,8 +16,9 @@ its own code. This module answers all of it in this process, from one model:
   after any request (:meth:`HostingService.before`, :meth:`~HostingService.after`).
   Every request is recorded, in order (:attr:`HostingService.requests`).
 - :class:`LocalClone` is the clone the run is in: its branches and commits,
-  and other repositories on the machine, which the cross-repository guard
-  compares by their `git -C` answers.
+  and other repositories on the machine, which the cross-repository guards —
+  project-management's and the backbone's — compare by their `git -C`
+  answers, or find git not answering.
 - :func:`install` routes every `subprocess.run` of `gh` and `git` to them, runs
   from the clone and sets the session anchor explicitly — the suite itself
   often runs inside a session that sets it. :func:`route_backbone` runs
@@ -42,14 +43,15 @@ from typing import Any
 
 import pytest
 
+from project_kit import session_guard
 from tests import pull_request_backbone
 
 Completed = subprocess.CompletedProcess[str]
 
 #: The session anchor: Claude Code's project directory, which
-#: project-management's cross-repository guard compares with the repository a
-#: mutation targets.
-ANCHOR = "CLAUDE_PROJECT_DIR"
+#: project-management's cross-repository guard and the backbone's compare with
+#: the repository a mutation targets.
+ANCHOR = session_guard.CLAUDE_CODE_ANCHOR
 
 # ---- the requests, one kind each ----------------------------------------------
 
@@ -658,6 +660,9 @@ class LocalClone:
     elsewhere: dict[Path, str | None] = field(default_factory=dict)
     #: Branches checked out in another worktree: a checkout of one fails.
     held_elsewhere: set[str] = field(default_factory=set)
+    #: git does not answer the cross-repository guards' questions — those it is
+    #: asked about another directory (`git -C`) — in time.
+    comparison_fault: bool = False
     calls: list[list[str]] = field(default_factory=list)
     deleted: list[str] = field(default_factory=list)
     checkouts: list[str] = field(default_factory=list)
@@ -675,6 +680,8 @@ class LocalClone:
         args = [str(arg) for arg in argv][1:]
         where = Path(cwd) if cwd is not None else Path.cwd()
         if args[:1] == ["-C"]:
+            if self.comparison_fault:
+                raise subprocess.TimeoutExpired(["git", *args], 5)
             where, args = Path(args[1]), args[2:]
         self.calls.append(args)
         root, origin = self._repository(where)
@@ -774,6 +781,14 @@ class Terminal(io.StringIO):
         return f"{self.answer}\n"
 
 
+class Screen(io.StringIO):
+    """Standard error on the terminal a :class:`Terminal`'s operator reads: a
+    question is asked only where both ends are a terminal."""
+
+    def isatty(self) -> bool:
+        return True
+
+
 class NoTerminal(io.StringIO):
     """Standard input that is not a terminal and holds nothing: a pipeline's,
     an agent's."""
@@ -793,9 +808,11 @@ def install(
     stdin: io.StringIO,
 ) -> None:
     """Answer every `gh` and `git` this process runs from `host` and `clone`;
-    run from the clone, with standard input `stdin`, and the session anchor at
-    `anchor` — None unsets it, as outside any session. Any other program a run
-    starts fails the test: the scenario must not reach past the fakes."""
+    run from the clone, with standard input `stdin` — and, where that is a
+    terminal, standard error on the same terminal (:class:`Screen`) — and the
+    session anchor at `anchor` — None unsets it, as outside any session. Any
+    other program a run starts fails the test: the scenario must not reach
+    past the fakes."""
 
     def run(args: Sequence[str], *_: Any, **kwargs: Any) -> Completed:
         argv = [str(arg) for arg in args]
@@ -812,6 +829,8 @@ def install(
     monkeypatch.setattr(subprocess, "run", run)
     monkeypatch.chdir(clone.root)
     monkeypatch.setattr("sys.stdin", stdin)
+    if stdin.isatty():
+        monkeypatch.setattr("sys.stderr", Screen())
     if anchor is None:
         monkeypatch.delenv(ANCHOR, raising=False)
     else:

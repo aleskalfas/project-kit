@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import click
 import pytest
+from click.testing import CliRunner
 
-from project_kit import versioning
+from project_kit import cli, session_guard, versioning
+from tests import sessions
 
 
 @pytest.fixture
@@ -138,6 +141,14 @@ def tmp_kit_in_git(tmp_path: Path) -> Path:
     return source_kit
 
 
+def _cleared(repo: Path) -> session_guard.Clearance:
+    """The cross-repository guard's clearance for `repo`, outside any session:
+    what a push to `origin` needs."""
+    cleared = session_guard.clear(repo, confirmed=False, interactive=False)
+    assert isinstance(cleared, session_guard.Clearance)
+    return cleared
+
+
 def test_tag_version_creates_annotated_tag(tmp_kit_in_git: Path) -> None:
     tag = versioning.tag_version(tmp_kit_in_git, push=False)
     assert tag == "v1.0.0"
@@ -195,7 +206,7 @@ def test_tag_version_push_invokes_git_push(
     _subprocess.run(["git", "init", "--bare", "-q", str(bare_remote)], check=True)
     _subprocess.run(["git", "remote", "add", "origin", str(bare_remote)], cwd=repo, check=True)
 
-    versioning.tag_version(tmp_kit_in_git, push=True)
+    versioning.tag_version(tmp_kit_in_git, push=True, clearance=_cleared(repo))
 
     # Verify the tag landed on the remote.
     result = _subprocess.run(
@@ -248,7 +259,7 @@ def test_untag_version_push_deletes_remote_tag(
     _subprocess.run(["git", "init", "--bare", "-q", str(bare_remote)], check=True)
     _subprocess.run(["git", "remote", "add", "origin", str(bare_remote)], cwd=repo, check=True)
 
-    versioning.tag_version(tmp_kit_in_git, push=True)
+    versioning.tag_version(tmp_kit_in_git, push=True, clearance=_cleared(repo))
     # Sanity check: tag is on the remote.
     result = _subprocess.run(
         ["git", "ls-remote", "--tags", str(bare_remote)],
@@ -258,7 +269,7 @@ def test_untag_version_push_deletes_remote_tag(
     )
     assert "refs/tags/v1.0.0" in result.stdout
 
-    versioning.untag_version(tmp_kit_in_git, push=True)
+    versioning.untag_version(tmp_kit_in_git, push=True, clearance=_cleared(repo))
 
     # Tag should be gone locally and on the remote.
     local = _subprocess.run(
@@ -272,6 +283,141 @@ def test_untag_version_push_deletes_remote_tag(
         check=True,
     )
     assert "refs/tags/v1.0.0" not in remote.stdout
+
+
+# --- the cross-repository guard on a push (#1254) ------------------------
+
+
+def _remote_tags(bare_remote: Path) -> str:
+    return _subprocess.run(
+        ["git", "ls-remote", "--tags", str(bare_remote)],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+
+
+def _local_tags(repo: Path) -> str:
+    return _subprocess.run(
+        ["git", "tag", "-l"], capture_output=True, text=True, cwd=repo, check=True
+    ).stdout.strip()
+
+
+@pytest.fixture
+def pushable(
+    tmp_kit_in_git: Path, tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, Path]:
+    """The kit `pkit version` acts on, its `origin` a bare repository a push
+    reaches without a network: (source kit, bare remote)."""
+    bare_remote = tmp_path_factory.mktemp("guarded-remote") / "remote.git"
+    _subprocess.run(["git", "init", "--bare", "-q", str(bare_remote)], check=True)
+    _subprocess.run(
+        ["git", "remote", "add", "origin", str(bare_remote)], cwd=tmp_kit_in_git.parent, check=True
+    )
+    monkeypatch.setattr(cli, "_target_kit", lambda: tmp_kit_in_git)
+    return tmp_kit_in_git, bare_remote
+
+
+@pytest.fixture
+def rooted_elsewhere(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A session rooted in another repository than the kit's."""
+    sessions.rooted_elsewhere(tmp_path_factory.mktemp("session"), monkeypatch)
+
+
+@pytest.fixture
+def guard_passes(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """How the cross-repository guard passed each change it was asked to
+    clear, in order — `refused` for one it refused."""
+    passes: list[str] = []
+    clear = session_guard.clear
+
+    def recording(*args: Any, **kwargs: Any) -> session_guard.Clearance | session_guard.Refusal:
+        passage = clear(*args, **kwargs)
+        passes.append(passage.passed if isinstance(passage, session_guard.Clearance) else "refused")
+        return passage
+
+    monkeypatch.setattr(session_guard, "clear", recording)
+    return passes
+
+
+def _tagged_and_pushed(source_kit: Path, bare_remote: Path) -> None:
+    """`v1.0.0` made and pushed with git alone, so no guard is asked."""
+    repo = source_kit.parent
+    _subprocess.run(["git", "tag", "-a", "v1.0.0", "-m", "v1.0.0"], cwd=repo, check=True)
+    _subprocess.run(
+        ["git", "push", "-q", "origin", "v1.0.0"], cwd=repo, check=True, capture_output=True
+    )
+    assert "refs/tags/v1.0.0" in _remote_tags(bare_remote)
+
+
+@pytest.mark.usefixtures("rooted_elsewhere")
+@pytest.mark.parametrize("command", ["tag", "untag"])
+def test_a_push_from_another_repository_with_no_terminal_and_no_flag_is_refused_untouched(
+    command: str, pushable: tuple[Path, Path], guard_passes: list[str]
+) -> None:
+    """No terminal to ask (the runner's input is not one) and no flag: the
+    guard refuses before the tag is made or deleted, so nothing changes
+    locally and nothing reaches `origin`."""
+    source_kit, bare_remote = pushable
+    if command == "untag":
+        _tagged_and_pushed(source_kit, bare_remote)
+    local_before, remote_before = _local_tags(source_kit.parent), _remote_tags(bare_remote)
+    result = CliRunner().invoke(cli.main, ["version", command, "--push"])
+    assert result.exit_code == 1
+    assert "the cross-repository guard refused" in result.stderr
+    assert "--allow-foreign-repo" in result.stderr
+    assert guard_passes == ["refused"]
+    assert _local_tags(source_kit.parent) == local_before
+    assert _remote_tags(bare_remote) == remote_before
+
+
+@pytest.mark.usefixtures("rooted_elsewhere")
+def test_the_flag_confirms_a_push_from_another_repository(
+    pushable: tuple[Path, Path], guard_passes: list[str]
+) -> None:
+    _, bare_remote = pushable
+    tagged = CliRunner().invoke(cli.main, ["version", "tag", "--push", "--allow-foreign-repo"])
+    assert tagged.exit_code == 0, tagged.output
+    assert "refs/tags/v1.0.0" in _remote_tags(bare_remote)
+    untagged = CliRunner().invoke(cli.main, ["version", "untag", "--push", "--allow-foreign-repo"])
+    assert untagged.exit_code == 0, untagged.output
+    assert "refs/tags/v1.0.0" not in _remote_tags(bare_remote)
+    assert guard_passes == ["flag", "flag"]
+
+
+def test_with_no_anchor_a_push_needs_no_flag(
+    pushable: tuple[Path, Path], guard_passes: list[str]
+) -> None:
+    """A pipeline — `release-tag.yml` runs `version tag --push` — has no
+    session's anchor: the guard does not fire, and passes undetermined."""
+    _, bare_remote = pushable
+    result = CliRunner().invoke(cli.main, ["version", "tag", "--push"])
+    assert result.exit_code == 0, result.output
+    assert "refs/tags/v1.0.0" in _remote_tags(bare_remote)
+    assert guard_passes == ["undetermined"]
+
+
+@pytest.mark.usefixtures("rooted_elsewhere")
+def test_a_tag_made_only_locally_runs_no_guard(
+    pushable: tuple[Path, Path], guard_passes: list[str]
+) -> None:
+    """Without `--push` nothing reaches the hosting service, so nothing is
+    guarded, even in another repository than the session's."""
+    source_kit, bare_remote = pushable
+    assert CliRunner().invoke(cli.main, ["version", "tag"]).exit_code == 0
+    assert CliRunner().invoke(cli.main, ["version", "untag"]).exit_code == 0
+    assert guard_passes == []
+    assert _local_tags(source_kit.parent) == "" and "v1.0.0" not in _remote_tags(bare_remote)
+
+
+@pytest.mark.parametrize("function", [versioning.tag_version, versioning.untag_version])
+def test_a_push_without_the_guards_clearance_is_not_made(function: Any, pushable: Any) -> None:
+    source_kit, bare_remote = pushable
+    with pytest.raises(TypeError, match="needs a clearance"):
+        function(source_kit, push=True)
+    assert _remote_tags(bare_remote) == ""
 
 
 def test_untag_version_accepts_prerelease_tag(tmp_kit_in_git: Path) -> None:

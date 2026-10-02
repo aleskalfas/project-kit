@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T00:50:35Z
+      at: 2026-10-02T00:55:24Z
       outcome: unchanged
-      unchanged-because: The CLI reference gained what connections resolve --json says about how a resolution ended (outcome, a closed set, and the document's schema_version) and the lifecycle reference tells a script to dispatch on outcome, never on why; this index still names the command surface and the lifecycle area those references document, and no command or area it lists was added, renamed or removed.
+      unchanged-because: The CLI reference now names every backbone command the cross-repository guard runs on and the fields of its documents; this index only points at that reference and describes no command's behaviour, so it holds
 ---
 
 # project-kit

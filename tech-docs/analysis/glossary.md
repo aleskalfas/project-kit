@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T22:17:09Z
+        at: 2026-10-02T00:55:25Z
         outcome: unchanged
-        unchanged-because: every title rule the schema declares now runs, and DEC-011 states them; what this page says of titles and filing still holds
+        unchanged-because: the backbone now runs the cross-repository guard on every change it makes on the hosting service; what this page says of the commands and the areas it indexes still holds
 ---
 
 # Glossary

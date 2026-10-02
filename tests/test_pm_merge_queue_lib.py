@@ -427,6 +427,34 @@ def test_a_request_reads_what_it_came_to(mq, pkit) -> None:
     assert pkit.asked()[0]["argv"] == ["pull-request", "enqueue", "42", "--head", "sha", "--json"]
 
 
+def test_a_request_the_backbones_guard_refused_says_so(mq, pkit) -> None:
+    """The backbone runs the cross-repository guard before the request; a
+    refusal reads as not accepted, its `reason_kind` naming the guard, with
+    what the guard compared (#1254)."""
+    guard = {
+        "verdict": "diverged",
+        "undetermined_kind": None,
+        "anchor": "/work/project",
+        "target": "/work/other",
+        "cleared": None,
+    }
+    pkit.answers(
+        {
+            "schema_version": 1,
+            "pull_request": 42,
+            "accepted": False,
+            "exit_code": None,
+            "reason": "the cross-repository guard refused: …",
+            "reason_kind": "foreign-repository",
+            "guard": guard,
+        },
+        code=1,
+    )
+    outcome = mq.request(["merge", "42", "--subject", "fix: x"], {})
+    assert (outcome.accepted, outcome.reason_kind) == (False, mq.FOREIGN_REPOSITORY)
+    assert outcome.guard == guard
+
+
 # --- the wait -------------------------------------------------------------------------
 
 

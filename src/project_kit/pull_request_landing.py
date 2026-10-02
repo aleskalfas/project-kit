@@ -43,6 +43,13 @@ what it refuses, the branch clean-up. project-management's merge verbs reach
 this module through `pkit pull-request` and its JSON documents, since they run
 as scripts that do not import the package; `pkit release merge` imports it.
 
+The requests that change the service's state — the merge, the enqueue, the
+dequeue — run the cross-repository guard (ADR-061 point 6, `session_guard`):
+each requires a clearance and the directory it acts in, and runs `gh` there,
+with no client of the caller's, so a caller that imports them can neither skip
+the guard nor clear one directory and act in another. The readings and the
+wait change nothing and run no guard.
+
 `gh` is the hosting service's client here. Every call runs it from the
 caller's directory — it resolves the repository from the git remote — with the
 caller's environment, so a host pinned through `GH_HOST` reaches it.
@@ -57,6 +64,8 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
+
+from project_kit import session_guard
 
 #: The version of the documents `pkit pull-request --json` writes; a reader
 #: refuses one it does not know.
@@ -334,14 +343,17 @@ def squash_merge(
     pr_number: int,
     *,
     subject: str,
+    cwd: Path,
+    clearance: session_guard.Clearance,
     head_oid: str = "",
     admin: bool = False,
-    gh: GhRunner | None = None,
 ) -> Outcome:
     """Squash-merge the PR with `subject` as the landed commit's subject.
 
-    GitHub's default subject for a single-commit PR is the commit message, so
-    the subject is always passed. `head_oid`, the head the caller checked, pins
+    `clearance` is the cross-repository guard's for `cwd`, the directory `gh`
+    runs in (:func:`session_guard.require`). GitHub's
+    default subject for a single-commit PR is the commit message, so the
+    subject is always passed. `head_oid`, the head the caller checked, pins
     the merge (`--match-head-commit`): a push in between fails it instead of
     landing commits nothing checked. Deliberately without `--delete-branch`:
     that flag makes gh check out the base locally and delete the local head,
@@ -352,42 +364,55 @@ def squash_merge(
     Accepted is not proof of a merge: on a base that requires a queue, gh
     enqueues and exits 0. Read the PR afterwards (:func:`read`).
     """
+    run = _acting(clearance, cwd)
     cmd = ["gh", "pr", "merge", str(pr_number), "--squash", "--subject", subject]
     if head_oid:
         cmd += ["--match-head-commit", head_oid]
     if admin:
         cmd.append("--admin")
-    return _request(_runner(gh), cmd)
+    return _request(run, cmd)
 
 
-def enqueue(pr_number: int, *, head_oid: str = "", gh: GhRunner | None = None) -> Outcome:
+def enqueue(
+    pr_number: int,
+    *,
+    cwd: Path,
+    clearance: session_guard.Clearance,
+    head_oid: str = "",
+) -> Outcome:
     """Put the PR in its base branch's merge queue: `gh pr merge <N> --auto`,
     pinned to the head the caller checked.
 
-    GitHub ignores a merge method, a subject and a body passed with a queued
-    merge, so none is passed; a caller checks the queue's method and the
-    repository's squash-commit defaults instead. With `--auto`, a PR whose own
-    required checks are still running is taken in once they pass. Never
-    `--admin`, which merges around the queue. The PR has not merged when this
-    returns.
+    `clearance` and `cwd` as for :func:`squash_merge`. GitHub ignores a merge
+    method, a subject and a body passed with a queued merge, so none is
+    passed; a caller checks the queue's method and the repository's
+    squash-commit defaults instead. With `--auto`, a PR whose own required
+    checks are still running is taken in once they pass. Never `--admin`,
+    which merges around the queue. The PR has not merged when this returns.
     """
+    run = _acting(clearance, cwd)
     cmd = ["gh", "pr", "merge", str(pr_number), "--auto"]
     if head_oid:
         cmd += ["--match-head-commit", head_oid]
-    return _request(_runner(gh), cmd)
+    return _request(run, cmd)
 
 
-def dequeue(pr_number: int, *, gh: GhRunner | None = None) -> Outcome:
+def dequeue(
+    pr_number: int,
+    *,
+    cwd: Path,
+    clearance: session_guard.Clearance,
+) -> Outcome:
     """Take the PR out of its base's merge queue — or, while auto-merge still
     holds it until its checks pass, cancel that — and confirm it is out.
 
-    The PR is read first. `gh pr merge --disable-auto` cancels the auto-merge;
-    on a PR already in the queue gh answers "already queued to merge" and
-    changes nothing, so such a PR is taken out through GitHub's own
-    `dequeuePullRequest`. Accepted once a reading shows the PR neither queued
-    nor merged.
+    `clearance` and `cwd` as for :func:`squash_merge`. The PR is read first.
+    `gh pr merge --disable-auto` cancels the auto-merge; on a PR already in
+    the queue gh answers "already queued to merge" and changes nothing, so
+    such a PR is taken out through GitHub's own `dequeuePullRequest`. Accepted
+    once a reading shows the PR neither queued nor merged.
     """
-    run = _runner(gh)
+    run = _acting(clearance, cwd)
     try:
         before = read(pr_number, gh=run)
     except Unreadable as exc:
@@ -534,9 +559,33 @@ def squash_defaults_document(*, gh: GhRunner | None = None) -> dict[str, Any]:
     }
 
 
-def outcome_document(pr_number: int, outcome: Outcome) -> dict[str, Any]:
-    """The document of a request — `merge`, `enqueue`, `dequeue`."""
-    return {"schema_version": SCHEMA_VERSION, "pull_request": pr_number, **outcome.as_json()}
+def outcome_document(
+    pr_number: int, outcome: Outcome, clearance: session_guard.Clearance
+) -> dict[str, Any]:
+    """The document of a request — `merge`, `enqueue`, `dequeue` — and of the
+    guard that let it be made: `reason_kind` null, `guard` how it cleared."""
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "pull_request": pr_number,
+        **outcome.as_json(),
+        "reason_kind": None,
+        "guard": clearance.as_json(),
+    }
+
+
+def refusal_document(pr_number: int, refusal: session_guard.Refusal) -> dict[str, Any]:
+    """The document of a request the cross-repository guard refused: nothing
+    was asked of the service, `accepted` false, `reason_kind`
+    `foreign-repository`, and `guard` what it compared."""
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "pull_request": pr_number,
+        "accepted": False,
+        "exit_code": None,
+        "reason": refusal.reason,
+        "reason_kind": session_guard.FOREIGN_REPOSITORY,
+        "guard": refusal.as_json(),
+    }
 
 
 def wait_reading_document(pr_number: int, reading: Reading) -> dict[str, Any]:
@@ -574,6 +623,12 @@ def _document(pr_number: int, **fields: Any) -> dict[str, Any]:
 def _runner(gh: GhRunner | None) -> GhRunner:
     """`gh`, else the module's runner, looked up at call time."""
     return gh if gh is not None else run_gh
+
+
+def _acting(clearance: session_guard.Clearance, cwd: Path) -> GhRunner:
+    """The runner a request that changes the service runs on, once `clearance`
+    covers `cwd`: `gh` from `cwd` — where the guard looked, and nowhere else."""
+    return gh_runner(session_guard.require(clearance, cwd))
 
 
 def _run(run: GhRunner, cmd: list[str]) -> subprocess.CompletedProcess[str]:

@@ -59,15 +59,21 @@ def in_process(
 ) -> None:
     """Route pm's backbone seam (`mq._answers`) to the backbone's CLI in this process.
 
-    `gh` stands in for the backbone's `gh` (default: the one on PATH). `read`
+    `gh` stands in for the backbone's `gh` (default: the one on PATH), the
+    one its readings run and the one its requests run where their clearance
+    covers (`landing.gh_runner`). `read`
     is a pm-level scripted reading — `(pr_number, config)` answering pm's
     `Reading` or raising pm's `Unreadable` — which the backbone's own readings
     (the wait's, the dequeue's) answer from too, so a test that scripts pm's
     `merge_queue.read` scripts the backbone's with the same sequence. `sleep`
-    and `clock` are the wait's.
+    and `clock` are the wait's. The backbone's standard input is the runner's,
+    which is no terminal, as pm's `/dev/null` is not: its cross-repository
+    guard never asks.
     """
     if gh is not None:
-        monkeypatch.setattr(landing, "run_gh", gh)
+        fake = gh
+        monkeypatch.setattr(landing, "run_gh", fake)
+        monkeypatch.setattr(landing, "gh_runner", lambda cwd: fake)
     if read is not None:
 
         def backbone_read(pr_number: int, *, gh: Any = None) -> landing.Reading:

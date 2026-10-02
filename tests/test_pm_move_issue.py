@@ -1,9 +1,10 @@
 """Tests for project-management's move-issue script's pure logic.
 
 Covers transition lookup, state inference, plan computation, severity
-parsing, forward-direction detection, parent-chain walking. The
-subprocess (gh) layer is not tested — those wrappers are thin
-pass-throughs.
+parsing, forward-direction detection. The parent an issue's first line
+names is read by `_lib/body_parent_ref.parent_issue`, tested in
+`test_pm_body_parent_ref.py`. The subprocess (gh) layer is not tested —
+those wrappers are thin pass-throughs.
 
 Also covers the DEC-031 placeholder-check wiring (issue #25):
 the transition path must invoke detect_placeholder_residuals at
@@ -481,41 +482,6 @@ def test_structural_type_from_kind_label_reads_mapping(mi, classification) -> No
     assert structural_type_from_kind_label(["type:bug"], classification) == "task"
     assert structural_type_from_kind_label(["type:feature"], classification) is None
     assert structural_type_from_kind_label(["priority:High"], classification) is None
-
-
-# --- parent-chain walking --------------------------------------------
-
-
-def test_walk_parent_chain_extracts_first_parent_ref(mi) -> None:
-    body = "Feature: #42\n\n## What\nfoo"
-    assert mi._walk_parent_chain(body) == [42]
-
-
-def test_walk_parent_chain_extracts_epic_form(mi) -> None:
-    body = "EPIC: #99\n\nbody"
-    assert mi._walk_parent_chain(body) == [99]
-
-
-def test_walk_parent_chain_skips_leading_blank_lines(mi) -> None:
-    body = "\n\nUmbrella: #5\n"
-    assert mi._walk_parent_chain(body) == [5]
-
-
-def test_walk_parent_chain_returns_empty_when_no_parent_ref(mi) -> None:
-    body = "## What\nno parent ref"
-    assert mi._walk_parent_chain(body) == []
-
-
-def test_walk_parent_chain_returns_empty_for_empty_body(mi) -> None:
-    assert mi._walk_parent_chain("") == []
-
-
-def test_walk_parent_chain_skips_dec013_integration_marker(mi) -> None:
-    """DEC-013 (#763): the `Integration: integration/<slug>` marker is the first
-    body line on a marked descendant, above the parent-ref. The chain-walker
-    must skip it and still read the parent-ref off the next content line."""
-    body = "Integration: integration/508-multi-instance-ownership\nEPIC: #508\n\nbody"
-    assert mi._walk_parent_chain(body) == [508]
 
 
 # --- state ordering ---------------------------------------------------
