@@ -32,8 +32,12 @@ the point is `fail`, and a gate never passes on fewer obligations than it
 should. A repository with no commit owes nothing: there is no HEAD to judge.
 These are the two cases a filler that reads history tells apart (COR-052 point
 6): history that does not exist yet holds nothing, and the answer is `[]`;
-history that exists and a shallow clone cut short is no answer — only the
-filler knows how far back it reads, so detecting it is this module's.
+history that exists and cannot be read is no answer. Whether HEAD names a
+commit is the backbone's to say — `head` in `pkit repository base --json`, which
+tells a HEAD with no commit yet from one git cannot read here — so this module
+asks git nothing. A history a shallow clone cut short is the other way it cannot
+be read: only the filler knows how far back it reads, so detecting it is this
+module's.
 """
 
 from __future__ import annotations
@@ -56,10 +60,14 @@ CODE_UNDOCUMENTED = "code-undocumented"
 STALE = "stale"
 UNREACHABLE = "unreachable"
 
-#: The version of `pkit friction check --all --json` this reading understands. A
-#: document without `schema_version` comes from a backbone that predates the key:
-#: version 1.
-CHECK_VERSION = 1
+#: The backbone's readings this contribution reads: the whole-repository check, and
+#: settled state for whether HEAD names a commit (`head`).
+CHECK_ARGV = ("pkit", "friction", "check", "--all", "--json")
+BASE_ARGV = ("pkit", "repository", "base", "--json")
+
+#: The version of each reading this capability understands. A document without
+#: `schema_version` comes from a backbone that predates the key: version 1.
+READING_VERSION = 1
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
@@ -69,44 +77,56 @@ class NoAnswer(Exception):
 
 
 def has_commit(root: str, run: Runner = subprocess.run) -> bool:
-    """Whether HEAD names a commit — the history the friction check reads."""
-    try:
-        proc = run(
-            ["git", "rev-parse", "--verify", "--quiet", "HEAD^{commit}"],
-            cwd=root,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except OSError:
+    """Whether HEAD names a commit — the history the friction check reads — as the
+    backbone reads HEAD, `head` in `pkit repository base --json`: False only when
+    there is none yet. Raises NoAnswer when the reading gives no answer, or says
+    git cannot read HEAD here: history that exists and was not read is never
+    history that does not exist."""
+    head = _reading(BASE_ARGV, root, run, "head")["head"]
+    if not isinstance(head, Mapping):
+        raise NoAnswer(f"`{' '.join(BASE_ARGV)}` answered no `head` this capability can read")
+    if isinstance(head.get("commit"), str) and head["commit"]:
+        return True
+    if head.get("unborn") is True:
         return False
-    return proc.returncode == 0
+    problem = head.get("problem")
+    raise NoAnswer(
+        problem.rstrip(".")
+        if isinstance(problem, str) and problem
+        else "HEAD names no commit this clone can read, and the backbone does not say why"
+    )
 
 
 def read_friction(root: str, run: Runner = subprocess.run) -> Mapping[str, Any]:
     """The whole-repository check's machine-readable document, through `pkit`.
     Raises NoAnswer when it gives none, or one of a version this reading does not
     understand."""
-    argv = ["pkit", "friction", "check", "--all", "--json"]
+    return _reading(CHECK_ARGV, root, run, "artefacts")
+
+
+def _reading(argv: Sequence[str], root: str, run: Runner, key: str) -> Mapping[str, Any]:
+    """The document a backbone reading prints, one that carries `key`, at the version
+    this capability reads. Raises NoAnswer when it gives none, or one of a version
+    this reading does not understand."""
     try:
-        proc = run(argv, cwd=root, capture_output=True, text=True, check=False)
+        proc = run(list(argv), cwd=root, capture_output=True, text=True, check=False)
     except OSError as exc:
         raise NoAnswer(f"`pkit` could not be run ({exc})") from exc
     try:
         document = json.loads(proc.stdout or "")
     except ValueError:
         document = None
-    if proc.returncode != 0 or not isinstance(document, Mapping) or "artefacts" not in document:
+    if proc.returncode != 0 or not isinstance(document, Mapping) or key not in document:
         detail = (proc.stderr or "").strip().splitlines()
         raise NoAnswer(
             f"`{' '.join(argv)}` exited {proc.returncode} without its document"
             + (f": {detail[-1]}" if detail else "")
         )
-    version = document.get("schema_version", CHECK_VERSION)
-    if version != CHECK_VERSION:
+    version = document.get("schema_version", READING_VERSION)
+    if version != READING_VERSION:
         raise NoAnswer(
             f"`{' '.join(argv)}` answered schema_version {version!r}; "
-            f"this capability reads {CHECK_VERSION}"
+            f"this capability reads {READING_VERSION}"
         )
     return document
 
