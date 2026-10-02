@@ -10,10 +10,12 @@
 COR-037 cascade `members` predicate for the issue-lifecycle CLOSURE fold: the
 parent-scoped candidate-member SOURCE. Given the parent issue number (the keyed
 subject the engine threads), returns `{members: ["<n>", ...]}` — the issue
-numbers of EVERY child of the parent (open and closed), discovered via the body
-parent-ref (the same `resolve_children` seam close-issue's `_find_open_children` uses — though by a
-different acquisition path: this predicate lets the seam fetch and vouch for the corpus, while the
-diagnostic hint supplies one with its own claim).
+numbers of EVERY child of the parent (open and closed): its native sub-issues
+together with every issue whose first line names it, as the containment seam
+resolves them (`resolve_children`, the contract ADR-035 holds). It is the seam
+close-issue's `_find_open_children` uses, by a different acquisition path: this
+predicate lets the seam fetch and vouch for the corpus, while the diagnostic hint
+supplies one with its own claim.
 The engine resolves each member's lifecycle outcome and folds them; an open
 child resolves to a non-terminal state and HOLDS the fold, reproducing pm's
 "an open child blocks eligibility" without filtering by state here.

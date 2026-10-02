@@ -506,18 +506,23 @@ def main() -> int:
     # first label in parent_ref_form. The parent type is detected from its title
     # prefix via the same `_infer_structural_type` the validator / show / tree
     # scripts use; on any detection failure the label degrades to parent_ref_form's
-    # first option (the prior behaviour).
+    # first option (the prior behaviour), and a parent whose label is not one of
+    # the type's forms is named in the first option with a warning
+    # (`body_parent_ref.issue_parent_line`, the writer set-field shares).
     parent_label = None
     if args.parent is not None:
         parent_type = _detect_parent_structural_type(args.parent, config, issue_types)
         if parent_type is not None:
             parent_label = _parent_ref_label(issue_types, parent_type)
-    expected_parent_ref = _parent_ref_line(
+    parent_line = _parent_line(
         type_entry,
         parent_num=args.parent,
         milestone_num=args.milestone,
         parent_label=parent_label,
     )
+    expected_parent_ref = parent_line.line
+    if parent_line.warning is not None and args.body_file is None:
+        print(f"[warn] {parent_line.warning}.", file=sys.stderr)
     if args.body_file is not None:
         if not args.body_file.is_file():
             print(
@@ -587,20 +592,22 @@ def main() -> int:
     # only the flag's own ref, so it never names a second parent). When the flag
     # and the first line name different issues, the native link and the textual
     # record would disagree from the moment of filing, so refuse before any
-    # mutation rather than pick one.
+    # mutation rather than pick one. The disagreement is read as every reader of
+    # the parent reads the line (`body_parent_ref.named_issue`), in any form: a
+    # loose `Feature: #2 — auth` names #2 for the close gate, so it disagrees with
+    # `--parent 3` even where the form check above let the body through
+    # (`hierarchy: advisory`). Linking from the first line alone stays narrower —
+    # only a form the type allows.
     first_line_ref = body_parent_ref.parse_first_line(
         body, str(type_entry.get("parent_ref_form", ""))
     )
     first_line_parent = first_line_ref.issue_number if first_line_ref else None
-    if (
-        args.parent is not None
-        and first_line_parent is not None
-        and first_line_parent != args.parent
-    ):
+    named_parent = body_parent_ref.named_issue(body)
+    if args.parent is not None and named_parent is not None and named_parent != args.parent:
         print(
             f"error: --parent #{args.parent} and the body's first line "
             f"{body_parent_ref.first_line(body)!r} name different parents "
-            f"(#{args.parent} vs #{first_line_parent}). The first line is the "
+            f"(#{args.parent} vs #{named_parent}). The first line is the "
             "textual parent record and the native sub-issue link must name the "
             "same issue — correct one of them, or omit --parent to link the "
             "first line's parent.",
@@ -1223,15 +1230,10 @@ def _parent_ref_label(issue_types: dict, parent_type: str) -> str | None:
 
     The label is the parent type's own rendered ``title_prefix`` (epic→``EPIC``,
     feature→``Feature``, umbrella→``Umbrella``) — the same token its
-    ``parent_ref_form`` uses. ``None`` when the parent type is unknown.
+    ``parent_ref_form`` uses. ``None`` when the parent type is unknown. Read by
+    ``body_parent_ref.type_label``, the one reading set-field shares.
     """
-    entry = (issue_types.get("types") or {}).get(parent_type)
-    if not isinstance(entry, dict):
-        return None
-    rendered = str(entry.get("title_prefix", ""))
-    if entry.get("title_case", "title") == "upper":
-        rendered = rendered.upper()
-    return rendered or None
+    return body_parent_ref.type_label(issue_types, parent_type)
 
 
 def _detect_parent_structural_type(parent_num: int, config: dict, issue_types: dict) -> str | None:
@@ -1304,7 +1306,18 @@ def _parent_ref_line(
     milestone_num: int | None = None,
     parent_label: str | None = None,
 ) -> str:
-    """Build the parent-ref line that goes at the top of the body.
+    """Build the parent-ref line that goes at the top of the body
+    (:func:`_parent_line`'s line)."""
+    return _parent_line(type_entry, parent_num, milestone_num, parent_label).line
+
+
+def _parent_line(
+    type_entry: dict,
+    parent_num: int | None,
+    milestone_num: int | None = None,
+    parent_label: str | None = None,
+) -> body_parent_ref.ParentLine:
+    """The parent-ref line that goes at the top of the body, and what to warn of.
 
     When ``milestone_num`` is given (and the type permits milestone as a
     parent), emits the markdown-link form so the rendered link points to
@@ -1312,25 +1325,21 @@ def _parent_ref_line(
         ``Milestone: [#<N>](../milestone/<N>)``
 
     When ``parent_num`` is given, emits the plain ``<Label>: #<N>`` form
-    (issue auto-links are correct for issue parents). ``parent_label`` is the
-    label matching the PARENT's actual structural type (e.g. ``EPIC`` for a Task
-    filed under an EPIC, #356); when it is ``None`` — the parent type could not
-    be detected — the label degrades to the first option in the type's
-    ``parent_ref_form`` (the prior behaviour).
+    (issue auto-links are correct for issue parents), written by
+    ``body_parent_ref.issue_parent_line`` — the writer ``set-field --parent``
+    shares. ``parent_label`` is the label matching the PARENT's actual
+    structural type (e.g. ``EPIC`` for a Task filed under an EPIC, #356), used
+    when it is one of the type's forms; when it is ``None`` — the parent type
+    could not be detected — the label degrades to the first option in the type's
+    ``parent_ref_form`` (the prior behaviour), as it does, with a warning, for a
+    parent whose label the type's forms do not offer.
     """
     if milestone_num is not None and "milestone" in (type_entry.get("parent_issue_types") or []):
-        return f"Milestone: [#{milestone_num}](../milestone/{milestone_num})"
+        return body_parent_ref.ParentLine(body_parent_ref.milestone_line(milestone_num))
     if parent_num is None:
-        return ""
-    if parent_label:
-        return f"{parent_label}: #{parent_num}"
-    form = type_entry.get("parent_ref_form", "Parent: #<N>")
-    # form is like "Feature: #<N>" or "EPIC: #<N> or Umbrella: #<N>" — pick
-    # the first label fragment before the `:` and use it.
-    head = str(form).split(":", 1)[0].strip()
-    if " or " in head:
-        head = head.split(" or ", 1)[0].strip()
-    return f"{head}: #{parent_num}"
+        return body_parent_ref.ParentLine("")
+    form = str(type_entry.get("parent_ref_form", "Parent: #<N>"))
+    return body_parent_ref.issue_parent_line(form, parent_num, parent_label)
 
 
 def _compose_body(template_path: Path, parent_ref: str) -> str:

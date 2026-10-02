@@ -82,6 +82,15 @@ def _run(
 
     issues = {42: issue, **(parents or {})}
     monkeypatch.setattr(ci, "_gh_get_issue", lambda n, _config: issues.get(n))
+    # The closure cascade resolves the closed issue's parent from its record,
+    # which carries its native parent: none here.
+    monkeypatch.setattr(
+        ci.containment,
+        "read_issue_record",
+        lambda _config, *, issue_number: ci.containment.IssueRecord(
+            issue=issues[int(issue_number)], parent=None
+        ),
+    )
     pr_reads: list[int] = []
 
     def fake_get_pr(n, _config):
@@ -132,25 +141,28 @@ def test_closes_an_open_leaf_as_completed_through_a_merged_pr(ci, monkeypatch, c
 
 
 @pytest.mark.parametrize("line", ["Epic: #10", "EPIC: #10 — the auth work", "Related: #10"])
-def test_a_first_line_that_is_not_an_allowed_parent_ref_is_said_not_called_absent(
+def test_a_first_line_not_in_an_allowed_form_has_its_parent_checked_with_a_warning(
     ci, monkeypatch, capsys, line: str
 ) -> None:
-    """The closure cascade finds no parent in a line the Task's type does not
-    accept, and says so — it does not report that the body names none."""
+    """A line the Task's type does not accept still names its parent — the close
+    gate counts the Task under it — so the closure cascade checks that parent,
+    and says the line is not an allowed form (#1281)."""
+    parent = {"title": "[EPIC] e", "state": "OPEN", "body": "## What\n", "labels": []}
     rec = _run(
         ci,
         monkeypatch,
         ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
         issue=_issue(body=f"{line}\n\n## What\nx\n"),
+        parents={10: parent},
     )
     assert rec.rc == 0
     out, err = capsys.readouterr()
-    assert "no parent ref found" not in out
-    assert "parents to check for eligibility" not in out
+    assert "[cascade] parents to check for eligibility: #10\n" in out
+    assert "  · parent #10 open; checkboxes complete" in out
     assert (
         f"[warn] #42's first line `{line}` is not a parent-ref a task may have: Feature: #<N> "
-        "or Umbrella: #<N> or EPIC: #<N> or Milestone: [#<N>](../milestone/<N>); parent "
-        "check skipped.\n"
+        "or Umbrella: #<N> or EPIC: #<N> or Milestone: [#<N>](../milestone/<N>); #10 is "
+        "checked as its parent all the same.\n"
     ) in err
 
 
@@ -163,8 +175,11 @@ def test_a_body_naming_no_parent_is_said_to_name_none(ci, monkeypatch, capsys) -
     )
     assert rec.rc == 0
     out, err = capsys.readouterr()
-    assert "[cascade] no parent ref found in body; parent check skipped." in out
-    assert "first line" not in err
+    assert (
+        "[cascade] no parent issue: neither a native parent nor one named on the first line; "
+        "parent check skipped."
+    ) in out
+    assert "first line names" not in err
 
 
 def test_the_comment_is_posted_once_across_a_retry(ci, monkeypatch) -> None:

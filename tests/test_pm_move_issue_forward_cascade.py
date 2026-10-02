@@ -187,6 +187,23 @@ def test_an_umbrella_between_the_task_and_its_epic_is_moved_too(
     _no_drift(world, capsys, inner, outer, epic)
 
 
+def test_a_feature_under_an_umbrella_is_walked_to_the_epic(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An Umbrella may hold a Feature, and a Feature's first line may name it
+    (#1281): the walk goes through the Feature and the Umbrella to the EPIC."""
+    epic = _container(world, "[EPIC] An epic")
+    umbrella = _container(world, "[Umbrella] A bucket", epic, "EPIC")
+    feature = _container(world, "[Feature] A feature", umbrella, "Umbrella")
+    task = _task(world, feature)
+
+    assert world.promote(task) == 0
+
+    assert "the walk stops there" not in capsys.readouterr().err
+    for number in (feature, umbrella, epic):
+        assert world.moves(number) == [("todo", "backlog", "promote-issue")], number
+
+
 def test_an_ancestor_at_the_target_is_left_alone_and_the_walk_goes_on(
     world: World, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -441,7 +458,7 @@ def test_an_ancestors_first_line_that_is_not_an_allowed_form_stops_the_walk_abov
     err = capsys.readouterr().err
     assert (
         f"the walk stopped: #{feature}'s first line `Epic: #{epic}` is not a parent-ref a "
-        "feature may have: EPIC: #<N> or Milestone: [#<N>](../milestone/<N>)\n"
+        "feature may have: EPIC: #<N> or Umbrella: #<N> or Milestone: [#<N>](../milestone/<N>)\n"
     ) in err
     assert world.moves(feature) == [("todo", "backlog", "promote-issue")]
     assert world.moves(epic) == []
@@ -484,6 +501,58 @@ def test_a_native_parent_that_agrees_with_the_first_line_is_followed(world: Worl
     assert world.promote(task) == 0
 
     assert world.moves(feature) == world.moves(epic) == [("todo", "backlog", "promote-issue")]
+
+
+def test_a_line_its_type_does_not_allow_is_followed_where_the_native_parent_agrees(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """#1281: the one change to the walk. A first line in a form the issue's type
+    does not allow, under a native parent naming the same issue, is the parent
+    both records agree on: the walk follows it, with a note, for the moved issue
+    and for an ancestor alike."""
+    epic = _container(world, "[EPIC] An epic")
+    feature = _container(world, "[Feature] A feature", epic, "Epic")
+    task = world.file_issue(body=f"Feature: #{feature} — auth\n\n{AUTHORED_BODY}")
+    world.tracker.native_parents[feature] = epic
+    world.tracker.native_parents[task] = feature
+    capsys.readouterr()
+
+    assert world.promote(task) == 0
+
+    out, err = capsys.readouterr()
+    assert world.moves(feature) == world.moves(epic) == [("todo", "backlog", "promote-issue")]
+    assert (
+        f"[note] #{task}'s first line `Feature: #{feature} — auth` is not a parent-ref a task "
+        f"may have: {TASK_FORMS}; its native parent agrees, so the forward cascade walks to it.\n"
+    ) in out
+    assert (
+        f"  [note] #{feature}'s first line `Epic: #{epic}` is not a parent-ref a feature may "
+        "have: EPIC: #<N> or Umbrella: #<N> or Milestone: [#<N>](../milestone/<N>); its native "
+        "parent agrees, so the walk follows it.\n"
+    ) in out
+    assert "the walk stops there" not in err
+
+
+def test_an_untyped_line_outside_the_label_form_is_said_and_not_followed(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An ancestor whose type cannot be told and whose first line is `Epic:#5`
+    names #5, and the walk says why it stops there rather than ending silently."""
+    epic = _container(world, "[EPIC] An epic")
+    brownfield = world.file_issue(
+        body=f"Epic:#{epic}\n\n{CONTAINER_BODY}", title="Payments work", labels=()
+    )
+    task = _task(world, brownfield)
+    capsys.readouterr()
+
+    assert world.promote(task) == 0
+
+    assert (
+        f"  [warn] #{brownfield}'s first line `Epic:#{epic}` is not in the parent-ref form "
+        "`<Label>: #<N>`; the walk stops there.\n"
+    ) in capsys.readouterr().err
+    assert world.moves(brownfield) == [("todo", "backlog", "promote-issue")]
+    assert world.moves(epic) == []
 
 
 # --- the moved issue's own parent is held to its native one ----------------
@@ -1040,6 +1109,32 @@ def test_an_issue_labelled_done_and_closed_as_completed_brings_its_ancestors_lev
     for number in (feature, epic):
         assert world.moves(number) == TODO_TO_IN_PROGRESS
         assert world.journal(number)[0]["reason"] == _reason(task, "at done")
+
+
+def test_a_closed_issue_nothing_places_is_told_apart_by_its_close_reason(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An issue closed with neither a state label nor a milestone reads as Todo,
+    but nothing recorded it there, so its close reason is read before that Todo
+    is taken for a won't-do close (#1281): closed as completed, it brings its
+    ancestors level; closed as not planned, it moves none."""
+    epic, feature, task = _epic_feature_task(world)
+    world.tracker.close(task, "COMPLETED")
+    _, other_feature, dropped = _epic_feature_task(world)
+    world.tracker.close(dropped, "NOT_PLANNED")
+    capsys.readouterr()
+
+    assert world.move(task, "done") == 0
+    assert world.move(dropped, "done") == 0
+
+    for number in (feature, epic):
+        assert world.moves(number) == TODO_TO_IN_PROGRESS
+        assert world.journal(number)[0]["reason"] == _reason(task, "at done")
+    assert (
+        "[cascade] the forward cascade moves no ancestor: "
+        f"#{dropped} closed as not planned, not as completed."
+    ) in capsys.readouterr().out
+    assert world.moves(other_feature) == []
 
 
 @pytest.mark.parametrize(

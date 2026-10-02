@@ -199,7 +199,7 @@ def test_an_issue_whose_type_cannot_be_told_names_any_labelled_issue(
     [
         ("feature", "Epic: #5"),
         ("feature", "Feature: #12 — auth"),
-        ("feature", "Umbrella: #7"),
+        ("feature", "Task: #7"),
         ("feature", "EPIC:#5"),
         ("task", "Related: #45"),
         ("epic", "Feature: #12"),
@@ -212,7 +212,7 @@ def test_a_line_that_looks_like_a_parent_ref_but_is_not_an_allowed_form_is_said(
     line, and the forms the type allows, are quoted for it to say instead."""
     body = f"{line}\n\n## What\n"
     assert bpr.parent_issue(body, structural_type, issue_types) is None
-    assert bpr.unrecognised_parent_line(body, structural_type, issue_types) == (
+    assert bpr.read_first_line(body, structural_type, issue_types).note == (
         f"first line `{line}` is not a parent-ref a {structural_type} may have: "
         f"{forms[structural_type]}"
     )
@@ -232,7 +232,7 @@ def test_a_line_that_looks_like_a_parent_ref_but_is_not_an_allowed_form_is_said(
 def test_a_line_with_nothing_to_say_about_it_is_not_said(
     bpr, issue_types, structural_type, body
 ) -> None:
-    assert bpr.unrecognised_parent_line(body, structural_type, issue_types) is None
+    assert bpr.read_first_line(body, structural_type, issue_types).note is None
 
 
 # --- a milestone first line follows a milestone move (#1049) -------------
@@ -276,3 +276,120 @@ def test_set_first_line_milestone_leaves_an_issue_parent_alone(bpr) -> None:
     body = "EPIC: #10\n\n## What\n"
     assert bpr.set_first_line_milestone(body, 6) == body
     assert bpr.set_first_line_milestone(body, None) == body
+
+
+# --- the one writer of an issue parent's first line (#1281) ---------------
+
+
+@pytest.mark.parametrize(
+    ("parent_type", "line"),
+    [("epic", "EPIC: #9"), ("feature", "Feature: #9"), ("umbrella", "Umbrella: #9")],
+)
+def test_the_line_carries_the_parents_own_label(bpr, issue_types, forms, parent_type, line) -> None:
+    label = bpr.type_label(issue_types, parent_type)
+    assert bpr.issue_parent_line(forms["task"], 9, label) == bpr.ParentLine(line)
+
+
+def test_a_feature_under_an_umbrella_names_it_an_umbrella(bpr, issue_types, forms) -> None:
+    label = bpr.type_label(issue_types, "umbrella")
+    assert bpr.issue_parent_line(forms["feature"], 9, label).line == "Umbrella: #9"
+
+
+def test_a_parent_of_unknown_type_takes_the_first_form(bpr, forms) -> None:
+    assert bpr.issue_parent_line(forms["task"], 9) == bpr.ParentLine("Feature: #9")
+
+
+def test_a_parent_the_forms_do_not_offer_takes_the_first_form_with_a_warning(
+    bpr, issue_types, forms
+) -> None:
+    written = bpr.issue_parent_line(forms["task"], 9, bpr.type_label(issue_types, "task"))
+    assert written.line == "Feature: #9"
+    assert written.warning == (
+        f"`Task: #<N>` is not a parent-ref this type may have ({forms['task']}), so the "
+        "first line names #9 as `Feature: #9`"
+    )
+
+
+def test_a_type_with_no_form_writes_no_line(bpr) -> None:
+    assert bpr.issue_parent_line("", 9, "EPIC") == bpr.ParentLine("")
+
+
+def test_an_undeclared_type_has_no_label(bpr, issue_types) -> None:
+    assert bpr.type_label(issue_types, "spike") is None
+
+
+# --- an EPIC's container is a milestone (#1281) ----------------------------
+#
+# An EPIC's only parent-ref names a milestone, so the number a writer is given
+# for it is a milestone's: the line it writes, `Milestone: #<N>`, names
+# milestone N and no issue, and the warning says so — whatever the parent's
+# label, and whether or not it is known.
+
+
+@pytest.mark.parametrize("label", [None, "EPIC", "Umbrella", "Feature"])
+def test_an_epics_line_names_a_milestone_and_the_warning_says_so(bpr, forms, label) -> None:
+    written = bpr.issue_parent_line(forms["epic"], 9, label)
+    assert written.line == "Milestone: #9"
+    assert written.warning == (
+        f"this type's container is a milestone, never an issue ({forms['epic']}), so the "
+        "first line `Milestone: #9` names milestone 9, not issue #9"
+    )
+    # And the line it wrote is read as the warning says: a milestone, no issue.
+    assert bpr.named_issue(f"{written.line}\n") is None
+    assert bpr.first_line_milestone(f"{written.line}\n") == 9
+
+
+def test_an_epics_form_names_no_issue_and_its_reading_says_so(bpr, issue_types, forms) -> None:
+    assert not bpr.form_names_an_issue(forms["epic"])
+    assert all(bpr.form_names_an_issue(forms[t]) for t in ("feature", "umbrella", "task"))
+    for line in ("Milestone: [#3](../milestone/3)", "Feature: #12", "## What"):
+        assert bpr.read_first_line(f"{line}\n", "epic", issue_types).issue_form is False
+        assert bpr.read_first_line(f"{line}\n", "task", issue_types).issue_form is True
+    # An issue whose type cannot be told may name an issue parent.
+    assert bpr.read_first_line("Feature: #12\n", None, issue_types).issue_form is True
+
+
+def test_a_milestone_first_option_says_so_where_the_parents_label_is_not_offered(bpr) -> None:
+    """A form whose first option is the milestone's but which offers issue
+    parents too: an unoffered or unknown label falls to the milestone line, and
+    the warning says it names a milestone; an offered label is written as is."""
+    form = "Milestone: [#<N>](../milestone/<N>) or EPIC: #<N>"
+    assert bpr.issue_parent_line(form, 9, "EPIC") == bpr.ParentLine("EPIC: #9")
+    unoffered = bpr.issue_parent_line(form, 9, "Task")
+    assert unoffered.line == "Milestone: #9"
+    assert unoffered.warning is not None
+    assert unoffered.warning.endswith("names milestone 9, not issue #9")
+    unknown = bpr.issue_parent_line(form, 9)
+    assert unknown.warning is not None and "the parent's type is not known" in unknown.warning
+
+
+# --- a parent-ref and nothing else (#1281) ---------------------------------
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Feature: #12",
+        "EPIC:#5",
+        "Umbrella: #7   ",
+        "Milestone: [#3](../milestone/3)",
+        "Milestone: #3",
+    ],
+)
+def test_a_line_that_is_only_a_parent_ref(bpr, line) -> None:
+    assert bpr.is_only_a_parent_ref(line)
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Feature: #12 — auth",
+        "Fixes: #12 by moving the reader into the seam",
+        "Note: #45 was closed in favour of this one; …",
+        "Milestone: [#3](../milestone/3) — Q4",
+        "## What",
+        "",
+    ],
+)
+def test_a_line_that_says_more_than_a_parent_ref(bpr, line) -> None:
+    assert not bpr.is_only_a_parent_ref(line)

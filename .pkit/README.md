@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T07:46:44Z
+      at: 2026-10-02T10:23:13Z
       outcome: unchanged
-      unchanged-because: the CLI README now says which verbs refuse a name an adapter or a capability already holds, and the lifecycle README how validation reports a pair registered under one name; this page maps the cli area as the pkit command-line surface and the lifecycle area as packaging and dependency architecture, one line each, which still holds
+      unchanged-because: "The process area's row says what the area is: the shared process substrate a capability binds its process to, and the engine behind pkit process. The process README's change corrects how a cascade's membership predicate is glossed, which this index does not describe, so the row still holds."
 ---
 
 # project-kit

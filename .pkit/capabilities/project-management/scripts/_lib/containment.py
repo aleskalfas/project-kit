@@ -12,12 +12,18 @@ The read counterpart (the second half of this module)
 DEC-005's "native wins" rule is a *read*-time resolution as much as a write-time
 one. Where this module's write half is the sole constructor of the native link,
 its read half (:func:`resolve_children`) is the sole resolver of "what are this
-parent's children?" — native sub-issues where present, textual child-side
-parent-refs otherwise, **native-wins on conflict**. Both `show-tree` and the
+parent's children?" — the union of its native sub-issues and the issues whose
+child-side first line names it, **native-wins on conflict**. Both `show-tree` and the
 DEC-034 closure-fold child-walk resolve through it, so no consumer re-derives
 containment by parsing body parent-refs directly (ADR-026's one-read-seam
 discipline, mirrored here for the containment axis: a second consumer must not
-re-derive what one seam already resolves). The formal contract for both halves
+re-derive what one seam already resolves). Its upward counterpart,
+:func:`resolve_parent`, answers "what is this issue's parent?" from one read of
+the issue's record — the native parent it carries, held to the first line — for
+the forward cascade, the closure cascade and the fold's membership step, and
+through its pure half (:func:`compare_parents`) for `show-tree`. Both directions
+read a first line through `body_parent_ref`, so the issue a line names is the
+same either way. The formal contract for both halves
 is ADR-035, the containment resolution contract (under
 ``tech-docs/architecture/decisions/``); this module's docstrings carry the
 semantics it pins.
@@ -109,11 +115,11 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Any
 
-from _lib import lifecycle_inference as _infer
+from _lib import body_parent_ref
 
 # Sibling module — the gh shell-out helper that pins the adopter's host/owner
 # (DEC-023). Imported the same way `_lib.substrate_writes` does, with a defensive
@@ -1057,8 +1063,8 @@ def _gh_call(args: list[str], config: dict[str, Any]) -> subprocess.CompletedPro
 
 
 # =========================================================================
-# Read seam — resolve a parent's children (native-where-present / textual-
-# otherwise / native-wins). The counterpart to the write half above.
+# Read seam — resolve a parent's children (native and first-line children
+# together, native-wins). The counterpart to the write half above.
 # =========================================================================
 
 
@@ -1385,8 +1391,8 @@ def resolve_children(
     corpus: dict[int, str] | None = None,
     corpus_complete: bool | None = None,
 ) -> ChildResolution:
-    """Resolve a parent's children — native-where-present, textual-otherwise,
-    native-wins on conflict (DEC-005).
+    """Resolve a parent's children — its native sub-issues together with every
+    issue whose first line names it, native-wins on conflict (DEC-005).
 
     The sole read-seam for "what are this parent's children?" ``show-tree``, the
     DEC-034 closure fold and ``close-issue``'s open-children walk all resolve
@@ -1514,27 +1520,287 @@ def resolve_children(
 
 
 def _body_names_parent(body: str, parent_number: int) -> bool:
-    """True when a child body's FIRST non-blank line is a parent-ref naming
-    ``parent_number`` (``<Word>: #<n>``).
+    """True when a child body's first line names issue ``parent_number`` as its
+    parent, in any form (``body_parent_ref.named_issue``).
 
-    The textual-side recognition, identical to the convention other walkers use
-    (``show-tree._extract_parent_ref``, ``lifecycle_inference.parent_ref``).
-    Co-located here so the read seam owns the
-    textual projection too — a consumer routing through the seam never re-parses
-    the body itself.
+    The textual side of the child set reads the line the way every other reader
+    of an issue's parent does, so the issue a line names here is the issue
+    :func:`resolve_parent` resolves the same line to. A first line naming its
+    parent in a form the child's type does not allow (``Epic: #5``) still counts
+    the child: it is reported as non-conforming, never dropped from a gate.
     """
-    if not body:
-        return False
-    body = _infer.strip_integration_marker(body)  # DEC-013 marker above parent-ref (#763)
-    for line in body.splitlines():
-        s = line.strip()
-        if not s:
-            continue
-        m = re.match(r"^([A-Za-z]+):\s+#(\d+)", s)
-        if not m:
-            return False
-        return int(m.group(2)) == parent_number
-    return False
+    return body_parent_ref.named_issue(body) == parent_number
+
+
+# =========================================================================
+# Read seam, upward — resolve an issue's parent. The counterpart to
+# `resolve_children`: one record read, the native parent held to the first line.
+# =========================================================================
+
+
+class ParentKind(Enum):
+    """How an issue's two records of its parent stand (:func:`resolve_parent`).
+
+    AGREED        — the native parent is the issue the first line names.
+    NATIVE_ONLY   — a native parent, and a first line that names no issue (none
+                    at all, or a milestone).
+    TEXTUAL_ONLY  — a first line naming a parent, and no native parent — the
+                    tracker reports none, or the instance has no sub-issues.
+    DISAGREE      — a native parent other than the issue the first line names
+                    (a native parent in another repository always is).
+    NONE          — neither record names a parent.
+    UNREAD        — the issue's record could not be read, so its native parent
+                    is not known; the first line is read from the body the
+                    caller holds.
+    """
+
+    AGREED = "agreed"
+    NATIVE_ONLY = "native-only"
+    TEXTUAL_ONLY = "textual-only"
+    DISAGREE = "disagree"
+    NONE = "none"
+    UNREAD = "unread"
+
+
+@dataclass(frozen=True)
+class ParentResolution:
+    """An issue's parent, with how its native link and its first line stand.
+
+    ``parent`` is the parent the issue has: the native one wherever one was read
+    (DEC-005: native wins), else the issue the first line names, else ``None``.
+    ``native`` is the native parent as read; ``line`` the first line, classified
+    (``body_parent_ref.read_first_line``), whose ``issue`` is :attr:`named`.
+
+    A first line naming the issue itself names no parent: no child set holds an
+    issue under itself (ADR-035). It is classified as naming none — ``line``'s
+    form is ``NONE`` — ``names_itself`` says it did, and :attr:`self_note` says
+    so in one sentence, so every property here agrees that the line names no
+    parent.
+
+    A consumer that **writes** on the parent acts only where :attr:`walks` — the
+    two records agree, or a first line in an allowed form is the only record —
+    and otherwise stops, saying :attr:`fact` and :meth:`remedy`. A consumer that
+    only **reads** follows the native parent, counts the first line's parent as
+    well (:attr:`local_parents`), and labels the disagreement. Each says its own
+    consequence after the seam's words; none compares the two records itself.
+    """
+
+    issue: int
+    kind: ParentKind
+    line: body_parent_ref.FirstLine
+    native: NativeParent | None = None
+    unread: UnreadIssue | None = None
+    names_itself: bool = False
+
+    @property
+    def named(self) -> int | None:
+        """The issue the first line names as the parent, in any form — never
+        the issue itself."""
+        return self.line.issue
+
+    @property
+    def parent(self) -> NativeParent | None:
+        """The parent the issue has: native wherever one was read, else the
+        first line's."""
+        if self.native is not None:
+            return self.native
+        return NativeParent(self.named) if self.named is not None else None
+
+    @property
+    def walks(self) -> bool:
+        """Whether a consumer that writes on the parent may act on it: the two
+        records agree, or a conforming first line is the only record."""
+        conforming = self.line.form is body_parent_ref.LineForm.CONFORMING
+        return self.kind is ParentKind.AGREED or (
+            self.kind is ParentKind.TEXTUAL_ONLY and conforming
+        )
+
+    @property
+    def local_parents(self) -> tuple[int, ...]:
+        """Every parent in this repository the issue is a child of — its native
+        parent and the issue its first line names, one or both, native first —
+        the parents whose child sets (:func:`resolve_children`) hold it."""
+        out: list[int] = []
+        if self.native is not None and self.native.repository is None:
+            out.append(self.native.number)
+        if self.named is not None and self.named not in out:
+            out.append(self.named)
+        return tuple(out)
+
+    @property
+    def self_note(self) -> str | None:
+        """What to say of a first line naming the issue itself, after which a
+        consumer says its own consequence, or ``None``."""
+        if not self.names_itself:
+            return None
+        n = self.issue
+        return f"#{n}'s first line `{self.line.line}` names #{n} itself, which is no parent"
+
+    @property
+    def fact(self) -> str | None:
+        """What keeps the two records from agreeing, in the seam's words, or
+        ``None`` where nothing does: ``#12's first line names #5, its native
+        parent is #7``. A non-conforming first line is said by
+        :attr:`form_note`, not here."""
+        n = self.issue
+        if self.kind is ParentKind.UNREAD:
+            detail = self.unread.detail if self.unread is not None else ""
+            if self.named is None:
+                return (
+                    f"#{n}'s record could not be read, so its native parent is not known ({detail})"
+                )
+            return (
+                f"#{n}'s record could not be read to hold its native parent to "
+                f"#{self.named}, the parent its first line names ({detail})"
+            )
+        if self.native is None or self.kind not in (ParentKind.NATIVE_ONLY, ParentKind.DISAGREE):
+            return None
+        if self.named is None:
+            return (
+                f"#{n}'s first line names no parent issue, its native parent is {self.native.ref}"
+            )
+        return f"#{n}'s first line names #{self.named}, its native parent is {self.native.ref}"
+
+    @property
+    def form_note(self) -> str | None:
+        """What to say of a first line naming its parent in a form the issue's
+        type does not allow, after the issue's number, or ``None``."""
+        note = self.line.note
+        return f"#{self.issue}'s {note}" if note is not None else None
+
+    def remedy(self, *, abroad: str = "") -> str | None:
+        """How the two records are brought into agreement, or ``None`` where
+        they agree or no native parent was read: the native parent wins and the
+        first line is rewritten to name it ([project-management:DEC-005-linking-and-containment]).
+        No first-line form can name a native parent in another repository; the
+        line then says so — with ``abroad``, what the caller does not do there —
+        and how the native link is moved under the first line's parent instead.
+
+        Neither applies to an issue whose type has no first-line form naming an
+        issue (an EPIC): its container is a milestone, so no rewrite of its first
+        line names an issue parent, and the line says that instead."""
+        native, n = self.native, self.issue
+        if native is None or self.kind not in (ParentKind.NATIVE_ONLY, ParentKind.DISAGREE):
+            return None
+        if not self.line.issue_form:
+            elsewhere = (
+                f"; {native.ref} is in another repository, which {abroad}"
+                if native.repository is not None and abroad
+                else ""
+            )
+            return (
+                f"→ #{n}'s container is a milestone: no first-line form its type may have "
+                f"names an issue, so no rewrite of its first line names {native.ref}"
+                f"{elsewhere}."
+            )
+        if native.repository is None:
+            return (
+                f"→ the native parent wins (DEC-005): `set-field {n} --parent {native.number}` "
+                f"rewrites #{n}'s first line to name it."
+            )
+        also = f" and {abroad}" if abroad else ""
+        move_link = (
+            f"; if #{self.named} is its parent, `set-field {n} --parent {self.named}` moves the "
+            "native link under it"
+            if self.named is not None
+            else ""
+        )
+        return (
+            f"→ {native.ref} is in another repository, which no first-line form can name"
+            f"{also}{move_link}."
+        )
+
+
+def compare_parents(
+    issue_number: int, line: body_parent_ref.FirstLine, native: NativeParent | None
+) -> ParentResolution:
+    """Hold an issue's native parent to its first line — the pure comparison
+    :func:`resolve_parent` makes after its read, for a caller that derived the
+    native parent itself (``show-tree``, from the native child sets it resolved).
+    ``native`` is ``None`` where the issue has none. A first line naming the
+    issue itself is classified here as naming no parent (:func:`_self_named`)."""
+    line, names_itself = _self_named(issue_number, line)
+    named = line.issue
+    if native is None:
+        kind = ParentKind.TEXTUAL_ONLY if named is not None else ParentKind.NONE
+    elif named is None:
+        kind = ParentKind.NATIVE_ONLY
+    elif native.is_issue(named):
+        kind = ParentKind.AGREED
+    else:
+        kind = ParentKind.DISAGREE
+    return ParentResolution(
+        issue=issue_number, kind=kind, line=line, native=native, names_itself=names_itself
+    )
+
+
+def _self_named(
+    issue_number: int, line: body_parent_ref.FirstLine
+) -> tuple[body_parent_ref.FirstLine, bool]:
+    """``line`` as the seam reads it for issue ``issue_number``, and whether it
+    named the issue itself. Such a line names no parent — no child set holds an
+    issue under itself — so it is read as naming none, its form ``NONE`` and no
+    form note (a line naming no parent is in no form to correct); the line as
+    written is kept for the seam's sentence."""
+    if line.issue is None or line.issue != issue_number:
+        return line, False
+    return replace(line, form=body_parent_ref.LineForm.NONE, number=None, note=None), True
+
+
+def resolve_parent(
+    config: dict[str, Any],
+    *,
+    issue_number: int,
+    structural_type: str | None,
+    issue_types: dict,
+    record: IssueRecord | UnreadIssue | None = None,
+    body: str | None = None,
+) -> ParentResolution:
+    """Resolve an issue's parent — its native parent held to its first line.
+
+    The sole read seam for "what is this issue's parent?", the upward
+    counterpart of :func:`resolve_children`: the forward cascade, the closure
+    cascade's eligibility report and the closure fold's membership step resolve
+    a parent through it, and ``show-tree`` through its pure half
+    (:func:`compare_parents`). None compares a first line with a native parent
+    itself, and the first line is read by ``body_parent_ref`` — the reader the
+    textual side of a child set uses — so the issue a line names is the same
+    for every consumer.
+
+    Args:
+      issue_number    — the issue whose parent to resolve.
+      structural_type — its type, which says which first-line forms conform;
+                        ``None`` for an untyped issue, whose any
+                        ``<Label>: #<N>`` line conforms.
+      record          — the issue's record (:func:`read_issue_record`), or why
+                        it could not be read, when the caller already holds it;
+                        omit it and the seam reads it. A ``gh issue view``
+                        payload is not a record: it cannot carry the native
+                        parent.
+      body            — the issue's body as the caller holds it, read for the
+                        first line only where the record cannot be read.
+
+    Cost: one REST read of the issue when ``record`` is omitted, none when it is
+    supplied (the shape mirrors :func:`resolve_children`'s corpus-supplied /
+    omitted split).
+    """
+    if record is None:
+        record = read_issue_record(config, issue_number=issue_number)
+    if isinstance(record, UnreadIssue):
+        line, names_itself = _self_named(
+            issue_number, body_parent_ref.read_first_line(body or "", structural_type, issue_types)
+        )
+        return ParentResolution(
+            issue=issue_number,
+            kind=ParentKind.UNREAD,
+            line=line,
+            unread=record,
+            names_itself=names_itself,
+        )
+    line = body_parent_ref.read_first_line(
+        str(record.issue.get("body") or ""), structural_type, issue_types
+    )
+    return compare_parents(issue_number, line, record.parent)
 
 
 # =========================================================================

@@ -798,10 +798,12 @@ def _validate(
             parent_ref_optional = bool(type_entry.get("parent_ref_optional", False))
             parent_ref_form = str(type_entry.get("parent_ref_form", ""))
             if parent_ref_form and not parent_ref_optional and malformed_marker is None:
-                # DEC-013 (#763): a marked descendant carries the
-                # `Integration: integration/<slug>` marker above the parent-ref;
-                # skip it so the parent-ref on the next line is recognised.
-                first_line = infer.strip_integration_marker(body).lstrip().split("\n", 1)[0]
+                # The first line as every reader of an issue's parent takes it
+                # (`body_parent_ref.first_line`): past the DEC-013 (#763)
+                # `Integration: integration/<slug>` marker a marked descendant
+                # carries above the parent-ref. The form check below is this
+                # script's own.
+                first_line = body_parent_ref.first_line(body)
                 _NEW_MILESTONE_RE = re.compile(r"^Milestone:\s+\[#(\d+)\]\(\.\./milestone/\1\)\s*$")
                 _OLD_MILESTONE_RE = re.compile(r"^Milestone:\s+#\d+\s*$")
                 _ISSUE_PARENT_RE = re.compile(r"^[A-Za-z]+:\s+#\d+\s*$")
