@@ -567,10 +567,58 @@ def test_the_reading_command_names_the_default_branch_and_the_base(
             "resolved": db.RESOLVED_REMOTE,
             "problem": None,
         },
+        "head": {"commit": repo.head(), "unborn": False, "problem": None},
     }
     refused = json.loads(_repository_base("--json", "--base=-x").stdout)
     assert refused["base"]["problem"] == "the base '-x' is not a revision name."
     assert refused["default_branch"] == document["default_branch"]
+
+
+def test_the_reading_names_no_base_as_a_fix_for_the_default_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A filler reads `default_branch` in this reading, and no base reaches a filler
+    (COR-054 point 3): its problem names the fetch and the declaration, as the
+    backbone's own refusal of a filler does. The base, a comparison's, still names
+    a base among its fixes."""
+    repo = _repo(tmp_path)
+    remote = _bare(tmp_path, repo)
+    repo.git("remote", "add", "origin", str(remote))  # never fetched
+    monkeypatch.chdir(repo.root)
+    document = json.loads(_repository_base("--json").stdout)
+    standing = document["default_branch"]["problem"]
+    assert standing == db.resolve(repo.root, standing=True).problem
+    assert "--base" not in standing and "PKIT_CHECK_BASE" not in standing
+    assert "refs/heads/main" not in standing
+    assert document["base"]["problem"] == db.resolve(repo.root).problem
+    assert "name a base with --base or PKIT_CHECK_BASE" in document["base"]["problem"]
+
+
+def test_head_tells_no_commit_yet_from_a_history_git_cannot_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """HEAD before its first commit holds nothing yet; HEAD whose commit git cannot
+    read is history this clone did not read, and never reads as none — nor does its
+    branch read as a default branch with no commit yet (COR-052 point 6)."""
+    unborn = GitRepo.init(tmp_path / "unborn")
+    assert db.head(unborn.root) == db.Head(None, True, None)
+    repo = _repo(tmp_path)
+    head = repo.head()
+    assert db.head(repo.root) == db.Head(head, False, None)
+    repo.lose_object(head)
+    unread = f"HEAD names {head[:12]}, which git cannot read as a commit here"
+    assert db.head(repo.root) == db.Head(None, False, unread)
+    branch = db.resolve(repo.root)
+    assert (branch.commit, branch.unborn) == (None, False)
+    monkeypatch.chdir(repo.root)
+    document = json.loads(_repository_base("--json").stdout)
+    assert document["head"] == {"commit": None, "unborn": False, "problem": unread}
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))  # no repository above it
+    no_git = db.head(plain)
+    assert (no_git.commit, no_git.unborn) == (None, False)
+    assert no_git.problem is not None and no_git.problem.startswith("git cannot read HEAD here: ")
 
 
 def _counting_git(
@@ -593,13 +641,14 @@ def _counting_git(
 @pytest.mark.parametrize(
     ("layout", "args", "most"),
     [
-        # The project root, one listing of the branch's references, where HEAD left it.
-        ("remote", (), 3),
+        # The project root, one listing of the branch's references, where HEAD left it,
+        # and HEAD's commit.
+        ("remote", (), 4),
         # The same, and whether a remote exists, since none holds the branch (point 2).
-        ("local", (), 4),
+        ("local", (), 5),
         # The default branch listed once; the base asked as a remote-tracking reference
-        # (`refs/remotes/main`), then listed as a branch, and where HEAD left it.
-        ("remote", ("--base=main",), 5),
+        # (`refs/remotes/main`), then listed as a branch, where HEAD left it, and HEAD.
+        ("remote", ("--base=main",), 6),
     ],
     ids=["remote", "local", "named-base"],
 )
