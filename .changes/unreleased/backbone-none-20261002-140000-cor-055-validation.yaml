@@ -1,3 +1,0 @@
-component: backbone
-kind: none
-body: COR-055 added as proposed — validation is one check that capabilities join, and only a broken invariant fails it. The record states what has shipped; nothing cites it until it is accepted, and no behaviour changes.
