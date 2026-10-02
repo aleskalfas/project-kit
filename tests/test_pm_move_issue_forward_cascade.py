@@ -1160,6 +1160,7 @@ def test_the_line_done_work_prints_when_the_move_to_done_fails_finishes_the_casc
         branch=f"fix/{task}-a-task",
         cross=False,
         merged_head="0" * 40,
+        confirmed=False,
         config={},
     )
 
