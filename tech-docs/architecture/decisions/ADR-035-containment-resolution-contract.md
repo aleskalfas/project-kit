@@ -179,12 +179,16 @@ Feature (EPIC #343), citing DEC-039. The sites:
    containment reason with "; " rather than ranked against it, because the PR list
    is independent of the tree.
 3. **The DEC-034 closure-fold child-walk** (`_lib/lifecycle_predicates.py`) — the
-   cascade membership read. **Converged — resolves *and* acquires through the seam;**
+   read of the cascade's member set. **Converged — resolves *and* acquires through the seam;**
    `cascade_members` asks `resolve_children` with no corpus of its own and maps an
    incomplete resolution to indeterminate. Its sibling `parent_has_active_descendant`
    takes the corpus from `fetch_issue_corpus` and holds on an incomplete one; it
    filters by the textual ref itself because it needs each row's state, labels and
-   milestone to infer position — which the child set does not carry.
+   milestone to infer position — which the child set does not carry. The fold's
+   per-candidate step, `cascade_membership`, confirms each child `cascade_members`
+   listed can be read and answers indeterminate for one it cannot; it reports what
+   the child's first line names as an account and takes no second reading of
+   whether the child has a parent (point 5).
 4. **`close-issue`** — the open-children walk behind the refused-cascade hint
    (`_find_open_children`). **Converged — resolves *and* acquires through the seam;**
    it takes the corpus from `fetch_issue_corpus` (it needs each row's state to filter
@@ -526,6 +530,15 @@ The contract therefore carries a determinacy channel:
   fail-closed posture the process substrate requires (COR-033), which the cascade
   slot states explicitly for membership: indeterminate membership overrides the
   `on_empty` policy (COR-037).
+- **No second reading removes a member the seam returned.** The cascade's
+  per-candidate membership test confirms the candidate can be read — one it cannot
+  read holds the fold indeterminate — and does not re-derive whether it has a
+  parent. A natively linked child's first line may name no issue at all (a
+  sub-issue linked in the tracker's UI, or one whose first line is its milestone
+  ref), so a test that looked for a parent there would answer a determinate "not a
+  member", the fold would drop the child, and the container would close over it
+  while it is open — the silently short child set this point exists to prevent,
+  produced after the seam vouched for a whole one.
 - **For a non-gate consumer the posture turns on what it emits: a read may label,
   a write must refuse.** One verdict, two admissible answers, and the discriminator
   is not the consumer's rank but whether its output outlives the command. A consumer
@@ -827,8 +840,10 @@ for the predicate to be right about.
   answer) from *unreadable* (indeterminate), the textual scan reports *complete* vs
   *truncated*, and either indeterminacy makes the whole resolution incomplete. A gate
   consumer maps an incomplete resolution to indeterminate, never to a child set and
-  never to "no children". The seam owns corpus acquisition so the ceiling semantics
-  live in one place: `CORPUS_CEILING` is the default `limit` and the value a gate
+  never to "no children". No second reading downstream removes a child the seam
+  returned: the cascade's per-candidate membership test confirms the child can be
+  read and does not ask whether it has a parent. The seam owns corpus acquisition
+  so the ceiling semantics live in one place: `CORPUS_CEILING` is the default `limit` and the value a gate
   takes, a renderer may ask for less, and *truncated* is measured against whatever
   was requested.
 - **A non-gate consumer's posture on that verdict turns on what it emits** — a
