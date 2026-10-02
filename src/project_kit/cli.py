@@ -997,12 +997,16 @@ def pull_request_land(
     the options applied to it; the direct squash merge, with SUBJECT, or the
     enqueue, each pinned to SHA; the wait for the merge; and, where a reading
     finds another head, the PR taken out of the queue. Never deletes a
-    branch. Writes each event — a reading, `requesting` before each request
-    is sent, `requested` once it is settled — and one end document saying
-    how the landing ended. Exit 0 when merged or planned; 4 when queued or
-    unconfirmed; 3 when the head moved, or the PR left the queue or was not
-    merged; 1 otherwise; 2 when SHA is not a full commit id. A caller reads
-    the end document, never the exit.
+    branch. Writes each event while the output takes them — a reading,
+    `requesting` before each request is sent, `requested` once it is
+    settled — and one end document saying how the landing ended. A write
+    that fails before any request stops the landing, nothing sent; after a
+    `requesting` is out, it stops the writing and not the landing, which may
+    then send a dequeue no line names: a reader left with no end reads the
+    PR. Exit 0 when merged or planned; 4 when queued or unconfirmed; 3 when
+    the head moved, or the PR left the queue or was not merged; 1 otherwise;
+    2 when SHA is not a full commit id. A caller reads the end document,
+    never the exit.
     """
     expected = pull_request_landing.full_object_id(head_oid)
     if not expected:

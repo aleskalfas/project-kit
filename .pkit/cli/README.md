@@ -651,7 +651,7 @@ On a base without a queue, `--direct-only`, `--allow-dropped-head` and `--queued
 | `event` | Its keys | Written |
 |---|---|---|
 | `reading` | `reading`, as `read` states it | the first reading; the one after a direct merge; each of the wait's that changed |
-| `requesting` | `request`: `merge`, `enqueue` or `dequeue` | before each request, before `gh` is started |
+| `requesting` | `request`: `merge`, `enqueue` or `dequeue` | while the output takes them, before each request, before `gh` is started |
 | | `head`: the pin; `null` for a dequeue | |
 | | `attempt`: `1`, or `2` for a dequeue sent once more | |
 | `requested` | `request`, `accepted`, `exit_code`, `reason`, `reason_kind` | once the request is settled, only after its `requesting` |
@@ -659,8 +659,9 @@ On a base without a queue, `--direct-only`, `--allow-dropped-head` and `--queued
 
 - `accepted` is `true` (made), `false`, or `null` (unconfirmed), as in the request documents (above).
 - A dequeue that sends nothing — already out, merged, or not read before it sent — writes neither `requesting` nor `requested`.
-- A reader left with no `end`: a request whose last line is a `requesting` may have been made.
-- A write that fails before any request ends the landing with nothing sent. Once a request has been sent, a failed write stops the writing, not the landing: it finishes its wait and its dequeue, and its exit still says how it ended.
+- A write that fails before any request stops the landing with nothing sent: a reader left with no `requesting` knows no request was made.
+- A write that fails after a `requesting` is out stops the writing, not the landing: it finishes its wait, and its dequeue where the head moved, with no line written; its exit still says how it ended.
+- So a reader left with a `requesting` and no `end` does not take the lines it has for all the landing did: the landing may be running, and may have sent a dequeue no line names. A request whose last line is a `requesting` may have been made. The reader reads the pull request (`pkit pull-request read <n>`).
 - The `[warn]` line as a request with no usable answer starts settling stays on standard error.
 - Without `--json`, each event and the end are said as a person reads them; warnings go to standard error.
 
@@ -733,7 +734,7 @@ The tests hold the decoder to one shared table of valid and invalid end document
 
 - A head move whose dequeue finds the PR merged stays `head-moved`, with `dequeue.reason_kind: merged`.
 - `closed` always means nothing was sent: a PR that closes after a request ends `dropped` or `not-merged`.
-- `merged` and `merged-at-another-head` always name `merged_head`: a merged reading that names no head ends `unconfirmed`, `unreadable`.
+- `merged` and `merged-at-another-head` always name `merged_head`. A merged reading that names no head ends `unreadable`, nothing sent, when it is the first reading, and `unconfirmed`, `unreadable` when it is a later one.
 
 **Exit codes are for a person; callers read the document.**
 

@@ -767,8 +767,11 @@ _ANSWERED = re.compile(r"^GraphQL: |\bHTTP 4(?!08)\d\d\b|^[X!] Pull request ", r
 
 #: Told of each request — its name, and the command that sends it — just
 #: before it is sent, while a landing runs (:func:`land`): this is the one
-#: place every request passes, so the landing's `requesting` line is out
-#: before `gh` starts. Unset, nothing is told.
+#: place every request passes, so while the landing's output takes them, its
+#: `requesting` line is out before `gh` starts. A write that fails before any
+#: request stops the landing, nothing sent; one that fails after a
+#: `requesting` line is out stops the writing and not the landing, whose
+#: later requests no line names. Unset, nothing is told.
 _ON_SEND: ContextVar[Callable[[str, Sequence[str]], None] | None] = ContextVar(
     "pull_request_landing_on_send", default=None
 )
@@ -1664,8 +1667,9 @@ _NONE_SENT: frozenset[str | None] = frozenset({None})
 #: `reason_kind`. A reader takes a document whose `sent` its end cannot
 #: carry for no answer (:func:`decode_end`). `queued` carries a merge the
 #: service queued instead; `not-merged` a request, or none, before the base
-#: lost its queue; `unconfirmed`, `unreadable`, any where a reading says
-#: merged and names no head.
+#: lost its queue; `unconfirmed`, `unreadable`, any where a reading after the
+#: first says merged and names no head — a first reading that names no head
+#: ends `unreadable`, nothing sent.
 LANDING_SENT: Mapping[tuple[str, str | None], frozenset[str | None]] = {
     (END_MERGED, None): _ANY_SENT,
     (END_MERGED_ELSEWHERE, None): _ANY_SENT,
@@ -1961,10 +1965,16 @@ def land(
     ends as the landing would — refused, with `options.no_request`, where a
     merge or an enqueue would follow.
 
-    `on_event` is told each event as it happens, as its document: the
-    readings — the first, the one after a direct merge, each of the wait's
-    that changed — and, for each request, `requesting`, before `gh` starts,
-    and `requested` once it is settled. The landing never deletes a branch.
+    `on_event` is told each event as it happens, as its document, while it
+    takes them: the readings — the first, the one after a direct merge, each
+    of the wait's that changed — and, for each request, `requesting`, before
+    `gh` starts, and `requested` once it is settled. Should telling it fail
+    before any request, the landing stops, nothing sent, and the failure is
+    raised; after a `requesting` is out, the telling stops and the landing
+    goes on — its wait, and its dequeue where the head moved — with no event
+    told. So a reader left with a `requesting` and no end does not take the
+    events it has for all the landing did: it may be running, and may have
+    sent a dequeue no event names. The landing never deletes a branch.
 
     `head` is a full commit id, in any case (:func:`full_object_id`): its
     lower-cased form is what the readings are compared with, what each
