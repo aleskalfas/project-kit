@@ -682,8 +682,13 @@ def test_an_ancestor_the_engine_cannot_place_is_not_written_and_ends_the_walk(
     assert world.promote(task) == 0
 
     err = capsys.readouterr().err
+    # The engine's cause, and what its classifier said, under the ancestor (#1244).
     assert (
         f"  #{outer}: not moved: the engine cannot tell where it is, so the walk stops here\n"
+        "    couldn't evaluate detection predicate 'detect-state': it exited 2\n"
+        "      the predicate said:\n"
+        f"        could not read issue #{outer}: `gh issue view` exited 1\n"
+        "        HTTP 502: Bad Gateway\n"
         f"  #{epic}: not reached\n"
     ) in err
     assert world.moves(inner) == [("todo", "backlog", "promote-issue")]

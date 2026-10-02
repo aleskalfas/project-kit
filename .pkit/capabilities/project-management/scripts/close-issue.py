@@ -99,7 +99,14 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import audit as _audit
-from _lib import axis_labels, body_parent_ref, bootstrap_gate, containment, session_guard
+from _lib import (
+    axis_labels,
+    body_parent_ref,
+    bootstrap_gate,
+    containment,
+    engine_said,
+    session_guard,
+)
 from _lib import lifecycle_inference as infer
 
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
@@ -124,7 +131,13 @@ from _lib.milestone import (
     list_milestone_children,
     resolve_close_trigger,
 )
-from _lib.move_journal import PROCESS_ADDRESS, journal_move, report_unrecorded
+from _lib.move_journal import (
+    PR_MERGE_CLOSE,
+    PROCESS_ADDRESS,
+    journal_move,
+    pr_merge_close_reason,
+    report_unrecorded,
+)
 from _lib.structural_type import infer_structural_type
 
 VALID_MODES = ("wont-do", "pr-merge", "cascade-eligibility-close")
@@ -406,8 +419,11 @@ def main() -> int:
             # GitHub closed the issue and wrote no label: the move to done is
             # recorded here, from where the merge found it — unless its label
             # already says done (done-work's move-issue wrote it, or a re-run).
-            merged_by = f": closed by merged PR #{args.pr}" if args.pr is not None else ""
-            close_move.record(f"pr-merge close{merged_by}")
+            close_move.record(
+                pr_merge_close_reason(args.pr, closed_by_merge=True)
+                if args.pr is not None
+                else PR_MERGE_CLOSE
+            )
         print(f"\n[ok] noted pr-merge close for #{args.issue_number}.")
 
     elif args.mode == "cascade-eligibility-close":
@@ -485,6 +501,11 @@ def main() -> int:
                 f"  → {reason or 'the process engine could not fold the children.'}",
                 file=sys.stderr,
             )
+            # What a predicate the fold could not evaluate said, as the engine
+            # reports it (`stderr_tail`), under the reason.
+            said = fold.get("stderr_tail") if isinstance(fold, dict) else None
+            for line in engine_said.said_lines(said, "    "):
+                print(line, file=sys.stderr)
             print(
                 "  → re-run once `gh` is reachable and every child's state is "
                 "readable; the container holds until the fold resolves.",
@@ -675,7 +696,7 @@ def _close_leaf_through_pr(
         substrate_map=substrate_map,
     ):
         return 3
-    close_move.record(f"pr-merge close: completed by merged PR #{args.pr}")
+    close_move.record(pr_merge_close_reason(args.pr, closed_by_merge=False))
     print(f"\n[ok] closed #{issue_number} (pr-merge through PR #{args.pr}, completed).")
     return None
 

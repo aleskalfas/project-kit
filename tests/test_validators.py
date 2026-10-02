@@ -428,8 +428,9 @@ def test_a_wrapped_report_is_still_recognised() -> None:
     [
         (
             _ended(command_runner.Ending.ABNORMAL_EXIT, "Traceback …\nKeyError: 'x'\n"),
-            "command 'check' exited 1: KeyError: 'x'",
+            "command 'check' exited 1: Traceback … | KeyError: 'x'",
         ),
+        (_ended(command_runner.Ending.ABNORMAL_EXIT, ""), "command 'check' exited 1."),
         (_ended(command_runner.Ending.UNPARSABLE, "", returncode=0), NO_DOCUMENT),
         # uv's text on an ending that is not an exit is not read.
         (
@@ -443,6 +444,49 @@ def test_any_other_no_answer_keeps_its_own_message(
 ) -> None:
     assert not validators.not_provisioned(run)
     assert validators.why_no_answer(run, "check") == message
+
+
+def test_an_exit_shows_the_shared_tail_of_what_the_command_said() -> None:
+    """Bounded and made safe as the runner's tail is (#1244): only the last lines,
+    every escape sequence and control character removed, on the finding's line."""
+    said = "".join(f"line {n}\n" for n in range(30)) + (
+        "\x1b[2J\x1b]0;pwned\x07\x1b[31mKeyError\x1b[0m: 'x'\x00\n"
+    )
+    message = validators.why_no_answer(_ended(command_runner.Ending.ABNORMAL_EXIT, said), "check")
+    assert message == "command 'check' exited 1: …line 21 | " + " | ".join(
+        [*(f"line {n}" for n in range(22, 30)), "KeyError: 'x'"]
+    )
+    assert "\n" not in message
+    assert not any(ch in message for ch in "\x00\x07\x1b")
+
+
+@pytest.mark.parametrize(
+    ("script_body", "chmod", "expect"),
+    [
+        (_answering(CLEAN_ANSWER), 0o644, "command 'check' could not start: [Errno 13]"),
+        ("print('garbage, not a document')\n", None, NO_DOCUMENT),
+        (
+            "import sys\n"
+            "sys.stderr.buffer.write(b'\\x1b]0;pwned\\x07first \\x1b[1mline\\x1b[0m\\n"
+            "second line\\x00\\n')\n"
+            "sys.exit(2)\n",
+            None,
+            "command 'check' exited 2: first line | second line",
+        ),
+    ],
+    ids=["cannot-start", "garbage", "escape-laden"],
+)
+def test_the_validator_s_no_answer_finding_says_why(
+    adopter: AdopterRepo, script_body: str, chmod: int | None, expect: str
+) -> None:
+    cap_dir = _register(adopter.root, "cap", script_body=script_body)
+    if chmod is not None:
+        (cap_dir / "scripts" / "check.py").chmod(chmod)
+    result = CliRunner().invoke(main, ["validate", "--only", "cap:thing"])
+    assert result.exit_code == 1, result.output
+    assert f"→ {expect}" in result.output
+    assert "pwned" not in result.output
+    assert not any(ch in result.output for ch in "\x00\x07\x1b")
 
 
 def test_the_finding_names_pkit_sync_and_differs_from_a_command_answering_nothing(

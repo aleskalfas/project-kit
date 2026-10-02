@@ -1,0 +1,20 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+  requires_backbone: release
+body: >
+  The issue a landing completes now journals its move to Done with the reason
+  every other issue its pull request closes gets (#1296). `done-work` — and
+  `land-work`, which lands through it — moved its own issue to Done after
+  GitHub had closed it, and that move was journaled with no reason, while each
+  other issue the pull request closed got `pr-merge close: closed by merged PR
+  #<PR>` from `close-issue`. `done-work` now names the merged pull request to
+  `move-issue` (`--to done --merged-pr <PR>`), and the one entry that move
+  writes carries the same reason — `completed by merged PR #<PR>` where the
+  issue is still open when it moves, as `close-issue` words a close it makes
+  through the pull request — so `pkit pm history` reads the same for each.
+  `--merged-pr` with any other target is refused as a usage error. With journal
+  logging off nothing is recorded, as before. Upgrade the capability together
+  with the backbone: it needs the release that adds `pkit process move
+  --reason`.

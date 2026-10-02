@@ -1051,6 +1051,130 @@ def test_cli_bare_empty_run_stays_clean_in_both_views(health_repo, monkeypatch) 
         assert "scope indeterminate" not in result.output
 
 
+# --- an unevaluable predicate says why (#1244) -----------------------------
+#
+# A finding that a predicate could not be evaluated names the cause — the
+# predicate and how its run ended — as the engine does, and carries what the
+# predicate said on stderr: under "the predicate said:" in the narrative, as
+# `stderr_tail` in both `--json` forms, bounded and stripped of escape
+# sequences. The verdict and the exit code are unchanged.
+
+# Each seam and the upstream detection, broken one at a time: the script, the
+# finding's subject (None: contract-level), and the reason around the cause.
+_UNEVALUABLE = {
+    "candidates": (
+        "delivery/scripts/list_candidates.py",
+        None,
+        "couldn't evaluate candidates predicate 'list-candidates': it ",
+        "; broken-empty is never read as 'nothing missed'",
+    ),
+    "resolve": (
+        "delivery/scripts/resolve_pickup.py",
+        "s-1",
+        "couldn't evaluate resolve predicate 'resolve-pickup': it ",
+        "; an error is never read as absence",
+    ),
+    "detection": (
+        "design/scripts/screen_ready.py",
+        "s-1",
+        "upstream position is indeterminate ('implementation-ready': couldn't evaluate "
+        "detection predicate 'screen-ready': it ",
+        "); an unreadable position is never read as 'not at the trigger'",
+    ),
+}
+
+# Clears the screen, retitles the window, colours a word, writes a NUL and
+# exits 2: what reaches the report is the words alone.
+_ESCAPE_LADEN = (
+    "import sys\n"
+    "sys.stderr.buffer.write(b'\\x1b[2J\\x1b]0;pwned\\x07source \\x1b[31mdown\\x1b[0m\\x00\\n')\n"
+    "sys.exit(2)\n"
+)
+
+
+def _break(repo: Path, script: str, how: str) -> None:
+    """Make one predicate script unevaluable: not executable (it cannot start),
+    printing text that is not JSON, or exiting 2 with an escape-laden stderr."""
+    path = repo / ".pkit" / "capabilities" / script
+    if how == "cannot-start":
+        path.chmod(0o644)
+    elif how == "garbage":
+        _write_script(path, "print('not json at all')\n")
+    else:
+        _write_script(path, _ESCAPE_LADEN)
+
+
+def _the_unevaluable(payload: dict) -> dict:
+    (contract,) = payload["contracts"]
+    (finding,) = contract["indeterminate"]
+    return finding
+
+
+@pytest.mark.parametrize("seam", sorted(_UNEVALUABLE))
+@pytest.mark.parametrize(
+    ("how", "cause", "said"),
+    [
+        ("cannot-start", "could not start: [Errno 13] Permission denied", None),
+        ("garbage", "printed no JSON document on its standard output", None),
+        ("escape-laden", "exited 2", "source down"),
+    ],
+)
+def test_an_unevaluable_predicate_s_finding_says_why(
+    health_repo, monkeypatch, seam: str, how: str, cause: str, said: str | None
+) -> None:
+    script, subject, head, tail = _UNEVALUABLE[seam]
+    repo = health_repo()
+    _add_screen(repo, "s-1")
+    _break(repo, script, how)
+
+    finding = _the_unevaluable(json.loads(_invoke_health(repo, monkeypatch, "--json").output))
+    assert finding["subject"] == subject
+    assert finding["reason"].startswith(head + cause)
+    assert finding["reason"].endswith(tail)
+    assert finding["stderr_tail"] == said
+    assert _the_unevaluable(
+        json.loads(_invoke_health(repo, monkeypatch, "--interpretation-only", "--json").output)
+    ) == {"subject": subject, "reason": finding["reason"], "stderr_tail": said}
+
+    result = _invoke_health(repo, monkeypatch)
+    assert result.exit_code == 1  # indeterminate, as before
+    assert "0 missed, 1 indeterminate" in result.output
+    assert head + cause in result.output
+    if said is None:
+        assert "the predicate said:" not in result.output
+    else:
+        assert f"      the predicate said:\n        {said}\n" in result.output
+        assert "pwned" not in result.output
+        assert not any(ch in result.output for ch in "\x00\x07\x1b")
+
+
+def test_a_seam_answer_without_its_list_names_what_it_lacks(health_repo) -> None:
+    repo = health_repo()
+    _add_screen(repo, "s-1")
+    _set_pickups(repo, {"s-1": "MALFORMED"})
+    (finding,) = _the_contract(ph.build_report(repo)).indeterminate
+    assert finding.reason == (
+        "couldn't read the answer of resolve predicate 'resolve-pickup': no `downstream` "
+        "list; an error is never read as absence"
+    )
+    assert finding.stderr_tail == ""
+
+
+def test_an_unregistered_seam_names_the_registration_it_lacks(health_repo) -> None:
+    repo = health_repo()
+    unit = repo / ".pkit" / "capabilities" / "delivery" / "schemas" / "unit.yaml"
+    unit.write_text(
+        unit.read_text(encoding="utf-8").replace("run: list-candidates", "run: list-ghosts"),
+        encoding="utf-8",
+    )
+    (finding,) = _the_contract(ph.build_report(repo)).indeterminate
+    assert finding.subject is None
+    assert finding.reason.startswith(
+        "couldn't evaluate candidates predicate 'list-ghosts': predicate command 'list-ghosts' "
+        "is not registered in 'delivery''s package.yaml"
+    )
+
+
 # --- role-addressed upstreams, resolved through the wiring (COR-053) --------
 
 _ROLE = "acme::design"
