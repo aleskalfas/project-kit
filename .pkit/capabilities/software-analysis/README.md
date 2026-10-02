@@ -12,7 +12,7 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-02T00:02:19Z
+      at: 2026-10-02T00:27:22Z
       outcome: updated
 ---
 
