@@ -18,7 +18,7 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-02T20:42:34Z
+      at: 2026-10-02T20:45:41Z
       outcome: updated
 ---
 
