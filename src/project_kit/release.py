@@ -2015,8 +2015,17 @@ class _ReleaseLanding:
         self.after_a_merge = False
 
     def planned(self) -> pull_request_landing.Landing:
-        """The landing as a dry run: read and judged, nothing sent."""
-        return self._land(dry_run=True)
+        """The landing as a dry run: read and judged, nothing sent. A head
+        the landing refuses — release's view names it in another form than a
+        full commit id — ends the run, having asked nothing."""
+        number = self.pr.number
+        try:
+            return self._land(dry_run=True)
+        except ValueError as exc:
+            raise click.ClickException(
+                f"the landing refuses the head `gh pr view {number}` names for PR #{number}: "
+                f"{exc}. This run asked nothing."
+            ) from None
 
     def lands(self, *, gated: bool = True) -> ReleaseMergeReport:
         """The landing, and release's report of how it ended. A landing that

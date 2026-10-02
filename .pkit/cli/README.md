@@ -572,7 +572,7 @@ The landing sequence, in one command (ADR-061 point 5). It composes the steps ab
 - **A head that moved**: a reading at another head than `<sha>` — before any request, or during the wait — takes a queued PR out of the queue, as `dequeue` does, and ends `head-moved`.
 - **No branch is deleted.** When to delete is the caller's, at the end's `merged_head` (`delete-branch --expect`).
 
-`<sha>` is a full commit id: 40 or 64 hexadecimal characters, in any case, read lower-cased. Anything else is a usage error, exit `2`, with nothing read. An abbreviated head would read as a PR at another head, and take a healthy PR out of the queue.
+`<sha>` is a full commit id: 40 or 64 hexadecimal characters, in any case, read lower-cased. Anything else is a usage error, exit `2`, with nothing read. An abbreviated head would read as a PR at another head, and take a healthy PR out of the queue. The sequence refuses it itself, before it reads, whether it is called as this command or imported (`pull_request_landing.land` raises `ValueError`).
 
 **The state-by-option table.** The first row that matches the reading decides; `H` is `<sha>`.
 

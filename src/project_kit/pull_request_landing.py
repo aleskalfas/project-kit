@@ -1226,7 +1226,8 @@ class _HeadBranch:
 def full_object_id(value: str) -> str:
     """`value` as a full commit id, lower-cased — 40 or 64 hexadecimal
     characters, nothing abbreviated — or "" when it is not one: the form
-    :func:`delete_branch`'s `expect` is named in on the command line."""
+    :func:`delete_branch`'s `expect` is named in on the command line, and the
+    only form :func:`land` takes its head in."""
     candidate = value.strip().lower()
     return candidate if _FULL_OBJECT_ID.fullmatch(candidate) else ""
 
@@ -1896,15 +1897,21 @@ def land(
     readings — the first, the one after a direct merge, each of the wait's
     that changed — and, for each request, `requesting`, before `gh` starts,
     and `requested` once it is settled. The landing never deletes a branch.
-    Raises `TypeError` or `ValueError` where `clearance` is not a clearance
-    for `cwd`, and `ValueError` with no `head`.
+
+    `head` is a full commit id, in any case (:func:`full_object_id`): its
+    lower-cased form is what the readings are compared with, what each
+    request is pinned to, and what the end's `checked_head` names. An
+    abbreviated head would read as another head, and take a healthy PR out
+    of the queue, so any other form is refused before anything is read
+    (ADR-061 point 5, the second obligation), whether the landing is called
+    as a command or imported. Raises `TypeError` or `ValueError` where
+    `clearance` is not a clearance for `cwd`, and `ValueError` where `head`
+    is not a full commit id.
     """
     where = session_guard.require(clearance, cwd)
-    if not head:
-        raise ValueError("a landing is pinned to the head the caller checked, and none was named")
     lander = _Lander(
         pr_number,
-        head=head,
+        head=_checked_head(head),
         subject=subject,
         where=where,
         clearance=clearance,
@@ -1929,18 +1936,31 @@ def refused_by_the_guard(
 ) -> Landing:
     """The end of a landing the cross-repository guard refused at its entry:
     nothing read, nothing sent, the guard's reason — which, for a dry run,
-    says a run at a terminal would ask."""
+    says a run at a terminal would ask. `head` as for :func:`land`: a full
+    commit id, else `ValueError`."""
     chosen = options if options is not None else LandOptions()
     return Landing(
         pr_number,
         END_REFUSED,
-        head,
+        _checked_head(head),
         refusal,
         landing_longest_seconds(chosen.seconds),
         dry_run=dry_run,
         reason_kind=session_guard.FOREIGN_REPOSITORY,
         reason=refusal.reason,
     )
+
+
+def _checked_head(head: str) -> str:
+    """The head a landing is pinned to, as a full commit id lower-cased;
+    `ValueError` for any other form (:func:`land`)."""
+    checked = full_object_id(head)
+    if not checked:
+        raise ValueError(
+            f"a landing is pinned to the head the caller checked, named as a full commit id "
+            f"(40 or 64 hexadecimal characters), and {head!r} is not one"
+        )
+    return checked
 
 
 def landing_longest_seconds(seconds: float | None) -> float:

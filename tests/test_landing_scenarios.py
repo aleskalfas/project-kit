@@ -358,7 +358,7 @@ def _dropped_head_forced(world: World) -> None:
 
 def _head_moves_while_queued(world: World) -> None:
     _queue(world)
-    world.host.progress = [fake.at(2), fake.pushes("sha-pushed")]
+    world.host.progress = [fake.at(2), fake.pushes(fake.oid("pushed"))]
 
 
 def _head_moves_dequeue_fails(world: World) -> None:
@@ -369,7 +369,7 @@ def _head_moves_dequeue_fails(world: World) -> None:
 def _queued_at_another_head(world: World) -> None:
     _already_queued(world)
     world.host.progress = []
-    world.host.before(fake.READ, lambda host: host.push("sha-pushed"))
+    world.host.before(fake.READ, lambda host: host.push(fake.oid("pushed")))
 
 
 def _merged_before(world: World) -> None:

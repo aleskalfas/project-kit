@@ -563,7 +563,9 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   merged nor that it did not, and exits 4 with nothing deleted, for a run
   once GitHub answers to complete. A run that cannot read the release PR —
   its view answered with something that is not JSON among it — or how its
-  base merges, before it asks anything says that this run asked nothing. When the head moved while the PR was queued and the queue merged
+  base merges, before it asks anything says that this run asked nothing; so
+  does one whose view names the head in another form than a full commit id,
+  which the landing refuses before it reads. When the head moved while the PR was queued and the queue merged
   it before it could be taken out, the run says it merged, and at which head,
   exit 3, nothing deleted; a re-run deletes the head branch.
 - **Does not tag.** `release-tag.yml` cuts the backbone tag on the resulting

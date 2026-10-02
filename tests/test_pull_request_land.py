@@ -1047,9 +1047,38 @@ def test_a_landing_needs_a_clearance_for_where_it_acts(
         landing.land(PR, head=HEAD, subject="x", cwd=elsewhere, clearance=here["clearance"])
     with pytest.raises(TypeError):
         landing.land(PR, head=HEAD, subject="x", cwd=tmp_path, clearance=None)  # pyright: ignore[reportArgumentType] a caller with no clearance, for the module's own check
-    with pytest.raises(ValueError, match="none was named"):
-        landing.land(PR, head="", subject="x", **here)
     assert host.requests == []
+
+
+@pytest.mark.parametrize("head", ["", "abc1234", HEAD[:39], HEAD + "0", "sha-head", f" {HEAD}x"])
+def test_the_landing_refuses_a_head_not_named_in_full_before_it_reads(
+    head: str, here: dict[str, Any], host: fake.HostingService
+) -> None:
+    """Imported as called by command: an abbreviated head would read as
+    another head and take a healthy PR out of the queue (ADR-061 point 5,
+    the second obligation), so any form but a full commit id is refused
+    with nothing read — by the guard's refusal too."""
+    with pytest.raises(ValueError, match="is not one"):
+        landing.land(PR, head=head, subject="x", **here)
+    refusal = session_guard.Refusal(
+        here["cwd"],
+        session_guard.Comparison(session_guard.DIVERGED, None, None, None, "none"),
+        "refused",
+    )
+    with pytest.raises(ValueError, match="is not one"):
+        landing.refused_by_the_guard(PR, head=head, refusal=refusal)
+    assert host.requests == []
+
+
+def test_the_landing_compares_and_pins_the_head_lower_cased(
+    here: dict[str, Any], host: fake.HostingService
+) -> None:
+    events: list[dict[str, Any]] = []
+    end = landing.land(PR, head=HEAD.upper(), subject="x", on_event=events.append, **here)
+    assert (end.ended, end.checked_head, end.merged_head) == (landing.END_MERGED, HEAD, HEAD)
+    [requesting] = [e for e in events if e["event"] == "requesting"]
+    assert requesting["head"] == HEAD
+    assert host.requests[1].argv[-2:] == ["--match-head-commit", HEAD]
 
 
 # ---- `pkit pull-request land` --------------------------------------------------------
