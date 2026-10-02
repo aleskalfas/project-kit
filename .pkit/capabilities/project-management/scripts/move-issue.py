@@ -218,6 +218,18 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--merged-pr",
+        type=int,
+        default=None,
+        metavar="PR",
+        help=(
+            "With --to done only: the merged PR that completed the issue. Where "
+            "a journal is kept, the move's entry gives it as the reason, worded "
+            "as close-issue words it for the other issues a PR closes "
+            "(`pr-merge close: closed by merged PR #<PR>`). done-work passes it."
+        ),
+    )
+    parser.add_argument(
         "--no-cascade",
         action="store_true",
         help="Skip the forward cascade on the issue's ancestors.",
@@ -243,6 +255,13 @@ def main() -> int:
     )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
+
+    if args.merged_pr is not None and args.to != "done":
+        print(
+            f"error: --merged-pr applies to --to done only (got --to {args.to}).",
+            file=sys.stderr,
+        )
+        return 2
 
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:
@@ -303,6 +322,13 @@ def main() -> int:
     state = str(issue.get("state", "")).lower()
     milestone = issue.get("milestone") or {}
     closed_as = _close_reason(issue)
+    # The reason the move to done is journaled with when a merged PR made it
+    # (`--merged-pr`): an issue already closed is one the merge closed.
+    merge_reason = (
+        move_journal.pr_merge_close_reason(args.merged_pr, closed_by_merge=state == "closed")
+        if args.merged_pr is not None
+        else None
+    )
 
     structural_type = infer_structural_type(
         title, issue_types, classification=classification, labels=labels
@@ -423,6 +449,7 @@ def main() -> int:
                         labels=labels,
                         substrate_map=substrate_map,
                         actor=invoker.github_login,
+                        reason=merge_reason,
                     )
         # The forward cascade is idempotent, so the issue already being in place
         # does not end the walk: re-running a move whose cascade left an ancestor
@@ -621,7 +648,9 @@ def main() -> int:
     # `--actor` is the resolved GitHub login of the invoker (not the
     # authorisation token), so the engine's cross-authority gate compares
     # like-with-like against an artifact's `produced_by` login (COR-033 P4).
-    _journal_move(args.issue_number, current_state, args.to, invoker.github_login)
+    _journal_move(
+        args.issue_number, current_state, args.to, invoker.github_login, reason=merge_reason
+    )
 
     # DEC-049 `full` projection: post a provenance-stamped comment for a governed
     # move not already covered by the bypass audit above, so the governed-vs-
@@ -1007,6 +1036,7 @@ def _journal_closed_issue_relabel(
     labels: list[str],
     substrate_map: axis_labels.SubstrateMap | None,
     actor: str | None,
+    reason: str | None,
 ) -> None:
     """Record the move to done that relabelling a closed issue makes (#1231).
 
@@ -1016,9 +1046,11 @@ def _journal_closed_issue_relabel(
     move on the tracker, and the only one pkit makes: close-issue, which runs
     next, finds the label at done and records nothing. So it is recorded here,
     from where the old label placed the issue (`state_before_close`), as
-    close-issue records a close: not at all when the workflow declares no such
-    move for the issue's type (the engine does not read `applies_to`), which is
-    warned about as a refused move is.
+    close-issue records a close: with ``reason`` — the merged PR's, which
+    done-work passes, is the one close-issue gives the other issues the PR
+    closed — and not at all when the workflow declares no such move for the
+    issue's type (the engine does not read `applies_to`), which is warned about
+    as a refused move is.
     """
     origin = infer.state_before_close(
         milestone=milestone, labels=labels, substrate_map=substrate_map
@@ -1032,7 +1064,7 @@ def _journal_closed_issue_relabel(
             f"declared in workflow.yaml for {structural_type!r}",
         )
         return
-    _journal_move(issue_number, origin, target_state, actor)
+    _journal_move(issue_number, origin, target_state, actor, reason=reason)
 
 
 # ---- gh wrappers ----------------------------------------------------

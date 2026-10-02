@@ -55,6 +55,8 @@ REASON = "the maintainer asked for it in session"
 MILESTONE = {"number": 7, "title": "Sprint 1"}
 AUDIT_MARKER = "<!-- pkit-audit -->"
 REPOSITORY_URL = "https://api.github.com/repos/acme/repo"
+#: When everything on the tracker happens: no test here orders its events by time.
+MOMENT = "2026-10-01T00:00:00Z"
 
 AUTHORED_BODY = (
     "## What\n\nA task filed to be promoted.\n\n"
@@ -125,7 +127,7 @@ class Tracker:
         self.merged_prs[pr] = {
             "number": pr,
             "state": "MERGED",
-            "mergedAt": "2026-10-01T00:00:00Z",
+            "mergedAt": MOMENT,
             "mergedBy": {"login": merged_by},
             "body": body,
             "url": f"https://github.com/acme/repo/pull/{pr}",
@@ -243,6 +245,7 @@ class Tracker:
             "body": issue["body"],
             "state": issue["state"],
             "stateReason": issue.get("state_reason") or "",
+            "closedAt": MOMENT if issue["state"] == "CLOSED" else None,
             "milestone": issue["milestone"],
             "labels": [{"name": name} for name in issue["labels"]],
             "assignees": [{"login": login} for login in issue["assignees"]],
@@ -273,7 +276,7 @@ class Tracker:
                         "event": event,
                         "label": {"name": name},
                         "actor": {"login": INVOKER.github_login},
-                        "created_at": "2026-10-01T00:00:00Z",
+                        "created_at": MOMENT,
                     }
                 )
         return _done(argv)

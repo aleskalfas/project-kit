@@ -150,9 +150,10 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     back, which is never taken for a failed one — the run says so and exits
     4 with the issue in Review; a later `done-work <N>` finds the PR merged,
     or still open, and finishes.
-  - Composes over `move-issue.py --to done` IMMEDIATELY after the merge, so
-    no best-effort step can stand between the irreversible merge and the
-    lifecycle transition.
+  - Composes over `move-issue.py --to done --merged-pr <PR>` IMMEDIATELY
+    after the merge, so no best-effort step can stand between the
+    irreversible merge and the lifecycle transition. Naming the PR journals
+    the move with the reason close-issue gives the other issues it closed.
   - Then composes over `close-issue.py <M> --mode pr-merge --pr <PR>` for
     every issue the merge closed, the primary first (#1086): each is closed
     as completed if the merge left it open (a base branch other than the
@@ -1147,9 +1148,11 @@ def _after_merge(
     # Compose over move-issue for the state transition + cascade — FIRST,
     # before any branch cleanup. The merge is irreversible and GitHub's
     # `Closes #N` has already closed the issue, so a best-effort step failing
-    # ahead of this call would strand the pm state at Review (#878).
+    # ahead of this call would strand the pm state at Review (#878). The merged
+    # PR is named, so the move is journaled with the reason close-issue gives the
+    # other issues it closed (#1296).
     move_rc = _invoke_move_issue(
-        args.issue_number, "done", args.capability_root, confirmed=confirmed
+        args.issue_number, "done", args.capability_root, confirmed=confirmed, merged_pr=pr_number
     )
     if move_rc != 0:
         owed = (
@@ -3223,14 +3226,20 @@ def _issue_list(numbers) -> str:
 
 
 def _invoke_move_issue(
-    issue_number: int, target: str, capability_root_arg: Path | None, *, confirmed: bool
+    issue_number: int,
+    target: str,
+    capability_root_arg: Path | None,
+    *,
+    confirmed: bool,
+    merged_pr: int | None = None,
 ) -> int:
-    return _run_sibling(
-        "move-issue.py",
-        [str(issue_number), "--to", target],
-        capability_root_arg,
-        confirmed=confirmed,
-    )
+    """Move the issue to `target` through move-issue. `merged_pr` names the
+    merged PR a move to done follows, so its journal entry carries the reason
+    close-issue gives every other issue that PR closed."""
+    argv = [str(issue_number), "--to", target]
+    if merged_pr is not None:
+        argv += ["--merged-pr", str(merged_pr)]
+    return _run_sibling("move-issue.py", argv, capability_root_arg, confirmed=confirmed)
 
 
 def _invoke_close_issue(

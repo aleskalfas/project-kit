@@ -124,7 +124,13 @@ from _lib.milestone import (
     list_milestone_children,
     resolve_close_trigger,
 )
-from _lib.move_journal import PROCESS_ADDRESS, journal_move, report_unrecorded
+from _lib.move_journal import (
+    PR_MERGE_CLOSE,
+    PROCESS_ADDRESS,
+    journal_move,
+    pr_merge_close_reason,
+    report_unrecorded,
+)
 from _lib.structural_type import infer_structural_type
 
 VALID_MODES = ("wont-do", "pr-merge", "cascade-eligibility-close")
@@ -406,8 +412,11 @@ def main() -> int:
             # GitHub closed the issue and wrote no label: the move to done is
             # recorded here, from where the merge found it — unless its label
             # already says done (done-work's move-issue wrote it, or a re-run).
-            merged_by = f": closed by merged PR #{args.pr}" if args.pr is not None else ""
-            close_move.record(f"pr-merge close{merged_by}")
+            close_move.record(
+                pr_merge_close_reason(args.pr, closed_by_merge=True)
+                if args.pr is not None
+                else PR_MERGE_CLOSE
+            )
         print(f"\n[ok] noted pr-merge close for #{args.issue_number}.")
 
     elif args.mode == "cascade-eligibility-close":
@@ -668,7 +677,7 @@ def _close_leaf_through_pr(
         substrate_map=substrate_map,
     ):
         return 3
-    close_move.record(f"pr-merge close: completed by merged PR #{args.pr}")
+    close_move.record(pr_merge_close_reason(args.pr, closed_by_merge=False))
     print(f"\n[ok] closed #{issue_number} (pr-merge through PR #{args.pr}, completed).")
     return None
 

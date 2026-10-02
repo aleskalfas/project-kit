@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-02T01:25:10Z
+      at: 2026-10-02T03:13:49Z
       outcome: unchanged
-      unchanged-because: done-work, merge-pr and DEC-013 have a merged pull request's head branch deleted through the backbone, after the verb's own steps and only at the head that merged; integration branches, the pull-request target and the merge path this use case walks are unchanged, so it holds
+      unchanged-because: done-work now journals its own issue's move to Done with the pull-request-merge reason close-issue gives the other issues; integration branches, the pull-request target and the merge path this use case walks are unchanged, so it holds
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation

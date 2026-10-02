@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-02T01:25:04Z
+        at: 2026-10-02T03:13:44Z
         outcome: unchanged
-        unchanged-because: "done-work and merge-pr have the backbone delete a merged pull request's head branch, after their own steps and only at the head that merged; what a stabilisation holds back and its guards (still unbuilt, EPIC #943) are unchanged, so the definition holds"
+        unchanged-because: "done-work now names the merged pull request when it moves its issue to Done, so that move's journal entry carries the pull-request-merge reason; stabilisation's phase, its intended stabilize-milestone line and its start and landing guards (still unbuilt, EPIC #943) are untouched, so the definition holds"
 ---
 
 # Glossary
