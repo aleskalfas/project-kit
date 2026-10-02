@@ -28,9 +28,8 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-02T00:02:21Z
-      outcome: unchanged
-      unchanged-because: "COR-053 changed in one rationale sentence, on why events take no consent model: it now names the two writes the consent rule covers; this page says nothing of consent for events, and what it takes from the record — connection points, roles and their wiring — is as it was"
+      at: 2026-10-02T00:50:30Z
+      outcome: updated
 ---
 
 # Lifecycle

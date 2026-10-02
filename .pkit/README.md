@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T00:27:22Z
+      at: 2026-10-02T00:50:35Z
       outcome: unchanged
-      unchanged-because: The lifecycle README's How a data point resolves gains guidance on choosing a point's entry ids, so several fillers' entries stand side by side; the index's pointer to the lifecycle README and its one-line summary of that area still hold
+      unchanged-because: The CLI reference gained what connections resolve --json says about how a resolution ended (outcome, a closed set, and the document's schema_version) and the lifecycle reference tells a script to dispatch on outcome, never on why; this index still names the command surface and the lifecycle area those references document, and no command or area it lists was added, renamed or removed.
 ---
 
 # project-kit
