@@ -268,12 +268,13 @@ def cascade_members(parent_number: int) -> dict[str, Any]:
     Returns `{members: ["<n>", ...]}` — the issue numbers (as strings, the
     engine's subject ids) of EVERY child of `parent_number`, open and closed
     alike. Children are resolved through the SAME containment read-seam
-    (`_lib.containment.resolve_children`) `show-tree` uses — native sub-issues
-    where present, textual child-side parent-refs otherwise, native-wins on
-    conflict (DEC-005). Routing both consumers through the one seam is the
-    load-bearing ADR-026 point: the closure fold does NOT re-derive containment
-    by re-parsing body parent-refs in parallel with `show-tree`; there is one
-    reader of "what are this parent's children?", and this is it for the fold.
+    (`_lib.containment.resolve_children`) `show-tree` uses — the union of the
+    parent's native sub-issues and every issue whose first line names it, in any
+    form, a child present both ways counted once as native (DEC-005). Routing
+    both consumers through the one seam is the contract ADR-035 holds: the
+    closure fold does NOT re-derive containment by re-parsing body parent-refs in
+    parallel with `show-tree`; there is one reader of "what are this parent's
+    children?", and this is it for the fold.
 
     The full set (not just open children) is intentional: the engine resolves
     EACH member's lifecycle outcome and the `all`-over-`done` reducer folds them.
@@ -340,27 +341,42 @@ def cascade_membership(child_number: int) -> dict[str, Any]:
     COR-032's never-hold-a-tree line), so this step has no parent to compare
     against and does not re-scope the members list: parent-faithfulness rests on
     `cascade_members` alone. What this step does carry is the read: a candidate
-    whose issue cannot be read (a gh failure) is indeterminate, which the engine
+    whose record cannot be read (a gh failure) is indeterminate, which the engine
     turns into a whole-fold fail-closed hold per COR-037, rather than silently
-    dropping the candidate. `detail.parent_ref` is what the candidate's first line
-    names, `None` when it names no issue — an account for the reader, not a
-    verdict.
+    dropping the candidate.
+
+    The read is the containment seam's (`containment.resolve_parent`, one record
+    read), and what it finds is an account for the reader, not a verdict:
+    `detail.parent_ref` is the issue the candidate's first line names, `None`
+    when it names none, and `detail.parent_kind` how the first line and the
+    native parent stand (`agreed`, `native-only`, `textual-only`, `disagree`,
+    `none`). The candidate is read untyped: which issue a line names, and so the
+    kind, does not depend on the type.
     """
     capability_root = _capability_root()
     if capability_root is None:
         return _indeterminate("project-management capability not found")
     config = _config(capability_root)
-    issue = _fetch_issue(child_number, config, "body")
-    if issue is None:
+    resolution = containment.resolve_parent(
+        config, issue_number=child_number, structural_type=None, issue_types={}
+    )
+    if resolution.unread is not None:
+        _say_unread(child_number, resolution.unread.detail)
         return _indeterminate(f"could not read issue #{child_number} (gh failure)")
-    parent = body_parent_ref.named_issue(str(issue.get("body") or ""))
+    parent = resolution.named
     first_line = f"names #{parent}" if parent is not None else "names no issue"
+    native = (
+        f"its native parent is {resolution.native.ref}"
+        if resolution.native is not None
+        else "it has no native parent"
+    )
     return {
         "result": True,
         "reason": (
-            f"#{child_number} is a member: the members list holds it (its first line {first_line})"
+            f"#{child_number} is a member: the members list holds it (its first line "
+            f"{first_line}, {native})"
         ),
-        "detail": {"parent_ref": parent},
+        "detail": {"parent_ref": parent, "parent_kind": resolution.kind.value},
     }
 
 

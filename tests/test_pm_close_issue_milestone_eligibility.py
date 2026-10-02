@@ -63,6 +63,13 @@ if args[:1] == ["api"] and "/milestones/" in args[1] and "-X" not in args:
         sys.exit(1)
     print(json.dumps(milestone))
     sys.exit(0)
+if args[:1] == ["api"] and "/issues/" in args[1] and args[1].rsplit("/", 1)[1].isdigit():
+    number = args[1].rsplit("/", 1)[1]
+    issue = state["issues"].get(number)
+    if issue is None:
+        sys.exit(1)
+    print(json.dumps(dict(issue, number=int(number), state=issue["state"].lower())))
+    sys.exit(0)
 if args[:1] == ["issue"] and len(args) > 2:
     issue = state["issues"].get(args[2])
     if issue is None:
@@ -289,7 +296,7 @@ def test_an_issue_in_no_milestone_checks_none(close_issue: _CloseIssue) -> None:
     run = close_issue(_CLOSE_EPIC, issues={20: epic}, milestones={6: _milestone()})
     assert run.rc == 0
     assert "milestones to check" not in run.out
-    assert not any(c[:1] == ["api"] for c in run.calls)
+    assert not any(c[:1] == ["api"] and "/milestones/" in c[1] for c in run.calls)
 
 
 def test_the_pr_merge_cascade_surfaces_it_for_a_leaf_in_the_milestone(
@@ -355,10 +362,18 @@ def test_a_milestone_first_line_is_not_a_parent_issue(
     ci: ModuleType, structural_type: str | None
 ) -> None:
     """The deprecated plain `Milestone: #<n>` form names a Milestone, not
-    issue #<n>, so the parent walk does not read it as one — whether or not the
-    issue's type can be told."""
+    issue #<n>, so the closure cascade does not read it as a parent issue —
+    whether or not the issue's type can be told."""
     yaml = YAML(typ="safe")
     types = yaml.load((CAP_ROOT / "schemas" / "issue-types.yaml").read_text(encoding="utf-8"))
-    parent_issue = ci.body_parent_ref.parent_issue
-    assert parent_issue("Milestone: #6\n\n## What\n", structural_type, types) is None
-    assert parent_issue("EPIC: #6\n\n## What\n", structural_type, types) == 6
+    containment = ci.containment
+
+    def parents(body: str) -> tuple[int, ...]:
+        record = containment.IssueRecord(issue={"body": body}, parent=None)
+        resolution = containment.resolve_parent(
+            {}, issue_number=42, structural_type=structural_type, issue_types=types, record=record
+        )
+        return resolution.local_parents
+
+    assert parents("Milestone: #6\n\n## What\n") == ()
+    assert parents("EPIC: #6\n\n## What\n") == (6,)

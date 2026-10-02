@@ -33,7 +33,9 @@ logic is shared with ``move-issue`` via ``_lib.labels.reconcile_state_labels_to_
 so there is no duplicated label-mutation code.
 
 After closing, every path runs the closure cascade (DEC-006), which reports and
-never closes: each parent issue the body's first line names is checked for
+never closes: each parent issue in this repository the close gate counts the
+issue under — its native parent and the parent its first line names, as the
+containment seam resolves them (``containment.resolve_parent``) — is checked for
 close eligibility, and so is each Milestone the issue sits in (its native
 Milestone field, or a ``Milestone: [#<n>](../milestone/<n>)`` body ref). A
 content-based (or ``either``) Milestone whose every child issue is closed is
@@ -101,7 +103,6 @@ sys.path.insert(0, str(_HERE))
 from _lib import audit as _audit
 from _lib import (
     axis_labels,
-    body_parent_ref,
     bootstrap_gate,
     containment,
     engine_said,
@@ -564,18 +565,7 @@ def main() -> int:
     # Closure cascade — semi-automatic per DEC-006: it reports eligibility and
     # closes nothing, over the parent issues and the Milestones alike.
     if not args.no_cascade:
-        parent_num = body_parent_ref.parent_issue(body, structural_type, issue_types)
-        unrecognised = body_parent_ref.read_first_line(body, structural_type, issue_types).note
-        if parent_num is not None:
-            print(f"\n[cascade] parents to check for eligibility: #{parent_num}")
-            _check_parent_eligibility(parent_num, config)
-        elif unrecognised is not None:
-            print(
-                f"\n[warn] #{args.issue_number}'s {unrecognised}; parent check skipped.",
-                file=sys.stderr,
-            )
-        else:
-            print("\n[cascade] no parent ref found in body; parent check skipped.")
+        _report_parents(args.issue_number, body, structural_type, issue_types, config)
         milestone_nums = issue_milestones(issue)
         if milestone_nums:
             print(
@@ -792,6 +782,73 @@ class _CloseMove:
 
 # ---- parent eligibility ---------------------------------------------
 
+# What the closure cascade does not do with a native parent in another
+# repository, as the containment seam's remedy line says it (`remedy(abroad=…)`).
+_NO_CHECK_ABROAD = "the closure cascade does not check"
+
+
+def _report_parents(
+    issue_number: int, body: str, structural_type: str | None, issue_types: dict, config: dict
+) -> None:
+    """The closure cascade over the closed issue's parent issues.
+
+    The parent is resolved by the containment seam from one read of the
+    issue's record (`containment.resolve_parent`), and every parent in this
+    repository the close gate counts the issue under — its native parent and the
+    issue its first line names, one or both — is checked for eligibility, so the
+    report and the gate cannot disagree. How the two records stand is said after
+    the checks, in the seam's words: a first line in a form the issue's type does
+    not allow (the parent it names is checked all the same), a native parent
+    with no first line naming it, two that disagree, a native parent in another
+    repository (which is not checked), or a record that could not be read (the
+    first line's parent is checked, and the native one was not compared). An
+    issue with neither record names no parent to check.
+    """
+    resolution = containment.resolve_parent(
+        config,
+        issue_number=issue_number,
+        structural_type=structural_type,
+        issue_types=issue_types,
+        body=body,
+    )
+    parents = resolution.local_parents
+    if parents:
+        print(
+            f"\n[cascade] parents to check for eligibility: {', '.join(f'#{n}' for n in parents)}"
+        )
+        for parent in parents:
+            _check_parent_eligibility(parent, config)
+    kind = resolution.kind
+    if kind is containment.ParentKind.NONE:
+        print(
+            "\n[cascade] no parent issue: neither a native parent nor one named on the first "
+            "line; parent check skipped."
+        )
+        return
+    if resolution.form_note is not None:
+        print(
+            f"\n[warn] {resolution.form_note}; #{resolution.named} is checked as its parent "
+            "all the same.",
+            file=sys.stderr,
+        )
+    if kind is containment.ParentKind.UNREAD:
+        consequence = (
+            f"#{resolution.named} is checked, and the native parent was not compared"
+            if resolution.named is not None
+            else "parent check skipped"
+        )
+        print(f"\n[warn] {resolution.fact}; {consequence}.", file=sys.stderr)
+        return
+    if resolution.fact is None:
+        return
+    native = resolution.native
+    if kind is containment.ParentKind.NATIVE_ONLY and native is not None and not native.repository:
+        print(f"\n[note] {resolution.fact}.")
+        print(f"  {resolution.remedy(abroad=_NO_CHECK_ABROAD)}")
+        return
+    print(f"\n[warn] {resolution.fact}.", file=sys.stderr)
+    print(f"  {resolution.remedy(abroad=_NO_CHECK_ABROAD)}", file=sys.stderr)
+
 
 def _check_parent_eligibility(parent_num: int, config: dict) -> None:
     """Report whether a parent is eligible to close.
@@ -918,11 +975,12 @@ def _find_open_children(parent_num: int, config: dict) -> list[int] | None:
 
     Children are resolved through the SAME containment read-seam
     (``_lib.containment.resolve_children``) the engine's ``cascade_members``
-    predicate and ``show-tree`` use — native sub-issues where present, textual
-    child-side parent-refs otherwise, native-wins (DEC-005). Routing this through
-    the one seam is the ADR-026 point: no consumer re-derives containment by
-    re-parsing body parent-refs. The seam returns ALL children; this helper
-    filters to the still-OPEN ones for the "what to close first" hint.
+    predicate and ``show-tree`` use — native sub-issues together with child-side
+    first-line parent-refs, native-wins on a child present both ways (DEC-005).
+    Routing this through the one seam is the ADR-035 point: no consumer
+    re-derives containment by re-parsing body parent-refs. The seam returns ALL
+    children; this helper filters to the still-OPEN ones for the "what to close
+    first" hint.
 
     Diagnostic only: the engine fold is the decision, and the sole caller reaches
     this after that fold has already refused. Empty list = all children closed

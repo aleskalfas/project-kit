@@ -12,8 +12,8 @@ The read counterpart (the second half of this module)
 DEC-005's "native wins" rule is a *read*-time resolution as much as a write-time
 one. Where this module's write half is the sole constructor of the native link,
 its read half (:func:`resolve_children`) is the sole resolver of "what are this
-parent's children?" — native sub-issues where present, textual child-side
-parent-refs otherwise, **native-wins on conflict**. Both `show-tree` and the
+parent's children?" — the union of its native sub-issues and the issues whose
+child-side first line names it, **native-wins on conflict**. Both `show-tree` and the
 DEC-034 closure-fold child-walk resolve through it, so no consumer re-derives
 containment by parsing body parent-refs directly (ADR-026's one-read-seam
 discipline, mirrored here for the containment axis: a second consumer must not
@@ -1063,8 +1063,8 @@ def _gh_call(args: list[str], config: dict[str, Any]) -> subprocess.CompletedPro
 
 
 # =========================================================================
-# Read seam — resolve a parent's children (native-where-present / textual-
-# otherwise / native-wins). The counterpart to the write half above.
+# Read seam — resolve a parent's children (native and first-line children
+# together, native-wins). The counterpart to the write half above.
 # =========================================================================
 
 
@@ -1391,8 +1391,8 @@ def resolve_children(
     corpus: dict[int, str] | None = None,
     corpus_complete: bool | None = None,
 ) -> ChildResolution:
-    """Resolve a parent's children — native-where-present, textual-otherwise,
-    native-wins on conflict (DEC-005).
+    """Resolve a parent's children — its native sub-issues together with every
+    issue whose first line names it, native-wins on conflict (DEC-005).
 
     The sole read-seam for "what are this parent's children?" ``show-tree``, the
     DEC-034 closure fold and ``close-issue``'s open-children walk all resolve
@@ -1610,12 +1610,14 @@ class ParentResolution:
     @property
     def local_parents(self) -> tuple[int, ...]:
         """Every parent in this repository the issue is a child of — its native
-        parent and the issue its first line names, one or both — the parents
-        whose child sets (:func:`resolve_children`) hold it."""
+        parent and the issue its first line names, one or both, native first —
+        the parents whose child sets (:func:`resolve_children`) hold it. A line
+        naming the issue itself names no parent: no child set holds an issue
+        under itself."""
         out: list[int] = []
         if self.native is not None and self.native.repository is None:
             out.append(self.native.number)
-        if self.named is not None and self.named not in out:
+        if self.named is not None and self.named not in out and self.named != self.issue:
             out.append(self.named)
         return tuple(out)
 
