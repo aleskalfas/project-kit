@@ -112,6 +112,7 @@ elif path.endswith("/sub_issues"):
     for ref in tracker["native"].get(parent, []):
         repo, _, number = ref.rpartition("#") if "#" in ref else ("acme/widget", "", ref)
         entries.append({
+            "id": 90000 + int(number),
             "number": int(number),
             "repository_url": "https://api.github.com/repos/" + repo,
             "parent_issue_url": HERE + "/issues/" + parent,
@@ -277,6 +278,34 @@ def test_the_native_read_places_each_sub_issue_in_its_repository(monkeypatch) ->
         containment.ForeignIssue(ELSEWHERE, 42),
         containment.ForeignIssue(ELSEWHERE, 43),
     }
+
+
+def test_a_child_elsewhere_keeps_the_id_its_link_is_removed_by(monkeypatch) -> None:
+    listed = {
+        "id": 4242,
+        "number": 42,
+        "repository_url": f"https://api.github.com/repos/{ELSEWHERE}",
+        "parent_issue_url": f"{HERE_API}/issues/5",
+    }
+    monkeypatch.setattr(containment, "_gh_call", _answer([listed]))
+
+    resolution = containment.resolve_children({}, parent_number=5, corpus={}, corpus_complete=True)
+
+    (child,) = resolution.foreign
+    assert child.database_id == 4242
+    # The removal runs on the parent, in this repository, never in the other one.
+    assert containment.remove_sub_issue_args(parent_number=5, child_database_id=4242) == [
+        "gh",
+        "api",
+        "-X",
+        "DELETE",
+        "repos/{owner}/{repo}/issues/5/sub_issue",
+        "-F",
+        "sub_issue_id=4242",
+    ]
+    assert containment.remove_sub_issue_command(parent_number=5, child_database_id=None) == (
+        "gh api -X DELETE repos/{owner}/{repo}/issues/5/sub_issue -F sub_issue_id=<id>"
+    )
 
 
 def _unanchored_tracker(sub_issues: list[dict], *, here: str | None = HERE_API):
@@ -583,6 +612,9 @@ def _close(root: Path) -> subprocess.CompletedProcess[str]:
 
 
 _RERUN = "re-run once `gh` is reachable"
+# The removal of the child elsewhere's link under #5, run in this repository:
+# its id is the one the sub-issue list gives it (the fake's 90000 + number).
+_UNLINK = "gh api -X DELETE repos/{owner}/{repo}/issues/5/sub_issue -F sub_issue_id=90042"
 
 
 def _writes(root: Path) -> list[list[str]]:
@@ -622,14 +654,14 @@ def test_a_container_held_by_an_open_child_elsewhere_names_its_repository(
     assert done.returncode == 1, done.stderr
     assert f"  - {FOREIGN}, a sub-issue in another repository\n" in done.stderr
     assert (
-        f"→ {FOREIGN} holds #5 until it is closed in {ELSEWHERE}, or its sub-issue link "
-        "under #5 is removed; nothing is written in another repository from here."
+        f"  → {FOREIGN} holds #5 until it is closed in {ELSEWHERE}, or its sub-issue link "
+        f"under #5 is removed, in this repository, with:\n      {_UNLINK}\n"
     ) in done.stderr
     assert _RERUN not in done.stderr
     assert _writes(project) == []
 
 
-def test_a_child_elsewhere_that_cannot_be_read_is_named_with_the_re_run_advice(
+def test_a_child_elsewhere_that_cannot_be_read_is_named_with_its_two_ways_out(
     project: Path, pkit_on_path: Path
 ) -> None:
     issues = {CONTAINER: _container()}
@@ -643,8 +675,13 @@ def test_a_child_elsewhere_that_cannot_be_read_is_named_with_the_re_run_advice(
     assert (
         f"→ {FOREIGN}, a sub-issue in another repository, could not be read: gh exited 1"
     ) in done.stderr
-    assert f"{FOREIGN} holds #5 until it is closed in {ELSEWHERE}" in done.stderr
-    assert _RERUN in done.stderr
+    assert (
+        f"    two ways out: make {FOREIGN} readable to the account `gh` uses here, then run "
+        "this again; or remove its sub-issue link under #5, in this repository, with:\n"
+        f"      {_UNLINK}\n"
+    ) in done.stderr
+    # A permission failure does not pass by running again: no re-run advice alone.
+    assert _RERUN not in done.stderr
     assert "is held by its open child" not in done.stderr
     assert _writes(project) == []
 

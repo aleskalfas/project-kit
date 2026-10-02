@@ -1005,13 +1005,19 @@ def _say_held_open(parent_num: int, children: _OpenChildren) -> None:
     )
     for child in children.open:
         if child.repository is not None:
-            print(f"  → {_released_abroad(parent_num, child)}", file=sys.stderr)
+            first, *rest = _released_abroad(parent_num, child)
+            print(f"  → {first}", file=sys.stderr)
+            for line in rest:
+                print(f"    {line}", file=sys.stderr)
 
 
 def _say_unresolved(parent_num: int, fold: dict | None, children: _OpenChildren | None) -> None:
     """The refusal for a container held because a read failed: the engine's
-    reason with what the predicate it could not evaluate said, each read of the
-    children that failed, and the re-run advice."""
+    reason with what the predicate it could not evaluate said, and each read of
+    the children that failed. A child in another repository that could not be
+    read is given its two ways out — made readable, or its link removed from
+    here — since a run repeated under the same access fails the same way; the
+    re-run advice goes with every other failed read."""
     print(
         "\n[refused] could not resolve the children-half of cascade "
         "eligibility (held fail-closed):",
@@ -1032,17 +1038,21 @@ def _say_unresolved(parent_num: int, fold: dict | None, children: _OpenChildren 
             f"  → #{parent_num}'s children could not be read in full: {children.incomplete}",
             file=sys.stderr,
         )
-    for child, why in children.unread if children is not None else ():
+    unread = children.unread if children is not None else ()
+    for child, why in unread:
         if child.repository is None:
             print(f"  → {child.ref} could not be read: {why}", file=sys.stderr)
             continue
         print(f"  → {_child_named(child)}, could not be read: {why}", file=sys.stderr)
-        print(f"    {_released_abroad(parent_num, child)}", file=sys.stderr)
-    print(
-        "  → re-run once `gh` is reachable and every child's state is "
-        "readable; the container holds until the fold resolves.",
-        file=sys.stderr,
-    )
+        for line in _unread_abroad(parent_num, child):
+            print(f"    {line}", file=sys.stderr)
+    abroad_only = bool(unread) and all(child.repository is not None for child, _ in unread)
+    if not abroad_only or (children is not None and children.incomplete):
+        print(
+            "  → re-run once `gh` is reachable and every child's state is "
+            "readable; the container holds until the fold resolves.",
+            file=sys.stderr,
+        )
 
 
 def _child_named(child: containment.ResolvedChild) -> str:
@@ -1052,14 +1062,34 @@ def _child_named(child: containment.ResolvedChild) -> str:
     return f"{child.ref}, a sub-issue in another repository"
 
 
-def _released_abroad(parent_num: int, child: containment.ResolvedChild) -> str:
-    """What releases a container from a child in another repository, where
-    nothing is written from here."""
-    return (
-        f"{child.ref} holds #{parent_num} until it is closed in {child.repository}, or "
-        f"its sub-issue link under #{parent_num} is removed; nothing is written in "
-        "another repository from here."
+def _unlink_command(parent_num: int, child: containment.ResolvedChild) -> str:
+    """The command that removes a child's sub-issue link from the parent, run in
+    this repository — printed, never run (`containment.remove_sub_issue_command`)."""
+    return containment.remove_sub_issue_command(
+        parent_number=parent_num, child_database_id=child.database_id
     )
+
+
+def _released_abroad(parent_num: int, child: containment.ResolvedChild) -> list[str]:
+    """What releases a container from an open child in another repository, where
+    pm writes nothing: the child closing there, or its link removed from this
+    repository, by the command on the second line."""
+    return [
+        f"{child.ref} holds #{parent_num} until it is closed in {child.repository}, or "
+        f"its sub-issue link under #{parent_num} is removed, in this repository, with:",
+        f"  {_unlink_command(parent_num, child)}",
+    ]
+
+
+def _unread_abroad(parent_num: int, child: containment.ResolvedChild) -> list[str]:
+    """The two ways out for a child in another repository that could not be
+    read: made readable, or its link removed from this repository."""
+    return [
+        f"two ways out: make {child.ref} readable to the account `gh` uses here, then "
+        f"run this again; or remove its sub-issue link under #{parent_num}, in this "
+        "repository, with:",
+        f"  {_unlink_command(parent_num, child)}",
+    ]
 
 
 def _find_open_children(parent_num: int, config: dict) -> _OpenChildren:

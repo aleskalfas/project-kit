@@ -115,7 +115,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Any
 
@@ -215,10 +215,14 @@ class ForeignIssue:
 
     A native sub-issue may live in another repository. It is identified by
     both, so it is never taken for this repository's issue of the same number.
+    ``database_id`` is its id as the parent's sub-issue list gives it — what
+    removing its link from the parent takes (:func:`remove_sub_issue_args`) —
+    ``None`` where the list carried none; it is not part of its identity.
     """
 
     repository: str
     number: int
+    database_id: int | None = field(default=None, compare=False)
 
     @property
     def ref(self) -> str:
@@ -409,6 +413,41 @@ def list_sub_issues_args(*, parent_number: int | str) -> list[str]:
         "--paginate",
         f"repos/{{owner}}/{{repo}}/issues/{parent_number}/sub_issues",
     ]
+
+
+def remove_sub_issue_args(
+    *, parent_number: int | str, child_database_id: int | str | None
+) -> list[str]:
+    """Construct the ``gh api …/sub_issue`` removal (DELETE) argv — for an
+    operator to run, never run here.
+
+    GitHub's documented removal, ``DELETE /repos/{owner}/{repo}/issues/{parent}
+    /sub_issue`` with ``{"sub_issue_id": <child database id>}``, takes the link
+    off the parent, in the parent's repository; it is how a container here is
+    released from a child in another repository without writing there. pm prints
+    it (:func:`remove_sub_issue_command`) and runs no removal itself. A child
+    whose id is not known is given ``<id>``, to be read from the parent's
+    sub-issue list (:func:`list_sub_issues_args`).
+    """
+    child = "<id>" if child_database_id is None else child_database_id
+    return [
+        "gh",
+        "api",
+        "-X",
+        "DELETE",
+        f"repos/{{owner}}/{{repo}}/issues/{parent_number}/sub_issue",
+        "-F",
+        f"sub_issue_id={child}",
+    ]
+
+
+def remove_sub_issue_command(
+    *, parent_number: int | str, child_database_id: int | str | None
+) -> str:
+    """:func:`remove_sub_issue_args` as one line to run in this repository."""
+    return " ".join(
+        remove_sub_issue_args(parent_number=parent_number, child_database_id=child_database_id)
+    )
 
 
 # The child's record answers both questions linking asks of it: its database id
@@ -1159,12 +1198,15 @@ class ResolvedChild:
     ``repository`` is ``owner/repo`` for a native sub-issue that lives in another
     repository, ``None`` for a child in this one. A child elsewhere is NATIVE (no
     first line here can name it) and is a different issue from this repository's
-    issue of the same number: :attr:`ref` names it with its repository.
+    issue of the same number: :attr:`ref` names it with its repository. Its
+    ``database_id`` is :attr:`ForeignIssue.database_id`, carried so a report can
+    say how its link is removed from here; ``None`` for a child in this one.
     """
 
     number: int
     substrate: ChildSubstrate
     repository: str | None = None
+    database_id: int | None = field(default=None, compare=False)
 
     @property
     def ref(self) -> str:
@@ -1374,7 +1416,10 @@ def read_native_children(config: dict[str, Any], *, parent_number: int | str) ->
         if repository is None or here is None or repository.lower() == here.lower():
             numbers.add(entry["number"])
         else:
-            foreign.add(ForeignIssue(repository, entry["number"]))
+            database_id = entry.get("id")
+            if not isinstance(database_id, int) or isinstance(database_id, bool):
+                database_id = None
+            foreign.add(ForeignIssue(repository, entry["number"], database_id))
     return NativeRead(numbers=numbers, outcome=NativeReadOutcome.READ, foreign=frozenset(foreign))
 
 
@@ -1704,7 +1749,10 @@ def resolve_children(
     # of the same number: it is neither deduped against one nor read as one.
     resolved.extend(
         ResolvedChild(
-            number=child.number, substrate=ChildSubstrate.NATIVE, repository=child.repository
+            number=child.number,
+            substrate=ChildSubstrate.NATIVE,
+            repository=child.repository,
+            database_id=child.database_id,
         )
         for child in sorted(native.foreign)
     )
