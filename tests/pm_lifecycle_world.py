@@ -106,8 +106,9 @@ class Tracker:
     clears it. `fail_next` holds `gh issue edit` flags whose next edit fails,
     once, before it changes anything; `views_fail` holds issues whose `gh issue
     view` fails, as a predicate's read of an unreachable issue does;
-    `comment_reads_fail` holds issues whose comments cannot be read, while
-    every other field of theirs can."""
+    `comments_fail` holds issues whose `gh issue comment` fails, posting
+    nothing; `comment_reads_fail` holds issues whose comments cannot be read,
+    while every other field of theirs can."""
 
     def __init__(self) -> None:
         self.issues: dict[int, dict[str, Any]] = {}
@@ -119,6 +120,7 @@ class Tracker:
         self.calls: list[list[str]] = []
         self.fail_next: set[str] = set()
         self.views_fail: set[int] = set()
+        self.comments_fail: set[int] = set()
         self.comment_reads_fail: set[int] = set()
         self.closes = 0
 
@@ -177,6 +179,8 @@ class Tracker:
             if argv[2] == "reopen":
                 self.reopen(number)
                 return _done(argv)
+            if number in self.comments_fail:
+                return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
             body = _option(argv, "--body")
             self.comments[number].append(
                 {"body": body, "viewerDidAuthor": True, "includesCreatedEdit": False}
