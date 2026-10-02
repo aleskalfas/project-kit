@@ -1182,10 +1182,11 @@ def test_shipped_capabilities_wire_clean(make_adopter_repo: MakeAdopterRepo) -> 
     assert wiring.findings == (), [f.message for f in wiring.findings]
     # The shipped connections: project-management provides `pkit::work-tracking`,
     # defines its doc-check point and fills it with its own mapping filler
-    # (#1000); living-docs provides `pkit::documentation`, defines its readers
-    # and reading-evidence points, and contributes to the doc-check point (#1004);
-    # software-analysis provides `pkit::analysis`, defines its revalidation-evidence
-    # point, and contributes its actors to the readers point (#1001).
+    # (#1000), and defines its use-case point (#889); living-docs provides
+    # `pkit::documentation`, defines its readers and reading-evidence points, and
+    # contributes to the doc-check point (#1004); software-analysis provides
+    # `pkit::analysis`, defines its revalidation-evidence point, and contributes
+    # its actors to the readers point (#1001).
     assert [(r.role, r.active) for r in wiring.roles] == [
         ("pkit::analysis", "software-analysis"),
         ("pkit::documentation", "living-docs"),
@@ -1196,6 +1197,7 @@ def test_shipped_capabilities_wire_clean(make_adopter_repo: MakeAdopterRepo) -> 
         "pkit::documentation:readers",
         "pkit::documentation:reading-evidence",
         "pkit::work-tracking:doc-check",
+        "pkit::work-tracking:use-cases",
     ]
     assert sorted(
         (b.counterpart.capability, b.counterpart.command, b.status) for b in wiring.bindings

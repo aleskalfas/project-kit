@@ -80,6 +80,7 @@ from _lib import (
     provenance,
     session_guard,
     title_rules,
+    use_case_citations,
 )
 from _lib import lifecycle_inference as infer
 from _lib.audit import audit_key
@@ -94,7 +95,6 @@ from _lib.membership import (
 from _lib.milestone import Milestone, resolve_milestone
 from _lib.structural_type import infer_structural_type
 from _lib.substrate_writes import clear_milestone, write_milestone
-from _lib import use_case_citations
 
 SEVERITY_HARD_REJECT = "hard-reject"
 SEVERITY_BYPASSABLE = "bypassable-with-audit"
@@ -388,14 +388,9 @@ def main() -> int:
             classification=classification,
             check_title=title_changed,
             check_body=body_changed,
-            # Read only for a body edit that cites a use case (DEC-054).
-            use_cases=(
-                use_case_citations.read_for(
-                    new_body, capability_root.parent.parent.parent, config
-                )
-                if body_changed
-                else None
-            ),
+            # The use-case point (DEC-054): read only for a body edit whose
+            # Feature or Task body cites a use case.
+            use_cases=use_case_citations.read_point if body_changed else None,
         )
         _print_findings(findings)
 
@@ -728,7 +723,7 @@ def _validate(
     classification: dict | None = None,
     check_title: bool = True,
     check_body: bool = True,
-    use_cases: use_case_citations.UseCases | use_case_citations.Unreadable | None = None,
+    use_cases: use_case_citations.Reader | None = None,
 ) -> list[Finding]:
     """Apply the body + title validators used by validate-issue.py.
 
@@ -859,9 +854,13 @@ def _validate(
                 "body contains file:line references; line numbers go stale.",
             )
         )
-    # Use-case citations (DEC-054), parity with validate-issue: inert where
-    # `use_cases` is None (software-analysis not installed, nothing cited).
-    for sev, label, detail in use_case_citations.check(body, use_cases):
+    # The use cases a Feature or Task body cites (DEC-054), as validate-issue
+    # reads them, at the severity the body-format schema gives the rule.
+    # `use_cases` reads the point, and only for a body that cites; None reads
+    # nothing.
+    for sev, label, detail in use_case_citations.findings(
+        body, structural_type, body_format, use_cases
+    ):
         findings.append(Finding(sev, label, detail))
 
     # Scope to the fields being changed (#583). Findings are labelled

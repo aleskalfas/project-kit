@@ -9,12 +9,11 @@
 
 Validates an existing GitHub issue against the methodology's body
 shape: titles.yaml's title checks per type, per-type required sections,
-classification axes presence + uniqueness, parent-ref first line, and —
-where the project's use-case point has a contributor — that every use
-case the body cites is among the use cases settled on the default branch
-(DEC-054). Emits findings
-tagged by the severity tokens from validation-severity.yaml (hard-
-reject / bypassable-with-audit / warning).
+classification axes presence + uniqueness, parent-ref first line, and
+the use cases the body cites in its `## Use cases` section against the
+use-case point, read only for a Feature or Task body that cites one
+(DEC-054). Emits findings tagged by the severity tokens from
+validation-severity.yaml (hard-reject / bypassable-with-audit / warning).
 
 Which substrate carries each classification axis — and therefore what the
 presence gate may demand — is asked of `_lib/axis_carriage`, never of the board
@@ -60,6 +59,7 @@ from _lib import (
     bootstrap_gate,
     classification_rules,
     title_rules,
+    use_case_citations,
 )
 from _lib import lifecycle_inference as infer
 from _lib.gh import gh_get_issue, load_adopter_config
@@ -75,7 +75,6 @@ from _lib.placeholder_detection import (
     detect_placeholder_residuals,
 )
 from _lib.structural_type import infer_structural_type
-from _lib import use_case_citations
 
 SEVERITY_HARD_REJECT = "hard-reject"
 SEVERITY_BYPASSABLE = "bypassable-with-audit"
@@ -169,13 +168,6 @@ def main() -> int:
     if issue is None:
         return 2
 
-    # The use cases the body's citations are checked against (DEC-054): read
-    # from the default branch only when the body cites one and software-analysis
-    # is installed; None otherwise, and the rule stays inert.
-    use_cases = use_case_citations.read_for(
-        str(issue.get("body") or ""), capability_root.parent.parent.parent, config
-    )
-
     # The adopter's substrate-map (DEC-036 / ADR-026), loaded once and threaded
     # into the validation. None ⇒ greenfield (no map). The type-presence gate
     # and the hierarchy mode below both read it, so load it here rather than
@@ -205,7 +197,9 @@ def main() -> int:
         phase=args.phase,
         hierarchy=hierarchy,
         substrate_map=substrate_map,
-        use_cases=use_cases,
+        # The use-case point (DEC-054): read only for a Feature or Task body
+        # that cites a use case.
+        use_cases=use_case_citations.read_point,
     )
 
     if args.json:
@@ -241,7 +235,7 @@ def _validate_issue(
     phase: str = PHASE_TRANSITION,
     hierarchy: str = axis_labels.HIERARCHY_GATED,
     substrate_map: axis_labels.SubstrateMap | None = None,
-    use_cases: use_case_citations.UseCases | use_case_citations.Unreadable | None = None,
+    use_cases: use_case_citations.Reader | None = None,
 ) -> list[Finding]:
     findings: list[Finding] = []
     title = str(issue.get("title", ""))
@@ -813,10 +807,13 @@ def _validate_issue(
                 "body contains file:line references; line numbers go stale.",
             )
         )
-    # Use-case citations (DEC-054), beside the predicted-decision-id rule and
-    # at its severity. `use_cases` is None where software-analysis is not
-    # installed or nothing is cited: no finding.
-    for sev, label, detail in use_case_citations.check(body, use_cases):
+    # The use cases a Feature or Task body cites (DEC-054), at the severity the
+    # body-format schema gives the rule: those the use-case point does not hold,
+    # or that they could not be checked. `use_cases` reads the point, and only
+    # for a body that cites; None reads nothing.
+    for sev, label, detail in use_case_citations.findings(
+        body, structural_type, body_format, use_cases
+    ):
         findings.append(Finding(sev, label, detail))
 
     return findings

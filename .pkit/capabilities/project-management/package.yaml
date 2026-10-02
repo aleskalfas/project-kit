@@ -230,7 +230,7 @@ commands:
     script: scripts/disable-default-agent.py
     help: "Deactivate the project-manager default-agent overlay; strips the agent key from .claude/settings.json, removes the live overlay file, and re-runs pkit sync (per DEC-030)."
 # Connection points (COR-053): the role this capability provides and the data
-# point it defines under it. See the README, "Connections".
+# points it defines under it. See the README, "Connections".
 connections:
   roles: [pkit::work-tracking]
   extension-points:
@@ -253,6 +253,25 @@ connections:
           fails rather than pass on fewer obligations.
         combination: additive
         inert: fail
+      pkit::work-tracking:use-cases:
+        schema_version: 1
+        schema: use-cases.schema.json
+        description: >-
+          The use cases settled on the default branch (DEC-054), one entry per
+          use case: its id, its title, `active` or `withdrawn`, and the path of
+          the document that describes it. Batch planning walks them before it
+          slices the work, and body validation warns of a use case an issue
+          body cites that they do not hold. A filler holds to four things: the
+          value holds every use case that ever settled, withdrawn ones
+          included; an id, once settled, names the same use case for good; the
+          answer is complete or none — a filler that cannot read a use case
+          gives no answer, never a shorter list; and a capability's filler
+          declares that it reads settled state. One keeper answers, and a
+          project filler replaces its answer whole. No default. Its readers
+          only report, so a filler that cannot answer is warned, and they say
+          the use cases could not be read.
+        combination: single
+        inert: fallback
   extensions:
     contributes:
       # The point's always-included default filler: the project's code-to-doc
