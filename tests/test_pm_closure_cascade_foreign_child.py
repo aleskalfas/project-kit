@@ -24,8 +24,10 @@ script with the real `pkit` on PATH.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -816,3 +818,154 @@ def test_closing_over_a_closed_child_elsewhere_writes_nothing_there(
     assert not [call for call in writes if any(ELSEWHERE in arg for arg in call)]
     # The child elsewhere is only ever read.
     assert _naming_elsewhere(project) == [["api", f"repos/{ELSEWHERE}/issues/42"]]
+
+
+def test_the_refusal_reads_a_child_elsewhere_once_more_than_the_fold(
+    project: Path, pkit_on_path: Path
+) -> None:
+    issues = {CONTAINER: _container()}
+    _tracker(project, issues, native={CONTAINER: [FOREIGN]}, foreign={FOREIGN: _issue("OPEN")})
+
+    done = _close(project)
+
+    assert done.returncode == 1, done.stderr
+    # Once by the fold's read of its state, once by the refusal saying what holds #5.
+    assert _naming_elsewhere(project) == [["api", f"repos/{ELSEWHERE}/issues/42"]] * 2
+
+
+# --- the real shape of a sub-issues answer ------------------------------------
+
+# One entry of a real sub-issues answer — `gh api
+# repos/aleskalfas/project-kit/issues/434/sub_issues --jq '.[0]'`, read on
+# 2026-10-02 — reduced to the keys the seam reads. GitHub carries
+# `parent_issue_url` on every entry (all 68 under #434 carried it).
+REAL_ENTRY = json.loads(
+    (REPO_ROOT / "tests" / "fixtures" / "github_sub_issue_entry.json").read_text(encoding="utf-8")
+)
+_SEAM_KEYS = {"id", "number", "repository_url", "parent_issue_url"}
+
+
+def test_the_real_entry_carries_what_the_seam_reads(monkeypatch) -> None:
+    assert set(REAL_ENTRY) == _SEAM_KEYS
+    assert isinstance(REAL_ENTRY["id"], int) and isinstance(REAL_ENTRY["number"], int)
+    gh, calls = _unanchored_tracker([REAL_ENTRY])
+    monkeypatch.setattr(containment, "_gh_call", gh)
+
+    read = containment.read_native_children({}, parent_number=434)
+
+    # Placed by its own anchor: this repository's, at no cost beyond the list.
+    assert (read.numbers, read.foreign) == ({435}, frozenset())
+    assert calls == [["gh", "api", "--paginate", "repos/{owner}/{repo}/issues/434/sub_issues"]]
+
+    elsewhere = dict(REAL_ENTRY, repository_url=f"https://api.github.com/repos/{ELSEWHERE}")
+    gh, _calls = _unanchored_tracker([elsewhere])
+    monkeypatch.setattr(containment, "_gh_call", gh)
+    (child,) = containment.read_native_children({}, parent_number=434).foreign
+    assert (child.ref, child.database_id) == (f"{ELSEWHERE}#435", REAL_ENTRY["id"])
+
+
+def test_the_fake_tracker_answers_in_the_real_shape(project: Path) -> None:
+    issues = {CONTAINER: _container()}
+    _tracker(project, issues, native={CONTAINER: [10, FOREIGN]}, foreign={FOREIGN: _issue("OPEN")})
+
+    listed = subprocess.run(
+        ["gh", "api", "--paginate", "repos/{owner}/{repo}/issues/5/sub_issues"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert [set(entry) for entry in json.loads(listed.stdout)] == [_SEAM_KEYS, _SEAM_KEYS]
+
+
+# --- linking, and every write a verb makes, with a child elsewhere --------------
+
+
+def test_a_child_elsewhere_does_not_make_this_repository_s_issue_linked(monkeypatch) -> None:
+    # acme/other#42 is under #5; this repository's #42 has no native parent. The
+    # linked check does not take one for the other: #42 is posted.
+    listed = {
+        "id": 4242,
+        "number": 42,
+        "repository_url": f"https://api.github.com/repos/{ELSEWHERE}",
+        "parent_issue_url": f"{HERE_API}/issues/5",
+    }
+    gh, calls = _unanchored_tracker([listed])
+    monkeypatch.setattr(containment, "_gh_call", gh)
+
+    result = containment.link_sub_issue({}, parent_number=5, child_number=42)
+
+    assert result.outcome is containment.LinkOutcome.LINKED
+    post = ["gh", "api", "-X", "POST", "repos/{owner}/{repo}/issues/5/sub_issues"]
+    assert [call for call in calls if "POST" in call] == [[*post, "-F", "sub_issue_id=1042"]]
+
+
+# A reference to an issue elsewhere GitHub would link: not inside a code span.
+_LINKED_ELSEWHERE = re.compile(rf"(?<!`){re.escape(ELSEWHERE)}#[0-9]+")
+
+
+def _writes_stay_here(calls: list[list[str]]) -> list[list[str]]:
+    """The writing calls among `calls`, each checked to be addressed to this
+    repository and to name an issue elsewhere only in a code span."""
+    writes = [call for call in calls if {"POST", "PATCH", "DELETE"} & set(call)]
+    for call in writes:
+        assert not any(f"repos/{ELSEWHERE}" in arg for arg in call), call
+        assert not any(_LINKED_ELSEWHERE.search(arg) for arg in call), call
+    return writes
+
+
+def test_create_issue_s_children_view_leaves_nothing_elsewhere(monkeypatch) -> None:
+    spec = importlib.util.spec_from_file_location(
+        "pm_create_issue_foreign_child", CAP_SCRIPTS / "create-issue.py"
+    )
+    assert spec is not None and spec.loader is not None
+    create_issue = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(create_issue)
+    listed = {
+        "id": 90042,
+        "number": 42,
+        "repository_url": f"https://api.github.com/repos/{ELSEWHERE}",
+        "parent_issue_url": f"{HERE_API}/issues/5",
+    }
+    rows = [
+        {"number": 5, "title": "[Feature] F", "body": "EPIC: #1\n"},
+        {"number": 11, "title": "[Task] t", "body": "Feature: #5\n"},
+    ]
+    calls: list[list[str]] = []
+
+    def gh(args, _config):
+        calls.append(list(args))
+        if args[:3] == ["gh", "issue", "list"]:
+            return subprocess.CompletedProcess(args, 0, json.dumps(rows), "")
+        if "POST" in args:
+            return subprocess.CompletedProcess(args, 0, "{}", "")
+        if args[-1] == "repos/{owner}/{repo}/issues/5/sub_issues":
+            return subprocess.CompletedProcess(args, 0, json.dumps([listed]), "")
+        if args[-1] == "repos/{owner}/{repo}/issues/5/comments":
+            return subprocess.CompletedProcess(args, 0, "[]", "")
+        raise AssertionError(f"unexpected gh call: {args}")
+
+    monkeypatch.setattr(containment, "_gh_call", gh)
+    create_issue._refresh_parent_children_view({}, parent_number=5, containment_mode="textual")
+
+    (write,) = _writes_stay_here(calls)
+    assert write[4] == "repos/{owner}/{repo}/issues/5/comments"
+    assert f"- `{FOREIGN}`\n" in write[-1]
+
+
+@pytest.mark.parametrize("subject", [FOREIGN, "not-an-issue"])
+def test_the_lifecycle_world_refuses_a_subject_it_does_not_hold(subject: str) -> None:
+    """The in-memory tracker other suites drive the engine against holds this
+    repository's issues only: a member elsewhere, or an id naming no issue, is
+    refused with why — never a crash on `int()`."""
+    from types import SimpleNamespace
+
+    from project_kit.process import PredicateFailure
+    from tests.pm_lifecycle_world import answer_from_tracker
+
+    answer = answer_from_tracker(SimpleNamespace(subject=subject), "detect-state", None)  # type: ignore[arg-type]
+
+    assert isinstance(answer, PredicateFailure)
+    assert answer.cause == "exited 2"
+    assert repr(subject) in answer.stderr_tail
+    assert "holds this repository's issues only" in answer.stderr_tail

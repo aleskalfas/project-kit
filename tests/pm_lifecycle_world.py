@@ -531,10 +531,23 @@ def answer_from_tracker(
     own predicate code (which reads the tracker through `gh`), under its
     script's exit-code contract: an answer the predicate could not reach is no
     answer — the script exits 2, with what the predicate said on standard
-    error — never the payload it carries."""
+    error — never the payload it carries.
+
+    The tracker holds this repository's issues only. A subject that is not one
+    of them — a closure-fold member in another repository, `owner/repo#<n>`, or
+    an id naming no issue — gets no answer, and says why, as a script refusing
+    a subject it cannot read would."""
+    subject = predicates.read_subject(str(runner.subject))
+    if not isinstance(subject, int):
+        where = "is an issue in another repository" if subject else "names no issue"
+        return PredicateFailure(
+            "exited 2",
+            f"the in-memory tracker holds this repository's issues only: "
+            f"{runner.subject!r} {where}",
+        )
     said = io.StringIO()
     with contextlib.redirect_stderr(said):
-        answer = _predicate_answer(run_name, int(runner.subject))
+        answer = _predicate_answer(run_name, subject)
     if answer is None:
         return PredicateFailure("could not start: no script of the capability runs it")
     if answer.get(predicates.INDETERMINATE_KEY):

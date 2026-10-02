@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -296,6 +297,32 @@ def test_a_parent_whose_only_child_is_elsewhere_gets_its_view_refreshed(
     st._refresh_children_views(issues, Path("."), {})
 
     assert refreshed == [2]
+
+
+def test_the_refreshed_view_leaves_nothing_in_the_other_repository(
+    st, issue_types, monkeypatch
+) -> None:
+    """The view written for #2 names `acme/other#7` in a code span, which GitHub
+    does not link, and every write is addressed to this repository (#1308)."""
+    issues = _tree_with_a_child_elsewhere(st, issue_types, monkeypatch)
+    calls: list[list[str]] = []
+
+    def gh(args, _config):
+        calls.append(list(args))
+        if "POST" in args:
+            return subprocess.CompletedProcess(args, 0, "{}", "")
+        if args[-1].endswith("/comments"):
+            return subprocess.CompletedProcess(args, 0, "[]", "")
+        raise AssertionError(f"unexpected gh call: {args}")
+
+    monkeypatch.setattr(st.axis_labels, "containment_mode", lambda _root: "textual")
+    monkeypatch.setattr(st.containment, "_gh_call", gh)
+    st._refresh_children_views(issues, Path("."), {})
+
+    (write,) = [call for call in calls if "POST" in call]
+    assert write[4] == "repos/{owner}/{repo}/issues/2/comments"
+    assert "- `acme/other#7`\n" in write[-1]
+    assert not re.search(r"(?<!`)acme/other#7", write[-1])
 
 
 def test_a_native_child_naming_this_repository_without_an_anchor_is_in_the_tree(
