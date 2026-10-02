@@ -1289,14 +1289,16 @@ class NativeReadOutcome(Enum):
     ``UNSUPPORTED`` and ``UNREADABLE`` both yield no child set, but they mean
     opposite things for completeness and must not be collapsed (ADR-035 §5):
 
-    * ``READ`` — the endpoint answered. The set is authoritative, empty included.
+    * ``READ`` — the endpoint answered. The set is authoritative for what the
+      hosting service lists to this reader, empty included; a sub-issue it
+      leaves out for this reader is not seen (``read_native_children``).
     * ``UNSUPPORTED`` — this instance has no native substrate at all, so the
       textual projection genuinely IS the whole answer, and degrading to it is a
       *determinate* result. Reached two ways and no other: a 410, or a 404 the
       probe attributes to the endpoint. No other status reaches it and no
       wording does — a 422 is UNREADABLE whatever it says (#808). It is the
-      seam's only fail-open surface, so it has to be earned rather than
-      inferred (#869).
+      only fail-open surface among the seam's own verdicts, so it has to be
+      earned rather than inferred (#869).
     * ``UNREADABLE`` — auth, network, a transient 5xx, a 422 GitHub answered
       with, an unparseable payload, or no ``gh`` on PATH: a native child set may
       exist and was not seen. Absence of the tool is not evidence about the
