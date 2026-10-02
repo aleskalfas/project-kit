@@ -9,7 +9,8 @@ its own code. This module answers all of it in this process, from one model:
   without a merge queue, the queue's merge method and the repository's
   squash-commit defaults; the PR queued, waiting to enter, or dropped at a
   head; a merge the service turns into an enqueue; auto-merge allowed or not;
-  the remote branches, a protected one, and other open PRs on a branch. A
+  the remote branches, a protected one, and other open PRs on a branch or
+  based on one. A
   queued PR moves on by one :data:`Step` per reading. A request can be
   refused, fail after it was made, or get no answer — made and the reply lost,
   or never received (:class:`NoAnswer`) — and a second actor can act before or
@@ -33,8 +34,10 @@ one PR and its queue) and `test_release_merge.py`'s `_Host` (the backbone's
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
+import re
 import subprocess
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -63,6 +66,7 @@ ENQUEUE = "enqueue"  # `gh pr merge --auto`
 DISABLE_AUTO = "disable-auto"  # `gh pr merge --disable-auto`
 DEQUEUE = "dequeue"  # GitHub's `dequeuePullRequest` mutation
 BRANCH = "branch"  # the GraphQL reading of a merged PR's head branch, before its deletion
+BASED_ON = "based-on"  # the GraphQL reading of the open PRs based on that branch
 DELETE_REF = "delete-ref"  # GitHub's `updateRefs` mutation: delete the branch at its tip
 VIEW = "view"  # `gh pr view`
 LIST = "list"  # `gh pr list`
@@ -75,7 +79,18 @@ UNKNOWN = "unknown"  # a request the fake does not model: answered with exit 1
 #: defaults, the merge requests, the dequeue and the branch deletion — as
 #: against the caller's own reads for its gates.
 LANDING = frozenset(
-    {READ, DEFAULTS, MERGE, MERGE_ADMIN, ENQUEUE, DISABLE_AUTO, DEQUEUE, BRANCH, DELETE_REF}
+    {
+        READ,
+        DEFAULTS,
+        MERGE,
+        MERGE_ADMIN,
+        ENQUEUE,
+        DISABLE_AUTO,
+        DEQUEUE,
+        BRANCH,
+        BASED_ON,
+        DELETE_REF,
+    }
 )
 
 # ---- what became of a request ---------------------------------------------------
@@ -94,12 +109,24 @@ _MERGED_AT = "2026-10-01T10:12:00Z"
 _MERGE_COMMIT = "c0ffee" + "0" * 34
 _REPOSITORY_ID = "R_project"
 
-#: What GitHub answers an `updateRefs` it refuses for a branch not at the
-#: commit named, or already gone: no reason, only that something went wrong.
+#: What GitHub answers an `updateRefs` it refuses — a branch not at the commit
+#: named, already gone, or protected from deletion: no reason, only that
+#: something went wrong. gh prints the answer, its `errors` naming this, and
+#: exits 1.
 NO_REASON = (
-    "gh: Something went wrong while executing your query. Please include `ED1C:3173D4` when "
+    "Something went wrong while executing your query. Please include `ED1C:3173D4` when "
     "reporting this issue."
 )
+
+
+def oid(name: str) -> str:
+    """A full commit id standing for the commit `name` — the same for the same
+    name — as `pkit pull-request delete-branch --expect` takes no other."""
+    return hashlib.sha1(name.encode()).hexdigest()
+
+
+#: The PR's head commit, unless a test moves it.
+HEAD = oid("head")
 
 
 class NoAnswer(Exception):
@@ -121,12 +148,14 @@ class Base:
 
 @dataclass
 class OtherPullRequest:
-    """Another PR whose head is one of this repository's branches."""
+    """Another PR whose head is one of this repository's branches, and which
+    merges into `base_ref` — the PR's head branch, for one stacked on it."""
 
     number: int
     head_ref: str
     head_oid: str
     state: str = "OPEN"
+    base_ref: str = "main"
 
 
 @dataclass
@@ -176,7 +205,7 @@ class HostingService:
     title: str = "fix: land it"
     body: str = "Closes #42\n\n## Test plan\n\n- [x] It lands.\n"
     head_ref: str = "fix/42-land-it"
-    head_oid: str = "sha-head"
+    head_oid: str = HEAD
     base: str = "main"
     state: str = "OPEN"
     merged_at: str = ""
@@ -436,8 +465,12 @@ class HostingService:
             self._leave_queue()
             return _done(args)
         if kind == BRANCH:
-            node = {**self._node(), "repository": {"id": _REPOSITORY_ID}, "headRef": self._ref()}
+            ref = self._ref(_first(args))
+            node = {**self._node(), "repository": {"id": _REPOSITORY_ID}, "headRef": ref}
             return _done(args, stdout=json.dumps({"data": {"repository": {"pullRequest": node}}}))
+        if kind == BASED_ON:
+            based = self._based_on(_field(args, "branch") or "", _first(args))
+            return _done(args, stdout=json.dumps({"data": {"repository": {"pullRequests": based}}}))
         if kind == DELETE_REF:
             return self._delete_ref(args, request)
         if kind == VIEW:
@@ -507,19 +540,17 @@ class HostingService:
         branch = (_field(args, "name") or "").removeprefix("refs/heads/")
         if _field(args, "repository") != _REPOSITORY_ID or _field(args, "after") != "0" * 40:
             request.result = "refused, not a deletion here"
-            return _done(args, 1, stderr=NO_REASON)
+            return _no_reason(args)
         if branch in self.protected:
             request.result = "refused, protected"
-            return _done(
-                args, 1, stderr="gh: Cannot delete this branch: it is protected (updateRefs)"
-            )
+            return _no_reason(args)
         if branch not in self.refs:
             request.result = "refused, gone"
-            return _done(args, 1, stderr=NO_REASON)
+            return _no_reason(args)
         tip = self.refs[branch]
         if tip != _field(args, "before"):
             request.result = f"refused, tip {tip}"
-            return _done(args, 1, stderr=NO_REASON)
+            return _no_reason(args)
         del self.refs[branch]
         result = "deleted"
         if branch == self.head_ref and tip != (self.merged_head or self.head_oid):
@@ -529,12 +560,12 @@ class HostingService:
                 other.state = "CLOSED"
                 result += f", closed #{other.number}"
         request.result = result
-        return _done(args)
+        return _done(args, stdout=json.dumps({"data": {"updateRefs": {"clientMutationId": None}}}))
 
-    def _ref(self) -> dict[str, Any] | None:
+    def _ref(self, first: int | None) -> dict[str, Any] | None:
         """The PR's head branch as GraphQL's `headRef` answers it: by name, as
-        it stands now — its tip and the open PRs whose head it is — or null
-        once it is gone."""
+        it stands now — its tip and the open PRs whose head it is, the `first`
+        of them named — or null once it is gone."""
         if self.cross_repository or self.head_ref not in self.refs:
             return None
         numbers = [
@@ -546,11 +577,20 @@ class HostingService:
             numbers.insert(0, self.number)
         return {
             "target": {"oid": self.refs[self.head_ref]},
-            "associatedPullRequests": {
-                "totalCount": len(numbers),
-                "nodes": [{"number": number} for number in numbers],
-            },
+            "associatedPullRequests": _connection(numbers, first),
         }
+
+    def _based_on(self, branch: str, first: int | None) -> dict[str, Any]:
+        """The open PRs whose base is `branch`, as GraphQL's
+        `pullRequests(baseRefName:)` answers them, the `first` of them named."""
+        numbers = [
+            other.number
+            for other in self.others
+            if other.base_ref == branch and other.state == "OPEN"
+        ]
+        if self.state == "OPEN" and self.base == branch:
+            numbers.insert(0, self.number)
+        return _connection(numbers, first)
 
     def _node(self) -> dict[str, Any]:
         """The PR as the GraphQL reading answers it."""
@@ -953,6 +993,8 @@ def _kind(args: list[str]) -> str:
             return DELETE_REF
         if "closedByPullRequestsReferences" in query:
             return ISSUE_MERGES
+        if "baseRefName:" in query:
+            return BASED_ON
         if "pullRequest(number:" in query:
             return BRANCH if "headRef {" in query else READ
         return UNKNOWN
@@ -979,3 +1021,25 @@ def _field(args: list[str], name: str) -> str | None:
 
 def _done(args: list[str], returncode: int = 0, *, stdout: str = "", stderr: str = "") -> Completed:
     return subprocess.CompletedProcess(args, returncode, stdout=stdout, stderr=stderr)
+
+
+def _no_reason(args: list[str]) -> Completed:
+    """gh's answer to an `updateRefs` GitHub refuses: the answer on standard
+    output, its `errors` saying only that something went wrong (:data:`NO_REASON`),
+    gh's own line on standard error, and exit 1."""
+    answer = {"data": {"updateRefs": None}, "errors": [{"message": NO_REASON}]}
+    return _done(args, 1, stdout=json.dumps(answer), stderr=f"gh: {NO_REASON}")
+
+
+def _connection(numbers: list[int], first: int | None) -> dict[str, Any]:
+    """A GraphQL connection of PRs, as it counts them all and names the
+    `first` of them (None: every one)."""
+    named = numbers if first is None else numbers[:first]
+    return {"totalCount": len(numbers), "nodes": [{"number": number} for number in named]}
+
+
+def _first(args: list[str]) -> int | None:
+    """How many of a connection's nodes a GraphQL query asks for (`first: N`)."""
+    query = next((arg for arg in args if arg.startswith("query=")), "")
+    found = re.search(r"first: (\d+)", query)
+    return int(found.group(1)) if found else None

@@ -5,19 +5,32 @@ custom:
 body: >
   `pkit pull-request delete-branch <n> --expect <sha>` deletes a merged pull
   request's head branch on the hosting service, and only while its tip is
-  `<sha>`, the head the pull request merged at, so a push made after the
-  merge is not lost and a newer pull request's branch of the same name is
-  not deleted. It runs the cross-repository guard first and takes
-  `--allow-foreign-repo`. It refuses a pull request that has not merged, or
-  whose head is in a fork; it keeps a branch whose tip moved, one another open
-  pull request uses, and one the service refuses to delete, saying why; and it
-  reports a branch already gone. The deletion is one compare-and-delete
-  request (GitHub's `updateRefs` with the expected tip). With `--json` it
-  writes one document: `outcome` (`deleted`, `kept`, `gone`, `refused`),
-  `branch`, `expected`, `tip`, `reason_kind`, `reason` and `guard`; it exits 0
-  when deleted, kept or gone and 1 when refused. `pkit release merge` deletes
-  a release pull request's head branch through it, after the merge, so a
-  branch kept or gone is said in one line and does not fail the run.
+  `<sha>`, so a push made after the merge is not lost and a newer pull
+  request's branch of the same name is not deleted. `<sha>` must be the head
+  the pull request merged at, named in full (40 or 64 hexadecimal
+  characters; anything else is a usage error, exit 2). It runs the
+  cross-repository guard first and takes `--allow-foreign-repo`. It refuses a
+  pull request that has not merged (`not-merged`), one whose head is in a
+  fork (`cross-repository`), a `<sha>` that is not the pull request's head
+  (`expect-mismatch`), and a reading it cannot take (`unreadable`), counts
+  of open pull requests included. It keeps a branch whose tip moved
+  (`tip-moved`); one another open pull request uses as its head or as its
+  base (`open-pull-request`); one the service answers the deletion of with
+  an error (`deletion-refused`); and one still in place after a deletion
+  that got no usable answer (`unanswered`). It reports `gone` when the
+  branch is not there. When a deletion gets no usable answer and the branch
+  cannot be read since, it reports `unconfirmed`, with no tip, since whether
+  the branch was deleted is not known. The deletion is one compare-and-delete
+  request (GitHub's `updateRefs` with the expected tip); a host whose API
+  lacks that mutation keeps the branch every time. With `--json` it writes
+  one document: `outcome` (`deleted`, `kept`, `gone`, `refused`,
+  `unconfirmed`), `branch`, `expected`, `merged_head`, `tip`, `reason_kind`,
+  `reason` and `guard`. It exits 0 when deleted, kept or gone, and 1 when
+  refused or unconfirmed. `pkit release merge` deletes a release pull
+  request's head branch through it, after the merge. What became of the
+  branch is said in one line, which names the command that deletes it later
+  where it was not deleted, and none of it fails the run. The local branch
+  is deleted only once the remote one was deleted or is gone.
   `pkit pull-request read` reports the head's ref name (`head_ref`) and
   whether the head is in another repository (`cross_repository`), as
   additions: `schema_version` stays 1.

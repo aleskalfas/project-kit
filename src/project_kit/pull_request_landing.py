@@ -34,8 +34,9 @@ Every step of a landing that talks to the hosting service lives here, once:
   the head moves;
 - **taking a PR out of the queue** (:func:`dequeue`);
 - **deleting a merged PR's head branch** (:func:`delete_branch`), only while
-  its tip is the head the caller names — the head that merged — as one
-  compare-and-delete request.
+  its tip is the head the PR merged at, which the caller names, and no other
+  open PR uses it as its head or its base — as one compare-and-delete
+  request.
 
 Merged is what GitHub reports, never what a command's exit implies: on a base
 that requires a queue, a plain merge request enqueues and exits 0, so a caller
@@ -63,6 +64,7 @@ caller's environment, so a host pinned through `GH_HOST` reaches it.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -99,25 +101,33 @@ LEFT = "left"
 HEAD_MOVED = "head-moved"
 
 #: How deleting a merged PR's head branch ended (:class:`BranchDeletion`):
-#: deleted at the head that merged; kept, `reason_kind` saying why; gone
-#: before the deletion was asked for; or refused, the deletion not asked for.
+#: deleted at the head that merged; kept, `reason_kind` saying why; gone — not
+#: there, whoever removed it; refused, the deletion not asked for; or
+#: unconfirmed — asked for, with no usable answer and no reading since, so
+#: whether it was deleted is not known.
 DELETED = "deleted"
 KEPT = "kept"
 GONE = "gone"
 REFUSED = "refused"
+UNCONFIRMED = "unconfirmed"
 
 #: Why a head branch was kept: its tip is not the head that merged; another
-#: open PR's head is the branch, and deleting it would close that PR; the
-#: service refused the deletion (a protected branch, say).
+#: open PR uses the branch as its head or as its base; the service answered
+#: the deletion with an error (a protected branch, say); or the deletion got
+#: no usable answer and a reading since finds the branch still at the head
+#: that merged. :data:`UNANSWERED` is also why a deletion is unconfirmed.
 TIP_MOVED = "tip-moved"
 OPEN_PULL_REQUEST = "open-pull-request"
 DELETION_REFUSED = "deletion-refused"
+UNANSWERED = "unanswered"
 
 #: Why a deletion was refused, besides the cross-repository guard's
 #: (`session_guard.FOREIGN_REPOSITORY`): the PR has not merged; its head is in
-#: another repository, a fork; the PR could not be read.
+#: another repository, a fork; the head named is not the head the PR merged
+#: at; the PR, or the open PRs that use its branch, could not be read.
 NOT_MERGED = "not-merged"
 CROSS_REPOSITORY = "cross-repository"
+EXPECT_MISMATCH = "expect-mismatch"
 NOT_READ = "unreadable"
 
 #: Runs one `gh` command and answers what it did.
@@ -160,14 +170,14 @@ _REMOVED_EVENT = "RemovedFromMergeQueueEvent"
 # GitHub's own mutation that takes a PR out of a merge queue.
 _DEQUEUE = "mutation($id: ID!) { dequeuePullRequest(input: {id: $id}) { clientMutationId } }"
 
-# How many of the open PRs whose head is a branch the deletion's reading names;
-# it counts them all.
+# How many of the open PRs that use a branch the deletion's readings name; they
+# count them all.
 _OPEN_PULL_REQUESTS_NAMED = 5
 
-# What deleting a merged PR's head branch reads first, in one request: the PR,
-# the repository the request acts in, and the branch as it stands now — its
-# tip, and the open PRs whose head it is. `headRef` is null once the branch is
-# gone.
+# What deleting a merged PR's head branch reads first, in one request: the PR —
+# its head commit among it — the repository the request acts in, and the
+# branch as it stands now: its tip, and the open PRs whose head it is.
+# `headRef` is null once the branch is gone.
 _BRANCH_FIELDS = f"""\
 {_PR_FIELDS}
       repository {{ id }}
@@ -178,6 +188,19 @@ _BRANCH_FIELDS = f"""\
           nodes {{ number }}
         }}
       }}"""
+
+# The open PRs whose base is a branch, read once the reading above has named
+# it: a branch knows the PRs whose head it is, not those based on it.
+_BASED_ON = f"""\
+query($owner: String!, $repo: String!, $branch: String!) {{
+  repository(owner: $owner, name: $repo) {{
+    pullRequests(states: [OPEN], baseRefName: $branch, first: {_OPEN_PULL_REQUESTS_NAMED}) {{
+      totalCount
+      nodes {{ number }}
+    }}
+  }}
+}}
+"""
 
 # GitHub's mutation that moves a repository's refs only from the commits it is
 # told they are at, all of them or none: a branch moved to the all-zero commit
@@ -190,6 +213,9 @@ _DELETE_AT = (
     "{ clientMutationId } }"
 )
 _NO_COMMIT = "0" * 40
+
+# A full commit id: SHA-1's 40 hexadecimal characters, or SHA-256's 64.
+_FULL_OBJECT_ID = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 
 
 class Unreadable(Exception):
@@ -512,18 +538,23 @@ def dequeue(
 class BranchDeletion:
     """What deleting a merged PR's head branch came to (:func:`delete_branch`)."""
 
-    #: :data:`DELETED`, :data:`KEPT`, :data:`GONE` or :data:`REFUSED`.
+    #: :data:`DELETED`, :data:`KEPT`, :data:`GONE`, :data:`REFUSED` or
+    #: :data:`UNCONFIRMED`.
     outcome: str
     #: The head branch, by name; empty when the PR was not read.
     branch: str = ""
     #: The branch's tip, when it was kept.
     tip: str = ""
     #: Why it was kept (:data:`TIP_MOVED`, :data:`OPEN_PULL_REQUEST`,
-    #: :data:`DELETION_REFUSED`) or refused (:data:`NOT_MERGED`,
-    #: :data:`CROSS_REPOSITORY`, :data:`NOT_READ`, or the guard's); empty when
-    #: it was deleted or gone.
+    #: :data:`DELETION_REFUSED`, :data:`UNANSWERED`), unconfirmed
+    #: (:data:`UNANSWERED`) or refused (:data:`NOT_MERGED`,
+    #: :data:`CROSS_REPOSITORY`, :data:`EXPECT_MISMATCH`, :data:`NOT_READ`, or
+    #: the guard's); empty when it was deleted or gone.
     reason_kind: str = ""
     reason: str = ""
+    #: The PR's head, as the reading found it: the head it merged at, once it
+    #: has; empty when the PR was not read.
+    merged_head: str = ""
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -532,18 +563,40 @@ class BranchDeletion:
             "tip": self.tip or None,
             "reason_kind": self.reason_kind or None,
             "reason": self.reason or None,
+            "merged_head": self.merged_head or None,
         }
 
     def describe(self) -> str:
-        """What became of the branch, as one phrase for a command's output."""
+        """What became of the branch, as one phrase for a command's output —
+        with no closing full stop, which the service's words may carry."""
         branch = f"remote branch {self.branch!r}" if self.branch else "the remote head branch"
+        reason = self.reason.rstrip(".")
         if self.outcome == DELETED:
             return f"deleted {branch}"
         if self.outcome == GONE:
-            return f"{branch} already deleted"
+            return f"{branch} is not there; nothing to delete"
         if self.outcome == KEPT:
-            return f"kept {branch}: {self.reason}"
-        return f"{branch} not deleted: {self.reason}"
+            return f"kept {branch}: {reason}"
+        if self.outcome == UNCONFIRMED:
+            return f"whether {branch} was deleted is not known: {reason}"
+        return f"{branch} not deleted: {reason}"
+
+
+@dataclass(frozen=True)
+class _OpenPullRequests:
+    """The open PRs, other than the one whose branch is being deleted, that
+    use the branch one way: how many, and the first few by number."""
+
+    count: int
+    numbers: tuple[int, ...]
+
+    def named(self) -> str:
+        """The numbers, as a parenthesis for a reason; empty when none is named."""
+        named = ", ".join(f"#{number}" for number in self.numbers)
+        more = self.count - len(self.numbers)
+        if named and more > 0:
+            named += f" and {more} more"
+        return f" ({named})" if named else ""
 
 
 @dataclass(frozen=True)
@@ -552,15 +605,50 @@ class _HeadBranch:
 
     pr_state: str
     merged: bool
+    #: The PR's head commit: the head it merged at, once it has.
+    head_oid: str
     name: str
     cross_repository: bool
     #: The repository the request acts in, as the GraphQL API names it.
     repository_id: str
     #: The branch's tip; empty once the branch is gone.
     tip: str
-    #: The open PRs whose head the branch is: how many, and the first few.
-    open_count: int
-    open_numbers: tuple[int, ...]
+    #: The open PRs whose head the branch is; None when the reading does not
+    #: say how many, which is never taken for none.
+    heads: _OpenPullRequests | None
+
+    def ended(
+        self, outcome: str, tip: str = "", reason_kind: str = "", reason: str = ""
+    ) -> BranchDeletion:
+        """The deletion of this branch, ended as `outcome`."""
+        return BranchDeletion(outcome, self.name, tip, reason_kind, reason, self.head_oid)
+
+
+@dataclass(frozen=True)
+class _Sent:
+    """What the deletion's request came to (:func:`_mutation`): `ended` is
+    :data:`_APPLIED`, :data:`_NOT_APPLIED` or :data:`_NO_ANSWER`; `said` is
+    what the service answered, or why there is no answer from it."""
+
+    ended: str
+    said: str = ""
+
+
+# How a mutation ended (:class:`_Sent`): applied; not applied — the service
+# answered with errors, so it did not apply it, or gh could not be run and
+# nothing was sent; or no usable answer — gh failed with nothing from the
+# service in it (a 502, a reset), so it may have been applied or not.
+_APPLIED = "applied"
+_NOT_APPLIED = "not-applied"
+_NO_ANSWER = "no-answer"
+
+
+def full_object_id(value: str) -> str:
+    """`value` as a full commit id, lower-cased — 40 or 64 hexadecimal
+    characters, nothing abbreviated — or "" when it is not one: the form
+    :func:`delete_branch`'s `expect` is named in on the command line."""
+    candidate = value.strip().lower()
+    return candidate if _FULL_OBJECT_ID.fullmatch(candidate) else ""
 
 
 def delete_branch(
@@ -575,20 +663,22 @@ def delete_branch(
     fifth obligation of point 5).
 
     `clearance` and `cwd` as for :func:`squash_merge`. One reading comes
-    first. A PR that has not merged, or whose head is in another repository —
-    a fork, whose owner keeps its branches, and a branch of the same name here
-    is not the PR's — is :data:`REFUSED` and nothing more is asked. A branch
-    already gone is :data:`GONE`. A branch is :data:`KEPT`, with its tip,
-    when the tip is not `expect` — a push since the merge, or a branch of the
-    same name made since — and when it is the head of another open PR, which
-    its deletion would close.
+    first. Nothing more is asked, and the deletion is :data:`REFUSED`, for a
+    PR that has not merged; one whose head is in another repository — a fork,
+    whose owner keeps its branches, and a branch of the same name here is not
+    the PR's; one whose head is not `expect`, so the branch is deleted only at
+    the head that merged; and a reading that cannot be taken. A branch not
+    there is :data:`GONE`. A branch whose tip is not `expect` — a push since
+    the merge, or a branch of the same name made since — is :data:`KEPT`,
+    with its tip. Then a second reading asks which open PRs are based on the
+    branch: a branch another open PR uses as its head or as its base is kept;
+    a count either reading does not give is refused, never taken for none.
 
     Otherwise the deletion is one compare-and-delete request: GitHub's
     `updateRefs`, naming `expect` as the branch's tip, deletes it only while
     it is there, so a push between the reading and the request is never lost.
-    The service answers a refused one without saying why, so a second reading
-    tells: the branch gone, moved, or still at `expect` and refused by the
-    service (a protected branch, say), :data:`KEPT` with the service's words.
+    Applied, the branch is :data:`DELETED`; otherwise it is read again
+    (:func:`_not_deleted`).
     """
     run = _acting(clearance, cwd)
     try:
@@ -597,33 +687,30 @@ def delete_branch(
         return BranchDeletion(
             REFUSED, reason_kind=NOT_READ, reason=f"PR #{pr_number} could not be read: {exc}"
         )
-    if not head.merged:
-        state = head.pr_state.lower() or "of no reported state"
-        return BranchDeletion(
+    refused = _refusal(pr_number, head, expect)
+    if refused is not None:
+        return refused
+    standing = _standing(pr_number, head, expect)
+    if standing is not None:
+        return standing
+    if head.heads is None:
+        return head.ended(
             REFUSED,
-            head.name,
-            reason_kind=NOT_MERGED,
-            reason=f"PR #{pr_number} has not merged (it is {state}); its head branch is deleted "
-            "only once it has",
-        )
-    if head.cross_repository:
-        return BranchDeletion(
-            REFUSED,
-            head.name,
-            reason_kind=CROSS_REPOSITORY,
-            reason=f"PR #{pr_number}'s head is in another repository, a fork, whose owner keeps "
-            "its branches; a branch of that name here is not the PR's",
-        )
-    if not head.name or not head.repository_id:
-        return BranchDeletion(
-            REFUSED,
-            head.name,
             reason_kind=NOT_READ,
-            reason=f"the reading of PR #{pr_number} names no head branch, or no repository",
+            reason=f"the reading of PR #{pr_number} does not say how many open pull requests "
+            "use its head branch as their head",
         )
-    unchanged = _left_standing(pr_number, head, expect)
-    if unchanged is not None:
-        return unchanged
+    try:
+        based = _based_on(pr_number, head.name, run)
+    except Unreadable as exc:
+        return head.ended(
+            REFUSED,
+            reason_kind=NOT_READ,
+            reason=f"which open pull requests are based on {head.name!r} could not be read: {exc}",
+        )
+    in_use = _in_use(head, head.heads, based)
+    if in_use is not None:
+        return in_use
     cmd = [
         "gh",
         "api",
@@ -639,55 +726,133 @@ def delete_branch(
         "-f",
         f"after={_NO_COMMIT}",
     ]
-    asked = _mutation(run, cmd)
-    if asked.accepted:
-        return BranchDeletion(DELETED, head.name)
-    refused = f"the service refused to delete it: {asked.reason or 'it gave no reason'}"
-    try:
-        after = _head_branch(pr_number, run)
-    except Unreadable as exc:
-        return BranchDeletion(
-            KEPT,
-            head.name,
-            head.tip,
-            DELETION_REFUSED,
-            f"{refused}; the branch could not be read since ({exc})",
+    sent = _mutation(run, cmd)
+    if sent.ended == _APPLIED:
+        return head.ended(DELETED)
+    return _not_deleted(pr_number, head, expect, sent, run)
+
+
+def _refusal(pr_number: int, head: _HeadBranch, expect: str) -> BranchDeletion | None:
+    """Why the deletion is not asked for at all, as `head` finds the PR — not
+    merged, a fork's, not named fully, or not at `expect` — or None."""
+    if not head.merged:
+        state = head.pr_state.lower() or "of no reported state"
+        return head.ended(
+            REFUSED,
+            reason_kind=NOT_MERGED,
+            reason=f"PR #{pr_number} has not merged (it is {state}); its head branch is deleted "
+            "only once it has",
         )
-    unchanged = _left_standing(pr_number, after, expect)
-    if unchanged is not None:
-        return unchanged
-    return BranchDeletion(KEPT, head.name, after.tip, DELETION_REFUSED, refused)
+    if head.cross_repository:
+        return head.ended(
+            REFUSED,
+            reason_kind=CROSS_REPOSITORY,
+            reason=f"PR #{pr_number}'s head is in another repository, a fork, whose owner keeps "
+            "its branches; a branch of that name here is not the PR's",
+        )
+    if not (head.name and head.repository_id and head.head_oid):
+        return head.ended(
+            REFUSED,
+            reason_kind=NOT_READ,
+            reason=f"the reading of PR #{pr_number} names no head branch, head commit or "
+            "repository",
+        )
+    if expect != head.head_oid:
+        return head.ended(
+            REFUSED,
+            reason_kind=EXPECT_MISMATCH,
+            reason=f"the head named, {expect or 'none'}, is not the head PR #{pr_number} merged "
+            f"at, {head.head_oid}: its head branch is deleted only at that head",
+        )
+    return None
 
 
-def _left_standing(pr_number: int, head: _HeadBranch, expect: str) -> BranchDeletion | None:
-    """Why the branch is not deleted as `head` finds it — gone, its tip not
-    `expect`, or the head of another open PR — or None when it may be."""
+def _standing(pr_number: int, head: _HeadBranch, expect: str) -> BranchDeletion | None:
+    """The branch as `head` finds it, when that ends the deletion — gone, or
+    its tip not `expect` — or None when it stands at `expect`."""
     if not head.tip:
-        return BranchDeletion(GONE, head.name)
+        return head.ended(GONE)
     if head.tip != expect:
-        return BranchDeletion(
+        return head.ended(
             KEPT,
-            head.name,
             head.tip,
             TIP_MOVED,
             f"its tip is {head.tip[:7]}, not {expect[:7]}, the head PR #{pr_number} merged at: "
             "a push since the merge, or a branch of that name made since, is not deleted",
         )
-    if head.open_count:
-        named = ", ".join(f"#{number}" for number in head.open_numbers)
-        more = head.open_count - len(head.open_numbers)
-        if named and more > 0:
-            named += f" and {more} more"
-        return BranchDeletion(
-            KEPT,
-            head.name,
-            head.tip,
-            OPEN_PULL_REQUEST,
-            "another open pull request uses this branch"
-            + (f" ({named})" if named else "")
-            + "; deleting it would close that pull request",
-        )
     return None
+
+
+def _in_use(
+    head: _HeadBranch, heads: _OpenPullRequests, based: _OpenPullRequests
+) -> BranchDeletion | None:
+    """The branch kept for the other open PRs that use it — `heads` as their
+    head, `based` as their base — or None when none does."""
+    uses: list[str] = []
+    if heads.count:
+        who = (
+            "another open pull request uses"
+            if heads.count == 1
+            else f"{heads.count} other open pull requests use"
+        )
+        whose, them = ("its", "that pull request") if heads.count == 1 else ("their", "them")
+        uses.append(
+            f"{who} this branch as {whose} head{heads.named()}: deleting it would close {them}"
+        )
+    if based.count:
+        who = (
+            "another open pull request is"
+            if based.count == 1
+            else f"{based.count} other open pull requests are"
+        )
+        uses.append(
+            f"{who} based on this branch{based.named()}, and a branch an open pull request "
+            "merges into is kept"
+        )
+    if not uses:
+        return None
+    return head.ended(KEPT, head.tip, OPEN_PULL_REQUEST, "; ".join(uses))
+
+
+def _not_deleted(
+    pr_number: int, head: _HeadBranch, expect: str, sent: _Sent, run: GhRunner
+) -> BranchDeletion:
+    """What became of the branch after a deletion not seen applied: the
+    branch is read again.
+
+    The service answered with errors — which is all a refused `updateRefs`
+    says, often only a generic error — so this request deleted nothing: the
+    reading tells the branch gone, moved, or still at `expect`, kept
+    (:data:`DELETION_REFUSED`); with no reading, kept at the tip read before
+    the request. No usable answer, so it may have been applied: the branch
+    gone is :data:`GONE`, the state asked for; still at `expect`, it was not
+    applied (:data:`KEPT`, :data:`UNANSWERED`); with no reading,
+    :data:`UNCONFIRMED`, stating no tip and no refusal it does not know.
+    """
+    unanswered = sent.ended == _NO_ANSWER
+    if unanswered:
+        asked = f"the deletion got no usable answer ({sent.said})"
+    else:
+        asked = f"the service did not delete it: {sent.said}"
+    try:
+        after = _head_branch(pr_number, run)
+    except Unreadable as exc:
+        since = f"the branch could not be read since ({exc})"
+        if unanswered:
+            return head.ended(UNCONFIRMED, reason_kind=UNANSWERED, reason=f"{asked}, and {since}")
+        return head.ended(KEPT, head.tip, DELETION_REFUSED, f"{asked}; {since}")
+    standing = _standing(pr_number, after, expect)
+    if standing is not None:
+        return standing
+    if unanswered:
+        return head.ended(
+            KEPT,
+            after.tip,
+            UNANSWERED,
+            f"{asked}, and a reading since finds the branch still at {expect[:7]}: the request "
+            "was not applied",
+        )
+    return head.ended(KEPT, after.tip, DELETION_REFUSED, asked)
 
 
 def _head_branch(pr_number: int, run: GhRunner) -> _HeadBranch:
@@ -695,30 +860,51 @@ def _head_branch(pr_number: int, run: GhRunner) -> _HeadBranch:
     :class:`Unreadable` when it cannot be read."""
     pr = _pull_request(pr_number, _BRANCH_FIELDS, run)
     ref = _mapping(pr.get("headRef"))
-    open_prs = _mapping(ref.get("associatedPullRequests"))
-    listed = [
-        number
-        for number in (
-            _int_or_none(_mapping(node).get("number")) for node in _list(open_prs.get("nodes"))
-        )
-        if number is not None
-    ]
-    # The open PRs other than this one: the count, less this PR where it is
-    # one of them.
-    numbers = tuple(number for number in listed if number != pr_number)
-    count = _int_or_none(open_prs.get("totalCount"))
-    others = len(listed) if count is None else count
-    others -= len(listed) - len(numbers)
     return _HeadBranch(
         pr_state=str(pr.get("state") or ""),
         merged=bool(pr.get("mergedAt")) or pr.get("state") == "MERGED",
+        head_oid=str(pr.get("headRefOid") or ""),
         name=str(pr.get("headRefName") or ""),
         cross_repository=_cross_repository(pr),
         repository_id=str(_mapping(pr.get("repository")).get("id") or ""),
         tip=str(_mapping(ref.get("target")).get("oid") or ""),
-        open_count=max(others, len(numbers)),
-        open_numbers=numbers,
+        heads=_open_others(pr_number, ref.get("associatedPullRequests")),
     )
+
+
+def _based_on(pr_number: int, branch: str, run: GhRunner) -> _OpenPullRequests:
+    """The open PRs other than `pr_number` whose base is `branch`. Raises
+    :class:`Unreadable` when they cannot be read, or the answer does not say
+    how many."""
+    data = _graphql(
+        run, _BASED_ON, ["-F", "owner={owner}", "-F", "repo={repo}", "-f", f"branch={branch}"]
+    )
+    based = _open_others(pr_number, _mapping(data.get("repository")).get("pullRequests"))
+    if based is None:
+        raise Unreadable(
+            f"the answer does not say how many open pull requests are based on {branch!r}"
+        )
+    return based
+
+
+def _open_others(pr_number: int, connection: object) -> _OpenPullRequests | None:
+    """The open PRs a connection's answer counts and names, less PR
+    `pr_number`; None when it does not say how many — which reads as not
+    known, never as none."""
+    answer = _mapping(connection)
+    count = _int_or_none(answer.get("totalCount"))
+    if count is None or count < 0:
+        return None
+    listed = [
+        number
+        for number in (
+            _int_or_none(_mapping(node).get("number")) for node in _list(answer.get("nodes"))
+        )
+        if number is not None
+    ]
+    numbers = tuple(number for number in listed if number != pr_number)
+    others = count - (len(listed) - len(numbers))
+    return _OpenPullRequests(max(others, len(numbers)), numbers)
 
 
 # ---- the wait ----------------------------------------------------------------
@@ -874,7 +1060,8 @@ def deletion_document(
     pr_number: int, expected: str, deletion: BranchDeletion, clearance: session_guard.Clearance
 ) -> dict[str, Any]:
     """`pkit pull-request delete-branch`'s document: the head that was
-    expected, what became of the branch, and how the guard cleared."""
+    expected, the PR's own head (`merged_head`), what became of the branch,
+    and how the guard cleared."""
     return {
         "schema_version": SCHEMA_VERSION,
         "pull_request": pr_number,
@@ -889,7 +1076,7 @@ def deletion_refusal_document(
 ) -> dict[str, Any]:
     """The document of a branch deletion the cross-repository guard refused:
     nothing was read or asked of the service, `outcome` refused, `reason_kind`
-    `foreign-repository`, and `guard` what it compared."""
+    `foreign-repository`, `merged_head` null, and `guard` what it compared."""
     deletion = BranchDeletion(
         REFUSED, reason_kind=session_guard.FOREIGN_REPOSITORY, reason=refusal.reason
     )
@@ -968,19 +1155,28 @@ def _request(run: GhRunner, cmd: list[str]) -> Outcome:
     return Outcome(True, proc.returncode)
 
 
-def _mutation(run: GhRunner, cmd: list[str]) -> Outcome:
-    """Run a GraphQL mutation; refused when gh fails or the answer carries
-    errors, with their words."""
+def _mutation(run: GhRunner, cmd: list[str]) -> _Sent:
+    """Run a GraphQL mutation, telling three ends apart.
+
+    Applied: gh exited 0 and the answer names no errors. Not applied: the
+    answer carries errors — the service answered, and a mutation it answers
+    with errors it did not apply — or gh could not be run, so nothing was
+    sent. No usable answer: gh failed with no errors from the service in its
+    answer (a 502, a reset), so the mutation may have been applied or not.
+    """
     try:
         proc = run(cmd)
     except FileNotFoundError:
-        return Outcome(False, None, "`gh` not on PATH")
+        return _Sent(_NOT_APPLIED, "`gh` not on PATH, so nothing was sent")
     except OSError as exc:
-        return Outcome(False, None, f"`gh` could not be run ({exc})")
+        return _Sent(_NOT_APPLIED, f"`gh` could not be run ({exc}), so nothing was sent")
     errors = _mapping(_json(proc.stdout)).get("errors")
-    if proc.returncode != 0 or errors:
-        return Outcome(False, proc.returncode, _error_text(proc.stderr, errors))
-    return Outcome(True, proc.returncode)
+    named = _list(errors)
+    if named:
+        return _Sent(_NOT_APPLIED, _error_text(proc.stderr, named))
+    if proc.returncode == 0 and not errors:
+        return _Sent(_APPLIED)
+    return _Sent(_NO_ANSWER, (proc.stderr or "").strip() or "gh answered nothing")
 
 
 def _cross_repository(pr: Mapping[str, Any]) -> bool:
@@ -1001,22 +1197,21 @@ def _pull_request(pr_number: int, fields: str, run: GhRunner) -> dict[str, Any]:
         "  }\n"
         "}\n"
     )
-    proc = _run(
-        run,
-        [
-            "gh",
-            "api",
-            "graphql",
-            "-f",
-            f"query={query}",
-            "-F",
-            "owner={owner}",
-            "-F",
-            "repo={repo}",
-            "-F",
-            f"number={pr_number}",
-        ],
+    data = _graphql(
+        run, query, ["-F", "owner={owner}", "-F", "repo={repo}", "-F", f"number={pr_number}"]
     )
+    pr = _mapping(_mapping(data.get("repository")).get("pullRequest"))
+    if not pr:
+        raise Unreadable(f"the answer names no pull request #{pr_number}")
+    return pr
+
+
+def _graphql(run: GhRunner, query: str, variables: list[str]) -> dict[str, Any]:
+    """The `data` GitHub's GraphQL API answers `query` with, given `variables`
+    as gh's `-f`/`-F` arguments. Raises :class:`Unreadable` when gh fails or
+    the answer carries errors — :class:`_UnknownField` for a field the API
+    does not know."""
+    proc = _run(run, ["gh", "api", "graphql", "-f", f"query={query}", *variables])
     payload = _mapping(_json(proc.stdout))
     errors = payload.get("errors")
     if proc.returncode != 0 or errors:
@@ -1024,11 +1219,7 @@ def _pull_request(pr_number: int, fields: str, run: GhRunner) -> dict[str, Any]:
         if _UNKNOWN_FIELD in reason:
             raise _UnknownField(reason)
         raise Unreadable(reason)
-    data = _mapping(payload.get("data"))
-    pr = _mapping(_mapping(data.get("repository")).get("pullRequest"))
-    if not pr:
-        raise Unreadable(f"the answer names no pull request #{pr_number}")
-    return pr
+    return _mapping(payload.get("data"))
 
 
 def _knows_merge_queues(pr_number: int, run: GhRunner) -> bool:

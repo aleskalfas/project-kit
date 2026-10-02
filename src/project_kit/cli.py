@@ -762,7 +762,8 @@ def pull_request_dequeue(number: int, allow_foreign_repo: bool, as_json: bool) -
     "--expect",
     required=True,
     metavar="SHA",
-    help="The head the PR merged at, in full: the branch is deleted only while its tip is it.",
+    help="The head the PR merged at, in full (40 or 64 hexadecimal characters): the branch is "
+    "deleted only while its tip is it.",
 )
 @_allow_foreign_repo_option
 @_pull_request_json_option
@@ -771,33 +772,44 @@ def pull_request_delete_branch(
 ) -> None:
     """Delete merged PR NUMBER's head branch on the service, only at SHA.
 
-    Refused unless the PR has merged and its head is in this repository, not
-    a fork. The branch is deleted only while its tip is the head the PR merged
-    at, in one compare-and-delete request; otherwise it is kept, and said
-    why, or found gone. The cross-repository guard runs first. Exit 0 when
-    deleted, kept or gone; 1 when refused, with why.
+    Refused unless the PR has merged, its head is in this repository, not a
+    fork, and SHA is the head it merged at. The branch is deleted only while
+    its tip is SHA and no other open PR uses it as its head or its base, in
+    one compare-and-delete request; otherwise it is kept, and said why, or
+    found gone. The cross-repository guard runs first. Exit 0 when deleted,
+    kept or gone; 1 when refused, or when whether it was deleted is not
+    known (unconfirmed); 2 when SHA is not a full commit id.
     """
-    if not expect.strip():
-        raise click.BadParameter("names no commit", param_hint="--expect")
+    expected = pull_request_landing.full_object_id(expect)
+    if not expected:
+        raise click.BadParameter(
+            f"{expect!r} is not a full commit id (40 or 64 hexadecimal characters)",
+            param_hint="--expect",
+        )
     clearance = _pull_request_cleared(
         number,
         allow_foreign_repo,
         as_json,
         refused=lambda refusal: pull_request_landing.deletion_refusal_document(
-            number, expect, refusal
+            number, expected, refusal
         ),
     )
     deletion = pull_request_landing.delete_branch(
-        number, expect=expect, cwd=clearance.directory, clearance=clearance
+        number, expect=expected, cwd=clearance.directory, clearance=clearance
     )
     if as_json:
-        document = pull_request_landing.deletion_document(number, expect, deletion, clearance)
+        document = pull_request_landing.deletion_document(number, expected, deletion, clearance)
         click.echo(pull_request_landing.render_json(document))
     elif deletion.outcome == pull_request_landing.REFUSED:
         click.echo(f"error: {deletion.describe()}. Nothing was deleted.", err=True)
+    elif deletion.outcome == pull_request_landing.UNCONFIRMED:
+        click.echo(
+            f"error: {deletion.describe()}. Run the command again: it reads the branch first.",
+            err=True,
+        )
     else:
         click.echo(f"PR #{number}: {deletion.describe()}")
-    if deletion.outcome == pull_request_landing.REFUSED:
+    if deletion.outcome in (pull_request_landing.REFUSED, pull_request_landing.UNCONFIRMED):
         raise SystemExit(1)
 
 
