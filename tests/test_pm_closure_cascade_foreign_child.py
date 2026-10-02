@@ -258,20 +258,126 @@ def test_the_native_read_places_each_sub_issue_in_its_repository(monkeypatch) ->
         "repository_url": f"https://api.github.com/repos/{ELSEWHERE}",
         "parent_issue_url": f"{HERE_API}/issues/5",
     }
-    # Its repository cannot be held to its parent's: kept in the one it names.
-    unanchored = {"number": 43, "repository_url": f"https://api.github.com/repos/{ELSEWHERE}"}
+    # Without a parent_issue_url of their own, placed by the name the others'
+    # anchor gives this repository.
+    unanchored_elsewhere = {
+        "number": 43,
+        "repository_url": f"https://api.github.com/repos/{ELSEWHERE}",
+    }
+    unanchored_here = {"number": 12, "repository_url": HERE_API}
     number_only = {"number": 11}
-    payload = [here_child, elsewhere, unanchored, number_only]
+    payload = [here_child, elsewhere, unanchored_elsewhere, unanchored_here, number_only]
     monkeypatch.setattr(containment, "_gh_call", _answer(payload))
 
     read = containment.read_native_children({}, parent_number=5)
 
     assert read.outcome is containment.NativeReadOutcome.READ
-    assert read.numbers == {10, 11}
+    assert read.numbers == {10, 11, 12}
     assert read.foreign == {
         containment.ForeignIssue(ELSEWHERE, 42),
         containment.ForeignIssue(ELSEWHERE, 43),
     }
+
+
+def _unanchored_tracker(sub_issues: list[dict], *, here: str | None = HERE_API):
+    """A `_gh_call` for a tracker whose sub-issue entries may omit
+    `parent_issue_url`: it answers the list with `sub_issues`, a parent's record
+    with `here` as its `repository_url` (`None`: the record cannot be read), and
+    a child's link state as having no native parent. Every call is logged."""
+    calls: list[list[str]] = []
+
+    def gh(args, _config):
+        calls.append(list(args))
+        if args[-1].endswith("/sub_issues"):
+            return subprocess.CompletedProcess(args, 0, json.dumps(sub_issues), "")
+        if args[-2:] == ["--jq", ".repository_url"]:
+            if here is None:
+                return subprocess.CompletedProcess(args, 1, "", "gh: Not Found (HTTP 404)")
+            return subprocess.CompletedProcess(args, 0, f"{here}\n", "")
+        if args[-1] == containment._LINK_STATE_JQ:
+            number = int(args[-3].rsplit("/", 1)[-1])
+            return subprocess.CompletedProcess(args, 0, f"{1000 + number}\n\n{HERE_API}\n", "")
+        if "POST" in args:
+            return subprocess.CompletedProcess(args, 0, "{}", "")
+        raise AssertionError(f"unexpected gh call: {args}")
+
+    return gh, calls
+
+
+_LIST_CALL = ["gh", "api", "--paginate", "repos/{owner}/{repo}/issues/5/sub_issues"]
+_NAME_CALL = ["gh", "api", "repos/{owner}/{repo}/issues/5", "--jq", ".repository_url"]
+
+
+def test_an_unanchored_entry_naming_this_repository_is_this_repository_s(monkeypatch) -> None:
+    # The entry names this repository (in another case) and carries no
+    # parent_issue_url: it is this repository's #10, whatever else it lacks.
+    entry = {"number": 10, "repository_url": "https://api.github.com/repos/Acme/Widget"}
+    gh, calls = _unanchored_tracker([entry])
+    monkeypatch.setattr(containment, "_gh_call", gh)
+
+    read = containment.read_native_children({}, parent_number=5)
+    resolution = containment.resolve_children(
+        {}, parent_number=5, corpus={10: "Feature: #5\n"}, corpus_complete=True
+    )
+    linked = containment.link_sub_issue({}, parent_number=5, child_number=10)
+
+    assert (read.numbers, read.foreign) == ({10}, frozenset())
+    # Deduped with the first line naming #5: one child, native.
+    assert [(c.ref, c.substrate.value) for c in resolution.children] == [("#10", "native")]
+    # The linked check finds it, so nothing is posted.
+    assert linked.outcome is containment.LinkOutcome.ALREADY
+    assert not [call for call in calls if "POST" in call]
+    # This repository's name was read from #5's record, once per list read.
+    assert calls[:2] == [_LIST_CALL, _NAME_CALL]
+
+
+def test_an_unanchored_entry_naming_another_repository_is_foreign(monkeypatch) -> None:
+    entry = {"number": 42, "repository_url": f"https://api.github.com/repos/{ELSEWHERE}"}
+    gh, _calls = _unanchored_tracker([entry])
+    monkeypatch.setattr(containment, "_gh_call", gh)
+
+    read = containment.read_native_children({}, parent_number=5)
+
+    assert (read.numbers, read.foreign) == (set(), {containment.ForeignIssue(ELSEWHERE, 42)})
+
+
+def test_one_anchored_entry_places_them_all_at_no_cost(monkeypatch) -> None:
+    entries = [
+        {"number": 10, "repository_url": HERE_API},
+        {"number": 11, "repository_url": HERE_API, "parent_issue_url": f"{HERE_API}/issues/5"},
+        {"number": 42, "repository_url": f"https://api.github.com/repos/{ELSEWHERE}"},
+        {"number": 12},
+    ]
+    gh, calls = _unanchored_tracker(entries)
+    monkeypatch.setattr(containment, "_gh_call", gh)
+
+    read = containment.read_native_children({}, parent_number=5)
+
+    assert read.numbers == {10, 11, 12}
+    assert read.foreign == {containment.ForeignIssue(ELSEWHERE, 42)}
+    assert calls == [_LIST_CALL]
+
+
+def test_number_only_entries_cost_no_name_read(monkeypatch) -> None:
+    gh, calls = _unanchored_tracker([{"number": 10}, {"number": 11}])
+    monkeypatch.setattr(containment, "_gh_call", gh)
+
+    assert containment.read_native_children({}, parent_number=5).numbers == {10, 11}
+    assert calls == [_LIST_CALL]
+
+
+def test_entries_this_repository_s_name_cannot_place_leave_the_read_unreadable(
+    monkeypatch,
+) -> None:
+    gh, _calls = _unanchored_tracker([{"number": 10, "repository_url": HERE_API}], here=None)
+    monkeypatch.setattr(containment, "_gh_call", gh)
+
+    read = containment.read_native_children({}, parent_number=5)
+    resolution = containment.resolve_children({}, parent_number=5, corpus={}, corpus_complete=True)
+
+    assert read.outcome is containment.NativeReadOutcome.UNREADABLE
+    assert not resolution.complete
+    assert "could not be read from #5's record" in (resolution.incomplete_reason or "")
 
 
 def test_a_child_elsewhere_is_not_this_repository_s_issue_of_its_number(monkeypatch) -> None:

@@ -132,7 +132,10 @@ class FakeGitHub:
     link POST with it; ``fail_posts`` fails the POST for those children only.
     Like GitHub, an add is refused on the one-parent rule when the child is
     already under another parent. ``records_parent=False`` stands in for an
-    instance whose issue record does not carry ``parent_issue_url``.
+    instance whose issue record does not carry ``parent_issue_url``; with
+    ``unanchored=True`` the sub-issues list names each entry's repository and
+    carries no ``parent_issue_url`` either. ``elsewhere`` maps a parent to the
+    numbers of its native sub-issues in another repository, ``acme/other``.
     """
 
     def __init__(
@@ -144,6 +147,8 @@ class FakeGitHub:
         post_error: str | None = None,
         fail_posts: tuple[int, ...] = (),
         records_parent: bool = True,
+        unanchored: bool = False,
+        elsewhere: dict[int, list[int]] | None = None,
     ) -> None:
         self.issues = issues
         self.native = {parent: set(children) for parent, children in (native or {}).items()}
@@ -151,6 +156,8 @@ class FakeGitHub:
         self.post_error = post_error
         self.fail_posts = set(fail_posts)
         self.records_parent = records_parent
+        self.unanchored = unanchored
+        self.elsewhere = elsewhere or {}
         self.posts: list[tuple[int, int]] = []
         self.comments: dict[int, list[dict]] = {}
         self.calls: list[list[str]] = []
@@ -181,7 +188,24 @@ class FakeGitHub:
             if self.list_error:
                 return _fail(args, self.list_error)
             children = sorted(self.native.get(parent, set()))
-            return _ok(args, json.dumps([{"id": DB_OFFSET + n, "number": n} for n in children]))
+            here = f"{_API}/repos/o/r"
+            entries = [
+                {
+                    "id": DB_OFFSET + n,
+                    "number": n,
+                    **({"repository_url": here} if self.unanchored else {}),
+                }
+                for n in children
+            ] + [
+                {
+                    "id": 90_000 + n,
+                    "number": n,
+                    "repository_url": f"{_API}/repos/acme/other",
+                    "parent_issue_url": f"{here}/issues/{parent}",
+                }
+                for n in self.elsewhere.get(parent, [])
+            ]
+            return _ok(args, json.dumps(entries))
         m = re.fullmatch(r"repos/\{owner\}/\{repo\}/issues/(\d+)/comments", path)
         if m:
             parent = int(m.group(1))
@@ -196,6 +220,8 @@ class FakeGitHub:
             jq = args[args.index("--jq") + 1] if "--jq" in args else ""
             if jq == ".number":  # the failure probe
                 return _ok(args, str(number))
+            if jq == ".repository_url":  # this repository's name, from a parent's record
+                return _ok(args, f"{_API}/repos/o/r\n")
             # The child-record read: database id, native parent URL, repository URL.
             parent = self.native_parent(number) if self.records_parent else None
             parent_url = f"{_API}/repos/o/r/issues/{parent}" if parent else ""
@@ -304,6 +330,25 @@ def test_an_existing_link_is_never_posted_again(lp, tmp_path, monkeypatch, capsy
     assert fake.posts == [(90, 101)], "nothing re-posted"
     assert "#101  already linked under #90" in out.out
     assert "nothing to link." in out.out
+
+
+def test_a_sub_issue_naming_this_repository_without_an_anchor_is_already_linked(
+    lp, tmp_path, monkeypatch, capsys
+):
+    """A tracker whose sub-issues list names each entry's repository and omits
+    `parent_issue_url` (and whose issue records omit it too): #102, listed under
+    #90 as `o/r`, is this repository's #102, so it is already linked and never
+    posted again (#1308). This repository's name is read once, from #90's record."""
+    fake = FakeGitHub(_tracker(), native={90: {102}}, records_parent=False, unanchored=True)
+    rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "102", "--yes")
+
+    assert rc == 0, out.err
+    assert "#102  already linked under #90" in out.out
+    assert fake.posts == []
+    name_reads = [c for c in fake.calls if c[-2:] == ["--jq", ".repository_url"]]
+    assert name_reads == [
+        ["gh", "api", "repos/{owner}/{repo}/issues/90", "--jq", ".repository_url"]
+    ]
 
 
 def test_milestone_parent_no_parent_line_and_missing_parent_link_nothing(

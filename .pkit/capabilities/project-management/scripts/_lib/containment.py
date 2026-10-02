@@ -1290,8 +1290,18 @@ class NativeRead:
 def read_native_children(config: dict[str, Any], *, parent_number: int | str) -> NativeRead:
     """The native child set, with the outcome that produced it.
 
-    Each sub-issue is placed in its repository (:func:`_sub_issue_repository`):
-    this repository's go to ``numbers``, another's to ``foreign``.
+    Each sub-issue is placed in its repository by comparing the repository its
+    entry names (``repository_url``) with this repository's own name: the same
+    name is this repository's, whatever else the entry lacks, and goes to
+    ``numbers``; another name goes to ``foreign``; an entry naming none is this
+    repository's, the number-only shape. This repository's name is taken from
+    the answer itself where it can be — an entry's ``parent_issue_url`` names
+    the parent asked about, which is this repository's issue, and the hosting
+    service puts it on every entry — so placing costs no call. Only where an
+    entry names a repository and none carries that anchor is it read from the
+    parent's own record (:func:`_this_repository`), once per read; a parent
+    record that cannot be read leaves the read unreadable, since no entry can
+    then be placed.
 
     Prefer this over :func:`read_native_child_numbers`, which cannot distinguish
     "no native substrate here" from "I could not reach it".
@@ -1318,53 +1328,85 @@ def read_native_children(config: dict[str, Any], *, parent_number: int | str) ->
     if payload is None:
         # The endpoint answered and we could not read it: a child set may exist.
         return NativeRead(numbers=set(), outcome=NativeReadOutcome.UNREADABLE)
+    listed: list[tuple[dict[str, Any], str | None]] = []
+    for entry in payload:
+        if not isinstance(entry, dict) or not isinstance(entry.get("number"), int):
+            continue
+        named = str(entry.get("repository_url") or "")
+        repository = _url_repository(named) if named else None
+        if named and repository is None:
+            # A listed child no repository could hold: unplaced, a child set may
+            # hold it, so the read is not a child set.
+            return NativeRead(
+                numbers=set(),
+                outcome=NativeReadOutcome.UNREADABLE,
+                why=(
+                    f"a sub-issue of #{parent_number} names a repository the hosting "
+                    f"service could not have spelled ({named!r}), so it cannot be placed"
+                ),
+            )
+        listed.append((entry, repository))
+    here: str | None = None
+    if any(repository is not None for _entry, repository in listed):
+        here = _anchored_repository(payload, parent_number) or _this_repository(
+            config, parent_number
+        )
+        if here is None:
+            return NativeRead(
+                numbers=set(),
+                outcome=NativeReadOutcome.UNREADABLE,
+                why=(
+                    f"#{parent_number}'s sub-issues name their repositories, and this "
+                    f"repository's own name could not be read from #{parent_number}'s "
+                    "record, so none of them can be placed"
+                ),
+            )
     numbers: set[int] = set()
     foreign: set[ForeignIssue] = set()
-    for entry in payload:
-        if isinstance(entry, dict):
-            raw = entry.get("number")
-            if isinstance(raw, int):
-                named = str(entry.get("repository_url") or "")
-                if named and _url_repository(named) is None:
-                    # A listed child no repository could hold: unplaced, a child
-                    # set may hold it, so the read is not a child set.
-                    return NativeRead(
-                        numbers=set(),
-                        outcome=NativeReadOutcome.UNREADABLE,
-                        why=(
-                            f"a sub-issue of #{parent_number} names a repository the "
-                            f"hosting service could not have spelled ({named!r}), so it "
-                            "cannot be placed"
-                        ),
-                    )
-                repository = _sub_issue_repository(entry)
-                if repository is None:
-                    numbers.add(raw)
-                else:
-                    foreign.add(ForeignIssue(repository, raw))
+    for entry, repository in listed:
+        if repository is None or here is None or repository.lower() == here.lower():
+            numbers.add(entry["number"])
+        else:
+            foreign.add(ForeignIssue(repository, entry["number"]))
     return NativeRead(numbers=numbers, outcome=NativeReadOutcome.READ, foreign=frozenset(foreign))
 
 
-def _sub_issue_repository(entry: dict[str, Any]) -> str | None:
-    """The repository a listed sub-issue lives in, ``None`` when it is this one.
+def _anchored_repository(payload: list, parent_number: int | str) -> str | None:
+    """This repository's name as the sub-issues answer states it: the repository
+    of the parent an entry's ``parent_issue_url`` names, where that is the parent
+    asked about — an issue of this repository. ``None`` when no entry says so."""
+    for entry in payload:
+        if not isinstance(entry, dict):
+            continue
+        m = _ISSUE_URL.search(str(entry.get("parent_issue_url") or ""))
+        if m is not None and int(m.group("number")) == int(parent_number):
+            if is_repository_name(m.group("repo")):
+                return m.group("repo")
+    return None
 
-    Each sub-issue the endpoint lists names its own repository
-    (``repository_url``) and its parent (``parent_issue_url``) — the parent asked
-    about, which is in this repository — and the two are compared as the upward
-    reader compares an issue's parent with the issue's own repository
-    (:func:`_parse_native_parent`). An entry that names no repository is this
-    repository's, the number-only shape. One whose repository cannot be held to
-    its parent's (no ``parent_issue_url``) is kept in the repository it names:
-    taking it for this repository's issue of the same number on no evidence is
-    the misreading this exists to prevent.
-    """
-    child = _url_repository(str(entry.get("repository_url") or ""))
-    if child is None:
+
+def _this_repository(config: dict[str, Any], parent_number: int | str) -> str | None:
+    """This repository's name as the parent's own record states it — the
+    repository the seam's requests are addressed to — or ``None`` when the
+    record cannot be read or names none. One call, made only where a sub-issues
+    answer names repositories and carries no ``parent_issue_url`` to anchor them
+    (:func:`read_native_children`)."""
+    try:
+        proc = _gh_call(
+            [
+                "gh",
+                "api",
+                f"repos/{{owner}}/{{repo}}/issues/{parent_number}",
+                "--jq",
+                ".repository_url",
+            ],
+            config,
+        )
+    except FileNotFoundError:
         return None
-    parent = _ISSUE_URL.search(str(entry.get("parent_issue_url") or ""))
-    if parent is not None and parent.group("repo").lower() == child.lower():
+    if proc.returncode != 0:
         return None
-    return child
+    return _url_repository((proc.stdout or "").strip())
 
 
 class SubIssueReads:

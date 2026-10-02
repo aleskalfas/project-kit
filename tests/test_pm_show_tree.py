@@ -244,6 +244,36 @@ def test_a_native_child_elsewhere_is_not_listed_as_the_issue_of_its_number(
     assert issues[7].parent_resolution.native is None
 
 
+def test_a_native_child_naming_this_repository_without_an_anchor_is_in_the_tree(
+    st, issue_types, monkeypatch
+) -> None:
+    """A tracker whose sub-issue entries name their repository and omit
+    `parent_issue_url`: #7, listed under #2 as this repository's, is #2's child
+    in the tree, under #2 natively (#1308)."""
+    here = "https://api.github.com/repos/acme/widget"
+    raw = [
+        {"number": 2, "title": "[Feature] f", "body": "## What\n", "state": "OPEN", "labels": []},
+        {"number": 7, "title": "[Task] t", "body": "## What\n", "state": "OPEN", "labels": []},
+    ]
+    issues = st._parse_issues(raw, issue_types)
+
+    def gh(args, _config):
+        if args[-1] == "repos/{owner}/{repo}/issues/2/sub_issues":
+            listed = [{"number": 7, "repository_url": here}]
+            return subprocess.CompletedProcess(args, 0, json.dumps(listed), "")
+        if args[-1].endswith("/sub_issues"):
+            return subprocess.CompletedProcess(args, 0, "[]", "")
+        if args[-2:] == ["--jq", ".repository_url"]:
+            return subprocess.CompletedProcess(args, 0, here + "\n", "")
+        raise AssertionError(f"unexpected gh call: {args}")
+
+    monkeypatch.setattr(st.containment, "_gh_call", gh)
+    st._link_parents(issues, {}, corpus_complete=True, issue_types={})
+    assert issues[2].children == [7]
+    assert issues[2].child_substrate == {7: "native"}
+    assert issues[7].parent_number == 2
+
+
 def test_link_parents_handles_missing_parent_target(st, issue_types, monkeypatch) -> None:
     """Parent ref that doesn't resolve in the loaded set stays unlinked."""
     raw = [
