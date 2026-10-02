@@ -499,6 +499,34 @@ def test_post_comment_unreadable_comment_list_posts(hooks, moved_hook, monkeypat
     assert len(gh.posted) == 1
 
 
+def test_engine_imported_the_way_a_script_does_calls_gh_on_the_configured_host() -> None:
+    """A script imports the engine as `_lib.hooks`, with `scripts/` on the path
+    and `_lib/` not. Its `gh` calls still go through the helper that sets the
+    host the adopter configured. Checked in a fresh interpreter, where no other
+    test has left a bare `gh` module importable."""
+    probe = (
+        "import subprocess, sys\n"
+        "sys.path.insert(0, sys.argv[1])\n"
+        "from _lib import hooks\n"
+        "hosts = []\n"
+        "def run(args, **kwargs):\n"
+        "    hosts.append((kwargs.get('env') or {}).get('GH_HOST'))\n"
+        "    return subprocess.CompletedProcess(args, 0, '{}', '')\n"
+        "subprocess.run = run\n"
+        "hooks._gh_call(['gh', 'issue', 'view', '7'], {'gh': {'host': 'ghe.example.com'}})\n"
+        "print(hosts)\n"
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", probe, str(HOOKS_PY.parent.parent)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip() == "['ghe.example.com']"
+
+
 def test_post_comment_old_form_stamp_does_not_suppress(hooks, moved_hook, monkeypatch) -> None:
     """A comment from a version that wrote the bare `<!-- pkit-hook: <id> -->`
     names no firing: the hook posts once under the new stamp, then a retry

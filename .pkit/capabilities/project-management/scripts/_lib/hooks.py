@@ -50,13 +50,15 @@ except ImportError:  # pragma: no cover
     YAMLError = Exception  # type: ignore[assignment, misc]
 
 
-# Sibling module — added to sys.path by the calling script.
+# Every `gh` call goes through the helper that pins the adopter's host
+# (DEC-023). Dual-form like the `audit` import below: `_lib/` on sys.path when
+# loaded by file path, `scripts/` when a script imports `_lib.hooks`. A script
+# finds no bare `gh` module, so a lone `from gh import` there left the engine
+# calling `gh` on the ambient host.
 try:
     from gh import gh_run  # type: ignore[import-not-found]
 except ImportError:  # pragma: no cover
-    # Last-resort fallback for unusual import contexts (tests load the
-    # module by file path and may not have _lib on sys.path).
-    gh_run = None  # type: ignore[assignment]
+    from _lib.gh import gh_run  # type: ignore[no-redef]
 
 # The sole constructor of the non-label substrate writes (ADR-031). The
 # `set-board-field` / `assign-milestone` handlers below obtain their `gh` write
@@ -647,10 +649,8 @@ def _hook_custom_script(
 
 
 def _gh_call(args: list[str], config: dict[str, Any]) -> subprocess.CompletedProcess:
-    """Call gh through the helper. Direct subprocess fallback if helper missing."""
-    if gh_run is not None:
-        return gh_run(args, config, check=False)
-    return subprocess.run(args, capture_output=True, text=True, check=False)
+    """Call gh through the helper, on the adopter's configured host."""
+    return gh_run(args, config, check=False)
 
 
 def _stamp_name(stamp_id: str) -> str:
