@@ -56,7 +56,7 @@ from project_kit.manifest import (
     read_backbone_manifest,
     write_backbone_manifest,
 )
-from project_kit.process import PredicateRunner
+from project_kit.process import PredicateFailure, PredicateRunner
 from tests.adopter_repo import MakeAdopterRepo
 
 # A script that starts a grandchild sharing its pipes — what a `uv run --script`
@@ -656,7 +656,9 @@ def test_the_predicate_policy_passes_the_subject_and_marks_nothing_offline(
 def test_the_predicate_policy_reads_anything_but_an_answered_object_as_indeterminate(
     tmp_path: Path, body: str
 ) -> None:
-    assert _predicate_capability(tmp_path, body).run_raw({"run": "probe"}) is None
+    assert isinstance(
+        _predicate_capability(tmp_path, body).run_raw({"run": "probe"}), PredicateFailure
+    )
 
 
 # Serial: the predicate must start its grandchild inside the one-second bound,
@@ -668,7 +670,7 @@ def test_the_predicate_policy_stops_a_grandchild_at_the_bound(
     runner = _predicate_capability(tmp_path, _SPAWNS_A_GRANDCHILD)
     monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 1)
     started = time.monotonic()
-    assert runner.run_raw({"run": "probe"}) is None
+    assert isinstance(runner.run_raw({"run": "probe"}), PredicateFailure)
     assert time.monotonic() - started < 15
     _assert_gone(int((runner.capability_dir / "scripts" / "probe.py.pid").read_text()))
 

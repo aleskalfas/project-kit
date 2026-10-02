@@ -45,7 +45,10 @@ The check's semantics, all fixed by COR-042:
   evaluated without error and confirmed zero subjects is a clean, determinate
   answer (no lines for that contract). An erroring/unavailable candidate source,
   an erroring `resolve`, or an unreadable upstream position is indeterminate —
-  never counted as "nothing missed".
+  never counted as "nothing missed". Its finding says why as the engine does:
+  the reason names the predicate and how its run ended (or what its answer
+  lacked), and what the predicate wrote on stderr rides beside it — under
+  "the predicate said:" in the narrative, as `stderr_tail` in `--json`.
 - **One line per (contract x upstream subject)**, de-duplicated within a
   contract; subjects name-sorted.
 - A definition that cannot be LOADED at all may hide contracts, so it is
@@ -99,18 +102,21 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from project_kit import cli_render
 from project_kit.package_validate import ROLE_QUALIFIER, role_of
 from project_kit.process import (
     PREDICATE_STUB_MARKER,
+    PredicateFailure,
     PredicateRunner,
     ProcessDefinition,
     ProcessEngine,
     ProcessError,
     _load_command_registry,
+    json_tail,
     load_definition,
+    said_lines,
 )
 from project_kit.process_graph import (
     discover_process_addresses,
@@ -175,11 +181,15 @@ class Finding:
     indeterminacy (uninterpretable contract / broken candidate source — the
     whole contract could not be evaluated, so there is no subject to name).
     `kind` is `missed` or `indeterminate`; `reason` is the self-explaining why.
+    `stderr_tail` is what a predicate that could not be evaluated said on
+    standard error (`PredicateFailure.stderr_tail`), "" when it said nothing
+    or the finding is not one.
     """
 
     subject: str | None
     kind: str
     reason: str
+    stderr_tail: str = ""
 
     def sort_key(self) -> tuple[str, str, str]:
         return (self.subject or "", self.kind, self.reason)
@@ -393,12 +403,16 @@ def _contract_sort_key(
 # --- evaluating one contract (live, read-only) -----------------------------
 
 
-def _contract_indeterminate(contract: HandoffContract, reason: str) -> ContractReport:
+def _contract_indeterminate(
+    contract: HandoffContract, reason: str, stderr_tail: str = ""
+) -> ContractReport:
     """The whole contract could not be evaluated: one contract-level
     indeterminate finding (fail-closed — reported distinctly, never green)."""
     return ContractReport(
         contract=contract,
-        findings=(Finding(subject=None, kind=KIND_INDETERMINATE, reason=reason),),
+        findings=(
+            Finding(subject=None, kind=KIND_INDETERMINATE, reason=reason, stderr_tail=stderr_tail),
+        ),
         at_trigger=0,
         satisfied=0,
     )
@@ -474,13 +488,11 @@ def evaluate_contract(
     # The candidate source (ADR-048): a registered command of the DECLARING
     # capability, subject slot = the upstream address (the scope it enumerates).
     candidate_ids = _read_candidates(repo_root, contract, candidates_predicate)
-    if candidate_ids is None:
+    if isinstance(candidate_ids, _NoAnswer):
         return _contract_indeterminate(
             contract,
-            f"the candidate source {candidates_predicate.get('run')!r} could "
-            "not be evaluated (errored / timed out / unparseable / "
-            "unregistered, or returned no `candidates` list); broken-empty is "
-            "never read as 'nothing missed'",
+            f"{candidate_ids.why}; broken-empty is never read as 'nothing missed'",
+            candidate_ids.stderr_tail,
         )
 
     findings: list[Finding] = []
@@ -504,13 +516,14 @@ def evaluate_contract(
             continue
         if position.state_id != trigger:
             if position.state_id is None and position.indeterminate:
+                why, said = position.why_indeterminate()
                 findings.append(
                     Finding(
                         subject=candidate_id,
                         kind=KIND_INDETERMINATE,
-                        reason="upstream position is indeterminate (a detection "
-                        "predicate could not be evaluated); an unreadable "
-                        "position is never read as 'not at the trigger'",
+                        reason=f"upstream position is indeterminate ({why}); an "
+                        "unreadable position is never read as 'not at the trigger'",
+                        stderr_tail=said,
                     )
                 )
             # Determinately elsewhere (or determinately positionless): not at
@@ -519,15 +532,13 @@ def evaluate_contract(
 
         at_trigger += 1
         downstream_ids = _read_resolution(repo_root, contract, resolve_predicate, candidate_id)
-        if downstream_ids is None:
+        if isinstance(downstream_ids, _NoAnswer):
             findings.append(
                 Finding(
                     subject=candidate_id,
                     kind=KIND_INDETERMINATE,
-                    reason=f"the resolve predicate {resolve_predicate.get('run')!r} "
-                    "could not be evaluated (errored / timed out / unparseable / "
-                    "unregistered, or returned no explicit `downstream` list); "
-                    "an error is never read as absence",
+                    reason=f"{downstream_ids.why}; an error is never read as absence",
+                    stderr_tail=downstream_ids.stderr_tail,
                 )
             )
             continue
@@ -586,11 +597,21 @@ def _is_role_address(address: str) -> bool:
     return ROLE_QUALIFIER in address
 
 
+@dataclass(frozen=True)
+class _NoAnswer:
+    """Why a seam predicate left the walk nothing to read (indeterminate):
+    `why` names the predicate and the cause — how its run ended, or what its
+    answer lacked — and `stderr_tail` is what it said on standard error."""
+
+    why: str
+    stderr_tail: str = ""
+
+
 def _read_candidates(
     repo_root: Path, contract: HandoffContract, predicate: dict[str, Any]
-) -> list[str] | None:
+) -> list[str] | _NoAnswer:
     """The de-duplicated, name-sorted upstream candidate ids from the
-    `candidates` seam, or None when the source is broken (indeterminate).
+    `candidates` seam, or why the source is broken (indeterminate).
     An explicit empty list is a DETERMINATE empty answer -> []."""
     runner = PredicateRunner(
         capability=contract.capability,
@@ -598,24 +619,9 @@ def _read_candidates(
         repo_root=repo_root,
         subject=contract.upstream,
     )
-    try:
-        payload = runner.run_raw(predicate)
-    except ProcessError:
-        # Unregistered command: for the report-only walk this folds into the
-        # contract's indeterminacy rather than aborting the whole report.
-        return None
-    if payload is None:
-        return None
-    raw = payload.get("candidates")
-    if not isinstance(raw, list):
-        return None
-    # A malformed member makes the WHOLE payload uninterpretable (indeterminate):
-    # silently filtering it would convert a broken answer into a determinate one
-    # (empty -> clean), breaching COR-042's broken-is-never-determinate rule.
-    if any(not isinstance(c, str) or not c for c in raw):
-        return None
+    ids = _seam_ids(runner, "candidates", predicate)
     # De-dup + name-sort: one line per (contract x subject), deterministic order.
-    return sorted(set(raw))
+    return ids if isinstance(ids, _NoAnswer) else sorted(set(ids))
 
 
 def _read_resolution(
@@ -623,11 +629,11 @@ def _read_resolution(
     contract: HandoffContract,
     predicate: dict[str, Any],
     upstream_subject: str,
-) -> list[str] | None:
+) -> list[str] | _NoAnswer:
     """One upstream subject's downstream id(s) from the `resolve` seam.
 
     Returns the (possibly several — fan-out) downstream ids; [] for EXPLICIT
-    determinate absence (the miss); None when the predicate is broken
+    determinate absence (the miss); why the predicate is broken otherwise
     (indeterminate — an error is never read as absence)."""
     runner = PredicateRunner(
         capability=contract.capability,
@@ -635,21 +641,46 @@ def _read_resolution(
         repo_root=repo_root,
         subject=upstream_subject,
     )
+    return _seam_ids(runner, "resolve", predicate)
+
+
+# The list each seam answers under (ADR-048): `{candidates: [...]}`,
+# `{downstream: [...]}`.
+_SEAM_KEYS = {"candidates": "candidates", "resolve": "downstream"}
+
+
+def _seam_ids(
+    runner: PredicateRunner, slot: str, predicate: dict[str, Any]
+) -> list[str] | _NoAnswer:
+    """The id list the `slot` seam predicate answers, or why there is none to
+    read. A run that gives no answer is reported as the engine reports one
+    (`PredicateFailure.reason_for`, with what it said); an answer without the
+    seam's list, or with a member that is not a non-empty string, cannot be
+    read."""
+    run = predicate.get("run")
     try:
         payload = runner.run_raw(predicate)
-    except ProcessError:
-        return None
-    if payload is None:
-        return None
-    raw = payload.get("downstream")
+    except ProcessError as exc:
+        # Unregistered command: for the report-only walk this folds into the
+        # contract's indeterminacy rather than aborting the whole report.
+        return _NoAnswer(f"couldn't evaluate {slot} predicate {run!r}: {exc}")
+    if isinstance(payload, PredicateFailure):
+        return _NoAnswer(payload.reason_for(slot, predicate), payload.stderr_tail)
+    key = _SEAM_KEYS[slot]
+    raw = payload.get(key)
     if not isinstance(raw, list):
-        return None
-    # Same strictness as the candidates seam: a malformed member is an
-    # uninterpretable payload (indeterminate), never filtered into `[]`
-    # (which would read as a determinate MISS from a broken answer).
-    if any(not isinstance(d, str) or not d for d in raw):
-        return None
-    return list(raw)
+        return _NoAnswer(f"couldn't read the answer of {slot} predicate {run!r}: no `{key}` list")
+    # A malformed member makes the WHOLE payload uninterpretable (indeterminate):
+    # silently filtering it would convert a broken answer into a determinate one
+    # (empty -> clean, or a MISS), breaching COR-042's
+    # broken-is-never-determinate rule.
+    members = cast("list[Any]", raw)
+    if any(not isinstance(member, str) or not member for member in members):
+        return _NoAnswer(
+            f"couldn't read the answer of {slot} predicate {run!r}: a `{key}` member "
+            "is not a non-empty string"
+        )
+    return list(cast("list[str]", members))
 
 
 # --- the whole walk --------------------------------------------------------
@@ -749,9 +780,26 @@ def _scope_reason(repo_root: Path, focus: str, addresses: list[str]) -> str:
 # --- rendering -------------------------------------------------------------
 
 
-def _finding_line(finding: Finding) -> str:
-    marker = "✗" if finding.kind == KIND_MISSED else "?"
-    return f"    {marker} {finding.subject}  {finding.reason}"
+def _finding_lines(finding: Finding) -> list[str]:
+    """One finding as both narrative views show it: a subject's line, or a
+    contract-level indeterminacy reported distinctly — then what a predicate
+    that could not be evaluated said, attributed to it as the engine shows it."""
+    if finding.subject is None:
+        head = cli_render.wrap(f"? contract indeterminate: {finding.reason}", indent="    ")
+    else:
+        marker = "✗" if finding.kind == KIND_MISSED else "?"
+        head = [f"    {marker} {finding.subject}  {finding.reason}"]
+    return [*head, *said_lines(finding.stderr_tail, "      ")]
+
+
+def _finding_json(finding: Finding) -> dict[str, str | None]:
+    """An indeterminate finding as both `--json` forms carry it: what the
+    predicate said rides beside `reason`, null when there is nothing to show."""
+    return {
+        "subject": finding.subject,
+        "reason": finding.reason,
+        "stderr_tail": json_tail(finding.stderr_tail),
+    }
 
 
 def _scope_lines(scope: UnresolvedScope | None) -> list[str]:
@@ -793,16 +841,7 @@ def render_narrative(report: HealthReport) -> str:
                 )
             continue
         for finding in cr.findings:
-            if finding.subject is None:
-                # Contract-level indeterminacy: reported distinctly.
-                lines.extend(
-                    cli_render.wrap(
-                        f"? contract indeterminate: {finding.reason}",
-                        indent="    ",
-                    )
-                )
-            else:
-                lines.append(_finding_line(finding))
+            lines.extend(_finding_lines(finding))
 
     if report.skipped:
         count = len(report.skipped)
@@ -1012,15 +1051,7 @@ def render_interpretation_narrative(report: InterpretationReport) -> str:
             )
             continue
         for finding in cr.indeterminate:
-            if finding.subject is None:
-                lines.extend(
-                    cli_render.wrap(
-                        f"? contract indeterminate: {finding.reason}",
-                        indent="    ",
-                    )
-                )
-            else:
-                lines.append(_finding_line(finding))
+            lines.extend(_finding_lines(finding))
 
     if report.skipped:
         count = len(report.skipped)
@@ -1069,9 +1100,7 @@ def render_interpretation_json(report: InterpretationReport) -> str:
                 "downstream": cr.contract.downstream,
                 "trigger": cr.contract.trigger or None,
                 "state": cr.contract.state_id,
-                "indeterminate": [
-                    {"subject": f.subject, "reason": f.reason} for f in cr.indeterminate
-                ],
+                "indeterminate": [_finding_json(f) for f in cr.indeterminate],
                 "counts": {"indeterminate": len(cr.indeterminate)},
             }
             for cr in report.contracts
@@ -1097,9 +1126,7 @@ def render_json(report: HealthReport) -> str:
                 "trigger": cr.contract.trigger or None,
                 "state": cr.contract.state_id,
                 "misses": [{"subject": f.subject, "reason": f.reason} for f in cr.misses],
-                "indeterminate": [
-                    {"subject": f.subject, "reason": f.reason} for f in cr.indeterminate
-                ],
+                "indeterminate": [_finding_json(f) for f in cr.indeterminate],
                 "counts": {
                     "at_trigger": cr.at_trigger,
                     "satisfied": cr.satisfied,

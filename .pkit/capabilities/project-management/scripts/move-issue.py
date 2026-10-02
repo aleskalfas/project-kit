@@ -96,6 +96,7 @@ from _lib import (
     bootstrap_gate,
     composed_move,
     containment,
+    engine_said,
     move_journal,
     session_guard,
     state_timeline,
@@ -1271,13 +1272,16 @@ class _AncestorOutcome:
 
     ``complete`` is False when the ancestor was not fully moved and journaled;
     ``behind`` when it was left behind the target in a way running the move again
-    can repair; ``stops_walk`` when nothing above it is moved."""
+    can repair; ``stops_walk`` when nothing above it is moved. ``why`` holds the
+    lines printed under it saying why the engine could not place it — the
+    engine's causes, and what its predicates said (`_lib/engine_said`)."""
 
     number: int
     said: str
     complete: bool = True
     behind: bool = False
     stops_walk: bool = False
+    why: tuple[str, ...] = ()
 
 
 def _cascade_forward_target(child_target: str) -> str:
@@ -1677,13 +1681,17 @@ def _first_parent(mover: _MovedIssue, named: int | None, context: _CascadeContex
     return named
 
 
-def _engine_position(issue_number: int) -> tuple[bool, str | None]:
-    """(reached, state): whether the engine answered, and the position it gave —
-    None from an engine that answered is a position it cannot tell."""
+def _engine_position(issue_number: int) -> tuple[bool, str | None, tuple[str, ...]]:
+    """(reached, state, why): whether the engine answered, the position it gave —
+    None from an engine that answered is a position it cannot tell — and, for
+    such a position, the lines saying why, as the engine's status gives it."""
     status = _engine_status(issue_number)
     if status is None:
-        return False, None
-    return True, _position_from_status(status)
+        return False, None, ()
+    state = _position_from_status(status)
+    if state is not None:
+        return True, state, ()
+    return True, None, tuple(engine_said.unplaced_lines(status, "    "))
 
 
 def _run_forward_cascade(plan: _CascadePlan, context: _CascadeContext) -> None:
@@ -1719,7 +1727,7 @@ def _cascade_ancestor(
     if not ancestor.steps:
         return _AncestorOutcome(number, f"left alone at {ancestor.state}")
     origin, steps, labels = ancestor.state, ancestor.steps, list(ancestor.labels)
-    reached, engine_state = _engine_position(number)
+    reached, engine_state, why = _engine_position(number)
     if reached and engine_state is None:
         return _AncestorOutcome(
             number,
@@ -1727,6 +1735,7 @@ def _cascade_ancestor(
             complete=False,
             behind=True,
             stops_walk=True,
+            why=why,
         )
     if engine_state is not None and engine_state != origin:
         steps = _cascade_steps(
@@ -1846,6 +1855,8 @@ def _print_cascade_report(
     print(f"\n{head} forward cascade from #{plan.mover.number}{status}:", file=stream)
     for outcome in outcomes:
         print(f"  #{outcome.number}: {outcome.said}", file=stream)
+        for line in outcome.why:
+            print(line, file=stream)
     for number in unreached:
         print(f"  #{number}: not reached", file=stream)
     if plan.stop is not None:

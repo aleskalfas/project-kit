@@ -99,7 +99,14 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import audit as _audit
-from _lib import axis_labels, body_parent_ref, bootstrap_gate, containment, session_guard
+from _lib import (
+    axis_labels,
+    body_parent_ref,
+    bootstrap_gate,
+    containment,
+    engine_said,
+    session_guard,
+)
 from _lib import lifecycle_inference as infer
 
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
@@ -485,6 +492,11 @@ def main() -> int:
                 f"  → {reason or 'the process engine could not fold the children.'}",
                 file=sys.stderr,
             )
+            # What a predicate the fold could not evaluate said, as the engine
+            # reports it (`stderr_tail`), under the reason.
+            said = fold.get("stderr_tail") if isinstance(fold, dict) else None
+            for line in engine_said.said_lines(said, "    "):
+                print(line, file=sys.stderr)
             print(
                 "  → re-run once `gh` is reachable and every child's state is "
                 "readable; the container holds until the fold resolves.",
