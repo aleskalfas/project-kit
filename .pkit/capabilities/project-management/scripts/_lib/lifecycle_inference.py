@@ -187,46 +187,44 @@ def state_before_close(
     *,
     milestone: dict | None,
     labels: list[str],
+    closed: bool,
     substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> str | None:
-    """The lifecycle state an issue held before it closed: the move to `done` a
-    close makes starts here (#1231).
+    """Where an issue was in the lifecycle before it closed — the state the move
+    to `done` a close makes starts from (#1231) — or None where nothing says.
 
-    A closed issue reads as `done` whatever else it carries, so this is
-    :func:`infer_current_state` read as if the issue were still open — its state
-    label, else its milestone, else `todo` — whether or not it has closed since.
-    On an open issue it is the issue's position; on one GitHub closed when a pull
-    request merged, it is where the issue was when the merge closed it, for as
-    long as nothing has written its label to `done` since.
+    The one reading of it, for each reader of that move: close-issue's journal
+    entry, move-issue's entry for relabelling an issue GitHub closed, and the
+    forward cascade, which tells a finished issue from a won't-do one by where
+    it came from. A closed issue reads as `done` whatever else it carries, so
+    this is :func:`infer_current_state` read as if the issue were still open:
 
-    None under a `derive`-bound `state`: open/closed is then the only state the
-    issue carries, so nothing records where in the lifecycle it was.
+    - its state label, where it has one — on an issue GitHub closed when a pull
+      request merged, where the merge found it, for as long as nothing has
+      written its label to `done` since;
+    - else, where it has a milestone, `backlog` — **inferred**, as an open
+      issue's position is: nothing recorded it there, so an issue a merge closed
+      from Review whose only mark was a milestone reads as backlog all the same;
+    - else, on an issue still open, `todo`: its position, as the engine detects
+      it;
+    - else None: an issue already closed with neither a state label nor a
+      milestone carries nothing of where it was, and `todo` would read its close
+      as a won't-do. A reader that needs to know then turns to the close reason.
+
+    None, too, under a `derive`-bound `state`: open/closed is then the only state
+    the issue carries, so nothing records where in the lifecycle it was.
     """
     if axis_labels.state_derive_binding(substrate_map) is not None:
+        return None
+    if (
+        closed
+        and not milestone
+        and axis_labels.resolve_read("state", labels, substrate_map) is None
+    ):
         return None
     return infer_current_state(
         state="open", milestone=milestone, labels=labels, substrate_map=substrate_map
     )
-
-
-def recorded_state_before_close(
-    *,
-    milestone: dict | None,
-    labels: list[str],
-    substrate_map: axis_labels.SubstrateMap | None = None,
-) -> str | None:
-    """:func:`state_before_close` where the issue records it — a state label or
-    a milestone — and None where it reads `todo` only because it carries
-    neither.
-
-    For a reader that tells a finished issue from a won't-do one by where it
-    came from: an issue closed with nothing recording its place reads as
-    `todo`, which says nothing of where it was, so such a reader turns to the
-    close reason instead.
-    """
-    if not milestone and axis_labels.resolve_read("state", labels, substrate_map) is None:
-        return None
-    return state_before_close(milestone=milestone, labels=labels, substrate_map=substrate_map)
 
 
 # --- gate inference -------------------------------------------------------

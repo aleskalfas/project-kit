@@ -48,10 +48,13 @@ the path ``move-issue`` records its moves through (``_lib.move_journal``,
 ``pkit process move --from``; #1231): after the close and its label reconcile,
 one move from the state the issue held before the close, with the close mode
 as the entry's reason. That state is read from the issue as fetched at the
-start, before anything is written (``lifecycle_inference.state_before_close``):
-its state label, else its milestone, else Todo — read as if it were open, so
-an issue GitHub closed when a pull request merged reads where the merge found
-it. An issue whose label already says done was moved there by whoever wrote
+start, before anything is written (``lifecycle_inference.state_before_close``,
+the reading the forward cascade takes too): its state label, else its
+milestone (Backlog, inferred), else — for an issue still open — Todo, read as if
+it were open, so an issue GitHub closed when a pull request merged reads where
+the merge found it. An issue GitHub closed with neither a state label nor a
+milestone carries nothing of where it was, and its close is not recorded from a
+guessed Todo. An issue whose label already says done was moved there by whoever wrote
 the label — ``move-issue``, or an earlier run of this script — and is not
 recorded again, so a re-run adds nothing. Whether the move is recorded is the
 engine's: it appends to the journal where the project keeps one and records
@@ -724,7 +727,8 @@ class _CloseMove:
 
     issue_number: int
     #: Where the issue was before the close (`state_before_close`), or None when
-    #: nothing records it (a `derive`-bound state).
+    #: nothing records it (a `derive`-bound state, or an issue already closed
+    #: with neither a state label nor a milestone).
     from_state: str | None
     #: Why the move is not recorded although it is one: the workflow declares
     #: no `from_state → done` for the issue's type. Empty when it does.
@@ -746,7 +750,10 @@ class _CloseMove:
         """The move closing ``issue`` makes, read from the issue as fetched —
         before this run writes anything."""
         from_state = infer.state_before_close(
-            milestone=issue.get("milestone"), labels=labels, substrate_map=substrate_map
+            milestone=issue.get("milestone"),
+            labels=labels,
+            closed=str(issue.get("state", "")).lower() == "closed",
+            substrate_map=substrate_map,
         )
         undeclared = ""
         if from_state is not None and from_state != DONE_STATE:

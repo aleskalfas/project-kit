@@ -481,11 +481,15 @@ def main() -> int:
         # from where its old label places it — a merge's close leaves review —
         # which tells a finished issue from a won't-do one; where the label
         # already reads done, or neither a state label nor a milestone records
-        # where it was, its close reason tells them apart instead.
+        # where it was, its close reason tells them apart instead. It is the one
+        # reading the journal entries for the close take, so the two agree.
         if not args.no_cascade:
             origin = (
-                infer.recorded_state_before_close(
-                    milestone=milestone, labels=labels, substrate_map=substrate_map
+                infer.state_before_close(
+                    milestone=milestone,
+                    labels=labels,
+                    closed=state == "closed",
+                    substrate_map=substrate_map,
                 )
                 if args.to == "done"
                 else None
@@ -1091,15 +1095,16 @@ def _journal_closed_issue_relabel(
     on the issue `done-work` runs for, say. That label write is the close's
     move on the tracker, and the only one pkit makes: close-issue, which runs
     next, finds the label at done and records nothing. So it is recorded here,
-    from where the old label placed the issue (`state_before_close`), as
-    close-issue records a close: with ``reason`` — the merged PR's, which
-    done-work passes, is the one close-issue gives the other issues the PR
-    closed — and not at all when the workflow declares no such move for the
-    issue's type (the engine does not read `applies_to`), which is warned about
-    as a refused move is.
+    from where the old label placed the issue (`state_before_close`, the reading
+    the forward cascade and close-issue take), as close-issue records a close:
+    with ``reason`` — the merged PR's, which done-work passes, is the one
+    close-issue gives the other issues the PR closed — and not at all when the
+    workflow declares no such move for the issue's type (the engine does not
+    read `applies_to`), which is warned about as a refused move is, nor where
+    nothing records where the issue was.
     """
     origin = infer.state_before_close(
-        milestone=milestone, labels=labels, substrate_map=substrate_map
+        milestone=milestone, labels=labels, closed=True, substrate_map=substrate_map
     )
     if origin is None or origin == target_state:
         return
