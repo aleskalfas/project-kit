@@ -2,6 +2,6 @@ component: backbone
 kind: none
 body: >
   The CLI reference's whole-repository check says where project-kit's own run
-  of it now lives — daily and on every push to `main`, publishing to one
-  tracking issue — and links the living-docs README for how. No command
-  changed.
+  of it lives — on `main` with the full history, after every push and once a
+  day, publishing its findings to one tracking issue — and cites ADR-055
+  point 5 for it. No command changed.
