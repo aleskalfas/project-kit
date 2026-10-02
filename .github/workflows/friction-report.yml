@@ -69,13 +69,12 @@ jobs:
       - name: Whole-repository friction check (reports, never fails)
         run: uv run pkit friction check --all --json > "$RUNNER_TEMP/friction.json"
 
-      # The body and the count of outstanding findings, rendered by living-docs'
-      # `friction-report` from the document above; the body also goes to the
-      # run's step summary.
+      # The body and the count of findings that need an answer, rendered from
+      # the document above; the body also goes to the run's step summary.
       - name: Render the findings
         run: |
-          uv run pkit living-docs friction-report --report "$RUNNER_TEMP/friction.json" --json > "$RUNNER_TEMP/friction-report.json"
-          jq -r .body "$RUNNER_TEMP/friction-report.json" >> "$GITHUB_STEP_SUMMARY"
+          uv run python scripts/friction_report_body.py "$RUNNER_TEMP/friction.json" --json > "$RUNNER_TEMP/friction-report.json"
+          uv run python scripts/friction_report_body.py "$RUNNER_TEMP/friction.json" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish to the tracking issue
         env:

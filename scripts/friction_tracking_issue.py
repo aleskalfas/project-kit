@@ -2,22 +2,22 @@
 
 The workflow `.github/workflows/friction-report.yml` runs the whole-repository
 friction check (COR-050 point 6) with the full history, daily and after every
-push to `main`, renders its findings with `pkit living-docs friction-report
+push to `main`, renders its findings with `scripts/friction_report_body.py
 --json`, and hands that publication to this script, which keeps **one** GitHub
 issue in step with it, through `gh`:
 
 - **Found by its marker** — the body's first line is `MARKER`, a hidden comment
   — looked for only among the issues the automation opened (`AUTHOR`) that carry
   its label (`LABEL`), so an issue that quotes the marker is never taken for it.
-- **Opened**, with its label, when something is outstanding and there is none.
+- **Opened**, with its label, when a finding needs an answer and there is none.
 - **Rewritten in place** when its body differs, and **reopened** when findings
   return: never a comment per run, never a second issue.
-- **Closed** when nothing is outstanding, its body saying so; the measures stay
-  in it. With nothing outstanding and no issue, nothing is opened.
+- **Closed** when nothing needs an answer, its body saying so; the deferrals and
+  the measures stay in it. With nothing to answer and no issue, none is opened.
 - **Left alone** when nothing changed: the same findings render the same body,
   so a run that finds what the last one found changes nothing.
 
-It decides nothing about friction: what is outstanding is the renderer's. It
+It decides nothing about friction: what needs an answer is the renderer's. It
 exits 0 whatever the check found, and 1, saying why, only when the publication
 cannot be read or `gh` refuses — the check reports and never fails (COR-050
 point 12), and the workflow is no required status.
@@ -57,9 +57,9 @@ LABEL_COLOR = "d4c5f9"
 LABEL_DESCRIPTION = "The whole-repository friction check's tracking issue, kept by automation"
 AUTHOR = "app/github-actions"
 
-TITLE = "Friction: what the whole-repository check finds outstanding"
+TITLE = "Friction: what the whole-repository check finds"
 
-#: The version of `pkit living-docs friction-report --json` this script reads.
+#: The version of `scripts/friction_report_body.py --json` this script reads.
 PUBLICATION_VERSION = 1
 
 #: How many of the automation's labelled issues are read when looking for the marker.
@@ -81,7 +81,7 @@ class Issue:
 
 @dataclass(frozen=True)
 class Publication:
-    outstanding: int
+    needs_answer: int
     body: str
 
 
@@ -92,7 +92,7 @@ def read_publication(text: str, source: str) -> Publication:
     except ValueError:
         document = None
     if not isinstance(document, Mapping):
-        raise Refused(f"{source} holds no publication of `pkit living-docs friction-report --json`")
+        raise Refused(f"{source} holds no publication of `scripts/friction_report_body.py --json`")
     publication = cast("Mapping[str, Any]", document)
     version = publication.get("schema_version")
     if version != PUBLICATION_VERSION:
@@ -100,11 +100,11 @@ def read_publication(text: str, source: str) -> Publication:
             f"{source} is a publication of schema_version {version!r}; "
             f"this script reads {PUBLICATION_VERSION}"
         )
-    outstanding = publication.get("outstanding")
+    needs_answer = publication.get("needs_answer")
     body = publication.get("body")
-    if not isinstance(outstanding, int) or outstanding < 0 or not isinstance(body, str):
-        raise Refused(f"{source} gives no count of outstanding findings and no body")
-    return Publication(outstanding, body)
+    if not isinstance(needs_answer, int) or needs_answer < 0 or not isinstance(body, str):
+        raise Refused(f"{source} gives no count of findings that need an answer and no body")
+    return Publication(needs_answer, body)
 
 
 class Gh:
@@ -174,8 +174,8 @@ def publish(publication: Publication, gh: Gh) -> str:
     body = f"{MARKER}\n{publication.body}"
     issue = find(gh)
     if issue is None:
-        if not publication.outstanding:
-            return "nothing outstanding and no tracking issue: nothing to do"
+        if not publication.needs_answer:
+            return "nothing needs an answer and there is no tracking issue: nothing to do"
         _ensure_label(gh)
         with _body_file(body) as path:
             url = gh("issue", "create", "--title", TITLE, "--body-file", path, "--label", LABEL)
@@ -185,12 +185,12 @@ def publish(publication: Publication, gh: Gh) -> str:
         with _body_file(body) as path:
             gh("issue", "edit", str(issue.number), "--body-file", path)
         done.append("rewrote its body")
-    if publication.outstanding and not issue.open:
+    if publication.needs_answer and not issue.open:
         gh("issue", "reopen", str(issue.number))
-        done.append("reopened it: findings are outstanding again")
-    elif not publication.outstanding and issue.open:
+        done.append("reopened it: a finding needs an answer")
+    elif not publication.needs_answer and issue.open:
         gh("issue", "close", str(issue.number), "--reason", "completed")
-        done.append("closed it: nothing outstanding")
+        done.append("closed it: nothing needs an answer")
     return f"tracking issue #{issue.number}: " + ("; ".join(done) or "unchanged")
 
 
@@ -235,7 +235,7 @@ def main(argv: list[str] | None = None, run: Runner = subprocess.run) -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Keep the one tracking issue of the whole-repository friction check in step with "
-            "a publication of `pkit living-docs friction-report --json`."
+            "a publication of `scripts/friction_report_body.py --json`."
         ),
     )
     parser.add_argument("publication", help="The file the renderer's --json output was written to.")

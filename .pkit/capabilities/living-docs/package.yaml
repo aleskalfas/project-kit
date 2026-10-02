@@ -16,10 +16,6 @@ commands:
     help: "This capability's filler of the pkit::work-tracking:doc-check point (DEC-001 point 7): one page-stale obligation per page the whole-repository friction check reports stale (a deferred page carries its answer and gives none), one code-undocumented obligation per uncovered surface path; --json prints the filler envelope the backbone reads. A query: read-only, offline, no parameter; `pkit sync` provisions its dependencies."
     query-contract: true
     reads: [history]
-  friction-report:
-    script: scripts/friction-report.py
-    help: "Render the whole-repository friction check's findings as one Markdown body to publish where people read them — stale debt with what changed and since when, deferrals with their reasons and since when, the other findings, and the unanchored and uncovered-surface measures — the same findings always giving the same body; --report <file> reads a document `pkit friction check --all --json` wrote, --json prints {schema_version, outstanding, body}, outstanding counting every finding but `left-out`. Exits 0 whatever the check found. A query: read-only, offline; it publishes nothing."
-    query-contract: true
 
 # The `living-docs:spaces` member of `pkit validate` (ADR-058).
 validators:

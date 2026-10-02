@@ -38,10 +38,6 @@ tells a HEAD with no commit yet from one git cannot read here — so this module
 asks git nothing. A history a shallow clone cut short is the other way it cannot
 be read: only the filler knows how far back it reads, so detecting it is this
 module's.
-
-The same reading, of the same versions, serves `friction-report`, which renders
-the check's findings for publication: through `pkit`, or from a file the check's
-document was written to (`parse_friction`).
 """
 
 from __future__ import annotations
@@ -108,19 +104,6 @@ def read_friction(root: str, run: Runner = subprocess.run) -> Mapping[str, Any]:
     return _reading(CHECK_ARGV, root, run, "artefacts")
 
 
-def parse_friction(text: str, source: str) -> Mapping[str, Any]:
-    """The whole-repository check's machine-readable document as `source` — a file
-    `pkit friction check --all --json` was written to — holds it. Raises NoAnswer
-    when it holds none, or one of a version this reading does not understand."""
-    try:
-        document = json.loads(text)
-    except ValueError:
-        document = None
-    if not isinstance(document, Mapping) or "artefacts" not in document:
-        raise NoAnswer(f"{source} holds no document of `{' '.join(CHECK_ARGV)}`")
-    return _versioned(document, source)
-
-
 def _reading(argv: Sequence[str], root: str, run: Runner, key: str) -> Mapping[str, Any]:
     """The document a backbone reading prints, one that carries `key`, at the version
     this capability reads. Raises NoAnswer when it gives none, or one of a version
@@ -139,16 +122,11 @@ def _reading(argv: Sequence[str], root: str, run: Runner, key: str) -> Mapping[s
             f"`{' '.join(argv)}` exited {proc.returncode} without its document"
             + (f": {detail[-1]}" if detail else "")
         )
-    return _versioned(document, f"`{' '.join(argv)}`")
-
-
-def _versioned(document: Mapping[str, Any], source: str) -> Mapping[str, Any]:
-    """`document`, when it is of the version this capability reads. Raises NoAnswer
-    otherwise; one without `schema_version` reads as version 1."""
     version = document.get("schema_version", READING_VERSION)
     if version != READING_VERSION:
         raise NoAnswer(
-            f"{source} answered schema_version {version!r}; this capability reads {READING_VERSION}"
+            f"`{' '.join(argv)}` answered schema_version {version!r}; "
+            f"this capability reads {READING_VERSION}"
         )
     return document
 

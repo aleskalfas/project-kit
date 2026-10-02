@@ -1,7 +1,7 @@
 """project-kit's tracking issue for the whole-repository friction check (#1266).
 
 `.github/workflows/friction-report.yml` runs the check daily and after every
-push to `main`, with the full history; living-docs' `friction-report` renders
+push to `main`, with the full history; `scripts/friction_report_body.py` renders
 its findings; `scripts/friction_tracking_issue.py` keeps one GitHub issue in
 step with them. A schedule cannot be run from here, so:
 
@@ -36,7 +36,7 @@ from tests.friction_documents import Timeline, guide
 
 REPO = Path(__file__).resolve().parent.parent
 PUBLISHER = REPO / "scripts" / "friction_tracking_issue.py"
-RENDERER = REPO / ".pkit" / "capabilities" / "living-docs" / "scripts" / "friction-report.py"
+RENDERER = REPO / "scripts" / "friction_report_body.py"
 WORKFLOW = REPO / ".github" / "workflows" / "friction-report.yml"
 
 MARKER = "<!-- pkit-friction-report -->"
@@ -213,7 +213,7 @@ def _render(directory: Path, document: dict[str, Any]) -> Path:
     report = directory / "friction.json"
     report.write_text(json.dumps(document), encoding="utf-8")
     proc = subprocess.run(
-        [sys.executable, str(RENDERER), "--report", str(report), "--json"],
+        [sys.executable, str(RENDERER), str(report), "--json"],
         capture_output=True,
         text=True,
         check=False,
@@ -254,7 +254,7 @@ def test_findings_open_one_labelled_issue_whose_body_is_the_rendering(gh: FakeGh
     assert issue["state"] == "OPEN" and issue["labels"] == [LABEL]
     rendered = json.loads((gh.directory / "friction-report.json").read_text(encoding="utf-8"))
     assert issue["body"] == f"{MARKER}\n{rendered['body']}"
-    assert "- `docs/guide.md` · `path:src/cli/**` · since 2026-09-30" in issue["body"]
+    assert "- `docs/guide.md` · `path:src/cli/**` · since `2026-09-30`" in issue["body"]
     assert "- `docs/plain.md`" in issue["body"]
     assert gh.load()["labels"] == [LABEL]
 
@@ -279,17 +279,17 @@ def test_changed_findings_rewrite_the_body_in_place(gh: FakeGh) -> None:
     assert [call[:2] for call in gh.writes()] == [["issue", "edit"]]
 
 
-def test_nothing_outstanding_closes_it_saying_so_and_findings_reopen_it(gh: FakeGh) -> None:
+def test_nothing_to_answer_closes_it_saying_so_and_findings_reopen_it(gh: FakeGh) -> None:
     _run(gh, _document([_stale("docs/guide.md")]))
 
     gh.forget_calls()
     closing = _run(gh, _document([], unanchored=("docs/plain.md",)))
     (issue,) = gh.issues()
     assert issue["state"] == "CLOSED"
-    assert issue["body"].startswith(f"{MARKER}\n**Nothing outstanding.**")
+    assert issue["body"].startswith(f"{MARKER}\n**Nothing needs an answer.**")
     assert "- `docs/plain.md`" in issue["body"]  # the measures stay in it
     assert [call[:2] for call in gh.writes()] == [["issue", "edit"], ["issue", "close"]]
-    assert "closed it: nothing outstanding" in closing.stdout
+    assert "closed it: nothing needs an answer" in closing.stdout
 
     gh.forget_calls()
     _run(gh, _document([], unanchored=("docs/plain.md",)))
@@ -303,10 +303,10 @@ def test_nothing_outstanding_closes_it_saying_so_and_findings_reopen_it(gh: Fake
     assert "reopened it" in reopening.stdout
 
 
-def test_nothing_outstanding_and_no_issue_opens_none(gh: FakeGh) -> None:
+def test_nothing_to_answer_and_no_issue_opens_none(gh: FakeGh) -> None:
     proc = _run(gh, _document([], unanchored=("docs/plain.md",)))
     assert gh.issues() == [] and gh.writes() == []
-    assert "nothing outstanding and no tracking issue" in proc.stdout
+    assert "nothing needs an answer and there is no tracking issue" in proc.stdout
 
 
 @pytest.mark.parametrize(
@@ -354,9 +354,12 @@ def test_a_refused_call_fails_the_run_saying_why(
 @pytest.mark.parametrize(
     ("text", "says"),
     [
-        ("not json", "holds no publication of `pkit living-docs friction-report --json`"),
-        (json.dumps({"schema_version": 2, "outstanding": 0, "body": ""}), "schema_version 2"),
-        (json.dumps({"schema_version": 1, "body": "x"}), "no count of outstanding findings"),
+        ("not json", "holds no publication of `scripts/friction_report_body.py --json`"),
+        (json.dumps({"schema_version": 2, "needs_answer": 0, "body": ""}), "schema_version 2"),
+        (
+            json.dumps({"schema_version": 1, "body": "x"}),
+            "no count of findings that need an answer",
+        ),
     ],
 )
 def test_a_publication_it_cannot_read_fails_the_run_and_calls_nothing(
@@ -391,7 +394,7 @@ def test_a_real_history_end_to_end(make_adopter_repo: MakeAdopterRepo, gh: FakeG
     )
     _run(gh, check())
     (issue,) = gh.issues()
-    assert issue["state"] == "CLOSED" and "**Nothing outstanding.**" in issue["body"]
+    assert issue["state"] == "CLOSED" and "**Nothing needs an answer.**" in issue["body"]
 
 
 # --- the workflow --------------------------------------------------------------------------
@@ -443,9 +446,12 @@ def test_it_runs_the_check_renders_it_and_publishes_it(workflow: dict[str, Any])
     steps = _steps(workflow)
     check = steps[_index(workflow, "Whole-repository friction check")]["run"]
     assert check.startswith("uv run pkit friction check --all --json >")
-    render = steps[_index(workflow, "Render the findings")]["run"]
-    assert "uv run pkit living-docs friction-report --report" in render and "--json" in render
-    assert "$GITHUB_STEP_SUMMARY" in render
+    render = steps[_index(workflow, "Render the findings")]["run"].splitlines()
+    script = 'uv run python scripts/friction_report_body.py "$RUNNER_TEMP/friction.json"'
+    assert render == [
+        f'{script} --json > "$RUNNER_TEMP/friction-report.json"',
+        f'{script} >> "$GITHUB_STEP_SUMMARY"',
+    ]
     publish = steps[_index(workflow, "Publish to the tracking issue")]
     assert publish["run"].startswith("uv run python scripts/friction_tracking_issue.py ")
     assert publish["env"] == {"GH_TOKEN": "${{ github.token }}"}
