@@ -41,6 +41,7 @@ import click
 from ruamel.yaml import YAML
 
 from project_kit import treecopy
+from project_kit.changesets import BACKBONE
 from project_kit.manifest import (
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
@@ -86,6 +87,14 @@ _yaml = YAML(typ="safe")
 # is the namespace of the project's architecture decision records, which
 # `pkit new decision` reads before any capability name (`decisions`), so a
 # capability named `adr` could have no decision records stamped (#1289).
+# `backbone` is the name the backbone carries where a component's carry the
+# component's: the component of its changesets (`changesets.BACKBONE`, the
+# constant read here), the owner of its validators (`validators.BACKBONE_OWNER`,
+# beside `<capability>:<name>`), the component its rule sets are cited with
+# (`friction_discovery.BACKBONE_COMPONENT`) and the component its documentation
+# locations are recorded under (`docs_roots.BACKBONE`), so a capability named
+# `backbone` would have its changesets, validators, rule sets and documentation
+# locations read as the backbone's (#1292).
 RESERVED_CAPABILITY_NAMES: dict[str, str] = {
     CORE_SCHEMAS_OWNER: (
         "it is the name core's own entries carry where a capability's carry the "
@@ -105,6 +114,14 @@ RESERVED_CAPABILITY_NAMES: dict[str, str] = {
         "it is the namespace of the project's architecture decision records, which "
         "`pkit new decision` reads before any capability name, so a capability named "
         "`adr` could have no decision records of its own stamped"
+    ),
+    BACKBONE: (
+        "it is the name the backbone carries where a component's carry the component's "
+        "name: the component of the backbone's changesets, the owner of its validators, "
+        "the component its rule sets are cited with, and the component its documentation "
+        "locations are recorded under, so a capability named `backbone` would have its "
+        "changesets, validators, rule sets and documentation locations read as the "
+        "backbone's"
     ),
 }
 

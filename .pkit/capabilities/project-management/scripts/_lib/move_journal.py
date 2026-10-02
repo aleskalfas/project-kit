@@ -138,10 +138,19 @@ def report_unrecorded(issue_number: int, why: str) -> None:
     The warning an engine refusal prints, and the one a caller prints for a
     move it does not hand the engine — a close the workflow declares no
     transition for, say (#1231) — so the two read alike.
+
+    `why` may run over several lines: an engine refusal on a predicate it could
+    not evaluate names, on the lines after its first, each cause and what the
+    predicate said, under "the predicate said:". Those lines follow the
+    warning as the engine laid them out, so nothing of the warning's own runs
+    on into the predicate's words.
     """
+    first, *rest = why.splitlines() or [""]
     print(
-        f"  [warn] {why}. {JOURNAL_GAP_CLAUSE} `pkit pm history {issue_number} "
+        f"  [warn] {first}. {JOURNAL_GAP_CLAUSE} `pkit pm history {issue_number} "
         f"--check-drift` will show the gap. {TRACKER_TRAIL_CLAUSE} The "
         "label/position is unaffected.",
         file=sys.stderr,
     )
+    for line in rest:
+        print(line, file=sys.stderr)

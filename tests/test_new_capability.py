@@ -83,11 +83,18 @@ def test_stamp_capability_refuses_invalid_slug(kit_target: Path) -> None:
 # Each reserved name, with a phrase of the reason its refusal gives: `core` names
 # core's own decision records, agents and schemas area (#919, #1289); `project`
 # names the project's own entries (#1269); `adr` names the project's architecture
-# decision records (#1289).
+# decision records (#1289); `backbone` names the four places the backbone's name is
+# read as a component's (#1292).
 RESERVED = [
     ("core", "the namespace of the core decision records and agents, and the core schemas area"),
     ("project", "indistinguishable from the project itself"),
     ("adr", "the namespace of the project's architecture decision records"),
+    (
+        "backbone",
+        "the component of the backbone's changesets, the owner of its validators, the component "
+        "its rule sets are cited with, and the component its documentation locations are "
+        "recorded under",
+    ),
 ]
 
 

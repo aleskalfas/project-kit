@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-02T03:13:49Z
+      at: 2026-10-02T03:07:28Z
       outcome: unchanged
-      unchanged-because: done-work now journals its own issue's move to Done with the pull-request-merge reason close-issue gives the other issues; integration branches, the pull-request target and the merge path this use case walks are unchanged, so it holds
+      unchanged-because: DEC-013 gains how set-field --parent treats the marker on the write path, refusing a malformed one; the marker's designation, the pull-request target it dictates and the merge path this use case walks are unchanged, so it holds
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation

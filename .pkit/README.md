@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T03:05:33Z
+      at: 2026-10-02T03:37:55Z
       outcome: unchanged
-      unchanged-because: the process README now names reason as the journal entry's one place for why a move was taken; this page describes the process area in one line, as the shared substrate and the engine behind pkit process, which still holds
+      unchanged-because: The page maps the lifecycle area to packaging and register mechanics and the cli area to the command surface; both READMEs still cover those subjects and only gained backbone among the names the capability commands refuse and packages validation reports.
 ---
 
 # project-kit

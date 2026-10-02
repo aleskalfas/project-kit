@@ -40,9 +40,9 @@ TERM-integration-branch:
         record:
           - project-management:DEC-013
       revalidated:
-        at: 2026-10-02T01:25:02Z
+        at: 2026-10-02T03:07:25Z
         outcome: unchanged
-        unchanged-because: DEC-013 gains that a merged pull request's head branch is deleted through the backbone's command, after the command's own steps and only at the head that merged; what an integration branch is, which this term defines, is untouched
+        unchanged-because: "DEC-013 gains how set-field --parent treats the marker on the write path: a valid one stays the first line with the parent-ref below it, a malformed one is refused with nothing written; what an integration branch is, which this term defines, is untouched"
 TERM-intent-note:
   name: Intent note
   status: active

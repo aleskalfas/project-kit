@@ -366,7 +366,7 @@ def test_install_refuses_when_already_installed(kit_target: Path, kit_source: Pa
         caps.install_capability(kit_target, source)
 
 
-# --- reserved names (#919, #1269, #1289) ---------------------------
+# --- reserved names (#919, #1269, #1289, #1292) ---------------------
 #
 # `core` is the namespace of the core decision records and agents and routes
 # schemas to the core schemas area, so a capability named `core` could have no
@@ -376,14 +376,22 @@ def test_install_refuses_when_already_installed(kit_target: Path, kit_source: Pa
 # namespace, the opening name of its checks in an evidence point), so a
 # capability named `project` would be indistinguishable from the project.
 # `adr` is the namespace of the project's architecture decision records, so a
-# capability named `adr` could have no decision records stamped. Every path
-# that brings a capability into a project refuses each, naming the reservation
-# and its reason.
+# capability named `adr` could have no decision records stamped. `backbone` is
+# the name the backbone's changesets, validators, rule sets and documentation
+# locations are read under, so a capability named `backbone` would have its own
+# read as the backbone's. Every path that brings a capability into a project
+# refuses each, naming the reservation and its reason.
 
 RESERVED = [
     ("core", "the namespace of the core decision records and agents, and the core schemas area"),
     ("project", "indistinguishable from the project itself"),
     ("adr", "the namespace of the project's architecture decision records"),
+    (
+        "backbone",
+        "the component of the backbone's changesets, the owner of its validators, the component "
+        "its rule sets are cited with, and the component its documentation locations are "
+        "recorded under",
+    ),
 ]
 
 
