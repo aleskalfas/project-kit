@@ -3061,8 +3061,8 @@ def test_parent_whose_type_cannot_be_told_is_filed_under_with_a_warning(
     assert created["body"].lstrip().split("\n", 1)[0] == "Feature: #9"
     assert link_calls == [{"parent": 9, "child": 500}]
     assert (
-        "[warn] #9's type cannot be told from its title, so whether a task may sit under "
-        "it was not checked"
+        "[warn] #9's type cannot be told, so whether a task may sit under it was not "
+        "checked (an issue whose type cannot be told is outside the containment graph)"
     ) in capsys.readouterr().err
 
 

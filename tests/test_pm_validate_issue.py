@@ -2499,7 +2499,7 @@ def _validate_with_parent_reads(vi, issue, *, issue_types, titles, body_format, 
         body_format=body_format,
         config=config,
         issue_number=42,
-        read_parent=lambda n: vi.containment_graph.read_parent(n, config, issue_types),
+        read_parent=lambda n: vi.containment_graph.read_parent_title(n, config, issue_types),
         **kw,
     )
 

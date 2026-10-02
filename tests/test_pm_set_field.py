@@ -1742,8 +1742,8 @@ def test_main_parent_whose_type_cannot_be_told_is_named_in_the_first_form_with_a
     assert captured["bodies"][0].startswith("Feature: #9\n")
     assert native.posts
     assert (
-        "  [warn] parent: #9's type cannot be told from its title, so whether a task may "
-        "sit under it was not checked"
+        "  [warn] parent: #9's type cannot be told, so whether a task may sit under it "
+        "was not checked (an issue whose type cannot be told is outside the containment graph)"
     ) in capsys.readouterr().out
 
 

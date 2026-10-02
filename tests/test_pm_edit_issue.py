@@ -711,7 +711,7 @@ def test_validate_a_body_under_a_parent_the_type_may_not_sit_under_is_a_hard_rej
         titles=titles,
         body_format=body_format,
         issue_number=42,
-        read_parent=lambda n: ei.containment_graph.read_parent(n, {}, issue_types),
+        read_parent=lambda n: ei.containment_graph.read_parent_title(n, {}, issue_types),
     )
 
     assert asked == [7]

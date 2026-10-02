@@ -1283,7 +1283,7 @@ def _checked_parent(
     with the kind-driven Task prefixes (``[Bug]``, ``[Docs]``, …), so a Task
     under any Task is refused, as set-field reads it.
     """
-    parent = containment_graph.read_parent(
+    parent = containment_graph.read_parent_title(
         number, config, issue_types, classification=classification
     )
     check = containment_graph.check_parent(issue_types, child_type, parent)

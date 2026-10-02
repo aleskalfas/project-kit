@@ -398,7 +398,7 @@ def main() -> int:
             issue_number=args.issue_number,
             read_parent=(
                 (
-                    lambda number: containment_graph.read_parent(
+                    lambda number: containment_graph.read_parent_title(
                         number, config, issue_types, classification=classification
                     )
                 )

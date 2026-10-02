@@ -207,7 +207,7 @@ def main() -> int:
         issue_number=args.issue_number,
         # The parent's type is read as this issue's own is: through the
         # substrate-map's vocabulary where one is present.
-        read_parent=lambda number: containment_graph.read_parent(
+        read_parent=lambda number: containment_graph.read_parent_title(
             number,
             config,
             issue_types,

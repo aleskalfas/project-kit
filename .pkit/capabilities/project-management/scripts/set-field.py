@@ -1397,7 +1397,7 @@ def _parent_check(
     issue ``parent_num`` is not its parent and is not read."""
     if not containment_graph.takes_an_issue_parent(issue_types, structural_type):
         return None, None
-    parent = containment_graph.read_parent(
+    parent = containment_graph.read_parent_title(
         parent_num, config, issue_types, classification=classification
     )
     check = containment_graph.check_parent(issue_types, structural_type, parent)

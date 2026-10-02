@@ -419,7 +419,11 @@ def classify(
     # parent its type may not sit under, so it is refused, as create-issue and
     # set-field refuse it. The parent's title is in the list already read.
     parent_read = containment_graph.typed_parent(
-        parent, str(parent_row.get("title") or ""), issue_types, classification=classification
+        parent,
+        str(parent_row.get("title") or ""),
+        issue_types,
+        classification=classification,
+        substrate_map=None,
     )
     check = containment_graph.check_parent(issue_types, structural_type, parent_read)
     if check.verdict is containment_graph.Verdict.REFUSED:
