@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T23:49:41Z
+      at: 2026-10-02T00:35:01Z
       outcome: unchanged
-      unchanged-because: "#1254 has done-work and merge-pr pass the cross-repository confirmation on to the backbone's own guard; integration branches, the pull-request target and the merge path this use case walks are unchanged, so it holds"
+      unchanged-because: done-work's only change is that its warning after a failed move to Done names the issue in the move-issue line it prints; the gate, the merge path and the integration base this use case relies on are unchanged
 ---
 
 # UC-008 — Land integration-branch work during a stabilisation

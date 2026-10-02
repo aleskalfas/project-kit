@@ -40,7 +40,7 @@ def journal_move(
     target_state: str,
     actor: str | None,
     reason: str | None = None,
-) -> None:
+) -> bool:
     """Hand the completed move to the engine via `pkit process move` (best-effort).
 
     Per the seam-ordering contract: the domain side-effect (the label/board
@@ -67,6 +67,11 @@ def journal_move(
     forward cascade names the child move that caused a parent's, and a close
     names the mode it closed through. A move the invoker asked for directly
     passes none, and its argv is unchanged.
+
+    True when the engine took the move — recorded it, or validated it where no
+    journal is kept — and False when it refused or could not be reached, after
+    the warning; the forward cascade reports each ancestor step that came back
+    False.
     """
     argv = [
         "pkit",
@@ -99,10 +104,12 @@ def journal_move(
             "detection stays authoritative).",
             file=sys.stderr,
         )
-        return
+        return False
     if proc.returncode != 0:
         detail = (proc.stdout or proc.stderr or "").strip()
         report_unrecorded(issue_number, f"the process engine refused this move: {detail}")
+        return False
+    return True
 
 
 def report_unrecorded(issue_number: int, why: str) -> None:

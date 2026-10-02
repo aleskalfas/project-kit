@@ -40,7 +40,7 @@
       }
     },
     "evidence": {
-      "description": "Optional: the executed results the revalidation drew on, each an entry of the `pkit::analysis:revalidation-evidence` point copied whole, in the point's own entry shape (DEC-001 point 7) — a passing result as support for `holds`, a failing one as a regression's proof. A record copies rather than cites by id: the record is history, while the point holds what its fillers report now, so an id alone would point at nothing once a filler stops reporting that commit. Evidence supports an outcome and never replaces one, so each artefact an entry is for has its outcome above; the check also holds each entry's `id` to its own `<artefact>@<commit>`.",
+      "description": "Optional: the executed results the revalidation drew on, each an entry of the `pkit::analysis:revalidation-evidence` point copied whole, in the point's own entry shape (DEC-001 point 7) — a passing result as support for `holds`, a failing one as a regression's proof. A record copies rather than cites by id: the record is history, while the point holds what its fillers report now, so an id alone would point at nothing once a filler stops reporting that commit. Evidence supports an outcome and never replaces one, so each artefact an entry is for has its outcome above; the check also holds each entry's `id` to its own `<artefact>@<commit>#<check>`.",
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,

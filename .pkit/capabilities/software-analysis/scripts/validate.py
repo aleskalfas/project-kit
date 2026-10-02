@@ -13,8 +13,11 @@ use case's or journey's heading against its id and title, ids two artefacts
 share, an actor or step the stamp would refuse, a use case not anchored to
 its actor, a journey whose use-case anchors do not match its steps, and the
 revalidation records' front matter, the artefacts they cite and the evidence
-they copy. It reports an open regression — a record's `code-regressed`
-artefact not revalidated since — and never fails on it. `unanchored-because`
+they copy. Where it reads the evidence point, it warns on an entry whose `id`
+is not its own `<artefact>@<commit>#<check>`, and on a capability's entry whose
+check opens with another name than the capability's. It reports an open
+regression — a record's `code-regressed` artefact not revalidated since — and
+never fails on it. `unanchored-because`
 beside anchors is the core's finding, in the friction block the key belongs
 to (COR-050 point 12). `_lib/check.py` states every check and the record point
 it applies.

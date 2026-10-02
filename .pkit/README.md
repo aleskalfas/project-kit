@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T00:38:39Z
+      at: 2026-10-02T00:27:22Z
       outcome: unchanged
-      unchanged-because: The CLI reference now names every backbone command the cross-repository guard runs on and the fields of its documents; this index only points at that reference and describes no command's behaviour, so it holds
+      unchanged-because: The lifecycle README's How a data point resolves gains guidance on choosing a point's entry ids, so several fillers' entries stand side by side; the index's pointer to the lifecycle README and its one-line summary of that area still hold
 ---
 
 # project-kit

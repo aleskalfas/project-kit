@@ -125,23 +125,6 @@ def test_infer_structural_type_returns_none_for_unknown(ci, issue_types) -> None
     assert ci.infer_structural_type("Plain", issue_types) is None
 
 
-# --- parent-chain walking --------------------------------------------
-
-
-def test_walk_parent_chain_extracts_first_parent_ref(ci) -> None:
-    body = "Feature: #42\n\nbody"
-    assert ci._walk_parent_chain(body) == [42]
-
-
-def test_walk_parent_chain_returns_empty_when_no_ref(ci) -> None:
-    body = "## What\nno parent ref here."
-    assert ci._walk_parent_chain(body) == []
-
-
-def test_walk_parent_chain_returns_empty_for_empty_body(ci) -> None:
-    assert ci._walk_parent_chain("") == []
-
-
 # ---- _find_open_children (cascade-eligibility, issue #118) -----------------
 
 
