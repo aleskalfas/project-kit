@@ -90,7 +90,7 @@
         "parent_ref_form": {
           "type": "string",
           "minLength": 1,
-          "description": "The textual first-line parent reference per MET-004 — the projection of the native sub-issue / Milestone link into the body. `<N>` is the placeholder for the parent's issue number. One option for each entry of `parent_issue_types`, an issue parent's labelled with that type's rendered `title_prefix`; `can_contain` and `parent_issue_types` name the same edges from either end."
+          "description": "The textual first-line parent reference per MET-004 — the projection of the native sub-issue / Milestone link into the body. `<N>` is the placeholder for the parent's issue number, or the milestone's in the milestone option. One `<Label>: #<N>` option for each issue type in `parent_issue_types`, labelled with that type's rendered `title_prefix`, and the milestone option (`Milestone: [#<N>](../milestone/<N>)`) where the type's container is a milestone — `milestone` listed in `parent_issue_types`, or no issue parent at all (an EPIC, whose container is a Milestone); `can_contain` and `parent_issue_types` name the same issue-type edges from either end."
         },
         "parent_ref_optional": {
           "type": "boolean",
