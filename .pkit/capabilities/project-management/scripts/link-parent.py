@@ -26,8 +26,12 @@ issue gets exactly one outcome:
   already linked under #P  the native link exists — it is never posted again
   milestone parent         a `Milestone:` first line: a milestone is not an
                            issue, so there is nothing to link under
-  no parent line           the first line is not a parent-ref form the issue's
-                           type allows, or the title's type is not recognised
+  no parent line           the first line names no issue, or names the issue
+                           itself, or the title's type is not recognised
+  non-conforming           the first line names its parent in a form the
+                           issue's type does not allow: it names that parent
+                           for every reader, but this verb links only from an
+                           allowed form
   parent #P not found      the named parent is not an issue in this repository
   parent #P is closed      the parent is closed while the issue is open
   conflict                 the issue is natively a sub-issue of a different
@@ -43,9 +47,9 @@ re-parent the issue, and a re-run links it. A closed issue under a closed parent
 (history) links normally.
 
 A conflict is not linked either: taking the issue from the parent it has would
-be a re-parent this verb was not asked for. `set-field <N> --parent <P>` makes
-the two records agree on the parent you mean — it rewrites the first line and
-moves the native link together.
+be a re-parent this verb was not asked for. The native parent wins (DEC-005):
+each conflict is reported with the containment seam's line for settling it —
+`set-field <N> --parent <native parent>` rewrites the first line to name it.
 
 The first line is read by `_lib.body_parent_ref`, the same reading
 `create-issue` files and links by, against the forms the issue's own type
@@ -130,10 +134,11 @@ class Outcome(Enum):
     """What one selected issue got. The value is its label in the summary.
 
     The plan assigns each issue WOULD_LINK, ALREADY_LINKED, CONFLICT,
-    UNSUPPORTED, MILESTONE_PARENT, NO_PARENT_LINE or PARENT_UNAVAILABLE;
-    applying it turns WOULD_LINK into LINKED, ALREADY_LINKED, CONFLICT,
-    UNSUPPORTED or FAILED. TEXTUAL replaces WOULD_LINK in textual containment
-    mode, where nothing is linked. The declaration order is the summary's order.
+    UNSUPPORTED, MILESTONE_PARENT, NO_PARENT_LINE, NON_CONFORMING or
+    PARENT_UNAVAILABLE; applying it turns WOULD_LINK into LINKED,
+    ALREADY_LINKED, CONFLICT, UNSUPPORTED or FAILED. TEXTUAL replaces WOULD_LINK
+    in textual containment mode, where nothing is linked. The declaration order
+    is the summary's order.
     """
 
     WOULD_LINK = "would link"
@@ -142,6 +147,7 @@ class Outcome(Enum):
     TEXTUAL = "textual only"
     MILESTONE_PARENT = "milestone parent"
     NO_PARENT_LINE = "no parent line"
+    NON_CONFORMING = "parent line not an allowed form"
     PARENT_UNAVAILABLE = "parent not found or closed"
     CONFLICT = "conflict (another native parent)"
     UNSUPPORTED = "not linked (unsupported)"
@@ -155,7 +161,10 @@ class Entry:
     ``parent`` is the issue parent the first line names, when it names one.
     ``native`` is how reading that parent's native sub-issues went during the
     plan (native mode only), which tells a refused link on an instance whose
-    sub-issues demonstrably work from one on an instance without them.
+    sub-issues demonstrably work from one on an instance without them. ``line``
+    is the first line as the plan read it (`body_parent_ref.read_first_line`),
+    for the containment seam to hold a native parent to; ``settle`` is the
+    seam's line for settling a conflict, printed under it.
     """
 
     issue: int
@@ -163,6 +172,8 @@ class Entry:
     detail: str
     parent: int | None = None
     native: NativeReadOutcome | None = None
+    line: body_parent_ref.FirstLine | None = None
+    settle: str | None = None
 
 
 def main() -> int:
@@ -332,11 +343,28 @@ def classify(
             "parent-ref form is unknown",
         )
 
+    read = body_parent_ref.read_first_line(body, structural_type, issue_types)
     ref = body_parent_ref.parse_first_line(body, str(type_entry.get("parent_ref_form", "")))
     if ref is None:
         line = body_parent_ref.first_line(body)
         if not line:
             return Entry(number, Outcome.NO_PARENT_LINE, "no parent line — the body is empty")
+        if read.issue == number:
+            return Entry(
+                number,
+                Outcome.NO_PARENT_LINE,
+                f"no parent line — the first line names #{number} itself",
+            )
+        if read.form is body_parent_ref.LineForm.NON_CONFORMING:
+            # The line names its parent for every reader; this verb links only
+            # from a form the type allows, as create-issue files by.
+            return Entry(
+                number,
+                Outcome.NON_CONFORMING,
+                f"names #{read.issue} as its parent, non-conforming — {_quote(line)} is not "
+                f"a parent-ref form for type {structural_type!r}; not linked",
+                line=read,
+            )
         return Entry(
             number,
             Outcome.NO_PARENT_LINE,
@@ -373,7 +401,9 @@ def classify(
             f"parent #{parent} is closed while #{number} is open — not linked",
             parent=parent,
         )
-    return Entry(number, Outcome.WOULD_LINK, f"would link under #{parent}", parent=parent)
+    return Entry(
+        number, Outcome.WOULD_LINK, f"would link under #{parent}", parent=parent, line=read
+    )
 
 
 def check_native_links(entries: list[Entry], config: dict, reads: SubIssueReads) -> list[Entry]:
@@ -444,6 +474,7 @@ def _check_child_parent(entry: Entry, native: NativeReadOutcome, config: dict) -
             outcome=Outcome.CONFLICT,
             detail=_conflict_detail(holder, parent),
             native=native,
+            settle=_settle(entry, holder),
         )
     if native is NativeReadOutcome.UNREADABLE:
         return replace(
@@ -465,6 +496,15 @@ def _conflict_detail(holder: NativeParent | None, parent: int | None) -> str:
         f"conflict — natively a sub-issue of {held}, but the first line names "
         f"#{parent}; not linked (an issue has one native parent)"
     )
+
+
+def _settle(entry: Entry, holder: NativeParent | None) -> str | None:
+    """How a conflict is settled, in the containment seam's words — the native
+    parent wins (DEC-005) and the first line is rewritten to name it — or None
+    where the native parent could not be named."""
+    if holder is None or entry.line is None:
+        return None
+    return containment.compare_parents(entry.issue, entry.line, holder).remedy()
 
 
 def _as_textual(entry: Entry) -> Entry:
@@ -523,6 +563,8 @@ def apply_links(entries: list[Entry], config: dict, reads: SubIssueReads) -> lis
             Outcome.UNSUPPORTED: "[warn]",
         }.get(done.outcome, "[fail]")
         print(f"  {marker} #{done.issue} {done.detail}")
+        if done.settle is not None:
+            print(f"    {done.settle}")
         applied.append(done)
     if refused:
         print(f"  → {axis_labels.TEXTUAL_CONTAINMENT_WAY_OUT}")
@@ -562,6 +604,7 @@ def _after_link(entry: Entry, result: LinkResult) -> Entry:
             entry,
             outcome=Outcome.CONFLICT,
             detail=result.quoting_refusal(_conflict_detail(result.current_parent, parent)),
+            settle=_settle(entry, result.current_parent),
         )
     if result.outcome is LinkOutcome.UNSUPPORTED:
         if entry.native is NativeReadOutcome.READ:
@@ -680,22 +723,14 @@ def _print_plan(entries: list[Entry], *, mode: str, dry_run: bool) -> None:
     print(f"{VERB}: {len(entries)} issue(s) — containment: {mode}{scope}{run}")
     for entry in entries:
         print(f"  #{entry.issue}  {entry.detail}")
+        # A conflict is two records naming different parents; the native one
+        # wins (DEC-005), and the seam says how the first line is brought to it.
+        if entry.settle is not None:
+            print(f"    {entry.settle}")
     targets = _refresh_targets(entries)
     if targets:
         print(f"children views to refresh: {', '.join(f'#{p}' for p in targets)}")
-    if any(entry.outcome is Outcome.CONFLICT for entry in entries):
-        print(_CONFLICT_REMEDY)
     print(f"plan: {_summary(entries)}")
-
-
-# A conflict is two records naming different parents; which one is right is the
-# operator's call, so the verb names the one command that makes them agree
-# either way rather than picking a side.
-_CONFLICT_REMEDY = (
-    "to resolve a conflict, set the parent you mean: "
-    "`pkit pm set-field <N> --parent <P>` rewrites the first line and moves the "
-    "native link together"
-)
 
 
 def _summary(entries: list[Entry]) -> str:
