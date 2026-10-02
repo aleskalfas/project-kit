@@ -1,0 +1,29 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  A parent of a type the issue's type may not sit under is refused, as the
+  containment record (DEC-005) has always required. `create-issue --parent N`
+  and `set-field <n> --parent N` used to file or re-parent under such a parent —
+  a Task under a Task, a Feature under a Feature — naming it in the first form
+  and printing a `[warn]`; they now stop before anything is written (no body, no
+  native link, no label), `--dry-run` included, with an error that names the
+  child's type, the parent's type and the first-line forms the child's type
+  allows. There is no override, and `hierarchy: advisory` does not soften it. To
+  file under a refused parent, pick a parent of one of those types, or change
+  the issue's type. `create-issue` without `--parent` holds the parent its
+  body's first line names the same way. The parent's type is read from its
+  title with the kind-driven Task prefixes, so a `[Bug]` or `[Docs]` issue is a
+  Task as a parent. A parent that cannot be read now refuses the filing
+  (`create-issue` exits 2, `set-field` exits 1), since nothing can be checked; a
+  parent whose title carries no type is accepted with a warning that nothing
+  was checked. An EPIC's `--parent` names a milestone: nothing is read or
+  checked for it, and `create-issue` no longer links the EPIC natively under
+  the issue of that number. `link-parent` reports a first line naming a parent
+  of the wrong type as a new outcome, `parent's type not allowed`, and does not
+  link it. Issues already under such a parent are not rewritten: `validate-issue`
+  reports them as `body.parent-ref.containment` at hard-reject — so its exit code
+  is 1 for them — reading the parent once, only where the first line names one,
+  and reporting a parent it cannot read as `body.parent-ref.containment-unchecked`
+  at warning; `edit-issue` checks a body it writes the same way.

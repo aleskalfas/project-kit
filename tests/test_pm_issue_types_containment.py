@@ -2,10 +2,10 @@
 
 The containment graph is written three times in the shipped schema: a type's
 `can_contain`, a type's `parent_issue_types`, and the options of a type's
-`parent_ref_form`. No script refuses a parent the graph does not allow yet, but
-the forms are what every reader of an issue's parent goes by — an edge the graph
-allows with no form to write it on a first line ends every walk at that issue (a
-Feature under an Umbrella did). These pin the three together, from either end,
+`parent_ref_form`. The edges are what a writer of a parent is held to
+(`_lib/containment_graph`, #1313), and the forms are what every reader of an
+issue's parent goes by — an edge the graph allows with no form to write it on a
+first line ends every walk at that issue (a Feature under an Umbrella did). These pin the three together, from either end,
 and the milestone edge with them: a form has one option per issue-parent type
 and the milestone option exactly where the type's container is a milestone —
 `milestone` among its parents, or no issue parent at all (an EPIC).

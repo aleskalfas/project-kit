@@ -22,9 +22,9 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-02T10:23:16Z
+      at: 2026-10-02T12:55:52Z
       outcome: unchanged
-      unchanged-because: create-issue now writes its first-line parent-ref through one shared line writer, labelled with the parent's own type; it reads no instance identity, ownership claim or audit trail and makes no claim, so resuming a clone after every session died is unchanged
+      unchanged-because: create-issue now refuses, before anything is written, a parent the new issue's type may not sit under; it still reads no instance identity, ownership claim or audit trail and makes no claim, so resuming a clone after every session died is unchanged
 ---
 
 # UC-001 — Resume a clone after every session died
