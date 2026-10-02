@@ -15,9 +15,8 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-02T03:28:17Z
-      outcome: unchanged
-      unchanged-because: "set-field --parent refuses up front a body whose first line is a malformed Integration: marker, naming the line and the required form, and a parent-ref prepended over leading blank lines replaces them; DEC-013 states that write path. The README's account still holds: set-field validates the whole batch up front and refuses before any mutation on a hard inconsistency, and --parent rewrites the body's first parent-ref line and moves the native link"
+      at: 2026-10-02T03:48:57Z
+      outcome: updated
 ---
 
 # project-management capability
