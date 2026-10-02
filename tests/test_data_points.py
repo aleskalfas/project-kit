@@ -934,6 +934,26 @@ def test_an_unborn_default_branch_starts_the_filler_and_empty_is_its_answer(
     assert len(_runs(repo)) == 1  # not started a second time
 
 
+def test_history_git_cannot_read_is_named_so_never_as_no_commit_yet(repo: AdopterRepo) -> None:
+    """A commit whose object git cannot read is history that exists and was not read
+    (COR-052 point 6): the report says git cannot read HEAD, never that there is no
+    commit yet — which a repository whose commit is there does not have."""
+    _provider(repo)
+    _command_contributor(repo, "evidence", _printing(EMPTY), reads=["history"])
+    repo.lose_object(repo.commit("initial"))
+    resolution = _resolve(repo)
+    point = resolution.point(READERS)
+    assert point is not None
+    assert point.fillers[0].reads == (dp.FillerRead("history", None, None, False),)
+    assert _reads_line(resolution) == [
+        f"{READERS}: evidence (command 'export') reads history (git cannot read HEAD here)"
+    ]
+    document = dp.point_document(point)
+    assert document["fillers"][0]["reads"] == [
+        {"state": "history", "ref": None, "commit": None, "shallow": False}
+    ]
+
+
 def test_a_reads_the_backbone_does_not_understand_is_never_run(repo: AdopterRepo) -> None:
     _provider(repo)
     _command_contributor(repo, "evidence", _printing(ANSWER), reads=["future"])

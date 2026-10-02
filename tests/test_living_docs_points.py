@@ -30,6 +30,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -378,6 +379,36 @@ def test_a_check_without_a_version_reads_as_the_first() -> None:
     assert doc_check_lib.read_friction(".", _check_answering(versioned)) == versioned
 
 
+def _base_answering(document: dict[str, Any]) -> Any:
+    """A runner answering `pkit repository base --json` with `document`."""
+
+    def run(argv: list[str], **_kw: Any) -> subprocess.CompletedProcess[str]:
+        assert argv == ["pkit", "repository", "base", "--json"]
+        return subprocess.CompletedProcess(argv, 0, json.dumps(document), "")
+
+    return run
+
+
+def _with_head(commit: str | None, unborn: bool, problem: str | None) -> dict[str, Any]:
+    head = {"commit": commit, "unborn": unborn, "problem": problem}
+    return {"schema_version": 1, "default_branch": {}, "base": {}, "head": head}
+
+
+def test_whether_head_names_a_commit_is_the_backbone_s_reading() -> None:
+    """None yet is an answer, and nothing is owed; a HEAD git cannot read is no
+    answer, in the backbone's words (COR-052 point 6)."""
+    assert doc_check_lib.has_commit(".", _base_answering(_with_head("a" * 40, False, None)))
+    assert not doc_check_lib.has_commit(".", _base_answering(_with_head(None, True, None)))
+    unread = "git cannot read HEAD here: fatal: detected dubious ownership in repository"
+    with pytest.raises(doc_check_lib.NoAnswer) as refused:
+        doc_check_lib.has_commit(".", _base_answering(_with_head(None, False, unread)))
+    assert str(refused.value) == unread
+    # A backbone whose reading names no HEAD cannot say there is no commit yet.
+    without = {"schema_version": 1, "default_branch": {}, "base": {}}
+    with pytest.raises(doc_check_lib.NoAnswer, match="exited 0 without its document"):
+        doc_check_lib.has_commit(".", _base_answering(without))
+
+
 # --- reader resolution through the backbone ------------------------------------------------
 
 
@@ -656,6 +687,58 @@ def test_history_not_yet_made_is_empty_and_history_cut_short_is_no_answer(
     cut = _fill_doc_check(shallow)
     assert (cut.returncode, cut.stdout) == (1, ""), cut.stderr
     assert "git fetch --unshallow" in cut.stderr
+
+
+def _git_asked_outside_pkit(
+    tmp_path_factory: pytest.TempPathFactory, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, Path]:
+    """A `pkit` and a `git` first on PATH. The `pkit` marks every process it starts;
+    the `git` writes its arguments, one line per call, to the first file returned —
+    and to the second when the call comes from outside `pkit`, one the script under
+    test makes of its own — then runs the real one."""
+    real = shutil.which("git")
+    assert real is not None
+    bin_dir = tmp_path_factory.mktemp("git-outside-pkit")
+    every, outside = bin_dir / "every", bin_dir / "outside"
+    every.touch()
+    outside.touch()
+    marker = "PKIT_TEST_INSIDE_BACKBONE"
+    scripts = {
+        "pkit": f'#!/bin/sh\n{marker}=1\nexport {marker}\nexec "{pkit_on_path / "pkit"}" "$@"\n',
+        "git": (
+            f'#!/bin/sh\necho "$*" >> "{every}"\n'
+            f'[ -n "${marker}" ] || echo "$*" >> "{outside}"\nexec "{real}" "$@"\n'
+        ),
+    }
+    for name, body in scripts.items():
+        (bin_dir / name).write_text(body, encoding="utf-8")
+        (bin_dir / name).chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    return every, outside
+
+
+def test_a_history_git_cannot_read_is_no_answer_and_the_filler_asks_git_nothing(
+    docs_project: AdopterRepo,
+    pkit_on_path: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A commit is there and git cannot read it: the filler exits 1 and prints
+    nothing — never `[]`, the answer only where there is no commit yet (COR-052
+    point 6). Whether HEAD names a commit is the backbone's reading, `head` in
+    `pkit repository base --json`: the filler asks git nothing of its own."""
+    repo = docs_project
+    head = repo.commit("base", {"src/a.py": "A = 1\n"})
+    repo.lose_object(head)
+    every, outside = _git_asked_outside_pkit(tmp_path_factory, pkit_on_path, monkeypatch)
+    unread = _fill_doc_check(repo.root)
+    assert (unread.returncode, unread.stdout) == (1, ""), unread.stderr
+    assert unread.stderr == (
+        f"error: HEAD names {head[:12]}, which git cannot read as a commit here; "
+        "no obligations can be given.\n"
+    )
+    assert every.read_text(encoding="utf-8")  # the backbone asked, through this git
+    assert outside.read_text(encoding="utf-8") == ""
 
 
 def test_the_filler_contributes_page_friction_and_uncovered_surface(

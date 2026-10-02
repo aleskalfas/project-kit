@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T02:11:20Z
+      at: 2026-10-02T02:09:34Z
       outcome: unchanged
-      unchanged-because: The CLI reference gains pull-request delete-branch's outcomes, its refusal of a head other than the merged one, its exit-code table, and validate's report of inferred process definitions from main; this index points at that reference by area and lists no pull-request subcommand, and no command or area it names was added, renamed or removed, so it holds
+      unchanged-because: a history filler reads whether HEAD has a commit from the backbone, and the base reading gains head; what this page says of the areas and commands it indexes still holds
 ---
 
 # project-kit

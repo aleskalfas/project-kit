@@ -19,18 +19,20 @@ anchors. A deferred page gives none: its deferral is the answer.
 The backbone runs it wherever the point resolves — `pkit validate`, `pkit
 status`, `pkit connections resolve` — as a query (COR-052 point 6): from the
 project root, with `--json` alone and the offline marker set. It takes no
-parameter: it reads the repository — HEAD and its history, through `pkit
-friction check --all --json`, and which documents are pages, from the working
-tree through `pkit friction artefacts --json` — writes nothing and needs no
-network. Its `commands:` entry declares what it reads beyond the working tree,
-`reads: [history]`, so the backbone's report names the commit HEAD was read
-at; it reads no settled state and no base — the base a pull request is
-compared with bounds the consumer's diff, never this filler (COR-052 point 6).
-History that does not exist yet holds nothing: with no commit it answers `[]`.
-History that exists and this clone cannot reach gives no answer: a page whose
-friction lies beyond a shallow clone's history exits 1, never with an empty
-answer. The contribution is inert while no capability provides the
-work-tracking role; nothing here asks.
+parameter: it reads the repository through the backbone and asks git nothing
+itself — whether HEAD names a commit, `head` in `pkit repository base --json`;
+HEAD and its history, through `pkit friction check --all --json`; and which
+documents are pages, from the working tree through `pkit friction artefacts
+--json` — writes nothing and needs no network. Its `commands:` entry declares
+what it reads beyond the working tree, `reads: [history]`, so the backbone's
+report names the commit HEAD was read at; it reads no settled state and no
+base — the base a pull request is compared with bounds the consumer's diff,
+never this filler (COR-052 point 6). History that does not exist yet holds
+nothing: with no commit it answers `[]`. History that exists and this clone
+cannot reach gives no answer: a HEAD git cannot read, or a page whose friction
+lies beyond a shallow clone's history, exits 1, never with an empty answer.
+The contribution is inert while no capability provides the work-tracking role;
+nothing here asks.
 
 Usage:
   pkit living-docs fill-doc-check           one line per obligation, for a person
@@ -38,9 +40,9 @@ Usage:
 
 Exit codes:
   0  answered
-  1  no answer: the friction check or the places gave no document, or a page's
-     friction lies beyond a shallow clone's history — never an empty answer in
-     its place
+  1  no answer: the friction check, the places or HEAD's reading gave no
+     document, git cannot read HEAD, or a page's friction lies beyond a shallow
+     clone's history — never an empty answer in its place
 """
 
 from __future__ import annotations

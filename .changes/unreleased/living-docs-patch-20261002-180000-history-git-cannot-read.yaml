@@ -1,0 +1,15 @@
+component: living-docs
+kind: patch
+custom:
+  category: Fixed
+  requires_backbone: release
+body: >
+  `fill-doc-check` no longer answers "nothing owed" when git cannot read a
+  commit that is there, such as a missing object or a checkout git refuses as
+  unsafe. It used to ask git itself whether HEAD named a commit and took any
+  failure for a repository with no commit. It now reads that from the backbone,
+  `head` in `pkit repository base --json`, and asks git nothing of its own.
+  Where git cannot read HEAD it exits 1 and prints nothing, so a documentation
+  check that reads it reports itself unresolved. A repository with no commit
+  yet still owes nothing. It needs the backbone this release ships, the first
+  whose reading carries `head`.
