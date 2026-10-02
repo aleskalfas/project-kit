@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T22:17:09Z
+        at: 2026-10-02T00:34:56Z
         outcome: unchanged
-        unchanged-because: every title rule the schema declares now runs, and DEC-011 states them; what this page says of titles and filing still holds
+        unchanged-because: done-work's only change is that its warning after a failed move to Done names the issue in the move-issue line it prints; nothing of a stabilisation, its freeze or its guards changed
 ---
 
 # Glossary

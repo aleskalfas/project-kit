@@ -20,9 +20,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T22:17:12Z
+      at: 2026-10-02T00:35:04Z
       outcome: unchanged
-      unchanged-because: DEC-014's example of a warning now names the Task title's length floor, as DEC-011 states it; what this page takes from the severity model — which findings refuse, which need an audited bypass and which warn — is unchanged
+      unchanged-because: done-work's only change is that its warning after a failed move to Done names the issue in the move-issue line it prints; stabilising a Milestone, and the guard on done-work this use case intends, are untouched
 ---
 
 # UC-010 — Stabilise a Milestone for a release
