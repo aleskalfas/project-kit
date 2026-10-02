@@ -629,12 +629,20 @@ def _index(workflow: dict[str, Any], name_prefix: str) -> int:
     )
 
 
-def test_it_runs_on_a_schedule_and_after_every_push_to_main(workflow: dict[str, Any]) -> None:
+def test_it_runs_after_every_push_to_main_daily_and_by_hand_and_on_nothing_else(
+    workflow: dict[str, Any],
+) -> None:
     triggers = workflow["on"]
+    assert set(triggers) == {"push", "schedule", "workflow_dispatch"}  # no gate among them
     assert triggers["push"] == {"branches": ["main"]}
     assert [entry["cron"] for entry in triggers["schedule"]] == ["41 5 * * *"]
-    assert "workflow_dispatch" in triggers
-    assert "pull_request" not in triggers and "merge_group" not in triggers  # no gate
+    assert triggers["workflow_dispatch"] == {}
+
+
+def test_only_main_publishes(workflow: dict[str, Any]) -> None:
+    """One job, guarded as a whole: a run dispatched from another branch writes no issue."""
+    (job,) = workflow["jobs"].values()
+    assert job["if"] == "github.ref == 'refs/heads/main'"
 
 
 def test_least_privilege_and_one_run_at_a_time(workflow: dict[str, Any]) -> None:
@@ -642,6 +650,8 @@ def test_least_privilege_and_one_run_at_a_time(workflow: dict[str, Any]) -> None
     assert workflow["concurrency"] == {"group": "friction-report", "cancel-in-progress": False}
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "secrets." not in text  # the built-in token only
+    handed_the_token = [s["name"] for s in _steps(workflow) if "github.token" in str(s)]
+    assert handed_the_token == ["Publish to the tracking issue"]
 
 
 def test_the_full_history_is_fetched_and_confirmed_before_the_check(
@@ -649,10 +659,26 @@ def test_the_full_history_is_fetched_and_confirmed_before_the_check(
 ) -> None:
     steps = _steps(workflow)
     checkout = steps[_index(workflow, "Checkout")]
-    assert checkout["uses"].startswith("actions/checkout@") and checkout["with"]["fetch-depth"] == 0
+    assert checkout["uses"].startswith("actions/checkout@")
+    assert checkout["with"] == {"fetch-depth": 0, "persist-credentials": False}
     confirm = _index(workflow, "Confirm the full history")
     assert "git rev-parse --is-shallow-repository" in steps[confirm]["run"]
     assert confirm < _index(workflow, "Whole-repository friction check")
+
+
+def test_the_query_commands_are_provisioned_before_the_check_as_the_required_check_does(
+    workflow: dict[str, Any],
+) -> None:
+    """The same step, in the same place, as `checks.yml` runs before its aggregator."""
+    checks = YAML(typ="safe").load((WORKFLOW.parent / "checks.yml").read_text(encoding="utf-8"))
+    (theirs,) = [
+        s for s in checks["jobs"]["checks"]["steps"] if s.get("name", "").startswith("Sync")
+    ]
+    sync = _index(workflow, "Sync")
+    assert _steps(workflow)[sync] == theirs
+    assert theirs["run"] == "uv run pkit sync"
+    assert _index(workflow, "Install project") < sync
+    assert sync < _index(workflow, "Whole-repository friction check")
 
 
 def test_it_runs_the_check_renders_it_and_publishes_it(workflow: dict[str, Any]) -> None:
