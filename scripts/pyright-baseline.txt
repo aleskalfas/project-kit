@@ -111,9 +111,9 @@ src/project_kit/process_dependencies.py reportUnknownMemberType 4
 src/project_kit/process_graph.py reportUnknownMemberType 8
 src/project_kit/process_graph.py reportUnknownVariableType 8
 src/project_kit/process_health.py reportPrivateUsage 1
-src/project_kit/process_health.py reportUnknownArgumentType 8
-src/project_kit/process_health.py reportUnknownMemberType 12
-src/project_kit/process_health.py reportUnknownVariableType 12
+src/project_kit/process_health.py reportUnknownArgumentType 6
+src/project_kit/process_health.py reportUnknownMemberType 10
+src/project_kit/process_health.py reportUnknownVariableType 10
 src/project_kit/process_journal.py reportUnknownMemberType 3
 src/project_kit/process_journal.py reportUnknownVariableType 1
 src/project_kit/project_config.py reportUnknownArgumentType 9
