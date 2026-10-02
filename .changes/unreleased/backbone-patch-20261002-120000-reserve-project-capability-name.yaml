@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Changed
+  pr: "1288"
 body: >
   `project` is a reserved capability name, as `core` is: `pkit new capability`,
   `pkit capabilities install` and `pkit capabilities register` refuse it, giving
