@@ -585,7 +585,13 @@ def main() -> int:
             for mnum in milestone_nums:
                 _check_milestone_eligibility(mnum, config, issue_types, classification)
 
-    # Fire after_close_issue hooks per DEC-024.
+    # Fire after_close_issue hooks per DEC-024. The occurrence is when the issue
+    # was closed: a re-run on the same close reads the same time, so its hook
+    # comment posts nothing new, and a close after a reopen has a time of its
+    # own, so its comment posts (#1243). An issue already closed when this run
+    # began carries the time in the read made then; one this run closed is read
+    # again, and only if a `post-comment` hook is about to post.
+    closed_at = str(issue.get("closedAt") or "") if state == "closed" else ""
     fire_hooks(
         "after_close_issue",
         context={
@@ -596,6 +602,7 @@ def main() -> int:
         },
         config=config,
         capability_root=capability_root,
+        occurrence=lambda: closed_at or _closed_at(args.issue_number, config),
     )
 
     return 0
@@ -955,7 +962,14 @@ def _find_open_children(parent_num: int, config: dict) -> list[int] | None:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(issue_number, config, fields="title,body,state,labels,milestone")
+    return gh_get_issue(issue_number, config, fields="title,body,state,labels,milestone,closedAt")
+
+
+def _closed_at(issue_number: int, config: dict) -> str:
+    """When the issue was last closed, as GitHub reports it, or "" when it is
+    open or cannot be read."""
+    issue = gh_get_issue(issue_number, config, fields="closedAt")
+    return str((issue or {}).get("closedAt") or "")
 
 
 def _gh_comment(issue_number: int, body: str, config: dict) -> bool:
