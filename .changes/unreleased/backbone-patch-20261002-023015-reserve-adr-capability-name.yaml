@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Changed
+  pr: "1291"
 body: >
   `adr` is a reserved capability name, as `core` and `project` are: `pkit new
   capability`, `pkit capabilities install` and `pkit capabilities register`
