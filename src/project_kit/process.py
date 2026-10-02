@@ -2505,9 +2505,9 @@ def detection_faults(definition: ProcessDefinition) -> list[str]:
     an error: its states declare more than one mode; its `classified`
     detections name one command under different `with` mappings — separate
     classifiers the runner gives the same input, so an answer one of them can
-    read is unreadable for the other (both ADR-062 point 9); and, in an
-    `inferred` definition, two or more states name one predicate, so each of
-    them reads the same answer and none but the first can be the position."""
+    read is unreadable for the other; and, in an `inferred` definition, two
+    or more states name one predicate, so each of them reads the same answer
+    and none but the first can be the position (all three ADR-062 point 9)."""
     faults: list[str] = []
     modes = definition.detection_modes()
     if len(modes) > 1:
@@ -2671,8 +2671,8 @@ def definitions_outcome(repo_root: Path) -> Outcome:
     whose `process.id` matches (the loader every `pkit process` command uses) —
     and its detections are readable: its states declare one detection mode,
     its `classified` detections name no command under different `with`
-    mappings (both ADR-062 point 9), and no two states of an `inferred`
-    definition name one predicate. All three are errors. This is the check
+    mappings, and no two states of an `inferred` definition name one
+    predicate. All three are errors (ADR-062 point 9). This is the check
     that reaches every definition, a capability's companion schema that
     restates the process block included (ADR-062 point 12).
 
