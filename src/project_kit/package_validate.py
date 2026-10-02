@@ -64,6 +64,13 @@ discovery's one judgment of it (`friction_discovery.held_folders`), which also
 leaves it holding nothing: every held file has one holder, and no declaration
 empties another's.
 
+One check of the registry is this pass's too: a capability registered under a
+name the lifecycle reserves (`capabilities.RESERVED_CAPABILITY_NAMES`), which
+`pkit new capability`, `capabilities install` and `capabilities register`
+refuse, is an ERROR at its `component.name`, giving the refusal's reason and
+the rename that lasts for where the package comes from — one registered before
+its name was reserved stays registered until it is renamed.
+
 The other checks across packages — roles and their providers, counterparts
 against point versions, mandatory marks and cycles, fingerprints, the version
 relations — are the wiring resolver's (`connections`, COR-053 point 7).
@@ -101,6 +108,7 @@ from project_kit.backbone_schemas import (
     load_backbone_schema,
     render_unknown_key,
 )
+from project_kit.capabilities import RESERVED_CAPABILITY_NAMES
 from project_kit.command_runner import command_leaves, resolve_command
 from project_kit.dispatcher import (
     ALIASES_KEY,
@@ -903,7 +911,8 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
     each with its provenance (`package_provenance`), so a finding names the fix
     that lasts, and under the project's journal settings, so an entry is warned
     on exactly when the `.pkit/.gitignore` render drops it; then add, to each
-    capability's report, the aliases of it another name shadows
+    capability's report, a name the lifecycle reserves
+    (`_reserved_name_findings`), the aliases of it another name shadows
     (`_shadowed_alias_findings`) and the held folders of it that overstep their
     bounds (`_held_folder_findings`)."""
     schema, note = load_package_schema(target_root)
@@ -911,22 +920,27 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
     journal = process_journal.read_settings(target_root)
     shadowed = _shadowed_alias_findings(target_root)
     unbounded = _held_folder_findings(target_root)
-    reports = [
-        _with_pass(
-            validate_package_file(
-                package,
-                schema,
-                component_dir=component_dir,
-                expected_name=entry.name,
-                provenance=package_provenance(target_root, package, entry.origin, ownership),
-                journal=journal,
-            ),
-            [*shadowed.get(entry.name, []), *unbounded.get(entry.name, [])]
-            if entry.kind == "capability"
-            else [],
+    reports: list[PackageReport] = []
+    for entry, component_dir, package in _registered_packages(target_root):
+        provenance = package_provenance(target_root, package, entry.origin, ownership)
+        report = validate_package_file(
+            package,
+            schema,
+            component_dir=component_dir,
+            expected_name=entry.name,
+            provenance=provenance,
+            journal=journal,
         )
-        for entry, component_dir, package in _registered_packages(target_root)
-    ]
+        if entry.kind == "capability":
+            report = _with_pass(
+                report,
+                [
+                    *_reserved_name_findings(entry.name, provenance),
+                    *shadowed.get(entry.name, []),
+                    *unbounded.get(entry.name, []),
+                ],
+            )
+        reports.append(report)
     return PackagesPass(reports=tuple(reports), schema_note=note)
 
 
@@ -937,6 +951,36 @@ def _with_pass(report: PackageReport, new: list[PackageFinding]) -> PackageRepor
     findings = list(report.findings)
     _add_pass(findings, new)
     return replace(report, findings=tuple(findings))
+
+
+def _reserved_name_findings(name: str, provenance: Provenance) -> list[PackageFinding]:
+    """A capability registered under a name the lifecycle reserves, as an error at
+    its `component.name`: the reason `pkit new capability`, `capabilities install`
+    and `capabilities register` refuse the name with, and the rename that lasts —
+    the project renames its own capability; a package a sync restores is its
+    author's to rename."""
+    reason = RESERVED_CAPABILITY_NAMES.get(name)
+    if reason is None:
+        return []
+    if provenance is Provenance.OWN:
+        fix = (
+            f"Rename it: unregister it with `pkit capabilities uninstall {name}`, which keeps "
+            f"the files of a capability the project authors, rename `.pkit/capabilities/{name}/` "
+            f"and its `component.name`, and register it under the new name with "
+            f"`pkit capabilities register <new-name>`."
+        )
+    else:
+        fix = (
+            f"A sync restores this package, so the rename is its author's: uninstall it with "
+            f"`pkit capabilities uninstall {name}` until it ships under another name."
+        )
+    return [
+        PackageFinding(
+            "/component/name",
+            Severity.ERROR,
+            f"capability name {name!r} is reserved: {reason}. {fix}",
+        )
+    ]
 
 
 def _shadowed_alias_findings(target_root: Path) -> dict[str, list[PackageFinding]]:

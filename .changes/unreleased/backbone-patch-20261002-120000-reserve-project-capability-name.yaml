@@ -1,0 +1,20 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+body: >
+  `project` is a reserved capability name, as `core` is: `pkit new capability`,
+  `pkit capabilities install` and `pkit capabilities register` refuse it, giving
+  the reason (#1269). `project` is the name the project's own entries carry
+  where a capability's carry the capability's name — the namespace of the
+  project's decision records and agents, and the opening name of the project's
+  checks in an evidence point — so a capability named `project` would be
+  indistinguishable from the project itself. A project that already has a
+  capability named `project` keeps it registered, but sees `pkit validate`
+  fail with an error at that capability's `component.name` that names the
+  rename: `pkit capabilities uninstall project` (which keeps an authored
+  capability's files), rename the directory and its `component.name`, and
+  `pkit capabilities register <new-name>`. Until it is renamed, `pkit
+  capabilities register project` and `pkit capabilities refresh project`
+  refuse it as well. `pkit validate` reports a capability registered under
+  `core` the same way.
