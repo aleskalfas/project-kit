@@ -13,7 +13,7 @@ pkit:
         - .github/workflows/release-tag.yml
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
     revalidated:
-      at: 2026-10-02T04:50:39Z
+      at: 2026-10-02T11:03:47Z
       outcome: updated
 ---
 
@@ -457,6 +457,33 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
 - **Checks preconditions.** The PR must be open, mergeable, and have all
   required checks green; a conflicting, red, or still-running PR is refused with
   a clear reason.
+- **Lands through `pkit pull-request land`'s sequence**, by import, and holds
+  no copy of it (`.pkit/cli/README.md`, "Pull-request commands"):
+  - it plans first: the landing as a dry run, pinned to the head its gates
+    read, with `--force` as the landing's `--allow-dropped-head` and
+    `--queued-bad-shape warn`;
+  - a plan that finds the PR merged, or closed, or cannot read it, or finds
+    it already queued — at the checked head, waited for, or at another
+    head, taken out of the queue — skips the gates;
+  - every other plan runs the gates first, then the plan's own refusal,
+    then the landing, which reads the PR again just before its request;
+  - `--dry-run` reports from the plan and lands nothing;
+  - how the landing ended is read from its end document, never from an
+    exit code, and every word of the report is release's own.
+- **Exits by how the landing ended.**
+  - `0` — merged, after the clean-up; or closed, nothing to merge.
+  - `4` — queued, or unconfirmed: nothing deleted, a re-run completes it.
+  - `3` — the head moved, the queue dropped the PR, or GitHub never reports
+    a merge gh accepted; nothing deleted.
+  - `1` — refused, unreadable or failed; or a gate refused.
+- **What landing through the sequence changed.**
+  - A head that moved between release's view and the landing's reading
+    exits 3, with nothing sent; the pinned request used to fail, exit 1.
+  - A PR auto-merge holds on a base without a queue is gated and merged
+    directly; it used to be taken for a queued PR and waited for without
+    the gates.
+  - A queue switched on, or a base changed, after release's view is judged
+    at the landing's reading, just before the request.
 - **Merges** per the project's merge convention: one squash commit on the
   base branch whose subject is the PR title, pinned to the head whose checks
   it read, head branch deleted on merge. The merge is the backbone's one merge
@@ -530,9 +557,9 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   says so plainly — what was asked, that whether it was made is not known,
   and the command that reads the PR — claiming neither that the release
   merged nor that it did not, and exits 4 with nothing deleted, for a run
-  once GitHub answers to complete. A run that cannot read the release PR, or
-  how its base merges, before it asks anything says that this run asked
-  nothing. When the head moved while the PR was queued and the queue merged
+  once GitHub answers to complete. A run that cannot read the release PR —
+  its view answered with something that is not JSON among it — or how its
+  base merges, before it asks anything says that this run asked nothing. When the head moved while the PR was queued and the queue merged
   it before it could be taken out, the run says it merged, and at which head,
   exit 3, nothing deleted; a re-run deletes the head branch.
 - **Does not tag.** `release-tag.yml` cuts the backbone tag on the resulting

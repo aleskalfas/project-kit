@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T07:46:44Z
+      at: 2026-10-02T11:03:50Z
       outcome: unchanged
-      unchanged-because: the CLI README now says which verbs refuse a name an adapter or a capability already holds, and the lifecycle README how validation reports a pair registered under one name; this page maps the cli area as the pkit command-line surface and the lifecycle area as packaging and dependency architecture, one line each, which still holds
+      unchanged-because: the CLI README now documents pkit pull-request land, the landing sequence in one command, and that release merge lands through it; this page maps the cli area as the pkit command-line surface in one line, which still holds
 ---
 
 # project-kit
