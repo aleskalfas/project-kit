@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  `pkit new decision adr <slug>` derives where the record goes from the
+  documentation roots when the overlay has no `adr-records` key (COR-049 points
+  3 to 5, #1264), where it used to refuse. The location is the internal root
+  plus `architecture/decisions` — `docs/architecture/decisions` with the
+  default root — and is recorded in `.pkit/agents/project/overlay.yaml` before
+  the first record is stamped there, so a later change of root moves nothing.
+  The command says what it recorded, the root it was derived from and where to
+  change it, and that `pkit sync` deploys the agents that now reach the folder.
+  A folder that is absent or empty is created and recorded without asking. A
+  folder that already holds documents takes consent: a terminal is asked once,
+  and the new `--yes` consents without a prompt. A non-interactive caller —
+  a script, CI, an agent — that runs the command without `--yes` over such a
+  folder is refused, exit 1, with nothing recorded and nothing stamped, and is
+  named the command to run with `--yes`. An explicit `adr-records` value still
+  wins, and a location inside `.pkit/`, explicit or derived, is still refused.

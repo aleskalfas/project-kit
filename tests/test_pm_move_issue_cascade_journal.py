@@ -23,6 +23,7 @@ import pytest
 from tests.pm_lifecycle_world import (
     AUTHORED_BODY,
     INVOKER,
+    REASON,
     Tracker,
     World,
     load_script,
@@ -126,12 +127,13 @@ def test_each_cascaded_parent_move_is_journaled_from_where_the_parent_was(
         _reason(child, "backlog → in-progress"),
     ]
     assert {entry["actor"] for entry in journal} == {INVOKER.github_login}
-    # The child's own moves were asked for directly and carry no reason.
+    # The child's own moves were asked for directly: its promotion carries the
+    # justification its gate was bypassed with (#1232), its start no reason.
     assert world.moves(child) == [
         ("todo", "backlog", "promote-issue"),
         ("backlog", "in-progress", "start-work"),
     ]
-    assert all("reason" not in entry for entry in world.journal(child))
+    assert [entry.get("reason") for entry in world.journal(child)] == [f"bypass: {REASON}", None]
 
 
 @pytest.mark.parametrize(("title", "ref"), CONTAINERS)
@@ -228,9 +230,12 @@ def test_with_journal_logging_off_a_cascade_prints_no_engine_warning(
 # --- what reaches the engine ----------------------------------------------
 
 
-def test_only_a_cascaded_move_passes_a_reason(mi, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A move the invoker asked for keeps the argv it had, so it reaches the
-    engine the same way it did before the cascade named a reason."""
+def test_a_reason_reaches_the_engine_only_when_one_is_given(
+    mi, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A move with no reason — asked for directly, no gate bypassed — keeps the
+    argv it had, so it reaches the engine the same way it did before a cascaded
+    or a bypassed move named one."""
     calls: list[list[str]] = []
 
     def run(argv, **kwargs):

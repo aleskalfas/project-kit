@@ -10,6 +10,7 @@ gates:
 reads:
   records:
     - COR-024
+    - COR-049
   paths:
     - CONTRIBUTING.md
     - .pkit/decisions/README.md
@@ -71,7 +72,7 @@ pkit new decision <capability> <slug>    # for DEC (capability-scoped)
 
 The command picks the next number in the id-space, stamps the frontmatter (`id`, `title` placeholder, `status: proposed`, today's `date`, `author` from git config), and writes the four required section headers (`## Context`, `## Decision`, `## Rationale`, `## Implications`) with empty bodies.
 
-For the `adr` namespace, the target directory is resolved from `.pkit/agents/project/overlay.yaml`'s top-level `adr-records:` key (first entry). The directory must exist before stamping — if not, the command refuses with a `mkdir -p` hint. If the overlay key is missing or the path points inside `.pkit/`, the command refuses with a pointer to COR-024/COR-025.
+For the `adr` namespace, the target directory is resolved from `.pkit/agents/project/overlay.yaml`'s top-level `adr-records:` key (first entry). A directory named there must exist before stamping — if not, the command refuses with a `mkdir -p` hint. If the key is present but empty, or the path points inside `.pkit/`, the command refuses with a pointer to COR-024/COR-025. With no `adr-records:` key, the command derives the directory from the project's internal documentation root (`docs/architecture/decisions/` by default) and records it in the overlay before stamping, saying what it recorded and which root it came from ([COR-049](../../decisions/core/COR-049-documentation-roots.md) point 5). A folder that is absent or empty is created and recorded without asking. A folder that already holds documents is recorded only with consent, because the recording puts those documents within reach of every agent that references `adr-records`: a terminal is asked once, `--yes` consents without a prompt, and a run with nobody to ask and no `--yes` records nothing and stamps nothing, naming the command to run with `--yes`.
 
 For a **capability namespace** (any namespace that is not `core`/`project`/`adr`), the record stamps under `.pkit/capabilities/<capability>/decisions/` with the `DEC` prefix, numbered independently within that capability. The capability must already exist (have a `package.yaml`); the command refuses an unknown name. The `decisions/` subdirectory is created on first use. Duplicate-id collisions across the corpus are caught by `pkit decisions validate` (wired into the check gate).
 

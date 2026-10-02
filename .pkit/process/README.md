@@ -15,7 +15,7 @@ pkit:
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051, ADR-062]
     revalidated:
-      at: 2026-10-02T02:53:18Z
+      at: 2026-10-02T02:40:00Z
       outcome: updated
 ---
 
@@ -117,7 +117,7 @@ A process declares `subject.cardinality`:
 
 The engine **never enumerates** a keyed process's subjects — it only ever acts on the one it is given. The **one** sanctioned, bounded exception is the **cascade fold** (COR-037, below): a parent reads across the members of *one declared child process* scoped to one parent subject, and only through a capability-supplied membership predicate run one subject at a time — never a containment tree the engine holds, never a general subject-listing API. Everywhere else the never-enumerate discipline is unchanged; pm's *forward* (position) cascade stays capability-local until a binding demands the shared form.
 
-Per-subject **runtime**: a resolved **position** (core) and a derived **blocked** detection (core, "no legal move") with an optional first-class `blocked{blocked_on, resume_when, assignee?}` wait (core — see below). Beside them, **optional audit**: an append-only **journal** — `{ts, subject, from→to, trigger, actor, gate-result, severity, bypass+reason}`, the how-we-got-here — kept only where the project turns journal logging on (off by default; see "The journal" below). Nothing the engine decides reads it.
+Per-subject **runtime**: a resolved **position** (core) and a derived **blocked** detection (core, "no legal move") with an optional first-class `blocked{blocked_on, resume_when, assignee?}` wait (core — see below). Beside them, **optional audit**: an append-only **journal** — `{ts, subject, from→to, trigger, actor, gate-result, severity, reason}`, the how-we-got-here, with `reason` the one place an entry carries why its move was taken — kept only where the project turns journal logging on (off by default; see "The journal" below). Nothing the engine decides reads it.
 
 ### Detection modes (core)
 
@@ -362,7 +362,7 @@ The backbone exposes the engine as a `pkit process …` surface. The core operat
 |---|---|
 | `status` | where the subject is · why · how it got here (the journal, or "journal logging is not enabled for this project") · legal moves with live prechecks · next hint — narrative or `--json` (which carries `journal_logging: {enabled, committed}` beside `journal`) |
 | `can-move <to>` | validate a candidate move (gate precheck + authorisation); refuse with a self-explaining reason |
-| `move <to> [--from <state>] [--reason <text>]` | execute a legal move; record the journal entry where the project keeps a journal (and run hooks, deferred) — the verdict is the same either way. `--from` names the state the subject held before the caller applied the move's domain side-effect; the move is validated and journaled from there (the seam-ordering contract below). `--reason` says why the caller took the move — a move one subject's move caused in another, say — and is recorded on the entry as given; no verdict reads it |
+| `move <to> [--from <state>] [--reason <text>]` | execute a legal move; record the journal entry where the project keeps a journal (and run hooks, deferred) — the verdict is the same either way. `--from` names the state the subject held before the caller applied the move's domain side-effect; the move is validated and journaled from there (the seam-ordering contract below). `--reason` says why the caller took the move — the justification for overriding a gate the binding lets it bypass, or a move one subject's move caused in another, say — and is recorded on the entry's `reason` as given; no verdict reads it |
 | `validate` | run the subject's invariants (COR-035) and report which hold / are violated — narrative or `--json`; exits non-zero on any violation |
 | `health` | walk every declared hand-off contract (COR-042) and report missed hand-offs — upstream subjects at their trigger with no downstream counterpart; takes **no subject**; out-of-runtime, report-only, deterministic; narrative or `--json`; exits non-zero on any miss **or indeterminate** |
 
