@@ -9,6 +9,7 @@ its own code. This module answers all of it in this process, from one model:
   without a merge queue, the queue's merge method and the repository's
   squash-commit defaults; the PR queued, waiting to enter, or dropped at a
   head; a merge the service turns into an enqueue; auto-merge allowed or not;
+  the base's requirements for a direct merge met or not;
   the remote branches, a protected one, and other open PRs on a branch or
   based on one. A
   queued PR moves on by one :data:`Step` per reading. A request can be
@@ -125,6 +126,18 @@ _REPOSITORY_ID = "R_project"
 NO_REASON = (
     "Something went wrong while executing your query. Please include `ED1C:3173D4` when "
     "reporting this issue."
+)
+
+
+#: What gh says, exiting 1, to a plain merge of a PR whose base's requirements
+#: are not met — the requirements auto-merge holds a PR for — having asked
+#: nothing of the service.
+_POLICY_PROHIBITS = (
+    "X Pull request #{number} is not mergeable: the base branch policy prohibits the merge.\n"
+    "To have the pull request merged after all the requirements have been met, add the "
+    "`--auto` flag.\n"
+    "To use administrator privileges to immediately merge the pull request, add the "
+    "`--admin` flag."
 )
 
 
@@ -251,6 +264,12 @@ class HostingService:
     checks_pending: bool = False
     #: A direct merge enqueues, though the reading names no queue.
     merge_enqueues: bool = False
+    #: The base's requirements for a merge — its required checks and reviews
+    #: — are met, so a plain direct merge goes through. Unmet, gh refuses it
+    #: before it asks anything, as for a PR auto-merge holds until they are
+    #: met: auto-merge stays armed, and an administrator merge goes around
+    #: them.
+    requirements_met: bool = True
 
     in_queue: bool = False
     #: The PR's place and state in the queue; None before the queue reports one.
@@ -556,6 +575,8 @@ class HostingService:
             # A base that requires a queue takes a plain merge as an enqueue.
             self.enter_queue()
             return _done(args)
+        if kind == MERGE and not self.requirements_met:
+            return _done(args, 1, stderr=_POLICY_PROHIBITS.format(number=self.number))
         self.merge_now()
         return _done(args)
 
@@ -628,6 +649,7 @@ class HostingService:
             "id": self.node_id,
             "state": self.state,
             "mergedAt": self.merged_at or None,
+            "mergeCommit": {"oid": self.merge_commit} if self.merge_commit else None,
             "headRefOid": self.head_oid,
             "headRefName": self.head_ref,
             "isCrossRepository": self.cross_repository,

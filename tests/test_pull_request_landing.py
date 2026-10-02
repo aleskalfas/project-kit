@@ -187,6 +187,17 @@ def test_the_reading_names_the_head_branch_and_whether_it_is_in_a_fork(fork: boo
     assert (document["head_ref"], document["cross_repository"]) == ("fix/42-x", fork)
 
 
+def test_the_reading_names_the_commit_a_merge_made_and_none_before_it() -> None:
+    """The reading asks every API for the merge commit (#1258), which a
+    landing's end states; an open PR names none."""
+    calls: list[list[str]] = []
+    merged = landing.read(496, gh=_gh([{**_MERGED, "mergeCommit": {"oid": "c0ffee"}}], calls))
+    assert "mergeCommit { oid }" in _query(calls[0])
+    assert (merged.merge_commit, merged.as_json()["merge_commit"]) == ("c0ffee", "c0ffee")
+    open_ = landing.read(496, gh=_gh([{**_OUT, "mergeCommit": None}]))
+    assert (open_.merge_commit, open_.as_json()["merge_commit"]) == ("", "")
+
+
 def test_a_reading_that_does_not_say_where_the_head_is_reads_as_a_forks() -> None:
     """Nothing is done on a branch that may not be the PR's: an answer without
     `isCrossRepository` reads as a head in another repository."""
@@ -600,6 +611,62 @@ def test_out_of_the_queue_rests_on_two_readings_running_and_no_more_than_its_mos
     assert settling == count <= landing._DEQUEUING.most_readings
 
 
+@pytest.mark.parametrize(
+    ("readable", "reason"),
+    [
+        (0, "PR #42 could not be read: HTTP 502"),
+        (
+            1,
+            "PR #42 read out of the merge queue once, and could not be read again to confirm "
+            "it: HTTP 502",
+        ),
+    ],
+    ids=["before-anything-was-sent", "read-out-once"],
+)
+def test_a_dequeue_that_could_not_read_the_pr_before_sending_says_it_is_unreadable(
+    readable: int,
+    reason: str,
+    here: dict[str, Any],
+    acting: Callable[[landing.GhRunner], None],
+) -> None:
+    """Nothing was sent, and whether the PR is in the queue is not known: not
+    accepted, `reason_kind` `unreadable` — never a dequeue that did not take
+    (#1258, the reviewer notes on #1303)."""
+    taken: list[list[str]] = []
+
+    def readable_first(argv: Sequence[str]) -> Completed:
+        taken.append(list(argv))
+        if len(taken) > readable:
+            return subprocess.CompletedProcess(list(argv), 1, stdout="", stderr="HTTP 502")
+        return _ok(argv, _answer(_OUT))
+
+    acting(readable_first)
+    assert landing.dequeue(42, **here) == landing.Outcome(False, None, reason, landing.NOT_READ)
+    assert not any("dequeuePullRequest" in _query(argv) for argv in taken)
+
+
+class _AtMostTwoReadings(landing._Asked):
+    """A request whose end state confirms on more readings than it may take."""
+
+    @property
+    def most_readings(self) -> int:
+        return 2
+
+
+def test_settling_stops_after_its_most_readings_ending_as_not_seen(
+    here: dict[str, Any], slept: list[float]
+) -> None:
+    """The settling takes no more readings than it is stated to take — the
+    count its longest is figured from — whatever its judge says: past them,
+    the request was not seen made (#1258, the reviewer notes on #1303)."""
+    host = fake.HostingService()
+    asked = _AtMostTwoReadings("merge", "neither merged nor queued", lambda *_: True, 3)
+    sent = landing._Sent(landing._NO_ANSWER, "no answer")
+    settled = landing._settle(496, host, asked, sent)
+    assert host.kinds() == [fake.READ, fake.READ]
+    assert (settled.outcome.accepted, settled.outcome.reason_kind) == (False, landing.NOT_MADE)
+
+
 # --- a request with no answer (#1256) ------------------------------------------------
 
 
@@ -991,6 +1058,10 @@ _TRANSPORT = [
     "of closed network connection",
     "unexpected end of JSON input",
     "HTTP 502: Bad Gateway (https://api.github.com/graphql)",
+    # A 4xx that is no answer: the request timed out on the way, and the
+    # service may have acted on it (#1258, the reviewer notes on #1303).
+    "HTTP 408: Request Timeout (https://api.github.com/graphql)",
+    "gh: Request Timeout (HTTP 408)",
     "",
 ]
 

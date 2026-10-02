@@ -48,7 +48,7 @@ pkit:
         - src/project_kit/session_guard.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059, ADR-061]
     revalidated:
-      at: 2026-10-02T07:46:20Z
+      at: 2026-10-02T11:03:46Z
       outcome: updated
 ---
 
@@ -149,6 +149,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `docs record-location <capability> <name> [--dry-run]` | record where an installed capability's documentation location `<name>` now lies (COR-049 point 5): a location derived from a root is written to the capability's `project/docs-locations.yaml`, so a later root change moves nothing; one already recorded is never overwritten. Running it is the consent: the value recorded is the one already in use, so it asks nothing, at a terminal or off one, and `--yes` is accepted with no effect (COR-049 point 5). What a capability's stamping command runs when it places the first document there. See "Configuration file" | yes | yes — a recorded location is left as it is |
 | `repository base [--base <ref>] [--json]` | what is settled (COR-054 point 5): the default branch — declared, and resolved to a commit — and the base a comparison reads — `<ref>`, else `$PKIT_CHECK_BASE`, else the default branch — with its commit and where HEAD left it; a branch read from the local branch, and a declaration read as the default, are said on standard error. Runs no discovery. `--json` is the stable document a capability's own script reads instead of resolving a branch or computing a merge-base, and adds HEAD — its commit, none yet, or why git cannot read it. See "Configuration file" | no | yes (read-only) |
 | `pull-request read <n>` / `squash-defaults` / `merge <n> --subject <s>` / `enqueue <n>` / `wait <n>` / `dequeue <n>` / `delete-branch <n> --expect <sha>` [`--allow-foreign-repo`] [`--json`] | landing a pull request on the hosting service — the one merge mechanic every command that lands a PR calls: where PR `<n>`'s base merges through a merge queue and where the PR stands in it; the repository's squash-commit defaults; the direct squash merge and the enqueue, each pinned to a checked head (`--head`); the bounded wait for the queue's merge; taking a PR out of the queue; deleting a merged PR's head branch, only while its tip is the head that merged. Runs `gh` from the working directory. `merge`, `enqueue`, `dequeue` and `delete-branch` run the cross-repository guard first and take `--allow-foreign-repo`. `--json` writes each document as one line, which is how a capability's script calls it. See "Pull-request commands" | `read`, `squash-defaults`, `wait`: no; `merge`, `enqueue`, `dequeue`, `delete-branch`: yes (on the hosting service) | reads yes; `enqueue`, `dequeue` and `delete-branch` yes; `merge` no — merges a PR |
+| `pull-request land <n> --head <sha> --subject <s>` [options] [`--dry-run`] [`--json`] | the landing sequence in one command: the guard once, one reading, the options applied, the merge or the enqueue, the wait, the dequeue on a head that moved; events, then one end document. See "Pull-request commands" | yes, but `--dry-run` (on the hosting service) | yes — it reads first; a merged PR ends merged |
 | `permissions explain [<agent>]` | render the per-agent permission mental model — grants, scopes, effects (per COR-028) | no | yes (read-only) |
 | `permissions diff [<agent>]` | reconcile the model against live `.claude/settings.json`: flag live rules no granted privilege justifies + dimensions the harness can't natively enforce | no | yes (read-only) |
 | `permissions catalog` | list the privilege catalog (baseline + extensions); a path-scoped allow (the agent workspace) shows the folder it is recognized inside | no | yes (read-only) |
@@ -446,11 +447,11 @@ What is settled, as every reader of it takes it ([COR-054](../decisions/core/COR
 
 ## Pull-request commands
 
-Landing a pull request on the hosting service, implemented once in the backbone (`src/project_kit/pull_request_landing.py`) for every command that lands one: project-management's merge verbs call these commands from their scripts, and `release merge` calls the module directly. The merge convention behind it — one squash commit whose subject is the PR title, through the base's merge queue where it has one, the head branch deleted on merge — is project-management's DEC-013, "Merge mechanics". What to land and when — gates, refusals, what follows the merge, and when the head branch is deleted, after the caller's own steps — is the caller's; so is the local branch, which is not on the hosting service. That this mechanic has one home in the backbone, and what every caller that lands a pull request must hold to, is ADR-061 ("Landing a pull request on the hosting service lives once, in the backbone").
+Landing a pull request on the hosting service, implemented once in the backbone (`src/project_kit/pull_request_landing.py`) for every command that lands one: project-management's merge verbs call these commands from their scripts, and `release merge` lands through `land`'s sequence, by import. The merge convention behind it — one squash commit whose subject is the PR title, through the base's merge queue where it has one, the head branch deleted on merge — is project-management's DEC-013, "Merge mechanics". What to land and when — gates, refusals, what follows the merge, and when the head branch is deleted, after the caller's own steps — is the caller's; so is the local branch, which is not on the hosting service. That this mechanic has one home in the backbone, and what every caller that lands a pull request must hold to, is ADR-061 ("Landing a pull request on the hosting service lives once, in the backbone").
 
 *GitHub-specific:* this noun is the backbone's realization for a repository hosted on GitHub, through the `gh` client — its merge queue, its GraphQL fields, its squash-commit defaults. Each command runs `gh` from the working directory, which resolves the repository from its remote, in the caller's environment, so a host pinned through `GH_HOST` is the one reached. Another hosting service would need its own realization.
 
-**The subcommands that change the service run the cross-repository guard** (COR-039; ADR-061 point 6). `merge`, `enqueue`, `dequeue` and `delete-branch` compare the session's anchor — the directory the harness fixed when the session started, which does not move with `cd` (Claude Code's project directory) — with the repository of the working directory, from git alone: one common directory (a linked worktree of the session's repository is its own), or `origin` remotes naming one repository once normalised (ssh or https, with or without `.git`, in any case). The guard lives in the backbone (`src/project_kit/session_guard.py`). Importing the module does not skip it: each of its functions that changes the service requires the guard's clearance for the directory it acts in, and runs `gh` there.
+**The subcommands that change the service run the cross-repository guard** (COR-039; ADR-061 point 6). `merge`, `enqueue`, `dequeue`, `delete-branch` and `land` compare the session's anchor — the directory the harness fixed when the session started, which does not move with `cd` (Claude Code's project directory) — with the repository of the working directory, from git alone: one common directory (a linked worktree of the session's repository is its own), or `origin` remotes naming one repository once normalised (ssh or https, with or without `.git`, in any case). The guard lives in the backbone (`src/project_kit/session_guard.py`). Importing the module does not skip it: each of its functions that changes the service requires the guard's clearance for the directory it acts in, and runs `gh` there.
 
 The backbone's other commands that change the hosting service run the same guard once, at their entry, before anything is read from the service or sent to it, and take the same `--allow-foreign-repo`: `release merge` (its merge and its branch clean-up), `release publish-notes` (the Release it creates or edits), `version tag --push` and `version untag --push` (the tag pushed to `origin`, or its deletion there), and `release apply --tag --push`, which pushes the tag the same way. A tag made or removed only locally changes nothing on the service and runs no guard. A refusal exits `1`, with nothing changed. `pkit report`'s issue is outside the guard by category, never by a flag (ADR-047).
 
@@ -460,17 +461,20 @@ The backbone's other commands that change the hosting service run the same guard
 
 A refused request writes the request's document with `accepted: false`, `exit_code: null`, `reason_kind: "foreign-repository"`, a `reason` that says why and names the flag, and `guard`; `delete-branch` writes its own document, `outcome: "refused"` with the same `reason_kind`, `reason` and `guard` (below); without `--json` it says the same on standard error. Every request document carries `reason_kind` (`null` when the guard let the request through) and `guard`: `verdict`, the comparison alone (`same-repo`, `diverged`, `undetermined`), whether or not the change was confirmed; `undetermined_kind` (`noncoverage` or `fault`); `anchor` and `target` (the two working trees, where git names them); and `cleared`, how the guard let the request through (`same-repo`, `undetermined`, `flag`, `terminal`), `null` when it refused. These are additions, so `schema_version` stays `1`. `read`, `squash-defaults` and `wait` change nothing and run no guard.
 
+`land` refused by the guard writes its end document alone: `ended: refused`, `reason_kind: foreign-repository`, `guard` with `cleared: null`, nothing read (below).
+
 *Residual gaps.* The guard is an interlock against a change made through these commands while the session points at another repository, not a security boundary (ADR-034 point 5): a raw `gh -R`, a raw `git -C`, or an unset anchor routes around it. And it compares directories, not where `gh` goes: a set `GH_REPO` sends `gh` to another repository than the working directory's remote, and the guard does not compare it.
 
 **The JSON document is the contract.** With `--json` every command writes its document as **one line of JSON**, keys sorted, carrying `schema_version` (`1`; a reader refuses a version it does not know) and, but for `squash-defaults`, `pull_request`; `wait` writes several, one per line, as it goes. A caller decides on the document's fields, never on the exit code: the exit codes are the commands' human face, for a person at a terminal, and one code can cover more than one outcome — `wait`'s exit `3` is both "left the queue" and "head moved", which a caller that must take the PR out of the queue on a head move tells apart by the end document's `ended`. A caller that gets no document back has no answer: the request may have been made or not, and it reads the PR (`read`) before it decides — concluding from that one reading only what the command itself would: the request's end state reached, that end; anything else unconfirmed, never that the request was not seen made, which takes two readings (below).
 
 **Every `gh` call is bounded.** Each command runs `gh` through the backbone's one bounded start for a tool it runs itself (`command_runner.run_bounded`): in the command's own process group, never a session of its own — so a caller that ends the group it runs `pkit pull-request` in, as project-management does at its bound, ends a `gh` request in flight too — and bounded per call: **15 seconds for a reading** (a GraphQL query, or the REST read of the squash-commit defaults) and **30 for a request that changes the service** (`gh pr merge`, which makes calls of its own, or a GraphQL mutation). Past its bound `gh` alone is ended — asked to stop, then killed two seconds later — never the command or its caller; `gh` gets nothing on standard input, so it never waits on a question. A reading past its bound is unreadable, as any reading that fails is. The module states the longest each subcommand can run from its own constants (`pull_request_landing.longest_seconds`): every `gh` call at its bound and ended there, every reading at its most calls, the readings that settle a request with no answer and the window before the second, a `dequeue` sent twice, and the cross-repository guard's git questions where the subcommand runs it. That figure, with room to start `pkit`, sits below the bound project-management puts on the subcommand, which a test holds.
 
-**A request is refused only on an answer recognised as one; anything else is settled by reading, never reported as not made.** `merge`, `enqueue`, `dequeue` and `delete-branch` take a request as **refused** only on an answer the backbone recognises as one: GraphQL errors in the answer; a `GraphQL: …` line from `gh`; an HTTP 4xx status (`HTTP 422: …`, or `gh: … (HTTP 403)`); `gh`'s own refusal before it sent anything, which it marks with its failure or warning sign (`X Pull request #N is not mergeable: …`, `! Pull request #N is already queued to merge`); or `gh` not started at all, so nothing was sent. Anything else is **no usable answer**, and the request may have been made: `gh` ended at its bound, or by a signal — a negative exit, whatever it printed — a server error (a 502), a broken connection, nothing back, or words the backbone does not know. A refusal in such words costs two readings and still ends not accepted, `gh`'s words in the reason. `merge`, `enqueue` or `dequeue` with no usable answer says so at once — one `[warn]` line on standard error: what was asked, that no usable answer came, that the PR is being read, and the longest that takes — and reads the PR:
+**A request is refused only on an answer recognised as one; anything else is settled by reading, never reported as not made.** `merge`, `enqueue`, `dequeue` and `delete-branch` take a request as **refused** only on an answer the backbone recognises as one: GraphQL errors in the answer; a `GraphQL: …` line from `gh`; an HTTP 4xx status (`HTTP 422: …`, or `gh: … (HTTP 403)`) but a 408, a request timed out on the way, which the service may have acted on; `gh`'s own refusal before it sent anything, which it marks with its failure or warning sign (`X Pull request #N is not mergeable: …`, `! Pull request #N is already queued to merge`); or `gh` not started at all, so nothing was sent. Anything else is **no usable answer**, and the request may have been made: `gh` ended at its bound, or by a signal — a negative exit, whatever it printed — a server error (a 502), a broken connection, nothing back, or words the backbone does not know. A refusal in such words costs two readings and still ends not accepted, `gh`'s words in the reason. `merge`, `enqueue` or `dequeue` with no usable answer says so at once — one `[warn]` line on standard error: what was asked, that no usable answer came, that the PR is being read, and the longest that takes — and reads the PR:
 
 - its end state seen — `merge`: merged, or queued, since a merge on a base that requires a queue enqueues; `enqueue`: queued or merged; either: dropped by the queue on a date no earlier than the request was sent, which only a request that put the PR in could be (GitHub's date and this machine's clock are compared there); `dequeue`: out of the queue on two readings running — the request was **made**;
 - not seen, the PR is read again no sooner than **40 seconds after the request was sent**, and 10 seconds after the reading before, so every request gets the same window whichever way its answer went missing; not seen again, the request was **not seen made** — what two readings saw, never that it was not made, which one reading never concludes either (ADR-061 point 7). The window rests on an assumption about the hosting service: that a change it accepted shows in a reading within 40 seconds of the request. A change it applies later shows to the next run that reads the PR, which every caller's re-run does first. A `dequeue` not seen made is sent once more — it is idempotent, and it is what keeps commits nothing checked out of the queue — and the reason says so, whatever the second came to;
-- a reading that cannot be taken, the first or a later one, leaves the request **unconfirmed**: whether it was made is not known, and the document states no refusal and no exit it does not know.
+- a reading that cannot be taken, the first or a later one, leaves the request **unconfirmed**: whether it was made is not known, and the document states no refusal and no exit it does not know;
+- no more readings are taken than the settling's longest is stated for: past them, the request was **not seen made**.
 
 A `dequeue` is confirmed by readings even when the service answered it: out of the queue rests on two readings running, as the wait's does, since a PR the queue is merging can read out of it and not yet merged. `delete-branch` settles its own request in its own document's terms (below). The ends of `merge`, `enqueue` and `dequeue`:
 
@@ -486,6 +490,8 @@ A `dequeue` is confirmed by readings even when the service answered it: out of t
 | `dequeue` still queued after acceptance — the service answered the dequeue, and the readings since do not see the PR out | `false` | `gh`'s | `null` | `1` |
 | unconfirmed — no usable answer, and no reading since | `null` | `null` | `unanswered` | `1` |
 | `dequeue` unconfirmed — the service answered the dequeue, and no reading since | `null` | `gh`'s | `unreadable` | `1` |
+| `dequeue` not read before it sent — the PR could not be read first; nothing was sent | `false` | `null` | `unreadable` | `1` |
+| `dequeue` read out once, not confirmed — the second reading could not be taken; nothing was sent | `false` | `null` | `unreadable` | `1` |
 
 `accepted` is `true`, `false` or `null`; `null` only on the two unconfirmed ends, where whether the request was made is not known. These documents have never been released — the changesets that introduce `pkit pull-request` are still under `.changes/unreleased/` — so this is their first released shape, `schema_version` `1`. Exit `1` covers every end but made, as `delete-branch`'s exit `1` covers its unconfirmed: a caller tells them apart by `reason_kind`. Without `--json`, a request made on a reading says it got no answer and a reading since shows it made, and an unconfirmed one says on standard error that whether it was made is not known, naming `pkit pull-request read <n>`.
 
@@ -495,6 +501,7 @@ Where PR `<n>`'s base merges through a merge queue, and where the PR stands in i
 
 - Without `--json`: `PR #<n>: <where it stands>` and `Base: merges through a queue, by <method>` or `Base: merges directly`.
 - With `--json`: `reading` — what GitHub answered (`has_queue`, `merge_method`, `pr_id`, `pr_state`, `merged_at`, `head_oid`, `head_ref` — the head branch's name — and `cross_repository` — the head is in another repository, a fork; an answer that does not say reads as `true` — `in_queue`, `position`, `entry_state`, `eta_seconds`, `waiting_to_enter`, `ever_queued`, and `removal`, the queue's last word on the PR when it dropped it: `at`, `reason`, `head_oid`) and what the reading concludes from it, so no reader derives it again (`merged`; `queued`, in the queue or held by auto-merge until it may enter; `squashes`; `dropped_head`, dropped at the head it has now; `description`); `null` when unreadable — and `unreadable`, `null` or why. `head_ref` and `cross_repository` are additions, so `schema_version` stays `1`.
+- `merge_commit` — the commit the PR's merge made, empty until it has merged or where GitHub names none — is an addition too.
 - Exit `0` when read; `1` when GitHub could not be read.
 
 ### `pull-request squash-defaults [--json]`
@@ -519,6 +526,8 @@ Wait for the merge queue to merge PR `<n>`: as long as the queue estimates plus 
 ### `pull-request dequeue <n> [--allow-foreign-repo] [--json]`
 
 Take PR `<n>` out of its base's merge queue — through GitHub's dequeue mutation once it is in the queue, by cancelling its auto-merge while it waits to enter — and confirm it is out. The PR is read first. Merged, it cannot be taken out: not accepted, `reason_kind: merged`, the reason saying at which head. Out of the queue, it is read once more 10 seconds later: out again, it is **already out**, and nothing is sent; queued, it is taken out. Out of the queue is concluded only from two readings running, the second no sooner than 40 seconds after the dequeue was sent, whether the service answered it or not (above): answered, a PR still queued on the readings since is **still queued after acceptance** — not accepted, gh's exit — and one that cannot be read since is unconfirmed (`reason_kind: unreadable`); with no usable answer, a dequeue not seen made is **sent once more**, and the reason names both. Document as `merge`. Exit `0` once two readings running show it neither queued nor merged; `1` otherwise — refused, merged, still queued after acceptance, not seen made or unconfirmed (the table above).
+
+A reading before anything is sent that cannot be taken — the first, or the one that confirms a PR read out of the queue — ends the dequeue not accepted, `reason_kind: unreadable`, with nothing sent: whether the PR is still queued is not known, which is not a dequeue that failed.
 
 ### `pull-request delete-branch <n> --expect <sha> [--allow-foreign-repo] [--json]`
 
@@ -549,6 +558,210 @@ Otherwise the deletion is **one compare-and-delete request**: GitHub's `updateRe
 | `2` | — a usage error: `--expect` not a full commit id |
 
 Exit `0` means the command reached an end it can state; the document says which. A caller that needs the branch gone reads `outcome`, never the exit code; `1` covers both a deletion not asked for and one whose end is not known. A branch kept, gone, refused or unconfirmed does not fail a landing.
+
+### `pull-request land <n> --head <sha> --subject <s> [options] [--json]`
+
+The options: `[--seconds <s>] [--allow-dropped-head] [--admin] [--direct-only] [--queued-bad-shape refuse|warn] [--no-request] [--allow-foreign-repo] [--dry-run]`.
+
+The landing sequence, in one command (ADR-061 point 5). It composes the steps above but the deletion, once, so a caller that lands through it holds no copy of them. `release merge` lands through it, by import.
+
+- **The guard** runs once, at the entry (above). Its clearance covers every request the landing makes, so a dequeue sent after a long wait never waits on a question.
+- **One reading**, then the first row of the table below that matches it, the options applied.
+- **The request**: the direct squash merge with `<s>` as its subject, as `merge` makes it, or the enqueue, as `enqueue` makes it — pinned to `<sha>`, and settled by reading when it gets no usable answer (above).
+- **The wait**, as `wait` waits: `--seconds`, else as long as the queue estimates plus 2 minutes, at most 30.
+- **A head that moved**: a reading at another head than `<sha>` — before any request, or during the wait — takes a queued PR out of the queue, as `dequeue` does, and ends `head-moved`.
+- **No branch is deleted.** When to delete is the caller's, at the end's `merged_head` (`delete-branch --expect`).
+
+`<sha>` is a full commit id: 40 or 64 hexadecimal characters, in any case, read lower-cased. Anything else is a usage error, exit `2`, with nothing read. An abbreviated head would read as a PR at another head, and take a healthy PR out of the queue. The sequence refuses it itself, before it reads, whether it is called as this command or imported (`pull_request_landing.land` raises `ValueError`).
+
+**The state-by-option table.** The first row that matches the reading decides; `H` is `<sha>`.
+
+| The PR at the reading | The landing |
+|---|---|
+| unreadable, or naming no head | `unreadable` |
+| naming no state the landing knows: neither open, closed nor merged | `unreadable`, nothing sent |
+| merged at `H` | `merged` |
+| merged at another head | `merged-at-another-head` |
+| closed | `closed` |
+| queued at another head, on any base | `dequeue`, then `head-moved` |
+| open, not queued, at another head | `head-moved`, nothing sent |
+| queued at `H`, on a base with a queue | the refusals (below), else the wait |
+| dropped at `H`, on a base with a queue | the refusals, else — with `--allow-dropped-head` — `enqueue`, then the wait |
+| open, not queued, on a base with a queue | the refusals, else `enqueue`, then the wait |
+| open on a base without a queue | `merge`, then one reading |
+
+- "Queued" is in the queue, or held by auto-merge until it may enter. A PR auto-merge holds at `H` on a base without a queue takes the last row: the direct merge is sent, not a wait.
+- Auto-merge holds a PR because its base's requirements are not met. Where they are met by the merge, it goes through. Where they are not, `gh` refuses a plain merge in words the module knows for a refusal: the landing ends `failed`, `sent: null`, with an `auto-merge-armed` warning that auto-merge is still enabled on the PR and will merge it, unpinned, once the requirements are met. What the service does here was not established by a real call; it is the test fake's model.
+- After a direct merge, one reading: merged, it ends; not merged, the wait; not read, one warning, then the wait.
+- That reading finding the PR queued: the service queued it instead of merging it. An `enqueued-instead` warning says so, and that the queue's commit shape was not judged; then the wait. For a PR auto-merge held, which reads queued before the merge as after it, only a queue entry it did not have counts.
+- The rows that send match an open PR: the reading names it `OPEN`.
+- `--admin` passes the direct merge through as an administrator merge.
+- `--no-request`: the caller allows no merge and no enqueue in this landing. A PR queued at `H` is waited for, and one queued at another head is still taken out: the dequeue protects. A row that would send a merge or an enqueue, on any base, ends `refused`, `request-not-allowed`, nothing sent; the dry run ends the same, not `planned`.
+
+The options, on the rows of a base with a queue:
+
+| Option | Queued at `H` | Dropped at `H` | Open, not queued |
+|---|---|---|---|
+| none | wait | `refused`, `dropped-head` | `enqueue`, wait |
+| `--admin` | `refused`, `admin-on-queue` | same | same |
+| `--direct-only` | `refused`, `queue-not-allowed` | same | same |
+| a bad shape, `--queued-bad-shape refuse` | `refused`, by the shape; the PR stays queued | `refused`, by the shape | `refused`, by the shape |
+| a bad shape, `--queued-bad-shape warn` | wait, with a warning | `refused`, by the shape | `refused`, by the shape |
+| `--allow-dropped-head` | as none | `enqueue`, wait | as none |
+| `--no-request` | as none | `refused`, `request-not-allowed` | `refused`, `request-not-allowed` |
+
+On a base without a queue, `--direct-only`, `--allow-dropped-head` and `--queued-bad-shape` change nothing, and no shape is read; `--no-request` refuses the merge there, `request-not-allowed`.
+
+**One refusal order**; the first that applies refuses, and nothing is sent:
+
+1. `request-not-allowed` — `--no-request`, where a merge or an enqueue would follow, on any base.
+2. `admin-on-queue` — `--admin`, on a base with a queue; this one and those below apply only there.
+3. `queue-not-allowed` — `--direct-only`.
+4. `queue-not-squash` — the queue's merge method is not squash.
+5. `dropped-head` — the queue dropped the PR at `H`, without `--allow-dropped-head`.
+6. `squash-defaults` — the repository's squash-commit defaults, read last, are not `PR_TITLE` and `PR_BODY`. Defaults that cannot be read end `unreadable`, `reason_kind: squash-defaults`.
+
+**Two stops no option lifts** (ADR-061 points 5 and 8):
+
+- no administrator merge on a base that merges through a queue;
+- no request to a queue that would not make the squash commit. `warn` relaxes only a PR already queued, which gets no request.
+
+**What a request came to.**
+
+- Made: the landing goes on.
+- Refused on an answer recognised as one: `failed`, `gh`'s words in `reason`, `sent: null`.
+- Not seen made on two readings: `failed`, `reason_kind: not-made`, `sent` set. The reason never says it was not made.
+- No usable answer, and no reading since: `unconfirmed`, `reason_kind: unanswered`, `sent` set.
+
+**The wait's ends.**
+
+| The wait sees | `ended` |
+|---|---|
+| merged at `H` | `merged` |
+| merged at another head | `merged-at-another-head` |
+| a reading at another head, not merged | `dequeue`, then `head-moved` |
+| the time run out, still queued | `queued` |
+| out of the queue on two readings, or closed, a queue seen | `dropped` |
+| the same, no queue seen | `not-merged` |
+| a reading that cannot be taken, after a direct merge it sent | `unconfirmed`, `reason_kind: unreadable` |
+| a reading that cannot be taken, otherwise | `queued`, `reason_kind: unreadable` |
+
+**The events.** With `--json` each is one line of JSON, flushed as it is written, carrying `schema_version`, `pull_request` and `event`.
+
+| `event` | Its keys | Written |
+|---|---|---|
+| `reading` | `reading`, as `read` states it | the first reading; the one after a direct merge; each of the wait's that changed |
+| `requesting` | `request`: `merge`, `enqueue` or `dequeue` | while the output takes them, before each request, before `gh` is started |
+| | `head`: the pin; `null` for a dequeue | |
+| | `attempt`: `1`, or `2` for a dequeue sent once more | |
+| `requested` | `request`, `accepted`, `exit_code`, `reason`, `reason_kind` | once the request is settled, only after its `requesting` |
+| `end` | the end document (below) | once, last |
+
+- `accepted` is `true` (made), `false`, or `null` (unconfirmed), as in the request documents (above).
+- A dequeue that sends nothing — already out, merged, or not read before it sent — writes neither `requesting` nor `requested`.
+- A write that fails before any request stops the landing with nothing sent: a reader left with no `requesting` knows no request was made.
+- A write that fails after a `requesting` is out stops the writing, not the landing: it finishes its wait, and its dequeue where the head moved, with no line written; its exit still says how it ended.
+- So a reader left with a `requesting` and no `end` does not take the lines it has for all the landing did: the landing may be running, and may have sent a dequeue no line names. A request whose last line is a `requesting` may have been made. The reader reads the pull request (`pkit pull-request read <n>`).
+- The `[warn]` line as a request with no usable answer starts settling stays on standard error.
+- Without `--json`, each event and the end are said as a person reads them; warnings go to standard error.
+
+**The end document.** Every key is in every document. Decoding is strict per `ended` (`pull_request_landing.decode_end`); anything else is no answer:
+
+- a missing key, another `schema_version`, or an `event` other than `end`;
+- an unknown `ended`, or a `reason_kind` its `ended` does not carry;
+- `dry_run` not a boolean, or `false` on a `planned` end;
+- `checked_head` not a full commit id, lower-cased; `bound_seconds` not a number;
+- `reason` not `null` on `merged` and `planned`, or not words on any other end;
+- `would` or `merged_head` where the tables below have none, or missing where they have one;
+- a `sent` its end and `reason_kind` cannot carry (the twelve ends, below);
+- a `dequeue` on any end but `head-moved`, or not in `dequeue`'s keys and types;
+- a `reading` that is `null` where one was taken, or one where the guard refused.
+
+The tests hold the decoder to one shared table of valid and invalid end documents (`tests/landing_end_cases.py`), which project-management's decoder is to be held to as well.
+
+| Key | Value | `null` when |
+|---|---|---|
+| `dry_run` | `true` or `false` | never |
+| `ended` | one of twelve (below) | never |
+| `reason_kind` | from `ended`'s closed set | `ended` alone says it |
+| `reason` | in words; where a reading failed, the failure as the reading states it | `merged`, `planned` |
+| `would` | `merge`, `enqueue`, `wait` or `dequeue` | not `planned` |
+| `path` | `queue` or `direct` | no reading |
+| `checked_head` | `<sha>` | never |
+| `merged_head` | the head of the reading that said merged | not merged |
+| `merge_commit` | the commit the merge made | not merged, or none named |
+| `sent` | `merge` or `enqueue`, sent and not refused | none sent, or the one sent refused |
+| `dequeue` | `accepted`, `exit_code`, `reason`, `reason_kind`, as `dequeue` states them | no dequeue run |
+| `reading` | the last reading the landing took, as `read` states it | none taken |
+| `shape` | `squashes`, `title`, `message`, `conforms`, `unreadable` | see below |
+| `warnings` | a list of `reason_kind` (the warnings, below) and `reason` | never; `[]` when none |
+| `guard` | `verdict`, `undetermined_kind`, `anchor`, `target`, `cleared` | never |
+| `bound_seconds` | the longest the landing can run (below) | never |
+
+- `path` is `queue` where the last reading shows a queue on the base, or the PR was ever in one.
+- `shape` is `null` with no reading, on a base without a queue, and for a PR merged or closed at the reading judged.
+- `shape`'s `title` and `message` are `null` where the defaults were not read — an earlier refusal ended the landing, or the queue does not squash — or could not be, `unreadable` saying why. `conforms` is `null` where it is not known.
+- `guard.verdict` is the comparison alone, never an override. `cleared` is `null` exactly when the guard refused.
+- `reading` is the last reading taken, whether or not it was written: a wait whose next reading fails ends on it.
+
+**The warnings**, by `reason_kind`, a closed set:
+
+- `queue-not-squash`, `squash-defaults` — a PR waited for, under `--queued-bad-shape warn`, in a queue that would not make its squash commit; `squash-defaults` also where the defaults could not be read.
+- `unreadable` — the reading after a direct merge could not be taken.
+- `auto-merge-armed` — auto-merge held the PR at the first reading, and its direct merge ends `failed` or `unconfirmed` with the hold still on the last reading: it is left armed — on `unconfirmed`, if the merge was not made. None on `failed`, `not-made`: the readings that did not see the merge saw the hold gone.
+- `enqueued-instead` — a direct merge the service queued instead. For a PR auto-merge held, a queue entry it did not have: the reading tells the entry from the hold.
+
+**The twelve ends.**
+
+| `ended` | Means | `reason_kind` | `sent` |
+|---|---|---|---|
+| `merged` | a reading says merged at `<sha>` | `null` | `null`, or what was sent |
+| `merged-at-another-head` | a reading says merged at another head | `null` | `null`, or what was sent |
+| `closed` | the first reading finds it closed unmerged | `null` | `null` |
+| `planned` | a dry run: a request or a wait would follow | `null` | `null` |
+| `queued` | handed to the queue, and not seen merged or out | `null` | `null`, `enqueue`, or a `merge` the service queued instead |
+| `queued` | the same, a wait reading lost | `unreadable` | `null`, `enqueue` |
+| `unconfirmed` | whether its merge or enqueue was made is not known | `unanswered` | `merge`, `enqueue` |
+| `unconfirmed` | whether its direct merge has merged is not known: a wait reading lost | `unreadable` | `merge` |
+| `unconfirmed` | a reading says merged and names no head, so at which head is not known | `unreadable` | `null`, or what was sent |
+| `head-moved` | a reading at another head; `dequeue` says what taking it out came to | `null` | `null`, or what was sent |
+| `dropped` | out of the queue on two readings, a queue seen | `null` | `null`, or what was sent |
+| `not-merged` | out on two readings, or closed, no queue seen | `null` | `merge` |
+| `not-merged` | the same, the base having lost its queue during the wait | `null` | `enqueue`, or `null` for a PR found queued |
+| `failed` | its merge or enqueue did not land it | `null`, `not-made` | `null` when refused; set for `not-made` |
+| `refused` | stopped before any request | `foreign-repository` (the guard's); `request-not-allowed`, `admin-on-queue`, `queue-not-allowed`, `queue-not-squash`, `dropped-head`, `squash-defaults` (the refusal order's) | `null` |
+| `unreadable` | a reading needed before a request could not be taken; nothing sent | `null`, `squash-defaults` | `null` |
+
+- A head move whose dequeue finds the PR merged stays `head-moved`, with `dequeue.reason_kind: merged`.
+- `closed` always means nothing was sent: a PR that closes after a request ends `dropped` or `not-merged`.
+- `merged` and `merged-at-another-head` always name `merged_head`. A merged reading that names no head ends `unreadable`, nothing sent, when it is the first reading, and `unconfirmed`, `unreadable` when it is a later one.
+
+**Exit codes are for a person; callers read the document.**
+
+- `0` — `merged`, `merged-at-another-head`, `planned`.
+- `4` — `queued`, `unconfirmed`.
+- `3` — `head-moved`, `dropped`, `not-merged`.
+- `1` — every other end.
+- `2` — a usage error: `<sha>` not a full commit id.
+
+**The dry run** (`--dry-run`).
+
+- The guard runs with a dry run's clearance, and never asks. In another repository without `--allow-foreign-repo` it ends `refused`, `foreign-repository`, `cleared: null`, nothing read, the reason saying a run at a terminal would ask. Otherwise `cleared` is `same-repo`, `undetermined` or `flag`.
+- It takes the first reading, and the squash-commit defaults where the table reaches them. It sends nothing.
+- A row that sends a request or waits ends `planned`, `would` saying which. Every other row ends as the landing would.
+- With `--no-request`, a row that would send a merge or an enqueue ends `refused`, `request-not-allowed`, as the landing would.
+- Under `warn`, a queued PR with a bad shape is `planned`, `would: wait`, with `warnings` filled.
+- It writes `reading`, then `end`. A guard refusal writes `end` alone.
+
+**`bound_seconds`** is the longest the landing can run with the options given: a function of the options alone, never of a reading, so a dry run states the bound of the landing it plans. It is the sum of every leg, each at its longest (`pull_request_landing.landing_longest_seconds`):
+
+- the plan's legs: the guard, one reading, the squash-commit defaults — the dry run's own longest (`planning_longest_seconds`);
+- the merge or the enqueue, and the readings that settle it, less the guard;
+- one reading after a direct merge;
+- the wait's limit — `--seconds`, else 30 minutes — and how far a wait runs past it;
+- taking the PR out of the queue, less the guard.
+
+With the bounds as they stand, a dry run takes at most `98` seconds, and a landing `932` plus the wait's limit: `2732` by default, `932` with `--seconds 0`.
 
 ## Authoring commands
 
