@@ -23,6 +23,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Callable, Sequence
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -47,16 +48,25 @@ def _ok(argv: Sequence[str], stdout: str = "") -> Completed:
     return subprocess.CompletedProcess(list(argv), 0, stdout=stdout, stderr="")
 
 
+# The read of the repository's squash-commit defaults, and the convention's.
+_DEFAULTS_READ = ["gh", "api", "repos/{owner}/{repo}"]
+_CONVENTION = {"squash_merge_commit_title": "PR_TITLE", "squash_merge_commit_message": "PR_BODY"}
+
+
 def _gh(
     answers: list[dict[str, Any]], calls: list[list[str]] | None = None
 ) -> Callable[[Sequence[str]], Completed]:
     """A `gh` answering each read with the next pull request of `answers`, the
-    last one repeated once they run out; any other command succeeds."""
+    last one repeated once they run out, and the repository's squash-commit
+    defaults with the convention's (:data:`_CONVENTION`), so a direct merge
+    leaves the body to the service; any other command succeeds."""
     remaining = list(answers)
 
     def gh(argv: Sequence[str]) -> Completed:
         if calls is not None:
             calls.append(list(argv))
+        if list(argv) == _DEFAULTS_READ:
+            return _ok(argv, json.dumps(_CONVENTION))
         if list(argv[:3]) != ["gh", "api", "graphql"] or "dequeuePullRequest" in _query(argv):
             return _ok(argv)
         pr = remaining.pop(0) if len(remaining) > 1 else remaining[0]
@@ -396,8 +406,9 @@ def test_the_squash_merge_takes_the_subject_and_pins_the_head_without_deleting(
     calls: list[list[str]] = []
     acting(_gh([_NO_QUEUE], calls))
     outcome = landing.squash_merge(42, subject="chore(release): v1.2.0", head_oid="a" * 40, **here)
-    assert outcome == landing.Outcome(True, 0, "")
+    assert outcome == landing.Outcome(True, 0, "", body=landing.BODY_COMPOSED)
     assert calls == [
+        _DEFAULTS_READ,
         [
             "gh",
             "pr",
@@ -408,7 +419,7 @@ def test_the_squash_merge_takes_the_subject_and_pins_the_head_without_deleting(
             "chore(release): v1.2.0",
             "--match-head-commit",
             "a" * 40,
-        ]
+        ],
     ]
 
 
@@ -418,7 +429,10 @@ def test_the_squash_merge_passes_admin_and_pins_nothing_without_a_head(
     calls: list[list[str]] = []
     acting(_gh([_NO_QUEUE], calls))
     landing.squash_merge(42, subject="fix: x", admin=True, **here)
-    assert calls == [["gh", "pr", "merge", "42", "--squash", "--subject", "fix: x", "--admin"]]
+    assert calls == [
+        _DEFAULTS_READ,
+        ["gh", "pr", "merge", "42", "--squash", "--subject", "fix: x", "--admin"],
+    ]
 
 
 def test_the_enqueue_is_auto_pinned_to_the_checked_head_and_nothing_else(
@@ -458,12 +472,157 @@ def test_a_refused_request_carries_gh_s_reason(
     here: dict[str, Any], acting: Callable[[landing.GhRunner], None]
 ) -> None:
     def refusing(argv: Sequence[str]) -> Completed:
+        if list(argv) == _DEFAULTS_READ:
+            return _ok(argv, json.dumps(_CONVENTION))
         return subprocess.CompletedProcess(list(argv), 1, stdout="", stderr=f"{_HEAD_MODIFIED}\n")
 
     acting(refusing)
     assert landing.squash_merge(42, subject="x", **here) == landing.Outcome(
-        False, 1, _HEAD_MODIFIED
+        False, 1, _HEAD_MODIFIED, body=landing.BODY_COMPOSED
     )
+
+
+# --- the body of a direct merge (#1257) ----------------------------------------------
+
+# A PR body as a caller's gates may judge it: a paragraph, an HTML comment and
+# a co-author line of its own, which the service keeps in a body passed to it.
+_BODY = (
+    "Closes #42\n\nA paragraph.\n\n<!-- hidden -->\n\n"
+    "Co-authored-by: Body Author <body@example.invalid>\n"
+)
+
+
+def _merge(here: dict[str, Any]) -> landing.Outcome:
+    return landing.squash_merge(496, subject="fix: land it", head_oid=fake.HEAD, **here)
+
+
+@pytest.mark.parametrize(
+    ("defaults", "route", "asked"),
+    [
+        (("PR_TITLE", "PR_BODY"), landing.BODY_COMPOSED, [fake.DEFAULTS, fake.MERGE]),
+        (
+            ("PR_TITLE", "COMMIT_MESSAGES"),
+            landing.BODY_PASSED,
+            [fake.DEFAULTS, fake.BODY, fake.MERGE],
+        ),
+        (
+            ("COMMIT_OR_PR_TITLE", "BLANK"),
+            landing.BODY_PASSED,
+            [fake.DEFAULTS, fake.BODY, fake.MERGE],
+        ),
+        (None, landing.BODY_PASSED, [fake.DEFAULTS, fake.BODY, fake.MERGE]),
+    ],
+    ids=["pr-body", "commit-messages", "blank", "unreadable"],
+)
+def test_a_direct_merge_lands_the_prs_title_and_body_by_the_route_that_loses_nothing(
+    defaults: tuple[str, str] | None,
+    route: str,
+    asked: list[str],
+    here: dict[str, Any],
+    acting: Callable[[landing.GhRunner], None],
+) -> None:
+    """Where the default composes the PR's body, the service composes it —
+    passing it could only lose what the service adds; under any other
+    default, or one the account cannot read, the PR's body is read just
+    before the merge and passed with it. Either way the commit is the PR's
+    title and body (COR-009), and the outcome says which way the body went."""
+    host = fake.HostingService(body=_BODY, squash_defaults=defaults)
+    acting(_bounded(host))
+    outcome = _merge(here)
+    assert (outcome.accepted, outcome.body) == (True, route)
+    assert host.kinds() == asked
+    assert host.body_route() == route
+    assert host.landed_message == f"fix: land it\n\n{_BODY}"
+
+
+def test_a_body_passed_is_the_prs_body_byte_for_byte_and_nothing_more(
+    here: dict[str, Any], acting: Callable[[landing.GhRunner], None]
+) -> None:
+    """The body passed is the PR's as read, its HTML comment and its own
+    co-author line among it; the subject stays the caller's. The service adds
+    no co-author trailer of the PR's commits to it, as it does after a body it
+    composes from their messages — which, on this default, is what the merge
+    would land without the body."""
+    host = fake.HostingService(body=_BODY, squash_defaults=("PR_TITLE", "COMMIT_MESSAGES"))
+    acting(_bounded(host))
+    assert _merge(here).accepted
+    [merge] = [request.argv for request in host.requests if request.kind == fake.MERGE]
+    assert merge[merge.index("--body") + 1] == _BODY
+    assert merge[merge.index("--subject") + 1] == "fix: land it"
+    assert "Co-authored-by: Pair" not in host.landed_message
+
+
+def test_an_empty_body_is_passed_as_empty(
+    here: dict[str, Any], acting: Callable[[landing.GhRunner], None]
+) -> None:
+    """A PR with no description lands with none: its empty body is passed,
+    not left to a default that composes something else."""
+    host = fake.HostingService(body="", squash_defaults=("PR_TITLE", "COMMIT_MESSAGES"))
+    acting(_bounded(host))
+    assert _merge(here).body == landing.BODY_PASSED
+    [merge] = [request.argv for request in host.requests if request.kind == fake.MERGE]
+    assert merge[merge.index("--body") + 1] == ""
+    assert host.landed_message == "fix: land it"
+
+
+@pytest.mark.parametrize(
+    "defaults",
+    [("PR_TITLE", "PR_BODY"), ("PR_TITLE", "COMMIT_MESSAGES")],
+    ids=["composed", "passed"],
+)
+def test_the_merge_carries_the_body_as_it_is_at_the_request_not_as_a_gate_read_it(
+    defaults: tuple[str, str],
+    here: dict[str, Any],
+    acting: Callable[[landing.GhRunner], None],
+) -> None:
+    """The gap the reference names: a caller's gates judged the body as they
+    read it; edited since, the merge carries the edited body — read just
+    before the request, or composed by the service at the merge. No rule is
+    made of a body that changed."""
+    host = fake.HostingService(body="As the gates read it.\n", squash_defaults=defaults)
+    host.before(fake.DEFAULTS, lambda service: setattr(service, "body", "Edited since.\n"))
+    acting(_bounded(host))
+    assert _merge(here).accepted
+    assert host.landed_message == "fix: land it\n\nEdited since.\n"
+
+
+def test_a_body_that_cannot_be_read_sends_no_merge(
+    here: dict[str, Any], acting: Callable[[landing.GhRunner], None]
+) -> None:
+    """The body the merge is to carry cannot be read: no merge is sent — not
+    accepted, `unreadable`, no exit code of gh's, no route taken."""
+    host = fake.HostingService(squash_defaults=("PR_TITLE", "COMMIT_MESSAGES"))
+    host.fail(fake.BODY)
+    acting(_bounded(host))
+    outcome = _merge(here)
+    assert outcome == landing.Outcome(
+        False,
+        None,
+        "the body of PR #496, which the merge is to carry, could not be read just before it, "
+        "so no merge was sent: HTTP 502: Bad Gateway",
+        landing.NOT_READ,
+    )
+    assert host.kinds() == [fake.DEFAULTS, fake.BODY]
+
+
+def test_defaults_that_cannot_be_read_pass_the_body(
+    here: dict[str, Any], acting: Callable[[landing.GhRunner], None]
+) -> None:
+    """A reading of the defaults that fails is no default that composes the
+    PR's body: the body is passed, so the commit carries it whatever the
+    default is."""
+    host = fake.HostingService(body=_BODY, squash_defaults=("PR_TITLE", "COMMIT_MESSAGES"))
+    host.fail(fake.DEFAULTS)
+    acting(_bounded(host))
+    assert _merge(here).body == landing.BODY_PASSED
+    assert host.landed_message == f"fix: land it\n\n{_BODY}"
+
+
+def test_the_merges_longest_run_counts_its_readings_before_the_request() -> None:
+    """The defaults and the body, one `gh` call each at its bound, come before
+    the merge and nowhere before an enqueue."""
+    one_call = landing.GH_READ_SECONDS + command_runner.END_GRACE_SECONDS
+    assert landing.longest_seconds("merge") == landing.longest_seconds("enqueue") + 2 * one_call
 
 
 @pytest.mark.parametrize(
@@ -628,8 +787,13 @@ def _queue(host: fake.HostingService) -> fake.HostingService:
 
 
 def _ask(request_: str, here: dict[str, Any]) -> landing.Outcome:
+    """Make the request on the shared fake, whose defaults compose the PR's
+    body: a merge leaves its body to the service, which these tests of what a
+    request came to then set aside."""
     if request_ == "merge":
-        return landing.squash_merge(496, subject="fix: land it", head_oid=fake.HEAD, **here)
+        outcome = landing.squash_merge(496, subject="fix: land it", head_oid=fake.HEAD, **here)
+        assert outcome.body == landing.BODY_COMPOSED
+        return replace(outcome, body="")
     if request_ == "enqueue":
         return landing.enqueue(496, head_oid=fake.HEAD, **here)
     return landing.dequeue(496, **here)
@@ -681,7 +845,8 @@ def test_a_request_with_no_answer_whose_end_state_one_reading_finds_was_made(
     setup(host)
     acting(_bounded(host))
     assert _ask(request_, here) == landing.Outcome(True, None)
-    assert host.kinds() == [fake.ENQUEUE if request_ == "enqueue" else fake.MERGE, fake.READ]
+    asked = [fake.ENQUEUE] if request_ == "enqueue" else [fake.DEFAULTS, fake.MERGE]
+    assert host.kinds() == [*asked, fake.READ]
     assert slept == []
 
 
@@ -693,7 +858,7 @@ def test_a_request_the_service_was_still_making_shows_in_the_second_reading(
     host.after(fake.READ, lambda service: service.merge_now())
     acting(_bounded(host))
     assert _ask("merge", here) == landing.Outcome(True, None)
-    assert host.kinds() == [fake.MERGE, fake.READ, fake.READ]
+    assert host.kinds() == [fake.DEFAULTS, fake.MERGE, fake.READ, fake.READ]
     assert slept == [landing.SETTLE_WINDOW_SECONDS]
 
 
@@ -743,12 +908,13 @@ def _ends_at_its_bound(
 ) -> landing.GhRunner:
     """`host` through the bounded start, on `clock`: the merge never answers
     and is ended after `request` seconds; the first reading after it takes
-    `first_reading` seconds."""
-    read_after = [first_reading]
+    `first_reading` seconds. What is read before the merge takes no time."""
+    read_after: list[float] = []
 
     def run(argv: Sequence[str]) -> Completed:
         if list(argv[:3]) == ["gh", "pr", "merge"]:
             clock.now += request
+            read_after.append(first_reading)
             raise subprocess.TimeoutExpired(list(argv), request)
         clock.now += read_after.pop() if read_after else 0.0
         return host(argv)
@@ -1008,7 +1174,7 @@ def test_a_request_the_service_answered_with_an_error_is_refused_in_its_words_un
     host.fail(fake.MERGE, stderr=stderr)
     acting(_bounded(host))
     assert _ask("merge", here) == landing.Outcome(False, 1, stderr)
-    assert host.kinds() == [fake.MERGE]
+    assert host.kinds() == [fake.DEFAULTS, fake.MERGE]
     assert slept == []
 
 
@@ -1035,7 +1201,7 @@ def test_words_the_module_does_not_recognise_as_an_answer_are_settled_by_reading
     assert outcome.reason.startswith(
         f"the merge of PR #496 got no usable answer ({stderr or 'gh answered nothing'})"
     )
-    assert host.kinds() == [fake.MERGE, fake.READ, fake.READ]
+    assert host.kinds() == [fake.DEFAULTS, fake.MERGE, fake.READ, fake.READ]
 
 
 def test_an_unrecognised_refusal_still_ends_not_accepted_in_gh_s_words(
@@ -1140,6 +1306,10 @@ if sys.argv[1:3] == ["pr", "merge"]:
     with open(os.environ["FAKE_GH_PIDFILE"], "w", encoding="utf-8") as out:
         out.write(str(os.getpid()))
     time.sleep(60)
+    sys.exit(0)
+if sys.argv[1:3] == ["api", "repos/{owner}/{repo}"]:
+    print(json.dumps({"squash_merge_commit_title": "PR_TITLE",
+                      "squash_merge_commit_message": "PR_BODY"}))
     sys.exit(0)
 print(json.dumps({"data": {"repository": {"pullRequest": json.loads(%r)}}}))
 """
@@ -1922,6 +2092,8 @@ def test_a_refused_request_exits_1(monkeypatch: pytest.MonkeyPatch) -> None:
     refusal = "GraphQL: Pull request is not mergeable (mergePullRequest)"
 
     def refusing(argv: Sequence[str]) -> Completed:
+        if list(argv) == _DEFAULTS_READ:
+            return _ok(argv, json.dumps(_CONVENTION))
         return subprocess.CompletedProcess(list(argv), 1, stdout="", stderr=refusal)
 
     monkeypatch.setattr(landing, "gh_runner", lambda cwd: refusing)
@@ -1929,6 +2101,42 @@ def test_a_refused_request_exits_1(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result.exit_code == 1
     [document] = _lines(result.stdout)
     assert document["reason"] == refusal and document["reason_kind"] is None
+    assert document["body"] == landing.BODY_COMPOSED
+
+
+@pytest.mark.parametrize(
+    ("message", "body"),
+    [("PR_BODY", "composed"), ("COMMIT_MESSAGES", "passed")],
+)
+def test_merge_writes_which_way_the_body_went(
+    monkeypatch: pytest.MonkeyPatch, message: str, body: str
+) -> None:
+    """`body` is additive to the request's document, on `merge` alone: the
+    other requests' documents do not carry it."""
+    host = fake.HostingService(squash_defaults=("PR_TITLE", message))
+    monkeypatch.setattr(landing, "gh_runner", lambda cwd: _bounded(host))
+    result = _invoke("merge", "496", "--subject", "fix: land it", "--json")
+    assert result.exit_code == 0
+    [document] = _lines(result.stdout)
+    assert (document["accepted"], document["body"]) == (True, body)
+
+
+def test_merge_whose_body_cannot_be_read_writes_it_unsent_and_exits_1(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    host = fake.HostingService(squash_defaults=("PR_TITLE", "BLANK"))
+    host.fail(fake.BODY)
+    monkeypatch.setattr(landing, "gh_runner", lambda cwd: _bounded(host))
+    result = _invoke("merge", "496", "--subject", "fix: land it", "--json")
+    assert result.exit_code == 1
+    [document] = _lines(result.stdout)
+    assert (document["accepted"], document["exit_code"], document["reason_kind"]) == (
+        False,
+        None,
+        "unreadable",
+    )
+    assert document["body"] is None
+    assert fake.MERGE not in host.kinds()
 
 
 def _unanswered_host(monkeypatch: pytest.MonkeyPatch, ends: str) -> fake.HostingService:
@@ -1983,7 +2191,9 @@ def test_a_merge_with_no_answer_writes_how_it_settled_and_exits_by_it(
         "reason",
         "reason_kind",
         "guard",
+        "body",
     }
+    assert document["body"] == landing.BODY_COMPOSED
 
 
 def test_a_merge_with_no_answer_says_how_it_settled_to_a_person(
@@ -2087,6 +2297,12 @@ def test_a_request_in_another_repository_with_no_terminal_is_refused_unmade(
     assert "--allow-foreign-repo" in document["reason"]
     assert document["schema_version"] == landing.SCHEMA_VERSION
     assert calls == []
+    # A merge's document says no body went: no merge was sent. `body` is the
+    # merge's alone.
+    if args[0] == "merge":
+        assert document["body"] is None
+    else:
+        assert "body" not in document
 
 
 def test_a_refusal_says_why_and_names_the_flag(fake_gh: Any, foreign: Path) -> None:

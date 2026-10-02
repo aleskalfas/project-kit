@@ -70,12 +70,28 @@ def test_both_verbs_compose_the_shared_mechanic(lib) -> None:
 # --- squash_merge ---------------------------------------------------------
 
 
+# What the backbone reads before a direct merge (#1257): the repository's
+# squash-commit defaults, here the convention's, so the merge leaves the
+# body to the service and asks nothing more before its request.
+_DEFAULTS_READ = ["gh", "api", "repos/{owner}/{repo}"]
+_CONVENTION = '{"squash_merge_commit_title": "PR_TITLE", "squash_merge_commit_message": "PR_BODY"}'
+
+
+def _convention(args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(args=args, returncode=0, stdout=_CONVENTION, stderr="")
+
+
 def _backbone_gh(monkeypatch, lib, fake_gh_run) -> None:
     """The merge requests are the backbone's (`pkit pull-request`): run it in this
-    process, its `gh` answered by `fake_gh_run(args, config)`."""
-    pull_request_backbone.in_process(
-        monkeypatch, lib.merge_queue, gh=lambda argv: fake_gh_run(list(argv), {})
-    )
+    process, its `gh` answered by `fake_gh_run(args, config)` — but for the
+    squash-commit defaults it reads before a direct merge, the convention's."""
+
+    def gh(argv):
+        if list(argv) == _DEFAULTS_READ:
+            return _convention(list(argv))
+        return fake_gh_run(list(argv), {})
+
+    pull_request_backbone.in_process(monkeypatch, lib.merge_queue, gh=gh)
 
 
 def test_squash_merge_has_no_local_delete_branch_half(lib, monkeypatch) -> None:
@@ -821,6 +837,8 @@ class _Queue:
         _defaults(monkeypatch, lib)
 
         def fake_gh(args):
+            if list(args) == _DEFAULTS_READ:
+                return _convention(list(args))
             self.commands.append(list(args))
             code = 1 if gh_fails else 0
             said = "GraphQL: the service refused it" if gh_fails else ""

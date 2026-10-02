@@ -105,7 +105,10 @@ class Cell:
     land-work: its exit and the gist of its last step line. A scenario that
     runs the caller again says each run's end in turn (`a → b`).
     `requests` — the landing's requests the service received, in order
-    (`hosting_fake.LANDING`; `read×3` is three running).
+    (`hosting_fake.LANDING`; `read×3` is three running); a direct merge says
+    how its body went (#1257): `merge(composed)`, left to the service, whose
+    default composes the PR's body, or `merge(passed)`, the PR's body read
+    just before it (`body`) and passed with it.
     `after` — the steps after the merge ran: done-work's move to Done and its
     closes, merge-pr's after-merge hooks, release's branch clean-up (its only
     step after the merge).
@@ -257,6 +260,12 @@ class World:
 
 def _direct(world: World) -> None:
     """A base without a queue: the fake's default."""
+
+
+def _default_not_the_body(world: World) -> None:
+    """A base without a queue, on a repository whose default squash-commit
+    message is the commits' messages, not the PR's body."""
+    world.host.squash_defaults = ("COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES")
 
 
 def _queue(world: World, *, method: str = "SQUASH") -> None:
@@ -748,6 +757,15 @@ _NO_ONE_LEFT = NotToday(
     "imports the landing module: a kill ends its own run, with nothing left to read what the "
     "request came to"
 )
+_BODY_LEFT_TO_THE_DEFAULT = (
+    "accident: a direct merge passes the subject only, so the commit's body is what the "
+    "repository's default composes, here the commits' messages, not the PR's body (COR-009); "
+    "#1257 passes it"
+)
+_BODY_PASSED = (
+    "the default does not compose the PR's body, so the body is read just before the merge "
+    "and passed with it (#1257)"
+)
 
 SCENARIOS: tuple[Scenario, ...] = (
     # ---- landing ---------------------------------------------------------------------
@@ -762,10 +780,52 @@ SCENARIOS: tuple[Scenario, ...] = (
             merged("0 merge: merged", "read×2 merge read delete-ref"),
         ),
         after={
-            DONE_WORK: _deleted("merged 0", "read×2 merge read branch based-on delete-ref"),
-            MERGE_PR: _deleted("0 record=ran", "read×2 merge read branch based-on delete-ref"),
-            RELEASE: _deleted("0", "read merge read branch based-on delete-ref"),
-            LAND_WORK: _deleted("0 merge: merged", "read×2 merge read branch based-on delete-ref"),
+            DONE_WORK: _deleted(
+                "merged 0", "read×2 defaults merge(composed) read branch based-on delete-ref"
+            ),
+            MERGE_PR: _deleted(
+                "0 record=ran", "read×2 defaults merge(composed) read branch based-on delete-ref"
+            ),
+            RELEASE: _deleted("0", "read defaults merge(composed) read branch based-on delete-ref"),
+            LAND_WORK: _deleted(
+                "0 merge: merged", "read×2 defaults merge(composed) read branch based-on delete-ref"
+            ),
+        },
+    ),
+    Scenario(
+        "no-queue-default-not-the-body",
+        "A base without a queue, on a repository whose default squash-commit message is the "
+        "commits' messages: the PR's body is passed with the merge.",
+        _default_not_the_body,
+        Row(
+            merged("merged 0", "read×2 merge read delete-ref", note=_BODY_LEFT_TO_THE_DEFAULT),
+            merged("0 record=ran", "read×2 merge read delete-ref", note=_BODY_LEFT_TO_THE_DEFAULT),
+            merged("0", "read merge read delete-ref", note=_BODY_LEFT_TO_THE_DEFAULT),
+            merged(
+                "0 merge: merged", "read×2 merge read delete-ref", note=_BODY_LEFT_TO_THE_DEFAULT
+            ),
+        ),
+        after={
+            DONE_WORK: _deleted(
+                "merged 0",
+                "read×2 defaults body merge(passed) read branch based-on delete-ref",
+                note=_BODY_PASSED,
+            ),
+            MERGE_PR: _deleted(
+                "0 record=ran",
+                "read×2 defaults body merge(passed) read branch based-on delete-ref",
+                note=_BODY_PASSED,
+            ),
+            RELEASE: _deleted(
+                "0",
+                "read defaults body merge(passed) read branch based-on delete-ref",
+                note=_BODY_PASSED,
+            ),
+            LAND_WORK: _deleted(
+                "0 merge: merged",
+                "read×2 defaults body merge(passed) read branch based-on delete-ref",
+                note=_BODY_PASSED,
+            ),
         },
     ),
     Scenario(
@@ -869,11 +929,18 @@ SCENARIOS: tuple[Scenario, ...] = (
             merged("0 merge: merged", "read×2 merge read×2 delete-ref"),
         ),
         after={
-            DONE_WORK: _deleted("merged 0", "read×2 merge read×2 branch based-on delete-ref"),
-            MERGE_PR: _deleted("0 record=ran", "read×2 merge read×2 branch based-on delete-ref"),
-            RELEASE: _deleted("0", "read merge read×2 branch based-on delete-ref"),
+            DONE_WORK: _deleted(
+                "merged 0", "read×2 defaults merge(composed) read×2 branch based-on delete-ref"
+            ),
+            MERGE_PR: _deleted(
+                "0 record=ran", "read×2 defaults merge(composed) read×2 branch based-on delete-ref"
+            ),
+            RELEASE: _deleted(
+                "0", "read defaults merge(composed) read×2 branch based-on delete-ref"
+            ),
             LAND_WORK: _deleted(
-                "0 merge: merged", "read×2 merge read×2 branch based-on delete-ref"
+                "0 merge: merged",
+                "read×2 defaults merge(composed) read×2 branch based-on delete-ref",
             ),
         },
     ),
@@ -894,10 +961,16 @@ SCENARIOS: tuple[Scenario, ...] = (
             merged("0 merge: merged", "read×2 merge read delete-ref"),
         ),
         after={
-            DONE_WORK: _deleted("merged 0", "read×2 merge read branch based-on delete-ref"),
-            MERGE_PR: _deleted("0 record=ran", "read×2 merge read branch based-on delete-ref"),
+            DONE_WORK: _deleted(
+                "merged 0", "read×2 defaults merge(composed) read branch based-on delete-ref"
+            ),
+            MERGE_PR: _deleted(
+                "0 record=ran", "read×2 defaults merge(composed) read branch based-on delete-ref"
+            ),
             RELEASE: _deleted("0", "read×4 branch based-on delete-ref"),
-            LAND_WORK: _deleted("0 merge: merged", "read×2 merge read branch based-on delete-ref"),
+            LAND_WORK: _deleted(
+                "0 merge: merged", "read×2 defaults merge(composed) read branch based-on delete-ref"
+            ),
         },
     ),
     Scenario(
@@ -922,7 +995,9 @@ SCENARIOS: tuple[Scenario, ...] = (
             MERGE_PR: _deleted(
                 "0 record=ran", "read×2 defaults enqueue read×2 branch based-on delete-ref"
             ),
-            RELEASE: _deleted("0", "read merge read×2 branch based-on delete-ref"),
+            RELEASE: _deleted(
+                "0", "read defaults merge(composed) read×2 branch based-on delete-ref"
+            ),
             LAND_WORK: _deleted(
                 "0 merge: merged", "read×2 defaults enqueue read×2 branch based-on delete-ref"
             ),
@@ -1227,10 +1302,16 @@ SCENARIOS: tuple[Scenario, ...] = (
             merged("0 merge: merged", "read×2 merge read delete-ref"),
         ),
         after={
-            DONE_WORK: _deleted("merged 0", "read×2 merge read branch based-on delete-ref"),
-            MERGE_PR: _deleted("0 record=ran", "read×2 merge read branch based-on delete-ref"),
-            RELEASE: _deleted("0", "read merge read branch based-on delete-ref"),
-            LAND_WORK: _deleted("0 merge: merged", "read×2 merge read branch based-on delete-ref"),
+            DONE_WORK: _deleted(
+                "merged 0", "read×2 defaults merge(composed) read branch based-on delete-ref"
+            ),
+            MERGE_PR: _deleted(
+                "0 record=ran", "read×2 defaults merge(composed) read branch based-on delete-ref"
+            ),
+            RELEASE: _deleted("0", "read defaults merge(composed) read branch based-on delete-ref"),
+            LAND_WORK: _deleted(
+                "0 merge: merged", "read×2 defaults merge(composed) read branch based-on delete-ref"
+            ),
         },
     ),
     Scenario(
@@ -1273,6 +1354,16 @@ SCENARIOS: tuple[Scenario, ...] = (
             stopped("1", "read merge"),
             stopped("7 merge: not merged", "read×2 merge"),
         ),
+        after={
+            DONE_WORK: stopped(
+                "refused 3 retry",
+                "read×2 defaults merge(composed)",
+                note="gh's refusal of the merge",
+            ),
+            MERGE_PR: stopped("3", "read×2 defaults merge(composed)"),
+            RELEASE: stopped("1", "read defaults merge(composed)"),
+            LAND_WORK: stopped("7 merge: not merged", "read×2 defaults merge(composed)"),
+        },
     ),
     # ---- requests and answers -------------------------------------------------------------
     Scenario(
@@ -1287,17 +1378,23 @@ SCENARIOS: tuple[Scenario, ...] = (
         ),
         after={
             DONE_WORK: _deleted(
-                "merged 0", "read×2 merge read×2 branch based-on delete-ref", note=_SETTLED_MADE
+                "merged 0",
+                "read×2 defaults merge(composed) read×2 branch based-on delete-ref",
+                note=_SETTLED_MADE,
             ),
             MERGE_PR: _deleted(
-                "0 record=ran", "read×2 merge read×2 branch based-on delete-ref", note=_SETTLED_MADE
+                "0 record=ran",
+                "read×2 defaults merge(composed) read×2 branch based-on delete-ref",
+                note=_SETTLED_MADE,
             ),
             RELEASE: _deleted(
-                "0", "read merge read×2 branch based-on delete-ref", note=_SETTLED_MADE
+                "0",
+                "read defaults merge(composed) read×2 branch based-on delete-ref",
+                note=_SETTLED_MADE,
             ),
             LAND_WORK: _deleted(
                 "0 merge: merged",
-                "read×2 merge read×2 branch based-on delete-ref",
+                "read×2 defaults merge(composed) read×2 branch based-on delete-ref",
                 note=_SETTLED_MADE,
             ),
         },
@@ -1340,15 +1437,19 @@ SCENARIOS: tuple[Scenario, ...] = (
             stopped("7 merge: not merged", "read×2 merge read", note=_ONE_READING),
         ),
         after={
-            DONE_WORK: stopped("refused 3 retry", "read×2 merge read×2", note=_SETTLED_NOT_MADE),
+            DONE_WORK: stopped(
+                "refused 3 retry", "read×2 defaults merge(composed) read×2", note=_SETTLED_NOT_MADE
+            ),
             MERGE_PR: stopped(
                 "3 record=owed",
-                "read×2 merge read×2",
+                "read×2 defaults merge(composed) read×2",
                 note=f"{_SETTLED_NOT_MADE}; {_OWED_ON_A_SENT_REQUEST}",
             ),
-            RELEASE: stopped("1", "read merge read×2", note=_SETTLED_NOT_MADE),
+            RELEASE: stopped("1", "read defaults merge(composed) read×2", note=_SETTLED_NOT_MADE),
             LAND_WORK: stopped(
-                "7 merge: not merged", "read×2 merge read×2", note=_SETTLED_NOT_MADE
+                "7 merge: not merged",
+                "read×2 defaults merge(composed) read×2",
+                note=_SETTLED_NOT_MADE,
             ),
         },
     ),
@@ -1376,6 +1477,29 @@ SCENARIOS: tuple[Scenario, ...] = (
                 "finds it merged, and asks for the re-run",
             ),
         ),
+        after={
+            DONE_WORK: _deleted(
+                "refused 3 retry → merged 0",
+                "read×2 defaults merge(composed) read×2 branch based-on delete-ref",
+                note=_MERGED_LATE,
+            ),
+            MERGE_PR: _deleted(
+                "3 record=owed → 0 record=ran",
+                "read×2 defaults merge(composed) read×3 branch based-on delete-ref",
+                note=_MERGED_LATE,
+            ),
+            RELEASE: _deleted(
+                "1 → 0",
+                "read defaults merge(composed) read×2 branch based-on delete-ref",
+                note=_MERGED_LATE,
+            ),
+            LAND_WORK: _deleted(
+                "7 merge: merged meanwhile → 0 merge: #42 completed through its merged PR",
+                "read×2 defaults merge(composed) read×2 branch based-on delete-ref",
+                note=f"{_MERGED_LATE}; land-work's own reading after done-work's end already "
+                "finds it merged, and asks for the re-run",
+            ),
+        },
     ),
     Scenario(
         "request-unanswered-then-unreadable",
@@ -1387,7 +1511,20 @@ SCENARIOS: tuple[Scenario, ...] = (
             stopped("hangs", "read merge", note=_HANGS),
             stopped("4 merge: unconfirmed", "read×2 merge read×2", note=_SETTLED_UNCONFIRMED),
         ),
-        after={RELEASE: stopped("4", "read merge read", note=_RELEASE_UNCONFIRMED)},
+        after={
+            DONE_WORK: stopped(
+                "unconfirmed 4", "read×2 defaults merge(composed) read", note=_SETTLED_UNCONFIRMED
+            ),
+            MERGE_PR: stopped(
+                "4 record=owed", "read×2 defaults merge(composed) read", note=_SETTLED_UNCONFIRMED
+            ),
+            RELEASE: stopped("4", "read defaults merge(composed) read", note=_RELEASE_UNCONFIRMED),
+            LAND_WORK: stopped(
+                "4 merge: unconfirmed",
+                "read×2 defaults merge(composed) read×2",
+                note=_SETTLED_UNCONFIRMED,
+            ),
+        },
     ),
     Scenario(
         "enqueue-unanswered-then-unreadable",
@@ -1432,20 +1569,22 @@ SCENARIOS: tuple[Scenario, ...] = (
         after={
             DONE_WORK: _deleted(
                 "merged 0",
-                "read×2 merge read×2 branch based-on delete-ref",
+                "read×2 defaults merge(composed) read×2 branch based-on delete-ref",
                 note=_LOST_ANSWER_SETTLED,
             ),
             MERGE_PR: _deleted(
                 "0 record=ran",
-                "read×2 merge read×2 branch based-on delete-ref",
+                "read×2 defaults merge(composed) read×2 branch based-on delete-ref",
                 note=_LOST_ANSWER_SETTLED,
             ),
             RELEASE: _deleted(
-                "0", "read merge read×2 branch based-on delete-ref", note=_LOST_ANSWER_SETTLED
+                "0",
+                "read defaults merge(composed) read×2 branch based-on delete-ref",
+                note=_LOST_ANSWER_SETTLED,
             ),
             LAND_WORK: _deleted(
                 "0 merge: merged",
-                "read×2 merge read×2 branch based-on delete-ref",
+                "read×2 defaults merge(composed) read×2 branch based-on delete-ref",
                 note=_LOST_ANSWER_SETTLED,
             ),
         },
@@ -1464,6 +1603,19 @@ SCENARIOS: tuple[Scenario, ...] = (
             _NO_ONE_LEFT,
             _deleted("0 merge: merged", "read×2 merge read branch based-on delete-ref"),
         ),
+        after={
+            DONE_WORK: _deleted(
+                "merged 0",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
+                note="no document: pm reads the PR merged, and that is the merge",
+            ),
+            MERGE_PR: _deleted(
+                "0 record=ran", "read×2 defaults merge(composed) read branch based-on delete-ref"
+            ),
+            LAND_WORK: _deleted(
+                "0 merge: merged", "read×2 defaults merge(composed) read branch based-on delete-ref"
+            ),
+        },
     ),
     Scenario(
         "killed-mid-request-then-neither",
@@ -1476,11 +1628,15 @@ SCENARIOS: tuple[Scenario, ...] = (
             stopped("7 merge: not merged", "read×2 merge read", note=_ONE_READING),
         ),
         after={
-            DONE_WORK: stopped("unconfirmed 4", "read×2 merge read", note=_KILLED_ONE_READING),
-            MERGE_PR: stopped("4 record=owed", "read×2 merge read", note=_KILLED_ONE_READING),
+            DONE_WORK: stopped(
+                "unconfirmed 4", "read×2 defaults merge(composed) read", note=_KILLED_ONE_READING
+            ),
+            MERGE_PR: stopped(
+                "4 record=owed", "read×2 defaults merge(composed) read", note=_KILLED_ONE_READING
+            ),
             LAND_WORK: stopped(
                 "4 merge: unconfirmed",
-                "read×2 merge read×2",
+                "read×2 defaults merge(composed) read×2",
                 note=f"{_KILLED_ONE_READING}; land-work's own reading since keeps it unconfirmed",
             ),
         },
@@ -1495,6 +1651,12 @@ SCENARIOS: tuple[Scenario, ...] = (
             stopped("4", "read merge read×2"),
             stopped("4 merge: unconfirmed", "read×2 merge read×3"),
         ),
+        after={
+            DONE_WORK: stopped("unconfirmed 4", "read×2 defaults merge(composed) read×2"),
+            MERGE_PR: stopped("4 record=owed", "read×2 defaults merge(composed) read×2"),
+            RELEASE: stopped("4", "read defaults merge(composed) read×2"),
+            LAND_WORK: stopped("4 merge: unconfirmed", "read×2 defaults merge(composed) read×3"),
+        },
     ),
     Scenario(
         "read-fails-after-an-enqueue",
@@ -1522,6 +1684,24 @@ SCENARIOS: tuple[Scenario, ...] = (
             _deleted("0", "read merge read×2 branch based-on delete-ref"),
             _deleted("0 merge: merged", "read×2 merge read×2 branch based-on delete-ref"),
         ),
+        after={
+            DONE_WORK: _deleted(
+                "merged 0",
+                "read×2 defaults merge(composed) read×2 branch based-on delete-ref",
+                note="one failed reading after an accepted merge is read again, never taken "
+                "for a merge or for none",
+            ),
+            MERGE_PR: _deleted(
+                "0 record=ran", "read×2 defaults merge(composed) read×2 branch based-on delete-ref"
+            ),
+            RELEASE: _deleted(
+                "0", "read defaults merge(composed) read×2 branch based-on delete-ref"
+            ),
+            LAND_WORK: _deleted(
+                "0 merge: merged",
+                "read×2 defaults merge(composed) read×2 branch based-on delete-ref",
+            ),
+        },
     ),
     Scenario(
         "rate-limit-mid-wait",
@@ -1571,10 +1751,16 @@ SCENARIOS: tuple[Scenario, ...] = (
             merged("0 merge: merged", "read×2 merge read delete-ref"),
         ),
         after={
-            DONE_WORK: _deleted("merged 0", "read×2 merge read branch based-on delete-ref"),
-            MERGE_PR: _deleted("0 record=ran", "read×2 merge read branch based-on delete-ref"),
-            RELEASE: _deleted("0", "read merge read branch based-on delete-ref"),
-            LAND_WORK: _deleted("0 merge: merged", "read×2 merge read branch based-on delete-ref"),
+            DONE_WORK: _deleted(
+                "merged 0", "read×2 defaults merge(composed) read branch based-on delete-ref"
+            ),
+            MERGE_PR: _deleted(
+                "0 record=ran", "read×2 defaults merge(composed) read branch based-on delete-ref"
+            ),
+            RELEASE: _deleted("0", "read defaults merge(composed) read branch based-on delete-ref"),
+            LAND_WORK: _deleted(
+                "0 merge: merged", "read×2 defaults merge(composed) read branch based-on delete-ref"
+            ),
         },
     ),
     Scenario(
@@ -1610,7 +1796,7 @@ SCENARIOS: tuple[Scenario, ...] = (
         after={
             DONE_WORK: merged(
                 "merged 0",
-                "read×2 merge read branch",
+                "read×2 defaults merge(composed) read branch",
                 remote="none",
                 local="kept",
                 deletion="kept tip-moved",
@@ -1618,7 +1804,7 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             MERGE_PR: merged(
                 "0 record=ran",
-                "read×2 merge read branch",
+                "read×2 defaults merge(composed) read branch",
                 remote="none",
                 local="kept",
                 deletion="kept tip-moved",
@@ -1626,7 +1812,7 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             RELEASE: merged(
                 "0",
-                "read merge read branch",
+                "read defaults merge(composed) read branch",
                 remote="none",
                 local="kept",
                 deletion="kept tip-moved",
@@ -1634,7 +1820,7 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             LAND_WORK: merged(
                 "0 merge: merged",
-                "read×2 merge read branch",
+                "read×2 defaults merge(composed) read branch",
                 remote="none",
                 local="kept",
                 deletion="kept tip-moved",
@@ -1655,24 +1841,28 @@ SCENARIOS: tuple[Scenario, ...] = (
         after={
             DONE_WORK: merged(
                 "merged 0",
-                "read×2 merge read branch",
+                "read×2 defaults merge(composed) read branch",
                 remote="none",
                 deletion="gone",
                 note=_FOUND_GONE,
             ),
             MERGE_PR: merged(
                 "0 record=ran",
-                "read×2 merge read branch",
+                "read×2 defaults merge(composed) read branch",
                 remote="none",
                 deletion="gone",
                 note=_FOUND_GONE,
             ),
             RELEASE: merged(
-                "0", "read merge read branch", remote="none", deletion="gone", note=_FOUND_GONE
+                "0",
+                "read defaults merge(composed) read branch",
+                remote="none",
+                deletion="gone",
+                note=_FOUND_GONE,
             ),
             LAND_WORK: merged(
                 "0 merge: merged",
-                "read×2 merge read branch",
+                "read×2 defaults merge(composed) read branch",
                 remote="none",
                 deletion="gone",
                 note=_FOUND_GONE,
@@ -1692,7 +1882,7 @@ SCENARIOS: tuple[Scenario, ...] = (
         after={
             DONE_WORK: merged(
                 "merged 0",
-                "read×2 merge read branch",
+                "read×2 defaults merge(composed) read branch",
                 remote="none",
                 local="kept",
                 deletion="refused cross-repository",
@@ -1700,7 +1890,7 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             MERGE_PR: merged(
                 "0 record=ran",
-                "read×2 merge read branch",
+                "read×2 defaults merge(composed) read branch",
                 remote="none",
                 local="kept",
                 deletion="refused cross-repository",
@@ -1708,7 +1898,7 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             RELEASE: merged(
                 "0",
-                "read merge read branch",
+                "read defaults merge(composed) read branch",
                 remote="none",
                 local="kept",
                 deletion="refused cross-repository",
@@ -1716,7 +1906,7 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             LAND_WORK: merged(
                 "0 merge: merged",
-                "read×2 merge read branch",
+                "read×2 defaults merge(composed) read branch",
                 remote="none",
                 local="kept",
                 deletion="refused cross-repository",
@@ -1737,7 +1927,7 @@ SCENARIOS: tuple[Scenario, ...] = (
         after={
             DONE_WORK: merged(
                 "merged 0",
-                "read×2 merge read branch based-on delete-ref branch",
+                "read×2 defaults merge(composed) read branch based-on delete-ref branch",
                 remote="refused, protected",
                 local="kept",
                 deletion="kept deletion-refused",
@@ -1745,7 +1935,7 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             MERGE_PR: merged(
                 "0 record=ran",
-                "read×2 merge read branch based-on delete-ref branch",
+                "read×2 defaults merge(composed) read branch based-on delete-ref branch",
                 remote="refused, protected",
                 local="kept",
                 deletion="kept deletion-refused",
@@ -1753,7 +1943,7 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             RELEASE: merged(
                 "0",
-                "read merge read branch based-on delete-ref branch",
+                "read defaults merge(composed) read branch based-on delete-ref branch",
                 remote="refused, protected",
                 local="kept",
                 deletion="kept deletion-refused",
@@ -1761,7 +1951,7 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             LAND_WORK: merged(
                 "0 merge: merged",
-                "read×2 merge read branch based-on delete-ref branch",
+                "read×2 defaults merge(composed) read branch based-on delete-ref branch",
                 remote="refused, protected",
                 local="kept",
                 deletion="kept deletion-refused",
@@ -1802,7 +1992,7 @@ SCENARIOS: tuple[Scenario, ...] = (
         after={
             DONE_WORK: merged(
                 "merged 0",
-                "read×2 merge read branch based-on",
+                "read×2 defaults merge(composed) read branch based-on",
                 remote="none",
                 local="kept",
                 deletion="kept open-pull-request",
@@ -1810,7 +2000,7 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             MERGE_PR: merged(
                 "0 record=ran",
-                "read×2 merge read branch based-on",
+                "read×2 defaults merge(composed) read branch based-on",
                 remote="none",
                 local="kept",
                 deletion="kept open-pull-request",
@@ -1818,7 +2008,7 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             RELEASE: merged(
                 "0",
-                "read merge read branch based-on",
+                "read defaults merge(composed) read branch based-on",
                 remote="none",
                 local="kept",
                 deletion="kept open-pull-request",
@@ -1826,7 +2016,7 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             LAND_WORK: merged(
                 "0 merge: merged",
-                "read×2 merge read branch based-on",
+                "read×2 defaults merge(composed) read branch based-on",
                 remote="none",
                 local="kept",
                 deletion="kept open-pull-request",
@@ -1847,7 +2037,7 @@ SCENARIOS: tuple[Scenario, ...] = (
         after={
             DONE_WORK: merged(
                 "merged 0",
-                "read×2 merge read branch based-on",
+                "read×2 defaults merge(composed) read branch based-on",
                 remote="none",
                 local="kept",
                 deletion="kept open-pull-request",
@@ -1855,7 +2045,7 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             MERGE_PR: merged(
                 "0 record=ran",
-                "read×2 merge read branch based-on",
+                "read×2 defaults merge(composed) read branch based-on",
                 remote="none",
                 local="kept",
                 deletion="kept open-pull-request",
@@ -1863,7 +2053,7 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             RELEASE: merged(
                 "0",
-                "read merge read branch based-on",
+                "read defaults merge(composed) read branch based-on",
                 remote="none",
                 local="kept",
                 deletion="kept open-pull-request",
@@ -1871,7 +2061,7 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
             LAND_WORK: merged(
                 "0 merge: merged",
-                "read×2 merge read branch based-on",
+                "read×2 defaults merge(composed) read branch based-on",
                 remote="none",
                 local="kept",
                 deletion="kept open-pull-request",
@@ -1977,26 +2167,26 @@ SCENARIOS: tuple[Scenario, ...] = (
         after={
             DONE_WORK: _deleted(
                 "merged 0",
-                "read×2 merge read branch based-on delete-ref",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
                 guard="flag×2",
                 note=f"{_FLAG_PASSED_ON}; {_SIBLINGS_STUBBED}",
             ),
             MERGE_PR: _deleted(
                 "0 record=ran",
-                "read×2 merge read branch based-on delete-ref",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
                 guard="flag×2",
                 note=_FLAG_PASSED_ON,
             ),
             RELEASE: _deleted(
                 "0",
-                "read merge read branch based-on delete-ref",
+                "read defaults merge(composed) read branch based-on delete-ref",
                 guard="flag",
                 note="it takes --allow-foreign-repo now: its guard at the entry passes by it, "
                 "for the merge and the branch's deletion alike",
             ),
             LAND_WORK: _deleted(
                 "0 merge: merged",
-                "read×2 merge read branch based-on delete-ref",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
                 guard="flag×2",
                 note="its flag reaches done-work, which passes it on to the backbone's guard; "
                 + _SIBLINGS_STUBBED,
@@ -2021,28 +2211,28 @@ SCENARIOS: tuple[Scenario, ...] = (
         after={
             DONE_WORK: _deleted(
                 "merged 0",
-                "read×2 merge read branch based-on delete-ref",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
                 asked=1,
                 guard="flag×2",
                 note=f"{_YES_PASSED_ON}; {_SIBLINGS_STUBBED}",
             ),
             MERGE_PR: _deleted(
                 "0 record=ran",
-                "read×2 merge read branch based-on delete-ref",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
                 asked=1,
                 guard="flag×2",
                 note=_YES_PASSED_ON,
             ),
             RELEASE: _deleted(
                 "0",
-                "read merge read branch based-on delete-ref",
+                "read defaults merge(composed) read branch based-on delete-ref",
                 asked=1,
                 guard="terminal",
                 note="its guard asks once, at the entry, before it reads the PR",
             ),
             LAND_WORK: _deleted(
                 "0 merge: merged",
-                "read×2 merge read branch based-on delete-ref",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
                 asked=1,
                 guard="flag×2",
                 note="asked once: land-work's yes is passed on to done-work, whose guard and "
@@ -2094,19 +2284,19 @@ SCENARIOS: tuple[Scenario, ...] = (
         after={
             DONE_WORK: _deleted(
                 "merged 0",
-                "read×2 merge read branch based-on delete-ref",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
                 guard="flag×2",
                 note=f"{_FLAG_OVERRIDES}; {_SIBLINGS_STUBBED}",
             ),
             MERGE_PR: _deleted(
                 "0 record=ran",
-                "read×2 merge read branch based-on delete-ref",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
                 guard="flag×2",
                 note=_FLAG_OVERRIDES,
             ),
             LAND_WORK: _deleted(
                 "0 merge: merged",
-                "read×2 merge read branch based-on delete-ref",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
                 guard="flag×2",
                 note=f"{_FLAG_OVERRIDES}; {_SIBLINGS_STUBBED}",
             ),
@@ -2125,22 +2315,25 @@ SCENARIOS: tuple[Scenario, ...] = (
         after={
             DONE_WORK: _deleted(
                 "merged 0",
-                "read×2 merge read branch based-on delete-ref",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
                 guard="undetermined×2",
                 note=_FAULT,
             ),
             MERGE_PR: _deleted(
                 "0 record=ran",
-                "read×2 merge read branch based-on delete-ref",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
                 guard="undetermined×2",
                 note=_FAULT,
             ),
             RELEASE: _deleted(
-                "0", "read merge read branch based-on delete-ref", guard="undetermined", note=_FAULT
+                "0",
+                "read defaults merge(composed) read branch based-on delete-ref",
+                guard="undetermined",
+                note=_FAULT,
             ),
             LAND_WORK: _deleted(
                 "0 merge: merged",
-                "read×2 merge read branch based-on delete-ref",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
                 guard="undetermined×2",
                 note=_FAULT,
             ),
@@ -2159,25 +2352,25 @@ SCENARIOS: tuple[Scenario, ...] = (
         after={
             DONE_WORK: _deleted(
                 "merged 0",
-                "read×2 merge read branch based-on delete-ref",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
                 guard="undetermined×2",
                 note=_NO_FIRE,
             ),
             MERGE_PR: _deleted(
                 "0 record=ran",
-                "read×2 merge read branch based-on delete-ref",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
                 guard="undetermined×2",
                 note=_NO_FIRE,
             ),
             RELEASE: _deleted(
                 "0",
-                "read merge read branch based-on delete-ref",
+                "read defaults merge(composed) read branch based-on delete-ref",
                 guard="undetermined",
                 note=_NO_FIRE,
             ),
             LAND_WORK: _deleted(
                 "0 merge: merged",
-                "read×2 merge read branch based-on delete-ref",
+                "read×2 defaults merge(composed) read branch based-on delete-ref",
                 guard="undetermined×2",
                 note=_NO_FIRE,
             ),
@@ -2361,6 +2554,19 @@ def _record(clone: fake.LocalClone) -> str:
     return str(json.loads(path.read_text(encoding="utf-8"))["state"])
 
 
+def _landing(host: fake.HostingService) -> list[str]:
+    """The landing's requests (`hosting_fake.LANDING`), in order, a direct
+    merge with how its body went: passed with it, or composed by the service."""
+    named: list[str] = []
+    for request in host.requests:
+        if request.kind in (fake.MERGE, fake.MERGE_ADMIN):
+            route = "passed" if "--body" in request.argv else "composed"
+            named.append(f"{request.kind}({route})")
+        elif request.kind in fake.LANDING:
+            named.append(request.kind)
+    return named
+
+
 def _requests(kinds: list[str]) -> str:
     """The kinds in order, a run of one kind as `kind×n`."""
     runs: list[tuple[str, int]] = []
@@ -2464,7 +2670,7 @@ def land(
     assert not unknown, f"the fake answered requests it does not model: {unknown}"
     return Cell(
         outcome,
-        _requests(host.landing()),
+        _requests(_landing(host)),
         after,
         host.remote_deletion(),
         clone.local_deletion(host.head_ref),
