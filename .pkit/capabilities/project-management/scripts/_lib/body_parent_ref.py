@@ -72,6 +72,10 @@ _ANY_ISSUE_LINE = re.compile(r"^(?P<label>[A-Za-z]+):\s+#(?P<number>\d+)")
 # number is a milestone's, never an issue's.
 _NAMES_AN_ISSUE = re.compile(r"^(?P<label>[A-Za-z]+):\s*#(?P<number>\d+)")
 
+# A line that is a parent-ref and nothing else: a label, a colon, `#<N>` and at
+# most trailing whitespace (:func:`is_only_a_parent_ref`).
+_ONLY_AN_ISSUE_REF = re.compile(r"^[A-Za-z]+:\s*#\d+\s*$")
+
 
 class LineForm(Enum):
     """How a body's first line names a parent (:func:`read_first_line`).
@@ -256,6 +260,24 @@ def parent_issue(body: str, structural_type: str | None, issue_types: dict) -> i
 
 def _parent_ref_form(structural_type: str | None, issue_types: dict) -> str | None:
     """The `parent_ref_form` ``issue_types`` declares for the type, or ``None``."""
+def is_only_a_parent_ref(line: str) -> bool:
+    """Whether ``line`` is a parent-ref and nothing else: ``<Label>: #<N>`` (any
+    spacing after the colon) or a milestone ref in either form, with nothing
+    after it but whitespace.
+
+    A line that names a parent and says more — ``Feature: #12 — auth``, or a
+    sentence that happens to open ``Note: #45 was closed…`` — is not: every reader
+    takes the issue it names (:func:`named_issue`), but the line carries words a
+    writer of the parent-ref has no business removing.
+    """
+    stripped = line.strip()
+    return bool(
+        _ONLY_AN_ISSUE_REF.match(stripped)
+        or _MILESTONE_LINE.match(stripped)
+        or _OLD_MILESTONE_LINE.match(stripped)
+    )
+
+
     types = issue_types.get("types") if isinstance(issue_types, dict) else None
     entry = types.get(structural_type) if isinstance(types, dict) and structural_type else None
     form = entry.get("parent_ref_form") if isinstance(entry, dict) else None

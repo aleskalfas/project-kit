@@ -316,3 +316,35 @@ def test_a_type_with_no_form_writes_no_line(bpr) -> None:
 
 def test_an_undeclared_type_has_no_label(bpr, issue_types) -> None:
     assert bpr.type_label(issue_types, "spike") is None
+
+
+# --- a parent-ref and nothing else (#1281) ---------------------------------
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Feature: #12",
+        "EPIC:#5",
+        "Umbrella: #7   ",
+        "Milestone: [#3](../milestone/3)",
+        "Milestone: #3",
+    ],
+)
+def test_a_line_that_is_only_a_parent_ref(bpr, line) -> None:
+    assert bpr.is_only_a_parent_ref(line)
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Feature: #12 — auth",
+        "Fixes: #12 by moving the reader into the seam",
+        "Note: #45 was closed in favour of this one; …",
+        "Milestone: [#3](../milestone/3) — Q4",
+        "## What",
+        "",
+    ],
+)
+def test_a_line_that_says_more_than_a_parent_ref(bpr, line) -> None:
+    assert not bpr.is_only_a_parent_ref(line)

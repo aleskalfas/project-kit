@@ -833,8 +833,89 @@ def test_is_parent_ref_recognises_forms(sf) -> None:
     assert sf._is_parent_ref("Feature: #1")
     assert sf._is_parent_ref("Milestone: [#6](../milestone/6)")
     assert sf._is_parent_ref("Milestone: #6")
+    assert sf._is_parent_ref("Epic:#5")
+    assert sf._is_parent_ref("Feature: #1   ")
     assert not sf._is_parent_ref("## What")
     assert not sf._is_parent_ref("just prose")
+    # A line naming an issue and saying more is not a parent-ref and nothing else.
+    assert not sf._is_parent_ref("Feature: #12 — auth")
+    assert not sf._is_parent_ref("Note: #45 was closed in favour of this one")
+
+
+# --- `--parent` never deletes what an author wrote (#1281) -----------------
+#
+# Only a first line that is a parent-ref and nothing else is replaced. A first
+# line naming an issue and saying more is kept, and the new parent-ref is
+# written above it: every reader reads only the first line, so it reads the new
+# one, and nothing the author wrote is lost. The plan line says which was done.
+
+_TAILED_LINES = [
+    "Feature: #12 — auth",
+    "Fixes: #12 by moving the reader into the seam, so the cascade reads one parent",
+    "Note: #45 was closed in favour of this one; its discussion still applies here.",
+]
+
+
+@pytest.mark.parametrize("line", _TAILED_LINES)
+def test_plan_parent_keeps_a_first_line_that_names_an_issue_and_says_more(sf, line) -> None:
+    body = f"{line}\n\n## What\nx\n"
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == f"Feature: #9\n\n{line}\n\n## What\nx\n"
+    assert sf.body_parent_ref.named_issue(new_body) == 9
+    assert result.changed is True
+    named = sf.body_parent_ref.named_issue(f"{line}\n")
+    assert result.message == (
+        f"parent: set 'Feature: #9' (prepended, above {line!r}, which names #{named} and says "
+        "more, so it is kept)"
+    )
+
+
+@pytest.mark.parametrize("line", ["Feature: #12", "Epic:#5", "Feature: #12  ", "Milestone: #3"])
+def test_plan_parent_replaces_a_first_line_that_is_only_a_parent_ref(sf, line) -> None:
+    body = f"{line}\n\n## What\nx\n"
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == "Feature: #9\n\n## What\nx\n"
+    assert result.message == f"parent: set 'Feature: #9' (was {line.strip()!r})"
+
+
+@pytest.mark.parametrize("line", _TAILED_LINES)
+def test_plan_parent_under_marker_keeps_a_tailed_line_below_the_new_ref(sf, line) -> None:
+    for between in ("", "\n"):
+        body = f"{_MARKER}\n{between}{line}\n\n## What\nx\n"
+        new_body, result = sf._plan_parent(body, "Feature: #9")
+        assert new_body == f"{_MARKER}\nFeature: #9\n\n{line}\n\n## What\nx\n", between
+        assert sf.infer.integration_slug(new_body) == "foo"
+        assert sf.body_parent_ref.named_issue(new_body) == 9
+        assert "(inserted below the integration marker, above " in result.message
+        assert "so it is kept)" in result.message
+
+
+def test_plan_parent_under_marker_replaces_a_bare_ref_directly_below_it(sf) -> None:
+    body = f"{_MARKER}\nEpic:#5\n\n## What\nx\n"
+    new_body, result = sf._plan_parent(body, "Feature: #9")
+    assert new_body == f"{_MARKER}\nFeature: #9\n\n## What\nx\n"
+    assert result.message == "parent: set 'Feature: #9' (was 'Epic:#5')"
+
+
+@pytest.mark.parametrize("marker", ["", f"{_MARKER}\r\n"])
+def test_plan_parent_on_a_crlf_body_keeps_a_tailed_line_and_replaces_a_bare_one(sf, marker) -> None:
+    tailed = f"{marker}Feature: #12 — auth\r\n\r\n## What\r\nx\r\n"
+    new_body, result = sf._plan_parent(tailed, "Feature: #9")
+    lines = [ln for ln in new_body.splitlines() if ln.strip()]
+    expected_first = [_MARKER] if marker else []
+    assert lines[: len(expected_first) + 2] == [
+        *expected_first,
+        "Feature: #9",
+        "Feature: #12 — auth",
+    ]
+    assert sf.body_parent_ref.named_issue(new_body) == 9
+    assert "so it is kept)" in result.message
+
+    bare = f"{marker}Feature: #12\r\n\r\n## What\r\nx\r\n"
+    new_body, result = sf._plan_parent(bare, "Feature: #9")
+    lines = [ln for ln in new_body.splitlines() if ln.strip()]
+    assert lines[: len(expected_first) + 2] == [*expected_first, "Feature: #9", "## What"]
+    assert result.message == "parent: set 'Feature: #9' (was 'Feature: #12')"
 
 
 # --- the board READ orchestration (#724) -------------------------------------

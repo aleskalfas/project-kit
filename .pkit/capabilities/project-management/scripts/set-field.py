@@ -1179,18 +1179,22 @@ def _retitle_prefix(title: str, target_prefix: str) -> str | None:
 
 
 def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
-    """Rewrite the body's first parent-ref line to `parent_ref_line` (idempotent).
+    """Write `parent_ref_line` as the body's first line, losing nothing (idempotent).
 
-    A parent-ref is the first non-blank body line naming a parent
-    (`<Label>: #<N>`, in any form, or `Milestone: [#<N>](../milestone/<N>)`;
-    `_is_parent_ref`), read past a leading DEC-013 `Integration:` marker, which
-    sits directly above it. When that line names a parent, it is replaced; otherwise the
-    new parent-ref is added — directly below the marker on a marked body, so the
-    marker stays the first line with no blank line between the two (#765), and
-    at the top of an unmarked one, in place of any blank lines leading it — with
-    one blank line before the content that follows. Setting the parent to the
-    value already present is a no-op. A malformed marker is refused before this
-    is reached (`main`), so it is never mistaken for content to write above.
+    The first line is the first non-blank body line, read past a leading DEC-013
+    `Integration:` marker, which sits directly above it. Where that line is a
+    parent-ref and nothing else (`_is_parent_ref`: `<Label>: #<N>`, or a
+    milestone ref in either form), it is replaced. Anywhere else the new
+    parent-ref is added above it — directly below the marker on a marked body,
+    so the marker stays the first line with no blank line between the two
+    (#765), and at the top of an unmarked one, in place of any blank lines
+    leading it — with one blank line before the content that follows. That
+    includes a line naming a parent and saying more (`Feature: #12 — auth`):
+    every reader reads only the first line, so the new parent-ref above it is
+    the one they read, and the words an author wrote stay where they were. The
+    plan line says which was done. Setting the parent to the value already
+    present is a no-op. A malformed marker is refused before this is reached
+    (`main`), so it is never mistaken for content to write above.
     """
     lines = body.splitlines()
     content = [i for i, ln in enumerate(lines) if ln.strip()]
@@ -1199,6 +1203,7 @@ def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
     marker_idx = content[0] if infer.strip_integration_marker(body) != body else None
     ref_candidates = content[1:] if marker_idx is not None else content
     first_idx = ref_candidates[0] if ref_candidates else None
+    kept = _kept_line(lines[first_idx]) if first_idx is not None else ""
 
     if first_idx is not None and _is_parent_ref(lines[first_idx]):
         if lines[first_idx].strip() == parent_ref_line:
@@ -1218,7 +1223,7 @@ def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
         )
 
     if marker_idx is not None:
-        # No parent-ref under the marker — insert one directly below it.
+        # No bare parent-ref under the marker — insert one directly below it.
         below = marker_idx + 1
         followed_by_content = below < len(lines) and bool(lines[below].strip())
         lines[below:below] = [parent_ref_line, *([""] if followed_by_content else [])]
@@ -1226,19 +1231,30 @@ def _plan_parent(body: str, parent_ref_line: str) -> tuple[str, FieldResult]:
             field="parent",
             ok=True,
             changed=True,
-            message=f"parent: set {parent_ref_line!r} (inserted below the integration marker)",
+            message=(
+                f"parent: set {parent_ref_line!r} (inserted below the integration marker{kept})"
+            ),
         )
 
-    # No parent-ref present — prepend one with a blank-line separator. The body's
-    # own leading blank lines are dropped, so the separator is the only one.
+    # No bare parent-ref present — prepend one with a blank-line separator. The
+    # body's own leading blank lines are dropped, so the separator is the only one.
     rest = "".join(body.splitlines(keepends=True)[content[0] :]) if content else ""
     new_body = parent_ref_line + ("\n\n" + rest if rest else "\n")
     return new_body, FieldResult(
         field="parent",
         ok=True,
         changed=True,
-        message=f"parent: set {parent_ref_line!r} (prepended)",
+        message=f"parent: set {parent_ref_line!r} (prepended{kept})",
     )
+
+
+def _kept_line(line: str) -> str:
+    """What the plan line adds when the new parent-ref goes above a first line
+    that names an issue and says more, which is kept: empty for any other line."""
+    named = body_parent_ref.named_issue(line)
+    if named is None or _is_parent_ref(line):
+        return ""
+    return f", above {line.strip()!r}, which names #{named} and says more, so it is kept"
 
 
 def _rejoin(lines: list[str], body: str) -> str:
@@ -1286,12 +1302,10 @@ def _plan_native_parent(holder: containment.NativeParent | None, parent: int) ->
 
 
 def _is_parent_ref(line: str) -> bool:
-    """True when `line` names a parent — an issue, in any form, or a milestone,
-    in either — as `body_parent_ref` reads a first line for every reader of an
-    issue's parent, so the line `--parent` replaces is the line they read as the
-    parent-ref (a loose `Epic: #5` included)."""
-    read = body_parent_ref.read_first_line(line, None, {})
-    return read.form is not body_parent_ref.LineForm.NONE
+    """True when `line` is a parent-ref and nothing else — the only first line
+    `--parent` replaces (`body_parent_ref.is_only_a_parent_ref`). A line naming a
+    parent and saying more (`Feature: #12 — auth`) is kept below the new one."""
+    return body_parent_ref.is_only_a_parent_ref(line)
 
 
 # ---- schema / config readers (mirroring create-issue + edit-issue) --------
