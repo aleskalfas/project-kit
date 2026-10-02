@@ -8,15 +8,14 @@
 """Project-management capability — cascade-membership (process predicate, DEC-034).
 
 COR-037 cascade `membership` predicate for the issue-lifecycle CLOSURE fold: the
-per-subject confirmation that THIS candidate is a real child member. The engine
-threads ONLY the candidate's subject id (the single-subject runner, COR-032);
-the folding parent's id is not passed — so this answers from the child's own
-reality: result=True iff the child's body declares a parent-ref first line (it is
-a hierarchy member). The per-parent scoping (does it belong to THIS parent?) is
-enforced authoritatively upstream by `cascade-members`, which reads the SAME body
-parent-ref and emits only children naming the folding parent. An indeterminate
-read (gh failure) holds the whole fold fail-closed per COR-037 rather than
-silently dropping the candidate.
+per-subject step for each candidate `cascade-members` listed. The engine threads
+ONLY the candidate's subject id (the single-subject runner, COR-032); the folding
+parent's id is not passed. result=True for every candidate whose issue can be
+read — whatever its first line says, since a natively linked child may name no
+issue there — and never a determinate "not a member": who the children are is
+`cascade-members`' answer alone, through the containment seam (native links
+included). An unreadable candidate (gh failure) is indeterminate, which holds the
+whole fold fail-closed per COR-037 rather than silently dropping the candidate.
 
 READ-ONLY. The process engine (COR-033) invokes this as
   <script> <child-issue-number> --json
@@ -41,7 +40,7 @@ from _lib import lifecycle_predicates as predicates
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Confirm a candidate issue is a child hierarchy member (cascade membership)."
+        description="Confirm a candidate child can be read (cascade membership); rejects none."
     )
     parser.add_argument("issue_number", help="The keyed subject: the CANDIDATE child issue number.")
     parser.add_argument("--json", action="store_true", help="Emit the structured JSON contract.")

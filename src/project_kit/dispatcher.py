@@ -24,7 +24,10 @@ Which top-level name an `aliases:` entry gets is one precedence walk
 (`resolve_aliases`): a backbone command, then a capability's own name, then
 the first capability in manifest order to declare the alias. The dispatcher
 binds what the walk binds; `pkit validate`'s packages member reports what it
-shadows (`installed_alias_table`), so the two never disagree.
+shadows (`installed_alias_table`), so the two never disagree. A capability's
+own name yields to a backbone command too: one that surfaces a namespace under
+a name a backbone command holds has no `pkit <capability> …`, and the packages
+member reports it (`shadowed_capability_names`).
 """
 
 from __future__ import annotations
@@ -149,6 +152,20 @@ def installed_alias_table(target_root: Path, static: Collection[str]) -> AliasTa
     """The alias table of the capabilities installed under `target_root` — the
     one the dispatch group binds — for `pkit validate` to report what it shadows."""
     return _alias_table(_namespace_capabilities(target_root), static)
+
+
+def shadowed_capability_names(target_root: Path, static: Collection[str]) -> tuple[str, ...]:
+    """The capabilities installed under `target_root` that surface a namespace
+    under a name a backbone command (`static`) holds, in manifest order:
+    `pkit <name>` runs the command, never the capability
+    (`CapabilityDispatchGroup.get_command`). Read from the capabilities the
+    dispatch group builds groups for, so one that declares no `commands:`
+    block surfaces no namespace and is never here."""
+    return tuple(
+        capability.name
+        for capability in _namespace_capabilities(target_root)
+        if capability.name in static
+    )
 
 
 def static_command_names() -> frozenset[str]:

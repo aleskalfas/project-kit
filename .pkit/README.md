@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T04:21:03Z
+      at: 2026-10-02T04:06:16Z
       outcome: unchanged
-      unchanged-because: the CLI README now says a pull-request request is refused only on an answer recognised as one, states the settling window and the dequeue's own ends, and the lifecycle README how gh is started; this page maps the cli area as the pkit command-line surface and the lifecycle area as packaging and dependency architecture, one line each, which still holds
+      unchanged-because: The page indexes the lifecycle README as packaging and dependency architecture and the CLI README as the pkit command surface; their new reserved adapter name and backbone-command checks fit those descriptions, so the index still holds
 ---
 
 # project-kit

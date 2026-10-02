@@ -27,6 +27,8 @@ from typing import Literal
 import click
 
 from project_kit.capabilities import refuse_reserved_capability_name
+from project_kit.changesets import BACKBONE
+from project_kit.dispatcher import static_command_names
 from project_kit.manifest import (
     ComponentRegistryEntry,
     read_backbone_manifest,
@@ -41,6 +43,29 @@ _VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.0$")
 AreaVariant = Literal["universal", "adapter-umbrella", "specialized"]
 MigrationTier = Literal["backbone", "adapter", "capability"]
 MigrationScope = Literal["manifest-schema", "structural", "resource"]
+
+# Names an adapter may not take because the backbone reads an adapter's name
+# where it reads its own, each mapped to the reason shown in the refusal.
+# `backbone` is the name the backbone carries where a component's carry the
+# component's, and two of those places read adapters as well as capabilities:
+# the component of its changesets (`changesets.BACKBONE`, the constant read
+# here; every `package.yaml` under `.pkit/` is a component there,
+# `changesets.discover_components`) and the owner of its validators
+# (`validators.BACKBONE_OWNER`; every registered component's validators are
+# owned by its name, `validators.capability_validators`), so an adapter named
+# `backbone` would have its changesets and validators read as the backbone's.
+# The capability table's other names (`capabilities.RESERVED_CAPABILITY_NAMES`:
+# `core`, `project`, `adr`) collide only where a capability's name is read —
+# the namespaces of decision records, agents and schemas, and an evidence
+# point's checks — none of which an adapter has, so an adapter may take them.
+RESERVED_ADAPTER_NAMES: dict[str, str] = {
+    BACKBONE: (
+        "it is the name the backbone carries where a component's carry the component's "
+        "name, and two of those places read adapters: the component of the backbone's "
+        "changesets and the owner of its validators, so an adapter named `backbone` would "
+        "have its changesets and validators read as the backbone's"
+    ),
+}
 
 
 # ---------------------------------------------------------------------------
@@ -247,11 +272,13 @@ def stamp_capability(target_root: Path, name: str) -> CapabilityScaffoldResult:
       bumps).
 
     Refuses if `name` is not kebab-case, is reserved
-    (`capabilities.RESERVED_CAPABILITY_NAMES`), or a capability with that
-    name already exists.
+    (`capabilities.RESERVED_CAPABILITY_NAMES`), is a backbone command's
+    (`_refuse_backbone_command_name`), or a capability with that name already
+    exists.
     """
     _validate_kebab_case(name, "capability name")
     refuse_reserved_capability_name(name)
+    _refuse_backbone_command_name(name)
 
     pkit_dir = _require_pkit_dir(target_root)
     caps_dir = pkit_dir / "capabilities"
@@ -301,9 +328,46 @@ def stamp_capability(target_root: Path, name: str) -> CapabilityScaffoldResult:
     )
 
 
+def _refuse_backbone_command_name(name: str) -> None:
+    """Refuse a capability name a backbone command holds.
+
+    The dispatcher gives a top-level name to a backbone command before any
+    capability (`dispatcher.CapabilityDispatchGroup`), so a capability of that
+    name could never surface its commands as `pkit <name> …`. The commands are
+    the dispatcher's own (`dispatcher.static_command_names`), read when asked:
+    they grow with the backbone's releases. Only the stamp refuses the name —
+    installing or registering a capability does not, since an upgrade can take
+    a name that was free when the capability shipped; `pkit validate` reports
+    an installed one whose namespace a backbone command holds (the packages
+    member).
+    """
+    if name in static_command_names():
+        raise click.ClickException(
+            f"capability name {name!r} is the backbone command `pkit {name}`, which every "
+            f"capability name and alias yields to, so a capability named {name!r} could never "
+            f"surface its commands as `pkit {name} …`. Choose another name."
+        )
+
+
 # ---------------------------------------------------------------------------
 # Adapters
 # ---------------------------------------------------------------------------
+
+
+def refuse_reserved_adapter_name(name: str) -> None:
+    """Refuse an adapter name in `RESERVED_ADAPTER_NAMES`.
+
+    Called where an adapter is named into a project — `pkit new adapter`, by
+    both its stamp and its registration — before any file is written or any
+    registry entry is made. `pkit init`, which installs and registers every
+    adapter its source ships, refuses a source shipping one under a reserved
+    name with the same reason.
+    """
+    reason = RESERVED_ADAPTER_NAMES.get(name)
+    if reason is not None:
+        raise click.ClickException(
+            f"adapter name {name!r} is reserved: {reason}. Choose another name."
+        )
 
 
 @dataclass(frozen=True)
@@ -319,10 +383,11 @@ class AdapterScaffoldResult:
 def stamp_adapter(target_root: Path, name: str) -> AdapterScaffoldResult:
     """Scaffold a new adapter at `.pkit/adapters/<name>/`.
 
-    Refuses if `name` is not kebab-case or an adapter with the same name
-    already exists.
+    Refuses if `name` is not kebab-case, is reserved (`RESERVED_ADAPTER_NAMES`),
+    or an adapter with the same name already exists.
     """
     _validate_kebab_case(name, "adapter name")
+    refuse_reserved_adapter_name(name)
 
     pkit_dir = _require_pkit_dir(target_root)
     adapters_dir = pkit_dir / "adapters"
@@ -520,7 +585,9 @@ def register_kit_shipped_component(
     manual edit needed.
 
     No-op if the backbone manifest doesn't exist (e.g. before `pkit init`).
+    Refuses a reserved name (`refuse_reserved_adapter_name`).
     """
+    refuse_reserved_adapter_name(name)
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
         return
