@@ -13,8 +13,9 @@ pkit:
         - .github/workflows/release-tag.yml
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
     revalidated:
-      at: 2026-10-02T03:21:55Z
-      outcome: updated
+      at: 2026-10-02T03:07:17Z
+      outcome: unchanged
+      unchanged-because: The page names backbone as the changeset component of the .pkit/VERSION tier, beside a kit-shipped component's name; changesets.py changed only a comment saying a capability is refused that name, so the changeset format and release mechanics read as written.
 ---
 
 # Release flow — changesets + the release step

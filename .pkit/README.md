@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T03:22:02Z
+      at: 2026-10-02T03:37:55Z
       outcome: unchanged
-      unchanged-because: the CLI README now states that the pull-request commands bound each gh call and settle a request with no answer by reading, and the lifecycle README how gh is started; this page maps the cli area as the pkit command-line surface and the lifecycle area as packaging and dependency architecture, one line each, which still holds
+      unchanged-because: The page maps the lifecycle area to packaging and register mechanics and the cli area to the command surface; both READMEs still cover those subjects and only gained backbone among the names the capability commands refuse and packages validation reports.
 ---
 
 # project-kit
