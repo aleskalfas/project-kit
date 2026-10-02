@@ -246,3 +246,27 @@ def test_require_keeps_a_change_where_the_guard_looked(
     refused = session_guard.clear(other, confirmed=False)
     with pytest.raises(TypeError, match="needs a clearance"):
         session_guard.require(refused, other)  # pyright: ignore[reportArgumentType] -- a refusal passed where a clearance is required is what this checks
+
+
+@pytest.mark.parametrize("where", ["own", "other"])
+def test_a_comparison_asks_git_no_more_than_the_questions_its_longest_run_counts(
+    session: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch, where: str
+) -> None:
+    """The longest the guard can take is its git questions, each at its bound
+    (`LONGEST_SECONDS`), which `pull_request_landing.longest_seconds` counts
+    in every subcommand that runs the guard: a comparison asks git at most
+    `GIT_QUESTIONS` times."""
+    anchor, other = session
+    asked: list[tuple[str, ...]] = []
+    git = session_guard._git
+
+    def counted(directory: Path | str, *args: str) -> subprocess.CompletedProcess[str]:
+        asked.append(args)
+        return git(directory, *args)
+
+    monkeypatch.setattr(session_guard, "_git", counted)
+    session_guard.evaluate(anchor if where == "own" else other, anchor)
+    assert len(asked) == session_guard.GIT_QUESTIONS
+    assert session_guard.GIT_QUESTIONS * session_guard._GIT_TIMEOUT_SECONDS == (
+        session_guard.LONGEST_SECONDS
+    )

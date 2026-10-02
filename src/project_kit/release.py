@@ -1871,10 +1871,11 @@ def merge_release_pr(
 
     Every `gh` call is bounded, so no stuck call holds the run. A merge or an
     enqueue that gets no answer the landing module settles by reading: made,
-    the run goes on as it would; not made on two readings running, it is
-    refused, nothing merged; unconfirmed — GitHub not readable since — the
-    report says so plainly, claiming neither a merge nor its absence, and
-    exits :data:`EXIT_ACCEPTED` with nothing deleted.
+    the run goes on as it would; not seen made on two readings, it is refused
+    saying this run saw nothing merged — never that nothing merged — with the
+    reading and the re-run that tell; unconfirmed — GitHub not readable since
+    — the report says so plainly, claiming neither a merge nor its absence,
+    and exits :data:`EXIT_ACCEPTED` with nothing deleted.
 
     A PR already in the queue is waited for, not gated or enqueued again, with
     a warning when the queue would not make the release's squash commit; a
@@ -1912,7 +1913,7 @@ def merge_release_pr(
         queue = pull_request_landing.read(pr.number, gh=gh)
     except pull_request_landing.Unreadable as exc:
         raise click.ClickException(
-            f"cannot tell how {base} merges: {exc}. Nothing was merged."
+            f"cannot tell how {base} merges: {exc}. This run asked nothing."
         ) from None
     if queue.merged:
         return _after_the_merge(
@@ -1967,7 +1968,7 @@ def merge_release_pr(
         if enqueued.accepted is None:
             return _unconfirmed(pr, enqueued)
         if enqueued.reason_kind == pull_request_landing.NOT_MADE:
-            raise click.ClickException(f"{enqueued.reason}. Nothing was merged.")
+            raise _not_seen_made(pr, enqueued)
         if not enqueued.accepted:
             raise click.ClickException(
                 f"`gh pr merge {pr.number} --auto` failed: {enqueued.reason}. Nothing was merged."
@@ -1990,7 +1991,7 @@ def merge_release_pr(
     if merged.accepted is None:
         return _unconfirmed(pr, merged)
     if merged.reason_kind == pull_request_landing.NOT_MADE:
-        raise click.ClickException(f"{merged.reason}. Nothing was merged.")
+        raise _not_seen_made(pr, merged)
     if not merged.accepted:
         raise click.ClickException(f"`gh pr merge {pr.number}` failed: {merged.reason}")
     try:
@@ -2033,6 +2034,24 @@ def _unconfirmed(pr: ReleasePrState, outcome: pull_request_landing.Outcome) -> R
         f"{number}` again: it reads the PR first, lands it if it has not, and deletes the head "
         "branch once it has merged.",
         EXIT_ACCEPTED,
+    )
+
+
+def _not_seen_made(
+    pr: ReleasePrState, outcome: pull_request_landing.Outcome
+) -> click.ClickException:
+    """The refusal of a merge or an enqueue of the release PR that got no
+    answer, and that two readings since did not see made
+    (`pull_request_landing`'s not-made): what the readings saw, that this run
+    saw nothing merged — never that nothing merged, since the service may
+    still apply the request — and the reading and the re-run that tell. Exit
+    1, as a refusal: nothing was deleted."""
+    number = pr.number
+    return click.ClickException(
+        f"{outcome.reason}. This run saw nothing merged, and nothing was deleted. Read where "
+        f"release PR #{number} stands with `pkit pull-request read {number}`, then run `pkit "
+        f"release merge {number}` again: it reads the PR first, lands it if it has not, and "
+        "deletes the head branch once it has merged."
     )
 
 
@@ -2221,6 +2240,13 @@ def _await_the_queue(
                 f"out yourself — in the PR's merge box, or `gh pr merge {number} --disable-auto` "
                 "while it waits to enter. Nothing was deleted."
             )
+        if out.reason_kind == pull_request_landing.HAS_MERGED:
+            raise ReleaseNotMerged(
+                f"{moved}, and it merged before it could be taken out of the merge queue: "
+                f"{out.reason}. The commits pushed after its checks were read may be in that "
+                f"merge; look at it. Nothing was deleted; run {rerun} again to delete the head "
+                "branch now the PR has merged."
+            )
         raise ReleaseNotMerged(
             f"{moved}, and taking it out of the merge queue failed ({out.reason}): it may "
             "still merge commits nothing checked. Take it out yourself — in the PR's merge "
@@ -2354,7 +2380,7 @@ def _gh_pr_view(pr_number: int, repo_root: Path) -> dict:
     except subprocess.TimeoutExpired as exc:
         raise click.ClickException(
             f"`gh pr view {pr_number}` did not answer within {exc.timeout:g} s, and was ended. "
-            "Nothing was merged."
+            "This run asked nothing."
         ) from None
     if result.returncode != 0:
         raise click.ClickException(f"`gh pr view {pr_number}` failed: {result.stderr.strip()}")
