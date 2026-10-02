@@ -511,8 +511,10 @@ def repository_base_command(base_ref: str | None, as_json: bool) -> None:
     origin/<name>, and the local branch only when there is no remote; `unborn`
     when it has no commit yet. The base: REF, else $PKIT_CHECK_BASE, else the
     default branch — its commit, where HEAD left it and whether it moved on
-    since. A data point's filler reads the default branch and never the base
-    (COR-052 point 6); no base override reaches it. A reader that used a
+    since. With --json, HEAD too: its commit, none yet (`unborn`), or why git
+    cannot read it. A data point's filler reads the default branch and HEAD,
+    never the base (COR-052 point 6); no base override reaches it, and the
+    default branch's problem names no base as a fix. A reader that used a
     local branch, and a declaration read as the default, say so on standard
     error. Read-only; it runs no discovery. It is how a capability's own
     script reads which commit is settled, without resolving a branch or

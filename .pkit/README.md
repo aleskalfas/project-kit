@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T01:59:26Z
+      at: 2026-10-02T02:09:34Z
       outcome: unchanged
-      unchanged-because: The CLI and process references now say that pkit validate's process member also reports an inferred definition whose states name one detection predicate; this index still names the command surface and the process substrate those references document, and no command or area it lists was added, renamed or removed.
+      unchanged-because: a history filler reads whether HEAD has a commit from the backbone, and the base reading gains head; what this page says of the areas and commands it indexes still holds
 ---
 
 # project-kit

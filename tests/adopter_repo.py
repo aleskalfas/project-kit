@@ -117,6 +117,15 @@ class GitRepo:
     def head(self) -> str:
         return self.git("rev-parse", "HEAD").stdout.strip()
 
+    def lose_object(self, sha: str) -> None:
+        """Take the loose object `sha` out of the object store: what names it still
+        does, and git can no longer read it — history that exists and cannot be read,
+        whatever the machine's git configuration. Commits made here stay loose
+        (`gc.auto` is off)."""
+        path = self.root / ".git" / "objects" / sha[:2] / sha[2:]
+        path.chmod(0o644)
+        path.unlink()
+
     def current_branch(self) -> str:
         """The checked-out branch name; works on an unborn branch too."""
         return self.git("symbolic-ref", "--short", "HEAD").stdout.strip()

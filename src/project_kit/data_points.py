@@ -48,7 +48,8 @@ defines, combines the point's fillers into one value by its declaration:
   as the fixes and never a base, under the point's inert policy. State that
   does not exist yet is the filler's to answer empty; history cut short of
   what it needs, the filler's to detect. Each filler that was asked carries
-  what it declared and the commit it was read at (`Filler.reads`), which the
+  what it declared and the commit it was read at — or that there is none yet,
+  or none this clone can read (`Filler.reads`) — which the
   status report, `pkit connections resolve` and the `connections` member's
   report lines name (COR-052 point 7). A `reads` value this reading does not
   understand is the packages member's error, and the filler is not started.
@@ -189,7 +190,9 @@ class FillerRead:
     where it was read (COR-052 points 6 and 7).
 
     `history`: `ref` is `HEAD` and `commit` its commit — None in a repository
-    with no commit yet — and `shallow` whether the clone's history is cut short.
+    with no commit yet, and both None when git cannot read HEAD here, history
+    that exists and was not read (`default_branch.Head`) — and `shallow`
+    whether the clone's history is cut short.
     `settled`: `ref` is the reference the default branch was read from and
     `commit` its commit; with no commit, `ref` is the branch's name when it has
     none yet (`DefaultBranch.unborn`) and None when it resolves to no commit
@@ -470,10 +473,10 @@ def _no_answer(reason: str, *, reported: bool = False) -> _Answer:
 @dataclass(frozen=True)
 class _State:
     """What a filler may read beyond the working tree, as one run reads it (COR-052
-    point 6): HEAD's commit (None with no commit yet), whether the clone is shallow,
-    and the default branch, resolved as a standing value reads it."""
+    point 6): HEAD — its commit, none yet, or why git cannot read it — whether the
+    clone is shallow, and the default branch, resolved as a standing value reads it."""
 
-    head: str | None
+    head: default_branch.Head
     shallow: bool
     branch: default_branch.DefaultBranch
 
@@ -556,7 +559,7 @@ class _Run:
         value reads it — read once per run, when a filler first declares `reads`."""
         if self.state is None:
             self.state = _State(
-                head=default_branch.commit_of(self.root, "HEAD"),
+                head=default_branch.head(self.root),
                 shallow=default_branch.is_shallow(self.root),
                 branch=default_branch.resolve(self.root, standing=True),
             )
@@ -567,7 +570,9 @@ class _Run:
         state = self.read_state()
         reads: list[FillerRead] = []
         if validators.READS_HISTORY in states:
-            reads.append(FillerRead(validators.READS_HISTORY, HEAD, state.head, state.shallow))
+            head = state.head
+            ref = HEAD if head.commit is not None or head.unborn else None
+            reads.append(FillerRead(validators.READS_HISTORY, ref, head.commit, state.shallow))
         if validators.READS_SETTLED in states:
             branch = state.branch
             if branch.commit is not None:
@@ -1429,6 +1434,8 @@ def reads_described(reads: Iterable[FillerRead]) -> str:
 
 def _read_described(read: FillerRead) -> str:
     if read.state == validators.READS_HISTORY:
+        if read.ref is None:
+            return f"history (git cannot read {HEAD} here)"
         if read.commit is None:
             return f"history ({read.ref}, no commit yet)"
         shallow = ", shallow clone" if read.shallow else ""
