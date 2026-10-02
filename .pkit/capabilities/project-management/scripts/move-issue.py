@@ -644,7 +644,13 @@ def main() -> int:
 
     print(f"\n[ok] transitioned #{args.issue_number}: {current_state} → {args.to}")
 
-    # Fire after_move_issue hooks per DEC-024.
+    # Fire after_move_issue hooks per DEC-024. The occurrence is the issue's
+    # count of landed moves, the one the transition audit key counts by: the
+    # journal's length as read before this move or, where no journal is kept,
+    # the timeline's state-label events, read after it and only if a
+    # `post-comment` hook is about to post. Either has grown by the time the
+    # issue can make the same transition again, so its hook comment posts again
+    # (#1243).
     fire_hooks(
         "after_move_issue",
         context={
@@ -656,6 +662,7 @@ def main() -> int:
         },
         config=config,
         capability_root=capability_root,
+        occurrence=lambda: _landed_moves(args.issue_number, engine_status, config, substrate_map),
     )
 
     return 0
@@ -974,7 +981,8 @@ def _landed_moves(
       look alike.
 
     The timeline is read only in the second case, and only on the bypass path
-    that keys an audit comment.
+    that keys an audit comment and for a `post-comment` hook about to post on
+    `after_move_issue`, which names its occurrence by the same count.
     """
     if not _journal_logging_off(status):
         length = _journal_length_from_status(status)

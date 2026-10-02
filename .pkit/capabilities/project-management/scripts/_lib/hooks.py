@@ -17,13 +17,13 @@ Exports:
 
     HookResult       — outcome of one hook (status, kind, detail)
     HookFailure      — exception raised internally on per-kind failures
-    fire_hooks(event, context, config) -> list[HookResult]
+    fire_hooks(event, context, config, *, occurrence=None) -> list[HookResult]
         Main entry. Reads hooks.yaml, dispatches the event's hooks,
         returns a list of results (success / skipped / failed).
     load_hooks_file(capability_root) -> dict
         Reads + parses `project/hooks.yaml`; returns `{}` if absent.
         Pre-check uses this independently.
-    hook_stamp(stamp_id, event, subject, number, transition) -> str
+    hook_stamp(stamp_id, event, subject, number, transition, occurrence) -> str
         The first line of a `post-comment` hook's comment, naming the hook
         and the firing it posted for.
     hook_comment_posted(comments, stamp) -> bool
@@ -38,6 +38,7 @@ import os
 import re
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -131,10 +132,48 @@ class HookResult:
     status: str  # "ok" | "skipped" | "failed"
     detail: str  # one-line human-readable summary
     error: str | None = None  # populated when status == "failed"
+    warning: str | None = None  # a check the hook went on without
 
 
 class HookFailure(Exception):
     """Raised internally by per-kind handlers; caught by fire_hooks."""
+
+
+class _FiringReads:
+    """What the `post-comment` hooks of one `fire_hooks` call read, each read at
+    most once and only when a hook is about to post: the caller's occurrence
+    (see `fire_hooks`) and the subject's comments. One call fires on one issue
+    or PR. A comment a hook posts joins the comments read, so a later hook of
+    the same call that stamps the same firing finds it there."""
+
+    def __init__(self, config: dict[str, Any], occurrence: Callable[[], str | None] | None) -> None:
+        self._config = config
+        self._occurrence_source = occurrence
+        self._occurrence: str | None = None
+        self._comments: list[dict[str, Any]] | None = None
+        self._comments_read = False
+
+    def occurrence(self) -> str:
+        """The caller's occurrence, or `""` when it passed none or it is unknown."""
+        if self._occurrence is None:
+            source = self._occurrence_source
+            self._occurrence = str((source() if source is not None else None) or "")
+        return self._occurrence
+
+    def comments(self, subject: str, number: int) -> list[dict[str, Any]] | None:
+        """The subject's comments, or None when they cannot be read."""
+        if not self._comments_read:
+            self._comments = _read_comments(subject, number, self._config)
+            self._comments_read = True
+        return self._comments
+
+    def posted(self, body: str) -> None:
+        """Count `body` among the comments read, as the posting account's own,
+        unedited — how the subject now shows it to that account."""
+        if self._comments is not None:
+            self._comments.append(
+                {"body": body, "viewerDidAuthor": True, "includesCreatedEdit": False}
+            )
 
 
 # ----- public entry point -----------------------------------------------
@@ -147,6 +186,7 @@ def fire_hooks(
     *,
     capability_root: Path | None = None,
     dry_run: bool = False,
+    occurrence: Callable[[], str | None] | None = None,
 ) -> list[HookResult]:
     """Fire every hook declared for `event` in `hooks.yaml`.
 
@@ -159,6 +199,15 @@ def fire_hooks(
     the gh helper for host pinning). Pass `dry_run=True` to list the
     hooks that would fire without executing them — the result entries
     have `status="skipped"` and `detail` describes the planned action.
+
+    `occurrence` answers which occurrence of `event` on its subject this
+    firing is — how many moves the issue had made, when it was closed — for
+    an event a subject can go through more than once. A `post-comment` hook's
+    stamp includes the answer (`hook_stamp`), so a second occurrence posts its
+    own comment while a retry of this one, answered the same, posts nothing.
+    It is asked at most once, and only when a `post-comment` hook is about to
+    post, so it may make a read of its own. None, or an empty answer, adds
+    nothing to the stamp.
 
     Report-and-continue: per-hook failures are caught and recorded as
     `status="failed"` HookResult entries; the function does not raise
@@ -184,6 +233,7 @@ def fire_hooks(
     if not isinstance(entries, list) or not entries:
         return []
 
+    reads = _FiringReads(config, occurrence)
     results: list[HookResult] = []
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):
@@ -230,6 +280,7 @@ def fire_hooks(
                 config=config,
                 capability_root=capability_root,
                 dry_run=dry_run,
+                reads=reads,
             )
         except HookFailure as exc:
             result = HookResult(
@@ -277,20 +328,21 @@ def hook_stamp(
     subject: str,
     number: int,
     transition: Any = None,
+    occurrence: str = "",
 ) -> str:
     """The first line of a `post-comment` hook's comment, which identifies one
     firing of one hook: `<!-- pkit-hook: <name>:<firing> -->`.
 
     A firing is the hook (`stamp_id`), the lifecycle `event`, the `subject` it
-    fired on (`"issue"` or `"pr"` and its `number`), and the transition's from
-    and to states when the event carries one (`after_move_issue`). These are
-    all the context the call sites pass that tells their firings apart: the
-    same hook may be declared on several events, and an issue moves through
-    many transitions. A retry of the same firing reproduces the stamp; a firing
-    that differs in any of these renders a different one. Firings that agree on
-    all of them are one firing: a transition the issue makes a second time, a
-    second close after a reopen. Telling those apart needs a fact the call site
-    does not pass today, such as how many moves the issue has made.
+    fired on (`"issue"` or `"pr"` and its `number`), the transition's from and
+    to states when the event carries one (`after_move_issue`), and the
+    `occurrence` the call site names (see `fire_hooks`): the same hook may be
+    declared on several events, an issue moves through many transitions, and
+    it can make one transition, or be closed, more than once. A retry of the
+    same firing reproduces the stamp; a firing that differs in any of these
+    renders a different one. An empty `occurrence` adds no part, so where the
+    call site cannot name one, a second occurrence of the same transition, or a
+    second close, stamps as the first did and posts nothing new.
 
     `<firing>` is a digest of those parts, so nothing from them — an adopter's
     state names, a template file name — is written into the HTML comment where
@@ -301,14 +353,16 @@ def hook_stamp(
     still stamp differently.
     """
     moved = transition if isinstance(transition, dict) else {}
-    parts = (
+    parts = [
         stamp_id,
         event,
         subject,
         str(number),
         str(moved.get("from") or ""),
         str(moved.get("to") or ""),
-    )
+    ]
+    if occurrence:
+        parts.append(occurrence)
     digest = hashlib.sha256("\x00".join(parts).encode("utf-8")).hexdigest()
     firing = digest[:FIRING_DIGEST_LENGTH]
     return f"{HOOK_STAMP_OPEN}{_stamp_name(stamp_id)}:{firing}{HOOK_STAMP_CLOSE}"
@@ -323,9 +377,10 @@ def hook_comment_posted(comments: Any, stamp: str) -> bool:
     so nobody can suppress a hook's comment by posting its stamp. Every doubt
     resolves toward posting, as for the audit writers: a comment without the
     authorship fields (the identity could not be read) counts as someone
-    else's, and an unreadable comment list arrives here empty. A stamp in the
-    form earlier versions wrote, `<!-- pkit-hook: <id> -->`, names no firing and
-    never equals one, so a hook may post once more where such a comment is.
+    else's, and an unreadable comment list, given as None, holds none. A stamp
+    in the form earlier versions wrote, `<!-- pkit-hook: <id> -->`, names no
+    firing and never equals one, so a hook may post once more where such a
+    comment is.
     """
     for comment in comments or ():
         if not is_own_unedited_comment(comment):
@@ -349,12 +404,15 @@ def _dispatch(
     config: dict[str, Any],
     capability_root: Path,
     dry_run: bool,
+    reads: _FiringReads,
 ) -> HookResult:
     """Route entry to its kind handler. Each handler returns a HookResult."""
     if kind == "set-board-field":
         return _hook_set_board_field(index, entry, context, config, dry_run)
     if kind == "post-comment":
-        return _hook_post_comment(event, index, entry, context, config, capability_root, dry_run)
+        return _hook_post_comment(
+            event, index, entry, context, config, capability_root, dry_run, reads
+        )
     if kind == "assign-milestone":
         return _hook_assign_milestone(index, entry, context, config, dry_run)
     if kind == "custom-script":
@@ -451,6 +509,7 @@ def _hook_post_comment(
     config: dict[str, Any],
     capability_root: Path,
     dry_run: bool,
+    reads: _FiringReads,
 ) -> HookResult:
     template_path = entry.get("template_path")
     if not isinstance(template_path, str) or not template_path:
@@ -470,12 +529,6 @@ def _hook_post_comment(
             detail="no issue/pr number in context",
         )
 
-    subject = "pr" if "pr" in context else "issue"
-    stamp = hook_stamp(stamp_id, event, subject, issue_number, context.get("transition"))
-    template_text = template_file.read_text(encoding="utf-8")
-    rendered = _render_template(template_text, context)
-    body = f"{stamp}\n\n{rendered}"
-
     if dry_run:
         return HookResult(
             index=index,
@@ -484,9 +537,30 @@ def _hook_post_comment(
             detail=f"would post comment to #{issue_number} from {template_path}",
         )
 
+    subject = "pr" if "pr" in context else "issue"
+    stamp = hook_stamp(
+        stamp_id,
+        event,
+        subject,
+        issue_number,
+        context.get("transition"),
+        reads.occurrence(),
+    )
+    template_text = template_file.read_text(encoding="utf-8")
+    rendered = _render_template(template_text, context)
+    body = f"{stamp}\n\n{rendered}"
+
     # Post once per firing: skip only when this firing's own comment is there.
-    comments = _read_comments(subject, issue_number, config)
-    if hook_comment_posted(comments, stamp):
+    # Comments that cannot be read hold nothing back: the hook posts, and says
+    # it could not check.
+    comments = reads.comments(subject, issue_number)
+    warning = None
+    if comments is None:
+        warning = (
+            f"could not read the comments on #{issue_number}, so posted without "
+            "checking for this firing's earlier comment"
+        )
+    elif hook_comment_posted(comments, stamp):
         return HookResult(
             index=index,
             kind="post-comment",
@@ -505,11 +579,13 @@ def _hook_post_comment(
     proc = _gh_call(post_args, config)
     if proc.returncode != 0:
         raise HookFailure(f"gh comment failed: {proc.stderr.strip() or 'no stderr'}")
+    reads.posted(body)
     return HookResult(
         index=index,
         kind="post-comment",
         status="ok",
         detail=f"posted comment to #{issue_number} from {template_path}",
+        warning=warning,
     )
 
 
@@ -659,19 +735,21 @@ def _stamp_name(stamp_id: str) -> str:
     return name[:HOOK_STAMP_NAME_MAX].rstrip("-") or "hook"
 
 
-def _read_comments(subject: str, number: int, config: dict[str, Any]) -> list[dict[str, Any]]:
-    """The issue's or PR's comments with their authorship fields, or `[]` when
+def _read_comments(
+    subject: str, number: int, config: dict[str, Any]
+) -> list[dict[str, Any]] | None:
+    """The issue's or PR's comments with their authorship fields, or None when
     they cannot be read — which makes the hook post, the safe direction."""
     proc = _gh_call(["gh", subject, "view", str(number), "--json", "comments"], config)
     if proc.returncode != 0:
-        return []
+        return None
     try:
         data = json.loads(proc.stdout)
     except (TypeError, ValueError):
-        return []
+        return None
     comments = data.get("comments") if isinstance(data, dict) else None
     if not isinstance(comments, list):
-        return []
+        return None
     return [c for c in comments if isinstance(c, dict)]
 
 
@@ -769,3 +847,5 @@ def _report(event: str, results: list[HookResult], *, dry_run: bool) -> None:
                 f"    [failed] #{r.index} {r.kind}: {r.error or r.detail}",
                 file=sys.stderr,
             )
+        elif r.warning:
+            print(f"    [warn] #{r.index} {r.kind}: {r.warning}", file=sys.stderr)

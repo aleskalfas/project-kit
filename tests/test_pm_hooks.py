@@ -347,15 +347,18 @@ def test_post_comment_missing_template_yields_failure(hooks, capability_root) ->
 class _FakeGh:
     """A fake `gh` for the post-comment hook. `view` answers with the subject's
     comments; `comment` records the post and adds it to them the way GitHub
-    would show it to the poster — authored by the viewer, unedited."""
+    would show it to the poster — authored by the viewer, unedited. `views`
+    counts the reads."""
 
     def __init__(self, comments: list[dict] | None = None, *, view_fails: bool = False) -> None:
         self.comments = list(comments or [])
         self.posted: list[str] = []
         self.view_fails = view_fails
+        self.views = 0
 
     def __call__(self, args: list[str], config: dict) -> subprocess.CompletedProcess:
         if args[2] == "view":
+            self.views += 1
             if self.view_fails:
                 return subprocess.CompletedProcess(args, 1, stdout="", stderr="boom")
             payload = json.dumps({"comments": self.comments})
@@ -393,11 +396,25 @@ def moved_hook(capability_root: Path) -> Path:
     return capability_root
 
 
-def _fire(hooks, root: Path, event: str = "after_move_issue", transition: dict | None = None):
+def _fire(
+    hooks,
+    root: Path,
+    event: str = "after_move_issue",
+    transition: dict | None = None,
+    occurrence=None,
+    dry_run: bool = False,
+):
     context: dict = {"issue": {"number": 7, "title": "t"}}
     if event == "after_move_issue":
         context["transition"] = transition or _MOVED
-    return hooks.fire_hooks(event, context=context, config={}, capability_root=root)
+    return hooks.fire_hooks(
+        event,
+        context=context,
+        config={},
+        capability_root=root,
+        occurrence=occurrence,
+        dry_run=dry_run,
+    )
 
 
 def _moved_stamp(hooks, transition: dict = _MOVED) -> str:
@@ -490,13 +507,99 @@ def test_post_comment_own_comment_quoting_the_stamp_does_not_suppress(
     assert len(gh.posted) == 1
 
 
-def test_post_comment_unreadable_comment_list_posts(hooks, moved_hook, monkeypatch) -> None:
+def test_post_comment_unreadable_comment_list_posts_and_warns(
+    hooks, moved_hook, monkeypatch, capsys
+) -> None:
     gh = _FakeGh(view_fails=True)
     monkeypatch.setattr(hooks, "_gh_call", gh)
 
-    _fire(hooks, moved_hook)
+    [result] = _fire(hooks, moved_hook)
 
     assert len(gh.posted) == 1
+    assert result.status == "ok"
+    assert result.warning is not None and "could not read the comments on #7" in result.warning
+    assert f"[warn] #0 post-comment: {result.warning}" in capsys.readouterr().err
+
+
+# --- post-comment: a repeat of a firing is another occurrence (#1243) ----------
+
+
+def test_post_comment_occurrence_tells_a_repeat_from_a_retry(
+    hooks, moved_hook, monkeypatch
+) -> None:
+    """The same transition at another occurrence posts again; the same
+    occurrence again is a retry and posts nothing."""
+    gh = _FakeGh()
+    monkeypatch.setattr(hooks, "_gh_call", gh)
+
+    _fire(hooks, moved_hook, occurrence=lambda: "3")
+    _fire(hooks, moved_hook, occurrence=lambda: "5")
+    retry = _fire(hooks, moved_hook, occurrence=lambda: "5")
+
+    assert len(gh.posted) == 2
+    assert gh.posted[0].splitlines()[0] != gh.posted[1].splitlines()[0]
+    assert "idempotent skip" in retry[0].detail
+
+
+def test_post_comment_reads_once_per_firing(hooks, capability_root, monkeypatch) -> None:
+    """Two `post-comment` hooks on one event cost one read of the comments and
+    one ask for the occurrence; a second hook stamping the same firing as the
+    first finds the first's comment among those read."""
+    tmpl_dir = capability_root / "project" / "hook-templates"
+    tmpl_dir.mkdir()
+    tmpl_dir.joinpath("a.md").write_text("a", encoding="utf-8")
+    tmpl_dir.joinpath("b.md").write_text("b", encoding="utf-8")
+    (capability_root / "project" / "hooks.yaml").write_text(
+        "schema_version: 1\n"
+        "hooks:\n"
+        "  after_close_issue:\n"
+        "    - kind: post-comment\n"
+        "      template_path: project/hook-templates/a.md\n"
+        "    - kind: post-comment\n"
+        "      template_path: project/hook-templates/b.md\n"
+        "    - kind: post-comment\n"
+        "      template_path: project/hook-templates/a.md\n",
+        encoding="utf-8",
+    )
+    gh = _FakeGh()
+    monkeypatch.setattr(hooks, "_gh_call", gh)
+    asked: list[str] = []
+
+    def occurrence() -> str:
+        asked.append("asked")
+        return "2026-10-01T12:00:00Z"
+
+    results = _fire(hooks, capability_root, event="after_close_issue", occurrence=occurrence)
+
+    assert [r.status for r in results] == ["ok", "ok", "ok"]
+    assert "idempotent skip" in results[2].detail
+    assert [body.splitlines()[-1] for body in gh.posted] == ["a", "b"]
+    assert gh.views == 1
+    assert asked == ["asked"]
+
+
+def test_post_comment_dry_run_asks_for_no_occurrence(hooks, moved_hook, monkeypatch) -> None:
+    gh = _FakeGh()
+    monkeypatch.setattr(hooks, "_gh_call", gh)
+
+    def occurrence() -> str:
+        raise AssertionError("a dry run asked for the occurrence")
+
+    [result] = _fire(hooks, moved_hook, occurrence=occurrence, dry_run=True)
+
+    assert result.status == "skipped"
+    assert gh.views == 0
+
+
+def test_hook_stamp_occurrence_is_part_of_the_firing(hooks) -> None:
+    """An empty occurrence adds no part: the firing is the other parts alone."""
+    bare = hooks.hook_stamp("moved", "after_move_issue", "issue", 7, _MOVED)
+
+    assert hooks.hook_stamp("moved", "after_move_issue", "issue", 7, _MOVED, "") == bare
+    third = hooks.hook_stamp("moved", "after_move_issue", "issue", 7, _MOVED, "3")
+    assert third != bare
+    assert third != hooks.hook_stamp("moved", "after_move_issue", "issue", 7, _MOVED, "5")
+    assert third == hooks.hook_stamp("moved", "after_move_issue", "issue", 7, _MOVED, "3")
 
 
 def test_engine_imported_the_way_a_script_does_calls_gh_on_the_configured_host() -> None:
