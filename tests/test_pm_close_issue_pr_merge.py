@@ -131,6 +131,42 @@ def test_closes_an_open_leaf_as_completed_through_a_merged_pr(ci, monkeypatch, c
     assert "[cascade] parents to check for eligibility: #10" in out
 
 
+@pytest.mark.parametrize("line", ["Epic: #10", "EPIC: #10 — the auth work", "Related: #10"])
+def test_a_first_line_that_is_not_an_allowed_parent_ref_is_said_not_called_absent(
+    ci, monkeypatch, capsys, line: str
+) -> None:
+    """The closure cascade finds no parent in a line the Task's type does not
+    accept, and says so — it does not report that the body names none."""
+    rec = _run(
+        ci,
+        monkeypatch,
+        ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
+        issue=_issue(body=f"{line}\n\n## What\nx\n"),
+    )
+    assert rec.rc == 0
+    out, err = capsys.readouterr()
+    assert "no parent ref found" not in out
+    assert "parents to check for eligibility" not in out
+    assert (
+        f"[warn] #42's first line `{line}` is not a parent-ref a task may have: Feature: #<N> "
+        "or Umbrella: #<N> or EPIC: #<N> or Milestone: [#<N>](../milestone/<N>); parent "
+        "check skipped.\n"
+    ) in err
+
+
+def test_a_body_naming_no_parent_is_said_to_name_none(ci, monkeypatch, capsys) -> None:
+    rec = _run(
+        ci,
+        monkeypatch,
+        ["42", "--mode", "pr-merge", "--pr", "1042", "--yes"],
+        issue=_issue(body="## What\nx\n"),
+    )
+    assert rec.rc == 0
+    out, err = capsys.readouterr()
+    assert "[cascade] no parent ref found in body; parent check skipped." in out
+    assert "first line" not in err
+
+
 def test_the_comment_is_posted_once_across_a_retry(ci, monkeypatch) -> None:
     """A run that posted the reference and then failed to close finds it on the
     re-run and does not post it again (the shared audit idempotence)."""

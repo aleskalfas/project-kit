@@ -20,7 +20,7 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T23:49:38Z
+      at: 2026-10-02T00:55:26Z
       outcome: unchanged
       unchanged-because: "#1254 has done-work and merge-pr pass the cross-repository confirmation on to the backbone's own guard; resuming sessions, the start and landing guards of a stabilisation (still unbuilt, EPIC #943) and the steps here are unchanged, so it holds"
 ---

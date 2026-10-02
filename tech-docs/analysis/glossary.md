@@ -115,9 +115,9 @@ TERM-stabilisation:
           - project-management:DEC-014
           - ADR-019
       revalidated:
-        at: 2026-10-01T23:49:33Z
+        at: 2026-10-02T00:55:25Z
         outcome: unchanged
-        unchanged-because: "#1254 has done-work and merge-pr pass the cross-repository confirmation on to the backbone's own guard; their landing and stabilisation-relevant gates are unchanged, and the stabilisation guards this term describes are still unbuilt (EPIC #943), so the definition holds"
+        unchanged-because: the backbone now runs the cross-repository guard on every change it makes on the hosting service; what this page says of the commands and the areas it indexes still holds
 ---
 
 # Glossary

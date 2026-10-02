@@ -19,7 +19,7 @@ pkit:
       artefact:
         - ACT-clone-session
     revalidated:
-      at: 2026-10-01T23:49:41Z
+      at: 2026-10-02T00:55:27Z
       outcome: unchanged
       unchanged-because: "#1254 has done-work and merge-pr pass the cross-repository confirmation on to the backbone's own guard; integration branches, the pull-request target and the merge path this use case walks are unchanged, so it holds"
 ---

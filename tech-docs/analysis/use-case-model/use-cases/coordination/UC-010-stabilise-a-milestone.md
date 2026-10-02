@@ -20,7 +20,7 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-01T23:49:43Z
+      at: 2026-10-02T00:55:28Z
       outcome: unchanged
       unchanged-because: "#1254 has done-work and merge-pr pass the cross-repository confirmation on to the backbone's own guard; release scope, the stabilisation and its guards (still unbuilt, EPIC #943) are unchanged, so it holds"
 ---
