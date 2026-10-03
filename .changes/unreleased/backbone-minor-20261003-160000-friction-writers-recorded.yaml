@@ -16,8 +16,9 @@ body: >
   names the command and the conditions for running it. The agents README
   gains "Friction writers" — an agent making a change answers what its own
   change owes; an agent whose task is the answer runs a writer only when its
-  body names it, it can ask the person, the person was shown every word first,
-  and it is not a reviewer — and its `owns` bullet says the same of
-  command-routed writes. The core rules gain rule 20, "A justification you
-  write for a person is shown to that person", and the `agent-author` skill a
+  body, or a skill its body hands the work to, names it, it can ask the
+  person, the person was shown every word first, and it is not a reviewer —
+  and its `owns` bullet says the same of command-routed writes. The core
+  rules gain rule 20, "An answer you write on an artefact is a person's
+  decision: show it to them word for word", and the `agent-author` skill a
   bullet for an agent that runs a command on a path it does not own.

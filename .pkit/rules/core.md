@@ -56,7 +56,7 @@ How a session relates to repos other than the one it is rooted in.
 
 ## Answers on artefacts
 
-20. **A justification you write for a person is shown to that person.** A revalidation or deferral on an anchored document (COR-050) is a person's decision. Those `pkit friction check` asks of your own change you may write without asking; before the person accepts the change, show them that check's list of answers word for word — in the pull request's description where there is one — never a summary. Any other, show and have accepted before you write it; if you cannot ask the person, return the commands and run none. Details: the agents README, "Friction writers".
+20. **An answer you write on an artefact is a person's decision: show it to them word for word.** A revalidation, a deferral or a reason for having no anchors (COR-050 points 1 and 3) is written only after a person was shown it and accepted it, with one exception. The answers the change check (`pkit friction check`) asks of a change you are making, and the revalidation of a combined state you owe after resolving a conflict, you may write first; then show the person who authorises the change's merge — or, committing straight to the default branch, the person you work for, before you commit — that check's list of every answer the change wrote, never a list you composed, before they authorise it. An authorisation covers only the answers shown before it: one given before the list was shown covers none, and none covers an answer written or reworded since — show the list and ask again. If you cannot ask the person, return the commands and run none. Details: the agents README, "Friction writers".
 
 ## Where rationale lives
 

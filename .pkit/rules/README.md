@@ -38,7 +38,7 @@ Five categories:
 - **Tool hygiene** — operational practices that keep work consistent. Pause for destructive ops, conventional commits, surface-change → version-bump, validate before assuming state, work with the permission layer, keep intermediate files in the agent workspace.
 - **Communicating with the user** — one decision at a time; reference by meaning, then identifier.
 - **Working across repositories** — a session mutates only its own repository's context.
-- **Answers on artefacts** — a justification you write for a person is shown to that person.
+- **Answers on artefacts** — an answer you write on an artefact is a person's decision: show it to them word for word.
 
 Each rule is terse — one statement plus a pointer to the COR / area README that owns the rationale. The rules file is read by every agent at session start (via `CLAUDE.md`'s `@<path>` include); it is operational, not expository.
 
