@@ -50,8 +50,10 @@ Usage:
 
 Exit codes:
   0  answered, whatever the verdict
-  1  the artefact cannot be explained — not committed, not found, or its
-     revalidation point is beyond a shallow clone — said on standard error
+  1  the artefact cannot be explained — not committed, not found — or was not
+     judged: its revalidation point is beyond a shallow clone, an anchor of it
+     cannot be resolved, or its state is one this capability does not read;
+     said on standard error
   2  a usage error, a quote without its source among them
 """
 
