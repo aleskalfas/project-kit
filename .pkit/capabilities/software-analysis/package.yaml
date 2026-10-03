@@ -28,6 +28,11 @@ commands:
     script: scripts/fill-readers.py
     help: "This capability's filler of the pkit::documentation:readers point (DEC-001 point 8): one reader per actor in force, its id the actor's id in lower case (`ACT-tester` → `act-tester`) and its description the actor's name and needs; --json prints the filler envelope the backbone reads. A query: read-only, offline, no parameter; `pkit sync` provisions its dependencies."
     query-contract: true
+  fill-use-cases:
+    script: scripts/fill-use-cases.py
+    help: "This capability's filler of the pkit::work-tracking:use-cases point (DEC-001 point 8): the use cases settled on the default branch, one entry per use case — its id as the analysis writes it, its title, `active` or `withdrawn` (a withdrawn use case is kept), and the path of its document. Reads the default branch at the commit the backbone resolves it to, never the working tree; the empty list where that branch has no commit yet. Complete or no answer: exit 1 with nothing on standard output when a reading fails or a use case there cannot be read in full. --json prints the filler envelope the backbone reads. A query: read-only, offline, no parameter; `pkit sync` provisions its dependencies."
+    query-contract: true
+    reads: [settled]
 
 # The `software-analysis:artefacts` member of `pkit validate` (ADR-058). The
 # number comparison reads a base, so it is not one (ADR-058 point 7).
@@ -67,8 +72,9 @@ friction:
       description: The revalidation records, one file each — the record of an act, not an anchored artefact.
 
 # COR-053 — the analysis role, the evidence point defined under it, and the
-# contribution to the documentation role's readers point (DEC-001 points 7
-# and 8). See the README, "Connections".
+# contributions to the documentation role's readers point and the
+# work-tracking role's use-case point (DEC-001 points 7 and 8). See the
+# README, "Connections".
 connections:
   roles: [pkit::analysis]
   extension-points:
@@ -97,3 +103,10 @@ connections:
         schema_version: 1
         command: fill-readers
         description: One reader per actor in force, its id the actor's id in lower case and its description the actor's name and needs.
+      # The use cases settled on the default branch, read at its commit and
+      # never from the working tree. Inert while no capability provides the
+      # work-tracking role.
+      - point: pkit::work-tracking:use-cases
+        schema_version: 1
+        command: fill-use-cases
+        description: Every use case the default branch holds, withdrawn ones included, each with its id, title, status and document path — complete, or no answer.

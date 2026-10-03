@@ -353,9 +353,25 @@ A page names an actor as its reader by that id (`reader: act-tester`). `pkit ana
 
 An install plan predicts the wiring, not the data (COR-053 point 7): it shows this contribution connecting and never runs the filler, so installing software-analysis beside a documentation provider puts the actors file's readability on that provider's validation path — from then on, an actors file that does not parse leaves the readers point unresolved, which `pkit validate` reports as an error.
 
+**Contributes to `pkit::work-tracking:use-cases`** (version 1), the work-tracking role's point for the use cases settled on the default branch, through the `fill-use-cases` command: one entry per use case the default branch holds.
+
+| Use case | Entry |
+|---|---|
+| its id, `UC-007` | `id: UC-007` — as the analysis writes it, so citing the id cites the use case |
+| its title | `title` |
+| its status | `status: active`, or `status: withdrawn` — a withdrawn use case is kept: its id is never used again (The artefacts, above), so a citation of it stays a true reference |
+| its file | `path`, relative to the repository |
+
+`pkit analysis fill-use-cases` prints the entries for you, `--json` the envelope the backbone reads. What a provider of the role does with them is its own (project-management plans against them and warns on an issue body citing a use case they do not hold).
+
+- **Settled state, never your working tree.** The command declares `reads: [settled]`: it reads the default branch at the commit the backbone resolves it to (`pkit repository base`, its `default_branch`) and what that commit holds (`pkit friction artefacts --at`), and asks git nothing itself. A use case on your branch is not in the value until it lands. Where the default branch cannot be read — a clone that has not fetched it — the backbone does not start the command, and the point's reason names the fetch.
+- **Complete, or no answer** (COR-052 point 6). A reading that fails, a file among the default branch's use cases that cannot be read as one — its front matter does not parse, or it has none — a use case there without an id or a title, or two holding one id: the command exits 1 with nothing on standard output, never a shorter list. The point is `fallback`, so `pkit validate` warns, naming the file, and whatever reads the point says the use cases could not be read.
+- **Empty is an answer.** A default branch nothing has been committed to, or one holding no use case yet, gives the empty list: there are none yet.
+- **Inert when no capability provides the work-tracking role**: the contribution is reported as having no active provider, its command never runs, and this capability never requires one.
+
 ## What's shipped now, what's next
 
-Shipped: the decision; the analysis location and its places; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, and the readers contribution with its filler, `pkit analysis fill-readers`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
+Shipped: the decision; the analysis location and its places; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
 
 ## Citing this capability's decisions
 

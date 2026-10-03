@@ -1186,7 +1186,8 @@ def test_shipped_capabilities_wire_clean(make_adopter_repo: MakeAdopterRepo) -> 
     # `pkit::documentation`, defines its readers and reading-evidence points, and
     # contributes to the doc-check point (#1004); software-analysis provides
     # `pkit::analysis`, defines its revalidation-evidence point, and contributes
-    # its actors to the readers point (#1001).
+    # its actors to the readers point (#1001) and its settled use cases to the
+    # use-case point (#889).
     assert [(r.role, r.active) for r in wiring.roles] == [
         ("pkit::analysis", "software-analysis"),
         ("pkit::documentation", "living-docs"),
@@ -1205,6 +1206,7 @@ def test_shipped_capabilities_wire_clean(make_adopter_repo: MakeAdopterRepo) -> 
         ("living-docs", "fill-doc-check", cx.BindingStatus.BOUND),
         ("project-management", "fill-doc-check", cx.BindingStatus.BOUND),
         ("software-analysis", "fill-readers", cx.BindingStatus.BOUND),
+        ("software-analysis", "fill-use-cases", cx.BindingStatus.BOUND),
     ]
 
 
