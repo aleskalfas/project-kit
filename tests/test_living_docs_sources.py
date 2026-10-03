@@ -519,6 +519,12 @@ def test_the_resolver_says_in_words_what_a_name_resolves_to(repo: AdopterRepo) -
         0,
         f"no source named 'no-such' is captured ({SOURCES}/no-such.yaml)\n",
     )
+    outside = _run(repo.root, str(RESOLVER), "--", "../x")
+    assert (outside.returncode, outside.stdout) == (
+        0,
+        "'../x' is not a source's name: a name is lower-case words of letters and digits "
+        "joined by single hyphens, starting with a letter, at most 64 characters\n",
+    )
     assert _run(repo.root, str(RESOLVER)).returncode == 2
 
 

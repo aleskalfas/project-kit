@@ -69,6 +69,8 @@ def main() -> int:
         print(json.dumps({"paths": paths}))
     elif paths:
         print(paths[0])
+    elif not source_layout.is_name(args.value):
+        print(f"{args.value!r} is not a source's name: a name is {source_layout.GRAMMAR}")
     else:
         print(f"no source named {args.value!r} is captured ({source_layout.file_path(args.value)})")
     return 0
