@@ -123,6 +123,11 @@ class _FakeGitHub:
     )
     #: The first call each of these matches gets no answer: gh exits 1.
     fails: list[Callable[[list[str]], bool]] = field(default_factory=list)
+    #: The PR's description, and each one written to it.
+    body: str = _PR_BODY
+    bodies: list[str] = field(default_factory=list)
+    #: The branch the PR merges into.
+    base_branch: str = "main"
     _reads: dict[str, int] = field(default_factory=dict)
 
     # -- what the pm scripts ask (`_lib.gh.gh_run`) --
@@ -152,6 +157,10 @@ class _FakeGitHub:
             if "statusCheckRollup" in fields:
                 view["statusCheckRollup"] = self._rollup()
             return _done(argv, json.dumps({f: view.get(f) for f in fields}))
+        if argv[:2] == ["pr", "edit"]:
+            self.body = Path(_option(argv, "--body-file") or "").read_text(encoding="utf-8")
+            self.bodies.append(self.body)
+            return _done(argv)
         if argv[:2] == ["pr", "comment"]:
             self.comments.append(
                 {
@@ -198,14 +207,14 @@ class _FakeGitHub:
             "isDraft": self.draft,
             "headRefName": BRANCH,
             "headRefOid": self.head,
-            "baseRefName": "main",
+            "baseRefName": self.base_branch,
             "baseRefOid": self.base,
             "state": self.state,
             "mergeable": self.mergeable,
             "isCrossRepository": False,
             "mergedAt": "2026-10-01T12:00:00Z" if merged else None,
             "author": {"login": "author"},
-            "body": _PR_BODY,
+            "body": self.body,
             "comments": self.comments,
             "commits": [{"oid": self.head, "committedDate": "2026-10-01T09:00:00Z"}],
             "closingIssuesReferences": [{"number": ISSUE}],
@@ -309,6 +318,39 @@ class _Run:
     answers: dict[str, tuple[str, str] | None] = field(default_factory=dict)
     after_merge: list[str] = field(default_factory=list)
     sleeps: list[float] = field(default_factory=list)
+    #: The change check at the head: the answers the change wrote (entries of
+    #: its `answers`), whether the base moved on, the head's unreadable files —
+    #: or why it could not be read.
+    written: list[dict[str, Any]] = field(default_factory=list)
+    outdated: bool = False
+    unreadable: list[str] = field(default_factory=list)
+    unread: str | None = None
+    #: Each (head, base) the list was derived for.
+    derived: list[tuple[str, str | None]] = field(default_factory=list)
+    merge_base: str = ""
+
+    def derive(self, head: str, base: str | None) -> Any:
+        """`friction_answers.derive`, answered from this world's change check."""
+        self.derived.append((head, base))
+        fa = self.land.friction_answers
+        if self.unread is not None:
+            return fa.Derivation(head, problem=self.unread)
+        document = {
+            "schema_version": 1,
+            "base": {"commit": self.merge_base, "outdated": self.outdated},
+            "findings": [],
+            "answers": self.written,
+            "unreadable": self.unreadable,
+        }
+        return fa.Derivation(head, document=document, answers=tuple(self.written))
+
+    def section(self) -> str:
+        """The list the description carries for the current head."""
+        derived = self.derive(self.github.head, None)
+        self.derived.pop()
+        section = self.land.friction_answers.render(derived.document, self.github.head)
+        assert section is not None
+        return section
 
     def commit(self, name: str, *, push: bool) -> str:
         (self.work / name).write_text(name, encoding="utf-8")
@@ -407,8 +449,18 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
         monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
 
         github = _FakeGitHub(mq=land.merge_queue, head=clone.head, base=clone.base)
-        run = _Run(land=land, work=work, github=github)
+        run = _Run(land=land, work=work, github=github, merge_base=clone.base)
         github.checks[github.head] = checks if checks is not None else [_GREEN]
+        monkeypatch.setattr(land.friction_answers, "derive", run.derive)
+        # The backbone's reading, stood in for: the default branch `main` (COR-054).
+        settled = land.friction_answers.default_branch
+        monkeypatch.setattr(settled, "_read", {})
+
+        def ask(explicit: str | None, _run: Any) -> Any:
+            branch = settled.Branch("main", False, "origin/main", clone.base, None)
+            return settled.Reading(branch, settled.Base("origin/main", clone.base, None, None))
+
+        monkeypatch.setattr(settled, "_ask", ask)
 
         gh_module = sys.modules["_lib.gh"]
         for module in (gh_module, land, land.done_work, land.review_pr):
@@ -458,7 +510,7 @@ def _steps(out: str) -> list[str]:
     return [line for line in out.splitlines() if line.split(":")[0] in _STEP_NAMES]
 
 
-_STEP_NAMES = {"head", "ci", "review", "merge"}
+_STEP_NAMES = {"head", "ci", "review", "answers", "merge"}
 
 
 def _short(oid: str) -> str:
@@ -477,9 +529,14 @@ def test_green_checks_two_reviewers_and_a_merge_one_line_each(world, capsys) -> 
         f"head: {_short(head)} (PR #{PR}, {BRANCH})",
         f"ci: passed on {_short(head)} (8m, run https://github.com/o/r/actions/runs/77)",
         "review: 0 kept fresh, 2 re-run — all approved",
+        "answers: none written by this change",
         f"merge: merged as {'c' * 7}",
     ]
     assert out.splitlines()[-1] == f"merge: merged as {'c' * 7}"
+    # The list was derived at the pinned head against the default branch, and a
+    # change that wrote no answers leaves the description as it was.
+    assert run.derived == [(head, None)]
+    assert run.github.bodies == []
     # Every reviewer was shown the pinned head, and the merge was pinned to it.
     assert run.invoked == [(name, head) for name in PANEL]
     subject = ["--subject", "feat(pm): land it"]
@@ -742,7 +799,7 @@ def test_human_review_mode_runs_no_reviewer_and_done_work_gates(world, capsys) -
         "review: human review mode (project default) — no reviewer agent to run; the "
         "approval is done-work's gate"
     )
-    assert steps[3] == f"merge: refused — [refused] approval gate not satisfied for PR #{PR}."
+    assert steps[4] == f"merge: refused — [refused] approval gate not satisfied for PR #{PR}."
 
 
 # ---- the merge ----------------------------------------------------------------
@@ -872,6 +929,7 @@ def test_a_dry_run_says_what_each_step_would_do_and_does_none(world, capsys) -> 
         f"head: {head} (PR #{PR}, {BRANCH})",
         f"ci: (dry-run) running on {head}: checks (IN_PROGRESS) — would wait up to 30m",
         "review: (dry-run) would keep 0 fresh and run reviewer, code-reviewer",
+        "answers: none written by this change",
         f"merge: (dry-run) would hand PR #{PR} at {head} to done-work once the checks pass "
         "and the review approves",
     ]
@@ -1355,3 +1413,324 @@ def test_an_authorisation_for_another_head_stops_before_anything(world, capsys) 
 def test_expect_head_takes_a_commit_id_only(land) -> None:
     with pytest.raises(SystemExit):
         land._parser().parse_args([str(ISSUE), "--expect-head", "not-a-sha"])
+
+
+# ---- the answers the change wrote (DEC-055) ---------------------------------------
+
+
+def _answer(location: str, reason: str | None, **fields: Any) -> dict[str, Any]:
+    """One entry of the change check's `answers`."""
+    return {
+        "artefact": location.split("/")[-1].removesuffix(".md"),
+        "location": location,
+        "answer": "unchanged",
+        "anchor": None,
+        "reason": reason,
+        "kept": [],
+        "asked": True,
+        "status": "stands",
+        "new": False,
+        **fields,
+    }
+
+
+INSTALL = _answer("docs/install.md", "The flag rename leaves the install steps as written.")
+DEFERRED = _answer(
+    "docs/cli.md",
+    "Rewritten with the redesign.",
+    answer="deferred",
+    anchor={"kind": "path", "value": "src/cli/**"},
+    asked=False,
+)
+LISTED = [
+    "  1. docs/install.md — unchanged: The flag rename leaves the install steps as written.",
+    "  2. docs/cli.md — deferred path:src/cli/** — not asked for by the change check: "
+    "Rewritten with the redesign.",
+]
+
+
+def _answers_world(world: Callable[..., _Run], *, listed: bool = False) -> _Run:
+    """A change that wrote two answers; `listed`: the description carries their list."""
+    run = world()
+    run.written = [INSTALL, DEFERRED]
+    if listed:
+        run.github.body = f"{_PR_BODY}\n{run.section()}\n"
+    return run
+
+
+def _ready_line(run: _Run, why: str = "") -> str:
+    head = run.github.head
+    return (
+        f"ready: {_short(head)} — CI passed, all required verdicts approved, 2 answers above "
+        f"to read{why}; merge with: pkit pm land-work {ISSUE} --yes --expect-head {head}"
+    )
+
+
+def test_the_answers_are_printed_above_ready_and_written_into_the_description(
+    world, capsys
+) -> None:
+    run = _answers_world(world)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    lines = out.splitlines()
+    at = lines.index(LISTED[0])
+    assert lines[at : at + 3] == [
+        *LISTED,
+        f"answers: 2 written by this change, listed above and in PR #{PR}'s description "
+        "(written now)",
+    ]
+    # done-work's gates, run dry, print their detail; the `ready:` line is last.
+    assert lines[-1] == _ready_line(run)
+    # Written once, last before the provenance footer the write stamps.
+    (written,) = run.github.bodies
+    assert written.startswith(_PR_BODY)
+    assert f"\n{run.section()}\n\n<!-- pkit-provenance:start -->" in written
+    assert run.github.merges == []
+
+
+def test_a_pr_into_another_branch_is_derived_against_that_branch(world, capsys) -> None:
+    """Only the default branch goes unnamed: the change check's own base is that
+    branch, and it resolves any other as it resolves every branch named a base."""
+    run = world()
+    run.github.base_branch = "integration/7-x"
+    run.run(capsys=capsys)
+    assert run.derived == [(run.github.head, "integration/7-x")]
+
+
+def test_a_list_already_in_the_description_is_read_as_current(world, capsys) -> None:
+    run = _answers_world(world, listed=True)
+    # As the host may hand it back: other line endings, trailing spaces.
+    run.github.body = run.github.body.replace("\n", "  \r\n")
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert f"answers: 2 written by this change, listed above and in PR #{PR}'s description" in (
+        out.splitlines()
+    )
+    assert run.github.bodies == []
+
+
+def test_a_list_of_another_head_is_written_again(world, capsys) -> None:
+    run = _answers_world(world, listed=True)
+    run.written = [INSTALL]
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert "(written now)" in out
+    (written,) = run.github.bodies
+    assert written.count("## Friction answers") == 1 and "docs/cli.md" not in written
+
+
+def test_a_dry_run_writes_nothing(world, capsys) -> None:
+    run = _answers_world(world)
+    rc, out, err = run.run("--dry-run", capsys=capsys)
+    assert rc == 0, out + err
+    assert (
+        f"answers: (dry-run) 2 written by this change, listed above and in PR #{PR}'s "
+        "description (would write)"
+    ) in out.splitlines()
+    assert run.github.bodies == [] and run.github.merges == []
+
+
+def test_no_answers_removes_the_list_an_earlier_head_left(world, capsys) -> None:
+    run = _answers_world(world, listed=True)
+    run.written = []
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+    assert (
+        f"answers: none written by this change — removed the list an earlier head left in "
+        f"PR #{PR}'s description"
+    ) in out.splitlines()
+    (written,) = run.github.bodies
+    assert "## Friction answers" not in written and written.startswith(_PR_BODY)
+    assert [merge[-1] for merge in run.github.merges] == [run.github.head]
+
+
+def test_a_dry_run_with_no_answers_leaves_an_earlier_list(world, capsys) -> None:
+    run = _answers_world(world, listed=True)
+    run.written = []
+    rc, out, err = run.run("--dry-run", capsys=capsys)
+    assert rc == 0, out + err
+    assert "would remove the list an earlier head left" in out
+    assert run.github.bodies == []
+
+
+@pytest.mark.parametrize(
+    "unread",
+    [
+        "`pkit friction check --json --head x`: it exited 1: Error: no such base",
+        "the base origin/main could not be fetched: Could not resolve host",
+    ],
+)
+def test_a_list_that_cannot_be_derived_stops_unreadable(world, capsys, unread) -> None:
+    run = _answers_world(world)
+    run.unread = unread
+    rc, out, _err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE == 2
+    assert out.splitlines()[-1] == (
+        f"answers: the change check's list at {_short(run.github.head)} could not be read — "
+        f"{unread}. Nothing was merged; run `land-work {ISSUE}` again"
+    )
+    assert run.github.bodies == [] and run.github.merges == []
+
+
+def test_a_reason_that_reads_as_a_closing_reference_is_refused_and_never_written(
+    world, capsys
+) -> None:
+    run = _answers_world(world)
+    run.written = [INSTALL, _answer("docs/api.md", "Holds once this fixes #77.")]
+    rc, out, _err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE == 1
+    assert out.splitlines()[-1] == (
+        "answers: refused — the words on docs/api.md read as a closing reference (fixes #77): "
+        "in the description and the squash commit they would close an issue at merge. Reword "
+        f"them on the artefact, push, and run `land-work {ISSUE}` again. Nothing was written"
+    )
+    assert run.github.bodies == [] and run.github.merges == []
+
+
+def test_a_list_the_description_cannot_hold_is_refused(world, capsys) -> None:
+    run = _answers_world(world)
+    run.written = [_answer("docs/api.md", "x" * 70000)]
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert (
+        "past the 65536 the host keeps: split the change or narrow the anchor"
+        in (out.splitlines()[-1])
+    )
+    assert run.github.bodies == [] and run.github.merges == []
+
+
+def test_a_write_that_fails_is_a_retry_and_merges_nothing(world, capsys) -> None:
+    run = _answers_world(world)
+    run.github.fails.append(lambda argv: argv[:2] == ["pr", "edit"])
+    rc, out, _err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == run.land.EXIT_RETRY == 7
+    assert out.splitlines()[-1] == (
+        f"answers: the list could not be written to PR #{PR}'s description: HTTP 502: Bad "
+        f"Gateway. Nothing was merged; run `land-work {ISSUE}` again"
+    )
+    assert run.github.merges == []
+
+
+# -- the authorisation, where the change wrote answers (DEC-055 point 3) --
+
+
+def test_yes_alone_stops_ready(world, capsys) -> None:
+    run = _answers_world(world, listed=True)
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    why = " (this run's --yes names no head, so it does not cover them)"
+    assert out.splitlines()[-1] == _ready_line(run, why)
+    assert run.github.merges == []
+
+
+def test_yes_naming_the_head_that_wrote_the_list_stops_and_the_rerun_merges(world, capsys) -> None:
+    run = _answers_world(world)
+    head = run.github.head
+    rc, out, _err = run.run("--yes", "--expect-head", head, capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    why = (
+        " (this run wrote them to the description, after the --yes was given, so it does not "
+        "cover them)"
+    )
+    assert out.splitlines()[-1] == _ready_line(run, why)
+    assert len(run.github.bodies) == 1 and run.github.merges == []
+
+    rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
+    assert rc == 0, out + err
+    assert run.github.merges[-1][-1] == head and len(run.github.bodies) == 1
+    assert run.after_merge == [f"move-issue #{ISSUE}", f"close-issue #{ISSUE}"]
+
+
+def test_yes_naming_the_head_whose_list_is_current_merges(world, capsys) -> None:
+    run = _answers_world(world, listed=True)
+    rc, out, err = run.run("--yes", "--expect-head", run.github.head[:12], capsys=capsys)
+    assert rc == 0, out + err
+    assert out.splitlines()[-1] == f"merge: merged as {'c' * 7}"
+    assert run.github.bodies == []
+    lines = out.splitlines()
+    assert lines.index(LISTED[0]) < lines.index(f"merge: merged as {'c' * 7}")
+
+
+def test_at_a_terminal_without_yes_the_prompt_follows_the_answers(
+    world, capsys, monkeypatch
+) -> None:
+    run = _answers_world(world)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    before: list[str] = []
+
+    def answer(prompt: str = "") -> str:
+        before.append(capsys.readouterr().out)
+        return "y"
+
+    monkeypatch.setattr("builtins.input", answer)
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == 0, out + err
+    (printed,) = before
+    assert LISTED[0] in printed.splitlines()
+    assert "(written now)" in printed
+    assert run.github.merges[-1][-1] == run.github.head
+
+
+def test_a_base_that_moved_on_is_refused_where_the_change_wrote_answers(world, capsys) -> None:
+    run = _answers_world(world, listed=True)
+    run.outdated = True
+    rc, out, _err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert out.splitlines()[-1] == (
+        f"answers: refused — main moved on after PR #{PR}'s head left it, so its merge can "
+        f"land words the list at {_short(run.github.head)} does not show. Merge main into "
+        f"{BRANCH} (`git merge origin/main`), push, and run `land-work {ISSUE}` again"
+    )
+    assert run.github.merges == []
+    # With no answers, an outdated base is no reason to stop.
+    run.written = []
+    run.github.body = _PR_BODY
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+
+
+def test_a_file_the_change_did_not_touch_that_cannot_be_read_is_no_reason_to_stop(
+    world, capsys
+) -> None:
+    """A file the change did not touch holds no word of it."""
+    run = world()
+    run.unreadable = [".gitignore"]  # unreadable, and untouched by the change
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+
+
+def test_a_file_the_change_touches_that_cannot_be_read_is_refused(world, capsys) -> None:
+    """Words on a file whose front matter does not parse cannot be listed."""
+    run = world()
+    run.unreadable = ["change.txt", ".gitignore"]  # the change added change.txt
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert out.splitlines()[-1] == (
+        "answers: refused — front matter the change check cannot read, in 1 file "
+        "(change.txt) this change touches, so its words cannot be listed. Fix it (`pkit "
+        f"validate` names the problem), push, and run `land-work {ISSUE}` again"
+    )
+    assert run.github.merges == []
+
+
+def test_the_terminal_list_shows_what_a_terminal_would_act_on_escaped(world, capsys) -> None:
+    run = world()
+    run.written = [_answer("docs/a.md", "fine\x1b[2Kgone ‮esrever")]
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert "  1. docs/a.md — unchanged: fine\\x1b[2Kgone \\u202eesrever" in out.splitlines()
+    assert "\x1b" not in out and "‮" not in out
+    assert "``fine\\x1b[2Kgone \\u202eesrever``" in run.github.body
+
+
+def test_done_work_closes_no_issue_the_list_names(world, capsys) -> None:
+    """done-work reads the closing references outside the list: a description whose
+    list says "fixes #77" closes #42 alone, through done-work's real path."""
+    run = world()
+    assert run.run(capsys=capsys)[0] == run.land.EXIT_READY  # reviewed, not merged
+    run.written = [_answer("docs/a.md", "Holds once this fixes #77.")]
+    run.github.body = f"{_PR_BODY}\n{run.section()}\n"
+    end = run.land.done_work.run([str(ISSUE), "--yes"], pinned_head=run.github.head)
+    assert end.kind == run.land.done_work.MERGED
+    assert run.after_merge == [f"move-issue #{ISSUE}", f"close-issue #{ISSUE}"]
+    assert not any(call[:3] == ["issue", "view", "77"] for call in run.github.calls)
