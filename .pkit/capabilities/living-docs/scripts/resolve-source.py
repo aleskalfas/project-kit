@@ -1,4 +1,8 @@
 #!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
 """living-docs capability — resolve-source: the `source` anchor kind's resolver (DEC-001 point 4).
 
 A page anchors a source outside the repository by its name (`source:
@@ -13,7 +17,10 @@ The backbone runs it for each anchor value as a query (the lifecycle README,
 "How a registered anchor kind is resolved"): from the project root, with
 `--json`, `--` and then the value, the offline marker set. It is bounded,
 deterministic, read-only and offline; it imports nothing beyond the standard
-library, so there is nothing to provision.
+library, so there is nothing to provision. Its inline metadata — no
+dependencies — is what makes uv run it apart from the project it is run in:
+without it, uv would install that project first, and write its environment
+there.
 
 Usage:
   pkit living-docs resolve-source <name>             the file the name resolves to

@@ -22,7 +22,8 @@ runs the real checks over it:
    answers, and the validator fails every other entry;
 6. a sources folder that cannot be read is no answer: the page is not judged;
 7. the resolver's own surface: its arguments, the grammar, its human view,
-   and that it runs offline from an empty uv cache;
+   and that it runs offline from an empty uv cache, apart from any project it
+   is run in;
 8. the registration, as the one registry reads it;
 9. a rule's origin citing a captured source;
 10. the validator's reports;
@@ -472,18 +473,37 @@ def test_the_resolver_says_in_words_what_a_name_resolves_to(repo: AdopterRepo) -
     assert _run(repo.root, str(RESOLVER)).returncode == 2
 
 
+#: An adopter's own Python project, whose one dependency no cache holds or index serves.
+UNRESOLVABLE_PROJECT = """\
+[project]
+name = "adopter"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = ["pkit-no-such-distribution==9.9.9"]
+"""
+
+
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv runs the resolver's shebang")
-def test_the_resolver_runs_offline_from_an_empty_uv_cache(
-    make_adopter_repo: MakeAdopterRepo, tmp_path: Path
+@pytest.mark.parametrize("project", [None, UNRESOLVABLE_PROJECT], ids=["no-project", "uv-project"])
+def test_the_resolver_runs_offline_from_an_empty_uv_cache_apart_from_the_project(
+    make_adopter_repo: MakeAdopterRepo, tmp_path: Path, project: str | None
 ) -> None:
-    """It declares no dependencies, so its `uv run --script` shebang needs nothing
-    provisioned: under the offline marker, with a cache nothing was ever put in."""
+    """It declares no dependencies in its inline metadata, so its `uv run --script`
+    shebang needs nothing provisioned — under the offline marker, with a cache
+    nothing was ever put in — and runs apart from the project it is run in: an
+    adopter's `pyproject.toml` whose dependency cannot be resolved is neither
+    installed, nor given a lock file or an environment."""
     repo = make_adopter_repo(capabilities=("living-docs",))
     repo.write({KEEP: KEEP_A_CHANGELOG})
+    if project is not None:
+        repo.write({"pyproject.toml": project})
     env = {**os.environ, "UV_OFFLINE": "1", "UV_CACHE_DIR": str(tmp_path / "empty-cache")}
+    env.pop("VIRTUAL_ENV", None)
     completed = _run(repo.root, str(RESOLVER), "--json", "--", "keep-a-changelog", env=env)
     assert completed.returncode == 0, completed.stderr
     assert json.loads(completed.stdout) == {"paths": [KEEP]}
+    assert not (repo.root / "uv.lock").exists()
+    assert not (repo.root / ".venv").exists()
 
 
 # --- 8. the registration -----------------------------------------------------------------
