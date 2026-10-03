@@ -15,7 +15,8 @@ backbone through its commands:
   backbone resolves both; the script never reads the variable, the
   declaration or a remote's reference, and never computes a merge-base
   itself. What the backbone says of them on standard error — a branch read
-  from the local branch — is passed on;
+  from the local branch — is passed on. The use-case filler reads the default
+  branch alone, at its commit, and nothing where it has none yet;
 - **recording the analysis location** on first use — `pkit docs
   record-location`, the backbone's one writer of a capability's recorded
   locations: with `--dry-run` to ask whether it is recorded already, and for
@@ -32,7 +33,8 @@ backbone through its commands:
   (DEC-001 point 7) through it. The command exits 1 on a point that does not
   resolve and still prints its document, so the document decides, never the
   exit code. A filler never asks for a point: the readers filler reads only
-  the analysis.
+  the analysis, and the use-case filler only the analysis the default branch
+  holds.
 
 Git answers which commit a name resolves to, who is working here — the
 default author of a revalidation record — whether the clone
@@ -92,12 +94,15 @@ def read_analysis(root: Path, at: str | None = None, run: Runner = subprocess.ru
 @dataclass(frozen=True)
 class Branch:
     """The default branch as the backbone resolves it (COR-054 points 1 and 2): its
-    name, the reference read and its commit — or, with neither, why, and the fix."""
+    name, the reference read and its commit — or, with neither, why, and the fix.
+    `unborn` is the branch with no commit yet: it holds nothing, rather than
+    holding what this clone cannot read."""
 
     name: str
     ref: str | None
     commit: str | None
     problem: str | None
+    unborn: bool = False
 
 
 @dataclass(frozen=True)
@@ -166,6 +171,7 @@ def settled(root: Path, base: str | None = None, run: Runner = subprocess.run) -
             ref=_text(branch.get("ref")),
             commit=_text(branch.get("commit")),
             problem=_text(branch.get("problem")),
+            unborn=branch.get("unborn") is True,
         ),
         Base(
             ref=str(named.get("ref")),

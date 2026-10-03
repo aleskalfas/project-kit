@@ -9,9 +9,11 @@
 
 Validates an existing GitHub issue against the methodology's body
 shape: titles.yaml's title checks per type, per-type required sections,
-classification axes presence + uniqueness, parent-ref first line. Emits findings
-tagged by the severity tokens from validation-severity.yaml (hard-
-reject / bypassable-with-audit / warning).
+classification axes presence + uniqueness, parent-ref first line, and
+the use cases the body cites in its `## Use cases` section against the
+use-case point, read only for a Feature or Task body that cites one
+(DEC-054). Emits findings tagged by the severity tokens from
+validation-severity.yaml (hard-reject / bypassable-with-audit / warning).
 
 Which substrate carries each classification axis — and therefore what the
 presence gate may demand — is asked of `_lib/axis_carriage`, never of the board
@@ -57,6 +59,7 @@ from _lib import (
     bootstrap_gate,
     classification_rules,
     title_rules,
+    use_case_citations,
 )
 from _lib import lifecycle_inference as infer
 from _lib.gh import gh_get_issue, load_adopter_config
@@ -194,6 +197,9 @@ def main() -> int:
         phase=args.phase,
         hierarchy=hierarchy,
         substrate_map=substrate_map,
+        # The use-case point (DEC-054): read only for a Feature or Task body
+        # that cites a use case.
+        use_cases=use_case_citations.read_point,
     )
 
     if args.json:
@@ -229,6 +235,7 @@ def _validate_issue(
     phase: str = PHASE_TRANSITION,
     hierarchy: str = axis_labels.HIERARCHY_GATED,
     substrate_map: axis_labels.SubstrateMap | None = None,
+    use_cases: use_case_citations.Reader | None = None,
 ) -> list[Finding]:
     findings: list[Finding] = []
     title = str(issue.get("title", ""))
@@ -800,6 +807,14 @@ def _validate_issue(
                 "body contains file:line references; line numbers go stale.",
             )
         )
+    # The use cases a Feature or Task body cites (DEC-054), at the severity the
+    # body-format schema gives the rule: those the use-case point does not hold,
+    # or that they could not be checked. `use_cases` reads the point, and only
+    # for a body that cites; None reads nothing.
+    for sev, label, detail in use_case_citations.findings(
+        body, structural_type, body_format, use_cases
+    ):
+        findings.append(Finding(sev, label, detail))
 
     return findings
 

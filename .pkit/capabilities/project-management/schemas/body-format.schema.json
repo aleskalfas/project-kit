@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "body-format.schema.json",
   "title": "Issue-body shape per type + universal body rules + checkbox semantics",
-  "description": "Formal shape of body-format.yaml — per-issue-type required sections (with checkbox flags and severity), the universal body rules (first-line parent ref, no h1, no file:line, no implementation recipes, no predicted decision IDs), the optional `Integration:` pre-line shape, the checkbox semantics (validated at tick, hard-stop at close, sticky ticks, two kinds: inline + issue-reference), and the sub-task promotion procedure. Consumed by the create-issue and validate-body skills at filing and edit time. Companion per COR-018.\n\nKey constraint: `bodies` keys are kebab-case issue-type ids drawn from issue-types.yaml's `types` namespace.",
+  "description": "Formal shape of body-format.yaml — per-issue-type required sections (with checkbox flags and severity), the universal body rules (first-line parent ref, no h1, no file:line, no implementation recipes, no predicted decision IDs, use-case citations checked against the use-case point), the optional `Integration:` pre-line shape, the checkbox semantics (validated at tick, hard-stop at close, sticky ticks, two kinds: inline + issue-reference), and the sub-task promotion procedure. Consumed by the create-issue and validate-body skills at filing and edit time. Companion per COR-018.\n\nKey constraint: `bodies` keys are kebab-case issue-type ids drawn from issue-types.yaml's `types` namespace.",
   "x-pkit-id-collection": "/bodies",
   "type": "object",
   "required": [
@@ -75,7 +75,7 @@
           "type": "array",
           "items": { "type": "string", "pattern": "^## .+$", "minLength": 4 },
           "uniqueItems": true,
-          "description": "Section headings templates may add beyond the minimum. Not enforced; the floor is `required_sections`. Common entries: `## Why`, `## Out of scope`, `## Related`, `## Dependencies`, `## Approach`, `## Implementation notes`."
+          "description": "Section headings templates may add beyond the minimum. Not enforced; the floor is `required_sections`. Common entries: `## Why`, `## Out of scope`, `## Related`, `## Dependencies`, `## Approach`, `## Implementation notes`. `## Use cases`, listed for a type, is the section the use-case citation rule reads on that type's bodies (DEC-054); no template carries it."
         }
       },
       "description": "Per-issue-type body shape."
@@ -112,6 +112,11 @@
       "additionalProperties": false,
       "required": ["rule", "severity"],
       "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^body\\.[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)*$",
+          "description": "Optional: the finding label a validator reports the rule under (e.g. `body.use-case-citation`), so the rule and its finding are found by one name, and a validator reads the rule's severity from this entry."
+        },
         "rule": {
           "type": "string",
           "minLength": 1,
