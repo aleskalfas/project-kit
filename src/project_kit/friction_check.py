@@ -1689,7 +1689,7 @@ def render_human(result: ChangeCheck) -> str:
     for finding in rows:
         if finding.location != current:
             current = finding.location
-            lines.append(f"  {_shown(current)}")
+            lines.append(f"  {_shown(current or '')}")
         cells = f"{finding.kind.value:{kind_width}}  {_anchor_cell(finding):{anchor_width}}"
         lines.append(f"    {cells}  {_shown(finding.message)}".rstrip())
     for finding in unreadable:
