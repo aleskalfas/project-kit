@@ -1,45 +1,58 @@
 """A page's body against the structure its kind declares (RS-LDOC-004).
 
 Pages of a kind follow one format, with a template per kind (living-docs
-DEC-001 point 3). The part of a format a tool can check is the page's
-**structure**: the sections its body must carry, in order where order
-matters. Each kind's structure is declared once, in this capability's
-`schemas/page-kinds.yaml` — never inferred from the template's text — and
-read here; the validator checks every page of the kind against it, and a test
+DEC-001 point 3). The part of a format a tool checks is the page's
+**structure**: the sections every page of the kind carries, in order where
+order matters. Each kind's structure is declared once, in this capability's
+`schemas/page-kinds.yaml` — never read out of the template's text — and read
+here; the validator checks every page of the kind against it, and a test
 checks every template against it, so neither holds a copy that can drift.
 
-What a **section** is, precisely: an ATX heading — a line of one to six `#`,
-indented at most three spaces, then a space, a tab or the end of the line —
-outside a fenced code block and below the front matter. Its level is the
-number of `#`; its text is the rest of the line without a closing run of `#`.
-An underlined (setext) heading, and a heading inside a block quote or a list
-item, is not read. A declared section names its level and, where the kind
-fixes the wording, its text; a section without text is one the writer words —
-the template's `<placeholder>` heading. Text is compared ignoring case, runs
-of white space and trailing punctuation (`. , : ; ! ?`). A page may carry
-sections besides the declared ones.
+What a **section** is, precisely: a heading written as a line that opens, with
+no space before it, with one to six `#`, then a space, a tab or the end of the
+line — below the front matter, outside fenced code and outside an HTML
+comment. Its level is the number of `#`; its text is the rest of the line
+without a closing run of `#`. Nothing else is read as a heading: not an
+indented `#` line (under a list item, say), not one inside a block quote, not
+an underlined (setext) heading, not an HTML heading (`<h1>`).
 
-A kind with no declared structure is not checked, and nothing is said about
-it. The declarations are read forgivingly: a malformed entry reads as no
-structure (the file's shape is `pkit schemas validate`'s, against
-`schemas/page-kinds.schema.json`).
+What hides a line. A fenced code block opens on a line of three or more
+backticks or tildes — at any indentation, and after block-quote and list
+markers — and closes on a line that holds, after any indentation and
+block-quote markers, only as many of the same character or more; one never
+closed runs to the end of the file. An HTML comment opens on a line that
+begins with `<!--` and runs to the line holding the next `-->`.
+
+A declared section names its level and, where the kind fixes the wording, its
+text. A section without text is one the writer words: a heading with words of
+its own satisfies it; an empty heading (`#` alone) and a template's unfilled
+`<placeholder>` do not. Text is compared ignoring case, runs of white space
+and trailing punctuation (`. , : ; ! ?`). A page may carry sections besides
+the declared ones.
+
+The declarations are read whole or not at all: a file that is absent, is not
+YAML or does not fit `schemas/page-kinds.schema.json` is `Unreadable`, with
+the reason. A kind the file does not list declares no structure.
 
 This module imports nothing of the capability's library, so it reads alone.
 """
 
 from __future__ import annotations
 
+import json
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
+from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
-from ruamel.yaml.error import YAMLError
+from ruamel.yaml.error import MarkedYAMLError, YAMLError
 
-#: Where each kind's structure is declared, relative to this capability's folder.
+#: Where each kind's structure is declared, and the schema the declaration fits —
+#: each relative to this capability's folder.
 PAGE_KINDS = Path("schemas") / "page-kinds.yaml"
+PAGE_KINDS_SCHEMA = Path("schemas") / "page-kinds.schema.json"
 
 #: The shared method's rule a page's structure applies (DEC-001 point 3).
 FORMAT_RULE = "RS-LDOC-004"
@@ -47,11 +60,25 @@ FORMAT_RULE = "RS-LDOC-004"
 #: How a section departs from its kind's structure.
 MISSING, OUT_OF_ORDER = "missing", "out-of-order"
 
-_ATX = re.compile(r"^ {0,3}(#{1,6})(?:[ \t]+(.*?))?[ \t]*$")
+_SCHEMA_FILE = Path(__file__).resolve().parents[2] / PAGE_KINDS_SCHEMA
+
+_ATX = re.compile(r"^(#{1,6})(?:[ \t]+(.*?))?[ \t]*$")
 _CLOSING = re.compile(r"(?:^|[ \t]+)#+$")
-_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
+#: What may stand before a fence on its line: indentation and block-quote markers,
+#: and before an opening one list markers too.
+_QUOTED = r"[ \t]*(?:>[ \t]*)*"
+_FENCE = re.compile(
+    rf"^{_QUOTED}(?:(?:[-+*]|[0-9]{{1,9}}[.)])[ \t]+(?:>[ \t]*)*)*(`{{3,}}|~{{3,}})(.*)$"
+)
+_COMMENT = re.compile(r"^[ \t]*<!--(.*)$")
+_COMMENT_END = "-->"
 _FRONT_MATTER_FENCE = re.compile(r"^---[ \t]*$")
+_PLACEHOLDER = re.compile(r"<[^<>]*>")
 _TRAILING = re.compile(r"[\s.,:;!?]+$")
+
+
+class Unreadable(Exception):
+    """The kinds' declaration gives no reading; the message says why."""
 
 
 @dataclass(frozen=True)
@@ -63,14 +90,20 @@ class Section:
     text: str | None = None
 
     def matches(self, heading: Heading) -> bool:
-        return heading.level == self.level and (
-            self.text is None or _comparable(heading.text) == _comparable(self.text)
-        )
+        if heading.level != self.level:
+            return False
+        if self.text is None:
+            return heading.worded
+        return _comparable(heading.text) == _comparable(self.text)
 
     def described(self) -> str:
-        if self.text is None:
-            return f"a level-{self.level} heading"
-        return f"`{'#' * self.level} {self.text}`"
+        """The section as a writer writes it."""
+        marks = "#" * self.level
+        if self.text is not None:
+            return f"the section `{marks} {self.text}`"
+        if self.level == 1:
+            return f"a title written as `{marks} Title`"
+        return f"a section written as `{marks} Heading`"
 
 
 @dataclass(frozen=True)
@@ -97,6 +130,12 @@ class Heading:
     text: str
     line: int
 
+    @property
+    def worded(self) -> bool:
+        """Whether the heading says something of its own: it is not empty, and not a
+        template's `<placeholder>` left unfilled."""
+        return bool(self.text) and _PLACEHOLDER.fullmatch(self.text) is None
+
 
 @dataclass(frozen=True)
 class Departure:
@@ -109,66 +148,68 @@ class Departure:
 
 
 def read_structures(path: Path) -> dict[str, Structure]:
-    """Each kind's declared structure, from the file at `path`; a kind whose entry is
-    malformed, and every kind when the file is absent or unparsable, has none."""
+    """Each kind's declared structure, from the declaration at `path`, read whole.
+    Raises `Unreadable` when the file is absent, is not YAML, or does not fit the
+    declaration's schema."""
     try:
         data = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, YAMLError):
-        return {}
-    kinds = data.get("kinds") if isinstance(data, Mapping) else None
-    if not isinstance(kinds, Mapping):
-        return {}
-    structures: dict[str, Structure] = {}
-    for kind, entry in kinds.items():
-        structure = _structure(entry)
-        if isinstance(kind, str) and structure is not None:
-            structures[kind] = structure
-    return structures
+    except OSError as exc:
+        raise Unreadable(f"the file cannot be read ({exc.strerror or exc})") from exc
+    except UnicodeDecodeError as exc:
+        raise Unreadable("the file is not UTF-8 text") from exc
+    except YAMLError as exc:
+        raise Unreadable(f"the file is not YAML ({_yaml_problem(exc)})") from exc
+    schema = Draft202012Validator(json.loads(_SCHEMA_FILE.read_text(encoding="utf-8")))
+    errors = sorted(schema.iter_errors(data), key=lambda e: [str(s) for s in e.absolute_path])
+    if errors:
+        first = errors[0]
+        pointer = "/" + "/".join(str(segment) for segment in first.absolute_path)
+        raise Unreadable(
+            f"the file does not fit {PAGE_KINDS_SCHEMA.as_posix()}: at `{pointer}`, {first.message}"
+        )
+    return {
+        kind: Structure(
+            sections=tuple(
+                Section(item["level"], item["text"].strip() if "text" in item else None)
+                for item in entry["sections"]
+            ),
+            ordered=entry.get("ordered", True),
+        )
+        for kind, entry in data["kinds"].items()
+    }
 
 
-def _structure(entry: Any) -> Structure | None:
-    if not isinstance(entry, Mapping):
-        return None
-    ordered = entry.get("ordered", True)
-    sections = entry.get("sections")
-    if not isinstance(ordered, bool) or not isinstance(sections, list) or not sections:
-        return None
-    read = [_section(item) for item in sections]
-    if any(section is None for section in read):
-        return None
-    return Structure(sections=tuple(s for s in read if s is not None), ordered=ordered)
-
-
-def _section(item: Any) -> Section | None:
-    if not isinstance(item, Mapping):
-        return None
-    level, text = item.get("level"), item.get("text")
-    if isinstance(level, bool) or not isinstance(level, int) or not 1 <= level <= 6:
-        return None
-    if text is None:
-        return Section(level)
-    if not isinstance(text, str) or not text.strip():
-        return None
-    return Section(level, text.strip())
+def _yaml_problem(exc: YAMLError) -> str:
+    if isinstance(exc, MarkedYAMLError) and exc.problem and exc.problem_mark is not None:
+        return f"{exc.problem}, at line {exc.problem_mark.line + 1}"
+    return "it does not parse"
 
 
 def headings(text: str) -> list[Heading]:
-    """The headings of a Markdown file's body, in order: ATX headings outside fenced
-    code, below the front matter, each with its line in the file."""
+    """The headings of a Markdown file's body, in order, each with its line in the
+    file: what the module's opening says a section is."""
     lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
     found: list[Heading] = []
     fence: tuple[str, int] | None = None  # the open fence's character and length
+    in_comment = False
     for index in range(_body_start(lines), len(lines)):
         line = lines[index]
         if fence is not None:
             if _closes(line, fence):
                 fence = None
             continue
+        if in_comment:
+            in_comment = _COMMENT_END not in line
+            continue
         opening = _FENCE.match(line)
         if opening is not None and not (
             opening.group(1).startswith("`") and "`" in opening.group(2)
         ):
             fence = (opening.group(1)[0], len(opening.group(1)))
+            continue
+        comment = _COMMENT.match(line)
+        if comment is not None:
+            in_comment = _COMMENT_END not in comment.group(1)
             continue
         atx = _ATX.match(line)
         if atx is not None:
@@ -190,7 +231,7 @@ def _body_start(lines: Sequence[str]) -> int:
 
 def _closes(line: str, fence: tuple[str, int]) -> bool:
     char, length = fence
-    return re.match(rf"^ {{0,3}}{re.escape(char)}{{{length},}}[ \t]*$", line) is not None
+    return re.match(rf"^{_QUOTED}{re.escape(char)}{{{length},}}[ \t]*$", line) is not None
 
 
 def _comparable(text: str) -> str:

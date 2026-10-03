@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "page-kinds.schema.json",
   "title": "Page kinds and their structure — living-docs capability",
-  "description": "Formal shape of the capability's `schemas/page-kinds.yaml`: each page kind it ships, keyed by the kind a page names in its `kind` field, with the structure the kind's pages follow (living-docs DEC-001 point 3; RS-LDOC-004) — the sections a page's body carries, in order unless the kind says otherwise. The one declaration of each kind's structure: the validator, `pkit living-docs validate`, checks every page of the kind against it, at the severity the status of RS-LDOC-004 gives, and a kind not listed is not checked. Capability data, read by the capability's own scripts; not adopter data.",
+  "description": "Formal shape of the capability's `schemas/page-kinds.yaml`: each page kind it ships, keyed by the kind a page names in its `kind` field, with the structure the kind's pages follow (living-docs DEC-001 point 3; RS-LDOC-004) — the sections a page's body carries, in order unless the kind says otherwise. The one declaration of each kind's structure: the validator, `pkit living-docs validate`, checks every page of the kind against it — a departure is an error while RS-LDOC-004 is accepted, and under any other status no body is checked. A kind not listed declares no structure: its pages are reported with their kind, never failed. A structure names only what every page of the kind must carry. Capability data, read by the capability's own scripts; not adopter data.",
   "type": "object",
   "required": [
     "schema_version",
@@ -40,7 +40,7 @@
       ],
       "properties": {
         "sections": {
-          "description": "The sections a page of the kind carries. Each takes a heading of its own; a page may carry other sections besides.",
+          "description": "The sections every page of the kind carries. Each takes a heading of its own; a page may carry other sections besides.",
           "type": "array",
           "minItems": 1,
           "items": {
@@ -56,7 +56,7 @@
     },
     "section": {
       "title": "One section: a heading's level and, where the kind fixes it, its text",
-      "description": "A Markdown ATX heading — one to six `#` — outside fenced code. A section without `text` is one the writer words, as the template's `<placeholder>` heading; text is compared ignoring case, runs of white space and trailing punctuation.",
+      "description": "A heading written with one to six `#` at the start of a line, outside fenced code and HTML comments. A section without `text` is one the writer words — a heading with words of its own, not an empty one or a template's unfilled `<placeholder>`; text is compared ignoring case, runs of white space and trailing punctuation.",
       "type": "object",
       "additionalProperties": false,
       "required": [
