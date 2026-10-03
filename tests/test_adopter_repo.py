@@ -4,7 +4,10 @@ consumers (validators, the friction engine per COR-050) rely on."""
 
 from __future__ import annotations
 
+import contextlib
 import os
+import uuid
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -226,6 +229,42 @@ def test_a_copy_has_the_shape_a_fresh_build_has(
     assert built is not None
     assert copied.shas() == [built.squash_merge, built.rename, built.initial]
     assert copied.current_branch() == fresh.current_branch() == "main"
+
+
+@contextlib.contextmanager
+def _a_cache_in(directory: Path) -> Iterator[Path]:
+    """`directory` holding, for the block, a compiled file in its `__pycache__` —
+    what loading a script of it in-process leaves — named as no other is."""
+    cache = directory / "__pycache__"
+    made = not cache.exists()
+    cache.mkdir(exist_ok=True)
+    planted = cache / f"pinned-{uuid.uuid4().hex}.cpython-312.pyc"
+    planted.write_bytes(b"bytecode")
+    try:
+        yield planted
+    finally:
+        planted.unlink()
+        if made:
+            with contextlib.suppress(OSError):
+                cache.rmdir()
+
+
+def test_a_copy_built_before_a_cache_has_the_shape_a_fresh_build_after_it_has(
+    make_adopter_repo: MakeAdopterRepo, tmp_path: Path
+) -> None:
+    """The order the landing tests put the builds in (#1325): a template built, then
+    a Python cache left in the source checkout's project-management scripts — they
+    load those in-process — then a fresh build."""
+    capabilities = ("project-management",)
+    scripts = install_mod.find_source_kit() / "capabilities" / "project-management" / "scripts"
+    templates = AdopterTemplates(tmp_path / "templates", dict(os.environ))
+    copied = templates.copy(tmp_path / "copy", capabilities=capabilities)
+    with _a_cache_in(scripts) as planted:
+        fresh = make_adopter_repo(
+            capabilities=capabilities, root=tmp_path / "fresh", chdir=False, fresh=True
+        )
+    assert _tree(copied.root) == _tree(fresh.root)
+    assert not any(planted.name in path for path in _tree(fresh.root))
 
 
 def test_each_copy_is_its_own(make_adopter_repo: MakeAdopterRepo, tmp_path: Path) -> None:

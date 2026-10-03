@@ -30,6 +30,12 @@ Adopter-owned content is *never* deleted before a copy and is never the
 target of an overwrite, so a partial failure cannot destroy adopter data.
 This is strictly safer than the prior `rmtree`-first posture, which could
 leave the adopter with neither old nor new content.
+
+What no copy carries: Python's caches (`is_python_cache`). Importing a script
+of the source tree in place writes its bytecode beside it, so whether a copy
+held caches depended on what had run in the source before it (#1325). Every
+path that copies a source tree into a project asks this one rule — the
+refresh below, and `shutil.copytree` through `ignore_python_caches`.
 """
 
 from __future__ import annotations
@@ -42,6 +48,22 @@ from pathlib import Path, PurePath
 # adopter-owned (the `project/` convention, positional per tier). The mechanic
 # is convention-agnostic; the caller supplies the convention.
 OwnershipPredicate = Callable[[PurePath], bool]
+
+#: The directory Python writes a module's bytecode into, beside the module.
+_CACHE_DIRECTORY = "__pycache__"
+#: The suffixes of compiled Python, wherever such a file lies.
+_COMPILED_SUFFIXES = frozenset({".pyc", ".pyo"})
+
+
+def is_python_cache(rel: PurePath) -> bool:
+    """True iff `rel` is a Python cache: inside a `__pycache__` directory, or a
+    compiled file. Never copied into a project."""
+    return _CACHE_DIRECTORY in rel.parts or rel.suffix in _COMPILED_SUFFIXES
+
+
+def ignore_python_caches(_directory: str, names: list[str]) -> set[str]:
+    """`is_python_cache` in the form `shutil.copytree`'s `ignore` takes."""
+    return {name for name in names if is_python_cache(PurePath(name))}
 
 
 def refresh_owned_tree(
@@ -72,6 +94,9 @@ def refresh_owned_tree(
     seam capability skip-state rides on; the primitive knows nothing of
     "skipped artifacts".
 
+    A Python cache in the source (`is_python_cache`) is treated the same way:
+    never copied, and pruned from the destination as a kit-owned orphan.
+
     `seed_owned=False` means the source's adopter-owned paths are **never**
     copied — not even into an absent destination — and its adopter-owned
     directories are not materialised. Use it when the source is another
@@ -92,6 +117,8 @@ def refresh_owned_tree(
     source_files: dict[PurePath, Path] = {}
     for path in source.rglob("*"):
         rel = path.relative_to(source)
+        if is_python_cache(rel):
+            continue
         if path.is_dir():
             source_dirs.add(rel)
         elif path.is_file():
