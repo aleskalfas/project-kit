@@ -12,9 +12,8 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-03T01:55:28Z
-      outcome: unchanged
-      unchanged-because: COR-050 now says what the resolver of a kind a capability registers answers, when an anchor of such a kind has changed, that one its resolver names no file for is dead, that exclusions leave it untouched, and that the change check fails one whose resolver gave no answer; this page cites COR-050 for the friction block in the container, the core check flagging an artefact when an anchor changes, unanchored-because, and dead anchors being the core's checks, and the artefacts it stamps anchor by path, record and artefact alone, never a registered kind, so all it says still holds
+      at: 2026-10-03T02:33:40Z
+      outcome: updated
 ---
 
 # software-analysis capability
