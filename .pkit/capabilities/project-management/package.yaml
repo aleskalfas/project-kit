@@ -48,6 +48,9 @@ commands:
   set-instance:
     script: scripts/set-instance.py
     help: "Set (or --show / --clear) this clone's numeric instance id — the opt-in, per-clone activation gate for instance ownership (DEC-035). Writes a git-ignored runtime file; a clone with no id set behaves as a single-clone repo."
+  decline-use-case-task:
+    script: scripts/decline-use-case-task.py
+    help: "Keep (or --show [--json] / --clear) the answer that declined the Task to author the use cases over an empty use-case set (DEC-054 point 5). Batch planning in this checkout then leaves the Task out until the next calendar day, in the machine's local time. Writes the time of the answer to a git-ignored runtime file; --show is read-only."
   create-issue:
     script: scripts/create-issue.py
     help: File a new issue (per DEC-020). Composes title + body from the type's template, applies classification labels, optionally adds to the configured Projects v2 board. Links the issue parent — --parent, or else the EPIC / Feature / Umbrella the body's first line names — as a native sub-issue (per DEC-005 / DEC-039), refusing a --parent that disagrees with the first line. Refuses a non-feature --kind on an epic/feature/umbrella up front (the DEC-011 kind/structural hard-reject). --from-report <N> auto-links the new issue into feedback/CR #N's Tracked by via the backbone's `pkit report link` (per DEC-048; link failure warns + exits 4, never rolls back).
