@@ -130,6 +130,7 @@ from project_kit.friction_discovery import (
     AnchorKinds,
     Artefact,
     ArtefactKind,
+    Deferral,
     Discovery,
     FrictionSettings,
     RepositoryTree,
@@ -276,8 +277,8 @@ class WrittenAnswer:
       `outcome` is neither — `deferred`, or `unanchored`.
     - `anchor`: the deferral's; `None` otherwise. `reason`: the words,
       whitespace folded as the check compares them; `None` where none is written.
-    - `kept`: on a revalidation whose `at` changed, the deferrals present at
-      the base and at head.
+    - `kept`: on a revalidation whose `at` changed, each deferral entry at head
+      whose anchor the base defers too.
     - `asked`: the diff asked for it — for a revalidation, the diff asked the
       artefact anything; for a deferral, the diff asked about its anchor, it is
       introduced in the diff, and no revalidation stands.
@@ -899,17 +900,26 @@ def anchors_of(artefact: Artefact) -> list[Anchor]:
     return [Anchor(kind, value) for kind, values in artefact.anchors.items() for value in values]
 
 
-def deferral_reason(artefact: Artefact, anchor: Anchor) -> str:
-    """The reason written on the deferral of `anchor`, whitespace folded; `""` when none."""
+def _entry_reason(artefact: Artefact, deferral: Deferral) -> str | None:
+    """The reason one deferral entry carries, whitespace folded; `None` when it carries
+    no text."""
     deferred: Any = _revalidated_field(artefact, "deferred")
+    if not isinstance(deferred, list):
+        return None
+    entry = cast(list[Any], deferred)[deferral.index]
+    reason = cast(Mapping[str, Any], entry).get("reason") if isinstance(entry, Mapping) else None
+    return " ".join(reason.split()) if isinstance(reason, str) else None
+
+
+def deferral_reason(artefact: Artefact, anchor: Anchor) -> str:
+    """The reason written on the deferral of `anchor`, whitespace folded; `""` when none.
+    An anchor deferred twice — a validation error (COR-050 point 4) — reads as its first
+    entry carrying text."""
     for deferral in artefact.deferrals:
-        if deferral.anchor != anchor or not isinstance(deferred, list):
-            continue
-        entry = cast(list[Any], deferred)[deferral.index]
-        if isinstance(entry, Mapping):
-            reason = cast(Mapping[str, Any], entry).get("reason")
-            if isinstance(reason, str):
-                return " ".join(reason.split())
+        if deferral.anchor == anchor:
+            reason = _entry_reason(artefact, deferral)
+            if reason is not None:
+                return reason
     return ""
 
 
@@ -1275,9 +1285,9 @@ def _revalidation_fields(artefact: Artefact) -> tuple[Any, Any, str | None]:
     return parsed_at(artefact), _revalidated_field(artefact, "outcome"), _because(artefact)
 
 
-def _reason(artefact: Artefact, anchor: Anchor) -> str | None:
-    """The folded reason of the deferral of `anchor`, `None` when it has none."""
-    return deferral_reason(artefact, anchor) or None
+def _reason(artefact: Artefact, deferral: Deferral) -> str | None:
+    """The folded reason of one deferral entry, `None` when it has none."""
+    return _entry_reason(artefact, deferral) or None
 
 
 def _written_answers(
@@ -1292,13 +1302,16 @@ def _written_answers(
       folded `unchanged-because` differs — an absent one counting as a value, so
       a block added to an existing artefact is listed. Where `at` changed it
       `stands` or is a `bump`, as the check judges it (`_revalidation`), and
-      names the deferrals it kept; where `at` did not, it is `edited`.
-    - A **deferral** is listed where the base lacks it (`stands`), or its folded
-      reason differs (`edited`).
+      names each deferral entry it kept; where `at` did not, it is `edited`.
+    - A **deferral** entry is listed where the base defers its anchor in no
+      entry (`stands`), or in none with its folded reason (`edited`). Every
+      entry is read, so an anchor deferred twice — a validation error (COR-050
+      point 4) — lists each entry carrying words the base did not; of an
+      anchor's entries introduced, the first is the one the check reads.
     - A **reason for having no anchors** is listed where it was added or differs.
     - A **new** artefact lists only what carries words — its `unchanged-because`,
-      each deferral, its `unanchored-because` — never a bare `at`; nothing in it
-      was asked for.
+      each deferral entry, its `unanchored-because` — never a bare `at`; nothing
+      in it was asked for.
 
     What the change removed is not listed.
     """
@@ -1324,18 +1337,21 @@ def _written_answers(
             new=before is None,
         )
 
-    deferred = sorted({d.anchor for d in artefact.deferrals}, key=lambda a: (a.kind, a.value))
+    # By anchor, an anchor's entries in written order (the sort is stable).
+    deferrals = sorted(artefact.deferrals, key=lambda d: (d.anchor.kind, d.anchor.value))
     entries: list[WrittenAnswer] = []
     if before is None:
         because = _because(artefact)
         if because is not None:
             entries.append(entry(_written_outcome(artefact), None, because))
         entries.extend(
-            entry(Answer.DEFERRED.value, anchor, _reason(artefact, anchor)) for anchor in deferred
+            entry(Answer.DEFERRED.value, d.anchor, _reason(artefact, d)) for d in deferrals
         )
     else:
         revalidation = _revalidation(artefact, before)
-        deferred_before = {d.anchor for d in before.deferrals}
+        reasons_before: dict[Anchor, set[str | None]] = {}
+        for deferral in before.deferrals:
+            reasons_before.setdefault(deferral.anchor, set()).add(_reason(before, deferral))
         if _revalidation_fields(artefact) != _revalidation_fields(before):
             kept: tuple[KeptDeferral, ...] = ()
             if revalidation is None:
@@ -1343,9 +1359,9 @@ def _written_answers(
             else:
                 status = AnswerStatus.BUMP if revalidation.answer is None else AnswerStatus.STANDS
                 kept = tuple(
-                    KeptDeferral(anchor, _reason(artefact, anchor))
-                    for anchor in deferred
-                    if anchor in deferred_before
+                    KeptDeferral(d.anchor, _reason(artefact, d))
+                    for d in deferrals
+                    if d.anchor in reasons_before
                 )
             entries.append(
                 entry(
@@ -1359,12 +1375,16 @@ def _written_answers(
             )
         asked_about = {question.anchor for question in questions}
         standing = revalidation is not None and revalidation.answer is not None
-        for anchor in deferred:
-            reason = _reason(artefact, anchor)
-            if anchor not in deferred_before:
-                asked = anchor in asked_about and not standing
+        introduced: set[Anchor] = set()  # the anchors whose first entry was listed
+        for deferral in deferrals:
+            anchor = deferral.anchor
+            reason = _reason(artefact, deferral)
+            carried = reasons_before.get(anchor)
+            if carried is None:
+                asked = anchor in asked_about and not standing and anchor not in introduced
+                introduced.add(anchor)
                 entries.append(entry(Answer.DEFERRED.value, anchor, reason, asked=asked))
-            elif reason != _reason(before, anchor):
+            elif reason not in carried:
                 entries.append(
                     entry(Answer.DEFERRED.value, anchor, reason, status=AnswerStatus.EDITED)
                 )

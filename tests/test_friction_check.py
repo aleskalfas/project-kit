@@ -1173,6 +1173,49 @@ def test_a_reworded_deferral_is_listed_as_edited(repo: AdopterRepo) -> None:
     ]
 
 
+def test_a_second_deferral_of_an_anchor_the_base_defers_is_listed(repo: AdopterRepo) -> None:
+    """An anchor deferred twice — validation's error (COR-050 point 4) — lists each entry
+    whose words the base did not carry for that anchor, not only the first."""
+    _start(repo, {"docs/guide.md": guide(deferred=[("path", "src/cli/**", "old words")])})
+    repo.commit(
+        "defer the CLI again",
+        {
+            "docs/guide.md": guide(
+                deferred=[("path", "src/cli/**", "old words"), ("path", "src/cli/**", "new words")]
+            )
+        },
+    )
+    result = _run(repo)
+    assert result.findings == ()
+    assert _answers(result) == [_written("deferred", "new words", anchor=CLI, status="edited")]
+
+
+def test_a_new_artefact_deferring_one_anchor_twice_lists_both(repo: AdopterRepo) -> None:
+    _start(repo, {})
+    twice = [("path", "src/cli/**", "first reason"), ("path", "src/cli/**", "second reason")]
+    repo.commit("a new page", {"docs/guide.md": guide(deferred=twice)})
+    assert _answers(_run(repo)) == [
+        _written("unchanged", HOLDS, new=True),
+        _written("deferred", "first reason", anchor=CLI, new=True),
+        _written("deferred", "second reason", anchor=CLI, new=True),
+    ]
+
+
+def test_of_an_anchor_deferred_twice_the_first_entry_is_the_one_asked_for(
+    repo: AdopterRepo,
+) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    twice = [("path", "src/cli/**", "first reason"), ("path", "src/cli/**", "second reason")]
+    repo.commit(
+        "change the CLI; defer it twice",
+        {"src/cli/main.py": "print('cli v3')\n", "docs/guide.md": guide(deferred=twice)},
+    )
+    assert _answers(_run(repo)) == [
+        _written("deferred", "first reason", anchor=CLI, asked=True),
+        _written("deferred", "second reason", anchor=CLI),
+    ]
+
+
 def test_a_kept_deferral_is_listed_only_on_the_revalidation(repo: AdopterRepo) -> None:
     anchors = {"path": ["src/cli/**", "src/core/**"]}
     kept = [("path", "src/core/**", "waiting on the engine")]
