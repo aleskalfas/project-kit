@@ -29,7 +29,7 @@ The capabilities stay independent. Whatever keeps the use cases works with no wo
      - `path`, optional, is the repository-relative path of the document that describes the use case.
    - **Its combination is `single`.** One keeper answers, and a project filler replaces the answer whole.
    - **It has no default.** This capability holds no use cases of its own.
-   - **Its inert policy is `fallback`** (COR-052 point 6), because the point's consumers only report. The policy holds on three conditions, and they are part of this decision:
+   - **Its inert policy is `fallback`**: its consumers only report, and a consumer that only reports may declare `fallback` (COR-052 point 6). The policy holds on three conditions, and they are part of this decision:
      - nothing refuses on the point, and nothing fails on it;
      - no finding is drawn from an id the point lacks unless the point resolved with no inert filler (point 3);
      - raising the rule of point 4 above a warning reopens the policy.
