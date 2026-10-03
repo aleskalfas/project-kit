@@ -10,9 +10,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:53:17Z
+          at: 2026-10-02T20:37:33Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 7 now says filler, not provider, for whoever reports a reading-evidence result, and that nothing in living-docs warns on a check's opening name; the key and the rule are unchanged, and the paths the user space's readers take through its pages are untouched by it
+          unchanged-because: "living-docs DEC-001 point 3 gains a paragraph on a page kind's structure: the sections a page's body carries and how validation checks them; it says nothing of the links between pages, so the paths the user space's readers take through its pages stay unbroken"
 ---
 
 # The user space's definition
