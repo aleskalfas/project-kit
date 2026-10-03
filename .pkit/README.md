@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-03T14:05:39Z
+      at: 2026-10-03T14:29:48Z
       outcome: unchanged
-      unchanged-because: the CLI reference gained the change check's list of answers a change wrote, its --head option and the writers' new refusal line; the schemas reference gained validation's finding for an anchor deferred twice; the lifecycle reference says how a resolver runs under --head — each inside its own friction or resolver section. This map names the three by role (the pkit command surface, the schemas, packaging and upgrades) and points to the CLI reference's Authoring commands section, and all of it still holds
+      unchanged-because: The rules README gained a fifth category of rules and the agents README a paragraph on friction writers; this index says in one line each that the rules area holds the universal rules every adopter's CLAUDE.md loads and the agents area the agent definitions the adapter deploys, both still true.
 ---
 
 # project-kit
