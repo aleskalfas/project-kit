@@ -327,7 +327,7 @@ The user may revise the Task away at the gate:
 ### Behind the scenes
 
 - The prerequisite Task is in the plan by default. It is not offered as a question before slicing.
-- After slicing, judge each Feature and Task: does it touch what users do — a goal someone using (not building) the software reaches, which a use case would describe? The build, tests, CI, refactors, tooling, and documentation of the method itself are internal. The table's Use cases column shows the judgement for every row: `T1` for T2 and T3, `none` for T4.
+- After slicing, judge each Feature and Task: does it touch what users do — a goal someone using (not building) the software reaches, which a use case would describe? The build, tests, CI, refactors, tooling, and documentation of how the software is built and worked on are internal. The table's Use cases column shows the judgement for every row: `T1` for T2 and T3, `none` for T4.
 - Then read the kept answer: `pkit pm decline-use-case-task --show --json`. Here its `state` is `none` or `expired`, so the Task is in. An `unreadable` answer, or a command that fails, puts it in too, and the gate adds that an earlier answer could not be read, with its `why`.
 - Only the issues that touch what users do depend on the Task: each names it in `## Dependencies`. They state the goals they serve as text and carry no `## Use cases` section. Internal work does not depend on it.
 - One of the Task's acceptance criteria is that the dependent issues name their use cases. It closes the loop: the Task does not close until each dependent Feature and Task has gained its `## Use cases` section, which it can once the use cases have settled.
@@ -399,7 +399,7 @@ Over an empty set, a plan none of whose Features and Tasks touches what users do
 ### Preconditions
 
 - As Scenario 9: the point resolved in full and holds nothing.
-- Every planned issue is internal work: the build, tests, CI, refactors, tooling, or documentation of the method itself.
+- Every planned issue is internal work: the build, tests, CI, refactors, tooling, or documentation of how the software is built and worked on.
 
 ### Walkthrough
 
