@@ -27,7 +27,6 @@ reads:
     - .pkit/capabilities/project-management/schemas/time-containers.yaml
     - .pkit/capabilities/project-management/project/config.yaml
     - .pkit/capabilities/project-management/project/workstreams.yaml
-    - .pkit/manifest.yaml
 ---
 
 # project-manager
@@ -97,7 +96,7 @@ Within **PM direction**, infer additionally whether the request is **single-issu
 
 Open the pm composite skill (its dispatcher is the `pm.md` file declared in `reads.paths`) and read its shared framing. Then open the matching sub-procedure file (`create-issue.md`, `validate-body.md`, `transition-state.md`, or `batch-plan.md` in the same folder) and follow its walkthrough step by step. Don't summarise the procedure — execute it. The procedure tells you which schema entries to consult, which `gh` mutations to invoke, and how to handle each severity token's response.
 
-For the `batch-plan` sub-procedure specifically, load your storyboard from `storyboard.md` with the Read tool and follow it for the scripted scenarios — happy path, ambiguous intent, plan rejection, mid-execution validation failure, and a project with no use cases yet. Where the software-analysis capability is installed, the plan is checked against the project's use cases before you slice it, and each issue names the use cases it satisfies ([project-management:DEC-054-use-case-validation]); you never write use cases yourself.
+For the `batch-plan` sub-procedure specifically, load your storyboard from `storyboard.md` with the Read tool and follow it for the scripted scenarios — happy path, ambiguous intent, plan rejection, mid-execution validation failure, and the use-case scenarios: a walk, a gap, a set that may be incomplete, use cases that could not be read, and no use case settled yet. While the use-case point is not off, you walk the use cases before you slice, and each planned Feature and Task names the use cases it serves ([project-management:DEC-054-use-case-validation]); you never write use cases yourself — over an empty set you plan their authoring as work.
 
 ### 5. Adversarial review during batch-planning
 

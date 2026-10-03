@@ -11,7 +11,7 @@ When the request is **single-issue** ("file this one bug", "create the EPIC for 
 
 ## What this sub-procedure carries
 
-Six sequential steps. The agent narrates each step's start to the user per the storyboard's tone rules; the procedural detail is here. Step 2 runs only where the software-analysis capability is installed ([project-management:DEC-054-use-case-validation]); elsewhere the flow goes from step 1 straight to step 3, and nothing in it mentions use cases.
+Six sequential steps. The agent narrates each step's start to the user per the storyboard's tone rules; the procedural detail is here. Step 2 acts only while the use-case point is not off ([project-management:DEC-054-use-case-validation]); while it is off the flow goes from step 1 straight to step 3, and nothing in it mentions use cases.
 
 ### 1. Read intent and reference material
 
@@ -20,16 +20,28 @@ Six sequential steps. The agent narrates each step's start to the user per the s
 - If any reference cannot be resolved (path not found, issue not accessible), surface the gap before proposing a slicing — do not guess content.
 - If the user's intent has missing inputs that prevent slicing (no reference at all; scope too vague), ask at most two clarifying questions per the storyboard's Scenario 2 — not a sequence of single-question turns.
 
-### 2. Walk the use cases (only when software-analysis is installed)
+### 2. Walk the use cases (while the use-case point is not off)
 
-Per [project-management:DEC-054-use-case-validation], a slicing is checked against what the software must do before it is proposed.
+Per [project-management:DEC-054-use-case-validation], a slicing is checked against what the software must do before it is proposed. The use cases come from one place: the `pkit::work-tracking:use-cases` data point, the use cases settled on the default branch — each an `id`, a `title`, a `status` (`active` or `withdrawn`) and, where given, the `path` of the document that describes it. Whatever keeps the project's use cases fills the point; this step reads the point and nothing else.
 
-- **Is it installed?** Software-analysis is installed when `.pkit/manifest.yaml` lists it under `components:` (kind `capability`). If it is not, skip this step, leave out the Use cases column in step 3 and the `## Use cases` section in step 6, and say nothing about use cases.
-- **Read the use cases as they stand on the default branch**, not in the working tree. A use case written on a branch that has not landed may still be renumbered, so its number cannot be cited yet. They live under software-analysis's `analysis` location — the `analysis` folder of the internal documentation root (the `internal` entry under `docs` in `.pkit/project/config.yaml`, `docs/` by default), unless software-analysis has recorded another location in its own project configuration. A use case is a Markdown file there whose front matter carries an `id` of the form `UC-NNN`. Read them at `origin/<default branch>` (for example `git ls-tree -r --name-only origin/main -- <location>` and `git show origin/main:<path>`), after a `git fetch` if the clone may be stale.
-- **Map the intent onto them.** Note which use cases the intent affects, and which behaviour in the intent no use case describes.
-- **A gap stops the flow before slicing.** When the project has no use cases yet, or the intent involves behaviour no use case describes, say so and offer two ways on, per the storyboard's Scenario 5:
-  - **Have the use cases written first**, through software-analysis's own authoring. The project-manager does not write use cases. Planning resumes once they have landed on the default branch, so the plan can cite them.
-  - **Plan without them.** Planning goes ahead, and the plan marks the issues that cite no use case.
+**Read the point**: `pkit connections resolve pkit::work-tracking:use-cases --json`. The command exits 1 on an unresolved point and still prints its document, so the document decides, never the exit code. Decide on the document's `outcome` and on its fillers' `state`. Its `why` is a sentence to show the user, never one to decide on. The storyboard scripts each state in which the step acts: a walk (Scenario 5), a gap (6), a partly checked set (7), use cases that could not be read (8) and an empty set (9).
+
+| The document | State | What the step does |
+|---|---|---|
+| `outcome` is `undefined` or `unfilled` | off | Nothing. No Use cases column in step 3, no `## Use cases` section in step 6, and nothing said about use cases. |
+| `outcome` is `resolved`, no filler's `state` is `inert`, `value` has entries | has entries | Walks them. |
+| `outcome` is `resolved`, no filler's `state` is `inert`, `value` is empty | empty | Plans the prerequisite Task. |
+| `outcome` is `resolved`, and a filler's `state` is `inert` | partly checked | Walks what the point holds, and says the set may be incomplete. |
+| any other `outcome`, including one this table does not list; no document; a `schema_version` other than 1 | could not check | Says the use cases could not be read, and why, and goes on without the step. |
+
+- **With entries, walk the active use cases against the intent.** A withdrawn use case is history: no new work serves it. Where an entry carries `path`, read that document for what the use case says; where the entries carry none, map the intent from titles alone and say so in the plan. Note three things for the gate: the use cases each planned Feature and Task serves; each use case the intent touches that no planned issue names; and the behaviour the plan builds that no use case describes.
+- **Partly checked: walk the entries the point holds**, as above. The plan says the set may be incomplete and names the filler that gave no answer, with its `reason`. Behaviour that no held use case describes is shown as a *possible* gap, since the missing filler may describe it. An empty `value` in this state is not the empty set: it does not lead to the prerequisite Task.
+- **With an empty set, plan a prerequisite Task to author the use cases.** It is in the plan by default; the user revises it away at the gate to plan without use cases.
+  - The planned issues depend on the Task: each names it in its `## Dependencies` section. They state the goals they serve as text and cite no use case, since none has settled.
+  - One of the Task's acceptance criteria is that the dependent issues name their use cases: once the use cases have settled, each dependent Feature and Task gains its `## Use cases` section.
+  - No answer is saved to configuration. When the user revises the Task away, the plan's topmost new issue says in prose that it was planned without use cases — or, where the plan files only under an existing issue, each filed issue does. The next plan over an empty set includes the Task again.
+- **Could not check: say so, and why** — the document's `why`, and each inert filler's `reason` — then go on to step 3 without the step. An unread point is never read as an empty set: no prerequisite Task, and no claim that the project has no use cases.
+- **Do not write use cases.** Their authoring is planned as work. Suggest no id for a use case that has not settled: an id is settled once its use case reaches the default branch.
 
 ### 3. Propose the slicing
 
@@ -41,9 +53,9 @@ Apply the methodology's typing rules to the work units implied by intent + refer
 - **Dependency chain** — express ordering between issues either implicitly (via parent-refs) or explicitly (as Dependencies sections in the body). Flag tight coupling in the body's Approach / Notes section.
 - **Same-module Tasks are built one at a time** — two Tasks are in the same module when the source files their bodies' implementation notes name overlap. The later one names the earlier in its `## Dependencies` section (one of the recommended sections in [project-management:DEC-010-issue-body-minimum-structure]; the relation is textual, per [project-management:DEC-005-linking-and-containment]), whether the earlier is in this plan or already open, and is dispatched once the earlier has merged — a scheduling constraint, because the two change the same files, not a dependency of one outcome on the other. Tasks in different modules run in parallel. Each landing in a shared module sends every other open PR there through another review round, which is why parallel work inside one module costs more than it saves.
 - **Milestone resolution** — if the adopter's config or the intent names a milestone, attach it. If neither, prompt before the approval gate. A follow-up a reviewer produced takes the scope decision in [create-issue](create-issue.md)'s intent recognition instead, which can leave it without a Milestone.
-- **Use cases per ticket** (only when step 2 ran) — name the use cases each ticket satisfies, citing only ids step 2 found on the default branch. A ticket that serves none — an internal refactor, a chore — shows `none`.
+- **Use cases per ticket** (only when step 2 walked a set) — name the use cases each Feature and Task serves, citing only ids the point holds. A Feature or Task that serves none — an internal refactor, a chore — shows `none`. Only Feature and Task bodies carry the section, so every other type shows `—`.
 
-Render the slicing as a single table the user can scan at a glance (the Use cases column only when step 2 ran):
+Render the slicing as a single table the user can scan at a glance (the Use cases column only when step 2 walked a set):
 
 | # | Type | Title | Parent | Workstream | Milestone | Priority | Use cases | Notes |
 |---|---|---|---|---|---|---|---|---|
@@ -65,7 +77,9 @@ Present the slicing to the user as a single message:
 - The slicing table.
 - The dependency chain (explicit ordering).
 - Reviewer findings summary (which were incorporated, which are noted, which need user resolution).
-- When step 2 ran: the behaviour no use case describes, if the user chose to plan without it.
+- When step 2 walked a set: the use-case mapping (the table's column) and both kinds of gap — each use case the intent touches that no planned issue names, and the behaviour the plan builds that no use case describes. Over a partly checked set: that the set may be incomplete, which filler did not answer, and the second kind as possible gaps. Where the walk went by titles alone, that too.
+- Over an empty set: the prerequisite Task, the issues that depend on it, and that revising it away plans without use cases.
+- When the use cases could not be read: that, and why.
 - Bodies are not shown at the gate — they are filled per ticket after approval. The slicing's classifications, parent-refs and use cases are the contract the user approves.
 
 End the message with: "Approve, revise, or cancel?"
@@ -78,8 +92,9 @@ In dependency order (parents before children so parent-ref values are available)
 
 - For each ticket: call `scripts/create-issue.py` with `--type`, `--title`, `--kind`, `--workstream`, `--priority`, `--parent` (if any), `--yes` — and, when the plan originated from a feedback/change-request report #N, `--from-report N` so each filed issue is auto-linked into #N's `## Tracked by` (per [project-management:DEC-048-from-report-auto-link]; a link failure exits 4 with a remediation command and never rolls the issue back).
 - Parse the script's `[ok] created: <URL>` line for the new issue number.
-- Immediately call `scripts/edit-issue.py --body-file <tmp> --yes` to overwrite the auto-generated template body with the planned body content (the create-issue.py script produces a placeholder body; the real content is what was approved at the gate). When the ticket names use cases, the body lists them in a `## Use cases` section, one per line (`- UC-003 — <the use case's title>`); a ticket that serves none has no such section.
-- A use-case citation warning from `edit-issue` on a body the plan wrote means it cites a use case that is not on the default branch — step 2 read a stale view, or a use case was renumbered since. Correct the body (fix or drop the id) and re-run `edit-issue` rather than leave the guess filed.
+- Immediately call `scripts/edit-issue.py --body-file <tmp> --yes` to overwrite the auto-generated template body with the planned body content (the create-issue.py script produces a placeholder body; the real content is what was approved at the gate). When a Feature or Task names use cases, its body lists them in a `## Use cases` section, one per line (`- UC-003 — <the use case's title>`); an issue that serves none has no such section, and neither has a body of another type.
+- `edit-issue` reports on that section at warning severity and never refuses the edit over it. A use-case citation warning on a body the plan wrote means it cites a use case the point does not hold — a mistyped id, or one that has not settled. Correct the body (fix or drop the id) and re-run `edit-issue` rather than leave the guess filed. The other thing it may say is that citations were not checked — the point could not be read, or it answered without a filler that was meant to answer. That is a notice about the check, not a finding against the body: pass it on to the user and go on.
+- Over an empty set, file the prerequisite Task ahead of the issues that depend on it, so their `## Dependencies` sections name it by number. Where the user revised it away, write the plan's line of prose instead (step 2).
 - Attach milestone via `gh issue edit <number> -R <repo> --milestone "<title>"` per the workaround for issue #177 (the create-issue.py `--milestone NUM` path is broken pending that issue's fix).
 - Handle each script's failure modes per [validate-body](validate-body.md)'s severity model: warnings emit and continue; hard-rejects pause and follow the storyboard's Scenario 4 walkthrough.
 
@@ -95,7 +110,7 @@ Per the storyboard's Scenario 4: on hard-reject, surface the specific rule that 
 ## What this sub-procedure does NOT do
 
 - It does not architect *what* to build. Architectural and product decisions go to the user, the `architect` agent, or a human. Batch-planning takes the user's stated outcomes and slices them into tickets; it does not invent the outcomes.
-- It does not write use cases. When they are missing it offers to have them written through software-analysis, and plans against them once they have landed.
+- It does not write use cases. Over an empty set it plans their authoring as work — the prerequisite Task — and a later plan walks them once they have settled.
 - It does not authorise itself to bypass the membership gate ([project-management:DEC-021-team-membership-gate]) or any hard-reject severity. The user authorises bypassable-with-audit overrides; hard-rejects are never bypassable.
 - It does not skip the single approval gate even when "the slicing seems obvious". The gate is the contract; the agent waits.
 - It does not file before the cited prerequisites (parent EPIC, dependent decisions). If a slicing depends on an unfiled prerequisite, file the prerequisite first and then file the dependents in the same approval-gated session.

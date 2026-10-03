@@ -507,6 +507,24 @@ def test_no_template_carries_the_section() -> None:
             assert "use cases" not in template.read_text(encoding="utf-8").lower(), template
 
 
+#: The capability that keeps the use cases in this repository, however it is spelt.
+KEEPER_SPELLINGS = ("software-analysis", "software_analysis", "software analysis")
+
+
+def test_nothing_the_capability_ships_names_a_keeper() -> None:
+    """project-management reads the point and knows no keeper (DEC-054 point 2): no
+    file it ships — code, schema, record, skill, agent, storyboard, README — names
+    the capability that fills the point here. `project/` is this repository's own
+    configuration of the capability, not what it ships."""
+    for path in sorted(CAPABILITY_ROOT.rglob("*")):
+        inside = path.relative_to(CAPABILITY_ROOT).parts
+        if not path.is_file() or "__pycache__" in inside or inside[0] == "project":
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore").lower()
+        for name in KEEPER_SPELLINGS:
+            assert name not in text, f"{path.relative_to(REPO_ROOT)} names {name!r}"
+
+
 # --- the rule over each state ----------------------------------------------------------------
 
 

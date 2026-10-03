@@ -2,12 +2,24 @@ component: project-management
 kind: minor
 custom:
   category: Added
+  requires_backbone: release
 body: >
-  With the software-analysis capability installed, batch planning reads your
-  use cases before it slices the work, offers to have missing ones written
-  first, and names the use cases each planned issue satisfies in a
-  `## Use cases` section. `validate-issue` and `edit-issue` warn when a body
-  cites a use case (`UC-NNN`) that is not on the default branch: like a
-  predicted decision id, its number is a guess until the use case lands. They
-  say so when the default branch cannot be read. Without software-analysis
-  nothing changes.
+  The capability accepts a data point for the use cases settled on the default
+  branch, `pkit::work-tracking:use-cases` (DEC-054): entries `{id, title,
+  status, path?}`, `single`, no default, inert `fallback`, with the companion
+  schema `schemas/use-cases.schema.json`. Whatever keeps your use cases fills
+  it — a capability's contribution, or your own filler file — and while
+  nothing does, nothing changes. With a set, batch planning walks the active
+  use cases before it slices the work, names the use cases each planned
+  Feature and Task serves in a `## Use cases` section, and shows at its
+  approval gate the use cases the plan leaves out and the behaviour no use
+  case describes; over an empty set the plan opens with a Task to author
+  them. `validate-issue`, `edit-issue` and `create-issue --body-file` warn
+  (`body.use-case-citation`) when a Feature or Task body cites, in that
+  section, a use case the point does not hold — existence only, and a
+  withdrawn use case passes — and say in one notice
+  (`body.use-cases-unchecked`) when the citations could not be checked. A
+  warning: no verb refuses or changes its exit code over it. The point is
+  read through the `outcome` of `pkit connections resolve --json`, which
+  comes with the backbone this release ships: upgrade the capability together
+  with the backbone.
