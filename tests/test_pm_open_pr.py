@@ -10,7 +10,7 @@ import importlib.util
 import subprocess
 import sys
 from pathlib import Path
-from types import ModuleType, SimpleNamespace
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -263,8 +263,37 @@ def _backbone_says_main(op: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(lib, "_ask", ask)
 
 
-def _stub_main(op, monkeypatch, argv: list[str], issues: dict[int, dict]) -> dict:
-    """Pass every gate, serve `issues` by number, capture the create call."""
+#: The commit the branch's remote-tracking reference names, as `_pushed_head` reads it.
+PUSHED = "abcdef0123456789abcdef0123456789abcdef01"
+
+
+def _derived(op: Any, *answers: dict[str, Any], **document: Any) -> Any:
+    """The derivation `friction_answers.derive` returns for a change that wrote `answers`."""
+    found = {
+        "schema_version": 1,
+        "base": {"commit": "0" * 40, "outdated": False},
+        "findings": [],
+        "answers": list(answers),
+        "unreadable": [],
+        **document,
+    }
+    return op.friction_answers.Derivation(PUSHED, document=found, answers=tuple(answers))
+
+
+def _stub_main(
+    op, monkeypatch, argv: list[str], issues: dict[int, dict], *, derived: Any = None
+) -> dict:
+    """Pass every gate, serve `issues` by number, capture the create call. The
+    change check's list is `derived` (none written, by default), at `PUSHED`;
+    `captured["derive"]` holds each (head, base) it was derived for."""
+    calls: list[tuple[str, str | None]] = []
+
+    def derive(head: str, base: str | None) -> Any:
+        calls.append((head, base))
+        return derived if derived is not None else _derived(op)
+
+    monkeypatch.setattr(op, "_pushed_head", lambda _branch: (PUSHED, ""))
+    monkeypatch.setattr(op.friction_answers, "derive", derive)
     monkeypatch.setattr(sys, "argv", argv)
     monkeypatch.setattr(op, "resolve_capability_root", lambda _explicit: CAP_ROOT)
     monkeypatch.setattr(op.bootstrap_gate, "enforce", lambda *a, **k: True)
@@ -278,7 +307,7 @@ def _stub_main(op, monkeypatch, argv: list[str], issues: dict[int, dict]) -> dic
     monkeypatch.setattr(op, "check_membership", lambda *a: SimpleNamespace(allowed=True))
     monkeypatch.setattr(op, "_gh_get_issue", lambda n, _config: issues.get(n))
     monkeypatch.setattr(op, "_current_branch", lambda: "feat/42-thing")
-    captured: dict = {}
+    captured: dict = {"derive": calls}
 
     def fake_pr_create(*, title, body, base, draft, config):
         captured.update(title=title, body=body, base=base)
@@ -366,203 +395,199 @@ def test_main_refuses_an_unknown_second_closing_issue(op, monkeypatch) -> None:
         {42: _open_issue()},
     )
     assert op.main() == 2
-    assert captured == {}
+    assert "title" not in captured and captured["derive"] == []
 
 
-# --- main(): `## Doc impact` rendered from the change check (#1000, DEC-053) ----------
-
-FRICTION = {
-    "check": "change",
-    "mode": "enforcing",
-    "findings": [
-        {
-            "artefact": "guide",
-            "location": "docs/guide.md",
-            "kind": "answered",
-            "anchor": {"kind": "code", "value": "src/cli.py"},
-            "answer": "unchanged",
-            "message": "changed in this diff; answered: unchanged — the flags did not move",
-        },
-        {
-            "artefact": "intro",
-            "location": "docs/intro.md",
-            "kind": "revalidated",
-            "anchor": None,
-            "answer": "updated",
-            "message": "revalidated with no changed anchor: updated",
-        },
-        {
-            "artefact": "api",
-            "location": "docs/api.md",
-            "kind": "friction",
-            "anchor": {"kind": "code", "value": "src/api.py"},
-            "answer": None,
-            "message": "changed in this diff; no answer",
-        },
-    ],
-}
-RENDERED = [
-    "- `docs/guide.md` (anchor `code:src/cli.py`): changed in this diff; answered: "
-    "unchanged — the flags did not move",
-    "- `docs/intro.md`: revalidated with no changed anchor: updated",
-]
+# --- main(): the friction answers' section (DEC-055) ------------------------------
 
 
-def _doc_impact(body: str) -> list[str]:
-    """The section's lines, without the provenance footer stamped after it."""
-    section = body.split("## Doc impact", 1)[1].split("\n## ", 1)[0]
-    section = section.split("<!-- pkit-provenance", 1)[0]
-    return [ln for ln in section.splitlines() if ln.strip()]
+def _answer(location: str, reason: str | None, **fields: Any) -> dict[str, Any]:
+    """One entry of the change check's `answers`."""
+    return {
+        "artefact": location.split("/")[-1].removesuffix(".md"),
+        "location": location,
+        "answer": "unchanged",
+        "anchor": None,
+        "reason": reason,
+        "kept": [],
+        "asked": True,
+        "status": "stands",
+        "new": False,
+        **fields,
+    }
 
 
-def test_the_answers_render_as_the_doc_impact_bullets(op, monkeypatch, capsys) -> None:
-    calls: list[str] = []
-    monkeypatch.setattr(op, "_friction_check", lambda base: calls.append(base) or FRICTION)
-    captured = _stub_main(
-        op,
-        monkeypatch,
-        ["open-pr", "42", "--summary", "s", "--draft", "--yes", "--doc-impact-from-friction"],
-        {42: _open_issue()},
+TWO = (_answer("docs/guide.md", "The flags did not move."), _answer("docs/api.md", "Holds."))
+FOOTER_START = "<!-- pkit-provenance:start -->"
+
+
+def _open(op, monkeypatch, *extra: str, derived: Any = None, body_file: Path | None = None):
+    argv = ["open-pr", "42", "--summary", "s", "--draft", "--yes", *extra]
+    if body_file is not None:
+        argv += ["--body-file", str(body_file)]
+    return _stub_main(op, monkeypatch, argv, {42: _open_issue()}, derived=derived)
+
+
+def test_the_list_is_written_last_before_the_footer(op, monkeypatch, capsys) -> None:
+    captured = _open(op, monkeypatch, derived=_derived(op, *TWO))
+    assert op.main() == 3  # the faked create returns no URL
+    body = captured["body"]
+    section = op.friction_answers.render(_derived(op, *TWO).document, PUSHED)
+    assert f"\n\n{section}\n\n{FOOTER_START}" in body
+    assert body.count("## Friction answers") == 1
+    # The default branch: the change check's own base (COR-054); the pushed head.
+    assert captured["derive"] == [(PUSHED, None)]
+    out = capsys.readouterr().out
+    assert (
+        "  answers: 2 written by this change, listed under `## Friction answers` (at abcdef0)"
+        in (out)
     )
-    assert op.main() == 3
-    assert calls == [None]  # the default branch: the change check's own base (COR-054)
-    assert _doc_impact(captured["body"]) == RENDERED
-    out = capsys.readouterr()
-    assert "doc impact: pre-filled from `pkit friction check` (2 answer(s))" in out.out
-    # The page still carrying friction is named; its answer belongs on the page.
-    assert "1 artefact(s) still carry friction with no answer on the page: docs/api.md" in out.err
 
 
-def test_a_pr_against_another_base_is_checked_against_that_base(
-    op: Any, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_a_pr_against_another_base_is_derived_against_that_base(op, monkeypatch) -> None:
     """An integration branch is named to the change check, which resolves it as every
     branch named as a base (COR-054 point 2); only the default branch goes unnamed."""
-    calls: list[str | None] = []
-
-    def check(base: str | None) -> dict[str, Any]:
-        calls.append(base)
-        return FRICTION
-
-    monkeypatch.setattr(op, "_friction_check", check)
-    _stub_main(
-        op,
-        monkeypatch,
-        [
-            "open-pr",
-            "42",
-            "--summary",
-            "s",
-            "--draft",
-            "--yes",
-            "--doc-impact-from-friction",
-            "--base",
-            "integration/7-x",
-        ],
-        {42: _open_issue()},
-    )
+    captured = _open(op, monkeypatch, "--base", "integration/7-x")
     assert op.main() == 3
-    assert calls == ["integration/7-x"]
+    assert captured["derive"] == [(PUSHED, "integration/7-x")]
+
+
+def test_no_answers_no_section(op, monkeypatch, capsys) -> None:
+    captured = _open(op, monkeypatch)
+    assert op.main() == 3
+    assert "## Friction answers" not in captured["body"]
+    assert "  answers: none written by this change" in capsys.readouterr().out
+
+
+def test_a_section_in_a_supplied_body_is_dropped(op, monkeypatch, tmp_path) -> None:
+    supplied = op.friction_answers.render(
+        _derived(op, _answer("docs/x.md", "An agent's own list.")).document, "f" * 40
+    )
+    body_file = tmp_path / "body.md"
+    body_file.write_text(f"Closes #42\n\n## Summary\nx\n\n## Doc impact\n- none\n\n{supplied}\n")
+    captured = _open(op, monkeypatch, body_file=body_file)
+    assert op.main() == 3
+    assert "An agent's own list." not in captured["body"]
+    assert "## Friction answers" not in captured["body"]
 
 
 @pytest.mark.parametrize(
-    ("base", "argv"),
+    ("how", "warning"),
     [
-        (None, ["pkit", "friction", "check", "--json"]),
-        ("integration/7-x", ["pkit", "friction", "check", "--json", "--base", "integration/7-x"]),
+        ("unreadable", "the base origin/main could not be fetched"),
+        ("not pushed", "origin/feat/42-thing names no commit — push the branch first"),
+        ("closing reference", "the words on docs/api.md read as a closing reference (fixes #7)"),
+        ("too long", "past the host's 65536 — split the change or narrow the anchor"),
     ],
 )
-def test_the_change_check_is_named_a_base_only_when_it_is_not_its_own(
-    op: Any, monkeypatch: pytest.MonkeyPatch, base: str | None, argv: list[str]
+def test_open_pr_never_refuses_over_the_list(op, monkeypatch, capsys, how, warning) -> None:
+    """The section is left out with one warning line; the pull request opens, and
+    land-work writes the list or says why it cannot."""
+    derived = {
+        "unreadable": op.friction_answers.Derivation(
+            PUSHED, problem="the base origin/main could not be fetched: no route"
+        ),
+        "not pushed": _derived(op, *TWO),
+        "closing reference": _derived(op, TWO[0], _answer("docs/api.md", "This fixes #7.")),
+        "too long": _derived(op, _answer("docs/guide.md", "x" * 70000)),
+    }[how]
+    captured = _open(op, monkeypatch, derived=derived)
+    if how == "not pushed":
+        monkeypatch.setattr(op, "_pushed_head", lambda _branch: (None, warning))
+    assert op.main() == 3  # opened: the faked create was asked, and returns no URL
+    assert "## Friction answers" not in captured["body"]
+    out = capsys.readouterr()
+    (line,) = [ln for ln in out.err.splitlines() if ln.startswith("warn: friction answers")]
+    assert warning in line and "`land-work` writes the list or says why it cannot" in line
+    assert "  answers: not listed (the warning above says why)" in out.out
+
+
+def test_the_pushed_head_is_the_remote_tracking_reference_not_local_head(
+    op, monkeypatch, tmp_path
 ) -> None:
-    seen: list[list[str]] = []
+    def git(*argv: str, cwd: Path) -> str:
+        done = subprocess.run(["git", *argv], cwd=cwd, capture_output=True, text=True, check=True)
+        return done.stdout.strip()
 
-    def run(cmd: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
-        seen.append(cmd)
-        return subprocess.CompletedProcess(cmd, 0, "{}", "")
+    git("init", "-q", "--bare", "-b", "main", "origin.git", cwd=tmp_path)
+    work = tmp_path / "work"
+    work.mkdir()
+    git("init", "-q", "-b", "feat/42-thing", cwd=work)
+    git("config", "user.email", "o@example.com", cwd=work)
+    git("config", "user.name", "O", cwd=work)
+    git("remote", "add", "origin", "../origin.git", cwd=work)
+    git("commit", "-q", "--allow-empty", "-m", "pushed", cwd=work)
+    git("push", "-q", "-u", "origin", "feat/42-thing", cwd=work)
+    pushed = git("rev-parse", "HEAD", cwd=work)
+    git("commit", "-q", "--allow-empty", "-m", "not pushed", cwd=work)
+    monkeypatch.chdir(work)
+    assert op._pushed_head("feat/42-thing") == (pushed, "")
+    assert op._pushed_head("feat/43-other") == (
+        None,
+        "origin/feat/43-other names no commit — push the branch first",
+    )
 
-    monkeypatch.setattr(op.subprocess, "run", run)
-    assert op._friction_check(base) == {}
-    assert seen == [argv]
+
+# --- main(): `--doc-impact-from-friction` (DEC-053, DEC-055) ---------------------
+
+
+def _doc_impact(body: str) -> list[str]:
+    """The section's lines, up to the next section or the provenance footer."""
+    section = body.split("## Doc impact", 1)[1].split("\n## ", 1)[0]
+    section = section.split(FOOTER_START, 1)[0]
+    return [ln for ln in section.splitlines() if ln.strip()]
+
+
+def test_doc_impact_gets_one_line_pointing_at_the_list(op, monkeypatch, capsys) -> None:
+    captured = _open(op, monkeypatch, "--doc-impact-from-friction", derived=_derived(op, *TWO))
+    assert op.main() == 3
+    line = "2 friction answers on anchored artefacts — listed under `## Friction answers`."
+    assert _doc_impact(captured["body"]) == [line]
+    assert f"doc impact: pre-filled: {line}" in capsys.readouterr().out
+
+
+def test_doc_impact_names_the_pages_still_carrying_friction(op, monkeypatch, capsys) -> None:
+    unanswered = {"location": "docs/cli.md", "kind": "friction", "artefact": "cli"}
+    derived = _derived(op, TWO[0], findings=[unanswered])
+    captured = _open(op, monkeypatch, "--doc-impact-from-friction", derived=derived)
+    assert op.main() == 3
+    assert _doc_impact(captured["body"]) == [
+        "1 friction answer on anchored artefacts — listed under `## Friction answers`."
+    ]
+    err = capsys.readouterr().err
+    assert "1 artefact(s) still carry friction with no answer on the page: docs/cli.md" in err
 
 
 def test_an_authored_doc_impact_section_is_left_as_written(op, monkeypatch, tmp_path) -> None:
     body = tmp_path / "body.md"
     body.write_text("Closes #42\n\n## Summary\nx\n\n## Doc impact\nNo doc impact: tests only.\n")
-    monkeypatch.setattr(op, "_friction_check", lambda base: FRICTION)
-    captured = _stub_main(
-        op,
-        monkeypatch,
-        [
-            "open-pr",
-            "42",
-            "--body-file",
-            str(body),
-            "--draft",
-            "--yes",
-            "--doc-impact-from-friction",
-        ],
-        {42: _open_issue()},
+    captured = _open(
+        op, monkeypatch, "--doc-impact-from-friction", derived=_derived(op, *TWO), body_file=body
     )
     assert op.main() == 3
     assert _doc_impact(captured["body"])[0] == "No doc impact: tests only."
 
 
-def test_without_the_flag_the_change_check_is_not_run(op, monkeypatch) -> None:
-    def never(base):
-        raise AssertionError("the change check ran without --doc-impact-from-friction")
-
-    monkeypatch.setattr(op, "_friction_check", never)
-    captured = _stub_main(
-        op,
-        monkeypatch,
-        ["open-pr", "42", "--summary", "s", "--draft", "--yes"],
-        {42: _open_issue()},
-    )
+@pytest.mark.parametrize(
+    ("derived", "note"),
+    [
+        (None, "not pre-filled — the change check reports no answers"),
+        ("unlisted", "not pre-filled — the answers are not listed"),
+        ("unreadable", "not pre-filled — `pkit friction check --json` gave no document"),
+    ],
+)
+def test_doc_impact_is_left_unwritten_without_a_list(
+    op, monkeypatch, capsys, derived, note
+) -> None:
+    found = {
+        None: None,
+        "unlisted": _derived(op, _answer("docs/api.md", "This fixes #7.")),
+        "unreadable": op.friction_answers.Derivation(PUSHED, problem="no document"),
+    }[derived]
+    captured = _open(op, monkeypatch, "--doc-impact-from-friction", derived=found)
     assert op.main() == 3
     assert _doc_impact(captured["body"]) == ["-"]
-
-
-def test_no_document_leaves_the_body_as_it_was(op, monkeypatch) -> None:
-    monkeypatch.setattr(op, "_friction_check", lambda base: None)
-    body, note = op._prefill_doc_impact("## Doc impact\n\n-\n", "main")
-    assert (body, note) == (
-        "## Doc impact\n\n-\n",
-        "not pre-filled — `pkit friction check --json` gave no document",
-    )
-
-
-@pytest.mark.parametrize("version", [2, None, "1"])
-def test_a_check_of_another_version_leaves_the_body_as_it_was(
-    op: ModuleType, monkeypatch: pytest.MonkeyPatch, version: object
-) -> None:
-    """A version this capability does not read is not rendered, never read as the one it knows."""
-
-    def check(_base: str) -> dict[str, object]:
-        return {**FRICTION, "schema_version": version}
-
-    monkeypatch.setattr(op, "_friction_check", check)
-    body, note = op._prefill_doc_impact("## Doc impact\n\n-\n", "main")
-    assert (body, note) == (
-        "## Doc impact\n\n-\n",
-        f"not pre-filled — `pkit friction check --json` answered schema_version {version!r}; "
-        "this capability reads 1",
-    )
-
-
-@pytest.mark.parametrize("versioned", [{}, {"schema_version": 1}])
-def test_a_check_without_a_version_reads_as_the_first(
-    op: ModuleType, monkeypatch: pytest.MonkeyPatch, versioned: dict[str, int]
-) -> None:
-    """A backbone from before the key answers version 1: the answers render."""
-
-    def check(_base: str) -> dict[str, object]:
-        return {**FRICTION, **versioned}
-
-    monkeypatch.setattr(op, "_friction_check", check)
-    body, note = op._prefill_doc_impact("## Doc impact\n\n-\n", "main")
-    assert _doc_impact(body) == RENDERED
-    assert note == "pre-filled from `pkit friction check` (2 answer(s))"
+    assert f"doc impact: {note}" in capsys.readouterr().out
 
 
 @pytest.fixture(scope="module")
@@ -592,8 +617,12 @@ def test_prefill_fills_only_an_unwritten_section(doc_impact) -> None:
     assert doc_impact.prefill(placeholder, []) == (placeholder, False)
 
 
-def test_only_answers_are_rendered(doc_impact) -> None:
-    assert doc_impact.answer_lines(FRICTION) == RENDERED
-    assert doc_impact.unanswered(FRICTION) == ["docs/api.md"]
-    assert doc_impact.answer_lines({"dormant": True, "findings": []}) == []
-    assert doc_impact.answer_lines({"findings": "garbage"}) == []
+def test_the_pages_still_carrying_friction_are_named(doc_impact) -> None:
+    document = {
+        "findings": [
+            {"location": "docs/api.md", "kind": "friction"},
+            {"location": "docs/guide.md", "kind": "answered"},
+        ]
+    }
+    assert doc_impact.unanswered(document) == ["docs/api.md"]
+    assert doc_impact.unanswered({"findings": "garbage"}) == []

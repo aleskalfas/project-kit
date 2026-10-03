@@ -342,6 +342,46 @@ def test_no_document_is_unreadable_never_a_pass(
     assert found.problem is not None and "no-such-base" in found.problem
 
 
+@pytest.mark.parametrize(
+    ("returncode", "stdout", "why"),
+    [
+        (0, '{"schema_version": 2, "answers": []}', "answered schema_version 2; this reads 1"),
+        (0, '{"schema_version": 1, "findings": []}', "lists no answers"),
+        (1, "", "it exited 1: Error: boom, with no JSON document"),
+        (2, '{"schema_version": 1, "answers": []}', "it exited 2: Error: boom"),
+    ],
+)
+def test_a_document_the_list_cannot_be_read_from_is_unreadable(
+    fa: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    returncode: int,
+    stdout: str,
+    why: str,
+) -> None:
+    def run(argv: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, returncode, stdout, "Error: boom\n")
+
+    monkeypatch.setattr(fa.subprocess, "run", run)
+    found = fa._run_check(HEAD, None, cwd=None)
+    assert isinstance(found, str) and why in found
+
+
+def test_enforcing_modes_exit_1_still_carries_the_document(
+    fa: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[list[str]] = []
+
+    def run(argv: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
+        seen.append(argv)
+        return subprocess.CompletedProcess(argv, 1, '{"schema_version": 1, "answers": []}', "")
+
+    monkeypatch.setattr(fa.subprocess, "run", run)
+    assert fa._run_check(HEAD, "integration/7-x", cwd=None) == {"schema_version": 1, "answers": []}
+    assert seen == [
+        ["pkit", "friction", "check", "--json", "--base", "integration/7-x", "--head", HEAD]
+    ]
+
+
 def test_a_base_that_cannot_be_fetched_is_unreadable(
     fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
 ) -> None:
