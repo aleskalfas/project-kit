@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-03T05:57:43Z
+      at: 2026-10-03T14:05:39Z
       outcome: unchanged
-      unchanged-because: the lifecycle, CLI and schemas references gained the anchor-kind registration under friction.kinds, how a registered resolver runs and what it answers, the unresolved state, the change check's no-answer and dead-unattributed findings, and how a reader of the machine-readable documents reads an unresolved artefact by its anchor's finding; this index names each area and what it holds in one line — the lifecycle area as packaging and dependency architecture, the cli area as the pkit command-line surface, the schemas area as the YAML schemas and their JSON Schema companions — none of which mentions anchors, friction or resolvers, so every line still holds
+      unchanged-because: the CLI reference gained the change check's list of answers a change wrote, its --head option and the writers' new refusal line; the schemas reference gained validation's finding for an anchor deferred twice; the lifecycle reference says how a resolver runs under --head — each inside its own friction or resolver section. This map names the three by role (the pkit command surface, the schemas, packaging and upgrades) and points to the CLI reference's Authoring commands section, and all of it still holds
 ---
 
 # project-kit
