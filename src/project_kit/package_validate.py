@@ -30,7 +30,8 @@ Pointer:
    command, every validator's command and every anchor kind's resolver
    (`friction.kinds`, COR-050 point 2) exists there and declares the query
    contract (`query-contract: true`; COR-052 point 6, ADR-057 point 3 and
-   ADR-058), an anchor kind the backbone resolves itself is refused, a
+   ADR-058), an anchor kind the backbone resolves itself is refused, as is
+   one an adapter registers — the registry reads capabilities alone — a
    command that declares what it reads beyond the working tree (`reads`, the
    same point) declares the query contract too — its values are the schema's
    to check — a contribution names `command` or `value` but not both,
@@ -612,19 +613,34 @@ def _repository_findings(
                 _check_relative(
                     findings, f"/friction/surface/{index}", value, "a repository-relative path"
                 )
-        findings.extend(_anchor_kind_findings(cast("Mapping[Any, Any]", friction), leaves))
+        component_kind: Any = (
+            cast("Mapping[Any, Any]", component).get("kind")
+            if isinstance(component, Mapping)
+            else None
+        )
+        findings.extend(
+            _anchor_kind_findings(
+                cast("Mapping[Any, Any]", friction), leaves, component_kind != "adapter"
+            )
+        )
 
     return findings
 
 
 def _anchor_kind_findings(
-    friction: Mapping[Any, Any], command_leaves: Mapping[tuple[str, ...], Mapping[Any, Any]]
+    friction: Mapping[Any, Any],
+    command_leaves: Mapping[tuple[str, ...], Mapping[Any, Any]],
+    is_capability: bool,
 ) -> list[PackageFinding]:
     """The anchor kinds a package registers under `friction.kinds` (COR-050 point 2): a
     kind the backbone resolves itself is refused, and each entry names a `commands:`
     leaf that declares the query contract, as a validator's and a filler's do
     (ADR-057 point 3). A kind another installed capability registers too is a check
-    across packages (`_shared_anchor_kind_findings`)."""
+    across packages (`_shared_anchor_kind_findings`).
+
+    The registry reads installed capabilities alone (`registered_anchor_kinds`), so an
+    adapter's entry registers nothing: refused at the entry, where a registration
+    nothing reads would otherwise look like one that stands."""
     from project_kit import friction_discovery as fd  # discovery reads package metadata too
 
     findings: list[PackageFinding] = []
@@ -634,6 +650,14 @@ def _anchor_kind_findings(
         return findings  # absent, or the shape pass reports the type
     for kind, entry in cast("Mapping[Any, Any]", kinds).items():
         path = f"/friction/{fd.KINDS_KEY}/{_token(kind)}"
+        if not is_capability:
+            _error(
+                path,
+                f"anchor kind {kind!r} is registered by an adapter: anchor kinds are read for "
+                f"installed capabilities only (COR-050 point 2), so this entry registers "
+                f"nothing — register the kind in a capability's package metadata.",
+            )
+            continue
         if kind in fd.CORE_ANCHOR_KINDS:
             _error(
                 path,

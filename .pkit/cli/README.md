@@ -972,6 +972,7 @@ The `packages` member's errors on the anchor kinds a capability registers under 
 
 - a kind's `command` names no `commands:` leaf, or one that does not declare `query-contract: true` — at the entry's `command`;
 - a kind the backbone resolves itself, `path`, `record` or `artefact` — at the entry: the registration is refused;
+- a kind an adapter registers — at the entry: anchor kinds are read for installed capabilities only, so the entry registers nothing;
 - a kind two or more installed capabilities register — at each one's entry: every registration is refused, none wins.
 
 Each installed component's validators follow (a capability's or an adapter's — every installed package is read), addressed `<component>:<name>`, sorted by their `order` (1000 by default, after every backbone member), then component, then name. An entry under `validators:` in the component's package metadata names a leaf of its `commands:` tree by `command`, so the same script is a focused surface (`pkit <capability> <command>`) and a member here; the leaf's `help` is the validator's (the lifecycle README, "Package metadata").

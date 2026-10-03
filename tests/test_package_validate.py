@@ -658,6 +658,22 @@ def test_an_anchor_kind_the_backbone_resolves_is_refused(
     assert "its registration is refused" in errors[f"/friction/kinds/{kind}"]
 
 
+def test_an_anchor_kind_an_adapter_registers_is_refused_at_the_entry(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    """The registry reads installed capabilities alone, so an adapter's entry would
+    register nothing while looking like a registration that stands."""
+    raw = _registering({"source": {"command": "create page"}, "path": {"command": "no such"}})
+    raw["component"]["kind"] = "adapter"
+    errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
+    assert list(errors) == ["/friction/kinds/source", "/friction/kinds/path"]
+    assert errors["/friction/kinds/source"] == (
+        "anchor kind 'source' is registered by an adapter: anchor kinds are read for installed "
+        "capabilities only (COR-050 point 2), so this entry registers nothing — register the "
+        "kind in a capability's package metadata."
+    )
+
+
 @pytest.mark.parametrize(
     ("kinds", "path", "fragment"),
     [
