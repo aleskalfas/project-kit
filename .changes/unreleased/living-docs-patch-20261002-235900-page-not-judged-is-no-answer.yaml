@@ -1,0 +1,13 @@
+component: living-docs
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `fill-doc-check` gives no answer for a page the friction check did not
+  judge, whatever the reason. It read only `unreachable` as not judged, so a
+  page in any other state that is not `stale` owed nothing, as a current page
+  does — among them `unresolved`, the state of a page with an anchor that
+  cannot be resolved, and any state a later backbone adds. A state other than
+  `current`, `stale` or `deferred` now exits 1, naming the page and its
+  state, so a documentation check that reads it reports itself unresolved
+  rather than pass on fewer obligations.
