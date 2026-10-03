@@ -1266,27 +1266,37 @@ class RuleSetPlace:
         return self.place.pattern
 
 
-def rule_set_places(target_root: Path, settings: FrictionSettings) -> tuple[RuleSetPlace, ...]:
+def rule_set_places(
+    target_root: Path, settings: FrictionSettings, tree: RepositoryTree | None = None
+) -> tuple[RuleSetPlace, ...]:
     """The places declared to hold rule sets, in claim order (the location rule).
 
     Method rule sets first: the backbone's `.pkit/rule-sets/`, then each
     installed capability's `.pkit/capabilities/<name>/rule-sets/` by name.
     Then project rule sets: `<internal root>/rule-sets/`, and every declared
     place whose path has a `rule-sets` segment. A folder the location rule
-    names is a place only while it exists inside the repository, so a project
-    without rule sets declares nothing; a declared place is taken as written.
-    A folder the rule names has no declaring file, so its declaration names
-    the folder itself.
+    names is a place only while it exists inside the repository
+    (`_folder_test`), so a project without rule sets declares nothing; a
+    declared place is taken as written. A folder the rule names has no
+    declaring file, so its declaration names the folder itself.
+
+    With a `tree` of another state than the working tree — a commit — both are
+    that state's: the folders it holds and the capabilities its manifest
+    installs, so a folder a commit adds, or a capability it installs, holds rule
+    sets there whichever checkout reads it. The working tree's are on disk, read
+    as they are without a tree.
     """
+    state = None if isinstance(tree, WorkingTree) else tree
     places: list[RuleSetPlace] = []
+    exists = _folder_test(target_root, state)
 
     def folder(rel: str, component: str | None, source: str) -> None:
-        if is_inside_repository(target_root, rel) and (target_root / rel).is_dir():
+        if exists(rel):
             declaration = SettingsPath(value=rel, resolved=rel, file=rel, pointer="", source=source)
             places.append(RuleSetPlace(Place(pattern=rel, declaration=declaration), component))
 
     folder(BACKBONE_RULE_SETS_DIR.as_posix(), BACKBONE_COMPONENT, BACKBONE_COMPONENT)
-    for name in installed_capability_names(target_root):
+    for name in installed_capability_names(target_root, state):
         rel = (CAPABILITIES_DIR / name / RULE_SETS_SEGMENT).as_posix()
         folder(rel, name, f"capability:{name}")
     folder(_join_posix(settings.internal_root, RULE_SETS_SEGMENT), None, "project")
@@ -1298,6 +1308,32 @@ def rule_set_places(target_root: Path, settings: FrictionSettings) -> tuple[Rule
     for rule_set_place in places:
         unique.setdefault(os.path.normpath(rule_set_place.pattern), rule_set_place)
     return tuple(unique.values())
+
+
+def _folder_test(target_root: Path, tree: RepositoryTree | None) -> Callable[[str], bool]:
+    """Whether a folder the location rule names exists inside the repository.
+
+    Without a `tree`, on disk, where it leads through a link judged as
+    `is_inside_repository` judges it — no repository demanded, so a project
+    without rule sets stays dormant outside one. With one, in that state: a
+    file of it lies beneath the folder, whose path stays inside the repository
+    as written — git lists no file through a link, so a file listed beneath it
+    lies inside. A folder holding no file is no folder of a commit, nor of a
+    clean checkout of it.
+    """
+    if tree is None:
+        return lambda rel: is_inside_repository(target_root, rel) and (target_root / rel).is_dir()
+    files = tree.files()
+
+    def holds(rel: str) -> bool:
+        if not _textually_inside(rel):
+            return False
+        folder = os.path.normpath(rel).replace(os.sep, "/")
+        if folder == ".":
+            return bool(files)
+        return any(path.startswith(f"{folder}/") for path in files)
+
+    return holds
 
 
 def rule_set_files(target_root: Path, places: Sequence[RuleSetPlace]) -> dict[Path, RuleSetPlace]:
@@ -1918,6 +1954,7 @@ def discover_artefacts(
     and the listing is the working tree's one listing (`working_tree`) — the
     one the change check reads as its head. A link is never read as a document.
 
+    Which folders hold rule sets is that state's too (`rule_set_places`).
     A file a declared place matches that is a synced copy is never walked
     under that place, whichever state is walked (`synced_copy_test`, read on
     the working tree's install state): it is recorded in `synced` for the
@@ -1932,12 +1969,13 @@ def discover_artefacts(
     is never held, as it is never read.
     """
     settings = settings if settings is not None else read_friction_settings(target_root, tree)
-    # Which rule-set folders are places is read from the working tree even when
-    # `tree` names another state: a folder that exists only at that state (one
-    # the change deleted outright) is not walked there. The folders are
-    # existence-gated so that a project without rule sets stays dormant
+    # Which rule-set folders are places is read from the state walked — a
+    # commit's own listing, or the disk for the working tree: a folder that
+    # exists only at a commit — one a change adds, or deletes outright — is
+    # walked there, whichever checkout reads it. The working tree's folders are
+    # existence-gated on disk so that a project without rule sets stays dormant
     # without a repository being demanded.
-    rule_set_places_found = rule_set_places(target_root, settings)
+    rule_set_places_found = rule_set_places(target_root, settings, tree)
     places = declared_places(settings)
     declared = frozenset(places)
     places += tuple(r.place for r in rule_set_places_found if r.place not in places)
@@ -2387,9 +2425,9 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
     re-reading the declarations or walking the places itself (ADR-057 points 1
     and 2). With a `tree` — a commit — the same run reads that state instead:
     its configuration and roots, its installed capabilities and their places,
-    its files; what discovery reads from the working tree whichever state it
-    walks (which folders hold rule sets, which files are synced copies, where a
-    link leads) is read from the working tree here too. The document holds:
+    its files and which folders hold rule sets; what discovery reads from the
+    working tree whichever state it walks (which files are synced copies, where
+    a link leads) is read from the working tree here too. The document holds:
 
     - `roots`: the two documentation roots, by audience (COR-049 point 1).
     - `places`: every declared place in walk order — the project's, then each

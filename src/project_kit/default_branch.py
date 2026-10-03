@@ -27,7 +27,9 @@ backbone configuration — `repository.default-branch`, `main` when absent
   3); the commit it names, where HEAD left it (their merge-base, the *fork*)
   and whether it moved on since. The friction change check, the migration and
   changeset checks and `pkit repository base` read it here, so no other
-  module resolves a base or computes where HEAD left it.
+  module resolves a base or computes where HEAD left it. A reader comparing
+  another commit than HEAD — the change check's `--head` — names it, and the
+  fork is taken against that commit instead.
 - **The reading** (`settled`): both at once, and what a reader says of them —
   the default branch resolved once, its resolution reused as the base when no
   base is named — and HEAD (`head`). The default branch is read there as a
@@ -393,41 +395,46 @@ def _fixes(*, declarable: bool, comparison: bool = True) -> list[str]:
 # --- the base of a comparison (point 3) ------------------------------------------------------
 
 
-def base(target_root: Path, explicit: str | None = None) -> Base:
-    """The base a comparison against settled state compares HEAD with (point 3):
+def base(target_root: Path, explicit: str | None = None, *, head_rev: str = "HEAD") -> Base:
+    """The base a comparison against settled state compares HEAD with (point 3) — or
+    `head_rev`, a commit a reader names instead (the change check's `--head`):
     `explicit`, else `$PKIT_CHECK_BASE`, else the default branch — its commit, the
     fork and whether it moved on, or the problem that stops a comparison."""
-    return _base(target_root, explicit, None)
+    return _base(target_root, explicit, None, head_rev)
 
 
-def _base(target_root: Path, explicit: str | None, branch: DefaultBranch | None) -> Base:
+def _base(
+    target_root: Path, explicit: str | None, branch: DefaultBranch | None, head_rev: str = "HEAD"
+) -> Base:
     """`base`, reading the default branch from `branch` when the caller resolved it
     already — so one run resolves it once — and resolving it only when it is the base."""
     if explicit is not None:
-        return _named(target_root, explicit, OPTION)
+        return _named(target_root, explicit, OPTION, head_rev)
     from_environment = os.environ.get(CHECK_BASE_ENV)
     if from_environment:
-        return _named(target_root, from_environment, ENVIRONMENT)
+        return _named(target_root, from_environment, ENVIRONMENT, head_rev)
     branch = resolve(target_root) if branch is None else branch
     if branch.ref is None or branch.commit is None:
         return Base(branch.name, DEFAULT_BRANCH, None, None, None, None, branch.problem)
-    return _compared(target_root, branch.ref, DEFAULT_BRANCH, branch.commit, branch.resolved)
+    return _compared(
+        target_root, branch.ref, DEFAULT_BRANCH, branch.commit, branch.resolved, head_rev
+    )
 
 
-def _named(target_root: Path, ref: str, source: str) -> Base:
+def _named(target_root: Path, ref: str, source: str, head_rev: str = "HEAD") -> Base:
     """A base named for one run: a remote-tracking reference as named; a branch name
     resolved as the default branch is (point 2); any other revision as named."""
     if not ref or ref.startswith("-"):
         return _refused(ref, source, f"the base {ref!r} is not a revision name.")
     tracking = commit_of(target_root, f"refs/remotes/{ref}")
     if tracking is not None:
-        return _compared(target_root, ref, source, tracking, RESOLVED_REMOTE)
+        return _compared(target_root, ref, source, tracking, RESOLVED_REMOTE, head_rev)
     refs = _branch_refs(target_root, ref) if is_branch_name(ref) else None
     if refs is not None and refs.known:
         found = _resolve_listed(target_root, refs, f"the base {ref!r}")
         if found.ref is None or found.commit is None:
             return _refused(ref, source, found.problem or f"the base {ref!r} resolves nowhere.")
-        return _compared(target_root, found.ref, source, found.commit, found.resolved)
+        return _compared(target_root, found.ref, source, found.commit, found.resolved, head_rev)
     tip = commit_of(target_root, ref)
     if tip is None:
         return _refused(
@@ -437,16 +444,19 @@ def _named(target_root: Path, ref: str, source: str) -> Base:
             f"(e.g. `{_fetch_hint(target_root, ref)}`), or name another with --base or "
             f"{CHECK_BASE_ENV}.",
         )
-    return _compared(target_root, ref, source, tip, None)
+    return _compared(target_root, ref, source, tip, None, head_rev)
 
 
-def _compared(target_root: Path, ref: str, source: str, tip: str, resolved: str | None) -> Base:
-    """Where HEAD left `tip` and whether it moved on since, or why not. The merge-base
-    is asked of HEAD by name; only when git finds none is HEAD looked at, to tell a
-    branch with no commit yet from one that shares no history with the base."""
-    found = _git(target_root, "merge-base", tip, "HEAD")
+def _compared(
+    target_root: Path, ref: str, source: str, tip: str, resolved: str | None, head_rev: str = "HEAD"
+) -> Base:
+    """Where HEAD — or the `head_rev` a reader names — left `tip` and whether it moved on
+    since, or why not. The merge-base is asked of the head by name; only when git finds
+    none is the head looked at, to tell a branch with no commit yet from one that shares
+    no history with the base."""
+    found = _git(target_root, "merge-base", tip, head_rev)
     fork = found.stdout.strip() if found is not None and found.returncode == 0 else ""
-    if not fork and commit_of(target_root, "HEAD") is None:
+    if not fork and commit_of(target_root, head_rev) is None:
         return Base(
             ref,
             source,
@@ -454,7 +464,9 @@ def _compared(target_root: Path, ref: str, source: str, tip: str, resolved: str 
             None,
             None,
             resolved,
-            "HEAD names no commit yet; a branch is compared with its base, so commit first.",
+            "HEAD names no commit yet; a branch is compared with its base, so commit first."
+            if head_rev == "HEAD"
+            else f"the head {head_rev!r} names no commit of this repository.",
         )
     if not fork:
         return Base(
@@ -464,7 +476,7 @@ def _compared(target_root: Path, ref: str, source: str, tip: str, resolved: str 
             None,
             None,
             resolved,
-            f"HEAD and the base {ref!r} share no history to compare; in a shallow clone, "
+            f"{head_rev} and the base {ref!r} share no history to compare; in a shallow clone, "
             f"fetch the history back to where the branch left the base (e.g. `git fetch "
             f"--unshallow`).",
         )
@@ -498,10 +510,12 @@ def _local(what: str, name: str) -> str:
 SCHEMA_VERSION = 1
 
 
-def settled(target_root: Path, explicit: str | None = None) -> Settled:
+def settled(target_root: Path, explicit: str | None = None, *, head_rev: str = "HEAD") -> Settled:
     """The reading (point 5): the default branch, resolved once, and the base a
     comparison reads — `explicit`, else `$PKIT_CHECK_BASE`, else that same
-    resolution of the default branch — and HEAD.
+    resolution of the default branch — and HEAD. A reader that compares another
+    commit than HEAD names it as `head_rev` (the change check's `--head`): the base's
+    fork is taken against it, and `head` stays HEAD at hand.
 
     The default branch is read as a standing value reads it: a data point's filler
     reads it here, and no base reaches a filler (COR-054 point 3), so its problem
@@ -515,7 +529,7 @@ def settled(target_root: Path, explicit: str | None = None) -> Settled:
         if branch.commit is not None
         else _default_branch(target_root, declaration, refs, standing=False)
     )
-    return Settled(branch, _base(target_root, explicit, compared), head(target_root))
+    return Settled(branch, _base(target_root, explicit, compared, head_rev), head(target_root))
 
 
 def render_json(document: Mapping[str, Any]) -> str:

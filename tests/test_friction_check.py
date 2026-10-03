@@ -9,6 +9,7 @@ documents come from `tests.friction_documents`.
 from __future__ import annotations
 
 import json
+import textwrap
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ from project_kit import friction_check as fc
 from project_kit import friction_discovery as fd
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.anchor_kind_capabilities import ASKED, register_kinds
 from tests.friction_documents import CONFIG, SOURCE, T1, T2, document, friction_config, guide
 
 
@@ -1010,6 +1012,7 @@ def test_json_document_shape(repo: AdopterRepo) -> None:
     assert result.exit_code == 1
     document = json.loads(result.stdout)
     assert sorted(document) == [
+        "answers",
         "base",
         "check",
         "counts",
@@ -1019,7 +1022,10 @@ def test_json_document_shape(repo: AdopterRepo) -> None:
         "head",
         "mode",
         "schema_version",
+        "unreadable",
     ]
+    assert document["answers"] == []  # friction is not an answer: nothing was written
+    assert document["unreadable"] == []
     assert document["schema_version"] == fc.CHANGE_SCHEMA_VERSION == 1
     assert (document["check"], document["mode"], document["dormant"], document["failed"]) == (
         "change",
@@ -1061,6 +1067,799 @@ def test_unparsable_front_matter_is_reported(repo: AdopterRepo) -> None:
     result = _run(repo)
     assert _summary(result) == [("unreadable", "docs/broken.md", None, None)]
     assert not result.failing
+
+
+# --- the answers the change wrote (COR-050 point 3) -----------------------------------------------
+
+CLI = {"kind": "path", "value": "src/cli/**"}
+CORE = {"kind": "path", "value": "src/core/**"}
+HOLDS = "the CLI surface is as described"  # the guide's justification at the base
+
+
+def _answers(result: fc.ChangeCheck) -> list[dict[str, Any]]:
+    return [answer.as_json() for answer in result.answers]
+
+
+def _written(answer: str | None, reason: str | None, **fields: Any) -> dict[str, Any]:
+    """One entry of the answers list as the JSON document carries it — the guide's, at
+    the base already, not asked for and standing, unless `fields` say otherwise."""
+    entry: dict[str, Any] = {
+        "artefact": "guide",
+        "location": "docs/guide.md",
+        "answer": answer,
+        "anchor": None,
+        "reason": reason,
+        "kept": [],
+        "asked": False,
+        "status": "stands",
+        "new": False,
+    }
+    entry.update(fields)
+    return entry
+
+
+def test_a_justification_reworded_with_at_untouched_is_listed_as_edited(
+    repo: AdopterRepo,
+) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit("reword", {"docs/guide.md": guide(because="the CLI surface, as described")})
+    result = _run(repo)
+    assert result.findings == ()  # no point moved: nothing is answered
+    assert _answers(result) == [
+        _written("unchanged", "the CLI surface, as described", status="edited")
+    ]
+
+
+def test_an_outcome_changed_with_at_untouched_is_listed_as_edited(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit("flip the outcome", {"docs/guide.md": guide(outcome="updated", because=None)})
+    assert _answers(_run(repo)) == [_written("updated", None, status="edited")]
+
+
+def test_a_rewrapped_justification_is_no_answer(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit("re-wrap", {"docs/guide.md": guide(because="the CLI surface\n   is as described")})
+    assert _answers(_run(repo)) == []
+
+
+def test_a_deferral_introduced_for_a_changed_anchor_is_asked_for(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit(
+        "change the CLI; defer the guide",
+        {
+            "src/cli/main.py": "print('cli v3')\n",
+            "docs/guide.md": guide(deferred=[("path", "src/cli/**", "rewrite after the rename")]),
+        },
+    )
+    assert _answers(_run(repo)) == [
+        _written("deferred", "rewrite after the rename", anchor=CLI, asked=True)
+    ]
+
+
+def test_a_deferral_introduced_with_no_changed_anchor_is_not_asked_for(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit(
+        "defer the guide ahead of a change",
+        {"docs/guide.md": guide(deferred=[("path", "src/cli/**", "a rename is coming")])},
+    )
+    result = _run(repo)
+    assert result.findings == ()
+    assert _answers(result) == [_written("deferred", "a rename is coming", anchor=CLI)]
+
+
+def test_a_deferral_beside_a_standing_revalidation_is_not_asked_for(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit(
+        "change the CLI; revalidate and defer",
+        {
+            "src/cli/main.py": "print('cli v3')\n",
+            "docs/guide.md": guide(
+                at=T2,
+                because="a refactor",
+                deferred=[("path", "src/cli/**", "and a rename later")],
+            ),
+        },
+    )
+    assert _answers(_run(repo)) == [
+        _written("unchanged", "a refactor", asked=True),
+        _written("deferred", "and a rename later", anchor=CLI),
+    ]
+
+
+def test_a_reworded_deferral_is_listed_as_edited(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide(deferred=[("path", "src/cli/**", "first words")])})
+    repo.commit(
+        "reword the deferral",
+        {"docs/guide.md": guide(deferred=[("path", "src/cli/**", "second words")])},
+    )
+    assert _answers(_run(repo)) == [
+        _written("deferred", "second words", anchor=CLI, status="edited")
+    ]
+
+
+def test_a_second_deferral_of_an_anchor_the_base_defers_is_listed(repo: AdopterRepo) -> None:
+    """An anchor deferred twice — validation's error (COR-050 point 4) — lists each entry
+    whose words the base did not carry for that anchor, not only the first."""
+    _start(repo, {"docs/guide.md": guide(deferred=[("path", "src/cli/**", "old words")])})
+    repo.commit(
+        "defer the CLI again",
+        {
+            "docs/guide.md": guide(
+                deferred=[("path", "src/cli/**", "old words"), ("path", "src/cli/**", "new words")]
+            )
+        },
+    )
+    result = _run(repo)
+    assert result.findings == ()
+    assert _answers(result) == [_written("deferred", "new words", anchor=CLI, status="edited")]
+
+
+def test_a_new_artefact_deferring_one_anchor_twice_lists_both(repo: AdopterRepo) -> None:
+    _start(repo, {})
+    twice = [("path", "src/cli/**", "first reason"), ("path", "src/cli/**", "second reason")]
+    repo.commit("a new page", {"docs/guide.md": guide(deferred=twice)})
+    assert _answers(_run(repo)) == [
+        _written("unchanged", HOLDS, new=True),
+        _written("deferred", "first reason", anchor=CLI, new=True),
+        _written("deferred", "second reason", anchor=CLI, new=True),
+    ]
+
+
+def test_of_an_anchor_deferred_twice_the_first_entry_is_the_one_asked_for(
+    repo: AdopterRepo,
+) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    twice = [("path", "src/cli/**", "first reason"), ("path", "src/cli/**", "second reason")]
+    repo.commit(
+        "change the CLI; defer it twice",
+        {"src/cli/main.py": "print('cli v3')\n", "docs/guide.md": guide(deferred=twice)},
+    )
+    assert _answers(_run(repo)) == [
+        _written("deferred", "first reason", anchor=CLI, asked=True),
+        _written("deferred", "second reason", anchor=CLI),
+    ]
+
+
+def test_a_kept_deferral_is_listed_only_on_the_revalidation(repo: AdopterRepo) -> None:
+    anchors = {"path": ["src/cli/**", "src/core/**"]}
+    kept = [("path", "src/core/**", "waiting on the engine")]
+    _start(repo, {"docs/guide.md": guide(anchors=anchors, deferred=kept)})
+    repo.commit(
+        "change the CLI; revalidate, keeping the engine's deferral",
+        {
+            "src/cli/main.py": "print('cli v3')\n",
+            "docs/guide.md": guide(anchors=anchors, at=T2, because="a refactor", deferred=kept),
+        },
+    )
+    assert _answers(_run(repo)) == [
+        _written(
+            "unchanged",
+            "a refactor",
+            asked=True,
+            kept=[{"anchor": CORE, "reason": "waiting on the engine"}],
+        )
+    ]
+
+
+def test_an_unanchored_reason_added_is_listed(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/glossary.md": document("glossary")})
+    repo.commit(
+        "say why the glossary has no anchors",
+        {
+            "docs/glossary.md": document(
+                "glossary", unanchored_because="words the  code\nnever names"
+            )
+        },
+    )
+    assert _answers(_run(repo)) == [
+        _written(
+            "unanchored",
+            "words the code never names",
+            artefact="glossary",
+            location="docs/glossary.md",
+        )
+    ]
+
+
+def test_a_new_artefact_lists_its_words_and_never_a_bare_at(repo: AdopterRepo) -> None:
+    _start(repo, {})
+    repo.commit(
+        "three new pages",
+        {
+            "docs/bare.md": document("bare", anchors={"path": ["src/core/**"]}, at=T1),
+            "docs/glossary.md": document("glossary", unanchored_because="nothing to anchor"),
+            "docs/guide.md": guide(deferred=[("path", "src/cli/**", "after the rename")]),
+        },
+    )
+    glossary = {"artefact": "glossary", "location": "docs/glossary.md"}
+    assert _answers(_run(repo)) == [
+        _written("unanchored", "nothing to anchor", new=True, **glossary),
+        _written("unchanged", HOLDS, new=True),
+        _written("deferred", "after the rename", anchor=CLI, new=True),
+    ]
+
+
+def test_a_block_added_to_an_existing_artefact_is_a_revalidation(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": '---\n{"id": "guide"}\n---\n\nBody.\n'})
+    repo.commit("anchor the guide", {"docs/guide.md": guide()})
+    # Its anchor list changed, so the diff asked it, and the revalidation answers.
+    assert _answers(_run(repo)) == [_written("unchanged", HOLDS, asked=True)]
+
+
+def test_a_revalidation_with_no_changed_anchor_is_not_asked_for(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit(
+        "improve the guide",
+        {"docs/guide.md": guide(at=T2, outcome="updated", because=None, body="Clearer.")},
+    )
+    assert _answers(_run(repo)) == [_written("updated", None)]
+
+
+def test_a_revalidation_of_a_changed_anchor_is_asked_for(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit(
+        "change the CLI; the guide still holds",
+        {"src/cli/main.py": "print('v2')\n", "docs/guide.md": guide(at=T2, because="a refactor")},
+    )
+    assert _answers(_run(repo)) == [_written("unchanged", "a refactor", asked=True)]
+
+
+def test_a_justification_reworded_beside_a_question_is_not_asked_for(repo: AdopterRepo) -> None:
+    """The deferral answers the diff's question; the reworded justification, with `at`
+    untouched, answers nothing, so it is never the asked-for answer."""
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit(
+        "change the CLI; defer it, and reword the justification",
+        {
+            "src/cli/main.py": "print('cli v3')\n",
+            "docs/guide.md": guide(
+                because="the CLI surface, as described",
+                deferred=[("path", "src/cli/**", "rewrite after the rename")],
+            ),
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [("answered", "docs/guide.md", "path:src/cli/**", "deferred")]
+    assert _answers(result) == [
+        _written("unchanged", "the CLI surface, as described", status="edited"),
+        _written("deferred", "rewrite after the rename", anchor=CLI, asked=True),
+    ]
+    section = fc.render_human(result).split("Answers written in this change", 1)[1]
+    assert (
+        'docs/guide.md  unchanged (not asked for; edited without a revalidation) — "the CLI '
+        'surface, as described"' in section
+    )
+
+
+def test_a_bump_beside_a_question_is_not_asked_for(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit(
+        "change the CLI; bump the marker",
+        {"src/cli/main.py": "print('cli v3')\n", "docs/guide.md": guide(at=T2)},
+    )
+    assert _answers(_run(repo)) == [_written("unchanged", HOLDS, status="bump")]
+
+
+def test_a_bump_is_listed_as_the_check_judges_it(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit("bump the marker", {"docs/guide.md": guide(at=T2)})
+    assert _answers(_run(repo)) == [_written("unchanged", HOLDS, status="bump")]
+
+
+# --- answers on collection entries, moves and changed anchors — YAML as people write it -----------
+
+
+def _yaml_entry(entry_id: str, block: str) -> str:
+    """One entry of a collection file, in YAML: its friction block as written (`block`,
+    the lines under `friction:`), block scalars and all."""
+    return f"{entry_id}:\n  status: accepted\n  pkit:\n    friction:\n" + textwrap.indent(
+        textwrap.dedent(block), "      "
+    )
+
+
+def _yaml_collection(*entries: str) -> str:
+    """A collection file whose front matter maps each entry by id, one body section each."""
+    ids = [entry.split(":", 1)[0] for entry in entries]
+    sections = "".join(f"## {entry_id} — a rule\n\nStatement.\n\n" for entry_id in ids)
+    front = "".join(entries) or "{}\n"
+    return f"---\n{front}---\n\n{sections}"
+
+
+# An entry anchored to the engine, revalidated at T1 with a folded justification.
+ENGINE_HOLDS = f"""\
+anchors:
+  path: [src/core/**]
+revalidated:
+  at: '{T1}'
+  outcome: unchanged
+  unchanged-because: >-
+    the engine
+    is as stated
+"""
+
+
+def test_answers_on_collection_entries_are_listed_by_entry(repo: AdopterRepo) -> None:
+    _start(
+        repo,
+        {
+            "docs/rules.md": _yaml_collection(
+                _yaml_entry("RS-1", ENGINE_HOLDS), _yaml_entry("RS-2", ENGINE_HOLDS)
+            )
+        },
+    )
+    revalidated = f"""\
+        anchors:
+          path: [src/core/**]
+        revalidated:
+          at: '{T2}'
+          outcome: unchanged
+          unchanged-because: |
+            a renamed constant;
+            the rule reads the same
+        """
+    deferred = f"""\
+        anchors:
+          path: [src/core/**]
+        revalidated:
+          at: '{T1}'
+          outcome: unchanged
+          unchanged-because: the engine is as stated
+          deferred:
+            - anchor: {{kind: path, value: src/core/**}}
+              reason: >-
+                rewrite once
+                the engine settles
+        """
+    repo.commit(
+        "change the engine; answer for both rules",
+        {
+            "src/core/engine.py": "ENGINE = 2\n",
+            "docs/rules.md": _yaml_collection(
+                _yaml_entry("RS-1", revalidated), _yaml_entry("RS-2", deferred)
+            ),
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [
+        ("answered", "docs/rules.md#RS-1", "path:src/core/**", "unchanged"),
+        ("answered", "docs/rules.md#RS-2", "path:src/core/**", "deferred"),
+    ]
+    rule = {"artefact": "RS-1", "location": "docs/rules.md#RS-1"}
+    other = {"artefact": "RS-2", "location": "docs/rules.md#RS-2"}
+    assert _answers(result) == [
+        _written("unchanged", "a renamed constant; the rule reads the same", asked=True, **rule),
+        _written("deferred", "rewrite once the engine settles", anchor=CORE, asked=True, **other),
+    ]
+
+
+def test_an_entry_moved_between_collection_files_lists_its_revalidation(
+    repo: AdopterRepo,
+) -> None:
+    rule = _yaml_entry("RS-2", ENGINE_HOLDS)
+    _start(
+        repo,
+        {
+            "docs/rules-a.md": _yaml_collection(_yaml_entry("RS-1", ENGINE_HOLDS), rule),
+            "docs/rules-b.md": _yaml_collection(),
+        },
+    )
+    moved = ENGINE_HOLDS.replace(T1, T2).replace("is as stated", "is as stated in its new file")
+    repo.commit(
+        "move RS-2 and revalidate it",
+        {
+            "docs/rules-a.md": _yaml_collection(_yaml_entry("RS-1", ENGINE_HOLDS)),
+            "docs/rules-b.md": _yaml_collection(_yaml_entry("RS-2", moved)),
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [("answered", "docs/rules-b.md#RS-2", None, "unchanged")]
+    assert _answers(result) == [
+        _written(
+            "unchanged",
+            "the engine is as stated in its new file",
+            asked=True,
+            artefact="RS-2",
+            location="docs/rules-b.md#RS-2",
+        )
+    ]
+
+
+def test_a_renamed_document_lists_its_revalidation_against_its_base(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    repo.rename("docs/guide.md", "docs/cli/guide.md")
+    repo.commit(
+        "revalidate the moved guide", {"docs/cli/guide.md": guide(at=T2, because="moved, as is")}
+    )
+    assert _answers(_run(repo)) == [
+        _written("unchanged", "moved, as is", asked=True, location="docs/cli/guide.md")
+    ]
+
+
+def test_a_deferral_whose_anchor_changed_with_the_same_words_is_listed(
+    repo: AdopterRepo,
+) -> None:
+    """The deferral is matched by its anchor, kind and value: the same words on another
+    anchor are a deferral the base lacks."""
+    reason = "rewrite after the rename"
+    _start(repo, {"docs/guide.md": guide(deferred=[("path", "src/cli/**", reason)])})
+    repo.commit(
+        "narrow the anchor, keeping the deferral's words",
+        {
+            "docs/guide.md": guide(
+                anchors={"path": ["src/cli/main.py"]},
+                deferred=[("path", "src/cli/main.py", reason)],
+            )
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [("friction", "docs/guide.md", None, None)]  # the anchor list
+    assert _answers(result) == [
+        _written("deferred", reason, anchor={"kind": "path", "value": "src/cli/main.py"})
+    ]
+
+
+def test_a_reason_for_no_anchors_replaced_by_anchors_lists_the_revalidation(
+    repo: AdopterRepo,
+) -> None:
+    _start(repo, {"docs/glossary.md": document("glossary", unanchored_because="nothing to anchor")})
+    repo.commit(
+        "anchor the glossary",
+        {
+            "docs/glossary.md": document(
+                "glossary",
+                anchors={"path": ["src/cli/**"]},
+                at=T2,
+                outcome="unchanged",
+                because="its terms are the CLI's",
+            )
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [("answered", "docs/glossary.md", None, "unchanged")]
+    assert _answers(result) == [
+        _written(
+            "unchanged",
+            "its terms are the CLI's",
+            asked=True,
+            artefact="glossary",
+            location="docs/glossary.md",
+        )
+    ]
+
+
+def test_what_the_change_removed_is_not_listed(repo: AdopterRepo) -> None:
+    deferred = [("path", "src/cli/**", "waiting on the rename")]
+    _start(repo, {"docs/guide.md": guide(deferred=deferred), "docs/old.md": document("old")})
+    repo.commit("drop a deferral and a page", {"docs/guide.md": guide(), "docs/old.md": None})
+    assert _answers(_run(repo)) == []
+
+
+def test_an_excluded_artefact_lists_what_it_wrote(repo: AdopterRepo) -> None:
+    config = friction_config(exclude=["docs/generated"])
+    _start(repo, {"docs/generated/guide.md": guide()}, config=config)
+    repo.commit("reword", {"docs/generated/guide.md": guide(because="reworded")})
+    assert _answers(_run(repo)) == [
+        _written("unchanged", "reworded", location="docs/generated/guide.md", status="edited")
+    ]
+
+
+def test_a_dormant_document_carries_no_answers(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()}, config=json.dumps({"friction": {"mode": "warning"}}))
+    repo.commit("reword", {"docs/guide.md": guide(because="reworded")})
+    result = _cli("--base", "main", "--json")
+    assert result.exit_code == 0, result.output
+    document = json.loads(result.stdout)
+    assert (document["dormant"], document["answers"], document["unreadable"]) == (True, [], [])
+
+
+def test_an_unreadable_file_is_not_listed_and_keeps_its_finding(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide(), "docs/other.md": guide().replace("guide", "other")})
+    repo.commit(
+        "reword one page and break the other",
+        {
+            "docs/guide.md": guide(because="reworded"),
+            "docs/other.md": "---\nid: [unclosed\npkit: {friction: {}}\n---\n",
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [("unreadable", "docs/other.md", None, None)]
+    assert _answers(result) == [_written("unchanged", "reworded", status="edited")]
+    assert result.unreadable == ("docs/other.md",)
+    assert json.loads(fc.render_json(result))["unreadable"] == ["docs/other.md"]
+    assert (
+        "1 file whose front matter does not parse could not be read for answers"
+        in fc.render_human(result)
+    )
+
+
+def test_the_document_names_the_unreadable_files_and_never_the_configuration(
+    repo: AdopterRepo,
+) -> None:
+    """`unreadable` holds the head's files whose front matter does not parse, sorted —
+    what was not read for answers. A base whose `friction.exclude` does not read is a
+    finding of the same kind, and no file of head: it is not among them."""
+    broken = "---\nid: [unclosed\npkit: {friction: {}}\n---\n"
+    _start(repo, {"docs/guide.md": guide()}, config=friction_config(exclude=5))
+    repo.commit(
+        "break two pages, mend the exclusions",
+        {CONFIG: friction_config(), "docs/z.md": broken, "docs/a/b.md": broken},
+    )
+    document = json.loads(fc.render_json(_run(repo)))
+    assert document["unreadable"] == ["docs/a/b.md", "docs/z.md"]
+    assert document["counts"]["unreadable"] == 3
+
+
+def test_the_human_view_ends_with_every_answer_in_full(repo: AdopterRepo) -> None:
+    long = " ".join(f"word{n}" for n in range(80))  # well past any terminal's width
+    anchors = {"path": ["src/cli/**", "src/core/**"]}
+    kept = [("path", "src/core/**", f"kept: {long}")]
+    _start(repo, {"docs/guide.md": guide(anchors=anchors, deferred=kept)})
+    repo.commit(
+        "revalidate without a change, and defer",
+        {
+            "docs/guide.md": guide(
+                anchors=anchors,
+                at=T2,
+                because=long,
+                deferred=[*kept, ("path", "src/cli/**", f"deferred: {long}")],
+            )
+        },
+    )
+    text = fc.render_human(_run(repo))
+    section = text.split("Answers written in this change", 1)[1].splitlines()[1:]
+    assert section == [
+        f"  docs/guide.md  unchanged (not asked for; keeps the deferral of path src/core/** — "
+        f'"kept: {long}") — "{long}"',
+        f'  docs/guide.md  deferred path src/cli/** (not asked for) — "deferred: {long}"',
+    ]
+
+
+def test_the_human_view_escapes_what_a_terminal_would_act_on(repo: AdopterRepo) -> None:
+    """YAML's double-quoted escapes reach the words: an escape sequence that moves the
+    cursor up and erases the line, and a right-to-left override. The human view shows
+    each escaped, in the findings and in the list; the JSON document keeps the words as
+    written, which its own encoding escapes."""
+    _start(repo, {"docs/guide.md": guide()})
+    yaml_front = (
+        "---\n"
+        "id: guide\n"
+        "pkit:\n"
+        "  friction:\n"
+        "    anchors:\n"
+        "      path: [src/cli/**]\n"
+        "    revalidated:\n"
+        f"      at: '{T1}'\n"
+        "      outcome: unchanged\n"
+        f"      unchanged-because: {HOLDS}\n"
+        "      deferred:\n"
+        "        - anchor: {kind: path, value: src/cli/**}\n"
+        '          reason: "later\\e[1A\\e[2K all fine \\u202Edesrever"\n'
+        "---\n\nBody.\n"
+    )
+    repo.commit(
+        "change the CLI; defer it",
+        {"src/cli/main.py": "print('cli v3')\n", "docs/guide.md": yaml_front},
+    )
+    result = _run(repo)
+    words = "later\x1b[1A\x1b[2K all fine \u202edesrever"
+    assert _answers(result) == [_written("deferred", words, anchor=CLI, asked=True)]
+    assert "\\u001b[1A" in fc.render_json(result)
+
+    text = fc.render_human(result)
+    assert "\x1b" not in text and "\u202e" not in text
+    shown = "later\\x1b[1A\\x1b[2K all fine \\u202edesrever"
+    assert f"answered: deferred — {shown}" in text  # the finding
+    assert f'docs/guide.md  deferred path src/cli/** — "{shown}"' in text  # the list
+
+
+def test_the_human_view_says_none_when_nothing_was_written(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit("change the CLI only", {"src/cli/main.py": "print('n')\n"})
+    text = fc.render_human(_run(repo))
+    assert text.endswith(
+        "Answers written in this change — read from the artefacts, word for word\n  none\n"
+    )
+
+
+# --- a head named: `--head <rev>` -----------------------------------------------------------------
+
+
+def test_a_named_head_gives_the_document_of_a_clean_checkout_at_that_commit(
+    repo: AdopterRepo,
+) -> None:
+    _start(repo, {"docs/guide.md": guide(), "docs/other.md": guide().replace("guide", "other")})
+    repo.commit(
+        "change the CLI; answer for the guide",
+        {
+            "src/cli/main.py": "print('cli v2')\n",
+            "docs/guide.md": guide(deferred=[("path", "src/cli/**", "rewrite after the rename")]),
+        },
+    )
+    clean = _cli("--base", "main", "--json")
+    assert clean.exit_code == 0, clean.output
+
+    repo.checkout("main")
+    # Uncommitted work on another branch: none of it is read.
+    repo.write(
+        {
+            "src/core/engine.py": "ENGINE = 'uncommitted'\n",
+            "docs/guide.md": guide(at=T2, because="uncommitted words"),
+            "docs/new.md": document("new", unanchored_because="uncommitted page"),
+        }
+    )
+    named = _cli("--base", "main", "--head", "feature", "--json")
+    assert named.exit_code == 0, named.output
+    assert named.stdout == clean.stdout
+    read = json.loads(named.stdout)
+    assert read["head"]["uncommitted_paths"] == 0
+    assert [a["reason"] for a in read["answers"]] == ["rewrite after the rename"]
+
+    human = _cli("--base", "main", "--head", "feature")
+    assert "(feature)   (--head: the working tree is not read)" in human.output
+    assert "(merge-base with feature)" in human.output
+
+
+def test_a_named_head_names_itself_when_the_base_moved_on(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit("feature work", {"src/core/engine.py": "ENGINE = 4\n"})
+    repo.checkout("main")
+    repo.commit("main moves on", {"README.md": "main moved\n"})
+    result = fc.run_change_check(repo.root, "main", named=fc.named_head(repo.root, "feature"))
+    (finding,) = result.findings
+    assert finding.kind is fc.FindingKind.OUTDATED_BASE
+    assert "which is not an ancestor of feature:" in finding.message
+
+
+# A rule set of the backbone's, in a folder only the feature branch holds, its rule's
+# reason for having no anchors written as a folded block scalar.
+BACKBONE_RULES = """---
+rule-set: XS
+version: 1.0.0
+rules:
+  RS-XS-001:
+    status: accepted
+    pkit:
+      friction:
+        unanchored-because: >-
+          a rule of the method itself,
+          anchored to nothing
+---
+
+# Rules
+
+## RS-XS-001 — Rule one
+
+The statement of RS-XS-001.
+"""
+
+# A rule set of a capability only the feature branch installs, its rule anchored to a
+# kind that capability registers and deferred with a literal block scalar.
+CAPABILITY_RULES = f"""---
+rule-set: KS
+version: 1.0.0
+rules:
+  RS-KS-001:
+    status: accepted
+    pkit:
+      friction:
+        anchors:
+          source: [alpha]
+        revalidated:
+          at: '{T1}'
+          deferred:
+            - anchor: {{kind: source, value: alpha}}
+              reason: |
+                waiting on the source
+                to be captured
+---
+
+# Rules
+
+## RS-KS-001 — Rule one
+
+The statement of RS-KS-001.
+"""
+
+
+def test_a_named_head_reads_its_rule_set_folders_and_anchor_kinds_from_that_commit(
+    repo: AdopterRepo,
+) -> None:
+    """A rule-set folder, a capability with one, and the anchor kind it registers exist
+    only at the commit named: run from a checkout on `main`, the document is the one a
+    clean checkout at that commit gives — the folders are that commit's, its manifest's
+    capabilities and their registrations too, never the running checkout's."""
+    _start(repo, {"docs/guide.md": guide()})
+    register_kinds(repo.root, "kinds", kinds={"source": "resolve"}, contract=False)
+    repo.write(
+        {
+            ".pkit/rule-sets/xs.md": BACKBONE_RULES,
+            ".pkit/capabilities/kinds/rule-sets/ks.md": CAPABILITY_RULES,
+        }
+    )
+    repo.commit("rule sets and an anchor kind, on this branch alone", files=None)
+    clean = _cli("--base", "main", "--json")
+    assert clean.exit_code == 0, clean.output
+
+    repo.checkout("main")
+    assert not (repo.root / ".pkit/rule-sets").exists()
+    assert not (repo.root / ".pkit/capabilities/kinds").exists()
+    named = _cli("--base", "main", "--head", "feature", "--json")
+    assert named.exit_code == 0, named.output
+    assert named.stdout == clean.stdout
+
+    read = json.loads(named.stdout)
+    assert read["answers"] == [
+        {
+            **_written("unanchored", "a rule of the method itself, anchored to nothing", new=True),
+            "artefact": "RS-XS-001",
+            "location": ".pkit/rule-sets/xs.md#RS-XS-001",
+        },
+        {
+            **_written(
+                "deferred",
+                "waiting on the source to be captured",
+                anchor={"kind": "source", "value": "alpha"},
+                new=True,
+            ),
+            "artefact": "RS-KS-001",
+            "location": ".pkit/capabilities/kinds/rule-sets/ks.md#RS-KS-001",
+        },
+    ]
+    (unresolved,) = [f for f in read["findings"] if f["kind"] == "unresolved-kind"]
+    assert "does not declare the query contract" in unresolved["message"]
+
+
+# A resolver that answers a file no state holds, so its answer is no answer.
+NAMES_A_STRAY_FILE = ASKED + 'print(json.dumps({"paths": ["stray.md"]}))\n'
+
+
+def test_a_named_head_runs_a_resolver_only_from_a_checkout_at_that_commit(
+    repo: AdopterRepo,
+) -> None:
+    """A resolver is a command run in the working tree, never read from a commit: from
+    any other checkout `--head` refuses rather than read the disk as that commit; from a
+    checkout at it, the resolver runs, and its answer is read against that commit's
+    files, which a missing answer names."""
+    _start(repo, {"docs/guide.md": guide()})
+    register_kinds(repo.root, "kinds", kinds={"source": "resolve"}, script_body=NAMES_A_STRAY_FILE)
+    repo.write({"docs/sourced.md": document("sourced", anchors={"source": ["alpha"]}, at=T1)})
+    repo.commit("a page anchored to a registered kind", files=None)
+    feature = repo.head()
+
+    repo.checkout("main")
+    refused = _cli("--base", "main", "--head", "feature", "--json")
+    assert refused.exit_code == 1
+    assert "--head feature: the anchor source 'alpha' is resolved by its capability's command" in (
+        refused.output
+    )
+    assert f"HEAD is at {repo.head()[: fc.SHORT]}" in refused.output
+    assert f"Run from a checkout at feature: HEAD at {feature[: fc.SHORT]}" in refused.output
+
+    repo.checkout("feature")
+    at_head = _cli("--base", "main", "--head", "feature", "--json")
+    assert at_head.exit_code == 0, at_head.output
+    (no_answer,) = [f for f in json.loads(at_head.stdout)["findings"] if f["kind"] == "no-answer"]
+    assert (
+        f"'stray.md', which is not a file of commit {feature[: fc.SHORT]} (feature)"
+        in (no_answer["message"])
+    )
+    working_tree = json.loads(_cli("--base", "main", "--json").stdout)
+    (no_answer,) = [f for f in working_tree["findings"] if f["kind"] == "no-answer"]
+    assert "'stray.md', which is not a file of the working tree" in no_answer["message"]
+
+    repo.write({"notes.txt": "uncommitted\n"})
+    uncommitted = _cli("--base", "main", "--head", "feature")
+    assert uncommitted.exit_code == 1
+    assert "the working tree is not feature (1 uncommitted path)" in uncommitted.output
+
+
+def test_a_named_head_is_refused_with_all_and_when_it_names_no_commit(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    with_all = _cli("--all", "--head", "feature")
+    assert with_all.exit_code == 2 and "--head and --all exclude each other" in with_all.output
+    unknown = _cli("--base", "main", "--head", "no-such-rev")
+    assert unknown.exit_code == 1
+    assert "--head 'no-such-rev' names no commit of this repository." in unknown.output
 
 
 # --- discovery through a tree agrees with the filesystem walk -------------------------------------

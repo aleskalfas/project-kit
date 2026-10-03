@@ -1418,8 +1418,12 @@ def _friction_write(
     yes: bool,
     dry_run: bool,
     rerun: list[str],
+    *,
+    writes_answer: bool,
 ) -> None:
-    """Build a writer's plan and apply it with the consent given (COR-050 point 13)."""
+    """Build a writer's plan and apply it with the consent given (COR-050 point 13). A
+    writer of an answer (`writes_answer`) is refused without a ready-made `--yes`
+    command (point 3; `friction_write.apply`)."""
     if yes and dry_run:
         raise click.UsageError(
             "--yes and --dry-run exclude each other: one writes, the other never does."
@@ -1429,7 +1433,9 @@ def _friction_write(
         raise click.ClickException("not in a project tree.")
     can_ask = not yes and not dry_run and friction_write.interactive()
     plan = plan_of(target_root, can_ask)
-    friction_write.apply(plan, yes=yes, dry_run=dry_run, can_ask=can_ask, rerun=rerun)
+    friction_write.apply(
+        plan, yes=yes, dry_run=dry_run, can_ask=can_ask, rerun=rerun, writes_answer=writes_answer
+    )
 
 
 @friction.command("revalidate")
@@ -1489,7 +1495,7 @@ def friction_revalidate_command(
             confirm_keep=friction_write.ask_keep if can_ask else None,
         )
 
-    _friction_write(plan_of, yes, dry_run, rerun)
+    _friction_write(plan_of, yes, dry_run, rerun, writes_answer=True)
 
 
 @friction.command("defer")
@@ -1518,7 +1524,7 @@ def friction_defer_command(
     def plan_of(target_root: Path, _can_ask: bool) -> friction_write.Plan:
         return friction_write.plan_defer(target_root, artefact, anchor=anchor, reason=reason)
 
-    _friction_write(plan_of, yes, dry_run, rerun)
+    _friction_write(plan_of, yes, dry_run, rerun, writes_answer=True)
 
 
 @friction.command("record-status")
@@ -1537,7 +1543,7 @@ def friction_record_status_command(artefact: str, yes: bool, dry_run: bool) -> N
     def plan_of(target_root: Path, _can_ask: bool) -> friction_write.Plan:
         return friction_write.plan_record_status(target_root, artefact)
 
-    _friction_write(plan_of, yes, dry_run, rerun)
+    _friction_write(plan_of, yes, dry_run, rerun, writes_answer=False)
 
 
 @friction.command("resolve")
@@ -1630,17 +1636,30 @@ def friction_resolve_command(
     ),
 )
 @click.option(
+    "--head",
+    "head_rev",
+    metavar="REV",
+    default=None,
+    help="Check commit REV instead of the working tree: its files read from git objects, "
+    "nothing checked out, the merge-base taken against REV. Uncommitted work is not read. "
+    "Not with --all.",
+)
+@click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
-def friction_check_command(base_ref: str | None, whole_repository: bool, as_json: bool) -> None:
+def friction_check_command(
+    base_ref: str | None, whole_repository: bool, head_rev: str | None, as_json: bool
+) -> None:
     """The change check (COR-050 point 6): every artefact whose anchor changed in the diff
     carries an answer — updated, unchanged with why, or deferred.
 
     Reads git only and writes nothing: the working tree (uncommitted changes
-    included) against the merge-base of REF — by default $PKIT_CHECK_BASE,
-    else the default branch (COR-054). Reports friction, dead anchors of the
-    change, bumps with nothing behind them and an outdated base. Exit 1 in
-    enforcing mode on friction, a dead anchor, an unresolved kind, a
+    included) — or, with --head, commit REV — against the merge-base of REF —
+    by default $PKIT_CHECK_BASE, else the default branch (COR-054). Reports
+    friction, dead anchors of the change, bumps with nothing behind them and
+    an outdated base, and lists last every answer the change wrote, word for
+    word: each revalidation, deferral and reason for having no anchors. Exit 1
+    in enforcing mode on friction, a dead anchor, an unresolved kind, a
     resolver's missing answer (no-answer) or a bump; an outdated base never
     fails, nor a dead anchor it cannot lay at the change (dead-unattributed).
 
@@ -1652,6 +1671,11 @@ def friction_check_command(base_ref: str | None, whole_repository: bool, as_json
     counted — and uncovered surface. Needs the full history, says so in a
     shallow clone, and exits 0 in either mode.
     """
+    if whole_repository and head_rev is not None:
+        raise click.UsageError(
+            "--head and --all exclude each other: the whole-repository check reads HEAD and "
+            "its history."
+        )
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -1662,9 +1686,15 @@ def friction_check_command(base_ref: str | None, whole_repository: bool, as_json
         else:
             click.echo(friction_repository.render_human(report), nl=False)
         return
-    settled = default_branch.settled(target_root, base_ref)
+    named = None if head_rev is None else friction_check.named_head(target_root, head_rev)
+    # The fork is taken against the commit the name gave, which the diff reads too.
+    settled = default_branch.settled(
+        target_root, base_ref, head_rev="HEAD" if named is None else named.commit
+    )
     _warn_settled(settled)
-    result = friction_check.run_change_check(target_root, base_ref, resolved=settled.base)
+    result = friction_check.run_change_check(
+        target_root, base_ref, resolved=settled.base, named=named
+    )
     if as_json:
         click.echo(friction_check.render_json(result), nl=False)
     else:

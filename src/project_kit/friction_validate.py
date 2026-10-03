@@ -57,6 +57,9 @@ settings that declare them, this pass reports:
   shape error;
 - **a dangling deferral** — a `deferred[].anchor` naming, by kind and value,
   no anchor of the artefact (COR-050 point 4);
+- **a deferral repeated** — a `deferred[]` entry for an anchor an earlier
+  entry already defers, by kind and value: the list holds one entry per
+  anchor (COR-050 point 4), so one anchor never carries two reasons;
 - **an anchor kind nothing resolves** — a kind outside the backbone's three
   that no installed capability registers, or whose registration is refused
   (two registrants, a command without the query contract or naming no leaf),
@@ -112,6 +115,7 @@ from project_kit.friction_discovery import (
     FRICTION_KEY,
     SKIP_OUTSIDE,
     UNANCHORED_BECAUSE_KEY,
+    Anchor,
     Artefact,
     Discovery,
     FrictionSettings,
@@ -145,6 +149,7 @@ class FrictionFindingKind(Enum):
     UNPARSABLE_FRONT_MATTER = "unparsable-front-matter"
     MIXED_LINE_ENDINGS = "mixed-line-endings"  # a file written with more than one line break
     DANGLING_DEFERRAL = "dangling-deferral"
+    DUPLICATE_DEFERRAL = "duplicate-deferral"  # an anchor an earlier entry already defers
     UNRESOLVED_KIND = "unresolved-kind"  # an anchor kind nothing installed resolves: a report
     CYCLE = "cycle"
     CONTAINER_REPORT = "container-report"  # an orphaned role block, an inert point block
@@ -494,6 +499,7 @@ def _artefact_findings(target_root: Path, discovery: Discovery) -> list[Friction
             findings.extend(_container_findings(artefact, schema, wiring))
         findings.extend(_unanchored_beside_anchors(artefact))
         findings.extend(_dangling_deferrals(artefact))
+        findings.extend(_duplicate_deferrals(artefact))
         findings.extend(_unresolved_kinds(artefact, registry))
 
     findings.extend(_cycles(discovery))
@@ -504,13 +510,15 @@ def block_findings(
     artefact: Artefact, schema: dict | None, target_root: Path
 ) -> tuple[FrictionFinding, ...]:
     """What this pass finds in one artefact's own block: its shape, a reason for having
-    no anchors beside anchors, dangling deferrals, and anchor kinds nothing resolves.
+    no anchors beside anchors, dangling and repeated deferrals, and anchor kinds nothing
+    resolves.
 
     The per-artefact judgments `validate_friction` applies — the container
     schema and the container's rule (skipped when `schema` is `None`, as the
     pass skips them without a readable schema), then `unanchored-because`
     beside anchors, then every deferral naming no anchor of the artefact, then
-    every anchor kind nothing installed resolves, which is a report. The
+    every deferral of an anchor an earlier entry defers, then every anchor kind
+    nothing installed resolves, which is a report. The
     cycle check spans artefacts and is not here.
     The writing commands (`friction_write`) read what they would write back
     through this, so a writer never writes a block validation would refuse —
@@ -525,6 +533,7 @@ def block_findings(
         findings.extend(_container_findings(artefact, schema, wiring))
     findings.extend(_unanchored_beside_anchors(artefact))
     findings.extend(_dangling_deferrals(artefact))
+    findings.extend(_duplicate_deferrals(artefact))
     findings.extend(_unresolved_kinds(artefact, registered_anchor_kinds(target_root)))
     return tuple(findings)
 
@@ -624,6 +633,36 @@ def _dangling_deferrals(artefact: Artefact) -> Iterable[FrictionFinding]:
                 f"deferral names {anchor.kind} anchor {anchor.value!r}, which the artefact "
                 f"does not declare{known}; remove the entry, or add the anchor it postpones "
                 f"(COR-050 point 4)."
+            ),
+        )
+
+
+def _duplicate_deferrals(artefact: Artefact) -> Iterable[FrictionFinding]:
+    """Each `deferred[]` entry for an anchor an earlier entry already defers, by kind and
+    value (COR-050 point 4: one entry per anchor).
+
+    The first entry for an anchor stands; each later one is reported, its
+    pointer carrying its index as written (`Deferral.index`). Two entries give
+    one anchor two reasons, so what the deferral says depends on which a
+    reader takes.
+    """
+    first: dict[Anchor, int] = {}
+    for deferral in artefact.deferrals:
+        earlier = first.setdefault(deferral.anchor, deferral.index)
+        if earlier == deferral.index:
+            continue
+        anchor = deferral.anchor
+        yield FrictionFinding(
+            location=artefact.location,
+            pointer=(
+                f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/revalidated/deferred/{deferral.index}/anchor"
+            ),
+            severity=Severity.ERROR,
+            kind=FrictionFindingKind.DUPLICATE_DEFERRAL,
+            message=(
+                f"{anchor.kind} anchor {anchor.value!r} is deferred again: entry {earlier} "
+                f"defers it already, and the list holds one entry per anchor — keep one, with "
+                f"one reason (`pkit friction defer` writes it so) (COR-050 point 4)."
             ),
         )
 
