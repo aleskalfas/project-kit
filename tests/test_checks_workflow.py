@@ -5,8 +5,8 @@ queue, the queue waits for that status on the merge it is about to make, so the
 workflow must run on the queue's `merge_group` event as well as on pull
 requests and pushes, and the diff-scoped checks inside it must read the base
 that merge is built on. The changeset guard, which needs the pull request's
-labels, stays on pull requests, and the whole-repository friction report on
-pushes.
+labels, stays on pull requests. The whole-repository friction report gates
+nothing and is a workflow of its own (`test_friction_tracking_issue.py`).
 """
 
 from __future__ import annotations
@@ -52,7 +52,12 @@ def test_the_aggregator_compares_with_the_base_the_queued_merge_is_built_on(work
     assert "'main'" in base
 
 
-def test_the_changeset_guard_and_the_friction_report_keep_their_events(workflow) -> None:
+def test_the_changeset_guard_keeps_to_pull_requests(workflow) -> None:
     guard = _step(workflow["jobs"]["checks"], "Changeset guard")
     assert guard["if"] == "github.event_name == 'pull_request'"
-    assert workflow["jobs"]["friction-report"]["if"] == "github.event_name == 'push'"
+
+
+def test_the_required_workflow_holds_no_friction_report(workflow) -> None:
+    """The report gates nothing, and keeps an issue `checks` has no permission for."""
+    assert list(workflow["jobs"]) == ["checks"]
+    assert "permissions" not in workflow

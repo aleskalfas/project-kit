@@ -12,8 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-03T02:33:42Z
-      outcome: updated
+      at: 2026-10-03T02:48:50Z
+      outcome: unchanged
+      unchanged-because: "nothing under the capability's scripts differs from main on this branch: 7ed8703e added a renderer of the whole-repository findings there and 5aa080f0 moved it out to project-kit's own scripts/, so what this page says of the capability and its scripts still holds"
 ---
 
 # living-docs capability
