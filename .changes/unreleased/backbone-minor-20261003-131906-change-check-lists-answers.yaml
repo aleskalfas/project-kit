@@ -1,0 +1,23 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit friction check` lists the answers a change wrote: every
+  revalidation, deferral and reason for having no anchors, with its words,
+  derived from each artefact carrying the block against its counterpart at
+  the merge-base — never composed. `--json` gains a top-level `answers` key
+  (`[]` while dormant; `schema_version` stays 1), each entry with
+  `artefact`, `location`, `answer` (`updated`, `unchanged`, `deferred`,
+  `unanchored` or `null`), `anchor`, `reason`, `kept` (the deferrals a
+  revalidation kept), `asked` (whether the diff asked for it), `status`
+  (`stands`, `bump` or `edited`) and `new`; the human view ends with
+  "Answers written in this change", every reason in full. `--head <rev>`
+  checks that commit, read from git objects, instead of the working tree:
+  the merge-base is taken against it and uncommitted work is not read, so a
+  pull request's head can be checked from any checkout; it is refused with
+  `--all`, and a revision that names no commit exits 1. `pkit friction
+  revalidate` and `defer`, refusing to write off a terminal without
+  `--yes`, no longer print a ready-made `--yes` command: they name the dry
+  run and say that an answer is written on a person's decision.
+  `record-status` refuses as before.
