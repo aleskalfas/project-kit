@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T14:53:03Z
+      at: 2026-10-03T01:52:16Z
       outcome: unchanged
-      unchanged-because: the decisions, lifecycle, CLI and schemas READMEs now cite COR-055 for what validation owns and the lifecycle README restates COR-052's rule for which inert policy a point declares; this page maps each of those areas in one line, the record system, packaging and lifecycle, the command surface and the schemas, which still hold
+      unchanged-because: the lifecycle README gains one paragraph saying every copy into a project leaves out Python's caches; this page maps the lifecycle area in one line as packaging, manifest schema, upgrade procedure and register/unregister mechanics, which still holds
 ---
 
 # project-kit
