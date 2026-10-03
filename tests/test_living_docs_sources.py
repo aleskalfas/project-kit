@@ -28,7 +28,8 @@ runs the real checks over it:
    is run in;
 8. the registration, as the one registry reads it;
 9. a rule's origin citing a captured source;
-10. the validator's reports;
+10. the validator's reports, a captured source carrying the shape's carrier
+    keys among them;
 11. a misspelt kind, with the nearest kind named, leaves the documentation
     check answering.
 
@@ -638,6 +639,26 @@ def test_the_validator_reports_what_names_nothing_and_what_nothing_names(
     )
     human = _run(repo.root, str(SCRIPTS / "validate.py"))
     assert human.returncode == 0, human.stdout
+
+
+def test_a_captured_source_carrying_the_shape_s_carrier_keys_is_reported(
+    repo: AdopterRepo,
+) -> None:
+    """The shape permits `schema_version` and `binds_to` for its own carrier, so
+    `data` passes a captured source carrying them; the validator reports each."""
+    carrying = 'schema_version: 1\nbinds_to: ["**/sources/*.yaml"]\n' + KEEP_A_CHANGELOG
+    repo.write({KEEP: carrying})
+    data = CliRunner().invoke(main, ["--color", "never", "validate", "--only", "data"])
+    assert data.exit_code == 0, data.output
+
+    validated = _validate(repo.root)
+    assert _findings(validated, "error") == []
+    reported = dict(_findings(validated, "report"))
+    assert sorted(reported) == [f"{KEEP}:/binds_to", f"{KEEP}:/schema_version"]
+    assert reported[f"{KEEP}:/schema_version"].startswith(
+        "captured source `keep-a-changelog` carries `schema_version`, which its shape "
+        "permits only for the shape's own carrier — remove it"
+    )
 
 
 # --- 11. a misspelt kind leaves the documentation check answering ------------------------

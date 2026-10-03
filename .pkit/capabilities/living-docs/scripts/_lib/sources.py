@@ -13,7 +13,9 @@ What is checked:
   either, and is only reported; a hidden entry is left alone (`source_layout`).
   A captured source's *shape* — its fields — is `schemas/source.schema.json`,
   which `pkit validate` applies under `data`, bound by the file's path
-  (COR-023), and is not judged here.
+  (COR-023), and is not judged here, but for the two keys that shape permits
+  only for its own carrier: a captured source carrying `schema_version` or
+  `binds_to` is reported.
 - **What names a source** — reports, never failed. A `source` anchor, or a
   rule's origin citing a `source`, that no captured file answers: the
   whole-repository check reports the anchor dead, and rule-set validation
@@ -33,6 +35,7 @@ from pathlib import Path
 
 from _lib import source_layout
 from _lib.artefacts import Artefact
+from _lib.declarations import load_yaml
 
 #: The anchor kind this capability registers, as an anchor block and a rule's
 #: cited source write it.
@@ -40,6 +43,10 @@ KIND = "source"
 
 ANCHOR_POINTER = f"/pkit/friction/anchors/{KIND}"
 ORIGIN_POINTER = "/origin/source"
+
+#: The keys the shape of a captured source permits for its own carrier,
+#: `schemas/source.yaml`, and never for a captured source.
+CARRIER_KEYS = ("schema_version", "binds_to")
 
 
 @dataclass(frozen=True)
@@ -91,6 +98,11 @@ def check(root: Path, artefacts: Sequence[Artefact]) -> Checked:
         if entry.problem
     ]
     captured = sorted(entry.name for entry in entries if entry.name is not None)
+    problems.extend(
+        Problem(False, f"{source_layout.file_path(name)}:/{key}", _carrier_key_message(name, key))
+        for name in captured
+        for key in _carrier_keys(root, name)
+    )
     citations = _citations(artefacts)
     answers: dict[str, bool] = {}
     dead = 0
@@ -153,6 +165,22 @@ def _layout_message(entry: source_layout.Entry) -> str:
         f"{entry.path} {entry.problem}. Captured sources are read only from {folder}/, "
         f"through real folders of exactly those names — correct it, or remove it "
         f"(DEC-001 point 4)."
+    )
+
+
+def _carrier_keys(root: Path, name: str) -> list[str]:
+    """The keys of `CARRIER_KEYS` the captured source `name` carries; none when its
+    file is no YAML mapping, whose shape `data` judges."""
+    value = load_yaml(root / source_layout.file_path(name))
+    return [key for key in CARRIER_KEYS if isinstance(value, Mapping) and key in value]
+
+
+def _carrier_key_message(name: str, key: str) -> str:
+    return (
+        f"captured source `{name}` carries `{key}`, which its shape permits only for the "
+        f"shape's own carrier — remove it: a captured source holds what identifies the "
+        f"source and the version read, and nothing else, since any change to its file asks "
+        f"every page anchored to it (DEC-001 point 4)."
     )
 
 
