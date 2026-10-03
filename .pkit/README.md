@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-03T13:19:45Z
+      at: 2026-10-03T14:05:39Z
       outcome: unchanged
-      unchanged-because: the CLI reference gained the change check's list of answers a change wrote, its --head option and the writers' new refusal line, inside its friction section; this map names the CLI reference as the pkit command surface and points to its Authoring commands section, and both still hold
+      unchanged-because: the CLI reference gained the change check's list of answers a change wrote, its --head option and the writers' new refusal line; the schemas reference gained validation's finding for an anchor deferred twice; the lifecycle reference says how a resolver runs under --head — each inside its own friction or resolver section. This map names the three by role (the pkit command surface, the schemas, packaging and upgrades) and points to the CLI reference's Authoring commands section, and all of it still holds
 ---
 
 # project-kit
