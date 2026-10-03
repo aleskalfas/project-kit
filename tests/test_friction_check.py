@@ -19,6 +19,7 @@ from project_kit import friction_check as fc
 from project_kit import friction_discovery as fd
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.anchor_kind_capabilities import ASKED, register_kinds
 from tests.friction_documents import CONFIG, SOURCE, T1, T2, document, friction_config, guide
 
 
@@ -1525,6 +1526,149 @@ def test_a_named_head_names_itself_when_the_base_moved_on(repo: AdopterRepo) -> 
     (finding,) = result.findings
     assert finding.kind is fc.FindingKind.OUTDATED_BASE
     assert "which is not an ancestor of feature:" in finding.message
+
+
+# A rule set of the backbone's, in a folder only the feature branch holds, its rule's
+# reason for having no anchors written as a folded block scalar.
+BACKBONE_RULES = """---
+rule-set: XS
+version: 1.0.0
+rules:
+  RS-XS-001:
+    status: accepted
+    pkit:
+      friction:
+        unanchored-because: >-
+          a rule of the method itself,
+          anchored to nothing
+---
+
+# Rules
+
+## RS-XS-001 — Rule one
+
+The statement of RS-XS-001.
+"""
+
+# A rule set of a capability only the feature branch installs, its rule anchored to a
+# kind that capability registers and deferred with a literal block scalar.
+CAPABILITY_RULES = f"""---
+rule-set: KS
+version: 1.0.0
+rules:
+  RS-KS-001:
+    status: accepted
+    pkit:
+      friction:
+        anchors:
+          source: [alpha]
+        revalidated:
+          at: '{T1}'
+          deferred:
+            - anchor: {{kind: source, value: alpha}}
+              reason: |
+                waiting on the source
+                to be captured
+---
+
+# Rules
+
+## RS-KS-001 — Rule one
+
+The statement of RS-KS-001.
+"""
+
+
+def test_a_named_head_reads_its_rule_set_folders_and_anchor_kinds_from_that_commit(
+    repo: AdopterRepo,
+) -> None:
+    """A rule-set folder, a capability with one, and the anchor kind it registers exist
+    only at the commit named: run from a checkout on `main`, the document is the one a
+    clean checkout at that commit gives — the folders are that commit's, its manifest's
+    capabilities and their registrations too, never the running checkout's."""
+    _start(repo, {"docs/guide.md": guide()})
+    register_kinds(repo.root, "kinds", kinds={"source": "resolve"}, contract=False)
+    repo.write(
+        {
+            ".pkit/rule-sets/xs.md": BACKBONE_RULES,
+            ".pkit/capabilities/kinds/rule-sets/ks.md": CAPABILITY_RULES,
+        }
+    )
+    repo.commit("rule sets and an anchor kind, on this branch alone", files=None)
+    clean = _cli("--base", "main", "--json")
+    assert clean.exit_code == 0, clean.output
+
+    repo.checkout("main")
+    assert not (repo.root / ".pkit/rule-sets").exists()
+    assert not (repo.root / ".pkit/capabilities/kinds").exists()
+    named = _cli("--base", "main", "--head", "feature", "--json")
+    assert named.exit_code == 0, named.output
+    assert named.stdout == clean.stdout
+
+    read = json.loads(named.stdout)
+    assert read["answers"] == [
+        {
+            **_written("unanchored", "a rule of the method itself, anchored to nothing", new=True),
+            "artefact": "RS-XS-001",
+            "location": ".pkit/rule-sets/xs.md#RS-XS-001",
+        },
+        {
+            **_written(
+                "deferred",
+                "waiting on the source to be captured",
+                anchor={"kind": "source", "value": "alpha"},
+                new=True,
+            ),
+            "artefact": "RS-KS-001",
+            "location": ".pkit/capabilities/kinds/rule-sets/ks.md#RS-KS-001",
+        },
+    ]
+    (unresolved,) = [f for f in read["findings"] if f["kind"] == "unresolved-kind"]
+    assert "does not declare the query contract" in unresolved["message"]
+
+
+# A resolver that answers a file no state holds, so its answer is no answer.
+NAMES_A_STRAY_FILE = ASKED + 'print(json.dumps({"paths": ["stray.md"]}))\n'
+
+
+def test_a_named_head_runs_a_resolver_only_from_a_checkout_at_that_commit(
+    repo: AdopterRepo,
+) -> None:
+    """A resolver is a command run in the working tree, never read from a commit: from
+    any other checkout `--head` refuses rather than read the disk as that commit; from a
+    checkout at it, the resolver runs, and its answer is read against that commit's
+    files, which a missing answer names."""
+    _start(repo, {"docs/guide.md": guide()})
+    register_kinds(repo.root, "kinds", kinds={"source": "resolve"}, script_body=NAMES_A_STRAY_FILE)
+    repo.write({"docs/sourced.md": document("sourced", anchors={"source": ["alpha"]}, at=T1)})
+    repo.commit("a page anchored to a registered kind", files=None)
+    feature = repo.head()
+
+    repo.checkout("main")
+    refused = _cli("--base", "main", "--head", "feature", "--json")
+    assert refused.exit_code == 1
+    assert "--head feature: the anchor source 'alpha' is resolved by its capability's command" in (
+        refused.output
+    )
+    assert f"HEAD is at {repo.head()[: fc.SHORT]}" in refused.output
+    assert f"Run from a checkout at feature: HEAD at {feature[: fc.SHORT]}" in refused.output
+
+    repo.checkout("feature")
+    at_head = _cli("--base", "main", "--head", "feature", "--json")
+    assert at_head.exit_code == 0, at_head.output
+    (no_answer,) = [f for f in json.loads(at_head.stdout)["findings"] if f["kind"] == "no-answer"]
+    assert (
+        f"'stray.md', which is not a file of commit {feature[: fc.SHORT]} (feature)"
+        in (no_answer["message"])
+    )
+    working_tree = json.loads(_cli("--base", "main", "--json").stdout)
+    (no_answer,) = [f for f in working_tree["findings"] if f["kind"] == "no-answer"]
+    assert "'stray.md', which is not a file of the working tree" in no_answer["message"]
+
+    repo.write({"notes.txt": "uncommitted\n"})
+    uncommitted = _cli("--base", "main", "--head", "feature")
+    assert uncommitted.exit_code == 1
+    assert "the working tree is not feature (1 uncommitted path)" in uncommitted.output
 
 
 def test_a_named_head_is_refused_with_all_and_when_it_names_no_commit(repo: AdopterRepo) -> None:

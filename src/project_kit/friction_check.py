@@ -29,9 +29,13 @@ so it works for any tool and locally before a commit.
   removed and turns its dependants' anchors dead (COR-050 point 6).
 - *A head named* (`--head`, `named_head`) is that commit, read from git
   objects as the base is: the merge-base is taken against it, the diff runs
-  between the two commits, and the working tree is not read. The registered
-  anchor kinds, and what discovery reads from the working tree whichever
-  state it walks, stay the running checkout's.
+  between the two commits, and the working tree is not read. Its anchor
+  kinds are the ones it registers, as the base's are the base's. A resolver
+  is a command run in the working tree, never read from a commit, so one runs
+  only where the working tree is that commit, and the check refuses anywhere
+  else (`_NamedHeadKinds`). What discovery reads from the working tree
+  whichever state it walks — which files are synced copies, where a link
+  leads — stays the running checkout's.
 
 **When an anchor changed** (point 5): a *path* anchor when a changed path
 matches it that both sides leave in — each side read under its own
@@ -111,7 +115,7 @@ import heapq
 import json
 import re
 import subprocess
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
@@ -128,6 +132,7 @@ from project_kit.friction_discovery import (
     CORE_ANCHOR_KINDS,
     Anchor,
     AnchorKinds,
+    AnchorResolution,
     Artefact,
     ArtefactKind,
     Deferral,
@@ -475,7 +480,7 @@ def resolve_base(
     (`default_branch.settled`), so it is not resolved twice."""
     if head is None:
         head_commit(root)
-    head_rev = "HEAD" if head is None else head.name
+    head_rev = "HEAD" if head is None else head.commit  # the commit, as the diff reads it
     found = default_branch.base(root, ref, head_rev=head_rev) if resolved is None else resolved
     if found.problem is not None or found.tip is None or found.fork is None:
         raise FrictionCheckError(found.problem or f"the base {found.ref!r} cannot be compared.")
@@ -1435,6 +1440,63 @@ def truth_chain_order(discovery: Discovery) -> list[int]:
 # --- the check ---------------------------------------------------------------------
 
 
+class _NamedHeadKinds(AnchorKinds):
+    """The anchor kinds of a head named with `--head` (`named_head`), and what their
+    resolvers answer for it, read against that commit's files and naming it.
+
+    A resolver is a command run in the working tree, which reads what is on disk:
+    it is never read from a commit. So one runs only where the working tree is
+    the commit named — HEAD at it, nothing uncommitted — and anywhere else the
+    check refuses (`FrictionCheckError`) rather than read the disk as that commit.
+    Only an anchor whose resolver would run is refused; an anchor of a core kind,
+    or of a kind nothing may resolve, reads the same from any checkout.
+    """
+
+    def __init__(
+        self,
+        target_root: Path,
+        registry: Mapping[str, ResolverCommand],
+        files: Collection[str],
+        head: HeadState,
+    ) -> None:
+        super().__init__(
+            target_root, registry, files, f"commit {head.commit[:SHORT]} ({head.name})"
+        )
+        self._head = head
+        self._elsewhere: str | None = None
+        self._checked = False
+
+    def resolve(self, anchor: Anchor) -> AnchorResolution:
+        if anchor.kind not in CORE_ANCHOR_KINDS and self.unresolved(anchor.kind) is None:
+            elsewhere = self._working_tree_elsewhere()
+            if elsewhere is not None:
+                name = self._head.name
+                raise FrictionCheckError(
+                    f"--head {name}: the anchor {anchor.kind} {anchor.value!r} is resolved by "
+                    f"its capability's command, which runs in the working tree and reads what "
+                    f"is there — and the working tree is not {name} ({elsewhere}). Run from a "
+                    f"checkout at {name}: HEAD at {self._head.commit[:SHORT]}, nothing "
+                    f"uncommitted."
+                )
+        return super().resolve(anchor)
+
+    def _working_tree_elsewhere(self) -> str | None:
+        """How the working tree differs from the commit named, or `None` when it is that
+        commit; asked once, when the first resolver would run."""
+        if not self._checked:
+            self._checked = True
+            at = commit_of(self.target_root, "HEAD")
+            if at != self._head.commit:
+                self._elsewhere = (
+                    "HEAD names no commit" if at is None else f"HEAD is at {at[:SHORT]}"
+                )
+            else:
+                uncommitted = uncommitted_paths(self.target_root)
+                if uncommitted:
+                    self._elsewhere = counted(uncommitted, "uncommitted path", "uncommitted paths")
+        return self._elsewhere
+
+
 def run_change_check(
     target_root: Path,
     base_ref: str | None = None,
@@ -1448,8 +1510,9 @@ def run_change_check(
     without one, `$PKIT_CHECK_BASE`, else the default branch (COR-054 point 3).
     `resolved` is that base when the caller has read it already (`resolve_base`).
     The anchor kinds are the registry's, the head's read from the package
-    metadata on disk — a `named` head's too — and the base's from the base
-    commit; a `registry` handed in stands for both.
+    metadata on disk — a `named` head's from that commit — and the base's from
+    the base commit; a `registry` handed in stands for both. A `named` head's
+    resolvers run only where the working tree is that commit (`_NamedHeadKinds`).
 
     Raises `FrictionCheckError` when it cannot run — outside a git repository,
     before the first commit, or with a base that does not resolve — except
@@ -1485,11 +1548,19 @@ def run_change_check(
     base_tree = CommitTree(target_root, base_state.commit)
     head = Side(target_root, head_tree, head_discovery)
     base = Side(target_root, base_tree, discover_artefacts(target_root, tree=base_tree))
-    kinds = AnchorKinds(
-        target_root,
-        registered_anchor_kinds(target_root) if registry is None else registry,
-        head.files,
-    )
+    if named is None:
+        kinds = AnchorKinds(
+            target_root,
+            registered_anchor_kinds(target_root) if registry is None else registry,
+            head.files,
+        )
+    else:
+        kinds = _NamedHeadKinds(
+            target_root,
+            registered_anchor_kinds(target_root, head_tree) if registry is None else registry,
+            head.files,
+            named,
+        )
 
     @functools.cache
     def base_registry() -> Mapping[str, ResolverCommand]:

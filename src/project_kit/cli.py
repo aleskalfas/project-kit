@@ -1687,7 +1687,10 @@ def friction_check_command(
             click.echo(friction_repository.render_human(report), nl=False)
         return
     named = None if head_rev is None else friction_check.named_head(target_root, head_rev)
-    settled = default_branch.settled(target_root, base_ref, head_rev=head_rev or "HEAD")
+    # The fork is taken against the commit the name gave, which the diff reads too.
+    settled = default_branch.settled(
+        target_root, base_ref, head_rev="HEAD" if named is None else named.commit
+    )
     _warn_settled(settled)
     result = friction_check.run_change_check(
         target_root, base_ref, resolved=settled.base, named=named
