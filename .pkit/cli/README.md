@@ -48,8 +48,9 @@ pkit:
         - src/project_kit/session_guard.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, COR-055, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059, ADR-061]
     revalidated:
-      at: 2026-10-03T02:33:41Z
-      outcome: updated
+      at: 2026-10-03T13:24:00Z
+      outcome: unchanged
+      unchanged-because: "No command, option, output or refusal this page documents changes in this change: COR-050's refinement records on whose decision revalidate and defer are run and when an agent may run them, which this page does not describe."
 ---
 
 # Command-line interface

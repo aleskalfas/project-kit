@@ -11,9 +11,8 @@ pkit:
         - src/project_kit/install.py
       record: [COR-001, COR-014]
     revalidated:
-      at: 2026-10-03T01:52:21Z
-      outcome: unchanged
-      unchanged-because: The page describes core.md as kit-owned and refreshed on every sync and project.md as never touched; leaving Python caches out of every copy changes nothing about how the rules files are propagated
+      at: 2026-10-03T13:23:37Z
+      outcome: updated
 ---
 
 # Rules

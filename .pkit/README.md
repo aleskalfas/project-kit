@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-03T05:57:43Z
+      at: 2026-10-03T13:24:06Z
       outcome: unchanged
-      unchanged-because: the lifecycle, CLI and schemas references gained the anchor-kind registration under friction.kinds, how a registered resolver runs and what it answers, the unresolved state, the change check's no-answer and dead-unattributed findings, and how a reader of the machine-readable documents reads an unresolved artefact by its anchor's finding; this index names each area and what it holds in one line — the lifecycle area as packaging and dependency architecture, the cli area as the pkit command-line surface, the schemas area as the YAML schemas and their JSON Schema companions — none of which mentions anchors, friction or resolvers, so every line still holds
+      unchanged-because: The rules README gained a fifth category of rules and the agents README a paragraph on friction writers; this index says in one line each that the rules area holds the universal rules every adopter's CLAUDE.md loads and the agents area the agent definitions the adapter deploys, both still true.
 ---
 
 # project-kit

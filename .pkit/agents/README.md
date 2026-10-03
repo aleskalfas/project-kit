@@ -17,9 +17,8 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, ADR-051, ADR-052]
     revalidated:
-      at: 2026-10-02T02:38:07Z
-      outcome: unchanged
-      unchanged-because: agents_overlay only exposes adopt's holds-documents test and its consent builder for another command to reuse; adopt's question, refusal and recording, and everything this page says of reconcile and adopt, behave as before
+      at: 2026-10-03T13:23:33Z
+      outcome: updated
 ---
 
 # Agents
