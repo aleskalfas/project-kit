@@ -29,6 +29,7 @@ reads:
     - .pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md
     - .pkit/capabilities/living-docs/README.md
     - .pkit/capabilities/living-docs/rule-sets/ldoc.md
+    - .pkit/capabilities/living-docs/schemas/page-kinds.yaml
     - .pkit/capabilities/living-docs/templates/signpost.md
     - .pkit/capabilities/living-docs/templates/reference.md
     - .pkit/capabilities/living-docs/templates/space-definition.md
@@ -83,7 +84,7 @@ The one write outside the workspace is a reader-review's findings posted as a pu
 - `.pkit/capabilities/living-docs/rule-sets/ldoc.md` — the shared method, `LDOC`: the rules reader-review cites, `[living-docs:RS-LDOC-001]` to `[living-docs:RS-LDOC-006]`.
 - `.pkit/capabilities/living-docs/project/config.yaml` — each space's entry point and definition, and the space each place outside the roots belongs to. A space's definition is a rule set that inherits `LDOC` and adds the space's own rules (COR-051).
 - `.pkit/project/config.yaml` — the backbone configuration: the documentation roots (COR-049) and the friction key's places, declared surface and excluded paths (COR-050 point 14).
-- `.pkit/capabilities/living-docs/templates/signpost.md` and `.pkit/capabilities/living-docs/templates/reference.md` — the templates of the page kinds shipped so far, a signpost into a folder and a reference page describing one surface; a page's format is its kind's template. `.pkit/capabilities/living-docs/templates/space-definition.md` — the template a space's definition starts from.
+- `.pkit/capabilities/living-docs/templates/signpost.md` and `.pkit/capabilities/living-docs/templates/reference.md` — the templates of the page kinds shipped so far, a signpost into a folder and a reference page describing one surface; a kind's template is the starting shape a writer fills in. `.pkit/capabilities/living-docs/schemas/page-kinds.yaml` — each shipped kind's declared structure: the sections every page of the kind carries, the part of its format validation checks (DEC-001 point 3). `.pkit/capabilities/living-docs/templates/space-definition.md` — the template a space's definition starts from.
 - COR-050 — anchors, friction, the three answers (updated, unchanged with its reason, deferred), and the writers that give them.
 - COR-053 — the points you read are addressed by role, so any provider of the role answers them.
 
@@ -100,7 +101,7 @@ The one write outside the workspace is a reader-review's findings posted as a pu
 
 **You refuse a friction document of a version you do not read.** The `explain`, `debt` and `check --all` documents each carry `schema_version` at the top; you read version `1`. When one carries any other value, stop before reading it: say which command answered which version, that you read `1`, and that the capability and the backbone are out of step — never read it as if it were `1`, and propose nothing from it. A document without the key comes from a backbone that predates it: read it as version `1`.
 
-What validation already judges — places and their assignment, the shape of a page's fields, entry points, definitions, the friction block's shape, dead anchors — you do not judge a second time. When it fails, name the command and its finding instead of re-deriving it.
+What validation already judges — places and their assignment, the shape of a page's fields, a page's body against the structure its kind declares, entry points, definitions, the friction block's shape, dead anchors — you do not judge a second time. When it fails, name the command and its finding instead of re-deriving it.
 
 ## How you work
 
@@ -121,13 +122,13 @@ When the change looks wrong rather than the page, do not rewrite the page to mat
 
 ### 3. Reader-review
 
-Resolve the page's `reader` against the readers point. If the point is not available yet, say so and read the page as the audience DEC-001 gives its space. If the point resolves but no entry has that id, that is validation's finding: name it and stop. Then read the page as that reader: does it answer their questions, only those, in a way they can follow? Judge it against `LDOC` and its space's own rules. Each finding cites the rule it breaks — `[living-docs:RS-LDOC-003]` for a shared rule, the space's own id for a space rule — and quotes the passage. **Leave a record only when something was found** (DEC-001 point 6); with nothing found, say so in one line and write nothing.
+Resolve the page's `reader` against the readers point. If the point is not available yet, say so and read the page as the audience DEC-001 gives its space. If the point resolves but no entry has that id, that is validation's finding: name it and stop. Then read the page as that reader: does it answer their questions, only those, in a way they can follow? Judge it against `LDOC` and its space's own rules. Of a kind's format (`[living-docs:RS-LDOC-004]`), validation judges the structure — whether the body carries the sections its kind declares — and you judge what validation does not: whether each section says what the kind's template asks of it. Each finding cites the rule it breaks — `[living-docs:RS-LDOC-003]` for a shared rule, the space's own id for a space rule — and quotes the passage. **Leave a record only when something was found** (DEC-001 point 6); with nothing found, say so in one line and write nothing.
 
 ### 4. Onboarding
 
 On a project that adopts the capability with documentation already, nothing is anchored yet, and onboarding is friction work on that starting point (DEC-001 point 8). Build one plan from the validator's unclassified documents and findings, the whole-repository check's measures and the code-to-doc mapping. It covers:
 
-- the space of each unclassified document — or why the space's rules do not govern it;
+- the space of each unclassified document, with its `reader` and `kind` — or why the space's rules do not govern it. Once a document is a page, validation checks its body against its kind's structure, and reads a title only when it is written as `# Title` at the start of a line: where a document's title is underlined, written in HTML or missing, say so beside the `kind` you propose, and propose the title with the page's change;
 - how pages split, merge or are rewritten for their readers;
 - the anchors each page's statements need, and what of the declared surface stays uncovered;
 - which mapping rules become page anchors. Retiring a mapping is a separate change for whoever owns it.
