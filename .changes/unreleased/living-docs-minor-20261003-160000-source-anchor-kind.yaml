@@ -16,9 +16,12 @@ body: >
   check finds such a page stale until it does. Nothing fetches a source, so a
   change nobody records is not seen. A name no file captures is a dead anchor.
   `pkit living-docs resolve-source <name>` prints the file a name resolves to.
-  `pkit validate` checks a captured source's shape under `data`, fails
-  anything else in the sources folder, and reports an anchor no file captures
-  and a captured source nothing names. A rule's origin may cite a captured
+  `pkit validate` checks a captured source's shape under `data`; fails a
+  sources folder named in another case, and anything else in it but a hidden
+  entry, which it leaves alone, or a file not ending in `.yaml`, which it
+  reports; and reports an anchor no file captures, a captured source nothing
+  names, and one carrying `schema_version` or `binds_to`. A rule's origin may
+  cite a captured
   source. Uninstalling living-docs removes the captured sources with its
   project tier. It needs the backbone this release ships, the first that runs
   a resolver a capability registers.
