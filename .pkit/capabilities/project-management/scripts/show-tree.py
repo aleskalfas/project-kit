@@ -54,7 +54,14 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, body_parent_ref, bootstrap_gate, containment, session_guard
+from _lib import (
+    axis_labels,
+    body_parent_ref,
+    bootstrap_gate,
+    containment,
+    friction_answers,
+    session_guard,
+)
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -359,7 +366,8 @@ def _parse_prs(raw: list) -> dict[int, PR]:
         number = r.get("number")
         if not isinstance(number, int):
             continue
-        body = str(r.get("body") or "")
+        # The friction answers' section closes nothing (DEC-055).
+        body = friction_answers.strip(str(r.get("body") or ""))
         closes = sorted({int(m.group(1)) for m in CLOSING_KEYWORD_RE.finditer(body)})
         out[number] = PR(
             number=number,

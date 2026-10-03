@@ -117,3 +117,84 @@ def test_closes_applies_to_a_replaced_body(ep, monkeypatch, tmp_path) -> None:
     rec = _run(ep, monkeypatch, ["7", "--body-file", str(new), "--closes", "43", "--yes"])
     assert rec.rc == 0
     assert rec.edits[0]["body"].startswith("Closes #42\nCloses #43\n\n## Summary\nrewritten")
+
+
+# ---- the friction answers' section (DEC-055) ---------------------------------------
+
+FOOTER = (
+    "<!-- pkit-provenance:start -->\n\n---\n<sub>🧰 pkit · tree `1` · pm `2`</sub>\n"
+    "<!-- pkit-provenance:end -->\n"
+)
+
+
+def _section(ep, reason: str, head: str = "a" * 40) -> str:
+    """The section land-work or open-pr writes, for one answer with `reason`."""
+    entry = {
+        "artefact": "guide",
+        "location": "docs/guide.md",
+        "answer": "unchanged",
+        "anchor": None,
+        "reason": reason,
+        "kept": [],
+        "asked": True,
+        "status": "stands",
+        "new": False,
+    }
+    document = {"base": {"commit": "b" * 40}, "answers": [entry], "unreadable": []}
+    section = ep.friction_answers.render(document, head)
+    assert section is not None
+    return section
+
+
+def _carrying(ep, reason: str = "The guide holds; fixes #99 is elsewhere.") -> tuple[str, str]:
+    section = _section(ep, reason)
+    return section, f"{PR_BODY}\n{section}\n\n{FOOTER}"
+
+
+def _sections(body: str) -> int:
+    return body.count("## Friction answers")
+
+
+@pytest.mark.parametrize("how", ["--body", "--body-file"])
+def test_a_replaced_body_keeps_the_section_the_description_carried(
+    ep, monkeypatch, tmp_path, how
+) -> None:
+    section, body = _carrying(ep)
+    supplied = "Closes #42\n\n## Summary\nrewritten\n\n## Doc impact\n- [x] none\n\n" + _section(
+        ep, "A list an agent wrote.", head="c" * 40
+    )
+    if how == "--body-file":
+        path = tmp_path / "body.md"
+        path.write_text(supplied, encoding="utf-8")
+        supplied = str(path)
+    rec = _run(ep, monkeypatch, ["7", how, supplied, "--yes"], body=body)
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    assert "rewritten" in written and "A list an agent wrote." not in written
+    assert _sections(written) == 1
+    assert f"- [x] none\n\n{section}\n\n<!-- pkit-provenance:start -->" in written
+
+
+def test_appended_text_lands_outside_the_section(ep, monkeypatch) -> None:
+    section, body = _carrying(ep)
+    rec = _run(ep, monkeypatch, ["7", "--append", "## Notes\n\nA later note.", "--yes"], body=body)
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    assert f"A later note.\n\n{section}\n\n<!-- pkit-provenance:start -->" in written
+    assert _sections(written) == 1
+
+
+def test_closes_reads_no_reference_in_the_section_and_keeps_it(ep, monkeypatch) -> None:
+    section, body = _carrying(ep)
+    rec = _run(ep, monkeypatch, ["7", "--closes", "99", "--yes"], body=body, known_issues=(42, 99))
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    assert written.startswith("Closes #42\nCloses #99\n\n## Summary")
+    assert section in written and _sections(written) == 1
+
+
+def test_a_closing_reference_only_in_the_section_meets_no_requirement(ep) -> None:
+    section = _section(ep, "fixes #42 — see ## Doc impact")
+    body = f"## Summary\nwork\n\n{section}\n"
+    labels = [f.label for f in ep._validate(title="feat(pm): x", body=body, titles={})]
+    assert labels == ["body.closes", "body.doc-impact"]

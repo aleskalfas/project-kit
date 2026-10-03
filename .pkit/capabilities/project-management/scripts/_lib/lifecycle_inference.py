@@ -56,7 +56,7 @@ from __future__ import annotations
 
 import re
 
-from _lib import axis_labels, default_branch
+from _lib import axis_labels, default_branch, friction_answers
 from _lib.checkbox_gate import unticked_boxes  # noqa: F401 — re-export
 
 # Canonical state ordering — the one move-issue's forward checks and the forward
@@ -237,10 +237,11 @@ def state_before_close(
 
 def closing_issue_numbers(pr_body: str) -> list[int]:
     """Issue numbers a PR closes via `Closes/Fixes/Resolves #N` (cross-checked
-    against the checkbox close-gate)."""
+    against the checkbox close-gate) — outside its friction answers' section,
+    which closes nothing (DEC-055)."""
     pattern = re.compile(r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE)
     seen: list[int] = []
-    for m in pattern.finditer(pr_body or ""):
+    for m in pattern.finditer(friction_answers.strip(pr_body or "")):
         n = int(m.group(1))
         if n not in seen:
             seen.append(n)

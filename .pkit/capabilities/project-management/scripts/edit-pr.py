@@ -16,6 +16,12 @@ before writing. Membership gate per DEC-021 runs at startup.
 that lands a second Task closes it on merge too (#1049). A reference the
 body already carries is left alone.
 
+The `## Friction answers` section (DEC-055) is carried across every edit:
+the edit is applied to the body without it, and the section the
+description carried is placed back, last before the provenance footer. A
+section inside a supplied body is dropped — only open-pr and land-work
+write one, from the change check — and edit-pr derives nothing.
+
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/edit-pr.py 99 --append "Additional notes..."
 
@@ -47,7 +53,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 import contextlib
 
-from _lib import bootstrap_gate, pr_validation, provenance, session_guard
+from _lib import bootstrap_gate, friction_answers, pr_validation, provenance, session_guard
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -185,12 +191,17 @@ def main() -> int:
 
     current_title = str(pr.get("title", ""))
     # Strip the footer on read; the seam re-stamps one on write (ADR-037).
-    current_body = provenance.strip_footer(str(pr.get("body") or ""))
+    carried_body = provenance.strip_footer(str(pr.get("body") or ""))
+    # The friction answers' section is set aside and placed back after the edit,
+    # so no edit lands inside it and none supplies one (DEC-055).
+    answers = friction_answers.find(carried_body)
+    current_body = friction_answers.strip(carried_body)
 
     new_title = args.title if args.title is not None else current_title
     new_body = _compute_new_body(current_body, args)
     if new_body is None:
         return 2
+    new_body = friction_answers.strip(new_body)
 
     added_closes: list[int] = []
     if args.closes:
@@ -202,6 +213,9 @@ def main() -> int:
         already = set(pr_validation.extract_closing_issues(new_body))
         added_closes = [n for n in dict.fromkeys(args.closes) if n not in already]
         new_body = pr_validation.with_closing_references(new_body, args.closes)
+    if answers is not None:
+        new_body = friction_answers.stamp(new_body, answers)
+    current_body = carried_body
 
     print(f"edit-pr: #{args.pr_number}")
     print(f"  current title: {current_title}")
@@ -290,6 +304,7 @@ def _compute_new_body(current_body: str, args: argparse.Namespace) -> str | None
 
 def _validate(*, title: str, body: str, titles: dict) -> list[Finding]:
     findings: list[Finding] = []
+    body = friction_answers.strip(body)  # the artefacts' words are never input (DEC-055)
     pattern = _pr_title_pattern(titles)
     if pattern and not re.match(pattern, title):
         findings.append(
