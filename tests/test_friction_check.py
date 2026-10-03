@@ -9,6 +9,7 @@ documents come from `tests.friction_documents`.
 from __future__ import annotations
 
 import json
+import textwrap
 from pathlib import Path
 from typing import Any
 
@@ -1343,6 +1344,187 @@ def test_a_bump_is_listed_as_the_check_judges_it(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": guide()})
     repo.commit("bump the marker", {"docs/guide.md": guide(at=T2)})
     assert _answers(_run(repo)) == [_written("unchanged", HOLDS, status="bump")]
+
+
+# --- answers on collection entries, moves and changed anchors — YAML as people write it -----------
+
+
+def _yaml_entry(entry_id: str, block: str) -> str:
+    """One entry of a collection file, in YAML: its friction block as written (`block`,
+    the lines under `friction:`), block scalars and all."""
+    return f"{entry_id}:\n  status: accepted\n  pkit:\n    friction:\n" + textwrap.indent(
+        textwrap.dedent(block), "      "
+    )
+
+
+def _yaml_collection(*entries: str) -> str:
+    """A collection file whose front matter maps each entry by id, one body section each."""
+    ids = [entry.split(":", 1)[0] for entry in entries]
+    sections = "".join(f"## {entry_id} — a rule\n\nStatement.\n\n" for entry_id in ids)
+    front = "".join(entries) or "{}\n"
+    return f"---\n{front}---\n\n{sections}"
+
+
+# An entry anchored to the engine, revalidated at T1 with a folded justification.
+ENGINE_HOLDS = f"""\
+anchors:
+  path: [src/core/**]
+revalidated:
+  at: '{T1}'
+  outcome: unchanged
+  unchanged-because: >-
+    the engine
+    is as stated
+"""
+
+
+def test_answers_on_collection_entries_are_listed_by_entry(repo: AdopterRepo) -> None:
+    _start(
+        repo,
+        {
+            "docs/rules.md": _yaml_collection(
+                _yaml_entry("RS-1", ENGINE_HOLDS), _yaml_entry("RS-2", ENGINE_HOLDS)
+            )
+        },
+    )
+    revalidated = f"""\
+        anchors:
+          path: [src/core/**]
+        revalidated:
+          at: '{T2}'
+          outcome: unchanged
+          unchanged-because: |
+            a renamed constant;
+            the rule reads the same
+        """
+    deferred = f"""\
+        anchors:
+          path: [src/core/**]
+        revalidated:
+          at: '{T1}'
+          outcome: unchanged
+          unchanged-because: the engine is as stated
+          deferred:
+            - anchor: {{kind: path, value: src/core/**}}
+              reason: >-
+                rewrite once
+                the engine settles
+        """
+    repo.commit(
+        "change the engine; answer for both rules",
+        {
+            "src/core/engine.py": "ENGINE = 2\n",
+            "docs/rules.md": _yaml_collection(
+                _yaml_entry("RS-1", revalidated), _yaml_entry("RS-2", deferred)
+            ),
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [
+        ("answered", "docs/rules.md#RS-1", "path:src/core/**", "unchanged"),
+        ("answered", "docs/rules.md#RS-2", "path:src/core/**", "deferred"),
+    ]
+    rule = {"artefact": "RS-1", "location": "docs/rules.md#RS-1"}
+    other = {"artefact": "RS-2", "location": "docs/rules.md#RS-2"}
+    assert _answers(result) == [
+        _written("unchanged", "a renamed constant; the rule reads the same", asked=True, **rule),
+        _written("deferred", "rewrite once the engine settles", anchor=CORE, asked=True, **other),
+    ]
+
+
+def test_an_entry_moved_between_collection_files_lists_its_revalidation(
+    repo: AdopterRepo,
+) -> None:
+    rule = _yaml_entry("RS-2", ENGINE_HOLDS)
+    _start(
+        repo,
+        {
+            "docs/rules-a.md": _yaml_collection(_yaml_entry("RS-1", ENGINE_HOLDS), rule),
+            "docs/rules-b.md": _yaml_collection(),
+        },
+    )
+    moved = ENGINE_HOLDS.replace(T1, T2).replace("is as stated", "is as stated in its new file")
+    repo.commit(
+        "move RS-2 and revalidate it",
+        {
+            "docs/rules-a.md": _yaml_collection(_yaml_entry("RS-1", ENGINE_HOLDS)),
+            "docs/rules-b.md": _yaml_collection(_yaml_entry("RS-2", moved)),
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [("answered", "docs/rules-b.md#RS-2", None, "unchanged")]
+    assert _answers(result) == [
+        _written(
+            "unchanged",
+            "the engine is as stated in its new file",
+            asked=True,
+            artefact="RS-2",
+            location="docs/rules-b.md#RS-2",
+        )
+    ]
+
+
+def test_a_renamed_document_lists_its_revalidation_against_its_base(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    repo.rename("docs/guide.md", "docs/cli/guide.md")
+    repo.commit(
+        "revalidate the moved guide", {"docs/cli/guide.md": guide(at=T2, because="moved, as is")}
+    )
+    assert _answers(_run(repo)) == [
+        _written("unchanged", "moved, as is", asked=True, location="docs/cli/guide.md")
+    ]
+
+
+def test_a_deferral_whose_anchor_changed_with_the_same_words_is_listed(
+    repo: AdopterRepo,
+) -> None:
+    """The deferral is matched by its anchor, kind and value: the same words on another
+    anchor are a deferral the base lacks."""
+    reason = "rewrite after the rename"
+    _start(repo, {"docs/guide.md": guide(deferred=[("path", "src/cli/**", reason)])})
+    repo.commit(
+        "narrow the anchor, keeping the deferral's words",
+        {
+            "docs/guide.md": guide(
+                anchors={"path": ["src/cli/main.py"]},
+                deferred=[("path", "src/cli/main.py", reason)],
+            )
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [("friction", "docs/guide.md", None, None)]  # the anchor list
+    assert _answers(result) == [
+        _written("deferred", reason, anchor={"kind": "path", "value": "src/cli/main.py"})
+    ]
+
+
+def test_a_reason_for_no_anchors_replaced_by_anchors_lists_the_revalidation(
+    repo: AdopterRepo,
+) -> None:
+    _start(repo, {"docs/glossary.md": document("glossary", unanchored_because="nothing to anchor")})
+    repo.commit(
+        "anchor the glossary",
+        {
+            "docs/glossary.md": document(
+                "glossary",
+                anchors={"path": ["src/cli/**"]},
+                at=T2,
+                outcome="unchanged",
+                because="its terms are the CLI's",
+            )
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [("answered", "docs/glossary.md", None, "unchanged")]
+    assert _answers(result) == [
+        _written(
+            "unchanged",
+            "its terms are the CLI's",
+            asked=True,
+            artefact="glossary",
+            location="docs/glossary.md",
+        )
+    ]
 
 
 def test_what_the_change_removed_is_not_listed(repo: AdopterRepo) -> None:
