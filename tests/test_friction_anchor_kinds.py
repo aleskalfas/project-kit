@@ -285,6 +285,28 @@ def test_an_answer_naming_no_file_makes_the_anchor_dead_for_the_whole_repository
     )
 
 
+def test_a_dead_registered_anchor_leaves_the_artefact_judged_on_its_other_anchors(
+    repo: AdopterRepo,
+) -> None:
+    """As a dead core anchor does: an answer naming no file is dead, not unresolved, so the
+    artefact is judged on its live path anchor — current, then stale once that changes."""
+    _sources(repo)
+    _start(repo, {"docs/guide.md": guide(anchors={"path": ["src/cli/**"], "source": ["iso-9999"]})})
+    current = fr.run_repository_check(repo.root)
+    assert [(f.kind, f.anchor) for f in current.findings if f.anchor is not None] == [
+        (fr.RepositoryFindingKind.DEAD_ANCHOR, DEAD_SOURCE)
+    ]
+    assert [r.state for r in current.artefact_reports] == [fr.ArtefactState.CURRENT]
+
+    repo.commit("the CLI changes", {"src/cli/main.py": "print('cli, changed')\n"})
+    stale = fr.run_repository_check(repo.root)
+    assert {(f.kind, f.anchor) for f in stale.findings if f.anchor is not None} == {
+        (fr.RepositoryFindingKind.DEAD_ANCHOR, DEAD_SOURCE),
+        (fr.RepositoryFindingKind.STALE, fd.Anchor("path", "src/cli/**")),
+    }
+    assert [r.state for r in stale.artefact_reports] == [fr.ArtefactState.STALE]
+
+
 # --- the change check fails what it can lay at the pull request -----------------------------
 
 ENFORCING = friction_config(mode="enforcing")
