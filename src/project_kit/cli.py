@@ -1664,8 +1664,9 @@ def friction_check_command(
     fails, nor a dead anchor it cannot lay at the change (dead-unattributed).
 
     With --all, the whole-repository check instead: every artefact at HEAD
-    against the current history, each anchor judged from the artefact's
-    revalidation point (derived from git, renames followed). Reports stale
+    against its revalidation point — the commit where it first carried the
+    `at` it carries (derived from git, renames followed) — an anchor stale
+    where what it stands on differs between the two. Reports stale
     and deferred debt with their origins, dead anchors, over-broad anchors,
     unanchored artefacts — those accepted with a reason listed apart, never
     counted — and uncovered surface. Needs the full history, says so in a

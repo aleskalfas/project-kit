@@ -114,17 +114,13 @@ import functools
 import heapq
 import json
 import re
-import subprocess
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from enum import Enum
 from fnmatch import fnmatchcase
 from functools import cached_property
 from pathlib import Path, PurePosixPath
-from typing import Any, Self, cast
-
-import click
+from typing import Any, Self
 
 from project_kit import cli_render, default_branch, refs
 from project_kit.backbone_schemas import CONTAINER_KEY
@@ -140,11 +136,25 @@ from project_kit.friction_discovery import (
     FrictionSettings,
     RepositoryTree,
     ResolverCommand,
+    content,
+    deferral_reason,
     discover_artefacts,
+    entry_reason,
+    parsed_at,
     pattern_matcher,
     refuse_resolver_without_query_contract,  # noqa: F401 — re-exported: the check's public surface
     registered_anchor_kinds,
+    revalidated_field,
     unresolved_kind_reason,
+)
+from project_kit.friction_git import (
+    SHORT,
+    CommitTree,
+    DiffEntry,
+    FrictionCheckError,
+    commit_of,
+    parse_name_status,
+    run_git,
 )
 from project_kit.project_config import project_config_path
 from project_kit.working_tree import (
@@ -163,14 +173,8 @@ ENFORCING = "enforcing"
 # or without its slug (the citation form of COR-017).
 _CAPABILITY_RECORD = re.compile(r"^([a-z][a-z0-9-]*[a-z0-9]):(DEC-\d+)((?:-[a-z0-9]+)*)$")
 
-# A pure rename keeps a file's content: git's similarity score for it.
-_IDENTICAL = 100
-
-# How many characters of a commit the human output shows.
-SHORT = 12
-
-# The mode of a link in a git tree.
-_LINK_MODE = "120000"
+# Characters a POSIX extended regular expression reads as other than themselves.
+_ERE_SPECIAL = re.compile(r"([.\[\]()*+?{}|^$\\])")
 
 
 # --- findings ----------------------------------------------------------------
@@ -369,81 +373,11 @@ class ChangeCheck:
         return 1 if self.failed else 0
 
 
-class FrictionCheckError(click.ClickException):
-    """The check could not run: no git repository, no commit, a base that does not resolve."""
-
-
 # --- git ----------------------------------------------------------------------
-
-
-def run_git(
-    root: Path, *args: str, stdin: bytes | None = None, accept: tuple[int, ...] = (0,)
-) -> subprocess.CompletedProcess[bytes]:
-    try:
-        completed = subprocess.run(
-            ["git", *args], cwd=root, input=stdin, capture_output=True, check=False
-        )
-    except OSError as exc:
-        raise FrictionCheckError(f"cannot run git: {exc}") from exc
-    if completed.returncode not in accept:
-        detail = completed.stderr.decode("utf-8", "replace").strip()
-        raise FrictionCheckError(
-            f"`git {args[0]}` failed: {detail or f'exit status {completed.returncode}'}"
-        )
-    return completed
-
-
-def commit_of(root: Path, name: str) -> str | None:
-    """The commit `name` resolves to, or None."""
-    completed = run_git(
-        root, "rev-parse", "--verify", "--quiet", f"{name}^{{commit}}", accept=(0, 1)
-    )
-    commit = completed.stdout.decode().strip()
-    return commit if completed.returncode == 0 and commit else None
-
-
-class CommitTree:
-    """The files of one commit, read from git objects; nothing is checked out."""
-
-    def __init__(self, root: Path, commit: str) -> None:
-        self._root = root
-        listed = run_git(root, "ls-tree", "-r", "-z", commit).stdout
-        self._blobs: dict[str, tuple[str, str]] = {}  # path -> (mode, object)
-        for record in listed.split(b"\0"):
-            if not record:
-                continue
-            meta, _, path = record.partition(b"\t")
-            mode, kind, obj = meta.decode().split(" ")
-            if kind == "blob":  # a submodule is a commit, not a file of this tree
-                self._blobs[path.decode("utf-8", "surrogateescape")] = (mode, obj)
-        self._files = tuple(sorted(self._blobs))
-
-    def files(self) -> Sequence[str]:
-        return self._files
-
-    def read_bytes(self, paths: Sequence[str]) -> Mapping[str, bytes | None]:
-        contents: dict[str, bytes | None] = dict.fromkeys(paths)
-        wanted = [
-            (rel, self._blobs[rel][1])
-            for rel in dict.fromkeys(paths)
-            if rel in self._blobs and self._blobs[rel][0] != _LINK_MODE
-        ]
-        if not wanted:
-            return contents
-        batch = "".join(f"{obj}\n" for _rel, obj in wanted).encode()
-        out = run_git(self._root, "cat-file", "--batch", stdin=batch).stdout
-        offset = 0
-        for rel, _obj in wanted:
-            header_end = out.index(b"\n", offset)
-            header = out[offset:header_end].split(b" ")
-            if len(header) != 3:  # `<object> missing`: nothing to read
-                offset = header_end + 1
-                continue
-            start = header_end + 1
-            size = int(header[2])
-            contents[rel] = out[start : start + size]
-            offset = start + size + 1
-        return contents
+#
+# The primitives — `run_git`, `commit_of`, `CommitTree`, `DiffEntry`,
+# `parse_name_status` and `FrictionCheckError` — live in `friction_git`, one
+# layer down, and are re-exported here as the check's surface.
 
 
 def head_commit(root: Path) -> str:
@@ -485,20 +419,6 @@ def resolve_base(
     if found.problem is not None or found.tip is None or found.fork is None:
         raise FrictionCheckError(found.problem or f"the base {found.ref!r} cannot be compared.")
     return BaseState(ref=found.ref, tip=found.tip, commit=found.fork, outdated=bool(found.outdated))
-
-
-@dataclass(frozen=True)
-class DiffEntry:
-    """One path the diff changes; `old_path` and `score` for a rename."""
-
-    status: str  # git's status letter: A, M, D, R, T, U
-    path: str  # the path at head; for a deletion, the removed path
-    old_path: str | None = None
-    score: int | None = None
-
-    @property
-    def changes_content(self) -> bool:
-        return not (self.status == "R" and self.score == _IDENTICAL)
 
 
 @dataclass(frozen=True)
@@ -551,31 +471,6 @@ def read_diff(root: Path, base_commit: str, head: HeadState | None = None) -> Di
     return Diff(
         entries=tuple(sorted(entries, key=lambda e: (e.path, e.status))), uncommitted=uncommitted
     )
-
-
-def parse_name_status(tokens: Sequence[str]) -> list[DiffEntry]:
-    """The entries of a NUL-separated `--name-status` listing, as `git diff` and `git log` print it.
-
-    A rename or copy is three tokens (`R<score>`, old, new); anything else two
-    (status, path). A copy adds its new path and leaves the source alone.
-    """
-    entries: list[DiffEntry] = []
-    index = 0
-    while index < len(tokens):
-        code = tokens[index]
-        letter = code[:1]
-        if letter in ("R", "C"):
-            old, new = tokens[index + 1], tokens[index + 2]
-            index += 3
-            if letter == "R":
-                score = int(code[1:]) if code[1:].isdigit() else None
-                entries.append(DiffEntry("R", new, old, score))
-            else:
-                entries.append(DiffEntry("A", new))
-            continue
-        entries.append(DiffEntry(letter, tokens[index + 1]))
-        index += 2
-    return entries
 
 
 def _untracked(root: Path) -> list[str]:
@@ -873,60 +768,14 @@ def _counterparts(head: Side, base: Side, diff: Diff) -> dict[int, Artefact]:
 # --- what the diff says about one artefact ------------------------------------
 
 
-def content(artefact: Artefact) -> tuple[str, dict[str, Any]]:
-    """An artefact's content (COR-050): its body text and its own fields, never the container."""
-    own = {k: v for k, v in artefact.carrier.items() if k != CONTAINER_KEY}
-    return artefact.body, own
-
-
-def _revalidated_field(artefact: Artefact, key: str) -> Any:
-    revalidated = artefact.revalidated
-    return revalidated.get(key) if isinstance(revalidated, Mapping) else None
-
-
-def parsed_at(artefact: Artefact) -> Any:
-    """The parsed value of `at`: the instant, so a quoting or formatting change is no change."""
-    value = _revalidated_field(artefact, "at")
-    if not isinstance(value, str):
-        return value
-    try:
-        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
-    except ValueError:
-        return value.strip()
-    return parsed.astimezone(UTC) if parsed.tzinfo is not None else value.strip()
-
-
 def _because(artefact: Artefact) -> str | None:
     """`unchanged-because` with its whitespace folded: a re-wrap is not a new justification."""
-    value = _revalidated_field(artefact, "unchanged-because")
+    value = revalidated_field(artefact, "unchanged-because")
     return " ".join(value.split()) if isinstance(value, str) else None
 
 
 def anchors_of(artefact: Artefact) -> list[Anchor]:
     return [Anchor(kind, value) for kind, values in artefact.anchors.items() for value in values]
-
-
-def _entry_reason(artefact: Artefact, deferral: Deferral) -> str | None:
-    """The reason one deferral entry carries, whitespace folded; `None` when it carries
-    no text."""
-    deferred: Any = _revalidated_field(artefact, "deferred")
-    if not isinstance(deferred, list):
-        return None
-    entry = cast(list[Any], deferred)[deferral.index]
-    reason = cast(Mapping[str, Any], entry).get("reason") if isinstance(entry, Mapping) else None
-    return " ".join(reason.split()) if isinstance(reason, str) else None
-
-
-def deferral_reason(artefact: Artefact, anchor: Anchor) -> str:
-    """The reason written on the deferral of `anchor`, whitespace folded; `""` when none.
-    An anchor deferred twice — a validation error (COR-050 point 4) — reads as its first
-    entry carrying text."""
-    for deferral in artefact.deferrals:
-        if deferral.anchor == anchor:
-            reason = _entry_reason(artefact, deferral)
-            if reason is not None:
-                return reason
-    return ""
 
 
 @dataclass(frozen=True)
@@ -942,7 +791,7 @@ def _revalidation(artefact: Artefact, before: Artefact) -> _Revalidation | None:
     at = parsed_at(artefact)
     if at is None or at == parsed_at(before):
         return None
-    outcome = _revalidated_field(artefact, "outcome")
+    outcome = revalidated_field(artefact, "outcome")
     changed = content(artefact) != content(before)
     if outcome == Answer.UPDATED.value:
         if changed:
@@ -1281,19 +1130,19 @@ def _friction_message(question: _Question, deferral_predates: bool) -> str:
 def _written_outcome(artefact: Artefact) -> str | None:
     """A revalidation's `outcome` as the answers list gives it: `updated` or `unchanged`,
     else `None`."""
-    outcome = _revalidated_field(artefact, "outcome")
+    outcome = revalidated_field(artefact, "outcome")
     return outcome if outcome in (Answer.UPDATED.value, Answer.UNCHANGED.value) else None
 
 
 def _revalidation_fields(artefact: Artefact) -> tuple[Any, Any, str | None]:
     """What a revalidation is listed on: the parsed `at`, the `outcome` and the folded
     `unchanged-because`, an absent one counting as a value."""
-    return parsed_at(artefact), _revalidated_field(artefact, "outcome"), _because(artefact)
+    return parsed_at(artefact), revalidated_field(artefact, "outcome"), _because(artefact)
 
 
 def _reason(artefact: Artefact, deferral: Deferral) -> str | None:
     """The folded reason of one deferral entry, `None` when it has none."""
-    return _entry_reason(artefact, deferral) or None
+    return entry_reason(artefact, deferral) or None
 
 
 def _written_answers(

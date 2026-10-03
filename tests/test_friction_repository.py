@@ -1267,11 +1267,13 @@ def test_json_document_shape(timeline: Timeline) -> None:
     (report,) = doc["artefacts"]
     assert sorted(report) == [
         "artefact",
+        "cut",
         "deferral_points",
         "location",
         "revalidation_point",
         "state",
     ]
+    assert report["cut"] is False
     assert report["state"] == "stale" and sorted(report["revalidation_point"]) == [
         "author",
         "change",

@@ -7,9 +7,9 @@ never the working tree, as the check does; neither writes anything.
 
 - **`debt`** lists the check's *stale* and *deferred* findings — the debt
   derived from git, never kept in a ledger (point 9) — oldest first by the
-  author date of their origin: for stale debt the first commit after the
-  revalidation point that changed the anchor (or moved the artefact), for
-  deferred debt the deferral point. Each entry carries its kind, the
+  author date of their origin: for stale debt the oldest change to the
+  anchor since its revalidation point that no commit put back (or the move
+  of the artefact), for deferred debt the deferral point. Each entry carries its kind, the
   artefact, the anchor, the origin — commit, author, date, change — and, for
   a deferral, its reason. The entries are exactly those `pkit friction check
   --all` reports (`run_repository_check`); ties keep the check's order,
@@ -295,8 +295,8 @@ def render_debt_json(listing: DebtListing) -> str:
 
 _DEBT_LEGEND: dict[fr.RepositoryFindingKind, str] = {
     _Kind.STALE: (
-        "an anchor changed after the revalidation point, or the artefact moved, with no answer — "
-        "since the first such commit"
+        "an anchor differs from what it stood on at the revalidation point, or the artefact "
+        "moved, with no answer — since the oldest change not put back"
     ),
     _Kind.DEFERRED: (
         "friction deliberately postponed — since the commit that introduced the deferral"
