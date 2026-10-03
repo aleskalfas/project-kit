@@ -51,7 +51,7 @@
       }
     },
     "validators": {
-      "description": "Validators this component registers with `pkit validate` (ADR-058): a mapping from a validator name (a word) to its entry, which names one leaf of this component's `commands:` tree by `command` — the leaf carries the `help` line and must declare `query-contract: true`. The umbrella addresses the validator `<component>:<name>` and runs the leaf's script from the project root with the one argument `--json`, the offline marker set and bounded like a predicate, reading one JSON document — and nothing else — from its standard output: `{\"summary\": [\"...\"], \"findings\": [{\"severity\": \"error\"|\"warning\"|\"info\"|\"report\", \"location\": \"...\", \"message\": \"...\"}]}` (a finding may add a `label`); diagnostics go to standard error. Only `error` fails the umbrella. An abnormal exit, a timeout, a leaf without the declaration or an answer that is not that document is an error finding, never a clean pass. `order` sorts the validator among the members (default 1000, after the backbone's, which take the orders below 1000). The living-docs capability registers the first, `living-docs:spaces`.",
+      "description": "Validators by which this component joins validation, `pkit validate`, each naming a command it registers (COR-055 point 3; the block's keys are ADR-058's): a mapping from a validator name (a word) to its entry, which names one leaf of this component's `commands:` tree by `command` — the leaf carries the `help` line and must declare `query-contract: true`. The umbrella addresses the validator `<component>:<name>` and runs the leaf's script from the project root with the one argument `--json`, the offline marker set and bounded like a predicate, reading one JSON document — and nothing else — from its standard output: `{\"summary\": [\"...\"], \"findings\": [{\"severity\": \"error\"|\"warning\"|\"info\"|\"report\", \"location\": \"...\", \"message\": \"...\"}]}` (a finding may add a `label`); diagnostics go to standard error. Only `error` fails the umbrella (COR-055 point 5). An abnormal exit, a timeout, a leaf without the declaration or an answer that is not that document is an error finding, never a clean pass (COR-055 point 6). `order` sorts the validator among the members (default 1000, after the backbone's, which take the orders below 1000). The living-docs capability registers the first, `living-docs:spaces`.",
       "type": "object",
       "propertyNames": {
         "pattern": "^[a-z][a-z0-9-]*$"
@@ -174,7 +174,7 @@
           "$ref": "#/$defs/non-empty-string"
         },
         "query-contract": {
-          "description": "The one constant declaration that this command honours the query contract (COR-050 point 2 and ADR-057 point 3; the literal is ADR-058's): bounded, deterministic, read-only, needing no network. Required on the command a validator names, and on every query command a capability registers. It grants nothing and is trusted, not enforced.",
+          "description": "The one constant declaration that this command honours the query contract (COR-050 point 2 and ADR-057 point 3; the literal is ADR-058's): bounded, deterministic, read-only, needing no network. Required on the command a validator names (validation runs it as a query, COR-055 point 3), and on every query command a capability registers. It grants nothing and is trusted, not enforced.",
           "const": true
         },
         "reads": {

@@ -15,8 +15,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-01T22:17:30Z
-      outcome: updated
+      at: 2026-10-02T14:53:01Z
+      outcome: unchanged
+      unchanged-because: check.sh's comment now calls pkit validate the project's one check of its own state and cites COR-055, and the decisions README cites COR-055 for why the narration warnings do not fail; this page calls pkit validate the umbrella over every registered check of the tree's state, lists the same aggregator lines, and points to the decisions README as the record system's spec, all still true
 ---
 
 # Contributing to project-kit
