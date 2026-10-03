@@ -61,9 +61,14 @@
     },
     "anchors": {
       "title": "Anchors, grouped by kind (COR-050 point 2)",
-      "description": "The three kinds the backbone resolves. A kind a capability registers is not admitted here until the kind registry exists; validation then reads registered kinds the way the container reads role blocks.",
+      "description": "The three kinds the backbone resolves, and any kind a capability registers (COR-050 point 2): a kind is a word, its values a list as for the three. Whether an installed capability registers a kind is not this schema's to say: the friction pass reports a kind nothing resolves, as the container reports an orphaned role block.",
       "type": "object",
-      "additionalProperties": false,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/anchor-values"
+      },
       "properties": {
         "path": {
           "description": "Files or globs relative to the repository root; `**` matches across folders.",
@@ -169,12 +174,9 @@
       ],
       "properties": {
         "kind": {
+          "description": "The anchor's kind as the `anchors` mapping writes it: one of the three the backbone resolves, or a kind a capability registers.",
           "type": "string",
-          "enum": [
-            "path",
-            "record",
-            "artefact"
-          ]
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
         },
         "value": {
           "$ref": "#/$defs/non-empty-string"
