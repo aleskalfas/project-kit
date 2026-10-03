@@ -1,0 +1,34 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  A pull request's description lists the answers its change wrote, and
+  `land-work` merges such a change on `--yes` only after the list was there
+  ([project-management:DEC-055-pr-lists-answers]). `open-pr` writes the change
+  check's list of the revalidations, deferrals and reasons for having no
+  anchors the change wrote — derived at the pushed head with `pkit friction
+  check --json --head` — into a section of its own, `## Friction answers`,
+  last before the provenance footer, every word as the check's human view
+  shows it; it never refuses to open over the list, and leaves it out with one
+  warning line when it cannot write it. `edit-pr` carries the section across
+  every edit and drops one a supplied body holds. `land-work` gains an
+  `answers` step between the review and the merge: it derives the list at the
+  pinned head, prints it above its `ready:` line and writes it into the
+  description where it is missing or differs. Where the change wrote answers,
+  `--yes` merges only with `--expect-head` and the list already in the
+  description; a run that had to write it, or named no head, stops at `ready:`
+  (exit 8) — run the `ready:` line's command once the person has read the list.
+  `land-work` refuses, with nothing merged: a list it cannot derive, or a base
+  it cannot fetch (exit 2); a reason that reads as a closing reference, a list
+  the description cannot hold, front matter the check cannot read in a file the
+  change touches, and — where the change wrote answers — a base that moved on
+  after the head left it (exit 1). Where an anchor's resolver must run, the list
+  is derived from a temporary checkout of the head. No reader of a description
+  takes the section as input: it closes no issue, meets no closing or Doc
+  impact requirement and overrides no mapping. `--doc-impact-from-friction`
+  fills an unwritten `## Doc impact` with one line counting the answers listed
+  there, in place of a bullet per answer. A change that wrote no answers lands
+  as before. Upgrade the capability together with the backbone: it needs the
+  release whose change check lists the answers a change wrote.
