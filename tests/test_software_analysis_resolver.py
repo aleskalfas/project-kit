@@ -30,10 +30,13 @@ analysis never rewritten to match broken code:
   this capability does not read, is refused, and an anchor in such a state is
   never current — nothing is proposed beside it;
 - the **agent's files**: its front matter (Write for the workspace, no Edit,
-  owning no path); that it performs the judgment and is no reviewer; that it
-  never runs a writer — its body and storyboard name one only among the
-  commands for the person, never with a consent flag; its storyboard's three
-  scenarios; the references; and the deployed copy.
+  owning no path, no tool for asking the person); that it performs the judgment
+  and is no reviewer; that it never runs a writer — its body names one only in
+  the paragraph that sets the agents README's four conditions, the second of
+  which never holds for it, and among the commands for the person, never with a
+  consent flag (#1148); its storyboard's three scenarios; the references; and
+  the deployed copy. That those commands write nothing without a person is
+  `test_handed_over_writers.py`'s.
 """
 
 from __future__ import annotations
@@ -726,6 +729,23 @@ CONSENT = re.compile(r"--yes\b|--dry-run\b")
 COMMANDS_SECTION = "## Commands for the person"
 COMMANDS_BLOCK = "# Commands for the person"
 
+#: The one paragraph of the body that names the friction writers outside the
+#: commands for the person: it sets the conditions for running one (COR-013; the
+#: agents README, "Friction writers").
+RULE = "**You never run a writer.**"
+
+#: The four conditions for running a writer, as the body restates them.
+CONDITIONS = (
+    "its body names the writers and the conditions; it can ask the person; the person was "
+    "shown every word before it is written; and it is not a reviewer."
+)
+
+#: Claude Code's tool for putting a question to the person: without it the agent
+#: cannot ask, so it runs no writer.
+ASKING_TOOL = "AskUserQuestion"
+
+SA_README = CAPABILITY / "README.md"
+
 SCENARIOS = ("Happy path", "The stop", "A regression, recorded")
 SCENARIO_PARTS = ("**Trigger.**", "**Preconditions.**", "### Walkthrough", "### Behind the scenes")
 
@@ -770,28 +790,68 @@ def _command_lines(commands: str) -> list[str]:
     return [line.strip() for line in commands.splitlines() if line.strip().startswith("pkit ")]
 
 
+def _the_rule(rest: str) -> tuple[str, str]:
+    """(the paragraph that names the writers and sets the conditions, everything else)."""
+    paragraphs = rest.split("\n\n")
+    (rule,) = [p for p in paragraphs if p.startswith(RULE)]
+    return rule, "\n\n".join(p for p in paragraphs if p is not rule)
+
+
 def test_the_agent_performs_the_judgment_and_never_runs_a_writer() -> None:
     front, body = _split(AGENT)
     assert front["name"] == "analysis-resolver"
     assert set(front["tools"]) == {"Read", "Glob", "Grep", "Bash", "Write"}  # no Edit
+    assert ASKING_TOOL not in front["tools"]  # it cannot ask the person
     assert front["owns"] == []
     assert "model" not in front and "effort" not in front
     assert front["storyboards"] == [STORYBOARD.name]
     assert f"`{STORYBOARD.name}`" in body
     assert "**perform the judgment of the revalidation**" in body
     assert "You are **not a reviewer**" in body
-    assert "**You never run a writer.**" in body
     assert "`.agent-workspace/analysis-resolver/<change>/`" in body
     assert "#revalidation" not in body  # links the README's table by name, restating none
     assert WRITES.search(front["description"]) is None
 
     commands, rest = _commands_for_the_person(body)
-    assert WRITES.findall(rest) == []
+    _rule, elsewhere = _the_rule(rest)
+    assert WRITES.findall(elsewhere) == []  # named only in the rule and the commands
     for writer in ("friction revalidate", "friction defer", "analysis new revalidation"):
         assert writer in commands, writer
     assert "record-status" not in commands
     assert [c for c in _command_lines(commands) if CONSENT.search(c)] == []
     assert "<the defect reference>" in commands and '--confirmed-by "<your name>"' in commands
+
+
+def test_the_rule_sets_the_four_conditions_and_the_agent_runs_none() -> None:
+    """The four conditions of the agents README's "Friction writers": the second never
+    holds for this agent, which has no tool for asking, so in every session it hands
+    the commands over and runs none — and says who may run them."""
+    _, body = _split(AGENT)
+    rule, _ = _the_rule(_commands_for_the_person(body)[1])
+    for writer in ("`pkit friction revalidate`", "`pkit friction defer`"):
+        assert writer in rule, writer
+    assert '(`.pkit/agents/README.md`, "Friction writers")' in rule
+    assert CONDITIONS in rule
+    assert "The second never holds for you: you have no tool for putting a question" in rule
+    assert "So in every session you hand the commands over, without `--yes`, and run none." in rule
+    assert "`pkit friction record-status` is the after-merge job's and never yours" in rule
+    assert (
+        "the person; the session that hears the person, once the person has accepted the "
+        "words; or an agent making the change, for the answers its own change owes."
+    ) in rule
+    # Whether an agent may run a writer is recorded: no sentence says no record does.
+    assert "no record does" not in body
+    assert "you hand them the commands that write it, and they run them" not in body
+    assert "you hand over the commands that write it, and run none" in body
+
+
+def test_the_readme_points_at_the_recorded_rule() -> None:
+    text = SA_README.read_text(encoding="utf-8")
+    assert "for a project record to sanction; none does" not in text
+    assert (
+        'Whether an agent may run a friction writer is set out in the agents README, "Friction '
+        'writers" (COR-050 point 3)'
+    ) in text
 
 
 def test_the_storyboard_scripts_the_three_scenarios_and_hands_over_commands() -> None:
@@ -803,6 +863,11 @@ def test_the_storyboard_scripts_the_three_scenarios_and_hands_over_commands() ->
     assert "**Hold only what depends on the ambiguity.**" in body
     pattern = body.split("## Invocation pattern", 1)[1].split("\n## ", 1)[0]
     assert "it returns the proposal" in pattern and "and nothing else" in pattern
+    assert (
+        "Either way it runs no writer: it has no tool for putting a question to the person, "
+        "so the second of the four conditions in its body never holds"
+    ) in pattern
+    assert "no record sanctions" not in body
     sections = re.split(r"^## Scenario \d+: ", body, flags=re.MULTILINE)[1:]
     titles = [section.splitlines()[0] for section in sections]
     assert len(titles) == len(SCENARIOS)
