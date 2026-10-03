@@ -28,7 +28,7 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-02T14:52:52Z
+      at: 2026-10-03T01:52:11Z
       outcome: updated
 ---
 
@@ -572,6 +572,8 @@ The backbone manifest's `components` list is the canonical install record.
 **Remove** a component → run refusal checks (see below), delete the registry entry, then delete the per-component manifest file. Adopter-owned content authored on top of the component (project-side records, customisations) is left untouched per COR-005 and the no-shared-files invariant. For a **capability**, whether the capability's *subtree* is also deleted is origin-dependent — a kit-shipped copy is deleted, an incubated (adopter-authored) subtree is kept unless explicitly purged (COR-031 D4; see "Uninstall: origin-aware removal" below).
 
 **Status / validate / upgrade** walk the registry to find component manifests, then operate per component.
+
+**What a copy leaves out.** Every copy of a source tree into a project — the backbone's on `pkit init` and `pkit sync`, a capability's on install and on the refresh that sync and upgrade run — leaves out Python's caches: any `__pycache__` directory and any compiled `.pyc` or `.pyo` file the source holds, which importing its scripts in place writes there. So what a project receives does not depend on what ran in the source before the copy. One rule decides it for every copy path (`project_kit.treecopy.is_python_cache`).
 
 ### Install pre-flight checks
 

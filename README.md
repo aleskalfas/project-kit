@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-10-02T07:46:37Z
+      at: 2026-10-03T01:52:22Z
       outcome: unchanged
-      unchanged-because: The page says init announces its target and asks first off the current folder before writing anything; the refusal of a methodology source shipping an adapter and a capability of one name also comes before anything is written, so what the page says of init still holds
+      unchanged-because: install and sync now leave Python caches out of what they copy from the source; this page promises that an update never touches the adopter's own files and that every other file has one owner, which still holds, and names no file a copy carries
 ---
 
 # project-kit

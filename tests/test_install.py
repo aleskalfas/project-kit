@@ -405,6 +405,36 @@ def test_install_does_not_propagate_scratchpad_state_contents(tmp_target: Path) 
     assert notes == []
 
 
+# ---- Python caches stay in the source (#1325) --------------------------------
+
+
+def _area_holding_python_caches(source_kit: Path) -> Path:
+    """A flat area — top-level files, `core/` and a non-standard subdir, as
+    `permissions/` ships — each holding a `__pycache__/x.cpython-312.pyc` and a
+    stray compiled file, as importing its modules in place leaves them."""
+    area = source_kit / "permissions"
+    for directory in (area, area / "core", area / "profiles"):
+        (directory / "__pycache__").mkdir(parents=True)
+        (directory / "module.py").write_text("VALUE = 1\n", encoding="utf-8")
+        (directory / "__pycache__" / "x.cpython-312.pyc").write_bytes(b"bytecode")
+        (directory / "stray.pyc").write_bytes(b"bytecode")
+    return area
+
+
+@pytest.mark.parametrize("overwrite", [False, True], ids=["init", "sync"])
+def test_an_area_copy_leaves_out_python_caches(tmp_path: Path, overwrite: bool) -> None:
+    source_kit, target_root = tmp_path / "source", tmp_path / "target"
+    area = _area_holding_python_caches(source_kit)
+    installed = target_root / ".pkit" / "permissions"
+    ctx = install.InstallContext(target_root=target_root, source_kit=source_kit, dry_run=False)
+
+    install._install_area(area, installed, ctx, overwrite=overwrite)
+
+    copied = sorted(p.relative_to(installed).as_posix() for p in installed.rglob("*"))
+    assert {"module.py", "core/module.py", "profiles/module.py"} <= set(copied)
+    assert [p for p in copied if "__pycache__" in p or p.endswith(".pyc")] == []
+
+
 # ── rules area propagation (issue #96) ────────────────────────────────────
 
 

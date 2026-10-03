@@ -1,0 +1,145 @@
+name: friction-report
+
+# The whole-repository friction check (COR-050 point 6; ADR-055 point 5), where
+# a person reads it (#1266). The change check guards a pull request; friction no
+# pull request touches — an anchor changed outside its artefact's own change,
+# debt older than the gate — is found only here. Every artefact is judged
+# against the current history: stale debt and deferrals with their origins, the
+# other findings, unanchored artefacts and uncovered surface.
+#
+# It reports and never fails on what it finds (COR-050 point 12): `pkit friction
+# check --all` exits 0 whatever it finds, and so do the renderer and the
+# publisher. The run fails only when the check could not run, its findings
+# could not be published, or there is more than one tracking issue, and its log
+# says which. It is no required status.
+#
+# The findings go to one tracking issue, kept by `scripts/friction_tracking_issue.py`
+# from the body `scripts/friction_report_body.py` renders: rewritten in place
+# when the findings change, open exactly while a finding needs an answer, never
+# a comment per run. One tracking issue; a second is a failed run that names
+# both. The run's step summary carries the same body.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Daily, 05:41 UTC. The check is a function of `main`'s history, so this run
+    # finds nothing a push did not; it repeats a publication that failed and
+    # restores an issue changed by hand.
+    - cron: "41 5 * * *"
+  workflow_dispatch: {}
+
+# Nothing by default; each job is granted what it uses. No secret beyond the
+# built-in token.
+permissions: {}
+
+# One run at a time on a ref, so that two runs on `main` cannot each find no
+# issue and open one. The run in progress is never cancelled; a newly queued run
+# replaces one still pending on the same ref, and the newest is the one whose
+# findings matter. A run dispatched from another branch is in a group of its
+# own, so it never displaces `main`'s.
+concurrency:
+  group: friction-report-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Runs the check and renders it, with a token that can only read. Everything
+  # the project installs runs here, and nothing here can write an issue.
+  render:
+    # Always on what `main` holds (ADR-055 point 5): a run dispatched by hand
+    # from another branch publishes nothing. Only in project-kit's own
+    # repository: a fork's issues are off by default, so its run would fail.
+    if: github.ref == 'refs/heads/main' && github.repository == 'aleskalfas/project-kit'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout (full history, back to every revalidation point)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Each artefact's file is walked back to its revalidation point; a shallow
+      # clone would report the points beyond it as unreachable instead of
+      # judging them. Stop here rather than publish that.
+      - name: Confirm the full history
+        run: |
+          if [ "$(git rev-parse --is-shallow-repository)" != "false" ]; then
+            echo "::error::The clone is shallow; the whole-repository friction check needs the full history (fetch-depth: 0)."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install project (clean resolve)
+        run: uv sync
+
+      # As `checks.yml` does before its aggregator: provisions every registered
+      # query command's environment, so a resolver a capability registers for
+      # an anchor kind runs here as it does in the required check, and no
+      # anchor is published as unresolved for want of it.
+      - name: Sync (provisions the query commands)
+        run: uv run pkit sync
+
+      - name: Whole-repository friction check (reports, never fails)
+        run: uv run pkit friction check --all --json > "$RUNNER_TEMP/friction.json"
+
+      # The body and the count of findings that need an answer, rendered from
+      # the document above; the body also goes to the run's step summary.
+      - name: Render the findings
+        run: |
+          uv run python scripts/friction_report_body.py "$RUNNER_TEMP/friction.json" --json > "$RUNNER_TEMP/friction-report.json"
+          uv run python scripts/friction_report_body.py "$RUNNER_TEMP/friction.json" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Hand the rendering to the publishing job
+        uses: actions/upload-artifact@v4
+        with:
+          name: friction-report
+          path: ${{ runner.temp }}/friction-report.json
+          if-no-files-found: error
+          retention-days: 1
+
+  # Writes the issue, and does nothing else. The token that can write issues
+  # reaches this job alone: GitHub's own actions, which check out the publisher,
+  # set up Python and fetch the rendering, and then the publisher, which needs
+  # nothing but the standard library and `gh`. What it reads of the rendering is
+  # data, never code.
+  publish:
+    needs: render
+    if: github.ref == 'refs/heads/main' && github.repository == 'aleskalfas/project-kit'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      # The publisher alone, from the commit `render` checked; the token stays
+      # out of the clone's configuration.
+      - name: Checkout (the publisher only)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/friction_tracking_issue.py
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Fetch the rendering
+        uses: actions/download-artifact@v4
+        with:
+          name: friction-report
+          path: ${{ runner.temp }}
+
+      - name: Publish to the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/friction_tracking_issue.py "$RUNNER_TEMP/friction-report.json"
