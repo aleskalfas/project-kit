@@ -508,7 +508,12 @@ def test_refuse_resolver_without_query_contract(query_contract: bool, refused: s
         assert reason is None
     else:
         assert reason is not None and refused in reason
-    assert fc.registered_anchor_kinds(Path(".")) == {}
+
+
+def test_a_project_with_no_capability_installed_registers_no_kind(repo: AdopterRepo) -> None:
+    """The registry reads installed capabilities alone: the backbone and the adapter
+    register nothing, whichever shipped capabilities would."""
+    assert fc.registered_anchor_kinds(repo.root) == {}
 
 
 def test_a_record_anchor_changes_with_its_decision_file(repo: AdopterRepo) -> None:
