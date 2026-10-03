@@ -17,8 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, ADR-051, ADR-052]
     revalidated:
-      at: 2026-10-03T13:23:33Z
-      outcome: updated
+      at: 2026-10-03T22:57:19Z
+      outcome: unchanged
+      unchanged-because: "This page rests on COR-050 for who may write an answer and when: an agent making a change may write the answers its change owes and shows the change check's own list to the person who authorises the merge. COR-050's refinement in this change says where a revalidation point lies, when an anchor counts as changed and how a written-back answer is judged; it leaves who writes an answer and on whose decision as they were, so the Friction writers section still holds."
 ---
 
 # Agents
