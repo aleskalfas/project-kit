@@ -56,6 +56,10 @@ What is checked, each against the record's words:
   without one yet is reported.
 - **Separation** (point 1). Roots that are the same folder, or nested, are
   reported for onboarding to clear, never failed.
+- **Captured sources** (point 4). The sources folder holds only captured
+  sources, each found from its name; a `source` anchor or a rule's cited
+  source that no file captures, and a captured source nothing names, are
+  reported. `sources` states those checks.
 
 **Where the documents are is read, never computed here.** The roots, every
 place the project and each capability declares, the files each one matches and
@@ -88,7 +92,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-from _lib import formats
+from _lib import formats, sources
 from _lib.artefacts import Document, Unreadable, read_artefacts
 from _lib.declarations import (
     BACKBONE_CONFIG,
@@ -325,8 +329,18 @@ def check(root: Path, read: Callable[[], Readers] = read_readers) -> Outcome:
     _separation_findings(decl, outcome)
     reader_note = _reader_findings(decl, walk, read, outcome)
     format_note = _format_findings(root, decl, walk, outcome)
+    captured = sources.check(root, decl.artefacts)
+    outcome.findings.extend(
+        Finding(ERROR if problem.error else REPORT, problem.location, problem.message)
+        for problem in captured.problems
+    )
     outcome.summary = _summary(
-        decl, walk, entry_notes, definition_notes, (reader_note, format_note), outcome
+        decl,
+        walk,
+        entry_notes,
+        definition_notes,
+        (reader_note, format_note, captured.summary),
+        outcome,
     )
     return outcome
 

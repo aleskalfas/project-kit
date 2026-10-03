@@ -1,7 +1,7 @@
 """Anchor kinds a capability registers, and their resolvers (COR-050 point 2; #1261).
 
 Every test stands up a real adopter repository with a fixture capability in it
-— no shipped capability registers a kind (`tests.anchor_kind_capabilities`) —
+— not living-docs, which registers `source` itself (`tests.anchor_kind_capabilities`) —
 whose `package.yaml` registers anchor kinds under `friction.kinds`, each naming
 a `commands:` leaf:
 

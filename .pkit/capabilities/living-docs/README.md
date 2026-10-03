@@ -12,7 +12,7 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-03T14:29:48Z
+      at: 2026-10-03T19:04:10Z
       outcome: updated
 ---
 
@@ -24,7 +24,7 @@ Keep your documentation **true for the people who read it**, even when an agent 
 
 - **Spaces.** A user space and a technical space, kept separate: neither root lies inside the other. You can add others. New pages go under each space's root. A space can also include places the project declares — inside a root, where they inherit that root's space, or outside every root, such as the repo's top-level README, where the capability's project configuration assigns them to a space. Where places nest the most specific one wins. Decision records, rule sets, and anything another capability claims — through a place, or a folder of documents it holds, such as an analysis capability's revalidation records — are anchor targets or that capability's own, never pages. Each space's *definition* (its rules) lives in the technical space.
 - **Rules.** The shared method rule set, `LDOC`, ships with this capability. Each space's definition inherits it and adds its own rules (core rule sets, COR-051).
-- **Anchors and friction.** Each page's anchors (code, decisions, sources, analysis artefacts) must ground everything it says. The core friction check (COR-050) flags a page when any of those changed and nobody revalidated it. When two branches revalidate the same page, its block conflicts on merge, and whoever resolves the conflict revalidates the page as merged: when you merge the check's base into your branch and the conflict lies only in the block, `pkit friction resolve` takes the base side's answer, keeps both sides' deferrals, and names the revalidation still owed (the CLI README, "friction resolve").
+- **Anchors and friction.** Each page's anchors (code, decisions, [sources](#sources), analysis artefacts) must ground everything it says. The core friction check (COR-050) flags a page when any of those changed and nobody revalidated it. When two branches revalidate the same page, its block conflicts on merge, and whoever resolves the conflict revalidates the page as merged: when you merge the check's base into your branch and the conflict lies only in the block, `pkit friction resolve` takes the base side's answer, keeps both sides' deferrals, and names the revalidation still owed (the CLI README, "friction resolve").
 - **Proposals, never blind edits.** The agent, `living-docs` ("The agent" below), proposes each fix with its evidence, and a person reviews it.
 - **Reader-review.** The agent reads a page as its declared reader and reports what that reader would miss or wouldn't need.
 
@@ -47,6 +47,45 @@ pkit:
 **A kind's structure.** Pages of a kind follow one format (`RS-LDOC-004`). A kind's template is the starting shape you fill in; the part of the format the validator checks is the kind's *structure*: the sections every page of the kind carries, in order where order matters. Each kind this capability ships declares its structure once, in `schemas/page-kinds.yaml`, and that file is where to read what a kind's pages must carry: each section is a heading level and, where the kind fixes the wording, its text, in the order listed unless the kind sets `ordered: false`. A structure names only what every page of the kind must carry, so a template may show more, and a page may carry other sections.
 
 A section is a heading written with one to six `#` at the start of a line. These are not read as one: a `#` line that is indented (under a list item, say) or that lies inside a block quote, fenced code or an HTML comment; an underlined (setext) heading; an HTML heading (`<h1>`). A section the kind leaves you to word needs words of its own, so an empty `#` and a template's unfilled `<placeholder>` do not count; fixed text is compared ignoring case, runs of white space and trailing punctuation. A page whose kind declares no structure — a kind your project adds, say — is reported with its kind and never failed.
+
+## Sources
+
+A page that rests on something outside the repository — a standard, a specification, another project's documentation — anchors it with the `source` kind, by the source's name:
+
+```yaml
+pkit:
+  friction:
+    anchors:
+      path: [src/release/**]
+      source: [keep-a-changelog]
+```
+
+**Capture each source once.** The friction checks read the repository alone and never reach the network, so each source is captured in a file of its own, `.pkit/capabilities/living-docs/project/sources/<name>.yaml`:
+
+```yaml
+# yaml-language-server: $schema=../../schemas/source.schema.json
+title: Keep a Changelog
+url: https://keepachangelog.com/en/1.1.0/
+version: "1.1.0"
+```
+
+- `title` — what the source is called. Required.
+- `url` — where it is found. Optional: a printed standard has none.
+- `version` — which text of the source your pages were last checked against, as the source labels that text: its version, edition or revision. For Keep a Changelog that is the document's `1.1.0`, not the release its own changelog has reached. For a source that labels none, name the exact text another way, such as a commit of the repository it is published from. Only when nothing names it, write the date you read it, `YYYY-MM-DD` — which records when, not what, so a later reader has nothing to compare it with. Quote it: YAML reads `1.1` as a number and `2026-10-03` as a date, and the shape wants text. Required.
+
+Write nothing else. The file is bound to its shape (`schemas/source.schema.json`) by its path, so it needs no `pkit_schema`. A `schema_version` would make any later version of the shape rewrite every captured source. If you want the editor directive comment, write it when you create the file. The name is lower-case words of letters and digits joined by single hyphens, starting with a letter, at most 64 characters (`rfc-9110`, `iso-8601`, `owasp-top-10`), so one name is one file on any disk. It cannot start with a digit (`twelve-factor-app`) or hold a dot; a version belongs in the file, not the name. Who captured a source, and when each version was recorded, is git's to say.
+
+**What counts as the source changing: any change to its file, nothing else.** That is why the file holds only these fields: describe the source, and say why a page relies on it, on the page. Recording a new version, or correcting the title or the address, is then the only edit the file has reason to see, and each asks every page anchored to the source for its answer — updated, unchanged with its reason, or deferred. Other edits ask them too: a comment added later; a reformat (a repository-wide YAML formatter or line-ending change asks every source-anchored page at once); `1.1` rewritten as `1.1.0`. A new version asks every page resting on any part of the source. To narrow that, capture the parts you rely on separately (`owasp-top-10-a01`), knowing that nothing keeps their versions in step.
+
+**Recording a new version.** When you read a new version of a source, edit `version` — and `url` if the address moved — in a pull request; the change check asks every page anchored to the source to answer in the same pull request. A change to the source that nobody records is not seen: nothing fetches it.
+
+**Dead, or no answer.** A name no file captures is a dead anchor: the change check fails it where the pull request adds it, the whole-repository check reports it, and `pkit validate` reports it under `living-docs:spaces` without failing. Commit a source's file with the page that first anchors it: a file only your working tree holds is no answer to a check that reads HEAD. If where sources are kept cannot be read — a permission or disk error — the resolver gives no answer: the page is not judged, and the documentation check reports itself unresolved until a run succeeds (Connections, below).
+
+**Rule-set origins** may cite a captured source as where a rule's words were said: `origin: {…, source: {kind: source, value: keep-a-changelog}}` (COR-051 point 5).
+
+**Uninstalling living-docs** removes its project tier — captured sources with it; they stay in git history — and leaves every `source` anchor with no resolver. Remove those anchors in the same change: where friction is enforced, the change check fails a pull request that keeps them while taking their resolver away.
+
+`pkit living-docs resolve-source <name>` prints the file a name resolves to. It is the resolver the friction checks run (`--json` prints `{"paths": [...]}`).
 
 ## The shared method: `LDOC`
 
@@ -103,6 +142,8 @@ A place inside a root belongs to that root's space; list it under `places` only 
 
 **What it reads.** Where your documents are, it reads from the core, through `pkit friction artefacts --json` — the same discovery `pkit validate` and the friction checks read: your documentation roots, the places your configuration and every installed capability declare, the files each place matches, each file's front matter, and the documents a capability holds that are not artefacts, with their owner. A held document — software-analysis's revalidation records, say — is walked by no place, so it is never an unclassified document: it is claimed by its owner and counted in the summary as "of another component" wherever it sits under your roots (DEC-001 point 1). It never reads the declarations or walks the places itself, so it can never disagree with the core about which files a place holds; a synced copy, a place outside the repository and a malformed declaration are skipped exactly as the core skips them. What it decides over that answer is this capability's: which place wins where places nest, which space a place serves, and what a document is. Besides, it reads its own project configuration, and the readers point — only when some page names a reader — through `pkit connections resolve`. When the core gives no reading of the places, that is its one error, and no space is checked. It fails on:
 
+- the sources folder, `.pkit/capabilities/living-docs/project/sources/`, or a folder on its path, that is a file or a link, or is named in another case (`Sources/`): no source is read from it, on any disk; the sources folder unreadable — a permission or disk error — so no source is checked;
+- an entry of the sources folder that is not a captured source: a `.yaml` file not named `<name>.yaml` with a name of the grammar in Sources, a folder, or a link. An entry whose name begins with `.` — `.gitkeep`, an editor's or a desktop's file — is left alone: no source's name begins with one. A captured source's shape — the three fields, nothing else, each text — is `schemas/source.schema.json`, which `pkit validate` applies under `data`, bound by the file's path (COR-023);
 - a place outside every root that holds a document nothing else claims, with no assignment; an assignment naming a place `friction.places` does not declare, or a space nobody declares; a place assigned twice;
 - a project place equal to or enclosing a root; a file two project places claim with equal specificity;
 - a decision record, a rule-set file, or another capability's artefact or held document carrying `reader` or `kind` — none is ever a page;
@@ -113,7 +154,7 @@ A place inside a root belongs to that root's space; list it under `places` only 
 - an entry point that is not a document of its space — under its root or in a place assigned to it;
 - a definition outside `<definitions>/rule-sets/`, or one that does not inherit `living-docs:LDOC`.
 
-It reports, without failing: a space with no definition yet, roots that are the same folder or nested (onboarding separates them), each kind that declares no structure, with the pages that name it and the kinds that do declare one, and — in its summary — the unclassified documents, whether each entry point is a page yet, the readers each page's reader was checked against, how many pages were checked against their kind's structure and how many were not because their kind declares none, and the pages left unanchored: those without an accepted reason, onboarding's work still to do, and apart from them those whose friction block gives one as `unanchored-because` (DEC-001 point 8; COR-050 point 1). The human view lists both, each accepted page with its reason; an excluded page is in neither. A synced tree declared as a place is the core's `synced-place` finding, under `friction` (above).
+It reports, without failing: a `source` anchor, or a rule origin citing a `source`, that no captured file answers (the whole-repository check reports it dead); a captured source nothing anchors or cites; a captured source carrying `schema_version` or `binds_to`, which its shape permits only for its own carrier; a file in the sources folder whose name does not end in `.yaml` — notes, an editor's backup — which captures nothing; a space with no definition yet, roots that are the same folder or nested (onboarding separates them), each kind that declares no structure, with the pages that name it and the kinds that do declare one, and — in its summary — the unclassified documents, whether each entry point is a page yet, the readers each page's reader was checked against, how many pages were checked against their kind's structure and how many were not because their kind declares none, and the pages left unanchored: those without an accepted reason, onboarding's work still to do, and apart from them those whose friction block gives one as `unanchored-because` (DEC-001 point 8; COR-050 point 1). The human view lists both, each accepted page with its reason; an excluded page is in neither. A synced tree declared as a place is the core's `synced-place` finding, under `friction` (above).
 
 **Pages are checked** for their front matter — `reader` and `kind`, the reader against the readers point, and the friction block, which `pkit validate` checks under `friction` — and for their body's structure, against the structure their kind declares. Everything else a page owes `LDOC` is judgment, left to the agent's reader-review (below): whether each section says what its kind's template asks, whether the anchors ground every statement, whether each fact is stated once, and whether the page says only what its reader needs.
 
@@ -147,7 +188,7 @@ The checks above tell you *that* a page drifted and *which* documents are not pa
 
 | Ask it to… | It reads | It gives you |
 |---|---|---|
-| **fix a stale or deferred page** | `pkit friction explain <page>`: the anchors that changed and the commits behind them; then those commits and the page | a diff of the page and a pull-request body, citing each commit and the anchor it changed, and naming the answer you give once it is applied (`pkit friction revalidate … --outcome updated`). When nothing in the page needs to change, it proposes the `unchanged` answer with a draft reason for you to confirm. |
+| **fix a stale or deferred page** | `pkit friction explain <page>`: the anchors that changed and the commits behind them; then those commits and the page | a diff of the page and a pull-request body, citing each commit and the anchor it changed, and naming the answer you give once it is applied (`pkit friction revalidate … --outcome updated`). When nothing in the page needs to change, it proposes the `unchanged` answer with a draft reason for you to confirm. For a page `explain` reports `unresolved`, it says why from the anchor's finding and proposes nothing for the prose: for `no-answer`, run again, then `pkit sync`, or the resolver needs mending; for `unresolved-kind`, where the kind misspells a registered one (`pkit validate` names the nearest), a one-line anchor correction with the revalidation a changed anchor list needs, otherwise the capability to install or the registration to mend. |
 | **review a page as its reader** | the page's `reader`, resolved through `pkit::documentation:readers`; `LDOC` and the space's own rules | a findings record, each finding citing the rule the page breaks (`RS-LDOC-003`, or the space's own rule) and quoting the passage — **only when something was found**. Nothing found: one line, no file. As a pull-request comment if you ask for one. |
 | **onboard existing documentation** | the validator's unclassified documents and findings, the friction check's measures, your code-to-doc mapping if you keep one | one plan behind one approval gate (below) |
 
@@ -158,9 +199,10 @@ What it will not do:
 - **Review a change for missing docs.** That is change review, the code-review panel's documentation reviewer where one is installed; reader-review looks at the page, not the diff.
 - **Test the docs by running the product.** Such results arrive through the reading-evidence point, and the agent reads them when they are there.
 - **Revalidate what is not a page** — a decision record, a rule, another capability's artefact. Its own component does that.
+- **Fetch a source.** For a page stale on a `source` anchor it reads the versions recorded and the address from the source file's history (`git show <commit> -- <file>`), names the source, both versions and the link, and asks you what changed in the source that bears on the page's statements. It never rewrites a page from a version change alone.
 - **Read a friction document of a version it does not read.** The `explain`, `debt` and `check --all` documents carry a `schema_version`; one other than 1 it refuses, naming the command and the version, and proposes nothing from it. One without the key, from a backbone before it, reads as 1.
 
-Until the readers point resolves, the agent reads a page as the audience DEC-001 gives its space — users for the user space, maintainers for the technical one — and says so. Its scripted flows (a fix proposed, a reader-review that finds nothing, an onboarding plan rejected and revised) are in [`agents/living-docs/storyboard.md`](agents/living-docs/storyboard.md); the agent itself is [`agents/living-docs/living-docs.md`](agents/living-docs/living-docs.md).
+Until the readers point resolves, the agent reads a page as the audience DEC-001 gives its space — users for the user space, maintainers for the technical one — and says so. Its scripted flows (a fix proposed, a reader-review that finds nothing, an onboarding plan rejected and revised, a page stale on a source) are in [`agents/living-docs/storyboard.md`](agents/living-docs/storyboard.md); the agent itself is [`agents/living-docs/living-docs.md`](agents/living-docs/living-docs.md).
 
 ## Onboarding an existing project
 
@@ -180,7 +222,7 @@ From then on, the friction check flags pages as their anchors change, and the ag
 
 ## What's shipped now, what's next
 
-Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the validator, the `LDOC` rule set, the space-definition template and the signpost and reference page templates with the page's schema and each page kind's declared structure, the connections (the readers and reading-evidence points, and the contribution to the documentation check), and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation.
+Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the validator, the `LDOC` rule set, the space-definition template and the signpost and reference page templates with the page's schema and each page kind's declared structure, the connections (the readers and reading-evidence points, and the contribution to the documentation check), the `source` anchor kind with its resolver and the shape of a captured source, and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation.
 
 ## Citing this capability's decisions
 

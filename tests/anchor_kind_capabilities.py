@@ -1,11 +1,13 @@
 """A fixture capability that registers anchor kinds, and resolvers for it (COR-050 point 2).
 
-No shipped capability registers an anchor kind, so the tests that run a
-resolver — the friction checks' (`test_friction_anchor_kinds`) and rule-set
-validation's (`test_rule_sets`) — stand one up in an adopter repository:
-`register_kinds` writes the capability's `package.yaml`, with the kinds under
-`friction.kinds` and the one `commands:` leaf they name, and registers it in
-the backbone manifest. The resolver bodies here are the leaf's script.
+The tests that run a resolver of their own making — the friction checks'
+(`test_friction_anchor_kinds`) and rule-set validation's (`test_rule_sets`) —
+stand one up in an adopter repository without living-docs: living-docs
+registers `source` itself, and a second registrant would refuse the kind for
+both (`test_living_docs_sources` tests living-docs' own). `register_kinds`
+writes the capability's `package.yaml`, with the kinds under `friction.kinds`
+and the one `commands:` leaf they name, and registers it in the backbone
+manifest. The resolver bodies here are the leaf's script.
 """
 
 from __future__ import annotations

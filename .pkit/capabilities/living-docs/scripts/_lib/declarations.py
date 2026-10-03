@@ -35,14 +35,12 @@ from typing import Any
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from _lib.artefacts import DeclaredPlace, Document, Reading
-
-#: This capability's name, as installed under `.pkit/capabilities/`.
-CAPABILITY = "living-docs"
+from _lib.artefacts import Artefact, DeclaredPlace, Document, Reading
+from _lib.root import CAPABILITIES_DIR, CAPABILITY
+from _lib.root import project_root as project_root  # re-exported: the commands read it here
 
 #: Where the declarations live, relative to the project root.
 BACKBONE_CONFIG = ".pkit/project/config.yaml"
-CAPABILITIES_DIR = ".pkit/capabilities"
 LIVING_DOCS_CONFIG = f"{CAPABILITIES_DIR}/{CAPABILITY}/project/config.yaml"
 
 #: The two audiences a root serves, as `docs` in the configuration names them.
@@ -116,18 +114,6 @@ def pointer_token(segment: Any) -> str:
 # --- files -------------------------------------------------------------------
 
 
-def project_root() -> Path:
-    """The project a command runs in: the nearest folder, from the working directory
-    up, where this capability is installed (`.pkit/capabilities/living-docs/`), else
-    the working directory. Git is not asked: what the repository holds is read
-    through the backbone, and a script asks git nothing of its own."""
-    start = Path.cwd()
-    for folder in (start, *start.parents):
-        if (folder / CAPABILITIES_DIR / CAPABILITY).is_dir():
-            return folder
-    return start
-
-
 def load_yaml(path: Path) -> Any:
     """A YAML file's value; `None` when absent or unparsable."""
     try:
@@ -192,6 +178,7 @@ class Declarations:
     root_places: Mapping[int, str]  # this capability's places that are a root -> its audience
     component_places: Mapping[int, str]  # another capability's places -> that capability
     documents: Mapping[str, Document]  # every Markdown file a place matches or a component holds
+    artefacts: tuple[Artefact, ...]  # every artefact in them, with its anchors and fields
     definitions: str | None  # this capability's definitions location, when it declares one
     ldoc_version: str | None  # the shared method's version, from its own rule-set file
     ldoc_rules: Mapping[str, Any]  # the shared method's rules by id, from the same file
@@ -262,6 +249,7 @@ def read_declarations(root: Path, reading: Reading) -> Declarations:
         root_places=root_places,
         component_places=component_places,
         documents=reading.documents,
+        artefacts=reading.artefacts,
         definitions=definitions,
         ldoc_version=ldoc_version if isinstance(ldoc_version, str) else None,
         ldoc_rules=mapping(ldoc_fields.get("rules")),

@@ -1,0 +1,4 @@
+# yaml-language-server: $schema=../../schemas/source.schema.json
+title: Keep a Changelog
+url: https://keepachangelog.com/en/1.1.0/
+version: "1.1.0"

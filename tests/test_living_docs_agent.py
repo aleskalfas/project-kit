@@ -17,8 +17,8 @@ person reviews. These tests hold the contract its files carry:
 - the **references**: `pkit refs validate`'s checks find nothing in the agent's
   folder (every record and path the body and storyboard cite is declared, and
   the storyboard and the agent name each other);
-- the **storyboard**: it names the agent back by its capability and scripts the
-  three scenarios, each with its four parts;
+- the **storyboard**: it names the agent back by its capability and scripts its
+  four scenarios, each with its four parts;
 - the **deployed copy**: `.claude/agents/living-docs.md` is what the Claude Code
   deploy writes from the source today, so a source edit without a redeploy
   fails here rather than shipping a stale agent; it carries the storyboard's
@@ -79,6 +79,7 @@ SCENARIOS = (
     "Happy path",
     "Reader-review finds nothing",
     "Onboarding plan rejected",
+    "A page stale on a source",
 )
 SCENARIO_PARTS = ("**Trigger.**", "**Preconditions.**", "### Walkthrough", "### Behind the scenes")
 
@@ -217,7 +218,7 @@ def test_storyboard_names_the_agent_back(storyboard):
     ]
 
 
-def test_storyboard_scripts_the_three_scenarios(storyboard):
+def test_storyboard_scripts_its_scenarios(storyboard):
     _, body = storyboard
     sections = re.split(r"^## Scenario \d+: ", body, flags=re.MULTILINE)[1:]
     titles = [section.splitlines()[0] for section in sections]

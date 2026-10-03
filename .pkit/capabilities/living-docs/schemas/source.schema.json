@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "source.schema.json",
+  "title": "Captured source — living-docs capability",
+  "description": "Formal shape of a captured source, `.pkit/capabilities/living-docs/project/sources/<name>.yaml`: a source outside the repository that a page anchors by its name through the `source` anchor kind (living-docs DEC-001 point 4) — what the source is called (`title`), where it is found (`url`, optional) and which version of its text the project's pages were last checked against (`version`). Any change to the file is the source's change, so it holds nothing else: what the source says, and why a page relies on it, are written on the pages. Whether the file is named after a source, as the resolver finds it, is the capability's validator's (`pkit living-docs validate`), not this schema's. Bound by its path (COR-023), departing from the schemas README's recommendation for adopter data in two ways: a captured source carries no `pkit_schema`, and no `schema_version`. A binding key, or a version marker, would be a field of the file whose every change asks the pages anchored to the source; and a marker must equal this schema's version, so any later version of the shape would rewrite every captured source. `schema_version` and `binds_to` are permitted for this file's own carrier, never required of a captured source. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "title",
+    "version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Carried by this schema's own carrier. A captured source omits it."
+    },
+    "binds_to": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Repo-relative globs matching the adopter-data files this schema validates (COR-023 fallback binding). Present on the capability-side carrier; absent from a captured source."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What the source is called."
+    },
+    "url": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Where the source is found. Optional: a printed standard has none."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Which text of the source the project's pages were last checked against, as the source labels that text — its version, edition or revision; for a source that labels none, another exact name of the text, such as a commit of the repository it is published from; only when nothing names it, the date it was read, `YYYY-MM-DD`. Text: quote it, since YAML reads `1.1` as a number and `2026-10-03` as a date."
+    }
+  }
+}

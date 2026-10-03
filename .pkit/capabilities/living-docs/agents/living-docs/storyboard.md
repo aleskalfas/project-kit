@@ -9,7 +9,7 @@ consumers:
 
 ## Framing
 
-This storyboard scripts the `living-docs` agent's three intents where their dialogue is designed rather than improvised: a friction fix proposed for a stale page (the happy path), a reader-review that finds nothing, and an onboarding plan rejected at its approval gate, revised and then approved. What the agent concludes about a page is judgment; how it shows that conclusion, when it stops, and what it writes are fixed here ([living-docs:DEC-001-living-docs-discipline] points 5, 6 and 8).
+This storyboard scripts the `living-docs` agent's three intents where their dialogue is designed rather than improvised: a friction fix proposed for a stale page (the happy path), a reader-review that finds nothing, an onboarding plan rejected at its approval gate, revised and then approved, and a friction fix for a page stale on a source, where the agent asks rather than reads what changed. What the agent concludes about a page is judgment; how it shows that conclusion, when it stops, and what it writes are fixed here ([living-docs:DEC-001-living-docs-discipline] points 5, 6 and 8).
 
 The scenarios operate on:
 
@@ -145,3 +145,35 @@ The single approval gate of Scenario 3 is a turn the agent waits on. Booted as t
 - **Rejected outright** ("not now", "cancel"): answer "Rejected — nothing drafted; the plan stays at .agent-workspace/living-docs/onboarding/plan.md" and stop.
 - **Approved:** draft one reviewable change per coherent step under `.agent-workspace/living-docs/onboarding/<step>/` — a diff labelled with the real paths, and a pull-request body citing the plan's evidence for that step. Moves, new pages and configuration edits are all diffs; none is made. A page new in its change counts as revalidated there (COR-050 point 6), so no writer is named for it.
 - End by naming the drafted changes and what the plan leaves open: onboarding is complete when the declared surface is covered and no page is left unanchored without a reason a person accepted (DEC-001 point 8). A page that has nothing to anchor to gets that reason drafted as `unanchored-because: <why>` in its friction block, instead of anchors, for the person to accept at the gate — never both.
+
+---
+
+## Scenario 4: A page stale on a source
+
+**Trigger.** The person asks the agent to propose the fix for a page that is stale on a `source` anchor: someone recorded a new version of the source the page rests on.
+
+**Preconditions.**
+
+- The page is a page, committed, and `pkit friction explain <page> --json` reports it `stale` on an anchor `source: <name>`.
+- The source is captured in `.pkit/capabilities/living-docs/project/sources/<name>.yaml`, whose history holds the version recorded before and the one recorded now (DEC-001 point 4).
+
+### Walkthrough
+
+> **User:** The changelog guide went stale on Keep a Changelog. Can you propose the fix?
+>
+> **living-docs:** *Running pkit friction explain on docs/contributing/changelog.md…* It is stale on one anchor, source keep-a-changelog: one commit since its revalidation — 5d2e8a1 "docs: read Keep a Changelog 1.2.0". *Reading the captured file before and at that commit…* The version recorded went from 1.1.0 to 1.2.0, and the address to https://keepachangelog.com/en/1.2.0/.
+>
+> **living-docs:** I don't fetch sources, so the change itself is yours to tell me: what changed between 1.1.0 and 1.2.0 that bears on the guide — its release headings, or its categories of change?
+>
+> **User:** 1.2.0 adds a `Breaking` category, listed first.
+>
+> **living-docs:** Then one passage no longer holds: "Grouping entries" lists the categories without `Breaking`. Everything else the anchor grounds still holds. Proposed: the diff is in .agent-workspace/living-docs/fix/changelog/changelog.md.diff and the pull-request body beside it, naming the commit, the anchor, both versions, the link and your answer. Once the change is applied, the answer is yours to give: pkit friction revalidate docs/contributing/changelog.md --outcome updated.
+
+### Behind the scenes
+
+- Run `pkit friction explain <page> --json` as in Scenario 1. The changed anchor is a `source`; its finding's commits each changed the captured file — the only file the anchor stands on.
+- Read each commit's change to the captured file (`git show <commit> -- <file>`): the source's `title`, the `version` recorded before and now, and the `url`. A commit that changed something else in the file — the title, the address, a reformat — is named as what it is.
+- Never fetch the source — no web request, no download. Name the source, both versions and the link, and ask one question: what changed in the source that bears on the page's statements.
+- Judge each statement the anchor grounds against the person's answer, as in Scenario 1; never rewrite a page from a version change alone. Nothing to change → propose the `unchanged` answer with a draft reason built from the person's answer.
+- If the person cannot say what changed yet, propose nothing for the prose: name the two answers that are theirs — read the source and come back, or defer the anchor with a reason (`pkit friction defer <page> --anchor source:<name> --reason …`) — and run neither.
+- Write the diff and `pr-body.md` as in Scenario 1, the pull-request body citing the commit, the anchor, both versions, the link and the person's answer as the evidence.

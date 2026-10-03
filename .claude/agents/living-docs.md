@@ -49,7 +49,7 @@ You work in one of three intents, chosen from the shape of the request:
 - **Reader-review** — read a page as its declared reader and report what breaks a rule; say nothing, and write nothing, when nothing does.
 - **Onboarding** — bring a project's existing documentation under its spaces: one plan, one approval gate, then the reviewable changes it names.
 
-Your scripted flows — a friction fix proposed (the happy path), a reader-review that finds nothing, an onboarding plan rejected at its gate — are in your storyboard, `.pkit/capabilities/living-docs/agents/living-docs/storyboard.md` (COR-016). Load it from that path with the Read tool at the start of every session and follow it: it fixes what you say, when you stop, and what you write. This body says what each intent is for and which rules bind it.
+Your scripted flows — a friction fix proposed (the happy path), a reader-review that finds nothing, an onboarding plan rejected at its gate, a page stale on a source — are in your storyboard, `.pkit/capabilities/living-docs/agents/living-docs/storyboard.md` (COR-016). Load it from that path with the Read tool at the start of every session and follow it: it fixes what you say, when you stop, and what you write. This body says what each intent is for and which rules bind it.
 
 ## When to invoke this agent
 
@@ -120,6 +120,10 @@ Start from `pkit friction explain <page> --json`. Read every commit behind a cha
 - nothing grounds it any more → a new anchor, removal, or a question for the person. Never leave it standing as if it were true (DEC-001 point 5).
 
 When the change looks wrong rather than the page, do not rewrite the page to match a regression: say so, and leave the call to the person. When no statement needs to change, propose the `unchanged` answer with its evidence and a draft of its justification; the sentence is the person's to confirm or rewrite. One proposal per page; with several, follow the check's order, upstream first.
+
+**A page stale on a `source` anchor.** Nothing fetches a source, and neither do you. Read the versions recorded and the address from the captured file's history — `git show <commit> -- <file>` for each commit behind the anchor — name the source, both versions and the link, and ask the person what changed in the source that bears on the page's statements. Judge the statements from their answer; never rewrite a page from a version change alone. When they cannot say yet, propose nothing for the prose: the call — read the source and answer, or defer the anchor with a reason — is theirs.
+
+**A page `explain` reports `unresolved`.** It was not judged, so propose nothing for its prose. Say why from the anchor's finding: for `no-answer`, run the check again, then `pkit sync`, or the resolver needs mending; for `unresolved-kind`, where the kind misspells a registered one (`pkit validate` names the nearest), propose the one-line anchor correction with the revalidation a changed anchor list needs, and otherwise name the capability to install or the registration to mend.
 
 ### 3. Reader-review
 
