@@ -43,7 +43,7 @@ The autonomous flow's steps live in **`batch-plan.md`**, a new sub-procedure of 
 The sub-procedure carries:
 
 1. **Read intent and reference material** — fuzzy intent + any handoff doc, scratchpad, or related issue the user supplies.
-2. **Walk the use cases** — while the use-case data point is not off: read the use cases and walk them against the intent before any slicing; each planned Feature and Task names the use cases it serves (refinement per [project-management:DEC-054-use-case-validation]).
+2. **Walk the use cases** — while the use-case data point is not off: read the use cases; where they have entries, walk them against the intent before any slicing, so each planned Feature and Task that serves a use case names it; over an empty set, judge after slicing which planned work touches what users do (refinement per [project-management:DEC-054-use-case-validation]).
 3. **Propose slicing** — Umbrella / EPIC / Feature / Task hierarchy per [project-management:DEC-004-six-level-hierarchy], with workstream / milestone / priority / parent-ref classifications per [project-management:DEC-012-classification-axes].
 4. **Adversarial review** — invoke `critic` and (when work crosses ≥3 components or the slicing introduces a new abstraction) `architect` per the reviewer-invocation discipline below.
 5. **Single approval gate** — present the (possibly revised) plan to the user, with the use-case mapping, both kinds of gap and, over an empty set, the prerequisite Task or why the plan has none (refinement per [project-management:DEC-054-use-case-validation]); pause until approval, revision, or refusal.
