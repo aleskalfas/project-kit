@@ -117,7 +117,7 @@ def _citations(artefacts: Sequence[Artefact]) -> list[_Citation]:
         where = f"{artefact.path}#{artefact.id}" if artefact.entry else artefact.path
         found.extend(
             _Citation(f"{where}:{ANCHOR_POINTER}", value, origin=False)
-            for value in artefact.anchors.get(KIND, ())
+            for value in (artefact.anchors or {}).get(KIND, ())
         )
         if artefact.rule:
             value = _cited_source(artefact.fields)
