@@ -1655,7 +1655,10 @@ def friction_check_command(
 
     Reads git only and writes nothing: the working tree (uncommitted changes
     included) — or, with --head, commit REV — against the merge-base of REF —
-    by default $PKIT_CHECK_BASE, else the default branch (COR-054). Reports
+    by default $PKIT_CHECK_BASE, else the default branch (COR-054). An `at`
+    the change writes back — a value the artefact carried before, read from
+    its file's history behind the base — answers nothing: the artefact is
+    judged against that value's revalidation point. Reports
     friction, dead anchors of the change, bumps with nothing behind them and
     an outdated base, and lists last every answer the change wrote, word for
     word: each revalidation, deferral and reason for having no anchors. Exit 1
