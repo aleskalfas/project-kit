@@ -74,8 +74,12 @@ LABEL = "friction-report"
 LABEL_COLOR = "d4c5f9"
 LABEL_DESCRIPTION = "The whole-repository friction check's tracking issue, kept by automation"
 
-#: The identity a workflow's token writes as: the name `gh issue list --author`
-#: finds its issues by, and the login `gh` then gives as their author.
+#: The identity a workflow's token writes as, spelled two ways that are not
+#: interchangeable. The listing must ask for `github-actions[bot]`:
+#: `gh issue list --author app/github-actions` matches nothing, so a listing by
+#: that spelling finds no tracking issue and every run opens another. The
+#: issues it lists then give their author as `app/github-actions`, the spelling
+#: each listed issue's author is checked against.
 AUTHOR_LISTED_AS = "github-actions[bot]"
 AUTHOR = "app/github-actions"
 

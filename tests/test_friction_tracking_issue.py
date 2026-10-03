@@ -54,10 +54,12 @@ BOT = "app/github-actions"
 #: `FAKE_GH_FAIL` names one call (`issue edit`, say) that fails. The listing is
 #: `gh`'s own by author: it finds the token's issues under the name
 #: `github-actions[bot]`, gives their author as `app/github-actions`, newest
-#: first, no more than `--limit`; a label filter, which would go through the
-#: search index, is refused. With `FAKE_GH_LISTS_EVERY_AUTHOR` it ignores the
-#: author it is asked for, so the publisher's own reading of the author is what
-#: keeps a person's issue out.
+#: first, no more than `--limit`; asked for `app/github-actions` it finds
+#: nothing, as `gh` does, so a publisher listing by that spelling opens a second
+#: issue here too; a label filter, which would go through the search index, is
+#: refused. With `FAKE_GH_LISTS_EVERY_AUTHOR` it ignores the author it is asked
+#: for, so the publisher's own reading of the author is what keeps a person's
+#: issue out.
 FAKE_GH = r"""
 import json, os, sys
 
@@ -94,7 +96,10 @@ command = args[:2]
 if command == ["issue", "list"]:
     if "--label" in args or "--search" in args:
         done(code=2, err="fake gh: a label or search filter goes through the search index\n")
-    listed_as = {"github-actions[bot]": "app/github-actions"}.get(opt("--author"), opt("--author"))
+    asked = opt("--author")
+    # A bot is asked for by its `[bot]` name; its `app/` login matches no author.
+    bots = {"github-actions[bot]": "app/github-actions"}
+    listed_as = None if asked.startswith("app/") else bots.get(asked, asked)
     every_author = os.environ.get("FAKE_GH_LISTS_EVERY_AUTHOR")
     states = {"all": ("OPEN", "CLOSED"), "closed": ("CLOSED",)}.get(opt("--state"), ("OPEN",))
     fields = opt("--json").split(",")
@@ -403,6 +408,35 @@ def test_the_listing_is_by_author_alone_and_reads_every_state(gh: FakeGh) -> Non
         "--json",
         "number,state,body,labels,author",
     ]
+
+
+def test_the_fake_gh_finds_the_token_s_issues_only_by_its_bot_name(gh: FakeGh) -> None:
+    """As `gh` does: the `app/` spelling the author reads back as matches nothing in a
+    listing, so a publisher that listed by it would open an issue on every run here."""
+    number = gh.seed(f"{MARKER}\nThe tracking issue.", labels=[LABEL])
+
+    def listed(author: str) -> list[int]:
+        proc = subprocess.run(
+            [
+                str(gh.bin / "gh"),
+                "issue",
+                "list",
+                "--author",
+                author,
+                "--state",
+                "all",
+                "--json",
+                "number,author",
+            ],
+            env={**os.environ, "FAKE_GH_STATE": str(gh.state_file)},
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return [issue["number"] for issue in json.loads(proc.stdout)]
+
+    assert listed(publisher.AUTHOR_LISTED_AS) == [number]
+    assert listed(publisher.AUTHOR) == []
 
 
 def test_a_note_above_the_marker_does_not_make_a_second_issue(gh: FakeGh) -> None:
