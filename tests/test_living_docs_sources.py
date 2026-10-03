@@ -269,7 +269,7 @@ def test_only_a_change_to_the_captured_file_asks_the_page(repo: AdopterRepo) -> 
         pytest.param(
             KEEP_A_CHANGELOG + "description: A changelog format.\n", "description", id="extra-key"
         ),
-        pytest.param("title: [Keep a Changelog\n", "", id="unparsable"),
+        pytest.param("title: [Keep a Changelog\n", "YAML parse error", id="unparsable"),
         pytest.param(KEEP_A_CHANGELOG.replace('"1.1.0"', "1.1"), "1.1", id="unquoted-version"),
     ],
 )
@@ -279,7 +279,7 @@ def test_a_source_of_the_wrong_shape_fails_data_and_its_page_stays_judged(
     repo.commit("capture the source wrongly", {KEEP: captured})
     data = CliRunner().invoke(main, ["--color", "never", "validate", "--only", "data"])
     assert data.exit_code == 1, data.output
-    assert KEEP in data.output and said in data.output
+    assert KEEP in data.output and said in data.output, data.output
     assert _resolve(repo.root, "keep-a-changelog") == [KEEP]
     # Judged: the file changed since the page's revalidation, so it is stale, never unresolved.
     assert _states(repo)[PAGE] is fr.ArtefactState.STALE
@@ -364,7 +364,9 @@ def test_a_link_or_a_folder_of_the_name_answers_nothing_and_fails(
 
 def test_a_name_outside_the_grammar_captures_nothing_on_any_disk(repo: AdopterRepo) -> None:
     """`Keep.yaml` is an error, and the anchor `keep` is dead even where the disk
-    ignores case: the name is matched exactly, never looked up."""
+    ignores case: the name is matched exactly, never looked up. The resolver's
+    half bites only on a case-insensitive disk (a default macOS one); on a
+    case-sensitive disk `keep.yaml` is simply not there."""
     (repo.root / SOURCES / "Keep.yaml").write_text(KEEP_A_CHANGELOG, encoding="utf-8")
     assert _resolve(repo.root, "keep") == []
     assert _layout_errors(repo.root) == [f"{SOURCES}/Keep.yaml"]
@@ -501,8 +503,14 @@ def test_the_resolver_answers_the_captured_file_from_the_arguments_it_is_given(
     "value", ["-x", "--help", "../x", "Keep", "a/b", "a.b", "a--b", "a-", "a" * 65, ""]
 )
 def test_a_value_outside_the_grammar_answers_no_file(repo: AdopterRepo, value: str) -> None:
-    for name in ("keep", "x", "a.b", "a--b", "a-", "a" * 65):
-        (repo.root / SOURCES / f"{name}.yaml").write_text(KEEP_A_CHANGELOG, encoding="utf-8")
+    """Every value would reach a real file, were it joined to the folder: `../x`
+    the project tier's `x.yaml`, `a/b` a file in a folder of the sources folder.
+    (`Keep` reaches `keep.yaml` only on a case-insensitive disk.)"""
+    for name in ("keep", "x", "a.b", "a--b", "a-", "a" * 65, "a/b"):
+        captured = repo.root / SOURCES / f"{name}.yaml"
+        captured.parent.mkdir(exist_ok=True)
+        captured.write_text(KEEP_A_CHANGELOG, encoding="utf-8")
+    (repo.root / LD / "project" / "x.yaml").write_text(KEEP_A_CHANGELOG, encoding="utf-8")
     assert _resolve(repo.root, value) == []
 
 
