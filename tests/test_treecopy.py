@@ -134,6 +134,33 @@ def test_excluded_artifact_not_copied_and_pruned(tmp_path: Path) -> None:
     assert not (dst / "skills" / "foo.md").exists()
 
 
+# --- Python caches (#1325) ---------------------------------------------
+
+
+def test_python_caches_in_the_source_are_not_copied(tmp_path: Path) -> None:
+    src, dst = tmp_path / "src", tmp_path / "dst"
+    _write(src / "scripts" / "run.py", "print('hi')\n")
+    _write(src / "scripts" / "__pycache__" / "x.cpython-312.pyc", "bytecode")
+    _write(src / "scripts" / "stray.pyc", "bytecode")
+
+    treecopy.refresh_owned_tree(src, dst, is_owned=treecopy.nothing_owned)
+
+    assert (dst / "scripts" / "run.py").is_file()
+    assert not (dst / "scripts" / "__pycache__").exists()
+    assert not (dst / "scripts" / "stray.pyc").exists()
+
+
+def test_python_caches_match_by_directory_and_suffix() -> None:
+    assert treecopy.is_python_cache(PurePath("scripts/__pycache__/x.cpython-312.pyc"))
+    assert treecopy.is_python_cache(PurePath("scripts/__pycache__"))
+    assert treecopy.is_python_cache(PurePath("stray.pyc"))
+    assert not treecopy.is_python_cache(PurePath("scripts/run.py"))
+    assert treecopy.ignore_python_caches("scripts", ["run.py", "__pycache__", "stray.pyc"]) == {
+        "__pycache__",
+        "stray.pyc",
+    }
+
+
 # --- mode preservation (capabilities ship executable *.sh / *.py) ------
 
 

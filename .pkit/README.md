@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T20:42:39Z
+      at: 2026-10-03T01:52:16Z
       outcome: unchanged
-      unchanged-because: the CLI README's entry for the whole-repository check says that project-kit runs it on main with the full history, after every push and once a day, and publishes its findings to one tracking issue, citing ADR-055 point 5; this page maps the cli area as the pkit command-line surface in one line, which still holds
+      unchanged-because: the lifecycle README gains one paragraph saying every copy into a project leaves out Python's caches; this page maps the lifecycle area in one line as packaging, manifest schema, upgrade procedure and register/unregister mechanics, which still holds
 ---
 
 # project-kit

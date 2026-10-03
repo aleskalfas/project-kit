@@ -194,6 +194,7 @@ class Declarations:
     documents: Mapping[str, Document]  # every Markdown file a place matches or a component holds
     definitions: str | None  # this capability's definitions location, when it declares one
     ldoc_version: str | None  # the shared method's version, from its own rule-set file
+    ldoc_rules: Mapping[str, Any]  # the shared method's rules by id, from the same file
     spaces: Mapping[str, SpaceConfig]
     assignments: tuple[Assignment, ...]  # as written, in order
     config_exists: bool  # whether living-docs' project configuration is there
@@ -236,7 +237,8 @@ def read_declarations(root: Path, reading: Reading) -> Declarations:
             component_places[place.index] = place.capability
 
     ldoc = reading.documents.get(LDOC_FILE)
-    ldoc_version = (ldoc.fields or {}).get("version") if ldoc is not None else None
+    ldoc_fields = mapping(ldoc.fields) if ldoc is not None else {}
+    ldoc_version = ldoc_fields.get("version")
 
     own = load_yaml(root / LIVING_DOCS_CONFIG)
     own_config = mapping(own)
@@ -262,6 +264,7 @@ def read_declarations(root: Path, reading: Reading) -> Declarations:
         documents=reading.documents,
         definitions=definitions,
         ldoc_version=ldoc_version if isinstance(ldoc_version, str) else None,
+        ldoc_rules=mapping(ldoc_fields.get("rules")),
         spaces=spaces,
         assignments=assignments,
         config_exists=isinstance(own, Mapping),

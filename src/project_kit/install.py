@@ -18,7 +18,7 @@ from contextlib import ExitStack
 from dataclasses import dataclass
 from enum import StrEnum
 from importlib.resources import as_file, files
-from pathlib import Path
+from pathlib import Path, PurePath
 
 import click
 
@@ -951,9 +951,9 @@ def _install_area(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool 
     # reach adopters — breaking the whole permission subsystem (the
     # decision core + catalog the CLI imports). Skip what is already
     # handled (README, core/_defs), adopter-owned (`project/`, scratchpad
-    # state), specially handled (adapter subdirs, `cli/pkit`), or a build
-    # cache (`__pycache__`).
-    _handled = {"README.md", "core", "_defs", "project", "__pycache__"}
+    # state), specially handled (adapter subdirs, `cli/pkit`), or a Python
+    # cache (`treecopy.is_python_cache`, the rule every copy path asks).
+    _handled = {"README.md", "core", "_defs", "project"}
     if area_name == "adapters":
         _handled |= {p.name for p in src.iterdir() if p.is_dir()}
     elif area_name == "cli":
@@ -968,7 +968,7 @@ def _install_area(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool 
         # absent in fresh adopters so the file-presence guard below handles it.
         _handled.add("project.md")
     for entry in sorted(src.iterdir()):
-        if entry.name in _handled:
+        if entry.name in _handled or treecopy.is_python_cache(PurePath(entry.name)):
             continue
         target = dst / entry.name
         if entry.is_dir():
@@ -1248,8 +1248,9 @@ def _copy_tree(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool = F
         return
     # Init mode: fresh copy. copytree raises FileExistsError if dst already
     # exists — that raise is load-bearing (re-running init is the structural
-    # error COR-004 specifies), so it is preserved untouched.
-    shutil.copytree(src, dst)
+    # error COR-004 specifies), so it is preserved untouched. It leaves out
+    # Python's caches, as the refresh does (one rule, `treecopy`).
+    shutil.copytree(src, dst, ignore=treecopy.ignore_python_caches)
 
 
 def _write_text(path: Path, content: str, ctx: InstallContext) -> None:
