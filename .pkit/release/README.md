@@ -14,7 +14,7 @@ pkit:
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
       source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-03T13:58:26Z
+      at: 2026-10-03T14:41:09Z
       outcome: updated
 ---
 
@@ -236,8 +236,15 @@ editorial policy this project layers on top of that output.
 ### Where the format departs from its two sources
 
 Read against the versions this page's `source` anchors capture — Keep a
-Changelog 1.1.0, and Common Changelog as read on 2026-10-03:
+Changelog 1.1.0, and Common Changelog at commit `bed3ea6` of the repository
+it is published from, `vweevers/common-changelog` — the format departs from
+them, besides the multi-tier grouping above, in these ways:
 
+- **No Unreleased section.** Keep a Changelog advises keeping one at the top
+  for changes not yet released; `CHANGELOG.md` has none, nor does Common
+  Changelog: a pull request declares its change in a changeset, and the
+  release step writes the section. Nor does the file say whether the project
+  follows Semantic Versioning, as Keep a Changelog asks.
 - **Release headings.** A section's heading is `## <version> — <date>`, or
   `## <date>` for a component-only release: an em dash, the version neither
   bracketed nor linked. Keep a Changelog's own headings bracket the version
@@ -247,8 +254,18 @@ Changelog 1.1.0, and Common Changelog as read on 2026-10-03:
   (`## [1.0.1] - 2019-08-24`).
 - **Categories.** The groups are Keep a Changelog's six, in its order. Common
   Changelog allows only `Changed`, `Added`, `Removed` and `Fixed`, in that
-  order: what this page takes from it is the language below, not its
-  categories.
+  order.
+- **An entry's words.** Common Changelog requires a change in the imperative
+  mood, starting with a present-tense verb (`Add`, `Fix`), and a breaking
+  change prefixed `**Breaking:**`. Here an entry is one plain sentence saying
+  the outcome for the reader, in any mood (`pkit now runs the version each
+  project pins, …`), and nothing marks a breaking change.
+- **References and authors.** Common Changelog requires a change to reference
+  its commits — and asks for its pull request or ticket, when there is one —
+  and to name its authors after the references, which only a project with one
+  contributor may leave out. Here an entry names no commit and no author: its
+  only reference is the trailing link to its pull request, `([#N])`
+  (Language, below).
 
 ### Language — Common Changelog
 
