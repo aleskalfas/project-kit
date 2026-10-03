@@ -13,8 +13,8 @@ This storyboard covers the **autonomous batch-planning flow** the `project-manag
 
 The flow operates on:
 
-- **Input state**: the user's fuzzy intent expressed in natural language; reference artifacts the user points the agent at (scratchpad notes under `.pkit/scratchpad/`, handoff documents, related issues, decision records); the capability's eight schemas at runtime (issue-types, workflow, body-format, titles, classification, git-conventions, validation-severity, time-containers); the adopter's `project/config.yaml` and `project/workstreams.yaml`; and, while the use-case point is not off, the use cases settled on the default branch (`UC-NNN`), read through `pkit connections resolve pkit::work-tracking:use-cases --json`, per [project-management:DEC-054-use-case-validation].
-- **Mutations**: GitHub issue creation via `create-issue.py`; body edits via `edit-issue.py`; milestone attachment via `gh issue edit`; optional state transitions via `move-issue.py`; audit comments per [project-management:DEC-014-validation-severity-model].
+- **Input state**: the user's fuzzy intent expressed in natural language; reference artifacts the user points the agent at (scratchpad notes under `.pkit/scratchpad/`, handoff documents, related issues, decision records); the capability's eight schemas at runtime (issue-types, workflow, body-format, titles, classification, git-conventions, validation-severity, time-containers); the adopter's `project/config.yaml` and `project/workstreams.yaml`; and, while the use-case point is not off, the use cases settled on the default branch (`UC-NNN`), read through `pkit connections resolve pkit::work-tracking:use-cases --json`, per [project-management:DEC-054-use-case-validation]; over an empty set, the answer kept in this checkout when the Task to author them was declined, read through `pkit pm decline-use-case-task --show --json`.
+- **Mutations**: GitHub issue creation via `create-issue.py`; body edits via `edit-issue.py`; milestone attachment via `gh issue edit`; optional state transitions via `move-issue.py`; audit comments per [project-management:DEC-014-validation-severity-model]; over an empty set, the kept answer to the use-case Task, via `decline-use-case-task`, on approval only.
 - **The single approval gate**: the moment the agent shows the proposed slicing and waits for the user's approval / revision / refusal. No `gh` mutation happens before this gate.
 
 User-facing entry points: invoking the `project-manager` agent with a fuzzy multi-issue ask. No CLI command; no flag; the agent infers batch-planning from the request shape during step 3 of its `How you work` procedure.
@@ -44,7 +44,7 @@ User invokes `project-manager` with fuzzy intent + a pointer to a reference docu
 - The reference document exists at the path the user names (or under a directory pattern the agent can resolve).
 - The user has filing authority for the issue types implied by the slicing per [project-management:DEC-008-pm-and-implementer-roles].
 - A milestone is either specified or default-resolvable from the capability's milestone config; if neither, the agent prompts before the approval gate.
-- The use-case point is off: nothing defines it, or nothing fills it. The walk step does nothing and the dialogue never mentions use cases. Scenarios 5–9 cover every other state.
+- The use-case point is off: nothing defines it, or nothing fills it. The walk step does nothing and the dialogue never mentions use cases. Scenarios 5–11 cover every other state.
 
 ### Walkthrough
 
@@ -65,7 +65,7 @@ User invokes `project-manager` with fuzzy intent + a pointer to a reference docu
 ### Behind the scenes
 
 - Read the reference document (scratchpad / handoff / issue) via the Read tool.
-- Read the use-case point (`pkit connections resolve pkit::work-tracking:use-cases --json`). Its `outcome` here is `undefined` or `unfilled`, so the step ends there: no Use cases column, no `## Use cases` sections, no mention of use cases. Any other outcome follows Scenarios 5–9.
+- Read the use-case point (`pkit connections resolve pkit::work-tracking:use-cases --json`). Its `outcome` here is `undefined` or `unfilled`, so the step ends there: no Use cases column, no `## Use cases` sections, no mention of use cases. Any other outcome follows Scenarios 5–11.
 - Parse out the implied work units. Apply [project-management:DEC-004-six-level-hierarchy]'s typing rules (Umbrella / EPIC / Feature / Task / Milestone) to choose ticket types.
 - Apply [project-management:DEC-012-classification-axes]'s rules to assign workstream / priority / kind labels per ticket.
 - Resolve parent-refs per [project-management:DEC-005-linking-and-containment].
@@ -299,30 +299,131 @@ The point resolved in full and holds nothing: `outcome: resolved`, no inert fill
 ### Preconditions
 
 - Something fills the point — the project keeps use cases, or is set up to — and none has reached the default branch.
+- The plan touches what users do: at least one planned Feature or Task serves a goal someone using the software reaches (otherwise Scenario 11).
+- No answer from earlier today is kept in this checkout: `pkit pm decline-use-case-task --show --json` gives `none` or `expired` (otherwise Scenario 10).
 
 ### Walkthrough
 
 > **User:** Plan the export feature from the handoff note in the scratchpad.
 >
-> **project-manager:** *Reading the handoff note…* *Reading the use cases settled on the default branch…* None has settled yet, so there is nothing to check the plan against. I'll put a Task to author them at the front of the plan.
+> **project-manager:** *Reading the handoff note…* *Reading the use cases settled on the default branch…* None has settled yet, so there is nothing to check the plan against. I'll slice first, then see which of the work touches what users do.
 >
-> **project-manager:** Plan: one Feature, "Report export". T1 "Author the use cases for report export" comes first. T2–T4 depend on it and state their goals in text — export a report, schedule an export, export to a shared folder — citing no use case, since none has settled. T1's last acceptance criterion: "T2–T4 name the use cases they serve". Revise T1 away to plan without use cases. Approve, revise, or cancel?
+> **project-manager:** *Checking for an answer kept in this checkout…* Plan: one Feature, "Report export", with four Tasks. No use case has settled yet. T2 and T3 touch what users do, so T1 "Author the use cases for report export" comes first and they depend on it; T4, a refactor, does not. T2 and T3 state their goals in text — export a report, schedule an export — citing no use case, since none has settled. T1's last acceptance criterion: "T2 and T3 name the use cases they serve". Revise T1 away to plan without use cases; this checkout won't offer it again until tomorrow. Approve, revise, or cancel?
 >
 > **User:** Approve.
 >
-> *(Continues with Scenario 1's filing flow, T1 first, so the `## Dependencies` sections of T2–T4 name it by number.)*
+> *(Clears any kept answer, then continues with Scenario 1's filing flow, T1 first, so the `## Dependencies` sections of T2 and T3 name it by number. T4 does not depend on it.)*
 
 The user may revise the Task away at the gate:
 
 > **User:** Drop T1 — we're not writing use cases for this.
 >
-> **project-manager:** Dropped. The Feature's body will say the plan was made without use cases. Updated plan: one Feature, three Tasks, no use case cited. Approve, revise, or cancel?
+> **project-manager:** Dropped. The Feature's body will say the plan was made without use cases. This checkout won't offer it again until tomorrow. Updated plan: one Feature, three Tasks, no use case cited. Approve, revise, or cancel?
+>
+> **User:** Approve.
+>
+> *(Keeps the answer, then continues with Scenario 1's filing flow.)*
 
 ### Behind the scenes
 
 - The prerequisite Task is in the plan by default. It is not offered as a question before slicing.
-- The planned issues depend on the Task: each names it in `## Dependencies`. They state the goals they serve as text and carry no `## Use cases` section.
+- After slicing, judge each Feature and Task: does it touch what users do — a goal someone using (not building) the software reaches, which a use case would describe? The build, tests, CI, refactors, tooling, and documentation of the method itself are internal. The table's Use cases column shows the judgement for every row: `T1` for T2 and T3, `none` for T4.
+- Then read the kept answer: `pkit pm decline-use-case-task --show --json`. Here its `state` is `none` or `expired`, so the Task is in. An `unreadable` answer, or a command that fails, puts it in too, and the gate adds that an earlier answer could not be read, with its `why`.
+- Only the issues that touch what users do depend on the Task: each names it in `## Dependencies`. They state the goals they serve as text and carry no `## Use cases` section. Internal work does not depend on it.
 - One of the Task's acceptance criteria is that the dependent issues name their use cases. It closes the loop: the Task does not close until each dependent Feature and Task has gained its `## Use cases` section, which it can once the use cases have settled.
+- The answer is kept on approval, never at the revision. On approval of a plan the user revised the Task out of, run `pkit pm decline-use-case-task` before filing. The plan's topmost new issue then says in prose that it was planned without use cases; where the plan files only under an existing issue, each filed issue says so.
+- On approval of a plan that includes the Task, run `pkit pm decline-use-case-task --clear` before filing: an answer kept earlier is discarded.
+- A cancelled plan keeps nothing. A revision returns to the slicing step, which judges again and reads the kept answer again; a Task the user revised away in this plan stays out.
+- Removing the Task because an open issue already plans the authoring of the use cases is not a decline: the issues that touch what users do depend on that open issue, nothing is kept, and no issue says it was planned without use cases.
 - The project-manager never writes a use case — it does not stamp, edit or commit one — and suggests no id for one: an id is settled once its use case reaches the default branch.
-- Nothing is saved to configuration. When the user revises the Task away, the plan's topmost new issue says so in prose; where the plan files only under an existing issue, each filed issue says so. The next plan over an empty set includes the Task again.
 - No `gh` mutation happens before the approval gate.
+
+## Scenario 10: A Task declined earlier the same day
+
+### Trigger
+
+Over an empty set, a plan that touches what users do, in a checkout where the Task to author the use cases was declined earlier the same day: `pkit pm decline-use-case-task --show --json` gives `state: declined`.
+
+### Preconditions
+
+- As Scenario 9: the point resolved in full and holds nothing, and the plan touches what users do.
+- At 09:12 today, in this checkout, the user approved a plan they had revised the Task out of.
+
+### Walkthrough
+
+> **User:** Plan the dashboard filters from the issue I linked.
+>
+> **project-manager:** *Reading the issue…* *Reading the use cases settled on the default branch…* None has settled yet. I'll slice first.
+>
+> **project-manager:** *Checking for an answer kept in this checkout…* Plan: one Feature, "Dashboard filters", with two Tasks; both touch what users do and state their goals in text. No use case has settled yet. You declined the Task to author them at 09:12 today; it is offered again from tomorrow. Say if you want it in this plan. Approve, revise, or cancel?
+>
+> **User:** Approve.
+>
+> *(Continues with Scenario 1's filing flow. The Feature's body says the plan was made without use cases. Nothing is kept: the answer from 09:12 is not renewed.)*
+
+The next morning, at 09:30, the Task is back:
+
+> **User:** Plan the report sharing from the handoff note.
+>
+> **project-manager:** *Reading the handoff note…* *Reading the use cases settled on the default branch…* None has settled yet. I'll slice first.
+>
+> **project-manager:** *Checking for an answer kept in this checkout…* Plan: one Feature, "Report sharing", with three Tasks. No use case has settled yet. T2 and T3 touch what users do, so T1 "Author the use cases for report sharing" comes first and they depend on it. Revise T1 away to plan without use cases; this checkout won't offer it again until tomorrow. Approve, revise, or cancel?
+
+The user may want the Task the same day after all:
+
+> **project-manager:** … You declined the Task to author them at 09:12 today; it is offered again from tomorrow. Say if you want it in this plan. Approve, revise, or cancel?
+>
+> **User:** Add it — I'll write them this week.
+>
+> **project-manager:** Added T3 "Author the use cases for dashboard filters", to come first; T1 and T2 depend on it. Approve, revise, or cancel?
+>
+> **User:** Approve.
+>
+> *(Clears the answer from 09:12, then continues with Scenario 1's filing flow, T3 first.)*
+
+### Behind the scenes
+
+- Same day → no Task; next day → Task again. The answer counts as declined for the rest of the calendar day on which its plan was approved, in the machine's local time, and has expired from local midnight on. Quote the local times the command gives — `declined_at_local`, and `offered_again_at_local` — rather than work them out.
+- Read the kept answer after the judgement, never before it: a plan of internal work reads nothing (Scenario 11).
+- A plan that leaves the Task out on a kept answer keeps nothing: the answer is not renewed, so the Task comes back the next day whatever is planned today.
+- The plan still says so on filing: its topmost new issue says in prose that it was planned without use cases — or each filed issue does, where the plan files only under an existing issue.
+- When the user asks for the Task, it stays in the plan through every revision, and on approval `pkit pm decline-use-case-task --clear` discards the kept answer before the Task is filed.
+- The answer is this checkout's. Another clone or worktree keeps its own, so a plan made there asks again, and a worktree removed after planning takes its answer with it.
+
+## Scenario 11: Internal work over an empty set
+
+### Trigger
+
+Over an empty set, a plan none of whose Features and Tasks touches what users do.
+
+### Preconditions
+
+- As Scenario 9: the point resolved in full and holds nothing.
+- Every planned issue is internal work: the build, tests, CI, refactors, tooling, or documentation of the method itself.
+
+### Walkthrough
+
+> **User:** Plan the CI clean-up from the scratchpad note.
+>
+> **project-manager:** *Reading the scratchpad note…* *Reading the use cases settled on the default branch…* None has settled yet. I'll slice first.
+>
+> **project-manager:** Plan: one Feature, "CI clean-up", with two Tasks — T1 splits the CI pipeline, T2 refactors the export module. No use case has settled yet, and this plan touches nothing users do — it splits the CI pipeline and refactors the export module — so it has no Task to author use cases. Say if it does. Approve, revise, or cancel?
+>
+> **User:** Approve.
+>
+> *(Continues with Scenario 1's filing flow. Nothing is kept, and no issue says it was planned without use cases.)*
+
+The user may correct the judgement:
+
+> **User:** T2 isn't only a refactor — it adds a way to retry a failed export.
+>
+> **project-manager:** Then T2 touches what users do. *Checking for an answer kept in this checkout…* T3 "Author the use cases for retrying an export" comes first, and T2 depends on it; T1, the CI split, does not. Revise T3 away to plan without use cases; this checkout won't offer it again until tomorrow. Approve, revise, or cancel?
+
+### Behind the scenes
+
+- Judge each Feature and Task after slicing. When none touches what users do, the plan has no prerequisite Task, and the table's Use cases column shows `none` on every Feature and Task.
+- Read no kept answer and keep nothing: `decline-use-case-task` is not run, at the gate or on approval.
+- The gate says why, naming what the work is, and invites a correction.
+- No issue says it was planned without use cases: the plan builds nothing a use case would describe.
+- A correction is not a decline. When the user says an issue touches what users do, the slicing step judges again, and Scenario 9's rule applies: read the kept answer, and include the Task unless it was declined earlier today (Scenario 10).
+- When a correction leaves no issue that touches what users do, the plan is back here: no Task, and nothing kept.
