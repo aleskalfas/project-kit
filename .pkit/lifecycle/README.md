@@ -29,7 +29,7 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-03T02:33:41Z
+      at: 2026-10-03T14:05:27Z
       outcome: updated
 ---
 
@@ -417,7 +417,7 @@ A capability registers an anchor kind under `friction.kinds` ("Field layout and 
 
 **The answer** is `{"paths": [...]}` and nothing else:
 
-- each entry is a repository-relative POSIX path naming a file of the state the check reads — the working tree's one listing for the change check and for validation, HEAD's files for the whole-repository check and the commands that read HEAD;
+- each entry is a repository-relative POSIX path naming a file of the state the check reads — the working tree's one listing for the change check and for validation, the named commit's files for the change check with `--head <rev>`, HEAD's files for the whole-repository check and the commands that read HEAD;
 - a path named twice counts once, and order does not matter;
 - an empty list is an answer: the value denotes nothing, and the anchor is dead.
 
@@ -433,7 +433,7 @@ A capability registers an anchor kind under `friction.kinds` ("Field layout and 
 
 It is also coarser than the thing itself: any change to a named file counts, as for a path or a record anchor, and a shared mapping file, once named, asks every anchor that maps through it whenever it changes. A capability keeps all of this small by its layout: one value, one file, found from the value itself (`sources/<value>.md`). Then a change to the thing is a change to that file, removing it leaves the anchor dead, and no shared file stands between a value and its file.
 
-**How it is asked.** The leaf's script is started with `--json`, `--` and then the value, so a value that begins with a dash is read as the value and never as an option. A value the system cannot pass as an argument — one holding a NUL byte — is not started, which is no answer. The resolver reads the files on disk whichever check asks; the whole-repository check and the commands that read HEAD then read its answer against HEAD's files, so a path only uncommitted work holds is no answer there, and the report's uncommitted-paths line says how much HEAD does not hold.
+**How it is asked.** The leaf's script is started with `--json`, `--` and then the value, so a value that begins with a dash is read as the value and never as an option. A value the system cannot pass as an argument — one holding a NUL byte — is not started, which is no answer. The resolver reads the files on disk whichever check asks; the whole-repository check and the commands that read HEAD then read its answer against HEAD's files, so a path only uncommitted work holds is no answer there, and the report's uncommitted-paths line says how much HEAD does not hold. The change check with `--head <rev>` reads a commit that need not be on disk, so it runs a resolver only where the working tree is that commit — HEAD at it, nothing uncommitted — and reads its answer against the commit's files; anywhere else it refuses, naming the anchor and the checkout to run from, rather than read the disk as the commit (the CLI README, "friction check").
 
 **What the checks do with it.**
 

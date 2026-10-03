@@ -1,0 +1,33 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit friction check` lists the answers a change wrote: every
+  revalidation, deferral and reason for having no anchors, with its words,
+  derived from each artefact carrying the block against its counterpart at
+  the merge-base — never composed. `--json` gains a top-level `answers` key
+  (`[]` while dormant; `schema_version` stays 1), each entry with
+  `artefact`, `location`, `answer` (`updated`, `unchanged`, `deferred`,
+  `unanchored` or `null`), `anchor`, `reason`, `kept` (the deferrals a
+  revalidation kept), `asked` (whether the diff asked for it), `status`
+  (`stands`, `bump` or `edited`) and `new`; the human view ends with
+  "Answers written in this change", every reason in full, any character
+  that is not printable shown escaped (`\x1b`, `\u202e`) there and in the
+  findings. Every deferral entry is read, so an anchor deferred twice lists
+  each entry's words. `--json` also gains `unreadable`, the head's files
+  whose front matter does not parse. `--head <rev>` checks that commit,
+  read from git objects, instead of the working tree: the merge-base is
+  taken against it, uncommitted work is not read, and its rule-set folders,
+  installed capabilities and registered anchor kinds are that commit's, so
+  a pull request's head can be checked from any checkout; a resolver of a
+  registered kind runs only from a checkout at that commit and is refused
+  elsewhere. `--head` is refused with `--all`, and a revision that names no
+  commit exits 1. Discovery over any commit — the whole-repository check,
+  `friction artefacts --at` — reads which folders hold rule sets from that
+  commit. `pkit validate` reports an anchor deferred twice in one block
+  (`duplicate-deferral`, an error; COR-050 point 4). `pkit friction
+  revalidate` and `defer`, refusing to write off a terminal without
+  `--yes`, no longer print a ready-made `--yes` command: they name the dry
+  run and say that an answer is written on a person's decision.
+  `record-status` refuses as before.

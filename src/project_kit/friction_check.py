@@ -27,6 +27,15 @@ so it works for any tool and locally before a commit.
   seam, each with its own settings, so a place added or removed in the diff
   counts: an artefact appearing in the places is new, one leaving them is
   removed and turns its dependants' anchors dead (COR-050 point 6).
+- *A head named* (`--head`, `named_head`) is that commit, read from git
+  objects as the base is: the merge-base is taken against it, the diff runs
+  between the two commits, and the working tree is not read. Its anchor
+  kinds are the ones it registers, as the base's are the base's. A resolver
+  is a command run in the working tree, never read from a commit, so one runs
+  only where the working tree is that commit, and the check refuses anywhere
+  else (`_NamedHeadKinds`). What discovery reads from the working tree
+  whichever state it walks — which files are synced copies, where a link
+  leads — stays the running checkout's.
 
 **When an anchor changed** (point 5): a *path* anchor when a changed path
 matches it that both sides leave in — each side read under its own
@@ -59,6 +68,13 @@ component resolves, separately, where the diff added the anchor or took the
 kind's resolver away; an anchor whose resolver gave no answer; a widening
 that asks nothing; an outdated base; front matter that does not parse.
 Findings run upstream first along artefact anchors (truth-chain order).
+
+**What it lists** (COR-050 point 3 and Implications): every answer the change
+wrote — each revalidation, deferral and reason for having no anchors, word for
+word — read from each head artefact carrying the block against its base
+counterpart (`_written_answers`), with whether the diff asked for it and
+whether the check accepts it. It is the list the person authorising a merge
+is shown: derived from the artefacts, never composed.
 
 **Modes** (point 12): `warning` reports and exits 0; `enforcing` exits 1 on
 friction, dead anchors, unresolved kinds, a resolver's missing answer and
@@ -99,7 +115,7 @@ import heapq
 import json
 import re
 import subprocess
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
@@ -116,8 +132,10 @@ from project_kit.friction_discovery import (
     CORE_ANCHOR_KINDS,
     Anchor,
     AnchorKinds,
+    AnchorResolution,
     Artefact,
     ArtefactKind,
+    Deferral,
     Discovery,
     FrictionSettings,
     RepositoryTree,
@@ -204,6 +222,10 @@ class Answer(Enum):
     NEW = "new"
 
 
+def _anchor_json(anchor: Anchor | None) -> dict[str, str] | None:
+    return None if anchor is None else {"kind": anchor.kind, "value": anchor.value}
+
+
 @dataclass(frozen=True)
 class Finding:
     """One finding: about an artefact (`artefact`, `location`), or about the run."""
@@ -220,13 +242,76 @@ class Finding:
             "artefact": self.artefact,
             "location": self.location,
             "kind": self.kind.value,
-            "anchor": (
-                None
-                if self.anchor is None
-                else {"kind": self.anchor.kind, "value": self.anchor.value}
-            ),
+            "anchor": _anchor_json(self.anchor),
             "answer": None if self.answer is None else self.answer.value,
             "message": self.message,
+        }
+
+
+#: The `answer` of an entry of the answers list that is a reason for having no
+#: anchors (COR-050 point 1), beside a revalidation's outcome and `deferred`.
+UNANCHORED = "unanchored"
+
+
+class AnswerStatus(Enum):
+    """Whether the check accepts an answer the change wrote. The values are the
+    `status` field of an entry of the JSON output's `answers`."""
+
+    STANDS = "stands"  # the check accepts it
+    BUMP = "bump"  # `at` changed and the diff does not bear it out: the check's own `bump`
+    EDITED = "edited"  # `at` untouched, the outcome or words changed: nothing is answered
+
+
+@dataclass(frozen=True)
+class KeptDeferral:
+    """A deferral a revalidation kept: present at the base and at head, by anchor."""
+
+    anchor: Anchor
+    reason: str | None  # its words at head, whitespace folded
+
+    def as_json(self) -> dict[str, Any]:
+        return {"anchor": _anchor_json(self.anchor), "reason": self.reason}
+
+
+@dataclass(frozen=True)
+class WrittenAnswer:
+    """One answer the change wrote in an artefact's block (`_written_answers`): a
+    revalidation, a deferral, or a reason for having no anchors, with its words.
+
+    - `answer`: `updated` or `unchanged` for a revalidation — `None` when its
+      `outcome` is neither — `deferred`, or `unanchored`.
+    - `anchor`: the deferral's; `None` otherwise. `reason`: the words,
+      whitespace folded as the check compares them; `None` where none is written.
+    - `kept`: on a revalidation whose `at` changed, each deferral entry at head
+      whose anchor the base defers too.
+    - `asked`: the diff asked for it — for a revalidation, the diff asked the
+      artefact anything and the revalidation stands; for a deferral, the diff
+      asked about its anchor, it is introduced in the diff, and no revalidation
+      stands.
+    - `new`: the artefact has no counterpart at the base.
+    """
+
+    artefact: str  # the artefact's id
+    location: str  # `path`, or `path#id` for a collection entry
+    answer: str | None
+    anchor: Anchor | None
+    reason: str | None
+    kept: tuple[KeptDeferral, ...]
+    asked: bool
+    status: AnswerStatus
+    new: bool
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "artefact": self.artefact,
+            "location": self.location,
+            "answer": self.answer,
+            "anchor": _anchor_json(self.anchor),
+            "reason": self.reason,
+            "kept": [kept.as_json() for kept in self.kept],
+            "asked": self.asked,
+            "status": self.status.value,
+            "new": self.new,
         }
 
 
@@ -242,8 +327,14 @@ class BaseState:
 
 @dataclass(frozen=True)
 class HeadState:
-    commit: str  # HEAD
+    commit: str  # HEAD, or the commit named with `--head`
     uncommitted: int  # paths the working tree changes beyond HEAD, untracked included
+    named: str | None = None  # the revision named with `--head`; `None` reads the working tree
+
+    @property
+    def name(self) -> str:
+        """How the head is named in what the check says: `HEAD`, or the revision given."""
+        return "HEAD" if self.named is None else self.named
 
 
 @dataclass(frozen=True)
@@ -259,6 +350,8 @@ class ChangeCheck:
     base: BaseState | None  # `None` only for a dormant run whose base did not resolve
     head: HeadState | None
     findings: tuple[Finding, ...]
+    answers: tuple[WrittenAnswer, ...] = ()  # what the change wrote, in the check's order
+    unreadable: tuple[str, ...] = ()  # head files whose front matter does not parse: not listed
 
     def count(self, kind: FindingKind) -> int:
         return sum(1 for f in self.findings if f.kind is kind)
@@ -364,15 +457,31 @@ def head_commit(root: Path) -> str:
     return head
 
 
+def named_head(root: Path, rev: str) -> HeadState:
+    """The head named with `--head`: the commit `rev` names, read from git objects, with
+    nothing uncommitted — the working tree is not read. Refuses a name that is no commit."""
+    commit = None if not rev or rev.startswith("-") else commit_of(root, rev)
+    if commit is None:
+        raise FrictionCheckError(f"--head {rev!r} names no commit of this repository.")
+    return HeadState(commit, 0, rev)
+
+
 def resolve_base(
-    root: Path, ref: str | None = None, *, resolved: default_branch.Base | None = None
+    root: Path,
+    ref: str | None = None,
+    *,
+    resolved: default_branch.Base | None = None,
+    head: HeadState | None = None,
 ) -> BaseState:
-    """The base's commit, its merge-base with HEAD, and whether it moved on: `ref`, else
-    `$PKIT_CHECK_BASE`, else the default branch — computed once for every reader
-    (`default_branch.base`, COR-054 point 5). `resolved` is that base when the run has
-    read it already (`default_branch.settled`), so it is not resolved twice."""
-    head_commit(root)
-    found = default_branch.base(root, ref) if resolved is None else resolved
+    """The base's commit, its merge-base with HEAD — or with the `head` named
+    (`named_head`) — and whether it moved on: `ref`, else `$PKIT_CHECK_BASE`, else the
+    default branch — computed once for every reader (`default_branch.base`, COR-054
+    point 5). `resolved` is that base when the run has read it already
+    (`default_branch.settled`), so it is not resolved twice."""
+    if head is None:
+        head_commit(root)
+    head_rev = "HEAD" if head is None else head.commit  # the commit, as the diff reads it
+    found = default_branch.base(root, ref, head_rev=head_rev) if resolved is None else resolved
     if found.problem is not None or found.tip is None or found.fork is None:
         raise FrictionCheckError(found.problem or f"the base {found.ref!r} cannot be compared.")
     return BaseState(ref=found.ref, tip=found.tip, commit=found.fork, outdated=bool(found.outdated))
@@ -415,18 +524,32 @@ class Diff:
         return {e.path: e for e in self.entries}
 
 
-def read_diff(root: Path, base_commit: str) -> Diff:
-    """`git diff -M --name-status` from the base to the working tree, untracked files added."""
+def read_diff(root: Path, base_commit: str, head: HeadState | None = None) -> Diff:
+    """`git diff -M --name-status` from the base to the working tree, untracked files
+    added — or, for a `head` named (`named_head`), to that commit, the working tree
+    left unread."""
+    to = () if head is None else (head.commit,)
     raw = run_git(
-        root, "diff", "-M", "--name-status", "-z", "--no-color", "--relative", base_commit, "--"
+        root,
+        "diff",
+        "-M",
+        "--name-status",
+        "-z",
+        "--no-color",
+        "--relative",
+        base_commit,
+        *to,
+        "--",
     ).stdout
     entries = parse_name_status(nul_separated(raw))
-    untracked = _untracked(root)
-    known = {e.path for e in entries}
-    entries.extend(DiffEntry("A", rel) for rel in untracked if rel not in known)
+    if head is not None:
+        uncommitted = 0
+    else:
+        known = {e.path for e in entries}
+        entries.extend(DiffEntry("A", rel) for rel in _untracked(root) if rel not in known)
+        uncommitted = uncommitted_paths(root)
     return Diff(
-        entries=tuple(sorted(entries, key=lambda e: (e.path, e.status))),
-        uncommitted=uncommitted_paths(root),
+        entries=tuple(sorted(entries, key=lambda e: (e.path, e.status))), uncommitted=uncommitted
     )
 
 
@@ -783,17 +906,26 @@ def anchors_of(artefact: Artefact) -> list[Anchor]:
     return [Anchor(kind, value) for kind, values in artefact.anchors.items() for value in values]
 
 
-def deferral_reason(artefact: Artefact, anchor: Anchor) -> str:
-    """The reason written on the deferral of `anchor`, whitespace folded; `""` when none."""
+def _entry_reason(artefact: Artefact, deferral: Deferral) -> str | None:
+    """The reason one deferral entry carries, whitespace folded; `None` when it carries
+    no text."""
     deferred: Any = _revalidated_field(artefact, "deferred")
+    if not isinstance(deferred, list):
+        return None
+    entry = cast(list[Any], deferred)[deferral.index]
+    reason = cast(Mapping[str, Any], entry).get("reason") if isinstance(entry, Mapping) else None
+    return " ".join(reason.split()) if isinstance(reason, str) else None
+
+
+def deferral_reason(artefact: Artefact, anchor: Anchor) -> str:
+    """The reason written on the deferral of `anchor`, whitespace folded; `""` when none.
+    An anchor deferred twice — a validation error (COR-050 point 4) — reads as its first
+    entry carrying text."""
     for deferral in artefact.deferrals:
-        if deferral.anchor != anchor or not isinstance(deferred, list):
-            continue
-        entry = cast(list[Any], deferred)[deferral.index]
-        if isinstance(entry, Mapping):
-            reason = cast(Mapping[str, Any], entry).get("reason")
-            if isinstance(reason, str):
-                return " ".join(reason.split())
+        if deferral.anchor == anchor:
+            reason = _entry_reason(artefact, deferral)
+            if reason is not None:
+                return reason
     return ""
 
 
@@ -963,8 +1095,10 @@ def _judge(
     diff: Diff,
     kinds: AnchorKinds,
     resolved_at_base: Callable[[str], bool],
-) -> list[Finding]:
-    """The findings about one head artefact carrying the `friction` block.
+) -> tuple[list[Finding], list[_Question]]:
+    """The findings about one head artefact carrying the `friction` block, and the
+    questions the diff asked it — none for a new or an excluded one — which the answers
+    list reads (`_written_answers`).
 
     An artefact under an excluded path at head owes no answer (COR-050 point
     7), as the whole-repository check never judges one stale: nothing in the
@@ -996,12 +1130,12 @@ def _judge(
 
     if before is None:
         if artefact.excluded:
-            return findings
+            return findings, []
         message = "new in this diff: counts as revalidated"
         if any(u.path == artefact.path for u in base.discovery.unreadable):
             message += " (its base version's front matter does not parse, so there is no before)"
         findings.append(finding(FindingKind.ANSWERED, message, None, Answer.NEW))
-        return findings
+        return findings, []
 
     questions: list[_Question] = []
     left_out: list[Finding] = []
@@ -1041,7 +1175,7 @@ def _judge(
     if standing is not None and not questions:
         message = f"revalidated with no changed anchor: {_answer_text(standing, artefact)}"
         findings.append(finding(FindingKind.REVALIDATED, message, None, standing))
-    return findings
+    return findings, questions
 
 
 def _anchor_problem(
@@ -1141,6 +1275,132 @@ def _friction_message(question: _Question, deferral_predates: bool) -> str:
     return f"{question.subject} and carries no answer: revalidate the artefact, or defer the anchor"
 
 
+# --- the answers the change wrote ------------------------------------------------
+
+
+def _written_outcome(artefact: Artefact) -> str | None:
+    """A revalidation's `outcome` as the answers list gives it: `updated` or `unchanged`,
+    else `None`."""
+    outcome = _revalidated_field(artefact, "outcome")
+    return outcome if outcome in (Answer.UPDATED.value, Answer.UNCHANGED.value) else None
+
+
+def _revalidation_fields(artefact: Artefact) -> tuple[Any, Any, str | None]:
+    """What a revalidation is listed on: the parsed `at`, the `outcome` and the folded
+    `unchanged-because`, an absent one counting as a value."""
+    return parsed_at(artefact), _revalidated_field(artefact, "outcome"), _because(artefact)
+
+
+def _reason(artefact: Artefact, deferral: Deferral) -> str | None:
+    """The folded reason of one deferral entry, `None` when it has none."""
+    return _entry_reason(artefact, deferral) or None
+
+
+def _written_answers(
+    artefact: Artefact, before: Artefact | None, questions: Sequence[_Question]
+) -> list[WrittenAnswer]:
+    """The answers the change wrote in one head artefact's block, read against its base
+    counterpart `before` (`None` when it has none) and the `questions` the diff asked it
+    (`_judge`): its revalidation, its deferrals by anchor, then its reason for having no
+    anchors (COR-050 points 1, 3 and 4).
+
+    - A **revalidation** is listed where the parsed `at`, the `outcome` or the
+      folded `unchanged-because` differs — an absent one counting as a value, so
+      a block added to an existing artefact is listed. Where `at` changed it
+      `stands` or is a `bump`, as the check judges it (`_revalidation`), and
+      names each deferral entry it kept; where `at` did not, it is `edited`.
+      It is asked for only where it stands.
+    - A **deferral** entry is listed where the base defers its anchor in no
+      entry (`stands`), or in none with its folded reason (`edited`). Every
+      entry is read, so an anchor deferred twice — a validation error (COR-050
+      point 4) — lists each entry carrying words the base did not; of an
+      anchor's entries introduced, the first is the one the check reads.
+    - A **reason for having no anchors** is listed where it was added or differs.
+    - A **new** artefact lists only what carries words — its `unchanged-because`,
+      each deferral entry, its `unanchored-because` — never a bare `at`; nothing
+      in it was asked for.
+
+    What the change removed is not listed.
+    """
+
+    def entry(
+        answer: str | None,
+        anchor: Anchor | None,
+        reason: str | None,
+        *,
+        status: AnswerStatus = AnswerStatus.STANDS,
+        asked: bool = False,
+        kept: tuple[KeptDeferral, ...] = (),
+    ) -> WrittenAnswer:
+        return WrittenAnswer(
+            artefact.id,
+            artefact.location,
+            answer,
+            anchor,
+            reason,
+            kept,
+            asked,
+            status,
+            new=before is None,
+        )
+
+    # By anchor, an anchor's entries in written order (the sort is stable).
+    deferrals = sorted(artefact.deferrals, key=lambda d: (d.anchor.kind, d.anchor.value))
+    entries: list[WrittenAnswer] = []
+    if before is None:
+        because = _because(artefact)
+        if because is not None:
+            entries.append(entry(_written_outcome(artefact), None, because))
+        entries.extend(
+            entry(Answer.DEFERRED.value, d.anchor, _reason(artefact, d)) for d in deferrals
+        )
+    else:
+        revalidation = _revalidation(artefact, before)
+        reasons_before: dict[Anchor, set[str | None]] = {}
+        for deferral in before.deferrals:
+            reasons_before.setdefault(deferral.anchor, set()).add(_reason(before, deferral))
+        if _revalidation_fields(artefact) != _revalidation_fields(before):
+            kept: tuple[KeptDeferral, ...] = ()
+            if revalidation is None:
+                status = AnswerStatus.EDITED
+            else:
+                status = AnswerStatus.BUMP if revalidation.answer is None else AnswerStatus.STANDS
+                kept = tuple(
+                    KeptDeferral(d.anchor, _reason(artefact, d))
+                    for d in deferrals
+                    if d.anchor in reasons_before
+                )
+            entries.append(
+                entry(
+                    _written_outcome(artefact),
+                    None,
+                    _because(artefact),
+                    status=status,
+                    asked=bool(questions) and status is AnswerStatus.STANDS,
+                    kept=kept,
+                )
+            )
+        asked_about = {question.anchor for question in questions}
+        standing = revalidation is not None and revalidation.answer is not None
+        introduced: set[Anchor] = set()  # the anchors whose first entry was listed
+        for deferral in deferrals:
+            anchor = deferral.anchor
+            reason = _reason(artefact, deferral)
+            carried = reasons_before.get(anchor)
+            if carried is None:
+                asked = anchor in asked_about and not standing and anchor not in introduced
+                introduced.add(anchor)
+                entries.append(entry(Answer.DEFERRED.value, anchor, reason, asked=asked))
+            elif reason not in carried:
+                entries.append(
+                    entry(Answer.DEFERRED.value, anchor, reason, status=AnswerStatus.EDITED)
+                )
+    unanchored = artefact.unanchored_because
+    if unanchored is not None and (before is None or unanchored != before.unanchored_because):
+        entries.append(entry(UNANCHORED, None, unanchored))
+    return entries
+
+
 # --- order ---------------------------------------------------------------------
 
 
@@ -1180,26 +1440,88 @@ def truth_chain_order(discovery: Discovery) -> list[int]:
 # --- the check ---------------------------------------------------------------------
 
 
+class _NamedHeadKinds(AnchorKinds):
+    """The anchor kinds of a head named with `--head` (`named_head`), and what their
+    resolvers answer for it, read against that commit's files and naming it.
+
+    A resolver is a command run in the working tree, which reads what is on disk:
+    it is never read from a commit. So one runs only where the working tree is
+    the commit named — HEAD at it, nothing uncommitted — and anywhere else the
+    check refuses (`FrictionCheckError`) rather than read the disk as that commit.
+    Only an anchor whose resolver would run is refused; an anchor of a core kind,
+    or of a kind nothing may resolve, reads the same from any checkout.
+    """
+
+    def __init__(
+        self,
+        target_root: Path,
+        registry: Mapping[str, ResolverCommand],
+        files: Collection[str],
+        head: HeadState,
+    ) -> None:
+        super().__init__(
+            target_root, registry, files, f"commit {head.commit[:SHORT]} ({head.name})"
+        )
+        self._head = head
+        self._elsewhere: str | None = None
+        self._checked = False
+
+    def resolve(self, anchor: Anchor) -> AnchorResolution:
+        if anchor.kind not in CORE_ANCHOR_KINDS and self.unresolved(anchor.kind) is None:
+            elsewhere = self._working_tree_elsewhere()
+            if elsewhere is not None:
+                name = self._head.name
+                raise FrictionCheckError(
+                    f"--head {name}: the anchor {anchor.kind} {anchor.value!r} is resolved by "
+                    f"its capability's command, which runs in the working tree and reads what "
+                    f"is there — and the working tree is not {name} ({elsewhere}). Run from a "
+                    f"checkout at {name}: HEAD at {self._head.commit[:SHORT]}, nothing "
+                    f"uncommitted."
+                )
+        return super().resolve(anchor)
+
+    def _working_tree_elsewhere(self) -> str | None:
+        """How the working tree differs from the commit named, or `None` when it is that
+        commit; asked once, when the first resolver would run."""
+        if not self._checked:
+            self._checked = True
+            at = commit_of(self.target_root, "HEAD")
+            if at != self._head.commit:
+                self._elsewhere = (
+                    "HEAD names no commit" if at is None else f"HEAD is at {at[:SHORT]}"
+                )
+            else:
+                uncommitted = uncommitted_paths(self.target_root)
+                if uncommitted:
+                    self._elsewhere = counted(uncommitted, "uncommitted path", "uncommitted paths")
+        return self._elsewhere
+
+
 def run_change_check(
     target_root: Path,
     base_ref: str | None = None,
     *,
     registry: Mapping[str, ResolverCommand] | None = None,
     resolved: default_branch.Base | None = None,
+    named: HeadState | None = None,
 ) -> ChangeCheck:
-    """Run the change check of the working tree against the merge-base of `base_ref` —
+    """Run the change check of the working tree — or of the commit `named` with `--head`
+    (`named_head`), read from git objects — against the merge-base of `base_ref` with it;
     without one, `$PKIT_CHECK_BASE`, else the default branch (COR-054 point 3).
     `resolved` is that base when the caller has read it already (`resolve_base`).
     The anchor kinds are the registry's, the head's read from the package
-    metadata on disk and the base's from the base commit; a `registry` handed
-    in stands for both.
+    metadata on disk — a `named` head's from that commit — and the base's from
+    the base commit; a `registry` handed in stands for both. A `named` head's
+    resolvers run only where the working tree is that commit (`_NamedHeadKinds`).
 
     Raises `FrictionCheckError` when it cannot run — outside a git repository,
     before the first commit, or with a base that does not resolve — except
     while dormant, where there is nothing to compare and a missing base is
     only left out of the report.
     """
-    head_tree = WorkingTree(target_root)
+    head_tree: RepositoryTree = (
+        WorkingTree(target_root) if named is None else CommitTree(target_root, named.commit)
+    )
     head_discovery = discover_artefacts(target_root, tree=head_tree)
     settings = head_discovery.settings
     counts = {
@@ -1208,7 +1530,7 @@ def run_change_check(
         "carrying": len(head_discovery.with_container),
     }
     if head_discovery.is_dormant:
-        dormant_base, dormant_head = _dormant_context(target_root, base_ref, resolved)
+        dormant_base, dormant_head = _dormant_context(target_root, base_ref, resolved, named)
         return ChangeCheck(
             mode=settings.mode_or_default,
             mode_as_written=settings.mode,
@@ -1216,19 +1538,29 @@ def run_change_check(
             base=dormant_base,
             head=dormant_head,
             findings=(),
+            answers=(),
+            unreadable=(),
             **counts,
         )
 
-    base_state = resolve_base(target_root, base_ref, resolved=resolved)
-    diff = read_diff(target_root, base_state.commit)
+    base_state = resolve_base(target_root, base_ref, resolved=resolved, head=named)
+    diff = read_diff(target_root, base_state.commit, named)
     base_tree = CommitTree(target_root, base_state.commit)
     head = Side(target_root, head_tree, head_discovery)
     base = Side(target_root, base_tree, discover_artefacts(target_root, tree=base_tree))
-    kinds = AnchorKinds(
-        target_root,
-        registered_anchor_kinds(target_root) if registry is None else registry,
-        head.files,
-    )
+    if named is None:
+        kinds = AnchorKinds(
+            target_root,
+            registered_anchor_kinds(target_root) if registry is None else registry,
+            head.files,
+        )
+    else:
+        kinds = _NamedHeadKinds(
+            target_root,
+            registered_anchor_kinds(target_root, head_tree) if registry is None else registry,
+            head.files,
+            named,
+        )
 
     @functools.cache
     def base_registry() -> Mapping[str, ResolverCommand]:
@@ -1238,9 +1570,12 @@ def run_change_check(
     def resolved_at_base(kind: str) -> bool:
         return unresolved_kind_reason(kind, base_registry()) is None
 
+    head_state = HeadState(head_commit(target_root), diff.uncommitted) if named is None else named
     findings: list[Finding] = []
     if base_state.outdated:
-        findings.append(Finding(FindingKind.OUTDATED_BASE, _outdated_message(base_state)))
+        findings.append(
+            Finding(FindingKind.OUTDATED_BASE, _outdated_message(base_state, head_state))
+        )
     unreadable = base.settings.exclude_unreadable
     if unreadable is not None:
         # What the base left out cannot be told: read it as head, never as leaving nothing out.
@@ -1254,12 +1589,14 @@ def run_change_check(
             )
         )
     counterparts = _counterparts(head, base, diff)
+    answers: list[WrittenAnswer] = []
     for index in truth_chain_order(head_discovery):
         artefact = head_discovery.artefacts[index]
         if artefact.has_friction_block:
-            findings.extend(
-                _judge(artefact, counterparts.get(index), head, base, diff, kinds, resolved_at_base)
-            )
+            before = counterparts.get(index)
+            judged, questions = _judge(artefact, before, head, base, diff, kinds, resolved_at_base)
+            findings.extend(judged)
+            answers.extend(_written_answers(artefact, before, questions))
     for unreadable in sorted(head_discovery.unreadable, key=lambda u: u.path):
         findings.append(
             Finding(
@@ -1274,8 +1611,10 @@ def run_change_check(
         mode_as_written=settings.mode,
         dormant=False,
         base=base_state,
-        head=HeadState(head_commit(target_root), diff.uncommitted),
+        head=head_state,
         findings=tuple(findings),
+        answers=tuple(answers),
+        unreadable=tuple(sorted({u.path for u in head_discovery.unreadable})),
         **counts,
     )
 
@@ -1286,13 +1625,18 @@ def _config_path(root: Path) -> str:
 
 
 def _dormant_context(
-    root: Path, base_ref: str | None, resolved: default_branch.Base | None
+    root: Path,
+    base_ref: str | None,
+    resolved: default_branch.Base | None,
+    named: HeadState | None = None,
 ) -> tuple[BaseState | None, HeadState | None]:
     """What a dormant run can say about its base and head; it demands neither (point 15)."""
     try:
-        base: BaseState | None = resolve_base(root, base_ref, resolved=resolved)
+        base: BaseState | None = resolve_base(root, base_ref, resolved=resolved, head=named)
     except FrictionCheckError:
         base = None
+    if named is not None:
+        return base, named
     try:
         commit = commit_of(root, "HEAD")
         head = None if commit is None else HeadState(commit, uncommitted_paths(root))
@@ -1301,11 +1645,11 @@ def _dormant_context(
     return base, head
 
 
-def _outdated_message(base: BaseState) -> str:
+def _outdated_message(base: BaseState, head: HeadState) -> str:
     return (
-        f"the base {base.ref} is at {base.tip[:SHORT]}, which is not an ancestor of HEAD: it "
-        f"moved on after this branch left it at {base.commit[:SHORT]}; results hold only "
-        f"against an up-to-date base — merge or rebase onto {base.ref}, then run again"
+        f"the base {base.ref} is at {base.tip[:SHORT]}, which is not an ancestor of "
+        f"{head.name}: it moved on after this branch left it at {base.commit[:SHORT]}; results "
+        f"hold only against an up-to-date base — merge or rebase onto {base.ref}, then run again"
     )
 
 
@@ -1347,6 +1691,8 @@ def render_json(result: ChangeCheck) -> str:
             **{kind.value: result.count(kind) for kind in FindingKind},
         },
         "findings": [finding.as_json() for finding in result.findings],
+        "answers": [answer.as_json() for answer in result.answers],
+        "unreadable": list(result.unreadable),
     }
     return json.dumps(document, indent=2, sort_keys=True) + "\n"
 
@@ -1385,7 +1731,9 @@ _MODE_GLOSS = {
 
 
 def render_human(result: ChangeCheck) -> str:
-    """The read view: header, findings grouped by artefact upstream first, result, legend."""
+    """The read view: header, findings grouped by artefact upstream first, result, legend,
+    and last the answers the change wrote, word for word — what the repository wrote shown
+    with any character a terminal would act on escaped (`_shown`)."""
     title = cli_render.style("title", "Friction change check")
     if result.dormant:
         return "\n".join([f"{title} — dormant", "", *_dormant_lines(result)]) + "\n"
@@ -1412,12 +1760,12 @@ def render_human(result: ChangeCheck) -> str:
     for finding in rows:
         if finding.location != current:
             current = finding.location
-            lines.append(f"  {current}")
+            lines.append(f"  {_shown(current or '')}")
         cells = f"{finding.kind.value:{kind_width}}  {_anchor_cell(finding):{anchor_width}}"
-        lines.append(f"    {cells}  {finding.message}".rstrip())
+        lines.append(f"    {cells}  {_shown(finding.message)}".rstrip())
     for finding in unreadable:
-        lines.append(f"  {finding.location}")
-        lines.append(f"    {finding.kind.value:{kind_width}}  {finding.message}")
+        lines.append(f"  {_shown(finding.location or '')}")
+        lines.append(f"    {finding.kind.value:{kind_width}}  {_shown(finding.message)}")
 
     lines.extend(["", _result_line(result)])
     shown = [kind for kind in _LEGEND if result.count(kind)]
@@ -1429,25 +1777,89 @@ def render_human(result: ChangeCheck) -> str:
         [
             "",
             cli_render.style("heading", "Commands"),
-            "  pkit friction check --json   the same findings, machine-readable",
+            "  pkit friction check --json   the same findings and answers, machine-readable",
             "  pkit validate                the blocks, deferrals and cycles themselves",
+            "",
+            *_answers_lines(result),
         ]
     )
     return "\n".join(lines) + "\n"
 
 
 def _anchor_cell(finding: Finding) -> str:
-    return "—" if finding.anchor is None else f"{finding.anchor.kind} {finding.anchor.value}"
+    if finding.anchor is None:
+        return "—"
+    return _shown(f"{finding.anchor.kind} {finding.anchor.value}")
+
+
+def _shown(text: str) -> str:
+    """`text` as the human view prints it: each character that is not printable — a
+    control character such as an escape, a bidirectional override, a zero-width
+    character — written as its escape (`\\x1b`, `\\u202e`), never raw. Words read
+    from an artefact then cannot move the cursor, erase a line or reorder what
+    follows on the terminal the list is read on; the JSON document escapes them
+    itself."""
+    if text.isprintable():
+        return text
+    return "".join(ch if ch.isprintable() else ascii(ch)[1:-1] for ch in text)
+
+
+def _answers_lines(result: ChangeCheck) -> list[str]:
+    """The closing section: one line per answer the change wrote, its words in full."""
+    lines = [
+        cli_render.style("heading", "Answers written in this change")
+        + cli_render.style("muted", " — read from the artefacts, word for word")
+    ]
+    lines.extend(f"  {_answer_line(answer)}" for answer in result.answers)
+    if not result.answers:
+        lines.append("  none")
+    if result.unreadable:
+        files = counted(len(result.unreadable), "file", "files")
+        lines.append(
+            f"  {files} whose front matter does not parse could not be read for answers "
+            f"(`unreadable` above)"
+        )
+    return lines
+
+
+def _answer_line(answer: WrittenAnswer) -> str:
+    """`<location>  <answer> [<anchor>] (<flags>) — "<words>"`, every word written, any
+    character that is not printable escaped (`_shown`)."""
+    what = answer.answer or "no outcome"
+    if answer.anchor is not None:
+        what += f" {answer.anchor.kind} {answer.anchor.value}"
+    flags = ["new"] if answer.new else []
+    if not answer.asked:
+        flags.append("not asked for")
+    if answer.status is AnswerStatus.BUMP:
+        flags.append("the diff does not bear it out")
+    if answer.status is AnswerStatus.EDITED:
+        flags.append("edited without a revalidation")
+    flags.extend(
+        f"keeps the deferral of {kept.anchor.kind} {kept.anchor.value}"
+        + ("" if kept.reason is None else f' — "{kept.reason}"')
+        for kept in answer.kept
+    )
+    line = f"{answer.location}  {what}"
+    if flags:
+        line += f" ({'; '.join(flags)})"
+    return _shown(line if answer.reason is None else f'{line} — "{answer.reason}"')
 
 
 def _header_lines(result: ChangeCheck) -> list[str]:
     lines: list[str] = []
+    against = "HEAD" if result.head is None else result.head.name
     if result.base is not None:
         lines.append(
             f"  Base: {result.base.ref} at {result.base.commit[:SHORT]}"
-            + cli_render.style("muted", "   (merge-base with HEAD)")
+            + cli_render.style("muted", f"   (merge-base with {against})")
         )
-    if result.head is not None:
+    if result.head is not None and result.head.named is not None:
+        lines.append(
+            f"  Head: {result.head.commit[:SHORT]} ({result.head.named})"
+            + cli_render.style("muted", "   (--head: the working tree is not read)")
+        )
+    elif result.head is not None:
         uncommitted = counted(result.head.uncommitted, "uncommitted path", "uncommitted paths")
         working = (
             f"+ working tree, {uncommitted}" if result.head.uncommitted else "(working tree clean)"
@@ -1458,7 +1870,7 @@ def _header_lines(result: ChangeCheck) -> list[str]:
     lines.extend(_mode_warning(result))
     for finding in result.findings:
         if finding.kind is FindingKind.OUTDATED_BASE:
-            lines.append(f"  ⚠ outdated base: {finding.message}")
+            lines.append(f"  ⚠ outdated base: {_shown(finding.message)}")
     return lines
 
 

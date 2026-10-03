@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-03T14:01:22Z
+      at: 2026-10-03T14:05:39Z
       outcome: unchanged
-      unchanged-because: the lifecycle reference gained a paragraph on a kind for a thing kept outside the repository, naming living-docs' source kind, and the schemas reference names source among the registered anchor kinds; this index names each area and what it holds in one line — the lifecycle area as packaging and dependency architecture, the schemas area as the YAML schemas and their JSON Schema companions — neither of which mentions anchor kinds, so every line still holds
+      unchanged-because: the CLI reference gained the change check's list of answers a change wrote, its --head option and the writers' new refusal line; the schemas reference gained validation's finding for an anchor deferred twice; the lifecycle reference says how a resolver runs under --head — each inside its own friction or resolver section. This map names the three by role (the pkit command surface, the schemas, packaging and upgrades) and points to the CLI reference's Authoring commands section, and all of it still holds
 ---
 
 # project-kit
