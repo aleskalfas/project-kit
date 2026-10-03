@@ -782,6 +782,52 @@ def test_refresh_never_seeds_source_project_file_and_refreshes_core(
     assert not (installed / "skills" / "old-skill.md").exists()
 
 
+# --- Python caches stay in the source (#1325) ---------------------------
+
+
+def _plant_python_caches(cap_dir: Path) -> None:
+    """What importing the capability's scripts in place leaves in its source
+    tree: a `__pycache__/` of compiled files, and a stray compiled file."""
+    scripts = cap_dir / "scripts"
+    (scripts / "__pycache__").mkdir(parents=True, exist_ok=True)
+    (scripts / "run.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (scripts / "__pycache__" / "x.cpython-312.pyc").write_bytes(b"bytecode")
+    (scripts / "stray.pyc").write_bytes(b"bytecode")
+
+
+def _python_caches(tree: Path) -> list[str]:
+    return [
+        p.relative_to(tree).as_posix()
+        for p in tree.rglob("*")
+        if "__pycache__" in p.parts or p.suffix == ".pyc"
+    ]
+
+
+def test_install_leaves_out_python_caches(kit_target: Path, kit_source: Path) -> None:
+    cap_dir = _stage_capability_in_source(kit_source, "evidence")
+    _plant_python_caches(cap_dir)
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+
+    installed = caps.install_capability(kit_target, source)
+
+    assert (installed / "scripts" / "run.py").is_file()
+    assert _python_caches(installed) == []
+
+
+def test_refresh_leaves_out_python_caches(kit_target: Path, kit_source: Path) -> None:
+    cap_dir = _stage_capability_in_source(kit_source, "evidence")
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+    installed = caps.install_capability(kit_target, source)
+    _plant_python_caches(cap_dir)
+
+    caps.refresh_capability(kit_target, source)
+
+    assert (installed / "scripts" / "run.py").is_file()
+    assert _python_caches(installed) == []
+
+
 def test_uninstall_capability_removes_and_deregisters(kit_target: Path, kit_source: Path) -> None:
     _stage_capability_in_source(kit_source, "evidence")
     source = caps.find_capability_in_source(kit_source, "evidence")

@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:53:23Z
+          at: 2026-10-02T20:37:21Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 now calls whoever reports a reading-evidence result its filler, not a provider, and says nothing in the capability reads the entries; the key is unchanged, and a page's anchors still ground every statement it makes
+          unchanged-because: "DEC-001 point 3 gains a paragraph on a page kind's structure: where it is declared and what validation makes of a departure from it; it concerns the sections a page's body carries, not what grounds the page's statements, so a page's anchors still ground every statement it makes"
   RS-LDOC-002:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -19,9 +19,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:53:24Z
+          at: 2026-10-02T20:37:23Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 now calls whoever reports a reading-evidence result its filler rather than a provider; the evidence key and the one-check-per-result rule are unchanged, and each fact on a page is still stated once and linked to
+          unchanged-because: DEC-001 point 3 gains a paragraph on a page kind's structure, declared once with the kind and checked by validation; it says nothing about where a fact is stated, so each fact is still stated once and other pages link to it
   RS-LDOC-003:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -29,9 +29,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:53:25Z
+          at: 2026-10-02T20:37:25Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 now says filler, not provider, for whoever reports a reading-evidence result; the readers point that a page's reader field names is untouched, so a page still names the one reader it is for and says only what that reader needs
+          unchanged-because: DEC-001 point 3 gains a paragraph on a page kind's structure; a declared structure names the sections a page carries, not its reader, and the reader field and the readers point are untouched, so a page still names its reader and says only what that reader needs
   RS-LDOC-004:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -39,9 +39,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:53:31Z
+          at: 2026-10-02T20:37:16Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 now says filler, not provider, for whoever reports a reading-evidence result; an evidence entry is still no page and has no kind, so pages of a kind still follow one format and name their kind
+          unchanged-because: DEC-001 point 3 says where a kind's structure is declared and what a departure costs; the structure is the checkable part of this rule, whose statement is unchanged
   RS-LDOC-005:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -49,9 +49,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:53:32Z
+          at: 2026-10-02T20:37:28Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 now says filler, not provider, for whoever reports a reading-evidence result; the key and the rule are unchanged, and nothing about an index-like file turns on that wording, so it is still a signpost to what a folder holds
+          unchanged-because: DEC-001 point 3 gains a paragraph on a page kind's structure; the structure the signpost kind declares asks only for a title and says nothing of what a signpost tells its reader, so an index-like file is still a signpost to what a folder holds, never a summary of its contents
   RS-LDOC-006:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -59,9 +59,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:53:32Z
+          at: 2026-10-02T20:37:31Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 now says filler, not provider, for whoever reports a reading-evidence result, and still no filler of the point has shipped; the wording only names who will report, and nothing is created ahead of that need
+          unchanged-because: DEC-001 point 3 gains a paragraph on a page kind's structure; the capability declares a structure only for the two kinds it ships, both of which pages already follow, and a structure names only what every page of the kind must carry, so nothing is created ahead of the need for it
 ---
 
 # LDOC — the shared documentation method

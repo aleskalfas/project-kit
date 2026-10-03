@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-03T01:55:23Z
+      at: 2026-10-03T01:52:16Z
       outcome: unchanged
-      unchanged-because: the lifecycle, CLI and schemas references gained the anchor-kind registration under friction.kinds, how a registered resolver runs and what it answers, the unresolved state and the change check's no-answer and dead-unattributed findings; this index names each area and what it holds in one line, none of which mentions anchors, friction or resolvers, so every line still holds
+      unchanged-because: the lifecycle README gains one paragraph saying every copy into a project leaves out Python's caches; this page maps the lifecycle area in one line as packaging, manifest schema, upgrade procedure and register/unregister mechanics, which still holds
 ---
 
 # project-kit
