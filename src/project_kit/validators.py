@@ -1,16 +1,18 @@
 """The validator registry behind `pkit validate` (ADR-058).
 
-`pkit validate` is the one umbrella over every deterministic check of the
-repository's *state* (COR-004). Each functionality registers a **validator**:
-a name, an order, and a callable that reads the project at a root and answers
-with an `Outcome` — the lines that summarise what it checked, and its
-findings, each with a severity. The backbone registers its members in this
-module (`BACKBONE_VALIDATORS`); a capability registers its own in its package
-metadata (`validators:`, the lifecycle README's package-metadata reference),
-which `capability_validators` reads defensively — a malformed entry is the
-packages member's finding, never a crash here.
+`pkit validate` is the project's one check of its own *state* against the
+invariants its records own (COR-055, which owns the contract). The backbone's
+functionalities and installed components join it by registering a
+**validator**: a name, an order, and a callable that reads the project at a
+root and answers with an `Outcome` — the lines that summarise what it
+checked, and its findings, each with a severity. The backbone registers its
+members in this module (`BACKBONE_VALIDATORS`); a capability registers its
+own in its package metadata (`validators:`, the lifecycle README's
+package-metadata reference), which `capability_validators` reads defensively
+— a malformed entry is the packages member's finding, never a crash here.
 
-**Severity is the whole contract between a member and the umbrella.**
+**Of what a member answers, severity is all the umbrella reads to decide its
+exit.**
 
 - `error` fails `pkit validate` (exit 1).
 - `warning`, `info` and `report` print and never fail. A warning asks for
