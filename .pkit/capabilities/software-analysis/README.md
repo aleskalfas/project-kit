@@ -12,9 +12,9 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-02T14:52:58Z
+      at: 2026-10-03T01:55:28Z
       outcome: unchanged
-      unchanged-because: DEC-001 now gives the report of a number two lines of work took to a check that compares the branch with its base, which this page already says pkit analysis check-numbers is, with pkit validate reporting the duplicate id once both files are in one tree; COR-052 point 6 now lets a point whose every use is advisory declare fallback so long as no finding is drawn from an entry's absence, and this page's evidence point is fallback, warns only on entries present and says nothing of an id the point no longer holds
+      unchanged-because: COR-050 now says what the resolver of a kind a capability registers answers, when an anchor of such a kind has changed, that one its resolver names no file for is dead, that exclusions leave it untouched, and that the change check fails one whose resolver gave no answer; this page cites COR-050 for the friction block in the container, the core check flagging an artefact when an anchor changes, unanchored-because, and dead anchors being the core's checks, and the artefacts it stamps anchor by path, record and artefact alone, never a registered kind, so all it says still holds
 ---
 
 # software-analysis capability

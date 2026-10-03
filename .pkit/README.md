@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-02T14:53:03Z
+      at: 2026-10-03T01:55:23Z
       outcome: unchanged
-      unchanged-because: the decisions, lifecycle, CLI and schemas READMEs now cite COR-055 for what validation owns and the lifecycle README restates COR-052's rule for which inert policy a point declares; this page maps each of those areas in one line, the record system, packaging and lifecycle, the command surface and the schemas, which still hold
+      unchanged-because: the lifecycle, CLI and schemas references gained the anchor-kind registration under friction.kinds, how a registered resolver runs and what it answers, the unresolved state and the change check's no-answer and dead-unattributed findings; this index names each area and what it holds in one line, none of which mentions anchors, friction or resolvers, so every line still holds
 ---
 
 # project-kit
