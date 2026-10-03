@@ -3,7 +3,9 @@
 The capability provides the `pkit::analysis` role and defines one data point
 under it, `revalidation-evidence` (`union`, no default, inert `fallback`), and
 contributes the analysis' actors to the documentation role's readers point,
-`pkit::documentation:readers`, through its command filler, `fill-readers`.
+`pkit::documentation:readers`, through its command filler, `fill-readers`. Its
+other contribution, the settled use cases to the work-tracking role's point, is
+declared here and exercised in `test_software_analysis_use_cases.py`.
 
 - the pieces: the package declaration and the evidence point's companion schema;
 - the contribution through the real backbone: with software-analysis alone it
@@ -67,12 +69,15 @@ from tests.analysis_repo import (
 )
 
 FILL = SA / "scripts" / "fill-readers.py"
+FILL_USE_CASES = SA / "scripts" / "fill-use-cases.py"
 LD = Path(".pkit") / "capabilities" / "living-docs"
 LIVING_DOCS = REPO / LD
 
 ROLE = "pkit::analysis"
 EVIDENCE = "pkit::analysis:revalidation-evidence"
 READERS = "pkit::documentation:readers"
+USE_CASE_POINT = "pkit::work-tracking:use-cases"
+PROJECT_MANAGEMENT = REPO / ".pkit" / "capabilities" / "project-management"
 EVIDENCE_FILLER = "tech-docs/pkit/fillers/pkit/analysis/revalidation-evidence.yaml"
 RECORD = "tech-docs/analysis/revalidations/2026-10-01-first-run.md"
 
@@ -167,7 +172,7 @@ def test_the_package_provides_the_role_and_declares_the_point_and_the_contributi
     assert point["description"].strip()
     assert (CAPABILITY / "schemas" / point["schema"]).is_file()
 
-    (contribution,) = connections["extensions"]["contributes"]
+    contribution, use_cases = connections["extensions"]["contributes"]
     assert contribution == {
         "point": READERS,
         "schema_version": 1,
@@ -178,7 +183,21 @@ def test_the_package_provides_the_role_and_declares_the_point_and_the_contributi
     readers = _package(LIVING_DOCS)["connections"]["extension-points"]["accepts"][READERS]
     assert readers["schema_version"] == contribution["schema_version"]
     command = package["commands"]["fill-readers"]
-    assert command["query-contract"] is True
+    assert command["query-contract"] is True and "reads" not in command
+    assert (CAPABILITY / command["script"]).is_file()
+
+    assert use_cases == {
+        "point": USE_CASE_POINT,
+        "schema_version": 1,
+        "command": "fill-use-cases",
+        "description": use_cases["description"],
+    }
+    # The version the shipped provider of the work-tracking role defines the point at.
+    accepted = _package(PROJECT_MANAGEMENT)["connections"]["extension-points"]["accepts"]
+    assert accepted[USE_CASE_POINT]["schema_version"] == use_cases["schema_version"]
+    command = package["commands"]["fill-use-cases"]
+    # It reads the default branch, and says so: the backbone holds it to settled state.
+    assert command["query-contract"] is True and command["reads"] == ["settled"]
     assert (CAPABILITY / command["script"]).is_file()
 
 
@@ -198,10 +217,11 @@ def test_the_filler_answers_the_point_and_version_the_package_declares() -> None
     """The envelope's `schema_version` is the filler's; the version the backbone binds
     the contribution by is the package's. Held equal, the filler never answers a
     version the contribution does not declare."""
-    (contribution,) = _package(CAPABILITY)["connections"]["extensions"]["contributes"]
-    readers = CAPABILITY / "scripts" / "_lib" / "readers.py"
-    assert _constant(readers, "POINT") == contribution["point"]
-    assert _constant(readers, "POINT_VERSION") == contribution["schema_version"]
+    contributes = _package(CAPABILITY)["connections"]["extensions"]["contributes"]
+    for contribution, module in zip(contributes, ("readers", "settled_use_cases"), strict=True):
+        filler = CAPABILITY / "scripts" / "_lib" / f"{module}.py"
+        assert _constant(filler, "POINT") == contribution["point"]
+        assert _constant(filler, "POINT_VERSION") == contribution["schema_version"]
 
 
 #: An executed check's name, as a filler gives it: a test's name, slugged.
@@ -289,14 +309,19 @@ def test_the_evidence_steps_are_a_set_by_the_artefact_s_kind(
 # --- the contribution to the readers point (DEC-001 point 8) ---------------------------------
 
 
-def test_alone_the_contribution_is_inert_and_its_filler_never_runs(project: AdopterRepo) -> None:
-    """No capability provides the documentation role: the contribution is reported as
-    having no active provider, never as an error, and its filler never runs."""
-    (project.root / FILL).write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+def test_alone_the_contributions_are_inert_and_their_fillers_never_run(
+    project: AdopterRepo,
+) -> None:
+    """No capability provides the documentation role, or the work-tracking role: each
+    contribution is reported as having no active provider, never as an error, and its
+    filler never runs."""
+    for filler in (FILL, FILL_USE_CASES):
+        (project.root / filler).write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
     result = CliRunner().invoke(main, ["--color", "never", "validate", "--only", "connections"])
     assert result.exit_code == 0, result.output
     assert "pkit::analysis → software-analysis" in result.output
-    assert f"software-analysis contributes {READERS!r}: no active provider" in result.output
+    for point in (READERS, USE_CASE_POINT):
+        assert f"software-analysis contributes {point!r}: no active provider" in result.output
     assert "0 error(s), 0 warning(s)." in result.output
     assert _resolve(READERS) == {
         "schema_version": 1,
@@ -312,8 +337,10 @@ def test_alone_the_contribution_is_inert_and_its_filler_never_runs(project: Adop
     assert shown.exit_code == 0, shown.output
     assert "Roles it provides (1)\n    pkit::analysis — software-analysis" in shown.output
     assert f"contributes {READERS} (v1, command fill-readers)" in shown.output
+    assert f"contributes {USE_CASE_POINT} (v1, command fill-use-cases)" in shown.output
     assert shown.output.endswith(
-        f"What connects here (1)\n    out software-analysis contributes {READERS}: "
+        f"What connects here (2)\n    out software-analysis contributes {READERS}: "
+        f"no active provider\n    out software-analysis contributes {USE_CASE_POINT}: "
         "no active provider\n"
     )
 

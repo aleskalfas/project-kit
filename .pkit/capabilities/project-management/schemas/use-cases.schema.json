@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://project-kit/capabilities/project-management/use-cases.schema.json",
+  "title": "Use cases settled on the default branch — the value of pkit::work-tracking:use-cases, version 1",
+  "description": "The data point's companion schema (COR-052 point 5; project-management:DEC-054 point 1). The value is the use cases settled on the default branch, one entry per use case. Batch planning walks them before it slices the work, and body validation reads the use-case ids an issue body cites in its `## Use cases` section against them, deriving its citation matcher from `id`'s pattern here. The point is `single`: one keeper answers, and a project filler replaces the answer whole. The version rises only on a change that breaks existing fillers.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/use-case" },
+  "$defs": {
+    "use-case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "status"],
+      "properties": {
+        "id": {
+          "description": "The use case's id: `UC-` and three or more digits. Once settled it names the same use case for good, withdrawn or not.",
+          "type": "string",
+          "pattern": "^UC-[0-9]{3,}$"
+        },
+        "title": {
+          "description": "The use case's title, a line a person reads in a plan.",
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "description": "`active`, or `withdrawn` for a use case no longer in force. A filler maps its own lifecycle onto these two.",
+          "enum": ["active", "withdrawn"]
+        },
+        "path": {
+          "description": "The repository-relative path of the document that describes the use case.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

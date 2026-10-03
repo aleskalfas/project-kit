@@ -58,6 +58,7 @@ bodies:
       - "## Out of scope"
       - "## Dependencies"
       - "## Approach"
+      - "## Use cases"
 
   umbrella:
     required_sections:
@@ -97,6 +98,7 @@ bodies:
       - "## Implementation notes"
       - "## Related"
       - "## Out of scope"
+      - "## Use cases"
 
 universal_body_rules:
   - rule: |
@@ -129,6 +131,22 @@ universal_body_rules:
       No predicted decision IDs (e.g., references to DEC-NNN that
       haven't been authored yet). Reference only IDs that already
       exist.
+    severity: "[validation-severity:warning]"
+  - id: body.use-case-citation
+    rule: |
+      On a Feature or Task body, a use case cited in a `## Use cases`
+      section and not held by the use-case point
+      (`pkit::work-tracking:use-cases`, the use cases settled on the
+      default branch) is reported. The check is of existence only: a
+      cited id that exists but names another use case than the one meant
+      passes, and so does a withdrawn use case. Only an id in that
+      section, matching the point's id pattern, is a citation; on a body
+      of another type the rule reads nothing. A report, never a refusal,
+      at the severity below, which validators read from here. While
+      nothing defines or fills the point it says nothing, and when the
+      point cannot be read it says, at the same severity, that the
+      citations were not checked. Per
+      [project-management:DEC-054-use-case-validation].
     severity: "[validation-severity:warning]"
   - rule: |
       Checkboxes follow the close-gate rule (every box ticked before

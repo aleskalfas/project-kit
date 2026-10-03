@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-02T12:56:14Z
+      at: 2026-10-03T01:46:53Z
       outcome: updated
 ---
 
@@ -114,7 +114,7 @@ This config is adopter-owned. The capability's schemas are immutable kit-shipped
 
 #### The default branch is the backbone's
 
-The branch work is cut from, pull requests target (DEC-013), `merge-pr` and `done-work` switch back to, and `pre-check` holds to the repository's default is **declared once, for every reader, in the backbone configuration**: `repository.default-branch` in `.pkit/project/config.yaml`, `main` when undeclared ([COR-054](../../decisions/core/COR-054-default-branch.md); the CLI reference, "Configuration file"). A project on another branch declares it there — `pkit config set repository.default-branch develop --yes` — and the core friction check, software-analysis' number check and this capability then read the same branch.
+The branch work is cut from, pull requests target (DEC-013), `merge-pr` and `done-work` switch back to, and `pre-check` holds to the repository's default is **declared once, for every reader, in the backbone configuration**: `repository.default-branch` in `.pkit/project/config.yaml`, `main` when undeclared ([COR-054](../../decisions/core/COR-054-default-branch.md); the CLI reference, "Configuration file"). A project on another branch declares it there — `pkit config set repository.default-branch develop --yes` — and the core friction check, any other capability that reads the default branch and this capability then read the same branch.
 
 - **Read through the backbone.** pm asks `pkit repository base --json` and never resolves a branch itself: the default branch's name for the verbs; the commit `start-work` cuts from and `create-draft` counts commits beyond, for the default branch and an integration branch alike (COR-054 point 2 — the remote's copy, and the local branch only in a clone with no remote, which the backbone warns about); and the base `check-doc-mapping` compares with and where the branch left it — `--base`, else `$PKIT_CHECK_BASE`, else the default branch (point 3). `open-pr --doc-impact-from-friction` runs the change check with no `--base` for the default branch, so it resolves it as every reader does.
 - **Never a guess** (point 4). When the backbone cannot answer — `pkit` missing, a timeout, a failed run, a backbone older than `pkit repository base` — the verbs that act on the branch (`start-work`, `create-draft`, `open-pr`, `review-work`) refuse, naming the cause; `merge-pr` / `done-work` skip the local clean-up and say so; `pre-check` fails its default-branch check. A base that resolves to no commit refuses `start-work`, `create-draft` and `check-doc-mapping` with the backbone's reason and fix.
@@ -295,6 +295,47 @@ pkit pm link-parent 1101 1102 --yes          # link two issues without the promp
 The asymmetry is deliberate: `create-issue` keeps stamping the template skeleton for the author to fill (stamp-then-fill workflow is preserved), and a just-filed Todo that cannot advance is harmless. The **block** lives at the first transition — that is where the harm of an unauthored body advancing through its whole lifecycle is closed.
 
 `create-issue` always emits the warning when filing an unauthored body; it never silently admits one.
+
+#### Use cases in planning and in bodies (per [project-management:DEC-054-use-case-validation])
+
+A project may keep a written account of what its software must do, as use cases, each with a stable id (`UC-NNN`). This capability does not write them, and does not know who keeps them. It defines one data point, `pkit::work-tracking:use-cases` — the use cases settled on the default branch ("Connections", below) — and reads it. What happens depends on what the point says:
+
+| The point | Batch planning | Body validation |
+|---|---|---|
+| **Off** — nothing defines it, or nothing fills it | Nothing. Use cases are never mentioned. | Nothing. |
+| **Has entries** | Walks the active use cases before it slices. | Warns of a cited id the set does not hold. |
+| **Empty** — every filler answered, and no use case has settled | Plans a Task to author the use cases ahead of work that touches what users do — unless you declined it in this checkout earlier today. | Warns of each cited id: none exists yet. |
+| **Partly checked** — it answered without a filler that was meant to answer | Walks what it holds, and says the set may be incomplete. | An id it holds passes; the ids it lacks are named as not checked. |
+| **Could not check** — it gave no set, as in a clone that has not fetched the default branch | Says the use cases could not be read, and why, and plans without them. | One notice says the citations were not checked, and why. |
+
+- **Batch planning walks the use cases before it slices.** With entries, the project-manager reads the active use cases against your intent: their documents where the entries give a path, their titles alone otherwise, and then the plan says so. Each planned Feature and Task names the use cases it serves, and its filed body lists them in a `## Use cases` section, one per line (`- UC-003 — Export a report`). An issue that serves none — a refactor, a chore — has no such section. The section is optional and outside the required minimum; no template carries it.
+- **The approval gate shows both kinds of gap**: a use case your intent touches that no planned issue names, and behaviour the plan builds that no use case describes. Neither blocks: you approve, revise or cancel. Over a partly checked set the plan names the filler that did not answer, and shows the second kind as a *possible* gap, since that filler may describe the behaviour.
+- **Over an empty set, a plan whose work touches what users do opens with a Task to author the use cases.** Work touches what users do when it serves a goal someone using (not building) the software reaches, which a use case would describe. The build, tests, CI, refactors, tooling and the documentation of how the software is built and worked on are internal; for a library or a command-line tool, using it is calling or running it, and building, testing or releasing it is internal. The slicing table's Use cases column shows the judgement for every Feature and Task: the Task's number where the issue depends on it, `declined` where the issue touches what users do and you declined the Task, `none` for internal work. Only the issues that touch what users do depend on the Task; they state the goals they serve as text and cite no use case, since none has settled, and one of the Task's acceptance criteria is that they name their use cases. A plan of internal work only has no such Task, and the approval gate says why; say if the work does touch what users do. The project-manager never writes use cases itself.
+- **A declined Task is kept until the next day, in this checkout.** Revise the Task away at the gate to plan without use cases: the plan's topmost new issue then says so in prose — or each filed issue does, where the plan files only under an existing issue — and when you approve the plan, your answer is kept in this checkout, never committed, for the rest of the day in your machine's local time. Until midnight, plans from this checkout leave the Task out and their gate says when you declined it ("You declined the Task at 09:12 today; it is offered again from tomorrow."); from the next day on it is offered again. The answer is kept per checkout: another clone or worktree asks separately, and a worktree removed after planning takes its answer with it. Removing the Task because an open issue already plans the use cases is not a decline: the dependent issues depend on that issue instead, and nothing is kept. The project-manager keeps the answer through `decline-use-case-task`; you need the command only to look at the answer or to drop it:
+
+  | Command | What it does |
+  |---|---|
+  | `decline-use-case-task` | Keep the answer: the Task was declined now. The project-manager runs it on approving a plan you revised the Task out of. |
+  | `decline-use-case-task --show [--json]` | Print the kept answer — `declined` with the local time of the answer and of the next offer, `expired`, `none`, or `unreadable` with why. Read-only. |
+  | `decline-use-case-task --clear` | Drop the kept answer, so the next plan offers the Task again. |
+
+  The answer is a git-ignored runtime file, `project/instance/use-case-task.json` under the capability's folder (declared in `package.yaml`'s `runtime_ignore:`), holding the UTC time of the answer and nothing else. A file that cannot be read never hides the Task: it is offered, and the gate says that an earlier answer could not be read.
+- **A body's citations are checked for existence.** On a Feature or Task body, `validate-issue`, `edit-issue` (on a body edit) and `create-issue --body-file` read the ids in the `## Use cases` section against the point. A citation is an id there matching the point's id pattern — `UC-` and three or more digits. One the set does not hold is reported as `body.use-case-citation`, naming what the set was read against — the default-branch commit, or your own filler file where it answered:
+
+  ```
+  [warning] body.use-case-citation: cites UC-042, not among the use cases settled on the default branch (read at origin/main 1a2b3c4d5e6f). The check is of existence only. If the use case has landed since, fetch the default branch and validate again.
+  ```
+
+  An id the point holds passes, whichever use case you meant, and so does a withdrawn one: its id is never reused, so the citation stays a true reference. An id anywhere else in the body is not a citation. EPIC, Umbrella and Milestone bodies are not read: a `## Use cases` heading there is ordinary content. The point is resolved only for a body that cites, so a body without the section starts no filler.
+- **A warning, never a refusal.** The severity is the rule's token in `schemas/body-format.yaml`, `warning`; no project setting changes it, and no verb refuses or changes its exit code over it. A use-case id is settled once its use case reaches the default branch — until then another line of work may take the same id — and this clone's view of that branch may lag the remote, so the finding names a likely guess and blocks nothing.
+- **When the citations cannot be checked**, the same verbs say so in one notice, `body.use-cases-unchecked`, at the same severity, and report no use case as unknown on that ground. A point that gave no set names the reason, and with it the fix; a partly checked one names the ids it lacks and the filler that did not answer:
+
+  ```
+  [warning] body.use-cases-unchecked: use-case citations not checked (UC-042): the use cases could not be read — <why>. None is reported as unknown on that ground.
+  [warning] body.use-cases-unchecked: UC-042 not checked: the use-case point answered without <filler> (<its reason>), so the set it holds may be incomplete.
+  ```
+
+  `validate-issue --json` carries both labels among its `findings`, like any other finding.
 
 #### PR body validation — residual placeholder detection (per [project-management:DEC-031-reject-unauthored-placeholder-bodies])
 
@@ -969,6 +1010,10 @@ doc_check:
 
 **The `## Doc impact` section may render the pages' answers.** `open-pr --doc-impact-from-friction` (opt-in) runs `pkit friction check --json` against the PR's base — for the default branch with no `--base`, so the check resolves it as every reader does; for an integration branch, that branch, resolved the same way (COR-054) and writes one bullet per answer the changed pages carry into an unwritten section — the template's placeholder, an empty section, or none — and leaves an authored section as it is; a page still carrying friction is named on stderr, to be answered on the page. A check document of a `schema_version` other than 1 is not rendered, and the command says so; one without the key, from a backbone before it, reads as 1 (the CLI README, "Friction checks"). Rendering only: the check never reads the section for a contributed obligation. The section itself stays required on every Task and pull request (DEC-015), whatever fills the point.
 
+- **Accepts** `pkit::work-tracking:use-cases`, version 1: the use cases settled on the default branch, per [project-management:DEC-054-use-case-validation]. Its shape is the companion schema `schemas/use-cases.schema.json`: each entry an `id` (`UC-` and three or more digits), a `title`, a `status` — `active` or `withdrawn` — and, optionally, the repository-relative `path` of the document that describes the use case. The point is `single`, with no default, and its inert policy is `fallback`: its readers only report, so a filler that cannot answer is a warning in `pkit validate`, never an error. What reads it, and how each state of it reads, is under "Use cases in planning and in bodies", above.
+
+  **Whatever keeps your use cases fills it**: a capability that contributes to the point, or your own filler file, `docs/pkit/fillers/pkit/work-tracking/use-cases.yaml` (`schema_version: 1` and a `value` list of entries), which replaces a capability's answer whole. `pkit status` shows what fills the point. A filler holds to four things, which the point's description states: the value holds every use case that ever settled, withdrawn ones included; an id, once settled, names the same use case for good; the answer is complete or none — a filler that cannot read a use case gives no answer, never a shorter list; and a capability's filler declares that it reads settled state (`reads: [settled]` on its command), so the backbone does not start it where the default branch cannot be read. Your own filler file is your statement of your use cases: it is held to the point's shape and taken as given. With nothing filling the point, nothing in this capability mentions use cases.
+
 ## Permissions
 
 The project-management capability ships a **capability-contributed permission grant** (per ADR-016) at `.pkit/capabilities/project-management/permissions/grants.yaml`. This fragment is automatically composed into the effective permission model whenever this capability is a registered component — no manual copy required.
@@ -1061,7 +1106,7 @@ Schemas distilled from upstream METs carry a structured `source:` block (per the
 
 - **GitHub** as the work-tracker. The methodology names GitHub primitives directly (per MET-002 / DEC-002): Issues, native sub-issues, Milestones, Projects v2 boards and fields, labels, branch protection, GraphQL.
 - **`gh` CLI** authenticated for the target organization, or equivalent GitHub access for whatever tooling the project-manager invokes.
-- **No other capabilities required.** This capability is self-contained.
+- **No other capabilities required.** This capability is self-contained. Another capability may fill the points it accepts ("Connections", above) — the documentation obligations, the use cases — and it works the same with none installed.
 
 ## Feedback to the spec
 

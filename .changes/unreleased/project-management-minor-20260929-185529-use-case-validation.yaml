@@ -1,0 +1,31 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  The capability accepts a data point for the use cases settled on the default
+  branch, `pkit::work-tracking:use-cases` (DEC-054): entries `{id, title,
+  status, path?}`, `single`, no default, inert `fallback`, with the companion
+  schema `schemas/use-cases.schema.json`. Whatever keeps your use cases fills
+  it — a capability's contribution, or your own filler file — and while
+  nothing does, nothing changes. With a set, batch planning walks the active
+  use cases before it slices the work, names the use cases each planned
+  Feature and Task serves in a `## Use cases` section, and shows at its
+  approval gate the use cases the plan leaves out and the behaviour no use
+  case describes. Over an empty set, a plan whose work touches what users do
+  opens with a Task to author them, and only the issues that touch what users
+  do depend on it; a plan of internal work has none, and its approval gate
+  says why. Revised away, the Task is left out of that checkout's plans for
+  the rest of the day, in the machine's local time, and offered again from
+  the next day: the new command `decline-use-case-task` records that answer
+  in a git-ignored file under `project/instance/`, and shows or clears it.
+  `validate-issue`, `edit-issue` and `create-issue --body-file` warn
+  (`body.use-case-citation`) when a Feature or Task body cites, in that
+  section, a use case the point does not hold — existence only, and a
+  withdrawn use case passes — and say in one notice
+  (`body.use-cases-unchecked`) when the citations could not be checked. A
+  warning: no verb refuses or changes its exit code over it. The point is
+  read through the `outcome` of `pkit connections resolve --json`, which
+  comes with the backbone this release ships: upgrade the capability together
+  with the backbone.

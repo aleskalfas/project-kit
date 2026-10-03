@@ -1,0 +1,21 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  The capability contributes its use cases to the work-tracking role's
+  `pkit::work-tracking:use-cases` data point (DEC-001 point 8) through a new
+  query command, `pkit analysis fill-use-cases`: every use case the default
+  branch holds, one entry each — its id as the analysis writes it, its title,
+  `active` or `withdrawn` (a withdrawn use case is kept, since its id is never
+  used again) and the path of its document. The command declares
+  `reads: [settled]`: it reads the default branch at the commit the backbone
+  resolves it to and what that commit holds, never the working tree, and asks
+  git nothing itself. It answers the empty list where the default branch has
+  no commit yet, and gives no answer — exit 1, nothing on standard output —
+  when a reading fails or a use case there cannot be read in full, never a
+  shorter list. The contribution is inert while no capability provides the
+  work-tracking role. `reads:` on a command leaf and `pkit friction artefacts
+  --at` come with the backbone this release ships: upgrade the capability
+  together with the backbone.
