@@ -419,6 +419,11 @@ def _answer(location: str, reason: str | None, **fields: Any) -> dict[str, Any]:
 
 TWO = (_answer("docs/guide.md", "The flags did not move."), _answer("docs/api.md", "Holds."))
 FOOTER_START = "<!-- pkit-provenance:start -->"
+#: The description's section of the answers, and the heading an earlier run wrote it under.
+HEADING = "## Documentation this change affects"
+FORMER_HEADING = "## Friction answers"
+#: How the plan's line for that section begins.
+PLAN = "  documents this change affects:"
 
 
 def _open(op, monkeypatch, *extra: str, derived: Any = None, body_file: Path | None = None):
@@ -434,14 +439,11 @@ def test_the_list_is_written_last_before_the_footer(op, monkeypatch, capsys) -> 
     body = captured["body"]
     section = op.friction_answers.render(_derived(op, *TWO).document, PUSHED)
     assert f"\n\n{section}\n\n{FOOTER_START}" in body
-    assert body.count("## Friction answers") == 1
+    assert body.count(HEADING) == 1
     # The PR's base, named even for the default branch; the pushed head.
     assert captured["derive"] == [(PUSHED, "main")]
     out = capsys.readouterr().out
-    assert (
-        "  answers: 2 written by this change, listed under `## Friction answers` (at abcdef0)"
-        in (out)
-    )
+    assert f"{PLAN} 2, listed under `{HEADING}` (at abcdef0)" in (out)
 
 
 def test_a_pr_against_another_base_is_derived_against_that_base(op, monkeypatch) -> None:
@@ -455,27 +457,33 @@ def test_a_pr_against_another_base_is_derived_against_that_base(op, monkeypatch)
 def test_no_answers_no_section(op, monkeypatch, capsys) -> None:
     captured = _open(op, monkeypatch)
     assert op.main() == 3
-    assert "## Friction answers" not in captured["body"]
-    assert "  answers: none written by this change" in capsys.readouterr().out
+    assert HEADING not in captured["body"]
+    assert f"{PLAN} none" in capsys.readouterr().out.splitlines()
 
 
-@pytest.mark.parametrize("marked", [True, False], ids=["a command's", "typed by hand"])
-def test_a_section_in_a_supplied_body_is_dropped(op, monkeypatch, tmp_path, capsys, marked) -> None:
+@pytest.mark.parametrize(
+    ("marked", "heading"),
+    [(True, HEADING), (True, FORMER_HEADING), (False, HEADING), (False, FORMER_HEADING)],
+    ids=["a command's", "an earlier run's", "typed by hand", "typed by hand, former heading"],
+)
+def test_a_section_in_a_supplied_body_is_dropped(
+    op, monkeypatch, tmp_path, capsys, marked, heading
+) -> None:
     supplied = (
         op.friction_answers.render(
             _derived(op, _answer("docs/x.md", "An agent's own list.")).document, "f" * 40
-        )
+        ).replace(HEADING, heading, 1)
         if marked
-        else "## Friction answers\n\n```\n1. docs/x.md — unchanged: An agent's own list.\n```"
+        else f"{heading}\n\n```\n1. docs/x.md — unchanged: An agent's own list.\n```"
     )
     body_file = tmp_path / "body.md"
     body_file.write_text(f"Closes #42\n\n## Summary\nx\n\n{supplied}\n\n## Doc impact\n- none\n")
     captured = _open(op, monkeypatch, body_file=body_file)
     assert op.main() == 3
     assert "An agent's own list." not in captured["body"]
-    assert "## Friction answers" not in captured["body"]
+    assert heading not in captured["body"]
     assert "## Doc impact\n- none" in captured["body"]
-    assert "warn: the body's `## Friction answers` section is dropped" in capsys.readouterr().err
+    assert f"warn: the body's `{HEADING}` section is dropped" in capsys.readouterr().err
 
 
 def test_the_friction_settings_a_change_alters_are_listed(op, monkeypatch, capsys) -> None:
@@ -487,10 +495,10 @@ def test_the_friction_settings_a_change_alters_are_listed(op, monkeypatch, capsy
     )
     captured = _open(op, monkeypatch, derived=derived)
     assert op.main() == 3
-    assert f"- {op.friction_answers.PLACES}: `docs` → none" in captured["body"]
+    assert "- Checked locations: `docs` → none" in captured["body"]
     assert (
-        "  answers: none written by this change, which alters the project's friction "
-        "settings, listed under `## Friction answers` (at abcdef0)"
+        f"{PLAN} none, but a change to which documents are checked, listed under `{HEADING}` "
+        "(at abcdef0)"
     ) in capsys.readouterr().out
 
 
@@ -520,11 +528,15 @@ def test_open_pr_never_refuses_over_the_list(op, monkeypatch, capsys, how, warni
     if how == "not pushed":
         monkeypatch.setattr(op, "_pushed_head", lambda _branch: (None, warning))
     assert op.main() == 3  # opened: the faked create was asked, and returns no URL
-    assert "## Friction answers" not in captured["body"]
+    assert HEADING not in captured["body"]
     out = capsys.readouterr()
-    (line,) = [ln for ln in out.err.splitlines() if ln.startswith("warn: friction answers")]
+    (line,) = [
+        ln
+        for ln in out.err.splitlines()
+        if ln.startswith("warn: documents this change affects not listed — ")
+    ]
     assert warning in line and "`land-work` writes the list or says why it cannot" in line
-    assert "  answers: not listed (the warning above says why)" in out.out
+    assert f"{PLAN} not listed (the warning above says why)" in out.out
 
 
 def test_the_pushed_head_is_the_remote_tracking_reference_not_local_head(
@@ -566,7 +578,7 @@ def _doc_impact(body: str) -> list[str]:
 def test_doc_impact_gets_one_line_pointing_at_the_list(op, monkeypatch, capsys) -> None:
     captured = _open(op, monkeypatch, "--doc-impact-from-friction", derived=_derived(op, *TWO))
     assert op.main() == 3
-    line = "2 friction answers on anchored artefacts — listed under `## Friction answers`."
+    line = f"2 documents this change affects — listed under `{HEADING}`."
     assert _doc_impact(captured["body"]) == [line]
     assert f"doc impact: pre-filled: {line}" in capsys.readouterr().out
 
@@ -577,7 +589,7 @@ def test_doc_impact_names_the_pages_still_carrying_friction(op, monkeypatch, cap
     captured = _open(op, monkeypatch, "--doc-impact-from-friction", derived=derived)
     assert op.main() == 3
     assert _doc_impact(captured["body"]) == [
-        "1 friction answer on anchored artefacts — listed under `## Friction answers`."
+        f"1 document this change affects — listed under `{HEADING}`."
     ]
     err = capsys.readouterr().err
     assert "1 artefact(s) still carry friction with no answer on the page: docs/cli.md" in err

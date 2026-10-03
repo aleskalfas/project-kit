@@ -151,8 +151,13 @@ def _carrying(ep, reason: str = "The guide holds; fixes #99 is elsewhere.") -> t
     return section, f"{PR_BODY}\n{section}\n\n{FOOTER}"
 
 
+#: The section's heading, and the one an earlier run wrote it under.
+HEADING = "## Documentation this change affects"
+FORMER_HEADING = "## Friction answers"
+
+
 def _sections(body: str) -> int:
-    return body.count("## Friction answers")
+    return body.count(HEADING) + body.count(FORMER_HEADING)
 
 
 @pytest.mark.parametrize("how", ["--body", "--body-file"])
@@ -216,9 +221,36 @@ def test_of_two_lists_the_latest_is_kept_and_the_other_dropped(ep, monkeypatch, 
 
 def test_a_section_typed_by_hand_is_dropped(ep, monkeypatch, capsys) -> None:
     section, body = _carrying(ep)
-    hand = "## Friction answers\n\n1. docs/guide.md — unchanged: as I recall it\n"
+    hand = f"{HEADING}\n\n1. docs/guide.md — unchanged: as I recall it\n"
     rec = _run(ep, monkeypatch, ["7", "--append", hand, "--yes"], body=body)
     assert rec.rc == 0
     written = rec.edits[0]["body"]
     assert "as I recall it" not in written and section in written and _sections(written) == 1
-    assert "drops every other `## Friction answers` section" in capsys.readouterr().err
+    assert f"drops every other `{HEADING}` section" in capsys.readouterr().err
+
+
+def test_a_section_typed_by_hand_under_the_former_heading_is_dropped(ep, monkeypatch) -> None:
+    section, body = _carrying(ep)
+    hand = f"{FORMER_HEADING}\n\n1. docs/guide.md — unchanged: as I recall it\n"
+    rec = _run(ep, monkeypatch, ["7", "--append", hand, "--yes"], body=body)
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    assert "as I recall it" not in written and FORMER_HEADING not in written
+    assert section in written and _sections(written) == 1
+
+
+def test_a_list_an_earlier_run_left_under_the_former_heading_is_carried_under_the_heading(
+    ep, monkeypatch, capsys
+) -> None:
+    """The markers identify the list: edit-pr carries the region an earlier run
+    wrote under the former heading, its words unchanged, and places it under the
+    heading — no stray former heading, and no warning, since it dropped nothing."""
+    section = _section(ep, "Words of an earlier run.")
+    earlier = FORMER_HEADING + section.removeprefix(HEADING)
+    body = f"{PR_BODY}\n{earlier}\n\n{FOOTER}"
+    rec = _run(ep, monkeypatch, ["7", "--append", "A note.", "--yes"], body=body)
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    assert FORMER_HEADING not in written and _sections(written) == 1
+    assert f"A note.\n\n{section}\n\n<!-- pkit-provenance:start -->" in written
+    assert "edit-pr keeps only the latest list" not in capsys.readouterr().err

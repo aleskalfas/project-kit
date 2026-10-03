@@ -49,15 +49,18 @@ It stops at the first step that cannot go on, and its last line says why.
           is nothing to run: the approval is `done-work`'s gate.
   answers The change check's list of the answers the change wrote, and the
           friction settings it alters, derived at the pinned head against the
-          PR's base (`_lib.friction_answers`), printed word for word and
-          written into the PR's description, last before its footer, where it
-          is not there already; a `## Friction answers` section no command
-          wrote is removed. Refused: a derivation that cannot be read (nothing
-          is merged on a guess), a file the change touches whose front matter
-          does not parse, a word that reads as a closing reference or holds an
-          HTML comment's delimiter, a list the description cannot hold, and —
-          where there is a list — a base whose commits since the head left it
-          changed a file the list's words are on.
+          PR's base (`_lib.friction_answers`), printed word for word, in the
+          plain words of the description's `## Documentation this change
+          affects` section, and written into the PR's description, last before
+          its footer, where it is not there already; its lines begin
+          `documents this change affects:` (`STEP`). A section under that
+          heading no command wrote is removed. Refused: a derivation that
+          cannot be read (nothing is merged on a guess), a file the change
+          touches whose front matter does not parse, a word that reads as a
+          closing reference or holds an HTML comment's delimiter, a list the
+          description cannot hold, and — where there is a list — a base whose
+          commits since the head left it changed a file the list's words are
+          on.
   merge   `done-work` with the pinned head. Without `--yes`, off a terminal,
           land-work merges nothing: it runs `done-work`'s gates as a dry run
           and stops with a `ready:` line naming the head and the command that
@@ -161,6 +164,14 @@ DEFAULT_WAIT_MINUTES = 30.0
 #: How often the checks are read while they are waited for.
 POLL_SECONDS = 20.0
 
+#: How each line of the answers step begins: the description's section, named
+#: in plain words (DEC-055 point 1).
+STEP = friction_answers.NAME
+#: Where the step's line says the list is, once it is in the description.
+_LISTED = "listed above and in the pull request's description"
+#: A section under the list's heading that no command wrote, as the step names it.
+_HAND_WRITTEN = "a list written by hand"
+
 # The wait's sleep and clock, looked up when a wait runs.
 _sleep: Callable[[float], None] = time.sleep
 _monotonic: Callable[[], float] = time.monotonic
@@ -252,7 +263,7 @@ class _ReviewEnd:
 class _AnswersEnd:
     """How the answers step ended, when it did not stop the run."""
 
-    #: How many answers the change wrote.
+    #: How many documents the change's answers are on (`friction_answers.documents`).
     count: int
     #: How many of the project's friction settings the change alters: shown with
     #: the answers and held as they are (DEC-055 points 1 and 3).
@@ -288,13 +299,14 @@ class _AnswersEnd:
 
     def to_read(self) -> str:
         """What the `ready:` line asks the person to read, or "" when nothing."""
-        noun = "answer" if self.count == 1 else "answers"
+        noun = "document" if self.count == 1 else "documents"
+        checked = friction_answers.CHECKED
         if self.count and self.settings:
-            return f"{self.count} {noun} and the friction settings change above to read"
+            return f"{self.count} {noun} and {checked} to read above"
         if self.count:
-            return f"{self.count} {noun} above to read"
+            return f"{self.count} {noun} to read above"
         if self.settings:
-            return "the friction settings change above to read"
+            return f"{checked} to read above"
         return ""
 
 
@@ -891,7 +903,7 @@ def _answers(
     if not head.base_branch:
         raise _Stop(
             EXIT_UNREADABLE,
-            f"answers: PR #{number}'s base branch could not be read, so the change check's "
+            f"{STEP}: PR #{number}'s base branch could not be read, so the change check's "
             f"list has no base to be derived against. Nothing was merged; run `land-work "
             f"{issue}` again",
         )
@@ -900,14 +912,14 @@ def _answers(
     if document is None:
         raise _Stop(
             EXIT_UNREADABLE,
-            f"answers: the change check's list at {sha} could not be read — {derived.problem}. "
+            f"{STEP}: the change check's list at {sha} could not be read — {derived.problem}. "
             f"Nothing was merged; run `land-work {issue}` again",
         )
     touched = _unreadable_in_change(derived)
     if touched:
         raise _Stop(
             EXIT_NEEDS_CHANGE,
-            f"answers: refused — front matter the change check cannot read, in "
+            f"{STEP}: refused — front matter the change check cannot read, in "
             f"{_files(touched)} this change touches, so its words cannot be listed. Fix it "
             f"(`pkit validate` names the problem), push, and run `land-work {issue}` again",
         )
@@ -933,40 +945,37 @@ def _answers(
             location, words = found
             raise _Stop(
                 EXIT_NEEDS_CHANGE,
-                f"answers: refused — the words on {location} {why.format(words=words)}. Reword "
+                f"{STEP}: refused — the words on {location} {why.format(words=words)}. Reword "
                 f"them there, push, and run `land-work {issue}` again. Nothing was written",
             )
     section = friction_answers.render(document, head.oid, settings)
     for line in friction_answers.lines(document, settings):
         print(f"  {line}")
-    count = len(derived.answers)
-    written = _written(count, settings=bool(settings))
-    where = f"listed above and in PR #{number}'s description"
+    count = friction_answers.documents(derived.answers)
+    written = friction_answers.affected(count, settings=bool(settings))
     end = _AnswersEnd(count, settings=len(settings), found=False)
     if friction_answers.current(body, section):
-        _say(f"answers: {written}, {where}")
+        _say(f"{STEP}: {written}, {_LISTED}")
         return _AnswersEnd(count, settings=len(settings), found=True)
     new_body = _stamped(body, section, capability_root)
     if not friction_answers.fits(new_body):
         raise _Stop(
             EXIT_NEEDS_CHANGE,
-            f"answers: refused — PR #{number}'s description with the list is {len(new_body)} "
+            f"{STEP}: refused — PR #{number}'s description with the list is {len(new_body)} "
             f"characters, past the {friction_answers.BODY_LIMIT} the host keeps. Shorten the "
             "description's own text, split the change, or narrow the anchor, push, and run "
             f"`land-work {issue}` again. Nothing was written. The only way past it is "
             "`done-work`, which lands the PR without the list: its merge is not held",
         )
-    removed = (
-        "; removed a `## Friction answers` section no command wrote"
-        if friction_answers.hand_written(body)
-        else ""
-    )
+    removed = f"; removed {_HAND_WRITTEN}" if friction_answers.hand_written(body) else ""
     if args.dry_run:
-        _say(f"answers: (dry-run) {written}, {where} (would write){removed}")
+        _say(f"{STEP}: (dry-run) {written}, {_LISTED} (would write){removed}")
         return end
     problem = _write_body(head, new_body, config)
     if problem:
-        _say(f"answers: {written}, listed above; PR #{number}'s description could not be written")
+        _say(
+            f"{STEP}: {written}, listed above; the pull request's description could not be written"
+        )
         return _AnswersEnd(
             count,
             settings=len(settings),
@@ -976,16 +985,8 @@ def _answers(
                 "the host may have kept it all the same"
             ),
         )
-    _say(f"answers: {written}, {where} (written now){removed}")
+    _say(f"{STEP}: {written}, {_LISTED} (written now){removed}")
     return end
-
-
-def _written(count: int, *, settings: bool) -> str:
-    """What the change wrote, as the `answers:` line says it."""
-    if not count:
-        return "none written by this change, which alters the project's friction settings"
-    written = f"{count} written by this change"
-    return f"{written}, which also alters the project's friction settings" if settings else written
 
 
 def _no_answers(
@@ -997,38 +998,26 @@ def _no_answers(
 ) -> _AnswersEnd:
     """A change that wrote no answers and alters no friction setting: the run goes
     on as it would without the step, and a list an earlier head left in the
-    description — or a `## Friction answers` section no command wrote — is
-    removed."""
+    description — or a section under its heading no command wrote — is removed."""
     if friction_answers.current(body, None):
-        _say("answers: none written by this change")
+        _say(f"{STEP}: none")
         return _AnswersEnd(0, settings=0, found=True)
     left = [
         *(["the list an earlier head left"] if friction_answers.has_list(body) else []),
-        *(
-            ["a `## Friction answers` section no command wrote"]
-            if friction_answers.hand_written(body)
-            else []
-        ),
+        *([_HAND_WRITTEN] if friction_answers.hand_written(body) else []),
     ]
     what = " and ".join(left)
     if args.dry_run:
-        _say(
-            f"answers: (dry-run) none written by this change — would remove {what} in PR "
-            f"#{head.pr_number}'s description"
-        )
+        _say(f"{STEP}: (dry-run) none — would remove {what} from the pull request's description")
     else:
         problem = _write_body(head, _stamped(body, None, capability_root), config)
         if problem:
             raise _Stop(
                 EXIT_RETRY,
-                f"answers: none written by this change, and {what} could not be removed from PR "
-                f"#{head.pr_number}'s description: {problem}. Nothing was merged; run "
-                f"`land-work {head.issue}` again",
+                f"{STEP}: none, and {what} could not be removed from PR #{head.pr_number}'s "
+                f"description: {problem}. Nothing was merged; run `land-work {head.issue}` again",
             )
-        _say(
-            f"answers: none written by this change — removed {what} in PR "
-            f"#{head.pr_number}'s description"
-        )
+        _say(f"{STEP}: none — removed {what} from the pull request's description")
     return _AnswersEnd(0, settings=0, found=True)
 
 
@@ -1058,7 +1047,7 @@ def _refuse_moved_base(derived: friction_answers.Derivation, head: _Head) -> Non
         which = f"its commits since changed {' and '.join(what)}"
     raise _Stop(
         EXIT_NEEDS_CHANGE,
-        f"answers: refused — {head.base} moved on after PR #{number}'s head left it, and "
+        f"{STEP}: refused — {head.base} moved on after PR #{number}'s head left it, and "
         f"{which}, so its merge can land words the list at {sha} does not show. Merge "
         f"{head.base} into {head.branch} (`git merge {head.remote}/{head.base}`), push, and "
         f"run `land-work {issue}` again",
@@ -1105,7 +1094,7 @@ def _read_body(head: _Head, config: dict[str, Any]) -> str:
             problem = "gh's answer names no pull request"
     raise _Stop(
         EXIT_UNREADABLE,
-        f"answers: PR #{pr_number}'s description could not be read: {problem}. Nothing was "
+        f"{STEP}: PR #{pr_number}'s description could not be read: {problem}. Nothing was "
         f"merged; run `land-work {head.issue}` again",
     )
 

@@ -51,7 +51,7 @@
     },
     "friction_answers_marker": {
       "$ref": "#/$defs/friction_answers_marker_block",
-      "description": "Shape and semantics of a pull request's `## Friction answers` section (DEC-055): the change check's list of the answers the change wrote, a sentinel-delimited region the capability's scripts write and every reader of the body strips before it reads."
+      "description": "Shape and semantics of a pull request's `## Documentation this change affects` section (DEC-055): the change check's list of the answers the change wrote, in plain words, a sentinel-delimited region the capability's scripts write and every reader of the body strips before it reads."
     },
     "checkbox_rules": {
       "$ref": "#/$defs/checkbox_rules_block",

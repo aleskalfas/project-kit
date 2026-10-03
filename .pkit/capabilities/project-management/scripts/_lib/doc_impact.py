@@ -2,8 +2,9 @@
 
 A change's anchored pages answer it on the page itself — updated, unchanged
 with its justification, deferred with its reason (COR-050) — and the answers
-the change wrote are listed in the description's own `## Friction answers`
-section (`_lib.friction_answers`, DEC-055). `open-pr --doc-impact-from-friction`
+the change wrote are listed in the description's own `## Documentation this
+change affects` section (`_lib.friction_answers`, DEC-055).
+`open-pr --doc-impact-from-friction`
 fills an unwritten `## Doc impact` with one line pointing there (`prefill`),
 naming no path and no reason, and names the pages still carrying friction
 (`unanswered`).

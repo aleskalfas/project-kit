@@ -28,23 +28,25 @@ Inputs:
   * PR body — `templates/PR.md` skeleton with a `Closes #N` line per
     closing issue; user-supplied `--body-file` overrides, and gains a
     `Closes #N` line for any closing issue it does not already name.
-  * `## Friction answers` (DEC-055) — the change check's list of the
-    answers the change wrote, and the friction settings it alters, derived
-    at the pushed head (the commit the branch's remote-tracking reference
-    names, not local HEAD) against the PR's base, named to the check, and
-    placed last before the provenance footer. A section the supplied body
-    carries — written by a command or typed by hand — is dropped, with a
-    warning. open-pr never refuses to open over it: a list it cannot
-    derive, a branch not pushed, a word that reads as a closing reference
-    or holds an HTML comment's delimiter, or a body it would make too long
-    leaves the section out with one warning line, and land-work writes it
-    or says why it cannot.
+  * `## Documentation this change affects` (DEC-055) — the change check's
+    list of the answers the change wrote, and the friction settings it
+    alters, in plain words, derived at the pushed head (the commit the
+    branch's remote-tracking reference names, not local HEAD) against the
+    PR's base, named to the check, and placed last before the provenance
+    footer. A section the supplied body carries — written by a command or
+    typed by hand, under that heading or the one an earlier run wrote — is
+    dropped, with a warning. open-pr never refuses to open over it: a list
+    it cannot derive, a branch not pushed, a word that reads as a closing
+    reference or holds an HTML comment's delimiter, or a body it would make
+    too long leaves the section out with one warning line, and land-work
+    writes it or says why it cannot.
   * `--doc-impact-from-friction` (opt-in) — fill an unwritten `## Doc
     impact` (the template's placeholder, empty, or absent) with one line
-    counting the answers listed under `## Friction answers`. It names no
-    path and no reason, so it meets no mapping obligation; an authored
-    section is never touched. Rendering only (DEC-053 point 2): the
-    section meets no documentation obligation; the pages do.
+    counting the documents listed under `## Documentation this change
+    affects`. It names no path and no reason, so it meets no mapping
+    obligation; an authored section is never touched. Rendering only
+    (DEC-053 point 2): the section meets no documentation obligation; the
+    pages do.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -181,9 +183,9 @@ def main() -> int:
         action="store_true",
         help=(
             "Fill an unwritten `## Doc impact` section (the template's placeholder, "
-            "empty, or absent) with one line counting the friction answers listed "
-            "under `## Friction answers`; it names no path and no reason. An authored "
-            "section is left as it is. Rendering only: the section meets no "
+            "empty, or absent) with one line counting the documents listed under "
+            "`## Documentation this change affects`; it names no path and no reason. "
+            "An authored section is left as it is. Rendering only: the section meets no "
             "documentation obligation (DEC-053)."
         ),
     )
@@ -407,7 +409,7 @@ def main() -> int:
         print(f"  scope:   {args.scope}")
     print(f"  title:   {pr_title}")
     print(f"  body:    {len(body)} chars")
-    print(f"  answers: {answers.note}")
+    print(f"  {friction_answers.NAME}: {answers.note}")
     if doc_impact_note is not None:
         print(f"  doc impact: {doc_impact_note}")
     if args.draft:
@@ -562,11 +564,11 @@ class _Answers:
 
     #: The section, or None when there is none to write.
     section: str | None
-    #: The plan's `answers:` line.
+    #: The plan's `documents this change affects:` line (`friction_answers.NAME`).
     note: str
     #: The change check's document, when it was read.
     document: Mapping[str, Any] | None = None
-    #: How many answers the change wrote, when the document was read.
+    #: How many documents the change's answers are on, when the document was read.
     count: int = 0
 
 
@@ -582,9 +584,9 @@ def _friction_answers(branch: str, base: str) -> _Answers:
     derived = friction_answers.derive(head, base)
     if derived.document is None:
         return _left_out(derived.problem or "the change check gave no document")
-    count = len(derived.answers)
+    count = friction_answers.documents(derived.answers)
     if not derived.listed:
-        return _Answers(None, "none written by this change", derived.document)
+        return _Answers(None, "none", derived.document)
     settings = derived.settings
     for found, why in (
         (
@@ -603,13 +605,7 @@ def _friction_answers(branch: str, base: str) -> _Answers:
             )
             return _Answers(None, left.note, derived.document, count)
     section = friction_answers.render(derived.document, head, settings)
-    listed = (
-        f"{count} written by this change"
-        if count
-        else "none written by this change, which alters the project's friction settings"
-    )
-    if count and settings:
-        listed += ", which also alters the project's friction settings"
+    listed = friction_answers.affected(count, settings=bool(settings))
     return _Answers(
         section,
         f"{listed}, listed under `{friction_answers.HEADING}` (at {head[:7]})",
@@ -620,8 +616,8 @@ def _friction_answers(branch: str, base: str) -> _Answers:
 
 def _left_out(why: str) -> _Answers:
     print(
-        f"warn: friction answers not listed — {why}; `land-work` writes the list or says "
-        "why it cannot",
+        f"warn: {friction_answers.NAME} not listed — {why}; `land-work` writes the list or "
+        "says why it cannot",
         file=sys.stderr,
     )
     return _Answers(None, "not listed (the warning above says why)")
@@ -667,9 +663,10 @@ def _git_out(*argv: str) -> str:
 
 def _prefill_doc_impact(body: str, answers: _Answers) -> tuple[str, str]:
     """`body` with its unwritten `## Doc impact` section holding one line that
-    counts the answers listed under `## Friction answers`, and one line saying
-    what happened. The line names no path and no reason, so it meets no mapping
-    obligation. Never refuses: no list leaves the body as it was."""
+    counts the documents listed under `## Documentation this change affects`,
+    and one line saying what happened. The line names no path and no reason, so
+    it meets no mapping obligation. Never refuses: no list leaves the body as it
+    was."""
     if answers.document is None:
         return body, "not pre-filled — `pkit friction check --json` gave no document"
     still = doc_impact.unanswered(answers.document)
@@ -683,9 +680,9 @@ def _prefill_doc_impact(body: str, answers: _Answers) -> tuple[str, str]:
         return body, "not pre-filled — the change check reports no answers"
     if answers.section is None:
         return body, "not pre-filled — the answers are not listed"
-    noun = "friction answer" if answers.count == 1 else "friction answers"
+    noun = "document" if answers.count == 1 else "documents"
     line = (
-        f"{answers.count} {noun} on anchored artefacts — listed under `{friction_answers.HEADING}`."
+        f"{answers.count} {noun} this change affects — listed under `{friction_answers.HEADING}`."
     )
     body, filled = doc_impact.prefill(body, [line])
     if not filled:

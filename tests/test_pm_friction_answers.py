@@ -125,27 +125,85 @@ def test_each_answer_is_listed_with_its_words_and_marks(fa: ModuleType) -> None:
     )
     assert fa.render(document, HEAD) == "\n".join(
         [
-            "## Friction answers",
+            "## Documentation this change affects",
             "",
             f"<!-- pkit-friction-answers:start head={HEAD} base={MERGE_BASE} -->",
-            "6 answers written by this change, as of `1a2b3c4` — the change check's list "
-            "(`pkit friction check`). Each is on its artefact.",
+            "This change modified things the documents below rely on. For each one it records "
+            "what was decided: updated, still accurate (with the reason), or set aside for later "
+            "(with the reason). Read these before approving the merge.",
             "",
-            "1. `docs/install.md` — **unchanged**: "
-            "``The flag rename leaves the install steps as written.``",
-            "2. `docs/cli.md` — **deferred** `path:src/cli/**` — not asked for by the change "
-            "check: ``Rewritten with the redesign.``",
-            "3. `docs/api.md` — **updated** — the diff does not bear it out",
-            "4. `docs/faq.md` — **no outcome** — not asked for by the change check; edited "
-            "without a revalidation: ``Reworded.``",
-            "5. `docs/new.md` — **unanchored** — a new artefact; not asked for by the change "
-            "check: ``A rule of the method.``",
-            "6. `docs/guide.md` — **unchanged**: ``The guide holds.``",
-            "   - keeps the deferral of `record:DEC-1`: ``Waiting on the record.``",
-            "   - keeps the deferral of `path:x/**`",
+            "As of commit `1a2b3c4`.",
+            "",
+            "1. `docs/install.md` — **still accurate**: "
+            '"``The flag rename leaves the install steps as written.``"',
+            "2. `docs/cli.md` — **set aside for later** for changes to `src/cli/**` (not "
+            'required by this change): "``Rewritten with the redesign.``"',
+            "3. `docs/api.md` — **updated** (re-check date changed with nothing behind it)",
+            "4. `docs/faq.md` — **no decision recorded** (not required by this change) (reason "
+            'changed without a new re-check): "``Reworded.``"',
+            "5. `docs/new.md` — **not tied to anything** (new document) (not required by this "
+            'change): "``A rule of the method.``"',
+            '6. `docs/guide.md` — **still accurate**: "``The guide holds.``"',
+            "   - (still set aside for changes to decision record `DEC-1`: "
+            '"``Waiting on the record.``")',
+            "   - (still set aside for changes to `x/**`)",
             "<!-- pkit-friction-answers:end -->",
         ]
     )
+
+
+@pytest.mark.parametrize(
+    ("anchor", "said"),
+    [
+        (("path", "src/cli/**"), "for changes to `src/cli/**`"),
+        (("record", "COR-050"), "for changes to decision record `COR-050`"),
+        (("artefact", "ACT-clone"), "for changes to document `ACT-clone`"),
+        (("symbol", "pkg.run"), "for changes to `symbol:pkg.run`"),
+    ],
+)
+def test_an_anchor_is_named_as_what_a_change_to_it_is_a_change_to(
+    fa: ModuleType, anchor: tuple[str, str], said: str
+) -> None:
+    """An anchor of a core kind in plain words; one of a kind a capability
+    registers as the change check names it, its kind in the code span too."""
+    document = _document(_entry("docs/a.md", "deferred", "Later.", anchor=anchor))
+    section = fa.render(document, HEAD)
+    assert section is not None and f"**set aside for later** {said}: " in section
+    (line,) = fa.lines(document)
+    assert line == f'1. docs/a.md — set aside for later {said.replace("`", "")}: "Later."'
+
+
+def test_the_check_s_terms_stay_out_of_the_section(fa: ModuleType) -> None:
+    """The change check's own terms are its machine-readable list's: the section a
+    reader sees names each answer and flag in plain words."""
+    section = fa.render(
+        _document(
+            _entry("a.md", "unchanged", "Holds."),
+            _entry("b.md", "deferred", "Later.", anchor=("path", "x/**"), asked=False, new=True),
+            _entry("c.md", "unanchored", "A rule.", status="bump"),
+        ),
+        HEAD,
+    )
+    assert section is not None
+    # The markers are HTML comments: a reader never sees them.
+    shown = "\n".join(ln for ln in section.splitlines() if not ln.startswith("<!--")).lower()
+    for term in ("unchanged", "deferred", "unanchored", "friction", "artefact", "change check"):
+        assert term not in shown, term
+
+
+def test_documents_counts_each_document_once(fa: ModuleType) -> None:
+    """A page that defers two anchors is one document the change affects."""
+    answers = [
+        _entry("docs/a.md", "deferred", "Later.", anchor=("path", "x/**")),
+        _entry("docs/a.md", "deferred", "Later.", anchor=("path", "y/**")),
+        _entry("docs/b.md", "updated"),
+    ]
+    assert fa.documents(answers) == 2
+    assert fa.documents([]) == 0
+    assert fa.affected(2, settings=False) == "2"
+    assert fa.affected(2, settings=True) == "2, plus a change to which documents are checked"
+    assert fa.affected(0, settings=True) == "none, but a change to which documents are checked"
+    assert fa.affected(0, settings=False) == "none"
 
 
 def test_a_change_that_wrote_no_answers_has_no_section(fa: ModuleType) -> None:
@@ -153,11 +211,12 @@ def test_a_change_that_wrote_no_answers_has_no_section(fa: ModuleType) -> None:
     assert fa.lines(_document()) == []
 
 
-def test_files_the_check_could_not_read_are_counted_on_the_first_line(fa: ModuleType) -> None:
+def test_files_the_check_could_not_read_are_counted_under_the_opening(fa: ModuleType) -> None:
     one = fa.render(_document(_entry("a.md", "updated"), unreadable=["b.md"]), HEAD)
-    assert one is not None and "1 file the check could not read is not listed." in one
+    assert one is not None
+    assert one.splitlines()[5] == "As of commit `1a2b3c4`. 1 document could not be read."
     two = fa.render(_document(_entry("a.md", "updated"), unreadable=["b.md", "c.md"]), HEAD)
-    assert two is not None and "2 files the check could not read are not listed." in two
+    assert two is not None and "As of commit `1a2b3c4`. 2 documents could not be read." in two
 
 
 def test_non_printable_characters_are_shown_escaped_as_the_human_view_shows_them(
@@ -171,16 +230,16 @@ def test_non_printable_characters_are_shown_escaped_as_the_human_view_shows_them
     assert "`docs/a\\u200b.md`" in section
     assert all(ch.isprintable() for line in section.splitlines() for ch in line)
     assert fa.lines(document) == [
-        "1. docs/a\\u200b.md — unchanged: fine\\x1b[1A\\x1b[2Kgone \\u202eesrever\\nnext"
+        '1. docs/a\\u200b.md — still accurate: "fine\\x1b[1A\\x1b[2Kgone \\u202eesrever\\nnext"'
     ]
 
 
 def test_a_reason_with_backticks_sits_in_a_longer_code_span(fa: ModuleType) -> None:
     section = fa.render(_document(_entry("a.md", "unchanged", "the ``flag`` is `x`")), HEAD)
     # Ending on a backtick, the words are padded on both sides; CommonMark drops the pads.
-    assert section is not None and ": ``` the ``flag`` is `x` ```" in section
+    assert section is not None and ': "``` the ``flag`` is `x` ```"' in section
     section = fa.render(_document(_entry("a.md", "unchanged", "plain")), HEAD)
-    assert section is not None and ": ``plain``" in section
+    assert section is not None and ': "``plain``"' in section
 
 
 def test_the_terminal_list_carries_every_word_and_mark(fa: ModuleType) -> None:
@@ -190,10 +249,11 @@ def test_the_terminal_list_carries_every_word_and_mark(fa: ModuleType) -> None:
         _entry("docs/g.md", "unchanged", "Holds.", kept=[(("path", "x/**"), "Kept.")]),
     )
     assert fa.lines(document) == [
-        "1. docs/install.md — unchanged: Holds.",
-        "2. docs/cli.md — deferred path:src/** — not asked for by the change check: Later.",
-        "3. docs/g.md — unchanged: Holds.",
-        "   keeps the deferral of path:x/**: Kept.",
+        '1. docs/install.md — still accurate: "Holds."',
+        "2. docs/cli.md — set aside for later for changes to src/** (not required by this "
+        'change): "Later."',
+        '3. docs/g.md — still accurate: "Holds."',
+        '   (still set aside for changes to x/**: "Kept.")',
     ]
 
 
@@ -298,7 +358,7 @@ def test_a_start_marker_with_no_end_is_stripped_through_the_footer(fa: ModuleTyp
     """What follows a start marker whose end was lost is the list's words: they are
     stripped up to the provenance footer, or the end of the body, never left under
     the section above (`## Doc impact` last of all, read for the mapping's override)."""
-    orphan = f"{BODY}\n## Friction answers\n\n{fa.MARKER_START} head=x base=y -->\nleft\n"
+    orphan = f"{BODY}\n{fa.HEADING}\n\n{fa.MARKER_START} head=x base=y -->\nleft\n"
     assert fa.strip(orphan) == BODY
     assert fa.strip(f"{orphan}\n{FOOTER}\n") == f"{BODY}\n{FOOTER}\n"
     assert fa.find(orphan) is None
@@ -324,31 +384,83 @@ def test_a_reason_quoting_the_provenance_marker_cuts_nothing(fa: ModuleType) -> 
     quoting = f"{BODY}\nThe footer opens with <!-- pkit-provenance:start --> as a line.\n"
     stamped = fa.stamp(f"{quoting}\n{FOOTER}\n", _section(fa, _entry("a.md", "updated")))
     assert "as a line." in stamped and stamped.endswith(f"{FOOTER}\n")
-    assert stamped.index("## Friction answers") > stamped.index("as a line.")
+    assert stamped.index(fa.HEADING) > stamped.index("as a line.")
 
 
-HAND = (
-    "## Friction answers\n\n"
-    "An agent's own list:\n\n"
-    "```\n"
-    "## not a heading, inside a fence\n"
-    "1. docs/a.md — unchanged: fixes #9\n"
-    "```\n"
-)
+def _hand(heading: str) -> str:
+    """A list typed by hand under `heading`, with no markers."""
+    return (
+        f"{heading}\n\n"
+        "An agent's own list:\n\n"
+        "```\n"
+        "## not a heading, inside a fence\n"
+        "1. docs/a.md — unchanged: fixes #9\n"
+        "```\n"
+    )
 
 
-def test_a_section_no_command_wrote_is_stripped_whole(fa: ModuleType) -> None:
-    """An unmarked `## Friction answers` — a list typed by hand — is stripped up to
-    the next heading of level one or two outside a fenced block, or the footer."""
-    body = f"Closes #42\n\n## Summary\n\nDone.\n\n{HAND}\n## Doc impact\n\nThe README.\n"
+#: The section's heading, and the one an earlier run wrote it under.
+HEADINGS = ("## Documentation this change affects", "## Friction answers")
+
+
+@pytest.mark.parametrize("heading", HEADINGS, ids=["the heading", "the former heading"])
+def test_a_section_no_command_wrote_is_stripped_whole(fa: ModuleType, heading: str) -> None:
+    """An unmarked section under the heading — a list typed by hand — is stripped up
+    to the next heading of level one or two outside a fenced block, or the footer;
+    under the heading an earlier run wrote too."""
+    assert heading in (fa.HEADING, fa.FORMER_HEADING)
+    hand = _hand(heading)
+    body = f"Closes #42\n\n## Summary\n\nDone.\n\n{hand}\n## Doc impact\n\nThe README.\n"
     assert fa.hand_written(body) and not fa.has_list(body)
     assert fa.strip(body) == BODY
     assert not fa.current(body, None)
-    last = f"{BODY}\n{HAND}\n{FOOTER}\n"
+    last = f"{BODY}\n{hand}\n{FOOTER}\n"
     assert fa.strip(last) == f"{BODY}\n{FOOTER}\n"
     section = _section(fa, _entry("a.md", "unchanged", "Holds."))
     assert fa.stamp(last, section) == f"{BODY}\n{section}\n\n{FOOTER}\n"
     assert not fa.current(f"{last}\n{section}\n", section)
+
+
+def _former(fa: ModuleType, section: str) -> str:
+    """`section` as an earlier run wrote it: under the former heading."""
+    assert section.startswith(f"{fa.HEADING}\n")
+    return fa.FORMER_HEADING + section.removeprefix(fa.HEADING)
+
+
+def test_a_section_an_earlier_run_wrote_under_the_former_heading_is_replaced_whole(
+    fa: ModuleType,
+) -> None:
+    """The markers identify the region; the former heading directly above it goes
+    with it, so a new write leaves one section, under the new heading, and no
+    stray heading of the old one."""
+    earlier = _former(fa, _section(fa, _entry("a.md", "unchanged", "Old."), head="e" * 40))
+    body = f"{BODY}\n{earlier}\n\n{FOOTER}\n"
+    assert fa.has_list(body) and not fa.hand_written(body)
+    assert fa.find(body) == fa.find(earlier)
+    assert fa.strip(body) == f"{BODY}\n{FOOTER}\n"
+    section = _section(fa, _entry("a.md", "unchanged", "New."))
+    assert not fa.current(body, section) and not fa.current(body, None)
+    stamped = fa.stamp(body, section)
+    assert stamped == f"{BODY}\n{section}\n\n{FOOTER}\n"
+    assert fa.FORMER_HEADING not in stamped and stamped.count(fa.HEADING) == 1
+    assert fa.current(stamped, section)
+    # A region carried as it is — edit-pr's way — is placed under the new heading.
+    region = fa.find(body)
+    assert region is not None
+    carried = fa.stamp(BODY, region)
+    assert carried == f"{BODY}\n{fa.HEADING}\n\n{region}\n" and fa.current(carried, region)
+
+
+def test_the_former_heading_inside_a_region_goes_with_the_region(fa: ModuleType) -> None:
+    """A region is its start marker's line through its end marker's, whatever it
+    holds: the former heading inside one is the region's, never a section of its
+    own typed by hand."""
+    region = f"{fa.MARKER_START} head={HEAD} base={MERGE_BASE} -->\n{fa.FORMER_HEADING}\n\nold\n"
+    body = f"{BODY}\n{fa.HEADING}\n\n{region}{fa.MARKER_END}\n"
+    assert fa.has_list(body) and not fa.hand_written(body)
+    assert fa.strip(body) == BODY
+    section = _section(fa, _entry("a.md", "unchanged", "Holds."))
+    assert fa.stamp(body, section) == f"{BODY}\n{section}\n"
 
 
 def test_of_two_regions_the_last_is_found_and_neither_is_current(fa: ModuleType) -> None:
@@ -737,15 +849,15 @@ def test_a_change_that_sets_friction_dormant_lists_the_setting(
     section = fa.render(found.document, head, found.settings)
     assert section is not None
     assert section.splitlines()[3:] == [
-        f"No answer written by this change, as of `{head[:7]}`, in the change check's list "
-        "(`pkit friction check`); it is dormant at that head.",
+        "This change decided nothing about any document, but it changes which documents are "
+        "checked. Read this before approving the merge.",
         "",
-        fa.SETTINGS_LEAD,
+        f"As of commit `{head[:7]}`, no document is checked.",
         "",
-        f"- {fa.PLACES}: `docs` → none",
+        "- Checked locations: `docs` → none",
         fa.MARKER_END,
     ]
-    assert fa.lines(found.document, found.settings) == [f"{fa.PLACES}: docs → none"]
+    assert fa.lines(found.document, found.settings) == ["Checked locations: docs → none"]
 
 
 def test_a_change_that_excludes_an_artefact_lists_it(
@@ -777,6 +889,28 @@ def test_settings_that_cannot_be_read_make_the_derivation_unreadable(
     assert fa.settings_change("", repo.head()) == (
         "the change check named no commit the head left its base at"
     )
+
+
+def test_settings_follow_the_documents_one_line_each(fa: ModuleType) -> None:
+    settings = [
+        fa.Setting(fa.PLACES, ("docs",), ("docs", "guides")),
+        fa.Setting(fa.EXCLUDED, (), ("docs/guide.md",)),
+    ]
+    section = fa.render(_document(_entry("a.md", "updated")), HEAD, settings)
+    assert section is not None
+    assert section.splitlines()[-7:] == [
+        "1. `a.md` — **updated**",
+        "",
+        "It also changes which documents are checked:",
+        "",
+        "- Checked locations: `docs` → `docs`, `guides`",
+        "- Documents excluded from checking: none → `docs/guide.md`",
+        fa.MARKER_END,
+    ]
+    assert fa.lines(_document(), settings) == [
+        "Checked locations: docs → docs, guides",
+        "Documents excluded from checking: none → docs/guide.md",
+    ]
 
 
 def test_a_setting_is_read_for_closing_references_and_delimiters(fa: ModuleType) -> None:

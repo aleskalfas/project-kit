@@ -218,7 +218,7 @@ provenance_marker:
 # The artefacts' words are never input: every reader of the body strips
 # the section before it scans.
 friction_answers_marker:
-  heading: "## Friction answers"
+  heading: "## Documentation this change affects"
   start_marker: "<!-- pkit-friction-answers:start"
   end_marker: "<!-- pkit-friction-answers:end -->"
   position: |
@@ -237,12 +237,14 @@ friction_answers_marker:
     override and the placeholder check read the body without it. A start
     marker with no end marker after it is stripped with everything after
     it up to the provenance footer, or the end of the body; an end marker
-    with no start marker is stripped alone. A `## Friction answers`
-    heading with no marker under it — a list no command wrote — is
-    stripped with everything under it, up to the next heading of level
-    one or two outside a fenced code block, a marker, or the provenance
-    footer. No text the section lists holds `<!--` or `-->`: the
-    commands that write it never write such a list.
+    with no start marker is stripped alone. The heading with no marker
+    under it — a list no command wrote — is stripped with everything
+    under it, up to the next heading of level one or two outside a fenced
+    code block, a marker, or the provenance footer. `## Friction answers`,
+    the heading an earlier run of these scripts wrote the section under,
+    is read as the heading in each of these rules, so a section it left
+    is stripped and replaced whole. No text the section lists holds
+    `<!--` or `-->`: the commands that write it never write such a list.
 
 checkbox_rules:
   validation_timing: |

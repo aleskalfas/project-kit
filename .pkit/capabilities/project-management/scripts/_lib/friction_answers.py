@@ -14,9 +14,12 @@ list (COR-050 point 3). This module puts that list in the description:
   of the change, through the backbone's discovery (`settings_change`). It
   returns the check's document and the friction settings the change alters —
   or why they could not be read, which is never a pass.
-- `render(document, head, settings)` is the `## Friction answers` section,
-  between its markers; `lines(document, settings)` the same list for a
-  terminal.
+- `render(document, head, settings)` is the `## Documentation this change
+  affects` section, between its markers; `lines(document, settings)` the same
+  list for a terminal. Both speak to a reader who does not know the
+  methodology: each answer and flag in plain words (`LABELS`, `FLAGS`), each
+  anchor as what a change to it is a change to. The change check's own terms
+  stay in its machine-readable list (`--json`), which this module reads.
 - `closing_reference` and `comment_delimiter` name a word of the list that
   must not be written: one that reads as a closing reference — the host's own
   parser would close an issue with it at merge, and nothing here can make that
@@ -24,9 +27,11 @@ list (COR-050 point 3). This module puts that list in the description:
   could open or close a comment around the section's markers.
 - `stamp`, `strip`, `find` and `current` place, remove, find and compare the
   section — strip-then-place-exactly-one, as `provenance.stamp` keeps the
-  footer. The section sits last, before the provenance footer. A
-  `## Friction answers` section no command wrote — a list typed by hand, with
-  no markers — is stripped with everything under it (`hand_written`).
+  footer. The section sits last, before the provenance footer. A section
+  under its heading no command wrote — a list typed by hand, with no markers —
+  is stripped with everything under it (`hand_written`). `FORMER_HEADING`, the
+  heading an earlier run of these commands wrote the section under, is read as
+  the section's heading too, so a list it left is replaced whole.
 
 Which backbone derives the list: both runs of the change check — from the
 working directory, and from a temporary checkout of the head when the first
@@ -68,14 +73,28 @@ try:
 except ImportError:  # pragma: no cover
     from _lib import default_branch, provenance  # type: ignore[no-redef]
 
-HEADING = "## Friction answers"
+HEADING = "## Documentation this change affects"
+#: The heading an earlier run of these commands wrote the section under: read as
+#: the section's heading, so a section it left is found, stripped and replaced.
+FORMER_HEADING = "## Friction answers"
 #: Sentinels — MUST match body-format.yaml `friction_answers_marker`. The start
 #: marker carries the head the list is for and the merge-base it was taken against.
 MARKER_START = "<!-- pkit-friction-answers:start"
 MARKER_END = "<!-- pkit-friction-answers:end -->"
 _START_LINE = re.compile(r"^<!-- pkit-friction-answers:start(?:\s[^\n]*)?-->$")
-#: The section's heading as a line, however a hand spaced or cased it.
-_HEADING_LINE = re.compile(r"^ {0,3}##[ \t]+friction answers[ \t]*#*[ \t]*$", re.IGNORECASE)
+
+
+def _heading_line(*headings: str) -> re.Pattern[str]:
+    """Any of `headings` as a line of its own, however a hand spaced or cased it."""
+    words = "|".join(
+        r"[ \t]+".join(re.escape(word) for word in heading.removeprefix("## ").split())
+        for heading in headings
+    )
+    return re.compile(rf"^ {{0,3}}##[ \t]+(?:{words})[ \t]*#*[ \t]*$", re.IGNORECASE)
+
+
+#: The section's heading as a line — its own, or the one an earlier run wrote.
+_HEADING_LINE = _heading_line(HEADING, FORMER_HEADING)
 #: A heading that ends a section: an ATX heading of level one or two.
 _SECTION_END = re.compile(r"^ {0,3}#{1,2}(?:[ \t]|$)")
 #: A fenced code block's opening line; a heading inside one is no heading.
@@ -139,9 +158,11 @@ class Setting:
     after: tuple[str, ...]
 
 
-#: The two settings a list can show.
-PLACES = "the places the change check reads"
-EXCLUDED = "of the files whose standing changed, those `friction.exclude` leaves out"
+#: The two settings a list can show, as it names them: the places the change
+#: check reads, and — of the files whose standing changed — those
+#: `friction.exclude` leaves out.
+PLACES = "Checked locations"
+EXCLUDED = "Documents excluded from checking"
 
 
 def settings_change(merge_base: str, head: str) -> tuple[Setting, ...] | str:
@@ -458,6 +479,27 @@ def listed_paths(document: Mapping[str, Any]) -> set[str]:
     return {str(e.get("location") or "").split("#", 1)[0] for e in _entries(document)} - {""}
 
 
+def documents(answers: Iterable[Mapping[str, Any]]) -> int:
+    """How many documents `answers` are on — each answer's artefact counted once:
+    a page that defers two anchors is one document the change affects."""
+    return len({str(answer.get("location") or answer.get("artefact") or "?") for answer in answers})
+
+
+#: How a command's output names the list, in the section's plain words.
+NAME = "documents this change affects"
+#: What that output calls a change to the friction settings.
+CHECKED = "a change to which documents are checked"
+
+
+def affected(count: int, *, settings: bool) -> str:
+    """How many documents the change affects — `count`, as `documents` counts
+    them — and whether it changes which are checked, as a command's line says
+    it after `NAME`."""
+    if not count:
+        return f"none, but {CHECKED}" if settings else "none"
+    return f"{count}, plus {CHECKED}" if settings else str(count)
+
+
 # --- rendering ---------------------------------------------------------------
 
 
@@ -479,45 +521,88 @@ def _code(text: str, *, least: int = 1) -> str:
     return f"{fence}{pad}{text}{pad}{fence}"
 
 
+#: Each answer of the change check (`--json`'s `answer`) as the list names it to
+#: a reader; an answer it does not name here is shown as the check gives it.
+LABELS = {
+    "updated": "updated",
+    "unchanged": "still accurate",
+    "deferred": "set aside for later",
+    "unanchored": "not tied to anything",
+}
+#: A revalidation whose outcome is neither `updated` nor `unchanged` (`answer` null).
+NO_OUTCOME = "no decision recorded"
+#: Each flag the change check puts on an answer, as the list names it.
+FLAGS = {
+    "new": "new document",
+    "not asked": "not required by this change",
+    "bump": "re-check date changed with nothing behind it",
+    "edited": "reason changed without a new re-check",
+}
+#: What a change to an anchor of a core kind is a change to; an anchor of another
+#: kind is named as the check names it, `kind:value`.
+_ANCHOR_NOUNS = {"path": "", "record": "decision record ", "artefact": "document "}
+
+
+@dataclass(frozen=True)
+class _Anchor:
+    """An anchor, its kind and value each shown as the list shows it."""
+
+    kind: str
+    value: str
+
+    @property
+    def named(self) -> str:
+        """The anchor as the change check names it."""
+        return f"{self.kind}:{self.value}"
+
+    def changes_to(self, *, markdown: bool) -> str:
+        """What a change to the anchor is a change to, in plain words: "for changes
+        to `src/cli/**`". The anchor's own text is set in a code span in Markdown."""
+        noun = _ANCHOR_NOUNS.get(self.kind)
+        text = self.value if noun is not None else self.named
+        return f"for changes to {noun or ''}{_code(text) if markdown else text}"
+
+
+def _read_anchor(value: Any) -> _Anchor | None:
+    anchor = _mapping(value)
+    if not anchor:
+        return None
+    return _Anchor(shown(str(anchor.get("kind"))), shown(str(anchor.get("value"))))
+
+
 @dataclass(frozen=True)
 class _Entry:
     """One answer, every text in it shown as the list shows it."""
 
     location: str
-    answer: str
-    anchor: str | None
-    marks: tuple[str, ...]
+    label: str
+    anchor: _Anchor | None
+    flags: tuple[str, ...]
     reason: str | None
-    kept: tuple[tuple[str, str | None], ...]
+    kept: tuple[tuple[_Anchor, str | None], ...]
 
 
 def _read_entry(entry: Mapping[str, Any]) -> _Entry:
-    anchor = _mapping(entry.get("anchor"))
-    reason = entry.get("reason")
-    marks: list[str] = []
+    answer, reason = entry.get("answer"), entry.get("reason")
+    flags: list[str] = []
     if entry.get("new"):
-        marks.append("a new artefact")
+        flags.append(FLAGS["new"])
     if not entry.get("asked"):
-        marks.append("not asked for by the change check")
+        flags.append(FLAGS["not asked"])
     if entry.get("status") == "bump":
-        marks.append("the diff does not bear it out")
+        flags.append(FLAGS["bump"])
     if entry.get("status") == "edited":
-        marks.append("edited without a revalidation")
-    kept: list[tuple[str, str | None]] = []
+        flags.append(FLAGS["edited"])
+    kept: list[tuple[_Anchor, str | None]] = []
     for item in entry.get("kept") or []:
-        held = _mapping(_mapping(item).get("anchor"))
         words = _mapping(item).get("reason")
-        kept.append(
-            (
-                shown(f"{held.get('kind')}:{held.get('value')}"),
-                shown(str(words)) if words is not None else None,
-            )
-        )
+        held = _read_anchor(_mapping(item).get("anchor")) or _Anchor("None", "None")
+        kept.append((held, shown(str(words)) if words is not None else None))
     return _Entry(
         location=shown(str(entry.get("location") or entry.get("artefact") or "?")),
-        answer=shown(str(entry.get("answer") or "no outcome")),
-        anchor=shown(f"{anchor.get('kind')}:{anchor.get('value')}") if anchor else None,
-        marks=tuple(marks),
+        label=LABELS.get(str(answer), shown(str(answer))) if answer else NO_OUTCOME,
+        anchor=_read_anchor(entry.get("anchor")),
+        flags=tuple(flags),
         reason=shown(str(reason)) if reason is not None else None,
         kept=tuple(kept),
     )
@@ -534,59 +619,67 @@ def _counted(count: int, one: str, many: str) -> str:
     return f"{count} {one if count == 1 else many}"
 
 
-#: What the list says above the friction settings the change alters.
-SETTINGS_LEAD = (
-    "The change alters what the change check is asked about — the friction settings "
-    "(`pkit friction artefacts`):"
+#: What the section says first, to a reader who does not know the methodology.
+OPENING = (
+    "This change modified things the documents below rely on. For each one it records what "
+    "was decided: updated, still accurate (with the reason), or set aside for later (with "
+    "the reason). Read these before approving the merge."
 )
+#: What it says first where the change decided nothing about any document but
+#: changes which documents are checked.
+SETTINGS_OPENING = (
+    "This change decided nothing about any document, but it changes which documents are "
+    "checked. Read this before approving the merge."
+)
+#: What the list says above those changes, after the documents.
+SETTINGS_LEAD = "It also changes which documents are checked:"
+
+
+def _described(entry: _Entry, number: int, *, markdown: bool) -> list[str]:
+    """One answer as the list shows it, then each deferral it kept. In Markdown the
+    label is bold and every text of the artefact's is set in a code span."""
+
+    def text(words: str, least: int = 1) -> str:
+        return _code(words, least=least) if markdown else words
+
+    label = f"**{entry.label}**" if markdown else entry.label
+    line = f"{number}. {text(entry.location)} — {label}"
+    if entry.anchor is not None:
+        line += f" {entry.anchor.changes_to(markdown=markdown)}"
+    line += "".join(f" ({flag})" for flag in entry.flags)
+    if entry.reason is not None:
+        line += f': "{text(entry.reason, least=2)}"'
+    out = [line]
+    for anchor, words in entry.kept:
+        kept = f"still set aside {anchor.changes_to(markdown=markdown)}"
+        kept += f': "{text(words, least=2)}"' if words is not None else ""
+        out.append(f"   - ({kept})" if markdown else f"   ({kept})")
+    return out
 
 
 def render(document: Mapping[str, Any], head: str, settings: Sequence[Setting] = ()) -> str | None:
-    """The `## Friction answers` section for `document`, derived at commit `head`,
-    with the friction `settings` the change alters; None when the change wrote no
-    answers and alters no setting. Every text is the check's or the backbone
-    discovery's, shown with any non-printable character escaped and set in a
-    code span, so no word of an artefact is read as Markdown."""
+    """The `## Documentation this change affects` section for `document`, derived
+    at commit `head`, with the friction `settings` the change alters; None when
+    the change wrote no answers and alters no setting. It opens in plain words
+    for a reader who does not know the methodology (`OPENING`); every text of
+    the check's or the backbone discovery's is shown with any non-printable
+    character escaped and set in a code span, so no word of an artefact is read
+    as Markdown."""
     entries = [_read_entry(entry) for entry in _entries(document)]
     if not entries and not settings:
         return None
     merge_base = str(_mapping(document.get("base")).get("commit") or "")
-    if entries:
-        first = (
-            f"{_counted(len(entries), 'answer', 'answers')} written by this change, as of "
-            f"`{head[:SHORT]}` — the change check's list (`pkit friction check`). Each is on "
-            "its artefact."
-        )
-    else:
-        dormant = "; it is dormant at that head" if document.get("dormant") else ""
-        first = (
-            f"No answer written by this change, as of `{head[:SHORT]}`, in the change check's "
-            f"list (`pkit friction check`){dormant}."
-        )
+    dormant = not entries and bool(document.get("dormant"))
+    as_of = f"As of commit `{head[:SHORT]}`" + (", no document is checked." if dormant else ".")
     unreadable = document.get("unreadable")
     if isinstance(unreadable, list) and unreadable:
-        files = len(unreadable)
-        first += (
-            f" {_counted(files, 'file', 'files')} the check could not read "
-            f"{'is' if files == 1 else 'are'} not listed."
-        )
-    out = [HEADING, "", f"{MARKER_START} head={head} base={merge_base} -->", first]
-    if entries:
-        out.append("")
+        as_of += f" {_counted(len(unreadable), 'document', 'documents')} could not be read."
+    out = [HEADING, "", f"{MARKER_START} head={head} base={merge_base} -->"]
+    out += [OPENING if entries else SETTINGS_OPENING, "", as_of, ""]
     for number, entry in enumerate(entries, start=1):
-        line = f"{number}. {_code(entry.location)} — **{entry.answer}**"
-        if entry.anchor is not None:
-            line += f" {_code(entry.anchor)}"
-        if entry.marks:
-            line += f" — {'; '.join(entry.marks)}"
-        if entry.reason is not None:
-            line += f": {_code(entry.reason, least=2)}"
-        out.append(line)
-        for anchor, words in entry.kept:
-            kept = f"   - keeps the deferral of {_code(anchor)}"
-            out.append(kept + (f": {_code(words, least=2)}" if words is not None else ""))
+        out += _described(entry, number, markdown=True)
     if settings:
-        out += ["", SETTINGS_LEAD, ""]
+        out += ["", SETTINGS_LEAD, ""] if entries else []
         for setting in settings:
             before, after = _side(setting.before, code=True), _side(setting.after, code=True)
             out.append(f"- {setting.key}: {before} → {after}")
@@ -595,22 +688,11 @@ def render(document: Mapping[str, Any], head: str, settings: Sequence[Setting] =
 
 
 def lines(document: Mapping[str, Any], settings: Sequence[Setting] = ()) -> list[str]:
-    """The list as a terminal shows it: one line per answer, its words in full,
-    then one per friction setting the change alters."""
+    """The list as a terminal shows it, in the section's words: one line per
+    answer, its words in full, then one per friction setting the change alters."""
     out: list[str] = []
     for number, entry in enumerate((_read_entry(e) for e in _entries(document)), start=1):
-        line = f"{number}. {entry.location} — {entry.answer}"
-        if entry.anchor is not None:
-            line += f" {entry.anchor}"
-        if entry.marks:
-            line += f" — {'; '.join(entry.marks)}"
-        if entry.reason is not None:
-            line += f": {entry.reason}"
-        out.append(line)
-        for anchor, words in entry.kept:
-            out.append(
-                f"   keeps the deferral of {anchor}" + (f": {words}" if words is not None else "")
-            )
+        out += _described(entry, number, markdown=False)
     for setting in settings:
         before, after = _side(setting.before, code=False), _side(setting.after, code=False)
         out.append(f"{setting.key}: {before} → {after}")
@@ -619,11 +701,13 @@ def lines(document: Mapping[str, Any], settings: Sequence[Setting] = ()) -> list
 
 def _texts(document: Mapping[str, Any], settings: Sequence[Setting]) -> Iterator[tuple[str, str]]:
     """Every text the section would show, as it would show it, with where it is:
-    (an answer's location, or `SETTINGS_WHERE`) and the text."""
+    (an answer's location, or `SETTINGS_WHERE`) and the text. An anchor is read as
+    the change check names it, `kind:value`."""
     for entry in (_read_entry(e) for e in _entries(document)):
-        texts: list[str | None] = [entry.location, entry.anchor, entry.reason]
+        named = entry.anchor.named if entry.anchor is not None else None
+        texts: list[str | None] = [entry.location, named, entry.reason]
         for anchor, words in entry.kept:
-            texts += [anchor, words]
+            texts += [anchor.named, words]
         for text in texts:
             if text:
                 yield entry.location, text
@@ -677,8 +761,9 @@ class _Span:
     """Lines of a body that are the section, or a piece of one: `first` through
     `last`. `kind` is `region` (a start marker's line through its end marker's,
     `start` and `end`), `marker` (a marker with no partner, and for a start
-    marker everything after it up to the provenance footer), or `hand` (a
-    `## Friction answers` heading no marker follows, with everything under it)."""
+    marker everything after it up to the provenance footer), or `hand` (the
+    section's heading — or `FORMER_HEADING` — with no marker following, and
+    everything under it)."""
 
     first: int
     last: int
@@ -750,8 +835,8 @@ def _marked(lines_: Sequence[str], at: int, footer: int | None, *, heading: int 
 
 
 def _hand(lines_: Sequence[str], heading: int, footer: int | None) -> _Span:
-    """The span of a `## Friction answers` section no command wrote: its heading
-    through the line before the provenance footer, a marker, the next heading of
+    """The span of a section under the section's heading that no command wrote: its
+    heading through the line before the provenance footer, a marker, the next heading of
     level one or two outside a fenced block, or the end of the body."""
     fence: str | None = None
     for index in range(heading + 1, len(lines_)):
@@ -786,8 +871,8 @@ def find(body: str) -> str | None:
 
 
 def hand_written(body: str) -> bool:
-    """Whether `body` carries a `## Friction answers` section no command wrote: the
-    heading with no marker under it."""
+    """Whether `body` carries a section no command wrote: the section's heading —
+    or `FORMER_HEADING` — with no marker under it."""
     return any(span.kind == "hand" for span in _spans(_split(body)))
 
 
@@ -799,8 +884,9 @@ def has_list(body: str) -> bool:
 def strip(body: str) -> str:
     """`body` without the section: every region and the heading directly above it,
     every marker with no partner — a start marker with everything after it up to
-    the provenance footer — and every `## Friction answers` section no command
-    wrote, with everything under it. Text outside them is left as it is."""
+    the provenance footer — and every section under the section's heading, or
+    `FORMER_HEADING`, that no command wrote, with everything under it. Text
+    outside them is left as it is."""
     lines_ = _split(body)
     spans = _spans(lines_)
     if not spans:
@@ -864,8 +950,8 @@ def _normal(text: str | None) -> str:
 def current(body: str, block: str | None) -> bool:
     """Whether `body` carries `block`'s region and nothing else of the section,
     read as a host may have changed its whitespace; with `block` None, whether it
-    carries nothing of the section — no region, no marker line, no
-    `## Friction answers` section a hand wrote. Markers count only as whole lines."""
+    carries nothing of the section — no region, no marker line, no section a
+    hand wrote under its heading. Markers count only as whole lines."""
     lines_ = _split(body)
     spans = _spans(lines_)
     if block is None:

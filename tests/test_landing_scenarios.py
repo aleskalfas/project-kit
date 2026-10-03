@@ -2662,9 +2662,10 @@ def land(
 
 
 def _the_change_wrote_no_answers(monkeypatch: pytest.MonkeyPatch, answers: ModuleType) -> None:
-    """land-work's `answers` step, answered as for a change that wrote none: the
-    landings these rows walk are the ones a change with no answers takes, which
-    the step leaves as they were (project-management DEC-055)."""
+    """land-work's step that lists the answers (`documents this change affects:`),
+    answered as for a change that wrote none: the landings these rows walk are the
+    ones a change with no answers takes, which the step leaves as they were
+    (project-management DEC-055)."""
 
     def derive(head: str, base: str | None) -> Any:
         document = {"schema_version": 1, "base": {"commit": "", "outdated": False}}

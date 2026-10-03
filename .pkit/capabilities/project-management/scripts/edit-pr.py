@@ -16,13 +16,15 @@ before writing. Membership gate per DEC-021 runs at startup.
 that lands a second Task closes it on merge too (#1049). A reference the
 body already carries is left alone.
 
-The `## Friction answers` section (DEC-055) is carried across every edit:
-the edit is applied to the body without it, and the section the
-description carried is placed back, last before the provenance footer —
-of several, the latest, the last one. Any other — inside a supplied body,
-a second list, or one typed by hand with no markers — is dropped with a
-warning: only open-pr and land-work write one, from the change check, and
-edit-pr derives nothing.
+The `## Documentation this change affects` section (DEC-055) is carried
+across every edit: the edit is applied to the body without it, and the
+section the description carried is placed back, under that heading, last
+before the provenance footer — of several, the latest, the last one; one an
+earlier run left under `## Friction answers` is carried the same way, its
+words unchanged until land-work writes it again. Any other — inside a
+supplied body, a second list, or one typed by hand with no markers — is
+dropped with a warning: only open-pr and land-work write one, from the
+change check, and edit-pr derives nothing.
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/edit-pr.py 99 --append "Additional notes..."

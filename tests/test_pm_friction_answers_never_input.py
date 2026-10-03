@@ -1,13 +1,14 @@
-"""The friction answers' section is never input (project-management DEC-055 point 4).
+"""The section of the answers a change wrote is never input (project-management
+DEC-055 point 4).
 
-A pull request's `## Friction answers` section carries the artefacts' words, as the
-change check lists them. No reader of the description treats it as input: a
-reason saying "fixes #77" closes nothing and meets no closing requirement, a
-`## Doc impact` in a reason is no Doc impact section, and a path in it overrides no
-mapping (`test_pm_check_doc_mapping`). Each reader here is the capability's own:
-`pr_validation` (behind done-work, merge-pr, validate-pr, open-pr and edit-pr),
-show-pr, show-tree and `lifecycle_inference`. done-work's close of the issues a PR
-closes is tested through land-work (`test_pm_land_work`).
+A pull request's `## Documentation this change affects` section carries the
+artefacts' words, as the change check lists them. No reader of the description
+treats it as input: a reason saying "fixes #77" closes nothing and meets no
+closing requirement, a `## Doc impact` in a reason is no Doc impact section, and a
+path in it overrides no mapping (`test_pm_check_doc_mapping`). Each reader here is
+the capability's own: `pr_validation` (behind done-work, merge-pr, validate-pr,
+open-pr and edit-pr), show-pr, show-tree and `lifecycle_inference`. done-work's
+close of the issues a PR closes is tested through land-work (`test_pm_land_work`).
 """
 
 from __future__ import annotations

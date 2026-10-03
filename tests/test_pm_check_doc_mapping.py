@@ -100,12 +100,13 @@ def test_the_friction_answers_section_overrides_no_mapping(cdm) -> None:
     and the region left under `## Doc impact`."""
     region = (
         "<!-- pkit-friction-answers:start head=a base=b -->\n"
-        "1 answer written by this change.\n\n"
-        "1. `packages/cli/src/commands/registry.ts` — **unchanged**: ``internal only``\n"
+        "This change modified things the documents below rely on.\n\n"
+        '1. `packages/cli/src/commands/registry.ts` — **still accurate**: "``internal only``"\n'
         "<!-- pkit-friction-answers:end -->"
     )
-    headed = f"## Doc impact\n- The README.\n\n## Friction answers\n\n{region}\n"
+    headed = f"## Doc impact\n- The README.\n\n## Documentation this change affects\n\n{region}\n"
+    former = f"## Doc impact\n- The README.\n\n## Friction answers\n\n{region}\n"
     bare = f"## Doc impact\n- The README.\n\n{region}\n"
-    for body in (headed, bare):
+    for body in (headed, former, bare):
         section = cdm._doc_impact_section(body)
         assert "registry.ts" not in section and "the readme." in section

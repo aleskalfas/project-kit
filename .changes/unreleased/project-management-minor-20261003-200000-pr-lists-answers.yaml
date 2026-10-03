@@ -10,17 +10,20 @@ body: >
   check's list of the revalidations, deferrals and reasons for having no
   anchors the change wrote — derived at the pushed head with `pkit friction
   check --json --base <the PR's base> --head`, the base always named — into a
-  section of its own, `## Friction answers`, last before the provenance footer,
-  every word as the check's human view shows it, with each change to the
+  section of its own, `## Documentation this change affects`, last before the
+  provenance footer, in plain words for a reader who does not know the
+  methodology — an opening paragraph, then each document with what was decided
+  (updated, still accurate, set aside for later) — every word of an artefact's
+  as the check's human view shows it, with each change to the
   friction places or exclusions the change makes — read through `pkit friction
   artefacts --json --at` at both ends — as it was and as it is; it never
   refuses to open over the list, and leaves it out
   with one warning line when it cannot write it. `edit-pr` carries the section
   across every edit — of two, the latest — and drops any other, saying so. A
-  `## Friction answers` section typed by hand, with no markers, is removed by
-  `open-pr`, `edit-pr` and `land-work`. `land-work` gains an `answers` step
-  between the review and the merge: it derives the list at the pinned head,
-  prints it above its `ready:` line and writes it into the description where it
+  section under that heading typed by hand, with no markers, is removed by
+  `open-pr`, `edit-pr` and `land-work`. `land-work` gains a step between the
+  review and the merge, its lines beginning `documents this change affects:`:
+  it derives the list at the pinned head, prints it above its `ready:` line and writes it into the description where it
   is missing or differs. Where the change wrote answers or alters the friction
   settings, `--yes` merges only with `--expect-head` and the list already in
   the description; a run that had to write it, or named no head, stops at
@@ -42,7 +45,7 @@ body: >
   no mapping. The provenance footer's markers, like the section's, now count
   only as whole lines, so a description that quotes one keeps every line after
   it. `--doc-impact-from-friction` fills an unwritten `## Doc impact` with one
-  line counting the answers listed there, in place of a bullet per answer. A
+  line counting the documents listed there, in place of a bullet per answer. A
   change that wrote no answers and alters no friction setting lands as before.
   Upgrade the capability together with the backbone: it needs the release
   whose change check lists the answers a change wrote.
