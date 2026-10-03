@@ -26,10 +26,15 @@ so no two collide in the point's `additive` merge.
 
 **Fail closed.** A check that gives no document, or one of a `schema_version`
 this reading does not understand (a document without the key comes from a
-backbone that predates it, and reads as version 1), or a page whose friction lies
-beyond a shallow clone's history, is no answer — raised, never an empty list:
-the point is `fail`, and a gate never passes on fewer obligations than it
-should. A repository with no commit owes nothing: there is no HEAD to judge.
+backbone that predates it, and reads as version 1), or a page the check did not
+judge, is no answer — raised, never an empty list: the point is `fail`, and a
+gate never passes on fewer obligations than it should. A page is judged when
+its state is `current`, `stale` or `deferred`. Any other state is not a
+judgment: `unreachable` (its friction lies beyond a shallow clone's history),
+`unresolved` (an anchor of it cannot be resolved — its kind has no resolver
+that may run, or its resolver gave no answer), and a state this reading does
+not know, which is never taken for current. A repository with no commit owes
+nothing: there is no HEAD to judge.
 These are the two cases a filler that reads history tells apart (COR-052 point
 6): history that does not exist yet holds nothing, and the answer is `[]`;
 history that exists and cannot be read is no answer. Whether HEAD names a
@@ -59,6 +64,11 @@ CODE_UNDOCUMENTED = "code-undocumented"
 #: matter here: only `stale` is owed — a `deferred` page carries its answer.
 STALE = "stale"
 UNREACHABLE = "unreachable"
+UNRESOLVED = "unresolved"
+
+#: The states in which the check judged a page. Any other — `unreachable`,
+#: `unresolved`, one this reading does not know — is no judgment, so no answer.
+JUDGED = frozenset({"current", STALE, "deferred"})
 
 #: The backbone's readings this contribution reads: the whole-repository check, and
 #: settled state for whether HEAD names a commit (`head`).
@@ -133,8 +143,9 @@ def _reading(argv: Sequence[str], root: str, run: Runner, key: str) -> Mapping[s
 
 def obligations(report: Mapping[str, Any], pages: Iterable[str]) -> list[dict[str, Any]]:
     """The obligations `report` gives rise to: the stale pages, then the uncovered
-    surface, each sorted. Raises NoAnswer when a page's friction cannot be
-    judged in this clone."""
+    surface, each sorted. Raises NoAnswer when the check did not judge a page
+    (`JUDGED`): its points lie beyond this clone's history, an anchor of it
+    cannot be resolved, or its state is one this reading does not know."""
     if report.get("dormant"):
         return []
     page_set = set(pages)
@@ -143,11 +154,21 @@ def obligations(report: Mapping[str, Any], pages: Iterable[str]) -> list[dict[st
         for a in report.get("artefacts") or []
         if isinstance(a, Mapping) and a.get("location") in page_set
     ]
-    unjudged = sorted(str(a["location"]) for a in reports if a.get("state") == UNREACHABLE)
-    if unjudged:
+    unreachable = sorted(str(a["location"]) for a in reports if a.get("state") == UNREACHABLE)
+    if unreachable:
         raise NoAnswer(
-            f"friction on {', '.join(unjudged)} cannot be judged: a point lies beyond this "
+            f"friction on {', '.join(unreachable)} cannot be judged: a point lies beyond this "
             f"shallow clone's history — fetch the full history (`git fetch --unshallow`)"
+        )
+    unjudged = sorted(
+        (str(a["location"]), str(a.get("state"))) for a in reports if a.get("state") not in JUDGED
+    )
+    if unjudged:
+        named = ", ".join(f"{page} ({state})" for page, state in unjudged)
+        raise NoAnswer(
+            f"friction on {named} was not judged: `{UNRESOLVED}` is a page with an anchor that "
+            f"cannot be resolved, and any other state is one this capability does not know — "
+            f"`pkit friction explain <page>` says why"
         )
     findings = [f for f in report.get("findings") or [] if isinstance(f, Mapping)]
     stale = sorted(str(a["location"]) for a in reports if a.get("state") == STALE)

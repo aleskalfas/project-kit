@@ -38,8 +38,12 @@ in by `friction.exclude`, after the point with no revalidation — with its
 origin, the first such commit (author, date, change); *deferred* — every
 deferral, with its point's origin and, in the human view, its age;
 *left-out* — a widening of `friction.exclude` since the point that asks
-nothing; dead anchors and unresolved kinds, all of them, not only a
-change's; *over-broad* anchors. Then the two measures: unanchored artefacts
+nothing; dead anchors, unresolved kinds and resolvers that gave no answer,
+all of them, not only a change's; *over-broad* anchors. An artefact with an
+anchor that cannot be resolved — its kind has no resolver that may run, or
+its resolver gave no answer — is **not judged**: its state is `unresolved`,
+never `current`, as an artefact whose points lie beyond a shallow clone is
+`unreachable` (point 2). Then the two measures: unanchored artefacts
 within the places — the forgotten ones counted, and those whose block gives
 the reason a person accepted them with none (`unanchored-because`, point 1)
 listed apart with it, never counted — and uncovered surface, excluded paths
@@ -167,19 +171,37 @@ class RepositoryFindingKind(Enum):
     DEFERRED = "deferred"
     LEFT_OUT = "left-out"
     DEAD_ANCHOR = "dead-anchor"
-    UNRESOLVED_KIND = "unresolved-kind"
+    UNRESOLVED_KIND = "unresolved-kind"  # a kind nothing installed may resolve
+    NO_ANSWER = "no-answer"  # a registered kind's resolver gave no answer
     OVER_BROAD = "over-broad"
     UNREACHABLE = "unreachable"
     UNREADABLE = "unreadable"
 
 
+#: The findings that leave an anchor unresolved: whether what it denotes changed cannot
+#: be told, so its artefact is not judged (`ArtefactState.UNRESOLVED`; COR-050 point 2).
+UNRESOLVED_KINDS = frozenset(
+    {RepositoryFindingKind.UNRESOLVED_KIND, RepositoryFindingKind.NO_ANSWER}
+)
+
+
 class ArtefactState(Enum):
-    """What the check found for one artefact with anchors; stale wins over deferred (point 10)."""
+    """What the check found for one artefact with anchors (point 10).
+
+    Two states say the artefact was not judged, and win over the rest:
+    `UNREACHABLE` — a point of it lies beyond a shallow clone's history — and
+    then `UNRESOLVED` — an anchor of it cannot be resolved (`UNRESOLVED_KINDS`),
+    so no reading of it is ever `current`, and no `since` is recorded that the
+    unread anchor could predate. Then stale wins over deferred. The stale and
+    deferred findings of an unresolved artefact's other anchors are still
+    reported.
+    """
 
     CURRENT = "current"
     STALE = "stale"
     DEFERRED = "deferred"
     UNREACHABLE = "unreachable"
+    UNRESOLVED = "unresolved"
 
 
 @dataclass(frozen=True)
@@ -1138,12 +1160,15 @@ class _Judge:
     # --- the rule of point 5 ---------------------------------------------------------
 
     def problem(self, anchor: Anchor) -> RepositoryFinding | None:
-        """A dead anchor or an unresolved kind at HEAD (point 7), else `None`.
+        """A dead anchor, an unresolved kind or a missing answer at HEAD (point 7), else
+        `None`.
 
-        An anchor of a registered kind is judged by its resolver's answer: no
-        answer leaves it unresolved — whether it changed cannot be told, so it
-        is never judged current (point 2) — and an answer naming no file
-        leaves it dead.
+        An anchor of a registered kind is judged by its resolver's answer, read
+        against HEAD's files: no answer leaves it unresolved (`NO_ANSWER`) —
+        whether it changed cannot be told, so its artefact is not judged
+        (point 2; `ArtefactState.UNRESOLVED`) — and an answer naming no file
+        leaves it dead, as a dead anchor of a core kind is: the artefact is
+        judged on its other anchors.
         """
         reason = self.kinds.unresolved(anchor.kind)
         if reason is not None:
@@ -1153,7 +1178,7 @@ class _Judge:
             resolution = self.kinds.resolve(anchor)
             if resolution.no_answer is not None:
                 return RepositoryFinding(
-                    RepositoryFindingKind.UNRESOLVED_KIND,
+                    RepositoryFindingKind.NO_ANSWER,
                     f"its resolver gave no answer, so whether it changed cannot be told: "
                     f"{resolution.no_answer}",
                     anchor=anchor,
@@ -1172,17 +1197,27 @@ class _Judge:
         )
 
     def over_broad(self, anchor: Anchor) -> RepositoryFinding | None:
-        """A path anchor matching more than `OVER_BROAD_SHARE` of the tracked files (point 7)."""
-        if anchor.kind != "path" or not self._tracked:
+        """An anchor standing on more than `OVER_BROAD_SHARE` of the tracked files (point 7):
+        a path anchor by the files it matches, an anchor of a registered kind by the
+        files its resolver names — the rule is not a kind's. A record or an artefact
+        anchor names one file."""
+        if not self._tracked:
             return None
-        matched = sum(map(self.head.stands_on(anchor.value), self.head.files))
+        if anchor.kind == "path":
+            matched = sum(map(self.head.stands_on(anchor.value), self.head.files))
+            verb, fix = "matches", "narrow it"
+        elif anchor.kind not in CORE_ANCHOR_KINDS:
+            matched = len(self.kinds.files(anchor))
+            verb, fix = "stands on", "have its resolver name less, or anchor to a narrower value"
+        else:
+            return None
         total = len(self._tracked)
         if matched <= total * OVER_BROAD_SHARE:
             return None
         share = round(100 * matched / total)
         message = (
-            f"matches {matched} of {total} tracked files ({share}%): most changes would make it "
-            f"a revalidation, which teaches people to bump the marker blindly — narrow it"
+            f"{verb} {matched} of {total} tracked files ({share}%): most changes would make it "
+            f"a revalidation, which teaches people to bump the marker blindly — {fix}"
         )
         return RepositoryFinding(RepositoryFindingKind.OVER_BROAD, message, anchor=anchor)
 
@@ -1407,8 +1442,11 @@ def _check_artefact(
 
     An artefact under an excluded path has no report and no stale or deferred
     finding — it is left out of the debt as of the measures (point 7) — and
-    only what it declares is checked: dead anchors, unresolved kinds and
-    over-broad anchors.
+    only what it declares is checked: dead anchors, unresolved kinds, missing
+    answers and over-broad anchors. An artefact with an anchor that cannot be
+    resolved is not judged (`ArtefactState.UNRESOLVED`): what its other
+    anchors owe is still found and reported, and its state says the reading
+    is not whole.
     """
 
     def finding(
@@ -1520,7 +1558,9 @@ def _check_artefact(
         )
         deferred.append(finding(RepositoryFindingKind.DEFERRED, message, anchor, deferral_point))
 
-    if stale:
+    if any(found.kind in UNRESOLVED_KINDS for found in problems):
+        state = ArtefactState.UNRESOLVED
+    elif stale:
         state = ArtefactState.STALE
     elif deferred:
         state = ArtefactState.DEFERRED
@@ -2014,10 +2054,13 @@ _LEGEND: dict[RepositoryFindingKind, str] = {
     ),
     RepositoryFindingKind.DEAD_ANCHOR: "an anchor resolving to nothing",
     RepositoryFindingKind.UNRESOLVED_KIND: (
-        "an anchor of a kind nothing installed resolves, or whose resolver gave no answer"
+        "an anchor of a kind nothing installed resolves: its artefact is not judged"
+    ),
+    RepositoryFindingKind.NO_ANSWER: (
+        "a resolver gave no answer for an anchor: its artefact is not judged — run again"
     ),
     RepositoryFindingKind.OVER_BROAD: (
-        f"a path anchor matching more than {round(100 * OVER_BROAD_SHARE)}% of the tracked files"
+        f"an anchor standing on more than {round(100 * OVER_BROAD_SHARE)}% of the tracked files"
     ),
     RepositoryFindingKind.UNREACHABLE: "a point beyond this clone's history",
     RepositoryFindingKind.UNREADABLE: (
@@ -2175,6 +2218,7 @@ def _summary(result: RepositoryCheck) -> str:
         (RepositoryFindingKind.LEFT_OUT, "left-out anchor", "left-out anchors"),
         (RepositoryFindingKind.DEAD_ANCHOR, "dead anchor", "dead anchors"),
         (RepositoryFindingKind.UNRESOLVED_KIND, "unresolved kind", "unresolved kinds"),
+        (RepositoryFindingKind.NO_ANSWER, "missing answer", "missing answers"),
         (RepositoryFindingKind.OVER_BROAD, "over-broad anchor", "over-broad anchors"),
         (RepositoryFindingKind.UNREACHABLE, "unreachable", "unreachable"),
     ]
@@ -2198,6 +2242,7 @@ __all__ = [
     "LET_BACK_IN",
     "OVER_BROAD_SHARE",
     "REPOSITORY_SCHEMA_VERSION",
+    "UNRESOLVED_KINDS",
     "AcceptedUnanchored",
     "AnchorFiles",
     "ArtefactCheck",

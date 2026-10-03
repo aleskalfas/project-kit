@@ -345,6 +345,26 @@ def test_a_page_whose_friction_cannot_be_judged_is_no_answer() -> None:
     ]
 
 
+@pytest.mark.parametrize("state", ["unresolved", "a-state-not-yet-invented", None])
+def test_a_page_the_check_did_not_judge_is_no_answer(state: str | None) -> None:
+    """Any state other than current, stale or deferred is no judgment: a page with an
+    anchor that cannot be resolved, and a state this reading does not know, are never
+    read as current — the point fails closed rather than owe too little."""
+    report = {
+        **REPORT,
+        "artefacts": [
+            {"location": "docs/current.md", "state": "current"},
+            {"location": "docs/guide.md", "state": state},
+        ],
+    }
+    with pytest.raises(doc_check_lib.NoAnswer) as refused:
+        doc_check_lib.obligations(report, PAGES)
+    assert f"friction on docs/guide.md ({state}) was not judged" in str(refused.value)
+    assert "docs/current.md" not in str(refused.value)
+    # Only a page's: an unjudged artefact that is not a page leaves the answer whole.
+    assert len(doc_check_lib.obligations(report, ["docs/current.md"])) == 2
+
+
 def test_a_dormant_check_owes_nothing() -> None:
     assert doc_check_lib.obligations({"dormant": True, "artefacts": []}, PAGES) == []
 

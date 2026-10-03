@@ -31,6 +31,9 @@ never this filler (COR-052 point 6). History that does not exist yet holds
 nothing: with no commit it answers `[]`. History that exists and this clone
 cannot reach gives no answer: a HEAD git cannot read, or a page whose friction
 lies beyond a shallow clone's history, exits 1, never with an empty answer.
+So does a page the friction check did not judge for any other reason — an
+anchor of it cannot be resolved, or its state is one this reading does not
+know.
 The contribution is inert while no capability provides the work-tracking role;
 nothing here asks.
 
@@ -41,8 +44,9 @@ Usage:
 Exit codes:
   0  answered
   1  no answer: the friction check, the places or HEAD's reading gave no
-     document, git cannot read HEAD, or a page's friction lies beyond a shallow
-     clone's history — never an empty answer in its place
+     document, git cannot read HEAD, or the friction check did not judge a
+     page — its friction lies beyond a shallow clone's history, or an anchor
+     of it cannot be resolved — never an empty answer in its place
 """
 
 from __future__ import annotations

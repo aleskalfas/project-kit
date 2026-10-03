@@ -586,8 +586,9 @@ def plan_record_status(target_root: Path, reference: str) -> Plan:
     when stale, `since` — the oldest commit its staleness comes from. Nothing
     is written when the recorded `state` and `since` already say so, whatever
     `as-of` holds. Refused: an artefact with no anchors or deferrals (there is
-    no state), one not at HEAD, and one whose points lie beyond a shallow
-    clone's history.
+    no state), one not at HEAD, and one the check did not judge — its points
+    lie beyond a shallow clone's history, or an anchor of it cannot be
+    resolved: a status is a judgment, and neither is one.
     """
     source = _read_source(target_root, find_artefact(target_root, reference))
     artefact = source.artefact
@@ -610,6 +611,18 @@ def plan_record_status(target_root: Path, reference: str) -> Plan:
             f"{artefact.location} cannot be judged: a point of it lies beyond this clone's "
             f"history — fetch the full history (`git fetch --unshallow`) and run again. "
             f"Nothing was written."
+        )
+    if report.state is fr.ArtefactState.UNRESOLVED:
+        unresolved = next(
+            f
+            for f in result.findings
+            if f.location == artefact.location and f.kind in fr.UNRESOLVED_KINDS
+        )
+        anchor = unresolved.anchor
+        named = "" if anchor is None else f"{anchor.kind} {anchor.value}: "
+        raise FrictionWriteError(
+            f"{artefact.location} cannot be judged: an anchor of it cannot be resolved "
+            f"({named}{unresolved.message}). Nothing was written."
         )
 
     value: dict[str, Any] = {"state": report.state.value, "as-of": result.head.commit}
