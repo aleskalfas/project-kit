@@ -569,6 +569,25 @@ def test_an_untracked_file_is_an_answer_for_the_change_check_and_none_at_head(
     )
 
 
+def test_the_whole_repository_readers_read_head_s_registrations_never_the_working_tree_s(
+    repo: AdopterRepo,
+) -> None:
+    """`--all`, `explain`, `debt` and `record-status` read HEAD and its history, the
+    registrations included: an uncommitted edit to a capability's package leaves the
+    kind as HEAD registers it. Only the resolver, a command, reads the disk."""
+    _sources(repo)
+    _start(repo, {"docs/guide.md": guide(anchors=SOURCE_ANCHORS), **CAPTURED})
+    _the_declaration_dropped(repo.root)  # uncommitted: the working tree's registration is refused
+    assert fd.unresolved_kind_reason("source", fd.registered_anchor_kinds(repo.root)) is not None
+
+    whole = fr.run_repository_check(repo.root)
+    assert [r.state for r in whole.artefact_reports] == [fr.ArtefactState.CURRENT]
+    assert [f for f in whole.findings if f.anchor == SOURCE_ANCHOR] == []
+    explained = CliRunner().invoke(main, ["friction", "explain", "docs/guide.md", "--json"])
+    assert explained.exit_code == 0, explained.output
+    assert json.loads(explained.output)["state"] == "current"
+
+
 def test_a_link_the_repository_holds_is_a_file_of_the_answer(repo: AdopterRepo) -> None:
     """A link is a file of the listing, never followed: the anchor stands on the link."""
     _sources(repo)

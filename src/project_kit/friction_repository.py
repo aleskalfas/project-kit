@@ -897,11 +897,11 @@ class _Judge:
         self.walker = walker
         self.blobs = blobs
         self.kinds = AnchorKinds(head.root, registry, head.files, HEAD_STATE)
-        """The anchor kinds, and each registered kind's anchors as their resolvers
-        answered — once per anchor value for the run (COR-050 point 2), each answer
-        read against HEAD's files: a resolver reads the files on disk, and a path
-        HEAD does not hold — uncommitted work — is no answer, never a file with no
-        history."""
+        """The anchor kinds, as HEAD's registrations declare them, and each registered
+        kind's anchors as their resolvers answered — once per anchor value for the run
+        (COR-050 point 2), each answer read against HEAD's files: a resolver reads the
+        files on disk, the one thing here that does, and a path HEAD does not hold —
+        uncommitted work — is no answer, never a file with no history."""
         self.unreadable: dict[str, str] = {}
         """The revalidation points whose `friction.exclude` does not read, and why:
         each read under HEAD's instead, and reported (`unreadable_findings`)."""
@@ -1350,7 +1350,7 @@ def run_repository_check(
         return _dormant(settings.mode_or_default, settings.mode, places=0)
 
     head = Side(target_root, tree, discovery)
-    registry = registered_anchor_kinds(target_root) if registry is None else registry
+    registry = registered_anchor_kinds(target_root, tree) if registry is None else registry
     history = read_history(target_root, head_sha)
     blobs = BlobReader(target_root)
     try:
@@ -1788,7 +1788,7 @@ def run_artefact_check(
     head = HeadState(head_sha, uncommitted_paths(target_root))
     if not (artefact.has_friction_block and (anchors_of(artefact) or artefact.deferrals)):
         return ArtefactCheck(head, bool(_shallow_commits(target_root)), artefact, None, ())
-    registry = registered_anchor_kinds(target_root) if registry is None else registry
+    registry = registered_anchor_kinds(target_root, tree) if registry is None else registry
     history = read_history(target_root, head_sha)
     blobs = BlobReader(target_root)
     try:
