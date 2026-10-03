@@ -22,7 +22,8 @@
 # Document-shaped: the file IS the resource. The body below is the minimal
 # reference instance — valid, the schema's self-test, and the starting point
 # a project edits. Adopter-owned: it lives in the capability's `project/`
-# tier and uninstalling the capability leaves it in place.
+# tier, which sync never touches; uninstalling the capability from a project
+# removes the tier, this file with it.
 
 schema_version: 1
 
