@@ -33,7 +33,7 @@ The scenarios operate on:
 
 ## Invocation pattern
 
-The single approval gate of Scenario 3 is a turn the agent waits on. Booted as the session's own agent it waits in the conversation. Dispatched as a subagent, it cannot hear the person: the plan is its result, it stops there, and approval arrives as a new request naming the plan's file. Either way nothing is drafted before approval.
+The single approval gate of Scenario 3 is a turn the agent waits on. Booted as the session's own agent it waits in the conversation. Dispatched as a subagent, it cannot hear the person: the plan is its result, it stops there, and approval arrives as a new request naming the plan's file. Either way nothing is drafted before approval. Either way it runs no friction writer (the agent body's "Read-only on the repository").
 
 ---
 
