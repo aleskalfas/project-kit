@@ -1453,6 +1453,8 @@ def run_change_check(
             base=dormant_base,
             head=dormant_head,
             findings=(),
+            answers=(),
+            unreadable=(),
             **counts,
         )
 
