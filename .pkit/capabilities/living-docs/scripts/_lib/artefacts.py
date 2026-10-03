@@ -92,13 +92,31 @@ class Document:
 
 
 @dataclass(frozen=True)
+class Artefact:
+    """One artefact the places hold, as the backbone reads it: its file, its id,
+    whether it is an entry of a collection file or a rule of a rule set rather
+    than a whole document, the anchors its friction block lists by kind — every
+    kind, the values that are text, in written order — and its own fields, the
+    container left out (a rule's carry its cited origin)."""
+
+    path: str
+    id: str
+    entry: bool
+    rule: bool
+    anchors: Mapping[str, tuple[str, ...]]
+    fields: Mapping[str, Any] | None
+
+
+@dataclass(frozen=True)
 class Reading:
     """The backbone's answer: the roots by audience, the places, the documents by
-    path — the files the places read, and the documents components hold."""
+    path — the files the places read, and the documents components hold — and
+    every artefact in them."""
 
     roots: Mapping[str, str]
     places: tuple[DeclaredPlace, ...]
     documents: Mapping[str, Document]
+    artefacts: tuple[Artefact, ...] = ()
 
 
 def read_artefacts(root: Path, run: Runner = subprocess.run) -> Reading:
@@ -166,7 +184,24 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
             fields=_fields(entry.get("fields")),
             held_by=capability_of(source) or source,
         )
-    return Reading(roots=roots, places=places, documents=documents)
+    artefacts = tuple(_artefact(entry) for entry in _mappings(document.get("artefacts")))
+    return Reading(roots=roots, places=places, documents=documents, artefacts=artefacts)
+
+
+def _artefact(entry: Mapping[str, Any]) -> Artefact:
+    anchors = {
+        str(kind): tuple(value for value in values if isinstance(value, str))
+        for kind, values in _mapping(entry.get("anchors")).items()
+        if isinstance(values, list)
+    }
+    return Artefact(
+        path=str(entry.get("path")),
+        id=str(entry.get("id")),
+        entry=entry.get("kind") == "entry",
+        rule=entry.get("rule_set") is not None,
+        anchors=anchors,
+        fields=_fields(entry.get("fields")),
+    )
 
 
 def _anchoring(document: Mapping[str, Any]) -> dict[str, tuple[bool | None, str | None]]:

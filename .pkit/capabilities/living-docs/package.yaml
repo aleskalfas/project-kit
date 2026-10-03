@@ -9,13 +9,17 @@ requires_backbone: ">=1.149.0,<2.0.0"
 commands:
   validate:
     script: scripts/validate.py
-    help: "Validate the documentation spaces (DEC-001): places and their assignment, what is never a page, pages' reader and kind, each reader against the readers point, each page's body against the structure its kind declares (RS-LDOC-004), entry points and definitions, and counts the pages left unanchored without an accepted reason apart from those accepted with one (DEC-001 point 8); --json prints the findings document `pkit validate` reads. A query: read-only, offline; `pkit sync` provisions its dependencies."
+    help: "Validate the documentation spaces (DEC-001): places and their assignment, what is never a page, pages' reader and kind, each reader against the readers point, each page's body against the structure its kind declares (RS-LDOC-004), entry points and definitions, and counts the pages left unanchored without an accepted reason apart from those accepted with one (DEC-001 point 8), and the captured sources' layout (point 4); --json prints the findings document `pkit validate` reads. A query: read-only, offline; `pkit sync` provisions its dependencies."
     query-contract: true
   fill-doc-check:
     script: scripts/fill-doc-check.py
     help: "This capability's filler of the pkit::work-tracking:doc-check point (DEC-001 point 7): one page-stale obligation per page the whole-repository friction check reports stale (a deferred page carries its answer and gives none), one code-undocumented obligation per uncovered surface path; --json prints the filler envelope the backbone reads. A query: read-only, offline, no parameter; `pkit sync` provisions its dependencies."
     query-contract: true
     reads: [history]
+  resolve-source:
+    script: scripts/resolve-source.py
+    help: "Resolve the source anchor kind (DEC-001 point 4): the file capturing a source, found from its name; --json prints {\"paths\": [...]}. A query: read-only, offline, no dependencies."
+    query-contract: true
 
 # The `living-docs:spaces` member of `pkit validate`: a component joins
 # validation by naming a command it registers (COR-055 point 3); the block's
@@ -51,6 +55,11 @@ friction:
     - location: definitions
       path: rule-sets
       description: The spaces' definitions, project rule sets that inherit LDOC (COR-051 point 2).
+  # COR-050 point 2 — a source outside the repository, anchored by its name and
+  # captured as one file of the project tier (DEC-001 point 4).
+  kinds:
+    source:
+      command: resolve-source
 
 # COR-053 — the documentation role, the two data points defined under it, and
 # the contribution to the work-tracking role's documentation check (DEC-001
