@@ -345,24 +345,80 @@ def test_a_page_whose_friction_cannot_be_judged_is_no_answer() -> None:
     ]
 
 
-@pytest.mark.parametrize("state", ["unresolved", "a-state-not-yet-invented", None])
-def test_a_page_the_check_did_not_judge_is_no_answer(state: str | None) -> None:
-    """Any state other than current, stale or deferred is no judgment: a page with an
-    anchor that cannot be resolved, and a state this reading does not know, are never
-    read as current — the point fails closed rather than owe too little."""
-    report = {
+def _finding(kind: str, anchor_kind: str, value: str) -> dict[str, Any]:
+    """A finding of `kind` on the guide's anchor `anchor_kind: value`."""
+    return {
+        "location": "docs/guide.md",
+        "kind": kind,
+        "anchor": {"kind": anchor_kind, "value": value},
+    }
+
+
+def _unjudged_guide(state: str | None, findings: list[dict[str, Any]]) -> dict[str, Any]:
+    """The report with the guide in `state`, carrying only `findings`, beside a current page."""
+    return {
         **REPORT,
         "artefacts": [
             {"location": "docs/current.md", "state": "current"},
             {"location": "docs/guide.md", "state": state},
         ],
+        "findings": findings,
     }
+
+
+@pytest.mark.parametrize(
+    ("state", "kinds"),
+    [
+        ("unresolved", ["no-answer"]),
+        ("unresolved", ["no-answer", "unresolved-kind"]),
+        ("unresolved", []),
+        ("a-state-not-yet-invented", []),
+        (None, []),
+    ],
+)
+def test_a_page_the_check_did_not_do_its_work_on_is_no_answer(
+    state: str | None, kinds: list[str]
+) -> None:
+    """A page whose anchor's resolver gave no answer — even beside an anchor of a kind
+    nothing resolves — an `unresolved` page whose cause the check does not name, and a
+    state this reading does not know are no judgment, never read as current: the point
+    fails closed rather than owe too little."""
+    findings = [_finding(kind, "source", f"s{n}") for n, kind in enumerate(kinds)]
+    report = _unjudged_guide(state, findings)
     with pytest.raises(doc_check_lib.NoAnswer) as refused:
         doc_check_lib.obligations(report, PAGES)
     assert f"friction on docs/guide.md ({state}) was not judged" in str(refused.value)
     assert "docs/current.md" not in str(refused.value)
     # Only a page's: an unjudged artefact that is not a page leaves the answer whole.
     assert len(doc_check_lib.obligations(report, ["docs/current.md"])) == 2
+
+
+def test_a_page_unjudged_only_on_a_kind_nothing_resolves_owes_what_its_other_anchors_owe() -> None:
+    """An anchor of a kind nothing installed resolves is a declaration for the project
+    to mend, not a check that could not answer (COR-050 point 12): the page owes what
+    its other anchors owe, and the human view names the anchor."""
+    unresolved = _finding("unresolved-kind", "source", "iso-8601")
+    stale = _unjudged_guide("unresolved", [_finding("stale", "path", "src/a.py"), unresolved])
+    obligations = doc_check_lib.obligations(stale, PAGES)
+    assert [(o["reason"], o.get("document") or o["path"]) for o in obligations] == [
+        ("page-stale", "docs/guide.md"),
+        ("code-undocumented", "src/d.py"),
+        ("code-undocumented", "src/z.py"),
+    ]
+    assert obligations[0]["description"] == (
+        "stale: path src/a.py changed — pkit friction explain docs/guide.md"
+    )
+    assert list(_schema(PM_CAPABILITY, "doc-check.schema.json").iter_errors(obligations)) == []
+    assert doc_check_lib.unresolved_kinds(stale, PAGES) == [("docs/guide.md", "source", "iso-8601")]
+    # A deferred anchor beside it carries its answer: no page obligation, the surface still owed.
+    deferred = _unjudged_guide("unresolved", [_finding("deferred", "path", "src/e.py"), unresolved])
+    assert [(o["reason"], o["path"]) for o in doc_check_lib.obligations(deferred, PAGES)] == [
+        ("code-undocumented", "src/d.py"),
+        ("code-undocumented", "src/z.py"),
+    ]
+    assert doc_check_lib.unresolved_kinds(deferred, PAGES) == [
+        ("docs/guide.md", "source", "iso-8601")
+    ]
 
 
 def test_a_dormant_check_owes_nothing() -> None:

@@ -12,7 +12,9 @@ Three layers:
   obligations, the per-source settings, reading the point document;
 - the point through the real backbone, in an adopter repository with the
   capability installed — its default filler run as a query, a documentation
-  capability contributing beside it;
+  capability contributing beside it, and living-docs' contribution over a page
+  an anchor leaves unjudged: on a kind nothing resolves the point still
+  resolves, on a resolver that gave no answer it does not;
 - `check-doc-mapping` over that repository, reading the point through a `pkit`
   that is the real CLI: a contributed obligation naming a page met only by
   that page in the diff, one naming only a path unmet for as long as it is
@@ -45,6 +47,8 @@ from project_kit.manifest import (
     write_backbone_manifest,
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.anchor_kind_capabilities import register_kinds
+from tests.friction_documents import document as friction_document
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
@@ -57,6 +61,8 @@ POINT = "pkit::work-tracking:doc-check"
 PM = "project-management"
 DOCS_CAP = "docs-test"
 PM_REL = Path(".pkit") / "capabilities" / PM
+LD_REL = Path(".pkit") / "capabilities" / "living-docs"
+BACKBONE_CONFIG = ".pkit/project/config.yaml"
 CHECK = PM_REL / "scripts" / "check-doc-mapping.py"
 FILLER_FILE = "docs/pkit/fillers/pkit/work-tracking/doc-check.yaml"
 
@@ -286,14 +292,18 @@ def _configure(repo: AdopterRepo, mapping: str, extra: str = "") -> None:
     )
 
 
+def _under_this_interpreter(script: Path) -> None:
+    """Point a script's `uv run --script` shebang at this interpreter."""
+    body = script.read_text(encoding="utf-8").split("\n", 1)[1]
+    script.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
+
+
 @pytest.fixture
 def project(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
     """An adopter with project-management installed and its mapping configured.
     The filler runs under this interpreter rather than `uv run --script`."""
     repo = make_adopter_repo(capabilities=(PM,))
-    filler = _pm_file(repo, "scripts/fill-doc-check.py")
-    body = filler.read_text(encoding="utf-8").split("\n", 1)[1]
-    filler.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
+    _under_this_interpreter(_pm_file(repo, "scripts/fill-doc-check.py"))
     _configure(repo, RULES.format(enforce="false"))
     return repo
 
@@ -357,6 +367,100 @@ def test_the_point_resolves_to_the_mapping_through_its_default_filler(project: A
     )
     # Resolved cleanly: nothing for `pkit validate` to report about it.
     assert dp.resolve_data_points(project.root).findings == ()
+
+
+@pytest.fixture
+def documented(project: AdopterRepo, pkit_on_path: Path) -> AdopterRepo:
+    """The project with living-docs installed beside project-management, its filler
+    under this interpreter, and one committed page in the user space anchoring
+    `src/a.py` — changed since, so the page owes — and `sources: [x]`, a kind
+    nothing registers."""
+    project.install_capabilities("living-docs")
+    _under_this_interpreter(project.root / LD_REL / "scripts" / "fill-doc-check.py")
+    config = {"name": "adopter", "docs": {"user": "docs/"}, "friction": {"mode": "warning"}}
+    anchors = {"path": ["src/a.py"], "sources": ["x"]}
+    project.write(
+        {
+            BACKBONE_CONFIG: json.dumps(config, indent=2) + "\n",
+            "src/a.py": "A = 1\n",
+            "docs/guide.md": friction_document(
+                None, anchors=anchors, reader="user", kind="signpost"
+            ),
+        }
+    )
+    project.commit("base")
+    project.commit("change a", {"src/a.py": "A = 2\n"})
+    return project
+
+
+def _fill_living_docs(
+    repo: AdopterRepo, *, human: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """`pkit living-docs fill-doc-check`, through the real `pkit` first on PATH: the
+    filler envelope, or with `human` the view for a person."""
+    return subprocess.run(
+        ["pkit", "living-docs", "fill-doc-check", *([] if human else ["--json"])],
+        cwd=repo.root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _validate(*members: str) -> Any:
+    only = [arg for member in members for arg in ("--only", member)]
+    return CliRunner().invoke(main, ["--color", "never", "validate", *only])
+
+
+def test_a_page_unjudged_only_on_a_kind_nothing_resolves_fails_no_check(
+    documented: AdopterRepo,
+) -> None:
+    """An anchor of a kind nothing installed resolves is a declaration to mend, which
+    validation reports (COR-050 point 12): living-docs answers for the page with what
+    its other anchors owe, so the point resolves and `pkit validate` passes."""
+    filled = _fill_living_docs(documented)
+    assert filled.returncode == 0, filled.stderr
+    value = json.loads(filled.stdout)["value"]
+    assert [o["id"] for o in value] == ["friction:page-stale:docs/guide.md"]
+    # The view for a person names the anchor, as a declaration to mend.
+    human = _fill_living_docs(documented, human=True)
+    assert human.returncode == 0, human.stderr
+    assert human.stdout.splitlines()[-1] == (
+        "  not judged on sources x (docs/guide.md): nothing installed resolves the kind — "
+        "a declaration to mend, not owed here; `pkit friction explain docs/guide.md`"
+    )
+    connections = _validate("connections")
+    assert connections.exit_code == 0, connections.output
+    assert "'living-docs' to" not in connections.output
+    friction = _validate("friction")
+    assert friction.exit_code == 0, friction.output
+    assert "0 error(s), 1 report(s)" in friction.output
+    assert "report   docs/guide.md:/pkit/friction/anchors/sources" in friction.output
+    assert "anchor kind 'sources' is unresolved" in friction.output
+
+
+def test_a_resolver_that_gives_no_answer_leaves_the_point_unresolved(
+    documented: AdopterRepo,
+) -> None:
+    """The kind is registered and its resolver gives no answer: the check did not do its
+    work on the page, so living-docs gives no answer and the `fail` point is unresolved."""
+    register_kinds(
+        documented.root,
+        "sources-test",
+        kinds={"sources": "resolve"},
+        script_body="import sys\nsys.exit(1)\n",
+        shebang=f"#!{sys.executable}",
+    )
+    documented.commit("register the kind", files=None)
+    filled = _fill_living_docs(documented)
+    assert (filled.returncode, filled.stdout) == (1, ""), filled.stderr
+    assert (
+        "friction on docs/guide.md (unresolved) was not judged: an anchor's resolver gave no answer"
+        in filled.stderr
+    )
+    connections = _validate("connections")
+    assert connections.exit_code == 1, connections.output
+    assert f"'living-docs' to {POINT!r} is inert" in connections.output
 
 
 def test_no_mapping_resolves_to_no_obligations(project: AdopterRepo) -> None:
