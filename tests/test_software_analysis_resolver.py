@@ -32,8 +32,8 @@ analysis never rewritten to match broken code:
 - the **agent's files**: its front matter (Write for the workspace, no Edit,
   owning no path, no tool for asking the person); that it performs the judgment
   and is no reviewer; that it never runs a writer — its body names one only in
-  the paragraph that sets the agents README's four conditions, the second of
-  which never holds for it, and among the commands for the person, never with a
+  the paragraph that points at the agents README's conditions and states the
+  second, which never holds for it, and among the commands for the person, never with a
   consent flag (#1148); its storyboard's three scenarios; the references; and
   the deployed copy. That those commands write nothing without a person is
   `test_handed_over_writers.py`'s.
@@ -730,15 +730,13 @@ COMMANDS_SECTION = "## Commands for the person"
 COMMANDS_BLOCK = "# Commands for the person"
 
 #: The one paragraph of the body that names the friction writers outside the
-#: commands for the person: it sets the conditions for running one (COR-013; the
-#: agents README, "Friction writers").
+#: commands for the person: it points at the conditions for running one (COR-013;
+#: the agents README, "Friction writers").
 RULE = "**You never run a writer.**"
 
-#: The four conditions for running a writer, as the body restates them.
-CONDITIONS = (
-    "its body names the writers and the conditions; it can ask the person; the person was "
-    "shown every word before it is written; and it is not a reviewer."
-)
+#: Where the conditions for running a writer are set; the body points there rather
+#: than restating them.
+FRICTION_WRITERS = '(`.pkit/agents/README.md`, "Friction writers")'
 
 #: Claude Code's tool for putting a question to the person: without it the agent
 #: cannot ask, so it runs no writer.
@@ -791,7 +789,7 @@ def _command_lines(commands: str) -> list[str]:
 
 
 def _the_rule(rest: str) -> tuple[str, str]:
-    """(the paragraph that names the writers and sets the conditions, everything else)."""
+    """(the paragraph that names the writers and points at the conditions, everything else)."""
     paragraphs = rest.split("\n\n")
     (rule,) = [p for p in paragraphs if p.startswith(RULE)]
     return rule, "\n\n".join(p for p in paragraphs if p is not rule)
@@ -822,23 +820,23 @@ def test_the_agent_performs_the_judgment_and_never_runs_a_writer() -> None:
     assert "<the defect reference>" in commands and '--confirmed-by "<your name>"' in commands
 
 
-def test_the_rule_sets_the_four_conditions_and_the_agent_runs_none() -> None:
-    """The four conditions of the agents README's "Friction writers": the second never
-    holds for this agent, which has no tool for asking, so in every session it hands
-    the commands over and runs none — and says who may run them."""
+def test_the_rule_points_at_the_conditions_and_the_agent_runs_none() -> None:
+    """The rule points at the agents README's "Friction writers" for the conditions:
+    the second never holds for this agent, which has no tool for asking, so in every
+    session it hands the commands over and runs none — and points there for who may
+    run them."""
     _, body = _split(AGENT)
     rule, _ = _the_rule(_commands_for_the_person(body)[1])
     for writer in ("`pkit friction revalidate`", "`pkit friction defer`"):
         assert writer in rule, writer
-    assert '(`.pkit/agents/README.md`, "Friction writers")' in rule
-    assert CONDITIONS in rule
-    assert "The second never holds for you: you have no tool for putting a question" in rule
+    assert FRICTION_WRITERS in rule
+    assert (
+        "the second — that it can ask the person — never holds for you: you have no tool "
+        "for putting a question"
+    ) in rule
     assert "So in every session you hand the commands over, without `--yes`, and run none." in rule
     assert "`pkit friction record-status` is the after-merge job's and never yours" in rule
-    assert (
-        "the person; the session that hears the person, once the person has accepted the "
-        "words; or an agent making the change, for the answers its own change owes."
-    ) in rule
+    assert 'say who may run them, as "Friction writers" lists them.' in rule
     # Whether an agent may run a writer is recorded: no sentence says no record does.
     assert "no record does" not in body
     assert "you hand them the commands that write it, and they run them" not in body
@@ -865,7 +863,7 @@ def test_the_storyboard_scripts_the_three_scenarios_and_hands_over_commands() ->
     assert "it returns the proposal" in pattern and "and nothing else" in pattern
     assert (
         "Either way it runs no writer: it has no tool for putting a question to the person, "
-        "so the second of the four conditions in its body never holds"
+        "so the second of the four conditions its body points at never holds"
     ) in pattern
     assert "no record sanctions" not in body
     sections = re.split(r"^## Scenario \d+: ", body, flags=re.MULTILINE)[1:]

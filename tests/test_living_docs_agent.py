@@ -9,8 +9,9 @@ person reviews. These tests hold the contract its files carry:
   storyboard declared by its bare sibling filename (the agents README's
   convention), no model or effort of its own;
 - **the friction writers** (#1148): the body names them in one paragraph, which
-  states the agents README's four conditions for running one, that two never
-  hold for this agent, and that it runs none; the storyboard runs none either,
+  points at the agents README's "Friction writers" for the conditions for
+  running one, states the two that never hold for this agent, and says it runs
+  none; the storyboard runs none either,
   and the command it names for the person carries no consent flag. That those
   commands write nothing without a person is `test_handed_over_writers.py`'s;
 - the **references**: `pkit refs validate`'s checks find nothing in the agent's
@@ -56,10 +57,15 @@ WRITERS = ("pkit friction revalidate", "pkit friction defer", "pkit friction rec
 WRITES = re.compile(r"friction (?:revalidate|defer|record-status)")
 RULE = "You own no path (`owns` is empty, COR-013)."
 
-#: The four conditions for running a writer, as the body restates them.
-CONDITIONS = (
-    "its body names the writers and the conditions; it can ask the person; the person was "
-    "shown every word before it is written; and it is not a reviewer."
+#: Where the conditions for running a writer are set; the body points there rather
+#: than restating them.
+FRICTION_WRITERS = '(`.pkit/agents/README.md`, "Friction writers")'
+
+#: The two conditions that never hold for this agent, as the body states them.
+NEVER_HOLDS = (
+    "Two of them never hold for you",
+    "you cannot ask the person — you have no tool for putting a question to them",
+    "you review pages",
 )
 
 #: Claude Code's tool for putting a question to the person: without it the agent
@@ -114,17 +120,18 @@ def test_agent_is_read_only_on_the_repository(agent):
 
 
 def test_body_names_the_writers_in_one_paragraph_and_runs_none(agent):
-    """The writers are named only where the body sets the four conditions, two of which
-    never hold for it; it names the command that answers, and runs none."""
+    """The writers are named only in the paragraph that points at the agents README's
+    conditions and states the two that never hold for it; it names the command that
+    answers, and runs none."""
     _, body = agent
     assert "## Read-only on the repository" in body
     (rule,) = [paragraph for paragraph in body.split("\n\n") if WRITES.search(paragraph)]
     assert rule.startswith(RULE)
     for writer in WRITERS:
         assert f"`{writer}`" in rule, writer
-    assert '(`.pkit/agents/README.md`, "Friction writers")' in rule
-    assert CONDITIONS in rule
-    assert "Two never hold for you. You have no tool for putting a question to the person" in rule
+    assert FRICTION_WRITERS in rule
+    for condition in NEVER_HOLDS:
+        assert condition in rule, condition
     assert "without `--yes`, and run none" in rule
     assert "`pkit friction record-status` is the after-merge job's and never yours." in rule
     assert "`.agent-workspace/living-docs/`" in body
@@ -136,7 +143,7 @@ def test_storyboard_hands_over_no_consent_and_runs_no_writer(storyboard):
     _, body = storyboard
     pattern = body.split("## Invocation pattern", 1)[1].split("\n## ", 1)[0]
     assert "Dispatched as a subagent, it cannot hear the person: the plan is its result" in pattern
-    assert "Either way it runs no friction writer" in pattern
+    assert "Either way nothing is drafted before approval, and no friction writer is run" in pattern
     handed = handed_over.commands(body)
     assert handed
     assert [c for c in handed if handed_over.CONSENT.search(c)] == []

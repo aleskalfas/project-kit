@@ -20,5 +20,7 @@ body: >
   person, the person was shown every word first, and it is not a reviewer —
   and its `owns` bullet says the same of command-routed writes. The core
   rules gain rule 20, "An answer you write on an artefact is a person's
-  decision: show it to them word for word", and the `agent-author` skill a
-  bullet for an agent that runs a command on a path it does not own.
+  decision: show it to them word for word", and the `agent-author` skill says
+  that a path an agent writes only through a mutating command it runs is not
+  listed among the files it owns: the body names the command and the
+  conditions for running it.
