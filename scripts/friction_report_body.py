@@ -33,7 +33,9 @@ point 5).
 - **A document it cannot fully read is refused** (`Unreadable`): text that is no
   JSON object, another check's document, a `schema_version` other than
   `DOCUMENT_VERSION`, or one without its findings or its measures. Nothing is
-  rendered from it, least of all "nothing needs an answer".
+  rendered from it, least of all "nothing needs an answer". A document without
+  `schema_version` reads as version 1, as the CLI reference says of this
+  check's document ("Friction checks").
 
 From the repository root:
 
@@ -129,7 +131,8 @@ def read_document(text: str | bytes, source: str) -> Mapping[str, Any]:
     document = cast("Mapping[str, Any]", loaded)
     if document.get("check") != DOCUMENT_CHECK:
         raise Unreadable(f"{source} holds no document of `pkit friction check --all --json`")
-    version = document.get("schema_version")
+    # A document without the key reads as version 1 (the CLI reference, "Friction checks").
+    version = document.get("schema_version", DOCUMENT_VERSION)
     if version != DOCUMENT_VERSION:
         raise Unreadable(
             f"{source} is a document of schema_version {version!r}; "

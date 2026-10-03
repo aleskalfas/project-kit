@@ -506,7 +506,6 @@ def _without(key: str) -> dict[str, Any]:
             "holds no document of `pkit friction check --all --json`",
         ),
         (json.dumps({**_document(), "schema_version": 2}), "schema_version 2; this script reads 1"),
-        (json.dumps(_without("schema_version")), "schema_version None; this script reads 1"),
         (json.dumps(_without("findings")), "gives no list of findings"),
         (json.dumps({**_document(), "findings": [{"location": "x"}]}), "gives no list of findings"),
         (json.dumps(_without("measures")), "gives no measures"),
@@ -520,6 +519,18 @@ def test_a_document_it_cannot_fully_read_is_refused_and_nothing_is_rendered(
     proc = _run(str(path), "--json")
     assert proc.returncode == 1 and proc.stdout == ""
     assert says in proc.stderr and "nothing to render" in proc.stderr
+
+
+def test_a_document_without_its_version_reads_as_version_1(tmp_path: Path) -> None:
+    """As the CLI reference says of the check's document ("Friction checks"), and as
+    living-docs' reader of it reads one."""
+    versioned = _document(findings=[_stale(1)])
+    unversioned = {key: value for key, value in versioned.items() if key != "schema_version"}
+    path = tmp_path / "friction.json"
+    path.write_text(json.dumps(unversioned), encoding="utf-8")
+    proc = _run(str(path), "--json")
+    assert proc.returncode == 0, proc.stderr
+    assert json.loads(proc.stdout) == report.publication(versioned)
 
 
 def test_a_file_that_is_not_there_is_refused(tmp_path: Path) -> None:
