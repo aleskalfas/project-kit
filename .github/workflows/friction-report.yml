@@ -29,27 +29,31 @@ on:
     - cron: "41 5 * * *"
   workflow_dispatch: {}
 
-# Read the repository; keep the one issue. No secret beyond the built-in token.
-permissions:
-  contents: read
-  issues: write
+# Nothing by default; each job is granted what it uses. No secret beyond the
+# built-in token.
+permissions: {}
 
-# One run at a time, so that two cannot each find no issue and open one. The run
-# in progress is never cancelled; a newly queued run replaces one still pending
-# in the group, and the newest is the one whose findings matter.
+# One run at a time on a ref, so that two runs on `main` cannot each find no
+# issue and open one. The run in progress is never cancelled; a newly queued run
+# replaces one still pending on the same ref, and the newest is the one whose
+# findings matter. A run dispatched from another branch is in a group of its
+# own, so it never displaces `main`'s.
 concurrency:
-  group: friction-report
+  group: friction-report-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  friction-report:
+  # Runs the check and renders it, with a token that can only read. Everything
+  # the project installs runs here, and nothing here can write an issue.
+  render:
     # Always on what `main` holds (ADR-055 point 5): a run dispatched by hand
-    # from another branch publishes nothing.
-    if: github.ref == 'refs/heads/main'
+    # from another branch publishes nothing. Only in project-kit's own
+    # repository: a fork's issues are off by default, so its run would fail.
+    if: github.ref == 'refs/heads/main' && github.repository == 'aleskalfas/project-kit'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      # The token stays out of the clone's configuration: only the publishing
-      # step is handed it.
       - name: Checkout (full history, back to every revalidation point)
         uses: actions/checkout@v4
         with:
@@ -94,7 +98,48 @@ jobs:
           uv run python scripts/friction_report_body.py "$RUNNER_TEMP/friction.json" --json > "$RUNNER_TEMP/friction-report.json"
           uv run python scripts/friction_report_body.py "$RUNNER_TEMP/friction.json" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Hand the rendering to the publishing job
+        uses: actions/upload-artifact@v4
+        with:
+          name: friction-report
+          path: ${{ runner.temp }}/friction-report.json
+          if-no-files-found: error
+          retention-days: 1
+
+  # Writes the issue, and does nothing else. The token that can write issues
+  # reaches this job alone: GitHub's own actions, which check out the publisher,
+  # set up Python and fetch the rendering, and then the publisher, which needs
+  # nothing but the standard library and `gh`. What it reads of the rendering is
+  # data, never code.
+  publish:
+    needs: render
+    if: github.ref == 'refs/heads/main' && github.repository == 'aleskalfas/project-kit'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      # The publisher alone, from the commit `render` checked; the token stays
+      # out of the clone's configuration.
+      - name: Checkout (the publisher only)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/friction_tracking_issue.py
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Fetch the rendering
+        uses: actions/download-artifact@v4
+        with:
+          name: friction-report
+          path: ${{ runner.temp }}
+
       - name: Publish to the tracking issue
         env:
           GH_TOKEN: ${{ github.token }}
-        run: uv run python scripts/friction_tracking_issue.py "$RUNNER_TEMP/friction-report.json"
+        run: python scripts/friction_tracking_issue.py "$RUNNER_TEMP/friction-report.json"

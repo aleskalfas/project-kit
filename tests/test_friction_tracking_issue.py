@@ -16,14 +16,18 @@ so:
   refuses fails the run, saying why;
 - one run goes **end to end** over a real history: the real check, the real
   renderer, the publisher;
-- the **workflow** is read as YAML: its triggers, that only `main` publishes,
-  its least privilege, the full history it fetches and checks before the check
-  runs, nothing it fails on but the check or the publication, and no finding
-  reaching a shell line.
+- the **workflow** is read as YAML: its triggers, that only project-kit's own
+  `main` publishes, its least privilege — the write token held by a job that
+  runs the publisher alone, from a checkout of the publisher alone, on the
+  rendering the read-only job hands it — runs on another ref never displacing
+  `main`'s, the full history it fetches and checks before the check runs,
+  nothing it fails on but the check or the publication, and no finding reaching
+  a shell line.
 """
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 import subprocess
@@ -646,6 +650,15 @@ def test_a_real_history_end_to_end(make_adopter_repo: MakeAdopterRepo, gh: FakeG
 
 # --- the workflow --------------------------------------------------------------------------
 
+#: The job that runs the check and renders it, and the one that publishes it.
+RENDER, PUBLISH = "render", "publish"
+
+#: Both jobs' guard: `main` only, and project-kit's own repository only.
+GUARD = "github.ref == 'refs/heads/main' && github.repository == 'aleskalfas/project-kit'"
+
+#: Where the rendering is written, handed over and read.
+RENDERING = '"$RUNNER_TEMP/friction-report.json"'
+
 
 @pytest.fixture(scope="module")
 def workflow() -> dict[str, Any]:
@@ -653,14 +666,18 @@ def workflow() -> dict[str, Any]:
     return YAML(typ="safe").load(WORKFLOW.read_text(encoding="utf-8"))
 
 
-def _steps(workflow: dict[str, Any]) -> list[dict[str, Any]]:
-    return workflow["jobs"]["friction-report"]["steps"]
+def _steps(workflow: dict[str, Any], job: str) -> list[dict[str, Any]]:
+    return workflow["jobs"][job]["steps"]
 
 
-def _index(workflow: dict[str, Any], name_prefix: str) -> int:
+def _index(workflow: dict[str, Any], job: str, name_prefix: str) -> int:
     return next(
-        i for i, s in enumerate(_steps(workflow)) if s.get("name", "").startswith(name_prefix)
+        i for i, s in enumerate(_steps(workflow, job)) if s.get("name", "").startswith(name_prefix)
     )
+
+
+def _step(workflow: dict[str, Any], job: str, name_prefix: str) -> dict[str, Any]:
+    return _steps(workflow, job)[_index(workflow, job, name_prefix)]
 
 
 def test_it_runs_after_every_push_to_main_daily_and_by_hand_and_on_nothing_else(
@@ -673,31 +690,95 @@ def test_it_runs_after_every_push_to_main_daily_and_by_hand_and_on_nothing_else(
     assert triggers["workflow_dispatch"] == {}
 
 
-def test_only_main_publishes(workflow: dict[str, Any]) -> None:
-    """One job, guarded as a whole: a run dispatched from another branch writes no issue."""
-    (job,) = workflow["jobs"].values()
-    assert job["if"] == "github.ref == 'refs/heads/main'"
+def test_only_project_kits_own_main_publishes(workflow: dict[str, Any]) -> None:
+    """Each job guarded as a whole: a run dispatched from another branch writes no
+    issue, and a fork's run does nothing."""
+    assert set(workflow["jobs"]) == {RENDER, PUBLISH}
+    assert all(job["if"] == GUARD for job in workflow["jobs"].values())
 
 
-def test_least_privilege_and_one_run_at_a_time(workflow: dict[str, Any]) -> None:
-    assert workflow["permissions"] == {"contents": "read", "issues": "write"}
-    assert workflow["concurrency"] == {"group": "friction-report", "cancel-in-progress": False}
-    text = WORKFLOW.read_text(encoding="utf-8")
-    assert "secrets." not in text  # the built-in token only
-    handed_the_token = [s["name"] for s in _steps(workflow) if "github.token" in str(s)]
-    assert handed_the_token == ["Publish to the tracking issue"]
+def test_one_run_at_a_time_on_a_ref(workflow: dict[str, Any]) -> None:
+    """Runs on `main` queue behind each other; one dispatched from another branch is
+    in a group of its own and never replaces a pending run on `main`."""
+    assert workflow["concurrency"] == {
+        "group": "friction-report-${{ github.ref }}",
+        "cancel-in-progress": False,
+    }
+
+
+def test_the_write_token_reaches_the_publishing_job_alone(workflow: dict[str, Any]) -> None:
+    """The job that installs and runs the project reads; the one that writes issues runs
+    GitHub's own actions and the publisher, checked out alone, and nothing else."""
+    jobs = workflow["jobs"]
+    assert workflow["permissions"] == {}
+    assert jobs[RENDER]["permissions"] == {"contents": "read"}
+    assert jobs[PUBLISH]["permissions"] == {"contents": "read", "issues": "write"}
+    assert jobs[PUBLISH]["needs"] == RENDER
+    assert "secrets." not in WORKFLOW.read_text(encoding="utf-8")  # the built-in token only
+    handed_the_token = [
+        (job, step["name"])
+        for job in jobs
+        for step in _steps(workflow, job)
+        if "github.token" in str(step)
+    ]
+    assert handed_the_token == [(PUBLISH, "Publish to the tracking issue")]
+
+    publishing = _steps(workflow, PUBLISH)
+    assert [s["uses"].split("@")[0] for s in publishing if "uses" in s] == [
+        "actions/checkout",
+        "actions/setup-python",
+        "actions/download-artifact",
+    ]
+    assert [s["run"] for s in publishing if "run" in s] == [
+        f"python scripts/friction_tracking_issue.py {RENDERING}"
+    ]
+    assert _step(workflow, PUBLISH, "Checkout")["with"] == {
+        "persist-credentials": False,
+        "sparse-checkout": "scripts/friction_tracking_issue.py",
+        "sparse-checkout-cone-mode": False,
+    }
+
+
+def test_the_publisher_needs_nothing_but_the_standard_library() -> None:
+    """The publishing job checks out the publisher alone and installs nothing."""
+    imported: set[str] = set()
+    for node in ast.walk(ast.parse(PUBLISHER.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Import):
+            imported |= {alias.name.split(".")[0] for alias in node.names}
+        elif isinstance(node, ast.ImportFrom):
+            assert not node.level, "a relative import needs a package checked out beside it"
+            imported.add((node.module or "").split(".")[0])
+    assert imported and imported <= sys.stdlib_module_names
+
+
+def test_the_rendering_is_handed_to_the_publishing_job_as_an_artifact(
+    workflow: dict[str, Any],
+) -> None:
+    upload = _step(workflow, RENDER, "Hand the rendering")
+    assert upload["uses"].startswith("actions/upload-artifact@")
+    assert upload["with"]["name"] == "friction-report"
+    assert upload["with"]["path"] == "${{ runner.temp }}/friction-report.json"
+    assert upload["with"]["if-no-files-found"] == "error"
+    assert _index(workflow, RENDER, "Render the findings") < _index(
+        workflow, RENDER, "Hand the rendering"
+    )
+    download = _step(workflow, PUBLISH, "Fetch the rendering")
+    assert download["uses"].startswith("actions/download-artifact@")
+    assert download["with"] == {"name": "friction-report", "path": "${{ runner.temp }}"}
+    assert _index(workflow, PUBLISH, "Fetch the rendering") < _index(
+        workflow, PUBLISH, "Publish to the tracking issue"
+    )
 
 
 def test_the_full_history_is_fetched_and_confirmed_before_the_check(
     workflow: dict[str, Any],
 ) -> None:
-    steps = _steps(workflow)
-    checkout = steps[_index(workflow, "Checkout")]
+    checkout = _step(workflow, RENDER, "Checkout")
     assert checkout["uses"].startswith("actions/checkout@")
     assert checkout["with"] == {"fetch-depth": 0, "persist-credentials": False}
-    confirm = _index(workflow, "Confirm the full history")
-    assert "git rev-parse --is-shallow-repository" in steps[confirm]["run"]
-    assert confirm < _index(workflow, "Whole-repository friction check")
+    confirm = _index(workflow, RENDER, "Confirm the full history")
+    assert "git rev-parse --is-shallow-repository" in _steps(workflow, RENDER)[confirm]["run"]
+    assert confirm < _index(workflow, RENDER, "Whole-repository friction check")
 
 
 def test_the_query_commands_are_provisioned_before_the_check_as_the_required_check_does(
@@ -708,25 +789,24 @@ def test_the_query_commands_are_provisioned_before_the_check_as_the_required_che
     (theirs,) = [
         s for s in checks["jobs"]["checks"]["steps"] if s.get("name", "").startswith("Sync")
     ]
-    sync = _index(workflow, "Sync")
-    assert _steps(workflow)[sync] == theirs
+    sync = _index(workflow, RENDER, "Sync")
+    assert _steps(workflow, RENDER)[sync] == theirs
     assert theirs["run"] == "uv run pkit sync"
-    assert _index(workflow, "Install project") < sync
-    assert sync < _index(workflow, "Whole-repository friction check")
+    assert _index(workflow, RENDER, "Install project") < sync
+    assert sync < _index(workflow, RENDER, "Whole-repository friction check")
 
 
 def test_it_runs_the_check_renders_it_and_publishes_it(workflow: dict[str, Any]) -> None:
-    steps = _steps(workflow)
-    check = steps[_index(workflow, "Whole-repository friction check")]["run"]
+    check = _step(workflow, RENDER, "Whole-repository friction check")["run"]
     assert check.startswith("uv run pkit friction check --all --json >")
-    render = steps[_index(workflow, "Render the findings")]["run"].splitlines()
+    render = _step(workflow, RENDER, "Render the findings")["run"].splitlines()
     script = 'uv run python scripts/friction_report_body.py "$RUNNER_TEMP/friction.json"'
     assert render == [
-        f'{script} --json > "$RUNNER_TEMP/friction-report.json"',
+        f"{script} --json > {RENDERING}",
         f'{script} >> "$GITHUB_STEP_SUMMARY"',
     ]
-    publish = steps[_index(workflow, "Publish to the tracking issue")]
-    assert publish["run"].startswith("uv run python scripts/friction_tracking_issue.py ")
+    publish = _step(workflow, PUBLISH, "Publish to the tracking issue")
+    assert publish["run"] == f"python scripts/friction_tracking_issue.py {RENDERING}"
     assert publish["env"] == {"GH_TOKEN": "${{ github.token }}"}
 
 
@@ -735,6 +815,7 @@ def test_nothing_fails_on_findings_and_no_finding_reaches_a_shell_line(
 ) -> None:
     """No step is skipped or tolerated on an outcome, and no run line expands an
     expression: what the check found travels in files, never in a command."""
-    for step in _steps(workflow):
-        assert "if" not in step and "continue-on-error" not in step
-        assert "${{" not in step.get("run", "")
+    for job in workflow["jobs"]:
+        for step in _steps(workflow, job):
+            assert "if" not in step and "continue-on-error" not in step
+            assert "${{" not in step.get("run", "")
