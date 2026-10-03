@@ -5,12 +5,15 @@ captured as one file of this capability's project tier (`source_layout`).
 What is checked:
 
 - **The layout** — errors. Every entry of the sources folder is a captured
-  source: a regular file named `<name>.yaml`, the name of the grammar. A file
-  of any other name, a folder or a link captures nothing, since a name answers
-  only its exact file; so does the folder when it, or a folder on its path, is
-  not a real folder. A captured source's *shape* — its fields — is
-  `schemas/source.schema.json`, which `pkit validate` applies under `data`,
-  bound by the file's path (COR-023), and is not judged here.
+  source: a regular file named `<name>.yaml`, the name of the grammar. A
+  `.yaml` file of any other name, a folder or a link captures nothing, since a
+  name answers only its exact file; so does the folder when it, or a folder on
+  its path, is not a real folder of exactly its name. A regular file whose
+  name does not end in `.yaml` — notes, an editor's backup — captures nothing
+  either, and is only reported; a hidden entry is left alone (`source_layout`).
+  A captured source's *shape* — its fields — is `schemas/source.schema.json`,
+  which `pkit validate` applies under `data`, bound by the file's path
+  (COR-023), and is not judged here.
 - **What names a source** — reports, never failed. A `source` anchor, or a
   rule's origin citing a `source`, that no captured file answers: the
   whole-repository check reports the anchor dead, and rule-set validation
@@ -83,7 +86,9 @@ def check(root: Path, artefacts: Sequence[Artefact]) -> Checked:
         )
 
     problems = [
-        Problem(True, entry.path, _layout_message(entry)) for entry in entries if entry.problem
+        Problem(entry.error, entry.path, _layout_message(entry))
+        for entry in entries
+        if entry.problem
     ]
     captured = sorted(entry.name for entry in entries if entry.name is not None)
     citations = _citations(artefacts)
@@ -145,8 +150,9 @@ def _layout_message(entry: source_layout.Entry) -> str:
             f"its exact file — rename it or remove it (DEC-001 point 4)."
         )
     return (
-        f"{entry.path} {entry.problem}. Captured sources are read only from {folder}/ "
-        f"through real folders — make it one, or remove it (DEC-001 point 4)."
+        f"{entry.path} {entry.problem}. Captured sources are read only from {folder}/, "
+        f"through real folders of exactly those names — correct it, or remove it "
+        f"(DEC-001 point 4)."
     )
 
 

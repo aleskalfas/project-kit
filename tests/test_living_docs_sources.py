@@ -18,8 +18,10 @@ runs the real checks over it:
    and still answers, so the page stays judged;
 4. a name nothing captures is dead in both checks, and reported by the
    validator without failing;
-5. the layout: only a regular file of the exact name, through real folders,
-   answers, and the validator fails every other entry;
+5. the layout: only a regular file of the exact name, through real folders of
+   their exact names, answers; the validator fails every other entry but a
+   hidden one, which it leaves alone, and a file not ending in `.yaml`, which
+   it reports;
 6. a sources folder that cannot be read is no answer: the page is not judged;
 7. the resolver's own surface: its arguments, the grammar, its human view,
    and that it runs offline from an empty uv cache, apart from any project it
@@ -164,14 +166,15 @@ def _validate(root: Path) -> dict[str, Any]:
 
 
 def _findings(document: dict[str, Any], severity: str) -> list[tuple[str, str]]:
-    """The validator's findings of `severity` about sources: on the sources folder, a
-    `source` anchor or a rule's cited source."""
+    """The validator's findings of `severity` about sources: on the sources folder —
+    or a folder whose name differs from it only in case — a `source` anchor or a
+    rule's cited source."""
     return [
         (f["location"], f["message"])
         for f in document["findings"]
         if f["severity"] == severity
         and (
-            f["location"].startswith(SOURCES)
+            f["location"].casefold().startswith(SOURCES.casefold())
             or f["location"].endswith(("/pkit/friction/anchors/source", "/origin/source"))
         )
     ]
@@ -364,8 +367,48 @@ def test_a_name_outside_the_grammar_captures_nothing_on_any_disk(repo: AdopterRe
     (repo.root / SOURCES / "Keep.yaml").write_text(KEEP_A_CHANGELOG, encoding="utf-8")
     assert _resolve(repo.root, "keep") == []
     assert _layout_errors(repo.root) == [f"{SOURCES}/Keep.yaml"]
-    (repo.root / SOURCES / "notes.txt").write_text("Read on 2026-10-03.\n", encoding="utf-8")
-    assert _layout_errors(repo.root) == [f"{SOURCES}/Keep.yaml", f"{SOURCES}/notes.txt"]
+
+
+def test_a_sources_folder_named_in_another_case_answers_nothing_and_fails_on_any_disk(
+    repo: AdopterRepo,
+) -> None:
+    """`Sources/` is not `sources/`, wherever the disk ignores case or not: each
+    folder on the path is matched by its exact name, as the file is."""
+    cased = f"{LD.as_posix()}/project/Sources"
+    (repo.root / SOURCES).rename(repo.root / cased)
+    assert _resolve(repo.root, "keep-a-changelog") == []
+    validated = _validate(repo.root)
+    [(location, message)] = _findings(validated, "error")
+    assert location == cased
+    assert message.startswith(
+        f"{cased} differs from `sources` only in case, so no source is read from it"
+    )
+    [(dead, _)] = _findings(validated, "report")
+    assert dead == f"{PAGE}:/pkit/friction/anchors/source"
+
+
+def test_a_hidden_entry_is_left_alone_and_a_file_of_another_suffix_is_reported(
+    repo: AdopterRepo,
+) -> None:
+    """No source's name begins with `.`, so a hidden entry — `.gitkeep`, a
+    desktop's `.DS_Store`, an editor's lock link — can answer no name and is not
+    the validator's. A regular file whose name does not end in `.yaml` — an
+    editor's backup, notes — captures nothing, and is reported, never failed."""
+    folder = repo.root / SOURCES
+    (folder / ".gitkeep").write_text("", encoding="utf-8")
+    (folder / ".DS_Store").write_bytes(b"\x00\x00\x00\x01Bud1")
+    (folder / ".#keep-a-changelog.yaml").symlink_to("user@host.1234")
+    (folder / "keep-a-changelog.yaml~").write_text(KEEP_A_CHANGELOG, encoding="utf-8")
+    (folder / "notes.txt").write_text("Read on 2026-10-03.\n", encoding="utf-8")
+    assert _resolve(repo.root, "keep-a-changelog") == [KEEP]
+
+    validated = _validate(repo.root)
+    assert _findings(validated, "error") == []
+    reported = dict(_findings(validated, "report"))
+    assert sorted(reported) == [f"{SOURCES}/keep-a-changelog.yaml~", f"{SOURCES}/notes.txt"]
+    assert reported[f"{SOURCES}/notes.txt"].startswith(
+        f"{SOURCES}/notes.txt does not end in `.yaml`, so it captures no source"
+    )
 
 
 # --- 6. a folder that cannot be read is no answer ----------------------------------------
@@ -404,7 +447,8 @@ def test_a_sources_folder_that_cannot_be_read_leaves_the_page_unjudged(repo: Ado
         folder.chmod(0o755)
 
 
-#: Runs `answer` with `os.scandir` refusing, as a folder without read permission does.
+#: Runs `answer` with `os.scandir` refusing to list the sources folder, as a folder
+#: without read permission does.
 SCANDIR_REFUSED = """
 import os, sys
 from pathlib import Path
@@ -412,8 +456,12 @@ from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 from _lib import source_layout
 
+listing = os.scandir
+
 def refused(path):
-    raise PermissionError(13, "Permission denied", str(path))
+    if Path(path).name == "sources":
+        raise PermissionError(13, "Permission denied", str(path))
+    return listing(path)
 
 os.scandir = refused
 try:
