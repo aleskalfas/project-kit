@@ -346,7 +346,7 @@ class ChangeCheck:
     head: HeadState | None
     findings: tuple[Finding, ...]
     answers: tuple[WrittenAnswer, ...] = ()  # what the change wrote, in the check's order
-    unreadable: tuple[str, ...] = ()  # files whose front matter does not parse: not listed
+    unreadable: tuple[str, ...] = ()  # head files whose front matter does not parse: not listed
 
     def count(self, kind: FindingKind) -> int:
         return sum(1 for f in self.findings if f.kind is kind)
@@ -1621,6 +1621,7 @@ def render_json(result: ChangeCheck) -> str:
         },
         "findings": [finding.as_json() for finding in result.findings],
         "answers": [answer.as_json() for answer in result.answers],
+        "unreadable": list(result.unreadable),
     }
     return json.dumps(document, indent=2, sort_keys=True) + "\n"
 

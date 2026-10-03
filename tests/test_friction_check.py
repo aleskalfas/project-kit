@@ -1364,7 +1364,7 @@ def test_a_dormant_document_carries_no_answers(repo: AdopterRepo) -> None:
     result = _cli("--base", "main", "--json")
     assert result.exit_code == 0, result.output
     document = json.loads(result.stdout)
-    assert (document["dormant"], document["answers"]) == (True, [])
+    assert (document["dormant"], document["answers"], document["unreadable"]) == (True, [], [])
 
 
 def test_an_unreadable_file_is_not_listed_and_keeps_its_finding(repo: AdopterRepo) -> None:
@@ -1380,10 +1380,28 @@ def test_an_unreadable_file_is_not_listed_and_keeps_its_finding(repo: AdopterRep
     assert _summary(result) == [("unreadable", "docs/other.md", None, None)]
     assert _answers(result) == [_written("unchanged", "reworded", status="edited")]
     assert result.unreadable == ("docs/other.md",)
+    assert json.loads(fc.render_json(result))["unreadable"] == ["docs/other.md"]
     assert (
         "1 file whose front matter does not parse could not be read for answers"
         in fc.render_human(result)
     )
+
+
+def test_the_document_names_the_unreadable_files_and_never_the_configuration(
+    repo: AdopterRepo,
+) -> None:
+    """`unreadable` holds the head's files whose front matter does not parse, sorted —
+    what was not read for answers. A base whose `friction.exclude` does not read is a
+    finding of the same kind, and no file of head: it is not among them."""
+    broken = "---\nid: [unclosed\npkit: {friction: {}}\n---\n"
+    _start(repo, {"docs/guide.md": guide()}, config=friction_config(exclude=5))
+    repo.commit(
+        "break two pages, mend the exclusions",
+        {CONFIG: friction_config(), "docs/z.md": broken, "docs/a/b.md": broken},
+    )
+    document = json.loads(fc.render_json(_run(repo)))
+    assert document["unreadable"] == ["docs/a/b.md", "docs/z.md"]
+    assert document["counts"]["unreadable"] == 3
 
 
 def test_the_human_view_ends_with_every_answer_in_full(repo: AdopterRepo) -> None:
