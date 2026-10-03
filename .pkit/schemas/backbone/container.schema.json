@@ -206,7 +206,7 @@
           "$ref": "#/$defs/non-empty-string"
         },
         "since": {
-          "description": "Where the staleness came from: the commit at which the first changed anchor moved past the revalidation point.",
+          "description": "Where the staleness came from: the origin of the oldest stale debt (COR-050 point 9).",
           "$ref": "#/$defs/non-empty-string"
         }
       }
