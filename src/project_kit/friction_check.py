@@ -68,7 +68,7 @@ Findings run upstream first along artefact anchors (truth-chain order).
 **What it lists** (COR-050 point 3 and Implications): every answer the change
 wrote — each revalidation, deferral and reason for having no anchors, word for
 word — read from each head artefact carrying the block against its base
-counterpart (`written_answers`), with whether the diff asked for it and
+counterpart (`_written_answers`), with whether the diff asked for it and
 whether the check accepts it. It is the list the person authorising a merge
 is shown: derived from the artefacts, never composed.
 
@@ -242,8 +242,8 @@ class Finding:
         }
 
 
-#: What an entry of the answers list wrote beside a revalidation's outcome and a
-#: deferral: a reason for having no anchors (COR-050 point 1).
+#: The `answer` of an entry of the answers list that is a reason for having no
+#: anchors (COR-050 point 1), beside a revalidation's outcome and `deferred`.
 UNANCHORED = "unanchored"
 
 
@@ -253,7 +253,7 @@ class AnswerStatus(Enum):
 
     STANDS = "stands"  # the check accepts it
     BUMP = "bump"  # `at` changed and the diff does not bear it out: the check's own `bump`
-    EDITED = "edited"  # `at` untouched, the words changed: no point moves, nothing is answered
+    EDITED = "edited"  # `at` untouched, the outcome or words changed: nothing is answered
 
 
 @dataclass(frozen=True)
@@ -269,7 +269,7 @@ class KeptDeferral:
 
 @dataclass(frozen=True)
 class WrittenAnswer:
-    """One answer the change wrote in an artefact's block (`written_answers`): a
+    """One answer the change wrote in an artefact's block (`_written_answers`): a
     revalidation, a deferral, or a reason for having no anchors, with its words.
 
     - `answer`: `updated` or `unchanged` for a revalidation — `None` when its
@@ -1081,8 +1081,8 @@ def _judge(
     resolved_at_base: Callable[[str], bool],
 ) -> tuple[list[Finding], list[_Question]]:
     """The findings about one head artefact carrying the `friction` block, and the
-    questions the diff asked it — none for a new one — which the answers list reads
-    (`written_answers`).
+    questions the diff asked it — none for a new or an excluded one — which the answers
+    list reads (`_written_answers`).
 
     An artefact under an excluded path at head owes no answer (COR-050 point
     7), as the whole-repository check never judges one stale: nothing in the
@@ -1280,8 +1280,8 @@ def _reason(artefact: Artefact, anchor: Anchor) -> str | None:
     return deferral_reason(artefact, anchor) or None
 
 
-def written_answers(
-    artefact: Artefact, before: Artefact | None, questions: Sequence[_Question] = ()
+def _written_answers(
+    artefact: Artefact, before: Artefact | None, questions: Sequence[_Question]
 ) -> list[WrittenAnswer]:
     """The answers the change wrote in one head artefact's block, read against its base
     counterpart `before` (`None` when it has none) and the `questions` the diff asked it
@@ -1503,7 +1503,7 @@ def run_change_check(
             before = counterparts.get(index)
             judged, questions = _judge(artefact, before, head, base, diff, kinds, resolved_at_base)
             findings.extend(judged)
-            answers.extend(written_answers(artefact, before, questions))
+            answers.extend(_written_answers(artefact, before, questions))
     for unreadable in sorted(head_discovery.unreadable, key=lambda u: u.path):
         findings.append(
             Finding(
