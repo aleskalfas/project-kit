@@ -1417,7 +1417,9 @@ def declared_anchor_kinds(package: Mapping[str, Any]) -> Iterator[tuple[str, str
             yield kind, reference
 
 
-def registered_anchor_kinds(target_root: Path) -> dict[str, ResolverCommand]:
+def registered_anchor_kinds(
+    target_root: Path, tree: RepositoryTree | None = None
+) -> dict[str, ResolverCommand]:
     """The anchor kinds installed capabilities register, by kind — the one
     registry every engine reads (ADR-057 point 2).
 
@@ -1428,11 +1430,18 @@ def registered_anchor_kinds(target_root: Path) -> dict[str, ResolverCommand]:
     and the packages member refuses the entry. A kind two or more capabilities
     register is kept once, naming them all (`ResolverCommand.shared_with`), so
     an anchor of it reads as refused rather than as resolved by either.
+
+    With a `tree`, the registrations that state holds — its manifest and its
+    package files, read forgivingly — which say whether a kind could be
+    resolved there (`unresolved_kind_reason`), as the change check asks of its
+    base. No resolver is run from them: a script is the one on disk.
     """
+    load = _mapping_loader(target_root, tree)
     found: dict[str, list[ResolverCommand]] = {}
-    for name in installed_capability_names(target_root):
-        component_dir = target_root / CAPABILITIES_DIR / name
-        package, _problem = _load_mapping(component_dir / command_runner.PACKAGE_FILE)
+    for name in installed_capability_names(target_root, tree):
+        component = CAPABILITIES_DIR / name
+        package = load((component / command_runner.PACKAGE_FILE).as_posix())
+        component_dir = target_root / component
         commands = command_runner.commands_of(
             component_dir, package.get(command_runner.COMMANDS_KEY)
         )

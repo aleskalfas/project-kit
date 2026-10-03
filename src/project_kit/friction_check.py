@@ -55,14 +55,16 @@ nothing behind it (`at` changed, but no answer stands); dead anchors *of the
 pull request* (resolving to nothing at head, and either added in the diff or
 with a target the diff removed, moved or excluded — dead anchors that were
 already dead are the whole-repository check's); an anchor kind no installed
-component resolves, separately; a widening that asks nothing; an outdated
-base; front matter that does not parse. Findings run upstream first along
-artefact anchors (truth-chain order).
+component resolves, separately, where the diff added the anchor or took the
+kind's resolver away; an anchor whose resolver gave no answer; a widening
+that asks nothing; an outdated base; front matter that does not parse.
+Findings run upstream first along artefact anchors (truth-chain order).
 
 **Modes** (point 12): `warning` reports and exits 0; `enforcing` exits 1 on
-friction, dead anchors, unresolved kinds and bumps. An outdated base never
-fails. Dormant — counts only, exit 0 — when no place is declared or nothing in
-the places carries the container (point 15).
+friction, dead anchors, unresolved kinds, a resolver's missing answer and
+bumps (`FAILING_KINDS`). An outdated base never fails. Dormant — counts only,
+exit 0 — when no place is declared or nothing in the places carries the
+container (point 15).
 
 **Resolver limits** (point 2; ADR-057). The anchor kinds capabilities register
 (`friction.kinds` in their package metadata) are looked up in
@@ -72,12 +74,19 @@ refused (`refuse_resolver_without_query_contract`), as is a kind two
 capabilities register. A resolver that may run is run once per anchor value
 under the query policy (`AnchorKinds`), and answers the files of the working
 tree the anchor stands on; the anchor changed in the diff when the diff changed
-the content of one of them. No answer leaves the anchor unresolved and
-reported, and an answer naming no file makes it dead and reported — in either
-case whether or not the diff added it, since what it stood on at the base
-cannot be read. Not a boundary: the declaration is trusted, not enforced
-(COR-050 point 2) — no layer of this distribution holds a single command to
-"no network" (ADR-057 point 4).
+the content of one of them. A resolver is asked about the head alone, so what
+an anchor stood on at the base is not known, and the check fails what it can
+lay at the pull request (point 12; `_anchor_problem`): an anchor the diff
+added that resolves to nothing or whose kind nothing resolves, and an anchor
+the diff kept whose kind the diff left without a resolver that may run — the
+base's registrations are read from the base commit. A resolver that gives no
+answer fails closed, whoever added the anchor (`no-answer`): the check could
+not do its work, and a second run may clear it. An anchor the diff kept whose
+resolver names no file is reported, never failed (`dead-unattributed`):
+whether the diff removed what it denoted cannot be told, and the
+whole-repository check reports it as dead either way. Not a boundary: the
+declaration is trusted, not enforced (COR-050 point 2) — no layer of this
+distribution holds a single command to "no network" (ADR-057 point 4).
 
 The check writes nothing (point 13).
 """
@@ -85,6 +94,7 @@ The check writes nothing (point 13).
 from __future__ import annotations
 
 import copy
+import functools
 import heapq
 import json
 import re
@@ -116,6 +126,7 @@ from project_kit.friction_discovery import (
     pattern_matcher,
     refuse_resolver_without_query_contract,  # noqa: F401 — re-exported: the check's public surface
     registered_anchor_kinds,
+    unresolved_kind_reason,
 )
 from project_kit.project_config import project_config_path
 from project_kit.working_tree import (
@@ -155,20 +166,31 @@ class FindingKind(Enum):
     REVALIDATED = "revalidated"
     BUMP = "bump"
     DEAD_ANCHOR = "dead-anchor"
+    DEAD_UNATTRIBUTED = "dead-unattributed"  # dead at head, and not known to be the diff's
     UNRESOLVED_KIND = "unresolved-kind"
+    NO_ANSWER = "no-answer"  # a registered kind's resolver gave no answer
     LEFT_OUT = "left-out"
     OUTDATED_BASE = "outdated-base"
     UNREADABLE = "unreadable"
 
 
 #: The findings enforcing mode fails on (COR-050 point 12). An unresolved kind
-#: is a dead anchor whose kind nothing resolves, reported separately.
+#: is a dead anchor whose kind nothing resolves, reported separately; a missing
+#: answer fails because the check could not tell, and never passes on that.
+#:
+#: `DEAD_UNATTRIBUTED` is left out on purpose, and this set is the one place that
+#: decides it: an anchor of a registered kind the diff kept, whose resolver names
+#: no file, is reported and not failed — whether the diff removed what it denoted
+#: cannot be told from a resolver asked about the head alone (ADR-057 point 3).
+#: Adding the kind here fails it instead; the legend and the failing summary follow
+#: this set, so nothing else in the code changes.
 FAILING_KINDS = frozenset(
     {
         FindingKind.FRICTION,
         FindingKind.BUMP,
         FindingKind.DEAD_ANCHOR,
         FindingKind.UNRESOLVED_KIND,
+        FindingKind.NO_ANSWER,
     }
 )
 
@@ -443,9 +465,6 @@ def uncommitted_paths(root: Path) -> int:
         run_git(root, "diff", "--name-only", "-z", "--no-color", "--relative", "HEAD", "--").stdout
     )
     return len(set(beyond_head) | set(_untracked(root)))
-
-
-# --- anchor kinds and their resolvers ----------------------------------------
 
 
 # --- one side of the diff -----------------------------------------------------
@@ -943,6 +962,7 @@ def _judge(
     base: Side,
     diff: Diff,
     kinds: AnchorKinds,
+    resolved_at_base: Callable[[str], bool],
 ) -> list[Finding]:
     """The findings about one head artefact carrying the `friction` block.
 
@@ -965,7 +985,7 @@ def _judge(
     live: list[Anchor] = []  # anchors kept from the base that resolve at head
     for anchor in anchors_of(artefact):
         added = anchor not in base_anchors
-        problem = _anchor_problem(anchor, added, head, base, kinds)
+        problem = _anchor_problem(anchor, added, head, base, kinds, resolved_at_base)
         if problem is None:
             if not added:
                 live.append(anchor)
@@ -1030,43 +1050,68 @@ def _anchor_problem(
     head: Side,
     base: Side,
     kinds: AnchorKinds,
+    resolved_at_base: Callable[[str], bool],
 ) -> tuple[FindingKind, str | None] | None:
     """`None` when the anchor resolves at head; otherwise its finding kind and message.
 
     The message is `None` when the problem is not the diff's: an anchor that
     was already dead at the base is the whole-repository check's, not this
-    check's (COR-050 point 7). A kind nothing resolves is judged the same way.
-    A path anchor the diff's `friction.exclude` left standing on nothing says
-    so: `…, excluded since this diff`. An anchor of a registered kind is
-    judged by its resolver's answer, which is the working tree's alone — what
-    it stood on at the base cannot be read — so one whose resolver gives no
-    answer, or names no file, is reported whether or not the diff added it:
-    failing closed, the check never passes what it cannot tell (COR-050
-    point 2).
+    check's (COR-050 points 7 and 12). A path anchor the diff's
+    `friction.exclude` left standing on nothing says so: `…, excluded since
+    this diff`.
+
+    A kind nothing resolves at head is the diff's when the diff added the
+    anchor, or kept it and took the kind's resolver away — the base could
+    resolve the kind (`resolved_at_base`): the capability uninstalled, a
+    second registrant added, the declaration or the leaf dropped. One the base
+    could not resolve either was already there.
+
+    An anchor of a registered kind is judged by its resolver's answer, which
+    is the head's alone — what it stood on at the base is not known:
+
+    - no answer fails closed, whoever added the anchor (`NO_ANSWER`): the
+      check cannot tell whether the diff changed what it denotes, and never
+      passes on that (COR-050 point 2);
+    - an answer naming no file makes an anchor the diff added dead
+      (`DEAD_ANCHOR`), and one it kept dead with nobody to lay it at
+      (`DEAD_UNATTRIBUTED`) — reported, and failed only if `FAILING_KINDS`
+      says so.
     """
     reason = kinds.unresolved(anchor.kind)
     if reason is not None:
-        message = (
-            f"nothing installed resolves this kind: {reason}; the anchor was added in this diff"
-        )
-        return FindingKind.UNRESOLVED_KIND, message if added else None
+        if added:
+            return (
+                FindingKind.UNRESOLVED_KIND,
+                f"nothing installed resolves this kind: {reason}; the anchor was added in this "
+                f"diff",
+            )
+        if resolved_at_base(anchor.kind):
+            return (
+                FindingKind.UNRESOLVED_KIND,
+                f"nothing installed resolves this kind, and this diff took its resolver away: "
+                f"{reason}",
+            )
+        return FindingKind.UNRESOLVED_KIND, None
     if anchor.kind not in CORE_ANCHOR_KINDS:
         resolution = kinds.resolve(anchor)
         if resolution.no_answer is not None:
             return (
-                FindingKind.UNRESOLVED_KIND,
+                FindingKind.NO_ANSWER,
                 f"its resolver gave no answer, so whether this diff changed what it denotes "
-                f"cannot be told: {resolution.no_answer}",
+                f"cannot be told: {resolution.no_answer} — a second run may clear it",
             )
-        if not resolution.paths:
-            where = (
-                "the anchor was added in this diff"
-                if added
-                else "whether this diff removed what it denoted cannot be told, since a "
-                "resolver answers for the working tree alone"
+        if resolution.paths:
+            return None
+        if added:
+            return (
+                FindingKind.DEAD_ANCHOR,
+                "its resolver names no file for it; the anchor was added in this diff",
             )
-            return FindingKind.DEAD_ANCHOR, f"its resolver names no file for it; {where}"
-        return None
+        return (
+            FindingKind.DEAD_UNATTRIBUTED,
+            "its resolver names no file for it; whether this diff removed what it denoted "
+            "cannot be told — the whole-repository check reports it as dead",
+        )
     if head.resolves(anchor):
         return None
     if added:
@@ -1144,6 +1189,9 @@ def run_change_check(
     """Run the change check of the working tree against the merge-base of `base_ref` —
     without one, `$PKIT_CHECK_BASE`, else the default branch (COR-054 point 3).
     `resolved` is that base when the caller has read it already (`resolve_base`).
+    The anchor kinds are the registry's, the head's read from the package
+    metadata on disk and the base's from the base commit; a `registry` handed
+    in stands for both.
 
     Raises `FrictionCheckError` when it cannot run — outside a git repository,
     before the first commit, or with a base that does not resolve — except
@@ -1181,6 +1229,14 @@ def run_change_check(
         head.files,
     )
 
+    @functools.cache
+    def base_registry() -> Mapping[str, ResolverCommand]:
+        """The base's registrations, read from the base commit when first asked for."""
+        return registered_anchor_kinds(target_root, base_tree) if registry is None else registry
+
+    def resolved_at_base(kind: str) -> bool:
+        return unresolved_kind_reason(kind, base_registry()) is None
+
     findings: list[Finding] = []
     if base_state.outdated:
         findings.append(Finding(FindingKind.OUTDATED_BASE, _outdated_message(base_state)))
@@ -1200,7 +1256,9 @@ def run_change_check(
     for index in truth_chain_order(head_discovery):
         artefact = head_discovery.artefacts[index]
         if artefact.has_friction_block:
-            findings.extend(_judge(artefact, counterparts.get(index), head, base, diff, kinds))
+            findings.extend(
+                _judge(artefact, counterparts.get(index), head, base, diff, kinds, resolved_at_base)
+            )
     for unreadable in sorted(head_discovery.unreadable, key=lambda u: u.path):
         findings.append(
             Finding(
@@ -1301,8 +1359,16 @@ _LEGEND: dict[FindingKind, str] = {
     FindingKind.REVALIDATED: "revalidated in this diff with no changed anchor",
     FindingKind.BUMP: "`at` changed with nothing behind it",
     FindingKind.DEAD_ANCHOR: "the diff left an anchor resolving to nothing",
+    FindingKind.DEAD_UNATTRIBUTED: (
+        "an anchor the diff kept resolves to nothing, and whether the diff did it cannot be told"
+        + ("" if FindingKind.DEAD_UNATTRIBUTED in FAILING_KINDS else ": reported only")
+    ),
     FindingKind.UNRESOLVED_KIND: (
-        "an anchor of a kind nothing installed resolves, or whose resolver gave no answer"
+        "an anchor of a kind nothing installed resolves: added in the diff, or its resolver "
+        "taken away by it"
+    ),
+    FindingKind.NO_ANSWER: (
+        "a resolver gave no answer, so its anchor could not be checked: a second run may clear it"
     ),
     FindingKind.LEFT_OUT: (
         "`friction.exclude` took files from an anchor and the diff changes none: reported only"
@@ -1311,8 +1377,8 @@ _LEGEND: dict[FindingKind, str] = {
 }
 
 _MODE_GLOSS = {
-    ENFORCING: "fails on friction, dead anchors, unresolved kinds and bumps; an outdated base only "
-    "reports",
+    ENFORCING: "fails on friction, dead anchors, unresolved kinds, missing answers and bumps; an "
+    "outdated base only reports",
     "warning": "reports and passes",
 }
 
@@ -1421,14 +1487,19 @@ def _mode_warning(result: ChangeCheck) -> list[str]:
 
 
 def _failing_summary(result: ChangeCheck) -> str:
+    """What the run found of the kinds enforcing mode fails on (`FAILING_KINDS`), counted."""
     parts = [
         (FindingKind.FRICTION, "friction", "friction"),
         (FindingKind.DEAD_ANCHOR, "dead anchor", "dead anchors"),
+        (FindingKind.DEAD_UNATTRIBUTED, "dead anchor kept", "dead anchors kept"),
         (FindingKind.UNRESOLVED_KIND, "unresolved kind", "unresolved kinds"),
+        (FindingKind.NO_ANSWER, "missing answer", "missing answers"),
         (FindingKind.BUMP, "bump", "bumps"),
     ]
     return ", ".join(
-        counted(result.count(kind), one, many) for kind, one, many in parts if result.count(kind)
+        counted(result.count(kind), one, many)
+        for kind, one, many in parts
+        if kind in FAILING_KINDS and result.count(kind)
     )
 
 
