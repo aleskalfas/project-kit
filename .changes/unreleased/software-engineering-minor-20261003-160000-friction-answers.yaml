@@ -1,0 +1,18 @@
+component: software-engineering
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  The `software-engineer` agent gains "Friction answers": when its change
+  makes an anchored artefact owe an answer, it may give it with `pkit friction
+  revalidate` or `pkit friction defer`, without asking first, and only for
+  what its own change owes — the answers the change check asks of it, and the
+  revalidation of a combined state after a conflict it resolved. It passes
+  `--yes` under that rule alone, writes a justification it can defend from the
+  diff, and says in its hand-off that the change wrote answers, which the
+  person who authorises the merge is shown from the change check's own list;
+  it never composes that list. Any other answer, and any reason for having no
+  anchors, it names in its hand-off for the person. The rule is the backbone's
+  this release ships (COR-050 point 3; the agents README, "Friction writers"),
+  so the capability requires that backbone.

@@ -1,0 +1,17 @@
+component: living-docs
+kind: minor
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  The `living-docs` agent states the recorded rule for friction writers: it
+  names `pkit friction revalidate` and `pkit friction defer` in the one
+  paragraph that sets the agents README's four conditions for running one,
+  two of which never hold for it — it has no tool for asking the person, and
+  in a reader-review it judges pages — so in every session it names the
+  command that gives the answer, without `--yes`, and runs none, and says who
+  runs it: the person, the session that hears the person once they accepted
+  the words, or an agent making the change, for what its own change owes. Its
+  storyboard and the capability README say the same. What it does is
+  unchanged. The rule is the backbone's this release ships (COR-050 point 3),
+  so the capability requires that backbone.
