@@ -5,6 +5,8 @@ name: checks
 # pre-push hook runs (scripts/check.sh) — one source of truth, no drift.
 # Replaces the former migrations-check + schemas-validate workflows (both are
 # now steps inside the aggregator).
+# The whole-repository friction report, which gates nothing, is its own
+# workflow: friction-report.yml.
 
 on:
   pull_request:
@@ -84,38 +86,3 @@ jobs:
         env:
           PKIT_CHANGESET_SKIP: ${{ contains(github.event.pull_request.labels.*.name, 'skip-changeset') && '1' || '' }}
         run: uv run pkit release check --base "origin/${{ github.event.pull_request.base.ref }}"
-
-  # The whole-repository friction check (COR-050 point 6; ADR-055 point 5) on
-  # every push to main: every artefact against the current history, stale and
-  # deferred debt with their origins, unanchored artefacts and uncovered
-  # surface. It reports and never fails the push — `pkit friction check --all`
-  # exits 0 by construction — so stale debt that slipped past the change check
-  # through an outdated base shows up here rather than blocking anything. It
-  # needs the full history: each artefact's file is walked back to its
-  # revalidation point, and a shallow clone would report the points beyond it
-  # as unreachable instead of judging them. Read it in this job's log, or in
-  # the step summary on the run's page.
-  friction-report:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout (full history, back to every revalidation point)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-
-      - name: Install project (clean resolve)
-        run: uv sync
-
-      - name: Whole-repository friction check (reports, never fails)
-        run: |
-          uv run pkit friction check --all | tee friction-report.txt
-          { echo '```'; cat friction-report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

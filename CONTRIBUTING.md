@@ -9,15 +9,17 @@ pkit:
         - scripts/pyright_ratchet.py
         - .githooks/pre-push
         - .github/workflows/checks.yml
+        - .github/workflows/friction-report.yml
+        - scripts/friction_report_body.py
+        - scripts/friction_tracking_issue.py
         - mise.toml
         - tests/README.md
         - src/project_kit/router.py
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-02T14:53:01Z
-      outcome: unchanged
-      unchanged-because: check.sh's comment now calls pkit validate the project's one check of its own state and cites COR-055, and the decisions README cites COR-055 for why the narration warnings do not fail; this page calls pkit validate the umbrella over every registered check of the tree's state, lists the same aggregator lines, and points to the decisions README as the record system's spec, all still true
+      at: 2026-10-03T02:35:55Z
+      outcome: updated
 ---
 
 # Contributing to project-kit
@@ -63,7 +65,19 @@ Add a check by editing `scripts/check.sh` once; both the hook and CI pick it up.
 
 **Landing a pull request through the merge queue** (#1011; ADR-055 point 5). Pull requests land with `uv run pkit pm done-work <N>`. When `main` merges through a GitHub merge queue, `done-work` does not merge: after its gates it enqueues the pull request, and the queue runs `checks` — the required status — on the merge it is about to make, on top of `main` and of every pull request queued ahead. The workflow runs on the queue's `merge_group` event for that, and its diff-scoped checks compare with the commit the queued merge is built on (`merge_group.base_sha`), so the friction and migration results are computed against the base the merge actually lands on: two pull requests landing back to back no longer let a stale page through, and nobody rebases to refresh a check. `done-work` prints the pull request's place in the queue and waits for the merge — as long as the queue estimates, plus a margin, at most 30 minutes — then moves the issue to Done, closes and cascades, and cleans up the branch. Pass `--no-wait` to return as soon as the pull request is queued; that run, or one whose wait ran out, exits 4 with the issue still in Review, and `done-work <N>` run again once the queue has merged it — from any clone — completes it. A pull request the queue drops (its checks failed on the queued merge) is fixed, pushed and landed again with `done-work`. The queue is the only path into `main` then: `--admin` and `--bypass-ci` are refused, and `merge-pr` goes through the queue as `done-work` does. The queue itself is a repository setting the operator applies — the default squash-commit title and message set to the pull request title and body, and a "Require merge queue" rule, merge method squash, in the ruleset that protects `main` — not something a script or this guide can do; until it is on, `done-work` merges directly and the outdated-base caveat of ADR-055 point 5 holds.
 
-**The whole-repository report, on every push to `main`.** The `friction-report` job of `.github/workflows/checks.yml` runs `pkit friction check --all` with the full history on every push to `main` and never fails the push (ADR-055 point 5): every artefact against the current history — stale and deferred debt with the commits they originate in, every dead and over-broad anchor, unanchored artefacts and uncovered surface. Stale debt that slipped past the change check through an outdated base shows up here. Read it in that job's log, or in the run's step summary; `uv run pkit friction check --all` gives the same report locally from HEAD (uncommitted work is not read), and `--json` the machine form.
+**The whole-repository report, after every push to `main` and once a day** (ADR-055 point 5). `.github/workflows/friction-report.yml` runs `pkit friction check --all` on `main` with the full history: every artefact against the current history. It finds the friction no pull request answers — stale debt that slipped past the change check, or an anchor that changed outside its artefact's own change. The daily run finds nothing a push did not; it repeats a publication that failed and restores an issue changed by hand.
+
+The findings go to **one tracking issue**, its body rewritten in place when they change, with no comment per run. `scripts/friction_report_body.py` renders the body and counts the findings that need an answer; `scripts/friction_tracking_issue.py` keeps the issue. The run's step summary carries the same body.
+
+The issue is open exactly while a finding needs an answer (ADR-055 point 5). Every finding needs one except a deferral and a `left-out` finding, which owes nothing. The body lists the deferrals with their reasons and holds the two measures, unanchored artefacts and uncovered surface; none of these holds the issue open. With nothing to answer the issue is closed, and none is opened where none exists. A finding that needs an answer reopens it.
+
+The tracking issue is the one the workflow's token opened that carries either sign: the hidden marker `<!-- pkit-friction-report -->` in its body, or the `friction-report` label. A person's issue with those signs is never taken for it. A run puts back whichever sign is missing. The body says that edits to it are lost: the next run rewrites it.
+
+The workflow gates nothing, and never fails on what the check finds. It fails when the check cannot run, a shallow clone included, and when the issue cannot be written: `gh` refuses, or the listing of the token's issues may be incomplete, so the run cannot tell whether a tracking issue exists. It also fails when it finds more than one tracking issue. It then keeps the oldest in step, changes nothing on the others, and names them all in its log and step summary; close the others and remove their marker and label.
+
+Answer what it reports in a pull request like any friction (the friction gate, above): revalidate, or defer with a reason. The next run closes the issue once nothing needs an answer; a deferral stays listed in its body.
+
+`uv run pkit friction check --all` gives the same report locally from HEAD (uncommitted work is not read), and `--json` the machine form. `uv run pkit friction check --all --json | uv run python scripts/friction_report_body.py -` prints the rendering the issue's body is made from, without the marker and the notice line the publisher sets above it. The publisher runs only in the workflow; run by hand, outside GitHub Actions, it refuses and writes nothing, since an issue a person's token opened is never taken for the tracking issue and would stay open beside it.
 
 **The documentation check, with the pages' friction enforced** ([project-management:DEC-053](.pkit/capabilities/project-management/decisions/DEC-053-doc-check-slot.md) point 3). Beside the core check, project-management's documentation check holds a pull request to the obligations of the documentation-check point, `pkit::work-tracking:doc-check`, and each source of obligations has its own setting in `.pkit/capabilities/project-management/project/config.yaml`. project-kit **enforces the `friction` source**, the one living-docs contributes, read at the branch's head: a **stale page** (`page-stale`), and a **path of the declared surface no page anchors** (`code-undocumented`). The code-to-doc **mapping** stays advisory, with no rules — they became page anchors. A `## Doc impact` line meets neither friction obligation. The aggregator runs it as its `doc check` line, against the same base as the friction change check, so it binds every merge as the friction gate does. Run it alone with `uv run pkit pm check-doc-mapping` (against the default branch); `uv run pkit living-docs fill-doc-check` lists what the head owes. When it refuses:
 

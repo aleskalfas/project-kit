@@ -1,0 +1,3 @@
+component: living-docs
+kind: none
+body: Internal — the README is revalidated unchanged after a merge of `main` left it stale on a history that never reaches `main`; nothing in the capability changed, and nothing you run changes.

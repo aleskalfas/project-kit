@@ -1,0 +1,7 @@
+component: backbone
+kind: none
+body: >
+  The CLI reference's whole-repository check says where project-kit's own run
+  of it lives — on `main` with the full history, after every push and once a
+  day, publishing its findings to one tracking issue — and cites ADR-055
+  point 5 for it. No command changed.
