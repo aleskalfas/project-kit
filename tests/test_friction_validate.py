@@ -930,6 +930,43 @@ def test_dangling_deferral_is_an_error_naming_the_anchor(adopter: AdopterRepo) -
     assert "record anchor 'COR-050'" in second.message
 
 
+def test_an_anchor_deferred_twice_is_an_error_at_each_later_entry(adopter: AdopterRepo) -> None:
+    """COR-050 point 4: one entry per anchor. The first entry stands; each later one for
+    the same kind and value is the finding — another anchor's entry between them, or the
+    same value under another kind, is no repeat."""
+    adopter.write(
+        {
+            CONFIG: _config(["docs"]),
+            "docs/guide.md": _document(
+                "guide",
+                anchors={"path": ["src/**", "COR-050"], "record": ["COR-050"]},
+                revalidated={
+                    "deferred": [
+                        {"anchor": {"kind": "path", "value": "src/**"}, "reason": "old words"},
+                        {"anchor": {"kind": "record", "value": "COR-050"}, "reason": "later"},
+                        {"anchor": {"kind": "path", "value": "COR-050"}, "reason": "a path"},
+                        {"anchor": {"kind": "path", "value": "src/**"}, "reason": "new words"},
+                        {"anchor": {"kind": "path", "value": "src/**"}, "reason": "third"},
+                    ]
+                },
+            ),
+        }
+    )
+    result = fv.validate_friction(adopter.root)
+
+    repeated = [f for f in result.errors if f.kind is fv.FrictionFindingKind.DUPLICATE_DEFERRAL]
+    assert [f.pointer for f in repeated] == [
+        "/pkit/friction/revalidated/deferred/3/anchor",
+        "/pkit/friction/revalidated/deferred/4/anchor",
+    ]
+    assert repeated[0].kind.value == "duplicate-deferral"
+    assert repeated[0].message.startswith(
+        "path anchor 'src/**' is deferred again: entry 0 defers it already, and the list holds "
+        "one entry per anchor"
+    )
+    assert _kinds(result) == [fv.FrictionFindingKind.DUPLICATE_DEFERRAL] * 2
+
+
 def test_unanchored_because_alone_is_accepted_and_beside_anchors_is_an_error(
     adopter: AdopterRepo,
 ) -> None:
