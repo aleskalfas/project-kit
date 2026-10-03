@@ -29,7 +29,7 @@ These apply to every issue type; except where a rule notes otherwise, each is en
 - **No `## Implementation` / `## How` recipes** — bodies describe outcomes, not how to build them. Implementation belongs in the PR or a separate design doc.
 - **Lead with the current desired state, not the history** — the body opens with the task (what the issue *is*, what's true when it closes), not a narrative of how the scope evolved. "How we got here" — splits, renames, prior decisions — lives in the timeline, comments, or a linked decision. This is an **authoring-side** rule carried by the create-issue skill and the project-manager agent (which composes bodies via `--body-file`, bypassing the template); the quality is not reliably machine-detectable, so unlike the rules above it is **not** encoded as a validated `universal_body_rules` check — a warning-level nudge would only follow a robust heuristic.
 - **No predicted decision IDs** — reference only IDs that already exist.
-- **No citations of use cases that do not exist** — where the software-analysis capability is installed, every use-case id (`UC-NNN`) a body cites must be a use case on the default branch; one that is not is reported like a predicted decision ID (refinement per [project-management:DEC-054-use-case-validation]).
+- **A cited use case exists** — on a Feature or Task body, a use-case id cited in a `## Use cases` section and not held by the use-case data point is reported as a warning; the check is of existence only, and is off where nothing fills the point (refinement per [project-management:DEC-054-use-case-validation]).
 - **Checkboxes follow [project-management:DEC-007-checkbox-validation] and [project-management:DEC-009-living-documents]** — close-gate, ticks sticky, wording-free / scope-gated.
 
 ### Per-type minimum required sections
@@ -54,7 +54,7 @@ Each required section's heading, purpose, checkbox flag, and missing-section sev
 
 Per-type templates may add recommended sections beyond the minimum — `## Why`, `## Out of scope`, `## Related`, `## Dependencies`, `## Approach`, `## Implementation notes`. Encoded as the schema's `optional_section_recommendations` per type. The capability mandates the structure floor; teams customise content within it.
 
-Where the software-analysis capability is installed, batch planning adds a `## Use cases` section naming the use cases an issue satisfies; it stays optional, outside the floor (refinement per [project-management:DEC-054-use-case-validation]).
+Feature and Task bodies may carry a `## Use cases` section naming the use cases the issue serves; it is optional, outside the floor (refinement per [project-management:DEC-054-use-case-validation]).
 
 ### Sub-task promotion
 

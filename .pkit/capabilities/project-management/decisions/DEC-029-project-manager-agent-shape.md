@@ -43,10 +43,10 @@ The autonomous flow's steps live in **`batch-plan.md`**, a new sub-procedure of 
 The sub-procedure carries:
 
 1. **Read intent and reference material** — fuzzy intent + any handoff doc, scratchpad, or related issue the user supplies.
-2. **Walk the use cases** — only where the software-analysis capability is installed: read the use cases the intent affects, or offer to have them authored first, before any slicing; each planned issue then names the use cases it satisfies (refinement per [project-management:DEC-054-use-case-validation]).
+2. **Walk the use cases** — while the use-case data point is not off: read the use cases and walk them against the intent before any slicing; each planned Feature and Task names the use cases it serves (refinement per [project-management:DEC-054-use-case-validation]).
 3. **Propose slicing** — Umbrella / EPIC / Feature / Task hierarchy per [project-management:DEC-004-six-level-hierarchy], with workstream / milestone / priority / parent-ref classifications per [project-management:DEC-012-classification-axes].
 4. **Adversarial review** — invoke `critic` and (when work crosses ≥3 components or the slicing introduces a new abstraction) `architect` per the reviewer-invocation discipline below.
-5. **Single approval gate** — present the (possibly revised) plan to the user; pause until approval, revision, or refusal.
+5. **Single approval gate** — present the (possibly revised) plan to the user, with the use-case mapping, both kinds of gap and, over an empty set, the prerequisite Task (refinement per [project-management:DEC-054-use-case-validation]); pause until approval, revision, or refusal.
 6. **File via primitives** — call `create-issue` / `edit-issue` / `move-issue` per the plan. Handle validation failures per the storyboard's mid-execution-validation-failure scenario.
 
 The sub-procedure file is authored as part of F3's implementation; this DEC commits its name and boundary.
