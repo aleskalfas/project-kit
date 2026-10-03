@@ -12,7 +12,7 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-02T14:37:32Z
+      at: 2026-10-02T20:37:38Z
       outcome: updated
 ---
 
@@ -44,7 +44,9 @@ pkit:
 
 `reader` and `kind` are each a word (`[a-z][a-z0-9-]*`); their shape is `schemas/page.schema.json`, which the validator below applies. The friction block is the core's, and `pkit validate` checks it under `friction`. A document in a space's places that carries neither field is an *unclassified document*: counted for onboarding to classify, never failed.
 
-**A kind's structure.** Pages of a kind follow one format (`RS-LDOC-004`), and the part of it a tool can check is the page's *structure*: the sections its body carries. Each kind this capability ships declares its structure once, in `schemas/page-kinds.yaml`: each section a heading level and, where the kind fixes the wording, its text, in the order listed unless the kind sets `ordered: false`. A reference page carries a title (`#`), then at least one level-2 section (`##`), each in the writer's own words; a signpost carries a title. A section is a heading written with one to six `#` at the start of a line, outside fenced code; an underlined heading, or one inside a quote or a list, is not read. Text is compared ignoring case, runs of white space and trailing punctuation, and a page may carry sections besides the declared ones. A kind that declares no structure, such as one your project adds, is not checked.
+**A kind's structure.** Pages of a kind follow one format (`RS-LDOC-004`). A kind's template is the starting shape you fill in; the part of the format the validator checks is the kind's *structure*: the sections every page of the kind carries, in order where order matters. Each kind this capability ships declares its structure once, in `schemas/page-kinds.yaml`, and that file is where to read what a kind's pages must carry: each section is a heading level and, where the kind fixes the wording, its text, in the order listed unless the kind sets `ordered: false`. A structure names only what every page of the kind must carry, so a template may show more, and a page may carry other sections.
+
+A section is a heading written with one to six `#` at the start of a line. These are not read as one: a `#` line that is indented (under a list item, say) or that lies inside a block quote, fenced code or an HTML comment; an underlined (setext) heading; an HTML heading (`<h1>`). A section the kind leaves you to word needs words of its own, so an empty `#` and a template's unfilled `<placeholder>` do not count; fixed text is compared ignoring case, runs of white space and trailing punctuation. A page whose kind declares no structure — a kind your project adds, say — is reported with its kind and never failed.
 
 ## The shared method: `LDOC`
 
@@ -66,7 +68,7 @@ You never edit `LDOC`; a space's definition inherits it, pinned to its major (`i
 `templates/` holds the writers' tools:
 
 - **`space-definition.md`** — a space's definition: a project rule set that inherits `LDOC` and holds the space's own rules, each carrying its friction block in its own container. Copy it to `<definitions>/rule-sets/<space>.md` (below), rename the set, and name the file as the space's `definition`. The user space adds one rule of its own: its readers' paths stay unbroken (DEC-001 point 3).
-- **`signpost.md`** — the page template for the one page kind the decision names: an index-like file that says what a folder holds and where to go (`RS-LDOC-005`). A page of another kind arrives with its template.
+- **`signpost.md`** — the page template for the one page kind the decision names: an index-like file that says what a folder holds and where to go (`RS-LDOC-005`). A page of another kind arrives with its template and its declared structure.
 - **`reference.md`** — the page template for a reference page: the page that describes one surface — an area, a capability, an adapter — to the reader who uses it, anchored to the code and decisions it describes.
 
 ## Declaring your spaces
@@ -106,13 +108,14 @@ A place inside a root belongs to that root's space; list it under `places` only 
 - a decision record, a rule-set file, or another capability's artefact or held document carrying `reader` or `kind` — none is ever a page;
 - a page whose `reader` or `kind` does not fit `schemas/page.schema.json`;
 - a page whose `reader` the readers point does not hold — the message names the readers it does (Connections, below);
-- a page whose body lacks a section its kind's structure declares, or carries one out of order (Pages, above) — the message names the page, its kind, the section and the declared structure. The severity is the one the status of `RS-LDOC-004` gives: an accepted rule binds and checks enforce it (COR-051 point 4), so an error; under any other status the rule binds nothing and no page's body is checked;
+- a page whose body lacks a section its kind's structure declares, or carries one out of order (Pages, above) — the message names the page, its kind, the section and the declared structure. It is an error while `RS-LDOC-004` is accepted; under any other status the rule binds nothing and no page's body is checked (COR-051 point 4);
+- the declaration of the kinds' structures, `schemas/page-kinds.yaml`, absent, unparsable or not fitting its schema — one error, "structures unreadable", and no page's body is checked; a page whose body cannot be read;
 - an entry point that is not a document of its space — under its root or in a place assigned to it;
 - a definition outside `<definitions>/rule-sets/`, or one that does not inherit `living-docs:LDOC`.
 
-It reports, without failing: a space with no definition yet, roots that are the same folder or nested (onboarding separates them), and — in its summary — the unclassified documents, whether each entry point is a page yet, the readers each page's reader was checked against, how many pages were checked against their kind's structure, and the pages left unanchored: those without an accepted reason, onboarding's work still to do, and apart from them those whose friction block gives one as `unanchored-because` (DEC-001 point 8; COR-050 point 1). The human view lists both, each accepted page with its reason; an excluded page is in neither. A synced tree declared as a place is the core's `synced-place` finding, under `friction` (above).
+It reports, without failing: a space with no definition yet, roots that are the same folder or nested (onboarding separates them), each kind that declares no structure, with the pages that name it and the kinds that do declare one, and — in its summary — the unclassified documents, whether each entry point is a page yet, the readers each page's reader was checked against, how many pages were checked against their kind's structure and how many were not because their kind declares none, and the pages left unanchored: those without an accepted reason, onboarding's work still to do, and apart from them those whose friction block gives one as `unanchored-because` (DEC-001 point 8; COR-050 point 1). The human view lists both, each accepted page with its reason; an excluded page is in neither. A synced tree declared as a place is the core's `synced-place` finding, under `friction` (above).
 
-**Pages are checked** for their front matter — `reader` and `kind`, the reader against the readers point, and the friction block, which `pkit validate` checks under `friction` — and for their body's structure, against the structure their kind declares. Everything else a page owes `LDOC` is judgment, left to the agent's reader-review (below): whether each section says what its kind's format asks, whether the anchors ground every statement, whether each fact is stated once, and whether the page says only what its reader needs.
+**Pages are checked** for their front matter — `reader` and `kind`, the reader against the readers point, and the friction block, which `pkit validate` checks under `friction` — and for their body's structure, against the structure their kind declares. Everything else a page owes `LDOC` is judgment, left to the agent's reader-review (below): whether each section says what its kind's template asks, whether the anchors ground every statement, whether each fact is stated once, and whether the page says only what its reader needs.
 
 ## Connections
 
