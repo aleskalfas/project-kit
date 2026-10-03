@@ -11,9 +11,10 @@ body: >
   anchors the change wrote — derived at the pushed head with `pkit friction
   check --json --base <the PR's base> --head`, the base always named — into a
   section of its own, `## Friction answers`, last before the provenance footer,
-  every word as the check's human view shows it, with each friction setting
-  the change alters (the `friction` key of `.pkit/project/config.yaml`) as it
-  was and as it is; it never refuses to open over the list, and leaves it out
+  every word as the check's human view shows it, with each change to the
+  friction places or exclusions the change makes — read through `pkit friction
+  artefacts --json --at` at both ends — as it was and as it is; it never
+  refuses to open over the list, and leaves it out
   with one warning line when it cannot write it. `edit-pr` carries the section
   across every edit — of two, the latest — and drops any other, saying so. A
   `## Friction answers` section typed by hand, with no markers, is removed by
@@ -30,7 +31,8 @@ body: >
   holds an HTML comment's delimiter, a list the description cannot hold, front
   matter the check cannot read in a file the change touches, and — where there
   is a list — a base whose commits since the head left it changed a file the
-  list's words are on (exit 1); a base that moved on elsewhere stops nothing.
+  list's words are on, or the settings it shows (exit 1); a base that moved on
+  elsewhere stops nothing.
   The change check runs unrouted (`PKIT_NO_ROUTE=1`) as the `pkit` first on
   PATH; where an anchor's resolver must run from a checkout at the head, and
   only then, it runs again from a temporary checkout of the head, removed

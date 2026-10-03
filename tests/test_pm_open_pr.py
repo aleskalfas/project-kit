@@ -483,11 +483,11 @@ def test_the_friction_settings_a_change_alters_are_listed(op, monkeypatch, capsy
     derived = op.friction_answers.Derivation(
         PUSHED,
         document=derived.document,
-        settings=(op.friction_answers.Setting("friction.mode", "enforcing", "warning"),),
+        settings=(op.friction_answers.Setting(op.friction_answers.PLACES, ("docs",), ()),),
     )
     captured = _open(op, monkeypatch, derived=derived)
     assert op.main() == 3
-    assert '- `friction.mode`: `"enforcing"` → `"warning"`' in captured["body"]
+    assert f"- {op.friction_answers.PLACES}: `docs` → none" in captured["body"]
     assert (
         "  answers: none written by this change, which alters the project's friction "
         "settings, listed under `## Friction answers` (at abcdef0)"

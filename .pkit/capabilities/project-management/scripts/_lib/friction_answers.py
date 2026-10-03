@@ -9,10 +9,11 @@ list (COR-050 point 3). This module puts that list in the description:
 - `derive(head, base)` runs the change check at the pull request's head
   (`pkit friction check --json --base <base> --head <oid>`) against the pull
   request's base — always named, so `$PKIT_CHECK_BASE` in the environment never
-  changes it — after fetching that base, and reads the project's friction
-  settings at both ends of the change (`settings_change`). It returns the
-  check's document and the settings the change alters — or why they could not
-  be read, which is never a pass.
+  changes it — after fetching that base, and reads what the check is asked
+  about — its places and the files `friction.exclude` leaves out — at both ends
+  of the change, through the backbone's discovery (`settings_change`). It
+  returns the check's document and the friction settings the change alters —
+  or why they could not be read, which is never a pass.
 - `render(document, head, settings)` is the `## Friction answers` section,
   between its markers; `lines(document, settings)` the same list for a
   terminal.
@@ -100,10 +101,13 @@ SHORT = 7
 #: the part of it that says where to run from.
 RESOLVER_REFUSAL = "Run from a checkout at"
 
-#: The backbone configuration file and its key that hold the project's friction
-#: settings — mode, places, surface, exclusions (COR-050 point 14).
-SETTINGS_FILE = ".pkit/project/config.yaml"
-SETTINGS_KEY = "friction"
+#: What the change check is asked about, read at one commit through the
+#: backbone's discovery (`pkit friction artefacts --json --at <rev>`): the one
+#: reading of the friction settings a capability's script makes, which never
+#: re-reads the configuration itself (the CLI README, "friction artefacts").
+ARTEFACTS = ("friction", "artefacts", "--json", "--at")
+#: Where a friction setting's change is said to be, in a refusal.
+SETTINGS_WHERE = "the friction settings"
 
 #: A closing reference in the host's grammar: one of its nine keywords, an
 #: optional colon, then `#N`, `owner/repo#N` or an issue's URL, in any case.
@@ -121,80 +125,113 @@ COMMENT_DELIMITER = re.compile(r"<!--|-->")
 # --- the friction settings ----------------------------------------------------
 
 
-class _Mark:
-    """A setting's value that is no value the file holds."""
-
-    def __init__(self, words: str) -> None:
-        self.words = words
-
-    def __repr__(self) -> str:
-        return self.words
-
-
-#: A setting the file does not hold, and a file that does not parse.
-ABSENT = _Mark("absent")
-UNPARSED = _Mark("the configuration file does not parse")
-
-
 @dataclass(frozen=True)
 class Setting:
-    """One friction setting the change alters: its key, and its value where the
-    head left its base and at the head — what the file holds, `ABSENT` or
-    `UNPARSED`. The settings decide what the change check asks, so a change to
-    one is shown with the answers (DEC-055 point 1)."""
+    """One change to what the change check is asked about: what changed, and its
+    value where the head left its base and at the head, each a list of texts.
+    The friction settings decide what the check asks — a change that empties the
+    places leaves it dormant, one that excludes an artefact's file leaves the
+    artefact out — so a change to them is shown with the answers (DEC-055
+    point 1)."""
 
     key: str
-    before: Any
-    after: Any
+    before: tuple[str, ...]
+    after: tuple[str, ...]
+
+
+#: The two settings a list can show.
+PLACES = "the places the change check reads"
+EXCLUDED = "of the files whose standing changed, those `friction.exclude` leaves out"
 
 
 def settings_change(merge_base: str, head: str) -> tuple[Setting, ...] | str:
-    """The friction settings that differ between `merge_base` and `head`, key by
-    key, or why they could not be read. Read from git objects, as the change
-    check reads each side's own configuration."""
+    """How what the change check is asked about differs between `merge_base` and
+    `head` — the places it reads, the project's and every capability's, and the
+    files `friction.exclude` leaves out of those both commits hold — or why it
+    could not be read. Read through the backbone at each commit, from git
+    objects, as the change check reads each side's own settings."""
     if not merge_base:
         return "the change check named no commit the head left its base at"
-    before = _friction_at(merge_base)
+    before = _discovery_at(merge_base)
     if isinstance(before, str):
         return before
-    after = _friction_at(head)
+    after = _discovery_at(head)
     if isinstance(after, str):
         return after
-    if isinstance(before, Mapping) and isinstance(after, Mapping):
-        keys = sorted(set(before) | set(after), key=str)
-        return tuple(
-            Setting(f"{SETTINGS_KEY}.{key}", before.get(key, ABSENT), after.get(key, ABSENT))
-            for key in keys
-            if before.get(key, ABSENT) != after.get(key, ABSENT)
+    found: list[Setting] = []
+    places = (_places(before), _places(after))
+    if places[0] != places[1]:
+        found.append(Setting(PLACES, *places))
+    standing = (_standing(before), _standing(after))
+    changed = {
+        path
+        for path in standing[0].keys() & standing[1].keys()
+        if standing[0][path] != standing[1][path]
+    }
+    if changed:
+        found.append(
+            Setting(
+                EXCLUDED,
+                tuple(sorted(path for path in changed if standing[0][path])),
+                tuple(sorted(path for path in changed if standing[1][path])),
+            )
         )
-    if before == after:
-        return ()
-    return (Setting(SETTINGS_KEY, before, after),)
+    return tuple(found)
 
 
-def _friction_at(commit: str) -> Any:
-    """The `friction` key of the configuration at `commit` — `ABSENT`, `UNPARSED`,
-    or what it holds — or, as text, why the commit could not be read."""
-    from ruamel.yaml import YAML
-    from ruamel.yaml.error import YAMLError
-
-    shown = _git("show", f"{commit}:{SETTINGS_FILE}")
-    if shown.returncode != 0:
-        if _git("cat-file", "-e", f"{commit}^{{commit}}").returncode == 0:
-            return ABSENT  # no configuration file at that commit
-        said = (shown.stderr or "").strip().splitlines()
-        return f"the friction settings at {commit[:SHORT]} could not be read" + (
-            f": {said[-1]}" if said else ""
-        )
+def _discovery_at(commit: str) -> Mapping[str, Any] | str:
+    """The backbone's discovery at `commit`, run as the change check is (unrouted),
+    or why it could not be read."""
+    command = f"`pkit friction artefacts --json --at {commit}`"
     try:
-        config = YAML(typ="safe").load(shown.stdout)
-    except YAMLError:
-        return UNPARSED
-    if config is None:
-        return ABSENT
-    if not isinstance(config, Mapping):
-        return UNPARSED
-    return config.get(SETTINGS_KEY, ABSENT)
+        proc = subprocess.run(
+            [*PKIT, *ARTEFACTS, commit],
+            env={**os.environ, **UNROUTED},
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=TIMEOUT,
+        )
+    except FileNotFoundError as exc:
+        return f"{command}: `pkit` is not on PATH ({exc})"
+    except subprocess.TimeoutExpired:
+        return f"{command}: it did not answer within {TIMEOUT}s"
+    except OSError as exc:
+        return f"{command}: it could not be run ({exc})"
+    said = [line.strip() for line in (proc.stderr or "").splitlines() if line.strip()]
+    if proc.returncode != 0:
+        return f"{command}: it exited {proc.returncode}" + (f": {said[-1]}" if said else "")
+    try:
+        document = json.loads(proc.stdout or "")
+    except ValueError:
+        return f"{command}: its answer is not JSON"
+    if not isinstance(document, dict) or document.get("schema_version", 1) != SCHEMA_VERSION:
+        return f"{command}: its answer is not a document of version {SCHEMA_VERSION}"
+    return document
+
+
+def _places(document: Mapping[str, Any]) -> tuple[str, ...]:
+    """Every place discovery reads, in walk order: its path, and who declares it
+    where that is not the project, or why it is skipped."""
+    out: list[str] = []
+    for place in document.get("places") or []:
+        place = _mapping(place)
+        text = str(place.get("path") or place.get("written") or "?")
+        source = str(place.get("source") or "")
+        notes = [source] if source and source != "project" else []
+        skipped = _mapping(place.get("skipped")).get("reason")
+        notes += [f"skipped: {skipped}"] if skipped else []
+        out.append(text + (f" ({', '.join(notes)})" if notes else ""))
+    return tuple(out)
+
+
+def _standing(document: Mapping[str, Any]) -> dict[str, bool]:
+    """Each file discovery read, and whether `friction.exclude` leaves it out."""
+    return {
+        str(_mapping(item).get("path")): bool(_mapping(item).get("excluded"))
+        for item in document.get("files") or []
+        if _mapping(item).get("path")
+    }
 
 
 # --- deriving ----------------------------------------------------------------
@@ -486,37 +523,29 @@ def _read_entry(entry: Mapping[str, Any]) -> _Entry:
     )
 
 
-def _value(value: Any) -> str | None:
-    """A setting's value as the list shows it: what the file holds, as JSON, or
-    None for `ABSENT` and `UNPARSED`, which are said in words."""
-    if isinstance(value, _Mark):
-        return None
-    return shown(json.dumps(value, sort_keys=True, ensure_ascii=False, default=str))
-
-
-def _side(value: Any, *, code: bool) -> str:
-    text = _value(value)
-    if text is None:
-        return f"({value!r})"
-    return _code(text) if code else text
+def _side(values: Sequence[str], *, code: bool) -> str:
+    """One side of a setting's change: each text, or "none"."""
+    if not values:
+        return "none"
+    return ", ".join(_code(shown(v)) if code else shown(v) for v in values)
 
 
 def _counted(count: int, one: str, many: str) -> str:
     return f"{count} {one if count == 1 else many}"
 
 
-#: What the list says above the settings the change alters.
+#: What the list says above the friction settings the change alters.
 SETTINGS_LEAD = (
-    f"The change alters the project's friction settings (`{SETTINGS_FILE}`, "
-    f"`{SETTINGS_KEY}`), which decide what the change check asks:"
+    "The change alters what the change check is asked about — the friction settings "
+    "(`pkit friction artefacts`):"
 )
 
 
 def render(document: Mapping[str, Any], head: str, settings: Sequence[Setting] = ()) -> str | None:
     """The `## Friction answers` section for `document`, derived at commit `head`,
     with the friction `settings` the change alters; None when the change wrote no
-    answers and alters no setting. Every text is the check's or the
-    configuration's, shown with any non-printable character escaped and set in a
+    answers and alters no setting. Every text is the check's or the backbone
+    discovery's, shown with any non-printable character escaped and set in a
     code span, so no word of an artefact is read as Markdown."""
     entries = [_read_entry(entry) for entry in _entries(document)]
     if not entries and not settings:
@@ -560,7 +589,7 @@ def render(document: Mapping[str, Any], head: str, settings: Sequence[Setting] =
         out += ["", SETTINGS_LEAD, ""]
         for setting in settings:
             before, after = _side(setting.before, code=True), _side(setting.after, code=True)
-            out.append(f"- {_code(setting.key)}: {before} → {after}")
+            out.append(f"- {setting.key}: {before} → {after}")
     out.append(MARKER_END)
     return "\n".join(out)
 
@@ -584,13 +613,13 @@ def lines(document: Mapping[str, Any], settings: Sequence[Setting] = ()) -> list
             )
     for setting in settings:
         before, after = _side(setting.before, code=False), _side(setting.after, code=False)
-        out.append(f"friction setting {setting.key}: {before} → {after}")
+        out.append(f"{setting.key}: {before} → {after}")
     return out
 
 
 def _texts(document: Mapping[str, Any], settings: Sequence[Setting]) -> Iterator[tuple[str, str]]:
     """Every text the section would show, as it would show it, with where it is:
-    (an answer's location, or the settings file) and the text."""
+    (an answer's location, or `SETTINGS_WHERE`) and the text."""
     for entry in (_read_entry(e) for e in _entries(document)):
         texts: list[str | None] = [entry.location, entry.anchor, entry.reason]
         for anchor, words in entry.kept:
@@ -599,9 +628,8 @@ def _texts(document: Mapping[str, Any], settings: Sequence[Setting]) -> Iterator
             if text:
                 yield entry.location, text
     for setting in settings:
-        for value in (setting.key, _value(setting.before), _value(setting.after)):
-            if value:
-                yield SETTINGS_FILE, value
+        for value in (setting.key, *setting.before, *setting.after):
+            yield SETTINGS_WHERE, shown(value)
 
 
 def _first(pattern: re.Pattern[str], found: Iterable[tuple[str, str]]) -> tuple[str, str] | None:

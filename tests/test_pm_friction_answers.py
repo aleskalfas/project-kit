@@ -721,7 +721,8 @@ def test_a_change_that_sets_friction_dormant_lists_the_setting(
 ) -> None:
     """The settings decide what the change check asks: a change that empties the
     places makes the check dormant at its head, so it lists no answer — and the
-    settings it altered are listed instead, as they were and as they are."""
+    settings it altered are listed instead, as they were and as they are, read
+    through the backbone's discovery at each commit."""
     repo = make_adopter_repo()
     repo.write({CONFIG: friction_config(mode="enforcing"), **SOURCE, "docs/guide.md": guide()})
     repo.commit("base", files=None)
@@ -732,9 +733,7 @@ def test_a_change_that_sets_friction_dormant_lists_the_setting(
     found = fa.derive(head, "main")
     assert found.problem is None, found.problem
     assert found.answers == () and found.listed
-    assert [(s.key, s.before, s.after) for s in found.settings] == [
-        ("friction.places", ["docs"], [])
-    ]
+    assert [(s.key, s.before, s.after) for s in found.settings] == [(fa.PLACES, ("docs",), ())]
     section = fa.render(found.document, head, found.settings)
     assert section is not None
     assert section.splitlines()[3:] == [
@@ -743,39 +742,45 @@ def test_a_change_that_sets_friction_dormant_lists_the_setting(
         "",
         fa.SETTINGS_LEAD,
         "",
-        '- `friction.places`: `["docs"]` → `[]`',
+        f"- {fa.PLACES}: `docs` → none",
         fa.MARKER_END,
     ]
-    assert fa.lines(found.document, found.settings) == [
-        'friction setting friction.places: ["docs"] → []'
-    ]
+    assert fa.lines(found.document, found.settings) == [f"{fa.PLACES}: docs → none"]
 
 
-def test_settings_read_absent_and_unparsable_as_such(
-    fa: ModuleType, make_adopter_repo: MakeAdopterRepo
+def test_a_change_that_excludes_an_artefact_lists_it(
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
 ) -> None:
     repo = make_adopter_repo()
-    repo.write({"a.txt": "a\n"})
-    repo.commit("no configuration", files=None)
-    bare = repo.head()
-    repo.commit("a configuration", {CONFIG: friction_config(mode="enforcing")})
-    configured = repo.head()
-    repo.commit("a broken one", {CONFIG: "friction: [unclosed\n"})
-    broken = repo.head()
-    assert [(s.key, s.before, s.after) for s in fa.settings_change(bare, configured)] == [
-        ("friction", fa.ABSENT, {"mode": "enforcing", "places": ["docs"]})
+    repo.write({CONFIG: friction_config(mode="enforcing"), **SOURCE, "docs/guide.md": guide()})
+    repo.write({"docs/other.md": document("other", anchors={"path": ["src/core/**"]}, at=T1)})
+    repo.commit("base", files=None)
+    before = repo.head()
+    excluding = friction_config(mode="enforcing", exclude=["docs/guide.md"])
+    repo.commit("leave the guide out", {CONFIG: excluding})
+    assert [(s.key, s.before, s.after) for s in fa.settings_change(before, repo.head())] == [
+        (fa.EXCLUDED, (), ("docs/guide.md",))
     ]
-    (setting,) = fa.settings_change(configured, broken)
-    assert (setting.key, setting.after) == ("friction", fa.UNPARSED)
-    assert fa.settings_change(configured, configured) == ()
-    assert "could not be read" in fa.settings_change(configured, "f" * 40)
-    rendered = fa.render({"base": {"commit": bare}, "answers": []}, configured, [setting])
-    assert rendered is not None
-    assert "(the configuration file does not parse)" in rendered
+    assert fa.settings_change(before, before) == ()
 
 
-def test_a_settings_value_is_read_for_closing_references_and_delimiters(fa: ModuleType) -> None:
-    settings = [fa.Setting("friction.exclude", fa.ABSENT, ["fixes #5/**"])]
-    assert fa.closing_reference(_document(), settings) == (fa.SETTINGS_FILE, "fixes #5")
-    settings = [fa.Setting("friction.exclude", fa.ABSENT, ["<!--/**"])]
-    assert fa.comment_delimiter(_document(), settings) == (fa.SETTINGS_FILE, "<!--")
+def test_settings_that_cannot_be_read_make_the_derivation_unreadable(
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
+) -> None:
+    repo = make_adopter_repo()
+    repo.write({CONFIG: friction_config(mode="enforcing"), **SOURCE, "docs/guide.md": guide()})
+    repo.commit("base", files=None)
+    before = repo.head()
+    repo.commit("a broken configuration", {CONFIG: "friction: [unclosed\n"})
+    found = fa.settings_change(before, repo.head())
+    assert isinstance(found, str) and "pkit friction artefacts --json --at" in found
+    assert fa.settings_change("", repo.head()) == (
+        "the change check named no commit the head left its base at"
+    )
+
+
+def test_a_setting_is_read_for_closing_references_and_delimiters(fa: ModuleType) -> None:
+    settings = [fa.Setting(fa.PLACES, (), ("fixes #5/**",))]
+    assert fa.closing_reference(_document(), settings) == (fa.SETTINGS_WHERE, "fixes #5")
+    settings = [fa.Setting(fa.PLACES, ("<!--/**",), ())]
+    assert fa.comment_delimiter(_document(), settings) == (fa.SETTINGS_WHERE, "<!--")

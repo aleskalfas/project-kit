@@ -1034,26 +1034,28 @@ def _no_answers(
 
 def _refuse_moved_base(derived: friction_answers.Derivation, head: _Head) -> None:
     """Where the base moved on after the head left it, refuse when its commits
-    since changed a file the list's words are on — an answer's artefact, or the
-    configuration whose friction settings the list shows: the merge could then
-    land words the list does not show. An outdated base that changed none of them
-    stops nothing; one whose changes cannot be read is refused, never guessed."""
+    since changed what the list's words are on — a file an answer is on, or the
+    friction settings the list shows: the merge could then land words the list
+    does not show. An outdated base that changed none of them stops nothing; one
+    whose changes cannot be read is refused, never guessed."""
     paths = friction_answers.listed_paths(derived.document or {})
-    if derived.settings:
-        paths.add(friction_answers.SETTINGS_FILE)
     changed: list[str] | None = None
     if derived.merge_base and derived.tip:
         proc = _git("diff", "--name-only", "-z", "--no-renames", derived.merge_base, derived.tip)
         if proc.returncode == 0:
             changed = sorted(paths & set(proc.stdout.split("\0")))
-    if changed == []:
+    settings: tuple[Any, ...] | str = ()
+    if derived.settings and changed is not None:
+        settings = friction_answers.settings_change(derived.merge_base, derived.tip)
+    if changed == [] and settings == ():
         return
     issue, number, sha = head.issue, head.pr_number, short_sha(head.oid)
-    which = (
-        f"its commits since changed {_files(changed)} the list's words are on"
-        if changed
-        else "which files its commits since changed could not be read"
-    )
+    if changed is None or isinstance(settings, str):
+        which = "which of the list's files and settings its commits since changed could not be read"
+    else:
+        what = [f"{_files(changed)} the list's words are on"] if changed else []
+        what += [friction_answers.SETTINGS_WHERE + " the list shows"] if settings else []
+        which = f"its commits since changed {' and '.join(what)}"
     raise _Stop(
         EXIT_NEEDS_CHANGE,
         f"answers: refused — {head.base} moved on after PR #{number}'s head left it, and "

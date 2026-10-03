@@ -1809,7 +1809,10 @@ def test_a_base_whose_changes_cannot_be_read_is_refused(world, capsys) -> None:
     run.outdated, run.tip = True, "f" * 40  # a tip this clone does not have
     rc, out, _err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
     assert rc == run.land.EXIT_NEEDS_CHANGE
-    assert "which files its commits since changed could not be read" in out.splitlines()[-1]
+    assert (
+        "which of the list's files and settings its commits since changed could not be read"
+        in out.splitlines()[-1]
+    )
     # With no answers, an outdated base is no reason to stop.
     run.written = []
     run.github.body = _PR_BODY
@@ -1918,13 +1921,13 @@ def test_a_change_that_sets_friction_dormant_is_held_like_an_answer(world, capsy
     head, listing no answer: the settings it altered are shown instead, and a
     `--yes` given before they reached the description merges nothing."""
     run = world()
-    setting = run.land.friction_answers.Setting("friction.places", ["docs"], [])
-    run.settings = [setting]
+    answers = run.land.friction_answers
+    run.settings = [answers.Setting(answers.PLACES, ("docs",), ())]
     head = run.github.head
     rc, out, _err = run.run("--yes", "--expect-head", head, capsys=capsys)
     assert rc == run.land.EXIT_READY
     lines = out.splitlines()
-    assert '  friction setting friction.places: ["docs"] → []' in lines
+    assert f"  {answers.PLACES}: docs → none" in lines
     assert (
         "answers: none written by this change, which alters the project's friction settings, "
         f"listed above and in PR #{PR}'s description (written now)"
@@ -1936,10 +1939,35 @@ def test_a_change_that_sets_friction_dormant_is_held_like_an_answer(world, capsy
         f"{ISSUE} --yes --expect-head {head}"
     )
     (written,) = run.github.bodies
-    assert '- `friction.places`: `["docs"]` → `[]`' in written
+    assert f"- {answers.PLACES}: `docs` → none" in written
     assert run.github.merges == []
     # `--yes` alone does not cover them either; naming the head, once shown, does.
     assert run.run("--yes", capsys=capsys)[0] == run.land.EXIT_READY
     rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
     assert rc == 0, out + err
     assert run.github.merges[-1][-1] == head and len(run.github.bodies) == 1
+
+
+def test_a_base_that_changed_the_listed_settings_is_refused(world, capsys, monkeypatch) -> None:
+    """The settings the list shows are words of it too: a base whose commits since
+    changed them can land settings the list does not show."""
+    run = world()
+    answers = run.land.friction_answers
+    run.settings = [answers.Setting(answers.PLACES, ("docs",), ())]
+    run.github.body = f"{_PR_BODY}\n{run.section()}\n"
+    _main_moves_on(run, "src/elsewhere.py")
+    moved: list[tuple[str, str]] = []
+
+    def settings_change(merge_base: str, head: str) -> Any:
+        moved.append((merge_base, head))
+        return (answers.Setting(answers.PLACES, ("docs",), ("docs", "guides")),)
+
+    monkeypatch.setattr(answers, "settings_change", settings_change)
+    rc, out, _err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert "its commits since changed the friction settings the list shows" in out.splitlines()[-1]
+    assert moved == [(run.merge_base, run.tip)] and run.github.merges == []
+    # A base that left the settings as they were stops nothing.
+    monkeypatch.setattr(answers, "settings_change", lambda merge_base, head: ())
+    rc, out, err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == 0, out + err
