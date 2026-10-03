@@ -1199,15 +1199,16 @@ class _Judge:
     def over_broad(self, anchor: Anchor) -> RepositoryFinding | None:
         """An anchor standing on more than `OVER_BROAD_SHARE` of the tracked files (point 7):
         a path anchor by the files it matches, an anchor of a registered kind by the
-        files its resolver names — the rule is not a kind's. A record or an artefact
-        anchor names one file."""
+        files its resolver names — the rule is not a kind's. Both are counted among the
+        tracked files `friction.exclude` leaves in, the share's whole, so it never passes
+        100%. A record or an artefact anchor names one file."""
         if not self._tracked:
             return None
         if anchor.kind == "path":
             matched = sum(map(self.head.stands_on(anchor.value), self.head.files))
             verb, fix = "matches", "narrow it"
         elif anchor.kind not in CORE_ANCHOR_KINDS:
-            matched = len(self.kinds.files(anchor))
+            matched = len(self._tracked.intersection(self.kinds.files(anchor)))
             verb, fix = "stands on", "have its resolver name less, or anchor to a narrower value"
         else:
             return None

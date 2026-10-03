@@ -39,6 +39,7 @@ a `commands:` leaf:
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from collections.abc import Callable
 from pathlib import Path
@@ -895,6 +896,23 @@ def test_an_anchor_whose_resolver_names_most_of_the_tracked_files_is_over_broad(
     assert broad.anchor == SOURCE_ANCHOR
     assert broad.message.startswith("stands on ") and "tracked files (100%)" in broad.message
     assert broad.message.endswith("have its resolver name less, or anchor to a narrower value")
+
+
+def test_the_over_broad_share_counts_the_named_files_exclusions_leave_in(
+    repo: AdopterRepo,
+) -> None:
+    """The share's whole is the tracked files `friction.exclude` leaves in, and the files a
+    resolver names are counted among them: one naming every file stands on all of them,
+    100%, never more."""
+    _sources(repo, EVERYTHING)
+    vendored = {f"vendor/lib{n}.py": f"N = {n}\n" for n in range(3)}
+    files = {"docs/guide.md": guide(anchors=SOURCE_ANCHORS), **vendored}
+    _start(repo, files, friction_config(exclude=["vendor"]))
+    result = fr.run_repository_check(repo.root)
+    [broad] = [f for f in result.findings if f.kind is fr.RepositoryFindingKind.OVER_BROAD]
+    counted = re.match(r"stands on (\d+) of (\d+) tracked files \(100%\)", broad.message)
+    assert counted is not None, broad.message
+    assert counted[1] == counted[2]
 
 
 # --- validation and the writers admit an anchor of any kind a word names ---------------------
