@@ -75,7 +75,11 @@ never beyond `COMMAND_TIMEOUT_SECONDS`; the outermost kill is never late.
   offline marker set, the base override removed (`validators.QUERY_DROPPED_ENV`) —
   a query answers about state, never about a base named for one run (COR-052
   point 6) — and the answer validated against the shape asked for; anything
-  else is no answer, an error finding;
+  else is no answer, an error finding. A filler runs under it with the same
+  argument (`data_points`), and an anchor kind's resolver with `--json`, `--`
+  and then the anchor value, its one subject, last so that no value is read
+  as an option (`friction_discovery.run_resolver`): no answer leaves a data
+  point to its inert policy and an anchor unresolved;
 - the *context-read* policy (`report_context.pm_workstream`, ADR-050): no
   arguments, the caller's environment unchanged but for the run's deadline —
   the verb asks the tracker — and the value read as the text an exit-0 run
@@ -368,7 +372,9 @@ def run_command(
     the caller's environment, then each variable `drop_env` names is removed —
     whether the caller's or `extra_env`'s — and the run's deadline is laid over
     what remains. Standard output is the answer and nothing else; standard
-    error is diagnostics.
+    error is diagnostics. A command the system cannot start — its script will
+    not execute, or an argument cannot be passed, as one holding a NUL byte
+    cannot — is not started, never an exception.
 
     Inside a live run (`inherited_deadline`) the run is nested (the module
     docstring): bounded by the time remaining, in the outermost run's process
@@ -395,7 +401,8 @@ def run_command(
             stderr=subprocess.PIPE,
             start_new_session=not tree.is_nested,
         )
-    except OSError as exc:
+    except (OSError, ValueError) as exc:
+        # `ValueError`: an argument the system cannot pass — one holding a NUL byte.
         tree.leave(None, ended=True)
         return CommandRun(Ending.NOT_STARTED, bound, detail=str(exc))
     ended = False

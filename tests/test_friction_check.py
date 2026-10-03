@@ -475,17 +475,20 @@ def test_a_registered_resolver_without_the_query_contract_is_refused(repo: Adopt
         "anchor a registered kind",
         {"docs/guide.md": guide(anchors={"use-case": ["UC-1"]}, at=T2, because="x")},
     )
-    undeclared = fc.ResolverCommand("use-case", "software-analysis", "resolve-use-case")
+    script = repo.root / ".pkit/capabilities/software-analysis/scripts/resolve-use-case.py"
+    undeclared = fc.ResolverCommand(
+        "use-case", "software-analysis", "resolve-use-case", script=script
+    )
     result = _run(repo, registry={"use-case": undeclared})
     assert "does not declare the query contract" in result.findings[0].message
-    # Declared, but naming no command: run, it gives no answer, and the anchor stays
-    # unresolved (`test_friction_anchor_kinds` runs real resolvers).
-    declared = fc.ResolverCommand(
+    # Naming no command of its capability: refused as the kind is, and said before the
+    # declaration is looked for (`test_friction_anchor_kinds` runs real resolvers).
+    nameless = fc.ResolverCommand(
         "use-case", "software-analysis", "resolve-use-case", query_contract=True
     )
-    result = _run(repo, registry={"use-case": declared})
+    result = _run(repo, registry={"use-case": nameless})
     assert result.findings[0].kind is fc.FindingKind.UNRESOLVED_KIND
-    assert "its resolver gave no answer" in result.findings[0].message
+    assert result.findings[0].message.startswith("nothing installed resolves this kind: ")
     assert "is not declared in the `commands:` of software-analysis" in result.findings[0].message
 
 

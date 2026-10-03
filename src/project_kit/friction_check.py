@@ -1176,7 +1176,9 @@ def run_change_check(
     head = Side(target_root, head_tree, head_discovery)
     base = Side(target_root, base_tree, discover_artefacts(target_root, tree=base_tree))
     kinds = AnchorKinds(
-        target_root, registered_anchor_kinds(target_root) if registry is None else registry
+        target_root,
+        registered_anchor_kinds(target_root) if registry is None else registry,
+        head.files,
     )
 
     findings: list[Finding] = []

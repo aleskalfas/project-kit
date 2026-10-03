@@ -569,7 +569,7 @@
       "additionalProperties": false,
       "properties": {
         "kinds": {
-          "description": "Anchor kinds this component registers (COR-050 point 2): a mapping from a kind — a word, as an anchor block and a rule's cited source write it — to its entry, which names by `command` the leaf of this component's `commands:` tree that resolves an anchor of the kind; the leaf must exist and declare `query-contract: true` (checked in Python). A kind the backbone resolves itself (`path`, `record`, `artefact`), or one another installed capability registers too, is refused (checked in Python). The backbone runs the leaf's script under the query policy with the anchor value and `--json`, and reads `{\"paths\": [...]}`: the files of the working tree the anchor stands on (the lifecycle README).",
+          "description": "Anchor kinds this component registers (COR-050 point 2): a mapping from a kind — a word, as an anchor block and a rule's cited source write it — to its entry, which names by `command` the leaf of this component's `commands:` tree that resolves an anchor of the kind; the leaf must exist and declare `query-contract: true` (checked in Python). A kind the backbone resolves itself (`path`, `record`, `artefact`), or one another installed capability registers too, is refused (checked in Python). The backbone runs the leaf's script under the query policy with `--json`, `--` and then the anchor value, and reads `{\"paths\": [...]}`: the files the anchor stands on (the lifecycle README).",
           "type": "object",
           "propertyNames": {
             "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"

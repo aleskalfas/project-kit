@@ -289,6 +289,15 @@ def test_a_script_that_cannot_start_is_not_started(tmp_path: Path) -> None:
     assert "Permission denied" in run.detail
 
 
+def test_an_argument_the_system_cannot_pass_is_not_started(tmp_path: Path) -> None:
+    """A NUL byte in an argument is the caller's data, never a crash of the run."""
+    script = _script(tmp_path / "echo.py", "print('{}')\n")
+    run = run_command(script, ["before\0after"], cwd=tmp_path)
+    assert run.ending is Ending.NOT_STARTED
+    assert "null byte" in run.detail
+    assert run_command(script, [], cwd=tmp_path).ending is Ending.ANSWERED  # the next run starts
+
+
 # Serial: the script must start its grandchild inside the one-second bound, which
 # a machine busy with other test workers misses.
 @pytest.mark.serial

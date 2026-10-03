@@ -1025,7 +1025,8 @@ def _source_kind_problem(kind: str, registry: Mapping[str, fd.ResolverCommand]) 
     point 5), so the kinds the backbone resolves itself are not source kinds.
     Every other kind takes the verdict the friction checks give an anchor of
     that kind (`unresolved_kind_reason`): unregistered, registered by two
-    capabilities, or refused without the query contract (COR-050 point 2).
+    capabilities, or refused — its command names no leaf, or lacks the query
+    contract (COR-050 point 2).
     This validator runs no resolver of its own: a kind that passes is resolved
     by the registry's resolver (`AnchorKinds`), so a source is never silently
     passed.
@@ -1383,8 +1384,13 @@ class _Catalogue:
     @cached_property
     def resolutions(self) -> fd.AnchorKinds:
         """The cited sources as their kinds' resolvers answer them — each resolver run
-        once per value for the pass, as the friction checks run them."""
-        return fd.AnchorKinds(self.target_root, self.anchor_kinds)
+        once per value for the pass, as the friction checks run them, and its answer
+        read against the working tree's one listing, which validation reads."""
+        return fd.AnchorKinds(
+            self.target_root,
+            self.anchor_kinds,
+            frozenset(fd.working_tree(self.target_root).files()),
+        )
 
     def decision(self, record: str) -> tuple[Path | None, str | None]:
         """(the record's file, its status) for a cited decision id, or (None, None)."""

@@ -120,6 +120,7 @@ from project_kit.friction_check import (
 )
 from project_kit.friction_discovery import (
     CORE_ANCHOR_KINDS,
+    HEAD_STATE,
     Anchor,
     AnchorKinds,
     Artefact,
@@ -873,9 +874,12 @@ class _Judge:
         self.history = history
         self.walker = walker
         self.blobs = blobs
-        self.kinds = AnchorKinds(head.root, registry)
+        self.kinds = AnchorKinds(head.root, registry, head.files, HEAD_STATE)
         """The anchor kinds, and each registered kind's anchors as their resolvers
-        answered — once per anchor value for the run (COR-050 point 2)."""
+        answered — once per anchor value for the run (COR-050 point 2), each answer
+        read against HEAD's files: a resolver reads the files on disk, and a path
+        HEAD does not hold — uncommitted work — is no answer, never a file with no
+        history."""
         self.unreadable: dict[str, str] = {}
         """The revalidation points whose `friction.exclude` does not read, and why:
         each read under HEAD's instead, and reported (`unreadable_findings`)."""
