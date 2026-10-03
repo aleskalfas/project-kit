@@ -135,8 +135,10 @@ import copy
 import functools
 import heapq
 import json
+import os
 import re
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
@@ -206,8 +208,9 @@ ENFORCING = "enforcing"
 # or without its slug (the citation form of COR-017).
 _CAPABILITY_RECORD = re.compile(r"^([a-z][a-z0-9-]*[a-z0-9]):(DEC-\d+)((?:-[a-z0-9]+)*)$")
 
-# Characters a POSIX extended regular expression reads as other than themselves.
-_ERE_SPECIAL = re.compile(r"([.\[\]()*+?{}|^$\\])")
+
+# How many `git log -S` searches of the history behind the base run at once.
+_SEARCHES = max(1, min(8, os.cpu_count() or 1))
 
 
 # --- findings ----------------------------------------------------------------
@@ -1110,15 +1113,16 @@ def _same_file(artefact: Artefact, before: Artefact, diff: Diff) -> bool:
 
 def _needles(artefact: Artefact, value: Any) -> list[str]:
     """What a file's history must hold somewhere for `value` to have been carried
-    before: the `at` as written and its canonical UTC form, or the block's key."""
+    before: its canonical UTC form and the `at` as written, or the block's key — a
+    needle that holds another left out, since every text holding it holds that one."""
     if value is BLOCK:
         return [FRICTION_KEY]
     found: list[str] = []
-    written = revalidated_field(artefact, "at")
-    if isinstance(written, str) and written.strip():
-        found.append(written.strip())
     if isinstance(value, datetime) and value.tzinfo is not None:
         found.append(value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S"))
+    written = revalidated_field(artefact, "at")
+    if isinstance(written, str) and written.strip() and not any(n in written for n in found):
+        found.append(written.strip())
     return found or [str(value)]
 
 
@@ -1141,6 +1145,7 @@ class _Behind:
         self._head = head
         self.shallow = bool(shallow_commits(root))
         self.cut: list[str] = []
+        self._searched: dict[tuple[str, tuple[str, ...]], frozenset[str]] = {}
         self._blobs: BlobReader | None = None
         self._walker: Walker | None = None
         self._states: dict[str, tuple[Side, Diff]] = {}
@@ -1157,27 +1162,61 @@ class _Behind:
             self._walker = Walker(history, self._blobs)
         return self._walker
 
-    def _seen(self, path: str, needles: Sequence[str]) -> bool:
-        """Whether any commit behind the base changed how often the file at `path` —
-        renames followed, a merge read against each parent — holds one of `needles`."""
+    def prefetch(self, pairs: Iterable[tuple[Artefact, Artefact]], diff: Diff) -> None:
+        """Run at once the searches `written_back` will make for these (head, base)
+        artefacts — those whose `at` the diff changes, in the same file — each its own
+        `git log -S` process, so a change revalidating many artefacts waits about as long
+        as for one."""
+        wanted: list[tuple[str, tuple[str, ...]]] = []
+        for artefact, before in pairs:
+            at = parsed_at(artefact)
+            if at == parsed_at(before) or not _same_file(artefact, before, diff):
+                continue
+            key = (before.path, tuple(_needles(artefact, BLOCK if at is None else at)))
+            if key not in self._searched and key not in wanted:
+                wanted.append(key)
+        if self.shallow or len(wanted) < 2:
+            return
+
+        def search(key: tuple[str, tuple[str, ...]]) -> frozenset[str]:
+            return self._search(*key)
+
+        with ThreadPoolExecutor(max_workers=min(len(wanted), _SEARCHES)) as pool:
+            for key, commits in zip(wanted, pool.map(search, wanted), strict=True):
+                self._searched[key] = commits
+
+    def _seen(self, path: str, needles: Sequence[str]) -> frozenset[str] | None:
+        """The commits behind the base that changed how often the file at `path` —
+        renames followed, a merge read against each parent — holds one of `needles`:
+        empty where none did. `None` in a shallow clone, where only the walk tells what
+        the cut hides."""
         if self.shallow:
-            return True
-        pattern = "|".join(_ERE_SPECIAL.sub(r"\\\1", needle) for needle in needles)
-        listed = run_git(
-            self._root,
-            "log",
-            "-m",
-            "--follow",
-            "--root",
-            "--no-color",
-            "--format=%H",
-            "--pickaxe-regex",
-            f"-S{pattern}",
-            self._base.commit,
-            "--",
-            path,
-        ).stdout
-        return bool(listed.strip())
+            return None
+        key = (path, tuple(needles))
+        if key not in self._searched:
+            self._searched[key] = self._search(*key)
+        return self._searched[key]
+
+    def _search(self, path: str, needles: Sequence[str]) -> frozenset[str]:
+        """`git log -S<needle>` for each needle, a fixed string — git finds one far faster
+        than a pattern — and the commits they list."""
+        found: set[str] = set()
+        for needle in needles:
+            listed = run_git(
+                self._root,
+                "log",
+                "-m",
+                "--follow",
+                "--root",
+                "--no-color",
+                "--format=%H",
+                f"-S{needle}",
+                self._base.commit,
+                "--",
+                path,
+            ).stdout
+            found.update(listed.decode().split())
+        return frozenset(found)
 
     def _note_cut(self, artefact: Artefact) -> None:
         if artefact.location not in self.cut:
@@ -1186,14 +1225,23 @@ class _Behind:
     def written_back(self, artefact: Artefact, before: Artefact, diff: Diff) -> _WrittenBack | None:
         """The `at` the diff writes back for `artefact` (`_WrittenBack`), or `None` where
         `at` held or the value is new. An `at` removed writes back the block's own
-        marker: it is judged against the commit that first introduced the block."""
+        marker: it is judged against the commit that first introduced the block. Only
+        the commits the search lists can have written the value, so the walk reads
+        no other version (`Walker.carried`)."""
         at = parsed_at(artefact)
         if at == parsed_at(before) or not _same_file(artefact, before, diff):
             return None
         value = BLOCK if at is None else at
-        if not self._seen(before.path, _needles(artefact, value)):
+        listed = self._seen(before.path, _needles(artefact, value))
+        if listed is not None and not listed:
             return None
-        found = self.walker.carried(before, value)
+        history = self.walker.history
+        among = (
+            None
+            if listed is None
+            else frozenset(index for sha in listed if (index := history.position(sha)) is not None)
+        )
+        found = self.walker.carried(before, value, among)
         if found.cut:
             self._note_cut(artefact)
         if found.unreachable:
@@ -1233,7 +1281,7 @@ class _Behind:
             (entry_reason(artefact, d) for d in artefact.deferrals if d.anchor == anchor), None
         )
         word = reason_word(reason)
-        if word is not None and not self._seen(before.path, [word]):
+        if word is not None and self._seen(before.path, [word]) == frozenset():
             return None
         found = self.walker.deferral_point(before, anchor, reason)
         if found.cut:
@@ -1885,6 +1933,10 @@ def run_change_check(
     answers: list[WrittenAnswer] = []
     behind = _Behind(target_root, base_state, named, head)
     try:
+        behind.prefetch(
+            ((head_discovery.artefacts[index], before) for index, before in counterparts.items()),
+            diff,
+        )
         for index in truth_chain_order(head_discovery):
             artefact = head_discovery.artefacts[index]
             if artefact.has_friction_block:

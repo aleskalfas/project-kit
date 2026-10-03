@@ -245,8 +245,11 @@ class History:
 
     def reached(self, points: Iterable[int]) -> frozenset[int]:
         """The commits any of `points` reaches, the points included."""
+        listed = tuple(points)
+        if len(listed) == 1:
+            return self.ancestors(listed[0])
         found: frozenset[int] = frozenset()
-        for point in points:
+        for point in listed:
             found = found | self.ancestors(point)
         return found
 
@@ -641,7 +644,7 @@ class Walker:
 
     # --- the revalidation point ---------------------------------------------------
 
-    def carried(self, like: Artefact, value: Any) -> Carried:
+    def carried(self, like: Artefact, value: Any, among: frozenset[int] | None = None) -> Carried:
         """Where the file of `like` first carried `value` — a parsed `at`, or `BLOCK` —
         for the artefact `like` names (COR-050 point 3; see the module docstring).
 
@@ -649,7 +652,10 @@ class Walker:
         entry, where a write has an earlier carrying of the value among its
         ancestors, back to where the entry was last added to the file, so a
         value it carried before it was removed and restored is no earlier
-        carrying.
+        carrying. `among`, where given, are the only commits that can have
+        written the value — those a `git log -S` search for it lists, since a
+        write changes how often the file holds it — so no other version is
+        read.
         """
         holds_value = carrier(value)
 
@@ -662,8 +668,11 @@ class Walker:
         writes: list[int] = []
         cut = False
         for version in versions:
+            at_cut = self.history.is_cut(version.index)
+            if among is not None and not at_cut and version.index not in among:
+                continue
             here = carries(self._after(version), version.path)
-            if self.history.is_cut(version.index):
+            if at_cut:
                 # Listed as added, its parent beyond the clone: what came before cannot be told.
                 if here:
                     return Carried((), unreachable=True, cut=True)
@@ -673,9 +682,9 @@ class Walker:
                 writes.append(version.index)
         points = self._first(writes)
         if like.kind is ArtefactKind.ENTRY and len(points) < len(writes):
-            added = self._entry_added(versions, like)
-            if added is not None:
-                points = self._first([w for w in writes if w <= added])
+            gone = self._entry_gone(versions, like, writes[0])
+            if gone is not None:
+                points = self._first([w for w in writes if w < gone])
         return Carried(tuple(points), cut=cut)
 
     def _first(self, writes: Sequence[int]) -> list[int]:
@@ -684,18 +693,14 @@ class Walker:
             w for w in writes if not any(o != w and o in self.history.ancestors(w) for o in writes)
         )
 
-    def _entry_added(self, versions: Sequence[Version], like: Artefact) -> int | None:
-        """The newest version that added the entry `like` names to its file: present
-        there, absent at every parent — `None` where the walk finds none."""
+    def _entry_gone(self, versions: Sequence[Version], like: Artefact, newest: int) -> int | None:
+        """The newest version, older than the write at `newest`, that holds no entry under
+        the id `like` names — where the entry was last absent from its file before it was
+        added again — or `None`. Read from the bytes alone: a version whose blob does not
+        hold the id holds no such entry; one that holds it is taken to hold the entry,
+        which errs only toward reading a value as carried before."""
         for version in versions:
-            if self.history.is_cut(version.index):
-                return version.index
-            if self.artefact_in(self._after(version), version.path, like) is None:
-                continue
-            if all(
-                source is None or self.artefact_in(state, source, like) is None
-                for state, source in version.parents()
-            ):
+            if version.index > newest and not self.holds(self._after(version), like.id):
                 return version.index
         return None
 

@@ -465,7 +465,7 @@ class _Judge:
         self.history = history
         self.walker = walker
         self.blobs = blobs
-        self.trees = TreeReader(head.root)
+        self.trees = TreeReader(blobs)
         self.kinds = AnchorKinds(head.root, registry, head.files, HEAD_STATE)
         """The anchor kinds, as HEAD's registrations declare them, and each registered
         kind's anchors as their resolvers answered — once per anchor value for the run
@@ -952,11 +952,13 @@ class _Judge:
         commits: set[int] = set()
         for rel in self.files_of(anchor, own):
             names = self.history.names(rel)
+            touched = {i for name in names for i in self.history.touched(name) if i not in covered}
+            if not touched:
+                continue  # nothing after what covers it touched the file: a candidate of none
             now = self.head_tree.entry(rel)
             states = self._states(rel, answering, names[1:])
             if not all(differs(now, state) for state in states):
                 continue
-            touched = {i for name in names for i in self.history.touched(name) if i not in covered}
             found = origin(
                 self.history,
                 touched,
@@ -1040,6 +1042,8 @@ class _Judge:
         """`change` for an artefact anchor: `target`'s content at HEAD against its
         content at each answering state's commit, never anything in its container."""
         versions = list(self.history.versions(target.path))
+        if all(v.index in covered for v in versions):
+            return None  # nothing after what covers it touched the target's file
         now = content(target)
         states = [self._target_at(index, target, versions) for index in answering]
         if not all(now != state for state in states):

@@ -14,8 +14,9 @@ history (`friction_history`) and both checks build on it without a cycle
   further process. `parse_name_status` reads a `--name-status` listing.
 - `BlobReader` is one `git cat-file --batch` process answering requests as
   they come, by `<commit>:<path>` or by object id.
-- `TreeReader` gives the entries of named paths at a commit through `git
-  ls-tree`, each (commit, path) read once.
+- `TreeReader` gives the entry of a path at a commit — its mode and object —
+  from the tree object of its folder, read through a `BlobReader`: no process
+  per path, each folder of each commit read once.
 """
 
 from __future__ import annotations
@@ -38,9 +39,6 @@ LINK_MODE = "120000"
 
 # The mode git writes for a path a side of a diff does not hold.
 _ABSENT_MODE = "000000"
-
-# How many paths one `git ls-tree` names, so no command line grows past the system's limit.
-_CHUNK = 200
 
 #: A file's entry in a git tree: its mode and its object id. Two states of a file
 #: are the same when their entries are — content and mode alike (COR-050 point 5).
@@ -216,7 +214,15 @@ class BlobReader:
         """The blob `obj` names, or `None` when it names none this repository holds."""
         return self._request(obj)
 
-    def _request(self, name: str) -> bytes | None:
+    def read_tree(self, commit: str, folder: str) -> bytes | None:
+        """The tree object of `folder` in `commit` — the root's for `""` — or `None` when
+        the commit holds no such folder."""
+        if "\n" in folder:
+            return None
+        name = f"{commit}:{folder}" if folder else f"{commit}^{{tree}}"
+        return self._request(name, b"tree")
+
+    def _request(self, name: str, kind: bytes = b"blob") -> bytes | None:
         assert self._process.stdin is not None and self._process.stdout is not None
         try:
             self._process.stdin.write(f"{name}\n".encode("utf-8", "surrogateescape"))
@@ -232,7 +238,7 @@ class BlobReader:
             self._process.stdout.read(1)  # the newline after the content
         except (OSError, ValueError) as exc:
             raise FrictionCheckError(f"`git cat-file` failed: {exc}") from exc
-        return data if header[1] == b"blob" else None
+        return data if header[1] == kind else None
 
     def close(self) -> None:
         if self._process.stdin is not None:
@@ -240,36 +246,40 @@ class BlobReader:
         self._process.wait()
 
 
-def tree_entries(root: Path, commit: str, paths: Iterable[str]) -> dict[str, TreeEntry]:
-    """The entry — mode and object — of each of `paths` that `commit` holds, gitlinks
-    included, through `git ls-tree`, a few hundred paths at a time; a path the commit
-    does not hold is left out. Paths are matched literally, never as patterns."""
+def _tree_object(raw: bytes, size: int) -> dict[str, TreeEntry]:
+    """The entries of a raw tree object, by name: `<mode> <name>\\0<object>` each, the
+    object `size` bytes long; a mode written short (`40000`) padded as `ls-tree` prints it."""
     found: dict[str, TreeEntry] = {}
-    wanted = sorted(set(paths))
-    for start in range(0, len(wanted), _CHUNK):
-        chunk = wanted[start : start + _CHUNK]
-        listed = run_git(root, "--literal-pathspecs", "ls-tree", "-z", commit, "--", *chunk).stdout
-        for path, mode, _kind, obj in _tree_records(listed):
-            found[path] = (mode, obj)
+    offset = 0
+    while offset < len(raw):
+        space = raw.index(b" ", offset)
+        end = raw.index(b"\0", space)
+        mode = raw[offset:space].decode().rjust(6, "0")
+        name = raw[space + 1 : end].decode("utf-8", "surrogateescape")
+        found[name] = (mode, raw[end + 1 : end + 1 + size].hex())
+        offset = end + 1 + size
     return found
 
 
 class TreeReader:
-    """`tree_entries`, each (commit, path) read from git once for the reader's life."""
+    """The entry — mode and object — of a path at a commit, gitlinks included, read from
+    the tree object of the path's folder through one `BlobReader`, each folder of each
+    commit once for the reader's life. A path the commit does not hold has none."""
 
-    def __init__(self, root: Path) -> None:
-        self._root = root
-        self._read: dict[str, dict[str, TreeEntry | None]] = {}
+    def __init__(self, blobs: BlobReader) -> None:
+        self._blobs = blobs
+        self._trees: dict[tuple[str, str], dict[str, TreeEntry]] = {}
+
+    def entry(self, commit: str, path: str) -> TreeEntry | None:
+        folder, _, name = path.rpartition("/")
+        key = (commit, folder)
+        found = self._trees.get(key)
+        if found is None:
+            raw = self._blobs.read_tree(commit, folder)
+            found = {} if raw is None else _tree_object(raw, len(commit) // 2)
+            self._trees[key] = found
+        return found.get(name)
 
     def entries(self, commit: str, paths: Iterable[str]) -> dict[str, TreeEntry | None]:
         """The entry of each of `paths` at `commit`, `None` where it holds none."""
-        known = self._read.setdefault(commit, {})
-        wanted = [rel for rel in dict.fromkeys(paths) if rel not in known]
-        if wanted:
-            found = tree_entries(self._root, commit, wanted)
-            for rel in wanted:
-                known[rel] = found.get(rel)
-        return {rel: known[rel] for rel in paths}
-
-    def entry(self, commit: str, path: str) -> TreeEntry | None:
-        return self.entries(commit, (path,))[path]
+        return {rel: self.entry(commit, rel) for rel in paths}
