@@ -475,14 +475,21 @@ def test_a_registered_resolver_without_the_query_contract_is_refused(repo: Adopt
         "anchor a registered kind",
         {"docs/guide.md": guide(anchors={"use-case": ["UC-1"]}, at=T2, because="x")},
     )
-    undeclared = fc.ResolverCommand("use-case", "software-analysis", "resolve-use-case")
+    script = repo.root / ".pkit/capabilities/software-analysis/scripts/resolve-use-case.py"
+    undeclared = fc.ResolverCommand(
+        "use-case", "software-analysis", "resolve-use-case", script=script
+    )
     result = _run(repo, registry={"use-case": undeclared})
     assert "does not declare the query contract" in result.findings[0].message
-    declared = fc.ResolverCommand(
+    # Naming no command of its capability: refused as the kind is, and said before the
+    # declaration is looked for (`test_friction_anchor_kinds` runs real resolvers).
+    nameless = fc.ResolverCommand(
         "use-case", "software-analysis", "resolve-use-case", query_contract=True
     )
-    result = _run(repo, registry={"use-case": declared})
-    assert "is not run yet" in result.findings[0].message
+    result = _run(repo, registry={"use-case": nameless})
+    assert result.findings[0].kind is fc.FindingKind.UNRESOLVED_KIND
+    assert result.findings[0].message.startswith("nothing installed resolves this kind: ")
+    assert "is not declared in the `commands:` of software-analysis" in result.findings[0].message
 
 
 @pytest.mark.parametrize(
@@ -501,7 +508,12 @@ def test_refuse_resolver_without_query_contract(query_contract: bool, refused: s
         assert reason is None
     else:
         assert reason is not None and refused in reason
-    assert fc.registered_anchor_kinds(Path(".")) == {}
+
+
+def test_a_project_with_no_capability_installed_registers_no_kind(repo: AdopterRepo) -> None:
+    """The registry reads installed capabilities alone: the backbone and the adapter
+    register nothing, whichever shipped capabilities would."""
+    assert fc.registered_anchor_kinds(repo.root) == {}
 
 
 def test_a_record_anchor_changes_with_its_decision_file(repo: AdopterRepo) -> None:

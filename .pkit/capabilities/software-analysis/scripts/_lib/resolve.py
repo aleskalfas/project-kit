@@ -35,8 +35,15 @@ than as a change — has a shape:
 - **unread** — a path anchor the artefact quotes nothing from, or an anchor of a
   kind no component resolves: nothing mechanical reads it.
 
+An anchor the checks did not judge — `unresolved-kind`, `no-answer`, or any
+state but `current` and a change — has no shape: what it denotes may have
+changed, and nothing says whether.
+
 And the rules, in the order they apply:
 
+0. **not-judged** — an anchor the checks did not judge: nothing is proposed,
+   since an outcome recorded now would answer for an anchor nobody read.
+   `pkit friction explain` says what clears it.
 1. **nothing-to-resolve** — the artefact is current, or unanchored, and no
    anchor of it is dead. (Stale with no such anchor, it moved: read it.)
 2. **ground-gone** — a *gone* anchor, or a contradiction the agent read (or
@@ -78,6 +85,7 @@ HOLDS, STALE, REGRESSED = "holds", "analysis-stale", "code-regressed"
 KEPT, MOVED, GONE, DELIBERATE, UNREAD = "kept", "moved", "gone", "deliberate", "unread"
 
 #: The rules, by name, as the verdicts cite them.
+NOT_JUDGED = "not-judged"
 NOTHING_TO_RESOLVE = "nothing-to-resolve"
 GROUND_GONE = "ground-gone"
 ANCHOR_MOVED = "anchor-moved"
@@ -88,10 +96,16 @@ NOTHING_DECIDES = "nothing-decides"
 #: The artefact states, from `pkit friction explain`, with nothing to resolve.
 SETTLED = frozenset({"current", "unanchored"})
 
-#: The anchor states that are a change to judge; the rest are current. A dead anchor
-#: counts whatever the artefact's state: the checks report it apart from staleness.
+#: The anchor states that are a change to judge. A dead anchor counts whatever the
+#: artefact's state: the checks report it apart from staleness.
 CHANGED = frozenset({"stale", "deferred", "dead-anchor"})
 DEAD = "dead-anchor"
+
+#: The one anchor state that is no change. Every other state — `unresolved-kind`,
+#: `no-answer`, `unreachable`, `excluded`, one a later backbone adds — says the
+#: checks did not judge the anchor, and is never read as current (the CLI README,
+#: "Friction checks": a reader treats a state it does not know as not judged).
+CURRENT = "current"
 
 #: The anchor kinds whose change is deliberate by nature.
 DELIBERATE_KINDS = frozenset({"record", "artefact"})
@@ -127,6 +141,11 @@ class Anchor:
     @property
     def changed(self) -> bool:
         return self.state in CHANGED
+
+    @property
+    def judged(self) -> bool:
+        """Whether the checks judged it: current, or a change to judge."""
+        return self.state == CURRENT or self.changed
 
     @property
     def shape(self) -> str:
@@ -218,6 +237,15 @@ Verdict = Proposal | Read | Ambiguous | Nothing
 
 def propose(artefact: str, state: str, anchors: Sequence[Anchor], intent: Intent) -> Verdict:
     """The verdict on `artefact`, in `state`, from its anchors and what the agent read."""
+    unjudged = [a for a in anchors if not a.judged]
+    if unjudged:
+        states = ", ".join(f"{a.label} {a.state}" for a in unjudged)
+        return Read(
+            NOT_JUDGED,
+            f"the checks did not judge every anchor of {artefact} ({states}): nothing is "
+            f"proposed while an anchor nobody read may have changed — `pkit friction explain "
+            f"{artefact}` says what clears it",
+        )
     changed = [a for a in anchors if a.changed]
     if not changed and state in SETTLED:
         return Nothing(NOTHING_TO_RESOLVE, f"{artefact} is {state}: nothing changed under it")

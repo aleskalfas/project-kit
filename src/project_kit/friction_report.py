@@ -13,8 +13,10 @@ never the working tree, as the check does; neither writes anything.
   artefact, the anchor, the origin — commit, author, date, change — and, for
   a deferral, its reason. The entries are exactly those `pkit friction check
   --all` reports (`run_repository_check`); ties keep the check's order,
-  upstream first. Artefacts whose points lie beyond a shallow clone are
-  named apart: their debt cannot be told. An artefact under an excluded
+  upstream first. Artefacts the check did not judge are named apart, each
+  kind by itself: those whose points lie beyond a shallow clone, whose debt
+  cannot be told, and those with an anchor that cannot be resolved, whose
+  debt is told only for their other anchors. An artefact under an excluded
   path is never judged stale or deferred (COR-050 point 7), so it is not
   listed. After the debt, the check's unanchored measure (point 8): the
   artefacts with no anchors and no reason, the only ones counted, and apart
@@ -184,6 +186,7 @@ class DebtListing:
     shallow: bool | None  # `None` only while dormant
     entries: tuple[DebtEntry, ...]  # oldest first
     unreachable: tuple[fr.ArtefactReport, ...]  # not judged: a point beyond a shallow clone
+    unresolved: tuple[fr.ArtefactReport, ...] = ()  # not judged: an anchor cannot be resolved
     unanchored: tuple[str, ...] = ()  # locations, in walk order
     accepted_unanchored: tuple[fr.AcceptedUnanchored, ...] = ()  # in walk order
 
@@ -219,15 +222,17 @@ def run_debt(
         for finding, origin in debt
     ]
     entries.sort(key=lambda entry: entry.origin.date)
-    unreachable = tuple(
-        r for r in check.artefact_reports if r.state is fr.ArtefactState.UNREACHABLE
-    )
+
+    def in_state(state: fr.ArtefactState) -> tuple[fr.ArtefactReport, ...]:
+        return tuple(r for r in check.artefact_reports if r.state is state)
+
     return DebtListing(
         False,
         check.head,
         bool(check.shallow),
         tuple(entries),
-        unreachable,
+        in_state(fr.ArtefactState.UNREACHABLE),
+        in_state(fr.ArtefactState.UNRESOLVED),
         check.unanchored,
         check.accepted_unanchored,
     )
@@ -272,11 +277,15 @@ def render_debt_json(listing: DebtListing) -> str:
         "counts": {
             **{kind.value: listing.count(kind) for kind in DEBT_KINDS},
             "unreachable": len(listing.unreachable),
+            "unresolved": len(listing.unresolved),
             "unanchored": len(listing.unanchored),
         },
         "debt": [entry.as_json() for entry in listing.entries],
         "unreachable": [
             {"artefact": r.artefact, "location": r.location} for r in listing.unreachable
+        ],
+        "unresolved": [
+            {"artefact": r.artefact, "location": r.location} for r in listing.unresolved
         ],
         "unanchored": list(listing.unanchored),
         "accepted_unanchored": [entry.as_json() for entry in listing.accepted_unanchored],
@@ -344,6 +353,18 @@ def render_debt_human(listing: DebtListing, *, now: datetime | None = None) -> s
                     "muted", " — a point beyond this shallow clone: git fetch --unshallow"
                 ),
                 *(f"  {report.location}" for report in listing.unreachable),
+            ]
+        )
+    if listing.unresolved:
+        lines.extend(
+            [
+                "",
+                cli_render.style("heading", "NOT JUDGED")
+                + cli_render.style(
+                    "muted",
+                    " — an anchor that cannot be resolved: pkit friction explain <artefact>",
+                ),
+                *(f"  {report.location}" for report in listing.unresolved),
             ]
         )
     lines.extend(_unanchored_lines(listing))
@@ -445,7 +466,9 @@ class ExplainedAnchor:
     """
 
     anchor: Anchor
-    state: str  # a finding kind, `current`, or `unreachable` when the artefact is not judged
+    # A finding kind — `unresolved-kind` and `no-answer` among them — or `current`, or
+    # `unreachable` when a shallow clone keeps the artefact from being judged.
+    state: str
     # Commits behind its staleness only: a dead anchor's commits say where its files went.
     changes: int
     over_broad: bool
@@ -628,8 +651,14 @@ def _explained(
         )
     elif kind is _Kind.UNRESOLVED_KIND and anchor is not None:
         clears = (
-            f"install the component that resolves `{anchor.kind}` anchors, or remove "
-            f"{_label(anchor)} from the block and revalidate"
+            f"install the capability that resolves `{anchor.kind}` anchors, or mend its "
+            f"registration where the finding says it is refused, or remove {_label(anchor)} from "
+            f"the block and revalidate"
+        )
+    elif kind is _Kind.NO_ANSWER and anchor is not None:
+        clears = (
+            "run again; if its resolver gives no answer again, run `pkit sync`, or the resolver "
+            "needs mending"
         )
     elif kind is _Kind.OVER_BROAD and anchor is not None:
         clears = (
@@ -644,7 +673,13 @@ def _explained(
 
 
 # The state an anchor shows: the first of these kinds a finding about it has.
-_ANCHOR_STATES = (_Kind.DEAD_ANCHOR, _Kind.UNRESOLVED_KIND, _Kind.STALE, _Kind.DEFERRED)
+_ANCHOR_STATES = (
+    _Kind.DEAD_ANCHOR,
+    _Kind.UNRESOLVED_KIND,
+    _Kind.NO_ANSWER,
+    _Kind.STALE,
+    _Kind.DEFERRED,
+)
 
 
 def _anchor_state(
@@ -715,6 +750,7 @@ _STATE_GLOSS = {
     "stale": "an anchor changed, or the artefact moved, with no answer since",
     "deferred": "friction deliberately postponed; nothing stale",
     "unreachable": "a point lies beyond this shallow clone — git fetch --unshallow",
+    "unresolved": "not judged: an anchor cannot be resolved; its other anchors' findings stand",
     UNANCHORED: "no anchors and no deferrals: nothing to judge",
     EXCLUDED: "under an excluded path: left out of the measures and the debt",
 }
@@ -803,7 +839,8 @@ def _anchor_lines(explanation: Explanation) -> list[str]:
         + cli_render.style("muted", " — what makes it true, as HEAD declares it")
     ]
     anchors = explanation.anchors
-    # A dead anchor or an unresolved kind is glossed with the check's own reason.
+    # A dead anchor, an unresolved kind or a missing answer is glossed with the check's
+    # own reason.
     reasons = {
         (f.finding.kind.value, f.finding.anchor): f.finding.message for f in explanation.findings
     }

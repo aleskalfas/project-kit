@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-03T02:30:58Z
+      at: 2026-10-03T05:57:43Z
       outcome: unchanged
-      unchanged-because: the CLI README's entry for the whole-repository check now says that project-kit runs it on main with the full history, after every push and once a day, and publishes its findings to one tracking issue, citing ADR-055 point 5; this page maps the cli area in one line as the pkit command-line surface, which still holds
+      unchanged-because: the lifecycle, CLI and schemas references gained the anchor-kind registration under friction.kinds, how a registered resolver runs and what it answers, the unresolved state, the change check's no-answer and dead-unattributed findings, and how a reader of the machine-readable documents reads an unresolved artefact by its anchor's finding; this index names each area and what it holds in one line — the lifecycle area as packaging and dependency architecture, the cli area as the pkit command-line surface, the schemas area as the YAML schemas and their JSON Schema companions — none of which mentions anchors, friction or resolvers, so every line still holds
 ---
 
 # project-kit

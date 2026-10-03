@@ -1640,8 +1640,9 @@ def friction_check_command(base_ref: str | None, whole_repository: bool, as_json
     included) against the merge-base of REF — by default $PKIT_CHECK_BASE,
     else the default branch (COR-054). Reports friction, dead anchors of the
     change, bumps with nothing behind them and an outdated base. Exit 1 in
-    enforcing mode on friction, a dead anchor, an unresolved kind or a bump;
-    an outdated base never fails.
+    enforcing mode on friction, a dead anchor, an unresolved kind, a
+    resolver's missing answer (no-answer) or a bump; an outdated base never
+    fails, nor a dead anchor it cannot lay at the change (dead-unattributed).
 
     With --all, the whole-repository check instead: every artefact at HEAD
     against the current history, each anchor judged from the artefact's
@@ -1682,7 +1683,9 @@ def friction_debt_command(as_json: bool) -> None:
 
     Exactly the stale and deferred findings of `pkit friction check --all`, from
     the same run of the whole-repository check: HEAD and its history, never the
-    working tree. Artefacts a shallow clone cannot judge are named apart. Then
+    working tree. Artefacts not judged are named apart: a point beyond a
+    shallow clone (unreachable), or an anchor that cannot be resolved
+    (unresolved). Then
     its unanchored measure: the artefacts with no anchors and no reason,
     counted, and apart from them those accepted with the reason their
     `unanchored-because` gives. Writes nothing; exits 0.

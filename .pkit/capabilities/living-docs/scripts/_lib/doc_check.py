@@ -26,10 +26,18 @@ so no two collide in the point's `additive` merge.
 
 **Fail closed.** A check that gives no document, or one of a `schema_version`
 this reading does not understand (a document without the key comes from a
-backbone that predates it, and reads as version 1), or a page whose friction lies
-beyond a shallow clone's history, is no answer — raised, never an empty list:
-the point is `fail`, and a gate never passes on fewer obligations than it
-should. A repository with no commit owes nothing: there is no HEAD to judge.
+backbone that predates it, and reads as version 1), or a page the check could
+not judge because it did not do its work, is no answer — raised, never an empty
+list: the point is `fail`, and a gate never passes on fewer obligations than it
+should. A page is judged when its state is `current`, `stale` or `deferred`.
+`unreachable` (its friction lies beyond a shallow clone's history), `unresolved`
+with an anchor whose resolver gave no answer (`no-answer`), and a state this
+reading does not know are no judgment. A page `unresolved` only because nothing
+installed resolves one of its anchors' kinds (`unresolved-kind`) owes what its
+other anchors owe: that anchor is a declaration for the project to mend, which
+the change check fails where a change is why and validation reports (COR-050
+point 12), never a reason to fail every later check. A repository with no commit
+owes nothing: there is no HEAD to judge.
 These are the two cases a filler that reads history tells apart (COR-052 point
 6): history that does not exist yet holds nothing, and the answer is `[]`;
 history that exists and cannot be read is no answer. Whether HEAD names a
@@ -59,6 +67,18 @@ CODE_UNDOCUMENTED = "code-undocumented"
 #: matter here: only `stale` is owed — a `deferred` page carries its answer.
 STALE = "stale"
 UNREACHABLE = "unreachable"
+UNRESOLVED = "unresolved"
+
+#: The two finding kinds that leave a page `unresolved`: an anchor of a kind nothing
+#: installed resolves — a declaration for the project to mend — and an anchor whose
+#: resolver gave no answer — a check that did not do its work.
+UNRESOLVED_KIND = "unresolved-kind"
+NO_ANSWER = "no-answer"
+
+#: The states in which the check judged a page. Any other — `unreachable`,
+#: `unresolved`, one this reading does not know — is no judgment, so no answer,
+#: unless the page is `unresolved` only by `UNRESOLVED_KIND` (`_only_by_kind`).
+JUDGED = frozenset({"current", STALE, "deferred"})
 
 #: The backbone's readings this contribution reads: the whole-repository check, and
 #: settled state for whether HEAD names a commit (`head`).
@@ -133,24 +153,40 @@ def _reading(argv: Sequence[str], root: str, run: Runner, key: str) -> Mapping[s
 
 def obligations(report: Mapping[str, Any], pages: Iterable[str]) -> list[dict[str, Any]]:
     """The obligations `report` gives rise to: the stale pages, then the uncovered
-    surface, each sorted. Raises NoAnswer when a page's friction cannot be
-    judged in this clone."""
+    surface, each sorted. A page left unjudged only by an anchor of a kind nothing
+    installed resolves owes what its other anchors owe (`_only_by_kind`). Raises
+    NoAnswer when the check did not do its work on a page: its points lie beyond
+    this clone's history, an anchor's resolver gave no answer, or its state is one
+    this reading does not know."""
     if report.get("dormant"):
         return []
-    page_set = set(pages)
-    reports = [
-        a
-        for a in report.get("artefacts") or []
-        if isinstance(a, Mapping) and a.get("location") in page_set
-    ]
-    unjudged = sorted(str(a["location"]) for a in reports if a.get("state") == UNREACHABLE)
-    if unjudged:
+    reports = _page_reports(report, pages)
+    findings = _findings(report)
+    kinds = _kinds_by_location(findings)
+    unreachable = sorted(str(a["location"]) for a in reports if a.get("state") == UNREACHABLE)
+    if unreachable:
         raise NoAnswer(
-            f"friction on {', '.join(unjudged)} cannot be judged: a point lies beyond this "
+            f"friction on {', '.join(unreachable)} cannot be judged: a point lies beyond this "
             f"shallow clone's history — fetch the full history (`git fetch --unshallow`)"
         )
-    findings = [f for f in report.get("findings") or [] if isinstance(f, Mapping)]
-    stale = sorted(str(a["location"]) for a in reports if a.get("state") == STALE)
+    unjudged = sorted(
+        (str(a["location"]), str(a.get("state")))
+        for a in reports
+        if a.get("state") not in JUDGED and not _only_by_kind(a, kinds)
+    )
+    if unjudged:
+        named = ", ".join(f"{page} ({state})" for page, state in unjudged)
+        raise NoAnswer(
+            f"friction on {named} was not judged: an anchor's resolver gave no answer — run "
+            f"again, then `pkit sync`, or mend the resolver — or the state is one this "
+            f"capability does not know; `pkit friction explain <page>` says which"
+        )
+    stale = sorted(
+        str(a["location"])
+        for a in reports
+        if a.get("state") == STALE
+        or (_only_by_kind(a, kinds) and STALE in kinds.get(str(a["location"]), set()))
+    )
     surface = sorted(str(p) for p in (report.get("measures") or {}).get("uncovered_surface") or [])
     return [
         *(_page_stale(page, findings) for page in stale),
@@ -158,9 +194,62 @@ def obligations(report: Mapping[str, Any], pages: Iterable[str]) -> list[dict[st
     ]
 
 
+def unresolved_kinds(report: Mapping[str, Any], pages: Iterable[str]) -> list[tuple[str, str, str]]:
+    """The anchors of a kind nothing installed resolves on the pages the check left
+    unjudged only by them (`_only_by_kind`), as (page, kind, value), sorted: for the
+    human view, which names each as a declaration to mend, not owed here."""
+    if report.get("dormant"):
+        return []
+    findings = _findings(report)
+    kinds = _kinds_by_location(findings)
+    held = {str(a["location"]) for a in _page_reports(report, pages) if _only_by_kind(a, kinds)}
+    named: list[tuple[str, str, str]] = []
+    for finding in findings:
+        anchor = finding.get("anchor")
+        if (
+            finding.get("kind") == UNRESOLVED_KIND
+            and finding.get("location") in held
+            and isinstance(anchor, Mapping)
+        ):
+            named.append(
+                (str(finding["location"]), str(anchor.get("kind")), str(anchor.get("value")))
+            )
+    return sorted(named)
+
+
 def envelope(value: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     """The filler envelope the command prints (COR-052 point 6)."""
     return {"schema_version": POINT_VERSION, "value": list(value)}
+
+
+def _page_reports(report: Mapping[str, Any], pages: Iterable[str]) -> list[Mapping[str, Any]]:
+    """The check's reports on the artefacts that are pages."""
+    page_set = set(pages)
+    return [
+        a
+        for a in report.get("artefacts") or []
+        if isinstance(a, Mapping) and a.get("location") in page_set
+    ]
+
+
+def _findings(report: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    return [f for f in report.get("findings") or [] if isinstance(f, Mapping)]
+
+
+def _kinds_by_location(findings: Iterable[Mapping[str, Any]]) -> dict[str, set[str]]:
+    """The finding kinds the check reports at each location."""
+    kinds: dict[str, set[str]] = {}
+    for finding in findings:
+        kinds.setdefault(str(finding.get("location")), set()).add(str(finding.get("kind")))
+    return kinds
+
+
+def _only_by_kind(artefact: Mapping[str, Any], kinds: Mapping[str, set[str]]) -> bool:
+    """Whether the check left `artefact` unjudged only because nothing installed
+    resolves one of its anchors' kinds — a declaration for the project to mend —
+    and not because an anchor's resolver gave no answer."""
+    at = kinds.get(str(artefact.get("location")), set())
+    return artefact.get("state") == UNRESOLVED and UNRESOLVED_KIND in at and NO_ANSWER not in at
 
 
 def _page_stale(page: str, findings: Sequence[Mapping[str, Any]]) -> dict[str, Any]:

@@ -603,6 +603,99 @@ def test_reads_without_the_query_contract_is_an_error(
     }
 
 
+def _registering(kinds: Any, *, contract: bool = True) -> dict[str, Any]:
+    """The package registering `kinds` under `friction.kinds` (COR-050 point 2), with
+    `create page` declaring the query contract unless told not to."""
+    raw = _package(friction={"kinds": kinds})
+    if contract:
+        raw["commands"]["create"]["page"]["query-contract"] = True
+    return raw
+
+
+def test_an_anchor_kind_names_a_declared_command_that_declares_the_query_contract(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    assert (
+        _validate(_registering({"source": {"command": "create page"}}), schema, component_dir) == []
+    )
+    undeclared = _messages(
+        _validate(_registering({"source": {"command": "refresh"}}), schema, component_dir),
+        pv.Severity.ERROR,
+    )
+    assert undeclared == {
+        "/friction/kinds/source/command": (
+            "anchor kind 'source': command 'refresh' is not declared in `commands:` "
+            "(declared: ['create page', 'publish'])."
+        )
+    }
+    # The report the packages member makes for a validator and a filler, made for a resolver.
+    no_contract = _messages(
+        _validate(_registering({"source": {"command": "publish"}}), schema, component_dir),
+        pv.Severity.ERROR,
+    )
+    assert no_contract == {
+        "/friction/kinds/source/command": (
+            "anchor kind 'source' names command 'publish' as its resolver, which does not "
+            "declare the query contract (`query-contract: true` on its `commands:` entry); a "
+            "resolver runs only when it declares it (COR-050 point 2)."
+        )
+    }
+
+
+@pytest.mark.parametrize("kind", ["path", "record", "artefact"])
+def test_an_anchor_kind_the_backbone_resolves_is_refused(
+    schema: dict[str, Any], component_dir: Path, kind: str
+) -> None:
+    errors = _messages(
+        _validate(_registering({kind: {"command": "create page"}}), schema, component_dir),
+        pv.Severity.ERROR,
+    )
+    assert list(errors) == [f"/friction/kinds/{kind}"]
+    assert (
+        f"anchor kind {kind!r} is one the backbone resolves itself"
+        in errors[f"/friction/kinds/{kind}"]
+    )
+    assert "its registration is refused" in errors[f"/friction/kinds/{kind}"]
+
+
+def test_an_anchor_kind_an_adapter_registers_is_refused_at_the_entry(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    """The registry reads installed capabilities alone, so an adapter's entry would
+    register nothing while looking like a registration that stands."""
+    raw = _registering({"source": {"command": "create page"}, "path": {"command": "no such"}})
+    raw["component"]["kind"] = "adapter"
+    errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
+    assert list(errors) == ["/friction/kinds/source", "/friction/kinds/path"]
+    assert errors["/friction/kinds/source"] == (
+        "anchor kind 'source' is registered by an adapter: anchor kinds are read for installed "
+        "capabilities only (COR-050 point 2), so this entry registers nothing — register the "
+        "kind in a capability's package metadata."
+    )
+
+
+@pytest.mark.parametrize(
+    ("kinds", "path", "fragment"),
+    [
+        ({"Source": {"command": "create page"}}, "/friction/kinds", "does not match"),
+        ({"source": {}}, "/friction/kinds/source", "'command' is a required property"),
+        (
+            {"source": {"command": "create page", "comand": "x"}},
+            "/friction/kinds/source/comand",
+            "did you mean 'command'?",
+        ),
+        ({"source": "create page"}, "/friction/kinds/source", "is not of type 'object'"),
+    ],
+    ids=["not-a-word", "no-command", "unknown-key", "not-an-entry"],
+)
+def test_an_anchor_kind_entry_the_schema_refuses_is_an_error(
+    schema: dict[str, Any], component_dir: Path, kinds: Any, path: str, fragment: str
+) -> None:
+    errors = _messages(_validate(_registering(kinds), schema, component_dir), pv.Severity.ERROR)
+    assert path in errors, errors
+    assert fragment in errors[path]
+
+
 def test_command_script_that_does_not_exist_is_an_error(
     schema: dict[str, Any], component_dir: Path
 ) -> None:

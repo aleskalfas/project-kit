@@ -65,7 +65,7 @@ src/project_kit/docs_roots.py reportUnknownVariableType 11
 src/project_kit/environment.py reportArgumentType 1
 src/project_kit/environment.py reportOptionalOperand 1
 src/project_kit/environment.py reportUnknownArgumentType 1
-src/project_kit/friction_check.py reportUnusedImport 2
+src/project_kit/friction_check.py reportUnusedImport 1
 src/project_kit/friction_discovery.py reportUnknownArgumentType 11
 src/project_kit/friction_discovery.py reportUnknownMemberType 12
 src/project_kit/friction_discovery.py reportUnknownVariableType 24

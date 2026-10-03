@@ -26,6 +26,9 @@ analysis never rewritten to match broken code:
 - **the explanation's version**: one this capability does not read is refused,
   and one without `schema_version`, from a backbone before the key, is read as
   version 1;
+- **what the checks did not judge**: an `unresolved` artefact, or one in a state
+  this capability does not read, is refused, and an anchor in such a state is
+  never current — nothing is proposed beside it;
 - the **agent's files**: its front matter (Write for the workspace, no Edit,
   owning no path); that it performs the judgment and is no reviewer; that it
   never runs a writer — its body and storyboard name one only among the
@@ -232,6 +235,28 @@ def test_the_rules_never_propose_a_gap_and_propose_holds_only_for_moved_code() -
         STALE_READ,
     }
     assert seen["holds"] == {("moved",)}
+
+
+@pytest.mark.parametrize("state", ["unresolved-kind", "no-answer", "judged-later"])
+def test_an_anchor_the_checks_did_not_judge_is_never_current_and_nothing_is_proposed(
+    state: str,
+) -> None:
+    """The reader rule (the CLI README, "Friction checks"): `unresolved-kind`, `no-answer`
+    and a state this reading does not know are not judged, never current. Beside such an
+    anchor, moved code proposes no `holds`, gone code nothing stale, and a current artefact
+    is not nothing to resolve: nothing is proposed, and nothing is given to run."""
+    unread = R.Anchor("source", "iso-8601", state)
+    assert not unread.judged and not unread.changed
+    for anchors, artefact_state in (
+        ([RENAMED, unread], "stale"),
+        ([GONE, unread], "stale"),
+        ([CURRENT, unread], "current"),
+    ):
+        verdict = R.propose("UC-001", artefact_state, anchors, R.Intent(**INTENDED))
+        assert isinstance(verdict, R.Read) and verdict.hint is None
+        assert verdict.rule == "not-judged"
+        assert f"source:iso-8601 {state}" in verdict.reason
+        assert A.answer("uc.md", verdict, anchors) is None
 
 
 def test_the_answer_emits_the_person_s_commands_word_for_word() -> None:
@@ -595,7 +620,8 @@ def test_an_artefact_that_cannot_be_explained_is_refused(flagged: AdopterRepo) -
 
 #: A `pkit` answering `friction explain` as another backbone would: the real answer
 #: with its `schema_version` set to `$EXPLAIN_VERSION` (JSON), or taken out when that
-#: is empty — a backbone from before the key.
+#: is empty — a backbone from before the key — and its `state` set to `$EXPLAIN_STATE`
+#: when that is given.
 _ANOTHER_PKIT = """#!{python}
 import json, os, subprocess, sys
 done = subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]],
@@ -608,6 +634,8 @@ if sys.argv[1:3] == ["friction", "explain"] and done.returncode == 0:
         document["schema_version"] = json.loads(version)
     else:
         del document["schema_version"]
+    if os.environ.get("EXPLAIN_STATE"):
+        document["state"] = os.environ["EXPLAIN_STATE"]
     out = json.dumps(document)
 sys.stdout.write(out)
 sys.stderr.write(done.stderr)
@@ -615,14 +643,42 @@ sys.exit(done.returncode)
 """
 
 
-def _another_backbone(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, version: str) -> None:
-    """Put `_ANOTHER_PKIT` first on PATH, answering `explain` at `version`."""
+def _another_backbone(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, version: str, state: str = ""
+) -> None:
+    """Put `_ANOTHER_PKIT` first on PATH, answering `explain` at `version`, in `state`
+    when one is given."""
     other = tmp_path / "another-backbone"
     other.mkdir()
     (other / "pkit").write_text(_ANOTHER_PKIT.format(python=sys.executable), encoding="utf-8")
     (other / "pkit").chmod(0o755)
     monkeypatch.setenv("PATH", f"{other}{os.pathsep}{os.environ['PATH']}")
     monkeypatch.setenv("EXPLAIN_VERSION", version)
+    monkeypatch.setenv("EXPLAIN_STATE", state)
+
+
+@pytest.mark.parametrize(
+    ("state", "said"),
+    [
+        ("unresolved", "UC-001 is not judged: an anchor of it cannot be resolved"),
+        ("judged-later", "the state 'judged-later', which this capability does not read"),
+    ],
+)
+def test_an_artefact_the_checks_did_not_judge_is_refused(
+    flagged: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, state: str, said: str
+) -> None:
+    """As an `unreachable` one is: an `unresolved` artefact, or one in a state this
+    capability does not read, is never proposed for — not even `holds` for code its
+    other anchors show moved, which would answer for the anchor nobody read."""
+    flagged.rename(RUN, "src/runner.py", "refactor: name the runner module for what it does")
+    assert _propose(flagged, "UC-001")["verdict"] == "holds"
+    _another_backbone(tmp_path, monkeypatch, "1", state)
+    completed = run_script(flagged, PROPOSE, "UC-001", "--json")
+    assert completed.returncode == 1
+    assert completed.stdout == ""
+    assert completed.stderr.startswith("cannot propose: ")
+    assert said in completed.stderr
+    assert "`pkit friction explain UC-001`" in completed.stderr
 
 
 @pytest.mark.parametrize("version", ["2", "null", '"1"'])

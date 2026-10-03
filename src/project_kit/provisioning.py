@@ -1,10 +1,11 @@
 """Provisioning the environments of query commands before they run offline (#1092).
 
-A query command — a component's validator, a command filler — runs with the
-offline marker set (`validators.OFFLINE_MARKER`, ADR-058): `UV_OFFLINE=1` makes
-a script with a `uv run --script` shebang resolve its inline dependencies from
-uv's cache and never fetch. What such a script needs must therefore be in the
-cache before its first offline run. `pkit init` and `pkit sync` put it there:
+A query command — a component's validator, a command filler, an anchor kind's
+resolver — runs with the offline marker set (`validators.OFFLINE_MARKER`,
+ADR-058): `UV_OFFLINE=1` makes a script with a `uv run --script` shebang
+resolve its inline dependencies from uv's cache and never fetch. What such a
+script needs must therefore be in the cache before its first offline run.
+`pkit init` and `pkit sync` put it there:
 for every command a registered component declares under the query contract
 whose script carries inline script metadata, they resolve the script's
 environment once, online, through uv's own resolution — `uv sync --script

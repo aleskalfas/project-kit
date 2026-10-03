@@ -10,9 +10,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-02T20:37:33Z
+          at: 2026-10-03T05:57:49Z
           outcome: unchanged
-          unchanged-because: "living-docs DEC-001 point 3 gains a paragraph on a page kind's structure: the sections a page's body carries and how validation checks them; it says nothing of the links between pages, so the paths the user space's readers take through its pages stay unbroken"
+          unchanged-because: "living-docs DEC-001 point 7 gains text on the documentation-check contribution: it gives no answer where the friction check could not do its work on a page, and a page left unjudged only by an anchor of a kind nothing installed resolves owes what its other anchors owe; it says nothing of the links between pages, so the paths the user space's readers take through its pages stay unbroken"
 ---
 
 # The user space's definition

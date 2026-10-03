@@ -683,6 +683,16 @@ def test_dead_anchors_and_unresolved_kinds_are_all_reported(timeline: Timeline) 
         "names no record",
     ]
     assert "no installed component registers a resolver" in result.findings[2].message
+    # A dead anchor leaves the artefact judged on its others; an anchor nothing resolves
+    # leaves it not judged — never current.
+    assert result.artefact_reports[0].state is fr.ArtefactState.UNRESOLVED
+    assert result.state_count(fr.ArtefactState.CURRENT) == 0
+
+
+def test_a_dead_anchor_leaves_the_artefact_judged_on_its_other_anchors(timeline: Timeline) -> None:
+    timeline.start({"docs/guide.md": guide(anchors={"path": ["src/cli/**", "src/gone/**"]})})
+    result = _run(timeline)
+    assert [f.kind for f in result.findings] == [fr.RepositoryFindingKind.DEAD_ANCHOR]
     assert result.artefact_reports[0].state is fr.ArtefactState.CURRENT
 
 
@@ -1228,7 +1238,13 @@ def test_json_document_shape(timeline: Timeline) -> None:
     assert doc["history"] == {"shallow": False}
     assert sorted(doc["head"]) == ["commit", "uncommitted_paths"]
     assert doc["counts"]["stale"] == 1 and doc["counts"]["checked"] == 1
-    assert doc["states"] == {"current": 0, "deferred": 0, "stale": 1, "unreachable": 0}
+    assert doc["states"] == {
+        "current": 0,
+        "deferred": 0,
+        "stale": 1,
+        "unreachable": 0,
+        "unresolved": 0,
+    }
     assert doc["measures"] == {
         "accepted_unanchored": [],
         "unanchored": [],

@@ -213,10 +213,17 @@ def test_debt_json_document_shape(timeline: Timeline) -> None:
         "schema_version",
         "unanchored",
         "unreachable",
+        "unresolved",
     ]
     assert doc["schema_version"] == frep.DEBT_SCHEMA_VERSION == 1
     assert (doc["report"], doc["dormant"], doc["history"]) == ("debt", False, {"shallow": False})
-    assert doc["counts"] == {"deferred": 1, "stale": 1, "unanchored": 0, "unreachable": 0}
+    assert doc["counts"] == {
+        "deferred": 1,
+        "stale": 1,
+        "unanchored": 0,
+        "unreachable": 0,
+        "unresolved": 0,
+    }
     assert (doc["unreachable"], doc["unanchored"], doc["accepted_unanchored"]) == ([], [], [])
     stale, deferred = doc["debt"]
     assert stale == {
@@ -294,7 +301,13 @@ def test_debt_lists_the_accepted_unanchored_apart_and_counts_only_the_forgotten(
     assert "not counted" in lines[accepted]
 
     doc = json.loads(_cli("debt", "--json").output)
-    assert doc["counts"] == {"deferred": 0, "stale": 1, "unanchored": 1, "unreachable": 0}
+    assert doc["counts"] == {
+        "deferred": 0,
+        "stale": 1,
+        "unanchored": 1,
+        "unreachable": 0,
+        "unresolved": 0,
+    }
     assert doc["unanchored"] == ["docs/plain.md"]
     assert doc["accepted_unanchored"] == [
         {"artefact": "sponsor", "location": "docs/sponsor.md", "reason": reason}
@@ -311,7 +324,13 @@ def test_debt_leaves_out_an_artefact_under_an_excluded_path(timeline: Timeline) 
     result = _cli("debt", "--json")
     assert result.exit_code == 0, result.output
     doc = json.loads(result.output)
-    assert doc["counts"] == {"deferred": 0, "stale": 1, "unanchored": 0, "unreachable": 0}
+    assert doc["counts"] == {
+        "deferred": 0,
+        "stale": 1,
+        "unanchored": 0,
+        "unreachable": 0,
+        "unresolved": 0,
+    }
     assert doc["unanchored"] == []  # `docs/generated/api.md` is unanchored, and excluded
 
 

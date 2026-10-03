@@ -31,6 +31,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from project_kit import friction_discovery as fd
 from project_kit import install, provisioning, sync
 from project_kit.cli import main
 from project_kit.manifest import (
@@ -39,6 +40,7 @@ from project_kit.manifest import (
     write_backbone_manifest,
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.anchor_kind_capabilities import register_kinds
 
 # The validator's finding when its query command is not provisioned.
 NOT_PROVISIONED_FINDING = (
@@ -428,6 +430,59 @@ def test_sync_provisions_a_fresh_tree_and_a_rerun_resolves_nothing(
     second = capsys.readouterr().out
     assert "  unchanged    query command 'check' (cap) — already provisioned\n" in second
     assert "provisioned  query command" not in second
+    assert local_index.requests == []
+
+
+# An anchor kind's resolver with the same inline dependency: it names a file only when
+# the dependency imports.
+UV_SHEBANG = "#!/usr/bin/env -S uv run --script"
+RESOLVER_SCRIPT = f"""# /// script
+# dependencies = ["{DEP}"]
+# ///
+import json
+
+import {DEP_MODULE}
+
+print(json.dumps({{"paths": ["sources/iso-8601.md"] if {DEP_MODULE}.VALUE == 42 else []}}))
+"""
+
+
+@needs_uv
+def test_sync_provisions_a_resolver_which_then_answers_offline(
+    make_adopter_repo: MakeAdopterRepo, local_index: _LocalIndex, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A resolver is a query command like a validator's (ADR-057 point 3): not provisioned,
+    it gives no answer and fetches nothing; after a sync it answers from the cache."""
+    repo: AdopterRepo = make_adopter_repo()
+    register_kinds(
+        repo.root,
+        "sources",
+        kinds={"source": "resolve"},
+        script_body=RESOLVER_SCRIPT,
+        shebang=UV_SHEBANG,
+        origin="incubated-in-repo",
+    )
+    repo.write({"sources/iso-8601.md": "ISO 8601, as captured.\n"})
+
+    def resolved() -> fd.AnchorResolution:
+        files = frozenset(fd.working_tree(repo.root).files())
+        kinds = fd.AnchorKinds(repo.root, fd.registered_anchor_kinds(repo.root), files)
+        return kinds.resolve(fd.Anchor("source", "iso-8601"))
+
+    assert resolved().no_answer == (
+        "command 'resolve': environment not provisioned — run `pkit sync` (its dependencies "
+        "are not in uv's cache, and a query runs offline)"
+    )
+    assert local_index.requests == []  # the offline marker held: nothing was fetched
+    capsys.readouterr()
+
+    sync.run_sync(repo.root)
+    assert (
+        "  provisioned  query command 'resolve' (sources) — its dependencies resolved into "
+        "uv's cache\n" in capsys.readouterr().out
+    )
+    local_index.requests.clear()
+    assert resolved() == fd.AnchorResolution(paths=("sources/iso-8601.md",))
     assert local_index.requests == []
 
 

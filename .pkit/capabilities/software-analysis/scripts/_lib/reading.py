@@ -28,6 +28,12 @@ the anchor's glob covers that `friction.exclude` leaves out, where the anchor
 re-pointed would stand on nothing.
 
 Both read HEAD, as the explanation does: uncommitted work is not read.
+
+An artefact the checks did not judge is refused, never read: `unreachable` (a
+point beyond a shallow clone), `unresolved` (an anchor of it cannot be
+resolved, so whether what it denotes changed cannot be told), and any state
+this reading does not know, which a later backbone may add — read as not
+judged, never as current (the CLI README, "Friction checks").
 """
 
 from __future__ import annotations
@@ -45,6 +51,9 @@ from _lib.resolve import DEAD, Anchor, Commit
 #: A piece of code quoted in Markdown, and a template placeholder that is none.
 _QUOTE = re.compile(r"`([^`\n]+)`")
 _PLACEHOLDER = re.compile(r"^<[^>]*>$")
+
+#: The artefact states this reading reads: judged, or with nothing to judge.
+_READ_STATES = frozenset({"current", "stale", "deferred", "unanchored", "excluded"})
 
 
 @dataclass(frozen=True)
@@ -79,6 +88,18 @@ def read(root: Path, artefact: str) -> Reading:
         raise Unreadable(
             f"{artefact}'s revalidation point lies beyond this shallow clone's history: "
             f"`git fetch --unshallow`, then ask again"
+        )
+    if state == "unresolved":
+        raise Unreadable(
+            f"{artefact} is not judged: an anchor of it cannot be resolved, so whether what it "
+            f"denotes changed cannot be told — `pkit friction explain {artefact}` says which, "
+            f"and what clears it"
+        )
+    if state not in _READ_STATES:
+        raise Unreadable(
+            f"`pkit friction explain` gives {artefact} the state {state!r}, which this "
+            f"capability does not read: it is not judged, never current — `pkit friction "
+            f"explain {artefact}` says why"
         )
     location = _text(document.get("location")) or artefact
     point = _text(_mapping(document.get("revalidation_point")).get("commit"))

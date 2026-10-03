@@ -12,8 +12,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-02T14:52:50Z
-      outcome: updated
+      at: 2026-10-03T01:55:26Z
+      outcome: unchanged
+      unchanged-because: rule-set validation resolves a rule's cited source through the one anchor-kind registry's resolver and fails a source whose resolver names no file (missing-source) or gives no answer (unanswered-source), reporting a kind with no resolver that may run; this page's rule-set section says only that pkit validate checks each rule set's schema, the join between data and prose, ids, origins, successors and inheritance, and sends every check to the schemas reference; it names no source kind, resolver or finding, and a cited source is part of an origin, so it still holds
 ---
 
 # Decision records

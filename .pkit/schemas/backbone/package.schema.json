@@ -564,10 +564,20 @@
       }
     },
     "friction": {
-      "title": "The `friction` block (COR-050 points 1 and 8)",
+      "title": "The `friction` block (COR-050 points 1, 2 and 8)",
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "kinds": {
+          "description": "Anchor kinds this component registers (COR-050 point 2): a mapping from a kind — a word, as an anchor block and a rule's cited source write it — to its entry, which names by `command` the leaf of this component's `commands:` tree that resolves an anchor of the kind; the leaf must exist and declare `query-contract: true` (checked in Python). A kind the backbone resolves itself (`path`, `record`, `artefact`), or one another installed capability registers too, is refused (checked in Python). The backbone runs the leaf's script under the query policy with `--json`, `--` and then the anchor value, and reads `{\"paths\": [...]}`: the files the anchor stands on (the lifecycle README).",
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/anchor-kind"
+          }
+        },
         "places": {
           "description": "Where this component's anchored artefacts live: each place a path glob inside one of the component's declared documentation locations (`location`), or, without one, inside the project (checked in Python).",
           "type": "array",
@@ -585,6 +595,20 @@
           "items": {
             "$ref": "#/$defs/friction-held"
           }
+        }
+      }
+    },
+    "anchor-kind": {
+      "title": "One registered anchor kind",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command"
+      ],
+      "properties": {
+        "command": {
+          "description": "The leaf of this component's `commands:` tree that resolves an anchor of the kind; must exist and declare `query-contract: true` (checked in Python).",
+          "$ref": "#/$defs/command-reference"
         }
       }
     },
