@@ -30,11 +30,12 @@ publication to this script, which keeps **one** GitHub issue in step with it
   signs. Nothing is closed for anyone.
 
 It decides nothing about friction: what needs an answer is the renderer's. It
-exits 0 whatever the check found, and 1, saying why, only when the publication
-cannot be read, `gh` refuses, the listing may be incomplete, or there is more
-than one tracking issue — the check reports and never fails (COR-050 point 12),
-and the workflow is no required status. What it says of a failure goes to the
-log and, in a workflow, to the run's step summary; never into the issue.
+exits 0 whatever the check found, and 1, saying why, only when it is run
+outside the workflow, the publication cannot be read, `gh` refuses, the listing
+may be incomplete, or there is more than one tracking issue — the check reports
+and never fails (COR-050 point 12), and the workflow is no required status.
+What it says of a failure goes to the log and, in a workflow, to the run's step
+summary; never into the issue.
 
 The body reaches `gh` as a file (`--body-file`), and every call is an argument
 list, never a shell line, so nothing the findings carry is run. It calls `gh`
@@ -42,9 +43,16 @@ directly rather than project-management's verbs: those file work items for
 people — a type, a parent, an owner, a lifecycle — which this report is not, and
 their gates ask for a member's identity a workflow's token does not have.
 
-From the repository root, where `gh` reaches the repository's remote:
+Only the workflow runs it, on `main`, from a checkout where `gh` reaches the
+repository's remote:
 
-    uv run python scripts/friction_tracking_issue.py <publication.json>
+    python scripts/friction_tracking_issue.py <publication.json>
+
+Anywhere else — `GITHUB_ACTIONS` is not `true` — it refuses and calls nothing.
+A person's token would open an issue no run takes for its own (`AUTHOR`), left
+open beside the one the next run opens. To see the body locally, the renderer
+prints it: `uv run pkit friction check --all --json | uv run python
+scripts/friction_report_body.py -`.
 """
 
 from __future__ import annotations
@@ -307,11 +315,19 @@ def main(argv: list[str] | None = None, run: Runner = subprocess.run) -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Keep the one tracking issue of the whole-repository friction check in step with "
-            "a publication of `scripts/friction_report_body.py --json`."
+            "a publication of `scripts/friction_report_body.py --json`. Only the workflow "
+            "`.github/workflows/friction-report.yml` runs it; anywhere else it refuses."
         ),
     )
     parser.add_argument("publication", help="The file the renderer's --json output was written to.")
     args = parser.parse_args(argv)
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return _fail(
+            "only the workflow `.github/workflows/friction-report.yml` publishes the report, "
+            "and this is no GitHub Actions run (`GITHUB_ACTIONS` is not `true`); nothing was "
+            "published. To see the body, run `uv run pkit friction check --all --json | "
+            "uv run python scripts/friction_report_body.py -`"
+        )
     try:
         with open(args.publication, encoding="utf-8") as handle:
             text = handle.read()

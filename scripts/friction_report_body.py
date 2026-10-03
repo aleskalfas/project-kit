@@ -43,6 +43,10 @@ From the repository root:
     uv run python scripts/friction_report_body.py <friction.json> --json    the publication
     uv run pkit friction check --all --json | uv run python scripts/friction_report_body.py -
 
+The last is how to see locally what the tracking issue would say: the
+rendering, without the marker and the notice line the publisher sets above it.
+The publisher itself runs only in the workflow.
+
 It exits 0 whatever the check found, and 1, saying why, when it has no document
 to render.
 """

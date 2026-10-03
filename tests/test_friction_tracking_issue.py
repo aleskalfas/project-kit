@@ -13,7 +13,7 @@ so:
   is the token's own issue with the marker or the label, whichever sign a hand
   removed put back; a person's issue is never taken for it; a second one, a
   listing that may be incomplete, a publication it cannot read or a call `gh`
-  refuses fails the run, saying why;
+  refuses fails the run, saying why; outside a workflow it refuses;
 - one run goes **end to end** over a real history: the real check, the real
   renderer, the publisher;
 - the **workflow** is read as YAML: its triggers, that only project-kit's own
@@ -269,21 +269,25 @@ def _render(directory: Path, document: dict[str, Any]) -> Path:
     return publication
 
 
-def _publish(gh: FakeGh, publication: Path, **environment: str) -> subprocess.CompletedProcess[str]:
-    """The publisher as the workflow runs it, with the fake `gh` first on the path and
-    no step summary to write to — the suite's own, when it runs in a workflow — unless
-    `environment` names one."""
-    env = {
+def _publish(
+    gh: FakeGh, publication: Path, **environment: str | None
+) -> subprocess.CompletedProcess[str]:
+    """The publisher as the workflow runs it — in a GitHub Actions run, the fake `gh`
+    first on the path — with no step summary to write to (the suite's own, when it
+    runs in a workflow) unless `environment` names one. A variable `environment`
+    sets to `None` is left out."""
+    env: dict[str, str | None] = {
         **os.environ,
         "PATH": f"{gh.bin}{os.pathsep}{os.environ['PATH']}",
         "FAKE_GH_STATE": str(gh.state_file),
+        "GITHUB_ACTIONS": "true",
         "GITHUB_STEP_SUMMARY": "",
         **environment,
     }
     return subprocess.run(
         [sys.executable, str(PUBLISHER), str(publication)],
         cwd=gh.directory,
-        env=env,
+        env={name: value for name, value in env.items() if value is not None},
         capture_output=True,
         text=True,
         check=False,
@@ -579,6 +583,17 @@ def test_a_refused_call_fails_the_run_saying_why(gh: FakeGh) -> None:
     assert "`gh issue edit` exited 1: HTTP 502: Bad Gateway" in proc.stderr
     (issue,) = gh.issues().values()
     assert issue["state"] == "OPEN"  # nothing after the refusal was done
+
+
+@pytest.mark.parametrize("value", [None, "", "false"])
+def test_outside_a_workflow_it_refuses_and_calls_nothing(gh: FakeGh, value: str | None) -> None:
+    """A person's run would open an issue no run of the workflow takes for its own."""
+    publication = _render(gh.directory, _document([_stale("docs/guide.md")]))
+    proc = _publish(gh, publication, GITHUB_ACTIONS=value)
+    assert proc.returncode == 1
+    assert "only the workflow `.github/workflows/friction-report.yml` publishes" in proc.stderr
+    assert "scripts/friction_report_body.py -" in proc.stderr  # where to see the body instead
+    assert gh.load()["calls"] == []
 
 
 @pytest.mark.parametrize(
