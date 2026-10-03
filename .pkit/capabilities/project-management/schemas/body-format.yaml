@@ -192,11 +192,14 @@ provenance_marker:
   agent_managed: true
   strip_before_scan: true
   strip_rule: |
-    Strip from `start_marker` through end-of-document before the body
-    validators and checkbox extractors scan. Stripping to EOF — rather
-    than matching a start/end pair — removes complete, partial, orphaned,
-    or doubled regions alike; it is the read/validation-side twin of the
-    write-side strip-then-append-exactly-one seam in ADR-037. Because the
+    Strip from the first line that is `start_marker` or `end_marker` —
+    the whole line, surrounding whitespace aside — through end-of-document
+    before the body validators and checkbox extractors scan. A sentence or
+    a list entry that quotes a sentinel is body text, never the footer's
+    start. Stripping to EOF — rather than matching a start/end pair —
+    removes complete, partial, orphaned, or doubled regions alike; it is
+    the read/validation-side twin of the write-side
+    strip-then-append-exactly-one seam in ADR-037. Because the
     footer is methodology-managed (agent_managed: true), it is exempt
     from the required-section, checkbox, and universal body rules — it is
     never validated as body content.
@@ -220,9 +223,10 @@ friction_answers_marker:
   end_marker: "<!-- pkit-friction-answers:end -->"
   position: |
     The last section of the body, before the provenance footer. Each
-    marker is a line of its own; the start marker's line goes on to name
-    the head the list is for and the merge-base it was taken against
-    (`head=<oid> base=<oid> -->`). A change that wrote no answers has no
+    marker is a line of its own, and counts only as a whole line; the
+    start marker's line goes on to name the head the list is for and the
+    merge-base it was taken against (`head=<oid> base=<oid> -->`). A
+    change that wrote no answers and alters no friction setting has no
     such section.
   agent_managed: true
   strip_before_scan: true
@@ -230,8 +234,15 @@ friction_answers_marker:
     Strip each region — the start marker's line through the end marker's
     — with the heading directly above it, before a reader scans the body:
     the closing references, the Doc impact requirement, the mapping's
-    override and the placeholder check read the body without it. A marker
-    line with no partner is stripped alone.
+    override and the placeholder check read the body without it. A start
+    marker with no end marker after it is stripped with everything after
+    it up to the provenance footer, or the end of the body; an end marker
+    with no start marker is stripped alone. A `## Friction answers`
+    heading with no marker under it — a list no command wrote — is
+    stripped with everything under it, up to the next heading of level
+    one or two outside a fenced code block, a marker, or the provenance
+    footer. No text the section lists holds `<!--` or `-->`: the
+    commands that write it never write such a list.
 
 checkbox_rules:
   validation_timing: |

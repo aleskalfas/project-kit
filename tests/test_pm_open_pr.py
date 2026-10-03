@@ -435,8 +435,8 @@ def test_the_list_is_written_last_before_the_footer(op, monkeypatch, capsys) -> 
     section = op.friction_answers.render(_derived(op, *TWO).document, PUSHED)
     assert f"\n\n{section}\n\n{FOOTER_START}" in body
     assert body.count("## Friction answers") == 1
-    # The default branch: the change check's own base (COR-054); the pushed head.
-    assert captured["derive"] == [(PUSHED, None)]
+    # The PR's base, named even for the default branch; the pushed head.
+    assert captured["derive"] == [(PUSHED, "main")]
     out = capsys.readouterr().out
     assert (
         "  answers: 2 written by this change, listed under `## Friction answers` (at abcdef0)"
@@ -446,7 +446,7 @@ def test_the_list_is_written_last_before_the_footer(op, monkeypatch, capsys) -> 
 
 def test_a_pr_against_another_base_is_derived_against_that_base(op, monkeypatch) -> None:
     """An integration branch is named to the change check, which resolves it as every
-    branch named as a base (COR-054 point 2); only the default branch goes unnamed."""
+    branch named as a base (COR-054 point 2), as the default branch is."""
     captured = _open(op, monkeypatch, "--base", "integration/7-x")
     assert op.main() == 3
     assert captured["derive"] == [(PUSHED, "integration/7-x")]
@@ -459,16 +459,39 @@ def test_no_answers_no_section(op, monkeypatch, capsys) -> None:
     assert "  answers: none written by this change" in capsys.readouterr().out
 
 
-def test_a_section_in_a_supplied_body_is_dropped(op, monkeypatch, tmp_path) -> None:
-    supplied = op.friction_answers.render(
-        _derived(op, _answer("docs/x.md", "An agent's own list.")).document, "f" * 40
+@pytest.mark.parametrize("marked", [True, False], ids=["a command's", "typed by hand"])
+def test_a_section_in_a_supplied_body_is_dropped(op, monkeypatch, tmp_path, capsys, marked) -> None:
+    supplied = (
+        op.friction_answers.render(
+            _derived(op, _answer("docs/x.md", "An agent's own list.")).document, "f" * 40
+        )
+        if marked
+        else "## Friction answers\n\n```\n1. docs/x.md — unchanged: An agent's own list.\n```"
     )
     body_file = tmp_path / "body.md"
-    body_file.write_text(f"Closes #42\n\n## Summary\nx\n\n## Doc impact\n- none\n\n{supplied}\n")
+    body_file.write_text(f"Closes #42\n\n## Summary\nx\n\n{supplied}\n\n## Doc impact\n- none\n")
     captured = _open(op, monkeypatch, body_file=body_file)
     assert op.main() == 3
     assert "An agent's own list." not in captured["body"]
     assert "## Friction answers" not in captured["body"]
+    assert "## Doc impact\n- none" in captured["body"]
+    assert "warn: the body's `## Friction answers` section is dropped" in capsys.readouterr().err
+
+
+def test_the_friction_settings_a_change_alters_are_listed(op, monkeypatch, capsys) -> None:
+    derived = _derived(op)
+    derived = op.friction_answers.Derivation(
+        PUSHED,
+        document=derived.document,
+        settings=(op.friction_answers.Setting("friction.mode", "enforcing", "warning"),),
+    )
+    captured = _open(op, monkeypatch, derived=derived)
+    assert op.main() == 3
+    assert '- `friction.mode`: `"enforcing"` → `"warning"`' in captured["body"]
+    assert (
+        "  answers: none written by this change, which alters the project's friction "
+        "settings, listed under `## Friction answers` (at abcdef0)"
+    ) in capsys.readouterr().out
 
 
 @pytest.mark.parametrize(
@@ -477,6 +500,7 @@ def test_a_section_in_a_supplied_body_is_dropped(op, monkeypatch, tmp_path) -> N
         ("unreadable", "the base origin/main could not be fetched"),
         ("not pushed", "origin/feat/42-thing names no commit — push the branch first"),
         ("closing reference", "the words on docs/api.md read as a closing reference (fixes #7)"),
+        ("comment delimiter", "the words on docs/api.md hold an HTML comment's delimiter (-->)"),
         ("too long", "past the host's 65536 — split the change or narrow the anchor"),
     ],
 )
@@ -489,6 +513,7 @@ def test_open_pr_never_refuses_over_the_list(op, monkeypatch, capsys, how, warni
         ),
         "not pushed": _derived(op, *TWO),
         "closing reference": _derived(op, TWO[0], _answer("docs/api.md", "This fixes #7.")),
+        "comment delimiter": _derived(op, TWO[0], _answer("docs/api.md", "ends -->")),
         "too long": _derived(op, _answer("docs/guide.md", "x" * 70000)),
     }[how]
     captured = _open(op, monkeypatch, derived=derived)

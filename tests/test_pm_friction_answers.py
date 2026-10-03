@@ -11,6 +11,8 @@ tested on the check's document shape.
 from __future__ import annotations
 
 import importlib.util
+import shutil
+import signal
 import subprocess
 import sys
 from collections.abc import Iterator
@@ -222,9 +224,41 @@ def test_a_kept_deferrals_reason_is_read_too(fa: ModuleType) -> None:
     assert fa.closing_reference(document) == ("docs/a.md", "fixes #3")
 
 
-@pytest.mark.parametrize("words", ["see #12", "the fix-up #12", "close to #3", "fixtures #2"])
+def test_a_location_and_an_anchor_are_read_too(fa: ModuleType) -> None:
+    document = _document(_entry("docs/fixes #3.md", "unchanged", "Holds."))
+    assert fa.closing_reference(document) == ("docs/fixes #3.md", "fixes #3")
+    document = _document(
+        _entry("docs/a.md", "deferred", "Later.", anchor=("path", "src/closes #4/**"))
+    )
+    assert fa.closing_reference(document) == ("docs/a.md", "closes #4")
+
+
+@pytest.mark.parametrize(
+    "words",
+    ["see #12", "the fix-up #12", "close to #3", "fixtures #2", "fixes the layout #2 section"],
+)
 def test_other_words_are_no_closing_reference(fa: ModuleType, words: str) -> None:
     assert fa.closing_reference(_document(_entry("docs/a.md", "unchanged", words))) is None
+
+
+# ---- comment delimiters ----------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("entry", "found"),
+    [
+        (_entry("docs/a.md", "unchanged", "Quotes <!-- pkit-provenance:start -->."), "<!--"),
+        (_entry("docs/a.md", "unchanged", "an arrow -->"), "-->"),
+        (_entry("docs/a<!--.md", "unchanged", "Holds."), "<!--"),
+        (_entry("docs/a.md", "unchanged", "Holds.", kept=[(("path", "x"), "until -->")]), "-->"),
+    ],
+)
+def test_a_word_holding_a_comment_delimiter_is_named(
+    fa: ModuleType, entry: dict[str, Any], found: str
+) -> None:
+    location = entry["location"]
+    assert fa.comment_delimiter(_document(entry)) == (location, found)
+    assert fa.comment_delimiter(_document(_entry("docs/a.md", "unchanged", "a -> b"))) is None
 
 
 # ---- the section in a description ---------------------------------------------
@@ -260,10 +294,70 @@ def test_stripping_leaves_the_rest_of_the_body_as_it_was(fa: ModuleType) -> None
     assert fa.stamp(fa.stamp(BODY, section), None) == BODY
 
 
-def test_a_marker_line_with_no_partner_is_stripped_alone(fa: ModuleType) -> None:
+def test_a_start_marker_with_no_end_is_stripped_through_the_footer(fa: ModuleType) -> None:
+    """What follows a start marker whose end was lost is the list's words: they are
+    stripped up to the provenance footer, or the end of the body, never left under
+    the section above (`## Doc impact` last of all, read for the mapping's override)."""
     orphan = f"{BODY}\n## Friction answers\n\n{fa.MARKER_START} head=x base=y -->\nleft\n"
-    assert fa.strip(orphan) == f"{BODY}\nleft\n"
+    assert fa.strip(orphan) == BODY
+    assert fa.strip(f"{orphan}\n{FOOTER}\n") == f"{BODY}\n{FOOTER}\n"
     assert fa.find(orphan) is None
+    assert not fa.current(orphan, None) and fa.has_list(orphan)
+
+
+def test_an_end_marker_with_no_start_is_stripped_alone(fa: ModuleType) -> None:
+    orphan = f"{BODY}\nkept\n{fa.MARKER_END}\nafter\n"
+    assert fa.strip(orphan) == f"{BODY}\nkept\n\nafter\n"
+
+
+def test_markers_count_only_as_whole_lines(fa: ModuleType) -> None:
+    """A sentence that mentions a marker is body text: no section, nothing stripped."""
+    body = f"{BODY}\nThe list opens with `{fa.MARKER_START} head=… -->` and ends.\n"
+    assert fa.current(body, None) and fa.strip(body) == body
+    section = _section(fa, _entry("a.md", "unchanged", "Holds."))
+    assert fa.current(fa.stamp(body, section), section)
+
+
+def test_a_reason_quoting_the_provenance_marker_cuts_nothing(fa: ModuleType) -> None:
+    """The footer starts only at a line that is its marker: a body quoting one, in
+    a sentence, keeps every line, and the section still goes before the footer."""
+    quoting = f"{BODY}\nThe footer opens with <!-- pkit-provenance:start --> as a line.\n"
+    stamped = fa.stamp(f"{quoting}\n{FOOTER}\n", _section(fa, _entry("a.md", "updated")))
+    assert "as a line." in stamped and stamped.endswith(f"{FOOTER}\n")
+    assert stamped.index("## Friction answers") > stamped.index("as a line.")
+
+
+HAND = (
+    "## Friction answers\n\n"
+    "An agent's own list:\n\n"
+    "```\n"
+    "## not a heading, inside a fence\n"
+    "1. docs/a.md — unchanged: fixes #9\n"
+    "```\n"
+)
+
+
+def test_a_section_no_command_wrote_is_stripped_whole(fa: ModuleType) -> None:
+    """An unmarked `## Friction answers` — a list typed by hand — is stripped up to
+    the next heading of level one or two outside a fenced block, or the footer."""
+    body = f"Closes #42\n\n## Summary\n\nDone.\n\n{HAND}\n## Doc impact\n\nThe README.\n"
+    assert fa.hand_written(body) and not fa.has_list(body)
+    assert fa.strip(body) == BODY
+    assert not fa.current(body, None)
+    last = f"{BODY}\n{HAND}\n{FOOTER}\n"
+    assert fa.strip(last) == f"{BODY}\n{FOOTER}\n"
+    section = _section(fa, _entry("a.md", "unchanged", "Holds."))
+    assert fa.stamp(last, section) == f"{BODY}\n{section}\n\n{FOOTER}\n"
+    assert not fa.current(f"{last}\n{section}\n", section)
+
+
+def test_of_two_regions_the_last_is_found_and_neither_is_current(fa: ModuleType) -> None:
+    old = _section(fa, _entry("a.md", "unchanged", "Old."), head="e" * 40)
+    new = _section(fa, _entry("a.md", "unchanged", "New."))
+    body = f"{BODY}\n{old}\n\n{new}\n"
+    assert fa.find(body) == fa.find(new)
+    assert not fa.current(body, new)
+    assert fa.strip(body) == BODY
 
 
 def test_a_region_is_found_and_restamped_whole(fa: ModuleType) -> None:
@@ -362,8 +456,8 @@ def test_a_document_the_list_cannot_be_read_from_is_unreadable(
         return subprocess.CompletedProcess(argv, returncode, stdout, "Error: boom\n")
 
     monkeypatch.setattr(fa.subprocess, "run", run)
-    found = fa._run_check(HEAD, None, cwd=None)
-    assert isinstance(found, str) and why in found
+    found = fa._run_check(HEAD, "main", cwd=None)
+    assert isinstance(found, fa._NoDocument) and why in found.why and not found.elsewhere
 
 
 def test_enforcing_modes_exit_1_still_carries_the_document(
@@ -380,6 +474,52 @@ def test_enforcing_modes_exit_1_still_carries_the_document(
     assert seen == [
         ["pkit", "friction", "check", "--json", "--base", "integration/7-x", "--head", HEAD]
     ]
+
+
+def test_the_check_runs_unrouted_with_the_base_named_whatever_the_environment(
+    fa: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Both runs — from the working directory and from a temporary checkout — run
+    the same `pkit`, routing off, and the base is the one named, never the
+    environment's `$PKIT_CHECK_BASE`."""
+    monkeypatch.setenv("PKIT_CHECK_BASE", "elsewhere")
+    seen: list[tuple[list[str], Any, str | None]] = []
+
+    def run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        seen.append((argv, kwargs.get("cwd"), kwargs["env"].get("PKIT_NO_ROUTE")))
+        return subprocess.CompletedProcess(argv, 0, '{"schema_version": 1, "answers": []}', "")
+
+    monkeypatch.setattr(fa.subprocess, "run", run)
+    fa._run_check(HEAD, "main", cwd=None)
+    fa._run_check(HEAD, "main", cwd=tmp_path)
+    assert [(argv[argv.index("--base") + 1], cwd, unrouted) for argv, cwd, unrouted in seen] == [
+        ("main", None, "1"),
+        ("main", tmp_path, "1"),
+    ]
+
+
+def test_only_the_resolver_refusal_is_answered_from_a_checkout(
+    fa: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The backbone's refusal to run a resolver away from the head is told apart
+    from every other failure, which is kept as the first run gave it."""
+    refusal = (
+        "Error: --head 1a2b3c4: the anchor source 'alpha' is resolved by its capability's "
+        "command, which runs in the working tree and reads what is there — and the working\n"
+        "tree is not 1a2b3c4 (HEAD is at 0000000). Run from a checkout at 1a2b3c4: HEAD at "
+        "1a2b3c4, nothing uncommitted.\n"
+    )
+    stderr = [refusal]
+
+    def run(argv: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, 1, "", stderr[0])
+
+    monkeypatch.setattr(fa.subprocess, "run", run)
+    found = fa._run_check(HEAD, "main", cwd=None)
+    assert isinstance(found, fa._NoDocument) and found.elsewhere
+    stderr[0] = "Error: the base main does not resolve\n"
+    found = fa._run_check(HEAD, "main", cwd=None)
+    assert isinstance(found, fa._NoDocument) and not found.elsewhere
 
 
 def test_a_base_that_cannot_be_fetched_is_unreadable(
@@ -435,3 +575,207 @@ def test_a_resolver_runs_from_a_temporary_checkout_of_the_head(
     ]
     listed = repo.git("worktree", "list", "--porcelain").stdout
     assert listed.count("worktree ") == 1, listed
+
+
+def _branch_needing_its_resolver(make_adopter_repo: MakeAdopterRepo) -> tuple[AdopterRepo, str]:
+    """A change whose list needs a registered kind's resolver, the clone on `main`."""
+    repo = make_adopter_repo()
+    repo.write({CONFIG: friction_config(mode="enforcing"), **SOURCE, "docs/guide.md": guide()})
+    register_kinds(repo.root, "kinds", kinds={"source": "resolve"}, script_body=RESOLVING)
+    repo.write({"sources/alpha.md": "alpha\n"})
+    repo.write({"docs/sourced.md": document("sourced", anchors={"source": ["alpha"]}, at=T1)})
+    repo.commit("base", files=None)
+    repo.checkout("feature", create=True)
+    repo.commit("the source changes", {"sources/alpha.md": "alpha, captured again\n"})
+    deferred = document(
+        "sourced",
+        anchors={"source": ["alpha"]},
+        at=T1,
+        deferred=[("source", "alpha", "the recapture is checked with the next release")],
+    )
+    repo.commit("defer the source", {"docs/sourced.md": deferred})
+    head = repo.head()
+    repo.checkout("main")
+    return repo, head
+
+
+def test_no_checkout_is_made_when_the_first_run_answers(
+    fa: ModuleType,
+    make_adopter_repo: MakeAdopterRepo,
+    pkit_on_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, head = _branch_with_an_answer(make_adopter_repo)
+    repo.checkout("main")
+
+    def no_checkout(_head: str) -> Any:
+        raise AssertionError("a temporary checkout was made")
+
+    monkeypatch.setattr(fa, "_checkout", no_checkout)
+    found = fa.derive(head, "main")
+    assert found.problem is None and len(found.answers) == 1
+
+
+def test_a_failure_other_than_the_resolver_refusal_is_kept_with_no_checkout(
+    fa: ModuleType,
+    make_adopter_repo: MakeAdopterRepo,
+    pkit_on_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, head = _branch_with_an_answer(make_adopter_repo)
+    repo.checkout("main")
+    repo.write({"notes.txt": "uncommitted\n"})
+    monkeypatch.setattr(fa, "_checkout", lambda _head: pytest.fail("a checkout was made"))
+    monkeypatch.setattr(fa, "_refresh_base", lambda _base: None)
+    found = fa.derive(head, "no-such-base")
+    assert found.document is None and found.problem is not None
+    assert "--base no-such-base" in found.problem
+
+
+def test_a_check_that_raises_inside_the_checkout_leaves_nothing_behind(
+    fa: ModuleType,
+    make_adopter_repo: MakeAdopterRepo,
+    pkit_on_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, head = _branch_needing_its_resolver(make_adopter_repo)
+    made: list[Path] = []
+    mkdtemp = fa.tempfile.mkdtemp
+
+    def recorded(**kwargs: Any) -> str:
+        made.append(Path(mkdtemp(**kwargs)))
+        return str(made[-1])
+
+    run_check = fa._run_check
+
+    def raising_inside(head_: str, base: str, *, cwd: Path | None) -> Any:
+        if cwd is not None:
+            assert (cwd / ".git").is_file()  # a linked worktree, made for this run
+            raise RuntimeError("the check broke")
+        return run_check(head_, base, cwd=cwd)
+
+    monkeypatch.setattr(fa.tempfile, "mkdtemp", recorded)
+    monkeypatch.setattr(fa, "_run_check", raising_inside)
+    with pytest.raises(RuntimeError, match="the check broke"):
+        fa.derive(head, "main")
+    (scratch,) = made
+    assert not scratch.exists()
+    listed = repo.git("worktree", "list", "--porcelain").stdout
+    assert listed.count("worktree ") == 1, listed
+    assert not (repo.root / ".git" / "worktrees").exists() or not any(
+        (repo.root / ".git" / "worktrees").iterdir()
+    )
+
+
+def test_only_this_runs_worktree_is_removed(
+    fa: ModuleType,
+    make_adopter_repo: MakeAdopterRepo,
+    pkit_on_path: Path,
+    tmp_path: Path,
+) -> None:
+    """Cleanup takes away the checkout this run added, and leaves another stale
+    worktree record — one a prune would take — as it found it."""
+    repo, head = _branch_needing_its_resolver(make_adopter_repo)
+    other = tmp_path / "someone-elses"
+    repo.git("worktree", "add", "--detach", "--quiet", str(other), head)
+    shutil.rmtree(other)  # stale: what `git worktree prune` would remove
+    found = fa.derive(head, "main")
+    assert found.problem is None, found.problem
+    listed = repo.git("worktree", "list", "--porcelain").stdout
+    assert str(other) in listed and listed.count("worktree ") == 2, listed
+
+
+def test_a_termination_signal_removes_the_checkout(
+    make_adopter_repo: MakeAdopterRepo, tmp_path: Path
+) -> None:
+    """SIGTERM — a harness's timeout — while the temporary checkout exists unwinds
+    through its removal."""
+    repo = make_adopter_repo()
+    repo.write({"a.txt": "a\n"})
+    repo.commit("base", files=None)
+    script = tmp_path / "terminate.py"
+    script.write_text(
+        "import os, signal, sys\n"
+        f"sys.path.insert(0, {str(LIB_DIR)!r})\n"
+        "import friction_answers as fa\n"
+        f"with fa._checkout({repo.head()!r}) as (path, why):\n"
+        "    assert path is not None, why\n"
+        "    print(path.parent, flush=True)\n"
+        "    os.kill(os.getpid(), signal.SIGTERM)\n"
+        "    raise AssertionError('not terminated')\n",
+        encoding="utf-8",
+    )
+    proc = subprocess.run(
+        [sys.executable, str(script)], cwd=repo.root, capture_output=True, text=True, check=False
+    )
+    assert proc.returncode == 128 + signal.SIGTERM, proc.stderr
+    assert not Path(proc.stdout.strip()).exists()
+    assert repo.git("worktree", "list", "--porcelain").stdout.count("worktree ") == 1
+
+
+# ---- the friction settings a change alters -----------------------------------------
+
+
+def test_a_change_that_sets_friction_dormant_lists_the_setting(
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
+) -> None:
+    """The settings decide what the change check asks: a change that empties the
+    places makes the check dormant at its head, so it lists no answer — and the
+    settings it altered are listed instead, as they were and as they are."""
+    repo = make_adopter_repo()
+    repo.write({CONFIG: friction_config(mode="enforcing"), **SOURCE, "docs/guide.md": guide()})
+    repo.commit("base", files=None)
+    repo.checkout("feature", create=True)
+    repo.commit("change the CLI", {"src/cli/main.py": "print('cli v2')\n"})
+    repo.commit("friction off", {CONFIG: friction_config(mode="enforcing", places=())})
+    head = repo.head()
+    found = fa.derive(head, "main")
+    assert found.problem is None, found.problem
+    assert found.answers == () and found.listed
+    assert [(s.key, s.before, s.after) for s in found.settings] == [
+        ("friction.places", ["docs"], [])
+    ]
+    section = fa.render(found.document, head, found.settings)
+    assert section is not None
+    assert section.splitlines()[3:] == [
+        f"No answer written by this change, as of `{head[:7]}`, in the change check's list "
+        "(`pkit friction check`); it is dormant at that head.",
+        "",
+        fa.SETTINGS_LEAD,
+        "",
+        '- `friction.places`: `["docs"]` → `[]`',
+        fa.MARKER_END,
+    ]
+    assert fa.lines(found.document, found.settings) == [
+        'friction setting friction.places: ["docs"] → []'
+    ]
+
+
+def test_settings_read_absent_and_unparsable_as_such(
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo
+) -> None:
+    repo = make_adopter_repo()
+    repo.write({"a.txt": "a\n"})
+    repo.commit("no configuration", files=None)
+    bare = repo.head()
+    repo.commit("a configuration", {CONFIG: friction_config(mode="enforcing")})
+    configured = repo.head()
+    repo.commit("a broken one", {CONFIG: "friction: [unclosed\n"})
+    broken = repo.head()
+    assert [(s.key, s.before, s.after) for s in fa.settings_change(bare, configured)] == [
+        ("friction", fa.ABSENT, {"mode": "enforcing", "places": ["docs"]})
+    ]
+    (setting,) = fa.settings_change(configured, broken)
+    assert (setting.key, setting.after) == ("friction", fa.UNPARSED)
+    assert fa.settings_change(configured, configured) == ()
+    assert "could not be read" in fa.settings_change(configured, "f" * 40)
+    rendered = fa.render({"base": {"commit": bare}, "answers": []}, configured, [setting])
+    assert rendered is not None
+    assert "(the configuration file does not parse)" in rendered
+
+
+def test_a_settings_value_is_read_for_closing_references_and_delimiters(fa: ModuleType) -> None:
+    settings = [fa.Setting("friction.exclude", fa.ABSENT, ["fixes #5/**"])]
+    assert fa.closing_reference(_document(), settings) == (fa.SETTINGS_FILE, "fixes #5")
+    settings = [fa.Setting("friction.exclude", fa.ABSENT, ["<!--/**"])]
+    assert fa.comment_delimiter(_document(), settings) == (fa.SETTINGS_FILE, "<!--")

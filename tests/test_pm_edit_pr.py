@@ -198,3 +198,27 @@ def test_a_closing_reference_only_in_the_section_meets_no_requirement(ep) -> Non
     body = f"## Summary\nwork\n\n{section}\n"
     labels = [f.label for f in ep._validate(title="feat(pm): x", body=body, titles={})]
     assert labels == ["body.closes", "body.doc-impact"]
+
+
+def test_of_two_lists_the_latest_is_kept_and_the_other_dropped(ep, monkeypatch, capsys) -> None:
+    """Every write places its list last, so of two the last is the latest: edit-pr
+    carries it, drops the other, and says so."""
+    stale = _section(ep, "An earlier head's words.", head="e" * 40)
+    latest = _section(ep, "The latest words.")
+    body = f"{PR_BODY}\n{stale}\n\n{latest}\n\n{FOOTER}"
+    rec = _run(ep, monkeypatch, ["7", "--append", "A note.", "--yes"], body=body)
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    assert "The latest words." in written and "An earlier head's words." not in written
+    assert _sections(written) == 1
+    assert "edit-pr keeps only the latest list the description carried" in capsys.readouterr().err
+
+
+def test_a_section_typed_by_hand_is_dropped(ep, monkeypatch, capsys) -> None:
+    section, body = _carrying(ep)
+    hand = "## Friction answers\n\n1. docs/guide.md — unchanged: as I recall it\n"
+    rec = _run(ep, monkeypatch, ["7", "--append", hand, "--yes"], body=body)
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    assert "as I recall it" not in written and section in written and _sections(written) == 1
+    assert "drops every other `## Friction answers` section" in capsys.readouterr().err

@@ -2671,7 +2671,6 @@ def _the_change_wrote_no_answers(monkeypatch: pytest.MonkeyPatch, answers: Modul
         return answers.Derivation(head, document={**document, "answers": [], "unreadable": []})
 
     monkeypatch.setattr(answers, "derive", derive)
-    monkeypatch.setattr(answers, "check_base_for", lambda base, config: None)
 
 
 def _release(args: list[str]) -> str:

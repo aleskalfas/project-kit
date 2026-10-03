@@ -29,12 +29,16 @@ Inputs:
     closing issue; user-supplied `--body-file` overrides, and gains a
     `Closes #N` line for any closing issue it does not already name.
   * `## Friction answers` (DEC-055) — the change check's list of the
-    answers the change wrote, derived at the pushed head (the commit the
-    branch's remote-tracking reference names, not local HEAD) against the
-    base, and placed last before the provenance footer. open-pr never
-    refuses to open over it: a list it cannot derive, a branch not pushed
-    or a reason that reads as a closing reference leaves the section out
-    with one warning line, and land-work writes it or says why it cannot.
+    answers the change wrote, and the friction settings it alters, derived
+    at the pushed head (the commit the branch's remote-tracking reference
+    names, not local HEAD) against the PR's base, named to the check, and
+    placed last before the provenance footer. A section the supplied body
+    carries — written by a command or typed by hand — is dropped, with a
+    warning. open-pr never refuses to open over it: a list it cannot
+    derive, a branch not pushed, a word that reads as a closing reference
+    or holds an HTML comment's delimiter, or a body it would make too long
+    leaves the section out with one warning line, and land-work writes it
+    or says why it cannot.
   * `--doc-impact-from-friction` (opt-in) — fill an unwritten `## Doc
     impact` (the template's placeholder, empty, or absent) with one line
     counting the answers listed under `## Friction answers`. It names no
@@ -337,13 +341,17 @@ def main() -> int:
     if body is None:
         return 2
     # The change check's list of the answers the change wrote (DEC-055), last
-    # before the footer, and never one a supplied body carries; open-pr never
-    # refuses over it.
+    # before the footer, and never one a supplied body carries — a section a
+    # command wrote or one typed by hand; open-pr never refuses over it.
+    if friction_answers.hand_written(body) or friction_answers.has_list(body):
+        print(
+            f"warn: the body's `{friction_answers.HEADING}` section is dropped — only open-pr "
+            "and land-work write it, from the change check",
+            file=sys.stderr,
+        )
     body = friction_answers.strip(body)
     versions = provenance.read_versions(capability_root)
-    answers = _fitting(
-        body, _friction_answers(branch, friction_answers.check_base_for(base, config)), versions
-    )
+    answers = _fitting(body, _friction_answers(branch, base), versions)
     doc_impact_note = None
     if args.doc_impact_from_friction:
         body, doc_impact_note = _prefill_doc_impact(body, answers)
@@ -562,11 +570,12 @@ class _Answers:
     count: int = 0
 
 
-def _friction_answers(branch: str, base: str | None) -> _Answers:
-    """The change check's list of the answers the change wrote, derived at the
-    pushed head against `base` (`None`: the check's own base, the default branch).
-    Never refuses: a list that cannot be written is left out with one warning
-    line, and land-work writes it or says why it cannot (DEC-055)."""
+def _friction_answers(branch: str, base: str) -> _Answers:
+    """The change check's list of the answers the change wrote, and the friction
+    settings it alters, derived at the pushed head against the PR's base — named
+    always, so `$PKIT_CHECK_BASE` never changes it. Never refuses: a list that
+    cannot be written is left out with one warning line, and land-work writes it
+    or says why it cannot (DEC-055)."""
     head, why = _pushed_head(branch)
     if head is None:
         return _left_out(why)
@@ -574,19 +583,39 @@ def _friction_answers(branch: str, base: str | None) -> _Answers:
     if derived.document is None:
         return _left_out(derived.problem or "the change check gave no document")
     count = len(derived.answers)
-    if not count:
+    if not derived.listed:
         return _Answers(None, "none written by this change", derived.document)
-    found = friction_answers.closing_reference(derived.document)
-    if found is not None:
-        location, words = found
-        left = _left_out(
-            f"the words on {location} read as a closing reference ({words}), which would "
-            "close an issue at merge — reword them on the artefact"
-        )
-        return _Answers(None, left.note, derived.document, count)
-    section = friction_answers.render(derived.document, head)
-    listed = f"{count} written by this change, listed under `{friction_answers.HEADING}`"
-    return _Answers(section, f"{listed} (at {head[:7]})", derived.document, count)
+    settings = derived.settings
+    for found, why in (
+        (
+            friction_answers.closing_reference(derived.document, settings),
+            "read as a closing reference ({words}), which would close an issue at merge",
+        ),
+        (
+            friction_answers.comment_delimiter(derived.document, settings),
+            "hold an HTML comment's delimiter ({words}), which could hide the list",
+        ),
+    ):
+        if found is not None:
+            location, words = found
+            left = _left_out(
+                f"the words on {location} {why.format(words=words)} — reword them there"
+            )
+            return _Answers(None, left.note, derived.document, count)
+    section = friction_answers.render(derived.document, head, settings)
+    listed = (
+        f"{count} written by this change"
+        if count
+        else "none written by this change, which alters the project's friction settings"
+    )
+    if count and settings:
+        listed += ", which also alters the project's friction settings"
+    return _Answers(
+        section,
+        f"{listed}, listed under `{friction_answers.HEADING}` (at {head[:7]})",
+        derived.document,
+        count,
+    )
 
 
 def _left_out(why: str) -> _Answers:

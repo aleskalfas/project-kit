@@ -7,18 +7,35 @@ merge is shown every one of them, word for word, from the change check's own
 list (COR-050 point 3). This module puts that list in the description:
 
 - `derive(head, base)` runs the change check at the pull request's head
-  (`pkit friction check --json --head <oid>`) against where that head left its
-  base, after fetching the base, and returns its document — or why it could
-  not be read, which is never a pass.
-- `render(document, head)` is the `## Friction answers` section, between its
-  markers; `lines(document)` the same list for a terminal.
-- `closing_reference(document)` names a word that reads as a closing
-  reference: the host's own parser would close an issue with it at merge, and
-  nothing here can make that parser skip a section, so such a list is never
-  written.
+  (`pkit friction check --json --base <base> --head <oid>`) against the pull
+  request's base — always named, so `$PKIT_CHECK_BASE` in the environment never
+  changes it — after fetching that base, and reads the project's friction
+  settings at both ends of the change (`settings_change`). It returns the
+  check's document and the settings the change alters — or why they could not
+  be read, which is never a pass.
+- `render(document, head, settings)` is the `## Friction answers` section,
+  between its markers; `lines(document, settings)` the same list for a
+  terminal.
+- `closing_reference` and `comment_delimiter` name a word of the list that
+  must not be written: one that reads as a closing reference — the host's own
+  parser would close an issue with it at merge, and nothing here can make that
+  parser skip a section — and one holding an HTML comment's delimiter, which
+  could open or close a comment around the section's markers.
 - `stamp`, `strip`, `find` and `current` place, remove, find and compare the
   section — strip-then-place-exactly-one, as `provenance.stamp` keeps the
-  footer. The section sits last, before the provenance footer.
+  footer. The section sits last, before the provenance footer. A
+  `## Friction answers` section no command wrote — a list typed by hand, with
+  no markers — is stripped with everything under it (`hand_written`).
+
+Which backbone derives the list: both runs of the change check — from the
+working directory, and from a temporary checkout of the head when the first
+meets the backbone's refusal to run an anchor's resolver away from the head —
+run the `pkit` first on PATH with routing off (`PKIT_NO_ROUTE=1`). That is the
+backbone serving the command that runs this module: a source checkout's own
+environment (`uv run` puts its `pkit` first), a project's pinned version (the
+pin's run puts its `pkit` first), else the installed tool. Never routed again
+from the directory a run starts in, a temporary checkout's own source or pin
+cannot give the same head another list.
 
 Every reader of a description strips the section before it reads (DEC-055
 point 4): the list is the artefacts' words, never input. The markers are
@@ -33,9 +50,10 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import tempfile
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -55,6 +73,12 @@ HEADING = "## Friction answers"
 MARKER_START = "<!-- pkit-friction-answers:start"
 MARKER_END = "<!-- pkit-friction-answers:end -->"
 _START_LINE = re.compile(r"^<!-- pkit-friction-answers:start(?:\s[^\n]*)?-->$")
+#: The section's heading as a line, however a hand spaced or cased it.
+_HEADING_LINE = re.compile(r"^ {0,3}##[ \t]+friction answers[ \t]*#*[ \t]*$", re.IGNORECASE)
+#: A heading that ends a section: an ATX heading of level one or two.
+_SECTION_END = re.compile(r"^ {0,3}#{1,2}(?:[ \t]|$)")
+#: A fenced code block's opening line; a heading inside one is no heading.
+_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 
 #: The version of `pkit friction check --json` this module reads; a document of
 #: another is unreadable here, never misread.
@@ -64,9 +88,22 @@ SCHEMA_VERSION = 1
 BODY_LIMIT = 65536
 #: How long the change check may run before its answer is given up on.
 TIMEOUT = 600
-#: The backbone's command, as a capability's script runs it.
+#: The backbone's command, as a capability's script runs it, and the
+#: environment both runs of the check add: routing off (the module docstring).
 PKIT = ("pkit",)
+UNROUTED = {"PKIT_NO_ROUTE": "1"}
 SHORT = 7
+#: The backbone's refusal to run an anchor's resolver from a working tree that
+#: is not the commit `--head` names: the one failure a temporary checkout of
+#: the head answers. The backbone owns the sentence — its change check's
+#: `--head` refusal (the CLI README, "Friction checks", `--head`) — and this is
+#: the part of it that says where to run from.
+RESOLVER_REFUSAL = "Run from a checkout at"
+
+#: The backbone configuration file and its key that hold the project's friction
+#: settings — mode, places, surface, exclusions (COR-050 point 14).
+SETTINGS_FILE = ".pkit/project/config.yaml"
+SETTINGS_KEY = "friction"
 
 #: A closing reference in the host's grammar: one of its nine keywords, an
 #: optional colon, then `#N`, `owner/repo#N` or an issue's URL, in any case.
@@ -76,6 +113,88 @@ CLOSING_REFERENCE = re.compile(
     r"(?:#\d+|[\w.-]+/[\w.-]+#\d+|https?://\S+?/issues/\d+)",
     re.IGNORECASE,
 )
+#: An HTML comment's delimiters: a word holding one could open or close a
+#: comment around the section's markers, or hide the list from the page.
+COMMENT_DELIMITER = re.compile(r"<!--|-->")
+
+
+# --- the friction settings ----------------------------------------------------
+
+
+class _Mark:
+    """A setting's value that is no value the file holds."""
+
+    def __init__(self, words: str) -> None:
+        self.words = words
+
+    def __repr__(self) -> str:
+        return self.words
+
+
+#: A setting the file does not hold, and a file that does not parse.
+ABSENT = _Mark("absent")
+UNPARSED = _Mark("the configuration file does not parse")
+
+
+@dataclass(frozen=True)
+class Setting:
+    """One friction setting the change alters: its key, and its value where the
+    head left its base and at the head — what the file holds, `ABSENT` or
+    `UNPARSED`. The settings decide what the change check asks, so a change to
+    one is shown with the answers (DEC-055 point 1)."""
+
+    key: str
+    before: Any
+    after: Any
+
+
+def settings_change(merge_base: str, head: str) -> tuple[Setting, ...] | str:
+    """The friction settings that differ between `merge_base` and `head`, key by
+    key, or why they could not be read. Read from git objects, as the change
+    check reads each side's own configuration."""
+    if not merge_base:
+        return "the change check named no commit the head left its base at"
+    before = _friction_at(merge_base)
+    if isinstance(before, str):
+        return before
+    after = _friction_at(head)
+    if isinstance(after, str):
+        return after
+    if isinstance(before, Mapping) and isinstance(after, Mapping):
+        keys = sorted(set(before) | set(after), key=str)
+        return tuple(
+            Setting(f"{SETTINGS_KEY}.{key}", before.get(key, ABSENT), after.get(key, ABSENT))
+            for key in keys
+            if before.get(key, ABSENT) != after.get(key, ABSENT)
+        )
+    if before == after:
+        return ()
+    return (Setting(SETTINGS_KEY, before, after),)
+
+
+def _friction_at(commit: str) -> Any:
+    """The `friction` key of the configuration at `commit` — `ABSENT`, `UNPARSED`,
+    or what it holds — or, as text, why the commit could not be read."""
+    from ruamel.yaml import YAML
+    from ruamel.yaml.error import YAMLError
+
+    shown = _git("show", f"{commit}:{SETTINGS_FILE}")
+    if shown.returncode != 0:
+        if _git("cat-file", "-e", f"{commit}^{{commit}}").returncode == 0:
+            return ABSENT  # no configuration file at that commit
+        said = (shown.stderr or "").strip().splitlines()
+        return f"the friction settings at {commit[:SHORT]} could not be read" + (
+            f": {said[-1]}" if said else ""
+        )
+    try:
+        config = YAML(typ="safe").load(shown.stdout)
+    except YAMLError:
+        return UNPARSED
+    if config is None:
+        return ABSENT
+    if not isinstance(config, Mapping):
+        return UNPARSED
+    return config.get(SETTINGS_KEY, ABSENT)
 
 
 # --- deriving ----------------------------------------------------------------
@@ -83,12 +202,20 @@ CLOSING_REFERENCE = re.compile(
 
 @dataclass(frozen=True)
 class Derivation:
-    """The change check's document at one head, or why it could not be read."""
+    """The change check's document at one head and the friction settings the
+    change alters, or why they could not be read."""
 
     head: str
     document: Mapping[str, Any] | None = None
     problem: str | None = None
     answers: tuple[Mapping[str, Any], ...] = field(default=())
+    settings: tuple[Setting, ...] = field(default=())
+
+    @property
+    def listed(self) -> bool:
+        """Whether there is a list to show: answers the change wrote, or friction
+        settings it alters."""
+        return bool(self.answers or self.settings)
 
     @property
     def unreadable(self) -> tuple[str, ...]:
@@ -98,7 +225,13 @@ class Derivation:
 
     @property
     def merge_base(self) -> str:
+        """The commit the head left its base at (the check's `base.commit`)."""
         return str(_mapping((self.document or {}).get("base")).get("commit") or "")
+
+    @property
+    def tip(self) -> str:
+        """The base's commit the check read (`base.tip`)."""
+        return str(_mapping((self.document or {}).get("base")).get("tip") or "")
 
     @property
     def outdated(self) -> bool:
@@ -106,45 +239,41 @@ class Derivation:
         return bool(_mapping((self.document or {}).get("base")).get("outdated"))
 
 
-def check_base_for(base: str, config: Mapping[str, Any]) -> str | None:
-    """What the change check is told to compare with for a pull request against
-    `base`: nothing for the default branch — the check's own base is that branch —
-    else `base`, which the check resolves as it resolves every branch named as a
-    base (COR-054 point 2). Where the backbone cannot say which the default branch
-    is, `base` is named."""
-    try:
-        return None if base == default_branch.name(config) else base
-    except default_branch.Unanswered:
-        return base
-
-
-def derive(head: str, base: str | None) -> Derivation:
-    """The change check's document for commit `head` against `base` (`None`: the
-    check's own base), the base fetched first where it is a remote's.
+def derive(head: str, base: str) -> Derivation:
+    """The change check's document for commit `head` against the branch `base` —
+    the pull request's, named always — the base fetched first where it is a
+    remote's, and the friction settings the change alters.
 
     Run from the working directory with `--head`, which reads the commit from git
     objects. A resolver of a registered anchor kind runs only from a checkout at
-    the commit, so where the run gives no document and the working directory is not
-    a clean checkout at `head`, the check runs again from a temporary checkout of
-    `head`, removed afterwards. Never a pass on a guess: a base that could not be
-    fetched, no document, a document of another version or without `answers` all
-    make the derivation unreadable, with why."""
+    the commit, and the check refuses so elsewhere: on that refusal alone the
+    check runs again from a temporary checkout of `head`, removed afterwards; any
+    other failure is kept as it is. Never a pass on a guess: a base that could
+    not be fetched, no document, a document of another version or without
+    `answers`, and settings that cannot be read all make the derivation
+    unreadable, with why."""
     problem = _refresh_base(base)
     if problem is not None:
         return Derivation(head, problem=problem)
     found = _run_check(head, base, cwd=None)
-    if isinstance(found, str) and not _clean_at(head):
+    if isinstance(found, _NoDocument) and found.elsewhere:
         with _checkout(head) as (path, why_not):
             if path is None:
-                found = f"{found}; a checkout at {head[:SHORT]} to run it from failed: {why_not}"
+                found = _NoDocument(
+                    f"{found.why}; a checkout at {head[:SHORT]} to run it from failed: {why_not}"
+                )
             else:
-                found = _run_check(head, base, cwd=path, env={"PKIT_NO_ROUTE": "1"})
-    if isinstance(found, str):
-        return Derivation(head, problem=found)
-    return Derivation(head, document=found, answers=tuple(_entries(found)))
+                found = _run_check(head, base, cwd=path)
+    if isinstance(found, _NoDocument):
+        return Derivation(head, problem=found.why)
+    merge_base = str(_mapping(found.get("base")).get("commit") or "")
+    settings = settings_change(merge_base, head)
+    if isinstance(settings, str):
+        return Derivation(head, problem=settings)
+    return Derivation(head, document=found, answers=tuple(_entries(found)), settings=settings)
 
 
-def _refresh_base(base: str | None) -> str | None:
+def _refresh_base(base: str) -> str | None:
     """Fetch the base the check will read where it is a remote's; why not, or None."""
     try:
         found = default_branch.check_base(base)
@@ -162,74 +291,115 @@ def _refresh_base(base: str | None) -> str | None:
     return None
 
 
-def _run_check(
-    head: str, base: str | None, *, cwd: Path | None, env: Mapping[str, str] | None = None
-) -> Mapping[str, Any] | str:
+@dataclass(frozen=True)
+class _NoDocument:
+    """Why the check gave no document; `elsewhere` when it refused only because
+    the working directory is not a checkout at the head (`RESOLVER_REFUSAL`)."""
+
+    why: str
+    elsewhere: bool = False
+
+
+def _run_check(head: str, base: str, *, cwd: Path | None) -> Mapping[str, Any] | _NoDocument:
     """The check's document, or why there is none. Enforcing mode exits 1 on
     friction and still prints its document, so exit 0 and 1 both carry one."""
-    argv = [*PKIT, "friction", "check", "--json", *(["--base", base] if base else [])]
-    argv += ["--head", head]
-    command = f"`pkit friction check --json{' --base ' + base if base else ''} --head {head}`"
+    argv = [*PKIT, "friction", "check", "--json", "--base", base, "--head", head]
+    command = f"`pkit friction check --json --base {base} --head {head}`"
     try:
         proc = subprocess.run(
             argv,
             cwd=cwd,
-            env=None if env is None else {**os.environ, **env},
+            env={**os.environ, **UNROUTED},
             capture_output=True,
             text=True,
             check=False,
             timeout=TIMEOUT,
         )
     except FileNotFoundError as exc:
-        return f"{command}: `pkit` is not on PATH ({exc})"
+        return _NoDocument(f"{command}: `pkit` is not on PATH ({exc})")
     except subprocess.TimeoutExpired:
-        return f"{command}: it did not answer within {TIMEOUT}s"
+        return _NoDocument(f"{command}: it did not answer within {TIMEOUT}s")
     except OSError as exc:
-        return f"{command}: it could not be run ({exc})"
+        return _NoDocument(f"{command}: it could not be run ({exc})")
     said = [line.strip() for line in (proc.stderr or "").splitlines() if line.strip()]
     why = f"it exited {proc.returncode}" + (f": {said[-1]}" if said else "")
     if proc.returncode not in (0, 1):
-        return f"{command}: {why}"
+        return _NoDocument(f"{command}: {why}")
     try:
         document = json.loads(proc.stdout or "")
     except ValueError:
-        return f"{command}: {why}, with no JSON document"
+        elsewhere = RESOLVER_REFUSAL in " ".join((proc.stderr or "").split())
+        return _NoDocument(f"{command}: {why}, with no JSON document", elsewhere=elsewhere)
     if not isinstance(document, dict):
-        return f"{command}: its answer is not a document"
+        return _NoDocument(f"{command}: its answer is not a document")
     version = document.get("schema_version", SCHEMA_VERSION)
     if version != SCHEMA_VERSION:
-        return f"{command}: it answered schema_version {version!r}; this reads {SCHEMA_VERSION}"
+        return _NoDocument(
+            f"{command}: it answered schema_version {version!r}; this reads {SCHEMA_VERSION}"
+        )
     if not isinstance(document.get("answers"), list):
-        return f"{command}: its document lists no answers — the backbone predates the list"
+        return _NoDocument(
+            f"{command}: its document lists no answers — the backbone predates the list"
+        )
     return document
-
-
-def _clean_at(head: str) -> bool:
-    """The working directory is a checkout at `head` with nothing uncommitted."""
-    at = _git("rev-parse", "--verify", "--quiet", "HEAD").stdout.strip()
-    if at != head:
-        return False
-    status = _git("status", "--porcelain", "--untracked-files=normal")
-    return status.returncode == 0 and not status.stdout.strip()
 
 
 @contextlib.contextmanager
 def _checkout(head: str) -> Iterator[tuple[Path | None, str]]:
-    """A temporary detached checkout of `head` (a linked worktree), removed on exit."""
+    """A temporary detached checkout of `head` (a linked worktree), removed on exit
+    — a termination signal included. Only the worktree this run added is removed,
+    with the directory it sits in; nothing else of the repository's is touched."""
     scratch = Path(tempfile.mkdtemp(prefix="pkit-friction-answers-"))
     path = scratch / "checkout"
-    added = _git("worktree", "add", "--detach", "--quiet", str(path), head)
+    with _terminating_unwinds():
+        added = _git("worktree", "add", "--detach", "--quiet", str(path), head)
+        admin = _admin_dir(path) if added.returncode == 0 else None
+        try:
+            if added.returncode != 0:
+                said = (added.stderr or "").strip().splitlines()
+                yield None, said[-1] if said else f"git worktree add exited {added.returncode}"
+            else:
+                yield path, ""
+        finally:
+            if added.returncode == 0:
+                removed = _git("worktree", "remove", "--force", str(path))
+                if removed.returncode != 0 and admin is not None:
+                    shutil.rmtree(admin, ignore_errors=True)
+            shutil.rmtree(scratch, ignore_errors=True)
+
+
+def _admin_dir(path: Path) -> Path | None:
+    """The repository's record of the linked worktree at `path` (`.git/worktrees/<name>`),
+    as the worktree's `.git` file names it."""
     try:
-        if added.returncode != 0:
-            said = (added.stderr or "").strip().splitlines()
-            yield None, said[-1] if said else f"git worktree add exited {added.returncode}"
-        else:
-            yield path, ""
+        pointer = (path / ".git").read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    gitdir = pointer.removeprefix("gitdir:").strip()
+    if not pointer.startswith("gitdir:") or not gitdir:
+        return None
+    return Path(gitdir) if Path(gitdir).is_absolute() else path / gitdir
+
+
+@contextlib.contextmanager
+def _terminating_unwinds() -> Iterator[None]:
+    """While inside, a termination signal (SIGTERM) raises `SystemExit`, so the
+    `finally` that removes a temporary checkout runs; the handler before is put
+    back on the way out. Off the main thread no handler can be set."""
+
+    def unwind(signum: int, _frame: Any) -> None:
+        raise SystemExit(128 + signum)
+
+    try:
+        before = signal.signal(signal.SIGTERM, unwind)
+    except ValueError:  # not the main thread
+        yield
+        return
+    try:
+        yield
     finally:
-        if added.returncode == 0:
-            _git("worktree", "remove", "--force", str(path))
-        shutil.rmtree(scratch, ignore_errors=True)
-        _git("worktree", "prune")
+        # None: the handler before was not set from Python — the default's.
+        signal.signal(signal.SIGTERM, signal.SIG_DFL if before is None else before)
 
 
 def _git(*argv: str) -> subprocess.CompletedProcess[str]:
@@ -243,6 +413,12 @@ def _mapping(value: Any) -> Mapping[str, Any]:
 def _entries(document: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     found = document.get("answers")
     return [entry for entry in found if isinstance(entry, Mapping)] if found else []
+
+
+def listed_paths(document: Mapping[str, Any]) -> set[str]:
+    """The files the list's words are on: each answer's artefact file, which holds
+    the deferrals a revalidation kept too."""
+    return {str(e.get("location") or "").split("#", 1)[0] for e in _entries(document)} - {""}
 
 
 # --- rendering ---------------------------------------------------------------
@@ -310,24 +486,54 @@ def _read_entry(entry: Mapping[str, Any]) -> _Entry:
     )
 
 
+def _value(value: Any) -> str | None:
+    """A setting's value as the list shows it: what the file holds, as JSON, or
+    None for `ABSENT` and `UNPARSED`, which are said in words."""
+    if isinstance(value, _Mark):
+        return None
+    return shown(json.dumps(value, sort_keys=True, ensure_ascii=False, default=str))
+
+
+def _side(value: Any, *, code: bool) -> str:
+    text = _value(value)
+    if text is None:
+        return f"({value!r})"
+    return _code(text) if code else text
+
+
 def _counted(count: int, one: str, many: str) -> str:
     return f"{count} {one if count == 1 else many}"
 
 
-def render(document: Mapping[str, Any], head: str) -> str | None:
-    """The `## Friction answers` section for `document`, derived at commit `head`;
-    None when the change wrote no answers. Every text is the check's, shown with
-    any non-printable character escaped and set in a code span, so no word of an
-    artefact is read as Markdown."""
+#: What the list says above the settings the change alters.
+SETTINGS_LEAD = (
+    f"The change alters the project's friction settings (`{SETTINGS_FILE}`, "
+    f"`{SETTINGS_KEY}`), which decide what the change check asks:"
+)
+
+
+def render(document: Mapping[str, Any], head: str, settings: Sequence[Setting] = ()) -> str | None:
+    """The `## Friction answers` section for `document`, derived at commit `head`,
+    with the friction `settings` the change alters; None when the change wrote no
+    answers and alters no setting. Every text is the check's or the
+    configuration's, shown with any non-printable character escaped and set in a
+    code span, so no word of an artefact is read as Markdown."""
     entries = [_read_entry(entry) for entry in _entries(document)]
-    if not entries:
+    if not entries and not settings:
         return None
     merge_base = str(_mapping(document.get("base")).get("commit") or "")
-    count = _counted(len(entries), "answer", "answers")
-    first = (
-        f"{count} written by this change, as of `{head[:SHORT]}` — the change check's list "
-        "(`pkit friction check`). Each is on its artefact."
-    )
+    if entries:
+        first = (
+            f"{_counted(len(entries), 'answer', 'answers')} written by this change, as of "
+            f"`{head[:SHORT]}` — the change check's list (`pkit friction check`). Each is on "
+            "its artefact."
+        )
+    else:
+        dormant = "; it is dormant at that head" if document.get("dormant") else ""
+        first = (
+            f"No answer written by this change, as of `{head[:SHORT]}`, in the change check's "
+            f"list (`pkit friction check`){dormant}."
+        )
     unreadable = document.get("unreadable")
     if isinstance(unreadable, list) and unreadable:
         files = len(unreadable)
@@ -335,7 +541,9 @@ def render(document: Mapping[str, Any], head: str) -> str | None:
             f" {_counted(files, 'file', 'files')} the check could not read "
             f"{'is' if files == 1 else 'are'} not listed."
         )
-    out = [HEADING, "", f"{MARKER_START} head={head} base={merge_base} -->", first, ""]
+    out = [HEADING, "", f"{MARKER_START} head={head} base={merge_base} -->", first]
+    if entries:
+        out.append("")
     for number, entry in enumerate(entries, start=1):
         line = f"{number}. {_code(entry.location)} — **{entry.answer}**"
         if entry.anchor is not None:
@@ -348,12 +556,18 @@ def render(document: Mapping[str, Any], head: str) -> str | None:
         for anchor, words in entry.kept:
             kept = f"   - keeps the deferral of {_code(anchor)}"
             out.append(kept + (f": {_code(words, least=2)}" if words is not None else ""))
+    if settings:
+        out += ["", SETTINGS_LEAD, ""]
+        for setting in settings:
+            before, after = _side(setting.before, code=True), _side(setting.after, code=True)
+            out.append(f"- {_code(setting.key)}: {before} → {after}")
     out.append(MARKER_END)
     return "\n".join(out)
 
 
-def lines(document: Mapping[str, Any]) -> list[str]:
-    """The list as a terminal shows it: one line per answer, its words in full."""
+def lines(document: Mapping[str, Any], settings: Sequence[Setting] = ()) -> list[str]:
+    """The list as a terminal shows it: one line per answer, its words in full,
+    then one per friction setting the change alters."""
     out: list[str] = []
     for number, entry in enumerate((_read_entry(e) for e in _entries(document)), start=1):
         line = f"{number}. {entry.location} — {entry.answer}"
@@ -368,22 +582,51 @@ def lines(document: Mapping[str, Any]) -> list[str]:
             out.append(
                 f"   keeps the deferral of {anchor}" + (f": {words}" if words is not None else "")
             )
+    for setting in settings:
+        before, after = _side(setting.before, code=False), _side(setting.after, code=False)
+        out.append(f"friction setting {setting.key}: {before} → {after}")
     return out
 
 
-def closing_reference(document: Mapping[str, Any]) -> tuple[str, str] | None:
-    """The first text of the list that reads as a closing reference, as
-    (location, the words that read so); None when none does. Every text the
-    section would show is read, as it would show it."""
+def _texts(document: Mapping[str, Any], settings: Sequence[Setting]) -> Iterator[tuple[str, str]]:
+    """Every text the section would show, as it would show it, with where it is:
+    (an answer's location, or the settings file) and the text."""
     for entry in (_read_entry(e) for e in _entries(document)):
-        texts = [entry.location, entry.anchor, entry.reason]
+        texts: list[str | None] = [entry.location, entry.anchor, entry.reason]
         for anchor, words in entry.kept:
             texts += [anchor, words]
         for text in texts:
-            match = CLOSING_REFERENCE.search(text or "")
-            if match is not None:
-                return entry.location, match.group(0)
+            if text:
+                yield entry.location, text
+    for setting in settings:
+        for value in (setting.key, _value(setting.before), _value(setting.after)):
+            if value:
+                yield SETTINGS_FILE, value
+
+
+def _first(pattern: re.Pattern[str], found: Iterable[tuple[str, str]]) -> tuple[str, str] | None:
+    for where, text in found:
+        match = pattern.search(text)
+        if match is not None:
+            return where, match.group(0)
     return None
+
+
+def closing_reference(
+    document: Mapping[str, Any], settings: Sequence[Setting] = ()
+) -> tuple[str, str] | None:
+    """The first text of the list that reads as a closing reference, as
+    (location, the words that read so); None when none does. Every text the
+    section would show is read, as it would show it."""
+    return _first(CLOSING_REFERENCE, _texts(document, settings))
+
+
+def comment_delimiter(
+    document: Mapping[str, Any], settings: Sequence[Setting] = ()
+) -> tuple[str, str] | None:
+    """The first text of the list holding an HTML comment's delimiter (`<!--` or
+    `-->`), as (location, the delimiter); None when none does."""
+    return _first(COMMENT_DELIMITER, _texts(document, settings))
 
 
 # --- the section in a description ------------------------------------------
@@ -397,74 +640,172 @@ def _is_end(line: str) -> bool:
     return line.strip() == MARKER_END
 
 
-def _region(lines_: Sequence[str]) -> tuple[int, int] | None:
-    """The first complete region: the start marker's line and the end marker's."""
-    for start, line in enumerate(lines_):
-        if _is_start(line):
-            for end in range(start + 1, len(lines_)):
-                if _is_end(lines_[end]):
-                    return start, end
-            return None
-    return None
+def _is_marker(line: str) -> bool:
+    return _is_start(line) or _is_end(line)
+
+
+@dataclass(frozen=True)
+class _Span:
+    """Lines of a body that are the section, or a piece of one: `first` through
+    `last`. `kind` is `region` (a start marker's line through its end marker's,
+    `start` and `end`), `marker` (a marker with no partner, and for a start
+    marker everything after it up to the provenance footer), or `hand` (a
+    `## Friction answers` heading no marker follows, with everything under it)."""
+
+    first: int
+    last: int
+    kind: str
+    start: int = -1
+    end: int = -1
+
+
+def _spans(lines_: Sequence[str]) -> list[_Span]:
+    """Every piece of the section `lines_` carries, in order. The heading directly
+    above a region or a marker — blank lines between — goes with it. Markers are
+    whole lines wherever they stand, a fenced code block included, so a region is
+    never hidden by a fence left open above it; a heading is read only outside a
+    fenced code block."""
+    footer = _footer_start(lines_)
+    spans: list[_Span] = []
+    fence: str | None = None
+    index = 0
+    while index < len(lines_):
+        line = lines_[index]
+        if _is_marker(line):
+            spans.append(_marked(lines_, index, footer, heading=None))
+            index = spans[-1].last + 1
+            continue
+        if fence is not None:
+            fence = None if _closes(line, fence) else fence
+            index += 1
+            continue
+        opened = _FENCE.match(line)
+        if opened is not None:
+            fence = opened.group(1)
+            index += 1
+            continue
+        if _HEADING_LINE.match(line):
+            below = index + 1
+            while below < len(lines_) and not lines_[below].strip():
+                below += 1
+            if below < len(lines_) and _is_marker(lines_[below]):
+                spans.append(_marked(lines_, below, footer, heading=index))
+            else:
+                spans.append(_hand(lines_, index, footer))
+            index = spans[-1].last + 1
+            continue
+        index += 1
+    return spans
+
+
+def _closes(line: str, fence: str) -> bool:
+    """Whether `line` closes a fenced block opened with `fence`: that character, at
+    least as many times, and nothing else."""
+    text = line.strip()
+    return text.startswith(fence) and not text.strip(fence[0])
+
+
+def _marked(lines_: Sequence[str], at: int, footer: int | None, *, heading: int | None) -> _Span:
+    """The span of the marker line at `at`: its region, when a start marker's end
+    follows; else the marker alone — or, for a start marker, everything from it to
+    the provenance footer or the end of the body, where its list would be."""
+    first = at if heading is None else heading
+    if _is_start(lines_[at]):
+        for end in range(at + 1, len(lines_)):
+            if _is_end(lines_[end]):
+                return _Span(first, end, "region", start=at, end=end)
+            if _is_start(lines_[end]):
+                break
+        stop = footer if footer is not None and footer > at else len(lines_)
+        return _Span(first, stop - 1, "marker")
+    return _Span(first, at, "marker")
+
+
+def _hand(lines_: Sequence[str], heading: int, footer: int | None) -> _Span:
+    """The span of a `## Friction answers` section no command wrote: its heading
+    through the line before the provenance footer, a marker, the next heading of
+    level one or two outside a fenced block, or the end of the body."""
+    fence: str | None = None
+    for index in range(heading + 1, len(lines_)):
+        line = lines_[index]
+        if index == footer or _is_marker(line):
+            return _Span(heading, index - 1, "hand")
+        if fence is not None:
+            fence = None if _closes(line, fence) else fence
+            continue
+        opened = _FENCE.match(line)
+        if opened is not None:
+            fence = opened.group(1)
+            continue
+        if _SECTION_END.match(line):
+            return _Span(heading, index - 1, "hand")
+    return _Span(heading, len(lines_) - 1, "hand")
+
+
+def _split(body: str) -> list[str]:
+    return body.replace("\r\n", "\n").split("\n")
 
 
 def find(body: str) -> str | None:
     """The region `body` carries — its start marker's line through its end
-    marker's — or None when it carries no complete one."""
-    lines_ = body.replace("\r\n", "\n").split("\n")
-    found = _region(lines_)
-    if found is None:
+    marker's — or None when it carries no complete one. Of several, the last:
+    every write places its region last, so that is the latest."""
+    lines_ = _split(body)
+    regions = [span for span in _spans(lines_) if span.kind == "region"]
+    if not regions:
         return None
-    start, end = found
-    return "\n".join(lines_[start : end + 1])
+    return "\n".join(lines_[regions[-1].start : regions[-1].end + 1])
+
+
+def hand_written(body: str) -> bool:
+    """Whether `body` carries a `## Friction answers` section no command wrote: the
+    heading with no marker under it."""
+    return any(span.kind == "hand" for span in _spans(_split(body)))
+
+
+def has_list(body: str) -> bool:
+    """Whether `body` carries the section a command wrote, or a marker of one."""
+    return any(span.kind != "hand" for span in _spans(_split(body)))
 
 
 def strip(body: str) -> str:
-    """`body` without the section: every region, any marker line on its own, and
-    the heading directly above a region (blank lines between). Text outside it is
-    left as it is."""
-    lines_ = body.replace("\r\n", "\n").split("\n")
+    """`body` without the section: every region and the heading directly above it,
+    every marker with no partner — a start marker with everything after it up to
+    the provenance footer — and every `## Friction answers` section no command
+    wrote, with everything under it. Text outside them is left as it is."""
+    lines_ = _split(body)
+    spans = _spans(lines_)
+    if not spans:
+        return body.replace("\r\n", "\n")
     out: list[str] = []
     index = 0
     cut = False
-    while index < len(lines_):
-        line = lines_[index]
-        if _is_start(line) or _is_end(line):
-            _drop_heading(out)
-            end = index
-            if _is_start(line):
-                found = _region(lines_[index:])
-                end = index + found[1] if found is not None else index
-            index = end + 1
-            cut = True
-            continue
+    for span in spans:
+        for line in lines_[index : span.first]:
+            if cut and not line.strip() and (not out or not out[-1].strip()):
+                continue  # no second blank line where the section was
+            cut = False
+            out.append(line)
+        while out and not out[-1].strip():
+            out.pop()
+        if out:
+            out.append("")
+        index = span.last + 1
+        cut = True
+    for line in lines_[index:]:
         if cut and not line.strip() and (not out or not out[-1].strip()):
-            index += 1  # no second blank line where the section was
             continue
         cut = False
         out.append(line)
-        index += 1
     return "\n".join(out)
 
 
-def _drop_heading(out: list[str]) -> None:
-    """Drop the section's heading from the end of `out`, and the blank lines with it."""
-    end = len(out)
-    while end and not out[end - 1].strip():
-        end -= 1
-    if end and out[end - 1].strip() == HEADING:
-        end -= 1
-        while end and not out[end - 1].strip():
-            end -= 1
-        del out[end:]
-        if out:
-            out.append("")
-
-
 def _footer_start(lines_: Sequence[str]) -> int | None:
-    """Where the provenance footer starts, as `provenance.strip_footer` finds it."""
+    """Where the provenance footer starts, as `provenance.strip_footer` finds it:
+    the first line that is one of its markers, whole."""
+    markers = (provenance.MARKER_START, provenance.MARKER_END)
     for index, line in enumerate(lines_):
-        if provenance.MARKER_START in line or provenance.MARKER_END in line:
+        if line.strip() in markers:
             return index
     return None
 
@@ -493,11 +834,18 @@ def _normal(text: str | None) -> str:
 
 
 def current(body: str, block: str | None) -> bool:
-    """Whether `body` carries `block`'s region, read as a host may have changed its
-    whitespace; with `block` None, whether it carries none."""
+    """Whether `body` carries `block`'s region and nothing else of the section,
+    read as a host may have changed its whitespace; with `block` None, whether it
+    carries nothing of the section — no region, no marker line, no
+    `## Friction answers` section a hand wrote. Markers count only as whole lines."""
+    lines_ = _split(body)
+    spans = _spans(lines_)
     if block is None:
-        return find(body) is None and MARKER_START not in body
-    return find(body) is not None and _normal(find(body)) == _normal(find(block))
+        return not spans
+    if len(spans) != 1 or spans[0].kind != "region":
+        return False
+    region = "\n".join(lines_[spans[0].start : spans[0].end + 1])
+    return _normal(region) == _normal(find(block))
 
 
 def fits(body: str) -> bool:
