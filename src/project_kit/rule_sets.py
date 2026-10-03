@@ -566,6 +566,7 @@ class RuleSetFindingKind(Enum):
     DECISION_NOT_ACCEPTED = "decision-not-accepted"  # an accepted rule citing an unaccepted record
     UNRESOLVED_SOURCE_KIND = "unresolved-kind"  # a source of a kind nothing resolves
     MISSING_SOURCE = "missing-source"  # the cited source's resolver names no file for it
+    UNANSWERED_SOURCE = "unanswered-source"  # the cited source's resolver gave no answer
     SUCCESSOR_NOT_FOUND = "successor-not-found"
     SUCCESSOR_OUT_OF_LINE = "successor-out-of-line"  # not in the set or one inheriting it
     INHERITED_SET_MISSING = "inherited-set-missing"
@@ -975,10 +976,18 @@ def _source_findings(
     resolved by the resolver the kind registers, as the friction checks resolve an
     anchor of it (`AnchorKinds`).
 
-    A kind nothing resolves, and a resolver that gives no answer, are reported:
-    the source is not checked, and the project cannot mend either. A source
-    whose resolver names no file for it does not resolve, which fails
-    validation (COR-051 point 5): its citation is the project's to correct."""
+    Validation fails unless a cited source resolves (COR-051 point 5), with one
+    carve-out: a source kind with no resolver that may run — nothing installed
+    registers it, or its registration is refused, which fails at the
+    registration — is reported, never silently passed. A registered resolver
+    that ran is not that case:
+
+    - one that names no file for the source does not resolve it
+      (`MISSING_SOURCE`): the citation is the project's to correct;
+    - one that gives no answer has not resolved it either (`UNANSWERED_SOURCE`):
+      the source could not be checked, and a pass nobody earned costs more than
+      the second run a failure costs (COR-055 point 6).
+    """
     source = origin.get("source")
     kind = source.get("kind") if isinstance(source, Mapping) else None
     if not isinstance(kind, str) or not kind:
@@ -997,17 +1006,19 @@ def _source_findings(
     if not isinstance(value, str) or not value:
         return  # malformed: the shape pass reports it
     resolution = catalogue.resolutions.resolve(fd.Anchor(kind, value))
+    resolver = catalogue.anchor_kinds[kind]
     if resolution.no_answer is not None:
-        yield _report(
+        yield _error(
             rule.location,
             "/origin/source",
-            RuleSetFindingKind.UNRESOLVED_SOURCE_KIND,
-            f"source {kind}:{value} is unresolved: its resolver gave no answer — "
-            f"{resolution.no_answer} — so the source is not checked (COR-051 point 5; COR-050 "
-            f"point 2).",
+            RuleSetFindingKind.UNANSWERED_SOURCE,
+            f"source {kind}:{value} could not be checked: its resolver gave no answer — "
+            f"{resolution.no_answer}. If it overran its time or its environment is not "
+            f"provisioned, run again (after `pkit sync`); otherwise the resolver "
+            f"`{resolver.command}` of {resolver.capability} needs mending (COR-051 point 5; "
+            f"COR-050 point 2).",
         )
     elif not resolution.paths:
-        resolver = catalogue.anchor_kinds[kind]
         yield _error(
             rule.location,
             "/origin/source",
