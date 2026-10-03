@@ -30,9 +30,9 @@ ACT-developer-subagent:
         path:
           - .pkit/capabilities/software-engineering/agents/software-engineer.md
       revalidated:
-        at: 2026-09-30T23:14:25Z
+        at: 2026-10-03T13:24:08Z
         outcome: unchanged
-        unchanged-because: The software-engineer gains one line on handling review findings (fix the blocking ones, record advisories in the PR body); the subagent still carries out one delegated Task in its worktree and acts as its clone at the tracker, which is all this actor states.
+        unchanged-because: The software-engineer gains a section on answering the friction its own change owes with the revalidate and defer commands; the subagent still carries out one delegated Task in its worktree and acts as its clone at the tracker, which is all this actor states.
 ACT-operator:
   name: Operator
   status: active

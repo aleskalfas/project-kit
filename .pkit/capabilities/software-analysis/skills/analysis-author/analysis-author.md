@@ -82,7 +82,7 @@ The code the analysis ought to cover is the project's to declare, as the declare
 
 ### An actor or term nothing embodies
 
-An actor or term that no code and no decision embodies — a sponsor, an outside regulator, a word of the business the software never names — is stamped with `--unanchored-because "<why nothing embodies it>"` instead of anchors: the stamp writes it as `unanchored-because` in the artefact's friction block, the core's key. An unanchored artefact is reported as a measure and never fails a check; the reason is what onboarding accepts, and the core's measure lists the artefact apart with it rather than counting it (`pkit friction check --all`). A use case or a journey is never unanchored: it always rests on its actor, or its steps.
+An actor or term that no code and no decision embodies — a sponsor, an outside regulator, a word of the business the software never names — is stamped with `--unanchored-because "<why nothing embodies it>"` instead of anchors: the stamp writes it as `unanchored-because` in the artefact's friction block, the core's key. An unanchored artefact is reported as a measure and never fails a check; the reason is what onboarding accepts, and the core's measure lists the artefact apart with it rather than counting it (`pkit friction check --all`). A use case or a journey is never unanchored: it always rests on its actor, or its steps. The reason is a person's decision, accepted before it is written (COR-050 point 1): an agent following this skill shows the person the reason word for word and stamps only once they accept it.
 
 ### After stamping
 

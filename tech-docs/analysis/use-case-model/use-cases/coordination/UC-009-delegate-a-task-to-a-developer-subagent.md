@@ -18,9 +18,9 @@ pkit:
         - ACT-clone-session
         - ACT-developer-subagent
     revalidated:
-      at: 2026-10-03T01:47:05Z
+      at: 2026-10-03T13:24:10Z
       outcome: unchanged
-      unchanged-because: The project-manager body's batch-plan paragraph now names the use-case scenarios and the walk before slicing; how a clone session starts a Task, dispatches a developer subagent and takes its result back is untouched, so the use case holds
+      unchanged-because: The software-engineer gains a section on answering the friction its own change owes; how the clone session starts the Task, dispatches the subagent and takes back its committed and pushed work is untouched, so the use case holds.
 ---
 
 # UC-009 — Delegate a task to a developer subagent

@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-10-02T07:46:42Z
+      at: 2026-10-03T13:45:18Z
       outcome: unchanged
-      unchanged-because: The page describes adapter-author and capability-author only as the skills paired with pkit new adapter and pkit new capability; it lists no refused names, so the skills' new rule that an adapter and a capability cannot share a name leaves both entries true as written
+      unchanged-because: The page names agent-author as walking an author through an agent's frontmatter, citations and body conventions under COR-013; its files-you-own bullet now also says that a path written only through a mutating command the agent runs is not listed, and that the body names the command instead, which is one more body convention, so the entry holds as written.
 ---
 
 # Skills
