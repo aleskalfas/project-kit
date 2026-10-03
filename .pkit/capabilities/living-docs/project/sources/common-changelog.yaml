@@ -1,0 +1,4 @@
+# yaml-language-server: $schema=../../schemas/source.schema.json
+title: Common Changelog
+url: https://common-changelog.org/
+version: "2026-10-03"

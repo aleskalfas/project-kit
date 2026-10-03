@@ -12,8 +12,9 @@ pkit:
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
+      source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-02T11:03:47Z
+      at: 2026-10-03T13:58:26Z
       outcome: updated
 ---
 
@@ -231,6 +232,23 @@ produces for *every* adopter — it is universal tool behaviour derived from the
 two-tier model (COR-010), not an adopter-optional choice. Only the **language**
 discipline below (plain, user-facing sentences, no in-body jargon/refs) is an
 editorial policy this project layers on top of that output.
+
+### Where the format departs from its two sources
+
+Read against the versions this page's `source` anchors capture — Keep a
+Changelog 1.1.0, and Common Changelog as read on 2026-10-03:
+
+- **Release headings.** A section's heading is `## <version> — <date>`, or
+  `## <date>` for a component-only release: an em dash, the version neither
+  bracketed nor linked. Keep a Changelog's own headings bracket the version
+  and use a hyphen (`## [1.1.2] - 2024-09-27`). Common Changelog requires
+  `## VERSION - DATE`, a hyphen between, and says the version should link to
+  further information, preferably through a reference-style link
+  (`## [1.0.1] - 2019-08-24`).
+- **Categories.** The groups are Keep a Changelog's six, in its order. Common
+  Changelog allows only `Changed`, `Added`, `Removed` and `Fixed`, in that
+  order: what this page takes from it is the language below, not its
+  categories.
 
 ### Language — Common Changelog
 
