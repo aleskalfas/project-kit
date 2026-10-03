@@ -17,7 +17,9 @@ commands:
     query-contract: true
     reads: [history]
 
-# The `living-docs:spaces` member of `pkit validate` (ADR-058).
+# The `living-docs:spaces` member of `pkit validate`: a component joins
+# validation by naming a command it registers (COR-055 point 3); the block's
+# keys are ADR-058's.
 validators:
   spaces:
     command: validate

@@ -1,0 +1,17 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+  pr: "1282"
+body: >
+  COR-055 (accepted) decides what validation is: the project's one check of its own state
+  against the invariants its records own, which the backbone's functionalities and installed
+  components join by registering validators — a component by naming a command it registers.
+  Every finding carries one severity from a shared set, and exactly one fails validation: a
+  broken invariant, or a validator that gave no answer. COR-052 point 6 is refined to match: a
+  validator is a query with no subject, as a filler is; and a data point whose every use is
+  advisory may declare `fallback` — a use is advisory when nothing refuses on the point's value,
+  nothing fails on it, and no finding is drawn from an entry's absence unless the point resolved
+  with no filler inert. A point read only for findings that do not fail validation, which had to
+  declare `fail`, may now fall back. The records state behaviour that has shipped: no command
+  changes.

@@ -1,0 +1,3 @@
+component: software-analysis
+kind: none
+body: Internal — the package metadata cites COR-055 where it cited ADR-058 — point 3 in the comment on the `software-analysis:artefacts` validator, point 2 in the `check-numbers` help line for why a check of a change is not a validator; nothing you run changes.
