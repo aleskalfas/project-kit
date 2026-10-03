@@ -16,9 +16,9 @@ ACT-clone-session:
           - project-management:DEC-029
           - project-management:DEC-035
       revalidated:
-        at: 2026-10-01T15:15:07Z
+        at: 2026-10-03T01:47:00Z
         outcome: unchanged
-        unchanged-because: The project-manager body's date-based Milestone trigger now names close-milestone, which rolls the open children forward; who the clone session is and what it needs from the tracker are untouched.
+        unchanged-because: The project-manager's batch planning gains a use-case walk before it slices, and DEC-029's sub-procedure names that step and what the approval gate shows; who the clone session is and what it needs from the tracker — its position, its own work apart from other clones', whether a stabilisation is on — are untouched.
 ACT-developer-subagent:
   name: Developer subagent
   status: active

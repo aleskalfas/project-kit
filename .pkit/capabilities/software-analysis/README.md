@@ -12,9 +12,8 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-02T14:52:58Z
-      outcome: unchanged
-      unchanged-because: DEC-001 now gives the report of a number two lines of work took to a check that compares the branch with its base, which this page already says pkit analysis check-numbers is, with pkit validate reporting the duplicate id once both files are in one tree; COR-052 point 6 now lets a point whose every use is advisory declare fallback so long as no finding is drawn from an entry's absence, and this page's evidence point is fallback, warns only on entries present and says nothing of an id the point no longer holds
+      at: 2026-10-03T01:46:54Z
+      outcome: updated
 ---
 
 # software-analysis capability
