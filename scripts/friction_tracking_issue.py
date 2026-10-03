@@ -48,11 +48,12 @@ repository's remote:
 
     python scripts/friction_tracking_issue.py <publication.json>
 
-Anywhere else — `GITHUB_ACTIONS` is not `true` — it refuses and calls nothing.
-A person's token would open an issue no run takes for its own (`AUTHOR`), left
-open beside the one the next run opens. To see the body locally, the renderer
-prints it: `uv run pkit friction check --all --json | uv run python
-scripts/friction_report_body.py -`.
+Outside GitHub Actions — `GITHUB_ACTIONS` is not `true` — it refuses and calls
+nothing, so that nobody runs it by hand: a person's token would open an issue
+no run takes for its own (`AUTHOR`), left open beside the one the next run
+opens. It guards against a run by hand; it is not a boundary. To see the body
+locally, the renderer prints it: `uv run pkit friction check --all --json | uv
+run python scripts/friction_report_body.py -`.
 """
 
 from __future__ import annotations
@@ -316,7 +317,7 @@ def main(argv: list[str] | None = None, run: Runner = subprocess.run) -> int:
         description=(
             "Keep the one tracking issue of the whole-repository friction check in step with "
             "a publication of `scripts/friction_report_body.py --json`. Only the workflow "
-            "`.github/workflows/friction-report.yml` runs it; anywhere else it refuses."
+            "`.github/workflows/friction-report.yml` runs it; outside GitHub Actions it refuses."
         ),
     )
     parser.add_argument("publication", help="The file the renderer's --json output was written to.")

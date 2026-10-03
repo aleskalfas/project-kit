@@ -18,7 +18,7 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-03T02:31:14Z
+      at: 2026-10-03T02:35:55Z
       outcome: updated
 ---
 
@@ -77,7 +77,7 @@ The workflow gates nothing, and never fails on what the check finds. It fails wh
 
 Answer what it reports in a pull request like any friction (the friction gate, above): revalidate, or defer with a reason. The next run closes the issue once nothing needs an answer; a deferral stays listed in its body.
 
-`uv run pkit friction check --all` gives the same report locally from HEAD (uncommitted work is not read), and `--json` the machine form. `uv run pkit friction check --all --json | uv run python scripts/friction_report_body.py -` prints the rendering the issue's body is made from, without the marker and the notice line the publisher sets above it. The publisher runs only in the workflow; run anywhere else, it refuses and writes nothing, since an issue a person's token opened is never taken for the tracking issue and would stay open beside it.
+`uv run pkit friction check --all` gives the same report locally from HEAD (uncommitted work is not read), and `--json` the machine form. `uv run pkit friction check --all --json | uv run python scripts/friction_report_body.py -` prints the rendering the issue's body is made from, without the marker and the notice line the publisher sets above it. The publisher runs only in the workflow; run by hand, outside GitHub Actions, it refuses and writes nothing, since an issue a person's token opened is never taken for the tracking issue and would stay open beside it.
 
 **The documentation check, with the pages' friction enforced** ([project-management:DEC-053](.pkit/capabilities/project-management/decisions/DEC-053-doc-check-slot.md) point 3). Beside the core check, project-management's documentation check holds a pull request to the obligations of the documentation-check point, `pkit::work-tracking:doc-check`, and each source of obligations has its own setting in `.pkit/capabilities/project-management/project/config.yaml`. project-kit **enforces the `friction` source**, the one living-docs contributes, read at the branch's head: a **stale page** (`page-stale`), and a **path of the declared surface no page anchors** (`code-undocumented`). The code-to-doc **mapping** stays advisory, with no rules — they became page anchors. A `## Doc impact` line meets neither friction obligation. The aggregator runs it as its `doc check` line, against the same base as the friction change check, so it binds every merge as the friction gate does. Run it alone with `uv run pkit pm check-doc-mapping` (against the default branch); `uv run pkit living-docs fill-doc-check` lists what the head owes. When it refuses:
 
