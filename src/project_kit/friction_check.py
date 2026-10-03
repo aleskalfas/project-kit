@@ -1098,7 +1098,8 @@ def _anchor_problem(
             return (
                 FindingKind.NO_ANSWER,
                 f"its resolver gave no answer, so whether this diff changed what it denotes "
-                f"cannot be told: {resolution.no_answer} — a second run may clear it",
+                f"cannot be told: {resolution.no_answer} — run again; if it gives none again, "
+                f"`pkit sync`, or the resolver needs mending",
             )
         if resolution.paths:
             return None

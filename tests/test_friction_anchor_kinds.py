@@ -369,7 +369,7 @@ def test_a_resolver_that_gives_no_answer_fails_the_change_check_in_enforcing_mod
     result = CliRunner().invoke(main, CHECK)
     assert result.exit_code == exit_code, result.output
     assert "no-answer" in result.output
-    assert "command 'resolve' did not answer within 1 s — a second run may clear it" in (
+    assert "command 'resolve' did not answer within 1 s — run again; if it gives none again" in (
         result.output
     )
 
@@ -695,7 +695,9 @@ def _assert_unresolved(repo: AdopterRepo, said: str) -> None:
         "its resolver gave no answer, so whether this diff changed what it denotes cannot be told: "
     )
     assert said in unresolved.message
-    assert unresolved.message.endswith(" — a second run may clear it")
+    assert unresolved.message.endswith(
+        " — run again; if it gives none again, `pkit sync`, or the resolver needs mending"
+    )
     assert unresolved in result.failing
 
     whole = fr.run_repository_check(repo.root)

@@ -31,8 +31,8 @@ body: >
   whose kind nothing installed resolves (`unresolved-kind`).
   The change check gains two finding kinds. `no-answer` — a resolver exited
   abnormally, overran its bound, was not provisioned or answered in another
-  shape — fails in enforcing mode whoever added the anchor, and says a second
-  run may clear it. `dead-unattributed` — an anchor the diff kept whose
+  shape — fails in enforcing mode whoever added the anchor, and says to run
+  again, then `pkit sync` or mend the resolver. `dead-unattributed` — an anchor the diff kept whose
   resolver names no file — is reported and never failed: a resolver is asked
   about the head alone, so a change that deletes what a kept anchor denotes
   passes the change check and the whole-repository check reports the anchor
