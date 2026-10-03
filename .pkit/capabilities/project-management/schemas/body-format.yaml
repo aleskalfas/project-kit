@@ -209,6 +209,30 @@ provenance_marker:
     - "No checkbox (`- [ ]` / `- [x]`)."
   misplacement_severity: "[validation-severity:warning]"
 
+# The answers a change wrote, in its PR body (per DEC-055). A section the
+# capability's scripts write from the change check's own list — open-pr,
+# edit-pr and land-work, never an agent — replaced whole on every write.
+# The artefacts' words are never input: every reader of the body strips
+# the section before it scans.
+friction_answers_marker:
+  heading: "## Friction answers"
+  start_marker: "<!-- pkit-friction-answers:start"
+  end_marker: "<!-- pkit-friction-answers:end -->"
+  position: |
+    The last section of the body, before the provenance footer. Each
+    marker is a line of its own; the start marker's line goes on to name
+    the head the list is for and the merge-base it was taken against
+    (`head=<oid> base=<oid> -->`). A change that wrote no answers has no
+    such section.
+  agent_managed: true
+  strip_before_scan: true
+  strip_rule: |
+    Strip each region — the start marker's line through the end marker's
+    — with the heading directly above it, before a reader scans the body:
+    the closing references, the Doc impact requirement, the mapping's
+    override and the placeholder check read the body without it. A marker
+    line with no partner is stripped alone.
+
 checkbox_rules:
   validation_timing: |
     Every check is an audit record of validation by the actor who

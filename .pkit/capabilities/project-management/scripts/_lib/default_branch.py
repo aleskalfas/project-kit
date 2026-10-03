@@ -76,12 +76,15 @@ class Branch:
 class Base:
     """A base as the backbone resolves it: the reference read, its commit (`tip`),
     where HEAD left it (`fork`) — or why not (`problem`); `tip` may name a commit
-    even then, when only the fork is missing."""
+    even then, when only the fork is missing. `resolved` is `remote` for a
+    remote-tracking reference, `local` for a local branch, None for a revision
+    read as named."""
 
     ref: str
     tip: str | None
     fork: str | None
     problem: str | None
+    resolved: str | None = None
 
 
 @dataclass(frozen=True)
@@ -222,6 +225,7 @@ def _reading(document: Any) -> Reading | None:
             tip=_text(base_doc.get("tip")),
             fork=_text(base_doc.get("fork")),
             problem=_text(base_doc.get("problem")),
+            resolved=_text(base_doc.get("resolved")),
         ),
     )
 
