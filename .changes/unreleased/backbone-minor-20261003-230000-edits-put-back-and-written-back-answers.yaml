@@ -1,0 +1,27 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  `pkit friction check` and `check --all` agree on histories that edit and
+  put back: an anchor has changed when what it stands on differs between two
+  states — the base and the head, or the revalidation point and HEAD — so an
+  edit put back is no change however the branch lands, and a file's mode
+  counts. The revalidation point is the commit where the artefact first
+  carried the `at` it carries: a revert of a revalidation is not one, and a
+  deferral put back keeps its first point, so neither erases debt nobody
+  answered. The change check reads an artefact's file history behind the
+  base when the change alters its `at` or brings back a deferral, and judges
+  a written-back `at` against that value's point: in enforcing mode,
+  reverting a revalidation now fails where it takes back answers to debt
+  that is still there, until someone revalidates or defers. Stale debt is
+  dated from the first change not put back. In a shallow clone a value first
+  carried inside it is read as first carried there and marked `cut`. `check
+  --all`, `debt`, `explain` and `record-status` follow, so verdicts move for
+  some histories: an edit and its revert is no longer debt, a reverted
+  revalidation brings its debt back, and points and origins may move — a
+  project running the after-merge status job may see many `last-check`
+  blocks rewritten on its first run. Additive output: the answers list marks
+  an `at` or deferral put back as `written-back`, `check --json` gains
+  `history` (`shallow`, `cut`), and each `artefacts` entry of `check --all
+  --json` gains `cut`; every `schema_version` stays 1.
