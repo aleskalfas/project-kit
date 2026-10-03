@@ -280,8 +280,9 @@ class WrittenAnswer:
     - `kept`: on a revalidation whose `at` changed, each deferral entry at head
       whose anchor the base defers too.
     - `asked`: the diff asked for it — for a revalidation, the diff asked the
-      artefact anything; for a deferral, the diff asked about its anchor, it is
-      introduced in the diff, and no revalidation stands.
+      artefact anything and the revalidation stands; for a deferral, the diff
+      asked about its anchor, it is introduced in the diff, and no revalidation
+      stands.
     - `new`: the artefact has no counterpart at the base.
     """
 
@@ -1303,6 +1304,7 @@ def _written_answers(
       a block added to an existing artefact is listed. Where `at` changed it
       `stands` or is a `bump`, as the check judges it (`_revalidation`), and
       names each deferral entry it kept; where `at` did not, it is `edited`.
+      It is asked for only where it stands.
     - A **deferral** entry is listed where the base defers its anchor in no
       entry (`stands`), or in none with its folded reason (`edited`). Every
       entry is read, so an anchor deferred twice — a validation error (COR-050
@@ -1369,7 +1371,7 @@ def _written_answers(
                     None,
                     _because(artefact),
                     status=status,
-                    asked=bool(questions),
+                    asked=bool(questions) and status is AnswerStatus.STANDS,
                     kept=kept,
                 )
             )

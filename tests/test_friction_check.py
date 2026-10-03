@@ -1300,6 +1300,42 @@ def test_a_revalidation_of_a_changed_anchor_is_asked_for(repo: AdopterRepo) -> N
     assert _answers(_run(repo)) == [_written("unchanged", "a refactor", asked=True)]
 
 
+def test_a_justification_reworded_beside_a_question_is_not_asked_for(repo: AdopterRepo) -> None:
+    """The deferral answers the diff's question; the reworded justification, with `at`
+    untouched, answers nothing, so it is never the asked-for answer."""
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit(
+        "change the CLI; defer it, and reword the justification",
+        {
+            "src/cli/main.py": "print('cli v3')\n",
+            "docs/guide.md": guide(
+                because="the CLI surface, as described",
+                deferred=[("path", "src/cli/**", "rewrite after the rename")],
+            ),
+        },
+    )
+    result = _run(repo)
+    assert _summary(result) == [("answered", "docs/guide.md", "path:src/cli/**", "deferred")]
+    assert _answers(result) == [
+        _written("unchanged", "the CLI surface, as described", status="edited"),
+        _written("deferred", "rewrite after the rename", anchor=CLI, asked=True),
+    ]
+    section = fc.render_human(result).split("Answers written in this change", 1)[1]
+    assert (
+        'docs/guide.md  unchanged (not asked for; edited without a revalidation) — "the CLI '
+        'surface, as described"' in section
+    )
+
+
+def test_a_bump_beside_a_question_is_not_asked_for(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/guide.md": guide()})
+    repo.commit(
+        "change the CLI; bump the marker",
+        {"src/cli/main.py": "print('cli v3')\n", "docs/guide.md": guide(at=T2)},
+    )
+    assert _answers(_run(repo)) == [_written("unchanged", HOLDS, status="bump")]
+
+
 def test_a_bump_is_listed_as_the_check_judges_it(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": guide()})
     repo.commit("bump the marker", {"docs/guide.md": guide(at=T2)})
