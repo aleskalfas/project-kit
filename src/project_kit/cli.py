@@ -1418,8 +1418,12 @@ def _friction_write(
     yes: bool,
     dry_run: bool,
     rerun: list[str],
+    *,
+    writes_answer: bool,
 ) -> None:
-    """Build a writer's plan and apply it with the consent given (COR-050 point 13)."""
+    """Build a writer's plan and apply it with the consent given (COR-050 point 13). A
+    writer of an answer (`writes_answer`) is refused without a ready-made `--yes`
+    command (point 3; `friction_write.apply`)."""
     if yes and dry_run:
         raise click.UsageError(
             "--yes and --dry-run exclude each other: one writes, the other never does."
@@ -1429,7 +1433,9 @@ def _friction_write(
         raise click.ClickException("not in a project tree.")
     can_ask = not yes and not dry_run and friction_write.interactive()
     plan = plan_of(target_root, can_ask)
-    friction_write.apply(plan, yes=yes, dry_run=dry_run, can_ask=can_ask, rerun=rerun)
+    friction_write.apply(
+        plan, yes=yes, dry_run=dry_run, can_ask=can_ask, rerun=rerun, writes_answer=writes_answer
+    )
 
 
 @friction.command("revalidate")
@@ -1489,7 +1495,7 @@ def friction_revalidate_command(
             confirm_keep=friction_write.ask_keep if can_ask else None,
         )
 
-    _friction_write(plan_of, yes, dry_run, rerun)
+    _friction_write(plan_of, yes, dry_run, rerun, writes_answer=True)
 
 
 @friction.command("defer")
@@ -1518,7 +1524,7 @@ def friction_defer_command(
     def plan_of(target_root: Path, _can_ask: bool) -> friction_write.Plan:
         return friction_write.plan_defer(target_root, artefact, anchor=anchor, reason=reason)
 
-    _friction_write(plan_of, yes, dry_run, rerun)
+    _friction_write(plan_of, yes, dry_run, rerun, writes_answer=True)
 
 
 @friction.command("record-status")
@@ -1537,7 +1543,7 @@ def friction_record_status_command(artefact: str, yes: bool, dry_run: bool) -> N
     def plan_of(target_root: Path, _can_ask: bool) -> friction_write.Plan:
         return friction_write.plan_record_status(target_root, artefact)
 
-    _friction_write(plan_of, yes, dry_run, rerun)
+    _friction_write(plan_of, yes, dry_run, rerun, writes_answer=False)
 
 
 @friction.command("resolve")

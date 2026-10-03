@@ -471,16 +471,55 @@ def test_record_status_in_a_flow_block_stays_inside_it(repo: AdopterRepo) -> Non
 # --- consent ------------------------------------------------------------------------------
 
 
-def test_without_consent_a_writer_refuses_and_names_the_command(repo: AdopterRepo) -> None:
+@pytest.mark.parametrize(
+    "command",
+    [
+        pytest.param(
+            ("defer", "guide", "--anchor", "src/cli/**", "--reason", "the redesign"), id="defer"
+        ),
+        pytest.param(
+            ("revalidate", "guide", "--outcome", "unchanged", "--because", "v2 is internal"),
+            id="revalidate",
+        ),
+    ],
+)
+def test_without_consent_an_answer_is_refused_with_no_ready_made_yes(
+    repo: AdopterRepo, command: tuple[str, ...]
+) -> None:
+    """An answer is written on a person's decision (COR-050 point 3): the refusal names
+    the dry run and says what `--yes` does, and prints no command that writes."""
     _put(repo, GUIDE)
-    result = _cli("defer", "guide", "--anchor", "src/cli/**", "--reason", "the redesign")
+    result = _cli(*command)
     assert result.exit_code == 1
-    assert "refusing to write docs/guide.md without consent" in result.output
-    assert (
-        "pkit friction defer guide --anchor 'src/cli/**' --reason 'the redesign' --yes"
-        in result.output
+    rerun = fw.command_line("pkit", "friction", *command)
+    assert result.output.endswith(
+        "refusing to write docs/guide.md without consent: stdin is not a terminal and --yes "
+        "was not given (COR-050 point 13). Nothing was written.\n"
+        "To see the change first, run:\n"
+        f"  {rerun} --dry-run\n"
+        "`--yes` writes without asking. An answer on an artefact is written on a person's "
+        "decision (COR-050 point 3).\n"
     )
+    assert f"{rerun} --yes" not in result.output
+    assert not any(line.strip().endswith("--yes") for line in result.output.splitlines())
     assert _read(repo) == GUIDE
+
+
+def test_without_consent_record_status_refuses_and_names_the_command(repo: AdopterRepo) -> None:
+    _commit_base(repo)
+    repo.commit("change the CLI", {"src/cli/main.py": "print('v2')\n"})
+    written = _read(repo)
+    result = _cli("record-status", "guide")
+    assert result.exit_code == 1
+    assert result.output.endswith(
+        "refusing to write docs/guide.md without consent: stdin is not a terminal and --yes "
+        "was not given (COR-050 point 13). Nothing was written.\n"
+        "To see the change first, run:\n"
+        "  pkit friction record-status guide --dry-run\n"
+        "To consent non-interactively, run:\n"
+        "  pkit friction record-status guide --yes\n"
+    )
+    assert _read(repo) == written
 
 
 def test_dry_run_shows_the_diff_and_writes_nothing(repo: AdopterRepo) -> None:
