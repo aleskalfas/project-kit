@@ -1020,8 +1020,10 @@ def test_json_document_shape(repo: AdopterRepo) -> None:
         "head",
         "mode",
         "schema_version",
+        "unreadable",
     ]
     assert document["answers"] == []  # friction is not an answer: nothing was written
+    assert document["unreadable"] == []
     assert document["schema_version"] == fc.CHANGE_SCHEMA_VERSION == 1
     assert (document["check"], document["mode"], document["dormant"], document["failed"]) == (
         "change",
