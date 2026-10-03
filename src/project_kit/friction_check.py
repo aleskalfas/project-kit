@@ -1660,7 +1660,8 @@ _MODE_GLOSS = {
 
 def render_human(result: ChangeCheck) -> str:
     """The read view: header, findings grouped by artefact upstream first, result, legend,
-    and last the answers the change wrote, word for word."""
+    and last the answers the change wrote, word for word — what the repository wrote shown
+    with any character a terminal would act on escaped (`_shown`)."""
     title = cli_render.style("title", "Friction change check")
     if result.dormant:
         return "\n".join([f"{title} — dormant", "", *_dormant_lines(result)]) + "\n"
@@ -1687,12 +1688,12 @@ def render_human(result: ChangeCheck) -> str:
     for finding in rows:
         if finding.location != current:
             current = finding.location
-            lines.append(f"  {current}")
+            lines.append(f"  {_shown(current)}")
         cells = f"{finding.kind.value:{kind_width}}  {_anchor_cell(finding):{anchor_width}}"
-        lines.append(f"    {cells}  {finding.message}".rstrip())
+        lines.append(f"    {cells}  {_shown(finding.message)}".rstrip())
     for finding in unreadable:
-        lines.append(f"  {finding.location}")
-        lines.append(f"    {finding.kind.value:{kind_width}}  {finding.message}")
+        lines.append(f"  {_shown(finding.location or '')}")
+        lines.append(f"    {finding.kind.value:{kind_width}}  {_shown(finding.message)}")
 
     lines.extend(["", _result_line(result)])
     shown = [kind for kind in _LEGEND if result.count(kind)]
@@ -1714,7 +1715,21 @@ def render_human(result: ChangeCheck) -> str:
 
 
 def _anchor_cell(finding: Finding) -> str:
-    return "—" if finding.anchor is None else f"{finding.anchor.kind} {finding.anchor.value}"
+    if finding.anchor is None:
+        return "—"
+    return _shown(f"{finding.anchor.kind} {finding.anchor.value}")
+
+
+def _shown(text: str) -> str:
+    """`text` as the human view prints it: each character that is not printable — a
+    control character such as an escape, a bidirectional override, a zero-width
+    character — written as its escape (`\\x1b`, `\\u202e`), never raw. Words read
+    from an artefact then cannot move the cursor, erase a line or reorder what
+    follows on the terminal the list is read on; the JSON document escapes them
+    itself."""
+    if text.isprintable():
+        return text
+    return "".join(ch if ch.isprintable() else ascii(ch)[1:-1] for ch in text)
 
 
 def _answers_lines(result: ChangeCheck) -> list[str]:
@@ -1736,7 +1751,8 @@ def _answers_lines(result: ChangeCheck) -> list[str]:
 
 
 def _answer_line(answer: WrittenAnswer) -> str:
-    """`<location>  <answer> [<anchor>] (<flags>) — "<words>"`, every word written."""
+    """`<location>  <answer> [<anchor>] (<flags>) — "<words>"`, every word written, any
+    character that is not printable escaped (`_shown`)."""
     what = answer.answer or "no outcome"
     if answer.anchor is not None:
         what += f" {answer.anchor.kind} {answer.anchor.value}"
@@ -1755,7 +1771,7 @@ def _answer_line(answer: WrittenAnswer) -> str:
     line = f"{answer.location}  {what}"
     if flags:
         line += f" ({'; '.join(flags)})"
-    return line if answer.reason is None else f'{line} — "{answer.reason}"'
+    return _shown(line if answer.reason is None else f'{line} — "{answer.reason}"')
 
 
 def _header_lines(result: ChangeCheck) -> list[str]:
@@ -1782,7 +1798,7 @@ def _header_lines(result: ChangeCheck) -> list[str]:
     lines.extend(_mode_warning(result))
     for finding in result.findings:
         if finding.kind is FindingKind.OUTDATED_BASE:
-            lines.append(f"  ⚠ outdated base: {finding.message}")
+            lines.append(f"  ⚠ outdated base: {_shown(finding.message)}")
     return lines
 
 

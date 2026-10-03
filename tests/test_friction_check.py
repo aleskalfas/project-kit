@@ -1411,6 +1411,44 @@ def test_the_human_view_ends_with_every_answer_in_full(repo: AdopterRepo) -> Non
     ]
 
 
+def test_the_human_view_escapes_what_a_terminal_would_act_on(repo: AdopterRepo) -> None:
+    """YAML's double-quoted escapes reach the words: an escape sequence that moves the
+    cursor up and erases the line, and a right-to-left override. The human view shows
+    each escaped, in the findings and in the list; the JSON document keeps the words as
+    written, which its own encoding escapes."""
+    _start(repo, {"docs/guide.md": guide()})
+    yaml_front = (
+        "---\n"
+        "id: guide\n"
+        "pkit:\n"
+        "  friction:\n"
+        "    anchors:\n"
+        "      path: [src/cli/**]\n"
+        "    revalidated:\n"
+        f"      at: '{T1}'\n"
+        "      outcome: unchanged\n"
+        f"      unchanged-because: {HOLDS}\n"
+        "      deferred:\n"
+        "        - anchor: {kind: path, value: src/cli/**}\n"
+        '          reason: "later\\e[1A\\e[2K all fine \\u202Edesrever"\n'
+        "---\n\nBody.\n"
+    )
+    repo.commit(
+        "change the CLI; defer it",
+        {"src/cli/main.py": "print('cli v3')\n", "docs/guide.md": yaml_front},
+    )
+    result = _run(repo)
+    words = "later\x1b[1A\x1b[2K all fine \u202edesrever"
+    assert _answers(result) == [_written("deferred", words, anchor=CLI, asked=True)]
+    assert "\\u001b[1A" in fc.render_json(result)
+
+    text = fc.render_human(result)
+    assert "\x1b" not in text and "\u202e" not in text
+    shown = "later\\x1b[1A\\x1b[2K all fine \\u202edesrever"
+    assert f"answered: deferred — {shown}" in text  # the finding
+    assert f'docs/guide.md  deferred path src/cli/** — "{shown}"' in text  # the list
+
+
 def test_the_human_view_says_none_when_nothing_was_written(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": guide()})
     repo.commit("change the CLI only", {"src/cli/main.py": "print('n')\n"})
