@@ -5,9 +5,15 @@ it — friction-fix proposals, reader-review, onboarding — always as proposals
 person reviews. These tests hold the contract its files carry:
 
 - the **front matter**: read-only on the repository (no `Edit`, nothing owned),
-  `Write` only for the agent workspace, its storyboard declared by its bare
-  sibling filename (the agents README's convention), no model or effort of its
-  own;
+  `Write` only for the agent workspace, no tool for asking the person, its
+  storyboard declared by its bare sibling filename (the agents README's
+  convention), no model or effort of its own;
+- **the friction writers** (#1148): the body names them in one paragraph, which
+  points at the agents README's "Friction writers" for the conditions for
+  running one, states the two that never hold for this agent, and says it runs
+  none; the storyboard runs none either,
+  and the command it names for the person carries no consent flag. That those
+  commands write nothing without a person is `test_handed_over_writers.py`'s;
 - the **references**: `pkit refs validate`'s checks find nothing in the agent's
   folder (every record and path the body and storyboard cite is declared, and
   the storyboard and the agent name each other);
@@ -34,6 +40,7 @@ import pytest
 from ruamel.yaml import YAML
 
 from project_kit import refs
+from tests import handed_over
 
 REPO = Path(__file__).resolve().parent.parent
 AGENT_DIR = REPO / ".pkit" / "capabilities" / "living-docs" / "agents" / "living-docs"
@@ -43,8 +50,29 @@ DEPLOYED = REPO / ".claude" / "agents" / "living-docs.md"
 ADAPTER = REPO / ".pkit" / "adapters" / "claude-code"
 OVERLAY = REPO / ".pkit" / "agents" / "project" / "overlay.yaml"
 
-#: The friction writers the agent never runs (COR-050 point 13).
+#: The friction writers the agent never runs: its body names them in one paragraph,
+#: which sets the conditions for running one (COR-013; the agents README, "Friction
+#: writers").
 WRITERS = ("pkit friction revalidate", "pkit friction defer", "pkit friction record-status")
+WRITES = re.compile(r"friction (?:revalidate|defer|record-status)")
+RULE = "You own no path (`owns` is empty, COR-013)."
+
+#: Where the conditions for running a writer are set; the body points there rather
+#: than restating them.
+FRICTION_WRITERS = '(`.pkit/agents/README.md`, "Friction writers")'
+
+#: The two conditions that never hold for this agent, as the body states them.
+NEVER_HOLDS = (
+    "Two of them never hold for you",
+    "you cannot ask the person — you have no tool for putting a question to them",
+    "you review pages",
+)
+
+#: Claude Code's tool for putting a question to the person: without it the agent
+#: cannot ask, so it runs no writer.
+ASKING_TOOL = "AskUserQuestion"
+
+README = REPO / ".pkit" / "capabilities" / "living-docs" / "README.md"
 
 #: The storyboard's scenarios (COR-016), each with its four parts.
 SCENARIOS = (
@@ -82,19 +110,50 @@ def test_front_matter_names_the_agent(agent):
 
 
 def test_agent_is_read_only_on_the_repository(agent):
-    """Read, search and the read commands; Write for the workspace; no Edit, nothing owned."""
+    """Read, search and the read commands; Write for the workspace; no Edit, nothing
+    owned, and no tool for asking the person."""
     front, _ = agent
     assert set(front["tools"]) == {"Read", "Glob", "Grep", "Bash", "Write"}
+    assert ASKING_TOOL not in front["tools"]
     assert front["owns"] == []
     assert not front.get("needs")
 
 
-def test_body_says_it_never_applies_or_runs_a_writer(agent):
+def test_body_names_the_writers_in_one_paragraph_and_runs_none(agent):
+    """The writers are named only in the paragraph that points at the agents README's
+    conditions and states the two that never hold for it; it names the command that
+    answers, and runs none."""
     _, body = agent
     assert "## Read-only on the repository" in body
+    (rule,) = [paragraph for paragraph in body.split("\n\n") if WRITES.search(paragraph)]
+    assert rule.startswith(RULE)
     for writer in WRITERS:
-        assert writer in body, writer
+        assert f"`{writer}`" in rule, writer
+    assert FRICTION_WRITERS in rule
+    for condition in NEVER_HOLDS:
+        assert condition in rule, condition
+    assert "without `--yes`, and run none" in rule
+    assert "`pkit friction record-status` is the after-merge job's and never yours." in rule
     assert "`.agent-workspace/living-docs/`" in body
+
+
+def test_storyboard_hands_over_no_consent_and_runs_no_writer(storyboard):
+    """Dispatched, the plan is its result; either way it runs no writer, and the command
+    it names for the person carries neither `--yes` nor `--dry-run`."""
+    _, body = storyboard
+    pattern = body.split("## Invocation pattern", 1)[1].split("\n## ", 1)[0]
+    assert "Dispatched as a subagent, it cannot hear the person: the plan is its result" in pattern
+    assert "Either way nothing is drafted before approval, and no friction writer is run" in pattern
+    handed = handed_over.commands(body)
+    assert handed
+    assert [c for c in handed if handed_over.CONSENT.search(c)] == []
+
+
+def test_readme_says_the_answer_is_a_person_s_decision():
+    text = README.read_text(encoding="utf-8")
+    assert "the answer a page carries is yours to give" not in text
+    assert "the answer a page carries is a person's decision (COR-050 point 3)" in text
+    assert 'who may run a writer is in the agents README, "Friction writers"' in text
 
 
 def test_storyboard_is_declared_as_its_sibling(agent):

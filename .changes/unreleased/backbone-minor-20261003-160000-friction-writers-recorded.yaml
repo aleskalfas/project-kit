@@ -1,0 +1,26 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  Whether an agent may run a friction writer is recorded. COR-050 point 3
+  says when an answer on an artefact is a person's decision: an agent making
+  a change may write first the answers the change check asks of that change,
+  and the revalidation of a combined state it owes after a conflict; they
+  become the person's when the person who authorises the merge is shown every
+  answer the change wrote, word for word, from the change check's own list,
+  and then authorises it. Every other answer, and every reason for having no
+  anchors (point 1), is accepted before it is written. COR-013 says a write
+  made by one of the methodology's mutating commands is the command's and is
+  not declared in `owns`: the agent's body, or a skill it hands the work to,
+  names the command and the conditions for running it. The agents README
+  gains "Friction writers" — an agent making a change answers what its own
+  change owes; an agent whose task is the answer runs a writer only when its
+  body, or a skill its body hands the work to, names it, it can ask the
+  person, the person was shown every word first, and it is not a reviewer —
+  and its `owns` bullet says the same of command-routed writes. The core
+  rules gain rule 20, "An answer you write on an artefact is a person's
+  decision: show it to them word for word", and the `agent-author` skill says
+  that a path an agent writes only through a mutating command it runs is not
+  listed among the files it owns: the body names the command and the
+  conditions for running it.

@@ -12,7 +12,7 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-03T12:32:07Z
+      at: 2026-10-03T14:29:48Z
       outcome: updated
 ---
 
@@ -153,7 +153,7 @@ The checks above tell you *that* a page drifted and *which* documents are not pa
 
 What it will not do:
 
-- **Apply anything.** It is read-only on your repository: it never edits, moves or deletes a tracked file, never changes configuration, and never runs a friction writer (`revalidate`, `defer`, `record-status`) — the answer a page carries is yours to give (COR-050 point 3). Its proposals land in the agent workspace, under `.agent-workspace/living-docs/`, as diffs you apply with `git apply` and pull-request bodies you open with. The one thing it writes outside the workspace is a reader-review posted as a pull-request comment, when you ask for it.
+- **Apply anything.** It is read-only on your repository: it never edits, moves or deletes a tracked file, never changes configuration, and never runs a friction writer (`revalidate`, `defer`, `record-status`) — the answer a page carries is a person's decision (COR-050 point 3), and this agent has no tool for asking you and judges pages besides; who may run a writer is in the agents README, "Friction writers". Its proposals land in the agent workspace, under `.agent-workspace/living-docs/`, as diffs you apply with `git apply` and pull-request bodies you open with. The one thing it writes outside the workspace is a reader-review posted as a pull-request comment, when you ask for it.
 - **Repeat validation.** What `pkit living-docs validate` and `pkit validate` already judge, it names rather than re-judges.
 - **Review a change for missing docs.** That is change review, the code-review panel's documentation reviewer where one is installed; reader-review looks at the page, not the diff.
 - **Test the docs by running the product.** Such results arrive through the reading-evidence point, and the agent reads them when they are there.
