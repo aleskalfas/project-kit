@@ -1,0 +1,21 @@
+component: living-docs
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit living-docs validate` checks a page's body against the structure its
+  kind declares (RS-LDOC-004: pages of a kind follow one format). Each kind
+  the capability ships declares its structure once, in the capability's
+  `schemas/page-kinds.yaml`: the sections every page of the kind carries, each
+  a heading level and, where the kind fixes it, its text, in order unless the
+  kind says otherwise. A reference page and a signpost each carry a title,
+  written as `# Title` at the start of a line. While RS-LDOC-004 is accepted,
+  a page that lacks a section, or carries one out of order, is an error naming
+  the page, its kind, the section and the declared structure, so
+  `pkit validate` fails; under any other status no body is checked. A `#` line
+  that is indented, or inside fenced code, a block quote or an HTML comment,
+  is no section; nor is an underlined or HTML heading, an empty one, or a
+  template's unfilled `<placeholder>`. A page may carry other sections. A page
+  whose kind declares no structure, such as a kind your project adds, is
+  reported with its kind and never failed. A declaration that cannot be read
+  is one error, and no body is checked.
