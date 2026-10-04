@@ -2473,6 +2473,54 @@ def test_an_at_removed_is_judged_against_the_blocks_introduction_and_listed_edit
     assert (answer.status, answer.asked, answer.kept) == (fc.AnswerStatus.EDITED, False, ())
 
 
+def test_a_write_back_of_a_value_the_cut_already_carries_answers_nothing(
+    timeline: Timeline, tmp_path: Path
+) -> None:
+    """In a shallow clone whose cut already carries the value written back, its point is
+    beyond the clone: the value answers nothing and is no bump, the guide is judged
+    against the base — asked about the CLI the change edits — and the header names it."""
+    timeline.start({"docs/guide.md": guide()})
+    timeline.commit("cli 2", {"src/cli/main.py": "print('2')\n"})
+    timeline.commit("revalidate", {"docs/guide.md": guide(at=T2, because="checked cli 2")})
+    timeline.commit("cli 3", {"src/cli/main.py": "print('3')\n"})
+    clone = _clone(timeline.adopter, tmp_path / "shallow", depth=3)
+    clone.checkout("topic", create=True)
+    clone.commit(
+        "write the first at back, edit the CLI",
+        {"docs/guide.md": guide(because="read again"), "src/cli/main.py": "print('4')\n"},
+    )
+
+    change = fc.run_change_check(clone.root, "main")
+    assert change.cut == ("docs/guide.md",)
+    assert [a.status for a in change.answers] == [fc.AnswerStatus.WRITTEN_BACK]
+    assert _friction(change) == [("docs/guide.md", "path:src/cli/**")]
+    assert change.count(fc.FindingKind.BUMP) == 0
+
+
+def test_a_submodule_bumped_under_a_path_anchor_is_a_change_in_both_checks(
+    timeline: Timeline,
+) -> None:
+    """A gitlink under a path anchor is one of its parts, compared by its object: moving
+    the submodule to another commit is a change — the change check asks, and once landed
+    the guide is stale from the move."""
+    repo = timeline.adopter
+    first = timeline.start({"docs/guide.md": guide()})
+    repo.git("update-index", "--add", "--cacheinfo", f"160000,{first},src/cli/vendor")
+    repo.write({"docs/guide.md": guide(at=T2, because="checked with the submodule")})
+    repo.git("add", "docs/guide.md")
+    other = timeline.commit_index("vendor a submodule under the CLI, revalidate")
+    assert _summary(_run(timeline)) == []
+
+    repo.checkout("bump", create=True)
+    repo.git("update-index", "--cacheinfo", f"160000,{other},src/cli/vendor")
+    moved = timeline.commit_index("move the submodule")
+    change = fc.run_change_check(repo.root, "main", named=fc.named_head(repo.root, moved))
+    assert _friction(change) == [("docs/guide.md", "path:src/cli/**")]
+    repo.checkout("main")
+    timeline.merge("bump")
+    assert _summary(_run(timeline)) == [("stale", "docs/guide.md", "path:src/cli/**", moved)]
+
+
 def test_a_deferral_put_back_that_covers_its_anchor_stands_flagged_put_back(
     timeline: Timeline,
 ) -> None:

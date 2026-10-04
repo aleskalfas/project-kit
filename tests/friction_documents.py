@@ -105,6 +105,12 @@ class Timeline:
     ) -> str:
         return self.adopter.commit(message, files, author=author, date=self._next())
 
+    def commit_index(self, message: str) -> str:
+        """Commit what the index holds — a gitlink staged with `git update-index`, say,
+        which `commit` would stage away, having no checkout — dated as the next commit."""
+        self.adopter.git("commit", "-q", "-m", message, date=self._next())
+        return self.adopter.head()
+
     def rename(self, src: str, dst: str) -> str:
         return self.adopter.rename(src, dst, date=self._next())
 
