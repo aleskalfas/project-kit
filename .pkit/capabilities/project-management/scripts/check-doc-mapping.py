@@ -94,7 +94,7 @@ import pathspec
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, default_branch, doc_check
+from _lib import bootstrap_gate, default_branch, doc_check, friction_answers
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -124,10 +124,11 @@ def _changed_files(fork: str) -> list[str] | None:
 
 
 def _doc_impact_section(body: str) -> str:
-    """Return the text of the PR body's `## Doc impact` section (lowercased)."""
+    """Return the text of the PR body's `## Doc impact` section (lowercased), read
+    without the friction answers' section, which overrides no mapping (DEC-055)."""
     if not body:
         return ""
-    lines = body.splitlines()
+    lines = friction_answers.strip(body).splitlines()
     out: list[str] = []
     capture = False
     for line in lines:

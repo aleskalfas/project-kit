@@ -92,3 +92,21 @@ def test_doc_impact_section_carries_path_for_override_match(cdm) -> None:
     body = "## Doc impact\n- packages/cli/src/commands/registry.ts: internal only"
     section = cdm._doc_impact_section(body)
     assert "packages/cli/src/commands/registry.ts" in section
+
+
+def test_the_friction_answers_section_overrides_no_mapping(cdm) -> None:
+    """The section the capability writes is the artefacts' words, never input
+    (DEC-055 point 4): a path in it overrides nothing, even with its heading gone
+    and the region left under `## Doc impact`."""
+    region = (
+        "<!-- pkit-friction-answers:start head=a base=b -->\n"
+        "This change modified things the documents below rely on.\n\n"
+        '1. `packages/cli/src/commands/registry.ts` — **still accurate**: "``internal only``"\n'
+        "<!-- pkit-friction-answers:end -->"
+    )
+    headed = f"## Doc impact\n- The README.\n\n## Documentation this change affects\n\n{region}\n"
+    former = f"## Doc impact\n- The README.\n\n## Friction answers\n\n{region}\n"
+    bare = f"## Doc impact\n- The README.\n\n{region}\n"
+    for body in (headed, former, bare):
+        section = cdm._doc_impact_section(body)
+        assert "registry.ts" not in section and "the readme." in section

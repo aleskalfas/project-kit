@@ -2627,6 +2627,7 @@ def land(
         _stub_gates(monkeypatch, lw, cap)
         _stub_gates(monkeypatch, lw.done_work, cap)
         _stub_done_work(monkeypatch, lw.done_work, run)
+        _the_change_wrote_no_answers(monkeypatch, lw.friction_answers)
         monkeypatch.setattr(lw, "_sleep", clock.sleep)
         monkeypatch.setattr(lw, "_monotonic", clock)
 
@@ -2658,6 +2659,19 @@ def land(
         _requests([passed for passed in guarded if passed != session_guard.SAME_REPO]),
         "; ".join(deletions),
     )
+
+
+def _the_change_wrote_no_answers(monkeypatch: pytest.MonkeyPatch, answers: ModuleType) -> None:
+    """land-work's step that lists the answers (`documents this change affects:`),
+    answered as for a change that wrote none: the landings these rows walk are the
+    ones a change with no answers takes, which the step leaves as they were
+    (project-management DEC-055)."""
+
+    def derive(head: str, base: str | None) -> Any:
+        document = {"schema_version": 1, "base": {"commit": "", "outdated": False}}
+        return answers.Derivation(head, document={**document, "answers": [], "unreadable": []})
+
+    monkeypatch.setattr(answers, "derive", derive)
 
 
 def _release(args: list[str]) -> str:
