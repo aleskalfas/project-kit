@@ -1672,8 +1672,9 @@ def friction_check_command(
     where what it stands on differs between the two. Reports stale
     and deferred debt with their origins, dead anchors, over-broad anchors,
     unanchored artefacts — those accepted with a reason listed apart, never
-    counted — and uncovered surface. Needs the full history, says so in a
-    shallow clone, and exits 0 in either mode.
+    counted — and uncovered surface. Reads each artefact's history back to
+    where it was last added; in a shallow clone it marks what the cut hides,
+    and exits 0 in either mode.
     """
     if whole_repository and head_rev is not None:
         raise click.UsageError(
