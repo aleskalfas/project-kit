@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-04T00:44:13Z
+      at: 2026-10-04T10:55:03Z
       outcome: unchanged
-      unchanged-because: This change rewrites what the CLI reference says the friction checks count as a changed anchor, a revalidation point and an answer's status, the schemas reference's sentence on the point of at, and the lifecycle reference's sentence on when a registered kind's anchor is stale. This map names the three by role (the pkit command surface, the schemas, packaging and upgrades) and points to the CLI reference's Authoring commands section, none of which those changes touch, so all of it still holds.
+      unchanged-because: This map names the CLI reference by its role, the pkit command surface, and links it. This change rewrites what that reference says check --all compares and how it dates debt after a merge that takes a file whole from one side; the reference's role and place are unchanged, so the map holds.
 ---
 
 # project-kit
