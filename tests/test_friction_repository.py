@@ -2447,3 +2447,92 @@ def test_a_merge_taking_back_a_file_from_before_the_point_reads_as_no_change(
     repo.checkout("main")
     timeline.merge("take")
     assert _summary(_run(timeline)) == []
+
+
+# --- the change check's write-back paths, and its answers list (COR-050 points 3, 4, 6) -----
+
+
+def test_an_at_removed_is_judged_against_the_blocks_introduction_and_listed_edited(
+    timeline: Timeline,
+) -> None:
+    """The CLI changed and was answered; a branch removes the `at`. The block's own marker
+    is written back, so the guide is judged against the commit that introduced the block
+    and asked about the CLI; the revalidation it removed is listed `edited`, never
+    `written-back`, and no bump."""
+    repo = timeline.adopter
+    timeline.start({"docs/guide.md": guide()})
+    timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
+    timeline.commit("revalidate", {"docs/guide.md": guide(at=T2, because="checked the CLI")})
+    repo.checkout("drop", create=True)
+    timeline.commit("drop the at", {"docs/guide.md": guide(at=None, outcome=None, because=None)})
+
+    change = fc.run_change_check(repo.root, "main")
+    assert _friction(change) == [("docs/guide.md", "path:src/cli/**")]
+    assert change.count(fc.FindingKind.BUMP) == 0
+    (answer,) = change.answers
+    assert (answer.status, answer.asked, answer.kept) == (fc.AnswerStatus.EDITED, False, ())
+
+
+def test_a_deferral_put_back_that_covers_its_anchor_stands_flagged_put_back(
+    timeline: Timeline,
+) -> None:
+    """The CLI changes, d0 defers it, r1 revalidates and drops the deferral; a branch
+    reverts r1. The `at` written back answers nothing; the deferral put back keeps d0's
+    point and covers the CLI as it stood there, which it still is — so the check accepts
+    it: `stands`, flagged `put_back`, asked for. Once landed the guide is deferred."""
+    repo = timeline.adopter
+    base = timeline.start({"docs/guide.md": guide()}, friction_config(mode="enforcing"))
+    timeline.commit("change the CLI", {"src/cli/main.py": "print('cli v2')\n"})
+    deferred = timeline.commit(
+        "defer the CLI", {"docs/guide.md": guide(deferred=[("path", "src/cli/**", REASON)])}
+    )
+    revalidated = timeline.commit(
+        "revalidate, dropping the deferral",
+        {"docs/guide.md": guide(at=T2, because="the CLI rework settled")},
+    )
+    repo.checkout("undo", create=True)
+    timeline.revert(revalidated)
+
+    change = fc.run_change_check(repo.root, "main")
+    assert [(f.kind, f.answer) for f in change.findings] == [
+        (fc.FindingKind.ANSWERED, fc.Answer.DEFERRED)
+    ]
+    assert not change.failed
+    revalidation, deferral = change.answers
+    assert revalidation.status is fc.AnswerStatus.WRITTEN_BACK
+    assert (deferral.status, deferral.put_back, deferral.asked) == (
+        fc.AnswerStatus.STANDS,
+        True,
+        True,
+    )
+    assert json.loads(fc.render_json(change))["answers"][1]["put_back"] is True
+    assert "put back: an entry it carried before, covering the anchor" in fc.render_human(change)
+
+    repo.checkout("main")
+    timeline.merge("undo")
+    result = _run(timeline)
+    assert _point(result) == base
+    assert _summary(result) == [("deferred", "docs/guide.md", "path:src/cli/**", deferred)]
+
+
+def test_a_written_back_revalidation_names_the_deferrals_it_kept(timeline: Timeline) -> None:
+    """A revalidation that kept the engine's deferral, reverted: its `at` is written back
+    and answers nothing, and like any revalidation whose `at` changed it names the
+    deferral it keeps."""
+    repo = timeline.adopter
+    anchors = {"path": ["src/cli/**", "src/core/**"]}
+    kept = [("path", "src/core/**", "waiting on the engine")]
+    timeline.start({"docs/guide.md": guide(anchors=anchors, deferred=kept)})
+    timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
+    revalidated = timeline.commit(
+        "revalidate, keeping the engine's deferral",
+        {"docs/guide.md": guide(anchors=anchors, deferred=kept, at=T2, because="checked")},
+    )
+    repo.checkout("undo", create=True)
+    timeline.revert(revalidated)
+
+    (answer,) = fc.run_change_check(repo.root, "main").answers
+    assert answer.status is fc.AnswerStatus.WRITTEN_BACK
+    assert [k.as_json() for k in answer.kept] == [
+        {"anchor": {"kind": "path", "value": "src/core/**"}, "reason": "waiting on the engine"}
+    ]

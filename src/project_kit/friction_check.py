@@ -22,16 +22,17 @@ revalidation — answers nothing and is no bump: the artefact is judged against
 that value's revalidation points instead of the base, asked about an anchor
 only where it differs, as a whole, from what it stood on at every one of them
 (`changed_since`, the rule `check --all` judges by), and only a deferral that
-covers the anchor answers it. An `at` removed writes back the block's own marker,
-judged against the commit that first introduced the block. Likewise a
-deferral the diff introduces on an anchor it asks about is searched for, only
-where the file ever held every word of its reason: one that puts back an
-entry the artefact carried before — the same anchor and reason — keeps that
-entry's point, and covers the anchor only as it stood there, and nothing once
-a revalidation point reaches it (point 4; `_judge`'s `covers`). In a shallow
-clone the walk always runs: a value first carried inside the clone is read
-as first carried there, one the file already carried at the cut answers
-nothing, and each artefact read to the cut is named (`history.cut`).
+covers the anchor answers it. An `at` removed writes back the block's own
+marker, judged against the commit that first introduced the block, and is
+listed `edited`. Likewise a deferral the diff introduces on an anchor it asks
+about is searched for, only where the file ever held every word of its
+reason: one that puts back an entry the artefact carried before — the same
+anchor and reason — keeps that entry's point, and covers the anchor only as
+it stood there, and nothing once a revalidation point reaches it (point 4;
+`_judge`'s `covers`). In a shallow clone the walk always runs: a value first
+carried inside the clone is read as first carried there, one the file
+already carried at the cut answers nothing, and each artefact read to the
+cut is named (`history.cut`).
 
 **Reading the repository — from git alone, never checking anything out.**
 
@@ -97,9 +98,11 @@ Findings run upstream first along artefact anchors (truth-chain order).
 wrote — each revalidation, deferral and reason for having no anchors, word for
 word — read from each head artefact carrying the block against its base
 counterpart (`_written_answers`), with whether the diff asked for it and
-whether the check accepts it — `written-back` where it puts back an `at` or a
-deferral the artefact carried before. It is the list the person authorising
-a merge is shown: derived from the artefacts, never composed.
+whether the check accepts it (`AnswerStatus`) — `written-back` where it puts
+back an `at`, or a deferral that covers nothing, the artefact carried before;
+every deferral put back is flagged `put_back`, whether it covers or not. It
+is the list the person authorising a merge is shown: derived from the
+artefacts, never composed.
 
 **Modes** (point 12): `warning` reports and exits 0; `enforcing` exits 1 on
 friction, dead anchors, unresolved kinds, a resolver's missing answer and
@@ -299,13 +302,20 @@ UNANCHORED = "unanchored"
 
 class AnswerStatus(Enum):
     """Whether the check accepts an answer the change wrote. The values are the
-    `status` field of an entry of the JSON output's `answers`."""
+    `status` field of an entry of the JSON output's `answers`: a reader keying on
+    `stands` drops nothing the check accepts."""
 
-    STANDS = "stands"  # the check accepts it
+    # The check accepts it: a new `at` the diff bears out, a deferral it reads as an
+    # answer — one put back that covers its anchor as it stood at its point included,
+    # flagged `put_back` (COR-050 point 4).
+    STANDS = "stands"
     BUMP = "bump"  # `at` changed and the diff does not bear it out: the check's own `bump`
-    EDITED = "edited"  # `at` untouched, the outcome or words changed: nothing is answered
-    # An `at`, or a deferral, the artefact carried before, written back: the `at` answers
-    # nothing, the deferral covers only what the entry it puts back did (COR-050 points 3, 4).
+    # No new `at` — `at` untouched, or removed — the outcome or the words changed: nothing
+    # is answered and no point moves.
+    EDITED = "edited"
+    # Answers nothing: an `at` the artefact carried before, written back, or a deferral
+    # put back that covers nothing, since it covers only what the entry it puts back did
+    # (COR-050 points 3 and 4).
     WRITTEN_BACK = "written-back"
 
 
@@ -329,13 +339,17 @@ class WrittenAnswer:
       `outcome` is neither — `deferred`, or `unanchored`.
     - `anchor`: the deferral's; `None` otherwise. `reason`: the words,
       whitespace folded as the check compares them; `None` where none is written.
-    - `kept`: on a revalidation whose `at` changed, each deferral entry at head
-      whose anchor the base defers too.
+    - `kept`: on a revalidation whose `at` changed to a value — new or written
+      back — each deferral entry at head whose anchor the base defers too.
     - `asked`: the diff asked for it — for a revalidation, the diff asked the
       artefact anything and the revalidation stands; for a deferral, the diff
       asked about its anchor, it is introduced in the diff, and no revalidation
       stands.
     - `new`: the artefact has no counterpart at the base.
+    - `put_back`: a deferral that puts back an entry the artefact carried before,
+      the same anchor and reason, so its point is that entry's (COR-050 point 4) —
+      `stands` where it covers its anchor as it stood there, `written-back` where
+      it covers nothing.
     """
 
     artefact: str  # the artefact's id
@@ -347,6 +361,7 @@ class WrittenAnswer:
     asked: bool
     status: AnswerStatus
     new: bool
+    put_back: bool = False
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -359,6 +374,7 @@ class WrittenAnswer:
             "asked": self.asked,
             "status": self.status.value,
             "new": self.new,
+            "put_back": self.put_back,
         }
 
 
@@ -1320,8 +1336,9 @@ class _Behind:
 @dataclass(frozen=True)
 class _Judged:
     """What the answers list reads of `_judge`'s reading of one artefact: the
-    revalidation as judged, whether its `at` is written back, the deferrals put back
-    and those that answered a question."""
+    revalidation as judged, whether its `at` is written back — a value it carried
+    before, never an `at` removed — the deferrals put back and those that answered a
+    question."""
 
     revalidation: _Revalidation | None = None
     written_back: bool = False
@@ -1471,7 +1488,7 @@ def _judge(
         findings.append(finding(FindingKind.REVALIDATED, message, None, standing))
     judged = _Judged(
         revalidation,
-        written is not None,
+        written is not None and parsed_at(artefact) is not None,
         frozenset(anchor for anchor, back in put_backs.items() if back is not None),
         frozenset(covering),
     )
@@ -1632,17 +1649,19 @@ def _written_answers(
       folded `unchanged-because` differs — an absent one counting as a value, so
       a block added to an existing artefact is listed. Where `at` changed to a
       new value it `stands` or is a `bump`, as the check judges it
-      (`_revalidation`), and names each deferral entry it kept; where it was
-      written back to a value the artefact carried before, it is
-      `written-back` and answers nothing (point 3); where `at` did not change,
-      it is `edited`. It is asked for only where it stands.
+      (`_revalidation`); where it was written back to a value the artefact
+      carried before, it is `written-back` and answers nothing (point 3); either
+      way it names each deferral entry it kept. Where `at` did not change, or
+      was removed, it is `edited`. It is asked for only where it stands.
     - A **deferral** entry is listed where the base defers its anchor in no
-      entry (`stands`, or `written-back` where it puts back an entry the
-      artefact carried before, point 4), or in none with its folded reason
-      (`edited`). Every entry is read, so an anchor deferred twice — a
-      validation error (COR-050 point 4) — lists each entry carrying words the
-      base did not; of an anchor's entries introduced, the first is the one
-      the check reads, asked for where it answered a question.
+      entry, or in none with its folded reason (`edited`). One that puts back
+      an entry the artefact carried before (point 4) is flagged `put_back`: it
+      `stands` where it covers its anchor as it stood at its point, and is
+      `written-back` where it covers nothing; any other `stands`. Every entry
+      is read, so an anchor deferred twice — a validation error (COR-050 point
+      4) — lists each entry carrying words the base did not; of an anchor's
+      entries introduced, the first is the one the check reads, asked for where
+      it answered a question.
     - A **reason for having no anchors** is listed where it was added or differs.
     - A **new** artefact lists only what carries words — its `unchanged-because`,
       each deferral entry, its `unanchored-because` — never a bare `at`; nothing
@@ -1659,6 +1678,7 @@ def _written_answers(
         status: AnswerStatus = AnswerStatus.STANDS,
         asked: bool = False,
         kept: tuple[KeptDeferral, ...] = (),
+        put_back: bool = False,
     ) -> WrittenAnswer:
         return WrittenAnswer(
             artefact.id,
@@ -1670,6 +1690,7 @@ def _written_answers(
             asked,
             status,
             new=before is None,
+            put_back=put_back,
         )
 
     # By anchor, an anchor's entries in written order (the sort is stable).
@@ -1688,13 +1709,14 @@ def _written_answers(
         for deferral in before.deferrals:
             reasons_before.setdefault(deferral.anchor, set()).add(_reason(before, deferral))
         if _revalidation_fields(artefact) != _revalidation_fields(before):
-            kept: tuple[KeptDeferral, ...] = ()
             if judged.written_back:
                 status = AnswerStatus.WRITTEN_BACK
             elif revalidation is None:
                 status = AnswerStatus.EDITED
             else:
                 status = AnswerStatus.BUMP if revalidation.answer is None else AnswerStatus.STANDS
+            kept: tuple[KeptDeferral, ...] = ()
+            if status is not AnswerStatus.EDITED:  # `at` changed to a value
                 kept = tuple(
                     KeptDeferral(d.anchor, _reason(artefact, d))
                     for d in deferrals
@@ -1718,11 +1740,21 @@ def _written_answers(
             if carried is None:
                 asked = anchor in judged.covering and anchor not in introduced
                 introduced.add(anchor)
+                put_back = anchor in judged.put_back
                 status = (
-                    AnswerStatus.WRITTEN_BACK if anchor in judged.put_back else AnswerStatus.STANDS
+                    AnswerStatus.WRITTEN_BACK
+                    if put_back and anchor not in judged.covering
+                    else AnswerStatus.STANDS
                 )
                 entries.append(
-                    entry(Answer.DEFERRED.value, anchor, reason, status=status, asked=asked)
+                    entry(
+                        Answer.DEFERRED.value,
+                        anchor,
+                        reason,
+                        status=status,
+                        asked=asked,
+                        put_back=put_back,
+                    )
                 )
             elif reason not in carried:
                 entries.append(
@@ -2201,6 +2233,8 @@ def _answer_line(answer: WrittenAnswer) -> str:
             if answer.anchor is None
             else "written back: an entry it carried before, which covers only what that one did"
         )
+    elif answer.put_back:
+        flags.append("put back: an entry it carried before, covering the anchor as it stood there")
     flags.extend(
         f"keeps the deferral of {kept.anchor.kind} {kept.anchor.value}"
         + ("" if kept.reason is None else f' — "{kept.reason}"')

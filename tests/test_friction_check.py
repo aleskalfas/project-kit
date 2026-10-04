@@ -1095,6 +1095,7 @@ def _written(answer: str | None, reason: str | None, **fields: Any) -> dict[str,
         "asked": False,
         "status": "stands",
         "new": False,
+        "put_back": False,
     }
     entry.update(fields)
     return entry
