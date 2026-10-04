@@ -1,0 +1,6 @@
+component: living-docs
+kind: none
+body: >
+  The README's examples of a held document and of a capability that supplies
+  readers name the role rather than a particular capability. Wording only; no
+  behaviour changes.
