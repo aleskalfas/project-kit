@@ -2411,10 +2411,11 @@ def test_each_answering_state_is_read_under_its_own_exclusions(timeline: Timelin
 OLD_NOTE = {"docs/notes.txt": "Old's note.\n"}
 
 
-def _merge_no_commit(timeline: Timeline, *args: str) -> None:
-    """Start a merge and stop before its commit — conflicted or not — for the test to
-    resolve; `timeline.commit` then makes the merge commit, dated as the next commit."""
-    timeline.adopter.git("merge", "-q", "--no-ff", "--no-commit", *args, check=False)
+def _merge_no_commit(timeline: Timeline, *args: str) -> bool:
+    """Start a merge and stop before its commit for the test to resolve — `timeline.commit`
+    then makes the merge commit, dated as the next commit. Whether it conflicted."""
+    merging = timeline.adopter.git("merge", "-q", "--no-ff", "--no-commit", *args, check=False)
+    return merging.returncode != 0
 
 
 def _cli_taken_back(timeline: Timeline, resolution: str) -> str:
@@ -2446,7 +2447,7 @@ def _cli_taken_back(timeline: Timeline, resolution: str) -> str:
         return taken
     repo.checkout("land", create=True)
     timeline.commit("land: edit the note", {"docs/notes.txt": "Land's note.\n"})
-    _merge_no_commit(timeline, "old")
+    assert _merge_no_commit(timeline, "old")  # the note conflicts
     return timeline.commit(
         "merge old, resolved to its side", {**OLD_NOTE, "src/cli/main.py": CLI_SOURCE}
     )
@@ -2501,7 +2502,7 @@ def _edit_undone(timeline: Timeline, resolution: str) -> tuple[str, str]:
     remains = timeline.commit("s1: edit the CLI", {"src/cli/main.py": "print('s1')\n"})
     repo.checkout("main")
     repo.checkout("kept", create=True)
-    _merge_no_commit(timeline, "side")
+    assert _merge_no_commit(timeline, "side")  # the CLI conflicts
     timeline.commit("merge side, resolved to its CLI", {"src/cli/main.py": "print('s1')\n"})
     return undone, remains
 
