@@ -46,6 +46,14 @@ no base is read (point 4). When the base moved on after this branch left it —
 the only case in which it can have taken a number since — that is reported,
 never failed, as the change check reports an outdated base.
 
+A number the default branch's history gave a file a commit the project's
+numbering setting names removed is free again, and taken by neither side: the
+rule is the stamp's, read from one home (`_lib/numbering.py`), so the two
+never disagree. A setting naming what is no commit of the default branch's
+history is an error here, read whenever the project has one — numbered here or
+not — since this is the check gate's line for numbering; the entry frees
+nothing meanwhile.
+
 Which commits those are the backbone names: `pkit repository base --json`
 carries the base, its tip and where this branch left it (COR-054 point 5), so
 nothing here resolves a base or computes a merge-base. The base is read at its
@@ -64,7 +72,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from _lib import backbone, history
+from _lib import backbone, history, numbering
 from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome
 from _lib.model import NOUN, NUMBERED, Analysis, Unreadable, kind_numbered
 
@@ -128,20 +136,26 @@ def compare(root: Path, ref: str | None = None) -> Comparison:
     except Unreadable as exc:
         raise CannotCompare(f"the analysis could not be read: {exc}") from exc
     ours = analysis.numbers()
-    if not ours:
-        line = "numbers: no use case or journey is numbered here; nothing to compare, no base read."
-        return Comparison(None, Outcome([line]))
+    written = numbering.read(root)
+    nothing = "numbers: no use case or journey is numbered here; nothing to compare, no base read."
+    if not ours and written.unset:
+        return Comparison(None, Outcome([nothing]))
 
     try:
-        base = _resolve(backbone.settled(root, ref).base)
+        reading = backbone.settled(root, ref)
     except Unreadable as exc:
         raise CannotCompare(f"the base could not be read: {exc}") from exc
+    setting = numbering.resolve(root, written, reading.default_branch)
+    said = _freeing(setting)
+    if not ours:
+        return Comparison(None, Outcome([nothing, *said], list(setting.problems)))
+    base = _resolve(reading.base)
     if not base.outdated:
         line = (
             f"numbers: this branch contains {base.ref} ({base.tip[: backbone.SHORT]}); nothing to "
             f"collide with."
         )
-        return Comparison(base, Outcome([line]))
+        return Comparison(base, Outcome([line, *said], list(setting.problems)))
     try:
         on_base = backbone.read_analysis(root, at=base.tip)
         before = backbone.read_analysis(root, at=base.commit).held()
@@ -154,9 +168,21 @@ def compare(root: Path, ref: str | None = None) -> Comparison:
     )
     outdated = Finding(REPORT, analysis.location or ".", f"outdated base: {_outdated(base)}")
     folders = {a.places[k] for a in (analysis, on_base) for k in NUMBERED if k in a.places}
-    theirs = _taken(root, base, analysis, on_base, before, folders, set(ours))
+    theirs = _taken(root, base, analysis, on_base, before, folders, set(ours), setting.commits)
     findings = _collisions(root, base, ours, theirs, folders) if theirs else []
-    return Comparison(base, Outcome([line], [outdated, *findings]))
+    return Comparison(base, Outcome([line, *said], [outdated, *setting.problems, *findings]))
+
+
+def _freeing(setting: numbering.Setting) -> list[str]:
+    """The summary line saying which commits free the numbers of the files they removed,
+    when the setting names any that do."""
+    if not setting.commits:
+        return []
+    commits = ", ".join(commit[: backbone.SHORT] for commit in setting.commits)
+    return [
+        f"numbering: the numbers of the files {commits} removed are free again, as "
+        f"{numbering.NAME} names (DEC-001 point 3)."
+    ]
 
 
 def _taken(
@@ -167,17 +193,18 @@ def _taken(
     before: set[str],
     folders: set[str],
     ours: set[str],
+    freed_by: tuple[str, ...],
 ) -> dict[str, Theirs]:
     """Each number of `ours` the default branch took since this branch left it, with its
     file: one its tip holds, else one its history since the fork gave a file gone
     since, as the stamp counts it held (`_lib/history.py`) — never one the merge-base
-    held."""
+    held, nor one a file the commits `freed_by` removed was given (`_lib/numbering.py`)."""
     at_tip = {i: paths for i, paths in on_base.numbers().items() if i in ours and i not in before}
     theirs = {i: Theirs(tuple(sorted(paths)), held=True) for i, paths in at_tip.items()}
     gone = ours - before - set(at_tip)
     if gone:
         since = history.given(root, f"{base.commit}..{base.tip}", folders)
-        judge = history.Judge(root, (analysis, on_base))
+        judge = history.Judge(root, (analysis, on_base), numbering.freed(root, freed_by, folders))
         for i, number in history.counted(judge, since, gone).items():
             theirs[i] = Theirs((number.path,), held=False)
     return theirs

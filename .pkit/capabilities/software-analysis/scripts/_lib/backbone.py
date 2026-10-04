@@ -43,7 +43,11 @@ added under the folders of the places the backbone names, with the commit that
 added it (`added`: one `git log`, since the backbone's reading is of one state,
 not of a history) — git lists the paths, and which of them were files of a
 place, not left out by `friction.exclude`, the backbone's reading at that
-commit says (`_lib/history.py`); for the number comparison, which versions of those files a
+commit says (`_lib/history.py`); for both, which commit an id the numbering
+setting names stands for — none, or several when it is ambiguous — whether the
+default branch's history holds it, and which files it removed, git's rename
+detection on (`commit_of`, `objects_named`, `is_ancestor`, `removed`;
+`_lib/numbering.py`); for the number comparison, which versions of those files a
 branch's own history wrote, and which the default branch holds, so a number
 the default branch took by landing this branch's own work is told from one it
 took for another (`blobs_written`, `blob_of`); and, for the
@@ -335,6 +339,48 @@ def added(root: Path, revisions: str, folders: Iterable[str]) -> list[tuple[str,
         elif field and commit:
             found.append((commit, field))
     return found
+
+
+def objects_named(root: Path, prefix: str) -> list[str]:
+    """Every object whose id starts with `prefix` — several when an abbreviated id is
+    ambiguous; empty when none does, or git cannot answer."""
+    if not prefix or prefix.startswith("-"):
+        return []
+    return (_git(root, "rev-parse", f"--disambiguate={prefix}") or "").split()
+
+
+def is_ancestor(root: Path, commit: str, of: str) -> bool:
+    """Whether `commit` is `of` or in its history — no commit of `commit`'s history lies
+    outside `of`'s; `False` when git cannot answer."""
+    if not commit or not of or commit.startswith("-") or of.startswith("-"):
+        return False
+    argv = ["git", "rev-list", "-n", "1", commit, f"^{of}", "--"]
+    try:
+        proc = subprocess.run(argv, cwd=root, capture_output=True, text=True, check=False)
+    except OSError:
+        return False
+    return proc.returncode == 0 and not proc.stdout.strip()
+
+
+def removed(root: Path, commit: str) -> list[str]:
+    """Each path `commit` deleted, against its first parent, git's rename detection on
+    over the whole tree and unbounded — so a file it renamed, wherever to, is not
+    among them; empty for a commit with no parent, or when git cannot answer."""
+    if not commit or commit.startswith("-"):
+        return []
+    listed = _git(
+        root,
+        "diff",
+        "--no-ext-diff",
+        "-M",
+        "-l0",  # no limit: past one, git would read a rename as a deletion
+        "--diff-filter=D",
+        "--name-only",
+        "-z",  # every path as written, never quoted
+        f"{commit}^",
+        commit,
+    )
+    return [path for path in (listed or "").split("\0") if path]
 
 
 def is_shallow(root: Path) -> bool:

@@ -15,7 +15,10 @@ first to reach the default branch keeps the number, and a number is never used
 again, so this one renumbers before merging (DEC-001 point 3). An artefact is
 known by its id, not its path; a file of the name this branch gives the
 number is a warning — possibly its own work landed; `_lib/numbers.py` states
-the rule.
+the rule. A number the history gave a file a commit the project's numbering
+setting names removed is free again, as the stamp counts it; a setting naming
+what is no commit of the default branch's history is an error, numbered here
+or not (`_lib/numbering.py`).
 
 It reads a base, so it answers about a change rather than the tree: it is its
 own line of a project's check gate, beside `pkit friction check`, and not a
@@ -36,10 +39,11 @@ branch, as the backbone resolves it for every reader (COR-054).
 
 Exit codes:
   0  compared, and no number collides — a warning never fails — or the
-     working tree numbers nothing
-  1  a number collides; or the numbers cannot be compared — the base names no
-     commit, or shares no history with HEAD — said on standard error, with
-     nothing on standard output
+     working tree numbers nothing; and the numbering setting, if any, holds
+  1  a number collides, or the numbering setting names what is no commit of
+     the default branch's history; or the numbers cannot be compared — the
+     base names no commit, or shares no history with HEAD — said on standard
+     error, with nothing on standard output
   2  a usage error
 """
 

@@ -20,7 +20,8 @@ time an artefact is placed there (COR-049 point 5):
 - a term, the entry `TERM-<slug>` of `glossary.md`.
 
 A use case or journey takes the next free number on the default branch — every
-number its history ever gave a file included — on a base named with `--base`,
+number its history ever gave a file included, but one the project's numbering
+setting frees (`_lib/numbering.py`) — on a base named with `--base`,
 and in the working tree; `$PKIT_CHECK_BASE`, a pipeline's base for its checks,
 never moves where it numbers from (COR-054 point 3). `pkit analysis
 check-numbers` reports a number another branch took first. `_lib/stamp.py`

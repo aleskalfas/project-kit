@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "config.schema.json",
+  "title": "Project configuration — software-analysis capability",
+  "description": "Formal shape of the project's `.pkit/capabilities/software-analysis/project/config.yaml`: the settings of the capability a project chooses. One today, `numbering.freed-by` (DEC-001 point 3): the commits whose removed files' numbers are free again. Whether each names one commit here, on the default branch's history, the stamp (`pkit analysis new`) and the number check (`pkit analysis check-numbers`) judge, since each reads git; not this schema. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "binds_to": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Repo-relative globs matching the adopter-data files this schema validates (COR-023 fallback binding). Present on the capability-side carrier; absent from a project's file."
+    },
+    "pkit_schema": {
+      "type": "string",
+      "description": "Self-describing adopter-data binding (COR-023). Expected value: `software-analysis:config`."
+    },
+    "numbering": {
+      "description": "How use cases and journeys are numbered (DEC-001 point 3).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "freed-by": {
+          "description": "The commits whose removed files' numbers are free again: a number the default branch's history gave a file one of them deleted — not renamed — is no longer counted. Nothing else frees a number: a file any other commit removed still holds its number, and so does a file the working tree or the default branch holds.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/commit-name"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "commit-name": {
+      "description": "A commit, by its full hexadecimal id or an abbreviation of it that names it alone, in lower case: 4 digits at least. Quoted in YAML, as digits alone read as a number.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{4,64}$"
+    }
+  }
+}

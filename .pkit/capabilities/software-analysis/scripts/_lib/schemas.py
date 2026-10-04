@@ -6,9 +6,10 @@ records. They share `analysis.schema.json` — each kind's id, the status, a lin
 of text — which is also where the commands read the id patterns from, so the
 stamp that gives an id and the check that judges one never disagree. A record
 copies the evidence it draws on in the evidence point's own entry shape, so
-the point's companion, `revalidation-evidence`, is loaded beside them. The
-friction block beside the own fields is the core's shape, validated by the
-backbone, and never here.
+the point's companion, `revalidation-evidence`, is loaded beside them, and so
+is the project configuration's, `config`, which the numbering setting is read
+against (`_lib/numbering.py`). The friction block beside the own fields is the
+core's shape, validated by the backbone, and never here.
 """
 
 from __future__ import annotations
@@ -28,11 +29,13 @@ from _lib.model import ACTOR, JOURNEY, TERM, USE_CASE
 #: Where the schemas are, in the capability's own tree.
 SCHEMAS = Path(__file__).resolve().parents[2] / "schemas"
 
-#: The shared definitions, the kind of front matter a revalidation record is, and
-#: the evidence point's companion, whose entries a record copies.
+#: The shared definitions, the kind of front matter a revalidation record is, the
+#: evidence point's companion, whose entries a record copies, and the project
+#: configuration's.
 SHARED = "analysis"
 RECORD = "revalidation-record"
 EVIDENCE = "revalidation-evidence"
+CONFIG = "config"
 
 #: Each kind's schema, by file stem.
 SCHEMA_OF = {ACTOR: "actor", TERM: "term", USE_CASE: "use-case", JOURNEY: "journey", RECORD: RECORD}
@@ -45,7 +48,7 @@ ID_DEF = {ACTOR: "actor-id", TERM: "term-id", USE_CASE: "use-case-id", JOURNEY: 
 def _schemas() -> dict[str, dict[str, Any]]:
     return {
         stem: json.loads((SCHEMAS / f"{stem}.schema.json").read_text(encoding="utf-8"))
-        for stem in (SHARED, EVIDENCE, *SCHEMA_OF.values())
+        for stem in (SHARED, EVIDENCE, CONFIG, *SCHEMA_OF.values())
     }
 
 
@@ -108,6 +111,22 @@ def errors(kind: str, fields: Mapping[str, Any]) -> list[tuple[str, str]]:
         (_pointer(error.absolute_path), error.message)
         for error in validator(kind).iter_errors(dict(fields))
     )
+
+
+def config_errors(config: object) -> list[tuple[str, str]]:
+    """Each way a project configuration falls short of its companion: a JSON Pointer
+    into it and the message, in a stable order."""
+    checker = Draft202012Validator(_schemas()[CONFIG], registry=_registry())
+    return sorted(
+        (_pointer(error.absolute_path), error.message) for error in checker.iter_errors(config)
+    )
+
+
+@functools.cache
+def commit_name_pattern() -> re.Pattern[str]:
+    """The pattern a commit the project configuration names has: its full id or an
+    abbreviation, in hexadecimal digits."""
+    return re.compile(_schemas()[CONFIG]["$defs"]["commit-name"]["pattern"])
 
 
 def _pointer(path: Any) -> str:
