@@ -16,11 +16,13 @@ history (`friction_history`) and both checks build on it without a cycle
   they come, by `<commit>:<path>` or by object id.
 - `TreeReader` gives the entry of a path at a commit — its mode and object —
   from the tree object of its folder, read through a `BlobReader`: no process
-  per path, each folder of each commit read once.
+  per path, each tree object read and parsed once, however many commits hold it.
 """
 
 from __future__ import annotations
 
+import functools
+import re
 import subprocess
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -39,6 +41,9 @@ LINK_MODE = "120000"
 
 # The mode git writes for a path a side of a diff does not hold.
 _ABSENT_MODE = "000000"
+
+# The mode of a folder in a git tree, as `ls-tree` prints it.
+_FOLDER_MODE = "040000"
 
 #: A file's entry in a git tree: its mode and its object id. Two states of a file
 #: are the same when their entries are — content and mode alike (COR-050 point 5).
@@ -214,15 +219,25 @@ class BlobReader:
         """The blob `obj` names, or `None` when it names none this repository holds."""
         return self._request(obj)
 
-    def read_tree(self, commit: str, folder: str) -> bytes | None:
-        """The tree object of `folder` in `commit` — the root's for `""` — or `None` when
-        the commit holds no such folder."""
+    def read_tree(self, commit: str, folder: str) -> tuple[str, bytes] | None:
+        """The tree object of `folder` in `commit` — the root's for `""` — with its object
+        id, or `None` when the commit holds no such folder."""
         if "\n" in folder:
             return None
         name = f"{commit}:{folder}" if folder else f"{commit}^{{tree}}"
-        return self._request(name, b"tree")
+        return self._lookup(name, b"tree")
+
+    def read_tree_object(self, obj: str) -> bytes | None:
+        """The tree object `obj` names, or `None` when it names none this repository holds."""
+        found = self._lookup(obj, b"tree")
+        return None if found is None else found[1]
 
     def _request(self, name: str, kind: bytes = b"blob") -> bytes | None:
+        found = self._lookup(name, kind)
+        return None if found is None else found[1]
+
+    def _lookup(self, name: str, kind: bytes) -> tuple[str, bytes] | None:
+        """The object `name` resolves to, with its id, where it is of `kind`; else `None`."""
         assert self._process.stdin is not None and self._process.stdout is not None
         try:
             self._process.stdin.write(f"{name}\n".encode("utf-8", "surrogateescape"))
@@ -238,7 +253,7 @@ class BlobReader:
             self._process.stdout.read(1)  # the newline after the content
         except (OSError, ValueError) as exc:
             raise FrictionCheckError(f"`git cat-file` failed: {exc}") from exc
-        return data if header[1] == kind else None
+        return (header[0].decode(), data) if header[1] == kind else None
 
     def close(self) -> None:
         if self._process.stdin is not None:
@@ -246,40 +261,135 @@ class BlobReader:
         self._process.wait()
 
 
-def _tree_object(raw: bytes, size: int) -> dict[str, TreeEntry]:
-    """The entries of a raw tree object, by name: `<mode> <name>\\0<object>` each, the
-    object `size` bytes long; a mode written short (`40000`) padded as `ls-tree` prints it."""
-    found: dict[str, TreeEntry] = {}
-    offset = 0
-    while offset < len(raw):
-        space = raw.index(b" ", offset)
-        end = raw.index(b"\0", space)
-        mode = raw[offset:space].decode().rjust(6, "0")
-        name = raw[space + 1 : end].decode("utf-8", "surrogateescape")
-        found[name] = (mode, raw[end + 1 : end + 1 + size].hex())
-        offset = end + 1 + size
-    return found
+@functools.cache
+def _tree_entries(size: int) -> re.Pattern[bytes]:
+    """One entry of a raw tree object: `<mode> <name>\\0<object>`, the object `size` bytes."""
+    return re.compile(rb"(\d+) ([^\0]*)\0(.{%d})" % size, re.DOTALL)
+
+
+class _Tree:
+    """One tree object's entries by name, each read into a `TreeEntry` when first asked
+    for: a folder's tree holds many entries, and a reading asks for a few."""
+
+    def __init__(self, raw: bytes, size: int) -> None:
+        self._raw = {name: (mode, obj) for mode, name, obj in _tree_entries(size).findall(raw)}
+        self._read: dict[str, TreeEntry | None] = {}
+
+    def get(self, name: str) -> TreeEntry | None:
+        """The entry under `name`, a mode written short (`40000`) padded as `ls-tree`
+        prints it; `None` where the tree holds none."""
+        try:
+            return self._read[name]
+        except KeyError:
+            raw = self._raw.get(name.encode("utf-8", "surrogateescape"))
+            found = None if raw is None else (raw[0].decode().rjust(6, "0"), raw[1].hex())
+            self._read[name] = found
+            return found
+
+    def names_differing(self, other: _Tree) -> frozenset[str]:
+        """The names this tree and `other` hold otherwise — a different entry, or one only."""
+        return frozenset(
+            name.decode("utf-8", "surrogateescape")
+            for name, _entry in self._raw.items() ^ other._raw.items()
+        )
+
+
+_NO_TREE = _Tree(b"", 0)
 
 
 class TreeReader:
     """The entry — mode and object — of a path at a commit, gitlinks included, read from
-    the tree object of the path's folder through one `BlobReader`, each folder of each
-    commit once for the reader's life. A path the commit does not hold has none."""
+    the tree object of the path's folder through one `BlobReader`. A path the commit does
+    not hold has none.
+
+    Each tree object is read and parsed once for the reader's life, by its id:
+    commits that hold a folder alike share it. A folder is asked for by name at
+    its commit, one request; where its commit's root is read already — as
+    `entries` reads it — it is found from the folder above it by id instead,
+    so a folder no other commit read holds the only request.
+    """
 
     def __init__(self, blobs: BlobReader) -> None:
         self._blobs = blobs
-        self._trees: dict[tuple[str, str], dict[str, TreeEntry]] = {}
+        self._by_id: dict[str, _Tree] = {}
+        self._folders: dict[tuple[str, str], _Tree] = {}
+        self._differences: dict[tuple[_Tree, _Tree], frozenset[str]] = {}
+        self._above: dict[frozenset[str], frozenset[str]] = {}
 
     def entry(self, commit: str, path: str) -> TreeEntry | None:
         folder, _, name = path.rpartition("/")
-        key = (commit, folder)
-        found = self._trees.get(key)
-        if found is None:
-            raw = self._blobs.read_tree(commit, folder)
-            found = {} if raw is None else _tree_object(raw, len(commit) // 2)
-            self._trees[key] = found
-        return found.get(name)
+        return self._folder(commit, folder).get(name)
 
     def entries(self, commit: str, paths: Iterable[str]) -> dict[str, TreeEntry | None]:
-        """The entry of each of `paths` at `commit`, `None` where it holds none."""
+        """The entry of each of `paths` at `commit`, `None` where it holds none — every
+        folder found from the commit's root, so a folder another commit holds alike is
+        never asked for again."""
+        self._folder(commit, "")
         return {rel: self.entry(commit, rel) for rel in paths}
+
+    def differing(self, commit: str, other: str, folders: frozenset[str]) -> frozenset[str]:
+        """The paths directly in `folders` that the two commits hold otherwise — a different
+        entry, or one only. One folder is read at each commit by name; several from the
+        root down, a folder only where the two commits hold the one above it otherwise,
+        so what both hold as one tree object is never read further."""
+        if len(folders) == 1:
+            (folder,) = folders
+            base = f"{folder}/" if folder else ""
+            names = self._names_differing(self._folder(commit, folder), self._folder(other, folder))
+            return frozenset(base + name for name in names)
+        wanted = self._above.get(folders)
+        if wanted is None:
+            wanted = self._above[folders] = frozenset(
+                "/".join(parts[:end])
+                for parts in (folder.split("/") for folder in folders if folder)
+                for end in range(1, len(parts) + 1)
+            )
+        found: set[str] = set()
+        stack = [""]
+        while stack:
+            folder = stack.pop()
+            base = f"{folder}/" if folder else ""
+            for name in self._names_differing(
+                self._folder(commit, folder), self._folder(other, folder)
+            ):
+                path = base + name
+                if folder in folders:
+                    found.add(path)
+                if path in wanted:
+                    stack.append(path)
+        return frozenset(found)
+
+    def _names_differing(self, tree: _Tree, other: _Tree) -> frozenset[str]:
+        if tree is other:
+            return frozenset()
+        found = self._differences.get((tree, other))
+        if found is None:
+            found = self._differences[tree, other] = tree.names_differing(other)
+        return found
+
+    def _folder(self, commit: str, folder: str) -> _Tree:
+        key = (commit, folder)
+        found = self._folders.get(key)
+        if found is None:
+            if folder and (commit, "") in self._folders:
+                above, _, name = folder.rpartition("/")
+                held = self._folder(commit, above).get(name)
+                found = _NO_TREE if held is None or held[0] != _FOLDER_MODE else self._tree(held[1])
+            else:
+                read = self._blobs.read_tree(commit, folder)
+                found = _NO_TREE if read is None else self._parsed(*read)
+            self._folders[key] = found
+        return found
+
+    def _tree(self, obj: str) -> _Tree:
+        found = self._by_id.get(obj)
+        if found is None:
+            raw = self._blobs.read_tree_object(obj)
+            found = _NO_TREE if raw is None else self._parsed(obj, raw)
+        return found
+
+    def _parsed(self, obj: str, raw: bytes) -> _Tree:
+        found = self._by_id.get(obj)
+        if found is None:
+            found = self._by_id[obj] = _Tree(raw, len(obj) // 2)
+        return found
