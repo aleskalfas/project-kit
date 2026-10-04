@@ -1,0 +1,51 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  A pull request's description lists the answers its change wrote, and
+  `land-work` merges such a change on `--yes` only after the list was there
+  ([project-management:DEC-055-pr-lists-answers]). `open-pr` writes the change
+  check's list of the revalidations, deferrals and reasons for having no
+  anchors the change wrote — derived at the pushed head with `pkit friction
+  check --json --base <the PR's base> --head`, the base always named — into a
+  section of its own, `## Documentation this change affects`, last before the
+  provenance footer, in plain words for a reader who does not know the
+  methodology — an opening paragraph, then each document with what was decided
+  (updated, still accurate, set aside for later) — every word of an artefact's
+  as the check's human view shows it, with each change to the
+  friction places or exclusions the change makes — read through `pkit friction
+  artefacts --json --at` at both ends — as it was and as it is; it never
+  refuses to open over the list, and leaves it out
+  with one warning line when it cannot write it. `edit-pr` carries the section
+  across every edit — of two, the latest — and drops any other, saying so. A
+  section under that heading typed by hand, with no markers, is removed by
+  `open-pr`, `edit-pr` and `land-work`. `land-work` gains a step between the
+  review and the merge, its lines beginning `documents this change affects:`:
+  it derives the list at the pinned head, prints it above its `ready:` line and writes it into the description where it
+  is missing or differs. Where the change wrote answers or alters the friction
+  settings, `--yes` merges only with `--expect-head` and the list already in
+  the description; a run that had to write it, or named no head, stops at
+  `ready:` (exit 8) — and so does a run that wrote it, whatever fails after the
+  write — to be run as the `ready:` line says once the person has read the
+  list. `land-work` refuses, with nothing merged: a list it cannot derive, or a
+  base it cannot fetch (exit 2); a word that reads as a closing reference or
+  holds an HTML comment's delimiter, a list the description cannot hold, front
+  matter the check cannot read in a file the change touches, and — where there
+  is a list — a base whose commits since the head left it changed a file the
+  list's words are on, or the settings it shows (exit 1); a base that moved on
+  elsewhere stops nothing.
+  The change check runs unrouted (`PKIT_NO_ROUTE=1`) as the `pkit` first on
+  PATH; where an anchor's resolver must run from a checkout at the head, and
+  only then, it runs again from a temporary checkout of the head, removed
+  afterwards — on a termination signal too — and nothing else of the
+  repository's with it. No reader of a description takes the section as input:
+  it closes no issue, meets no closing or Doc impact requirement and overrides
+  no mapping. The provenance footer's markers, like the section's, now count
+  only as whole lines, so a description that quotes one keeps every line after
+  it. `--doc-impact-from-friction` fills an unwritten `## Doc impact` with one
+  line counting the documents listed there, in place of a bullet per answer. A
+  change that wrote no answers and alters no friction setting lands as before.
+  Upgrade the capability together with the backbone: it needs the release
+  whose change check lists the answers a change wrote.

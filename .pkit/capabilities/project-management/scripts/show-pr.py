@@ -48,7 +48,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate
+from _lib import bootstrap_gate, friction_answers
 from _lib.agent_verdicts import (
     all_verdicts,
     latest_verdicts_per_reviewer,
@@ -187,8 +187,10 @@ def _summarise(pr: dict, freshness: FreshnessRule | None = None) -> dict:
     ]
 
     conv = _parse_conventional_commits(title)
-    closing_issues = _extract_closing_issues(body)
-    has_doc_impact = "## Doc impact" in body
+    # The friction answers' section is the artefacts' words, never input (DEC-055).
+    authored = friction_answers.strip(body)
+    closing_issues = _extract_closing_issues(authored)
+    has_doc_impact = "## Doc impact" in authored
     comments = pr.get("comments") or []
     review = _summarise_review(comments, freshness)
     review_history = _summarise_review_history(comments, freshness)
@@ -509,7 +511,7 @@ def _parse_conventional_commits(title: str) -> dict:
 
 def _extract_closing_issues(pr_body: str) -> list[int]:
     out: list[int] = []
-    for m in CLOSING_KEYWORD_RE.finditer(pr_body or ""):
+    for m in CLOSING_KEYWORD_RE.finditer(friction_answers.strip(pr_body or "")):
         n = int(m.group(1))
         if n not in out:
             out.append(n)

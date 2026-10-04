@@ -149,6 +149,21 @@ def test_strip_footer_leaves_no_trailing_separator(prov, versions) -> None:
     assert prov.strip_footer(stamped) == "content"
 
 
+def test_a_sentinel_counts_only_as_a_whole_line(prov, versions) -> None:
+    """A sentence or a list entry quoting a sentinel is body text: nothing after it
+    is cut, and the footer is still found where it starts its own line."""
+    body = (
+        "## What\n\n"
+        f"1. The footer opens with `{prov.MARKER_START}`, then a rule.\n"
+        f"2. It closes with {prov.MARKER_END} on a line of its own.\n"
+        "3. After it, nothing.\n"
+    )
+    assert prov.strip_footer(body) == body.rstrip()
+    stamped = prov.stamp(body, versions)
+    assert stamped.startswith(body.rstrip()) and stamped.count("3. After it") == 1
+    assert prov.strip_footer(f"{body}\n  {prov.MARKER_START}  \n\n---\n") == body.rstrip()
+
+
 # --- filing comment ----------------------------------------------------
 
 

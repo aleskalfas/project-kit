@@ -49,6 +49,10 @@
       "$ref": "#/$defs/provenance_marker_block",
       "description": "Shape and semantics of the methodology-managed version-provenance footer (DEC-041 / ADR-037): a trailing sentinel-delimited region, stripped before scanning and shape-constrained so an un-stripped footer stays inert."
     },
+    "friction_answers_marker": {
+      "$ref": "#/$defs/friction_answers_marker_block",
+      "description": "Shape and semantics of a pull request's `## Documentation this change affects` section (DEC-055): the change check's list of the answers the change wrote, in plain words, a sentinel-delimited region the capability's scripts write and every reader of the body strips before it reads."
+    },
     "checkbox_rules": {
       "$ref": "#/$defs/checkbox_rules_block",
       "description": "Checkbox semantics: when validation happens (tick time), how closure is gated, which two ticked-states the rule recognises."
@@ -150,6 +154,46 @@
         "removal_authorisation_severity": {
           "$ref": "validation-severity.schema.json#/$defs/severity_ref",
           "description": "Severity applied when a human removes the marker without author authorisation (MET-008 scope-change rule)."
+        }
+      }
+    },
+    "friction_answers_marker_block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["heading", "start_marker", "end_marker", "position", "agent_managed", "strip_before_scan", "strip_rule"],
+      "properties": {
+        "heading": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The section's heading, directly above the region."
+        },
+        "start_marker": {
+          "type": "string",
+          "minLength": 1,
+          "description": "How the line that opens the region begins: an HTML comment that goes on to name the head and the merge-base the list is for."
+        },
+        "end_marker": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The line that closes the region."
+        },
+        "position": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Where the section sits — last, before the provenance footer."
+        },
+        "agent_managed": {
+          "type": "boolean",
+          "description": "Whether the capability's scripts own the section (agents and humans never author or edit it)."
+        },
+        "strip_before_scan": {
+          "type": "boolean",
+          "description": "Whether every reader of the body strips the section before scanning."
+        },
+        "strip_rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "How the section is stripped."
         }
       }
     },
