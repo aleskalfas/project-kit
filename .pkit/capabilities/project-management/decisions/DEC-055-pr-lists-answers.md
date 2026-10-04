@@ -1,7 +1,7 @@
 ---
 id: DEC-055
 title: A pull request lists the answers its change wrote
-status: proposed
+status: accepted
 date: 2026-10-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
