@@ -1,0 +1,18 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit friction check --all` sees a change made by a merge that takes a file
+  whole from one side (#1336) — a fix to the check's verdict in a rare
+  history. git's combined diff lists a path for a merge only where the merge
+  differs from every parent, so a merge resolved with `-s ours`, or a
+  conflict resolved to one parent's file, lists nothing for the file it took.
+  Where such a merge brought a file back to what it was before an artefact's
+  revalidation, and no commit since touched it, the check read no change,
+  though the change check on that merge asked. Each answering state's trees
+  are now compared with HEAD's for every file an anchor stands on, so the
+  artefact is reported stale, dated from that merge; and debt is dated along
+  the lines that carry HEAD's file, so an edit such a merge discarded no
+  longer dates it. `pkit friction debt`, `explain` and `record-status`
+  follow, and `explain` names the file behind such a merge.
