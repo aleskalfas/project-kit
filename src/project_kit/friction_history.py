@@ -65,17 +65,20 @@ lines that carry it from that state to HEAD: from HEAD, each commit leads to
 the parents holding the part as it does — a commit that changed it, to all
 of them — so an edit a merge discarded by taking the part whole from another
 parent is on no line. The changes on them are the commits whose part
-differs from it at every parent, and each merge that took the part whole
-from one side where what it took came down from the state's history
-unchanged and differs from the part there — it brought back what the part
-was before the state, and git's combined diff, listing only what differs
-from every parent, does not list it. Of the changes, those that leave the part
-as it stood at the state put it back; the origin is the oldest of the others
-that no put-back descends from — so an edit put back and made again is
-dated from the second edit — else the newest. An anchor's debt is dated
-where it came to differ from every answering state: of each state's oldest
-origin, the newest. Where no merge lies between the state and HEAD, the
-commits between are one line, and the changes are read from the log alone;
+differs from it at every parent, and each merge descending from the state
+that took the part whole from one side where what it took came down from
+the state's history unchanged and differs from the part there — it brought
+back what the part was before the state, and git's combined diff, listing
+only what differs from every parent, does not list it. A part that differs
+always has a change: where the lines end outside the state's history and
+none is found, it is the newest merge on them that took the part whole,
+else the state itself. Of the changes, those that leave the part as it
+stood at the state put it back; the origin is the oldest of the others that
+no put-back descends from — so an edit put back and made again is dated
+from the second edit — else the newest. An anchor's debt is dated where it
+came to differ from every answering state: of each state's oldest origin,
+the newest. Where no merge lies between the state and HEAD, the commits
+between are one line, and the changes are read from the log alone;
 otherwise a merge's parents are read from their trees.
 """
 
@@ -255,7 +258,40 @@ class History:
         )
         """The log index of every merge commit."""
         self._ancestors: dict[int, frozenset[int]] = {}
+        self._descendants: dict[int, frozenset[int]] = {}
         self._merged: dict[tuple[int, int], bool] = {}
+
+    @functools.cached_property
+    def parent_positions(self) -> tuple[tuple[int | None, ...], ...]:
+        """Each commit's parents by log index, in parent order; `None` for a parent this
+        clone does not hold."""
+        return tuple(tuple(map(self._index.get, commit.parents)) for commit in self.commits)
+
+    @functools.cached_property
+    def child_counts(self) -> tuple[int, ...]:
+        """How many commits of this history name each commit as a parent."""
+        counts = [0] * len(self.commits)
+        for parents in self.parent_positions:
+            for parent in parents:
+                if parent is not None:
+                    counts[parent] += 1
+        return tuple(counts)
+
+    @functools.cached_property
+    def _listed_paths(self) -> tuple[frozenset[str], ...]:
+        return tuple(
+            frozenset(
+                path
+                for entry in commit.entries
+                for path in (entry.path, entry.old_path)
+                if path is not None
+            )
+            for commit in self.commits
+        )
+
+    def listed(self, index: int) -> frozenset[str]:
+        """Every path the commit at `index` touched — either side of a rename."""
+        return self._listed_paths[index]
 
     def position(self, sha: str) -> int | None:
         """The log index of the commit `sha`, or `None` when this history does not list it."""
@@ -303,6 +339,18 @@ class History:
                     stack.append(position)
         found = frozenset(seen)
         self._ancestors[index] = found
+        return found
+
+    def descendants(self, index: int) -> frozenset[int]:
+        """The commits that reach the commit at `index`, itself included — one pass back up
+        the log from it, which lists every commit before its parents."""
+        found = self._descendants.get(index)
+        if found is None:
+            seen = {index}
+            for later in range(index - 1, -1, -1):
+                if any(parent in seen for parent in self.parent_positions[later]):
+                    seen.add(later)
+            found = self._descendants[index] = frozenset(seen)
         return found
 
     def reached(self, points: Iterable[int]) -> frozenset[int]:
@@ -1146,26 +1194,249 @@ def line_changes(
     parent, to all of them — down to what the state reaches. An edit a merge
     discarded by taking the part whole from another parent is on no line, so it
     never dates the debt. A merge that took the part whole from one side is a
-    change itself where what it took came down from the state's history
-    unchanged and differs from `then`: it brought back what the part was before
-    the state — `-s ours`, or a conflict resolved to one parent — though git's
-    combined diff, listing only what differs from every parent, does not list
-    it. Where no merge lies between the state and `start`, the commits between
-    are one line, read from the listing alone.
+    change itself where it descends from the state, and what it took came down
+    from the state's history unchanged and differs from `then`: it brought back
+    what the part was before the state — `-s ours`, or a conflict resolved to one
+    parent — though git's combined diff, listing only what differs from every
+    parent, does not list it. A merge the state does not reach it from brought
+    nothing back to a line the state is on. Where no merge lies between the
+    state and `start`, the commits between are one line, read from the listing
+    alone.
+
+    Where the part at `start` differs from `then` there is always a change. Where
+    the lines end outside the state's history at a commit that does not hold the
+    file — a root of an unrelated history, or a shallow clone's cut on a side
+    line — none of the above may be found; then the change is the newest merge on
+    them that took the part whole from one side and descends from the state,
+    else the state's own commit.
     """
     covered = history.ancestors(state)
+    if history.merged(state, start):
+        changes, took = _walked_changes(
+            history, state, covered, start, path, read, value, then=then, renames=renames
+        )
+    else:
+        changes = _listed_changes(history, covered, start, path, read, value, renames=renames)
+        took = {}
+    if changes or value(path, read(history.commits[start].sha, path)) == then:
+        return changes
+    descends = history.descendants(state)
+    newest = min((index for index in took if index in descends), default=None)
+    return {state: then} if newest is None else {newest: took[newest]}
+
+
+def files_line_changes(
+    history: History,
+    state: int,
+    start: int,
+    thens: Mapping[str, TreeEntry | None],
+    read: Callable[[str, str], TreeEntry | None],
+    differing: Callable[[str, str, frozenset[str]], frozenset[str]],
+) -> dict[str, dict[int, TreeEntry | None]]:
+    """`line_changes` for several files at once, each part a file's entry under its one
+    path, never followed across renames, and `thens` each one's entry at the state: the
+    changes of each, read in one walk of the lines that carry them all.
+
+    The files go down the lines together, each commit carrying those whose lines
+    reach it: one with one parent leads them all to it, the files it touched being
+    its changes; a merge leads each to the parents holding it as the merge does —
+    `differing` gives, of the paths in some folders, those two commits hold
+    otherwise — and a file it lists, or holds otherwise than every parent, to all
+    of them. File by file the rules are `line_changes`'s, so is what it returns.
+    """
     if not history.merged(state, start):
-        return _listed_changes(history, covered, start, path, read, value, renames=renames)
+        return {
+            rel: line_changes(history, state, start, rel, read, then=then)
+            for rel, then in thens.items()
+        }
+    covered = history.ancestors(state)
+    walk = _FilesWalk(history, covered, frozenset(thens), differing)
+    walk.run(start)
+    sha = history.commits[start].sha
+    descends: frozenset[int] | None = None
+    found: dict[str, dict[int, TreeEntry | None]] = {}
+    for rel, then in thens.items():
+        changes = {index: walk.entry_at(index, rel, read) for index in walk.wrote.get(rel, ())}
+        took = walk.took.get(rel, [])
+        candidates = [index for index in took if walk.entry_at(index, rel, read) != then]
+        if candidates:
+            unchanged = walk.unchanged(rel, candidates)
+            if any(unchanged[index] for index in candidates):
+                descends = history.descendants(state) if descends is None else descends
+                changes.update(
+                    (index, walk.entry_at(index, rel, read))
+                    for index in candidates
+                    if unchanged[index] and index in descends
+                )
+        if not changes and read(sha, rel) != then:
+            descends = history.descendants(state) if descends is None else descends
+            newest = min((index for index in took if index in descends), default=None)
+            changes = (
+                {state: then} if newest is None else {newest: walk.entry_at(newest, rel, read)}
+            )
+        found[rel] = dict(sorted(changes.items()))
+    return found
+
+
+class _FilesWalk:
+    """The lines that carry several files from a commit down to what a state reaches, all
+    walked at once (`files_line_changes`): by file, the commits that changed it and the
+    merges that took it whole from one side, and what each commit leads each file to."""
+
+    def __init__(
+        self,
+        history: History,
+        covered: frozenset[int],
+        files: frozenset[str],
+        differing: Callable[[str, str, frozenset[str]], frozenset[str]],
+    ) -> None:
+        self.history = history
+        self.covered = covered
+        self.files = files
+        self.folders = frozenset(rel.rpartition("/")[0] for rel in files)
+        self.differing = differing
+        self.wrote: dict[str, list[int]] = {}  # commits whose file differs from every parent's
+        self.took: dict[str, list[int]] = {}  # merges some parents hold the file as, another not
+        self._cut: dict[tuple[int, int], frozenset[str]] = {}  # files a merge leads not to a parent
+        self._entries: dict[tuple[int, str], TreeEntry | None] = {}
+
+    def run(self, start: int) -> None:
+        history = self.history
+        parents_at, children = history.parent_positions, history.child_counts
+        carried: dict[int, frozenset[str]] = {start: self.files}
+        pending = [start]
+        while pending:
+            index = heapq.heappop(pending)
+            files = carried.pop(index)
+            while True:
+                parents = parents_at[index]
+                touched = files & history.listed(index)
+                if len(parents) > 1:
+                    self._merge(index, files, touched, carried, pending)
+                    break
+                if touched:
+                    self._changes(index, touched)  # one parent, or a root or cut adding it
+                if not parents or parents[0] is None or parents[0] in self.covered:
+                    break
+                parent = parents[0]
+                if children[parent] > 1:  # read once every line leading to it is in
+                    _carry(carried, pending, parent, files)
+                    break
+                index = parent
+
+    def _merge(
+        self,
+        index: int,
+        files: frozenset[str],
+        listed: frozenset[str],
+        carried: dict[int, frozenset[str]],
+        pending: list[int],
+    ) -> None:
+        commit = self.history.commits[index]
+        rest = files - listed
+        differ = [
+            self.differing(commit.sha, parent, self.folders) & rest for parent in commit.parents
+        ]
+        every = differ[0].intersection(*differ[1:])
+        some = differ[0].union(*differ[1:]) - every
+        self._changes(index, listed | every)
+        for rel in some:
+            self.took.setdefault(rel, []).append(index)
+        for k, parent in enumerate(self.history.parent_positions[index]):
+            cut = differ[k] & some
+            if cut:
+                self._cut[index, k] = cut
+            if parent is not None and parent not in self.covered and files - cut:
+                _carry(carried, pending, parent, files - cut)
+
+    def _changes(self, index: int, files: frozenset[str]) -> None:
+        for rel in files:
+            self.wrote.setdefault(rel, []).append(index)
+
+    def entry_at(
+        self, index: int, rel: str, read: Callable[[str, str], TreeEntry | None]
+    ) -> TreeEntry | None:
+        """The file's entry at the commit at `index`: from the listing where it touched the
+        file, else from its tree."""
+        key = (index, rel)
+        if key not in self._entries:
+            listed = self.history.touching(index, rel)
+            if listed is None:
+                found = read(self.history.commits[index].sha, rel)
+            else:
+                found = listed.after if listed.path == rel else None
+            self._entries[key] = found
+        return self._entries[key]
+
+    def unchanged(self, rel: str, commits: Iterable[int]) -> dict[int, bool]:
+        """Whether the file came down to each of `commits` from the state's history
+        unchanged (`_unchanged`), along the parents each commit leads it to."""
+        followed: dict[int, tuple[int | None, ...]] = {}
+        wrote = set(self.wrote.get(rel, ()))
+        commits = list(commits)
+        pending = list(commits)
+        while pending:
+            index = pending.pop()
+            if index in followed:
+                continue
+            leads = tuple(
+                None if parent is None or parent in self.covered else parent
+                for k, parent in enumerate(self.history.parent_positions[index])
+                if rel not in self._cut.get((index, k), ())
+            )
+            followed[index] = leads
+            if index not in wrote:
+                pending.extend(lead for lead in leads if lead is not None)
+        return _unchanged(followed, wrote, commits)
+
+
+def _carry(
+    carried: dict[int, frozenset[str]], pending: list[int], index: int, files: frozenset[str]
+) -> None:
+    """Lead `files` to the commit at `index`: queued to read with the files every other line
+    leads to it."""
+    held = carried.get(index)
+    if held is None:
+        carried[index] = files
+        heapq.heappush(pending, index)
+    elif not files <= held:
+        carried[index] = held | files
+
+
+def _walked_changes(
+    history: History,
+    state: int,
+    covered: frozenset[int],
+    start: int,
+    path: str,
+    read: Callable[[str, str], TreeEntry | None],
+    value: Callable[[str, TreeEntry | None], Any],
+    *,
+    then: Any,
+    renames: bool,
+) -> tuple[dict[int, Any], dict[int, Any]]:
+    """`line_changes` where a merge lies between the state and `start`: the changes on the
+    lines, and every merge on them that took the part whole from one side — each with
+    the part there.
+
+    The lines are walked from `start`, newest first. A commit with one parent that
+    did not touch the file holds it as that parent does, so a stretch of them is
+    followed down at once (`_down_the_stretch`); at any other commit the file at
+    each parent is read (`_parents_of`).
+    """
+    names = history.names(path) if renames else ()
     entry = read(history.commits[start].sha, path)
     held: dict[int, tuple[str, TreeEntry | None, Any]] = {start: (path, entry, value(path, entry))}
-    followed: dict[int, list[int | None]] = {}  # the parents each commit leads to; `None`: covered
+    followed: dict[int, tuple[int | None, ...]] = {}  # the parents each leads to; `None`: covered
     wrote: set[int] = set()  # commits whose part differs from it at every parent
     took: set[int] = set()  # merges whose part some parents hold and another does not
     pending = [start]
     while pending:
-        index = heapq.heappop(pending)
+        index = _down_the_stretch(history, covered, held, followed, heapq.heappop(pending))
+        if index is None:
+            continue
         name, entry, here = held[index]
-        steps = _parents_of(history, index, name, entry, read, renames=renames)
+        steps = _parents_of(history, index, name, entry, read, renames=renames, names=names)
         values = [
             here if (source, there) == (name, entry) else value(source, there)
             for _sha, source, there in steps
@@ -1179,26 +1450,86 @@ def line_changes(
             same = list(range(len(steps)))
         elif len(same) < len(steps):
             took.add(index)
-        followed[index] = []
+        leads: list[int | None] = []
         for k in same:
             sha, source, there = steps[k]
             position = history.position(sha)
             if position is None or position in covered:
-                followed[index].append(None)
+                leads.append(None)
                 continue
-            followed[index].append(position)
+            leads.append(position)
             if position not in held:
                 held[position] = (source, there, values[k])
                 heapq.heappush(pending, position)
-    # Whether the part came down to each commit from the state's history unchanged: the
-    # log lists every parent after its children, so a commit's parents are read first.
-    unchanged: dict[int, bool] = {}
-    for index in sorted(followed, reverse=True):
-        unchanged[index] = index not in wrote and any(
-            parent is None or unchanged[parent] for parent in followed[index]
-        )
-    brought_back = {index for index in took if unchanged[index] and held[index][2] != then}
-    return {index: held[index][2] for index in sorted(wrote | brought_back)}
+        followed[index] = tuple(leads)
+    candidates = [index for index in sorted(took) if held[index][2] != then]
+    unchanged = _unchanged(followed, wrote, candidates)
+    descends = (
+        history.descendants(state) if any(unchanged[i] for i in candidates) else frozenset[int]()
+    )
+    brought_back = {index for index in candidates if unchanged[index] and index in descends}
+    changes = {index: held[index][2] for index in sorted(wrote | brought_back)}
+    return changes, {index: held[index][2] for index in took}
+
+
+def _down_the_stretch(
+    history: History,
+    covered: frozenset[int],
+    held: dict[int, tuple[str, TreeEntry | None, Any]],
+    followed: dict[int, tuple[int | None, ...]],
+    index: int,
+) -> int | None:
+    """From the commit at `index` on a line, down through each commit with one parent that
+    did not touch the part's file — it holds the part as its parent does — to the first
+    commit that is not one: returned, or `None` where the stretch ends in what the state
+    reaches or at a commit already on a line."""
+    here = held[index]
+    name = here[0]
+    parents_at = history.parent_positions
+    while True:
+        parents = parents_at[index]
+        if len(parents) != 1 or history.touching(index, name) is not None:
+            return index
+        parent = parents[0]
+        if parent is None or parent in covered:
+            followed[index] = (None,)
+            return None
+        followed[index] = (parent,)
+        if parent in held:
+            return None
+        held[parent] = here
+        index = parent
+
+
+def _unchanged(
+    followed: Mapping[int, Sequence[int | None]], wrote: set[int], commits: Iterable[int]
+) -> dict[int, bool]:
+    """Whether the part came down to each of `commits` from the state's history unchanged:
+    some line from it leads to what the state reaches through no commit that changed the
+    part (`followed`, `wrote`) — read for every commit on the way, each once."""
+    found: dict[int, bool] = {}
+    for commit in commits:
+        stack = [commit]
+        while stack:
+            index = stack[-1]
+            if index in found:
+                stack.pop()
+            elif index in wrote:
+                found[index] = False
+                stack.pop()
+            elif any(lead is None or found.get(lead) for lead in followed[index]):
+                found[index] = True
+                stack.pop()
+            else:
+                unread = [
+                    lead for lead in followed[index] if lead is not None and lead not in found
+                ]
+                if unread:
+                    stack.extend(unread)
+                else:
+                    found[index] = False
+                    stack.pop()
+    return found
 
 
 def _parents_of(
@@ -1209,17 +1540,20 @@ def _parents_of(
     read: Callable[[str, str], TreeEntry | None],
     *,
     renames: bool,
+    names: Sequence[str] = (),
 ) -> list[tuple[str, str, TreeEntry | None]]:
     """The file at `name` in the commit at `index`, whose entry there is `entry`, as each
     parent holds it: the parent, the file's name there and its entry — from the listing
-    where the commit touched the file, from the parent's tree where a merge did not,
-    and `entry` itself for the one parent of a commit that did not. Without `renames`,
-    a parent holding the file only under another name holds nothing at `name`."""
+    where the commit touched the file; from the parent's tree where a merge did not,
+    followed across renames under the file's name there, `name` or the first of its
+    other `names` the parent holds; and `entry` itself for the one parent of a commit
+    that did not. Without `renames`, a parent holding the file only under another name
+    holds nothing at `name`."""
     parents = history.commits[index].parents
     listed = history.touching(index, name)
     if listed is None:
         if len(parents) > 1:
-            return [(parent, name, read(parent, name)) for parent in parents]
+            return [(parent, *_held(read, parent, (name, *names))) for parent in parents]
         return [(parent, name, entry) for parent in parents]
     sources = Version(index, listed.path, listed).sources
     steps: list[tuple[str, str, TreeEntry | None]] = []
@@ -1236,6 +1570,18 @@ def _parents_of(
         else:
             steps.append((parent, name, there if source == name else None))
     return steps
+
+
+def _held(
+    read: Callable[[str, str], TreeEntry | None], commit: str, names: Sequence[str]
+) -> tuple[str, TreeEntry | None]:
+    """The file at `commit` under the first of its `names` the commit holds, with that
+    name; under the first name, with no entry, where it holds none of them."""
+    for name in names:
+        entry = read(commit, name)
+        if entry is not None:
+            return name, entry
+    return names[0], None
 
 
 def _listed_changes(
@@ -1309,6 +1655,7 @@ __all__ = [
     "changed_since",
     "differs",
     "file_entry",
+    "files_line_changes",
     "line_changes",
     "origin",
     "read_history",

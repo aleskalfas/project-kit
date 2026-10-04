@@ -38,9 +38,11 @@ from the state's tree objects, read through `git cat-file --batch`
 (`TreeReader`) — a record's file and a registered kind's files the same
 way, followed across renames; an artefact anchor's target by its content,
 read at the state's commit. An edit put back, however many commits made and
-undid it, is no change. Every part the anchor stands on at the state or at
-HEAD is compared, whatever the history lists — a merge that takes a file
-whole from one side lists nothing for it, yet the file may differ. The
+undid it, is no change. Where a merge lies between a state and HEAD, every
+part the anchor stands on at the state or at HEAD is compared, whatever the
+history lists — a merge that takes a file whole from one side lists nothing
+for it, yet the file may differ; where none does, the commits between are
+one line, and a part none of them touched stands as it stood. The
 history only dates the debt: each part is measured from the state it
 differs from, its origin the oldest change still standing on the lines that
 carry it to HEAD (`friction_history.line_changes`,
@@ -180,6 +182,8 @@ from project_kit.friction_history import (
     changed,
     changed_since,
     differs,
+    file_entry,
+    files_line_changes,
     line_changes,
     origin,
     read_history,
@@ -515,7 +519,11 @@ class _Judge:
         self._moved: dict[tuple[str, int], ExclusionChange] = {}
         self._exclusions: dict[tuple[Anchor, int, frozenset[str]], _Exclusion] = {}
         self._flips: dict[int, tuple[FrictionSettings, list[Callable[[str], bool]]] | None] = {}
-        self._lines: dict[tuple[int, int, str, TreeEntry | None, bool], dict[int, Any]] = {}
+        self._lines: dict[tuple[Any, ...], dict[int, Any]] = {}
+        self.taken: dict[tuple[int, int], set[str]] = {}
+        """By merge and answering state, the files a merge took whole from one side that
+        `line` read as changes measured from that state: git's combined diff lists none of
+        them, and `explain` names them behind the merge (`_touched_by`)."""
 
     # --- a state under its own exclusions ------------------------------------------
 
@@ -613,12 +621,16 @@ class _Judge:
         """What `friction.exclude` changing from the revalidation point to HEAD did to a
         path anchor (`exclusion_change`); empty for another kind, or where they read alike.
 
-        The files it stood on are sought among HEAD's and every path touched
-        since the point: a file the point held that nothing touched since is
-        HEAD's still, so no commit's listing is read — and a file added since,
-        changed while the anchor stood on it, and left out later is among
-        them, its change never erased. The artefact's own names are the
-        caller's to leave out (`ExclusionChange.less`).
+        The files it stood on are sought among HEAD's, every path touched since
+        the point, and — where a merge lies between the point and HEAD — every
+        path in history the anchor matches that the point's tree holds. On one
+        line, a file the point held that no commit touched since is HEAD's
+        still, so no tree is read; past a merge, one that took a side whole
+        may have removed it, a side cut before the file was added, though no
+        listing names it. A file added since, changed while the anchor stood
+        on it, and left out later is among them, its change never erased. The
+        artefact's own names are the caller's to leave out
+        (`ExclusionChange.less`).
         """
         if anchor.kind != "path" or self.reads_as_head(point):
             return ExclusionChange()
@@ -627,7 +639,11 @@ class _Judge:
         if found is None:
             at_head, in_history = self._matched_by(anchor.value)
             since = at_head | (in_history & self._paths_after(point))
-            before = Listing(since, self.settings_of(self.history.commits[point].sha))
+            sha = self.history.commits[point].sha
+            if self.history.merged(point, 0):
+                held = self.trees.entries(sha, sorted(in_history - since))
+                since |= {rel for rel, entry in held.items() if entry is not None}
+            before = Listing(since, self.settings_of(sha))
             found = exclusion_change(anchor.value, before, Listing(at_head, self.head.settings))
             self._moved[key] = found
         return found
@@ -742,7 +758,10 @@ class _Judge:
         stood = tuple(
             rel
             for rel in moved.left_out
-            if rel not in after  # untouched since the point: HEAD's file is the point's
+            # Listed by no commit since the point: the point held the file, or a merge took
+            # it whole from a side — `exclusion` then compares it at the widening with the
+            # point, so it asks only where it changed while the anchor stood on it.
+            if rel not in after
             or self.blobs.read(sha, rel) is not None
             or any(i not in reached and self.counts(i, rel) for i in self.history.touched(rel))
         )
@@ -931,20 +950,78 @@ class _Judge:
         return None
 
     def line(
-        self, state: int, start: int, rel: str, then: TreeEntry | None, *, renames: bool = False
+        self,
+        state: int,
+        start: int,
+        rel: str,
+        then: Any,
+        *,
+        renames: bool = False,
+        target: Artefact | None = None,
     ) -> dict[int, Any]:
-        """The changes to the file at `rel` in the commit at `start` since the answering state
-        at `state`, where it was `then`, on the lines that carry it there, each with the
-        file's entry where it changed (`line_changes`) — once per file, state and commit
-        for the run."""
-        key = (state, start, rel, then, renames)
+        """The changes to a part since the answering state at `state`, on the lines that carry
+        it to the commit at `start`, where its file is at `rel`, each with the part where it
+        changed (`line_changes`) — once per part, state and commit for the run.
+
+        The part is the file's entry, `then` its entry at the state; for `target`,
+        an artefact anchor's, the target's content, `then` its content there. Each
+        merge among the changes that lists none of the file's names took it whole
+        from one side: recorded in `taken`.
+        """
+        value: Callable[[str, TreeEntry | None], Any] = file_entry
+        key: tuple[Any, ...] = ("file", state, start, rel, renames, then)
+        if target is not None:
+            key = ("artefact", state, start, rel, renames, target.id)
+            value = self._content_in(target)
         found = self._lines.get(key)
         if found is None:
-            found = line_changes(
-                self.history, state, start, rel, self.trees.entry, then=then, renames=renames
+            found = self._lines[key] = line_changes(
+                self.history, state, start, rel, self.trees.entry, value, then=then, renames=renames
             )
-            self._lines[key] = found
+            self._record_taken(state, rel, found, renames=renames)
         return found
+
+    def _content_in(self, target: Artefact) -> Callable[[str, TreeEntry | None], Any]:
+        """The content of `target` as the file at a path, with an entry, holds it."""
+        walker = self.walker
+
+        def content_in(path: str, entry: TreeEntry | None) -> Any:
+            return _content_of(walker.artefact_in(entry, path, target))
+
+        return content_in
+
+    def lines(
+        self, state: int, start: int, thens: Mapping[str, TreeEntry | None]
+    ) -> dict[str, dict[int, Any]]:
+        """`line` for several files at once, each part a file's entry under its one path,
+        `thens` each one's entry at the state — those not read yet read in one walk
+        (`files_line_changes`)."""
+        keys = {rel: ("file", state, start, rel, False, then) for rel, then in thens.items()}
+        unread = {rel: then for rel, then in thens.items() if keys[rel] not in self._lines}
+        if unread:
+            read = files_line_changes(
+                self.history, state, start, unread, self.trees.entry, self.trees.differing
+            )
+            for rel, found in read.items():
+                self._lines[keys[rel]] = found
+                self._record_taken(state, rel, found, renames=False)
+        return {rel: self._lines[key] for rel, key in keys.items()}
+
+    def _record_taken(
+        self, state: int, rel: str, changes: Mapping[int, Any], *, renames: bool
+    ) -> None:
+        """Record in `taken` each merge among `changes` that lists none of the file's names:
+        it took the file whole from one side."""
+        history = self.history
+        names = history.names(rel) if renames else (rel,)
+        covered = history.ancestors(state)
+        for index in changes:
+            if (
+                index not in covered
+                and len(history.commits[index].parents) > 1
+                and all(history.touching(index, name) is None for name in names)
+            ):
+                self.taken.setdefault((index, state), set()).add(rel)
 
     def change(
         self, anchor: Anchor, answering: Sequence[int], own: frozenset[str]
@@ -986,25 +1063,33 @@ class _Judge:
         origin among the parts that differ (`origin`, each measured from this state) and
         the changes after the state behind them.
 
-        Each part is compared as HEAD's trees and the state's hold it, whatever
-        the history lists, so a part a merge took whole from one side is never
-        missed: a path anchor's files it stands on at the state and at HEAD,
-        each under its own exclusions, those a widening took (`exclusion`),
-        those gone under an exclusion, and those a narrowing let in, which
-        always count; a record's file and a registered kind's files, followed
-        across renames; an artefact's content, read at the state's commit. An
-        edit put back is no change. The history dates what differs: each part
-        from the changes on the lines that carry it to HEAD (`line_changes`).
+        Each part is compared as HEAD's trees and the state's hold it: a path
+        anchor's files it stands on at the state and at HEAD, each under its own
+        exclusions, those a widening took (`exclusion`), those gone under an
+        exclusion, and those a narrowing let in, which always count; a record's
+        file and a registered kind's files, followed across renames; an
+        artefact's content, read at the state's commit. Where a merge lies
+        between the state and HEAD, every such part is compared, whatever the
+        history lists, so one a merge took whole from one side is never missed;
+        where none does, the commits between are one line, and a part none of
+        them touched stands as it stood (`_touched_since`). An edit put back is
+        no change. The history dates what differs: each part from the changes on
+        the lines that carry it to HEAD (`line_changes`).
         """
         if anchor.kind == "artefact":
             target = self.head.find(anchor.value)
             return None if target is None else self._target_since(target, state)
         if anchor.kind == "path":
             return self._path_since(anchor, state, own)
+        covered = self.history.ancestors(state)
+        merged = self.history.merged(state, 0)
         origins: list[int] = []
         commits: set[int] = set()
         for rel in self.files_of(anchor, own):
-            then = self._entry_at(state, rel, self.history.names(rel)[1:])
+            names = self.history.names(rel)
+            if not merged and not any(self._touched_since(name, covered) for name in names):
+                continue  # one line, and no commit since the state touched the file
+            then = self._entry_at(state, rel, names[1:])
             if not differs(self.head_tree.entry(rel), then):
                 continue
             changes = self.line(state, 0, rel, then, renames=True)
@@ -1014,20 +1099,36 @@ class _Judge:
                 commits.update(changes)
         return Change(max(origins), frozenset(commits)) if origins else None
 
+    def _touched_since(self, rel: str, covered: frozenset[int]) -> bool:
+        """Whether a commit outside `covered` touched the path `rel` — either side of a
+        rename."""
+        return any(index not in covered for index in self.history.touched(rel))
+
     def _path_since(self, anchor: Anchor, state: int, own: frozenset[str]) -> Change | None:
-        """`since` for a path anchor."""
+        """`since` for a path anchor: its files it stands on at the state and at HEAD, and
+        those gone under an exclusion — where a merge lies between the state and HEAD,
+        every one, read at the state from its root (`TreeReader.entries`); otherwise
+        those a commit since touched."""
         covered = self.history.ancestors(state)
+        merged = self.history.merged(state, 0)
         moved = self.exclusion_change(anchor, state).less(own)
+        candidates = [*sorted(self.matching_paths(anchor.value, state) - own), *moved.gone]
+        if merged:
+            at_state = self.trees.entries(self.history.commits[state].sha, candidates)
+        else:
+            candidates = [rel for rel in candidates if self._touched_since(rel, covered)]
+            at_state = {rel: self._entry_at(state, rel) for rel in candidates}
+        thens = {
+            rel: at_state[rel]
+            for rel in candidates
+            if differs(None if rel in moved.gone else self.head_tree.entry(rel), at_state[rel])
+        }
+        lines = self.lines(state, 0, thens)
         origins: list[int] = []
         behind: set[int] = set()
-        for rel in [*sorted(self.matching_paths(anchor.value, state) - own), *moved.gone]:
-            gone = rel in moved.gone
-            now = None if gone else self.head_tree.entry(rel)
-            then = self._entry_at(state, rel)
-            if not differs(now, then):
-                continue
-            changes = self.line(state, 0, rel, then)
-            if gone:  # removed under an exclusion: only where the anchor still stood on it
+        for rel, then in thens.items():
+            changes = lines[rel]
+            if rel in moved.gone:  # removed under an exclusion: only where the anchor stood on it
                 changes = {c: entry for c, entry in changes.items() if self.counts(c, rel)}
             found = origin(self.history, changes, then)
             if found is not None:
@@ -1050,29 +1151,28 @@ class _Judge:
 
     def _target_since(self, target: Artefact, state: int) -> Change | None:
         """`since` for an artefact anchor: `target`'s content at HEAD against its content at
-        the state's commit, never anything in its container — read under the file's name
-        there, and not at all where the state holds the file as HEAD does."""
+        the state's commit, never anything in its container.
+
+        The state's content is read from its tree, under the file's name there as
+        the history follows it, else under the name it has at HEAD — so a file
+        deleted and restored as it was after the state reads as the state held
+        it — and not at all where the state holds the file as HEAD does. On one
+        line, where no commit since the state touched the file, it stands as it
+        stood.
+        """
         reached = self.history.ancestors(state)
-        version = next((v for v in self.history.versions(target.path) if v.index in reached), None)
-        then = None
-        if version is not None:
-            entry = self.trees.entry(self.history.commits[state].sha, version.path)
-            if version.path == target.path and entry == self.head_tree.entry(target.path):
-                return None  # the same file: the same content
-            then = _content_of(self.walker.artefact_in(entry, version.path, target))
+        versions = list(self.history.versions(target.path))
+        if not self.history.merged(state, 0) and all(v.index in reached for v in versions):
+            return None  # one line, and no commit since the state touched the target's file
+        version = next((v for v in versions if v.index in reached), None)
+        name = target.path if version is None else version.path
+        entry = self.trees.entry(self.history.commits[state].sha, name)
+        if name == target.path and entry == self.head_tree.entry(target.path):
+            return None  # the same file: the same content
+        then = _content_of(self.walker.artefact_in(entry, name, target))
         if content(target) == then:
             return None
-        walker = self.walker
-        changes = line_changes(
-            self.history,
-            state,
-            0,
-            target.path,
-            self.trees.entry,
-            lambda path, entry: _content_of(walker.artefact_in(entry, path, target)),
-            then=then,
-            renames=True,
-        )
+        changes = self.line(state, 0, target.path, then, renames=True, target=target)
         found = origin(self.history, changes, then)
         return None if found is None else Change(found, frozenset(changes))
 
@@ -1437,8 +1537,9 @@ class CommitBehind:
     record or artefact anchor: the file it names, under the names the commit
     touched. A move: the artefact's file under both its names. Either side of
     a rename counts, as the check counts it, and a merge touched a path it
-    holds otherwise than one of its parents — one it took whole from a side
-    too, which git's combined diff does not list.
+    took whole from one side where the check reads that as a change — bringing
+    back what the file was before an answering state — which git's combined
+    diff does not list.
     """
 
     commit: Commit
@@ -1454,8 +1555,9 @@ class TracedFinding:
 
     `commits` are oldest first, each with the paths behind the finding it
     touched (`CommitBehind`). Stale on an anchor: every commit after what the
-    answering states cover that touched a part of the anchor differing from
-    what it was at a state, and the finding's origin; stale by a move: the
+    answering states cover that changed a part of the anchor differing from
+    what it was at a state, on the lines that carry the part to HEAD
+    (`_Judge.change`), and the finding's origin; stale by a move: the
     rename. Deferred: the changes the deferral postpones —
     after the revalidation point, up to the deferral point; none for a dead
     anchor, whose deferral postpones no friction (COR-050 point 4) since the
@@ -1660,7 +1762,7 @@ def _traced(
             behind.update(index for index in changed if index in postponed)
         behind |= configured
         touched = (
-            _touched_by(judge, _paths_behind(judge, anchor, own, answering), behind)
+            _touched_by(judge, _paths_behind(judge, anchor, own, answering), behind, answering)
             if behind
             else {}
         )
@@ -1717,11 +1819,13 @@ def _names(history: History, path: str) -> frozenset[str]:
     return frozenset(names)
 
 
-def _touched_by(judge: _Judge, paths: frozenset[str], commits: set[int]) -> dict[int, set[str]]:
+def _touched_by(
+    judge: _Judge, paths: frozenset[str], commits: set[int], states: Sequence[int]
+) -> dict[int, set[str]]:
     """Of `paths`, those each of `commits` touched, by commit — one pass over their history
-    — and, for a merge, each it holds otherwise than one of its parents does, read from
-    their trees: what it took whole from one side, which git's combined diff does not
-    list."""
+    — and, for a merge, each it took whole from one side as a change measured from one of
+    the answering `states` (`_Judge.taken`), which git's combined diff does not list: never
+    one it merged as it merges any file, whose side's commits carry the change."""
     history = judge.history
     touched: dict[int, set[str]] = {}
     for rel in paths:
@@ -1729,14 +1833,10 @@ def _touched_by(judge: _Judge, paths: frozenset[str], commits: set[int]) -> dict
             if index in commits:
                 touched.setdefault(index, set()).add(rel)
     for index in commits:
-        commit = history.commits[index]
-        if len(commit.parents) < 2:
-            continue
-        listed = touched.get(index, set())
-        for rel in sorted(paths - listed):
-            here = judge.trees.entry(commit.sha, rel)
-            if any(judge.trees.entry(parent, rel) != here for parent in commit.parents):
-                touched.setdefault(index, set()).add(rel)
+        for state in states:
+            taken = judge.taken.get((index, state), set()) & paths
+            if taken:
+                touched.setdefault(index, set()).update(taken)
     return touched
 
 

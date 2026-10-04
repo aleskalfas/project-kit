@@ -9,10 +9,10 @@ body: >
   differs from every parent, so a merge resolved with `-s ours`, or a
   conflict resolved to one parent's file, lists nothing for the file it took.
   Where such a merge brought a file back to what it was before an artefact's
-  revalidation, and no commit since touched it, the check read no change,
-  though the change check on that merge asked. Each answering state's trees
-  are now compared with HEAD's for every file an anchor stands on, so the
-  artefact is reported stale, dated from that merge; and debt is dated along
-  the lines that carry HEAD's file, so an edit such a merge discarded no
-  longer dates it. `pkit friction debt`, `explain` and `record-status`
+  revalidation, or removed it, and no commit since touched it, the check read
+  no change, though the change check on that merge asked. Where a merge lies
+  between an answering state and HEAD, the state's trees are now compared
+  with HEAD's for every file an anchor stands on, so the artefact is reported
+  stale, dated from that merge; and debt is dated along the lines that carry
+  HEAD's file, so an edit such a merge discarded no longer dates it. `pkit friction debt`, `explain` and `record-status`
   follow, and `explain` names the file behind such a merge.
