@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "config.schema.json",
   "title": "Project configuration — software-analysis capability",
-  "description": "Formal shape of the project's `.pkit/capabilities/software-analysis/project/config.yaml`: the settings of the capability a project chooses. One today, `numbering.freed-by` (DEC-001 point 3): the commits whose removed files' numbers are free again. Whether each names one commit here, on the default branch's history, the stamp (`pkit analysis new`) and the number check (`pkit analysis check-numbers`) judge, since each reads git; not this schema. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
+  "description": "Formal shape of the project's `.pkit/capabilities/software-analysis/project/config.yaml`: the settings of the capability a project chooses. One today, `numbering.freed-by` (DEC-001 point 3): the commits by which the default branch lost artefacts whose numbers are free again. Whether each is a commit of the default branch's history here, and frees a number, the stamp (`pkit analysis new`) and the number check (`pkit analysis check-numbers`) judge, since each reads git; not this schema. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
   "type": "object",
   "required": [
     "schema_version"
@@ -31,21 +31,21 @@
       "additionalProperties": false,
       "properties": {
         "freed-by": {
-          "description": "The commits whose removed files' numbers are free again: a number the default branch's history gave a file one of them deleted — not renamed — is no longer counted. Nothing else frees a number: a file any other commit removed still holds its number, and so does a file the working tree or the default branch holds.",
+          "description": "The commits by which the default branch lost artefacts nothing still relies on, whose numbers are free again: a number the default branch's history gave only files one of them deleted — not renamed — and by which the default branch lost them last is no longer counted. Nothing else frees a number through the stamp: a file any other commit removed still holds its number, and so does a file the working tree or the default branch holds.",
           "type": "array",
           "uniqueItems": true,
           "items": {
-            "$ref": "#/$defs/commit-name"
+            "$ref": "#/$defs/commit-id"
           }
         }
       }
     }
   },
   "$defs": {
-    "commit-name": {
-      "description": "A commit, by its full hexadecimal id or an abbreviation of it that names it alone, in lower case: 4 digits at least. Quoted in YAML, as digits alone read as a number.",
+    "commit-id": {
+      "description": "A commit, by its full hexadecimal id in lower case — 40 digits, or 64 in a SHA-256 repository: an abbreviation can come to name two commits as history grows. Quoted in YAML, as digits alone can read as a number.",
       "type": "string",
-      "pattern": "^[0-9a-f]{4,64}$"
+      "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
     }
   }
 }

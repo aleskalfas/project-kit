@@ -44,11 +44,11 @@ added it (`added`: one `git log`, since the backbone's reading is of one state,
 not of a history) — git lists the paths, and which of them were files of a
 place, not left out by `friction.exclude`, the backbone's reading at that
 commit says (`_lib/history.py`); for both, which commit an id the numbering
-setting names stands for — none, or several when it is ambiguous — whether the
-default branch's history holds it, and which files it removed, git's rename
-detection on (`commit_of`, `objects_named`, `is_ancestor`, `removed`;
-`_lib/numbering.py`); for the number comparison, which versions of those files a
-branch's own history wrote, and which the default branch holds, so a number
+setting names stands for, whether the default branch's history holds it, which
+files it removed, git's rename detection on, and the commit of the default
+branch's first-parent line at which each of those paths went last
+(`commit_of`, `is_ancestor`, `removed`, `lost`; `_lib/numbering.py`); for the
+number comparison, which versions of those files a branch's own history wrote, and which the default branch holds, so a number
 the default branch took by landing this branch's own work is told from one it
 took for another (`blobs_written`, `blob_of`); and, for the
 proposal, which files held a piece of code at a commit — anywhere in the tree,
@@ -330,6 +330,40 @@ def added(root: Path, revisions: str, folders: Iterable[str]) -> list[tuple[str,
         "--",
         *pathspecs,
     )
+    return _listing(listed)
+
+
+def lost(root: Path, tip: str, paths: Iterable[str]) -> dict[str, str]:
+    """Each of `paths` the first-parent line of `tip` lost, with the newest commit of that
+    line at which it went — deleted, or renamed away, against the commit's first parent;
+    a path it never lost is not there. One `git log`, each path taken literally; empty
+    when git cannot answer."""
+    pathspecs = [f":(literal){path}" for path in sorted(set(paths))]
+    if not pathspecs or not tip or tip.startswith("-"):
+        return {}
+    listed = _git(
+        root,
+        "log",
+        tip,
+        "--first-parent",
+        "--diff-merges=first-parent",  # a merge, against the line it lies on
+        "-z",
+        "--no-renames",
+        "--diff-filter=D",
+        "--format=%x01%H",
+        "--name-only",
+        "--",
+        *pathspecs,
+    )
+    found: dict[str, str] = {}
+    for commit, path in _listing(listed):
+        found.setdefault(path, commit)  # newest first
+    return found
+
+
+def _listing(listed: str | None) -> list[tuple[str, str]]:
+    """Each path a `git log -z --format=%x01%H --name-only` listing names, with its commit,
+    in the listing's order."""
     found: list[tuple[str, str]] = []
     commit = ""
     for field in (listed or "").split("\0"):
@@ -339,14 +373,6 @@ def added(root: Path, revisions: str, folders: Iterable[str]) -> list[tuple[str,
         elif field and commit:
             found.append((commit, field))
     return found
-
-
-def objects_named(root: Path, prefix: str) -> list[str]:
-    """Every object whose id starts with `prefix` — several when an abbreviated id is
-    ambiguous; empty when none does, or git cannot answer."""
-    if not prefix or prefix.startswith("-"):
-        return []
-    return (_git(root, "rev-parse", f"--disambiguate={prefix}") or "").split()
 
 
 def is_ancestor(root: Path, commit: str, of: str) -> bool:

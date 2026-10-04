@@ -3,19 +3,25 @@ kind: minor
 custom:
   category: Added
 body: >
-  A project may name the commits whose removed files' numbers are free again
-  — a pilot cleared before its analysis is established, say (DEC-001 point
-  3): `numbering.freed-by` in the capability's new project configuration,
+  A project may name commits by which the default branch lost artefacts
+  nothing still relies on — a pilot abandoned before its analysis was
+  established, say — and their numbers are free again (DEC-001 point 3):
+  `numbering.freed-by` in the capability's new project configuration,
   `.pkit/capabilities/software-analysis/project/config.yaml`, whose shape is
-  `schemas/config.schema.json`. A number the default branch's history gave a
-  file one of those commits deleted is no longer counted: `pkit analysis new`
-  numbers as though it was never given, saying so and naming the commit when
-  it is a number the stamp would have followed, and `pkit analysis
-  check-numbers` reports no collision for it. Nothing else frees a number: a
-  file another commit removed, a file a named commit renamed rather than
-  deleted, and every file the working tree or the default branch holds keep
-  theirs. Each entry is a commit's full id, or an abbreviation naming it alone,
-  on the default branch's history; one that names no commit here, is
-  ambiguous, or lies off that history refuses the stamp of a use case or
-  journey and fails `pkit analysis check-numbers` — whether the working tree
-  numbers anything or not — at the entry. Without the file, nothing changes.
+  `schemas/config.schema.json`. A number the default branch's history gave
+  only files a named commit deleted — not renamed, by git's rename detection —
+  and by which the default branch lost them last is no longer counted: `pkit
+  analysis new` numbers as though it was never given, saying so and naming the
+  commit when it is a number the stamp would have followed, and `pkit analysis
+  check-numbers` reports no collision for it and lists every number the
+  setting frees, with a `freed` list in its `--json` document. Nothing else
+  frees a number through the stamp: a file another commit removed, a file a
+  named commit renamed rather than deleted, the name a file had before it was
+  moved, a file a merge kept or brought back and another commit removed since,
+  a path added more than once before the named commit (reported), and every
+  file the working tree or the default branch holds keep theirs. Each entry is
+  a commit's full id on the default branch's history; one that is no commit's
+  id here, lies off that history, or frees no number, and a file that does not
+  parse, refuse the stamp of a use case or journey and fail `pkit analysis
+  check-numbers` — whether the working tree numbers anything or not — at the
+  entry. Without the file, nothing changes.

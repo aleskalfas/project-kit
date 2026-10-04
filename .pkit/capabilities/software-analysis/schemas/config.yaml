@@ -1,18 +1,19 @@
 # The software-analysis project configuration: the settings of the capability
 # a project chooses.
 #
-# - `numbering.freed-by` — the commits whose removed files' numbers are free
-#   again (software-analysis DEC-001 point 3): a pilot cleared before its
-#   analysis is established, say. A number the default branch's history gave a
-#   file one of them deleted — not renamed — is no longer counted by the stamp
-#   (`pkit analysis new`) or the number check (`pkit analysis check-numbers`),
-#   which read the rule from one home (`scripts/_lib/numbering.py`). Nothing
-#   else frees a number: a file any other commit removed still holds its
-#   number, and so does a file the working tree or the default branch holds.
-#   Each entry is a commit's full id or an abbreviation that names it alone,
-#   quoted, on the default branch's history; the stamp refuses, and the number
-#   check fails on, one that names no commit here, is ambiguous, or lies off
-#   that history.
+# - `numbering.freed-by` — the commits by which the default branch lost
+#   artefacts nothing still relies on, whose numbers are free again
+#   (software-analysis DEC-001 point 3): a pilot abandoned before its analysis
+#   was established, say. A number the default branch's history gave only files
+#   one of them deleted — not renamed — and by which the default branch lost
+#   them last is no longer counted by the stamp (`pkit analysis new`) or the
+#   number check (`pkit analysis check-numbers`), which read the rule from one
+#   home (`scripts/_lib/numbering.py`). Nothing else frees a number through the
+#   stamp: a file any other commit removed still holds its number, and so does
+#   a file the working tree or the default branch holds. Each entry is a
+#   commit's full id, quoted, on the default branch's history; the stamp
+#   refuses, and the number check fails on, one that is no commit's id here,
+#   lies off that history, or frees no number.
 #
 # Document-shaped: the file IS the resource. The body below is the minimal
 # reference instance — valid, the schema's self-test, and the starting point

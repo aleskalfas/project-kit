@@ -19,9 +19,10 @@ stays held once the file is gone. The backbone reads one state at a time
   say, and the path counts.
 
 A number that counts so is freed only by the project's numbering setting: a
-file a commit it names removed holds no number (`_lib/numbering.py`, which
-says which files those are); the judge is given them, and says which commit
-freed a number that would have counted (`freed_by`).
+file it frees holds no number (`_lib/numbering.py`, which says which files
+those are — every file the history gave a number it frees); the judge is given
+them, and says which commit freed a number that would have counted
+(`freed_by`).
 
 Only what could change an answer is judged: for the stamp, the numbers past
 the highest the tree and the tip hold, highest first, until one counts
@@ -70,8 +71,9 @@ class Judge:
     `present` — leaves the path out, and the backbone's reading at the commit that
     added the file held it as a file of its place, or cannot say: it failed, or the
     place the path lies under now was not its place then; and the numbering setting
-    did not free it — `freed` names each file, by its path and the commit that added
-    it, a commit of the setting removed, with that commit. One reading per commit."""
+    did not free it — `freed` names each file it frees, by its path and the commit
+    that added it, with the commit of the setting that freed it. One reading per
+    commit."""
 
     def __init__(
         self,

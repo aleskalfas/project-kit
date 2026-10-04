@@ -123,10 +123,9 @@ def config_errors(config: object) -> list[tuple[str, str]]:
 
 
 @functools.cache
-def commit_name_pattern() -> re.Pattern[str]:
-    """The pattern a commit the project configuration names has: its full id or an
-    abbreviation, in hexadecimal digits."""
-    return re.compile(_schemas()[CONFIG]["$defs"]["commit-name"]["pattern"])
+def commit_id_pattern() -> re.Pattern[str]:
+    """The pattern a commit the project configuration names has: its full id."""
+    return re.compile(_schemas()[CONFIG]["$defs"]["commit-id"]["pattern"])
 
 
 def _pointer(path: Any) -> str:

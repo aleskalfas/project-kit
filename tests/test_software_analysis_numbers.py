@@ -377,6 +377,7 @@ def test_a_working_tree_numbering_nothing_needs_no_base(project: AdopterRepo) ->
     assert document(completed) == {
         "schema_version": 1,
         "base": None,
+        "freed": [],
         "summary": [
             "numbers: no use case or journey is numbered here; nothing to compare, no base read."
         ],
