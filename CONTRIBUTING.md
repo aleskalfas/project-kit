@@ -18,9 +18,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-04T08:54:53Z
+      at: 2026-10-04T10:54:59Z
       outcome: unchanged
-      unchanged-because: The friction gate this page describes fails a pull request whose anchored surface changed while the artefact carries no answer, and has it answered in the same pull request by revalidating or deferring. COR-050's refinement changes when an anchor counts as changed and makes a reverted revalidation answer nothing; that shows as friction this gate already fails on, answered the same two ways, so what the page says still holds.
+      unchanged-because: The friction gate this page describes fails a pull request whose anchored surface changed while the artefact carries no answer, and has it answered in the same pull request by revalidating or deferring. COR-050's refinement only names one more case where the change check asks more than the whole-repository check, a line holding a copied revalidation merging the original's line; that is friction this gate already asks, answered the same two ways, so the page holds.
 ---
 
 # Contributing to project-kit
