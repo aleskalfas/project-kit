@@ -19,9 +19,8 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-04T10:55:01Z
-      outcome: unchanged
-      unchanged-because: This page fixes the shape of the friction block COR-050 owns and the validation findings it fails on. COR-050's refinement only adds a case to its rationale's list of where the two checks part; no key, field, value or validation rule changes, so the page holds.
+      at: 2026-10-03T22:57:12Z
+      outcome: updated
 ---
 
 # Schemas
