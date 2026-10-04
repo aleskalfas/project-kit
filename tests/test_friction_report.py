@@ -764,10 +764,12 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
         "location",
         "report",
         "revalidation_point",
+        "revalidation_points",
         "schema_version",
         "state",
         "unanchored_because",
     ]
+    assert doc["revalidation_points"] == [doc["revalidation_point"]]
     assert doc["schema_version"] == frep.EXPLAIN_SCHEMA_VERSION == 1
     assert (doc["report"], doc["artefact"], doc["location"], doc["state"]) == (
         "explain",

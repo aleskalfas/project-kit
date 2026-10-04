@@ -19,6 +19,7 @@ from click.testing import CliRunner
 
 from project_kit import friction_check as fc
 from project_kit import friction_history as fh
+from project_kit import friction_report as frep
 from project_kit import friction_repository as fr
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor
@@ -1272,6 +1273,7 @@ def test_json_document_shape(timeline: Timeline) -> None:
         "deferral_points",
         "location",
         "revalidation_point",
+        "revalidation_points",
         "state",
     ]
     assert report["cut"] is False
@@ -1281,6 +1283,7 @@ def test_json_document_shape(timeline: Timeline) -> None:
         "commit",
         "date",
     ]
+    assert report["revalidation_points"] == [report["revalidation_point"]]
 
 
 def test_output_is_deterministic(timeline: Timeline) -> None:
@@ -2212,3 +2215,235 @@ def test_restating_a_stamp_in_another_spelling_is_no_revalidation(
     result = _run(timeline)
     assert _point(result) == base
     assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", owed)]
+
+
+# --- an anchor judged as a whole (COR-050 points 3, 4 and 9) ---------------------------------
+#
+# With several answering states, an anchor has changed only where what it stands on
+# differs from what it stood on at every one of them — at each, some part — never part by
+# part. Both checks judge by that rule (`friction_history.changed_since`).
+
+
+def _parts(a: str, b: str) -> dict[str, str]:
+    """Two files under the CLI anchor, `a.py` and `b.py`, holding `a` and `b`."""
+    return {"src/cli/a.py": f"A = '{a}'\n", "src/cli/b.py": f"B = '{b}'\n"}
+
+
+def test_an_anchor_is_judged_as_a_whole_against_its_point_and_its_deferral(
+    timeline: Timeline,
+) -> None:
+    """The critic's history: P is revalidated at (a0, b0); c1 changes both files; d defers
+    the anchor at (a1, b1); c2 puts a.py back. (a0, b1) is no file-by-file match for
+    either state, yet differs from P's (a0, b0) and from d's (a1, b1) as a whole: new
+    friction — the change check on c2 asks, and once landed the guide is stale from c2,
+    its debt dated where it came to differ from both."""
+    repo = timeline.adopter
+    timeline.start({"docs/guide.md": guide(), **_parts("a0", "b0")})
+    timeline.commit("c1: change both", _parts("a1", "b1"))
+    deferred = timeline.commit(
+        "d: defer the CLI", {"docs/guide.md": guide(deferred=[("path", "src/cli/**", REASON)])}
+    )
+    repo.checkout("partial", create=True)
+    put_back = timeline.commit("c2: put a.py back", {"src/cli/a.py": "A = 'a0'\n"})
+
+    change = fc.run_change_check(repo.root, "main")
+    assert _friction(change) == [("docs/guide.md", "path:src/cli/**")]
+    repo.checkout("main")
+    timeline.merge("partial")
+    result = _run(timeline)
+    assert _summary(result) == [
+        ("stale", "docs/guide.md", "path:src/cli/**", put_back),
+        ("deferred", "docs/guide.md", "path:src/cli/**", deferred),
+    ]
+    assert result.artefact_reports[0].state is fr.ArtefactState.STALE
+
+
+@dataclass(frozen=True)
+class Copied:
+    """The commits `_copied_onto_release` lays down."""
+
+    revalidated: str  # P1, on main
+    copied: str  # P2, its cherry-pick on the release line
+
+
+def _copied_onto_release(timeline: Timeline) -> Copied:
+    """Main changes a.py and revalidates (P1, at (a1, b0)); the release line, cut at the
+    base, changes b.py and takes the revalidation (P2, at (a0, b1)); a branch `land` off
+    main merges the release line: (a1, b1)."""
+    repo = timeline.adopter
+    timeline.start({"docs/guide.md": guide(), **_parts("a0", "b0")})
+    repo.checkout("release", create=True)
+    repo.checkout("main")
+    timeline.commit("main: change a.py", {"src/cli/a.py": "A = 'a1'\n"})
+    revalidated = timeline.commit(
+        "main: revalidate", {"docs/guide.md": guide(at=T2, because="checked a1")}
+    )
+    repo.checkout("release")
+    timeline.commit("release: change b.py", {"src/cli/b.py": "B = 'b1'\n"})
+    copied = timeline.cherry_pick(revalidated)
+    repo.checkout("main")
+    repo.checkout("land", create=True)
+    timeline.merge("release")
+    return Copied(revalidated, copied)
+
+
+def test_a_revalidation_copied_onto_a_release_line_is_judged_as_a_whole(timeline: Timeline) -> None:
+    """The critic's cherry-pick variant: merged, HEAD's a.py matches P1 and its b.py
+    matches P2, but the anchor as a whole matches neither — stale, as the merge's change
+    check asks. Both points are reported, in the JSON documents and in `explain`."""
+    history = _copied_onto_release(timeline)
+    repo = timeline.adopter
+    change = fc.run_change_check(repo.root, "main")
+    assert _friction(change) == [("docs/guide.md", "path:src/cli/**")]
+
+    result = _run(timeline)
+    assert [kind for kind, *_ in _summary(result)] == ["stale"]
+    (report,) = result.artefact_reports
+    points = {history.revalidated, history.copied}
+    assert {p.sha for p in report.revalidation_points} == points
+    assert report.revalidation_point == report.revalidation_points[0]
+    listed = json.loads(fr.render_json(result))["artefacts"][0]["revalidation_points"]
+    assert {p["commit"] for p in listed} == points
+
+    explanation = frep.run_explain(repo.root, "docs/guide.md")
+    explained = json.loads(frep.render_explain_json(explanation))
+    assert {p["commit"] for p in explained["revalidation_points"]} == points
+    human = frep.render_explain_human(explanation, now=NOW)
+    assert all(f"revalidation  {sha[:12]}" in human for sha in points)
+
+
+@pytest.mark.parametrize("both", [False, True], ids=["one-point-differs", "both-differ"])
+def test_an_at_written_back_with_two_points_is_asked_only_where_it_differs_from_both(
+    timeline: Timeline, both: bool
+) -> None:
+    """A revalidation copied onto a release line merged back leaves its `at` with two
+    points. Main revalidates again and a branch reverts that: the `at` written back is
+    judged against both points, and the change check asks only where the anchor differs
+    from each — not where the CLI matches main's point and differs only from the release
+    line's, yes once main changed it again. `check --all` agrees once it lands."""
+    repo = timeline.adopter
+    timeline.start({"docs/guide.md": guide()})
+    repo.checkout("release", create=True)
+    repo.checkout("main")
+    timeline.commit("main: change the CLI", {"src/cli/main.py": "print('main')\n"})
+    revalidated = timeline.commit(
+        "main: revalidate", {"docs/guide.md": guide(at=T2, because="checked on main")}
+    )
+    repo.checkout("release")
+    timeline.cherry_pick(revalidated)
+    repo.checkout("main")
+    timeline.merge("release")
+    if both:
+        timeline.commit("main: change the CLI again", {"src/cli/main.py": "print('again')\n"})
+    again = timeline.commit(
+        "main: revalidate again", {"docs/guide.md": guide(at=T3, because="checked once more")}
+    )
+    repo.checkout("undo", create=True)
+    timeline.revert(again)
+
+    change = fc.run_change_check(repo.root, "main")
+    assert [a.status for a in change.answers] == [fc.AnswerStatus.WRITTEN_BACK]
+    assert _friction(change) == ([("docs/guide.md", "path:src/cli/**")] if both else [])
+    repo.checkout("main")
+    timeline.merge("undo")
+    result = _run(timeline)
+    assert len(result.artefact_reports[0].revalidation_points) == 2
+    assert [kind for kind, *_ in _summary(result)] == (["stale"] if both else [])
+
+
+def test_merging_the_original_revalidation_into_its_copys_line_asks_in_the_change_check_only(
+    timeline: Timeline,
+) -> None:
+    """Main changes the CLI and revalidates; the release line takes the revalidation. A
+    branch off release merges main, bringing the change the revalidation answered: the
+    change check compares release with the merge and asks; `check --all`, with both
+    points, finds the guide current — a case where the two checks part (CLI README)."""
+    repo = timeline.adopter
+    timeline.start({"docs/guide.md": guide()})
+    repo.checkout("release", create=True)
+    repo.checkout("main")
+    timeline.commit("main: change the CLI", {"src/cli/main.py": "print('main')\n"})
+    revalidated = timeline.commit(
+        "main: revalidate", {"docs/guide.md": guide(at=T2, because="checked on main")}
+    )
+    repo.checkout("release")
+    timeline.cherry_pick(revalidated)
+    repo.checkout("forward", create=True)
+    timeline.merge("main")
+
+    change = fc.run_change_check(repo.root, "release")
+    assert _friction(change) == [("docs/guide.md", "path:src/cli/**")]
+    assert _summary(_run(timeline)) == []
+
+
+def test_each_answering_state_is_read_under_its_own_exclusions(timeline: Timeline) -> None:
+    """The table is excluded at the revalidation point; a narrowing lets it in, a deferral
+    then covers the anchor, and the table is edited and put back. Read under its own
+    exclusions, the deferral's state holds the table as HEAD does: the guide is deferred,
+    not stale — read under the point's exclusions, the table would be a let-in, which
+    always counts, and the edit put back a change nothing answered. A change to the table
+    that stands makes it stale."""
+    timeline.start(
+        {"docs/guide.md": guide(), **GENERATED}, friction_config(exclude=["src/cli/generated"])
+    )
+    timeline.commit("let the table in", {CONFIG: friction_config()})
+    deferred = timeline.commit(
+        "defer the CLI", {"docs/guide.md": guide(deferred=[("path", "src/cli/**", REASON)])}
+    )
+    timeline.commit("regenerate the table", {"src/cli/generated/table.py": "T = 9\n"})
+    timeline.commit("put the table back", GENERATED)
+    assert _summary(_run(timeline)) == [("deferred", "docs/guide.md", "path:src/cli/**", deferred)]
+
+    edited = timeline.commit("regenerate it again", {"src/cli/generated/table.py": "T = 2\n"})
+    assert _summary(_run(timeline)) == [
+        ("stale", "docs/guide.md", "path:src/cli/**", edited),
+        ("deferred", "docs/guide.md", "path:src/cli/**", deferred),
+    ]
+
+
+# --- what a merge that takes one side whole hides from `check --all` (stated limits) --------
+
+
+def test_an_edit_undone_by_a_merge_taking_one_side_whole_still_dates_the_debt(
+    timeline: Timeline,
+) -> None:
+    """A stated limit: e1 edits the CLI after the point; a merge that takes the CLI file
+    whole from the other side undoes it; e2 edits it again. git's combined diff does not
+    list the file for that merge, so it is never read as putting the file back: the debt
+    is dated from e1, where the record dates it from e2."""
+    repo = timeline.adopter
+    timeline.start({"docs/guide.md": guide()})
+    repo.checkout("side", create=True)
+    timeline.commit("side: a note", NOTE)
+    repo.checkout("main")
+    first = timeline.commit("e1: edit the CLI", {"src/cli/main.py": "print('e1')\n"})
+    repo.git("merge", "-q", "--no-ff", "--no-commit", "side", check=False)
+    timeline.commit("merge side, taking its CLI", {"src/cli/main.py": CLI_SOURCE})
+    timeline.commit("e2: edit the CLI again", {"src/cli/main.py": "print('e2')\n"})
+    assert _summary(_run(timeline)) == [("stale", "docs/guide.md", "path:src/cli/**", first)]
+
+
+def test_a_merge_taking_back_a_file_from_before_the_point_reads_as_no_change(
+    timeline: Timeline,
+) -> None:
+    """A stated limit: after the point P that answered c's edit of the CLI, a merge takes
+    the file whole from a line cut before c, putting back what it was before c. git's
+    combined diff does not list it and no commit after P touched it, so `check --all`
+    reads no change though HEAD differs from P; the change check, comparing its base with
+    the merge, asks."""
+    repo = timeline.adopter
+    timeline.start({"docs/guide.md": guide()})
+    repo.checkout("old", create=True)
+    timeline.commit("old: a note", NOTE)
+    repo.checkout("main")
+    timeline.commit("c: edit the CLI", {"src/cli/main.py": "print('c')\n"})
+    timeline.commit("P: revalidate", {"docs/guide.md": guide(at=T2, because="checked c")})
+    repo.checkout("take", create=True)
+    repo.git("merge", "-q", "--no-ff", "--no-commit", "old", check=False)
+    timeline.commit("merge old, taking its CLI", {"src/cli/main.py": CLI_SOURCE})
+
+    change = fc.run_change_check(repo.root, "main")
+    assert _friction(change) == [("docs/guide.md", "path:src/cli/**")]
+    repo.checkout("main")
+    timeline.merge("take")
+    assert _summary(_run(timeline)) == []

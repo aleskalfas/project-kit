@@ -728,6 +728,9 @@ def render_explain_json(explanation: Explanation) -> str:
             if report is None or report.revalidation_point is None
             else report.revalidation_point.as_json()
         ),
+        "revalidation_points": (
+            [] if report is None else [point.as_json() for point in report.revalidation_points]
+        ),
         "deferral_points": (
             []
             if report is None
@@ -818,8 +821,13 @@ def _point_lines(report: fr.ArtefactReport) -> list[str]:
         cli_render.style("heading", "POINTS")
         + cli_render.style("muted", " — from git: where each answer stands")
     ]
+    # Every revalidation point, newest first: several where lines of work that do not
+    # descend from one another each first carried the value (COR-050 point 3).
+    revalidations: Sequence[fr.Commit | None] = report.revalidation_points or (
+        report.revalidation_point,
+    )
     rows: list[tuple[str, fr.Commit | None, str]] = [
-        ("revalidation", report.revalidation_point, "")
+        ("revalidation", point, "") for point in revalidations
     ]
     rows.extend(("deferral", point, _cell(anchor)) for anchor, point in report.deferral_points)
     width = max(len(name) for name, _point, _anchor in rows)

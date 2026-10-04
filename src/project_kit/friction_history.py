@@ -54,11 +54,21 @@ beyond the clone: *unreachable*. Otherwise a value first carried inside the
 clone is taken as first carried there, and the reading says the clone was
 *cut* (`Carried.cut`).
 
-**Where a change originates** (point 9; `origin`). Of the commits after what
-covers a part of an anchor that touched it, those whose result equals the
-part as it stood at an answering state put it back; the origin is the oldest
-of the others that no put-back descends from — so an edit put back and made
-again is dated from the second edit — else the newest of them.
+**When an anchor has changed** (points 3 to 5; `changed_since`). With several
+answering states, an anchor has changed only where what it stands on differs,
+as a whole, from what it stood on at every one of them: both checks judge an
+anchor by that one rule.
+
+**Where a change originates** (point 9; `origin`). Each part of an anchor is
+measured from one answering state at a time. Of the commits after that state
+that touched the part, those whose result equals the part as it stood there
+put it back; the origin is the oldest of the others that no put-back
+descends from — so an edit put back and made again is dated from the second
+edit — else the newest of them. An anchor's debt is dated where it came to
+differ from every answering state: of each state's oldest origin, the
+newest. A merge that takes a file whole from one side is not listed for it
+(git's combined diff lists only what differs from every parent), so it is
+never read as putting the file back, nor as changing it.
 """
 
 from __future__ import annotations
@@ -71,7 +81,7 @@ from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from project_kit.friction_discovery import (
     Anchor,
@@ -1043,6 +1053,9 @@ def changed(
 
 # --- whether a part of an anchor differs, and since when -------------------------
 
+# A state an anchor is judged against: a commit's log index, or a reading of one.
+_State = TypeVar("_State")
+
 
 def differs(later: TreeEntry | None, earlier: TreeEntry | None) -> bool:
     """Whether a file differs between two states: there in one and not the other, or with
@@ -1050,18 +1063,34 @@ def differs(later: TreeEntry | None, earlier: TreeEntry | None) -> bool:
     return later != earlier
 
 
+def changed_since(states: Iterable[_State], differs_from: Callable[[_State], bool]) -> bool:
+    """Whether an anchor has changed since the states that answer it (COR-050 points 3 to
+    5): only where what it stands on differs, as a whole, from what it stood on at every
+    one of them — at each, some part of it differs, never necessarily the same part.
+
+    The one rule both checks judge an anchor with several answering states by: the
+    change check, the points of an `at` a change writes back (and a deferral's point
+    no revalidation point reaches); the whole-repository check, every answering state.
+    `differs_from` says whether what the anchor stands on now differs from a state.
+    """
+    return all(differs_from(state) for state in states)
+
+
 def origin(
     history: History, touched: Iterable[int], puts_back: Callable[[int], bool]
 ) -> int | None:
-    """Where a change to one part of what an anchor stands on originates (COR-050 point 9).
+    """Where a change to one part of what an anchor stands on originates, measured from
+    one answering state (COR-050 point 9).
 
-    `touched`: the commits after what covers the part that touched it.
-    `puts_back`: whether a commit's result is the part as it stood at an
-    answering state. The origin is the oldest commit that does not put it
-    back and that no put-back descends from — the oldest change still
-    standing — else, after an unusual merge, the newest commit that touched
-    it; `None` where none did. Order among commits that do not descend from
-    one another only dates the debt.
+    `touched`: the commits after that state that touched the part. `puts_back`:
+    whether a commit's result is the part as it stood at that state. The origin
+    is the oldest commit that does not put it back and that no put-back descends
+    from — the oldest change still standing — else, after an unusual merge, the
+    newest commit that touched it; `None` where none did. Order among commits
+    that do not descend from one another only dates the debt. A merge that took
+    the part whole from one side is not among `touched` (git's combined diff
+    lists only what differs from every parent), so it is never read as putting
+    the part back: an edit it undid still dates the debt.
     """
     commits = sorted(set(touched))
     if not commits:
@@ -1088,6 +1117,7 @@ __all__ = [
     "Writes",
     "carrier",
     "changed",
+    "changed_since",
     "differs",
     "origin",
     "read_history",

@@ -14,8 +14,10 @@ never from a ledger (point 9), through `friction_history`:
   revalidation where a merge kept the other side's, however recent its date.
   Where versions that do not descend from one another each first carried
   the value, each is a point, and an anchor has changed only where it
-  differs from every one. A move after the point with no revalidation is
-  reported, since rename detection may hide earlier changes.
+  differs from every one. The value is read in whatever spelling YAML's
+  timestamp grammar allows (`friction_history.stamps_in`), so restating it
+  in another is no revalidation. A move after the point with no revalidation
+  is reported, since rename detection may hide earlier changes.
 - a *deferral point* is the commit that first introduced the deferral entry,
   by anchor kind and value; rewording its reason does not move it, and an
   entry put back with an anchor and a reason the artefact carried before
@@ -25,16 +27,23 @@ never from a ledger (point 9), through `friction_history`:
 
 **When an anchor changed.** Each anchor is measured from its *answering
 states* (`_Judge.answering`): every revalidation point, and its deferral
-point where no revalidation point reaches it. A part of what it stands on
-changed where it differs between HEAD and every answering state
-(`friction_history.differs`): a path anchor's files by mode and object —
-HEAD's from its tree, a state's through `git ls-tree` — a record's file and
-a registered kind's files the same way, followed across renames; an artefact
-anchor's target by its content, read at each state's commit. An edit put
-back, however many commits made and undid it, is no change. The commits the
-history lists only name the candidates — those after what the states cover
-that touched what the anchor stands on — and date the debt: its *origin* is
-the oldest change no commit put back since (`friction_history.origin`).
+point where no revalidation point reaches it. The anchor is judged as a
+whole (`friction_history.changed_since`, the rule the change check judges
+the points of a written-back `at` by): it has changed only where what it
+stands on differs from what it stood on at every answering state — at
+each, some part of it differs, not necessarily the same — never part by
+part. A part differs from a state (`friction_history.differs`) as follows:
+a path anchor's files by mode and object — HEAD's from its tree, a state's
+from the state's tree objects, read through `git cat-file --batch`
+(`TreeReader`) — a record's file and a registered kind's files the same
+way, followed across renames; an artefact anchor's target by its content,
+read at the state's commit. An edit put back, however many commits made and
+undid it, is no change. The commits the history lists only name each
+state's candidates — the paths commits after that state touched — and date
+the debt: each part is measured from the state it differs from, its origin
+the oldest change no commit put back to what it was there
+(`friction_history.origin`), and the anchor's debt is dated where it came
+to differ from every state — of each state's oldest origin, the newest.
 
 **Reading history — from git alone, per file and bounded.** One `git log
 --raw -M -c` from HEAD lists every commit with the paths it touched and each
@@ -74,25 +83,26 @@ anchors, unresolved kinds and over-broad anchors are reported. Whether it is
 excluded is read from the artefact, as discovery decided it
 (`Artefact.excluded_by`), never by matching its path again.
 
-**Each state under its own exclusions** (point 7). The revalidation point is
-read under the `friction.exclude` it declared — its settings alone, never a
-discovery over it (`_Judge.settings_of`) — and HEAD under its own, as the
-change check reads its base and head; where an artefact has several points,
-the newest one's. A path anchor's file counts where both leave it in. Where
-the exclusions changed between them (`exclusion_change`), the files the
-anchor stood on are sought among HEAD's and every path touched since the
-point, so no commit's listing is read: a narrowing — a file it stands on at
-HEAD that the point left out — is a change from the commit that let the file
-in; a widening — a file it stood on that HEAD leaves out — takes the file as
-it stood when the newest widening took it, and is a change where that
-differs from every answering state, dated from the change before the
-widening, never from the widening; otherwise it is reported. So a change
-made while a file was left out never counts where the point or HEAD leaves
-it out, and a widening never erases a change nobody answered. An artefact a
-narrowing let back in after its point is stale from that commit, as the
-change check asked it to revalidate there. A path anchor dead because a
-widening left out every file it stood on says so, `excluded since
-<commit>`. A point whose exclusions do not read is read under HEAD's and
+**Each state under its own exclusions** (point 7). Every answering state is
+read under the `friction.exclude` its commit declared — its settings alone,
+never a discovery over it (`_Judge.settings_of`) — and HEAD under its own, as
+the change check reads its base and head: a deferral point under its own, a
+revalidation point under its own. A path anchor's file counts where both
+leave it in. Where the exclusions changed between the state and HEAD
+(`exclusion_change`), the files the anchor stood on are sought among HEAD's
+and every path touched since the state, so no commit's listing is read: a
+narrowing — a file it stands on at HEAD that the state left out — is a
+change from the commit that let the file in; a widening — a file it stood on
+that HEAD leaves out — takes the file as it stood when the newest widening
+after the state took it, and is a change where that differs from what it was
+at the state, dated from the change before the widening, never from the
+widening; otherwise it is reported, against the newest revalidation point.
+So a change made while a file was left out never counts where the state or
+HEAD leaves it out, and a widening never erases a change nobody answered. An
+artefact a narrowing let back in after its point is stale from that commit,
+as the change check asked it to revalidate there. A path anchor dead because
+a widening left out every file it stood on says so, `excluded since
+<commit>`. A state whose exclusions do not read is read under HEAD's and
 reported, never read as leaving nothing out.
 
 A shallow clone whose history stops where the file already carries the value
@@ -163,6 +173,7 @@ from project_kit.friction_history import (
     Version,
     Walker,
     changed,
+    changed_since,
     differs,
     origin,
     read_history,
@@ -260,10 +271,12 @@ class RepositoryFinding:
 class ArtefactReport:
     """One checked artefact: its points, as derived from git, and its state.
 
-    `revalidation_point` is the newest of its revalidation points where it has
-    several (COR-050 point 3). `cut` says its file's history reaches a shallow
-    clone's cut, so the value it carries was read as first carried inside the
-    clone.
+    `revalidation_points` are every revalidation point, newest first — several
+    where lines of work that do not descend from one another each first carried
+    the value (COR-050 point 3) — and `revalidation_point` the newest of them,
+    the one a finding's message names. `cut` says its file's history reaches a
+    shallow clone's cut, so the value it carries was read as first carried
+    inside the clone.
     """
 
     artefact: str
@@ -272,6 +285,7 @@ class ArtefactReport:
     revalidation_point: Commit | None  # `None` when unreachable
     deferral_points: tuple[tuple[Anchor, Commit | None], ...]  # in written order
     cut: bool = False
+    revalidation_points: tuple[Commit, ...] = ()
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -282,6 +296,7 @@ class ArtefactReport:
             "revalidation_point": (
                 None if self.revalidation_point is None else self.revalidation_point.as_json()
             ),
+            "revalidation_points": [point.as_json() for point in self.revalidation_points],
             "deferral_points": [
                 {
                     "anchor": {"kind": anchor.kind, "value": anchor.value},
@@ -383,11 +398,14 @@ def _excludes_nothing(_rel: str) -> bool:
 
 @dataclass(frozen=True)
 class Change:
-    """How a live anchor changed since what answers it (COR-050 points 5 and 9).
+    """How a live anchor changed since what answers it (COR-050 points 5 and 9) — since
+    one answering state (`_Judge.since`), or since all of them (`_Judge.change`).
 
     `origin`: the log index of the commit the debt is dated from (`origin`).
-    `commits`: every commit outside what covers the anchor that touched a
-    part of it that differs — what `explain` lists behind the finding.
+    `commits`: the commits behind it — since one state, each after it that
+    touched a part of the anchor that differs from what it was there; since
+    all of them, those of these after what every state covers, what `explain`
+    lists behind the finding with its origin.
     """
 
     origin: int
@@ -396,16 +414,16 @@ class Change:
 
 @dataclass(frozen=True)
 class _Exclusion:
-    """What `friction.exclude` changing since the revalidation point did to one path
-    anchor, against what its answering states cover (COR-050 point 7).
+    """What `friction.exclude` changing between one answering state and HEAD did to one
+    path anchor (COR-050 point 7), the state read under its own exclusions.
 
     `moved`: the change itself, the artefact's own names left out
     (`ExclusionChange`). `changed`: of the files it leaves out, each that,
-    as it stood when the newest widening took it, differs from what it was
-    at every answering state, with the origin of that change; `touched`, the
-    commits behind those. `while_out`: of the files it lets in, each changed
-    while it was left out — no change to the anchor, but named — with the
-    oldest such commit. `left_by`: the commits that left its files out.
+    as it stood when the newest widening after the state took it, differs
+    from what it was at the state, with the origin of that change; `touched`,
+    the commits behind those. `while_out`: of the files it lets in, each
+    changed while it was left out — no change to the anchor, but named — with
+    the oldest such commit. `left_by`: the commits that left its files out.
     """
 
     moved: ExclusionChange
@@ -440,15 +458,17 @@ class _Judge:
     Each state is read under its own exclusions (point 7): a commit's are what
     discovery's settings reader reads from it (`settings_of`), HEAD's are the
     head's — never a discovery over an older commit, since exclusions are all
-    that is read from one. The methods that read exclusions take the newest
-    revalidation point's log index; those that judge a change take, besides,
-    the anchor's answering states (`answering`) and what they cover.
+    that is read from one. The methods that read a state take its log index:
+    a revalidation point, or a deferral point no revalidation point reaches
+    (`answering`).
 
-    Whether a part of an anchor changed is whether it differs between HEAD
-    and every answering state (`differs`): a file by its mode and object —
-    HEAD's from its tree, a state's through `git ls-tree` (`TreeReader`) — an
-    artefact by its content as the state's commit holds it. The commits a
-    history lists only name the candidates and date the debt (`origin`).
+    An anchor has changed where, as a whole, it differs from every answering
+    state (`change`, by `changed_since`); a part of it differs from one
+    (`since`) by its mode and object, for a file — HEAD's from its tree, a
+    state's from the state's tree objects, read through `git cat-file
+    --batch` (`TreeReader`) — and by its content as the state's commit holds
+    it, for an artefact. The commits a history lists only name the
+    candidates and date the debt (`origin`).
     """
 
     def __init__(
@@ -486,6 +506,7 @@ class _Judge:
         self._matching: dict[tuple[str, tuple[str, ...] | None], frozenset[str]] = {}
         self._after: dict[int, frozenset[str]] = {}
         self._moved: dict[tuple[str, int], ExclusionChange] = {}
+        self._exclusions: dict[tuple[Anchor, int, frozenset[str]], _Exclusion] = {}
         self._flips: dict[int, tuple[FrictionSettings, list[Callable[[str], bool]]] | None] = {}
 
     # --- a state under its own exclusions ------------------------------------------
@@ -651,26 +672,24 @@ class _Judge:
                 found.add(index)
         return found
 
-    def exclusion(
-        self,
-        anchor: Anchor,
-        point: int,
-        answering: Sequence[int],
-        covered: frozenset[int],
-        own: frozenset[str],
-    ) -> _Exclusion:
-        """What `friction.exclude` changing since the revalidation point did to a path
-        anchor, against what its `answering` states and what they cover hold
-        (`_Exclusion`).
+    def exclusion(self, anchor: Anchor, state: int, own: frozenset[str]) -> _Exclusion:
+        """What `friction.exclude` changing between the answering state at `state` and HEAD
+        did to a path anchor, the state read under its own exclusions (`_Exclusion`).
 
         A file a widening took from the anchor stands, in the later state, as it
-        was when the newest widening outside what is covered took it (COR-050
-        point 5): it is the anchor's question where that differs from what it was
-        at every answering state, dated from the oldest change before the
-        widening still standing (`origin`). What changed after, while it was left
-        out, is not the anchor's.
+        was when the newest widening after the state took it (COR-050 point 5):
+        it is the anchor's question where that differs from what it was at the
+        state, dated from the oldest change before the widening still standing
+        (`origin`). What changed after, while it was left out, is not the
+        anchor's.
         """
-        moved = self.left_out_since(anchor, point, own)
+        key = (anchor, state, own)
+        cached = self._exclusions.get(key)
+        if cached is not None:
+            return cached
+        moved = self.left_out_since(anchor, state, own)
+        covered = self.history.ancestors(state)
+        sha = self.history.commits[state].sha
         changed: dict[str, int] = {}
         touched: set[int] = set()
         for rel in moved.left_out:
@@ -681,8 +700,8 @@ class _Judge:
                 if at is None
                 else self.trees.entry(self.history.commits[at].sha, rel)
             )
-            states = self._states(rel, answering)
-            if not all(differs(reference, state) for state in states):
+            then = self.trees.entry(sha, rel)
+            if not differs(reference, then):
                 continue
             before = self.history.ancestors(at) if at is not None else None
             commits = [
@@ -693,7 +712,7 @@ class _Judge:
             found = origin(
                 self.history,
                 commits,
-                lambda c, rel=rel, states=states: self._result(c, rel) in states,
+                lambda c, rel=rel, then=then: self._result(c, rel) == then,
             )
             if found is not None:
                 changed[rel] = found
@@ -706,7 +725,9 @@ class _Judge:
             if out:
                 while_out[rel] = max(out)
         left_by = frozenset(self.flips(moved.left_out, covered, excluded=True))
-        return _Exclusion(moved, changed, while_out, left_by, frozenset(touched))
+        found_exclusion = _Exclusion(moved, changed, while_out, left_by, frozenset(touched))
+        self._exclusions[key] = found_exclusion
+        return found_exclusion
 
     def left_out_since(self, anchor: Anchor, point: int, own: frozenset[str]) -> ExclusionChange:
         """`exclusion_change`, the artefact's own names left out, and of the files it leaves
@@ -900,21 +921,15 @@ class _Judge:
             return points.revalidations
         return (*points.revalidations, deferral)
 
-    def _states(
-        self, rel: str, answering: Sequence[int], names: Sequence[str] = ()
-    ) -> list[TreeEntry | None]:
-        """The entry of the file `rel` at each answering state — under `rel`, else the
-        first of its earlier `names` the state holds — `None` where it holds none."""
-        found: list[TreeEntry | None] = []
-        for index in answering:
-            sha = self.history.commits[index].sha
-            entry = None
-            for name in (rel, *names):
-                entry = self.trees.entry(sha, name)
-                if entry is not None:
-                    break
-            found.append(entry)
-        return found
+    def _entry_at(self, state: int, rel: str, names: Sequence[str] = ()) -> TreeEntry | None:
+        """The entry of the file `rel` at the state at `state` — under `rel`, else the first
+        of its earlier `names` the state holds — `None` where it holds none."""
+        sha = self.history.commits[state].sha
+        for name in (rel, *names):
+            entry = self.trees.entry(sha, name)
+            if entry is not None:
+                return entry
+        return None
 
     def _result(self, index: int, path: str) -> TreeEntry | None:
         """The entry the commit at `index` left the file at `path` with: `None` where it
@@ -923,47 +938,72 @@ class _Judge:
         return None if entry is None else entry.after
 
     def change(
-        self,
-        anchor: Anchor,
-        answering: Sequence[int],
-        covered: frozenset[int],
-        own: frozenset[str],
-        point: int,
+        self, anchor: Anchor, answering: Sequence[int], own: frozenset[str]
     ) -> Change | None:
         """Whether a live anchor changed since its `answering` states, and where
-        (COR-050 points 5 and 9).
+        (COR-050 points 3 to 5 and 9).
 
-        A part of what it stands on changed where it differs between HEAD and
-        every answering state (`differs`): a path anchor's files — those
-        commits outside `covered` touched that it stands on at the point and at
-        HEAD, those a widening took (`exclusion`), those gone under an
+        The anchor is judged as a whole (`changed_since`, the rule the change
+        check judges the points of a written-back `at` by): it has changed only
+        where what it stands on differs from what it stood on at every answering
+        state — at each some part of it differs, not necessarily the same — never
+        part by part. Each state is read on its own (`since`), under its own
+        `friction.exclude` (point 7). The debt is dated where the anchor came to
+        differ from every state: of each state's origin — the oldest commit from
+        which one of its parts has differed, without returning, from what it was
+        there (point 9) — the newest. The commits behind it are those after what
+        every state covers that touched a part differing from what it was at a
+        state: what a deferral postponed is listed behind the deferral, never here.
+        """
+        readings: dict[int, Change | None] = {}
+
+        def differs_from(state: int) -> bool:
+            readings[state] = self.since(anchor, state, own)
+            return readings[state] is not None
+
+        if not changed_since(answering, differs_from):
+            return None
+        found = [reading for reading in readings.values() if reading is not None]
+        covered = self.history.reached(answering)
+        return Change(
+            min(reading.origin for reading in found),
+            frozenset(c for reading in found for c in reading.commits if c not in covered),
+        )
+
+    def since(self, anchor: Anchor, state: int, own: frozenset[str]) -> Change | None:
+        """How a live anchor differs from what it stood on at the answering state at
+        `state`: `None` where every part of it stands as it stood there; else the oldest
+        origin among the parts that differ (`origin`, each measured from this state) and
+        the commits after the state behind them.
+
+        The parts are sought among the paths commits after the state touched: a
+        path anchor's files it stands on at the state and at HEAD, each under its
+        own exclusions, those a widening took (`exclusion`), those gone under an
         exclusion, and those a narrowing let in, which always count; a record's
-        file and a registered kind's files, followed across renames; an
-        artefact's content, read at each state's commit. An edit put back is
-        no change. The debt is dated from the oldest origin among the parts
-        that differ (`origin`).
+        file and a registered kind's files, followed across renames; an artefact's
+        content, read at the state's commit. An edit put back is no change.
         """
         if anchor.kind == "artefact":
             target = self.head.find(anchor.value)
-            return None if target is None else self._target_change(target, answering, covered)
+            return None if target is None else self._target_since(target, state)
         if anchor.kind == "path":
-            return self._path_change(anchor, answering, covered, own, point)
+            return self._path_since(anchor, state, own)
+        covered = self.history.ancestors(state)
         origins: list[int] = []
         commits: set[int] = set()
         for rel in self.files_of(anchor, own):
             names = self.history.names(rel)
             touched = {i for name in names for i in self.history.touched(name) if i not in covered}
             if not touched:
-                continue  # nothing after what covers it touched the file: a candidate of none
-            now = self.head_tree.entry(rel)
-            states = self._states(rel, answering, names[1:])
-            if not all(differs(now, state) for state in states):
+                continue  # nothing after the state touched the file: it stands as it stood
+            then = self._entry_at(state, rel, names[1:])
+            if not differs(self.head_tree.entry(rel), then):
                 continue
             found = origin(
                 self.history,
                 touched,
-                lambda c, names=names, states=states: any(
-                    self.history.entry(c, name) is not None and self._result(c, name) in states
+                lambda c, names=names, then=then: any(
+                    self.history.entry(c, name) is not None and self._result(c, name) == then
                     for name in names
                 ),
             )
@@ -972,21 +1012,15 @@ class _Judge:
                 commits.update(touched)
         return Change(max(origins), frozenset(commits)) if origins else None
 
-    def _path_change(
-        self,
-        anchor: Anchor,
-        answering: Sequence[int],
-        covered: frozenset[int],
-        own: frozenset[str],
-        point: int,
-    ) -> Change | None:
-        """`change` for a path anchor."""
+    def _path_since(self, anchor: Anchor, state: int, own: frozenset[str]) -> Change | None:
+        """`since` for a path anchor."""
+        covered = self.history.ancestors(state)
         touched_by: dict[str, list[int]] = {}
-        for rel in self.matching_paths(anchor.value, point) - own:
+        for rel in self.matching_paths(anchor.value, state) - own:
             commits = [i for i in self.history.touched(rel) if i not in covered]
             if commits:
                 touched_by[rel] = commits
-        moved = self.exclusion_change(anchor, point).less(own)
+        moved = self.exclusion_change(anchor, state).less(own)
         for rel in moved.gone:
             commits = [
                 i for i in self.history.touched(rel) if i not in covered and self.counts(i, rel)
@@ -997,18 +1031,18 @@ class _Judge:
         behind: set[int] = set()
         for rel, commits in sorted(touched_by.items()):
             now = None if rel in moved.gone else self.head_tree.entry(rel)
-            states = self._states(rel, answering)
-            if not all(differs(now, state) for state in states):
+            then = self._entry_at(state, rel)
+            if not differs(now, then):
                 continue
             found = origin(
                 self.history,
                 commits,
-                lambda c, rel=rel, states=states: self._result(c, rel) in states,
+                lambda c, rel=rel, then=then: self._result(c, rel) == then,
             )
             if found is not None:
                 origins.append(found)
                 behind.update(commits)
-        exclusion = self.exclusion(anchor, point, answering, covered, own)
+        exclusion = self.exclusion(anchor, state, own)
         origins.extend(exclusion.changed.values())
         behind |= exclusion.touched
         if moved.let_in:
@@ -1036,17 +1070,15 @@ class _Judge:
         then = self.walker.artefact_in(self.trees.entry(sha, version.path), version.path, target)
         return None if then is None else content(then)
 
-    def _target_change(
-        self, target: Artefact, answering: Sequence[int], covered: frozenset[int]
-    ) -> Change | None:
-        """`change` for an artefact anchor: `target`'s content at HEAD against its
-        content at each answering state's commit, never anything in its container."""
+    def _target_since(self, target: Artefact, state: int) -> Change | None:
+        """`since` for an artefact anchor: `target`'s content at HEAD against its content at
+        the state's commit, never anything in its container."""
+        covered = self.history.ancestors(state)
         versions = list(self.history.versions(target.path))
         if all(v.index in covered for v in versions):
-            return None  # nothing after what covers it touched the target's file
-        now = content(target)
-        states = [self._target_at(index, target, versions) for index in answering]
-        if not all(now != state for state in states):
+            return None  # nothing after the state touched the target's file
+        then = self._target_at(state, target, versions)
+        if content(target) == then:
             return None
         walker = self.walker
         touched = {
@@ -1058,13 +1090,13 @@ class _Judge:
         by_index = {v.index: v for v in versions}
 
         def puts_back(index: int) -> bool:
-            then = walker.same_at(by_index[index], target)
-            return (None if then is None else content(then)) in states
+            held = walker.same_at(by_index[index], target)
+            return (None if held is None else content(held)) == then
 
         found = origin(self.history, touched, puts_back)
         if found is None:
-            # The content differs, yet no listed commit outside what is covered changed
-            # it — a merge took it whole from a side: date it from the newest that touched it.
+            # The content differs, yet no listed commit after the state changed it — a
+            # merge took it whole from a side: date it from the newest that touched it.
             outside = [v.index for v in versions if v.index not in covered]
             if not outside:
                 return None
@@ -1244,6 +1276,7 @@ def _check_artefact(
             ArtefactState.UNREACHABLE,
             None if points.revalidation is None else commits[points.revalidation],
             tuple((a, None if p is None else commits[p]) for a, p in points.deferrals),
+            revalidation_points=tuple(commits[p] for p in points.revalidations),
         )
         unreachable = [finding(RepositoryFindingKind.UNREACHABLE, message)]
         return report, unreachable + problems + broad
@@ -1277,16 +1310,15 @@ def _check_artefact(
             )
         )
     left_out: list[RepositoryFinding] = []
+    own = points.own_paths
     for anchor in live:
         deferral_point = deferral_points.get(anchor)
         answering = judge.answering(points, anchor)
-        covered = judge.history.reached(answering)
-        exclusion = judge.exclusion(
-            anchor, points.revalidation, answering, covered, points.own_paths
-        )
-        if exclusion.moved.left_out and not exclusion.asks:
-            left_out.append(_left_out_finding(finding, exclusion, anchor, commits))
-        change = judge.change(anchor, answering, covered, points.own_paths, points.revalidation)
+        # A widening that asks nothing is reported against the newest revalidation point.
+        newest = judge.exclusion(anchor, points.revalidation, own)
+        if newest.moved.left_out and not newest.asks:
+            left_out.append(_left_out_finding(finding, newest, anchor, commits))
+        change = judge.change(anchor, answering, own)
         if change is None:
             continue
         came = commits[change.origin]
@@ -1295,8 +1327,12 @@ def _check_artefact(
             f'{came.short} "{came.subject}" ({came.author}, {came.day}), a change not put '
             f"back since"
         )
-        if exclusion.asks:
-            message += f"; `friction.exclude` changed over it since ({exclusion.describe(commits)})"
+        asking = next(
+            (found for found in (judge.exclusion(anchor, s, own) for s in answering) if found.asks),
+            None,
+        )
+        if asking is not None:
+            message += f"; `friction.exclude` changed over it since ({asking.describe(commits)})"
         if deferral_point is not None:
             message += (
                 f"; its deferral at {commits[deferral_point].short} covers only earlier changes"
@@ -1329,6 +1365,7 @@ def _check_artefact(
         point,
         tuple((a, None if p is None else commits[p]) for a, p in points.deferrals),
         cut=points.cut,
+        revalidation_points=tuple(commits[p] for p in points.revalidations),
     )
     return report, stale + deferred + left_out + problems + broad
 
@@ -1442,9 +1479,10 @@ class TracedFinding:
     """A finding of the whole-repository check about one artefact, and the commits behind it.
 
     `commits` are oldest first, each with the paths behind the finding it
-    touched (`CommitBehind`). Stale on an anchor: every commit outside what
-    the points cover that changed the anchor, the finding's origin among them;
-    stale by a move: the rename. Deferred: the changes the deferral postpones —
+    touched (`CommitBehind`). Stale on an anchor: every commit after what the
+    answering states cover that touched a part of the anchor differing from
+    what it was at a state, and the finding's origin; stale by a move: the
+    rename. Deferred: the changes the deferral postpones —
     after the revalidation point, up to the deferral point; none for a dead
     anchor, whose deferral postpones no friction (COR-050 point 4) since the
     anchor is an error (point 7). A dead `path` anchor: where its files went —
@@ -1611,7 +1649,6 @@ def _traced(
     for finding in findings:
         anchor = finding.anchor
         answering = points.revalidations if anchor is None else judge.answering(points, anchor)
-        covered = history.reached(answering)
         behind: set[int] = set()
         configured: set[int] = set()  # commits behind it through `friction.exclude`
         if finding.kind is RepositoryFindingKind.STALE and finding.origin is not None:
@@ -1620,16 +1657,17 @@ def _traced(
             if anchor is None and came == let_in:
                 configured.add(came)
             elif anchor is not None:
-                change = judge.change(anchor, answering, covered, own, point)
+                change = judge.change(anchor, answering, own)
                 if change is not None:
                     behind.update(change.commits)
-                if anchor.kind == "path":
-                    exclusion = judge.exclusion(anchor, point, answering, covered, own)
-                    configured.update(judge.flips(exclusion.moved.let_in, covered, excluded=False))
+                for state in answering if anchor.kind == "path" else ():
+                    exclusion = judge.exclusion(anchor, state, own)
+                    after = history.ancestors(state)
+                    configured.update(judge.flips(exclusion.moved.let_in, after, excluded=False))
                     if exclusion.asks:
                         configured.update(exclusion.left_by)
         elif finding.kind is RepositoryFindingKind.LEFT_OUT and anchor is not None:
-            configured.update(judge.exclusion(anchor, point, answering, covered, own).left_by)
+            configured.update(judge.exclusion(anchor, point, own).left_by)
         elif (
             finding.kind is RepositoryFindingKind.DEAD_ANCHOR
             and anchor is not None
@@ -1648,7 +1686,9 @@ def _traced(
             behind.update(index for index in changed if index in postponed)
         behind |= configured
         touched = (
-            _touched_by(history, _paths_behind(judge, anchor, own, point), behind) if behind else {}
+            _touched_by(history, _paths_behind(judge, anchor, own, answering), behind)
+            if behind
+            else {}
         )
         if anchor is None and let_in in configured:
             touched.pop(let_in, None)  # a let-in changed the configuration, not the artefact
@@ -1665,24 +1705,26 @@ def _traced(
 
 
 def _paths_behind(
-    judge: _Judge, anchor: Anchor | None, own: frozenset[str], point: int
+    judge: _Judge, anchor: Anchor | None, own: frozenset[str], states: Sequence[int]
 ) -> frozenset[str]:
-    """Every path whose change a finding on `anchor` reads (`CommitBehind`).
+    """Every path whose change a finding on `anchor` reads (`CommitBehind`), measured
+    from the answering `states`.
 
-    A path anchor's paths are the check's own (`_Judge.matching_paths`, and
-    the files an exclusion change since the point left out, let in or found
-    gone, less `own`); a record or artefact anchor's the names of the file it
-    names; a registered kind's the names of each file its resolver answers,
-    less `own`; a move's (no anchor) the artefact's own names.
+    A path anchor's paths are the check's own at each state
+    (`_Judge.matching_paths`, and the files an exclusion change since it left
+    out, let in or found gone, less `own`); a record or artefact anchor's the
+    names of the file it names; a registered kind's the names of each file its
+    resolver answers, less `own`; a move's (no anchor) the artefact's own names.
     """
     if anchor is None:
         return own
     if anchor.kind == "path":
-        moved = judge.exclusion_change(anchor, point)
-        return (
-            judge.matching_paths(anchor.value, point)
-            | frozenset(moved.left_out + moved.let_in + moved.gone)
-        ) - own
+        paths: set[str] = set()
+        for state in states:
+            moved = judge.exclusion_change(anchor, state)
+            paths.update(judge.matching_paths(anchor.value, state))
+            paths.update(moved.left_out + moved.let_in + moved.gone)
+        return frozenset(paths) - own
     if anchor.kind == "artefact":
         target = judge.head.find(anchor.value)
         return frozenset() if target is None else _names(judge.history, target.path)

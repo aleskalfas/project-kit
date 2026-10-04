@@ -19,9 +19,10 @@ changed how often the file holds each time, in whatever spelling it was typed
 value, the walk `check --all` makes (`friction_history`) over the one log
 from the base. A value the artefact carried before — the revert of a
 revalidation — answers nothing and is no bump: the artefact is judged against
-that value's revalidation points instead of the base, asked about every
-anchor that differs between them and head, and only a deferral that covers
-the anchor answers it. An `at` removed writes back the block's own marker,
+that value's revalidation points instead of the base, asked about an anchor
+only where it differs, as a whole, from what it stood on at every one of them
+(`changed_since`, the rule `check --all` judges by), and only a deferral that
+covers the anchor answers it. An `at` removed writes back the block's own marker,
 judged against the commit that first introduced the block. Likewise a
 deferral the diff introduces on an anchor it asks about is searched for, only
 where the file ever held every word of its reason: one that puts back an
@@ -188,6 +189,7 @@ from project_kit.friction_history import (
     Commit,
     Walker,
     Writes,
+    changed_since,
     read_history,
     read_writes,
     reason_words,
@@ -1352,8 +1354,10 @@ def _judge(
     An `at` the diff writes back (point 3; `_Behind.written_back`) answers
     nothing and is no bump: the artefact is judged against that value's
     revalidation points instead of the base, asked about an anchor only where
-    every point's reading asks it. A deferral answers a question where it
-    covers the anchor (point 4; `covers`).
+    it differs, as a whole, from what it stood on at every point
+    (`changed_since`, the rule `check --all` judges by), with the left-out
+    notes of every point. A deferral answers a question where it covers the
+    anchor (point 4; `covers`).
     """
 
     def finding(
@@ -1390,11 +1394,13 @@ def _judge(
             _questions(artefact, p.before, resolving, head, p.side, p.diff, kinds, p.wording)
             for p in points
         ]
-        asked = {q.key for q in readings[0][0]}
-        for found, _notes in readings[1:]:
-            asked &= {q.key for q in found}
-        questions = [q for q in readings[0][0] if q.key in asked]
-        notes = readings[0][1]
+        asked_at = [frozenset(q.key for q in found) for found, _notes in readings]
+        questions = [
+            q
+            for q in readings[0][0]
+            if changed_since(asked_at, lambda keys, key=q.key: key in keys)
+        ]
+        notes = list(dict.fromkeys(note for _asked, noted in readings for note in noted))
         revalidation = None
     else:
         questions, notes = _questions(
