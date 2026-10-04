@@ -29,7 +29,7 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-03T14:05:27Z
+      at: 2026-10-03T22:57:12Z
       outcome: updated
 ---
 
@@ -438,7 +438,7 @@ It is also coarser than the thing itself: any change to a named file counts, as 
 **What the checks do with it.**
 
 - The change check asks an artefact when the diff changed the content of a file the answer names — a pure rename keeps the content — its own file left out.
-- The whole-repository check finds the anchor stale from the first commit after the revalidation point that changed the content of such a file, renames followed.
+- The whole-repository check finds the anchor stale where such a file differs — renames followed — between HEAD and the revalidation point, dated from the oldest change to it no commit put back since; an edit put back is no change.
 - The files count as anchored for the uncovered-surface measure.
 - `friction.exclude` does not apply to the files an answer names: an anchor of a registered kind names what it stands on by its value, as a record anchor does, and exclusions cover paths ([COR-050](../decisions/core/COR-050-anchors-and-friction.md) point 7).
 - Each anchor value is resolved once per check, however many artefacts carry it. A resolver that overruns its bound is not started again in that check: the values it had left have no answer, so a resolver that hangs costs one bound, not one per value.
