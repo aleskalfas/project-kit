@@ -2400,52 +2400,169 @@ def test_each_answering_state_is_read_under_its_own_exclusions(timeline: Timelin
     ]
 
 
-# --- what a merge that takes one side whole hides from `check --all` (stated limits) --------
+# --- a merge that takes a file whole from one side (COR-050 points 5 and 9) ----------------
+#
+# git's combined diff lists a path for a merge only where the merge differs from every
+# parent, so a merge that takes a file whole from one side — `-s ours`, or a conflict
+# resolved to one parent's file — lists nothing for it. `check --all` compares each
+# answering state's trees with HEAD's, so such a file is never missed, and dates the debt
+# along the lines that carry HEAD's file, so an edit such a merge discarded never dates it.
+
+OLD_NOTE = {"docs/notes.txt": "Old's note.\n"}
 
 
-def test_an_edit_undone_by_a_merge_taking_one_side_whole_still_dates_the_debt(
-    timeline: Timeline,
-) -> None:
-    """A stated limit: e1 edits the CLI after the point; a merge that takes the CLI file
-    whole from the other side undoes it; e2 edits it again. git's combined diff does not
-    list the file for that merge, so it is never read as putting the file back: the debt
-    is dated from e1, where the record dates it from e2."""
+def _merge_no_commit(timeline: Timeline, *args: str) -> None:
+    """Start a merge and stop before its commit — conflicted or not — for the test to
+    resolve; `timeline.commit` then makes the merge commit, dated as the next commit."""
+    timeline.adopter.git("merge", "-q", "--no-ff", "--no-commit", *args, check=False)
+
+
+def _cli_taken_back(timeline: Timeline, resolution: str) -> str:
+    """Main changes the CLI (c) and revalidates the guide (P); a line `old`, cut before c,
+    edits the note. A branch brings the CLI back to what it was before c by taking old's
+    file whole, and keeps the guide's revalidation; returns the merge that took it.
+
+    `ours`: a branch off old merges main with `-s ours`, keeping old's tree; the branch
+    `land` off main merges it — the guide put back as main has it. `conflict`: the branch
+    `land` off main edits the note and merges old; the note conflicts, and the merge is
+    resolved to old's files, the CLI's among them."""
     repo = timeline.adopter
-    timeline.start({"docs/guide.md": guide()})
-    repo.checkout("side", create=True)
-    timeline.commit("side: a note", NOTE)
-    repo.checkout("main")
-    first = timeline.commit("e1: edit the CLI", {"src/cli/main.py": "print('e1')\n"})
-    repo.git("merge", "-q", "--no-ff", "--no-commit", "side", check=False)
-    timeline.commit("merge side, taking its CLI", {"src/cli/main.py": CLI_SOURCE})
-    timeline.commit("e2: edit the CLI again", {"src/cli/main.py": "print('e2')\n"})
-    assert _summary(_run(timeline)) == [("stale", "docs/guide.md", "path:src/cli/**", first)]
-
-
-def test_a_merge_taking_back_a_file_from_before_the_point_reads_as_no_change(
-    timeline: Timeline,
-) -> None:
-    """A stated limit: after the point P that answered c's edit of the CLI, a merge takes
-    the file whole from a line cut before c, putting back what it was before c. git's
-    combined diff does not list it and no commit after P touched it, so `check --all`
-    reads no change though HEAD differs from P; the change check, comparing its base with
-    the merge, asks."""
-    repo = timeline.adopter
-    timeline.start({"docs/guide.md": guide()})
+    timeline.start({"docs/guide.md": guide(), **NOTE})
     repo.checkout("old", create=True)
-    timeline.commit("old: a note", NOTE)
+    timeline.commit("old: edit the note", OLD_NOTE)
     repo.checkout("main")
     timeline.commit("c: edit the CLI", {"src/cli/main.py": "print('c')\n"})
     timeline.commit("P: revalidate", {"docs/guide.md": guide(at=T2, because="checked c")})
-    repo.checkout("take", create=True)
-    repo.git("merge", "-q", "--no-ff", "--no-commit", "old", check=False)
-    timeline.commit("merge old, taking its CLI", {"src/cli/main.py": CLI_SOURCE})
+    if resolution == "ours":
+        repo.checkout("old")
+        repo.checkout("kept", create=True)
+        _merge_no_commit(timeline, "-s", "ours", "main")
+        taken = timeline.commit("merge main, keeping old's tree")
+        repo.checkout("main")
+        repo.checkout("land", create=True)
+        _merge_no_commit(timeline, "kept")
+        repo.git("checkout", "main", "--", "docs/guide.md")
+        timeline.commit("land kept, keeping main's guide")
+        return taken
+    repo.checkout("land", create=True)
+    timeline.commit("land: edit the note", {"docs/notes.txt": "Land's note.\n"})
+    _merge_no_commit(timeline, "old")
+    return timeline.commit(
+        "merge old, resolved to its side", {**OLD_NOTE, "src/cli/main.py": CLI_SOURCE}
+    )
 
-    change = fc.run_change_check(repo.root, "main")
-    assert _friction(change) == [("docs/guide.md", "path:src/cli/**")]
+
+@pytest.mark.parametrize("resolution", ["ours", "conflict"])
+def test_a_merge_taking_a_file_back_from_before_the_point_is_a_change_in_both_checks(
+    timeline: Timeline, resolution: str
+) -> None:
+    """After the point P that answered c's edit of the CLI, a merge takes the file whole
+    from a line cut before c, bringing back what it was before c; no commit after P
+    touched the file, and no merge lists it. The change check on the branch asks; landed,
+    `check --all` finds the CLI differs from P and reports it, dated from the merge that
+    took the file — and `explain` names the file behind that merge."""
+    taken = _cli_taken_back(timeline, resolution)
+    repo = timeline.adopter
+    assert _friction(fc.run_change_check(repo.root, "main")) == [
+        ("docs/guide.md", "path:src/cli/**")
+    ]
     repo.checkout("main")
-    timeline.merge("take")
-    assert _summary(_run(timeline)) == []
+    timeline.merge("land")
+    assert _summary(_run(timeline)) == [("stale", "docs/guide.md", "path:src/cli/**", taken)]
+
+    (traced,) = frep.run_explain(repo.root, "docs/guide.md").findings
+    behind = {c.commit.sha: c.paths for c in traced.commits}
+    assert behind[taken] == ("src/cli/main.py",)
+
+
+def _edit_undone(timeline: Timeline, resolution: str) -> tuple[str, str]:
+    """After the point, main edits the CLI (e1); a branch's merge discards that edit by
+    taking the CLI whole from its own side, and the CLI is changed again on that side.
+    Returns e1 and the change that remains.
+
+    `ours`: the branch `kept`, cut at the point, merges main with `-s ours` — e1 undone —
+    and edits the CLI (e2). `conflict`: the line `side`, cut at the point, edits the CLI
+    (s1) after e1; the branch `kept` off main merges it, the CLI conflicts, and the merge
+    is resolved to side's file."""
+    repo = timeline.adopter
+    timeline.start({"docs/guide.md": guide(), **NOTE})
+    branch = "kept" if resolution == "ours" else "side"
+    repo.checkout(branch, create=True)
+    timeline.commit(f"{branch}: edit the note", OLD_NOTE)
+    repo.checkout("main")
+    undone = timeline.commit("e1: edit the CLI", {"src/cli/main.py": "print('e1')\n"})
+    if resolution == "ours":
+        repo.checkout("kept")
+        _merge_no_commit(timeline, "-s", "ours", "main")
+        timeline.commit("merge main, keeping this side")
+        remains = timeline.commit("e2: edit the CLI", {"src/cli/main.py": "print('e2')\n"})
+        return undone, remains
+    repo.checkout("side")
+    remains = timeline.commit("s1: edit the CLI", {"src/cli/main.py": "print('s1')\n"})
+    repo.checkout("main")
+    repo.checkout("kept", create=True)
+    _merge_no_commit(timeline, "side")
+    timeline.commit("merge side, resolved to its CLI", {"src/cli/main.py": "print('s1')\n"})
+    return undone, remains
+
+
+@pytest.mark.parametrize("resolution", ["ours", "conflict"])
+def test_an_edit_a_merge_undid_never_dates_the_debt(timeline: Timeline, resolution: str) -> None:
+    """e1 edits the CLI after the point and is older than every change that remains; a
+    merge that takes the CLI whole from the other side discards it, and git's combined
+    diff does not list the file there. The debt is dated from the change that remains —
+    e2 made after the merge, or s1 the merge took — never from e1; the change check on
+    the branch asks, and the checks agree once it lands."""
+    undone, remains = _edit_undone(timeline, resolution)
+    repo = timeline.adopter
+    assert _friction(fc.run_change_check(repo.root, "main")) == [
+        ("docs/guide.md", "path:src/cli/**")
+    ]
+    repo.checkout("main")
+    timeline.merge("kept")
+    found = _summary(_run(timeline))
+    assert found == [("stale", "docs/guide.md", "path:src/cli/**", remains)]
+    assert undone not in {origin for *_, origin in found}
+
+
+TARGET = "docs/target.md"
+
+
+def _target(body: str = "Body.") -> str:
+    return document(
+        "target", anchors={"path": ["src/core/**"]}, at=T1, outcome="updated", body=body
+    )
+
+
+@pytest.mark.parametrize("kind", ["record", "artefact"])
+def test_a_record_or_artefact_a_merge_took_back_whole_is_a_change(
+    timeline: Timeline, kind: str
+) -> None:
+    """The same for a record anchor and an artefact anchor: after the point P answered c's
+    edit, a merge takes the file whole from a line cut before c. `check --all` reports the
+    anchor changed, dated from the merge, as the change check on the branch asks."""
+    repo = timeline.adopter
+    path, value = (RECORD, "COR-050") if kind == "record" else (TARGET, "target")
+    anchors = {kind: [value]}
+    timeline.start({"docs/guide.md": guide(anchors=anchors), TARGET: _target(), **NOTE})
+    edited = _record(timeline) + "\nAmended.\n" if kind == "record" else _target("Body, amended.")
+    repo.checkout("old", create=True)
+    timeline.commit("old: edit the note", OLD_NOTE)
+    repo.checkout("main")
+    timeline.commit("c: edit what the guide stands on", {path: edited})
+    timeline.commit(
+        "P: revalidate", {"docs/guide.md": guide(anchors=anchors, at=T2, because="checked c")}
+    )
+    repo.checkout("land", create=True)
+    _merge_no_commit(timeline, "old")
+    repo.git("checkout", "old", "--", path)
+    taken = timeline.commit("merge old, taking its file")
+
+    anchor = f"{kind}:{value}"
+    assert _friction(fc.run_change_check(repo.root, "main")) == [("docs/guide.md", anchor)]
+    repo.checkout("main")
+    timeline.merge("land")
+    assert _summary(_run(timeline)) == [("stale", "docs/guide.md", anchor, taken)]
 
 
 # --- the change check's write-back paths, and its answers list (COR-050 points 3, 4, 6) -----
