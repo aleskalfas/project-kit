@@ -2098,7 +2098,6 @@ def test_a_value_first_written_by_a_merge_resolution_is_found_by_the_write_back_
 # both checks must find a value however it was typed: the walk's byte prefilter and the
 # change check's reading of a file's history (`friction_history.stamps_in`).
 
-
 #: The instant 2026-01-01T09:00:00Z as a hand might type it, each a spelling validation
 #: accepts — unquoted, the parsed time is what is checked; quoted, only the canonical form.
 SPELLINGS = {
@@ -2584,3 +2583,34 @@ def test_a_written_back_revalidation_names_the_deferrals_it_kept(timeline: Timel
     assert [k.as_json() for k in answer.kept] == [
         {"anchor": {"kind": "path", "value": "src/core/**"}, "reason": "waiting on the engine"}
     ]
+
+
+def test_a_side_line_that_dropped_an_entry_does_not_make_a_write_back_a_point(
+    timeline: Timeline,
+) -> None:
+    """Where an entry was last added is read by ancestry: a side line that dropped RS-1,
+    merged after main wrote RS-1's `at` back, is no place RS-1 was absent from main's
+    line — so the write-back is not a point, and RS-1 is stale from the engine change its
+    reverted revalidation had answered."""
+    repo = timeline.adopter
+    base = timeline.start({"docs/rules.md": _rules(**{"RS-1": {"at": T1}, "RS-2": {"at": T1}})})
+    repo.checkout("side", create=True)
+    repo.checkout("main")
+    changed = timeline.commit("change the engine", {"src/core/engine.py": "ENGINE = 2\n"})
+    revalidated = timeline.commit(
+        "revalidate RS-1",
+        {"docs/rules.md": _rules(**{"RS-1": {"at": T2, "because": "checked"}, "RS-2": {"at": T1}})},
+    )
+    repo.checkout("side")
+    timeline.commit("side: drop RS-1", {"docs/rules.md": _rules(**{"RS-2": {"at": T1}})})
+    repo.checkout("main")
+    timeline.revert(revalidated)
+    repo.git("merge", "-q", "--no-ff", "--no-commit", "side", check=False)
+    timeline.commit(
+        "merge side, keeping RS-1",
+        {"docs/rules.md": _rules(**{"RS-1": {"at": T1}, "RS-2": {"at": T1}})},
+    )
+
+    result = _run(timeline)
+    assert _point(result, "docs/rules.md#RS-1") == base
+    assert ("stale", "docs/rules.md#RS-1", "path:src/core/**", changed) in _summary(result)

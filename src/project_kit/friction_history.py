@@ -883,7 +883,8 @@ class Walker:
         if like.kind is ArtefactKind.ENTRY and len(points) < len(writes):
             gone = self._entry_gone(versions, like, writes[0])
             if gone is not None:
-                points = self._first([w for w in writes if w < gone])
+                before = self.history.ancestors(gone)
+                points = self._first([w for w in writes if w not in before])
         return Carried(tuple(points), cut=cut)
 
     def _first(self, writes: Sequence[int]) -> list[int]:
@@ -893,13 +894,20 @@ class Walker:
         )
 
     def _entry_gone(self, versions: Sequence[Version], like: Artefact, newest: int) -> int | None:
-        """The newest version, older than the write at `newest`, that holds no entry under
-        the id `like` names — where the entry was last absent from its file before it was
-        added again — or `None`. Read from the bytes alone: a version whose blob does not
-        hold the id holds no such entry; one that holds it is taken to hold the entry,
-        which errs only toward reading a value as carried before."""
+        """The newest version among the ancestors of the write at `newest` that holds no
+        entry under the id `like` names — where the entry was last absent from its file
+        before it was added again — or `None`. Read by ancestry, so a side line that
+        dropped the entry and was merged later is no such place; and from the bytes
+        alone: a version whose blob does not hold the id holds no such entry, and one that
+        holds it is taken to hold the entry, which errs only toward reading a value as
+        carried before."""
+        reached = self.history.ancestors(newest)
         for version in versions:
-            if version.index > newest and not self.holds(self._after(version), (like.id,)):
+            if (
+                version.index != newest
+                and version.index in reached
+                and not self.holds(self._after(version), (like.id,))
+            ):
                 return version.index
         return None
 
