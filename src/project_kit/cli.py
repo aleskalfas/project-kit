@@ -1655,7 +1655,10 @@ def friction_check_command(
 
     Reads git only and writes nothing: the working tree (uncommitted changes
     included) — or, with --head, commit REV — against the merge-base of REF —
-    by default $PKIT_CHECK_BASE, else the default branch (COR-054). Reports
+    by default $PKIT_CHECK_BASE, else the default branch (COR-054). An `at`
+    the change writes back — a value the artefact carried before, read from
+    its file's history behind the base — answers nothing: the artefact is
+    judged against that value's revalidation point. Reports
     friction, dead anchors of the change, bumps with nothing behind them and
     an outdated base, and lists last every answer the change wrote, word for
     word: each revalidation, deferral and reason for having no anchors. Exit 1
@@ -1664,8 +1667,9 @@ def friction_check_command(
     fails, nor a dead anchor it cannot lay at the change (dead-unattributed).
 
     With --all, the whole-repository check instead: every artefact at HEAD
-    against the current history, each anchor judged from the artefact's
-    revalidation point (derived from git, renames followed). Reports stale
+    against its revalidation point — the commit where it first carried the
+    `at` it carries (derived from git, renames followed) — an anchor stale
+    where what it stands on differs between the two. Reports stale
     and deferred debt with their origins, dead anchors, over-broad anchors,
     unanchored artefacts — those accepted with a reason listed apart, never
     counted — and uncovered surface. Needs the full history, says so in a

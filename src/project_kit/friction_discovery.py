@@ -89,10 +89,17 @@ is the one reader of those declarations and the one walker of the places:
   `pkit friction artefacts --json` prints it, and a capability's script reads
   where artefacts are through it, at head or at another state, never by
   walking the places or listing a commit itself (ADR-057 points 1 and 2).
+- `content`, `parsed_at`, `deferral_reason` — what one artefact's block and
+  fields say, read the same way by both checks and by the walk through an
+  artefact's history (`friction_history`): its content, never the container
+  (COR-050 point 5); the parsed instant of `at`, so writing the same instant
+  differently is no change (point 3); and a deferral's reason, whitespace
+  folded (point 4).
 
-Nothing here computes friction: the checks (`friction_check`) read the model
-this module produces. The listing of the working tree has its home in
-`working_tree`; the git plumbing behind a commit lives with the checks.
+Nothing here computes friction: the checks (`friction_check`,
+`friction_repository`) and the history walk read the model this module
+produces. The listing of the working tree has its home in `working_tree`; the
+git plumbing behind a commit in `friction_git`.
 """
 
 from __future__ import annotations
@@ -104,6 +111,7 @@ import os
 import re
 from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path, PurePosixPath
 from typing import Any, Protocol, cast
@@ -1843,6 +1851,59 @@ class Artefact:
 
     def anchors_of_kind(self, kind: str) -> tuple[str, ...]:
         return self.anchors.get(kind, ())
+
+
+# --- what an artefact's block says -------------------------------------------
+#
+# The readings both checks and the history walk make of one artefact (ADR-057
+# point 2): its content, the parsed marker, and the reason a deferral gives.
+
+
+def content(artefact: Artefact) -> tuple[str, dict[str, Any]]:
+    """An artefact's content (COR-050): its body text and its own fields, never the container."""
+    own = {k: v for k, v in artefact.carrier.items() if k != CONTAINER_KEY}
+    return artefact.body, own
+
+
+def revalidated_field(artefact: Artefact, key: str) -> Any:
+    """One key of the artefact's `revalidated` block as written, `None` when absent."""
+    revalidated = artefact.revalidated
+    return revalidated.get(key) if isinstance(revalidated, Mapping) else None
+
+
+def parsed_at(artefact: Artefact) -> Any:
+    """The parsed value of `at`: the instant, so a quoting or formatting change is no change."""
+    value = revalidated_field(artefact, "at")
+    if not isinstance(value, str):
+        return value
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return value.strip()
+    return parsed.astimezone(UTC) if parsed.tzinfo is not None else value.strip()
+
+
+def entry_reason(artefact: Artefact, deferral: Deferral) -> str | None:
+    """The reason one deferral entry carries, whitespace folded; `None` when it carries
+    no text."""
+    deferred: Any = revalidated_field(artefact, "deferred")
+    if not isinstance(deferred, list):
+        return None
+    entry = cast(list[Any], deferred)[deferral.index]
+    reason = cast(Mapping[str, Any], entry).get("reason") if isinstance(entry, Mapping) else None
+    return " ".join(reason.split()) if isinstance(reason, str) else None
+
+
+def deferral_reason(artefact: Artefact, anchor: Anchor) -> str:
+    """The reason written on the deferral of `anchor`, whitespace folded; `""` when none.
+    An anchor deferred twice — a validation error (COR-050 point 4) — reads as its first
+    entry carrying text."""
+    for deferral in artefact.deferrals:
+        if deferral.anchor == anchor:
+            reason = entry_reason(artefact, deferral)
+            if reason is not None:
+                return reason
+    return ""
 
 
 @dataclass(frozen=True)

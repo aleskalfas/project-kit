@@ -764,10 +764,12 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
         "location",
         "report",
         "revalidation_point",
+        "revalidation_points",
         "schema_version",
         "state",
         "unanchored_because",
     ]
+    assert doc["revalidation_points"] == [doc["revalidation_point"]]
     assert doc["schema_version"] == frep.EXPLAIN_SCHEMA_VERSION == 1
     assert (doc["report"], doc["artefact"], doc["location"], doc["state"]) == (
         "explain",
@@ -898,21 +900,19 @@ def test_a_commits_paths_are_what_the_check_reads_never_the_artefacts_own_file(
     assert explanation.report.revalidation_point.sha == base
 
 
-def test_a_file_that_lived_only_between_the_point_and_head_is_in_the_commits_paths(
+def test_a_file_that_lived_only_between_the_point_and_head_is_no_change(
     timeline: Timeline,
 ) -> None:
-    """Neither tree holds it, so `files` never lists it; the commits that added and removed it
-    changed the anchor, and each names it."""
+    """Added and removed again between the point and HEAD, it is in neither state the check
+    compares (COR-050 point 5): no finding, no commit behind one, and neither tree lists it."""
     timeline.start({"docs/guide.md": guide()})
-    added = timeline.commit("a scratch module", {"src/cli/scratch.py": "S = 1\n"})
-    removed = timeline.commit("drop the scratch module", {"src/cli/scratch.py": None})
+    timeline.commit("a scratch module", {"src/cli/scratch.py": "S = 1\n"})
+    timeline.commit("drop the scratch module", {"src/cli/scratch.py": None})
 
     explanation = frep.run_explain(timeline.adopter.root, "guide")
-    (stale,) = explanation.findings
-    assert [(c.commit.sha, c.paths) for c in stale.commits] == [
-        (added, ("src/cli/scratch.py",)),
-        (removed, ("src/cli/scratch.py",)),
-    ]
+    assert explanation.findings == ()
+    assert explanation.report is not None
+    assert explanation.report.state is fr.ArtefactState.CURRENT
     (anchor,) = explanation.anchors
     assert anchor.files == fr.AnchorFiles(("src/cli/main.py",), ("src/cli/main.py",), ())
 

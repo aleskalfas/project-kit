@@ -12,8 +12,9 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-03T13:23:35Z
-      outcome: updated
+      at: 2026-10-03T22:57:27Z
+      outcome: unchanged
+      unchanged-because: This page says the core check flags an artefact when an anchor changes, that only the answer on the artefact clears friction, and that propose takes each anchor's files and the commits and paths behind each finding from pkit friction explain. COR-050's refinement makes a change a difference between two states, so an edit put back is none and a written-back at answers nothing; explain still gives the commits behind each finding it reports, so every statement here still holds.
 ---
 
 # software-analysis capability
