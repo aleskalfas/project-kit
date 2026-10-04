@@ -36,10 +36,17 @@ held it, tested again the same way. Rewording within a stretch moves nothing.
 
 **Reading little** (critic G4). A file's versions are parsed once each, by
 object id, shared by every artefact in the file; and a version whose bytes
-hold none of the walk's needles — the value's canonical `YYYY-MM-DDTHH:MM:SS`,
-the block's key, a word of a deferral's reason — carries none of what it
-looks for, so it is never parsed. A blob that writes a time with an explicit
-offset is always parsed: the same instant may be written in another zone.
+hold none of what the walk looks for — the value, in any spelling YAML's
+timestamp grammar allows (`stamps_in`), the block's key, every word of a
+deferral's reason (`reason_words`) — carries none of it, so it is never
+parsed.
+
+**The times a file's history wrote** (`read_writes`). Where the change check
+must tell a written-back `at` from a new one, one `git log -p` of the
+artefact's file lists, for every time it ever held, the commits that changed
+how often it holds it — `git log -S` for every spelling at once, each time
+read as the UTC instant it denotes — so a write-back is never missed for how
+its stamp was typed, and one reading serves every artefact of a collection.
 
 **A shallow clone.** The boundary commit is listed as adding every file. A
 value — or a deferral entry — the file already carries there has its point
@@ -57,12 +64,12 @@ again is dated from the second edit — else the newest of them.
 from __future__ import annotations
 
 import bisect
+import functools
 import re
-import sys
-from collections import OrderedDict
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections import Counter, OrderedDict
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -92,12 +99,25 @@ _LOG_FORMAT = f"--format={_RECORD_START}%H%x00%P%x00%an%x00%aI%x00%s"
 # The mode of a submodule in a git tree: a commit, never a file to read.
 _GITLINK_MODE = "160000"
 
-# A time written in a blob, and one written with an explicit offset.
-_STAMP = re.compile(rb"(\d{4}-\d\d-\d\d)[T ](\d\d:\d\d:\d\d)")
-_ZONED = re.compile(rb"\d\d:\d\d:\d\d(?:\.\d+)?[ \t]*[+-]\d\d(?::?\d\d)?")
+# A time as YAML's timestamp grammar writes one — the grammar the front-matter reader
+# resolves an unquoted `at` by; a quoted one validates only as `YYYY-MM-DDTHH:MM:SSZ`,
+# which it reads too: the date, then `T`, `t` or whitespace — a line break inside a
+# plain scalar included — then the time, month, day and hour with one digit or two; an
+# optional fraction; an optional zone, `Z` or an offset. Its groups are the fields.
+_STAMP = re.compile(
+    rb"(\d{4})-(\d\d?)-(\d\d?)(?:[Tt]|\s+)(\d\d?):(\d\d):(\d\d)(?:\.\d*)?"
+    rb"(?:\s*(?:Z|([-+])(\d\d?)(?::?(\d\d))?))?"
+)
+
+# How `stamp` writes an instant.
+_INSTANT = "%Y-%m-%dT%H:%M:%S"
 
 # The bytes every version carrying a `friction` block holds.
 _BLOCK_KEY = b"friction"
+
+# Lines of context `read_writes` reads around each change: a time written across lines,
+# its zone on a third, is read whole wherever one of its lines changed.
+_CONTEXT = 2
 
 # How many blobs the walker keeps in memory between a prefilter and a parse.
 _RECENT = 16
@@ -442,6 +462,147 @@ def shallow_commits(root: Path) -> frozenset[str]:
         return frozenset()
 
 
+# --- the times a file's history wrote ------------------------------------------------
+
+# Every byte a time `_STAMP` reads can be written with: a cut between two others leaves
+# no time on both sides of it.
+_STAMP_BYTES = frozenset(b"0123456789-+:.TtZ \t\r\n\f\v")
+
+
+# How many bytes `_shared` compares at a time before it narrows down.
+_STRIDE = 4096
+
+
+def _shared(a: bytes, b: bytes) -> int:
+    """How many bytes `a` and `b` share at their start: compared a stride at a time, then
+    narrowed down by halving the stride that differs."""
+    limit = min(len(a), len(b))
+    low = 0
+    while low + _STRIDE <= limit and a[low : low + _STRIDE] == b[low : low + _STRIDE]:
+        low += _STRIDE
+    high = min(low + _STRIDE, limit)
+    while low < high:  # a[:low] == b[:low] holds throughout
+        mid = (low + high + 1) // 2
+        low, high = (mid, high) if a[low:mid] == b[low:mid] else (low, mid - 1)
+    return low
+
+
+def _apart(was: bytes, now: bytes) -> tuple[bytes, bytes]:
+    """`was` and `now` without what they share at either end, each cut moved off any byte
+    a time can be written with: a time on the shared stretch is held as often by both,
+    and none straddles a cut, so how often each time is held differs between the two
+    exactly as between the whole texts — read in a fraction of the bytes where one line
+    holds a whole collection's front matter."""
+    start = _shared(was, now)
+    while start and was[start - 1] in _STAMP_BYTES:
+        start -= 1
+    finish = min(_shared(was[::-1], now[::-1]), len(was) - start, len(now) - start)
+    while finish and was[len(was) - finish] in _STAMP_BYTES:
+        finish -= 1
+    return was[start : len(was) - finish], now[start : len(now) - finish]
+
+
+@dataclass(frozen=True)
+class Writes:
+    """Which commits of a file's history changed how often it holds each time, and its
+    block's key (`read_writes`): only those can have written a value there, since a
+    write makes the file hold it once more.
+
+    `stamps` maps each instant (`stamp`) to those commits; `block` lists the commits
+    that changed how often the file holds the block's key.
+    """
+
+    stamps: Mapping[str, frozenset[str]]
+    block: frozenset[str]
+
+    def of(self, value: Any) -> frozenset[str] | None:
+        """The commits that can have written `value` — a parsed `at`, or `BLOCK` — into
+        the file, empty where none can; `None` for a value no reading tells, an `at` that
+        is no aware time, which the walk alone can judge."""
+        if value is BLOCK:
+            return self.block
+        if isinstance(value, datetime) and value.tzinfo is not None:
+            return self.stamps.get(stamp(value), frozenset())
+        return None
+
+
+def read_writes(root: Path, head: str, path: str) -> Writes:
+    """`git log -p` of the file at `path` from `head` — renames followed, a merge diffed
+    against each parent, the root's whole file read as added — read for the times it
+    writes (`Writes`).
+
+    What `git log -S` lists for one fixed spelling, for every time and every spelling
+    at once: each hunk is read as the two slices of the file it shows, before and
+    after, and a commit is listed for a time where the two hold it a different number
+    of times, each time read as the instant it denotes (`stamps_in`) — so a stamp
+    reformatted in place is no write, and one typed with a space, a lowercase `t` or
+    unpadded fields is found as readily as the canonical form. Each change is read
+    with `_CONTEXT` lines around it, so a time written across lines is read whole.
+    One process serves every artefact of the file.
+    """
+    raw = run_git(
+        root,
+        "log",
+        "-m",
+        "--follow",
+        "--root",
+        "-p",
+        f"-U{_CONTEXT}",
+        "--text",
+        "--no-color",
+        "--no-ext-diff",
+        "--no-textconv",
+        "--no-show-signature",
+        f"--format={_RECORD_START}%H",
+        head,
+        "--",
+        path,
+    ).stdout
+    stamps: dict[str, set[str]] = {}
+    block: set[str] = set()
+    sha = ""
+    before: list[bytes] = []
+    after: list[bytes] = []
+
+    def hunk_read() -> None:
+        if not before and not after:
+            return
+        was, now = b"\n".join(before), b"\n".join(after)
+        before.clear()
+        after.clear()
+        if was.count(_BLOCK_KEY) != now.count(_BLOCK_KEY):
+            block.add(sha)
+        was, now = _apart(was, now)
+        net = stamps_in(now)
+        net.subtract(stamps_in(was))
+        for instant, count in net.items():
+            if count:
+                stamps.setdefault(instant, set()).add(sha)
+
+    in_hunk = False
+    for line in raw.split(b"\n"):
+        if line.startswith(_RECORD_START.encode()):
+            hunk_read()
+            sha, in_hunk = line[1:].decode(), False
+        elif line.startswith(b"@@"):
+            hunk_read()
+            in_hunk = True
+        elif not in_hunk:
+            continue  # a file's header lines
+        elif line.startswith(b"diff "):  # no line of a hunk starts so: the next file's header
+            hunk_read()
+            in_hunk = False
+        elif line.startswith(b" "):
+            before.append(line[1:])
+            after.append(line[1:])
+        elif line.startswith(b"-"):
+            before.append(line[1:])
+        elif line.startswith(b"+"):
+            after.append(line[1:])
+    hunk_read()
+    return Writes({k: frozenset(v) for k, v in stamps.items()}, frozenset(block))
+
+
 # --- what the walk finds -------------------------------------------------------
 
 
@@ -510,26 +671,56 @@ class _Parsed:
 class _Bytes:
     """What the prefilter reads from one blob without parsing it."""
 
-    stamps: frozenset[str]  # each time written in it, as `YYYY-MM-DDTHH:MM:SS`
-    zoned: bool  # it writes a time with an explicit offset: the prefilter cannot tell
+    stamps: frozenset[str]  # each time written in it, as the instant it denotes (`stamp`)
     block: bool  # it holds the block's key
 
 
-def _stamp(value: datetime) -> str:
-    return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S")
+def stamp(value: datetime) -> str:
+    """An aware time as the prefilters compare one: the UTC instant, `YYYY-MM-DDTHH:MM:SS`."""
+    return value.astimezone(UTC).strftime(_INSTANT)
 
 
-def reason_word(reason: str | None) -> str | None:
-    """The word of a deferral's reason a version carrying it must hold: its longest
-    word written in plain ASCII with no quote or backslash, so an escaped or quoted
-    form cannot hide it — `None` where none has `_SHORTEST_WORD` characters."""
-    if not reason:
+@functools.lru_cache(maxsize=65536)
+def _instant(fields: tuple[bytes, ...]) -> str | None:
+    """The instant a time `_STAMP` read denotes, its fields given, as `stamp` writes one;
+    `None` where they name no time (a thirteenth month, say). One written with no zone is
+    read as UTC: it is never an aware `at`, so that reading errs only toward a parse."""
+    year, month, day, hour, minute, second, sign, hours, minutes = fields
+    try:
+        instant = datetime(int(year), int(month), int(day), int(hour), int(minute), int(second))
+    except ValueError:
         return None
-    words = [
-        word for word in reason.split() if word.isascii() and not any(ch in word for ch in "\"'\\")
-    ]
-    longest = max(words, key=len, default="")
-    return longest if len(longest) >= _SHORTEST_WORD else None
+    if sign:
+        offset = timedelta(hours=int(hours), minutes=int(minutes or 0))
+        instant = instant - offset if sign == b"+" else instant + offset
+    return instant.strftime(_INSTANT)
+
+
+def stamps_in(data: bytes) -> Counter[str]:
+    """Each time `data` writes in a spelling YAML's timestamp grammar allows — `T`, `t` or
+    whitespace between date and time, fields padded or not, a fraction, any zone — as the
+    instant it denotes (`stamp`), counted: whatever spelling an `at` was typed in, the
+    prefilters find it."""
+    found: Counter[str] = Counter()
+    for fields, count in Counter(_STAMP.findall(data)).items():
+        instant = _instant(fields)
+        if instant is not None:
+            found[instant] += count
+    return found
+
+
+def reason_words(reason: str | None) -> tuple[str, ...]:
+    """The words of a deferral's reason every text carrying it holds: those written in plain
+    ASCII with no quote or backslash, so no escaped or quoted form can hide one, and of at
+    least `_SHORTEST_WORD` characters — each once, the longest first; none where none is."""
+    if not reason:
+        return ()
+    words = {
+        word
+        for word in reason.split()
+        if len(word) >= _SHORTEST_WORD and word.isascii() and not any(ch in word for ch in "\"'\\")
+    }
+    return tuple(sorted(words, key=lambda word: (-len(word), word)))
 
 
 def carrier(value: Any) -> Callable[[Artefact | None], bool]:
@@ -567,32 +758,30 @@ class Walker:
         found = self._bytes.get(obj)
         if found is None:
             raw = self._read(obj) or b""
-            stamps = frozenset(
-                sys.intern(f"{day.decode()}T{time.decode()}") for day, time in _STAMP.findall(raw)
-            )
-            found = _Bytes(stamps, _ZONED.search(raw) is not None, _BLOCK_KEY in raw)
+            found = _Bytes(frozenset(stamps_in(raw)), _BLOCK_KEY in raw)
             self._bytes[obj] = found
         return found
 
     def may_carry(self, state: TreeEntry | None, value: Any) -> bool:
         """Whether the blob of `state` could carry `value`: `False` only where its bytes
-        hold no form of it, so it is never parsed to find out."""
+        hold no spelling of it (`stamps_in`), so it is never parsed to find out."""
         if state is None or state[0] in (LINK_MODE, _GITLINK_MODE):
             return False
         if value is BLOCK:
             return self._scan(state[1]).block
         if isinstance(value, datetime) and value.tzinfo is not None:
-            found = self._scan(state[1])
-            return found.zoned or _stamp(value) in found.stamps
+            return stamp(value) in self._scan(state[1]).stamps
         return True  # a value no prefilter reads: parse to tell
 
-    def holds(self, state: TreeEntry | None, word: str | None) -> bool:
-        """Whether the blob of `state` holds `word`; any blob may, where there is none."""
+    def holds(self, state: TreeEntry | None, words: Sequence[str]) -> bool:
+        """Whether the blob of `state` holds every one of `words` — any blob does where
+        there are none."""
         if state is None or state[0] in (LINK_MODE, _GITLINK_MODE):
             return False
-        if word is None:
+        if not words:
             return True
-        return word.encode() in (self._read(state[1]) or b"")
+        raw = self._read(state[1]) or b""
+        return all(word.encode() in raw for word in words)
 
     def artefact_in(self, state: TreeEntry | None, path: str, like: Artefact) -> Artefact | None:
         """`like` as the blob of `state` holds it at `path`: the document, or the entry under
@@ -653,9 +842,9 @@ class Walker:
         ancestors, back to where the entry was last added to the file, so a
         value it carried before it was removed and restored is no earlier
         carrying. `among`, where given, are the only commits that can have
-        written the value — those a `git log -S` search for it lists, since a
-        write changes how often the file holds it — so no other version is
-        read.
+        written the value — those the file's reading lists for it
+        (`read_writes`), since a write changes how often the file holds it — so
+        no other version is read.
         """
         holds_value = carrier(value)
 
@@ -700,7 +889,7 @@ class Walker:
         hold the id holds no such entry; one that holds it is taken to hold the entry,
         which errs only toward reading a value as carried before."""
         for version in versions:
-            if version.index > newest and not self.holds(self._after(version), like.id):
+            if version.index > newest and not self.holds(self._after(version), (like.id,)):
                 return version.index
         return None
 
@@ -725,7 +914,7 @@ class Walker:
             return found is not None and any(d.anchor == anchor for d in found.deferrals)
 
         def carrying(state: TreeEntry | None, path: str, wanted: str | None) -> bool:
-            if not self.holds(state, reason_word(wanted)):
+            if not self.holds(state, reason_words(wanted)):
                 return False
             found = self.artefact_in(state, path, like)
             return found is not None and any(
@@ -896,11 +1085,15 @@ __all__ = [
     "Points",
     "Version",
     "Walker",
+    "Writes",
     "carrier",
     "changed",
     "differs",
     "origin",
     "read_history",
-    "reason_word",
+    "read_writes",
+    "reason_words",
     "shallow_commits",
+    "stamp",
+    "stamps_in",
 ]

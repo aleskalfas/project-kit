@@ -12,23 +12,25 @@ own anchor list, or a move, needs a revalidation as well. Anything else is
 so it works for any tool and locally before a commit.
 
 **An `at` written back** (points 3 and 6; `_Behind`). Where the diff changes
-an artefact's `at`, the check asks whether the value is new: one `git log -S`
-search of the artefact's file behind the base for the value, and, on a hit,
-the walk `check --all` makes (`friction_history`) over the one log from the
-base. A value the artefact carried before — the revert of a revalidation —
-answers nothing and is no bump: the artefact is judged against that value's
-revalidation points instead of the base, asked about every anchor that
-differs between them and head, and only a deferral that covers the anchor
-answers it. An `at` removed writes back the block's own marker, judged
-against the commit that first introduced the block. Likewise a deferral the
-diff introduces on an anchor it asks about is searched for: one that puts
-back an entry the artefact carried before — the same anchor and reason —
-keeps that entry's point, and covers the anchor only as it stood there, and
-nothing once a revalidation point reaches it (point 4; `_judge`'s
-`covers`). In a shallow clone the walk always runs: a value first carried
-inside the clone is read as first carried there, one the file already
-carried at the cut answers nothing, and each artefact read to the cut is
-named (`history.cut`).
+an artefact's `at`, the check asks whether the value is new: one `git log -p`
+reading of the artefact's file behind the base, which lists the commits that
+changed how often the file holds each time, in whatever spelling it was typed
+(`friction_history.read_writes`), and, where one could have written the
+value, the walk `check --all` makes (`friction_history`) over the one log
+from the base. A value the artefact carried before — the revert of a
+revalidation — answers nothing and is no bump: the artefact is judged against
+that value's revalidation points instead of the base, asked about every
+anchor that differs between them and head, and only a deferral that covers
+the anchor answers it. An `at` removed writes back the block's own marker,
+judged against the commit that first introduced the block. Likewise a
+deferral the diff introduces on an anchor it asks about is searched for, only
+where the file ever held every word of its reason: one that puts back an
+entry the artefact carried before — the same anchor and reason — keeps that
+entry's point, and covers the anchor only as it stood there, and nothing once
+a revalidation point reaches it (point 4; `_judge`'s `covers`). In a shallow
+clone the walk always runs: a value first carried inside the clone is read
+as first carried there, one the file already carried at the cut answers
+nothing, and each artefact read to the cut is named (`history.cut`).
 
 **Reading the repository — from git alone, never checking anything out.**
 
@@ -140,7 +142,6 @@ import re
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from enum import Enum
 from fnmatch import fnmatchcase
 from functools import cached_property
@@ -151,7 +152,6 @@ from project_kit import cli_render, default_branch, refs
 from project_kit.backbone_schemas import CONTAINER_KEY
 from project_kit.friction_discovery import (
     CORE_ANCHOR_KINDS,
-    FRICTION_KEY,
     Anchor,
     AnchorKinds,
     AnchorResolution,
@@ -187,8 +187,10 @@ from project_kit.friction_history import (
     BLOCK,
     Commit,
     Walker,
+    Writes,
     read_history,
-    reason_word,
+    read_writes,
+    reason_words,
     shallow_commits,
 )
 from project_kit.project_config import project_config_path
@@ -209,7 +211,7 @@ ENFORCING = "enforcing"
 _CAPABILITY_RECORD = re.compile(r"^([a-z][a-z0-9-]*[a-z0-9]):(DEC-\d+)((?:-[a-z0-9]+)*)$")
 
 
-# How many `git log -S` searches of the history behind the base run at once.
+# How many readings of the history behind the base run at once.
 _SEARCHES = max(1, min(8, os.cpu_count() or 1))
 
 
@@ -1111,31 +1113,19 @@ def _same_file(artefact: Artefact, before: Artefact, diff: Diff) -> bool:
     return diff.renamed_from.get(artefact.path, artefact.path) == before.path
 
 
-def _needles(artefact: Artefact, value: Any) -> list[str]:
-    """What a file's history must hold somewhere for `value` to have been carried
-    before: its canonical UTC form and the `at` as written, or the block's key — a
-    needle that holds another left out, since every text holding it holds that one."""
-    if value is BLOCK:
-        return [FRICTION_KEY]
-    found: list[str] = []
-    if isinstance(value, datetime) and value.tzinfo is not None:
-        found.append(value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S"))
-    written = revalidated_field(artefact, "at")
-    if isinstance(written, str) and written.strip() and not any(n in written for n in found):
-        found.append(written.strip())
-    return found or [str(value)]
-
-
 class _Behind:
     """The history behind the base, read only where a change alters an artefact's `at` or
     brings a deferral back (COR-050 point 6).
 
-    First, where the clone is not shallow, one `git log -S` search of the
-    artefact's file for what a carrying would hold (`_seen`): no hit, and the
-    value is new. On a hit, the one log from the base (`read_history`), read
-    once per run, and the walk `check --all` makes (`friction_history.Walker`).
-    In a shallow clone the walk always runs, since only it tells what the cut
-    hides; each artefact read without history beyond the cut is listed (`cut`).
+    First, where the clone is not shallow, one `git log -p` reading of the
+    artefact's file (`read_writes`), shared by every artefact in it: where no
+    commit changed how often the file holds the value, in any spelling, the
+    value is new. Otherwise the one log from the base (`read_history`), read
+    once per run, and the walk `check --all` makes (`friction_history.Walker`)
+    over the commits that reading listed. A deferral's reason is sought word by
+    word (`_ever_held`). In a shallow clone the walk always runs, since only it
+    tells what the cut hides; each artefact read without history beyond the cut
+    is listed (`cut`).
     """
 
     def __init__(self, root: Path, base: BaseState, named: HeadState | None, head: Side) -> None:
@@ -1145,7 +1135,8 @@ class _Behind:
         self._head = head
         self.shallow = bool(shallow_commits(root))
         self.cut: list[str] = []
-        self._searched: dict[tuple[str, tuple[str, ...]], frozenset[str]] = {}
+        self._writes: dict[str, Writes] = {}
+        self._held: dict[tuple[str, str], bool] = {}
         self._blobs: BlobReader | None = None
         self._walker: Walker | None = None
         self._states: dict[str, tuple[Side, Diff]] = {}
@@ -1163,60 +1154,64 @@ class _Behind:
         return self._walker
 
     def prefetch(self, pairs: Iterable[tuple[Artefact, Artefact]], diff: Diff) -> None:
-        """Run at once the searches `written_back` will make for these (head, base)
-        artefacts — those whose `at` the diff changes, in the same file — each its own
-        `git log -S` process, so a change revalidating many artefacts waits about as long
-        as for one."""
-        wanted: list[tuple[str, tuple[str, ...]]] = []
+        """Read at once the files `written_back` will read for these (head, base)
+        artefacts — those whose `at` the diff changes, in the same file — each file once,
+        however many of its artefacts the change revalidates, and several files side by
+        side, so a change revalidating many artefacts waits about as long as for one."""
+        wanted: list[str] = []
         for artefact, before in pairs:
-            at = parsed_at(artefact)
-            if at == parsed_at(before) or not _same_file(artefact, before, diff):
+            if parsed_at(artefact) == parsed_at(before) or not _same_file(artefact, before, diff):
                 continue
-            key = (before.path, tuple(_needles(artefact, BLOCK if at is None else at)))
-            if key not in self._searched and key not in wanted:
-                wanted.append(key)
+            if before.path not in self._writes and before.path not in wanted:
+                wanted.append(before.path)
         if self.shallow or len(wanted) < 2:
             return
 
-        def search(key: tuple[str, tuple[str, ...]]) -> frozenset[str]:
-            return self._search(*key)
+        def read(path: str) -> Writes:
+            return read_writes(self._root, self._base.commit, path)
 
         with ThreadPoolExecutor(max_workers=min(len(wanted), _SEARCHES)) as pool:
-            for key, commits in zip(wanted, pool.map(search, wanted), strict=True):
-                self._searched[key] = commits
+            for path, found in zip(wanted, pool.map(read, wanted), strict=True):
+                self._writes[path] = found
 
-    def _seen(self, path: str, needles: Sequence[str]) -> frozenset[str] | None:
-        """The commits behind the base that changed how often the file at `path` —
-        renames followed, a merge read against each parent — holds one of `needles`:
-        empty where none did. `None` in a shallow clone, where only the walk tells what
-        the cut hides."""
+    def _writes_of(self, path: str) -> Writes | None:
+        """The times the file at `path` was written with behind the base (`read_writes`);
+        `None` in a shallow clone, where only the walk tells what the cut hides."""
         if self.shallow:
             return None
-        key = (path, tuple(needles))
-        if key not in self._searched:
-            self._searched[key] = self._search(*key)
-        return self._searched[key]
+        found = self._writes.get(path)
+        if found is None:
+            found = self._writes[path] = read_writes(self._root, self._base.commit, path)
+        return found
 
-    def _search(self, path: str, needles: Sequence[str]) -> frozenset[str]:
-        """`git log -S<needle>` for each needle, a fixed string — git finds one far faster
-        than a pattern — and the commits they list."""
-        found: set[str] = set()
-        for needle in needles:
-            listed = run_git(
-                self._root,
-                "log",
-                "-m",
-                "--follow",
-                "--root",
-                "--no-color",
-                "--format=%H",
-                f"-S{needle}",
-                self._base.commit,
-                "--",
-                path,
-            ).stdout
-            found.update(listed.decode().split())
-        return frozenset(found)
+    def _ever_held(self, path: str, words: Sequence[str]) -> bool:
+        """Whether some version of the file at `path`, behind the base, held each of
+        `words` (`reason_words`): one `git log -S` per word, the longest first, stopping
+        at the first that lists no commit — a version that first held a word changed
+        how often the file holds it, so a word no commit lists was never there, and
+        neither was a reason with it. Always `True` in a shallow clone."""
+        if self.shallow:
+            return True
+        for word in words:
+            key = (path, word)
+            if key not in self._held:
+                listed = run_git(
+                    self._root,
+                    "log",
+                    "-m",
+                    "--follow",
+                    "--root",
+                    "--no-color",
+                    "--format=%H",
+                    f"-S{word}",
+                    self._base.commit,
+                    "--",
+                    path,
+                ).stdout
+                self._held[key] = bool(listed.strip())
+            if not self._held[key]:
+                return False
+        return True
 
     def _note_cut(self, artefact: Artefact) -> None:
         if artefact.location not in self.cut:
@@ -1226,13 +1221,14 @@ class _Behind:
         """The `at` the diff writes back for `artefact` (`_WrittenBack`), or `None` where
         `at` held or the value is new. An `at` removed writes back the block's own
         marker: it is judged against the commit that first introduced the block. Only
-        the commits the search lists can have written the value, so the walk reads
-        no other version (`Walker.carried`)."""
+        the commits the file's reading lists for the value (`Writes.of`) can have
+        written it, so the walk reads no other version (`Walker.carried`)."""
         at = parsed_at(artefact)
         if at == parsed_at(before) or not _same_file(artefact, before, diff):
             return None
         value = BLOCK if at is None else at
-        listed = self._seen(before.path, _needles(artefact, value))
+        writes = self._writes_of(before.path)
+        listed = None if writes is None else writes.of(value)
         if listed is not None and not listed:
             return None
         history = self.walker.history
@@ -1274,14 +1270,14 @@ class _Behind:
         self, artefact: Artefact, before: Artefact, anchor: Anchor, diff: Diff
     ) -> _PutBack | None:
         """The deferral on `anchor` the diff introduces, where it puts back an entry the
-        artefact carried before (`_PutBack`); `None` where it is new."""
+        artefact carried before (`_PutBack`); `None` where it is new — sure of it, with
+        no walk, where the file never held some word of its reason (`_ever_held`)."""
         if not _same_file(artefact, before, diff):
             return None
         reason = next(
             (entry_reason(artefact, d) for d in artefact.deferrals if d.anchor == anchor), None
         )
-        word = reason_word(reason)
-        if word is not None and self._seen(before.path, [word]) == frozenset():
+        if not self._ever_held(before.path, reason_words(reason)):
             return None
         found = self.walker.deferral_point(before, anchor, reason)
         if found.cut:

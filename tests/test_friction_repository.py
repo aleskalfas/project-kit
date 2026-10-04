@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +18,7 @@ import pytest
 from click.testing import CliRunner
 
 from project_kit import friction_check as fc
+from project_kit import friction_history as fh
 from project_kit import friction_repository as fr
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor
@@ -2086,3 +2087,128 @@ def test_a_value_first_written_by_a_merge_resolution_is_found_by_the_write_back_
     repo.checkout("main")
     timeline.merge("undo")
     assert _point(_run(timeline)) == history.merge
+
+
+# --- an `at` in any spelling YAML's timestamp grammar allows (COR-050 point 3) -----------
+#
+# Validation accepts any spelling YAML's timestamp grammar resolves to a UTC instant, so
+# both checks must find a value however it was typed: the walk's byte prefilter and the
+# change check's reading of a file's history (`friction_history.stamps_in`).
+
+
+#: The instant 2026-01-01T09:00:00Z as a hand might type it, each a spelling validation
+#: accepts — unquoted, the parsed time is what is checked; quoted, only the canonical form.
+SPELLINGS = {
+    "space": "2026-01-01 09:00:00Z",
+    "lowercase-t": "2026-01-01t09:00:00Z",
+    "unpadded": "2026-1-1 9:00:00Z",
+    "spaces-and-zone": "2026-01-01   09:00:00 Z",
+    "fraction": "2026-01-01T09:00:00.000Z",
+    "utc-offset": "2026-01-01 09:00:00 +00:00",
+    "two-lines": "2026-01-01\n        09:00:00Z",
+    "quoted": '"2026-01-01T09:00:00Z"',
+    "unquoted": "2026-01-01T09:00:00Z",
+}
+
+
+def _typed_guide(at: str, because: str = "the CLI surface is as described") -> str:
+    """The guide anchored to the CLI and to COR-050, its front matter in block YAML, so
+    `at` stands in the file exactly as typed."""
+    return (
+        "---\nid: guide\npkit:\n  friction:\n    anchors:\n      path: [src/cli/**]\n"
+        "      record: [COR-050]\n    revalidated:\n"
+        f"      at: {at}\n      outcome: unchanged\n      unchanged-because: {because}\n"
+        "---\n\nBody.\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "written",
+    [*SPELLINGS.values(), "2026-01-01T11:00:00+02:00", "2026-01-01 04:00:00 -05"],
+)
+def test_every_spelling_of_a_time_reads_as_the_instant_it_denotes(written: str) -> None:
+    assert fh.stamps_in(f"at: {written}\n".encode()) == {"2026-01-01T09:00:00": 1}
+
+
+def test_the_history_reading_lists_a_time_changed_in_its_last_digit(timeline: Timeline) -> None:
+    """A collection's front matter is one line, so a revalidation that changes one entry's
+    `at` in its last digit shares all but that with the line before it: the reading still
+    lists the commit for both times, and for no time it left alone."""
+    base = timeline.start(
+        {"docs/rules.md": _rules(**{"RS-1": {"at": "2026-10-01T09:00:01Z"}, "RS-2": {"at": T1}})}
+    )
+    changed = timeline.commit(
+        "revalidate RS-1",
+        {
+            "docs/rules.md": _rules(
+                **{"RS-1": {"at": "2026-10-01T09:00:02Z", "because": "checked"}, "RS-2": {"at": T1}}
+            )
+        },
+    )
+
+    def at(text: str) -> datetime:
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+
+    writes = fh.read_writes(timeline.adopter.root, "HEAD", "docs/rules.md")
+    assert writes.of(at("2026-10-01T09:00:02Z")) == {changed}
+    assert writes.of(at("2026-10-01T09:00:01Z")) == {base, changed}
+    assert writes.of(at(T1)) == {base}
+
+
+@pytest.mark.parametrize("spelling", sorted(SPELLINGS))
+def test_reverting_a_revalidation_back_to_a_stamp_in_any_spelling_brings_back_its_debt(
+    timeline: Timeline, spelling: str
+) -> None:
+    """The critic's history A: c0 types its `at` in one spelling; Y amends the record,
+    unanswered; X amends it again and revalidates with a canonical `at`; a branch reverts
+    X. The value written back is found whatever its spelling: the change check judges it
+    against c0 and asks about the record — enforcing mode fails — and once landed the
+    guide is stale from Y, at c0."""
+    repo = timeline.adopter
+    base = timeline.start(
+        {"docs/guide.md": _typed_guide(SPELLINGS[spelling])}, friction_config(mode="enforcing")
+    )
+    text = _record(timeline)
+    owed = timeline.commit("Y: amend the record", {RECORD: text + "\nY.\n"})
+    answered = timeline.commit(
+        "X: amend the record again, revalidate the guide",
+        {
+            RECORD: text + "\nY.\n\nX.\n",
+            "docs/guide.md": _typed_guide(T2, "checked against Y and X"),
+        },
+    )
+    repo.checkout("undo", create=True)
+    timeline.revert(answered)
+
+    change = fc.run_change_check(repo.root, "main")
+    assert _friction(change) == [("docs/guide.md", "record:COR-050")]
+    assert change.failed
+    assert [a.status for a in change.answers] == [fc.AnswerStatus.WRITTEN_BACK]
+    repo.checkout("main")
+    timeline.merge("undo")
+    result = _run(timeline)
+    assert _point(result) == base
+    assert _summary(result) == [("stale", "docs/guide.md", "record:COR-050", owed)]
+
+
+@pytest.mark.parametrize("spelling", sorted(SPELLINGS))
+def test_restating_a_stamp_in_another_spelling_is_no_revalidation(
+    timeline: Timeline, spelling: str
+) -> None:
+    """The critic's history B: c0 types its `at` in one spelling; Y changes the CLI; F
+    writes the same instant in another. F is no revalidation: the change check lists no
+    answer, and once landed the point is still c0 and Y's debt stays."""
+    repo = timeline.adopter
+    base = timeline.start({"docs/guide.md": _typed_guide(SPELLINGS[spelling])})
+    owed = timeline.commit("Y: change the CLI", {"src/cli/main.py": "print('Y')\n"})
+    repo.checkout("restate", create=True)
+    restated = SPELLINGS["unpadded" if spelling == "quoted" else "quoted"]
+    timeline.commit("F: restate the stamp", {"docs/guide.md": _typed_guide(restated)})
+
+    change = fc.run_change_check(repo.root, "main")
+    assert (change.findings, change.answers) == ((), ())
+    repo.checkout("main")
+    timeline.merge("restate")
+    result = _run(timeline)
+    assert _point(result) == base
+    assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", owed)]
