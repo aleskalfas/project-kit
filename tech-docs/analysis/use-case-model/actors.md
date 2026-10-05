@@ -18,6 +18,22 @@ ACT-adopter:
         record:
           - COR-001
           - COR-010
+ACT-operator:
+  name: Operator
+  status: active
+  needs:
+    - Let agents work on their own without a stream of confirmations, and know where their confinement does not hold.
+    - Be asked before an agent changes a repository other than the session's own, so it never happens silently.
+    - Find out why a command prompted me or was blocked, and what would stop it happening again.
+    - Keep my per-machine choices (sandbox allowances, sockets, local settings) out of what the project commits.
+    - Run each project at the version it pins, and be told plainly when it falls back to my installed tool.
+    - Get a fresh clone ready to work with one sync.
+  pkit:
+    friction:
+      anchors:
+        record:
+          - COR-028
+          - COR-039
 ---
 
 # Actors
@@ -27,3 +43,7 @@ Who uses the system, and what each needs from it. Each actor's id is stable; its
 ## ACT-adopter — Adopter
 
 The person who adopts the methodology for a project and keeps its setup: what is installed, at which version, which of their own additions sit beside it, and which checks the project's merges wait on. They come at setup, at each upgrade, and when the project needs a discipline. They bring their project, its existing `CLAUDE.md` and settings, its repository settings, and the rules and grants they add. Core: the split between methodology-owned and project-owned files, and the install and upgrade lifecycle, exist for this role. Installing a capability is itself a core act.
+
+## ACT-operator — Operator
+
+The person at the controls of a machine. They start agent sessions, choose how much the agents may do without asking, and answer what the methodology gates. They come every working day, in every clone, bringing the machine, its credentials and sandbox, and the judgement the gates ask for. The role is per machine and per clone; it is not whoever holds the repository's settings, whom CONTRIBUTING.md also calls the operator (:65, :67), since making merges wait on the checks is the adopter's. Core: the permission model, its sandbox and the cross-repository gate are this role's controls.
