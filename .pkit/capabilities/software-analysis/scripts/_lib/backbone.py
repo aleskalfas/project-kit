@@ -43,10 +43,17 @@ added under the folders of the places the backbone names, with the commit that
 added it (`added`: one `git log`, since the backbone's reading is of one state,
 not of a history) — git lists the paths, and which of them were files of a
 place, not left out by `friction.exclude`, the backbone's reading at that
-commit says (`_lib/history.py`); for the number comparison, which versions of those files a
-branch's own history wrote, and which the default branch holds, so a number
-the default branch took by landing this branch's own work is told from one it
-took for another (`blobs_written`, `blob_of`); and, for the
+commit says (`_lib/history.py`); for both, which commit an entry of the
+numbering setting names, whether the default branch's history holds it, which
+files it removed, git's rename detection on, and the commit of the default
+branch's first-parent line at which each of those paths was removed last
+(`commit_of`, `is_ancestor`, `removed`, `lost`; `_lib/numbering.py`) — the
+last two saying when git fails, so a fault of the clone or of git is told from
+one of the setting; for the
+number comparison, which versions of those files a branch's own history wrote,
+and which the default branch holds, so a number the default branch took by
+landing this branch's own work is told from one it took for another
+(`blobs_written`, `blob_of`); and, for the
 proposal, which files held a piece of code at a commit — anywhere in the tree,
 or among files the caller names — where files were renamed to between two
 commits, and a commit's message. Which files an anchor stands on is never
@@ -326,6 +333,45 @@ def added(root: Path, revisions: str, folders: Iterable[str]) -> list[tuple[str,
         "--",
         *pathspecs,
     )
+    return _listing(listed)
+
+
+class GitFailed(Exception):
+    """Git could not answer: what it said, or why it could not be run."""
+
+
+def lost(root: Path, tip: str, paths: Iterable[str]) -> dict[str, str]:
+    """Each of `paths` the first-parent line of `tip` lost, with the newest commit of that
+    line at which it went — deleted, or renamed away, against the commit's first parent;
+    a path it never lost is not there. One `git log`, each path taken literally; it
+    needs git 2.31 or later (`--diff-merges`). Raises `GitFailed` when git cannot
+    answer."""
+    pathspecs = [f":(literal){path}" for path in sorted(set(paths))]
+    if not pathspecs or not tip or tip.startswith("-"):
+        return {}
+    listed = _answer(
+        root,
+        "log",
+        tip,
+        "--first-parent",
+        "--diff-merges=first-parent",  # a merge, against the line it lies on
+        "-z",
+        "--no-renames",
+        "--diff-filter=D",
+        "--format=%x01%H",
+        "--name-only",
+        "--",
+        *pathspecs,
+    )
+    found: dict[str, str] = {}
+    for commit, path in _listing(listed):
+        found.setdefault(path, commit)  # newest first
+    return found
+
+
+def _listing(listed: str | None) -> list[tuple[str, str]]:
+    """Each path a `git log -z --format=%x01%H --name-only` listing names, with its commit,
+    in the listing's order."""
     found: list[tuple[str, str]] = []
     commit = ""
     for field in (listed or "").split("\0"):
@@ -335,6 +381,41 @@ def added(root: Path, revisions: str, folders: Iterable[str]) -> list[tuple[str,
         elif field and commit:
             found.append((commit, field))
     return found
+
+
+def is_ancestor(root: Path, commit: str, of: str) -> bool:
+    """Whether `commit` is `of` or in its history — no commit of `commit`'s history lies
+    outside `of`'s; `False` when git cannot answer."""
+    if not commit or not of or commit.startswith("-") or of.startswith("-"):
+        return False
+    argv = ["git", "rev-list", "-n", "1", commit, f"^{of}", "--"]
+    try:
+        proc = subprocess.run(argv, cwd=root, capture_output=True, text=True, check=False)
+    except OSError:
+        return False
+    return proc.returncode == 0 and not proc.stdout.strip()
+
+
+def removed(root: Path, commit: str) -> list[str]:
+    """Each path `commit` deleted, against its first parent, git's rename detection on
+    over the whole tree and unbounded — so a file it renamed, wherever to, is not
+    among them. Raises `GitFailed` when git cannot answer — for a commit whose parent
+    this clone does not hold, or one with none."""
+    if not commit or commit.startswith("-"):
+        return []
+    listed = _answer(
+        root,
+        "diff",
+        "--no-ext-diff",
+        "-M",
+        "-l0",  # no limit: past one, git would read a rename as a deletion
+        "--diff-filter=D",
+        "--name-only",
+        "-z",  # every path as written, never quoted
+        f"{commit}^",
+        commit,
+    )
+    return [path for path in (listed or "").split("\0") if path]
 
 
 def is_shallow(root: Path) -> bool:
@@ -411,3 +492,15 @@ def _git(root: Path, *args: str) -> str | None:
         return None
     out = proc.stdout.strip()
     return out if proc.returncode == 0 and out else None
+
+
+def _answer(root: Path, *args: str) -> str:
+    """What git prints, empty or not; `GitFailed`, with git's last line, when it fails."""
+    try:
+        proc = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=False)
+    except OSError as exc:
+        raise GitFailed(f"git could not be run ({exc})") from exc
+    if proc.returncode != 0:
+        detail = [line for line in proc.stderr.strip().splitlines() if line]
+        raise GitFailed(detail[-1] if detail else f"git {args[0]} exited {proc.returncode}")
+    return proc.stdout.strip()

@@ -1,0 +1,13 @@
+component: project-management
+kind: patch
+custom:
+  category: Changed
+body: >
+  The use-case point's contract for its filler (DEC-054 point 2) states its
+  one exception: an id, once settled, names the same use case for good,
+  unless the project declares that nothing cites it. Such a use case may
+  then leave the value, and its id may later name a different use case.
+  Anything that keeps an id is citing it. The point's description, its
+  companion schema and the README say so. The point stays at version 1: a
+  data point's counterparts are its contributors, and loosening an
+  obligation on fillers breaks no existing filler (COR-053 point 5).

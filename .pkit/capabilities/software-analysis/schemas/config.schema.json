@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "config.schema.json",
+  "title": "Settings file — software-analysis capability",
+  "description": "Formal shape of the project's `.pkit/capabilities/software-analysis/project/config.yaml`: the settings of the capability a project chooses. The capability's README describes each setting, in its section \"Configuration\". This schema checks the shape only. The stamp (`pkit analysis new`) and the number check (`pkit analysis check-numbers`) ask git whether each entry holds. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "binds_to": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Repo-relative globs matching the adopter-data files this schema validates (COR-023 fallback binding). Present on the capability-side carrier; absent from a project's file."
+    },
+    "pkit_schema": {
+      "type": "string",
+      "description": "Self-describing adopter-data binding (COR-023). Expected value: `software-analysis:config`."
+    },
+    "numbering": {
+      "description": "How use cases and journeys are numbered (DEC-001 point 3).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "freed-by": {
+          "description": "Ids a person declares free again, declaring that nothing cites them: a pilot abandoned before anything cited it, say. Each entry names the commit that removed the artefacts and lists their ids. The stamp gives a listed id again, and the number check does not count it as taken. The README's section \"Configuration\" says what cites an id and which ids a commit can free.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/entry"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "description": "One commit and the ids it frees.",
+      "type": "object",
+      "required": [
+        "commit",
+        "ids"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "commit": {
+          "$ref": "#/$defs/commit-id"
+        },
+        "ids": {
+          "description": "The use cases and journeys the commit removed whose ids are free again. Only a listed id is freed.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "analysis.schema.json#/$defs/use-case-id"
+              },
+              {
+                "$ref": "analysis.schema.json#/$defs/journey-id"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "commit-id": {
+      "description": "A commit, by its full hexadecimal id in lower case — 40 digits, or 64 in a SHA-256 repository: an abbreviation can come to name two commits as history grows. Quoted in YAML, as digits alone can read as a number.",
+      "type": "string",
+      "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+    }
+  }
+}

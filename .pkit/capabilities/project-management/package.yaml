@@ -266,11 +266,15 @@ connections:
           slices the work, and body validation warns of a use case an issue
           body cites that they do not hold. A filler holds to four things: the
           value holds every use case that ever settled, withdrawn ones
-          included; an id, once settled, names the same use case for good; the
-          answer is complete or none — a filler that cannot read a use case
-          gives no answer, never a shorter list; and a capability's filler
-          declares that it reads settled state. One keeper answers, and a
-          project filler replaces its answer whole. No default. Its readers
+          included, but not one whose id the project freed; an id, once
+          settled, names the same use case for good, unless the project
+          declares that nothing cites it — that use case may then leave the
+          value, and its id may later name a different use case; the answer
+          is complete or none — a filler that cannot read a use case gives no
+          answer, never a shorter list; and a capability's filler declares
+          that it reads settled state. Anything that keeps an id is citing
+          it. One keeper answers, and a project filler replaces its answer
+          whole. No default. Its readers
           only report, so a filler that cannot answer is warned, and they say
           the use cases could not be read.
         combination: single

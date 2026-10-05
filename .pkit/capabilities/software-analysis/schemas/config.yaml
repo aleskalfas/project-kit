@@ -1,0 +1,33 @@
+# The software-analysis settings file: the settings of the capability a
+# project chooses. The capability's README describes each, in its section
+# "Configuration".
+#
+# - `numbering.freed-by` — ids a person declares free again, declaring that
+#   nothing cites them: a pilot abandoned before anything cited it, say
+#   (software-analysis DEC-001 point 3). Each entry names the commit that
+#   removed the artefacts, by its full id, quoted, and lists their ids. The
+#   stamp (`pkit analysis new`) gives a listed id again, and the number check
+#   (`pkit analysis check-numbers`) does not count it as taken. The stamp
+#   refuses, and the number check fails on, an entry they cannot honour,
+#   saying why.
+#
+# Document-shaped: the file IS the resource. The body below is the minimal
+# reference instance — valid, the schema's self-test, and the starting point
+# a project edits. Adopter-owned: it lives in the capability's `project/`
+# tier, which sync never touches; uninstalling the capability from a project
+# removes the tier, this file with it.
+
+schema_version: 1
+
+# Adopter-data binding (COR-023). The glob carries the distinguishing segments:
+# a bare `**/config.yaml` would claim the backbone configuration and every
+# other capability's `config.yaml`.
+binds_to:
+  - "**/software-analysis/project/config.yaml"
+
+pkit_schema: software-analysis:config
+
+# --- reference instance -------------------------------------------------
+
+numbering:
+  freed-by: []

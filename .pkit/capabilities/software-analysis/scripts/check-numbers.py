@@ -15,7 +15,10 @@ first to reach the default branch keeps the number, and a number is never used
 again, so this one renumbers before merging (DEC-001 point 3). An artefact is
 known by its id, not its path; a file of the name this branch gives the
 number is a warning — possibly its own work landed; `_lib/numbers.py` states
-the rule.
+the rule. An id the project's numbering setting frees is free again, as the
+stamp counts it, and each entry's are listed; an entry naming what is no
+commit of the default branch's history, or listing an id its commit does not
+free, is an error, numbered here or not (`_lib/numbering.py`).
 
 It reads a base, so it answers about a change rather than the tree: it is its
 own line of a project's check gate, beside `pkit friction check`, and not a
@@ -29,17 +32,20 @@ name it gave the number.
 
 Usage:
   pkit analysis check-numbers [--base <ref>]          the summary and the findings
-  pkit analysis check-numbers [--base <ref>] --json   {schema_version, base, summary, findings}
+  pkit analysis check-numbers [--base <ref>] --json   {schema_version, base, freed, summary,
+                                                       findings}
 
 The base is `--base`, else `$PKIT_CHECK_BASE`, else the project's default
 branch, as the backbone resolves it for every reader (COR-054).
 
 Exit codes:
   0  compared, and no number collides — a warning never fails — or the
-     working tree numbers nothing
-  1  a number collides; or the numbers cannot be compared — the base names no
-     commit, or shares no history with HEAD — said on standard error, with
-     nothing on standard output
+     working tree numbers nothing; and the numbering setting, if any, holds
+  1  a number collides, or an entry of the numbering setting names what is
+     no commit of the default branch's history, or lists an id its commit does
+     not free; or the numbers cannot be compared — the base names no commit,
+     or shares no history with HEAD — said on standard error, with nothing on
+     standard output
   2  a usage error
 """
 
@@ -76,7 +82,7 @@ def main() -> int:
     parser.add_argument(
         "--json",
         action="store_true",
-        help="Print the document {schema_version, base, summary, findings}.",
+        help="Print the document {schema_version, base, freed, summary, findings}.",
     )
     args = parser.parse_args()
 

@@ -9,10 +9,15 @@ the capability's places put it under the analysis location:
   included, and past every number the default branch's history ever gave a
   file of its place, deleted since or not, since a number is never used
   again; a note names the file when the history's number is the one it
-  follows. A file's number is read from its front matter and from its name,
-  so a file whose id cannot be read still holds its number. Numbers two
-  branches take in parallel are `pkit analysis check-numbers`' to report
-  (point 3);
+  follows. Only the project's numbering setting frees a number: an id an
+  entry lists, which the history gave only files the default branch lost by
+  the entry's commit, is not counted, and a note says so when it is one the
+  stamp would have followed; an entry naming what is no commit of the default
+  branch's history, or listing an id its commit does not free, refuses the
+  stamp (`_lib/numbering.py`). A file's number is read from its front matter
+  and from its name, so a file whose id cannot be read still holds its number.
+  Numbers two branches take in parallel are `pkit analysis check-numbers`' to
+  report (point 3);
 - an **actor** or a **term** is a new entry, `ACT-<slug>` or `TERM-<slug>`, of
   its collection file — added to its front matter, and its section to the
   body, each where its id sorts, every other byte left as it was — the file
@@ -73,7 +78,7 @@ from typing import Any
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from _lib import backbone, history, markdown, schemas
+from _lib import backbone, history, markdown, numbering, schemas
 from _lib.model import (
     ACTOR,
     COLLECTIONS,
@@ -170,15 +175,23 @@ def stamp(
     _check_references(analysis, request)
 
     notes: list[str] = []
-    tips = _settled(root, base)
+    branch, tips = _settled(root, base)
     named = " and ".join(dict.fromkeys(ref for ref, _commit in tips))
-    held, past = _held(root, analysis, kind, tips, notes)
+    held, past, freed = _held(root, analysis, kind, branch, tips, notes)
     new_id = _new_id(kind, request.slug, held, named)
     if past is not None:
         notes.append(
             f"{new_id} follows {past.id}, the number {named}'s history gave {past.path} (commit "
             f"{past.commit[: backbone.SHORT]}), which neither {named} nor the working tree holds "
             f"now: a number is never used again (DEC-001 point 3)"
+        )
+    if freed is not None:
+        number, by = freed
+        notes.append(
+            f"{number.id} is free again, freed by {by[: backbone.SHORT]}, as {numbering.NAME} "
+            f"names: {named}'s history gave it {number.path} (commit "
+            f"{number.commit[: backbone.SHORT]}), which {by[: backbone.SHORT]} removed (DEC-001 "
+            f"point 3)"
         )
 
     if kind in COLLECTIONS:
@@ -369,13 +382,14 @@ def _in_force(analysis: Analysis, artefact_id: str, kind: str) -> None:
 # --- the id ----------------------------------------------------------------------------------
 
 
-def _settled(root: Path, base: str | None) -> list[tuple[str, str]]:
+def _settled(root: Path, base: str | None) -> tuple[backbone.Branch, list[tuple[str, str]]]:
     """What the stamp allocates past, as the backbone resolves it (COR-054 point 3):
     the default branch, and `base` when one is named on the command line — each as
-    `(ref, commit)`, one entry per commit. Never the base a pipeline names for its
-    checks, which only a comparison reads. Refused, with the backbone's reason and
-    fix, when either resolves nowhere (point 4). One reading answers both: the
-    default branch it names is the declared one whatever base it is asked for."""
+    `(ref, commit)`, one entry per commit, the default branch's first — with the
+    default branch as read. Never the base a pipeline names for its checks, which
+    only a comparison reads. Refused, with the backbone's reason and fix, when
+    either resolves nowhere (point 4). One reading answers both: the default branch
+    it names is the declared one whatever base it is asked for."""
     try:
         reading = backbone.settled(root, base)
     except Unreadable as exc:
@@ -389,22 +403,28 @@ def _settled(root: Path, base: str | None) -> list[tuple[str, str]]:
         if named.tip is None:
             raise Refused(named.problem or f"the base {base!r} resolves nowhere")
         tips.setdefault(named.tip, named.ref)
-    return [(ref, commit) for commit, ref in tips.items()]
+    return branch, [(ref, commit) for commit, ref in tips.items()]
 
 
 def _held(
     root: Path,
     analysis: Analysis,
     kind: str,
+    branch: backbone.Branch,
     tips: list[tuple[str, str]],
     notes: list[str],
-) -> tuple[set[str], history.Given | None]:
+) -> tuple[set[str], history.Given | None, tuple[history.Given, str] | None]:
     """Every id held, as `identity` spells it — in the working tree, and at each
     settled tip, a file's number read from its name too (`Analysis.held`) — and, for
     a use case or journey, the number of its kind past all of them that a tip's
     history gave a file gone since, which counts as held too (DEC-001 point 3;
-    `_lib/history.py`). An actor's or term's id is a slug a person chooses, and a
-    withdrawn one stays in its collection file, so no history is read for one."""
+    `_lib/history.py`), with the highest past that the numbering setting freed, and
+    the commit that freed it (`_lib/numbering.py`); refused when the setting has a
+    problem — an entry that is no commit of the default branch's history, or an id it
+    lists that its commit does not free — and noting each id a named commit would free
+    that no entry lists, which stays taken. An actor's or term's id is a slug a person
+    chooses, and a withdrawn one stays in its collection file, so no history is read
+    for one."""
     held = analysis.held()
     named = " and ".join(ref for ref, _commit in tips)
     readings = [analysis]
@@ -416,7 +436,14 @@ def _held(
         held |= on_tip.held()
         readings.append(on_tip)
     if kind not in NUMBERED:
-        return held, None
+        return held, None, None
+    setting = numbering.resolve(root, numbering.read(root), branch)
+    numbered = {analysis.places[k] for k in NUMBERED if k in analysis.places}
+    freeing = numbering.freeing(root, setting, branch.commit, numbered)
+    problems = (*setting.problems, *freeing.problems)
+    if problems:
+        raise Refused(f"{numbering.NAME}, {problems[0].location}: {problems[0].message}")
+    notes += [f"{numbering.NAME}, {said.location}: {said.message}" for said in freeing.reports]
     if backbone.is_shallow(root):
         notes.append(
             f"history: shallow clone — {named}'s history was read back to where the clone "
@@ -425,12 +452,15 @@ def _held(
         )
     folders = {state.places[kind] for state in readings if kind in state.places}
     top = max(_numbers(kind, held), default=0)
-    judge = history.Judge(root, readings)
+    judge = history.Judge(root, readings, freeing.files)
     given = [number for _ref, tip in tips for number in history.given(root, tip, folders)]
     past = history.highest(judge, given, kind, above=top)
     if past is not None:
         held.add(past.id)
-    return held, past
+    freed = history.freed_past(
+        judge, given, kind, above=top if past is None else number_of(past.id)
+    )
+    return held, past, freed
 
 
 def _numbers(kind: str, held: set[str]) -> list[int]:

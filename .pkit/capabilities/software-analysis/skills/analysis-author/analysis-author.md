@@ -94,3 +94,5 @@ An actor or term that no code and no decision embodies — a sponsor, an outside
 ### Withdrawing, never deleting
 
 An artefact is withdrawn, never deleted: set its `status` to `withdrawn` and keep the file or the entry, so that records and journeys citing it still resolve. Its id is never used again. An artefact in force never rests on a withdrawn one — withdraw or re-point the use cases of an actor before withdrawing the actor, or the check refuses them.
+
+The one exception is a pilot abandoned before anything cited it. To clear one so the analysis numbers from `UC-001` again, delete its files in one commit and declare their ids free in the numbering setting (the capability's README, "Configuration"). An entry there is a person's declaration that nothing cites those ids, and the README says what cites an id: an agent following this skill may propose one, showing the ids, where it looked and what it found, and never writes one to make a check pass. Where anything cites them, restore the artefacts as withdrawn instead.
