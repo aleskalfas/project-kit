@@ -36,6 +36,19 @@ ACT-developer:
       anchors:
         record:
           - COR-009
+ACT-merge-authoriser:
+  name: Merge authoriser
+  status: active
+  needs:
+    - See every answer the change wrote on its artefacts, word for word from the check's own list, before I authorise its merge.
+    - Have my authorisation cover only what I was shown, and be asked again for anything written or reworded after.
+    - Be shown the same list before an agent commits straight to the default branch for me.
+    - Have a decision record or rule an agent drafted become binding only through my own review of it.
+  pkit:
+    friction:
+      anchors:
+        record:
+          - COR-050
 ACT-operator:
   name: Operator
   status: active
@@ -65,6 +78,10 @@ The person who adopts the methodology for a project and keeps its setup: what is
 ## ACT-developer — Developer
 
 The person who builds: decisions, rules, notes, code and its documentation, one change at a time. They come for every unit of work, and again when some work recurs often enough to deserve tooling of its own. They bring the change and direct agents to make it. Core: every change passes the acceptance gate and the friction check, whatever tracks the work, and lands as COR-009 sets out. That the backbone itself lands pull requests is provisional (ADR-061 point 3, raised as #1222). A work tracker's view of this role (project-management's "Implementer") comes with that capability.
+
+## ACT-merge-authoriser — Merge authoriser
+
+The person who authorises a change's merge into the default branch. Where work is committed there directly, it is the person the agent works for, before the commit. Always a person: the authorisation turns the answers an agent wrote into a person's decision, and the same person's review turns a record or rule an agent drafted into a binding one. They come at the end of each piece of work, and whenever a drafted record or rule waits for acceptance. They bring the authority to land the change. The name is not "approver", because project-management uses that word for a reviewer agent (DEC-028). Core: COR-050 point 3 defines this role, for a merge and a direct commit alike, and the acceptance gate gives it acceptance, so it exists with no work tracker installed.
 
 ## ACT-operator — Operator
 
