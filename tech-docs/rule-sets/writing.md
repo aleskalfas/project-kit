@@ -99,7 +99,7 @@ Put a series of three or more items in a list with a lead-in when any item is a 
 - **How:**
   - The lead-in is a label or a sentence that says what the list holds. Nest a list where an item has parts of its own.
   - A series of two stays in the sentence, and so does a series of short phrases, such as "decisions, rules, notes, code and its documentation".
-  - Text that an inheriting set's rule holds to one sentence is exempt, such as an actor's need (RS-ANALYSIS-001). Table cells are exempt too, since a cell holds no list.
+  - Text that an accepted decision record holds to one sentence is exempt. An example is an actor's need or a use case's goal (software-analysis DEC-001 point 1). Table cells are exempt too, since a cell holds no list.
 - **Breaks the rule:** "That can be an adopter growing a discipline in their own repository, an organisation that keeps private methodology in one repository for its others, or whoever adapts the methodology to a new harness."
 - **Keeps the rule:** "**Can be:**", then one list item for each of the three. The label is the core actors', since the plain rewrite's *Who this can be* holds a pronoun (RS-WRITE-002).
 - **Breaks the rule on a page:** in the CLI reference's friction section, "**Writes only with consent** — the consent rule of the configuration writer (COR-048 point 5), applied to the project's artefacts: `--yes` consents non-interactively; on a terminal without it the command shows the diff and asks; …"
@@ -142,7 +142,7 @@ Keep every sentence to 25 words or fewer, and count the words in parentheses too
 
 Give each sentence of prose one idea.
 
-- **How:** split where one idea ends, then check that the parts still agree (RS-WRITE-013). Text that an inheriting set's rule holds to one sentence follows that rule instead, such as an actor's need (RS-ANALYSIS-001).
+- **How:** split where one idea ends, then check that the parts still agree (RS-WRITE-013). Text that an accepted decision record holds to one sentence is exempt. An example is an actor's need or a use case's goal (software-analysis DEC-001 point 1).
 - **Breaks the rule:** "They bring the methodology's disciplines (CONTRIBUTING.md), and they are the first adopter of what they ship."
 - **Keeps the rule:** "**Brings:** the methodology's disciplines (CONTRIBUTING.md). They are the first adopter of what they ship." The label is the core actors', in place of the plain rewrite's *What they bring* (RS-WRITE-002).
 - **Breaks the rule on a page:** in the CLI reference's section on `friction check`, "It reads the artefacts, never a pull-request description, so it runs the same in CI, for a pull request from any tool, and locally before a commit."
