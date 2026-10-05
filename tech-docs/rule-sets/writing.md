@@ -70,6 +70,7 @@ Open each section with one sentence that says what matters most in it.
 
 - **How:**
   - Keep that sentence to what matters most, and put the detail in the lines below it.
+  - A section that is only a list, such as a revalidation record's *Outcomes*, needs no opening sentence: its heading says what the list holds. A section may stay empty, such as a glossary term's when the one-sentence definition suffices.
   - Table cells are exempt, since a cell is not a section.
 - **Breaks it:** "The person who adopts the methodology for a project and keeps its setup: what is installed, at which version, which of their own additions sit beside it, and which checks the project's merges wait on."
 - **Keeps it:** "The person who adopts the methodology for a project and keeps its setup." The setup follows as a labelled list.
