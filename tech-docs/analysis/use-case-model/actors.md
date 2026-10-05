@@ -18,6 +18,20 @@ ACT-adopter:
         record:
           - COR-001
           - COR-010
+ACT-ai-agent:
+  name: AI agent
+  status: active
+  needs:
+    - Start every session with the project's rules and conventions loaded.
+    - Find my role definition deployed, with the project's own paths filled in and my own permission grants applied.
+    - Create a methodology artefact through its paired skill and stamp, so its id, place and front matter come out right.
+    - Keep my intermediate files in a workspace that no commit carries and no confirmation guards.
+    - Get a delegated agent's result back whole, never cut short while still reading as complete.
+  pkit:
+    friction:
+      anchors:
+        record:
+          - COR-013
 ACT-component-author:
   name: Component author
   status: active
@@ -107,6 +121,10 @@ Who uses the system, and what each needs from it. Each actor's id is stable; its
 ## ACT-adopter — Adopter
 
 The person who adopts the methodology for a project and keeps its setup: what is installed, at which version, which of their own additions sit beside it, and which checks the project's merges wait on. They come at setup, at each upgrade, and when the project needs a discipline. They bring their project, its existing `CLAUDE.md` and settings, its repository settings, and the rules and grants they add. Core: the split between methodology-owned and project-owned files, and the install and upgrade lifecycle, exist for this role. Installing a capability is itself a core act.
+
+## ACT-ai-agent — AI agent
+
+An AI agent working under the methodology: the main session acting for a person, or an agent that session dispatches for one role (in the core: critic, architect, methodology-reviewer, convention-compliance-reviewer, process-author). It is another system acting on this one. It comes whenever work is done, and it keeps no memory between sessions beyond what the repository holds. When it does a role's work it appears as a step in that role's use cases. The core's reviewer agents advise, and no core gate counts their verdict. Core: the agent architecture, the rules loaded into every session and the adapter's deployment make this actor exist.
 
 ## ACT-component-author — Component author
 
