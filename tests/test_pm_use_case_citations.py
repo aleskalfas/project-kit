@@ -815,8 +815,16 @@ def verbs(
         return run(ei, ["edit-issue", "7", *root, "--body-file", str(body_file), "--dry-run"])
 
     def create(body: str, kind: str = "task") -> tuple[int, str]:
+        # `--parent 10` is read through the containment seam's record read, as a
+        # Feature, which a Task may sit under: create-issue holds a parent to the
+        # containment graph, and refuses one it cannot read.
         def gh(cmd: list[str], *_a: Any, **_kw: Any) -> Any:
-            stdout = json.dumps({"title": "[Feature] A capability"}) if "view" in cmd else ""
+            record = cmd[:2] == ["gh", "api"] and cmd[-1] == "repos/{owner}/{repo}/issues/10"
+            stdout = (
+                json.dumps({"number": 10, "title": "[Feature] A capability", "labels": []})
+                if record
+                else ""
+            )
             return subprocess.CompletedProcess(cmd, 0, stdout, "")
 
         monkeypatch.setattr(ci.subprocess, "run", gh)

@@ -15,6 +15,20 @@ use-case point, read only for a Feature or Task body that cites one
 (DEC-054). Emits findings tagged by the severity tokens from
 validation-severity.yaml (hard-reject / bypassable-with-audit / warning).
 
+The issue's parent is held to issue-types.yaml's containment graph
+([project-management:DEC-005-linking-and-containment]), under either hierarchy
+mode: an issue already under a parent its type may not sit under is reported —
+never rewritten — at a hard-reject under `--phase create` and a warning under
+`--phase transition` (`containment_graph.existing_violation_severity`). The
+parent judged is the one the containment seam resolves
+(`containment.resolve_parent`, one read of the issue's record): the native parent
+wherever one was read, else the one the first line asserts under an issue
+type's own label. Its type is read once more, only where there is a parent to
+judge; both types are told through the substrate map's vocabulary where one is
+present (`containment_graph.issue_type`). A parent that cannot be read, or one in
+another repository, is reported at warning as not checked, never as a
+violation; an issue or a parent whose type cannot be told draws nothing.
+
 Which substrate carries each classification axis — and therefore what the
 presence gate may demand — is asked of `_lib/axis_carriage`, never of the board
 flag directly ([project-management:DEC-051-axis-carriage-activation] decision
@@ -58,6 +72,8 @@ from _lib import (
     body_parent_ref,
     bootstrap_gate,
     classification_rules,
+    containment,
+    containment_graph,
     title_rules,
     use_case_citations,
 )
@@ -197,6 +213,7 @@ def main() -> int:
         phase=args.phase,
         hierarchy=hierarchy,
         substrate_map=substrate_map,
+        issue_number=args.issue_number,
         # The use-case point (DEC-054): read only for a Feature or Task body
         # that cites a use case.
         use_cases=use_case_citations.read_point,
@@ -235,8 +252,13 @@ def _validate_issue(
     phase: str = PHASE_TRANSITION,
     hierarchy: str = axis_labels.HIERARCHY_GATED,
     substrate_map: axis_labels.SubstrateMap | None = None,
+    issue_number: int | None = None,
     use_cases: use_case_citations.Reader | None = None,
 ) -> list[Finding]:
+    """The issue's findings. ``issue_number`` given, the containment check is
+    made — the one check that reads the tracker: the issue's record, for its
+    native parent, and its parent's, for the parent's type; omitted, it is
+    not."""
     findings: list[Finding] = []
     title = str(issue.get("title", ""))
     body = str(issue.get("body") or "")
@@ -777,6 +799,45 @@ def _validate_issue(
                                 f"parent-refs are recorded but not required.",
                             )
                         )
+
+        # The issue's parent, held to the containment graph (DEC-005) whatever
+        # the hierarchy mode, since the graph carries no knob to soften
+        # (DEC-036 D4), and not rewritten. The parent judged is the one the
+        # containment seam resolves — the native parent wherever one was read,
+        # else the one the first line asserts — and both types are told as every
+        # check tells them, by `containment_graph.issue_type`: through the
+        # substrate map where one is present. Here it agrees with this verb's own
+        # reading of the issue's type above; asking it keeps the writers and
+        # this report from typing a pair two ways.
+        if issue_number is not None:
+            child_type = containment_graph.issue_type(
+                title,
+                issue_types,
+                classification=classification,
+                substrate_map=substrate_map,
+                labels=labels,
+            )
+            resolution = containment.resolve_parent(
+                config,
+                issue_number=issue_number,
+                structural_type=child_type,
+                issue_types=issue_types,
+                body=body,
+            )
+            for severity, label, detail in containment_graph.parent_findings(
+                resolution,
+                child_type,
+                issue_types,
+                phase=phase,
+                read=lambda number: containment_graph.read_parent(
+                    number,
+                    config,
+                    issue_types,
+                    classification=classification,
+                    substrate_map=substrate_map,
+                ),
+            ):
+                findings.append(Finding(severity, label, detail))
 
         # Residual-placeholder detection per DEC-031.
         if capability_root is not None:

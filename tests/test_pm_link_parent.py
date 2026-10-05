@@ -72,8 +72,9 @@ def _stage(tmp_path: Path, *, containment: str | None = None) -> Path:
     return root
 
 
-def _issue(number: int, title: str, body: str, state: str = "OPEN") -> dict:
-    return {"number": number, "title": title, "body": body, "state": state}
+def _issue(number: int, title: str, body: str, state: str = "OPEN", labels=()) -> dict:
+    labelled = [{"name": name} for name in labels]
+    return {"number": number, "title": title, "body": body, "state": state, "labels": labelled}
 
 
 def _tracker() -> list[dict]:
@@ -749,10 +750,17 @@ def schemas() -> tuple[dict, dict]:
     )
 
 
-def _classify(lp, schemas, rows, number, *, complete=True):
+def _classify(lp, schemas, rows, number, *, complete=True, substrate_map=None):
     issue_types, classification = schemas
     by_number = {row["number"]: row for row in rows}
-    return lp.classify(number, by_number, issue_types, classification, corpus_complete=complete)
+    return lp.classify(
+        number,
+        by_number,
+        issue_types,
+        classification,
+        corpus_complete=complete,
+        substrate_map=substrate_map,
+    )
 
 
 def test_an_unrecognised_title_has_no_parent_line(lp, schemas):
@@ -803,3 +811,130 @@ def test_a_missing_parent_on_a_short_list_says_the_list_was_short(lp, schemas):
     entry = _classify(lp, schemas, [_issue(1, "[Task] t", "Feature: #2\n")], 1, complete=False)
     assert entry.outcome is lp.Outcome.PARENT_UNAVAILABLE
     assert "not read in full" in entry.detail
+
+
+# --- a parent the type may not sit under is reported, never linked (#1313) ------
+# A first line in an allowed form may still name a parent of a type the issue's
+# type may not sit under — `Feature: #2` where #2 is a Task. The link would make
+# that containment, so link-parent refuses it as create-issue and set-field do.
+
+
+def _shipped_types() -> dict:
+    return YAML(typ="safe").load((CAPABILITY / "schemas" / "issue-types.yaml").read_text())["types"]
+
+
+_TYPES = _shipped_types()
+
+
+def _title(structural_type: str) -> str:
+    entry = _TYPES[structural_type]
+    prefix = entry["title_prefix"]
+    return f"[{prefix.upper() if entry.get('title_case') == 'upper' else prefix}] x"
+
+
+def _first_form_label(child: str) -> str:
+    """The label of the first issue-parent option of `child`'s form."""
+    return str(_TYPES[child]["parent_ref_form"]).split(":", 1)[0].strip()
+
+
+# Every type a first line can link from (an EPIC's form names a milestone only),
+# against every type the parent can be, from the shipped schema.
+_LINKABLE = [
+    c for c in sorted(_TYPES) if any(p != "milestone" for p in _TYPES[c]["parent_issue_types"])
+]
+_PAIRS = [(c, p) for c in _LINKABLE for p in sorted(_TYPES)]
+
+
+@pytest.mark.parametrize(("child", "parent"), _PAIRS)
+def test_a_parent_is_linked_exactly_where_the_schema_lets_the_type_sit_under_it(
+    lp, schemas, child: str, parent: str
+) -> None:
+    rows = [
+        _issue(1, _title(child), f"{_first_form_label(child)}: #2\n"),
+        _issue(2, _title(parent), ""),
+    ]
+    entry = _classify(lp, schemas, rows, 1)
+
+    if parent in _TYPES[child]["parent_issue_types"]:
+        assert entry.outcome is lp.Outcome.WOULD_LINK
+    else:
+        assert entry.outcome is lp.Outcome.PARENT_TYPE_REFUSED
+        article = "an" if child[0] in "aeiou" else "a"
+        parent_article = "an" if parent[0] in "aeiou" else "a"
+        assert entry.detail.startswith(
+            f"not linked — {article} {child} may not sit under #2, which is "
+            f"{parent_article} {parent}: "
+        )
+        assert f"`{_TYPES[child]['parent_ref_form']}`" in entry.detail
+
+
+def test_a_parent_whose_type_cannot_be_told_is_linked(lp, schemas):
+    """An untyped parent is outside the containment graph, so a legacy tree links."""
+    rows = [_issue(1, "[Task] t", "Feature: #2\n"), _issue(2, "an untyped issue", "")]
+    assert _classify(lp, schemas, rows, 1).outcome is lp.Outcome.WOULD_LINK
+
+
+def test_a_task_under_a_kind_prefixed_task_is_refused_and_nothing_is_posted(
+    lp, tmp_path, monkeypatch, capsys
+):
+    """`[Bug] …` is a Task: a Task whose first line names it is reported, not
+    linked, and the others in the run still link."""
+    issues = [
+        *_tracker(),
+        _issue(200, "[Bug] a kind-prefixed task", "Feature: #90\n"),
+        _issue(201, "[Task] under a task", "Feature: #200\n"),
+    ]
+    fake = FakeGitHub(issues)
+    rc, out, _guard = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "201", "--yes")
+
+    assert rc == 0
+    assert fake.posts == [(90, 101)]
+    assert "#201  not linked — a task may not sit under #200, which is a task" in out.out
+    assert "done: 1 linked, 1 parent's type not allowed" in out.out
+
+
+def test_an_untitled_kind_labelled_parent_is_a_task_from_the_list_read(lp, schemas):
+    """The issue list carries labels: a parent with no type prefix and a `type:bug`
+    label is a Task in greenfield, so a Task under it is refused."""
+    rows = [
+        _issue(1, "[Task] t", "Feature: #2\n"),
+        _issue(2, "Login crashes", "", labels=("type:bug",)),
+    ]
+    assert _classify(lp, schemas, rows, 1).outcome is lp.Outcome.PARENT_TYPE_REFUSED
+
+
+_STORY = {"type": {"title-prefix": {"remap": {"feature": "[Story]", "task": "[Task]"}}}}
+_TYPE_BY_LABEL = {"type": {"label": {"remap": {"bug": "kind/bug"}}}}
+
+
+@pytest.mark.parametrize(
+    ("axes", "parent", "outcome"),
+    [
+        (_STORY, _issue(2, "[Task] a task", ""), "PARENT_TYPE_REFUSED"),
+        (_STORY, _issue(2, "[Story] a story", ""), "WOULD_LINK"),
+        (_TYPE_BY_LABEL, _issue(2, "[Bug] Login crashes", ""), "WOULD_LINK"),
+        (_TYPE_BY_LABEL, _issue(2, "Login crashes", "", labels=("type:bug",)), "WOULD_LINK"),
+    ],
+    ids=["story-map-task", "story-map-story", "label-map-kind-prefix", "label-map-kind-label"],
+)
+def test_under_a_map_both_types_are_told_by_its_title_prefixes(lp, schemas, axes, parent, outcome):
+    """Under a map a type is told only by the map's title-prefix binding: a Task
+    under a `[Task]` is refused, under a `[Story]` (a Feature) linked; where the
+    map does not carry `type` in titles no type is told, and the pair links."""
+    rows = [_issue(1, "[Task] t", "Feature: #2\n"), parent]
+    entry = _classify(lp, schemas, rows, 1, substrate_map=lp.axis_labels.SubstrateMap(axes=axes))
+    assert entry.outcome is getattr(lp.Outcome, outcome)
+
+
+def test_the_issue_list_is_read_with_labels(lp, tmp_path, monkeypatch, capsys):
+    fake = FakeGitHub(_tracker())
+    seen: list[str] = []
+    real = lp.containment.fetch_issue_corpus
+
+    def spy(config, **kwargs):
+        seen.append(kwargs.get("fields", ""))
+        return real(config, **kwargs)
+
+    monkeypatch.setattr(lp.containment, "fetch_issue_corpus", spy)
+    _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "101", "--dry-run")
+    assert seen and "labels" in seen[0].split(",")
