@@ -116,15 +116,15 @@ Keep every sentence to 25 words or fewer, and count the words in parentheses too
   - A lead-in that ends in a colon is one sentence. Colons and semicolons end none.
   - Headings, bold labels, code blocks and quoted examples of a broken rule are not counted.
 - **Breaks it:** a sentence of 38 words, "Core: the backbone ships no workflow, only checks made to run unattended, which bind once the project makes them a required status (COR-050 point 12), and one base a pipeline names for all of them (COR-054 point 3)."
-- **Keeps it:** "the backbone ships no workflow. It ships only:", then one list item for the checks and one for the base.
+- **Keeps it:** "the backbone ships no workflow. It ships only checks made to run unattended, and one base a pipeline names for all of them (COR-054 point 3). The checks bind once the project makes them a required status (COR-050 point 12)." Unlike the plain rewrite, this keeps the two items in the sentence (RS-WRITE-003).
 
 ### RS-WRITE-006 — One idea per sentence
 
 Give each sentence of prose one idea.
 
 - **How:** split where one idea ends, then check that the parts still agree (RS-WRITE-013). Needs and use-case goals follow RS-WRITE-012 instead.
-- **Breaks it:** "every change passes the acceptance gate and the friction check, whatever tracks the work, and lands as COR-009 sets out."
-- **Keeps it:** "every change passes the acceptance gate and the friction check, whatever tracks the work. It lands as COR-009 sets out."
+- **Breaks it:** "They bring the methodology's disciplines (CONTRIBUTING.md), and they are the first adopter of what they ship."
+- **Keeps it:** "**What they bring:** the methodology's disciplines (CONTRIBUTING.md). They are the first adopter of what they ship."
 
 ### RS-WRITE-007 — One topic a paragraph, at most four sentences
 
