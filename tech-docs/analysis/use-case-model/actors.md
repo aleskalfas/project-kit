@@ -18,6 +18,24 @@ ACT-adopter:
         record:
           - COR-001
           - COR-010
+ACT-component-author:
+  name: Component author
+  status: active
+  needs:
+    - Package a recurring discipline as a capability from the methodology's primitives, without forking the methodology.
+    - Keep a capability I wrote in my own repository, where sync never overwrites it and uninstall never deletes it.
+    - Give my capability roles, data points and processes that other components can connect to without naming it, and have the engine run and check them.
+    - Release my component on its own version, and say which backbone versions it works with.
+    - Carry the projects that installed my component across a breaking change of it.
+    - Know my capability is ready to share before other repositories pull it.
+    - Adapt the methodology to another harness, say requirement by requirement how far it meets them, and report what of the permission model it cannot enforce.
+  pkit:
+    friction:
+      anchors:
+        record:
+          - COR-031
+          - COR-041
+          - COR-047
 ACT-developer:
   name: Developer
   status: active
@@ -74,6 +92,10 @@ Who uses the system, and what each needs from it. Each actor's id is stable; its
 ## ACT-adopter — Adopter
 
 The person who adopts the methodology for a project and keeps its setup: what is installed, at which version, which of their own additions sit beside it, and which checks the project's merges wait on. They come at setup, at each upgrade, and when the project needs a discipline. They bring their project, its existing `CLAUDE.md` and settings, its repository settings, and the rules and grants they add. Core: the split between methodology-owned and project-owned files, and the install and upgrade lifecycle, exist for this role. Installing a capability is itself a core act.
+
+## ACT-component-author — Component author
+
+Someone who extends the methodology with a component (a capability or an adapter) rather than only using it. That can be an adopter growing a discipline in their own repository, an organisation that keeps private methodology in one repository for its others, or whoever adapts the methodology to a new harness. They come when a pattern recurs often enough to package, at each release of their component, and when a new harness arrives. They bring the component's decisions, schemas, skills, agents and process definitions, and they own its compatibility claim. In project-kit's source repository the methodology maintainer plays this part for the capabilities and the adapter it ships. Core: the capability pattern, its origins, connection points, the process engine and the harness requirements are the extension points this role uses, and they exist before any capability is installed.
 
 ## ACT-developer — Developer
 
