@@ -1,44 +1,44 @@
 ---
 rule-set: WRITE
-version: 0.1.0
+version: 1.0.0
 rules:
   RS-WRITE-001:
-    status: proposed
-    origin: {why: "Something must show what matters most. In the trial, opening each section with who the actor is made every section scannable (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    status: accepted
+    origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "Something must show what matters most. In the trial, opening each section with who the actor is made every section scannable (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-002:
     status: proposed
     origin: {why: "Lists, nested lists and sub-headings over long paragraphs. In the trial, the same labels in the same order were the largest gain for scanning. A reader can jump to one label in any section (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
     offers: [labels]
   RS-WRITE-003:
-    status: proposed
-    origin: {why: "Lists, nested lists and sub-headings over long paragraphs. In the trial, pairs and short series stayed in the sentence, so the lists did not clutter the page (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    status: accepted
+    origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "Lists, nested lists and sub-headings over long paragraphs. In the trial, pairs and short series stayed in the sentence, so the lists did not clutter the page (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-004:
-    status: proposed
-    origin: {why: "Side matter interrupted each role's description. Moved last under Note, it left the description shorter with nothing dropped (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    status: accepted
+    origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "Side matter interrupted each role's description. Moved last under Note, it left the description shorter with nothing dropped (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-005:
-    status: proposed
-    origin: {why: "Short sentences are easier for every reader. That is the maintainer's view, not a trial finding, since the trial tested no readers. The trial showed that the limit can be kept. The original had ten body sentences over 25 words, and both rewrites brought every one to 25 or fewer (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    status: accepted
+    origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "Short sentences are easier for every reader. That is the maintainer's view, not a trial finding, since the trial tested no readers. The trial showed that the limit can be kept. The original had ten body sentences over 25 words, and both rewrites brought every one to 25 or fewer (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-006:
     status: proposed
     origin: {why: "A sentence with one idea is read once, in the maintainer's view. The trial could not show it. This rule was applied with the word limit and the labels, and their effects could not be told apart. Splitting also put meaning at risk. In the trial, a split section contradicted itself. In the core actors, two splits would have chosen a reading, and in the try-outs, splits moved pronouns away from their nouns (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-007:
-    status: proposed
-    origin: {why: "A dense paragraph hides what each of its sentences is about. Dense paragraphs were the original's main problem, and eight of its nine ran over four sentences (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    status: accepted
+    origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "A dense paragraph hides what each of its sentences is about. Dense paragraphs were the original's main problem, and eight of its nine ran over four sentences (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-008:
-    status: proposed
-    origin: {why: "A semicolon joins two sentences that read better apart. Three of the original's four semicolons split cleanly into sentences or a list. The fourth joined two citations, where a comma would be ambiguous, since a citation can hold a comma itself (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    status: accepted
+    origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "A semicolon joins two sentences that read better apart. Three of the original's four semicolons split cleanly into sentences or a list. The fourth joined two citations, where a comma would be ambiguous, since a citation can hold a comma itself (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-009:
-    status: proposed
-    origin: {why: "An elided verb, as in \"the whole-repository report the developer\", slows every reader down. It slows most a reader whose first language is not English. Both are the maintainer's view, not a trial finding, since the trial tested no readers. The trial's ASD-STE100 rewrite made that clause whole (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    status: accepted
+    origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "An elided verb, as in \"the whole-repository report the developer\", slows every reader down. It slows most a reader whose first language is not English. Both are the maintainer's view, not a trial finding, since the trial tested no readers. The trial's ASD-STE100 rewrite made that clause whole (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-010:
-    status: proposed
-    origin: {why: "A reader who picks the wrong referent learns a wrong fact, and nothing warns them. In the trial, naming the harness behind \"it\" made a need clear (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    status: accepted
+    origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "A reader who picks the wrong referent learns a wrong fact, and nothing warns them. In the trial, naming the harness behind \"it\" made a need clear (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-011:
-    status: proposed
-    origin: {why: "Project terms such as review, land and retire have defined meanings. An outside dictionary's nearest words changed those meanings in the trial (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    status: accepted
+    origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "Project terms such as review, land and retire have defined meanings. An outside dictionary's nearest words changed those meanings in the trial (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-013:
-    status: proposed
-    origin: {why: "A style that changes meaning is disqualified, since readers rely on the facts a document states. In the trial, rewrites by both guidelines changed what statements claim (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    status: accepted
+    origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "A style that changes meaning is disqualified, since readers rely on the facts a document states. In the trial, rewrites by both guidelines changed what statements claim (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
 ---
 
 # WRITE — project-kit's general writing rules
