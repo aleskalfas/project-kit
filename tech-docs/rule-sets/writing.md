@@ -20,7 +20,7 @@ rules:
     origin: {why: "Short sentences are easier for every reader. The original had ten body sentences over 25 words, and both rewrites brought every one to 25 or fewer (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-006:
     status: proposed
-    origin: {why: "A sentence with one idea is read once. One idea per sentence halved the average sentence of the trial's prose (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    origin: {why: "A sentence with one idea is read once, in the maintainer's view. The trial could not show it. This rule was applied with the word limit and the labels, and their effects could not be told apart. Splitting also put meaning at risk. In the trial, a split section contradicted itself. In the core actors, two splits would have chosen a reading, and in the try-outs, splits moved pronouns away from their nouns (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-007:
     status: proposed
     origin: {why: "A dense paragraph hides what each of its sentences is about. Dense paragraphs were the original's main problem, and eight of its nine ran over four sentences (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
@@ -58,6 +58,7 @@ These rules say how project-kit writes its analysis, and later its documentation
 - **Where they apply next:** the pages of the technical and user spaces, in a later change. That change first adds the exceptions those pages need. Then the spaces' definitions, `TECH` and `USER`, inherit this set.
 - **Where they come from:** a style trial in October 2026. It rewrote the core actors document by ASD-STE100 and by ISO 24495-1, and kept what helped. The trial, and what it left out, are in `.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`.
 - **How a rule reads:** a statement, then *How*, then text that *Breaks it* and text that *Keeps it*. Unless an example says otherwise, *Breaks it* quotes the original actors document, and *Keeps it* quotes the plain rewrite. A rule's reason is the `why` of its origin, in the front matter (COR-051 point 5).
+- **Held back:** RS-WRITE-006 stays proposed for now. Its `why` says what the trial could not show, and what splitting put at risk.
 - **Note:** how rules are named, accepted and inherited is the rule-set record's (COR-051). A rule binds only once it is accepted.
 
 ## Structure
