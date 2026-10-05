@@ -1,0 +1,7 @@
+component: backbone
+kind: none
+body: >
+  project-kit's own operational rules (.pkit/rules/project.md) gain one line
+  that points its analysis artefacts at its writing rule set, WRITE. The file is
+  project-owned and sync never touches it, so nothing reaches an adopter. The
+  changeset guard counts any change under .pkit/rules/ as the backbone's.
