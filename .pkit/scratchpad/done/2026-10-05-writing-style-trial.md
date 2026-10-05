@@ -204,5 +204,6 @@ An adversarial review of `WRITE`'s first draft found rules that the trial did no
 - **FPLG's one idea per sentence, on needs:** it splits a need in two, against software-analysis DEC-001 point 1.
 - **FPLG's positive language, on guards:** "Never ship X without Y" turned into a goal to ship X.
 - **FPLG's "address the reader as you":** it does not fit a catalogue of roles.
+- **The active voice when the actor is known** (FPLG, "Use active voice", and ASD-STE100 3.6): proposed in `WRITE`'s first draft, then dropped after review. The original was already mostly active, so the trial showed no gain. It showed only the rule's limit: a rewrite made a passive active and named a validator the original never named.
 
 **Not tested:** testing with readers (ISO 24495-1, Principle 4). Neither rewrite did it, so the trial cannot judge it.

@@ -32,14 +32,11 @@ rules:
     origin: {why: "An elided verb, as in \"the whole-repository report the developer\", slows every reader down. It slows most a reader whose first language is not English (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-010:
     status: proposed
-    origin: {why: "The active voice says who acts. The passive stays where the actor receives, so needs keep \"be told\" and \"be asked\" (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    origin: {why: "A reader who picks the wrong referent learns a wrong fact, and nothing warns them. In the trial, naming the harness behind \"it\" made a need clear (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-011:
     status: proposed
-    origin: {why: "A reader who picks the wrong referent learns a wrong fact, and nothing warns them. In the trial, naming the harness behind \"it\" made a need clear (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
-  RS-WRITE-012:
-    status: proposed
     origin: {why: "Project terms such as review, land and retire have defined meanings. An outside dictionary's nearest words changed those meanings in the trial (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
-  RS-WRITE-013:
+  RS-WRITE-012:
     status: proposed
     origin: {why: "A need is one sentence, and so is a use case's goal (software-analysis DEC-001 point 1). An actor's needs are joined into one reader description, and first person keeps the actor's voice (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
     pkit:
@@ -47,7 +44,7 @@ rules:
         anchors:
           path: [.pkit/capabilities/software-analysis/scripts/_lib/readers.py]
           record: ["software-analysis:DEC-001"]
-  RS-WRITE-014:
+  RS-WRITE-013:
     status: proposed
     origin: {why: "A style that changes meaning is disqualified for analysis artefacts. In the trial, rewrites by both guidelines changed what statements claim (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
 ---
@@ -56,7 +53,7 @@ rules:
 
 These rules say how project-kit writes its documentation and its analysis.
 
-- **What matters most:** the meaning. A rewrite keeps it (RS-WRITE-014).
+- **What matters most:** the meaning. A rewrite keeps it (RS-WRITE-013).
 - **Where the rules apply:**
   - every page of the technical and user spaces, through their definitions, `TECH` and `USER`, which inherit this set
   - the analysis under `tech-docs/analysis/`, this set's own scope
@@ -93,7 +90,7 @@ Put a series of three or more items in a list with a lead-in when the items are 
 - **How:**
   - The lead-in is a label or a sentence that says what the list holds. Nest a list where an item has parts of its own.
   - A series of two stays in the sentence, and so does a series of short phrases, such as "decisions, rules, notes, code and its documentation".
-  - Needs and table cells are exempt. A need is one sentence (RS-WRITE-013), and a table cell holds no list.
+  - Needs and table cells are exempt. A need is one sentence (RS-WRITE-012), and a table cell holds no list.
 - **Example:**
   - Before: "That can be an adopter growing a discipline in their own repository, an organisation that keeps private methodology in one repository for its others, or whoever adapts the methodology to a new harness."
   - After: "**Who this can be:**", then one list item for each of the three.
@@ -133,7 +130,7 @@ Give each sentence of prose one idea.
 
 - **How:**
   - Split where one idea ends, then check that the parts still agree. One split in the trial turned "only checks …, and one base" into "only checks", then "also one base".
-  - Needs follow RS-WRITE-013 instead.
+  - Needs follow RS-WRITE-012 instead.
 - **Example:**
   - Before: "every change passes the acceptance gate and the friction check, whatever tracks the work, and lands as COR-009 sets out."
   - After: "every change passes the acceptance gate and the friction check, whatever tracks the work. It lands as COR-009 sets out."
@@ -151,7 +148,7 @@ Give each paragraph one topic and no more than four sentences.
 
 Write no semicolons in prose.
 
-- **How:** make two sentences, or a list. Where two citations share a parenthesis, join them with "and", as in "(PRJ-002 and release README:22-29)". Each citation keeps its own form (RS-WRITE-014). Code and text quoted word for word are exempt.
+- **How:** make two sentences, or a list. Where two citations share a parenthesis, join them with "and", as in "(PRJ-002 and release README:22-29)". Each citation keeps its own form (RS-WRITE-013). Code and text quoted word for word are exempt.
 - **Example:**
   - Before: "The role is per machine and per clone; it is not whoever holds the repository's settings, …"
   - After: "The role is per machine and per clone." The rest moved to the section's *Note*.
@@ -165,29 +162,20 @@ In a series of clauses, give each clause its own verb.
   - Before: "the change check serves the developer and the merge authoriser, the whole-repository report the developer"
   - After: "The change check serves the developer and the merge authoriser." Then "The whole-repository report serves the developer."
 
-### RS-WRITE-010 — The active voice when the actor is known
-
-Use the active voice when you know who acts, and keep the passive where the actor receives.
-
-- **How:** in a rewrite, you know only the actors that the source names. A rewrite never adds one (RS-WRITE-014).
-- **Example:**
-  - Before: "… and let the system validate them" (a rewrite)
-  - After: "… and have them validated" (the original). The original names no actor, so the passive stays.
-
 ## Words and terms
 
 These rules make each word point at one thing.
 
-### RS-WRITE-011 — Name what a pronoun stands for
+### RS-WRITE-010 — Name what a pronoun stands for
 
 Replace a pronoun with the noun it stands for when the pronoun could point at two things.
 
-- **How:** in a rewrite, take the noun from the author, or from a cited source that the author confirms (RS-WRITE-014).
+- **How:** in a rewrite, take the noun from the author, or from a cited source that the author confirms (RS-WRITE-013).
 - **Example:**
   - Before: "say requirement by requirement how far it meets them". *It* could be the methodology or the harness.
   - After: "Say how far that harness meets each requirement", once the author confirms the reading that COR-047 gives.
 
-### RS-WRITE-012 — One term for one thing, from the glossary
+### RS-WRITE-011 — One term for one thing, from the glossary
 
 Use one term for one thing, and take it from the project's glossary, not from an outside dictionary.
 
@@ -200,7 +188,7 @@ Use one term for one thing, and take it from the project's glossary, not from an
 
 This rule is for an actor's needs and a use case's goal, in the analysis.
 
-### RS-WRITE-013 — One need or goal, one sentence
+### RS-WRITE-012 — One need or goal, one sentence
 
 Write each need of an actor, and each use case's goal, as one first-person sentence that starts with its verb.
 
@@ -216,7 +204,7 @@ Write each need of an actor, and each use case's goal, as one first-person sente
 
 This rule protects what a text says whenever someone rewrites it.
 
-### RS-WRITE-014 — A rewrite keeps the meaning
+### RS-WRITE-013 — A rewrite keeps the meaning
 
 A rewrite adds, drops, weakens or narrows no claim, and asks the author wherever it would have to choose a reading.
 
@@ -228,7 +216,7 @@ A rewrite adds, drops, weakens or narrows no claim, and asks the author wherever
   - **Swapping a term:** "the same person's *review* turns a record or rule … into a binding one" became "When the same person *examines* a record or rule …". Reading a draft does not make it binding.
   - **Changing a citation's form:** "(:65, :67)" became "(lines 65 and 67)".
   - **Splitting into parts that disagree:** "only checks …, and one base" became "only checks", then "also one base".
-  - **Choosing a reading:** in "knowing what each change … means for them", one rewrite made the adopters the ones who know, and the other the maintainer. A pronoun's referent is a reading too (RS-WRITE-011).
+  - **Choosing a reading:** in "knowing what each change … means for them", one rewrite made the adopters the ones who know, and the other the maintainer. A pronoun's referent is a reading too (RS-WRITE-010).
 - **Example:**
   - Before: "Ship a backbone change that breaks installed projects only with the migration that carries them across." (a rewrite)
   - After: "Never ship a backbone change that breaks installed projects without the migration that carries them across." (the original). The *only* form reads as a wish to ship breaking changes.
