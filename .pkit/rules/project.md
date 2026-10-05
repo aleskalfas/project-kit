@@ -7,4 +7,4 @@
 
 ## Writing
 
-3. **Write the analysis by `ANALYSIS`.** Everything under `tech-docs/analysis/` follows the accepted rules of `ANALYSIS`, project-kit's writing rule set for its analysis (`tech-docs/rule-sets/analysis.md`). `ANALYSIS` inherits `WRITE`, project-kit's general writing rules (`tech-docs/rule-sets/writing.md`), so WRITE's accepted rules bind there too. Specific to project-kit's own writing rule sets, so this rule lives here rather than in core.
+3. **Write the analysis by `WRITE`.** Everything under `tech-docs/analysis/` follows the accepted rules of `WRITE`, project-kit's general writing rules (`tech-docs/rule-sets/writing.md`). Specific to project-kit's own writing rules, so this rule lives here rather than in core.
