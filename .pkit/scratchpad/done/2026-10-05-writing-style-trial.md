@@ -5,7 +5,6 @@ started: 2026-10-05
 retired: 2026-10-05
 produced:
   - tech-docs/rule-sets/writing.md
-  - tech-docs/rule-sets/analysis.md
 ---
 
 # The writing-style trial — plain language and ASD-STE100 on the actors document
@@ -17,7 +16,7 @@ Should project-kit write its documentation and its analysis by a published guide
 - **The candidates:** plain language (ISO 24495-1) and ASD-STE100 Simplified Technical English.
 - **The maintainer's preference:** lists, nested lists and sub-headings over long paragraphs. Something must show what matters most.
 - **The test:** a style that changes meaning is disqualified for analysis artefacts.
-- **What it produced:** the proposed rules of `WRITE`, project-kit's general writing rule set (`tech-docs/rule-sets/writing.md`). It also produced the rule on needs and goals of `ANALYSIS`, the set for the analysis (`tech-docs/rule-sets/analysis.md`). Each of these rules' reasons cites this note.
+- **What it produced:** the rules of `WRITE`, project-kit's general writing rule set (`tech-docs/rule-sets/writing.md`). Each of these rules' reasons cites this note. A rule on needs and goals, drafted for the analysis, waits for #1352.
 
 The trial's working files lived in the agent workspace, which is never committed. This note keeps what the rules rest on.
 
@@ -268,8 +267,8 @@ The rules were then tried on two reference pages, on the branch `docs/1348-write
 
 ## Split per domain
 
-On 5 October the maintainer decided that the rules split per domain, and they were split.
+On 5 October the maintainer decided that the rules split per domain. The same day, the maintainer deferred the analysis set to #1352 and accepted ten of `WRITE`'s twelve general rules.
 
-- **`WRITE`** keeps the general rules. It has no scope of its own, and binds only through a set that inherits it.
-- **`ANALYSIS`** (`tech-docs/rule-sets/analysis.md`) inherits `WRITE` for everything under `tech-docs/analysis/`. It adds the rule on needs and goals, and fills `WRITE`'s list of labels with the core actors' list.
+- **`WRITE`** keeps the general rules, and has no scope of its own. RS-WRITE-001, RS-WRITE-003 to RS-WRITE-005, RS-WRITE-007 to RS-WRITE-011 and RS-WRITE-013 are accepted. RS-WRITE-002, on labels, and RS-WRITE-006, on one idea per sentence, stay proposed.
+- **The analysis set:** deferred to #1352. Its rules, its list of labels and its name wait for the design that gives each kind of analysis document a declared structure. Until then, the analysis follows `WRITE`'s accepted rules directly (`.pkit/rules/project.md`).
 - **Next:** the documentation spaces inherit `WRITE` through `TECH` and `USER`, once it has the exceptions that reference pages need.
