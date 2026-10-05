@@ -207,3 +207,60 @@ An adversarial review of `WRITE`'s first draft found rules that the trial did no
 - **The active voice when the actor is known** (FPLG, "Use active voice", and ASD-STE100 3.6): proposed in `WRITE`'s first draft, then dropped after review. The original was already mostly active, so the trial showed no gain. It showed only the rule's limit: a rewrite made a passive active and named a validator the original never named.
 
 **Not tested:** testing with readers (ISO 24495-1, Principle 4). Neither rewrite did it, so the trial cannot judge it.
+
+## Applied
+
+The proposed rules were then applied twice: to the core actors, and to two reference pages. The limits held, except where the meaning rule kept a sentence as written.
+
+### The core actors
+
+The actors document was rewritten under the rules on its own branch, for PR #1345.
+
+| Metric | Before | After |
+|---|---|---|
+| Words, needs / body | 918 / 926 | 917 / 881 |
+| Average sentence, needs / body (words) | 17.7 / 19.3 | 17.6 / 11.4 |
+| Longest sentence, needs / body (words) | 26 / 49 | 25 / 24 |
+| Sentences over 25 words, needs / body | 1 / 10 | 0 / 0 |
+| Paragraphs or list items over four sentences | 8 of 9 | 0 of 60 |
+| Bold labels / list items | 0 / 0 | 37 / 51 |
+| Semicolons, body | 4 | 0 |
+
+- **Facts:** a script checked the ids, citations and number of needs against the original. The body lost 45 words to bold labels, which are not counted. A word diff found no fact lost.
+- **Body words:** 926 here against the trial's 948, because the trial counted the headings.
+- **What the meaning rule held back:** twelve spots, each a question for the author.
+  - Two splits would choose a reading. The developer's "whatever tracks the work" may cover the landing too. The merge authoriser's "so" may follow from both clauses.
+  - Eight readings, most of them a pronoun's, were left for the author.
+  - Two pairs of terms may each name one thing.
+- **What it found in the rules:** the examples of RS-WRITE-005 and RS-WRITE-006 broke other rules of the set. Both examples are fixed.
+
+### Two reference pages
+
+The rules were then tried on two reference pages, on the branch `docs/1348-write-tryout`, which is not to be merged.
+
+- **The pages:** the section on `pkit analysis new` in the software-analysis README, and the opening and four commands of the CLI reference's friction section.
+
+| Measure | `pkit analysis new` | Friction section |
+|---|---|---|
+| Words, prose | 1,368 → 1,457 (+6.5%) | 6,309 → 6,541 (+3.7%) |
+| Average sentence, prose (words) | 41.1 → 14.3 | 34.1 → 12.7 |
+| Longest sentence, prose (words) | 109 → 33 | 352 → 65 |
+| Sentences over 25 words, prose | 23 → 1 | 90 → 3 |
+| Paragraphs or list items over four sentences | 1 → 0 | 14 → 0 |
+| Semicolons | 15 → 0 | 82 → 0 |
+
+- **Gains:** lists, the sentence limit and the paragraph limit helped most. Table cells read more easily too. The text grew by 6.5% and 3.7%, against 16% in the trial's plain rewrite.
+- **Costs:**
+  - The key lists of `--json` nested four levels deep.
+  - A code span counts as words, so a quoted message filled a sentence alone. The fix added sentences that carry nothing.
+  - Splits moved pronouns away from their nouns. Each noun named is a reading that the author must confirm. Twelve other spots stayed as written, for the author.
+  - RS-WRITE-002 did not fit. The command sections differ too much for one list of labels.
+  - Three slips were caught: two moves broke a pointer each, and an editing tool wrote a bidi control character.
+- **What reference pages need:** these exceptions, before the spaces inherit the set:
+  - a code span counts as one word
+  - command synopses are exempt
+  - a fixed form for JSON key references
+  - table cells may be fragments that start with their verb
+  - labels that other text cites stay stable
+  - a limit on how deep lists nest
+  - a check for control and bidi characters
