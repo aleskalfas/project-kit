@@ -54,11 +54,9 @@ rules:
 These rules say how project-kit writes its documentation and its analysis.
 
 - **What matters most:** the meaning. A rewrite keeps it (RS-WRITE-013).
-- **Where the rules apply:**
-  - the analysis under `tech-docs/analysis/`, which is this set's scope. project-kit's operational rules send its writers here (`.pkit/rules/project.md`).
-  - the pages of the technical and user spaces, through inheritance, when their definitions, `TECH` and `USER`, inherit this set. That inheritance is pending.
+- **Where the rules apply:** the analysis under `tech-docs/analysis/`, which is this set's scope. project-kit's operational rules send its writers here (`.pkit/rules/project.md`). The pages of the technical and user spaces take the rules through inheritance, when their definitions, `TECH` and `USER`, inherit this set. That inheritance is pending.
 - **Where they come from:** a style trial in October 2026. It rewrote the core actors document by ASD-STE100 and by ISO 24495-1, and kept what helped. The trial, and what it left out, are in `.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`.
-- **How a rule reads:** a statement, then *How*, then text that *Breaks it* and text that *Keeps it*. Unless an example says otherwise, *Breaks it* quotes the original actors document and *Keeps it* the plain rewrite. A rule's reason is the `why` of its origin, in the front matter (COR-051 point 5).
+- **How a rule reads:** a statement, then *How*, then text that *Breaks it* and text that *Keeps it*. Unless an example says otherwise, *Breaks it* quotes the original actors document, and *Keeps it* quotes the plain rewrite. A rule's reason is the `why` of its origin, in the front matter (COR-051 point 5).
 - **Note:** how rules are named, accepted and inherited is the rule-set record's (COR-051). A rule binds only once it is accepted.
 
 ## Structure
@@ -79,7 +77,7 @@ Give parallel sections their bold labels from one list, in that list's order.
 
 - **How:** choose the list once for the whole document. A section may leave out a label it has nothing for. A label says what follows it, such as *When they come*.
 - **Breaks it:** "They come for every unit of work, and again when some work recurs often enough to deserve tooling of its own. They bring the change and direct agents to make it."
-- **Keeps it:** "**When they come:** for every unit of work, and again when some work recurs often enough to deserve tooling of its own." Then "**What they bring:** the change. They direct agents to make it."
+- **Keeps it:** "**When they come:** for every unit of work, …", then "**What they bring:** the change. They direct agents to make it."
 
 ### RS-WRITE-003 — A list for a series that carries detail
 
@@ -116,16 +114,14 @@ Keep every sentence to 25 words or fewer, and count the words in parentheses too
   - A sentence ends at a full stop, a question mark or an exclamation mark before a space or a line end. Each list item and each need ends one too.
   - A lead-in that ends in a colon is one sentence. Colons and semicolons end none.
   - Headings, bold labels, code blocks and quoted examples of a broken rule are not counted.
-- **Breaks it (38 words):** "Core: the backbone ships no workflow, only checks made to run unattended, which bind once the project makes them a required status (COR-050 point 12), and one base a pipeline names for all of them (COR-054 point 3)."
+- **Breaks it:** a sentence of 38 words, "Core: the backbone ships no workflow, only checks made to run unattended, which bind once the project makes them a required status (COR-050 point 12), and one base a pipeline names for all of them (COR-054 point 3)."
 - **Keeps it:** "the backbone ships no workflow. It ships only:", then one list item for the checks and one for the base.
 
 ### RS-WRITE-006 — One idea per sentence
 
 Give each sentence of prose one idea.
 
-- **How:**
-  - Split where one idea ends, then check that the parts still agree. One split in the trial turned "only checks …, and one base" into "only checks", then "also one base".
-  - Needs follow RS-WRITE-012 instead.
+- **How:** split where one idea ends, then check that the parts still agree (RS-WRITE-013). Needs and use-case goals follow RS-WRITE-012 instead.
 - **Breaks it:** "every change passes the acceptance gate and the friction check, whatever tracks the work, and lands as COR-009 sets out."
 - **Keeps it:** "every change passes the acceptance gate and the friction check, whatever tracks the work. It lands as COR-009 sets out."
 
@@ -204,7 +200,7 @@ A rewrite adds, drops, weakens or narrows no claim, and asks the author wherever
   - **Swapping a term:** "the same person's *review* turns a record or rule … into a binding one" became "When the same person *examines* a record or rule …". Reading a draft does not make it binding.
   - **Changing a citation's form:** "(:65, :67)" became "(lines 65 and 67)".
   - **Splitting into parts that disagree:** "only checks …, and one base" became "only checks", then "also one base".
-  - **Choosing a reading:** in "knowing what each change … means for them", one rewrite made the adopters the ones who know, and the other the maintainer. A pronoun's referent is a reading too (RS-WRITE-010).
+  - **Choosing a reading:** "knowing what each change … means for them" has two readings. One rewrite gave the knowing to the adopters, and the other gave it to the maintainer. A pronoun's referent is a reading too (RS-WRITE-010).
 - **Breaks it:** "Ship a backbone change that breaks installed projects only with the migration that carries them across." (the plain rewrite)
 - **Keeps it:** "Never ship a backbone change that breaks installed projects without the migration that carries them across." (the original). The *only* form reads as a wish to ship breaking changes.
 
