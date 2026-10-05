@@ -49,7 +49,7 @@ These are project-kit's general writing rules. They bind a document only through
 - **Where the rules apply:** wherever a set that inherits this one applies. This set has no scope of its own, so it governs nothing directly.
 - **The analysis set:** `ANALYSIS` (`tech-docs/rule-sets/analysis.md`) inherits this set for everything under `tech-docs/analysis/`. project-kit's operational rules send whoever writes the analysis there (`.pkit/rules/project.md`).
 - **The documentation spaces, next:** the spaces' definitions, `TECH` and `USER`, will inherit this set in a later change (#1350). That change first adds the exceptions that reference pages need.
-- **What an inheriting set fills:** the list of labels for each kind of document it governs (`RS-WRITE-002#labels`).
+- **What an inheriting set may fill:** the list of labels for a kind of document it governs (`RS-WRITE-002#labels`).
 - **Where the rules come from:** a style trial in October 2026. It rewrote the core actors document by ASD-STE100 and by ISO 24495-1, and kept what helped. The rules were then tried on two reference pages. The trial, the try-out and what they left out are in `.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`.
 - **How a rule reads:** a statement, then *How*, then examples. A rule's reason is the `why` of its origin, in the front matter (COR-051 point 5).
   - *Breaks the rule* and *Keeps the rule* quote the core actors: the original document breaks the rule, and the plain rewrite keeps it.
@@ -83,7 +83,7 @@ Open each section with one sentence that says what matters most in it.
 Give parallel sections their bold labels from one list, in its order, with no pronoun in any label.
 
 - **How:**
-  - **The list** (`RS-WRITE-002#labels`) is set for each kind of document. A set that inherits this one fills this point with the list for each kind it governs. Where no list is filled for a kind, choose the list once for the whole document.
+  - **The list** (`RS-WRITE-002#labels`) is set for each kind of document. A set that inherits this one may fill this point with the list for a kind it governs. Where no set fills it for a kind, take the labels that the kind's template gives. Where the kind has no template, or its template gives no labels, choose one list for the whole document.
   - A section may leave out a label it has nothing for.
   - A label says what follows it. With no pronoun, one label fits a section about a person and a section about a system alike.
   - Table cells are exempt, since a cell holds no label.

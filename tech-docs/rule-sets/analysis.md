@@ -69,5 +69,5 @@ Take the labels of an analysis document's parallel sections from the list for it
 - **The actors file**, `tech-docs/analysis/use-case-model/actors.md`: *The setup*, *Always a person*, *Can be*, *Does*, *Comes*, *Brings*, *In the model*, *Core* and *Note*.
 - **How:**
   - This rule fills `RS-WRITE-002#labels`, and the rest of RS-WRITE-002 holds as written. A section may leave out a label, and no label holds a pronoun.
-  - A kind with no list here chooses its list once for the whole document, as RS-WRITE-002 says.
+  - A kind with no list here takes its labels as RS-WRITE-002 says.
   - A later kind's list joins this rule beside the actors file's, under the kind's name.
