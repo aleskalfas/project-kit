@@ -43,11 +43,11 @@ rules:
 
 # WRITE — project-kit's general writing rules
 
-These are project-kit's general writing rules. They bind a document only through a set that inherits them: the analysis set now, and later the documentation spaces (#1350).
+These are project-kit's general writing rules. The analysis follows them directly for now, and a set for the analysis may come with #1352. The documentation spaces will inherit them later (#1350).
 
 - **What matters most:** the meaning. A rewrite keeps it (RS-WRITE-013).
-- **Where the rules apply:** wherever a set that inherits this one applies. This set has no scope of its own, so it governs nothing directly.
-- **The analysis set:** `ANALYSIS` (`tech-docs/rule-sets/analysis.md`) inherits this set for everything under `tech-docs/analysis/`. project-kit's operational rules send whoever writes the analysis there (`.pkit/rules/project.md`).
+- **Where the rules apply:** everything under `tech-docs/analysis/`, since project-kit's operational rules send whoever writes the analysis here (`.pkit/rules/project.md`). This set has no scope of its own.
+- **A set for the analysis:** one may come with #1352, which gives each kind of analysis document a declared structure. The rule on needs and goals and the analysis's list of labels wait for that design.
 - **The documentation spaces, next:** the spaces' definitions, `TECH` and `USER`, will inherit this set in a later change (#1350). That change first adds the exceptions that reference pages need.
 - **What an inheriting set may fill:** the list of labels for a kind of document it governs (`RS-WRITE-002#labels`).
 - **Where the rules come from:** a style trial in October 2026. It rewrote the core actors document by ASD-STE100 and by ISO 24495-1, and kept what helped. The rules were then tried on two reference pages. The trial, the try-out and what they left out are in `.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`.
@@ -56,8 +56,8 @@ These are project-kit's general writing rules. They bind a document only through
   - *Breaks the rule on a page* and *Keeps the rule on a page* quote a reference page before and after its try-out on `docs/1348-write-tryout`.
   - An example that quotes anything else says so.
 - **What binds:** a rule's statement and its *How*. Both are the rule's content in the sense of COR-051 point 2, and the examples only illustrate them. Inside a *How*, a "such as" phrase and a sentence that starts "An example is" only illustrate too. The rest of the *How* binds.
-- **Held back:** RS-WRITE-006 stays proposed for now. Its `why` says what the trial could not show, and what splitting put at risk.
-- **A number not reused:** RS-WRITE-012 moved to the analysis set as RS-ANALYSIS-001, since needs and goals are the analysis's own. Its number stays unused here.
+- **Held back:** RS-WRITE-002, on labels, and RS-WRITE-006, on one idea per sentence, stay proposed. The maintainer held both back on 5 October. RS-WRITE-006's `why` says what the trial could not show, and what splitting put at risk.
+- **A number not reused:** RS-WRITE-012 was the rule on needs and goals. It left this set, since needs and goals are the analysis's own, and its number stays unused here.
 - **Note:** how rules are named, accepted and inherited is the rule-set record's (COR-051). A rule binds only once it is accepted.
 
 ## Structure
@@ -88,7 +88,7 @@ Give parallel sections their bold labels from one list, in its order, with no pr
   - A label says what follows it. With no pronoun, one label fits a section about a person and a section about a system alike.
   - Table cells are exempt, since a cell holds no label.
 - **Breaks the rule:** the plain rewrite gives one slot two labels, "**When they come:**" for the developer and "**When it comes:**" for the CI pipeline.
-- **Keeps the rule:** one label for both, from the core actors' list (RS-ANALYSIS-002): "**Comes:** for every unit of work, …" and "**Comes:** on every pull request, …".
+- **Keeps the rule:** one label for both, as in the core actors revised for PR #1345: "**Comes:** for every unit of work, …" and "**Comes:** on every pull request, …".
 - **Breaks the rule on a page:** after the CLI reference's try-out, `friction check --all`, `friction debt` and `friction explain` share the label *What it reads*, which holds a pronoun.
 - **Keeps the rule on a page:** the same three commands and `friction check` share the label *`--json`*, which holds none.
 
@@ -101,7 +101,7 @@ Put a series of three or more items in a list with a lead-in when any item is a 
   - A series of two stays in the sentence, and so does a series of short phrases, such as "decisions, rules, notes, code and its documentation".
   - Text that an accepted decision record holds to one sentence is exempt. An example is an actor's need or a use case's goal (software-analysis DEC-001 point 1). Table cells are exempt too, since a cell holds no list.
 - **Breaks the rule:** "That can be an adopter growing a discipline in their own repository, an organisation that keeps private methodology in one repository for its others, or whoever adapts the methodology to a new harness."
-- **Keeps the rule:** "**Can be:**", then one list item for each of the three. The label is the core actors', since the plain rewrite's *Who this can be* holds a pronoun (RS-WRITE-002).
+- **Keeps the rule:** "**Can be:**", then one list item for each of the three. The label is the core actors', in place of the plain rewrite's *Who this can be*.
 - **Breaks the rule on a page:** in the CLI reference's friction section, "**Writes only with consent** — the consent rule of the configuration writer (COR-048 point 5), applied to the project's artefacts: `--yes` consents non-interactively; on a terminal without it the command shows the diff and asks; …"
 - **Keeps the rule on a page:** "**Writes only with consent.** It applies the consent rule of the configuration writer (COR-048 point 5) to the project's artefacts." One list item follows for each case.
 
@@ -141,7 +141,7 @@ Give each sentence of prose one idea.
 
 - **How:** split where one idea ends, then check that the parts still agree (RS-WRITE-013). Text that an accepted decision record holds to one sentence is exempt. An example is an actor's need or a use case's goal (software-analysis DEC-001 point 1).
 - **Breaks the rule:** "They bring the methodology's disciplines (CONTRIBUTING.md), and they are the first adopter of what they ship."
-- **Keeps the rule:** "**Brings:** the methodology's disciplines (CONTRIBUTING.md). They are the first adopter of what they ship." The label is the core actors', in place of the plain rewrite's *What they bring* (RS-WRITE-002).
+- **Keeps the rule:** "**Brings:** the methodology's disciplines (CONTRIBUTING.md). They are the first adopter of what they ship." The label is the core actors', in place of the plain rewrite's *What they bring*.
 - **Breaks the rule on a page:** in the CLI reference's section on `friction check`, "It reads the artefacts, never a pull-request description, so it runs the same in CI, for a pull request from any tool, and locally before a commit."
 - **Keeps the rule on a page:** "It reads the artefacts, never a pull-request description. So it runs the same in CI, for a pull request from any tool, and locally before a commit."
 
@@ -150,7 +150,7 @@ Give each sentence of prose one idea.
 Give each paragraph one topic and no more than four sentences.
 
 - **How:**
-  - A list item counts as a paragraph. Labels and lists are the usual fix (RS-WRITE-002 and RS-WRITE-003).
+  - A list item counts as a paragraph. Labels and lists are the usual fix. RS-WRITE-003 says when a series takes a list.
   - Four is project-kit's choice. ASD-STE100 allows six (its 6.6).
   - Table cells are exempt, since a cell holds no paragraph.
 - **Breaks the rule:** the operator's section, one paragraph of five sentences on six topics.
