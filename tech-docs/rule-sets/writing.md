@@ -39,6 +39,9 @@ rules:
   RS-WRITE-013:
     status: accepted
     origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "A style that changes meaning is disqualified, since readers rely on the facts a document states. In the trial, rewrites by both guidelines changed what statements claim (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+  RS-WRITE-014:
+    status: proposed
+    origin: {why: "Line numbers drift whenever the cited file changes, and a section name drifts when its heading is renamed. Nothing checks either. A permanent id and an anchor stay true without upkeep. In the core actors, a line-number citation had already drifted to the wrong lines (#1354)."}
 ---
 
 # WRITE — project-kit's general writing rules
@@ -57,6 +60,7 @@ These are project-kit's general writing rules. The analysis follows them directl
   - An example that quotes anything else says so.
 - **What binds:** a rule's statement and its *How*. Both are the rule's content in the sense of COR-051 point 2, and the examples only illustrate them. Inside a *How*, a "such as" phrase and a sentence that starts "An example is" only illustrate too. The rest of the *How* binds.
 - **Held back:** RS-WRITE-002, on labels, and RS-WRITE-006, on one idea per sentence, stay proposed. The maintainer held both back on 5 October. RS-WRITE-006's `why` says what the trial could not show, and what splitting put at risk.
+- **Proposed:** RS-WRITE-014, on citing by permanent id, waits for the maintainer's acceptance.
 - **A number not reused:** RS-WRITE-012 was the rule on needs and goals. It left this set, since needs and goals are the analysis's own, and its number stays unused here.
 - **Note:** how rules are named, accepted and inherited is the rule-set record's (COR-051). A rule binds only once it is accepted.
 
@@ -197,6 +201,14 @@ Use one term for one thing, and take it from the project's glossary, not from an
 - **How:** until the glossary holds a word, use the word that the project's records use. Where a document uses two terms, ask the author whether they name one thing.
 - **Breaks the rule:** the developer comes "for every unit of work", and the merge authoriser comes "at the end of each piece of work". The two terms may name one thing.
 - **Keeps the rule:** one of the two in both places, once the author confirms that they name one thing. The first ASD-STE100 rewrite chose "task" for both without asking.
+
+### RS-WRITE-014 — Cite by permanent id
+
+Cite a decision, a rule, an artefact or an issue by its permanent id, and name a document without a line or section locator.
+
+- **How:** a permanent id never changes and is never reused, so the citation stays true while the cited text moves. Where an artefact depends on what a document says, anchor the artefact to that document, so a change to it flags the artefact. Code and text quoted word for word are exempt.
+- **Breaks the rule:** "the changeset guard and the release tag (PRJ-002 and release README:22-29)". Lines 22 to 29 held the README's opening, not either step.
+- **Keeps the rule:** "the changeset guard and the release tag (PRJ-002)".
 
 ## Keeping meaning
 

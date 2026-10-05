@@ -170,7 +170,7 @@ A project's continuous integration, acting on the system from outside. It is an 
   - The whole-repository report serves the developer (a change to what a document rests on reaches them).
   - A release tag serves the methodology maintainer.
 - **Core:** the backbone ships no workflow. It ships only checks made to run unattended, and one base a pipeline names for all of them (COR-054 point 3). The checks bind once the project makes them a required status (COR-050 point 12).
-- **Note:** project-kit's workflows are one wiring of these. Two of their steps are project-kit's alone: the changeset guard and the release tag (PRJ-002 and release README:22-29).
+- **Note:** project-kit's workflows are one wiring of these. Two of their steps are project-kit's alone: the changeset guard and the release tag (PRJ-002).
 
 ## ACT-component-author — Component author
 
@@ -228,4 +228,4 @@ The person at the controls of a machine. The role is per machine and per clone.
 - **Comes:** every working day, in every clone.
 - **Brings:** the machine, its credentials and sandbox, and the judgement the gates ask for.
 - **Core:** the permission model, its sandbox and the cross-repository gate are this role's controls.
-- **Note:** the role is not whoever holds the repository's settings, since making merges wait on the checks is the adopter's. CONTRIBUTING.md also calls whoever holds those settings the operator (:65, :67).
+- **Note:** the role is not whoever holds the repository's settings, since making merges wait on the checks is the adopter's. CONTRIBUTING.md also calls whoever holds those settings the operator.
