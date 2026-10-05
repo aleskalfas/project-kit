@@ -3,15 +3,15 @@ ACT-adopter:
   name: Adopter
   status: active
   needs:
-    - Install the methodology into my project with one command, committed for the team or kept out of the shared repository, and see its wiring.
+    - Install the methodology with one command, committed for the team or kept out of the shared repository, and see its wiring into my project.
     - Upgrade it like a dependency, at a version pinned for the whole project, with its migrations run for me and my own files left alone.
     - Add or remove a capability, one shared from another of my repositories included, and be told of a name collision instead of being overwritten.
     - Choose which installed capability provides a role.
     - Declare my project's settings once (name, default branch, documentation roots, friction mode, anchored places, declared surface, excluded paths) and have them validated.
     - Add my own operational rules, settings, permission grants and agent paths beside the methodology's, never editing its files.
-    - Make my merges wait on pkit's checks, knowing they bind only once my CI requires them.
+    - Make my merges wait on the system's checks, knowing they bind only once my CI requires them.
     - Re-pin an inherited rule set to its new major version once I have reviewed it.
-    - Report a problem with pkit, and follow what happens to it.
+    - Report a problem with the system, and follow what happens to it.
   pkit:
     friction:
       anchors:
@@ -37,11 +37,11 @@ ACT-ci-pipeline:
   status: active
   needs:
     - Run every check with no terminal and no person to answer, and gate the merge on its exit status.
-    - Compare a change with its real base, the pull request's target or the queued merge's base, named once for every check.
+    - Compare a change with its real base, the pull request's target or the queued merge's base, named once for all the checks.
     - Run the checks offline once the checkout is provisioned.
     - Get findings in a machine-readable form, to publish them where people look.
     - Be told when a shallow clone lacks history a check needs, rather than get a misleading result.
-    - Run the whole-repository check to a report that never fails on what it finds, so it can run after merges and on a schedule.
+    - Have the whole-repository check report its findings without failing, so the check can run after merges and on a schedule.
     - Tag a release once it lands, from the version it declares, with no one there to confirm the push.
   pkit:
     friction:
@@ -59,7 +59,7 @@ ACT-component-author:
     - Release my component on its own version, and say which backbone versions it works with.
     - Carry the projects that installed my component across a breaking change of it.
     - Know my capability is ready to share before other repositories pull it.
-    - Adapt the methodology to another harness, say requirement by requirement how far it meets them, and report what of the permission model it cannot enforce.
+    - Adapt the methodology to another harness, and say how far that harness meets each requirement and what of the permission model the harness cannot enforce.
   pkit:
     friction:
       anchors:
@@ -104,7 +104,7 @@ ACT-methodology-maintainer:
   needs:
     - Develop the methodology in its source repository, where no sync copies over my work, and run what I ship there before any adopter does.
     - Keep each core record true for any project that adopts it.
-    - Release the backbone so adopters can upgrade and pin to it, knowing what each change since the last release means for them.
+    - Release the backbone so adopters can upgrade and pin to it, and know what each change since the last release means for them.
     - Never ship a backbone change that breaks installed projects without the migration that carries them across.
     - Receive adopters' reports with their versions attached, and link each one to the issue that fixes it.
   pkit:
@@ -121,7 +121,7 @@ ACT-operator:
     - Be asked before an agent changes a repository other than the session's own, so it never happens silently.
     - Find out why a command prompted me or was blocked, and what would stop it happening again.
     - Keep my per-machine choices (sandbox allowances, sockets, local settings) out of what the project commits.
-    - Run each project at the version it pins, and be told plainly when it falls back to my installed tool.
+    - Run each project at the version it pins, and be told plainly when pkit falls back to my installed tool.
     - Get a fresh clone ready to work with one sync.
   pkit:
     friction:
@@ -152,7 +152,7 @@ The person who adopts the methodology for a project and keeps its setup.
 
 ## ACT-ai-agent — AI agent
 
-An AI agent working under the methodology. It is another system acting on this one.
+An AI agent working under the methodology, acting on the system from outside.
 
 - **Can be:** the main session acting for a person, or an agent that session dispatches for one role (in the core: critic, architect, methodology-reviewer, convention-compliance-reviewer, process-author).
 - **Comes:** whenever work is done. It keeps no memory between sessions beyond what the repository holds.
@@ -161,11 +161,11 @@ An AI agent working under the methodology. It is another system acting on this o
 
 ## ACT-ci-pipeline — CI pipeline
 
-Another system acting on pkit: a project's continuous integration. It is an actor because it starts work on its own trigger with no person in the session.
+A project's continuous integration, acting on the system from outside. It is an actor because it starts work on its own trigger with no person in the session.
 
 - **Comes:** on every pull request, queued merge and push to the default branch, and on a schedule.
 - **Brings:** a clean checkout, a base to compare with, and no person to answer a prompt.
-- **In the model:** its needs are what pkit must give an unattended runner. The goals its runs serve belong to people:
+- **In the model:** its needs are what the system must give an unattended runner. The goals its runs serve belong to people:
   - The change check serves the developer and the merge authoriser.
   - The whole-repository report serves the developer (a change to what a document rests on reaches them).
   - A release tag serves the methodology maintainer.
@@ -186,15 +186,15 @@ Someone who extends the methodology with a component (a capability or an adapter
   - when a new harness arrives
 - **Brings:** the component's decisions, schemas, skills, agents and process definitions. They own its compatibility claim.
 - **Core:** the capability pattern, its origins, connection points, the process engine and the harness requirements are the extension points this role uses. They exist before any capability is installed.
-- **Note:** in project-kit's source repository the methodology maintainer plays this part for the capabilities and the adapter it ships.
+- **Note:** in project-kit's source repository the methodology maintainer plays this part for the capabilities and the adapter project-kit ships.
 
 ## ACT-developer — Developer
 
 The person who builds: decisions, rules, notes, code and its documentation, one change at a time.
 
-- **Comes:** for every unit of work, and again when some work recurs often enough to deserve tooling of its own.
+- **Comes:** for every change, and again when some work recurs often enough to deserve tooling of its own.
 - **Brings:** the change. They direct agents to make it.
-- **Core:** every change passes the acceptance gate and the friction check, whatever tracks the work, and lands as COR-009 sets out. That the backbone itself lands pull requests is provisional (ADR-061 point 3, raised as #1222).
+- **Core:** whatever tracks the work, every change passes the acceptance gate and the friction check, and lands as COR-009 sets out. That the backbone itself lands pull requests is provisional (ADR-061 point 3, raised as #1222).
 - **Note:** a work tracker's view of this role (project-management's "Implementer") comes with that capability.
 
 ## ACT-merge-authoriser — Merge authoriser
@@ -202,9 +202,11 @@ The person who builds: decisions, rules, notes, code and its documentation, one 
 The person who authorises a change's merge into the default branch. Where work is committed there directly, it is the person the agent works for, before the commit.
 
 - **Always a person:** the authorisation turns the answers an agent wrote into a person's decision. The same person's review turns a record or rule an agent drafted into a binding one.
-- **Comes:** at the end of each piece of work, and whenever a drafted record or rule waits for acceptance.
+- **Comes:** at the end of each change, and whenever a drafted record or rule waits for acceptance.
 - **Brings:** the authority to land the change.
-- **Core:** COR-050 point 3 defines this role, for a merge and a direct commit alike, and the acceptance gate gives it acceptance. So it exists with no work tracker installed.
+- **Core:** two core rules make this role, and neither needs a work tracker:
+  - COR-050 point 3, for seeing a change's answers before a merge or a direct commit
+  - the acceptance gate, for accepting a record or a rule
 - **Note:** the name is not "approver", because project-management uses that word for a reviewer agent (DEC-028).
 
 ## ACT-methodology-maintainer — Methodology maintainer
@@ -212,7 +214,7 @@ The person who authorises a change's merge into the default branch. Where work i
 Whoever maintains a distribution of the methodology.
 
 - **Can be:** project-kit's maintainers, or a fork's.
-- **Does:** work in its source repository, on the core records, the backbone and the releases adopters upgrade to.
+- **Does:** work in the distribution's source repository, on the core records, the backbone and the releases adopters upgrade to.
 - **Comes:** for every change to the methodology and every backbone release.
 - **Brings:** the methodology's disciplines (CONTRIBUTING.md). They are the first adopter of what they ship.
 - **Core:** the source repository, its release policy and its report inbox exist for this role.
