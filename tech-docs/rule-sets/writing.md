@@ -74,11 +74,14 @@ Open each section with one sentence that says what matters most in it.
 
 ### RS-WRITE-002 — Parallel sections share their labels
 
-Give parallel sections their bold labels from one list, in that list's order.
+Give parallel sections their bold labels from one list, in its order, with no pronoun in any label.
 
-- **How:** choose the list once for the whole document. A section may leave out a label it has nothing for. A label says what follows it, such as *When they come*.
-- **Breaks it:** "They come for every unit of work, and again when some work recurs often enough to deserve tooling of its own. They bring the change and direct agents to make it."
-- **Keeps it:** "**When they come:** for every unit of work, …", then "**What they bring:** the change. They direct agents to make it."
+- **How:**
+  - Choose the list once for the whole document. A section may leave out a label it has nothing for.
+  - A label says what follows it. With no pronoun, one label fits a section about a person and a section about a system alike.
+  - The core actors' list is *The setup*, *Always a person*, *Can be*, *Does*, *Comes*, *Brings*, *In the model*, *Core* and *Note*.
+- **Breaks it:** the plain rewrite gives one slot two labels, "**When they come:**" for the developer and "**When it comes:**" for the CI pipeline.
+- **Keeps it:** one label for both, from the core actors' list: "**Comes:** for every unit of work, …" and "**Comes:** on every pull request, …".
 
 ### RS-WRITE-003 — A list for a series that carries detail
 
@@ -89,7 +92,7 @@ Put a series of three or more items in a list with a lead-in when the items are 
   - A series of two stays in the sentence, and so does a series of short phrases, such as "decisions, rules, notes, code and its documentation".
   - Needs and table cells are exempt. A need is one sentence (RS-WRITE-012), and a table cell holds no list.
 - **Breaks it:** "That can be an adopter growing a discipline in their own repository, an organisation that keeps private methodology in one repository for its others, or whoever adapts the methodology to a new harness."
-- **Keeps it:** "**Who this can be:**", then one list item for each of the three.
+- **Keeps it:** "**Can be:**", then one list item for each of the three. The label is the core actors', since the plain rewrite's *Who this can be* holds a pronoun (RS-WRITE-002).
 
 ### RS-WRITE-004 — Side matter last, under *Note*
 
@@ -124,7 +127,7 @@ Give each sentence of prose one idea.
 
 - **How:** split where one idea ends, then check that the parts still agree (RS-WRITE-013). Needs and use-case goals follow RS-WRITE-012 instead.
 - **Breaks it:** "They bring the methodology's disciplines (CONTRIBUTING.md), and they are the first adopter of what they ship."
-- **Keeps it:** "**What they bring:** the methodology's disciplines (CONTRIBUTING.md). They are the first adopter of what they ship."
+- **Keeps it:** "**Brings:** the methodology's disciplines (CONTRIBUTING.md). They are the first adopter of what they ship." The label is the core actors', in place of the plain rewrite's *What they bring* (RS-WRITE-002).
 
 ### RS-WRITE-007 — One topic a paragraph, at most four sentences
 
