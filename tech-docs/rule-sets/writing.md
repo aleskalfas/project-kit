@@ -110,10 +110,7 @@ Put a series of three or more items in a list with a lead-in when any item is a 
 Put side matter last in its section, under the label *Note*.
 
 - **How:**
-  - Side matter is any of these:
-    - the reason for a name
-    - a fact that holds for project-kit alone, and not for the projects that adopt the methodology
-    - an overlap with another document
+  - Side matter is the reason for a name, or an overlap with another document.
   - Table cells are exempt, since a cell holds no label.
 - **Breaks the rule:** in the middle of the merge authoriser's paragraph, "The name is not "approver", because project-management uses that word for a reviewer agent (DEC-028)."
 - **Keeps the rule:** as the section's last item, "**Note:** the name is not "approver", because project-management uses that word for a reviewer agent (DEC-028)."
