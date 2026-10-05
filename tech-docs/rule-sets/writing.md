@@ -1,7 +1,6 @@
 ---
 rule-set: WRITE
 version: 0.1.0
-scope: [tech-docs/analysis/**]
 rules:
   RS-WRITE-001:
     status: proposed
@@ -9,6 +8,7 @@ rules:
   RS-WRITE-002:
     status: proposed
     origin: {why: "Lists, nested lists and sub-headings over long paragraphs. In the trial, the same labels in the same order were the largest gain for scanning. A reader can jump to one label in any section (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    offers: [labels]
   RS-WRITE-003:
     status: proposed
     origin: {why: "Lists, nested lists and sub-headings over long paragraphs. In the trial, pairs and short series stayed in the sentence, so the lists did not clutter the page (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
@@ -36,30 +36,28 @@ rules:
   RS-WRITE-011:
     status: proposed
     origin: {why: "Project terms such as review, land and retire have defined meanings. An outside dictionary's nearest words changed those meanings in the trial (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
-  RS-WRITE-012:
-    status: proposed
-    origin: {why: "A need is one sentence, and so is a use case's goal (software-analysis DEC-001 point 1). An actor's needs are joined into one reader description, and first person keeps the actor's voice (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
-    pkit:
-      friction:
-        anchors:
-          path: [.pkit/capabilities/software-analysis/scripts/_lib/readers.py]
-          record: ["software-analysis:DEC-001"]
   RS-WRITE-013:
     status: proposed
     origin: {why: "A style that changes meaning is disqualified for analysis artefacts. In the trial, rewrites by both guidelines changed what statements claim (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
 ---
 
-# WRITE — project-kit's writing rules
+# WRITE — project-kit's general writing rules
 
-These rules say how project-kit writes its analysis, and later they will say how it writes its documentation.
+These are project-kit's general writing rules. They bind a document only through a set that inherits them: the analysis set now, and later the documentation spaces (#1350).
 
 - **What matters most:** the meaning. A rewrite keeps it (RS-WRITE-013).
-- **Where the rules apply:** the analysis under `tech-docs/analysis/`, which is this set's scope. project-kit's operational rules send its writers here (`.pkit/rules/project.md`).
-- **Where they apply next:** the pages of the technical and user spaces, in a later change. That change first adds the exceptions those pages need. Then the spaces' definitions, `TECH` and `USER`, inherit this set.
-- **Where they come from:** a style trial in October 2026. It rewrote the core actors document by ASD-STE100 and by ISO 24495-1, and kept what helped. The trial, and what it left out, are in `.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`.
-- **How a rule reads:** a statement, then *How*, then text that *Breaks it* and text that *Keeps it*. Unless an example says otherwise, *Breaks it* quotes the original actors document, and *Keeps it* quotes the plain rewrite. A rule's reason is the `why` of its origin, in the front matter (COR-051 point 5).
+- **Where the rules apply:** wherever a set that inherits this one applies. This set has no scope of its own, so it governs nothing directly.
+- **The analysis set:** `ANALYSIS` (`tech-docs/rule-sets/analysis.md`) inherits this set for everything under `tech-docs/analysis/`. project-kit's operational rules send whoever writes the analysis there (`.pkit/rules/project.md`).
+- **The documentation spaces, next:** the spaces' definitions, `TECH` and `USER`, will inherit this set in a later change (#1350). That change first adds the exceptions that reference pages need.
+- **What an inheriting set fills:** the list of labels for each kind of document it governs (`RS-WRITE-002#labels`).
+- **Where the rules come from:** a style trial in October 2026. It rewrote the core actors document by ASD-STE100 and by ISO 24495-1, and kept what helped. The rules were then tried on two reference pages. The trial, the try-out and what they left out are in `.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`.
+- **How a rule reads:** a statement, then *How*, then examples. A rule's reason is the `why` of its origin, in the front matter (COR-051 point 5).
+  - *Breaks it* and *Keeps it* quote the core actors: the original document breaks the rule, and the plain rewrite keeps it.
+  - *Breaks it on a page* and *Keeps it on a page* quote a reference page before and after its try-out, on the branch `docs/1348-write-tryout`.
+  - An example that quotes anything else says so.
 - **What binds:** a rule's statement and its *How*. Both are the rule's content in the sense of COR-051 point 2, and the examples only illustrate them.
 - **Held back:** RS-WRITE-006 stays proposed for now. Its `why` says what the trial could not show, and what splitting put at risk.
+- **A number not reused:** RS-WRITE-012 moved to the analysis set as RS-ANALYSIS-001, since needs and goals are the analysis's own. Its number stays unused here.
 - **Note:** how rules are named, accepted and inherited is the rule-set record's (COR-051). A rule binds only once it is accepted.
 
 ## Structure
@@ -72,22 +70,27 @@ Open each section with one sentence that says what matters most in it.
 
 - **How:**
   - Keep that sentence to what matters most, and put the detail in the lines below it.
-  - A section that is only a list, such as a revalidation record's *Outcomes*, needs no opening sentence: its heading says what the list holds. A section may stay empty, such as a glossary term's when the one-sentence definition suffices.
+  - A section that is only a list needs no opening sentence, since its heading says what the list holds. An example is a revalidation record's *Outcomes*.
+  - An empty section needs none either, where its document's kind lets it stay empty. An example is a glossary term's section, when its one-sentence definition suffices.
   - Table cells are exempt, since a cell is not a section.
 - **Breaks it:** "The person who adopts the methodology for a project and keeps its setup: what is installed, at which version, which of their own additions sit beside it, and which checks the project's merges wait on."
 - **Keeps it:** "The person who adopts the methodology for a project and keeps its setup." The setup follows as a labelled list.
+- **Breaks it on a page:** the software-analysis README's section on `pkit analysis new` opens with "Create artefacts with the stamp, never by copying a template by hand: it gives each one its id, puts it in its place and writes the anchors it must carry."
+- **Keeps it on a page:** its try-out opens with "Create artefacts with the stamp, never by copying a template by hand." What the stamp does follows in the next sentence.
 
 ### RS-WRITE-002 — Parallel sections share their labels
 
 Give parallel sections their bold labels from one list, in its order, with no pronoun in any label.
 
 - **How:**
-  - Choose the list once for the whole document. A section may leave out a label it has nothing for.
+  - **The list** (`RS-WRITE-002#labels`) is set for each kind of document. A set that inherits this one fills this point with the list for each kind it governs. Where no list is filled for a kind, choose the list once for the whole document.
+  - A section may leave out a label it has nothing for.
   - A label says what follows it. With no pronoun, one label fits a section about a person and a section about a system alike.
-  - The core actors' list is *The setup*, *Always a person*, *Can be*, *Does*, *Comes*, *Brings*, *In the model*, *Core* and *Note*.
   - Table cells are exempt, since a cell holds no label.
 - **Breaks it:** the plain rewrite gives one slot two labels, "**When they come:**" for the developer and "**When it comes:**" for the CI pipeline.
-- **Keeps it:** one label for both, from the core actors' list: "**Comes:** for every unit of work, …" and "**Comes:** on every pull request, …".
+- **Keeps it:** one label for both, from the core actors' list (RS-ANALYSIS-002): "**Comes:** for every unit of work, …" and "**Comes:** on every pull request, …".
+- **Breaks it on a page:** after the CLI reference's try-out, `friction check --all`, `friction debt` and `friction explain` share the label *What it reads*, which holds a pronoun.
+- **Keeps it on a page:** the same three commands and `friction check` share the label *`--json`*, which holds none.
 
 ### RS-WRITE-003 — A list for a series that carries detail
 
@@ -96,9 +99,11 @@ Put a series of three or more items in a list with a lead-in when any item is a 
 - **How:**
   - The lead-in is a label or a sentence that says what the list holds. Nest a list where an item has parts of its own.
   - A series of two stays in the sentence, and so does a series of short phrases, such as "decisions, rules, notes, code and its documentation".
-  - Needs and table cells are exempt. A need is one sentence (RS-WRITE-012), and a table cell holds no list.
+  - Text that an inheriting set's rule holds to one sentence is exempt, such as an actor's need (RS-ANALYSIS-001). Table cells are exempt too, since a cell holds no list.
 - **Breaks it:** "That can be an adopter growing a discipline in their own repository, an organisation that keeps private methodology in one repository for its others, or whoever adapts the methodology to a new harness."
 - **Keeps it:** "**Can be:**", then one list item for each of the three. The label is the core actors', since the plain rewrite's *Who this can be* holds a pronoun (RS-WRITE-002).
+- **Breaks it on a page:** in the CLI reference's friction section, "**Writes only with consent** — the consent rule of the configuration writer (COR-048 point 5), applied to the project's artefacts: `--yes` consents non-interactively; on a terminal without it the command shows the diff and asks; …"
+- **Keeps it on a page:** "**Writes only with consent.** It applies the consent rule of the configuration writer (COR-048 point 5) to the project's artefacts." One list item follows for each case.
 
 ### RS-WRITE-004 — Side matter last, under *Note*
 
@@ -112,6 +117,8 @@ Put side matter last in its section, under the label *Note*.
   - Table cells are exempt, since a cell holds no label.
 - **Breaks it:** in the middle of the merge authoriser's paragraph, "The name is not "approver", because project-management uses that word for a reviewer agent (DEC-028)."
 - **Keeps it:** as the section's last item, "**Note:** the name is not "approver", because project-management uses that word for a reviewer agent (DEC-028)."
+- **Breaks it on a page:** the CLI reference's friction section gives the reason for the command group's name in its first sentence, "The `friction` command group is everything the anchors-and-friction functionality does (…), named like the block an artefact carries and the configuration key."
+- **Keeps it on a page:** after its try-out, the reason is the last item of the section's opening. It reads "**Note:** the group is named like the block an artefact carries and the configuration key."
 
 ## Sentences and paragraphs
 
@@ -123,19 +130,23 @@ Keep every sentence to 25 words or fewer, and count the words in parentheses too
 
 - **How:** count as the trial did.
   - A word is a token between spaces that holds a letter or a digit, once bold marks and backticks are removed. An id, a file name or a hyphenated word is one word.
-  - A sentence ends at a full stop, a question mark or an exclamation mark before a space or a line end. Each list item and each need ends one too.
+  - A sentence ends at a full stop, a question mark or an exclamation mark before a space or a line end. Each list item ends one too, and so does each item of a front-matter list, such as an actor's need.
   - A lead-in that ends in a colon is one sentence. Colons and semicolons end none.
   - Headings, bold labels, code blocks and quoted examples of a broken rule are not counted.
 - **Breaks it:** a sentence of 38 words, "Core: the backbone ships no workflow, only checks made to run unattended, which bind once the project makes them a required status (COR-050 point 12), and one base a pipeline names for all of them (COR-054 point 3)."
 - **Keeps it:** "the backbone ships no workflow. It ships only checks made to run unattended, and one base a pipeline names for all of them (COR-054 point 3). The checks bind once the project makes them a required status (COR-050 point 12)." Unlike the plain rewrite, this keeps the two items in the sentence (RS-WRITE-003).
+- **Breaks it on a page:** a sentence of 32 words in the software-analysis README, "Every artefact form also takes `--path <glob>` and `--record <id>`, each repeatable: the code that makes the artefact true and the decisions it relies on, written as its path and record anchors."
+- **Keeps it on a page:** "Every artefact form also takes `--path <glob>` and `--record <id>`, each repeatable. They are the code that makes the artefact true and the decisions it relies on, written as its path and record anchors."
 
 ### RS-WRITE-006 — One idea per sentence
 
 Give each sentence of prose one idea.
 
-- **How:** split where one idea ends, then check that the parts still agree (RS-WRITE-013). Needs and use-case goals follow RS-WRITE-012 instead.
+- **How:** split where one idea ends, then check that the parts still agree (RS-WRITE-013). Text that an inheriting set's rule holds to one sentence follows that rule instead, such as an actor's need (RS-ANALYSIS-001).
 - **Breaks it:** "They bring the methodology's disciplines (CONTRIBUTING.md), and they are the first adopter of what they ship."
 - **Keeps it:** "**Brings:** the methodology's disciplines (CONTRIBUTING.md). They are the first adopter of what they ship." The label is the core actors', in place of the plain rewrite's *What they bring* (RS-WRITE-002).
+- **Breaks it on a page:** in the CLI reference's section on `friction check`, "It reads the artefacts, never a pull-request description, so it runs the same in CI, for a pull request from any tool, and locally before a commit."
+- **Keeps it on a page:** "It reads the artefacts, never a pull-request description. So it runs the same in CI, for a pull request from any tool, and locally before a commit."
 
 ### RS-WRITE-007 — One topic a paragraph, at most four sentences
 
@@ -147,6 +158,8 @@ Give each paragraph one topic and no more than four sentences.
   - Table cells are exempt, since a cell holds no paragraph.
 - **Breaks it:** the operator's section, one paragraph of five sentences on six topics.
 - **Keeps it:** an opening of two sentences, then one labelled item for each topic, none over two sentences.
+- **Breaks it on a page:** the software-analysis README's *Ids* item, one list item of thirteen sentences.
+- **Keeps it on a page:** a lead of three sentences, then twelve labelled items, none over four sentences.
 
 ### RS-WRITE-008 — No semicolons
 
@@ -155,6 +168,8 @@ Write no semicolons in prose.
 - **How:** make two sentences, or a list. Where two citations share a parenthesis, join them with "and", as in "(PRJ-002 and release README:22-29)". Each citation keeps its own form (RS-WRITE-013). Code and text quoted word for word are exempt.
 - **Breaks it:** "The role is per machine and per clone; it is not whoever holds the repository's settings, …"
 - **Keeps it:** "The role is per machine and per clone." The rest moved to the section's *Note*.
+- **Breaks it on a page:** in the CLI reference's friction section, "Entries are kept in one order — deferrals by anchor kind, then value; keys in the schema's order — so the same input writes the same bytes, …"
+- **Keeps it on a page:** "Entries are kept in one order. Deferrals are ordered by anchor kind, then value, and keys are in the schema's order."
 
 ### RS-WRITE-009 — Each clause has its own verb
 
@@ -163,6 +178,8 @@ In a series of clauses, give each clause its own verb.
 - **How:** repeat a verb that two clauses share, rather than leave the reader to supply it.
 - **Breaks it:** "the change check serves the developer and the merge authoriser, the whole-repository report the developer"
 - **Keeps it:** "The change check serves the developer and the merge authoriser." Then "The whole-repository report serves the developer."
+- **Breaks it on a page:** in the software-analysis README, "An actor is `ACT-<slug>` and a term `TERM-<slug>`"
+- **Keeps it on a page:** "An actor is `ACT-<slug>`, and a term is `TERM-<slug>`."
 
 ## Words and terms
 
@@ -173,8 +190,8 @@ These rules make each pronoun point at one thing, and give each thing one term.
 Replace a pronoun with the noun it stands for when the pronoun could point at two things.
 
 - **How:** in a rewrite, take the noun from the author, or from a cited source that the author confirms (RS-WRITE-013).
-- **Breaks it:** in the software-analysis README's section on `pkit analysis new`, "Create artefacts with the stamp, never by copying a template by hand: it gives each one its id, …" *It* could be the stamp or the template.
-- **Keeps it:** in that section's try-out, "… never by copying a template by hand. The stamp gives each one its id, …", once the author confirms that reading.
+- **Breaks it on a page:** in the software-analysis README's section on `pkit analysis new`, "Create artefacts with the stamp, never by copying a template by hand: it gives each one its id, …" *It* could be the stamp or the template.
+- **Keeps it on a page:** in that section's try-out, "… never by copying a template by hand. The stamp gives each one its id, …", once the author confirms that reading.
 
 ### RS-WRITE-011 — One term for one thing, from the glossary
 
@@ -183,25 +200,6 @@ Use one term for one thing, and take it from the project's glossary, not from an
 - **How:** until the glossary holds a word, use the word that the project's records use. Where a document uses two terms, ask the author whether they name one thing.
 - **Breaks it:** the developer comes "for every unit of work", and the merge authoriser comes "at the end of each piece of work". The two terms may name one thing.
 - **Keeps it:** one of the two in both places, once the author confirms that they name one thing. The first ASD-STE100 rewrite chose "task" for both without asking.
-
-## Needs and goals
-
-This rule is for an actor's needs and a use case's goal, in the analysis.
-
-### RS-WRITE-012 — One need or goal, one sentence
-
-Write each need of an actor, and each use case's goal, as one sentence in its actor's voice. That sentence is an imperative that starts with its verb, using *I*, *me*, *my* and *myself* wherever the actor refers to itself.
-
-- **How:**
-  - *Never* may come before the verb.
-  - Never split a need or a goal into two sentences, and keep it within the limit of RS-WRITE-005.
-  - A use case's goal is the same user story as a need (software-analysis DEC-001 point 1), so it takes the same form.
-- **Breaks it:**
-  - "Run every check with no terminal and no person to answer. Gate the merge on the check's exit status." (the plain rewrite, split in two)
-  - "Find the agent's role definition deployed, …" (the first ASD-STE100 run, where the AI agent names itself)
-- **Keeps it:**
-  - "Run every check with no terminal and no person to answer, and gate the merge on its exit status." (the original)
-  - "Find my role definition deployed, …" (the original)
 
 ## Keeping meaning
 
@@ -214,7 +212,7 @@ A rewrite adds, drops, weakens or narrows no claim, and asks the author wherever
 - **How:**
   - Flag the passage for the author, and keep the original until the author answers. The flag is a comment on the change's pull request that lists each held spot, as on PR #1345.
   - Project terms and citations stay as written, and a citation's form includes its locator, such as "release README:22-29".
-  - Text a person decided is never rewritten for style: a recorded revalidation, a deferral, an `unanchored-because` reason or a revalidation record. Reworded, it would need that person's decision again (`.pkit/rules/core.md` rule 20).
+  - Text a person decided is never rewritten for style, such as a recorded revalidation, a deferral, an `unanchored-because` reason or a revalidation record. Reworded, it would need that person's decision again (`.pkit/rules/core.md` rule 20).
   - This rule wins wherever another rule of this set would change what a text says.
   - The trial's rewrites changed what a text says in each of these ways:
     - **Adding:** the original "have them validated" names no validator, and the rewrite "let the system validate them" names one.
