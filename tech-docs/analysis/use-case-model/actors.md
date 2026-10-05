@@ -67,6 +67,21 @@ ACT-merge-authoriser:
       anchors:
         record:
           - COR-050
+ACT-methodology-maintainer:
+  name: Methodology maintainer
+  status: active
+  needs:
+    - Develop the methodology in its source repository, where no sync copies over my work, and run what I ship there before any adopter does.
+    - Keep each core record true for any project that adopts it.
+    - Release the backbone so adopters can upgrade and pin to it, knowing what each change since the last release means for them.
+    - Never ship a backbone change that breaks installed projects without the migration that carries them across.
+    - Receive adopters' reports with their versions attached, and link each one to the issue that fixes it.
+  pkit:
+    friction:
+      anchors:
+        record:
+          - ADR-059
+          - PRJ-002
 ACT-operator:
   name: Operator
   status: active
@@ -104,6 +119,10 @@ The person who builds: decisions, rules, notes, code and its documentation, one 
 ## ACT-merge-authoriser — Merge authoriser
 
 The person who authorises a change's merge into the default branch. Where work is committed there directly, it is the person the agent works for, before the commit. Always a person: the authorisation turns the answers an agent wrote into a person's decision, and the same person's review turns a record or rule an agent drafted into a binding one. They come at the end of each piece of work, and whenever a drafted record or rule waits for acceptance. They bring the authority to land the change. The name is not "approver", because project-management uses that word for a reviewer agent (DEC-028). Core: COR-050 point 3 defines this role, for a merge and a direct commit alike, and the acceptance gate gives it acceptance, so it exists with no work tracker installed.
+
+## ACT-methodology-maintainer — Methodology maintainer
+
+Whoever maintains a distribution of the methodology: project-kit's maintainers, or a fork's. They work in its source repository, on the core records, the backbone and the releases adopters upgrade to. They come for every change to the methodology and every backbone release. They bring the methodology's disciplines (CONTRIBUTING.md), and they are the first adopter of what they ship. Core: the source repository, its release policy and its report inbox exist for this role.
 
 ## ACT-operator — Operator
 
