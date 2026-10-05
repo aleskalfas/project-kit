@@ -32,9 +32,10 @@ Four parts, so the validators that call them stay pure:
 - **The rule** (`findings`): the point is read only for a body that cites. A
   cited id the whole set does not hold is reported, naming what the set was
   read against. It checks existence only. A withdrawn use case passes, since
-  its id is never reused. What could not be checked is one notice about the
-  check, at the same severity and under its own label: the ids a partly
-  checked set lacks are named as not checked, and an unread point says why.
+  an id that anything cites is never reused. What could not be checked is one
+  notice about the check, at the same severity and under its own label: the
+  ids a partly checked set lacks are named as not checked, and an unread point
+  says why.
   Nothing here refuses or changes a verb's exit.
 """
 

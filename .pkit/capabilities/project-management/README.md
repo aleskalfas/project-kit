@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-03T19:52:38Z
+      at: 2026-10-05T00:52:40Z
       outcome: updated
 ---
 
@@ -326,7 +326,7 @@ A project may keep a written account of what its software must do, as use cases,
   [warning] body.use-case-citation: cites UC-042, not among the use cases settled on the default branch (read at origin/main 1a2b3c4d5e6f). The check is of existence only. If the use case has landed since, fetch the default branch and validate again.
   ```
 
-  An id the point holds passes, whichever use case you meant, and so does a withdrawn one: its id is never reused, so the citation stays a true reference. An id anywhere else in the body is not a citation. EPIC, Umbrella and Milestone bodies are not read: a `## Use cases` heading there is ordinary content. The point is resolved only for a body that cites, so a body without the section starts no filler.
+  An id the point holds passes, whichever use case you meant, and so does a withdrawn one: an id that anything cites is never reused, so the citation stays a true reference. An id anywhere else in the body is not a citation. EPIC, Umbrella and Milestone bodies are not read: a `## Use cases` heading there is ordinary content. The point is resolved only for a body that cites, so a body without the section starts no filler.
 - **A warning, never a refusal.** The severity is the rule's token in `schemas/body-format.yaml`, `warning`; no project setting changes it, and no verb refuses or changes its exit code over it. A use-case id is settled once its use case reaches the default branch — until then another line of work may take the same id — and this clone's view of that branch may lag the remote, so the finding names a likely guess and blocks nothing.
 - **When the citations cannot be checked**, the same verbs say so in one notice, `body.use-cases-unchecked`, at the same severity, and report no use case as unknown on that ground. A point that gave no set names the reason, and with it the fix; a partly checked one names the ids it lacks and the filler that did not answer:
 
@@ -1041,7 +1041,7 @@ doc_check:
 
 - **Accepts** `pkit::work-tracking:use-cases`, version 1: the use cases settled on the default branch, per [project-management:DEC-054-use-case-validation]. Its shape is the companion schema `schemas/use-cases.schema.json`: each entry an `id` (`UC-` and three or more digits), a `title`, a `status` — `active` or `withdrawn` — and, optionally, the repository-relative `path` of the document that describes the use case. The point is `single`, with no default, and its inert policy is `fallback`: its readers only report, so a filler that cannot answer is a warning in `pkit validate`, never an error. What reads it, and how each state of it reads, is under "Use cases in planning and in bodies", above.
 
-  **Whatever keeps your use cases fills it**: a capability that contributes to the point, or your own filler file, `docs/pkit/fillers/pkit/work-tracking/use-cases.yaml` (`schema_version: 1` and a `value` list of entries), which replaces a capability's answer whole. `pkit status` shows what fills the point. A filler holds to four things, which the point's description states: the value holds every use case that ever settled, withdrawn ones included; an id, once settled, names the same use case for good; the answer is complete or none — a filler that cannot read a use case gives no answer, never a shorter list; and a capability's filler declares that it reads settled state (`reads: [settled]` on its command), so the backbone does not start it where the default branch cannot be read. Your own filler file is your statement of your use cases: it is held to the point's shape and taken as given. With nothing filling the point, nothing in this capability mentions use cases.
+  **Whatever keeps your use cases fills it**: a capability that contributes to the point, or your own filler file, `docs/pkit/fillers/pkit/work-tracking/use-cases.yaml` (`schema_version: 1` and a `value` list of entries), which replaces a capability's answer whole. `pkit status` shows what fills the point. A filler holds to four things, which the point's description states: the value holds every use case that ever settled, withdrawn ones included; an id, once settled, names the same use case for good, unless your project declares that nothing cites it; the answer is complete or none — a filler that cannot read a use case gives no answer, never a shorter list; and a capability's filler declares that it reads settled state (`reads: [settled]` on its command), so the backbone does not start it where the default branch cannot be read. Your own filler file is your statement of your use cases: it is held to the point's shape and taken as given. With nothing filling the point, nothing in this capability mentions use cases.
 
 ## Permissions
 
