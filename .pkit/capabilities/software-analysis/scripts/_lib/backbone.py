@@ -48,9 +48,10 @@ setting names stands for, whether the default branch's history holds it, which
 files it removed, git's rename detection on, and the commit of the default
 branch's first-parent line at which each of those paths went last
 (`commit_of`, `is_ancestor`, `removed`, `lost`; `_lib/numbering.py`); for the
-number comparison, which versions of those files a branch's own history wrote, and which the default branch holds, so a number
-the default branch took by landing this branch's own work is told from one it
-took for another (`blobs_written`, `blob_of`); and, for the
+number comparison, which versions of those files a branch's own history wrote,
+and which the default branch holds, so a number the default branch took by
+landing this branch's own work is told from one it took for another
+(`blobs_written`, `blob_of`); and, for the
 proposal, which files held a piece of code at a commit — anywhere in the tree,
 or among files the caller names — where files were renamed to between two
 commits, and a commit's message. Which files an anchor stands on is never
