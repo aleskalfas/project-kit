@@ -292,14 +292,18 @@ def test_the_definitions_location_is_recorded_and_each_space_names_its_definitio
     }
 
 
-def test_ldoc_and_both_space_definitions_validate_and_pin_it() -> None:
+def test_ldoc_write_and_both_space_definitions_validate_and_each_space_pins_both() -> None:
     result = rs.validate_rule_sets(REPO)
     assert result.errors == ()
     names = {rule_set.name: rule_set for rule_set in result.discovery.rule_sets}
     assert names["LDOC"].component == "living-docs"
+    # project-kit's shared writing rules, a project rule set every space inherits.
+    assert names["WRITE"].component is None
+    assert names["WRITE"].path == "tech-docs/rule-sets/writing.md"
     for name in ("USER", "TECH"):
         assert names[name].component is None
-        assert [str(pin) for _index, pin in names[name].pins] == ["living-docs:LDOC@1"]
+        pins = [str(pin) for _index, pin in names[name].pins]
+        assert pins == ["living-docs:LDOC@1", "WRITE@0"]
     assert all(check.problem is None for check in rs.pin_checks(result.discovery))
 
 
