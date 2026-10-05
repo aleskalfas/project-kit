@@ -5,6 +5,7 @@ started: 2026-10-05
 retired: 2026-10-05
 produced:
   - tech-docs/rule-sets/writing.md
+  - tech-docs/rule-sets/analysis.md
 ---
 
 # The writing-style trial — plain language and ASD-STE100 on the actors document
@@ -16,7 +17,7 @@ Should project-kit write its documentation and its analysis by a published guide
 - **The candidates:** plain language (ISO 24495-1) and ASD-STE100 Simplified Technical English.
 - **The maintainer's preference:** lists, nested lists and sub-headings over long paragraphs. Something must show what matters most.
 - **The test:** a style that changes meaning is disqualified for analysis artefacts.
-- **What it produced:** the proposed rules of `WRITE`, project-kit's writing rule set (`tech-docs/rule-sets/writing.md`). Each rule's reason cites this note.
+- **What it produced:** the proposed rules of `WRITE`, project-kit's general writing rule set (`tech-docs/rule-sets/writing.md`). It also produced the rule on needs and goals of `ANALYSIS`, the set for the analysis (`tech-docs/rule-sets/analysis.md`). Each of these rules' reasons cites this note.
 
 The trial's working files lived in the agent workspace, which is never committed. This note keeps what the rules rest on.
 
@@ -264,3 +265,11 @@ The rules were then tried on two reference pages, on the branch `docs/1348-write
   - labels that other text cites stay stable
   - a limit on how deep lists nest
   - a check for control and bidi characters
+
+## Split per domain
+
+On 5 October the maintainer decided that the rules split per domain, and they were split.
+
+- **`WRITE`** keeps the general rules. It has no scope of its own, and binds only through a set that inherits it.
+- **`ANALYSIS`** (`tech-docs/rule-sets/analysis.md`) inherits `WRITE` for everything under `tech-docs/analysis/`. It adds the rule on needs and goals, and fills `WRITE`'s list of labels with the core actors' list.
+- **Next:** the documentation spaces inherit `WRITE` through `TECH` and `USER`, once it has the exceptions that reference pages need.
