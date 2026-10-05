@@ -51,10 +51,10 @@ Write each need of an actor, and each use case's goal, as one sentence in its ac
   - *Never* may come before the verb.
   - Never split a need or a goal into two sentences, and keep it within the limit of RS-WRITE-005.
   - A use case's goal is the same user story as a need (software-analysis DEC-001 point 1), so it takes the same form.
-- **Breaks it:**
+- **Breaks the rule:**
   - "Run every check with no terminal and no person to answer. Gate the merge on the check's exit status." (the plain rewrite, split in two)
   - "Find the agent's role definition deployed, …" (the first ASD-STE100 run, where the AI agent names itself)
-- **Keeps it:**
+- **Keeps the rule:**
   - "Run every check with no terminal and no person to answer, and gate the merge on its exit status." (the original)
   - "Find my role definition deployed, …" (the original)
 
