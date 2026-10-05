@@ -18,6 +18,24 @@ ACT-adopter:
         record:
           - COR-001
           - COR-010
+ACT-developer:
+  name: Developer
+  status: active
+  needs:
+    - Record my decisions beside the methodology's, and build only on accepted ones.
+    - Author and extend my project's rule sets without editing the ones that ship with the methodology.
+    - Think a question too big for a decision through in a scratchpad note, and retire the note once it has produced something.
+    - Say what each of my documents rests on, so a change there reaches me.
+    - Answer what my change made stale, judging an agent's proposed answer word for word, or running its commands myself when it cannot ask me.
+    - Know before I push that my change passes the checks my project gates its merges on.
+    - Have a substantive draft challenged before I adopt it, and my diff checked against the methodology's conventions before I commit it.
+    - Land my change on the default branch as one squash commit with a conventional title, through a pull request or directly when I work alone.
+    - Turn recurring work into my project's own skill or agent, designing its dialogue as a storyboard first.
+  pkit:
+    friction:
+      anchors:
+        record:
+          - COR-009
 ACT-operator:
   name: Operator
   status: active
@@ -43,6 +61,10 @@ Who uses the system, and what each needs from it. Each actor's id is stable; its
 ## ACT-adopter — Adopter
 
 The person who adopts the methodology for a project and keeps its setup: what is installed, at which version, which of their own additions sit beside it, and which checks the project's merges wait on. They come at setup, at each upgrade, and when the project needs a discipline. They bring their project, its existing `CLAUDE.md` and settings, its repository settings, and the rules and grants they add. Core: the split between methodology-owned and project-owned files, and the install and upgrade lifecycle, exist for this role. Installing a capability is itself a core act.
+
+## ACT-developer — Developer
+
+The person who builds: decisions, rules, notes, code and its documentation, one change at a time. They come for every unit of work, and again when some work recurs often enough to deserve tooling of its own. They bring the change and direct agents to make it. Core: every change passes the acceptance gate and the friction check, whatever tracks the work, and lands as COR-009 sets out. That the backbone itself lands pull requests is provisional (ADR-061 point 3, raised as #1222). A work tracker's view of this role (project-management's "Implementer") comes with that capability.
 
 ## ACT-operator — Operator
 
