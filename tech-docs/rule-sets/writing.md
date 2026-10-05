@@ -209,17 +209,22 @@ This rule protects what a text says whenever someone rewrites it.
 
 A rewrite adds, drops, weakens or narrows no claim, and asks the author wherever it would have to choose a reading.
 
-- **How:** flag the passage for the author, and keep the original until the author answers. Project terms and citations stay as written, and a citation's form includes its locator, such as "release README:22-29". This rule wins wherever another rule of this set would change what a text says. The trial's rewrites changed what a text says in each of these ways:
-  - **Adding:** the original "have them validated" names no validator, and the rewrite "let the system validate them" names one.
-  - **Dropping:** "every change *passes* the acceptance gate" became "the acceptance gate and the friction check *examine* each change". The duty to pass is gone.
-  - **Weakening:** "*Carry* the projects … *across* a breaking change" became "*Help* the projects … to continue to operate". Dropping *own* or *itself* weakens a claim too.
-  - **Narrowing:** "*answer* what the methodology gates" became "*accepts or rejects the prompts* at the gates".
-  - **Swapping a term:** "the same person's *review* turns a record or rule … into a binding one" became "When the same person *examines* a record or rule …". Reading a draft does not make it binding.
-  - **Changing a citation's form:** "(:65, :67)" became "(lines 65 and 67)".
-  - **Splitting into parts that disagree:** "only checks …, and one base" became "only checks", then "also one base".
-  - **Choosing a reading:** "knowing what each change … means for them" has two readings. One rewrite gave the knowing to the adopters, and the other gave it to the maintainer. A pronoun's referent is a reading too (RS-WRITE-010).
-- **Breaks it:** "Ship a backbone change that breaks installed projects only with the migration that carries them across." (the plain rewrite)
-- **Keeps it:** "Never ship a backbone change that breaks installed projects without the migration that carries them across." (the original). The *only* form reads as a wish to ship breaking changes.
+- **How:**
+  - Flag the passage for the author, and keep the original until the author answers. The flag is a comment on the change's pull request that lists each held spot, as on PR #1345.
+  - Project terms and citations stay as written, and a citation's form includes its locator, such as "release README:22-29".
+  - Text a person decided is never rewritten for style: a recorded revalidation, a deferral, an `unanchored-because` reason or a revalidation record. Reworded, it would need that person's decision again (`.pkit/rules/core.md` rule 20).
+  - This rule wins wherever another rule of this set would change what a text says.
+  - The trial's rewrites changed what a text says in each of these ways:
+    - **Adding:** the original "have them validated" names no validator, and the rewrite "let the system validate them" names one.
+    - **Dropping:** "every change *passes* the acceptance gate" became "the acceptance gate and the friction check *examine* each change". The duty to pass is gone.
+    - **Weakening:** "*Carry* the projects … *across* a breaking change" became "*Help* the projects … to continue to operate". Dropping *own* or *itself* weakens a claim too.
+    - **Narrowing:** "*answer* what the methodology gates" became "*accepts or rejects the prompts* at the gates".
+    - **Swapping a term:** "the same person's *review* turns a record or rule … into a binding one" became "When the same person *examines* a record or rule …". Reading a draft does not make it binding.
+    - **Splitting into parts that disagree:** "only checks …, and one base" became "only checks", then "also one base".
+    - **Choosing a reading:** "knowing what each change … means for them" has two readings. One rewrite gave the knowing to the adopters, and the other gave it to the maintainer. A pronoun's referent is a reading too (RS-WRITE-010).
+  - The trial also changed a citation's form: "(:65, :67)" became "(lines 65 and 67)". That is a change of form, not of claim, and the citation clause above forbids it too.
+- **Breaks it:** "Ship a backbone change that breaks installed projects only with the migration that carries them across." (the plain rewrite). It turns the guard "Never … without" into the goal "only with", which adds an implied goal: a wish to ship breaking changes.
+- **Keeps it:** "Never ship a backbone change that breaks installed projects without the migration that carries them across." (the original)
 
 ## What this set does not govern
 
