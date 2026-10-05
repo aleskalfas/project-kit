@@ -49,12 +49,13 @@ rules:
     origin: {why: "A style that changes meaning is disqualified for analysis artefacts. In the trial, rewrites by both guidelines changed what statements claim (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
 ---
 
-# WRITE — writing for project-kit's documentation
+# WRITE — project-kit's writing rules
 
-These rules say how project-kit writes its documentation and its analysis.
+These rules say how project-kit writes its analysis, and later its documentation.
 
 - **What matters most:** the meaning. A rewrite keeps it (RS-WRITE-013).
-- **Where the rules apply:** the analysis under `tech-docs/analysis/`, which is this set's scope. project-kit's operational rules send its writers here (`.pkit/rules/project.md`). The pages of the technical and user spaces take the rules through inheritance, when their definitions, `TECH` and `USER`, inherit this set. That inheritance is pending.
+- **Where the rules apply:** the analysis under `tech-docs/analysis/`, which is this set's scope. project-kit's operational rules send its writers here (`.pkit/rules/project.md`).
+- **Where they apply next:** the pages of the technical and user spaces, in a later change. That change first adds the exceptions those pages need. Then the spaces' definitions, `TECH` and `USER`, inherit this set.
 - **Where they come from:** a style trial in October 2026. It rewrote the core actors document by ASD-STE100 and by ISO 24495-1, and kept what helped. The trial, and what it left out, are in `.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`.
 - **How a rule reads:** a statement, then *How*, then text that *Breaks it* and text that *Keeps it*. Unless an example says otherwise, *Breaks it* quotes the original actors document, and *Keeps it* quotes the plain rewrite. A rule's reason is the `why` of its origin, in the front matter (COR-051 point 5).
 - **Note:** how rules are named, accepted and inherited is the rule-set record's (COR-051). A rule binds only once it is accepted.
@@ -212,4 +213,4 @@ This set leaves three kinds of writing to their own rules, and reaches a table c
 - **Rule sets:** the rule-set record governs them (COR-051). This set keeps its own rules anyway.
 - **Agent and skill bodies:** their own disciplines govern them (`.pkit/agents/README.md` and `.pkit/skills/README.md`).
 - **Table cells:** only the rules that fit a cell reach it. A cell holds no list, label or paragraph, so RS-WRITE-001 to RS-WRITE-004 and RS-WRITE-007 do not apply there.
-- **Note:** this set does not inherit `living-docs:LDOC`. LDOC's rules are for pages, and would pull a page's `reader` field (RS-LDOC-003) onto analysis artefacts, which are never pages (living-docs DEC-001 point 1). living-docs DEC-001 point 3 keeps a project's documentation rules in a set that inherits LDOC. Pages reach WRITE only through `TECH` and `USER`, which inherit LDOC, so every page that takes WRITE takes LDOC beside it.
+- **Note:** this set does not inherit `living-docs:LDOC`. LDOC's rules are for pages, and would pull a page's `reader` field (RS-LDOC-003) onto analysis artefacts, which are never pages (living-docs DEC-001 point 1). living-docs DEC-001 point 3 keeps a project's documentation rules in a set that inherits LDOC. Pages will reach WRITE only through `TECH` and `USER`, which inherit LDOC, so every page that takes WRITE will take LDOC beside it.
