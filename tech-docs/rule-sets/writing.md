@@ -55,7 +55,7 @@ These are project-kit's general writing rules. They bind a document only through
   - *Breaks the rule* and *Keeps the rule* quote the core actors: the original document breaks the rule, and the plain rewrite keeps it.
   - *Breaks the rule on a page* and *Keeps the rule on a page* quote a reference page before and after its try-out, on the branch `docs/1348-write-tryout`.
   - An example that quotes anything else says so.
-- **What binds:** a rule's statement and its *How*. Both are the rule's content in the sense of COR-051 point 2, and the examples only illustrate them.
+- **What binds:** a rule's statement and its *How*. Both are the rule's content in the sense of COR-051 point 2, and the examples only illustrate them. Inside a *How*, a "such as" phrase and a sentence that starts "An example is" only illustrate too. The rest of the *How* binds.
 - **Held back:** RS-WRITE-006 stays proposed for now. Its `why` says what the trial could not show, and what splitting put at risk.
 - **A number not reused:** RS-WRITE-012 moved to the analysis set as RS-ANALYSIS-001, since needs and goals are the analysis's own. Its number stays unused here.
 - **Note:** how rules are named, accepted and inherited is the rule-set record's (COR-051). A rule binds only once it is accepted.
