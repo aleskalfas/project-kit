@@ -7,4 +7,4 @@
 
 ## Writing
 
-3. **Analysis artefacts follow the accepted rules of `WRITE`.** Analysis artefacts under `tech-docs/analysis/` follow the accepted rules of `WRITE` (`tech-docs/rule-sets/writing.md`). Specific to project-kit's own writing rule set, so this rule lives here rather than in core.
+3. **Write the analysis by `WRITE`.** Everything under `tech-docs/analysis/` follows the accepted rules of `WRITE`, project-kit's writing rule set (`tech-docs/rule-sets/writing.md`). Specific to project-kit's own writing rule set, so this rule lives here rather than in core.

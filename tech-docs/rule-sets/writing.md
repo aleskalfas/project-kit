@@ -17,7 +17,7 @@ rules:
     origin: {why: "Side matter interrupted each role's description. Moved last under Note, it left the description shorter with nothing dropped (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-005:
     status: proposed
-    origin: {why: "Short sentences are easier for every reader. The original had ten body sentences over 25 words, and both rewrites brought every one to 25 or fewer (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    origin: {why: "Short sentences are easier for every reader. That is the maintainer's view, not a trial finding, since the trial tested no readers. The trial showed that the limit can be kept. The original had ten body sentences over 25 words, and both rewrites brought every one to 25 or fewer (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-006:
     status: proposed
     origin: {why: "A sentence with one idea is read once, in the maintainer's view. The trial could not show it. This rule was applied with the word limit and the labels, and their effects could not be told apart. Splitting also put meaning at risk. In the trial, a split section contradicted itself. In the core actors, two splits would have chosen a reading, and in the try-outs, splits moved pronouns away from their nouns (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
@@ -29,7 +29,7 @@ rules:
     origin: {why: "A semicolon joins two sentences that read better apart. Three of the original's four semicolons split cleanly into sentences or a list. The fourth joined two citations, where a comma would be ambiguous, since a citation can hold a comma itself (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-009:
     status: proposed
-    origin: {why: "An elided verb, as in \"the whole-repository report the developer\", slows every reader down. It slows most a reader whose first language is not English (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    origin: {why: "An elided verb, as in \"the whole-repository report the developer\", slows every reader down. It slows most a reader whose first language is not English. Both are the maintainer's view, not a trial finding, since the trial tested no readers. The trial's ASD-STE100 rewrite made that clause whole (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-010:
     status: proposed
     origin: {why: "A reader who picks the wrong referent learns a wrong fact, and nothing warns them. In the trial, naming the harness behind \"it\" made a need clear (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
@@ -51,13 +51,14 @@ rules:
 
 # WRITE — project-kit's writing rules
 
-These rules say how project-kit writes its analysis, and later its documentation.
+These rules say how project-kit writes its analysis, and later they will say how it writes its documentation.
 
 - **What matters most:** the meaning. A rewrite keeps it (RS-WRITE-013).
 - **Where the rules apply:** the analysis under `tech-docs/analysis/`, which is this set's scope. project-kit's operational rules send its writers here (`.pkit/rules/project.md`).
 - **Where they apply next:** the pages of the technical and user spaces, in a later change. That change first adds the exceptions those pages need. Then the spaces' definitions, `TECH` and `USER`, inherit this set.
 - **Where they come from:** a style trial in October 2026. It rewrote the core actors document by ASD-STE100 and by ISO 24495-1, and kept what helped. The trial, and what it left out, are in `.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`.
 - **How a rule reads:** a statement, then *How*, then text that *Breaks it* and text that *Keeps it*. Unless an example says otherwise, *Breaks it* quotes the original actors document, and *Keeps it* quotes the plain rewrite. A rule's reason is the `why` of its origin, in the front matter (COR-051 point 5).
+- **What binds:** a rule's statement and its *How*. Both are the rule's content in the sense of COR-051 point 2, and the examples only illustrate them.
 - **Held back:** RS-WRITE-006 stays proposed for now. Its `why` says what the trial could not show, and what splitting put at risk.
 - **Note:** how rules are named, accepted and inherited is the rule-set record's (COR-051). A rule binds only once it is accepted.
 
@@ -165,22 +166,22 @@ In a series of clauses, give each clause its own verb.
 
 ## Words and terms
 
-These rules make each word point at one thing.
+These rules make each pronoun point at one thing, and give each thing one term.
 
 ### RS-WRITE-010 — Name what a pronoun stands for
 
 Replace a pronoun with the noun it stands for when the pronoun could point at two things.
 
 - **How:** in a rewrite, take the noun from the author, or from a cited source that the author confirms (RS-WRITE-013).
-- **Breaks it:** "say requirement by requirement how far it meets them". *It* could be the methodology or the harness.
-- **Keeps it:** "Say how far that harness meets each requirement", once the author confirms the reading that COR-047 gives.
+- **Breaks it:** in the software-analysis README's section on `pkit analysis new`, "Create artefacts with the stamp, never by copying a template by hand: it gives each one its id, …" *It* could be the stamp or the template.
+- **Keeps it:** in that section's try-out, "… never by copying a template by hand. The stamp gives each one its id, …", once the author confirms that reading.
 
 ### RS-WRITE-011 — One term for one thing, from the glossary
 
 Use one term for one thing, and take it from the project's glossary, not from an outside dictionary.
 
 - **How:** until the glossary holds a word, use the word that the project's records use. Where a document uses two terms, ask the author whether they name one thing.
-- **Breaks it:** the developer comes "for every unit of work", and the merge authoriser "at the end of each piece of work". The two terms may name one thing.
+- **Breaks it:** the developer comes "for every unit of work", and the merge authoriser comes "at the end of each piece of work". The two terms may name one thing.
 - **Keeps it:** one of the two in both places, once the author confirms that they name one thing. The first ASD-STE100 rewrite chose "task" for both without asking.
 
 ## Needs and goals
