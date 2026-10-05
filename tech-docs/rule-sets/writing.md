@@ -55,7 +55,7 @@ These rules say how project-kit writes its documentation and its analysis.
 
 - **What matters most:** the meaning. A rewrite keeps it (RS-WRITE-013).
 - **Where the rules apply:**
-  - the analysis under `tech-docs/analysis/`, which is this set's scope
+  - the analysis under `tech-docs/analysis/`, which is this set's scope. project-kit's operational rules send its writers here (`.pkit/rules/project.md`).
   - the pages of the technical and user spaces, through inheritance, when their definitions, `TECH` and `USER`, inherit this set. That inheritance is pending.
 - **Where they come from:** a style trial in October 2026. It rewrote the core actors document by ASD-STE100 and by ISO 24495-1, and kept what helped. The trial, and what it left out, are in `.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`.
 - **How a rule reads:** a statement, then *How*, then text that *Breaks it* and text that *Keeps it*. Unless an example says otherwise, *Breaks it* quotes the original actors document and *Keeps it* the plain rewrite. A rule's reason is the `why` of its origin, in the front matter (COR-051 point 5).
