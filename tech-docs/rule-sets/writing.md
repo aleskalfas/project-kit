@@ -176,14 +176,18 @@ This rule is for an actor's needs and a use case's goal, in the analysis.
 
 ### RS-WRITE-012 — One need or goal, one sentence
 
-Write each need of an actor, and each use case's goal, as one first-person sentence that starts with its verb.
+Write each need of an actor, and each use case's goal, as one sentence in its actor's voice. That sentence is an imperative that starts with its verb, using *I*, *me*, *my* and *myself* wherever the actor refers to itself.
 
 - **How:**
-  - *Never* may come before the verb. Keep *I*, *me* and *my*.
-  - Never split one into two sentences, and keep it within the limit of RS-WRITE-005.
+  - *Never* may come before the verb.
+  - Never split a need or a goal into two sentences, and keep it within the limit of RS-WRITE-005.
   - A use case's goal is the same user story as a need (software-analysis DEC-001 point 1), so it takes the same form.
-- **Breaks it:** "Run every check with no terminal and no person to answer. Gate the merge on the check's exit status." (the plain rewrite)
-- **Keeps it:** "Run every check with no terminal and no person to answer, and gate the merge on its exit status." (the original)
+- **Breaks it:**
+  - "Run every check with no terminal and no person to answer. Gate the merge on the check's exit status." (the plain rewrite, split in two)
+  - "Find the agent's role definition deployed, …" (the first ASD-STE100 run, where the AI agent names itself)
+- **Keeps it:**
+  - "Run every check with no terminal and no person to answer, and gate the merge on its exit status." (the original)
+  - "Find my role definition deployed, …" (the original)
 
 ## Keeping meaning
 
