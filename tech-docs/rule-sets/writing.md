@@ -207,3 +207,13 @@ A rewrite adds, drops, weakens or narrows no claim, and asks the author wherever
   - **Choosing a reading:** in "knowing what each change … means for them", one rewrite made the adopters the ones who know, and the other the maintainer. A pronoun's referent is a reading too (RS-WRITE-010).
 - **Breaks it:** "Ship a backbone change that breaks installed projects only with the migration that carries them across." (the plain rewrite)
 - **Keeps it:** "Never ship a backbone change that breaks installed projects without the migration that carries them across." (the original). The *only* form reads as a wish to ship breaking changes.
+
+## What this set does not govern
+
+This set leaves three kinds of writing to their own rules, and reaches a table cell only in part.
+
+- **Decision records:** the decision-record specification governs them (`.pkit/decisions/README.md`).
+- **Rule sets:** the rule-set record governs them (COR-051). This set keeps its own rules anyway.
+- **Agent and skill bodies:** their own disciplines govern them (`.pkit/agents/README.md` and `.pkit/skills/README.md`).
+- **Table cells:** only the rules that fit a cell reach it. A cell holds no list, label or paragraph, so RS-WRITE-001 to RS-WRITE-004 and RS-WRITE-007 do not apply there.
+- **Note:** this set does not inherit `living-docs:LDOC`. LDOC's rules are for pages, and would pull a page's `reader` field (RS-LDOC-003) onto analysis artefacts, which are never pages (living-docs DEC-001 point 1). living-docs DEC-001 point 3 keeps a project's documentation rules in a set that inherits LDOC. Pages reach WRITE only through `TECH` and `USER`, which inherit LDOC, so every page that takes WRITE takes LDOC beside it.
