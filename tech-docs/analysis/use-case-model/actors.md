@@ -3,7 +3,7 @@ ACT-adopter:
   name: Adopter
   status: active
   needs:
-    - Install the methodology into my project with one command, committed for the team or kept out of the shared repository, and see how it is wired.
+    - Install the methodology into my project with one command, committed for the team or kept out of the shared repository, and see its wiring.
     - Upgrade it like a dependency, at a version pinned for the whole project, with its migrations run for me and my own files left alone.
     - Add or remove a capability, one shared from another of my repositories included, and be told of a name collision instead of being overwritten.
     - Choose which installed capability provides a role.
@@ -77,7 +77,7 @@ ACT-developer:
     - Say what each of my documents rests on, so a change there reaches me.
     - Answer what my change made stale, judging an agent's proposed answer word for word, or running its commands myself when it cannot ask me.
     - Know before I push that my change passes the checks my project gates its merges on.
-    - Have a substantive draft challenged before I adopt it, and my diff checked against the methodology's conventions before I commit it.
+    - Have a substantive draft challenged before I adopt it, and have my diff checked against the methodology's conventions before I commit it.
     - Land my change on the default branch as one squash commit with a conventional title, through a pull request or directly when I work alone.
     - Turn recurring work into my project's own skill or agent, designing its dialogue as a storyboard first.
   pkit:
@@ -133,36 +133,95 @@ ACT-operator:
 
 # Actors
 
-Who uses the system, and what each needs from it. Each actor's id is stable; its name may change.
+Who uses the system, and what each needs from it. Each actor's id is stable. Its name may change.
 
 ## ACT-adopter — Adopter
 
-The person who adopts the methodology for a project and keeps its setup: what is installed, at which version, which of their own additions sit beside it, and which checks the project's merges wait on. They come at setup, at each upgrade, and when the project needs a discipline. They bring their project, its existing `CLAUDE.md` and settings, its repository settings, and the rules and grants they add. Core: the split between methodology-owned and project-owned files, and the install and upgrade lifecycle, exist for this role. Installing a capability is itself a core act.
+The person who adopts the methodology for a project and keeps its setup.
+
+- **The setup:**
+  - what is installed, at which version
+  - which of their own additions sit beside it
+  - which checks the project's merges wait on
+- **When they come:** at setup, at each upgrade, and when the project needs a discipline.
+- **What they bring:** their project, its existing `CLAUDE.md` and settings, its repository settings, and the rules and grants they add.
+- **Core:** the split between methodology-owned and project-owned files, and the install and upgrade lifecycle, exist for this role. Installing a capability is itself a core act.
 
 ## ACT-ai-agent — AI agent
 
-An AI agent working under the methodology: the main session acting for a person, or an agent that session dispatches for one role (in the core: critic, architect, methodology-reviewer, convention-compliance-reviewer, process-author). It is another system acting on this one. It comes whenever work is done, and it keeps no memory between sessions beyond what the repository holds. When it does a role's work it appears as a step in that role's use cases. The core's reviewer agents advise, and no core gate counts their verdict. Core: the agent architecture, the rules loaded into every session and the adapter's deployment make this actor exist.
+An AI agent working under the methodology. It is another system acting on this one.
+
+- **Who this can be:** the main session acting for a person, or an agent that session dispatches for one role (in the core: critic, architect, methodology-reviewer, convention-compliance-reviewer, process-author).
+- **When they come:** whenever work is done. It keeps no memory between sessions beyond what the repository holds.
+- **In the model:** when it does a role's work, it appears as a step in that role's use cases.
+- **Core:** the agent architecture, the rules loaded into every session and the adapter's deployment make this actor exist. The core's reviewer agents advise, and no core gate counts their verdict.
 
 ## ACT-ci-pipeline — CI pipeline
 
-Another system acting on pkit: a project's continuous integration. It comes on every pull request, queued merge and push to the default branch, and on a schedule, bringing a clean checkout, a base to compare with, and no person to answer a prompt. It is an actor because it starts work on its own trigger with no person in the session. Its needs are what pkit must give an unattended runner; the goals its runs serve belong to people: the change check serves the developer and the merge authoriser, the whole-repository report the developer (a change to what a document rests on reaches them), a release tag the methodology maintainer. Core: the backbone ships no workflow, only checks made to run unattended, which bind once the project makes them a required status (COR-050 point 12), and one base a pipeline names for all of them (COR-054 point 3). project-kit's workflows are one wiring of these, and two of their steps are project-kit's alone: the changeset guard and the release tag (PRJ-002; release README:22-29).
+Another system acting on pkit: a project's continuous integration. It is an actor because it starts work on its own trigger with no person in the session.
+
+- **When they come:** on every pull request, queued merge and push to the default branch, and on a schedule.
+- **What they bring:** a clean checkout, a base to compare with, and no person to answer a prompt.
+- **In the model:** its needs are what pkit must give an unattended runner. The goals its runs serve belong to people:
+  - The change check serves the developer and the merge authoriser.
+  - The whole-repository report serves the developer (a change to what a document rests on reaches them).
+  - A release tag serves the methodology maintainer.
+- **Core:** the backbone ships no workflow. It ships only:
+  - checks made to run unattended, which bind once the project makes them a required status (COR-050 point 12)
+  - one base a pipeline names for all of them (COR-054 point 3)
+- **Note:** project-kit's workflows are one wiring of these. Two of their steps are project-kit's alone: the changeset guard and the release tag (PRJ-002 and release README:22-29).
 
 ## ACT-component-author — Component author
 
-Someone who extends the methodology with a component (a capability or an adapter) rather than only using it. That can be an adopter growing a discipline in their own repository, an organisation that keeps private methodology in one repository for its others, or whoever adapts the methodology to a new harness. They come when a pattern recurs often enough to package, at each release of their component, and when a new harness arrives. They bring the component's decisions, schemas, skills, agents and process definitions, and they own its compatibility claim. In project-kit's source repository the methodology maintainer plays this part for the capabilities and the adapter it ships. Core: the capability pattern, its origins, connection points, the process engine and the harness requirements are the extension points this role uses, and they exist before any capability is installed.
+Someone who extends the methodology with a component (a capability or an adapter) rather than only using it.
+
+- **Who this can be:**
+  - an adopter growing a discipline in their own repository
+  - an organisation that keeps private methodology in one repository for its others
+  - whoever adapts the methodology to a new harness
+- **When they come:** when a pattern recurs often enough to package, at each release of their component, and when a new harness arrives.
+- **What they bring:** the component's decisions, schemas, skills, agents and process definitions. They own its compatibility claim.
+- **Core:** the capability pattern, its origins, connection points, the process engine and the harness requirements are the extension points this role uses. They exist before any capability is installed.
+- **Note:** in project-kit's source repository the methodology maintainer plays this part for the capabilities and the adapter it ships.
 
 ## ACT-developer — Developer
 
-The person who builds: decisions, rules, notes, code and its documentation, one change at a time. They come for every unit of work, and again when some work recurs often enough to deserve tooling of its own. They bring the change and direct agents to make it. Core: every change passes the acceptance gate and the friction check, whatever tracks the work, and lands as COR-009 sets out. That the backbone itself lands pull requests is provisional (ADR-061 point 3, raised as #1222). A work tracker's view of this role (project-management's "Implementer") comes with that capability.
+The person who builds: decisions, rules, notes, code and its documentation, one change at a time.
+
+- **When they come:** for every unit of work, and again when some work recurs often enough to deserve tooling of its own.
+- **What they bring:** the change. They direct agents to make it.
+- **Core:** every change passes the acceptance gate and the friction check, whatever tracks the work, and lands as COR-009 sets out. That the backbone itself lands pull requests is provisional (ADR-061 point 3, raised as #1222).
+- **Note:** a work tracker's view of this role (project-management's "Implementer") comes with that capability.
 
 ## ACT-merge-authoriser — Merge authoriser
 
-The person who authorises a change's merge into the default branch. Where work is committed there directly, it is the person the agent works for, before the commit. Always a person: the authorisation turns the answers an agent wrote into a person's decision, and the same person's review turns a record or rule an agent drafted into a binding one. They come at the end of each piece of work, and whenever a drafted record or rule waits for acceptance. They bring the authority to land the change. The name is not "approver", because project-management uses that word for a reviewer agent (DEC-028). Core: COR-050 point 3 defines this role, for a merge and a direct commit alike, and the acceptance gate gives it acceptance, so it exists with no work tracker installed.
+The person who authorises a change's merge into the default branch. Where work is committed there directly, it is the person the agent works for, before the commit.
+
+- **Always a person:** the authorisation turns the answers an agent wrote into a person's decision. The same person's review turns a record or rule an agent drafted into a binding one.
+- **When they come:** at the end of each piece of work, and whenever a drafted record or rule waits for acceptance.
+- **What they bring:** the authority to land the change.
+- **Core:** COR-050 point 3 defines this role, for a merge and a direct commit alike, and the acceptance gate gives it acceptance. So it exists with no work tracker installed.
+- **Note:** the name is not "approver", because project-management uses that word for a reviewer agent (DEC-028).
 
 ## ACT-methodology-maintainer — Methodology maintainer
 
-Whoever maintains a distribution of the methodology: project-kit's maintainers, or a fork's. They work in its source repository, on the core records, the backbone and the releases adopters upgrade to. They come for every change to the methodology and every backbone release. They bring the methodology's disciplines (CONTRIBUTING.md), and they are the first adopter of what they ship. Core: the source repository, its release policy and its report inbox exist for this role.
+Whoever maintains a distribution of the methodology.
+
+- **Who this can be:** project-kit's maintainers, or a fork's.
+- **What they do:** work in its source repository, on the core records, the backbone and the releases adopters upgrade to.
+- **When they come:** for every change to the methodology and every backbone release.
+- **What they bring:** the methodology's disciplines (CONTRIBUTING.md). They are the first adopter of what they ship.
+- **Core:** the source repository, its release policy and its report inbox exist for this role.
 
 ## ACT-operator — Operator
 
-The person at the controls of a machine. They start agent sessions, choose how much the agents may do without asking, and answer what the methodology gates. They come every working day, in every clone, bringing the machine, its credentials and sandbox, and the judgement the gates ask for. The role is per machine and per clone; it is not whoever holds the repository's settings, whom CONTRIBUTING.md also calls the operator (:65, :67), since making merges wait on the checks is the adopter's. Core: the permission model, its sandbox and the cross-repository gate are this role's controls.
+The person at the controls of a machine. The role is per machine and per clone.
+
+- **What they do:**
+  - start agent sessions
+  - choose how much the agents may do without asking
+  - answer what the methodology gates
+- **When they come:** every working day, in every clone.
+- **What they bring:** the machine, its credentials and sandbox, and the judgement the gates ask for.
+- **Core:** the permission model, its sandbox and the cross-repository gate are this role's controls.
+- **Note:** the role is not whoever holds the repository's settings, since making merges wait on the checks is the adopter's. CONTRIBUTING.md also calls whoever holds those settings the operator (:65, :67).
