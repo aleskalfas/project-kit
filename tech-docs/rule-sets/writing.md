@@ -5,43 +5,43 @@ scope: [tech-docs/analysis/**]
 rules:
   RS-WRITE-001:
     status: proposed
-    origin: {why: "Something must show what matters most."}
+    origin: {why: "Something must show what matters most (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-002:
     status: proposed
-    origin: {why: "Lists, nested lists and sub-headings over long paragraphs. In the trial, the same labels in the same order were the largest gain for scanning."}
+    origin: {why: "Lists, nested lists and sub-headings over long paragraphs. In the trial, the same labels in the same order were the largest gain for scanning (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-003:
     status: proposed
-    origin: {why: "Lists, nested lists and sub-headings over long paragraphs. Listing only series of three or more kept the trial's lists from cluttering the page."}
+    origin: {why: "Lists, nested lists and sub-headings over long paragraphs. Listing only series of three or more kept the trial's lists from cluttering the page (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-004:
     status: proposed
-    origin: {why: "Side matter interrupted each role's description. Moved last under Note, it left the description shorter with nothing dropped."}
+    origin: {why: "Side matter interrupted each role's description. Moved last under Note, it left the description shorter with nothing dropped (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-005:
     status: proposed
-    origin: {why: "A script can check it. Both rewrites met it, and the longest sentence fell from 49 words to 25."}
+    origin: {why: "A script can check it. Both rewrites met it, and the longest sentence fell from 49 words to 25 (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-006:
     status: proposed
-    origin: {why: "One idea per sentence halved the average sentence of the trial's prose."}
+    origin: {why: "One idea per sentence halved the average sentence of the trial's prose (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-007:
     status: proposed
-    origin: {why: "Dense paragraphs were the original's main problem. Eight of its nine ran over four sentences."}
+    origin: {why: "Dense paragraphs were the original's main problem. Eight of its nine ran over four sentences (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-008:
     status: proposed
-    origin: {why: "Every semicolon in the original split cleanly into two sentences or a list."}
+    origin: {why: "Every semicolon in the original split cleanly into two sentences or a list (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-009:
     status: proposed
-    origin: {why: "Elided words such as \"the whole-repository report the developer\" slow every reader down."}
+    origin: {why: "Elided words such as \"the whole-repository report the developer\" slow every reader down (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-010:
     status: proposed
-    origin: {why: "The active voice says who acts. The passive stays where the actor receives, so needs keep \"be told\" and \"be asked\"."}
+    origin: {why: "The active voice says who acts. The passive stays where the actor receives, so needs keep \"be told\" and \"be asked\" (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-011:
     status: proposed
-    origin: {why: "Naming the harness behind \"it\" made a need clear, and the cited record confirmed the reading."}
+    origin: {why: "Naming the harness behind \"it\" made a need clear, and the cited record confirmed the reading (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-012:
     status: proposed
-    origin: {why: "An outside dictionary's words changed the meaning of project terms in the trial. The project's own terms carry its meaning."}
+    origin: {why: "An outside dictionary's words changed the meaning of project terms in the trial. The project's own terms carry its meaning (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-013:
     status: proposed
-    origin: {why: "A need is one sentence, and an actor's needs are joined into one reader description. First person keeps the actor's voice."}
+    origin: {why: "A need is one sentence, and an actor's needs are joined into one reader description. First person keeps the actor's voice (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
     pkit:
       friction:
         anchors:
@@ -49,7 +49,7 @@ rules:
           record: ["software-analysis:DEC-001"]
   RS-WRITE-014:
     status: proposed
-    origin: {why: "Every meaning change in the trial came from a resolved ambiguity, a guard turned into a goal, or a swapped term or citation."}
+    origin: {why: "Every meaning change in the trial came from a resolved ambiguity, a guard turned into a goal, or a swapped term or citation (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
 ---
 
 # WRITE — writing for project-kit's documentation
@@ -60,7 +60,7 @@ These rules say how project-kit writes its documentation and its analysis.
 - **Where the rules apply:**
   - every page of the technical and user spaces, through their definitions, `TECH` and `USER`, which inherit this set
   - the analysis under `tech-docs/analysis/`, this set's own scope
-- **Where they come from:** a style trial in October 2026. It rewrote the core actors document by ASD-STE100 and by ISO 24495-1, and kept what helped.
+- **Where they come from:** a style trial in October 2026. It rewrote the core actors document by ASD-STE100 and by ISO 24495-1, and kept what helped. The trial, and what it left out, are in `.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`.
 - **How a rule reads:** one statement, then why and how, then one example. Each *before* is quoted from the trial's documents, so it may break the rule it shows.
 - **Note:** how rules are named, accepted and inherited is the rule-set record's (COR-051). A rule binds only once it is accepted.
 
@@ -236,14 +236,3 @@ A rewrite never resolves an ambiguity, turns a *never* into an *only*, or swaps 
 - **Example:**
   - Before: "Ship a backbone change that breaks installed projects only with the migration that carries them across." (a rewrite)
   - After: "Never ship a backbone change that breaks installed projects without the migration that carries them across." (the original). The *only* form reads as a wish to ship breaking changes.
-
-## Considered and not adopted
-
-The trial tested these rules and left them out:
-
-- **ASD-STE100's dictionary, and the rules built on it:** its 875 words serve aircraft maintenance. Project verbs such as *land*, *ship* and *retire* are not among them.
-- **ASD-STE100's approved meanings:** each word keeps one physical sense. Eight of the trial's nine meaning changes came from them.
-- **ASD-STE100's count of a parenthesis as a sentence of its own:** it let a 35-word need pass a 25-word limit. RS-WRITE-005 counts the parenthesis in.
-- **ASD-STE100's American spelling:** the project writes British English, and its ids carry it, as in `ACT-merge-authoriser`.
-- **ISO 24495-1's familiar words, in analysis artefacts:** almost every noun there is a project term. RS-WRITE-012 takes terms from the glossary instead.
-- **ISO 24495-1's "leave out what readers do not need", in analysis artefacts:** every cut drops a fact. RS-WRITE-004 moves side matter under *Note* instead.
