@@ -5,10 +5,12 @@ pkit_schema: software-analysis:config
 schema_version: 1
 
 numbering:
-  # Ids declared free again, because nothing cites them (software-analysis
-  # DEC-001 point 3). The first entry: the pilot analysis of the multi-clone
-  # coordination work, ten use cases and two journeys, removed before the full
-  # analysis of pkit began, so that analysis numbers from UC-001 and JRN-001.
+  # Ids declared free again. An entry may list only ids that nothing cites
+  # (software-analysis DEC-001 point 3; the capability's README,
+  # "Configuration", says what cites an id). The first entry: the pilot
+  # analysis of the multi-clone coordination work, ten use cases and two
+  # journeys, removed before the full analysis of pkit began, so that analysis
+  # numbers from UC-001 and JRN-001.
   freed-by:
     - commit: "6107ae77e537ff669bf54c566d0be6cf636b4b1e"
       ids: [UC-001, UC-002, UC-003, UC-004, UC-005, UC-006, UC-007, UC-008, UC-009, UC-010, JRN-001, JRN-002]
