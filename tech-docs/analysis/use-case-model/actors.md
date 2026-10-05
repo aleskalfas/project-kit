@@ -32,6 +32,23 @@ ACT-ai-agent:
       anchors:
         record:
           - COR-013
+ACT-ci-pipeline:
+  name: CI pipeline
+  status: active
+  needs:
+    - Run every check with no terminal and no person to answer, and gate the merge on its exit status.
+    - Compare a change with its real base, the pull request's target or the queued merge's base, named once for every check.
+    - Run the checks offline once the checkout is provisioned.
+    - Get findings in a machine-readable form, to publish them where people look.
+    - Be told when a shallow clone lacks history a check needs, rather than get a misleading result.
+    - Run the whole-repository check to a report that never fails on what it finds, so it can run after merges and on a schedule.
+    - Tag a release once it lands, from the version it declares, with no one there to confirm the push.
+  pkit:
+    friction:
+      anchors:
+        record:
+          - COR-054
+          - COR-050
 ACT-component-author:
   name: Component author
   status: active
@@ -125,6 +142,10 @@ The person who adopts the methodology for a project and keeps its setup: what is
 ## ACT-ai-agent — AI agent
 
 An AI agent working under the methodology: the main session acting for a person, or an agent that session dispatches for one role (in the core: critic, architect, methodology-reviewer, convention-compliance-reviewer, process-author). It is another system acting on this one. It comes whenever work is done, and it keeps no memory between sessions beyond what the repository holds. When it does a role's work it appears as a step in that role's use cases. The core's reviewer agents advise, and no core gate counts their verdict. Core: the agent architecture, the rules loaded into every session and the adapter's deployment make this actor exist.
+
+## ACT-ci-pipeline — CI pipeline
+
+Another system acting on pkit: a project's continuous integration. It comes on every pull request, queued merge and push to the default branch, and on a schedule, bringing a clean checkout, a base to compare with, and no person to answer a prompt. It is an actor because it starts work on its own trigger with no person in the session. Its needs are what pkit must give an unattended runner; the goals its runs serve belong to people: the change check serves the developer and the merge authoriser, the whole-repository report the developer (a change to what a document rests on reaches them), a release tag the methodology maintainer. Core: the backbone ships no workflow, only checks made to run unattended, which bind once the project makes them a required status (COR-050 point 12), and one base a pipeline names for all of them (COR-054 point 3). project-kit's workflows are one wiring of these, and two of their steps are project-kit's alone: the changeset guard and the release tag (PRJ-002; release README:22-29).
 
 ## ACT-component-author — Component author
 
