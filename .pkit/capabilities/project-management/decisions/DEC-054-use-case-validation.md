@@ -35,8 +35,8 @@ The capabilities stay independent. Whatever keeps the use cases works with no wo
      - raising the rule of point 4 above a warning reopens the policy.
 
 2. **The filler's contract.** The point's description states it, as what the point means and what one may rely on (COR-053 point 3), so any keeper can meet it without this capability knowing the keeper:
-   - the value holds **every use case that ever settled**, withdrawn ones included;
-   - **an id is never reused**: once settled, it names the same use case for good, unless the project declares that nothing cites it — that use case may then leave the value, and its id name another;
+   - the value holds **every use case that ever settled**, withdrawn ones included, but not one whose id the project freed;
+   - **an id is never reused**: once settled, it names the same use case for good, unless the project declares that nothing cites it. Then that use case may leave the value, and its id may later name a different use case. Anything that keeps an id is citing it;
    - the answer is **complete or none**: a filler that cannot read a use case gives no answer, never a shorter list;
    - a capability's filler **declares that it reads settled state**, so no base named for a run reaches it, and the backbone does not start it where that branch cannot be read (COR-052 point 6).
 
@@ -99,7 +99,7 @@ The sibling point under this role, the documentation obligations, feeds the merg
 
 **Why existence only.** The value carries ids, titles and a status. Whether a body's prose fits the use case it cites is a judgment no matcher makes well, and a rule that guessed would warn wrongly on every paraphrase. Existence catches the failure that matters: an id guessed before its use case settled. Saying that the check stops there keeps a pass from being read as more than it is.
 
-**Why a withdrawn use case passes.** An id that anything cites is never reused, so a citation of a withdrawn use case is a true reference, not a guess. Validation runs again on old issues. Warning on every issue that served a use case later withdrawn would turn the rule into noise. Planning maps onto active use cases only.
+**Why a withdrawn use case passes.** An id is never reused unless the project declared that nothing cites it, so a citation of a withdrawn use case is a true reference, not a guess. Validation runs again on old issues. Warning on every issue that served a use case later withdrawn would turn the rule into noise. Planning maps onto active use cases only.
 
 **Why a report, not a refusal.** The finding names a likely guess, read against this clone's view of the default branch, which may lag the remote. A use case may land minutes later. Blocking a filing on that weighs more than the rule warrants. The planning step keeps guessed ids out of the plans the agent writes, and the report catches the rest.
 
