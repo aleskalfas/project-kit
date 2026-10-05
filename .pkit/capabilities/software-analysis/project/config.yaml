@@ -1,14 +1,14 @@
-# project-kit's software-analysis configuration. Project-owned.
+# project-kit's software-analysis settings. Project-owned.
 # Shape: ../schemas/config.schema.json.
 
 pkit_schema: software-analysis:config
 schema_version: 1
 
 numbering:
-  # Commits by which the default branch lost artefacts nothing still relies on,
-  # whose numbers are free again (software-analysis DEC-001 point 3). The first
-  # removed the pilot analysis of the multi-clone coordination work — ten use
-  # cases and two journeys — before the full analysis of pkit was established,
-  # so that analysis numbers from UC-001 and JRN-001.
+  # Ids declared free again, because nothing cites them (software-analysis
+  # DEC-001 point 3). The first entry: the pilot analysis of the multi-clone
+  # coordination work, ten use cases and two journeys, removed before the full
+  # analysis of pkit began, so that analysis numbers from UC-001 and JRN-001.
   freed-by:
-    - "6107ae77e537ff669bf54c566d0be6cf636b4b1e"
+    - commit: "6107ae77e537ff669bf54c566d0be6cf636b4b1e"
+      ids: [UC-001, UC-002, UC-003, UC-004, UC-005, UC-006, UC-007, UC-008, UC-009, UC-010, JRN-001, JRN-002]

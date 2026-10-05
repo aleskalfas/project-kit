@@ -1,19 +1,15 @@
-# The software-analysis project configuration: the settings of the capability
-# a project chooses.
+# The software-analysis settings file: the settings of the capability a
+# project chooses. The capability's README describes each, in its section
+# "Configuration".
 #
-# - `numbering.freed-by` — the commits by which the default branch lost
-#   artefacts nothing still relies on, whose numbers are free again
-#   (software-analysis DEC-001 point 3): a pilot abandoned before its analysis
-#   was established, say. A number the default branch's history gave only files
-#   one of them deleted — not renamed — and by which the default branch lost
-#   them last is no longer counted by the stamp (`pkit analysis new`) or the
-#   number check (`pkit analysis check-numbers`), which read the rule from one
-#   home (`scripts/_lib/numbering.py`). Nothing else frees a number through the
-#   stamp: a file any other commit removed still holds its number, and so does
-#   a file the working tree or the default branch holds. Each entry is a
-#   commit's full id, quoted, on the default branch's history; the stamp
-#   refuses, and the number check fails on, one that is no commit's id here,
-#   lies off that history, or frees no number.
+# - `numbering.freed-by` — ids a person declares free again, because nothing
+#   cites them: a pilot abandoned before anything cited it, say
+#   (software-analysis DEC-001 point 3). Each entry names the commit that
+#   removed the artefacts, by its full id, quoted, and lists their ids. The
+#   stamp (`pkit analysis new`) gives a listed id again, and the number check
+#   (`pkit analysis check-numbers`) does not count it as taken. The stamp
+#   refuses, and the number check fails on, an entry they cannot honour,
+#   saying why.
 #
 # Document-shaped: the file IS the resource. The body below is the minimal
 # reference instance — valid, the schema's self-test, and the starting point

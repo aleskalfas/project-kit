@@ -9,13 +9,13 @@ the capability's places put it under the analysis location:
   included, and past every number the default branch's history ever gave a
   file of its place, deleted since or not, since a number is never used
   again; a note names the file when the history's number is the one it
-  follows. Only the project's numbering setting frees a number: one the
-  history gave only files the default branch lost by a commit it names is not
-  counted, and a note says so when it is one the stamp would have followed; a
-  setting naming what is no commit of the default branch's history, or a
-  commit that frees no number, refuses the stamp (`_lib/numbering.py`). A
-  file's number is read from its front matter and from its name, so a file
-  whose id cannot be read still holds its number.
+  follows. Only the project's numbering setting frees a number: an id an
+  entry lists, which the history gave only files the default branch lost by
+  the entry's commit, is not counted, and a note says so when it is one the
+  stamp would have followed; an entry naming what is no commit of the default
+  branch's history, or listing an id its commit does not free, refuses the
+  stamp (`_lib/numbering.py`). A file's number is read from its front matter
+  and from its name, so a file whose id cannot be read still holds its number.
   Numbers two branches take in parallel are `pkit analysis check-numbers`' to
   report (point 3);
 - an **actor** or a **term** is a new entry, `ACT-<slug>` or `TERM-<slug>`, of
@@ -420,9 +420,9 @@ def _held(
     history gave a file gone since, which counts as held too (DEC-001 point 3;
     `_lib/history.py`), with the highest past that the numbering setting freed, and
     the commit that freed it (`_lib/numbering.py`); refused when the setting has a
-    problem — an entry that is no commit of the default branch's history, or one that
-    frees no number — and noting each path it removed that it frees not, since the
-    history added it more than once. An actor's or term's id is a slug a person
+    problem — an entry that is no commit of the default branch's history, or an id it
+    lists that its commit does not free — and noting each id a named commit would free
+    that no entry lists, which stays taken. An actor's or term's id is a slug a person
     chooses, and a withdrawn one stays in its collection file, so no history is read
     for one."""
     held = analysis.held()
@@ -443,7 +443,7 @@ def _held(
     problems = (*setting.problems, *freeing.problems)
     if problems:
         raise Refused(f"{numbering.NAME}, {problems[0].location}: {problems[0].message}")
-    notes += [f"{numbering.NAME}, {kept.location}: {kept.message}" for kept in freeing.reports]
+    notes += [f"{numbering.NAME}, {said.location}: {said.message}" for said in freeing.reports]
     if backbone.is_shallow(root):
         notes.append(
             f"history: shallow clone — {named}'s history was read back to where the clone "

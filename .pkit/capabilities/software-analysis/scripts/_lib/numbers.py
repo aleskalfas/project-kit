@@ -47,16 +47,16 @@ numbering setting to check against its history. When the base moved on after
 this branch left it — the only case in which it can have taken a number since
 — that is reported, never failed, as the change check reports an outdated base.
 
-A number the project's numbering setting frees is free again, and taken by
+An id the project's numbering setting frees is free again, and taken by
 neither side: the rule is the stamp's, read from one home
-(`_lib/numbering.py`), so the two never disagree. Every number it frees is
-listed — in the summary, and with its file and both commits in `--json` — so
-a reviewer sees what the declaration does. A setting naming what is no commit
-of the default branch's history, or a commit that frees no number, is an error
-here, read whenever the project has one — numbered here or not — since this is
-the check gate's line for numbering; such an entry frees nothing meanwhile. A
-path a named commit removed that its history added more than once is reported,
-and not freed.
+(`_lib/numbering.py`), so the two never disagree. Each entry's freed ids are
+listed — in the summary, and each file with both commits in `--json` — so a
+reviewer sees what the declaration does. An entry naming what is no commit of
+the default branch's history, or listing an id its commit does not free, is an
+error here, read whenever the project has a setting — numbered here or not —
+since this is the check gate's line for numbering; such an entry or id frees
+nothing meanwhile. An id a named commit would free that no entry lists is
+reported, and stays taken.
 
 Which commits those are the backbone names: `pkit repository base --json`
 carries the base, its tip and where this branch left it (COR-054 point 5), so
@@ -186,23 +186,14 @@ def compare(root: Path, ref: str | None = None) -> Comparison:
 
 
 def _freeing(freeing: numbering.Freeing) -> list[str]:
-    """A summary line for each commit of the numbering setting that frees numbers,
-    listing them."""
-    by: dict[str, list[str]] = {}
-    for freed in freeing.freed:
-        numbers = by.setdefault(freed.freed_by, [])
-        if freed.id not in numbers:
-            numbers.append(freed.id)
+    """A summary line for each entry of the numbering setting that frees an id, listing
+    the ids it frees."""
     return [
-        f"numbering: {commit[: backbone.SHORT]} frees {_listed(numbers)}, as {numbering.NAME} "
-        f"names (DEC-001 point 3)."
-        for commit, numbers in by.items()
+        f"numbering: {commit[: backbone.SHORT]} frees {numbering.joined(ids)}, as "
+        f"{numbering.NAME} names (DEC-001 point 3)."
+        for commit, ids in freeing.ids
+        if ids
     ]
-
-
-def _listed(items: list[str]) -> str:
-    """`a`, `a and b`, `a, b and c`."""
-    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} and {items[-1]}"
 
 
 def _taken(
