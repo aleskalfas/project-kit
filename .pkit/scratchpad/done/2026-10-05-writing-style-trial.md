@@ -176,6 +176,20 @@ The comparison recommended one shared rule set: plain language's structure, ASD-
 - **Needs:** one sentence in the actor's first person, starting with a verb, at most 25 words.
 - **Keeping meaning:** a rewrite never resolves an ambiguity, reframes a guard, or swaps a project term or a citation form without the author.
 
+## What the review of the first draft changed
+
+An adversarial review of `WRITE`'s first draft found rules that the trial did not support as written. The rules now differ from the recommendation in these ways:
+
+- **What matters most:** a section opens with one sentence that says what matters most, in the maintainer's words, not only what the section is about.
+- **Labels:** they come from one list, in its order, and a section may leave one out.
+- **Lists:** only where the items are clauses or carry detail. Pairs and short series stay in the sentence, as the plain rewrite kept them. Needs and table cells are exempt.
+- **Sentence length:** words and sentences are counted as this trial counted them. No script checks the limit yet.
+- **Semicolons:** two citations in one parenthesis are joined with "and", since a citation can hold a comma.
+- **Omitted words:** narrowed to a verb for each clause in a series. The broad form would have banned every labelled fragment.
+- **Pronouns:** a referent comes from the author, or from a cited source that the author confirms.
+- **Needs:** the rule covers a use case's goal too, which software-analysis DEC-001 point 1 makes the same user story.
+- **Keeping meaning:** stated in general. The trial's changes were not all of the three kinds the draft named. A split contradicted itself, a requirement was dropped, a duty was weakened, a validator was added and emphasis was lost.
+
 ## Considered and not adopted
 
 - **ASD-STE100's approved words and approved meanings** (1.1 to 1.4, and 9.2): together they caused eight of the nine material meaning changes. Project verbs such as *land*, *ship* and *retire* are not among the 875 words.
