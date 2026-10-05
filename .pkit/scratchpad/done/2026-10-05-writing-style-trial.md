@@ -214,16 +214,16 @@ The proposed rules were then applied twice: to the core actors, and to two refer
 
 ### The core actors
 
-The actors document was rewritten under the rules on its own branch, for PR #1345.
+The actors document was rewritten under the rules on its own branch, for PR #1345. A second review then reworded RS-WRITE-002 and RS-WRITE-003, and the document was revised to match. The *After* column counts that revision.
 
 | Metric | Before | After |
 |---|---|---|
 | Words, needs / body | 918 / 926 | 917 / 881 |
-| Average sentence, needs / body (words) | 17.7 / 19.3 | 17.6 / 11.4 |
+| Average sentence, needs / body (words) | 17.7 / 19.3 | 17.6 / 11.0 |
 | Longest sentence, needs / body (words) | 26 / 49 | 25 / 24 |
 | Sentences over 25 words, needs / body | 1 / 10 | 0 / 0 |
-| Paragraphs or list items over four sentences | 8 of 9 | 0 of 60 |
-| Bold labels / list items | 0 / 0 | 37 / 51 |
+| Paragraphs or list items over four sentences | 8 of 9 | 0 of 64 |
+| Bold labels / list items | 0 / 0 | 37 / 55 |
 | Semicolons, body | 4 | 0 |
 
 - **Facts:** a script checked the ids, citations and number of needs against the original. The body lost 45 words to bold labels, which are not counted. A word diff found no fact lost.
