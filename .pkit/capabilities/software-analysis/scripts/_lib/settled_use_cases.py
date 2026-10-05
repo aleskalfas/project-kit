@@ -13,11 +13,11 @@ its use cases onto that shape and keeps its own model to itself:
   of that commit (`pkit friction artefacts --at <commit> --json`). The working
   tree and the branch at hand are never read, and the filler asks git nothing
   itself;
-- **every use case that settled, withdrawn ones included**: a withdrawn use
-  case stays in its file, and its id names it for good — the project frees
-  only an id nothing cites, of a use case no file holds any longer (DEC-001
-  point 3). It is given with `status: withdrawn`; any other use case is
-  `active`;
+- **every use case that settled, withdrawn ones included, but none whose id
+  the project freed**: a withdrawn use case stays in its file, and its id
+  names it for good — the project frees only an id it declares nothing cites,
+  of a use case no file holds any longer (DEC-001 point 3). It is given with
+  `status: withdrawn`; any other use case is `active`;
 - **its id as the analysis writes it**: `UC-007` is `UC-007` in the point, so
   a citation of the id is a citation of the use case.
 

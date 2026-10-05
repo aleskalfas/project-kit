@@ -31,7 +31,7 @@
       "additionalProperties": false,
       "properties": {
         "freed-by": {
-          "description": "Ids a person declares free again, because nothing cites them: a pilot abandoned before anything cited it, say. Each entry names the commit that removed the artefacts and lists their ids. The stamp gives a listed id again, and the number check does not count it as taken. The README's section \"Configuration\" says which ids a commit can free.",
+          "description": "Ids a person declares free again, declaring that nothing cites them: a pilot abandoned before anything cited it, say. Each entry names the commit that removed the artefacts and lists their ids. The stamp gives a listed id again, and the number check does not count it as taken. The README's section \"Configuration\" says what cites an id and which ids a commit can free.",
           "type": "array",
           "uniqueItems": true,
           "items": {

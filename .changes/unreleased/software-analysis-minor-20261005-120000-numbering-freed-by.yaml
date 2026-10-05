@@ -3,8 +3,9 @@ kind: minor
 custom:
   category: Added
 body: >
-  A project can declare use-case and journey ids free again when nothing cites
-  them: a pilot abandoned before anything cited it, say (DEC-001 point 3). The
+  A project can remove use cases and journeys that nothing cites, and declare
+  their ids free again: a pilot abandoned before anything cited it, say
+  (DEC-001 point 3). The
   declaration is `numbering.freed-by` in the capability's new settings file,
   `.pkit/capabilities/software-analysis/project/config.yaml`, whose shape is
   `schemas/config.schema.json`. Each entry names the commit that removed the
@@ -17,4 +18,5 @@ body: >
   the stamp of a use case or journey and fails `pkit analysis check-numbers`,
   saying why; a clone too shallow to hold the commit's parent, and git older
   than 2.31, are named as such. The capability's README, "Configuration",
-  says which ids a commit can free. Without the file, nothing changes.
+  says what cites an id and which ids a commit can free. Without the file,
+  nothing changes.
