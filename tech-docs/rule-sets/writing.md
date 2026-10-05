@@ -68,7 +68,9 @@ These rules lay a document out so that a reader can scan it.
 
 Open each section with one sentence that says what matters most in it.
 
-- **How:** keep that sentence to what matters most, and put the detail in the lines below it.
+- **How:**
+  - Keep that sentence to what matters most, and put the detail in the lines below it.
+  - Table cells are exempt, since a cell is not a section.
 - **Breaks it:** "The person who adopts the methodology for a project and keeps its setup: what is installed, at which version, which of their own additions sit beside it, and which checks the project's merges wait on."
 - **Keeps it:** "The person who adopts the methodology for a project and keeps its setup." The setup follows as a labelled list.
 
@@ -80,12 +82,13 @@ Give parallel sections their bold labels from one list, in its order, with no pr
   - Choose the list once for the whole document. A section may leave out a label it has nothing for.
   - A label says what follows it. With no pronoun, one label fits a section about a person and a section about a system alike.
   - The core actors' list is *The setup*, *Always a person*, *Can be*, *Does*, *Comes*, *Brings*, *In the model*, *Core* and *Note*.
+  - Table cells are exempt, since a cell holds no label.
 - **Breaks it:** the plain rewrite gives one slot two labels, "**When they come:**" for the developer and "**When it comes:**" for the CI pipeline.
 - **Keeps it:** one label for both, from the core actors' list: "**Comes:** for every unit of work, …" and "**Comes:** on every pull request, …".
 
 ### RS-WRITE-003 — A list for a series that carries detail
 
-Put a series of three or more items in a list with a lead-in when the items are clauses or carry detail of their own.
+Put a series of three or more items in a list with a lead-in when any item is a clause or carries detail.
 
 - **How:**
   - The lead-in is a label or a sentence that says what the list holds. Nest a list where an item has parts of its own.
@@ -98,10 +101,12 @@ Put a series of three or more items in a list with a lead-in when the items are 
 
 Put side matter last in its section, under the label *Note*.
 
-- **How:** side matter is any of these:
-  - the reason for a name
-  - a fact that holds for project-kit alone, and not for the projects that adopt the methodology
-  - an overlap with another document
+- **How:**
+  - Side matter is any of these:
+    - the reason for a name
+    - a fact that holds for project-kit alone, and not for the projects that adopt the methodology
+    - an overlap with another document
+  - Table cells are exempt, since a cell holds no label.
 - **Breaks it:** in the middle of the merge authoriser's paragraph, "The name is not "approver", because project-management uses that word for a reviewer agent (DEC-028)."
 - **Keeps it:** as the section's last item, "**Note:** the name is not "approver", because project-management uses that word for a reviewer agent (DEC-028)."
 
@@ -133,7 +138,10 @@ Give each sentence of prose one idea.
 
 Give each paragraph one topic and no more than four sentences.
 
-- **How:** a list item counts as a paragraph. Labels and lists are the usual fix (RS-WRITE-002 and RS-WRITE-003). Four is project-kit's choice. ASD-STE100 allows six (its 6.6).
+- **How:**
+  - A list item counts as a paragraph. Labels and lists are the usual fix (RS-WRITE-002 and RS-WRITE-003).
+  - Four is project-kit's choice. ASD-STE100 allows six (its 6.6).
+  - Table cells are exempt, since a cell holds no paragraph.
 - **Breaks it:** the operator's section, one paragraph of five sentences on six topics.
 - **Keeps it:** an opening of two sentences, then one labelled item for each topic, none over two sentences.
 
@@ -219,5 +227,5 @@ This set leaves three kinds of writing to their own rules, and reaches a table c
 - **Decision records:** the decision-record specification governs them (`.pkit/decisions/README.md`).
 - **Rule sets:** the rule-set record governs them (COR-051). This set keeps its own rules anyway.
 - **Agent and skill bodies:** their own disciplines govern them (`.pkit/agents/README.md` and `.pkit/skills/README.md`).
-- **Table cells:** only the rules that fit a cell reach it. A cell holds no list, label or paragraph, so RS-WRITE-001 to RS-WRITE-004 and RS-WRITE-007 do not apply there.
+- **Table cells:** a rule that does not reach a cell says so in its *How*, as RS-WRITE-001 to RS-WRITE-004 and RS-WRITE-007 do.
 - **Note:** this set does not inherit `living-docs:LDOC`. LDOC's rules are for pages, and would pull a page's `reader` field (RS-LDOC-003) onto analysis artefacts, which are never pages (living-docs DEC-001 point 1). living-docs DEC-001 point 3 keeps a project's documentation rules in a set that inherits LDOC. Pages will reach WRITE only through `TECH` and `USER`, which inherit LDOC, so every page that takes WRITE will take LDOC beside it.
