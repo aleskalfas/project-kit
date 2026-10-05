@@ -10,7 +10,7 @@ A design draft for #1352. It folds in #1346 (an actor's needs beside its descrip
 
 - **Paths:** `SA/` is `.pkit/capabilities/software-analysis/`, and `LD/` is `.pkit/capabilities/living-docs/`.
 - **Read from open pull requests:** the writing rules `WRITE` as pushed on PR #1349 (`tech-docs/rule-sets/writing.md` at `57dc2bdb`), and the core actors on PR #1345 (`tech-docs/analysis/use-case-model/actors.md` at `fb960c45`). The analysis set that PR #1349 is splitting out was not pushed yet.
-- **Reviewed:** by the critic. Its findings and the answers are in "Review", at the end.
+- **Reviewed:** by the critic and the architect. Their findings and the answers are in "Review", at the end.
 
 ## The question
 
@@ -18,24 +18,24 @@ How does each analysis kind declare its required parts, so a script checks them 
 
 ## The chain
 
-The maintainer's hierarchy is *meta rules > rules > templates > content*. pkit already has a concept for each level.
+The maintainer's hierarchy is *meta rules > rules > templates > content*. pkit has a concept for each level, and each level has two owners.
 
-| Level | pkit concept | Owns | Today, for the analysis |
-|---|---|---|---|
-| Meta rules | Decisions, and the capability's method rule that artefacts of a kind follow one format | Which kinds exist and what each must say, in words. That the structure binds. | DEC-001 point 1 names each kind's parts (`SA/decisions/DEC-001-software-analysis-discipline.md:26-32`). No method rule. |
-| Rules | The project's rule sets (COR-051) | How to write: style, gated by status | project-kit's `WRITE`, proposed, scoped to `tech-docs/analysis/**` (`writing.md:4`) |
-| Templates | Templates and declared structures | The template shows the shape. The structure is the checkable part (COR-051 point 1). | Templates in `SA/templates/`. A structure for front matter only, in `SA/schemas/*.schema.json` |
-| Content | Artefacts | What the author writes | Under the internal root's `analysis/` (DEC-001 point 2) |
+| Level | The methodology or the capability owns | The project owns |
+|---|---|---|
+| Meta rules: decisions | software-analysis DEC-001, and the core records such as COR-051 | its PRJ and ADR records |
+| Rules: rule sets (COR-051) | a method rule set: artefacts of a kind follow one format | its own sets, such as project-kit's `WRITE`, for style |
+| Templates: templates and declared structures | the shipped structure per kind, and the templates rendered from it | its additions to a kind's structure (part 4) |
+| Content: artefacts | none | the analysis, under the internal root's `analysis/` (DEC-001 point 2) |
 
-Scripts work across the levels. The stamp writes an artefact from its template (`SA/scripts/_lib/stamp.py:491-508`), and the check reads the artefact.
-
-Each fact gets one home:
-
-- **The decision** names a kind's parts in words.
-- **The declared structure** lists them as data: which parts, in what order, required or optional, with each part's hint and example.
-- **The template** is the structure rendered for a writer.
-- **The method rule** makes the structure bind. Its status sets the check's severity, as RS-LDOC-004's does for pages.
-- **A style rule** says how to write. A hint says what data goes in a part, and never repeats a style rule.
+- **Each fact has one home:**
+  - **The decision** names a kind's parts in words (`SA/decisions/DEC-001-software-analysis-discipline.md:26-32`).
+  - **The declared structure** lists them as data: which parts, in what order, required or optional, with each part's hint and example.
+  - **The template** is the structure rendered for a writer.
+  - **A rule** makes a structure bind. The structure is its checkable part, as a schema is (COR-051 point 1), and no part of its content.
+  - **A style rule** says how to write. A hint says what data goes in a part, and never repeats a style rule.
+- **Each structure binds at the status of the rule in its own column.** The shipped structure binds at the method rule's status. A project's addition binds at its project rule's status (part 4).
+- **A structure change is no rule-content change,** so it flags none of the rule's dependants. A tightened structure shows up as validation findings after an upgrade.
+- **Today:** software-analysis has no method rule set, and declares a structure for front matter only (`SA/schemas/*.schema.json`). `WRITE` is proposed, scoped to `tech-docs/analysis/**` (`writing.md:4`).
 
 ## Today
 
@@ -62,7 +62,8 @@ Each fact gets one home:
 ### living-docs, for contrast
 
 - Each page kind declares its structure once, as data (`LD/schemas/page-kinds.yaml:26-32`), with a schema (`LD/schemas/page-kinds.schema.json:34-78`).
-- The validator reports a declared heading that a page lacks or carries out of order (`LD/scripts/_lib/formats.py:243-267`). RS-LDOC-004's status sets the severity (`LD/scripts/_lib/spaces.py:568-632`).
+- The validator reports a declared heading that a page lacks or carries out of order (`LD/scripts/_lib/formats.py:243-267`).
+- RS-LDOC-004 must be accepted for any body to be checked. Under any other status nothing is checked (`LD/scripts/_lib/spaces.py:149`, `:568-632`).
 - A structure is never read from a template's text, and a test holds each template to it (living-docs DEC-001 point 3, `LD/decisions/DEC-001-living-docs-discipline.md:57`).
 - **Limits:** it reads headings only. A kind that a project adds declares no structure, and its pages are never failed (`LD/README.md:50`).
 
@@ -72,7 +73,11 @@ The analysis does not fit that reader as it stands. Its bodies use bold labels, 
 
 ### 1. A declared structure per kind
 
-**Recommended: a data file with a schema, as living-docs does.** `SA/schemas/artefact-kinds.yaml` declares each kind's structure, in a shape that extends `page-kinds.yaml`.
+**Recommended: a data file with a schema, as living-docs does.** `SA/schemas/artefact-kinds.yaml` declares each kind's structure.
+
+- Its schema is a strict superset of `page-kinds.schema.json`.
+- Its missing and out-of-order logic is that of `formats.departures`.
+- So a later extraction to the backbone is a move, not a reconciliation.
 
 | Where | For | Against |
 |---|---|---|
@@ -90,31 +95,37 @@ The analysis does not fit that reader as it stands. Its bodies use bold labels, 
 - **A part's extent:** from its label to the next declared label, or to a heading of the same or a higher level.
 - **`required`:** true unless set false. An optional element is checked only when present. A required part may not be empty.
 - **`hint` and `example`:** for the template (part 2), and for the check's messages.
-- **`form`:** a check on a part's content, from a closed list that software-analysis implements:
-  - `sentence`: one sentence.
-  - `numbered-steps`: each item opens with a number, and no number repeats. Numbers need not run in sequence, since steps are append-only (DEC-001 point 3).
-  - `variants`: each item opens with a step's number and a letter, `2a.`, naming a step of *Main path*. The part may read `None.` instead.
-  - `steps-match-front-matter`, `seams-match-steps` and `outcomes-match-front-matter`: a journey's and a record's lines against their front matter.
+- **`form`:** a check on a part's content, from a closed list that software-analysis implements. A list form judges only the part's list items, so a custom line inside the part never breaks it.
+  - Generic: `sentence`, one sentence. `numbered-steps`: each item opens with a number, and no number repeats. Numbers need not run in sequence, since steps are append-only (DEC-001 point 3).
+  - The analysis' own: `variants`, each item opening with a step of *Main path* and a letter, `2a.`, or the part reading `None.`. Then `steps-match-front-matter`, `seams-match-steps` and `outcomes-match-front-matter`.
 
 **Custom content.** A writer may add labels and sections anywhere. The check judges only the declared elements: present, in order, not empty, and of their form. A project that wants its own labels checked declares them (part 4).
 
-**Scope.** A document kind's structure covers its body. A collection kind's structure covers the entry's section, `## <id> — <name>`, as the core reads it (`src/project_kit/friction_discovery.py:2396`). A withdrawn artefact is history, so a part required later never fails it.
+**Scope.** A document kind's structure covers its body. A collection kind's structure covers its entry's section. A withdrawn artefact is history, so a part required later never fails it.
 
-**The check.** `pkit analysis validate` reports an element that is missing, out of order, empty, or not of its form. The message gives the part's hint and example. The method rule's status sets the severity (part 3).
+- **The entry's extent is the backbone's.** COR-050 point 1 defines it, friction hashes exactly that text (`src/project_kit/friction_discovery.py:2299`, `:2396`), and each computation has one home (ADR-057 point 2).
+- **software-analysis' own copy reads it differently** (`SA/scripts/_lib/markdown.py:74-85`). It would let a part pass the check outside the text friction treats as the entry.
+- **So the artefacts document gives each entry's section span.** `pkit friction artefacts --json` gains the key, which raises no version (`friction_discovery.py:2428-2431`). software-analysis reads it, as it reads the rest of that document (ADR-057 point 1).
 
-**Where the reader lives.** Four Markdown section readers exist already:
+**The check.** `pkit analysis validate` reports an element that is missing, out of order, empty, or not of its form. The message gives the part's hint and example. The rule's status sets the severity (part 3).
+
+**Where the reader lives.** software-analysis reads labels, part extents and forms. Four readers exist already:
 
 - living-docs' heading reader (`LD/scripts/_lib/formats.py:188-218`)
-- software-analysis' heading and section reader (`SA/scripts/_lib/markdown.py:55-85`)
+- software-analysis' heading and section reader (`markdown.py:55-85`)
 - the backbone's two, for rule sets (`src/project_kit/rule_sets.py:522`) and for collection entries (`friction_discovery.py:2396`)
 
 | Option | For | Against |
 |---|---|---|
-| **software-analysis extends its own reader** with labels and part extents (recommended) | No new reader, and no core change. Labels and forms have one consumer today, and COR-007 waits for a second. | Two readers of labels once living-docs needs them |
-| The backbone reads headings, labels and extents, with a schema and a query command | One meaning of *section* and *label* for the methodology | The backbone grows for one consumer, and needs a core record. The forms stay software-analysis' all the same. |
+| **software-analysis reads labels and forms, and the backbone gives the entry's extent** (recommended) | No new general reader in the core. One home for the entry. | Two readers of labels, once a second component reads them |
+| The backbone reads headings, labels and extents now | One meaning of *section* and *label* | A reading command for one consumer, and a core record. The analysis' forms stay in the capability anyway. |
 | software-analysis calls living-docs' reader | No copy | The capability works alone (DEC-001 point 10). |
 
-**The trigger to extract.** `WRITE` plans to reach the documentation pages next (`writing.md:58`). Pages would then carry labels, and living-docs would need the same reader. That is the second consumer. The generic part — headings, labels and extents — then moves to the backbone, under a core record. The forms never move: they are this capability's semantics.
+**COR-007, applied.** This is the second case of a kind declaring its body structure as data. The variation is only now visible: labels, forms and collection entries. So it is a deliberate decision not to extract yet.
+
+- **The trigger:** a second component that must read declared labels. That is living-docs shipping a page kind with labels, or letting a project add to a kind's structure.
+- **What would move:** headings, labels, extents and the generic forms, as a backbone reading command. The analysis' own forms stay.
+- **Where it is recorded:** in DEC-001's alternatives, as living-docs DEC-001 records its trigger for the `source` kind.
 
 ### 2. Templates with a hint and an example per part
 
@@ -123,6 +134,7 @@ The analysis does not fit that reader as it stands. Its bodies use bold labels, 
 - **Rendered.** The stamp renders the shipped structure plus the project's additions (part 4). The committed `SA/templates/<kind>.md` is made of:
   - the front matter, written by hand and held to the kind's schema, as today
   - the body, rendered from the declaration without additions, and held equal to it by a test
+  - In living-docs a template may show more than its structure. Here it shows exactly the structure, and DEC-001 says so.
 - **One part, as stamped:**
 
   ```markdown
@@ -130,9 +142,9 @@ The analysis does not fit that reader as it stands. Its bodies use bold labels, 
   ```
 
 - **The hint is the placeholder.** It stands where the content goes, as the angle-bracket hints of Cockburn's use-case template do ([Use Case Template](https://www.cs.otago.ac.nz/coursework/cosc461/uctempla.htm)).
-  - The check refuses a part that still holds a hint. It refuses a required part left empty after the hint is deleted.
+  - The check refuses a part that still holds a hint, and a required part left empty once the hint is deleted.
   - A hint is one line. No reader of the analysis skips comments (`markdown.py:74-85`, `friction_discovery.py:2396`), so a line break in a hint could split a section.
-  - The marker `<!-- pkit:hint` is matched outside code spans and fences, so an artefact may quote it.
+  - The marker is matched outside code spans and fences, so an artefact may quote it. Its `pkit` is the methodology's literal, as the container key is (the lifecycle README, "The methodology's literals").
   - New templates hold no angle-bracket placeholders in their bodies. The append-only list stays for what was stamped before.
 - **A hint also reaches a later editor.** The check's message for a missing or empty part gives the hint and its example. The skill's *Fill it* lists give way to "fill each part as its hint says" (`SA/skills/analysis-author/use-case.md:34-40`, `actor.md:30-33`).
 - **A hint says what data goes there, and shows one example.** It names no style. The example is plain and written in no project's voice.
@@ -151,32 +163,49 @@ The analysis does not fit that reader as it stands. Its bodies use bold labels, 
 **Recommended: a method rule set that the capability ships, with the format rule first, and a DEC-001 point behind it.**
 
 - **The rule:** "An analysis artefact carries its kind's declared structure, and each kind has a template." It mirrors RS-LDOC-004 (`LD/rule-sets/ldoc.md:83-85`).
-- **The set:** `SA/rule-sets/<name>.md`. Its scope is the analysis places, so it binds through the capability's check, inherited or not. Its name is chosen now, beside the one PR #1349 picks for project-kit's analysis set, since names are unique among rule sets (COR-051 point 3).
+- **The set:** `SA/rule-sets/<name>.md`. Like `LDOC`, it has no scope and binds through the capability's check.
+- **Its name is distinctive,** as `LDOC` is. A shipped name is reserved in every adopter, since names are unique among a project's rule sets (COR-051 point 3). Choose it beside the one PR #1349 picks for project-kit's analysis set.
 - **Inheriting it is optional.** A project's set inherits it only to fill a point it offers. Then every newly accepted rule is a new major for that project to re-pin (COR-051 point 7).
-- **The decision:** DEC-001 gains a point like living-docs' *A kind's structure* (living-docs DEC-001 point 3). It says that each kind's structure is data, and that its template is rendered from it.
+- **Under a proposed status nothing is checked,** as in living-docs (`LD/scripts/_lib/spaces.py:149`). The same holds for a project's additions (part 4).
+- **The decision:** DEC-001 gains a point like living-docs' *A kind's structure* (living-docs DEC-001 point 3). It says each kind's structure is data, its template is rendered from it, and it binds at its rule's status. DEC-001 cites no project's rule set.
 - **What the set adds over a DEC-001 point alone:** a rule id the check's findings cite, a status the capability flips to turn the check on, and the pattern living-docs already uses. The gain is modest, and the alternative is fair.
+- **Worth a core refinement later:** "a structure binds at the status of the rule it is the checkable part of" would stand in two capability decisions. A refinement of COR-051 point 1 could state it once.
 
 ### 4. What a project may add or narrow
 
-**Recommended: a `structures` key in the capability's settings file, `SA/project/config.yaml`.** The file is the project's, and sync never touches it (`SA/README.md:227`). So no shipped file is edited (core rule 1). The key is not `kinds`, a word anchors already use.
+**Recommended: a file of its own in the capability's project tier, `SA/project/structures.yaml`,** with a schema bound to it by its path (COR-023).
 
-- **May:**
-  - add labels and sections to a kind, each placed `after` a named element, with its hint and example
+- **Why there.** The project tier is the project's, and sync never touches it (`SA/README.md:227`). So no shipped file is edited (core rule 1).
+- **Why its own file.** A pointer to it from a rule may become an anchor, and an anchor sees any change to its file (COR-050 point 5). A key in `config.yaml` would flag it on every edit to the numbering setting.
+- **Uninstalling** the capability removes the project tier (`SA/schemas/config.yaml:17-18`), as living-docs says of captured sources.
+
+What a project may change:
+
+- **Relabel a shipped element, and replace its hint and example,** keeping its id, its place and its form. This tightens nothing, so it needs no rule and binds at the method rule's status. A non-English project writes its own labels this way.
+- **Tighten, naming the project rule that asks for it:**
+  - add labels and sections, each placed `after` a named element, with its hint and example
   - make a shipped optional element required
-  - relabel a shipped element, and replace its hint and example, keeping its id, its place and its form
   - close a kind's label list (`closed: true`), so an undeclared label is reported. RS-WRITE-002's "one list" needs this.
 - **May not:** drop or relax a shipped required element, reorder shipped elements, invent a form, or add a kind. A new kind needs its own decision (DEC-001 point 11). COR-051 point 7 forbids relaxing an inherited rule. A structure is data, so here the check can refuse a relaxing entry outright.
-- **An addition binds at its own rule's status.** Each addition names the project rule that asks for it, and the check takes that rule's status.
-  - project-kit's actor labels name RS-WRITE-002, which is proposed. They are reported, never failed, until it is accepted.
-  - Without this, a proposed rule's content would fail validation through a settings file, past the acceptance gate (core rule 2).
-- **One home for the labels.** PR #1349's split is to give the analysis set a fill of RS-WRITE-002's label list. The pushed `writing.md` offers no such point yet. Once it does, the fill points at the `structures` entry rather than copying the list.
+
+How a tightening binds:
+
+- **At the status of the rule it names.** Under a proposed rule nothing of it is checked, as for the method rule (part 3). So a settings file never tightens a check past the acceptance gate (core rule 2).
+- **Only within that rule's scope.** The check reports a named rule whose set does not cover the analysis (COR-051 point 2).
+- **Orphaned when the rule is superseded or withdrawn:** reported and not applied, as an orphaned fill is (`rule_sets.py:578`).
+- **No core change.** Rules are artefacts with their fields in `pkit friction artefacts --json`, so the check reads a rule's status there.
 - **Order across versions.** An addition follows the element it names. A later shipped element lands after its own anchor, so the two never trade places silently.
+
+project-kit's own entries:
+
+- **Its actor labels** name RS-WRITE-002, which is proposed. They are written once it is accepted.
+- **One home for the list.** PR #1349's split is to give the analysis set a fill of RS-WRITE-002's label list. The pushed `writing.md` offers no such point yet. Once it does, the fill points at `structures.yaml` rather than copying the list.
 
 | Alternative | Against |
 |---|---|
 | Project templates beside the shipped ones | Two shapes that drift, which the declaration exists to prevent |
 | A project rule set that carries the structure | A structure is no part of a rule's content (part 1). |
-| A file of its own in the project tier | Workable. A key in the existing settings file reuses that file's schema and its check. |
+| A `structures` key in `config.yaml` | Every edit to the file would flag a rule anchored to it. |
 
 ### 5. Templates follow the writing rules, and stay project-neutral
 
@@ -191,34 +220,46 @@ The resolution:
 - **#1351's opening sentence, read per kind:**
   - A collection file's opening is the one sentence the stamp writes, once, when the file is created (`SA/templates/glossary.md:25`). After that it is the project's to reword.
   - A use case or a journey opens with its first part, *Goal* or *Starts*. That sentence is the author's, not the stamp's.
-- **project-kit holds its templates to `WRITE`.** In its source repository the shipped trees are authored source (`LD/README.md:136`). So `WRITE`'s scope there can add the declaration and the templates. The maintainer's "templates are written to the writing rules" then has its home, and binds when `WRITE` is accepted.
-- **Adopters receive plain text** and are bound by none of `WRITE`. Their own rules bind what their authors write, through their own rule sets' scopes.
+- **Shipped hints and examples meet a neutral floor:** short sentences and no semicolons. They carry none of project-kit's style, such as RS-WRITE-002's labels or RS-WRITE-012's first person (COR-014).
+- **project-kit may hold its own templates to `WRITE`.** In its source repository the shipped trees are authored source (ADR-055 point 3), so `WRITE`'s scope there can reach them.
+  - This reverses the usual ownership, a project rule over shipped content. It is recorded as a refinement of ADR-055 point 3, not left implicit in a scope.
+  - A rule set's scope names artefacts (`.pkit/schemas/backbone/rule-set.schema.json:32`). The templates and the declaration are not artefacts, so `WRITE` says in one sentence that its scope reaches them.
+  - It never reaches an adopter.
+- **An adopter's rules bind what its authors write,** through its own rule sets' scopes.
 
 ### 6. The actors' layout (#1346)
 
 **Recommended: one file per actor**, `use-case-model/actors/ACT-<slug>.md`, as use cases are.
 
 - **Reads as one unit.** The needs sit in the front matter, about ten lines above the description. Today they sit up to 130 lines away (`actors.md:1-132` against `:134-232`).
-- **The needs stay data.** The schema checks them, and the readers filler reads them as today.
+- **The needs stay data.** The schema checks them, and the readers filler reads them from the artefacts document, as today.
 - **An actor becomes a document kind,** headed `# ACT-<slug> — <name>`, and checked as a use case is. The collection code stays, for terms.
-- **The cost of a move.** Moving an entry between files requires a revalidation in the same change (COR-050 point 3). That answer is a person's (core rule 20), so a migration cannot write it.
-  - **project-kit avoids it:** the layout lands before PR #1345 merges, so the eight core actors are created as files and never move.
-  - **An adopter's migration** moves the files with no hand edits, and refuses while any actor has unanswered friction. A moved file is new in its change, so it would hide that friction (COR-050 point 6). The upgrade's pull request then carries one revalidation per actor, which a person answers.
 - **What else changes:**
   - DEC-001 points 2 and 3, and the place in `SA/package.yaml:62-64`
   - an `id` field in the actor's schema
   - the stamp, and the skill's actor sub-procedure
   - the readers filler, which now fails closed on any one unreadable actor file
 
+**The criterion behind it: what a filler might read stays front-matter data.** Fillers read through the artefacts document, which carries fields and not bodies (ADR-057 point 1).
+
+- The readers filler reads needs today, so needs stay data, and the files move to sit beside the prose.
+- A term's definition is what a glossary point would carry, which living-docs DEC-001 already expects to take from "whatever component keeps one". So definitions stay data too, and the glossary stays a collection.
+- The cost: a glossary read rendered shows each term's heading, not its definition. A generated view can show both later, never written twice.
+
 | Alternative | Against |
 |---|---|
+| Declared body elements count as data: the needs become a labelled list in the actor's section, parsed for the filler | No file moves. But the filler would parse a body, which the artefacts document does not carry, and the schema could no longer check the needs. |
 | Keep the collection, mirror the needs into the section, and check the two equal | A fact written twice by hand, which #1346 rules out |
-| Keep the collection, with the needs as a labelled list in the section, parsed for the filler | No move, and no revalidations. But data a tool reads would be parsed out of prose, which COR-051 rejects for rule sets ("Markers in the prose"). The schema could no longer check it. |
 
-**The glossary stays a collection, and a definition moves into its section.** A glossary is read as one list, and nothing but the schema reads `definition` (`SA/schemas/term.schema.json:17-20`).
+**The move, and who pays for it.** Moving an artefact requires a revalidation in the same change (COR-050 point 3). That answer is a person's (core rule 20).
 
-- The definition becomes the section's opening sentence, of form `sentence`. It then reads where it stands, and no entry moves.
-- The cost: the term's schema drops `definition`, and the content change flags whatever anchors to a term.
+- **software-analysis looks unreleased.** Its 25 changesets are all in `.changes/unreleased/`. The last release, 1.149.0, is dated 2026-08-24 (`CHANGELOG.md:3`), before DEC-001 (2026-09-27). If no adopter has it, no installed state needs a migration (COR-010).
+- **One mechanical cost stays.** Removing `SA/templates/actors.md` triggers `pkit migrations check-diff`. The file is kept, or a migration that does nothing says why.
+- **project-kit's eight actors (PR #1345):**
+  - created as files, if the layout lands first
+  - moved, if #1345 merges first. Then the layout's pull request carries eight revalidations the maintainer writes. Nothing anchors to the actors yet.
+- **If an adopter does have it,** a migration is the wrong tool. It runs after the sync, so a refusal halts a half-done upgrade (`src/project_kit/migrations.py:135-140`). It would also edit adopter-owned files.
+- **A gap, whatever is decided.** The change check pairs a moved artefact with its old self only within one kind (`src/project_kit/friction_check.py:817-823`). An entry that becomes a document reads as removed and new, and a new artefact counts as revalidated (COR-050 point 6). So COR-050 point 3 goes unenforced for this move. It needs an issue of its own.
 
 ### 7. Which writing rules a script can check
 
@@ -277,10 +318,9 @@ Grounded in DEC-001 point 1 and today's templates. Labels keep today's wording, 
 - an opening, required: who this is
 - **Comes:** and **Brings:**, optional, from today's placeholder (`SA/templates/actors.md:29`)
 
-**Term**, its entry section:
+**Term**, its entry section, its definition staying in the front matter:
 
 - `## TERM-<slug> — <name>`, required
-- an opening of form `sentence`, required: the definition (part 6)
 - **Applies to:**, **Not:** and **Example:**, optional, from today's placeholder (`SA/templates/glossary.md:29`)
 
 **Revalidation record**, its body, written whole by the stamp:
@@ -292,15 +332,12 @@ Grounded in DEC-001 point 1 and today's templates. Labels keep today's wording, 
 
 ## Forces and costs
 
-- **A breaking change.** A check that fails what it passed before breaks the capability, as living-docs DEC-001 point 3 says of pages. software-analysis is at 0.1.0 (`SA/package.yaml:5`), and project-kit's own pilot analysis was removed (`6107ae77`). So the method rule can ship accepted, and a departure fails from the first release.
-- **Migration:** the actors' split, with its revalidations (part 6), and the terms' definitions moved into their sections.
+- **A breaking change, probably before any release.** A check that fails what it passed before breaks the capability, as living-docs DEC-001 point 3 says of pages. software-analysis is at 0.1.0 (`SA/package.yaml:5`) and looks unreleased (part 6).
+- **Changesets.** software-analysis takes a `minor`, which its first release may absorb. The backbone takes a `minor` for the entry span, and software-analysis then requires that release.
 - **Adopters:**
-  - an artefact that lacks a required part is filled in, or the capability is not upgraded yet
-  - an adopter with actors upgrades through a pull request with one revalidation per actor
-  - an adopter answers for what anchors to a moved actor or a changed term
-  - additions are optional
+  - an artefact that lacks a required part is filled in
+  - additions are optional, and relabelling needs no rule
 - **Brownfield onboarding** (DEC-001 point 9). An agent derives candidates in bulk, and required parts raise that cost. The stamp's hints guide it, and each candidate fails until a person confirms and fills it, as point 9 wants anyway.
-- **Friction.** A structure change is no rule-content change (part 1), so it flags none of the rule's dependants.
 - **Placeholders.** Body placeholders retire for new artefacts. The append-only list stays for old ones.
 - **What stays LLM judgment:**
   - whether the content is true, and whether a goal is one user story
@@ -311,47 +348,63 @@ Grounded in DEC-001 point 1 and today's templates. Labels keep today's wording, 
 ## Slicing
 
 1. **Plain stamped text (#1351),** alone: reword the surviving sentences, and append the old placeholders to the list.
-2. **Decision:** DEC-001 gains the structure point, and points 2 and 3 take the actors' layout. The maintainer accepts it.
-3. **One file per actor (#1346),** before PR #1345 merges: the place, the schema, the stamp, the check, the readers filler, the skill and a migration.
-4. **Structure check:** the declaration and its schema, the method rule set, labels and extents in the reader, and `pkit analysis validate` checking bodies.
-5. **Forms:** numbered steps, lettered variants, a journey's steps and seams, a record's outcomes, and a term's one-sentence definition.
-6. **Rendered templates:** hints as placeholders, the stamp rendering from the declaration, the skill's *Fill it* lists retired, and `WRITE`'s scope in project-kit extended to the templates.
-7. **Project additions:** the `structures` key, each addition bound at its rule's status, and project-kit's actor labels.
-8. **Later:** project-kit's writing lint. The generic reader moves to the backbone when living-docs needs labels.
+2. **Decision:** DEC-001 gains the structure point, the data criterion, the actors' layout in points 2 and 3, and the extraction trigger. The maintainer accepts it.
+3. **The entry's span** in the backbone's artefacts document.
+4. **One file per actor (#1346):** the place, the schema, the stamp, the check, the readers filler and the skill. project-kit's actors are created as files, or moved with eight revalidations.
+5. **Structure check:** the declaration and its schema, the method rule set, labels and extents, and `pkit analysis validate` checking bodies.
+6. **Forms:** numbered steps, lettered variants, a journey's steps and seams, and a record's outcomes.
+7. **Rendered templates:** hints as placeholders, the stamp rendering from the declaration, the skill's *Fill it* lists retired, and the ADR-055 refinement for `WRITE` over the templates.
+8. **Project additions:** `structures.yaml` and its binding. project-kit's actor labels follow once RS-WRITE-002 is accepted.
+9. **Later:** project-kit's writing lint, and the reader's extraction when its trigger fires.
+
+Found on the way, each an issue of its own:
+
+- The change check does not pair an entry with the document it becomes (part 6).
+- The backbone reads a rule-set file two ways: its rule-set reader skips fenced code, and its entry reader does not (`rule_sets.py:522-539`, `friction_discovery.py:2396`).
 
 ## Open questions for the maintainer
 
-1. **Where does the structure reader live?** Recommended: software-analysis extends its own, and the generic part moves to the backbone when living-docs needs labels. The alternative is the backbone now, under a core record.
-2. **How does a hint reach the writer?** Recommended: the hint is the placeholder, a one-line marked comment, and the check's messages repeat it. The alternative keeps hints out of artefacts, in check messages and the skill only.
-3. **One file per actor?** Recommended: yes, landed before PR #1345 merges, with a migration that refuses while friction is open. The alternative keeps the collection and parses the needs from a labelled list, so nothing moves.
-4. **Whose status binds a project's additions?** Recommended: the project rule each addition names, so a proposed rule never fails a check. The alternative is the method rule's status for every addition.
+1. **Is software-analysis installed anywhere outside project-kit?** Recommended: treat it as unreleased, ship no actor migration, and let PR #1345 merge when ready. If it is installed, the move needs a lifecycle decision, not a migration.
+2. **What may a tool read from a body?** Recommended: nothing a filler reads. Needs and definitions stay front-matter data, so actors move to one file each and terms stay in the glossary. The alternative counts declared body elements as data, so the needs become a labelled list and nothing moves.
+3. **How does a hint reach the writer?** Recommended: the hint is the placeholder, a one-line marked comment, and the check's messages repeat it. The alternative keeps hints out of artefacts, in check messages and the skill only.
+4. **Under a proposed rule, is anything reported?** Recommended: no, as in living-docs, for the method rule and a project's additions alike. The alternative reports a preview in both capabilities, which refines living-docs DEC-001 point 3.
 
 ## Review
 
-The critic reviewed the first draft. Each red flag and gap, with its answer:
+The critic and then the architect reviewed this note. Each blocking finding and gap, with its answer.
+
+**The critic, on the first draft:**
 
 | Finding | Answer |
 |---|---|
-| Red flag: moving the actors needs a revalidation per actor, which a migration cannot write (COR-050 point 3) | Confirmed. Part 6 now lands the layout before PR #1345, has the migration refuse while friction is open, and leaves the revalidations to a person. |
-| Red flag: project labels bound at the method rule's status would enforce proposed RS-WRITE-002 | Confirmed. Each addition binds at its own rule's status (part 4), and that is now question 4. |
-| Red flag: analysis forms would move into the backbone | Confirmed. The forms stay in software-analysis, and the reader is extracted only on a second consumer (part 1). |
+| Red flag: moving the actors needs a revalidation per actor, which a migration cannot write (COR-050 point 3) | Confirmed. Part 6 now costs the move, and the architect's review narrowed it further. |
+| Red flag: project labels bound at the method rule's status would enforce proposed RS-WRITE-002 | Confirmed. A tightening binds at its own rule's status (part 4). |
+| Red flag: analysis forms would move into the backbone | Confirmed. The forms stay in software-analysis (part 1). |
 | The label grammar breaks on `**1a.**` and seam lines | Only declared labels delimit, and a part's extent is defined (part 1). |
 | `numbered-steps` cannot mean sequential | It means numbered and unique (part 1). |
-| A hint marker can be quoted, and a multi-line hint can split a section | One-line hints, matched outside code (part 2). The living-docs citation is gone. |
-| The stamp's rewriting is not costed | Part 2 says the body generation is rewritten, and records carry no hints. |
-| What the committed template is made of | Front matter by hand, body rendered (part 2). |
-| A shipped example in project-kit's voice, and labels no project can rename | Examples are plain, and a project may relabel and replace hints (part 4). |
-| Part 4 underspecified | `after`, `closed`, no new forms, and the key renamed `structures` (part 4). |
+| A hint marker can be quoted, and a multi-line hint can split a section | One-line hints, matched outside code (part 2) |
+| The stamp's rewriting is not costed | The body generation is rewritten, and records carry no hints (part 2). |
+| What the committed template is made of | Front matter by hand, body rendered (part 2) |
+| Project-kit's voice in shipped examples, and labels no project can rename | A neutral floor, and relabelling without a rule (parts 4 and 5) |
+| Part 4 underspecified | `after`, `closed`, no new forms, and a file of its own (part 4) |
 | A third home for each part's description | The skill's *Fill it* lists give way to the hints (part 2). |
-| Withdrawn artefacts | A part required later never fails one (part 1). |
-| Brownfield onboarding | Added to forces and costs. |
-| DEC-001 point 3 and the filler | Listed in part 6. |
-| Meta rules at the wrong level of the chain | The table now puts the method rule beside the decisions. |
-| #1351's opening-sentence criterion | Quoted and read per kind (part 5). |
-| The glossary deferred to #1346 circularly | Decided: a definition moves into its section (part 6). |
-| The "plain floor" had no home | project-kit's `WRITE` scope covers the templates instead (part 5). |
-| Hints in check messages and the skill (counter-alternative) | Adopted beside the hint in the artefact (part 2). |
-| A hint that replaces the placeholder (counter-alternative) | Adopted as the recommended form (part 2). |
-| Ship #1351 first, alone (counter-alternative) | Slice 1. |
-| An existing prose linter (counter-alternative) | Named as the lint's alternative (part 7). |
-| Smaller citations: reader count, COR-051 point 7, RUP's trigger, `actors.md:29`, the COR-013 analogy | Corrected or removed. |
+| Withdrawn artefacts, and brownfield onboarding | Parts 1 and "Forces and costs" |
+| #1351's opening-sentence criterion | Quoted and read per kind (part 5) |
+| Counter-alternatives: the hint as the placeholder, hints in check messages, #1351 first, an existing prose linter | All adopted (parts 2 and 7, slice 1) |
+| Smaller citations | Corrected or removed |
+
+**The architect, on the second draft:**
+
+| Finding | Answer |
+|---|---|
+| Concern: a collection entry's extent would be computed outside the backbone, which owns it | Adopted. The artefacts document gives the span (part 1, slice 3). |
+| Concern: additions reported under a proposed rule, where living-docs checks nothing | Adopted: nothing is checked under a proposed rule (parts 3 and 4). A preview is question 4's alternative. |
+| Concern: the actor migration is likely unneeded, and would fail mid-upgrade and edit adopter files | Adopted. Release state is question 1, and the gap in move pairing is its own issue (part 6). |
+| Data or prose decided two ways for actors and terms | One criterion, what a filler reads, so definitions stay data (part 6, question 2) |
+| The chain mixed a rule's level with its owner | Two axes (the chain) |
+| Part 4: which entries need a rule, scope, superseded rules | Relabelling needs none. Scope and orphans are checked (part 4). |
+| `structures` in `config.yaml` | A file of its own (part 4) |
+| The extraction trigger mis-stated | A component that must read declared labels. Generic forms move with it (part 1). |
+| `WRITE` over shipped templates crosses an ownership line | Recorded as an ADR-055 refinement, with a neutral floor for adopters (part 5) |
+| Custom labels inside a part with a form | List forms judge only list items (part 1). |
+| The method set's scope and name | No scope, and a distinctive name (part 3) |
