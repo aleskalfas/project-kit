@@ -58,6 +58,7 @@ bodies:
       - "## Out of scope"
       - "## Dependencies"
       - "## Approach"
+      - "## Use cases"
 
   umbrella:
     required_sections:
@@ -97,6 +98,7 @@ bodies:
       - "## Implementation notes"
       - "## Related"
       - "## Out of scope"
+      - "## Use cases"
 
 universal_body_rules:
   - rule: |
@@ -129,6 +131,22 @@ universal_body_rules:
       No predicted decision IDs (e.g., references to DEC-NNN that
       haven't been authored yet). Reference only IDs that already
       exist.
+    severity: "[validation-severity:warning]"
+  - id: body.use-case-citation
+    rule: |
+      On a Feature or Task body, a use case cited in a `## Use cases`
+      section and not held by the use-case point
+      (`pkit::work-tracking:use-cases`, the use cases settled on the
+      default branch) is reported. The check is of existence only: a
+      cited id that exists but names another use case than the one meant
+      passes, and so does a withdrawn use case. Only an id in that
+      section, matching the point's id pattern, is a citation; on a body
+      of another type the rule reads nothing. A report, never a refusal,
+      at the severity below, which validators read from here. While
+      nothing defines or fills the point it says nothing, and when the
+      point cannot be read it says, at the same severity, that the
+      citations were not checked. Per
+      [project-management:DEC-054-use-case-validation].
     severity: "[validation-severity:warning]"
   - rule: |
       Checkboxes follow the close-gate rule (every box ticked before
@@ -174,11 +192,14 @@ provenance_marker:
   agent_managed: true
   strip_before_scan: true
   strip_rule: |
-    Strip from `start_marker` through end-of-document before the body
-    validators and checkbox extractors scan. Stripping to EOF — rather
-    than matching a start/end pair — removes complete, partial, orphaned,
-    or doubled regions alike; it is the read/validation-side twin of the
-    write-side strip-then-append-exactly-one seam in ADR-037. Because the
+    Strip from the first line that is `start_marker` or `end_marker` —
+    the whole line, surrounding whitespace aside — through end-of-document
+    before the body validators and checkbox extractors scan. A sentence or
+    a list entry that quotes a sentinel is body text, never the footer's
+    start. Stripping to EOF — rather than matching a start/end pair —
+    removes complete, partial, orphaned, or doubled regions alike; it is
+    the read/validation-side twin of the write-side
+    strip-then-append-exactly-one seam in ADR-037. Because the
     footer is methodology-managed (agent_managed: true), it is exempt
     from the required-section, checkbox, and universal body rules — it is
     never validated as body content.
@@ -190,6 +211,40 @@ provenance_marker:
     - "No surviving template-placeholder prose."
     - "No checkbox (`- [ ]` / `- [x]`)."
   misplacement_severity: "[validation-severity:warning]"
+
+# The answers a change wrote, in its PR body (per DEC-055). A section the
+# capability's scripts write from the change check's own list — open-pr,
+# edit-pr and land-work, never an agent — replaced whole on every write.
+# The artefacts' words are never input: every reader of the body strips
+# the section before it scans.
+friction_answers_marker:
+  heading: "## Documentation this change affects"
+  start_marker: "<!-- pkit-friction-answers:start"
+  end_marker: "<!-- pkit-friction-answers:end -->"
+  position: |
+    The last section of the body, before the provenance footer. Each
+    marker is a line of its own, and counts only as a whole line; the
+    start marker's line goes on to name the head the list is for and the
+    merge-base it was taken against (`head=<oid> base=<oid> -->`). A
+    change that wrote no answers and alters no friction setting has no
+    such section.
+  agent_managed: true
+  strip_before_scan: true
+  strip_rule: |
+    Strip each region — the start marker's line through the end marker's
+    — with the heading directly above it, before a reader scans the body:
+    the closing references, the Doc impact requirement, the mapping's
+    override and the placeholder check read the body without it. A start
+    marker with no end marker after it is stripped with everything after
+    it up to the provenance footer, or the end of the body; an end marker
+    with no start marker is stripped alone. The heading with no marker
+    under it — a list no command wrote — is stripped with everything
+    under it, up to the next heading of level one or two outside a fenced
+    code block, a marker, or the provenance footer. `## Friction answers`,
+    the heading an earlier run of these scripts wrote the section under,
+    is read as the heading in each of these rules, so a section it left
+    is stripped and replaced whole. No text the section lists holds
+    `<!--` or `-->`: the commands that write it never write such a list.
 
 checkbox_rules:
   validation_timing: |

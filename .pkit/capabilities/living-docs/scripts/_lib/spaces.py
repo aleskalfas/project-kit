@@ -30,6 +30,16 @@ What is checked, each against the record's words:
   person accepted it with none — its `unanchored-because`, the core's key
   (COR-050 point 1) — which is counted apart. Both as the backbone reads the
   block; an excluded page is in neither (COR-050 point 7). Never failed.
+- **Page formats** (point 3; RS-LDOC-004). A page whose kind declares its
+  structure — the sections its body carries, in order where order matters, in
+  this capability's `schemas/page-kinds.yaml` — is checked against it. While
+  the rule is accepted in the shared method, a section the page lacks or
+  carries out of order is an error; under any other status the rule binds
+  nothing and no body is checked (`SEVERITY_OF_STATUS`). A kind that declares
+  no structure is reported with the pages that name it, never failed. A
+  declaration that gives no reading is one error, "structures unreadable", and
+  no body is checked; a page whose body cannot be read is an error of its own.
+  `formats` says what a section is.
 - **Readers** (points 4 and 7). Each page's `reader` resolves against the
   readers point, `pkit::documentation:readers`, read as it resolves (`readers`)
   — only when some page names a well-formed reader. A reader the point does not
@@ -46,6 +56,10 @@ What is checked, each against the record's words:
   without one yet is reported.
 - **Separation** (point 1). Roots that are the same folder, or nested, are
   reported for onboarding to clear, never failed.
+- **Captured sources** (point 4). The sources folder holds only captured
+  sources, each found from its name; a `source` anchor or a rule's cited
+  source that no file captures, and a captured source nothing names, are
+  reported. `sources` states those checks.
 
 **Where the documents are is read, never computed here.** The roots, every
 place the project and each capability declares, the files each one matches and
@@ -53,6 +67,8 @@ each file's front matter are the backbone's artefact discovery, read once
 through `pkit friction artefacts --json` (`artefacts`). What this module
 decides over that answer is DEC-001's: which of several matching places wins,
 the space a place serves, and what a document is.
+
+A page's body is read from the working tree, at the path the backbone names.
 
 **Not here.** A synced tree declared as a place is the backbone's finding,
 under `friction` — such a file is not among the documents a place matches; the
@@ -76,12 +92,14 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
+from _lib import formats, sources
 from _lib.artefacts import Document, Unreadable, read_artefacts
 from _lib.declarations import (
     BACKBONE_CONFIG,
     CAPABILITIES_DIR,
     CAPABILITY,
     INTERNAL_ROOT,
+    LDOC_FILE,
     LIVING_DOCS_CONFIG,
     USER_ROOT,
     Declarations,
@@ -108,6 +126,10 @@ PAGE_FIELDS = ("reader", "kind")
 #: This capability's companion schema for a page's own fields.
 PAGE_SCHEMA = Path(__file__).resolve().parents[2] / "schemas" / "page.schema.json"
 
+#: Where each page kind's structure is declared: the file, and the path a message names.
+PAGE_KINDS = Path(__file__).resolve().parents[2] / formats.PAGE_KINDS
+PAGE_KINDS_PATH = f"{CAPABILITIES_DIR}/{CAPABILITY}/{formats.PAGE_KINDS.as_posix()}"
+
 #: The shared method rule set a space's definition inherits (DEC-001 point 2).
 LDOC_PIN = re.compile(rf"^{re.escape(CAPABILITY)}:LDOC@(?:0|[1-9][0-9]*)$")
 
@@ -120,6 +142,11 @@ RECORD_ID = re.compile(r"^(?:COR|PRJ|ADR|DEC)-[0-9]{3,}$")
 RULE_SETS = "rule-sets"
 
 ERROR, REPORT = "error", "report"
+
+#: What a rule's status makes of a departure from it (COR-051 point 4): an
+#: accepted rule binds, and checks enforce it; a rule of any other status — a
+#: rule without one is proposed — binds nothing, so nothing is checked.
+SEVERITY_OF_STATUS = {"accepted": ERROR}
 
 
 @dataclass(frozen=True)
@@ -280,6 +307,7 @@ class _Walk:
     claims: dict[str, Claim] = field(default_factory=dict)
     pages: dict[str, str | None] = field(default_factory=dict)  # page -> space
     readers: dict[str, str] = field(default_factory=dict)  # page -> its well-formed reader
+    kinds: dict[str, str] = field(default_factory=dict)  # page -> its well-formed kind
     holds: dict[int, str] = field(
         default_factory=dict
     )  # project place index -> a document it holds
@@ -300,7 +328,20 @@ def check(root: Path, read: Callable[[], Readers] = read_readers) -> Outcome:
     definition_notes = _definition_findings(decl, outcome)
     _separation_findings(decl, outcome)
     reader_note = _reader_findings(decl, walk, read, outcome)
-    outcome.summary = _summary(decl, walk, entry_notes, definition_notes, reader_note, outcome)
+    format_note = _format_findings(root, decl, walk, outcome)
+    captured = sources.check(root, decl.artefacts)
+    outcome.findings.extend(
+        Finding(ERROR if problem.error else REPORT, problem.location, problem.message)
+        for problem in captured.problems
+    )
+    outcome.summary = _summary(
+        decl,
+        walk,
+        entry_notes,
+        definition_notes,
+        (reader_note, format_note, captured.summary),
+        outcome,
+    )
     return outcome
 
 
@@ -414,6 +455,9 @@ def _walk(decl: Declarations, places: Sequence[Reach], outcome: Outcome) -> _Wal
             reader = (front or {}).get("reader")
             if isinstance(reader, str) and "reader" not in invalid:
                 walk.readers[rel] = reader
+            kind = (front or {}).get("kind")
+            if isinstance(kind, str) and "kind" not in invalid:
+                walk.kinds[rel] = kind
         elif not document.excluded:
             # Excluded paths are left out of the measures (COR-050 point 7).
             outcome.unclassified.append(rel)
@@ -518,6 +562,110 @@ def _reader_findings(
     return (
         f"readers ({READERS_POINT}): {', '.join(readers.ids) or 'none'}; "
         f"{len(walk.readers)} page reader(s) checked."
+    )
+
+
+def _format_findings(root: Path, decl: Declarations, walk: _Walk, outcome: Outcome) -> str:
+    """Each page's body against the structure its kind declares (DEC-001 point 3;
+    RS-LDOC-004), at the severity the rule's status in the shared method gives:
+    an error while the rule is accepted, and under any other status no body is
+    checked. A kind that declares no structure is reported, never failed; a
+    declaration that gives no reading is one error. Returns the summary's line
+    about it."""
+    rule = formats.FORMAT_RULE
+    entry = decl.ldoc_rules.get(rule)
+    if not isinstance(entry, Mapping):
+        return f"page formats: not checked — {LDOC_FILE} holds no {rule}."
+    status = entry.get("status")
+    status = status if isinstance(status, str) and status else "proposed"
+    severity = SEVERITY_OF_STATUS.get(status)
+    if severity is None:
+        return (
+            f"page formats: not checked — {rule} is {status}, so it binds nothing "
+            f"(COR-051 point 4)."
+        )
+    try:
+        structures = formats.read_structures(PAGE_KINDS)
+    except formats.Unreadable as exc:
+        outcome.findings.append(
+            Finding(
+                ERROR,
+                PAGE_KINDS_PATH,
+                f"structures unreadable — {str(exc).rstrip('.')}. No page's body is checked "
+                f"until the page kinds' structures can be read: the file is {CAPABILITY}'s own, "
+                f"never the project's to edit — restore it as the capability ships it "
+                f"(DEC-001 point 3).",
+            )
+        )
+        return "page formats: structures unreadable, so no page's body is checked."
+    checked = departing = unreadable = 0
+    undeclared: dict[str, list[str]] = {}
+    for rel, kind in sorted(walk.kinds.items()):
+        structure = structures.get(kind)
+        if structure is None:
+            undeclared.setdefault(kind, []).append(rel)
+            continue
+        try:
+            text = (root / rel).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            unreadable += 1
+            outcome.findings.append(Finding(ERROR, rel, _unread_message(rel, kind, exc)))
+            continue
+        checked += 1
+        found = formats.departures(formats.headings(text), structure)
+        departing += 1 if found else 0
+        outcome.findings.extend(
+            Finding(severity, rel, _departure_message(rel, kind, structure, departure))
+            for departure in found
+        )
+    outcome.findings.extend(
+        Finding(REPORT, f"{rels[0]}:/kind", _undeclared_message(kind, rels, sorted(structures)))
+        for kind, rels in sorted(undeclared.items())
+    )
+    unchecked = sum(len(rels) for rels in undeclared.values())
+    return (
+        f"page formats ({rule}, {status}): {checked} page(s) checked against the structure "
+        f"their kind declares in {PAGE_KINDS_PATH}, {departing} departing from it; "
+        f"{unchecked} page(s) not checked, of {len(undeclared)} kind(s) that declare no structure"
+        + (f"; {unreadable} page(s) that cannot be read" if unreadable else "")
+        + "."
+    )
+
+
+def _departure_message(
+    rel: str, kind: str, structure: formats.Structure, departure: formats.Departure
+) -> str:
+    section = departure.section.described()
+    if departure.how == formats.MISSING:
+        problem = f"lacks {section} at the start of a line"
+        fix = (
+            "add it; a heading that is underlined, written in HTML, indented, empty or a "
+            "template's unfilled `<placeholder>` is not read"
+        )
+    else:
+        problem = f"carries {section} out of order, at line {departure.line}"
+        fix = "move the section into that order"
+    return (
+        f"{rel}, a page of kind {kind!r}, {problem}: the structure its kind declares is "
+        f"{structure.described()} ({PAGE_KINDS_PATH}) — {fix}. A page may carry other sections "
+        f"besides (RS-LDOC-004)."
+    )
+
+
+def _undeclared_message(kind: str, rels: Sequence[str], declared: Sequence[str]) -> str:
+    return (
+        f"kind {kind!r} declares no structure, so the body of the {len(rels)} page(s) that "
+        f"name it is not checked: {', '.join(rels)}. {PAGE_KINDS_PATH} declares "
+        f"{list(declared)} — name one of them where a page is of that kind; a kind the "
+        f"project adds is reported, never failed (DEC-001 point 3)."
+    )
+
+
+def _unread_message(rel: str, kind: str, exc: Exception) -> str:
+    why = exc.strerror if isinstance(exc, OSError) and exc.strerror else "it is not UTF-8 text"
+    return (
+        f"{rel}, a page of kind {kind!r}, cannot be read ({why}), so its body is not checked "
+        f"against the structure its kind declares (RS-LDOC-004)."
     )
 
 
@@ -738,7 +886,7 @@ def _summary(
     walk: _Walk,
     entry_notes: Mapping[str, str],
     definition_notes: Mapping[str, str],
-    reader_note: str,
+    page_notes: Sequence[str],
     outcome: Outcome,
 ) -> list[str]:
     spaces = known_spaces(decl)
@@ -764,7 +912,7 @@ def _summary(
         f"definitions location; {len(outcome.unclassified)} unclassified document(s) for "
         f"onboarding (DEC-001 point 4)."
     )
-    lines.append(reader_note)
+    lines.extend(page_notes)
     lines.append(
         f"pages unanchored: {len(outcome.unanchored)} without an accepted reason, "
         f"{len(outcome.accepted_unanchored)} accepted with one (`unanchored-because`); "

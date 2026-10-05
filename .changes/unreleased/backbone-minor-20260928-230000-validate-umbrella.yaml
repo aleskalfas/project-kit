@@ -3,8 +3,9 @@ kind: minor
 custom:
   category: Changed
 body: >
-  The `pkit validate` command is the one umbrella over every check of the tree's state (ADR-058). A
-  validator registry (`project_kit.validators`) replaces the hand-wired passes: each
+  The `pkit validate` command is the project's one check of its own state against the invariants
+  its records own (COR-055; ADR-058). A validator registry (`project_kit.validators`) replaces
+  the hand-wired passes: each
   functionality registers a name, an order and a callable answering summary lines and
   findings, each finding with a severity — `error` fails the command, `warning`, `info` and
   `report` print. The backbone's twelve members run in dependence order — `manifests`,

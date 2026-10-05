@@ -12,8 +12,9 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-02T00:27:22Z
-      outcome: updated
+      at: 2026-10-04T10:54:55Z
+      outcome: unchanged
+      unchanged-because: This page says the core check flags an artefact when an anchor changes, that only the answer on the artefact clears friction, and that propose reads each finding's files and commits from pkit friction explain. COR-050's refinement only adds a case to its rationale's list of where the two checks part; when an artefact is flagged, what clears it and what explain hands propose are as the page says.
 ---
 
 # software-analysis capability
@@ -271,7 +272,7 @@ The checks say *that* an artefact may no longer be true. Deciding what the chang
 
 For each flagged artefact, upstream first, it reads `pkit friction explain`, the commits behind the changed anchor and the change's context — the commit messages, the pull request or work item — and proposes an outcome with its evidence, each quote it read beside its source and whether it was found there.
 
-- **You run the commands; it runs none.** The proposal lists, per artefact, what you do first — an edit, a defect to report — and the writer commands word for word: `pkit friction revalidate` for the outcome, `pkit friction defer` for what you would rather postpone, and `pkit analysis new revalidation` for a record when there is something to say. None carries `--yes`: the friction writers each ask you once, and the record stamp has no prompt and writes what its command line says. Where the words are yours alone — the defect's reference, your name — a placeholder stands, and the writers refuse it until you fill it. Whether an agent may run the writers itself is for a project record to sanction; none does.
+- **It runs none of the commands.** The proposal lists, per artefact, what you do first — an edit, a defect to report — and the writer commands word for word: `pkit friction revalidate` for the outcome, `pkit friction defer` for what you would rather postpone, and `pkit analysis new revalidation` for a record when there is something to say. None carries `--yes`: the friction writers each ask you once, and the record stamp has no prompt and writes what its command line says. Where the words are yours alone — the defect's reference, your name — a placeholder stands, and the writers refuse it until you fill it. Whether an agent may run a friction writer is set out in the agents README, "Friction writers" (COR-050 point 3): this agent is given no tool for asking you, so it hands the commands over in every session. An agent making the change may run them for the answers its own change owes; the record stamp and the defect's reference stay yours.
 - **It never rewrites an artefact.** It has no edit tool and writes only in the agent workspace: an artefact's edit is a diff there, which you apply.
 - **It asks where it can't tell stale from regressed.** That artefact, the artefacts downstream of it through the cascade and the record carry the question instead of commands — what disagrees, the commit, and the two readings; every other artefact gets its commands. Your answer is the quote it proposes from next.
 - **Not for** another component's artefacts, writing new analysis (the skill's), reviewing a change, planned revalidations or onboarding, or running the software.
@@ -284,6 +285,8 @@ Its scripted flows — a drift resolved, the stop, and a regression recorded wit
 
 **An explanation of another version is refused.** `propose` reads `pkit friction explain` at `schema_version` 1. One that answers any other version is refused with exit 1, naming the version, and nothing is proposed from it; one without the key, from a backbone before it, reads as 1 (the CLI README, "Friction checks").
 
+**An artefact the checks did not judge is refused.** One the explanation gives the state `unreachable` (a point beyond a shallow clone), `unresolved` (an anchor of it cannot be resolved), or a state `propose` does not know is refused with exit 1, and nothing is proposed: an outcome recorded then would answer for an anchor nobody read. Its anchors are held to the same rule (`not-judged` below).
+
 **What the agent read goes in as quotes, each with its source**: a commit, a URL, or a person. A quote from a commit behind the changed anchors is checked against that commit's message (`git log --format=%B`, whitespace runs read as one space) and shown `verified` or not; any other source cannot be checked here and is shown unverified. The check is shown, never enforced: whether the change was meant is a person's decision, and the proposal puts the evidence beside it.
 
 **Code that moved is not a disagreement.** When an anchored file was renamed, or the code the artefact quotes was carried into another file, the anchor is what went stale, not the description: one file outside the anchor, of the kind its files are (by extension), now holds every piece of lost quoted code and held none of it at the revalidation point — or, for an anchor the artefact quotes nothing from, git's rename detection says where the files it stood on at that point went. The anchor is re-pointed (or the new file anchored beside it, where some quoted code stayed), and the revalidation is recorded `unchanged`, because an edit to the anchors alone changes no content — `updated` with no content change is a bump (COR-050 point 5). A quote found only in a file of another kind, or in more than one new file, is not a move — nor is a file the anchor's glob covers that `friction.exclude` leaves out, since the anchor re-pointed there would stand on nothing.
@@ -292,6 +295,7 @@ The rules, in order (`scripts/_lib/resolve.py`):
 
 | Rule | When | Comes to |
 |---|---|---|
+| `not-judged` | an anchor the checks did not judge: any state but `current` or a change — `unresolved-kind`, `no-answer`, `excluded`, one `propose` does not know | read, and nothing proposed: `pkit friction explain` says what clears it |
 | `nothing-to-resolve` | the artefact is current or unanchored, and no anchor is dead | nothing |
 | `ground-gone` | an anchored file is gone, code the artefact quotes is gone from it and went nowhere the reading can name, or the agent reads a contradiction (`--contradicted`, or evidence of one, `--unintended`) where code changed | `analysis-stale` with `--intended`; `code-regressed` with `--unintended`; **ambiguous** with neither, or both |
 | `anchor-moved` | every changed anchor moved | `holds`, the anchor re-pointed, recorded `unchanged` |
@@ -305,7 +309,7 @@ It never proposes `gap-found`: behaviour nothing describes is found by reading. 
 
 **What an anchor matches is the explanation's.** `propose` matches no anchor itself: the files each path anchor stands on at the revalidation point and at HEAD, the commits behind each finding with the paths behind them — for a dead anchor, where its files went — and the artefact's body (for an actor or a term, its own section) all come from `pkit friction explain --json`, so they never disagree with what the checks decide. Git only reads what those files hold. A file `friction.exclude` leaves out is none of them: a quote only such a file still holds is gone, not kept.
 
-`--json` prints `{schema_version, artefact, location, state, head, revalidation_point, verdict, rule, reason, hint, question, anchors, read, answer}`: each changed anchor with its `shape` (`kept`, `moved`, `gone`, `deliberate`, `unread`), the commits behind it — each `{commit, change, paths}`, the paths behind the finding it touched, so `git show <commit> -- <paths>` is what changed under the anchor — what it `quoted`, what is `gone` and where it `moved_to`; each quote read with its `source`, `source_kind` (`commit` or `other`) and `verified` (`true`, `false`, or `null` when it cannot be checked); and the `answer`, `{outcome, first, commands}` or `null`. It reads HEAD, as the explanation does; exit `1` when the artefact cannot be explained (not committed, not found, or beyond a shallow clone), `2` on a usage error such as a quote without its source. A query: read-only, offline, and `pkit sync` provisions its dependencies.
+`--json` prints `{schema_version, artefact, location, state, head, revalidation_point, verdict, rule, reason, hint, question, anchors, read, answer}`: each changed anchor with its `shape` (`kept`, `moved`, `gone`, `deliberate`, `unread`), the commits behind it — each `{commit, change, paths}`, the paths behind the finding it touched, so `git show <commit> -- <paths>` is what changed under the anchor — what it `quoted`, what is `gone` and where it `moved_to`; each quote read with its `source`, `source_kind` (`commit` or `other`) and `verified` (`true`, `false`, or `null` when it cannot be checked); and the `answer`, `{outcome, first, commands}` or `null`. It reads HEAD, as the explanation does; exit `1` when the artefact cannot be explained (not committed, not found) or was not judged, `2` on a usage error such as a quote without its source. A query: read-only, offline, and `pkit sync` provisions its dependencies.
 
 ## Connections
 
@@ -353,9 +357,25 @@ A page names an actor as its reader by that id (`reader: act-tester`). `pkit ana
 
 An install plan predicts the wiring, not the data (COR-053 point 7): it shows this contribution connecting and never runs the filler, so installing software-analysis beside a documentation provider puts the actors file's readability on that provider's validation path — from then on, an actors file that does not parse leaves the readers point unresolved, which `pkit validate` reports as an error.
 
+**Contributes to `pkit::work-tracking:use-cases`** (version 1), the work-tracking role's point for the use cases settled on the default branch, through the `fill-use-cases` command: one entry per use case the default branch holds.
+
+| Use case | Entry |
+|---|---|
+| its id, `UC-007` | `id: UC-007` — as the analysis writes it, so citing the id cites the use case |
+| its title | `title` |
+| its status | `status: active`, or `status: withdrawn` — a withdrawn use case is kept: its id is never used again (The artefacts, above), so a citation of it stays a true reference |
+| its file | `path`, relative to the repository |
+
+`pkit analysis fill-use-cases` prints the entries for you, `--json` the envelope the backbone reads. What a provider of the role does with them is its own (project-management plans against them and warns on an issue body citing a use case they do not hold).
+
+- **Settled state, never your working tree.** The command declares `reads: [settled]`: it reads the default branch at the commit the backbone resolves it to (`pkit repository base`, its `default_branch`) and what that commit holds (`pkit friction artefacts --at`), and asks git nothing itself. A use case on your branch is not in the value until it lands. Where the default branch cannot be read — a clone that has not fetched it — the backbone does not start the command, and the point's reason names the fetch.
+- **Complete, or no answer** (COR-052 point 6). A reading that fails, a file among the default branch's use cases that cannot be read as one — its front matter does not parse, or it has none — a use case there without an id or a title, or two holding one id: the command exits 1 with nothing on standard output, never a shorter list. The point is `fallback`, so `pkit validate` warns, naming the file, and whatever reads the point says the use cases could not be read.
+- **Empty is an answer.** A default branch nothing has been committed to, or one holding no use case yet, gives the empty list: there are none yet.
+- **Inert when no capability provides the work-tracking role**: the contribution is reported as having no active provider, its command never runs, and this capability never requires one.
+
 ## What's shipped now, what's next
 
-Shipped: the decision; the analysis location and its places; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, and the readers contribution with its filler, `pkit analysis fill-readers`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
+Shipped: the decision; the analysis location and its places; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
 
 ## Citing this capability's decisions
 

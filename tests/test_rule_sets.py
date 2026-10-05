@@ -28,6 +28,7 @@ from project_kit import friction_validate as fv
 from project_kit import rule_sets as rs
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.anchor_kind_capabilities import HANGING, RESOLVING, register_kinds
 
 REPO = Path(__file__).resolve().parents[1]
 CONFIG = ".pkit/project/config.yaml"
@@ -429,16 +430,18 @@ def test_a_source_of_a_core_anchor_kind_is_no_source_kind(adopter: AdopterRepo) 
 def test_a_source_is_judged_through_the_resolver_its_kind_registers(
     adopter: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The pass reads the one anchor-kind registry the friction checks read and takes
-    its verdict on the kind (COR-051 point 5; ADR-057 point 2). No package metadata
-    declares an anchor kind yet, so the synthetic resolver is registered at the
-    registry itself — the function every engine calls."""
+    """The pass reads the one anchor-kind registry the friction checks read, takes its
+    verdict on the kind, and resolves the source through the resolver the kind
+    registers (COR-051 point 5; ADR-057 point 2). The synthetic resolver is
+    registered at the registry itself — the function every engine calls — and its
+    run stood in for (`run_resolver`); the tests after this one run real ones."""
     front = cmn()
     front["rules"]["RS-CMN-001"]["origin"]["source"] = {"kind": "transcript", "value": "t-12"}
     front["rules"]["RS-CMN-005"]["origin"]["source"] = {"kind": "transcript", "value": "t-13"}
     write_set(adopter, f"{PROJECT_SETS}/cmn.md", front)
+    script = adopter.root / ".pkit/capabilities/sources/scripts/resolve-transcript.py"
     declared = fd.ResolverCommand(
-        "transcript", "sources", "resolve transcript", query_contract=True
+        "transcript", "sources", "resolve transcript", query_contract=True, script=script
     )
     reads: list[Path] = []
 
@@ -449,35 +452,130 @@ def test_a_source_is_judged_through_the_resolver_its_kind_registers(
 
         monkeypatch.setattr(fd, "registered_anchor_kinds", registry)
 
-    # Registered with the query contract: judged by that resolver, which fails closed
-    # while registered resolvers are not run — never as a kind nothing registers.
+    # Registered with the query contract but its script is not there: its resolver gives
+    # no answer, so the source fails — never passed, and never a kind nothing registers.
     register(declared)
     result = validate(adopter)
-    assert [f.kind for f in result.findings] == [Kind.UNRESOLVED_SOURCE_KIND] * 2
+    assert [f.kind for f in result.findings] == [Kind.UNANSWERED_SOURCE] * 2
+    assert all(f.severity is rs.Severity.ERROR for f in result.findings)
     assert reads == [adopter.root]  # the registry is read once per pass
     message = result.findings[0].message
-    assert (
-        "the resolver `resolve transcript` that sources registers for it is not run yet" in message
-    )
+    assert "source transcript:t-12 could not be checked: its resolver gave no answer" in message
+    assert "command 'resolve transcript' names a script that does not exist" in message
     reason = fd.unresolved_kind_reason("transcript", {})
     assert reason is not None and reason not in message
 
     # Registered without it: refused, as the friction checks refuse it.
-    register(fd.ResolverCommand("transcript", "sources", "resolve transcript"))
+    register(fd.ResolverCommand("transcript", "sources", "resolve transcript", script=script))
     refused = validate(adopter).findings[0].message
     assert "does not declare the query contract" in refused
 
-    # Once the registry resolves the kind, a source of it resolves through it: no report.
+    # The kind resolves: each source is what its resolver answers for its value.
     register(declared)
-    verdicts: list[tuple[str, fd.ResolverCommand]] = []
+    asked: list[str] = []
+    answers = {"t-12": ("transcripts/t-12.md",), "t-13": ()}
 
-    def resolving(kind: str, registry: Mapping[str, fd.ResolverCommand]) -> str | None:
-        verdicts.append((kind, registry[kind]))
-        return None
+    def resolving(
+        root: Path, resolver: fd.ResolverCommand, value: str, files: object, state: str
+    ) -> fd.AnchorResolution:
+        assert resolver == declared
+        asked.append(value)
+        return fd.AnchorResolution(paths=answers[value])
 
-    monkeypatch.setattr(fd, "unresolved_kind_reason", resolving)
+    monkeypatch.setattr(fd, "run_resolver", resolving)
+    result = validate(adopter)
+    assert sorted(asked) == ["t-12", "t-13"]
+    # A source naming a file resolves; one its resolver names no file for fails validation.
+    assert [f.kind for f in result.findings] == [Kind.MISSING_SOURCE]
+    missing = only(result, Kind.MISSING_SOURCE)
+    assert missing.severity is rs.Severity.ERROR
+    assert missing.where == f"{PROJECT_SETS}/cmn.md#RS-CMN-005 /origin/source"
+    assert missing.message == (
+        "cites source transcript:t-13, which does not resolve: the resolver `resolve "
+        "transcript` that sources registers for `transcript` names no file for it (COR-051 "
+        "point 5)."
+    )
+
+
+# --- a cited source, through a real resolver ----------------------------------------------
+
+VALIDATE_RULE_SETS = ["validate", "--only", "rule-sets"]
+
+
+def _cite(adopter: AdopterRepo, value: str) -> None:
+    """The project rule set CMN, its first rule citing the source `source:<value>`."""
+    front = cmn()
+    front["rules"]["RS-CMN-001"]["origin"]["source"] = {"kind": "source", "value": value}
+    write_set(adopter, f"{PROJECT_SETS}/cmn.md", front)
+
+
+def test_a_source_its_resolver_names_a_file_for_resolves(adopter: AdopterRepo) -> None:
+    register_kinds(adopter.root, "sources", kinds={"source": "resolve"}, script_body=RESOLVING)
+    adopter.write({"sources/iso-8601.md": "ISO 8601, as captured.\n"})
+    _cite(adopter, "iso-8601")
     assert validate(adopter).findings == ()
-    assert verdicts == [("transcript", declared)] * 2
+    result = CliRunner().invoke(main, VALIDATE_RULE_SETS)
+    assert result.exit_code == 0, result.output
+
+
+def test_a_source_its_resolver_names_no_file_for_is_missing(adopter: AdopterRepo) -> None:
+    register_kinds(adopter.root, "sources", kinds={"source": "resolve"}, script_body=RESOLVING)
+    _cite(adopter, "iso-9999")
+    missing = only(validate(adopter), Kind.MISSING_SOURCE)
+    assert missing.severity is rs.Severity.ERROR
+    assert "the resolver `resolve` that sources registers for `source` names no file for it" in (
+        missing.message
+    )
+    assert CliRunner().invoke(main, VALIDATE_RULE_SETS).exit_code == 1
+
+
+# Serial: the bound is one second, which a machine busy with other test workers misses.
+@pytest.mark.serial
+def test_a_source_whose_resolver_gives_no_answer_fails_validation(
+    adopter: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A registered resolver that ran and gave no answer has not resolved the source
+    (COR-051 point 5): validation fails rather than pass a source nobody checked."""
+    register_kinds(adopter.root, "sources", kinds={"source": "resolve"}, script_body=HANGING)
+    _cite(adopter, "iso-8601")
+    monkeypatch.setattr(rs.fd.command_runner, "COMMAND_TIMEOUT_SECONDS", 1)
+    unanswered = only(validate(adopter), Kind.UNANSWERED_SOURCE)
+    assert unanswered.severity is rs.Severity.ERROR
+    assert unanswered.where == f"{PROJECT_SETS}/cmn.md#RS-CMN-001 /origin/source"
+    assert unanswered.message == (
+        "source source:iso-8601 could not be checked: its resolver gave no answer — command "
+        "'resolve' did not answer within 1 s. If it overran its time or its environment is not "
+        "provisioned, run again (after `pkit sync`); otherwise the resolver `resolve` of sources "
+        "needs mending (COR-051 point 5; COR-050 point 2)."
+    )
+    result = CliRunner().invoke(main, VALIDATE_RULE_SETS)
+    assert result.exit_code == 1, result.output
+    assert "could not be checked: its resolver gave no answer" in " ".join(result.output.split())
+
+
+def test_a_source_of_a_kind_nothing_installed_registers_is_a_report(adopter: AdopterRepo) -> None:
+    """The one carve-out (COR-051 point 5): no installed resolver is reported, never
+    failed and never silently passed."""
+    _cite(adopter, "iso-8601")
+    report = only(validate(adopter), Kind.UNRESOLVED_SOURCE_KIND)
+    assert report.severity is rs.Severity.REPORT
+    result = CliRunner().invoke(main, VALIDATE_RULE_SETS)
+    assert result.exit_code == 0, result.output
+
+
+def test_a_source_of_a_kind_whose_registration_is_refused_is_a_report(
+    adopter: AdopterRepo,
+) -> None:
+    """No resolver that may run: the source is reported here, and the registration
+    fails once, at the registration, in the packages member."""
+    register_kinds(adopter.root, "sources", kinds={"source": "resolve"}, contract=False)
+    _cite(adopter, "iso-8601")
+    result = validate(adopter)
+    assert result.errors == ()
+    report = only(result, Kind.UNRESOLVED_SOURCE_KIND)
+    assert "does not declare the query contract" in report.message
+    assert CliRunner().invoke(main, VALIDATE_RULE_SETS).exit_code == 0
+    assert CliRunner().invoke(main, ["validate", "--only", "packages"]).exit_code == 1
 
 
 # --- successors ---------------------------------------------------------------------

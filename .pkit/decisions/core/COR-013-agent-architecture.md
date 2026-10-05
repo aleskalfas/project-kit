@@ -39,14 +39,14 @@ reads:
   paths:                        # filesystem paths (area docs, READMEs, project-root files)
   records:                      # decision-record IDs (resolved by ID, not slug)
   patterns:                     # adopter-overlay placeholders (see rule 5)
-owns:                           # paths the artifact has write authority over (agents only)
+owns:                           # paths whose modification is the agent's responsibility (agents only)
 needs:                          # hook names the artifact invokes (see rule 4)
 answers:                        # hook names the artifact provides (skills only)
 gates:                          # records whose accepted-status is load-bearing (skills only)
 ```
 
 - `reads` lists the references the artifact consults at task time.
-- `owns` lists paths whose modification is the agent's responsibility; every managed path has exactly one owning agent.
+- `owns` lists paths whose modification is the agent's responsibility; every managed path has exactly one owning agent. A write made by one of the methodology's own mutating commands (COR-004), whichever part of the methodology ships it, is that command's and is not declared in `owns`: what it may write, and what it checks before writing, are fixed by the command, whichever agent runs it. An agent runs such a command on a path it does not own only where its body, or a skill its body hands the work to, names the command and the conditions for running it. A write the agent makes itself — with a file tool, or with any other program through a shell — is never such a command's write.
 - `needs` and `answers` express the hook contract from rule 4.
 - `gates` carries the acceptance-gate semantic from `.pkit/decisions/README.md` for skills; an entry there asserts the skill refuses to run unless the named records are `accepted`.
 
@@ -166,6 +166,8 @@ Agents tied to the adopter's domain — implementers, domain reviewers, customis
 **Why the unified frontmatter shape spans agents and skills.** Both kinds participate in the reference graph; both make declarations about what they reference and what they answer. Splitting the schema across two shapes would force the graph walker to handle two normalisations and create asymmetric authoring ergonomics for what is structurally the same data. The fields that only apply to one kind (`owns` for agents; `answers` and `gates` for skills) are omitted from the other.
 
 **Why references in frontmatter, not prose.** Bulk rename across hardcoded text references is sed-and-pray; bulk rename across structured frontmatter is YAML-aware and zero false positives. The frontmatter is queryable for reverse lookup and impact analysis. The body's job is the role / procedure description; the frontmatter's is the machine-readable declaration. The bidirectional consistency check keeps them in sync — neither can drift from the other.
+
+**Why command-routed writes stay out of `owns`.** A mutating command writes what it names, after its own checks, whichever agent runs it, and several agents may run it on the same file. `owns` answers a different question — which agent answers for a path — and only that question can have exactly one answer. Naming the command and its conditions in the body, or in the skill the body hands the work to, keeps what an agent may write visible where its role is read, without claiming an ownership no check could hold.
 
 **Why the body's citation convention is strict.** A loose convention forces the validator to parse arbitrary prose, with high false-positive risk for things that look like paths but aren't (sentences containing dot-separated tokens, version strings, etc.). Backticks-for-paths plus `(COR|PRJ)-\d+` for record IDs are unambiguous, parser-friendly, and authoring-natural — authors already write paths in backticks for rendering.
 

@@ -31,6 +31,9 @@ never this filler (COR-052 point 6). History that does not exist yet holds
 nothing: with no commit it answers `[]`. History that exists and this clone
 cannot reach gives no answer: a HEAD git cannot read, or a page whose friction
 lies beyond a shallow clone's history, exits 1, never with an empty answer.
+So does a page whose anchor's resolver gave no answer, or whose state this
+reading does not know. A page left unjudged only by an anchor of a kind
+nothing installed resolves owes what its other anchors owe.
 The contribution is inert while no capability provides the work-tracking role;
 nothing here asks.
 
@@ -41,8 +44,9 @@ Usage:
 Exit codes:
   0  answered
   1  no answer: the friction check, the places or HEAD's reading gave no
-     document, git cannot read HEAD, or a page's friction lies beyond a shallow
-     clone's history — never an empty answer in its place
+     document, git cannot read HEAD, or the friction check did not judge a
+     page — its friction lies beyond a shallow clone's history, or an anchor's
+     resolver gave no answer — never an empty answer in its place
 """
 
 from __future__ import annotations
@@ -50,6 +54,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -60,16 +65,18 @@ from _lib.artefacts import Unreadable
 from _lib.declarations import project_root
 
 
-def obligations(root: Path) -> list[dict[str, Any]]:
-    """The point's obligations for the project at `root`. Raises NoAnswer."""
+def reading(root: Path) -> tuple[Mapping[str, Any], list[str]] | None:
+    """The whole-repository friction check and the pages, for the project at `root`;
+    None when nothing is committed — no HEAD to judge, so nothing is owed. Raises
+    NoAnswer."""
     if not doc_check.has_commit(str(root)):
-        return []  # nothing committed: no HEAD to judge, so nothing is owed
+        return None
     report = doc_check.read_friction(str(root))
     try:
         pages = spaces.pages(root)
     except Unreadable as exc:
         raise doc_check.NoAnswer(f"the pages cannot be told: {exc}") from exc
-    return doc_check.obligations(report, pages)
+    return report, pages
 
 
 def main() -> int:
@@ -87,7 +94,8 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        value = obligations(project_root())
+        read = reading(project_root())
+        value = [] if read is None else doc_check.obligations(*read)
     except doc_check.NoAnswer as exc:
         print(f"error: {exc}; no obligations can be given.", file=sys.stderr)
         return 1
@@ -98,6 +106,11 @@ def main() -> int:
     for obligation in value:
         subject = obligation.get("path") or obligation["document"]
         print(f"  {obligation['reason']}  {subject} — {obligation['description']}")
+    for page, kind, anchored in [] if read is None else doc_check.unresolved_kinds(*read):
+        print(
+            f"  not judged on {kind} {anchored} ({page}): nothing installed resolves the kind — "
+            f"a declaration to mend, not owed here; `pkit friction explain {page}`"
+        )
     return 0
 
 

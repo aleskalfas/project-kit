@@ -117,3 +117,140 @@ def test_closes_applies_to_a_replaced_body(ep, monkeypatch, tmp_path) -> None:
     rec = _run(ep, monkeypatch, ["7", "--body-file", str(new), "--closes", "43", "--yes"])
     assert rec.rc == 0
     assert rec.edits[0]["body"].startswith("Closes #42\nCloses #43\n\n## Summary\nrewritten")
+
+
+# ---- the friction answers' section (DEC-055) ---------------------------------------
+
+FOOTER = (
+    "<!-- pkit-provenance:start -->\n\n---\n<sub>🧰 pkit · tree `1` · pm `2`</sub>\n"
+    "<!-- pkit-provenance:end -->\n"
+)
+
+
+def _section(ep, reason: str, head: str = "a" * 40) -> str:
+    """The section land-work or open-pr writes, for one answer with `reason`."""
+    entry = {
+        "artefact": "guide",
+        "location": "docs/guide.md",
+        "answer": "unchanged",
+        "anchor": None,
+        "reason": reason,
+        "kept": [],
+        "asked": True,
+        "status": "stands",
+        "new": False,
+    }
+    document = {"base": {"commit": "b" * 40}, "answers": [entry], "unreadable": []}
+    section = ep.friction_answers.render(document, head)
+    assert section is not None
+    return section
+
+
+def _carrying(ep, reason: str = "The guide holds; fixes #99 is elsewhere.") -> tuple[str, str]:
+    section = _section(ep, reason)
+    return section, f"{PR_BODY}\n{section}\n\n{FOOTER}"
+
+
+#: The section's heading, and the one an earlier run wrote it under.
+HEADING = "## Documentation this change affects"
+FORMER_HEADING = "## Friction answers"
+
+
+def _sections(body: str) -> int:
+    return body.count(HEADING) + body.count(FORMER_HEADING)
+
+
+@pytest.mark.parametrize("how", ["--body", "--body-file"])
+def test_a_replaced_body_keeps_the_section_the_description_carried(
+    ep, monkeypatch, tmp_path, how
+) -> None:
+    section, body = _carrying(ep)
+    supplied = "Closes #42\n\n## Summary\nrewritten\n\n## Doc impact\n- [x] none\n\n" + _section(
+        ep, "A list an agent wrote.", head="c" * 40
+    )
+    if how == "--body-file":
+        path = tmp_path / "body.md"
+        path.write_text(supplied, encoding="utf-8")
+        supplied = str(path)
+    rec = _run(ep, monkeypatch, ["7", how, supplied, "--yes"], body=body)
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    assert "rewritten" in written and "A list an agent wrote." not in written
+    assert _sections(written) == 1
+    assert f"- [x] none\n\n{section}\n\n<!-- pkit-provenance:start -->" in written
+
+
+def test_appended_text_lands_outside_the_section(ep, monkeypatch) -> None:
+    section, body = _carrying(ep)
+    rec = _run(ep, monkeypatch, ["7", "--append", "## Notes\n\nA later note.", "--yes"], body=body)
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    assert f"A later note.\n\n{section}\n\n<!-- pkit-provenance:start -->" in written
+    assert _sections(written) == 1
+
+
+def test_closes_reads_no_reference_in_the_section_and_keeps_it(ep, monkeypatch) -> None:
+    section, body = _carrying(ep)
+    rec = _run(ep, monkeypatch, ["7", "--closes", "99", "--yes"], body=body, known_issues=(42, 99))
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    assert written.startswith("Closes #42\nCloses #99\n\n## Summary")
+    assert section in written and _sections(written) == 1
+
+
+def test_a_closing_reference_only_in_the_section_meets_no_requirement(ep) -> None:
+    section = _section(ep, "fixes #42 — see ## Doc impact")
+    body = f"## Summary\nwork\n\n{section}\n"
+    labels = [f.label for f in ep._validate(title="feat(pm): x", body=body, titles={})]
+    assert labels == ["body.closes", "body.doc-impact"]
+
+
+def test_of_two_lists_the_latest_is_kept_and_the_other_dropped(ep, monkeypatch, capsys) -> None:
+    """Every write places its list last, so of two the last is the latest: edit-pr
+    carries it, drops the other, and says so."""
+    stale = _section(ep, "An earlier head's words.", head="e" * 40)
+    latest = _section(ep, "The latest words.")
+    body = f"{PR_BODY}\n{stale}\n\n{latest}\n\n{FOOTER}"
+    rec = _run(ep, monkeypatch, ["7", "--append", "A note.", "--yes"], body=body)
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    assert "The latest words." in written and "An earlier head's words." not in written
+    assert _sections(written) == 1
+    assert "edit-pr keeps only the latest list the description carried" in capsys.readouterr().err
+
+
+def test_a_section_typed_by_hand_is_dropped(ep, monkeypatch, capsys) -> None:
+    section, body = _carrying(ep)
+    hand = f"{HEADING}\n\n1. docs/guide.md — unchanged: as I recall it\n"
+    rec = _run(ep, monkeypatch, ["7", "--append", hand, "--yes"], body=body)
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    assert "as I recall it" not in written and section in written and _sections(written) == 1
+    assert f"drops every other `{HEADING}` section" in capsys.readouterr().err
+
+
+def test_a_section_typed_by_hand_under_the_former_heading_is_dropped(ep, monkeypatch) -> None:
+    section, body = _carrying(ep)
+    hand = f"{FORMER_HEADING}\n\n1. docs/guide.md — unchanged: as I recall it\n"
+    rec = _run(ep, monkeypatch, ["7", "--append", hand, "--yes"], body=body)
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    assert "as I recall it" not in written and FORMER_HEADING not in written
+    assert section in written and _sections(written) == 1
+
+
+def test_a_list_an_earlier_run_left_under_the_former_heading_is_carried_under_the_heading(
+    ep, monkeypatch, capsys
+) -> None:
+    """The markers identify the list: edit-pr carries the region an earlier run
+    wrote under the former heading, its words unchanged, and places it under the
+    heading — no stray former heading, and no warning, since it dropped nothing."""
+    section = _section(ep, "Words of an earlier run.")
+    earlier = FORMER_HEADING + section.removeprefix(HEADING)
+    body = f"{PR_BODY}\n{earlier}\n\n{FOOTER}"
+    rec = _run(ep, monkeypatch, ["7", "--append", "A note.", "--yes"], body=body)
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    assert FORMER_HEADING not in written and _sections(written) == 1
+    assert f"A note.\n\n{section}\n\n<!-- pkit-provenance:start -->" in written
+    assert "edit-pr keeps only the latest list" not in capsys.readouterr().err

@@ -1,0 +1,17 @@
+component: living-docs
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `fill-doc-check` gives no answer when the friction check could not do its
+  work on a page. It read only `unreachable` as not judged, so a page in any
+  other state that is not `stale` owed nothing, as a current page does. Now a
+  page whose anchor's resolver gave no answer (`no-answer`), or in a state
+  this capability does not know, exits 1, naming the page and why, so a
+  documentation check that reads it reports itself unresolved rather than
+  pass on fewer obligations. A page left unjudged only by an anchor whose
+  kind nothing installed resolves (`unresolved-kind`) owes what its other
+  anchors owe — a `page-stale` obligation when one of them changed — and the
+  human view names the anchor: such an anchor is the project's to mend, which
+  `pkit validate` reports under `friction` and the change check fails where a
+  pull request adds it, so it never makes every later check fail.

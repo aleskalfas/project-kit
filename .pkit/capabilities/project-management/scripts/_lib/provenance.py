@@ -210,12 +210,14 @@ def strip_footer(body: str) -> str:
 
     Cutting to end-of-document (rather than matching a start/end pair)
     removes complete, partial, orphaned, or doubled regions alike — the
-    read/validation-side twin of the write-side append. Trailing blank
-    lines left behind are trimmed.
+    read/validation-side twin of the write-side append. A sentinel counts
+    only as a whole line, surrounding whitespace aside, as `render_footer`
+    writes it: a sentence or a list entry that quotes one is body text,
+    never the footer's start. Trailing blank lines left behind are trimmed.
     """
     lines = body.splitlines()
     for i, ln in enumerate(lines):
-        if MARKER_START in ln or MARKER_END in ln:
+        if ln.strip() in (MARKER_START, MARKER_END):
             head = "\n".join(lines[:i])
             return head.rstrip()
     return body.rstrip()

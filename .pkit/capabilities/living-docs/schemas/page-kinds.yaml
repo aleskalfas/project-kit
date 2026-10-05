@@ -1,0 +1,32 @@
+# The page kinds living-docs ships, and the structure each kind's pages
+# follow: pages of a kind follow one format, with a template per kind
+# ([living-docs:DEC-001-living-docs-discipline] point 3; RS-LDOC-004). A
+# kind's template is `templates/<kind>.md`, the starting shape a writer fills
+# in; its structure is declared here, once, and nowhere else — the validator
+# (`pkit living-docs validate`) checks every page of the kind against it, and
+# a test checks every template against it, so neither holds a copy that can
+# drift. A structure names only what every page of the kind must carry, so a
+# template may show more.
+#
+# - `sections` — the headings every page of the kind carries: each a `level`
+#   (1 for `#` to 6) and, where the kind fixes the wording, its `text`. A
+#   section without `text` is one the writer words: a heading with words of
+#   its own, not an empty one or a template's unfilled `<placeholder>`. Text
+#   is compared ignoring case, runs of white space and trailing punctuation.
+#   A page may carry other sections besides.
+# - `ordered` — whether the sections come in the order listed; true unless
+#   set to false.
+#
+# A kind not listed here declares no structure: its pages are reported with
+# their kind, and never failed. What a heading is — and what it is not, such
+# as a line inside a fenced code block — is scripts/_lib/formats.py's.
+
+schema_version: 1
+
+kinds:
+  reference:
+    sections:
+      - level: 1   # the surface the page describes
+  signpost:
+    sections:
+      - level: 1   # the folder the page signposts

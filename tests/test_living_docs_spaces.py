@@ -15,6 +15,15 @@ The capability's first artefacts, each held to living-docs DEC-001:
 - the **page templates** — the signpost and the reference page — each
   validating: its own fields by the capability's schema, its friction block
   by the core's;
+- **page formats** (RS-LDOC-004; #1267): a page's body against the structure
+  its kind declares in `schemas/page-kinds.yaml` — a title missing, or written
+  as something that is not read as one; a kind declaring no structure,
+  reported and never failed; the severity the rule's status gives; a
+  declaration that gives no reading, which is one error. What no shipped kind
+  declares — a section out of order, fixed text, sections in any order — is
+  tested on a declaration of the test's own, read from a file outside the
+  repository: no test rewrites the declaration the capability ships. Then
+  what a heading is, and each template following its kind's structure;
 - **one home for discovery**: the capability's scripts read the places and
   their documents through `pkit friction artefacts` and carry no matcher,
   listing or place reader of their own (#1099; ADR-057 point 2).
@@ -30,6 +39,7 @@ project-kit's own configuration passing is in `test_self_host_documentation.py`.
 from __future__ import annotations
 
 import ast
+import importlib.util
 import io
 import json
 import os
@@ -38,6 +48,7 @@ import subprocess
 import sys
 from collections.abc import Mapping
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import pytest
@@ -671,6 +682,574 @@ def test_the_page_template_validates_its_fields_and_its_friction_block(kind: str
 @pytest.mark.parametrize("reader", ["User", "", 7, None, ["user"], "a reader"])
 def test_the_page_schema_refuses_a_wrong_reader(reader: Any) -> None:
     assert not _page_schema().is_valid({"reader": reader, "kind": "signpost"})
+
+
+# --- page formats: a page's body against its kind's structure (RS-LDOC-004; #1267) -------
+
+
+def _library(name: str) -> ModuleType:
+    """A module of the capability's script library, under a name of its own: the
+    library is `_lib` in every capability, so it is never imported by that name."""
+    spec = importlib.util.spec_from_file_location(
+        f"living_docs_lib_{name}", CAPABILITY / "scripts" / "_lib" / f"{name}.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+formats = _library("formats")
+
+PAGE_KINDS = CAPABILITY / "schemas" / "page-kinds.yaml"
+PAGE_KINDS_PATH = f"{LD.as_posix()}/schemas/page-kinds.yaml"
+LDOC = CAPABILITY / "rule-sets" / "ldoc.md"
+
+#: What the validator says of a reference page, docs/ref.md, without its title.
+LACKS_TITLE = (
+    "docs/ref.md, a page of kind 'reference', lacks a title written as `# Title` at the start "
+    "of a line: the structure its kind declares is a title written as `# Title` "
+    f"({PAGE_KINDS_PATH}) — add it; a heading that is underlined, written in HTML, indented, "
+    "empty or a template's unfilled `<placeholder>` is not read. A page may carry other "
+    "sections besides (RS-LDOC-004)."
+)
+
+INSTALL, USE = {"level": 2, "text": "Install"}, {"level": 2, "text": "Use"}
+
+#: Runs the validator's check with the kinds' declaration read from another file.
+KINDS_DRIVER = """
+import json, sys
+from pathlib import Path
+
+sys.path.insert(0, sys.argv[1])
+from _lib import spaces
+from _lib.declarations import project_root
+
+spaces.PAGE_KINDS = Path(sys.argv[2])
+print(json.dumps(spaces.check(project_root()).document()))
+"""
+
+
+def _page(kind: str, body: str) -> str:
+    return f"---\nreader: user\nkind: {kind}\n---\n\n{body}"
+
+
+def _format_line(document: Mapping[str, Any]) -> str:
+    (line,) = [line for line in document["summary"] if line.startswith("page formats")]
+    return line
+
+
+def _declaration(folder: Path, kinds: Mapping[str, Any]) -> Path:
+    """A declaration of `kinds` in a file of its own, outside any repository."""
+    path = folder / "page-kinds.yaml"
+    path.write_text(_yaml({"schema_version": 1, "kinds": kinds}), encoding="utf-8")
+    return path
+
+
+def run_declaring(repo: AdopterRepo, declaration: Path) -> dict[str, Any]:
+    """The validator's findings document with the kinds' structures read from
+    `declaration`: what the adopter's copy of the capability ships stays as synced."""
+    completed = subprocess.run(
+        [sys.executable, "-c", KINDS_DRIVER, str(repo.root / LD / "scripts"), str(declaration)],
+        cwd=repo.root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    return json.loads(completed.stdout)
+
+
+def test_a_page_that_follows_its_kind_s_structure_passes(project: AdopterRepo) -> None:
+    """The fixture's signposts and a reference page each carry their title: no
+    finding, and the summary counts each checked."""
+    project.write({"docs/ref.md": _page("reference", "# Ref\n\nWhat it is.\n")})
+    document = run(project)
+    assert document["findings"] == []
+    assert _format_line(document) == (
+        "page formats (RS-LDOC-004, accepted): 4 page(s) checked against the structure their "
+        f"kind declares in {PAGE_KINDS_PATH}, 0 departing from it; 0 page(s) not checked, of "
+        "0 kind(s) that declare no structure."
+    )
+
+
+def test_a_page_lacking_a_section_fails_naming_the_page_its_kind_the_section_and_the_structure(
+    project: AdopterRepo,
+) -> None:
+    project.write({"docs/ref.md": _page("reference", "What it is, and nothing more.\n")})
+    document = run(project)
+    assert [f["severity"] for f in document["findings"]] == ["error"]
+    assert only_error(document) == ("docs/ref.md", LACKS_TITLE)
+    assert ", 1 departing from it; " in _format_line(document)
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "- ```sh\n# install\n```\n",  # the only `#` line is code, fenced on a list item's line
+        "- A step:\n\n  # Under a list item\n",  # indented
+        "<!--\n# Commented out\n-->\n\nProse.\n",
+        "#\n\nProse.\n",  # an empty heading
+        "# <Surface>\n\nProse.\n",  # the template's placeholder, unfilled
+        "Ref\n===\n\nProse.\n",  # an underlined (setext) title
+        '<h1 align="center">Ref</h1>\n\nProse.\n',
+    ],
+)
+def test_what_is_not_read_as_a_title_leaves_the_page_without_one(
+    project: AdopterRepo, body: str
+) -> None:
+    project.write({"docs/ref.md": _page("reference", body)})
+    assert only_error(run(project)) == ("docs/ref.md", LACKS_TITLE)
+
+
+def test_a_title_after_code_fenced_under_a_list_item_is_read(project: AdopterRepo) -> None:
+    """The fence a list item's line opens is closed by the indented fence under it,
+    which opens nothing: the title below is read."""
+    body = "- ```sh\n  # install\n  ```\n\n# Ref\n"
+    project.write({"docs/ref.md": _page("reference", body)})
+    assert run(project)["findings"] == []
+
+
+def test_pkit_validate_fails_on_a_page_departing_from_its_kind_s_structure(
+    project: AdopterRepo,
+) -> None:
+    project.write({"docs/ref.md": _page("reference", "What it is, and nothing more.\n")})
+    result = CliRunner().invoke(
+        main, ["--color", "never", "validate", "--only", "living-docs:spaces"]
+    )
+    assert result.exit_code == 1
+    assert "docs/ref.md, a page of kind 'reference', lacks a title" in result.output
+
+
+def test_a_kind_that_declares_no_structure_is_reported_with_its_pages_and_never_failed(
+    project: AdopterRepo,
+) -> None:
+    """A kind the project adds, and a kind mistyped: each is one report naming the
+    kind, the pages that name it and the kinds that are declared."""
+    project.write(
+        {
+            "docs/notes.md": _page("tutorial", "Only prose, no heading at all.\n"),
+            "docs/steps.md": _page("tutorial", "# Steps\n"),
+            "docs/ref.md": _page("refrence", "# Ref\n"),
+        }
+    )
+    document = run(project)
+    assert errors(document) == []
+    declared = f"{PAGE_KINDS_PATH} declares ['reference', 'signpost'] — name one of them where"
+    closing = "a page is of that kind; a kind the project adds is reported, never failed"
+    assert [(f["severity"], f["location"], f["message"]) for f in document["findings"]] == [
+        (
+            "report",
+            "docs/ref.md:/kind",
+            "kind 'refrence' declares no structure, so the body of the 1 page(s) that name it "
+            f"is not checked: docs/ref.md. {declared} {closing} (DEC-001 point 3).",
+        ),
+        (
+            "report",
+            "docs/notes.md:/kind",
+            "kind 'tutorial' declares no structure, so the body of the 2 page(s) that name it "
+            f"is not checked: docs/notes.md, docs/steps.md. {declared} {closing} "
+            "(DEC-001 point 3).",
+        ),
+    ]
+    assert _format_line(document).endswith(
+        "3 page(s) checked against the structure their kind declares in "
+        f"{PAGE_KINDS_PATH}, 0 departing from it; 3 page(s) not checked, of 2 kind(s) that "
+        "declare no structure."
+    )
+    result = CliRunner().invoke(
+        main, ["--color", "never", "validate", "--only", "living-docs:spaces"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "kind 'tutorial' declares no structure" in result.output
+
+
+def test_the_rule_the_check_names_is_an_accepted_rule_of_the_shipped_method() -> None:
+    """The check applies one rule by its id (`FORMAT_RULE`): were the shipped LDOC to
+    supersede or withdraw it, the check would stop while its successor binds."""
+    front, _body = fd.split_front_matter(LDOC.read_text(encoding="utf-8"))
+    assert front is not None
+    rules = YAML(typ="safe").load(front)["rules"]
+    assert rules[formats.FORMAT_RULE]["status"] == "accepted"
+
+
+@pytest.mark.parametrize(
+    ("status", "line"),
+    [
+        ("    status: proposed\n", "RS-LDOC-004 is proposed"),
+        ("    status: superseded\n", "RS-LDOC-004 is superseded"),
+        ("    status: withdrawn\n", "RS-LDOC-004 is withdrawn"),
+        ("", "RS-LDOC-004 is proposed"),  # a rule without a status is proposed
+    ],
+)
+def test_the_severity_is_the_one_the_rule_s_status_gives(
+    project: AdopterRepo, status: str, line: str
+) -> None:
+    """An accepted RS-LDOC-004 binds, so a departure is an error (above); a rule of any
+    other status binds nothing (COR-051 point 4), so no page's body is checked."""
+    project.write({"docs/ref.md": _page("reference", "No title.\n")})
+    assert errors(run(project)) != []
+    ldoc = project.root / LD / "rule-sets" / "ldoc.md"
+    accepted = "  RS-LDOC-004:\n    status: accepted\n"
+    text = ldoc.read_text(encoding="utf-8")
+    assert accepted in text
+    ldoc.write_text(text.replace(accepted, f"  RS-LDOC-004:\n{status}"), encoding="utf-8")
+    document = run(project)
+    assert document["findings"] == []
+    assert _format_line(document) == (
+        f"page formats: not checked — {line}, so it binds nothing (COR-051 point 4)."
+    )
+
+
+def test_a_shared_method_without_the_rule_checks_no_body_and_says_so(
+    project: AdopterRepo,
+) -> None:
+    """The rule set's own defects are the backbone's `rule-sets` findings; here the
+    summary says the check did not run, and why."""
+    project.write({"docs/ref.md": _page("reference", "No title.\n")})
+    ldoc = project.root / LD / "rule-sets" / "ldoc.md"
+    text = ldoc.read_text(encoding="utf-8")
+    assert "  RS-LDOC-004:\n" in text
+    ldoc.write_text(text.replace("  RS-LDOC-004:\n", "  RS-LDOC-014:\n"), encoding="utf-8")
+    document = run(project)
+    assert document["findings"] == []
+    assert _format_line(document) == (
+        f"page formats: not checked — {LD.as_posix()}/rule-sets/ldoc.md holds no RS-LDOC-004."
+    )
+
+
+@pytest.mark.parametrize(
+    ("content", "why"),
+    [
+        (None, "the file cannot be read"),
+        ("kinds: [unclosed\n", "the file is not YAML"),
+        (
+            "schema_version: 1\nkinds:\n  reference:\n    sections: []\n",
+            "the file does not fit schemas/page-kinds.schema.json: at `/kinds/reference/sections`",
+        ),
+    ],
+)
+def test_a_declaration_that_gives_no_reading_is_one_error_and_no_body_is_checked(
+    project: AdopterRepo,
+    tmp_path_factory: pytest.TempPathFactory,
+    content: str | None,
+    why: str,
+) -> None:
+    declaration = tmp_path_factory.mktemp("kinds") / "page-kinds.yaml"
+    if content is not None:
+        declaration.write_text(content, encoding="utf-8")
+    project.write({"docs/ref.md": _page("reference", "No title.\n")})
+    document = run_declaring(project, declaration)
+    assert [f["severity"] for f in document["findings"]] == ["error"]
+    location, message = only_error(document)
+    assert location == PAGE_KINDS_PATH
+    assert message.startswith(f"structures unreadable — {why}")
+    assert message.endswith(
+        ". No page's body is checked until the page kinds' structures can be read: the file "
+        "is living-docs's own, never the project's to edit — restore it as the capability "
+        "ships it (DEC-001 point 3)."
+    )
+    assert _format_line(document) == (
+        "page formats: structures unreadable, so no page's body is checked."
+    )
+
+
+def test_a_section_out_of_order_fails_naming_its_line_and_the_declared_order(
+    project: AdopterRepo, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """No shipped kind declares two sections, so the declaration is one of the test's
+    own, read in place of the shipped one — which reads as the validator reads it."""
+    assert run_declaring(project, project.root / PAGE_KINDS_PATH) == run(project)
+    declaration = _declaration(
+        tmp_path_factory.mktemp("kinds"),
+        {
+            "guide": {"sections": [{"level": 1}, INSTALL, USE]},
+            "faq": {"ordered": False, "sections": [INSTALL, USE]},
+        },
+    )
+    project.write(
+        {
+            "docs/guide.md": _page("guide", "# Guide\n\n## Use\n\n## Install\n"),
+            "docs/faq.md": _page("faq", "## Use\n\n## Install\n"),
+        }
+    )
+    document = run_declaring(project, declaration)
+    assert only_error(document) == (
+        "docs/guide.md",
+        "docs/guide.md, a page of kind 'guide', carries the section `## Use` out of order, at "
+        "line 8: the structure its kind declares is a title written as `# Title`, then the "
+        f"section `## Install`, then the section `## Use` ({PAGE_KINDS_PATH}) — move the "
+        "section into that order. A page may carry other sections besides (RS-LDOC-004).",
+    )
+    # The guide and the list of questions are checked; the two signposts left are of a
+    # kind this declaration does not list.
+    assert "2 page(s) checked" in _format_line(document)
+    assert "1 departing from it; 2 page(s) not checked, of 1 kind(s)" in _format_line(document)
+
+
+# The declaration, read whole or not at all.
+
+
+def test_a_declaration_reads_as_each_kind_s_sections_and_their_order(tmp_path: Path) -> None:
+    structures = formats.read_structures(
+        _declaration(
+            tmp_path,
+            {
+                "guide": {"sections": [{"level": 1}, INSTALL, USE]},
+                "faq": {"ordered": False, "sections": [INSTALL, USE]},
+                "note": {"ordered": True, "sections": [{"level": 1}, {"level": 2}]},
+            },
+        )
+    )
+    install, use = formats.Section(2, "Install"), formats.Section(2, "Use")
+    assert structures == {
+        "guide": formats.Structure((formats.Section(1), install, use)),
+        "faq": formats.Structure((install, use), ordered=False),
+        "note": formats.Structure((formats.Section(1), formats.Section(2))),
+    }
+    assert structures["guide"].described() == (
+        "a title written as `# Title`, then the section `## Install`, then the section `## Use`"
+    )
+    assert structures["faq"].described() == (
+        "the section `## Install` and the section `## Use`, in any order"
+    )
+    assert structures["note"].described() == (
+        "a title written as `# Title`, then a section written as `## Heading`"
+    )
+
+
+@pytest.mark.parametrize(
+    ("content", "why"),
+    [
+        (None, "the file cannot be read"),
+        ("kinds: [unclosed\n", "the file is not YAML ("),
+        ("", "does not fit schemas/page-kinds.schema.json: at `/`"),
+        ("kinds: {}\n", "'schema_version' is a required property"),
+        ("schema_version: 2\nkinds: {}\n", "at `/schema_version`"),
+        ("schema_version: 1\nkinds: []\n", "at `/kinds`"),
+        ("schema_version: 1\nkinds:\n  Bad Kind:\n    sections: [{level: 1}]\n", "at `/kinds`"),
+        ("schema_version: 1\nkinds:\n  guide: {}\n", "at `/kinds/guide`"),
+        ("schema_version: 1\nkinds:\n  guide:\n    sections: []\n", "at `/kinds/guide/sections`"),
+        (
+            "schema_version: 1\nkinds:\n  guide:\n    sections: [{level: 7}]\n",
+            "at `/kinds/guide/sections/0/level`",
+        ),
+        (
+            "schema_version: 1\nkinds:\n  guide:\n    sections: [{level: true}]\n",
+            "at `/kinds/guide/sections/0/level`",
+        ),
+        (
+            "schema_version: 1\nkinds:\n  guide:\n    sections: [{level: 1, text: '  '}]\n",
+            "at `/kinds/guide/sections/0/text`",
+        ),
+        (
+            "schema_version: 1\nkinds:\n  guide:\n    sections: [{level: 1}]\n    order: yes\n",
+            "at `/kinds/guide`",
+        ),
+    ],
+)
+def test_a_declaration_absent_unparsable_or_unfit_gives_no_reading(
+    tmp_path: Path, content: str | None, why: str
+) -> None:
+    path = tmp_path / "page-kinds.yaml"
+    if content is not None:
+        path.write_text(content, encoding="utf-8")
+    with pytest.raises(formats.Unreadable) as refused:
+        formats.read_structures(path)
+    assert why in str(refused.value)
+
+
+# A body against a structure.
+
+
+def test_a_section_the_body_lacks_is_missing(tmp_path: Path) -> None:
+    structures = formats.read_structures(
+        _declaration(
+            tmp_path,
+            {
+                "note": {"sections": [{"level": 1}, {"level": 2}]},
+                "guide": {"sections": [{"level": 1}, INSTALL, USE]},
+            },
+        )
+    )
+    assert formats.departures(formats.headings("# Note\n\nProse.\n"), structures["note"]) == [
+        formats.Departure(formats.Section(2), formats.MISSING)
+    ]
+    assert formats.departures(formats.headings("# Guide\n\n## Use\n"), structures["guide"]) == [
+        formats.Departure(formats.Section(2, "Install"), formats.MISSING)
+    ]
+    assert formats.departures(formats.headings("# Note\n\n## Part\n"), structures["note"]) == []
+
+
+def test_sections_out_of_order_depart_only_where_the_kind_says_order_matters(
+    tmp_path: Path,
+) -> None:
+    structures = formats.read_structures(
+        _declaration(
+            tmp_path,
+            {
+                "guide": {"sections": [{"level": 1}, INSTALL, USE]},
+                "faq": {"ordered": False, "sections": [INSTALL, USE]},
+            },
+        )
+    )
+    swapped = formats.headings("# Guide\n\n## Use\n\n## Install\n")
+    assert formats.departures(swapped, structures["guide"]) == [
+        formats.Departure(formats.Section(2, "Use"), formats.OUT_OF_ORDER, 3)
+    ]
+    assert formats.departures(swapped, structures["faq"]) == []
+    # In any order, each section is still owed.
+    assert formats.departures(formats.headings("# Guide\n\n## Use\n"), structures["faq"]) == [
+        formats.Departure(formats.Section(2, "Install"), formats.MISSING)
+    ]
+
+
+def test_a_section_s_text_compares_ignoring_case_space_and_trailing_punctuation() -> None:
+    section = formats.Section(2, "Getting started")
+    assert section.matches(formats.Heading(2, "getting   STARTED:", 1))
+    assert section.matches(formats.Heading(2, "Getting started?", 1))
+    assert not section.matches(formats.Heading(3, "Getting started", 1))
+    assert not section.matches(formats.Heading(2, "Getting started fast", 1))
+
+
+def test_a_section_the_writer_words_takes_a_heading_with_words_of_its_own() -> None:
+    title = formats.Section(1)
+    assert title.matches(formats.Heading(1, "Anything the writer says", 1))
+    assert title.matches(formats.Heading(1, "The <kbd> element", 1))
+    assert not title.matches(formats.Heading(1, "", 1))  # `#` alone
+    assert not title.matches(formats.Heading(1, "<Surface>", 1))  # a placeholder, unfilled
+
+
+def test_each_declared_section_takes_a_heading_of_its_own() -> None:
+    two = formats.Structure((formats.Section(2), formats.Section(2)))
+    one_h2 = [formats.Heading(2, "Only", 3)]
+    assert formats.departures(one_h2, two) == [
+        formats.Departure(formats.Section(2), formats.MISSING)
+    ]
+    # Text fixed first: the one `## Install` serves the section that names it.
+    either = formats.Structure((formats.Section(2), formats.Section(2, "Install")), ordered=False)
+    assert formats.departures([formats.Heading(2, "Install", 3)], either) == [
+        formats.Departure(formats.Section(2), formats.MISSING)
+    ]
+
+
+# What a section is: a `#` heading at the start of a line, below the front matter,
+# outside fenced code and outside an HTML comment.
+
+
+def _headings(text: str) -> list[tuple[int, str, int]]:
+    return [(h.level, h.text, h.line) for h in formats.headings(text)]
+
+
+def test_a_heading_is_a_line_of_hashes_at_the_start_of_a_line_below_the_front_matter() -> None:
+    text = (
+        "---\n# a YAML comment, not a heading\nkind: reference\n---\n"  # lines 1-4
+        "# Title ##\n"  # 5: the closing run of `#` is not text
+        "#Not a heading\n"  # 6: no space after the `#`
+        " ## One space in\n"  # 7: indented, as under a list item
+        "    # four spaces: indented code\n"  # 8
+        "####### seven\n"  # 9: more than six
+        "## Closing# kept\n"  # 10
+        "#\n"  # 11: an empty heading
+        "Underlined\n==========\n"  # 12-13: a setext heading
+        "<h2>In HTML</h2>\n"  # 14
+        "> ## In a block quote\n"  # 15
+        "- ## On a list item's line\n"  # 16
+    )
+    assert _headings(text) == [(1, "Title", 5), (2, "Closing# kept", 10), (1, "", 11)]
+    assert _headings("# One\r\n\r\n## Two\r\n") == [(1, "One", 1), (2, "Two", 3)]
+
+
+def test_a_line_inside_fenced_code_is_no_heading() -> None:
+    text = (
+        "```python\n# in code\n```\n"  # lines 1-3
+        "~~~~\n# in code\n~~~\n# still in: a closing fence is as long as the opening\n~~~~\n"
+        "``` `not` a fence\n"  # 9: a backtick fence's info has no backtick
+        "## Read\n"  # 10
+    )
+    assert _headings(text) == [(2, "Read", 10)]
+    assert _headings("```\n# never closed\n") == []
+
+
+@pytest.mark.parametrize(
+    ("opening", "inside", "closing"),
+    [
+        ("- ```sh", "  # install", "  ```"),  # under a list item, as a renderer indents it
+        ("- ```sh", "# install", "```"),
+        ("1. ~~~", "# install", "   ~~~"),
+        ("> ```", "> # install", "> ```"),
+        ("- > ```", "# install", "  > ```"),
+        ("      ```", "# install", "```"),  # under a nested list item
+    ],
+)
+def test_a_fence_opens_after_list_and_quote_markers_and_closes_at_any_indentation(
+    opening: str, inside: str, closing: str
+) -> None:
+    """The closing fence closes the one that is open and opens none: what follows is read."""
+    text = f"# Tool\n\n{opening}\n{inside}\n{closing}\n\n## Usage\n"
+    assert _headings(text) == [(1, "Tool", 1), (2, "Usage", 7)]
+
+
+def test_a_line_inside_an_html_comment_is_no_heading() -> None:
+    text = (
+        "<!--\n# Hidden\n-->\n"  # lines 1-3
+        "# Shown\n"  # 4
+        "<!-- closed on its own line -->\n"  # 5
+        "## Also shown\n"  # 6
+        "  <!-- opens\n## Hidden too\nand closes --> here\n"  # 7-9
+        "### Last\n"  # 10
+    )
+    assert _headings(text) == [(1, "Shown", 4), (2, "Also shown", 6), (3, "Last", 10)]
+    # Fenced code holds no comment: the `<!--` in it opens none.
+    assert _headings("```html\n<!--\n```\n# Read\n") == [(1, "Read", 4)]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "# No front matter\n\n## Part\n",
+        "---\r\nkind: reference\r\n---\r\n\r\n# Title\r\n",
+        "---\nkind: reference\n---\n\n# Title\n\n---\n\n## After a rule in the body\n",
+        "---\n# never closed, so no front matter\nkind: reference\n",
+        "--- \n# a YAML comment\n---\t\n# Title\n",
+        "Prose first.\n\n---\n# Between two rules\n---\n",
+    ],
+)
+def test_the_body_starts_where_the_backbone_s_front_matter_split_puts_it(text: str) -> None:
+    """The capability's scripts import nothing of the backbone, so the reader finds
+    the body itself; it finds the one the backbone's split gives."""
+    _front, body = fd.split_front_matter(text)
+    assert [(h.level, h.text) for h in formats.headings(text)] == [
+        (h.level, h.text) for h in formats.headings(body)
+    ]
+
+
+# The one declaration: the templates follow it, and it is what the schema says.
+
+
+def test_the_declared_kinds_are_the_page_templates_and_validate() -> None:
+    data = YAML(typ="safe").load(PAGE_KINDS.read_text(encoding="utf-8"))
+    schema = json.loads((CAPABILITY / "schemas" / "page-kinds.schema.json").read_text("utf-8"))
+    Draft202012Validator.check_schema(schema)
+    assert list(Draft202012Validator(schema).iter_errors(data)) == []
+    assert sorted(formats.read_structures(PAGE_KINDS)) == sorted(data["kinds"]) == PAGE_TEMPLATES
+
+
+@pytest.mark.parametrize("kind", PAGE_TEMPLATES)
+def test_each_page_template_filled_in_follows_the_structure_its_kind_declares(kind: str) -> None:
+    """A template is the starting shape a writer fills in: with its placeholders
+    worded it satisfies its kind's structure, and left as shipped it lacks every
+    section the writer words."""
+    structure = formats.read_structures(PAGE_KINDS)[kind]
+    template = (CAPABILITY / "templates" / f"{kind}.md").read_text(encoding="utf-8")
+    filled = re.sub(r"<[^<>\n]+>", "words", template)
+    assert formats.departures(formats.headings(filled), structure) == []
+    assert formats.departures(formats.headings(template), structure) == [
+        formats.Departure(section, formats.MISSING)
+        for section in structure.sections
+        if section.text is None
+    ]
 
 
 # --- one home for discovery (#1099; ADR-057 point 2) -------------------------------------

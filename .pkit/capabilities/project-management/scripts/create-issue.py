@@ -26,6 +26,11 @@ is `--parent`, or the one the first line asserts under an issue type's own
 label. An EPIC's container is a milestone, never an issue: `--parent` on an
 EPIC is refused before anything is read, and `--milestone` schedules it.
 
+A Feature or Task body given with `--body-file` that cites use cases in its
+`## Use cases` section is read against the use-case point (DEC-054): a cited
+use case the point does not hold is reported, and so is a point that could not
+be read; neither refuses the filing nor changes the exit code.
+
 For board-substrate adopters (per DEC-019 +
 `schemas/mandatory-issue-state.yaml`), the new issue is also added to
 the configured Projects v2 board as the final step of filing. The
@@ -87,6 +92,7 @@ from _lib import (
     provenance,
     session_guard,
     title_rules,
+    use_case_citations,
 )
 from _lib.containment import LinkOutcome, link_sub_issue
 from _lib.gh import gh_project_run, load_adopter_config
@@ -673,6 +679,11 @@ def main() -> int:
     # lifecycle transition via validate-issue --phase transition.
     _warn_placeholder_residuals(body, args.type, body_format, capability_root)
 
+    # The use cases a prepared Feature or Task body cites (DEC-054): reported,
+    # never refused. The point is read only for a body that cites one.
+    if args.body_file is not None:
+        _warn_use_case_citations(body, args.type, body_format)
+
     # Resolve assignee.
     assignee = args.assignee or invoker.github_login
     if not assignee:
@@ -973,6 +984,16 @@ def _warn_placeholder_residuals(
     )
     for _sev, label, detail in findings:
         print(f"[warning] {label}: {detail}", file=sys.stderr)
+
+
+def _warn_use_case_citations(body: str, structural_type: str, body_format: dict) -> None:
+    """Report on stderr the use cases *body* cites that the use-case point does not
+    hold, or that they could not be checked (DEC-054), at the severity the
+    body-format schema gives the rule. Filing is not blocked: the rule is a report."""
+    for severity, label, detail in use_case_citations.findings(
+        body, structural_type, body_format, use_case_citations.read_point
+    ):
+        print(f"[{severity}] {label}: {detail}", file=sys.stderr)
 
 
 def _build_labels(

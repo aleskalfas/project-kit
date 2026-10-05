@@ -1,10 +1,13 @@
-"""Rendering a pull request's `## Doc impact` section from the artefacts' answers.
+"""A pull request's `## Doc impact` section, filled where nobody wrote it.
 
 A change's anchored pages answer it on the page itself — updated, unchanged
-with its justification, deferred with its reason (COR-050) — and the core
-change check reports those answers machine-readably: `pkit friction check
---json`. The `## Doc impact` section may *render* them (DEC-053 point 2), so
-the author starts from what the pages already say instead of retyping it.
+with its justification, deferred with its reason (COR-050) — and the answers
+the change wrote are listed in the description's own `## Documentation this
+change affects` section (`_lib.friction_answers`, DEC-055).
+`open-pr --doc-impact-from-friction`
+fills an unwritten `## Doc impact` with one line pointing there (`prefill`),
+naming no path and no reason, and names the pages still carrying friction
+(`unanswered`).
 
 Rendering only: the section is never read back as an answer. The doc-check
 point's obligations are met by the pages in the diff, and the section stays
@@ -19,12 +22,7 @@ from typing import Any
 
 HEADING = "## Doc impact"
 
-# The version of `pkit friction check --json` this rendering reads. A document
-# without `schema_version` comes from a backbone that predates the key: version 1.
-SCHEMA_VERSION = 1
-
-# The finding kinds of the change check that carry an answer.
-ANSWER_KINDS = ("answered", "revalidated")
+# The change check's finding kind for an artefact with no answer yet.
 FRICTION_KIND = "friction"
 
 # What the template leaves in an unwritten section.
@@ -37,35 +35,6 @@ def _findings(document: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     if not isinstance(findings, list):
         return []
     return [f for f in findings if isinstance(f, Mapping)]
-
-
-def _where(finding: Mapping[str, Any]) -> str:
-    location = f"`{finding.get('location') or finding.get('artefact') or '?'}`"
-    anchor = finding.get("anchor")
-    if isinstance(anchor, Mapping) and anchor.get("kind"):
-        location += f" (anchor `{anchor.get('kind')}:{anchor.get('value')}`)"
-    return location
-
-
-def unread_version(document: Mapping[str, Any]) -> str | None:
-    """Why this rendering does not read `document` — a `schema_version` other than
-    the one it reads — or None when it reads it."""
-    version = document.get("schema_version", SCHEMA_VERSION)
-    if version == SCHEMA_VERSION:
-        return None
-    return (
-        f"`pkit friction check --json` answered schema_version {version!r}; "
-        f"this capability reads {SCHEMA_VERSION}"
-    )
-
-
-def answer_lines(document: Mapping[str, Any]) -> list[str]:
-    """One bullet per answer the change check found, in its order."""
-    return [
-        f"- {_where(f)}: {f.get('message', '')}"
-        for f in _findings(document)
-        if f.get("kind") in ANSWER_KINDS
-    ]
 
 
 def unanswered(document: Mapping[str, Any]) -> list[str]:

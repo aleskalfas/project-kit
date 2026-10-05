@@ -1,0 +1,39 @@
+# A captured source: a source outside the repository that a page anchors by
+# its name — a standard, a specification, another project's documentation.
+#
+# Per [living-docs:DEC-001-living-docs-discipline] point 4. The friction
+# checks read the repository alone and reach no network, so each source is
+# captured as one file of this capability's project tier, found from its name:
+# `.pkit/capabilities/living-docs/project/sources/<name>.yaml`. The `source`
+# anchor kind's resolver answers that file, and any change to it is the
+# source's change, so it holds only what identifies the source and the
+# version of its text the project's pages were last checked against:
+#
+# - `title` — what the source is called. Required.
+# - `url` — where it is found. Optional: a printed standard has none.
+# - `version` — which text of the source the pages were last checked against,
+#   as the source labels that text (its version, edition or revision); for a
+#   source that labels none, another exact name of the text, such as a commit
+#   of the repository it is published from; only when nothing names it, the
+#   date it was read, `YYYY-MM-DD`. Text, so quote it. Required.
+#
+# Document-shaped: the file IS the resource. The body below is the minimal
+# reference instance — valid, the schema's self-test. Unlike the sibling
+# configuration, a captured source is bound by its path alone and carries no
+# `pkit_schema` and no `schema_version` (the companion's description says
+# why). Adopter-owned: it lives in the capability's `project/` tier, which
+# sync never touches; uninstalling the capability from a project removes the
+# tier, captured sources with it.
+
+schema_version: 1
+
+# Adopter-data binding (COR-023), by path: one file per source, in the folder
+# the resolver reads.
+binds_to:
+  - "**/living-docs/project/sources/*.yaml"
+
+# --- reference instance -------------------------------------------------
+
+title: Keep a Changelog
+url: https://keepachangelog.com/en/1.1.0/
+version: "1.1.0"

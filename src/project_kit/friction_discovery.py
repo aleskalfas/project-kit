@@ -89,10 +89,17 @@ is the one reader of those declarations and the one walker of the places:
   `pkit friction artefacts --json` prints it, and a capability's script reads
   where artefacts are through it, at head or at another state, never by
   walking the places or listing a commit itself (ADR-057 points 1 and 2).
+- `content`, `parsed_at`, `deferral_reason` — what one artefact's block and
+  fields say, read the same way by both checks and by the walk through an
+  artefact's history (`friction_history`): its content, never the container
+  (COR-050 point 5); the parsed instant of `at`, so writing the same instant
+  differently is no change (point 3); and a deferral's reason, whitespace
+  folded (point 4).
 
-Nothing here computes friction: the checks (`friction_check`) read the model
-this module produces. The listing of the working tree has its home in
-`working_tree`; the git plumbing behind a commit lives with the checks.
+Nothing here computes friction: the checks (`friction_check`,
+`friction_repository`) and the history walk read the model this module
+produces. The listing of the working tree has its home in `working_tree`; the
+git plumbing behind a commit in `friction_git`.
 """
 
 from __future__ import annotations
@@ -102,8 +109,9 @@ import io
 import json
 import os
 import re
-from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path, PurePosixPath
 from typing import Any, Protocol, cast
@@ -111,7 +119,7 @@ from typing import Any, Protocol, cast
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from project_kit import docs_roots, lifecycle_ownership
+from project_kit import command_runner, docs_roots, lifecycle_ownership, validators
 from project_kit.backbone_schemas import CONTAINER_KEY, as_written
 from project_kit.line_breaks import line_break, universal_newlines
 from project_kit.manifest import read_backbone_manifest
@@ -1266,27 +1274,37 @@ class RuleSetPlace:
         return self.place.pattern
 
 
-def rule_set_places(target_root: Path, settings: FrictionSettings) -> tuple[RuleSetPlace, ...]:
+def rule_set_places(
+    target_root: Path, settings: FrictionSettings, tree: RepositoryTree | None = None
+) -> tuple[RuleSetPlace, ...]:
     """The places declared to hold rule sets, in claim order (the location rule).
 
     Method rule sets first: the backbone's `.pkit/rule-sets/`, then each
     installed capability's `.pkit/capabilities/<name>/rule-sets/` by name.
     Then project rule sets: `<internal root>/rule-sets/`, and every declared
     place whose path has a `rule-sets` segment. A folder the location rule
-    names is a place only while it exists inside the repository, so a project
-    without rule sets declares nothing; a declared place is taken as written.
-    A folder the rule names has no declaring file, so its declaration names
-    the folder itself.
+    names is a place only while it exists inside the repository
+    (`_folder_test`), so a project without rule sets declares nothing; a
+    declared place is taken as written. A folder the rule names has no
+    declaring file, so its declaration names the folder itself.
+
+    With a `tree` of another state than the working tree — a commit — both are
+    that state's: the folders it holds and the capabilities its manifest
+    installs, so a folder a commit adds, or a capability it installs, holds rule
+    sets there whichever checkout reads it. The working tree's are on disk, read
+    as they are without a tree.
     """
+    state = None if isinstance(tree, WorkingTree) else tree
     places: list[RuleSetPlace] = []
+    exists = _folder_test(target_root, state)
 
     def folder(rel: str, component: str | None, source: str) -> None:
-        if is_inside_repository(target_root, rel) and (target_root / rel).is_dir():
+        if exists(rel):
             declaration = SettingsPath(value=rel, resolved=rel, file=rel, pointer="", source=source)
             places.append(RuleSetPlace(Place(pattern=rel, declaration=declaration), component))
 
     folder(BACKBONE_RULE_SETS_DIR.as_posix(), BACKBONE_COMPONENT, BACKBONE_COMPONENT)
-    for name in installed_capability_names(target_root):
+    for name in installed_capability_names(target_root, state):
         rel = (CAPABILITIES_DIR / name / RULE_SETS_SEGMENT).as_posix()
         folder(rel, name, f"capability:{name}")
     folder(_join_posix(settings.internal_root, RULE_SETS_SEGMENT), None, "project")
@@ -1298,6 +1316,32 @@ def rule_set_places(target_root: Path, settings: FrictionSettings) -> tuple[Rule
     for rule_set_place in places:
         unique.setdefault(os.path.normpath(rule_set_place.pattern), rule_set_place)
     return tuple(unique.values())
+
+
+def _folder_test(target_root: Path, tree: RepositoryTree | None) -> Callable[[str], bool]:
+    """Whether a folder the location rule names exists inside the repository.
+
+    Without a `tree`, on disk, where it leads through a link judged as
+    `is_inside_repository` judges it — no repository demanded, so a project
+    without rule sets stays dormant outside one. With one, in that state: a
+    file of it lies beneath the folder, whose path stays inside the repository
+    as written — git lists no file through a link, so a file listed beneath it
+    lies inside. A folder holding no file is no folder of a commit, nor of a
+    clean checkout of it.
+    """
+    if tree is None:
+        return lambda rel: is_inside_repository(target_root, rel) and (target_root / rel).is_dir()
+    files = tree.files()
+
+    def holds(rel: str) -> bool:
+        if not _textually_inside(rel):
+            return False
+        folder = os.path.normpath(rel).replace(os.sep, "/")
+        if folder == ".":
+            return bool(files)
+        return any(path.startswith(f"{folder}/") for path in files)
+
+    return holds
 
 
 def rule_set_files(target_root: Path, places: Sequence[RuleSetPlace]) -> dict[Path, RuleSetPlace]:
@@ -1323,6 +1367,27 @@ def rule_set_files(target_root: Path, places: Sequence[RuleSetPlace]) -> dict[Pa
 #: The anchor kinds the backbone resolves itself (COR-050 point 2).
 CORE_ANCHOR_KINDS: tuple[str, ...] = ("path", "record", "artefact")
 
+#: The list of a capability's `friction` block that registers anchor kinds: a
+#: mapping from a kind to its entry, whose `command` names the `commands:` leaf
+#: that resolves an anchor of the kind (COR-050 point 2; the lifecycle README's
+#: package-metadata reference).
+KINDS_KEY = "kinds"
+KIND_COMMAND_KEY = "command"
+
+#: The one key of a resolver's answer: the files the anchor stands on, in the
+#: state the check reads (`resolver_answer`; the lifecycle README).
+RESOLVER_PATHS_KEY = "paths"
+
+#: What ends the options a resolver is given: the anchor value comes after it, so
+#: no value is read as an option (ADR-057 point 3).
+END_OF_OPTIONS = "--"
+
+#: The states a resolver's answer is read against, as a no-answer names them: the
+#: working tree's one listing — the change check's and validation's — and HEAD's
+#: files, for the whole-repository check and the commands that read HEAD.
+WORKING_TREE_STATE = "the working tree"
+HEAD_STATE = "HEAD"
+
 
 @dataclass(frozen=True)
 class ResolverCommand:
@@ -1331,13 +1396,25 @@ class ResolverCommand:
     `query_contract` is whether the command's registry entry declares the
     query contract (COR-050 point 2; ADR-057 point 3 realises the declaration):
     bounded, deterministic, read-only and needing no network. The declaration
-    grants nothing; it is a claim the backbone requires and trusts.
+    grants nothing; it is a claim the backbone requires and trusts. `script`
+    is the leaf's script, `None` when `command` names no leaf of the
+    capability's `commands:` tree — a registration that resolves nothing
+    (`refuse_resolver_naming_no_leaf`). `shared_with` names the other installed
+    capabilities that register the same kind: a kind registered twice is
+    refused, whichever registered it first (`unresolved_kind_reason`).
     """
 
     kind: str
     capability: str
     command: str
     query_contract: bool = False
+    script: Path | None = None
+    shared_with: tuple[str, ...] = ()
+
+    @property
+    def registrants(self) -> tuple[str, ...]:
+        """Every installed capability that registers the kind, in name order."""
+        return (self.capability, *self.shared_with)
 
 
 def refuse_resolver_without_query_contract(resolver: ResolverCommand) -> str | None:
@@ -1359,36 +1436,290 @@ def refuse_resolver_without_query_contract(resolver: ResolverCommand) -> str | N
     )
 
 
-def registered_anchor_kinds(target_root: Path) -> dict[str, ResolverCommand]:
-    """The anchor kinds installed capabilities register, by kind.
+def refuse_resolver_naming_no_leaf(resolver: ResolverCommand) -> str | None:
+    """Why `resolver` cannot run when its `command` names no leaf of its capability's
+    `commands:` tree, or `None` when it names one. Said before the declaration is
+    looked for: a command that is not there declares nothing, and the fix is the
+    reference, not the declaration."""
+    if resolver.script is not None:
+        return None
+    return (
+        f"the resolver `{resolver.command}` that {resolver.capability} registers for it is "
+        f"not declared in the `commands:` of {resolver.capability}"
+    )
 
-    Where registered kinds are looked up. No package metadata declares an
-    anchor kind yet — the kind registry arrives with its own change — so this
-    is empty and every kind outside `CORE_ANCHOR_KINDS` is unresolved.
+
+def declared_anchor_kinds(package: Mapping[str, Any]) -> Iterator[tuple[str, str]]:
+    """`(kind, command reference)` for each anchor kind a package registers under
+    `friction.kinds`, in written order. Read forgivingly: an entry that is not a
+    mapping with a text `command` registers nothing here — the packages member
+    reports it."""
+    kinds = _mapping_or_empty(package.get(FRICTION_KEY)).get(KINDS_KEY)
+    for kind, entry in _mapping_or_empty(kinds).items():
+        reference = _mapping_or_empty(entry).get(KIND_COMMAND_KEY)
+        if isinstance(reference, str) and reference.strip():
+            yield kind, reference
+
+
+def registered_anchor_kinds(
+    target_root: Path, tree: RepositoryTree | None = None
+) -> dict[str, ResolverCommand]:
+    """The anchor kinds installed capabilities register, by kind — the one
+    registry every engine reads (ADR-057 point 2).
+
+    Each installed capability's `friction.kinds` (`declared_anchor_kinds`),
+    with the leaf its entry names in the capability's `commands:` tree and
+    whether that leaf declares the query contract. A kind the backbone
+    resolves itself is never registered: the backbone's own resolution stands,
+    and the packages member refuses the entry. A kind two or more capabilities
+    register is kept once, naming them all (`ResolverCommand.shared_with`), so
+    an anchor of it reads as refused rather than as resolved by either.
+
+    With a `tree`, the registrations that state holds — its manifest and its
+    package files, read forgivingly — which say whether a kind could be
+    resolved there (`unresolved_kind_reason`), as the change check asks of its
+    base. No resolver is run from them: a script is the one on disk.
     """
-    del target_root  # read from each capability's package metadata once kinds are declared
-    return {}
+    load = _mapping_loader(target_root, tree)
+    found: dict[str, list[ResolverCommand]] = {}
+    for name in installed_capability_names(target_root, tree):
+        component = CAPABILITIES_DIR / name
+        package = load((component / command_runner.PACKAGE_FILE).as_posix())
+        component_dir = target_root / component
+        commands = command_runner.commands_of(
+            component_dir, package.get(command_runner.COMMANDS_KEY)
+        )
+        for kind, reference in declared_anchor_kinds(package):
+            if kind in CORE_ANCHOR_KINDS:
+                continue
+            leaf = command_runner.resolve_command(commands, reference)
+            found.setdefault(kind, []).append(
+                ResolverCommand(
+                    kind=kind,
+                    capability=name,
+                    command=reference,
+                    query_contract=(
+                        leaf is not None and leaf.entry.get(validators.QUERY_CONTRACT_KEY) is True
+                    ),
+                    script=None if leaf is None else leaf.script,
+                )
+            )
+    return {
+        kind: replace(first, shared_with=tuple(r.capability for r in rest))
+        for kind, (first, *rest) in found.items()
+    }
 
 
 def unresolved_kind_reason(kind: str, registry: Mapping[str, ResolverCommand]) -> str | None:
-    """`None` when the backbone resolves `kind`; otherwise why nothing does.
+    """`None` when an anchor of `kind` can be resolved; otherwise why nothing resolves it.
 
-    A registered kind passes `refuse_resolver_without_query_contract` before its
-    resolver could run; one that passes is still unresolved, since registered
-    resolvers are not run yet — failing closed (COR-050 point 2).
+    The backbone resolves its own kinds. A registered kind can be resolved when
+    one installed capability registers it, its command names a leaf of that
+    capability's `commands:` tree (`refuse_resolver_naming_no_leaf`) and the
+    leaf declares the query contract (`refuse_resolver_without_query_contract`):
+    a kind two capabilities register is refused for both, and a resolver that
+    names no leaf, or one without the declaration, is refused before it could
+    run. Whether one anchor of a kind that can be resolved does resolve is its
+    resolver's answer (`AnchorKinds.resolve`), which fails closed (COR-050
+    point 2).
     """
     if kind in CORE_ANCHOR_KINDS:
         return None
     resolver = registry.get(kind)
     if resolver is None:
         return "no installed component registers a resolver for it"
-    refusal = refuse_resolver_without_query_contract(resolver)
-    if refusal is not None:
-        return refusal
-    return (
-        f"the resolver `{resolver.command}` that {resolver.capability} registers for it "
-        f"is not run yet"
+    if resolver.shared_with:
+        return (
+            f"the capabilities {', '.join(resolver.registrants)} each register it, and a kind "
+            f"registered more than once is refused: none of their resolvers runs"
+        )
+    return refuse_resolver_naming_no_leaf(resolver) or refuse_resolver_without_query_contract(
+        resolver
     )
+
+
+@dataclass(frozen=True)
+class AnchorResolution:
+    """What a resolver answered for one anchor value (COR-050 point 2).
+
+    `paths` are the files the anchor stands on in the state the check reads,
+    sorted — none when it denotes nothing, which makes the anchor dead.
+    `no_answer` says why the resolver gave no answer, when it gave none: the
+    anchor is then unresolved, never resolved — whether what it denotes changed
+    cannot be told. `overran` is whether it gave none because it overran its
+    bound: such a resolver is not started again in the same check
+    (`AnchorKinds.resolve`).
+    """
+
+    paths: tuple[str, ...] = ()
+    no_answer: str | None = None
+    overran: bool = False
+
+
+def resolver_answer(
+    document: Any, reference: str, files: Collection[str], state: str = WORKING_TREE_STATE
+) -> AnchorResolution:
+    """A resolver's answer, read failing closed (COR-050 point 2; ADR-057 point 3).
+
+    The answer is exactly `{"paths": [...]}`: every entry a repository-relative
+    POSIX path naming a file of the state the check reads — `files`, which
+    `state` names in a no-answer — a path named twice counted once. Anything
+    else — another document, another key, an entry that is not text or names
+    no file that state holds (an absolute path, one climbing with `..`, a
+    folder, a file git ignores, for HEAD a file not committed) — is no answer,
+    never a partial one.
+    """
+    expected = f'expected exactly `{{"{RESOLVER_PATHS_KEY}": [...]}}`'
+    if not isinstance(document, Mapping) or set(cast(Mapping[Any, Any], document)) != {
+        RESOLVER_PATHS_KEY
+    }:
+        return AnchorResolution(
+            no_answer=f"command {reference!r} printed no resolver answer: {expected}"
+        )
+    listed = cast(Mapping[str, Any], document)[RESOLVER_PATHS_KEY]
+    if not isinstance(listed, list):
+        return AnchorResolution(
+            no_answer=(
+                f"command {reference!r} answered `{RESOLVER_PATHS_KEY}` that is not a list: "
+                f"{expected}"
+            )
+        )
+    paths: set[str] = set()
+    for item in cast(list[Any], listed):
+        if not isinstance(item, str) or item not in files:
+            return AnchorResolution(
+                no_answer=(
+                    f"command {reference!r} answered {item!r}, which is not a file of "
+                    f"{state}: every path a resolver answers is repository-relative and "
+                    f"names a file that state holds"
+                )
+            )
+        paths.add(item)
+    return AnchorResolution(paths=tuple(sorted(paths)))
+
+
+def run_resolver(
+    target_root: Path,
+    resolver: ResolverCommand,
+    value: str,
+    files: Collection[str],
+    state: str = WORKING_TREE_STATE,
+) -> AnchorResolution:
+    """Run `resolver` for one anchor value under the query policy, and read its answer
+    against `files`, the files of the state the check reads, which `state` names
+    (`resolver_answer`).
+
+    The policy every query command the backbone runs is under (ADR-057 point
+    3; the lifecycle README, "How a registered command is run"): the command
+    must name a leaf that declares the query contract, or it is not started;
+    the script runs from the project root with `--json`, the end-of-options
+    marker and then the anchor value — its one subject (COR-052 point 6), last
+    so that no value is read as an option — the offline marker set and the
+    base override removed, in its own process group, bounded by the backbone's
+    one command bound and killed as a group when it overruns (inside another
+    run, by the time that run has left, in the outermost run's group). An
+    abnormal exit, a timeout, a value the system cannot pass as an argument, an
+    environment not provisioned or an answer `resolver_answer` cannot read is
+    no answer (`AnchorResolution.no_answer`).
+    """
+    refusal = refuse_resolver_naming_no_leaf(resolver) or refuse_resolver_without_query_contract(
+        resolver
+    )
+    if refusal is not None or resolver.script is None:
+        return AnchorResolution(no_answer=refusal)
+    if not resolver.script.is_file():
+        return AnchorResolution(
+            no_answer=f"command {resolver.command!r} names a script that does not exist"
+        )
+    run = command_runner.run_command(
+        resolver.script,
+        [validators.QUERY_FLAG, END_OF_OPTIONS, value],
+        cwd=target_root,
+        extra_env=validators.OFFLINE_MARKER,
+        drop_env=validators.QUERY_DROPPED_ENV,
+    )
+    if run.ending is not command_runner.Ending.ANSWERED:
+        return AnchorResolution(
+            no_answer=validators.why_no_answer(run, resolver.command).rstrip("."),
+            overran=run.ending is command_runner.Ending.TIMED_OUT,
+        )
+    return resolver_answer(run.document, resolver.command, files, state)
+
+
+class AnchorKinds:
+    """The anchor kinds one run resolves, and what each anchor of a registered kind
+    resolved to: each resolver run at most once per anchor value for the length of
+    the run (COR-050 point 2), and never again in it once it overran its bound.
+
+    One per check or validation pass, over the one registry
+    (`registered_anchor_kinds`), or a registry a caller hands in. `files` are
+    the files of the state the pass reads, which every answer is read against,
+    and `state` names it (`resolver_answer`): the working tree's one listing
+    for the change check and for validation, HEAD's files for the
+    whole-repository check and the commands that read HEAD — so a path that
+    state does not hold is no answer, whatever the resolver saw on disk.
+    """
+
+    def __init__(
+        self,
+        target_root: Path,
+        registry: Mapping[str, ResolverCommand],
+        files: Collection[str],
+        state: str = WORKING_TREE_STATE,
+    ) -> None:
+        self.target_root = target_root
+        self.registry = registry
+        self._files = files
+        self._state = state
+        self._resolved: dict[tuple[str, str], AnchorResolution] = {}
+        self._overran: dict[str, str] = {}
+        """The kinds whose resolver overran its bound in this run, each with the
+        value it overran on: not started again (ADR-057 point 3)."""
+
+    def unresolved(self, kind: str) -> str | None:
+        """Why nothing resolves an anchor of `kind` (`unresolved_kind_reason`), or `None`."""
+        return unresolved_kind_reason(kind, self.registry)
+
+    def resolve(self, anchor: Anchor) -> AnchorResolution:
+        """What the resolver `anchor`'s kind registers answered for its value.
+
+        Meaningful for a registered kind that can be resolved (`unresolved` is
+        `None`); any other kind gives no answer, saying why. A resolver that
+        overran its bound is not started again in this run: the values it had
+        left have no answer, so a resolver that hangs costs one bound, not one
+        per value.
+        """
+        key = (anchor.kind, anchor.value)
+        if key not in self._resolved:
+            reason = self.unresolved(anchor.kind)
+            resolver = self.registry.get(anchor.kind)
+            if anchor.kind in CORE_ANCHOR_KINDS:
+                resolution = AnchorResolution(no_answer="the backbone resolves it itself")
+            elif reason is not None or resolver is None:
+                resolution = AnchorResolution(no_answer=reason)
+            elif anchor.kind in self._overran:
+                resolution = AnchorResolution(
+                    no_answer=(
+                        f"command {resolver.command!r} was not started again: it overran its "
+                        f"bound for {self._overran[anchor.kind]!r} earlier in this check"
+                    )
+                )
+            else:
+                resolution = run_resolver(
+                    self.target_root, resolver, anchor.value, self._files, self._state
+                )
+                if resolution.overran:
+                    self._overran[anchor.kind] = anchor.value
+            self._resolved[key] = resolution
+        return self._resolved[key]
+
+    def files(self, anchor: Anchor) -> tuple[str, ...]:
+        """The files an anchor of a registered kind stands on — its resolver's answer —
+        or none: for a core kind, a kind nothing resolves, or a resolver that gave no
+        answer."""
+        if anchor.kind in CORE_ANCHOR_KINDS or self.unresolved(anchor.kind) is not None:
+            return ()
+        return self.resolve(anchor).paths
 
 
 # --- artefacts ----------------------------------------------------------
@@ -1522,6 +1853,59 @@ class Artefact:
         return self.anchors.get(kind, ())
 
 
+# --- what an artefact's block says -------------------------------------------
+#
+# The readings both checks and the history walk make of one artefact (ADR-057
+# point 2): its content, the parsed marker, and the reason a deferral gives.
+
+
+def content(artefact: Artefact) -> tuple[str, dict[str, Any]]:
+    """An artefact's content (COR-050): its body text and its own fields, never the container."""
+    own = {k: v for k, v in artefact.carrier.items() if k != CONTAINER_KEY}
+    return artefact.body, own
+
+
+def revalidated_field(artefact: Artefact, key: str) -> Any:
+    """One key of the artefact's `revalidated` block as written, `None` when absent."""
+    revalidated = artefact.revalidated
+    return revalidated.get(key) if isinstance(revalidated, Mapping) else None
+
+
+def parsed_at(artefact: Artefact) -> Any:
+    """The parsed value of `at`: the instant, so a quoting or formatting change is no change."""
+    value = revalidated_field(artefact, "at")
+    if not isinstance(value, str):
+        return value
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return value.strip()
+    return parsed.astimezone(UTC) if parsed.tzinfo is not None else value.strip()
+
+
+def entry_reason(artefact: Artefact, deferral: Deferral) -> str | None:
+    """The reason one deferral entry carries, whitespace folded; `None` when it carries
+    no text."""
+    deferred: Any = revalidated_field(artefact, "deferred")
+    if not isinstance(deferred, list):
+        return None
+    entry = cast(list[Any], deferred)[deferral.index]
+    reason = cast(Mapping[str, Any], entry).get("reason") if isinstance(entry, Mapping) else None
+    return " ".join(reason.split()) if isinstance(reason, str) else None
+
+
+def deferral_reason(artefact: Artefact, anchor: Anchor) -> str:
+    """The reason written on the deferral of `anchor`, whitespace folded; `""` when none.
+    An anchor deferred twice — a validation error (COR-050 point 4) — reads as its first
+    entry carrying text."""
+    for deferral in artefact.deferrals:
+        if deferral.anchor == anchor:
+            reason = entry_reason(artefact, deferral)
+            if reason is not None:
+                return reason
+    return ""
+
+
 @dataclass(frozen=True)
 class UnreadableFile:
     """A Markdown file in a place whose front matter does not parse as YAML.
@@ -1631,6 +2015,7 @@ def discover_artefacts(
     and the listing is the working tree's one listing (`working_tree`) — the
     one the change check reads as its head. A link is never read as a document.
 
+    Which folders hold rule sets is that state's too (`rule_set_places`).
     A file a declared place matches that is a synced copy is never walked
     under that place, whichever state is walked (`synced_copy_test`, read on
     the working tree's install state): it is recorded in `synced` for the
@@ -1645,12 +2030,13 @@ def discover_artefacts(
     is never held, as it is never read.
     """
     settings = settings if settings is not None else read_friction_settings(target_root, tree)
-    # Which rule-set folders are places is read from the working tree even when
-    # `tree` names another state: a folder that exists only at that state (one
-    # the change deleted outright) is not walked there. The folders are
-    # existence-gated so that a project without rule sets stays dormant
+    # Which rule-set folders are places is read from the state walked — a
+    # commit's own listing, or the disk for the working tree: a folder that
+    # exists only at a commit — one a change adds, or deletes outright — is
+    # walked there, whichever checkout reads it. The working tree's folders are
+    # existence-gated on disk so that a project without rule sets stays dormant
     # without a repository being demanded.
-    rule_set_places_found = rule_set_places(target_root, settings)
+    rule_set_places_found = rule_set_places(target_root, settings, tree)
     places = declared_places(settings)
     declared = frozenset(places)
     places += tuple(r.place for r in rule_set_places_found if r.place not in places)
@@ -2100,9 +2486,9 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
     re-reading the declarations or walking the places itself (ADR-057 points 1
     and 2). With a `tree` — a commit — the same run reads that state instead:
     its configuration and roots, its installed capabilities and their places,
-    its files; what discovery reads from the working tree whichever state it
-    walks (which folders hold rule sets, which files are synced copies, where a
-    link leads) is read from the working tree here too. The document holds:
+    its files and which folders hold rule sets; what discovery reads from the
+    working tree whichever state it walks (which files are synced copies, where
+    a link leads) is read from the working tree here too. The document holds:
 
     - `roots`: the two documentation roots, by audience (COR-049 point 1).
     - `places`: every declared place in walk order — the project's, then each

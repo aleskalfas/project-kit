@@ -92,13 +92,40 @@ class Document:
 
 
 @dataclass(frozen=True)
+class Artefact:
+    """One artefact the places hold, as the backbone reads it: its file, its id,
+    whether it is an entry of a collection file or a rule of a rule set rather
+    than a whole document, the anchors its friction block lists by kind — every
+    kind, the values that are text, in written order; `None` when the backbone
+    answered without them, added within the document's version — the reason it
+    gives for listing none, `unanchored_because` (COR-050 point 1), and its own
+    fields, the container left out (a rule's carry its cited origin)."""
+
+    path: str
+    id: str
+    entry: bool
+    rule: bool
+    anchors: Mapping[str, tuple[str, ...]] | None
+    unanchored_because: str | None
+    fields: Mapping[str, Any] | None
+
+    @property
+    def anchored(self) -> bool | None:
+        """Whether its friction block lists an anchor; `None` when the backbone
+        answered without its anchors."""
+        return None if self.anchors is None else any(self.anchors.values())
+
+
+@dataclass(frozen=True)
 class Reading:
     """The backbone's answer: the roots by audience, the places, the documents by
-    path — the files the places read, and the documents components hold."""
+    path — the files the places read, and the documents components hold — and
+    every artefact in them."""
 
     roots: Mapping[str, str]
     places: tuple[DeclaredPlace, ...]
     documents: Mapping[str, Document]
+    artefacts: tuple[Artefact, ...] = ()
 
 
 def read_artefacts(root: Path, run: Runner = subprocess.run) -> Reading:
@@ -136,19 +163,22 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
     places = tuple(
         _place(index, entry) for index, entry in enumerate(_mappings(document.get("places")))
     )
-    anchoring = _anchoring(document)
+    artefacts = tuple(_artefact(entry) for entry in _mappings(document.get("artefacts")))
+    # A file is one document artefact unless it is a collection file, whose
+    # entries are artefacts of their own.
+    whole = {artefact.path: artefact for artefact in artefacts if not artefact.entry}
     documents = {}
     for entry in _mappings(document.get("files")):
         path = str(entry.get("path"))
-        anchored, because = anchoring.get(path, (None, None))
+        artefact = whole.get(path)
         documents[path] = Document(
             path=path,
             places=_indices(entry.get("places")),
             rule_set=entry.get("rule_set") is not None,
             excluded=bool(entry.get("excluded")),
             fields=_fields(entry.get("fields")),
-            anchored=anchored,
-            unanchored_because=because,
+            anchored=artefact.anchored if artefact is not None else None,
+            unanchored_because=artefact.unanchored_because if artefact is not None else None,
         )
     # A held document is walked by no place, so it is never among the files; it
     # carries the places matching it and the held folder holding it, whose
@@ -166,23 +196,29 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
             fields=_fields(entry.get("fields")),
             held_by=capability_of(source) or source,
         )
-    return Reading(roots=roots, places=places, documents=documents)
+    return Reading(roots=roots, places=places, documents=documents, artefacts=artefacts)
 
 
-def _anchoring(document: Mapping[str, Any]) -> dict[str, tuple[bool | None, str | None]]:
-    """For each file that is one document artefact, whether its friction block lists
-    an anchor — `None` when the backbone answered without the artefact's `anchors`,
-    added within the document's version — and the reason it gives for listing none,
-    `unanchored_because`, added the same way (COR-050 point 1). A collection file's
-    entries are artefacts of their own, so it is no one document here."""
-    found: dict[str, tuple[bool | None, str | None]] = {}
-    for entry in _mappings(document.get("artefacts")):
-        if entry.get("kind") != "document":
-            continue
-        anchors = entry.get("anchors")
-        anchored = any(anchors.values()) if isinstance(anchors, Mapping) else None
-        found[str(entry.get("path"))] = (anchored, _text(entry.get("unanchored_because")))
-    return found
+def _artefact(entry: Mapping[str, Any]) -> Artefact:
+    listed = entry.get("anchors")
+    anchors = (
+        {
+            str(kind): tuple(value for value in values if isinstance(value, str))
+            for kind, values in listed.items()
+            if isinstance(values, list)
+        }
+        if isinstance(listed, Mapping)
+        else None
+    )
+    return Artefact(
+        path=str(entry.get("path")),
+        id=str(entry.get("id")),
+        entry=entry.get("kind") == "entry",
+        rule=entry.get("rule_set") is not None,
+        anchors=anchors,
+        unanchored_because=_text(entry.get("unanchored_because")),
+        fields=_fields(entry.get("fields")),
+    )
 
 
 def capability_of(source: str) -> str | None:

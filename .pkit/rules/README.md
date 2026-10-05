@@ -11,9 +11,8 @@ pkit:
         - src/project_kit/install.py
       record: [COR-001, COR-014]
     revalidated:
-      at: 2026-10-02T07:46:41Z
-      outcome: unchanged
-      unchanged-because: The page describes core.md as kit-owned and refreshed on every sync and project.md as never touched; init's new refusal of a source shipping an adapter and a capability of one name changes nothing about how the rules files are propagated
+      at: 2026-10-03T13:23:37Z
+      outcome: updated
 ---
 
 # Rules
@@ -33,12 +32,13 @@ Operational rules and tool hygiene patterns the kit ships for any project that a
 
 ## What goes in `core.md`
 
-Four categories:
+Five categories:
 
 - **Hard rules** — invariants whose violation breaks the methodology. The no-shared-files invariant, the acceptance gate, paired-skill / `pkit new` for kit-shipped artifacts, migrations idempotency, etc.
 - **Tool hygiene** — operational practices that keep work consistent. Pause for destructive ops, conventional commits, surface-change → version-bump, validate before assuming state, work with the permission layer, keep intermediate files in the agent workspace.
 - **Communicating with the user** — one decision at a time; reference by meaning, then identifier.
 - **Working across repositories** — a session mutates only its own repository's context.
+- **Answers on artefacts** — an answer you write on an artefact is a person's decision: show it to them word for word.
 
 Each rule is terse — one statement plus a pointer to the COR / area README that owns the rationale. The rules file is read by every agent at session start (via `CLAUDE.md`'s `@<path>` include); it is operational, not expository.
 

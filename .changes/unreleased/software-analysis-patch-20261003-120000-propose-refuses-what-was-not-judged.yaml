@@ -1,0 +1,18 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Fixed
+  requires_backbone: release
+body: >
+  `pkit analysis propose` proposes nothing for an artefact the friction
+  checks did not judge. It refused only an artefact whose revalidation point
+  lies beyond a shallow clone, and read every anchor state but `stale`,
+  `deferred` and `dead-anchor` as current — so for an artefact in the
+  backbone's `unresolved` state, whose anchor of a registered kind cannot be
+  resolved, it could propose `holds` from its other anchors and hand over
+  `revalidate --outcome unchanged` for the anchor nobody read. It now refuses
+  an `unresolved` artefact, and one in any state it does not know, with exit
+  1 and what `pkit friction explain` says clears it; and an anchor in any
+  state but `current` or a change — `unresolved-kind`, `no-answer`, one a
+  later backbone adds — is not judged, so the verdict is the new rule
+  `not-judged`: read, with nothing proposed and no command to run.

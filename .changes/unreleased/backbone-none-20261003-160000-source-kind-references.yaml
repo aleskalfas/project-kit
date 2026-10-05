@@ -1,0 +1,9 @@
+component: backbone
+kind: none
+body: >
+  The lifecycle reference says what an anchor kind for a thing kept outside
+  the repository answers, naming living-docs' `source`, and the schemas
+  reference names `source` among the registered kinds. The release reference
+  anchors the two changelog sources it follows and says where the generated
+  format departs from each, and the `.pkit` index is revalidated against the
+  references it anchors. No command changed.

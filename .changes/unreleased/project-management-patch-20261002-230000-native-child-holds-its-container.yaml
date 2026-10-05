@@ -11,10 +11,11 @@ body: >
   or one filed with `create-issue --parent <N> --milestone <M>`, whose first
   line is the `Milestone:` ref — so the container could close while that child
   was open. A container may therefore now hold where it closed before:
-  `close-issue <N> --mode=cascade-eligibility-close` refuses, and its reason
-  names the child it holds on (`member '<n>'`, with the state it is in), as
+  `close-issue <N> --mode=cascade-eligibility-close` refuses, naming each open
+  child that holds it (`#<n>`) with what releases the container, and
   `pkit process cascade project-management:issue-lifecycle --subject <N>`
-  does; `pkit pm show-tree <N>` lists every child the container waits on.
-  Close that child — or, if it does not belong under the container, move it
+  names the member the fold stopped at (`member '<n>'`, with the state it is
+  in); `pkit pm show-tree` shows that child under the container, whatever its
+  first line names. Close that child — or, if it does not belong under the container, move it
   with `set-field <n> --parent <P>` — and the container closes as before. A
   child whose issue cannot be read still holds the container, as before.

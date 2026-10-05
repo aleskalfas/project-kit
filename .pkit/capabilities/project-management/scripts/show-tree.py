@@ -54,7 +54,14 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, body_parent_ref, bootstrap_gate, containment, session_guard
+from _lib import (
+    axis_labels,
+    body_parent_ref,
+    bootstrap_gate,
+    containment,
+    friction_answers,
+    session_guard,
+)
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -92,6 +99,9 @@ class Issue:
     # What the render says of a child listed under this issue beyond its
     # substrate: a native parent elsewhere, a first line not in an allowed form.
     child_marks: dict[int, tuple[str, ...]] = field(default_factory=dict)
+    # Native sub-issues that live in another repository: shown as leaves named
+    # `owner/repo#<n>`, their state not read (`_link_parents`).
+    children_elsewhere: list[containment.ResolvedChild] = field(default_factory=list)
 
 
 @dataclass
@@ -356,7 +366,8 @@ def _parse_prs(raw: list) -> dict[int, PR]:
         number = r.get("number")
         if not isinstance(number, int):
             continue
-        body = str(r.get("body") or "")
+        # The friction answers' section closes nothing (DEC-055).
+        body = friction_answers.strip(str(r.get("body") or ""))
         closes = sorted({int(m.group(1)) for m in CLOSING_KEYWORD_RE.finditer(body)})
         out[number] = PR(
             number=number,
@@ -408,6 +419,11 @@ def _link_parents(
     none on an instance the seam found without sub-issues — and is False
     wherever a missing one only means none was seen.
 
+    A native sub-issue in another repository is in no fetched issue list, and
+    never this repository's issue of the same number: it goes to its parent's
+    ``children_elsewhere``, rendered as a leaf named ``owner/repo#<n>`` with no
+    state, since the render reads nothing in another repository.
+
     Cost bound: the native read is issued only for *candidate parents* — issues
     of a structural type (epic/feature/umbrella/task) OR named as a parent by
     some issue's first line — not for every corpus issue. An issue that is
@@ -444,6 +460,12 @@ def _link_parents(
         if not resolution.complete:
             incomplete_parents.append(num)
         for child in resolution.children:
+            if child.repository is not None:
+                # A native child in another repository is never this one's issue
+                # of its number: it is shown as a leaf of its own, what holds a
+                # container being what this view is used to find.
+                issue.children_elsewhere.append(child)
+                continue
             if child.number not in issues:
                 continue  # a native child outside the fetched corpus — skip render
             issue.children.append(child.number)
@@ -527,7 +549,11 @@ def _refresh_children_views(issues: dict[int, Issue], capability_root: Path, con
     titles = {num: issue.title for num, issue in issues.items() if issue.title}
     # Only parents that resolved at least one child get a view — a parent with no
     # children needs no children comment (and the seam would render an empty one).
-    parents = sorted(num for num, issue in issues.items() if issue.children)
+    # A child in another repository is a child: the view the writer renders lists
+    # it, as `create-issue` and `link-parent` refresh it.
+    parents = sorted(
+        num for num, issue in issues.items() if issue.children or issue.children_elsewhere
+    )
     if not parents:
         print("[ok] no parents with children to refresh.", file=sys.stderr)
         return
@@ -617,6 +643,12 @@ def _issue_to_dict(issue: Issue) -> dict:
         "child_substrate": {
             str(n): issue.child_substrate.get(n, "textual") for n in sorted(issue.children)
         },
+        # Native sub-issues in another repository: never among `children` (which
+        # are this repository's numbers), their state not read.
+        "children_in_other_repositories": [
+            {"ref": child.ref, "repository": child.repository, "number": child.number}
+            for child in issue.children_elsewhere
+        ],
         # How the issue's native parent and its first line stand: `disagree`
         # marks two parents, `non-conforming` a first line in a form the issue's
         # type does not allow.
@@ -647,6 +679,11 @@ def _resolution_to_dict(
         "first_line_form": resolution.line.form.value,
         "first_line_names_itself": resolution.names_itself,
     }
+
+
+# How a child in another repository is marked in the text and markdown renders:
+# where it lives, and nothing about its state, which the render does not read.
+_ELSEWHERE_MARK = "in another repository"
 
 
 # ---- text renderer --------------------------------------------------
@@ -713,6 +750,8 @@ def _print_branch(
         print(f"{sub}PR #{p.number} ({p.state}) — {p.title}")
     for child in sorted(issue.children):
         _print_branch(issues, prs, child, depth + 1, _listing_marks(issue, child))
+    for elsewhere in issue.children_elsewhere:
+        print(f"{'  ' * (depth + 1)}- {elsewhere.ref}  [{_ELSEWHERE_MARK}]")
 
 
 # ---- markdown renderer ----------------------------------------------
@@ -758,6 +797,10 @@ def _md_branch(
         print(f"{indent}  - PR #{p.number} ({p.state}) {p.title}")
     for child in sorted(issue.children):
         _md_branch(issues, prs, child, depth + 1, _listing_marks(issue, child))
+    # A code span, so markdown pasted into an issue does not link the issue
+    # elsewhere and leave a reference on its timeline.
+    for elsewhere in issue.children_elsewhere:
+        print(f"{'  ' * (depth + 1)}- `{elsewhere.ref}` _({_ELSEWHERE_MARK})_")
 
 
 # ---- gh wrappers ----------------------------------------------------

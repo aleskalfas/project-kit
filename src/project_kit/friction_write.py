@@ -38,7 +38,9 @@ kind, then value; keys in the schema's order (`anchors`, `unanchored-because`,
 `--dry-run` shows the diff and writes nothing; a non-interactive run with
 neither refuses, writes nothing, and names the command to run — the consent
 rule of the configuration writer (COR-048 point 5), applied to the project's
-own artefacts.
+own artefacts. `record-status` names it with `--dry-run` and with `--yes`;
+`revalidate` and `defer` name only the dry run and print no ready-made `--yes`
+command: an answer is written on a person's decision (point 3).
 """
 
 from __future__ import annotations
@@ -586,8 +588,9 @@ def plan_record_status(target_root: Path, reference: str) -> Plan:
     when stale, `since` — the oldest commit its staleness comes from. Nothing
     is written when the recorded `state` and `since` already say so, whatever
     `as-of` holds. Refused: an artefact with no anchors or deferrals (there is
-    no state), one not at HEAD, and one whose points lie beyond a shallow
-    clone's history.
+    no state), one not at HEAD, and one the check did not judge — its points
+    lie beyond a shallow clone's history, or an anchor of it cannot be
+    resolved: a status is a judgment, and neither is one.
     """
     source = _read_source(target_root, find_artefact(target_root, reference))
     artefact = source.artefact
@@ -610,6 +613,18 @@ def plan_record_status(target_root: Path, reference: str) -> Plan:
             f"{artefact.location} cannot be judged: a point of it lies beyond this clone's "
             f"history — fetch the full history (`git fetch --unshallow`) and run again. "
             f"Nothing was written."
+        )
+    if report.state is fr.ArtefactState.UNRESOLVED:
+        unresolved = next(
+            f
+            for f in result.findings
+            if f.location == artefact.location and f.kind in fr.UNRESOLVED_KINDS
+        )
+        anchor = unresolved.anchor
+        named = "" if anchor is None else f"{anchor.kind} {anchor.value}: "
+        raise FrictionWriteError(
+            f"{artefact.location} cannot be judged: an anchor of it cannot be resolved "
+            f"({named}{unresolved.message}). Nothing was written."
         )
 
     value: dict[str, Any] = {"state": report.state.value, "as-of": result.head.commit}
@@ -1142,11 +1157,23 @@ def render_diff(plan: Plan) -> str:
     return "".join(diff)
 
 
-def apply(plan: Plan, *, yes: bool, dry_run: bool, can_ask: bool, rerun: Sequence[str]) -> bool:
+def apply(
+    plan: Plan,
+    *,
+    yes: bool,
+    dry_run: bool,
+    can_ask: bool,
+    rerun: Sequence[str],
+    writes_answer: bool = False,
+) -> bool:
     """Show the plan and, with consent, write it; returns whether the file was written.
 
     `rerun` is the command as run, without `--yes` or `--dry-run`, for the
     refusal to name. A plan with nothing to write writes nothing and succeeds.
+    A writer whose plan is an answer on an artefact (`writes_answer`: revalidate,
+    defer) is refused without a ready-made `--yes` command to run: an answer is
+    written on a person's decision (COR-050 point 3), so the refusal names the
+    dry run and says what `--yes` does.
     """
     click.echo(render_plan(plan), nl=False)
     if not plan.changes:
@@ -1159,11 +1186,17 @@ def apply(plan: Plan, *, yes: bool, dry_run: bool, can_ask: bool, rerun: Sequenc
         return False
     if not yes:
         if not can_ask:
+            consent = (
+                "`--yes` writes without asking. An answer on an artefact is written on a "
+                "person's decision (COR-050 point 3)."
+                if writes_answer
+                else f"To consent non-interactively, run:\n  {command_line(*rerun, '--yes')}"
+            )
             raise ConsentRefused(
                 f"refusing to write {plan.rel} without consent: stdin is not a terminal and "
                 f"--yes was not given (COR-050 point 13). Nothing was written.\n"
                 f"To see the change first, run:\n  {command_line(*rerun, '--dry-run')}\n"
-                f"To consent non-interactively, run:\n  {command_line(*rerun, '--yes')}"
+                f"{consent}"
             )
         click.echo("")
         click.echo(render_diff(plan), nl=False)

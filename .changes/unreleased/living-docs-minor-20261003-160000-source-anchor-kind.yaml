@@ -1,0 +1,27 @@
+component: living-docs
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  A page can rest on a source outside the repository — a standard, a
+  specification, another project's documentation — by anchoring it by name:
+  `source: [keep-a-changelog]`. living-docs registers the `source` anchor
+  kind. Capture each source once, in
+  `.pkit/capabilities/living-docs/project/sources/<name>.yaml`: its `title`,
+  an optional `url`, and the `version` of its text your pages were last
+  checked against, quoted. Any change to that file is the source's change:
+  when you record a new version, the change check asks every page anchored to
+  the source to answer in the same pull request, and the whole-repository
+  check finds such a page stale until it does. Nothing fetches a source, so a
+  change nobody records is not seen. A name no file captures is a dead anchor.
+  `pkit living-docs resolve-source <name>` prints the file a name resolves to.
+  `pkit validate` checks a captured source's shape under `data`; fails a
+  sources folder named in another case, and anything else in it but a hidden
+  entry, which it leaves alone, or a file not ending in `.yaml`, which it
+  reports; and reports an anchor no file captures, a captured source nothing
+  names, and one carrying `schema_version` or `binds_to`. A rule's origin may
+  cite a captured
+  source. Uninstalling living-docs removes the captured sources with its
+  project tier. It needs the backbone this release ships, the first that runs
+  a resolver a capability registers.

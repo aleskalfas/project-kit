@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Copying a source tree into a project leaves out Python's caches — any
+  `__pycache__` directory and any compiled `.pyc` or `.pyo` file the source
+  holds (#1325). Importing a script of the source in place writes them there,
+  so `pkit init`, `pkit sync`, and a capability's install and refresh used to
+  copy whatever had run in the source before them; what a project receives no
+  longer depends on it. One rule decides it for every copy path.

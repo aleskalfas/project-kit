@@ -213,10 +213,17 @@ def test_debt_json_document_shape(timeline: Timeline) -> None:
         "schema_version",
         "unanchored",
         "unreachable",
+        "unresolved",
     ]
     assert doc["schema_version"] == frep.DEBT_SCHEMA_VERSION == 1
     assert (doc["report"], doc["dormant"], doc["history"]) == ("debt", False, {"shallow": False})
-    assert doc["counts"] == {"deferred": 1, "stale": 1, "unanchored": 0, "unreachable": 0}
+    assert doc["counts"] == {
+        "deferred": 1,
+        "stale": 1,
+        "unanchored": 0,
+        "unreachable": 0,
+        "unresolved": 0,
+    }
     assert (doc["unreachable"], doc["unanchored"], doc["accepted_unanchored"]) == ([], [], [])
     stale, deferred = doc["debt"]
     assert stale == {
@@ -294,7 +301,13 @@ def test_debt_lists_the_accepted_unanchored_apart_and_counts_only_the_forgotten(
     assert "not counted" in lines[accepted]
 
     doc = json.loads(_cli("debt", "--json").output)
-    assert doc["counts"] == {"deferred": 0, "stale": 1, "unanchored": 1, "unreachable": 0}
+    assert doc["counts"] == {
+        "deferred": 0,
+        "stale": 1,
+        "unanchored": 1,
+        "unreachable": 0,
+        "unresolved": 0,
+    }
     assert doc["unanchored"] == ["docs/plain.md"]
     assert doc["accepted_unanchored"] == [
         {"artefact": "sponsor", "location": "docs/sponsor.md", "reason": reason}
@@ -311,7 +324,13 @@ def test_debt_leaves_out_an_artefact_under_an_excluded_path(timeline: Timeline) 
     result = _cli("debt", "--json")
     assert result.exit_code == 0, result.output
     doc = json.loads(result.output)
-    assert doc["counts"] == {"deferred": 0, "stale": 1, "unanchored": 0, "unreachable": 0}
+    assert doc["counts"] == {
+        "deferred": 0,
+        "stale": 1,
+        "unanchored": 0,
+        "unreachable": 0,
+        "unresolved": 0,
+    }
     assert doc["unanchored"] == []  # `docs/generated/api.md` is unanchored, and excluded
 
 
@@ -745,10 +764,12 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
         "location",
         "report",
         "revalidation_point",
+        "revalidation_points",
         "schema_version",
         "state",
         "unanchored_because",
     ]
+    assert doc["revalidation_points"] == [doc["revalidation_point"]]
     assert doc["schema_version"] == frep.EXPLAIN_SCHEMA_VERSION == 1
     assert (doc["report"], doc["artefact"], doc["location"], doc["state"]) == (
         "explain",
@@ -879,21 +900,19 @@ def test_a_commits_paths_are_what_the_check_reads_never_the_artefacts_own_file(
     assert explanation.report.revalidation_point.sha == base
 
 
-def test_a_file_that_lived_only_between_the_point_and_head_is_in_the_commits_paths(
+def test_a_file_that_lived_only_between_the_point_and_head_is_no_change(
     timeline: Timeline,
 ) -> None:
-    """Neither tree holds it, so `files` never lists it; the commits that added and removed it
-    changed the anchor, and each names it."""
+    """Added and removed again between the point and HEAD, it is in neither state the check
+    compares (COR-050 point 5): no finding, no commit behind one, and neither tree lists it."""
     timeline.start({"docs/guide.md": guide()})
-    added = timeline.commit("a scratch module", {"src/cli/scratch.py": "S = 1\n"})
-    removed = timeline.commit("drop the scratch module", {"src/cli/scratch.py": None})
+    timeline.commit("a scratch module", {"src/cli/scratch.py": "S = 1\n"})
+    timeline.commit("drop the scratch module", {"src/cli/scratch.py": None})
 
     explanation = frep.run_explain(timeline.adopter.root, "guide")
-    (stale,) = explanation.findings
-    assert [(c.commit.sha, c.paths) for c in stale.commits] == [
-        (added, ("src/cli/scratch.py",)),
-        (removed, ("src/cli/scratch.py",)),
-    ]
+    assert explanation.findings == ()
+    assert explanation.report is not None
+    assert explanation.report.state is fr.ArtefactState.CURRENT
     (anchor,) = explanation.anchors
     assert anchor.files == fr.AnchorFiles(("src/cli/main.py",), ("src/cli/main.py",), ())
 

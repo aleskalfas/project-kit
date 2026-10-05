@@ -34,6 +34,7 @@ from pathlib import Path
 # sys.path) — mirrors `_lib/substrate_writes.py`'s idiom.
 try:
     import axis_labels  # type: ignore[import-not-found]
+    import friction_answers  # type: ignore[import-not-found]
     import title_rules  # type: ignore[import-not-found]
     from placeholder_detection import (  # type: ignore[import-not-found]
         PHASE_CREATE,
@@ -41,7 +42,7 @@ try:
         detect_placeholder_residuals,
     )
 except ImportError:  # pragma: no cover
-    from _lib import axis_labels, title_rules  # type: ignore[no-redef]
+    from _lib import axis_labels, friction_answers, title_rules  # type: ignore[no-redef]
     from _lib.placeholder_detection import (  # type: ignore[no-redef]
         PHASE_CREATE,
         PHASE_TRANSITION,
@@ -91,6 +92,9 @@ def validate_pr(
     already derived the correct title from the issue, e.g. ``open-pr``).
     """
     findings: list[Finding] = []
+    # The friction answers' section is the artefacts' words, never input (DEC-055):
+    # no closing reference, Doc impact heading or template prose is read from it.
+    pr_body = friction_answers.strip(pr_body)
 
     # Title: titles.yaml's `pr` checks — the Conventional-Commits pattern and the
     # declared wording rules on the summary — then the type cross-check, which
@@ -196,9 +200,10 @@ def pr_body_format() -> dict:
 
 
 def extract_closing_issues(pr_body: str) -> list[int]:
-    """The issue numbers a PR body closes (Closes/Fixes/Resolves #N), de-duped."""
+    """The issue numbers a PR body closes (Closes/Fixes/Resolves #N), de-duped —
+    outside its friction answers' section, which closes nothing (DEC-055)."""
     out: list[int] = []
-    for m in CLOSING_KEYWORD_RE.finditer(pr_body or ""):
+    for m in CLOSING_KEYWORD_RE.finditer(friction_answers.strip(pr_body or "")):
         n = int(m.group(1))
         if n not in out:
             out.append(n)

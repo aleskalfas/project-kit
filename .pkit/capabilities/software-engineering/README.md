@@ -13,8 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
     revalidated:
-      at: 2026-10-01T15:01:44Z
-      outcome: updated
+      at: 2026-10-03T13:23:58Z
+      outcome: unchanged
+      unchanged-because: The page names software-engineer as the producer agent that reads the project's conventions corpus, conforms to it and defers judgment to the reviewers, deployed with its placeholder resolved under COR-013; the agent's new section on answering its own change's friction, and COR-013's rule that a command's write is named in the body rather than in owns, leave each of those statements true.
 ---
 
 # software-engineering capability

@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:53:23Z
+          at: 2026-10-03T14:01:31Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 now calls whoever reports a reading-evidence result its filler, not a provider, and says nothing in the capability reads the entries; the key is unchanged, and a page's anchors still ground every statement it makes
+          unchanged-because: DEC-001 point 4 gains the source kind through which a page anchors a source outside the repository, each source captured as one file holding the version read; the rule already counts the captured sources a page quotes among its anchors, so a page's anchors still ground every statement it makes
   RS-LDOC-002:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -19,9 +19,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:53:24Z
+          at: 2026-10-03T14:01:33Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 now calls whoever reports a reading-evidence result its filler rather than a provider; the evidence key and the one-check-per-result rule are unchanged, and each fact on a page is still stated once and linked to
+          unchanged-because: DEC-001 point 4 gains how a page anchors a captured source, and keeps what the source says and why a page relies on it on the pages rather than in the captured file; it says nothing about stating a fact in more than one page, so each fact is still stated once and other pages link to it
   RS-LDOC-003:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -29,9 +29,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:53:25Z
+          at: 2026-10-03T14:01:36Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 now says filler, not provider, for whoever reports a reading-evidence result; the readers point that a page's reader field names is untouched, so a page still names the one reader it is for and says only what that reader needs
+          unchanged-because: DEC-001 point 4 gains how a page anchors a source outside the repository through the source kind; it touches neither the reader field nor the readers point, so a page still names its reader and says only what that reader needs
   RS-LDOC-004:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -39,9 +39,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:53:31Z
+          at: 2026-10-03T14:01:39Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 now says filler, not provider, for whoever reports a reading-evidence result; an evidence entry is still no page and has no kind, so pages of a kind still follow one format and name their kind
+          unchanged-because: DEC-001 point 4 gains how a page anchors a source outside the repository through the source kind, and the shape of a captured source's file; it says nothing of a page's kind, its template or its format, so pages of a kind still follow one format
   RS-LDOC-005:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -49,9 +49,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:53:32Z
+          at: 2026-10-03T14:01:41Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 now says filler, not provider, for whoever reports a reading-evidence result; the key and the rule are unchanged, and nothing about an index-like file turns on that wording, so it is still a signpost to what a folder holds
+          unchanged-because: DEC-001 point 4 gains how a page anchors a source outside the repository through the source kind; it says nothing of what an index-like file tells its reader, so such a file is still a signpost to what a folder holds, never a summary of its contents
   RS-LDOC-006:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -59,9 +59,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-01T23:53:32Z
+          at: 2026-10-03T14:01:44Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 7 now says filler, not provider, for whoever reports a reading-evidence result, and still no filler of the point has shipped; the wording only names who will report, and nothing is created ahead of that need
+          unchanged-because: "DEC-001 point 4 gains how a page anchors a source outside the repository: a source is captured once a page rests on it, and its file records a new version only when someone reads one; that asks for nothing to be created ahead of its need, so nothing is created ahead of the need for it"
 ---
 
 # LDOC — the shared documentation method

@@ -57,6 +57,17 @@ settings that declare them, this pass reports:
   shape error;
 - **a dangling deferral** — a `deferred[].anchor` naming, by kind and value,
   no anchor of the artefact (COR-050 point 4);
+- **a deferral repeated** — a `deferred[]` entry for an anchor an earlier
+  entry already defers, by kind and value: the list holds one entry per
+  anchor (COR-050 point 4), so one anchor never carries two reasons;
+- **an anchor kind nothing resolves** — a kind outside the backbone's three
+  that no installed capability registers, or whose registration is refused
+  (two registrants, a command without the query contract or naming no leaf),
+  as the one anchor-kind registry judges it (`unresolved_kind_reason`;
+  ADR-057 point 2). A **report**, never an error (COR-050 points 7 and 12):
+  the container schema admits any kind a word names, as the container admits
+  a role block with no active provider, and a refused registration fails once,
+  at the registration, in the packages pass. This pass runs no resolver;
 - **a cycle between artefacts** through `anchors.artefact`, with the cycle's
   path — a cycle has no order in which its members could be revalidated
   (COR-050 point 5).
@@ -76,11 +87,11 @@ matches a synced copy, which only the walk can tell. This pass never walks a
 place that leaves the repository, nor a synced copy a declared place matches.
 Without the tree's ownership module no match can be told a synced copy; that
 is a report, not an error. What it does not do either: compute friction, resolve
-path anchors against git, or report dead anchors — those are the two checks'
-findings (COR-050 points 6 and 7), later Tasks. What the container validator
-reports rather than judges — a role block whose role has no active provider, a
-point block the active provider's point does not match — is carried through as
-reports (never errors) so `pkit validate` can show them.
+path anchors against git, run a registered kind's resolver, or report dead
+anchors — those are the two checks' findings (COR-050 points 6 and 7). What the
+container validator reports rather than judges — a role block whose role has no
+active provider, a point block the active provider's point does not match — is
+carried through as reports (never errors) so `pkit validate` can show them.
 
 Dormant until used (COR-050 point 15): with no places declared, or nothing in
 them to judge — no artefact carrying the container and no file it failed to
@@ -100,18 +111,23 @@ from pathlib import Path
 from project_kit import backbone_schemas as bs
 from project_kit import connections, validators
 from project_kit.friction_discovery import (
+    CORE_ANCHOR_KINDS,
     FRICTION_KEY,
     SKIP_OUTSIDE,
     UNANCHORED_BECAUSE_KEY,
+    Anchor,
     Artefact,
     Discovery,
     FrictionSettings,
+    ResolverCommand,
     SettingsPath,
     UnreadableFile,
     discover_artefacts,
     is_inside_repository,
     read_friction_settings,
+    registered_anchor_kinds,
     synced_copy_test,
+    unresolved_kind_reason,
 )
 from project_kit.lifecycle_ownership import OWNERSHIP_MODULE
 
@@ -133,6 +149,8 @@ class FrictionFindingKind(Enum):
     UNPARSABLE_FRONT_MATTER = "unparsable-front-matter"
     MIXED_LINE_ENDINGS = "mixed-line-endings"  # a file written with more than one line break
     DANGLING_DEFERRAL = "dangling-deferral"
+    DUPLICATE_DEFERRAL = "duplicate-deferral"  # an anchor an earlier entry already defers
+    UNRESOLVED_KIND = "unresolved-kind"  # an anchor kind nothing installed resolves: a report
     CYCLE = "cycle"
     CONTAINER_REPORT = "container-report"  # an orphaned role block, an inert point block
     SCHEMA_UNAVAILABLE = "schema-unavailable"  # the tree ships no readable container schema
@@ -183,7 +201,8 @@ def validate_friction(target_root: Path) -> FrictionValidation:
     matter is reported whenever places are declared: a file that fails to parse
     also keeps the pass awake (`Discovery.is_dormant`), so a YAML typo in the
     only container-carrying file is an error, not silence. The line-ending,
-    container, deferral and cycle findings run only when the pass is awake.
+    container, deferral, unresolved-kind and cycle findings run only when the
+    pass is awake.
     """
     settings = read_friction_settings(target_root)
     discovery = discover_artefacts(target_root, settings)
@@ -473,12 +492,15 @@ def _artefact_findings(target_root: Path, discovery: Discovery) -> list[Friction
     if schema_finding is not None:
         findings.append(schema_finding)
     wiring = connections.container_wiring(target_root)
+    registry = registered_anchor_kinds(target_root)  # read once for the pass
 
     for artefact in discovery.with_container:
         if schema is not None and artefact.rule_set is None:  # a rule's: the rule-set pass's
             findings.extend(_container_findings(artefact, schema, wiring))
         findings.extend(_unanchored_beside_anchors(artefact))
         findings.extend(_dangling_deferrals(artefact))
+        findings.extend(_duplicate_deferrals(artefact))
+        findings.extend(_unresolved_kinds(artefact, registry))
 
     findings.extend(_cycles(discovery))
     return findings
@@ -488,15 +510,20 @@ def block_findings(
     artefact: Artefact, schema: dict | None, target_root: Path
 ) -> tuple[FrictionFinding, ...]:
     """What this pass finds in one artefact's own block: its shape, a reason for having
-    no anchors beside anchors, and dangling deferrals.
+    no anchors beside anchors, dangling and repeated deferrals, and anchor kinds nothing
+    resolves.
 
     The per-artefact judgments `validate_friction` applies — the container
     schema and the container's rule (skipped when `schema` is `None`, as the
     pass skips them without a readable schema), then `unanchored-because`
-    beside anchors, then every deferral naming no anchor of the artefact. The
+    beside anchors, then every deferral naming no anchor of the artefact, then
+    every deferral of an anchor an earlier entry defers, then every anchor kind
+    nothing installed resolves, which is a report. The
     cycle check spans artefacts and is not here.
     The writing commands (`friction_write`) read what they would write back
-    through this, so a writer never writes a block validation would refuse.
+    through this, so a writer never writes a block validation would refuse —
+    and writes one validation only reports on, an anchor of a kind nothing
+    resolves included.
     """
     findings: list[FrictionFinding] = []
     if schema is not None:
@@ -506,6 +533,8 @@ def block_findings(
         findings.extend(_container_findings(artefact, schema, wiring))
     findings.extend(_unanchored_beside_anchors(artefact))
     findings.extend(_dangling_deferrals(artefact))
+    findings.extend(_duplicate_deferrals(artefact))
+    findings.extend(_unresolved_kinds(artefact, registered_anchor_kinds(target_root)))
     return tuple(findings)
 
 
@@ -606,6 +635,76 @@ def _dangling_deferrals(artefact: Artefact) -> Iterable[FrictionFinding]:
                 f"(COR-050 point 4)."
             ),
         )
+
+
+def _duplicate_deferrals(artefact: Artefact) -> Iterable[FrictionFinding]:
+    """Each `deferred[]` entry for an anchor an earlier entry already defers, by kind and
+    value (COR-050 point 4: one entry per anchor).
+
+    The first entry for an anchor stands; each later one is reported, its
+    pointer carrying its index as written (`Deferral.index`). Two entries give
+    one anchor two reasons, so what the deferral says depends on which a
+    reader takes.
+    """
+    first: dict[Anchor, int] = {}
+    for deferral in artefact.deferrals:
+        earlier = first.setdefault(deferral.anchor, deferral.index)
+        if earlier == deferral.index:
+            continue
+        anchor = deferral.anchor
+        yield FrictionFinding(
+            location=artefact.location,
+            pointer=(
+                f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/revalidated/deferred/{deferral.index}/anchor"
+            ),
+            severity=Severity.ERROR,
+            kind=FrictionFindingKind.DUPLICATE_DEFERRAL,
+            message=(
+                f"{anchor.kind} anchor {anchor.value!r} is deferred again: entry {earlier} "
+                f"defers it already, and the list holds one entry per anchor — keep one, with "
+                f"one reason (`pkit friction defer` writes it so) (COR-050 point 4)."
+            ),
+        )
+
+
+def _unresolved_kinds(
+    artefact: Artefact, registry: Mapping[str, ResolverCommand]
+) -> Iterable[FrictionFinding]:
+    """Each anchor kind of the artefact that nothing installed resolves, once per kind
+    (COR-050 point 7) — a report, never an error (point 12).
+
+    The one registry's verdict (`unresolved_kind_reason`): no installed
+    capability registers the kind, or its registration is refused. A kind
+    nothing registers names the nearest kind that is known — a typo of `path`
+    reads as one. Uninstalling a capability must not fail validation, nor make
+    the writers refuse every artefact naming its kind; the change check fails
+    such an anchor where the diff adds it or takes its resolver away, and its
+    artefact is not judged while it stands.
+    """
+    for kind, values in artefact.anchors.items():
+        reason = unresolved_kind_reason(kind, registry)
+        if reason is None or not values:
+            continue
+        suggestion = ""
+        if kind not in registry:
+            nearest = bs.nearest_known_key(kind, (*CORE_ANCHOR_KINDS, *registry))
+            suggestion = f" Did you mean {nearest!r}?" if nearest is not None else ""
+        yield FrictionFinding(
+            location=artefact.location,
+            pointer=f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/anchors/{_pointer_token(kind)}",
+            severity=Severity.REPORT,
+            kind=FrictionFindingKind.UNRESOLVED_KIND,
+            message=(
+                f"anchor kind {kind!r} is unresolved: {reason}. Its anchors are not checked, "
+                f"and the artefact is not judged, while nothing resolves the kind (COR-050 "
+                f"points 2 and 7).{suggestion}"
+            ),
+        )
+
+
+def _pointer_token(segment: str) -> str:
+    """One JSON Pointer reference token (RFC 6901 escaping)."""
+    return segment.replace("~", "~0").replace("/", "~1")
 
 
 def _cycles(discovery: Discovery) -> list[FrictionFinding]:

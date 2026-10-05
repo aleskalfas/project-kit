@@ -1,0 +1,53 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A capability registers an anchor kind with its resolver under
+  `friction.kinds` in its package metadata: a mapping from the kind to an
+  entry whose `command` names the `commands:` leaf that resolves it. The
+  `packages` member of `pkit validate` reports, at the registration, a
+  resolver whose command names no leaf or whose leaf does not declare
+  `query-contract: true`, a kind the backbone resolves itself (`path`,
+  `record`, `artefact`), a kind two installed capabilities register, and a
+  kind an adapter registers; the friction checks and rule-set validation
+  refuse each before any run. A resolver that may run is run under the query
+  policy — `--json`, `--` and then the anchor value as its arguments, the
+  value last so that none is read as an option, from the project root, the
+  offline marker set, the base override removed, bounded by thirty seconds —
+  once per anchor value for a check, and not again in that check once it
+  overran its bound. It answers `{"paths": [...]}`: every file whose content
+  decides what the value denotes. The change check and validation read the
+  answer against the working tree's listing; `friction check --all`,
+  `explain`, `debt` and `record-status` read it against HEAD's files, so a
+  path HEAD does not hold is no answer. The change check asks an artefact when
+  the diff changed the content of a file the answer names, and the
+  whole-repository check finds it stale when a commit after its revalidation
+  point did; the files count as anchored surface, and an anchor whose resolver
+  names more than half of the tracked files is over-broad.
+  Validation admits an anchor, and a deferral, of any kind a word names, and
+  the friction writers write them: the container schema leaves the anchor
+  kinds open, and the `friction` member reports, and never fails, an anchor
+  whose kind nothing installed resolves (`unresolved-kind`).
+  The change check gains two finding kinds. `no-answer` — a resolver exited
+  abnormally, overran its bound, was not provisioned or answered in another
+  shape — fails in enforcing mode whoever added the anchor, and says to run
+  again, then `pkit sync` or mend the resolver. `dead-unattributed` — an anchor the diff kept whose
+  resolver names no file — is reported and never failed: a resolver is asked
+  about the head alone, so a change that deletes what a kept anchor denotes
+  passes the change check and the whole-repository check reports the anchor
+  dead. An anchor the diff added that resolves to nothing fails as
+  `dead-anchor`, and `unresolved-kind` fails when the diff added the anchor or
+  took the kind's resolver away, read from the base commit's registrations.
+  An artefact with an anchor that cannot be resolved is not judged:
+  `friction check --all`, `explain` and `debt` give it the state `unresolved`,
+  never `current`, with the finding `unresolved-kind` or `no-answer`, and
+  `record-status` refuses it. `schema_version` stays `1` in every reading
+  document: kinds and one state are added, and a reader treats a finding kind
+  or a state it does not know as not judged.
+  Rule-set validation resolves a cited source through its kind's resolver and
+  fails when the resolver names no file (`missing-source`) or gives no answer
+  (`unanswered-source`); a source kind with no resolver that may run stays a
+  report. `pkit init` and `pkit sync` provision a resolver's script as they
+  provision a validator's. COR-050 points 2, 5, 7 and 12 state what a resolver
+  answers and what the change check fails.

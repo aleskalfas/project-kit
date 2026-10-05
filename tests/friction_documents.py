@@ -105,6 +105,12 @@ class Timeline:
     ) -> str:
         return self.adopter.commit(message, files, author=author, date=self._next())
 
+    def commit_index(self, message: str) -> str:
+        """Commit what the index holds — a gitlink staged with `git update-index`, say,
+        which `commit` would stage away, having no checkout — dated as the next commit."""
+        self.adopter.git("commit", "-q", "-m", message, date=self._next())
+        return self.adopter.head()
+
     def rename(self, src: str, dst: str) -> str:
         return self.adopter.rename(src, dst, date=self._next())
 
@@ -113,3 +119,15 @@ class Timeline:
 
     def squash_merge(self, branch: str) -> str:
         return self.adopter.squash_merge(branch, date=self._next())
+
+    def revert(self, commit: str, *, mainline: int | None = None) -> str:
+        """`git revert` of `commit`, dated as the next commit: what it changed, undone — for
+        a merge commit, against its parent number `mainline`."""
+        parent = () if mainline is None else ("-m", str(mainline))
+        self.adopter.git("revert", "--no-edit", *parent, commit, date=self._next())
+        return self.adopter.head()
+
+    def cherry_pick(self, commit: str) -> str:
+        """`git cherry-pick` of `commit` onto the current branch, dated as the next commit."""
+        self.adopter.git("cherry-pick", commit, date=self._next())
+        return self.adopter.head()
