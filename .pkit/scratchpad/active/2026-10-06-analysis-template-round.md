@@ -20,17 +20,18 @@ The maintainer picks each analysis kind's parts here, one kind at a time, from c
 
 ## The use case
 
-The maintainer chose eight parts: the design's five, one of them renamed, and three of Cockburn's further parts. The round had recommended the five alone, and its comparison and recommendation stay below as they were made.
+The maintainer chose eight parts: the design's five, two of them renamed, and three of Cockburn's further parts. The round had recommended the five alone, and its comparison and recommendation stay below as they were made.
 
 ### Decided: the use case
 
-The maintainer chose the use case's parts on 6 October, in comments on PR #1374. F fills them with both examples (`use-case/F-chosen-template.md`).
+The maintainer chose the use case's parts and their labels on 6 October, in comments on PR #1374. F fills them with both examples (`use-case/F-chosen-template.md`).
 
 - **Added, with the maintainer's reasons:**
-  - *Also involved*, optional: the other actors who take part, each with what the use case must protect for them. It is Cockburn's stakeholders and interests, added for completeness.
+  - *Other actors*, optional: the other actors who take part, each with what the use case must protect for them. It is Cockburn's stakeholders and interests, added for completeness.
   - *Preconditions*, required: what the system already guarantees before the use case starts. A journey's seams need them, since a seam is where one use case's end must meet the next one's start.
-  - *If it fails*, required: what the system guarantees even when the use case ends early or fails. pkit's safety guarantees need a part of their own. It is Cockburn's minimal guarantee, and the round's *Always holds*.
-- **Renamed:** *Done when* is now *Postconditions*, the pair to *Preconditions*.
+  - *Minimal guarantees*, required: what the system still guarantees when the use case ends early or fails. pkit's safety guarantees need a part of their own. It is Cockburn's minimal guarantee, and the round's *Always holds*.
+- **Renamed:** *Starts when* is now *Trigger*, and *Done when* is now *Postconditions*, the pair to *Preconditions*.
+- **Every label a noun:** the maintainer chose the labels last, in the pull request's last comment. *Other actors* and *Minimal guarantees* were first *Also involved* and *If it fails*.
 - **Otherwise, start small:** any other part is added once real use cases show it recurs.
 - **Where each part ships:** with software-analysis, as the round recommended. The maintainer's comments leave that as it was.
 
@@ -40,13 +41,13 @@ The maintainer chose the use case's parts on 6 October, in comments on PR #1374.
 |---|---|---|---|---|---|
 | `heading` | `# UC-NNN — <title>` | yes | heading | none, since the stamp writes it | `# UC-007 — Export the report as a file` |
 | `goal` | Goal | yes | `sentence` | What the actor wants from this use case, in one sentence. | Export the report as a file. |
-| `also-involved` | Also involved | no | none | Each other actor who takes part, and what this use case must protect for them. | **Auditor** (`ACT-auditor`): each export is logged with who made it. |
+| `other-actors` | Other actors | no | none | Each other actor who takes part, and what this use case must protect for them. | **Auditor** (`ACT-auditor`): each export is logged with who made it. |
 | `preconditions` | Preconditions | yes, and `None.` is allowed | none | What the system already guarantees before the use case starts. Each is a state, not an event, and no step checks it. Write `None.` when there is none. | The analyst is signed in. |
-| `starts-when` | Starts when | yes | none | The event that starts the use case, and who or what causes it. | The analyst asks to export the report on screen. |
+| `trigger` | Trigger | yes | none | The event that starts the use case, and who or what causes it. | The analyst asks to export the report on screen. |
 | `main-path` | Main path | yes | `numbered-steps` | Numbered steps from the start to the goal, each saying who does what. | 1. The analyst chooses `Export`. 2. The system writes the report to a file. |
 | `variants` | Variants | yes, and `None.` is allowed | `variants` | One for each condition, lettered after the step it branches from. Say what happens instead, and where the path rejoins or ends. Write `None.` when there is none. | 2a. The disk is full. The system says so and writes nothing, and the use case ends. |
 | `postconditions` | Postconditions | yes | none | The state that shows the goal is met. | The file holds the whole report. |
-| `if-it-fails` | If it fails | yes, and `None.` is allowed | none | What the system guarantees even when the use case ends early or fails. Name the record or code each rests on. Write `None.` when there is none. | A failed export leaves no partial file (DEC-003). |
+| `minimal-guarantees` | Minimal guarantees | yes, and `None.` is allowed | none | What the system still guarantees when the use case ends early or fails. Name the record or code each rests on. Write `None.` when there is none. | A failed export leaves no partial file (DEC-003). |
 
 - **The hints:** each is one line, with short sentences, no semicolon and no project's voice (the design's part 5). They say what goes in a part, never how to format it.
 - **The examples:** one neutral use case runs through them all, the design's export. An auditor and a decision of the example's own complete it.
@@ -54,7 +55,7 @@ The maintainer chose the use case's parts on 6 October, in comments on PR #1374.
 
 **The front matter gains `involves`:**
 
-- **What it holds:** the actors of *Also involved*, by id, as a list, such as `involves: [ACT-merge-authoriser, ACT-ci-pipeline]`. It is absent where the part is.
+- **What it holds:** the actors of *Other actors*, by id, as a list, such as `involves: [ACT-merge-authoriser, ACT-ci-pipeline]`. It is absent where the part is.
 - **Why data:** a tool takes data only from the front matter (the design's Decided 2). So a check can resolve each id to an actor.
 - **An anchor too:** each actor in it is an artefact anchor, as the primary actor is (DEC-001 point 4). A change to one flags the use case.
 
@@ -70,27 +71,27 @@ The maintainer chose the use case's parts on 6 October, in comments on PR #1374.
 **The round's questions:**
 
 1. **Question 1, DEC-001 point 1's parts only:** no. Three parts ship beyond them, and any other waits until real use cases show it recurs. Each later kind is weighed in its turn.
-2. **Question 2, *Always holds*:** it comes now, as *If it fails*, required with `None.` allowed.
+2. **Question 2, *Always holds*:** it comes now, as *Minimal guarantees*, required with `None.` allowed.
 3. **Question 3, *Variants* required:** yes, with `None.` allowed, as recommended.
 4. **Question 4, the append-only check:** still open.
 
 **What filling F showed:**
 
-- **The landing's precondition:** it sat in *Starts when*. A's trigger read "a committed change", which is a state. F moves the state to *Preconditions*, and *Starts when* keeps the event.
+- **The landing's precondition:** it sat in A's *Starts when*. A's trigger read "a committed change", which is a state. F moves the state to *Preconditions*, and *Trigger* keeps the event.
 - **E's precondition:** none, so the part reads `None.`. Neither example lists "pkit is installed". Every use case would share it, as "the system is running" would.
 - **A fact outside the system:** the landing relies on `gh` reaching the repository the change was pushed to, as the caller's environment sets it up (ADR-061 point 4). No step checks it, since the guard compares directories, not where `gh` goes (`session_guard.py`). The system does not guarantee it either, so the hint leaves it out. Question 5 asks where it goes.
 - **Who is involved:** the landing involves four actors, and E involves none, so E shows the part left out.
   - The CI pipeline and the merge authoriser take part in steps 3 and 4.
   - The AI agent takes part where it acts for the developer, as in 2a.
   - The operator answers the guard in 6a, which now names them.
-- **An interest with no guarantee:** the merge authoriser's interest rests on a person showing the list, which no check verifies (COR-050 point 3). So *Also involved* states it, and *If it fails* cannot.
+- **An interest with no guarantee:** the merge authoriser's interest rests on a person showing the list, which no check verifies (COR-050 point 3). So *Other actors* states it, and *Minimal guarantees* cannot.
 - **Interests that repeat needs:** the CI pipeline's, the merge authoriser's and the operator's restate needs their actors already carry. The round raised this against stakeholders, and the maintainer kept the part for completeness.
-- **If it fails, held to what the records give:** each item cites its record or code, checked against ADR-061, COR-039 and the landing's code.
+- **Minimal guarantees, held to what the records give:** each item cites its record or code, checked against ADR-061, COR-039 and the landing's code.
   - Every merge and enqueue is pinned to the checked head. That does not mean that no unchecked commit merges.
   - Auto-merge is not the landing's request, and a queue may merge a moved head before the next reading. F's items say both.
 - **Anchors:** every record and file F cites is among its anchors, so a change to one flags the use case (RS-WRITE-014). The landing gains COR-054, for the CI pipeline's base, and its four involved actors.
-- **What F changes from A:** the front matter's `involves` and anchors, the precondition taken out of *Starts when*, and 6a naming the operator. *Variants* drops A's instruction line, as D does. The steps and the other variants are A's.
-- **Length:** the landing runs to 1,323 words, against A's 960 and B's 1,282. E runs to 335, against 259 in the recommended parts.
+- **What F changes from A:** the front matter's `involves` and anchors, the precondition taken out of A's *Starts when*, and 6a naming the operator. *Variants* drops A's instruction line, as D does. The steps and the other variants are A's.
+- **Length:** the landing runs to 1,335 words, against A's 960 and B's 1,282. E runs to 333, against 259 in the recommended parts.
 
 **For the build:**
 
@@ -98,7 +99,7 @@ The maintainer chose the use case's parts on 6 October, in comments on PR #1374.
 - **`involves`, a schema change (#1363 and #1364):** the use case's schema gains it as an optional list of actor ids (`SA/schemas/use-case.schema.json`). The check resolves each id to an actor, and requires each one's artefact anchor as it does for `actor` today (`SA/scripts/_lib/check.py`).
 - **The stamp (#1366):** it writes `involves` and each actor's anchor, as it writes the primary actor and its anchor today (`SA/scripts/_lib/stamp.py`).
 - **DEC-001 first (#1358):** its point 1 names a use case's parts, and its point 4 names a use case's anchors. The three new parts and `involves` go beyond both, so #1358's refinement says so before any build cites it (core rule 2).
-- **A possible form (#1365):** a form could hold *Also involved*'s items to `involves`, as `steps-match-front-matter` holds a journey's steps. The round does not decide it.
+- **A possible form (#1365):** a form could hold the items of *Other actors* to `involves`, as `steps-match-front-matter` holds a journey's steps. The round does not decide it.
 - **The append-only check:** question 4, still open. It is filed once it is answered.
 
 ### The example
@@ -159,7 +160,7 @@ B says the most and costs the most, and C cannot be cited. Words are counted in 
 | B | 12: *Goal in context*, *Scope*, *Level*, *Stakeholders and interests*, *Precondition*, *Minimal guarantees*, *Success guarantees*, *Trigger*, *Main success scenario*, *Extensions*, *Technology and data variations*, *Related information* | None marked. *Related information* holds whatever a project needs. | 1,282 | The scope (GitHub through `gh`), ADR-061 point 5's obligations in one place, four stakeholders' interests, technology variations, open issues | *Goal in context* repeats the goal, and its second sentence repeats the frequency. *Success guarantees* repeat *Done when*. *Level* reads "user goal" in every use case. Two interests repeat actors' needs, and *Open issues* repeat the tracker. |
 | C | 2, unlabelled: the story and the variations | None | 351 | Nothing. It reads fastest, as one story. | Nothing, but it drops the step numbers, the outcomes and the end as a part of its own |
 | D | 5, as A | All five, *Variants* allowed to read `None.` | 943 | As A, with hints and checks | Nothing |
-| F | 8: *Goal*, *Also involved*, *Preconditions*, *Starts when*, *Main path*, *Variants*, *Postconditions*, *If it fails* | All but *Also involved*. *Preconditions*, *Variants* and *If it fails* may read `None.`. | 1,323 | The other actors as data and anchors, the precondition apart from the trigger, and seven guarantees, each with its record or code | Three interests restate actors' needs. *If it fails* restates ADR-061 point 5's obligations. |
+| F | 8: *Goal*, *Other actors*, *Preconditions*, *Trigger*, *Main path*, *Variants*, *Postconditions*, *Minimal guarantees* | All but *Other actors*. *Preconditions*, *Variants* and *Minimal guarantees* may read `None.`. | 1,335 | The other actors as data and anchors, the precondition apart from the trigger, and seven guarantees, each with its record or code | Three interests restate actors' needs. *Minimal guarantees* restates ADR-061 point 5's obligations. |
 
 **Note:** F came after the recommendation, and its row is added here to compare.
 
@@ -184,8 +185,8 @@ Only A, B and D keep the step numbers that journeys and evidence cite. Most of B
   | B's *Stakeholders and interests* | ADR-061, COR-050, COR-009 and COR-039, one for each interest. The other actors are not anchored, which DEC-001 point 4 neither asks nor forbids. |
   | B's *Related information* | None. No anchor kind watches an issue. |
   | C's story | Every anchor, on the whole text |
-  | F's *Also involved* | Each actor in `involves`, as an artefact anchor |
-  | F's *If it fails* | ADR-061, COR-039, `pull_request_landing.py` and `session_guard.py` |
+  | F's *Other actors* | Each actor in `involves`, as an artefact anchor |
+  | F's *Minimal guarantees* | ADR-061, COR-039, `pull_request_landing.py` and `session_guard.py` |
 
 - **Quoting code:** A, B and D quote commands, flags and outcomes in backticks, as the analysis-author skill asks. C quotes its commands, but names no outcome, such as `merged` or `dropped`.
 - **The one-sentence goal** (DEC-001 point 1):
@@ -219,16 +220,17 @@ Ship D's five parts, all required, and ship no further part for now.
   - **A precondition, *Assumes*:** the main example's one fact, GitHub through `gh`, is checked by the landing, so it is variant 6e. It is also false for variant 2a. E's precondition would be "pkit is installed", true of every use case.
     - **Decided otherwise:** *Preconditions* comes, required, since a journey's seams need it. The landing's committed change, which no step checks, is its one precondition.
   - **A guarantee over every end, *Always holds*:** the strongest candidate. Question 2 asks about it.
-    - **Decided otherwise:** it comes now as *If it fails*, required, since pkit's safety guarantees need a part of their own.
+    - **Decided otherwise:** it comes now as *Minimal guarantees*, required, since pkit's safety guarantees need a part of their own.
   - **Scope:** real in pkit, since a use case belongs to the core or to a capability. An area can carry it (`--area`, DEC-001 point 2), and so can the goal's wording.
   - **Level:** DEC-001 names no levels, and a journey already covers a path across use cases. A level would need a rule that DEC-001 lacks.
   - **Stakeholders and interests:** two of the main example's four interests repeat actors' needs, and the steps name the other actors.
-    - **Decided otherwise:** they come as *Also involved*, optional and limited to actors, for completeness. The actors are also listed as data in the front matter.
+    - **Decided otherwise:** they come as *Other actors*, optional and limited to actors, for completeness. The actors are also listed as data in the front matter.
   - **Success guarantees and Trigger:** they are *Done when* and *Starts when*.
   - **Technology and data variations:** a variant holds them, as 6e holds the host.
   - **Related information:** open issues belong to the tracker, which no anchor watches.
   - **The casual form:** journeys and evidence cannot cite a step in it (DEC-001 point 3).
 - **Labels:** today's. A project may relabel any part (the design's part 4).
+  - **Decided otherwise:** every label a noun. *Starts when* is now *Trigger*, and *Done when* is now *Postconditions*.
 - **Ships with:** every part ships with software-analysis. project-kit adds no part of its own for the use case.
 - **Note:** project-kit's style still reaches these parts through its rule sets, not as parts. Examples are `WRITE`, and RS-ANALYSIS-001's actor's voice for the goal once it is accepted.
 
@@ -258,7 +260,7 @@ Each question is one decision, with a recommendation. The maintainer settled que
 2. **Does *Always holds* wait, or come now?**
    - **Recommendation:** wait, and revisit once project-kit has real use cases. It recurred in each case traced: the landing, E, where a note is moved and never deleted, and two the critic traced. But its first worked example overclaimed what ADR-061 point 5 gives, and it restates the record it rests on.
    - **Else:** ship it as an optional part, or add it in project-kit's own `structures.yaml`. A project's addition needs a project rule naming it, and binds only at that rule's status (the design's part 4).
-   - **Decided:** it comes now, as *If it fails*, required with `None.` allowed.
+   - **Decided:** it comes now, as *Minimal guarantees*, required with `None.` allowed.
 3. **Is *Variants* required, with `None.` allowed?**
    - **Recommendation:** yes, for the design's reason: a required part makes the writer consider variants. It differs from *Always holds*, since DEC-001 point 1 names variants.
    - **Else:** *Variants* is optional, and a use case without it passes.

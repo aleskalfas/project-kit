@@ -24,7 +24,7 @@ pkit:
 
 **Goal:** Land my change on the default branch as one squash commit with a conventional title.
 
-**Also involved:**
+**Other actors:**
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs step 3's checks with no person to answer, against the one base it names for every check (COR-054 point 3).
 - **Merge authoriser** (`ACT-merge-authoriser`): sees every answer the change wrote, word for word from the change check's own list, before authorising the merge. The authorisation covers only what was shown (COR-050 point 3).
@@ -33,7 +33,7 @@ pkit:
 
 **Preconditions:** the change is committed in the project's repository.
 
-**Starts when:** the developer decides that the change is ready to land.
+**Trigger:** the developer decides that the change is ready to land.
 
 **Main path:**
 
@@ -72,7 +72,7 @@ pkit:
 
 **Postconditions:** the default branch holds the change as one squash commit whose subject is the pull request's title, and the pull request reads merged.
 
-**If it fails:**
+**Minimal guarantees:**
 
 - A landing that ends `refused` or `unreadable` has sent no request, and leaves the pull request as it was (ADR-061 point 5 and `pull_request_landing.py`).
 - Each merge or enqueue the landing sends is pinned to `<sha>`. A push after the checks fails it, rather than landing commits nobody checked (ADR-061 point 5).
@@ -106,7 +106,7 @@ pkit:
 
 **Preconditions:** None.
 
-**Starts when:** the developer meets a question too large to settle in one decision record.
+**Trigger:** the developer meets a question too large to settle in one decision record.
 
 **Main path:**
 
@@ -125,7 +125,7 @@ pkit:
 
 **Postconditions:** the note sits in `done/`, naming what it produced.
 
-**If it fails:**
+**Minimal guarantees:**
 
 - The stamp makes every check before it writes, so a refused stamp writes nothing (`scratchpads.py`).
 - Retiring a note moves it, and never deletes it. A dropped note is kept as a record of what was explored (COR-012).
