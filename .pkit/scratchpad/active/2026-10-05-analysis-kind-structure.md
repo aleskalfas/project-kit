@@ -494,7 +494,7 @@ The design breaks what passed before, but before any release and with no adopter
 
 ## Slicing
 
-Thirteen issues build the design, filed in this order. Each is a Task under EPIC #234, sized for one pull request.
+Fifteen issues build the design. Issues 1 to 13 are listed in their order, and issues 14 and 15 follow them. Each is a Task under EPIC #234, sized for one pull request.
 
 - **Docs ride along.** Each issue keeps the README and the skill true for what it changes. Issue 12 then rewrites how they teach.
 - **Existing issues:** #1346 is issue 3, and #1351 folds into issue 9. #1352 closes with this note's pull request.
@@ -507,6 +507,7 @@ Thirteen issues build the design, filed in this order. Each is a Task under EPIC
 1. **software-analysis's decision covers each kind's declared structure**
    - **Type:** Task, parent EPIC #234.
    - **Delivers:** DEC-001 says each kind's structure is data, rendered as its template, with hints as placeholders. It binds at its rule's status, with a preview on request. Each actor becomes a file, and the maintainer picks the method set's name.
+   - **Also:** adopting the capability includes choosing each kind's parts. The shipped structure is a starting point a project reviews, never a default it skips (issue 15).
    - **Records:** software-analysis DEC-001 points 2 and 3, a new paragraph on a kind's structure, and its alternatives and implications. ADR-055 point 3 holds project-kit's templates to `WRITE`, in wording the architect authors (COR-025).
    - **Depends on:** the maintainer's go on this design.
 2. **The change check asks for a revalidation when an entry becomes a document**
@@ -529,7 +530,7 @@ Thirteen issues build the design, filed in this order. Each is a Task under EPIC
    - **Type:** Task, parent EPIC #234.
    - **Delivers:** `SA/schemas/artefact-kinds.yaml` and its schema, a strict superset of living-docs' `page-kinds.schema.json`. It declares part 8's five kinds with hints, examples and forms by name. A schema test holds it, and nothing else reads it yet.
    - **Records:** none changed.
-   - **Depends on:** 1, and 3 for the actor as a document.
+   - **Depends on:** 1, 3 for the actor as a document, and 14 for the parts it declares.
 6. **The artefacts document gives each entry's span and the rule sets that cover each artefact**
    - **Type:** Task, parent EPIC #234.
    - **Delivers:** `pkit friction artefacts --json` gains two keys. One is each entry's section span, computed where friction hashes the entry. The other is, for each artefact, the rule sets whose scope covers it, matched where places are matched.
@@ -571,6 +572,21 @@ Thirteen issues build the design, filed in this order. Each is a Task under EPIC
     - **Delivers:** the maintainer accepts RS-SAN-001, and the method set goes to 1.0.0. Before that, project-kit's analysis passes `--preview` with no finding from the method set. software-analysis takes a `minor` changeset.
     - **Records:** none changed. A rule's acceptance follows COR-051 point 4.
     - **Depends on:** 3, 8 and 9.
+
+Two more, added on the maintainer's word on 6 October. They are numbered after the others, and issue 14 comes before issue 5.
+
+14. **Each analysis kind's parts are chosen in a template round**
+    - **Type:** Task, parent EPIC #234.
+    - **Delivers:** the maintainer picks each kind's parts, one kind at a time, starting with the use case. Then come the journey, the actor, the glossary term and the revalidation record.
+    - **How:** two or three candidate templates per kind, from established practice and today's template. Each is filled with one real pkit example, so the candidates are compared filled, not empty. For a use case, the candidates include Cockburn's fully dressed and casual forms.
+    - **Result:** per kind, the parts, their order, which are required, and each part's hint and example. Issue 5 declares exactly that. What suits every project ships with software-analysis, and what is project-kit's alone goes to its own `structures.yaml` (issue 10).
+    - **Records:** none changed. A short note records the round, as the style trial did.
+    - **Depends on:** nothing. It runs beside issues 1 to 4.
+15. **A project chooses its analysis templates when it adopts software-analysis**
+    - **Type:** Task, parent EPIC #234.
+    - **Delivers:** the README's adoption steps and an analysis-author sub-procedure for choosing templates. A project reviews each kind's shipped parts, fills a candidate with one of its own examples, and keeps the shipped parts or adds its own in `structures.yaml`. The step is never skipped.
+    - **Records:** none changed. It applies DEC-001 as refined in issue 1.
+    - **Depends on:** 10, 12, and 14 for what the round taught.
 
 Found on the way, two more to file:
 
