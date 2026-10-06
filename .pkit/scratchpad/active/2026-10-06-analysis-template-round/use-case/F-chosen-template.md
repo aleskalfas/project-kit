@@ -1,4 +1,4 @@
-The maintainer's chosen parts, filled with both examples. Each artefact is shown whole, as it would read on the default branch, inside its own fence.
+The maintainer's chosen parts, filled with both examples. Each artefact is shown whole, as it would read on the default branch, inside its own fence. The ordinary example has nothing for the two optional parts, *Other actors* and *Assumptions*, so it leaves both out.
 
 ## The landing
 
@@ -32,6 +32,12 @@ pkit:
 - **Operator** (`ACT-operator`): is asked before the landing changes a repository other than the session's. Where nobody can be asked, the landing refuses (COR-039 point 1).
 
 **Preconditions:** the change is committed in the project's repository.
+
+**Assumptions:**
+
+- `gh` reaches the repository the change was pushed to. The caller's environment and the working directory's remote decide where `gh` goes, and the guard compares directories only (ADR-061 point 4 and `session_guard.py`).
+- Where a queue merges the pull request, its title is still conventional at the merge. The queue reads the title then, and the landing does not check the title (ADR-061 point 8).
+- The service shows a change it accepted within the window the landing allows for settling a request (`pull_request_landing.py`). Otherwise a merge or an enqueue with no usable answer can end the landing `failed`, though the service may still apply it (ADR-061 point 7).
 
 **Trigger:** the developer decides that the change is ready to land.
 

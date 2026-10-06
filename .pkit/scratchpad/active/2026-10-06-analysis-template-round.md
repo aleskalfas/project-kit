@@ -16,11 +16,11 @@ The maintainer picks each analysis kind's parts here, one kind at a time, from c
 - **Paths:** `SA/` is `.pkit/capabilities/software-analysis/`.
 - **Citations:** records, rules and issues by permanent id, files by name, never by line number (RS-WRITE-014, proposed).
 - **Reviewed:** by the critic, before the maintainer saw it. Its findings and the answers are in "Review", at the end of each kind.
-- **Status:** the use case is decided, but for question 4 and the two questions its filling raised. The other four kinds follow it.
+- **Status:** the use case is decided, but for questions 4 and 6. The other four kinds follow it.
 
 ## The use case
 
-The maintainer chose eight parts: the design's five, two of them renamed, and three of Cockburn's further parts. The round had recommended the five alone, and its comparison and recommendation stay below as they were made.
+The maintainer chose nine parts: the design's five, two of them renamed, three of Cockburn's further parts, and *Assumptions*. The round had recommended the five alone, and its comparison and recommendation stay below as they were made.
 
 ### Decided: the use case
 
@@ -28,10 +28,11 @@ The maintainer chose the use case's parts and their labels on 6 October, in comm
 
 - **Added, with the maintainer's reasons:**
   - *Other actors*, optional: the other actors who take part, each with what the use case must protect for them. It is Cockburn's stakeholders and interests, added for completeness.
-  - *Preconditions*, required: what the system already guarantees before the use case starts. A journey's seams need them, since a seam is where one use case's end must meet the next one's start.
+  - *Preconditions*, required: what the system, or an earlier use case, has already made true before the use case starts. A journey's seams need them, since a seam is where one use case's end must meet the next one's start.
+  - *Assumptions*, optional: what must also be true for the use case to work, but nothing in the system secures. Each names the record that admits it, and each is a candidate for a check. Question 5 gives the reasons.
   - *Minimal guarantees*, required: what the system still guarantees when the use case ends early or fails. pkit's safety guarantees need a part of their own. It is Cockburn's minimal guarantee, and the round's *Always holds*.
 - **Renamed:** *Starts when* is now *Trigger*, and *Done when* is now *Postconditions*, the pair to *Preconditions*.
-- **Every label a noun:** the maintainer chose the labels last, in the pull request's last comment. *Other actors* and *Minimal guarantees* were first *Also involved* and *If it fails*.
+- **Every label a noun:** the maintainer chose the labels after the parts, in a later comment on the pull request. *Other actors* and *Minimal guarantees* were first *Also involved* and *If it fails*.
 - **Otherwise, start small:** any other part is added once real use cases show it recurs.
 - **Where each part ships:** with software-analysis, as the round recommended. The maintainer's comments leave that as it was.
 
@@ -42,7 +43,8 @@ The maintainer chose the use case's parts and their labels on 6 October, in comm
 | `heading` | `# UC-NNN — <title>` | yes | heading | none, since the stamp writes it | `# UC-007 — Export the report as a file` |
 | `goal` | Goal | yes | `sentence` | What the actor wants from this use case, in one sentence. | Export the report as a file. |
 | `other-actors` | Other actors | no | none | Each other actor who takes part, and what this use case must protect for them. | **Auditor** (`ACT-auditor`): each export is logged with who made it. |
-| `preconditions` | Preconditions | yes, and `None.` is allowed | none | What the system already guarantees before the use case starts. Each is a state, not an event, and no step checks it. Write `None.` when there is none. | The analyst is signed in. |
+| `preconditions` | Preconditions | yes, and `None.` is allowed | none | What the system, or an earlier use case, has already made true before the use case starts. Each is a state, not an event, and no step checks it. Write `None.` when there is none. | The analyst is signed in. |
+| `assumptions` | Assumptions | no | none | What must also be true for the use case to work, but nothing in the system secures. Name the record that admits each. | The disk keeps the file as the system wrote it (DEC-003). |
 | `trigger` | Trigger | yes | none | The event that starts the use case, and who or what causes it. | The analyst asks to export the report on screen. |
 | `main-path` | Main path | yes | `numbered-steps` | Numbered steps from the start to the goal, each saying who does what. | 1. The analyst chooses `Export`. 2. The system writes the report to a file. |
 | `variants` | Variants | yes, and `None.` is allowed | `variants` | One for each condition, lettered after the step it branches from. Say what happens instead, and where the path rejoins or ends. Write `None.` when there is none. | 2a. The disk is full. The system says so and writes nothing, and the use case ends. |
@@ -74,12 +76,19 @@ The maintainer chose the use case's parts and their labels on 6 October, in comm
 2. **Question 2, *Always holds*:** it comes now, as *Minimal guarantees*, required with `None.` allowed.
 3. **Question 3, *Variants* required:** yes, with `None.` allowed, as recommended.
 4. **Question 4, the append-only check:** still open.
+5. **Question 5, a fact the use case relies on that the system does not secure:** option (c). It goes in *Assumptions*, a part of its own, and *Preconditions* stay strict.
+6. **Question 6, the actor's voice in the goal hint:** still open.
 
 **What filling F showed:**
 
 - **The landing's precondition:** it sat in A's *Starts when*. A's trigger read "a committed change", which is a state. F moves the state to *Preconditions*, and *Trigger* keeps the event.
 - **E's precondition:** none, so the part reads `None.`. Neither example lists "pkit is installed". Every use case would share it, as "the system is running" would.
-- **A fact outside the system:** the landing relies on `gh` reaching the repository the change was pushed to, as the caller's environment sets it up (ADR-061 point 4). No step checks it, since the guard compares directories, not where `gh` goes (`session_guard.py`). The system does not guarantee it either, so the hint leaves it out. Question 5 asks where it goes.
+- **Facts outside the system:** the landing relies on three that no step checks and nothing in the system secures. F lists them under *Assumptions*, each with the record that admits it.
+  - **Where `gh` goes:** the maintainer's example. The caller's environment and the working directory's remote decide the target (ADR-061 point 4), and the guard compares directories only (`session_guard.py`).
+  - **The title at a queue's merge:** the queue reads the title at the merge, and the landing makes no rule of a title changed since (ADR-061 point 8).
+  - **How soon the service shows a change:** the code names it an assumption (`pull_request_landing.py`). ADR-061 point 7 admits that the service may still apply a change two readings did not see.
+- **The four questions, applied:** the committed change is a precondition. GitHub as the host is checked, so it stays variant 6e. The three facts above are assumptions.
+- **E's assumptions:** none, so E leaves the part out, as it leaves out *Other actors*.
 - **Who is involved:** the landing involves four actors, and E involves none, so E shows the part left out.
   - The CI pipeline and the merge authoriser take part in steps 3 and 4.
   - The AI agent takes part where it acts for the developer, as in 2a.
@@ -91,14 +100,14 @@ The maintainer chose the use case's parts and their labels on 6 October, in comm
   - Auto-merge is not the landing's request, and a queue may merge a moved head before the next reading. F's items say both.
 - **Anchors:** every record and file F cites is among its anchors, so a change to one flags the use case (RS-WRITE-014). The landing gains COR-054, for the CI pipeline's base, and its four involved actors.
 - **What F changes from A:** the front matter's `involves` and anchors, the precondition taken out of A's *Starts when*, and 6a naming the operator. *Variants* drops A's instruction line, as D does. The steps and the other variants are A's.
-- **Length:** the landing runs to 1,335 words, against A's 960 and B's 1,282. E runs to 333, against 259 in the recommended parts.
+- **Length:** the landing runs to 1,443 words, against A's 960 and B's 1,282. E runs to 333, against 259 in the recommended parts.
 
 **For the build:**
 
 - **The parts (#1363):** the table above, in its order, with each part's hint and example.
 - **`involves`, a schema change (#1363 and #1364):** the use case's schema gains it as an optional list of actor ids (`SA/schemas/use-case.schema.json`). The check resolves each id to an actor, and requires each one's artefact anchor as it does for `actor` today (`SA/scripts/_lib/check.py`).
 - **The stamp (#1366):** it writes `involves` and each actor's anchor, as it writes the primary actor and its anchor today (`SA/scripts/_lib/stamp.py`).
-- **DEC-001 first (#1358):** its point 1 names a use case's parts, and its point 4 names a use case's anchors. The three new parts and `involves` go beyond both, so #1358's refinement says so before any build cites it (core rule 2).
+- **DEC-001 first (#1358):** its point 1 names a use case's parts, and its point 4 names a use case's anchors. The four new parts and `involves` go beyond both, so #1358's refinement says so before any build cites it (core rule 2).
 - **A possible form (#1365):** a form could hold the items of *Other actors* to `involves`, as `steps-match-front-matter` holds a journey's steps. The round does not decide it.
 - **The append-only check:** question 4, still open. It is filed once it is answered.
 
@@ -140,7 +149,7 @@ Each candidate is complete and filled, as the artefact would read on the default
   - each part stamped with a one-line hint, which the writer replaces
   - every part required and checked, with *Variants* allowed to read `None.`
 - **E, a second example in the recommended parts** (`use-case/E-second-example.md`): the developer thinks a question through in a scratchpad note. It is an ordinary use case, with six steps and three variants.
-- **F, the chosen template** (`use-case/F-chosen-template.md`): the maintainer's eight parts, filled with both examples, the landing and E. It came after the recommendation, and "Decided: the use case" says what filling it showed.
+- **F, the chosen template** (`use-case/F-chosen-template.md`): the maintainer's nine parts, filled with both examples, the landing and E. It came after the recommendation, and "Decided: the use case" says what filling it showed.
 - **Note:** the brief for this round named A's third part *Steps*. The template's label is *Main path*, and the candidates keep it.
 
 **Sources.** Cockburn's forms and the RUP outline were read from these pages:
@@ -160,7 +169,7 @@ B says the most and costs the most, and C cannot be cited. Words are counted in 
 | B | 12: *Goal in context*, *Scope*, *Level*, *Stakeholders and interests*, *Precondition*, *Minimal guarantees*, *Success guarantees*, *Trigger*, *Main success scenario*, *Extensions*, *Technology and data variations*, *Related information* | None marked. *Related information* holds whatever a project needs. | 1,282 | The scope (GitHub through `gh`), ADR-061 point 5's obligations in one place, four stakeholders' interests, technology variations, open issues | *Goal in context* repeats the goal, and its second sentence repeats the frequency. *Success guarantees* repeat *Done when*. *Level* reads "user goal" in every use case. Two interests repeat actors' needs, and *Open issues* repeat the tracker. |
 | C | 2, unlabelled: the story and the variations | None | 351 | Nothing. It reads fastest, as one story. | Nothing, but it drops the step numbers, the outcomes and the end as a part of its own |
 | D | 5, as A | All five, *Variants* allowed to read `None.` | 943 | As A, with hints and checks | Nothing |
-| F | 8: *Goal*, *Other actors*, *Preconditions*, *Trigger*, *Main path*, *Variants*, *Postconditions*, *Minimal guarantees* | All but *Other actors*. *Preconditions*, *Variants* and *Minimal guarantees* may read `None.`. | 1,335 | The other actors as data and anchors, the precondition apart from the trigger, and seven guarantees, each with its record or code | Three interests restate actors' needs. *Minimal guarantees* restates ADR-061 point 5's obligations. |
+| F | 9: *Goal*, *Other actors*, *Preconditions*, *Assumptions*, *Trigger*, *Main path*, *Variants*, *Postconditions*, *Minimal guarantees* | All but *Other actors* and *Assumptions*. *Preconditions*, *Variants* and *Minimal guarantees* may read `None.`. | 1,443 | The other actors as data and anchors, the precondition apart from the trigger, three assumptions, and seven guarantees, each with its record or code | Three interests restate actors' needs. *Minimal guarantees* restates ADR-061 point 5's obligations, and *Assumptions* restate what its points 4, 7 and 8 admit. |
 
 **Note:** F came after the recommendation, and its row is added here to compare.
 
@@ -186,6 +195,7 @@ Only A, B and D keep the step numbers that journeys and evidence cite. Most of B
   | B's *Related information* | None. No anchor kind watches an issue. |
   | C's story | Every anchor, on the whole text |
   | F's *Other actors* | Each actor in `involves`, as an artefact anchor |
+  | F's *Assumptions* | ADR-061, `session_guard.py` and `pull_request_landing.py` |
   | F's *Minimal guarantees* | ADR-061, COR-039, `pull_request_landing.py` and `session_guard.py` |
 
 - **Quoting code:** A, B and D quote commands, flags and outcomes in backticks, as the analysis-author skill asks. C quotes its commands, but names no outcome, such as `merged` or `dropped`.
@@ -218,7 +228,7 @@ Ship D's five parts, all required, and ship no further part for now.
 - **Why no further part ships now:** software-analysis is installed in project-kit alone (the design's Decided 1). An optional part added later fails no artefact, since an optional element is checked only when present (the design's part 1). So a part ships once real use cases show it recurs (COR-007).
 - **What was weighed and left out:**
   - **A precondition, *Assumes*:** the main example's one fact, GitHub through `gh`, is checked by the landing, so it is variant 6e. It is also false for variant 2a. E's precondition would be "pkit is installed", true of every use case.
-    - **Decided otherwise:** *Preconditions* comes, required, since a journey's seams need it. The landing's committed change, which no step checks, is its one precondition.
+    - **Decided otherwise:** *Preconditions* comes, required, since a journey's seams need it. The landing's committed change, which no step checks, is its one precondition. *Assumptions* comes too, optional, for what no step checks and nothing in the system secures (question 5).
   - **A guarantee over every end, *Always holds*:** the strongest candidate. Question 2 asks about it.
     - **Decided otherwise:** it comes now as *Minimal guarantees*, required, since pkit's safety guarantees need a part of their own.
   - **Scope:** real in pkit, since a use case belongs to the core or to a capability. An area can carry it (`--area`, DEC-001 point 2), and so can the goal's wording.
@@ -251,7 +261,7 @@ The declaration #1363 would have taken, in this order, before the table in "Deci
 
 ### Questions for the maintainer
 
-Each question is one decision, with a recommendation. The maintainer settled questions 1 to 3 on 6 October, and question 4 is open. Questions 5 and 6 came from filling F.
+Each question is one decision, with a recommendation. The maintainer settled questions 1 to 3 and question 5 on 6 October, and questions 4 and 6 are open. Questions 5 and 6 came from filling F.
 
 1. **Does software-analysis ship only DEC-001 point 1's parts, with any further part shipped once real artefacts show it recurs?**
    - **Recommendation:** yes. It settles the use case's further parts now, and the same choice returns for the other four kinds. It reverses nothing, since the design's part 8 left the same parts out.
@@ -273,6 +283,13 @@ Each question is one decision, with a recommendation. The maintainer settled que
    - **The case:** the landing relies on `gh` reaching the repository the change was pushed to, as the caller's environment sets it up (ADR-061 point 4). No step checks it, and the chosen hint leaves it out.
    - **Recommendation:** yes. The hint would read "What already holds before the use case starts", and the landing would state the fact. A reader then learns what the use case trusts unchecked.
    - **Else:** the hint stays as chosen, and such a fact goes unstated until a step checks it and a variant can name it.
+   - **Decided:** option (c), a part of its own. *Preconditions* stay strict, and such a fact goes in *Assumptions*, optional, right after them.
+     - **Why:** the methodologies agree on keeping what is guaranteed apart from what is assumed. Cockburn keeps preconditions to what is guaranteed. Requirements standards list assumptions apart (IEEE 830, ISO/IEC/IEEE 29148 and Volere), and safety cases make assumptions explicit. A part in each use case puts the risk where it is.
+     - **The test:** four questions place a fact the use case needs.
+       - Does pkit make it true in this use case? Then it is a requirement.
+       - Was it made true before the use case starts? Then it is a precondition.
+       - Is it checked and reacted to? Then it is a variant.
+       - Is it outside the system, and unchecked? Then it is an assumption.
 6. **Does the shipped goal hint name the actor's voice?**
    - **The case:** the decision as recorded for this round gives the goal "in the actor's voice". The design keeps the voice as project-kit's own rule, since a voice is a project's style (its part 9, and COR-014).
    - **Recommendation:** no. The shipped hint asks for one sentence, and project-kit's goals keep the voice through RS-ANALYSIS-001.
