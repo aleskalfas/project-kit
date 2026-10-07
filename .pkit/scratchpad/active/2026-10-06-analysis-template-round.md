@@ -16,7 +16,7 @@ The maintainer picks each analysis kind's parts here, one kind at a time, from c
 - **Paths:** `SA/` is `.pkit/capabilities/software-analysis/`.
 - **Citations:** records, rules and issues by permanent id, files by name, never by line number (RS-WRITE-014, proposed).
 - **Reviewed:** by the critic, before the maintainer saw it. Its findings and the answers are in "Review", at the end of each kind.
-- **Status:** the use case, the journey and the actor are fully decided, under one rule for every kind ("Decided: across kinds"). The glossary term and the revalidation record follow.
+- **Status:** the use case, the journey and the actor are fully decided, under one rule for every kind ("Decided: across kinds"). The glossary term waits for the maintainer's answers, and the revalidation record follows.
 
 ## Decided: across kinds
 
@@ -1201,3 +1201,272 @@ The critic reviewed the first draft. Each finding below changed the draft, or is
 | Counter-alternative: a form for what a body cites | Named in "For the build", and not decided |
 | Counter-alternative: Cockburn's kinds of actor | Not adopted. The use case's example auditor makes the case for `None.`, and the round could not read Cockburn's text on actors. |
 | Writing: elided verbs, series out of lists, ambiguous pronouns, hints framed for a person | Each fixed. The opening's hint reads for a system too. |
+
+## The glossary term
+
+The round fills four candidates with two terms: *the system*, the decided first term, and *revalidation*. It recommends two parts for a term's section, an example and the distinctions, which today's template already asks for in prose. Four questions wait for the maintainer.
+
+### The example
+
+Each candidate is the glossary, `glossary.md` under the analysis location, holding both terms as it would read on the default branch. A term stays an entry of that one collection file, with its definition as data (the design's Decided 2 and its part 6).
+
+- **The system:** the decided first term (PR #1345, question 12). The maintainer defined it as the system under discussion, reserved the word, and had the two "another system" sentences rephrased.
+  - **What it is:** pkit, as the platform you install, run and extend, in the words of this round's brief.
+  - **Its first words are Cockburn's:** the system under discussion, *SuD*, is his name for the system a use case describes ("Sources").
+- **Revalidation:** an ordinary term from pkit's records, chosen over *change* and *anchor*.
+  - **The records define it:** DEC-001 point 5 does so by genus and difference, "one review of some artefacts against one version of the system". COR-050 point 3 names the block that records it.
+  - **It was renamed:** COR-050 called the act a *recheck* when it was accepted on 27 September (commit `9664ddb5`), and its refinement of the next day renamed it. The design behind DEC-001 had called it *walk*, then *walkthrough* (`2026-09-26-software-analysis-living-docs-design.md`). So it tests `replaces` (question 3).
+  - **One word for two things:** COR-050 point 3 and DEC-001 point 4 also call an artefact's record of the act its revalidation. DEC-001 point 6 names a third neighbour, the revalidation record.
+  - **Another thing under its old name:** COR-016 calls a part of each storyboard scenario its *Walkthrough*. DEC-001 point 7 sets the act apart from testing.
+  - **Why not *change*:** its records give it more than one meaning (item 4), so filling it would have meant choosing one. That choice is the maintainer's.
+  - **Why not *anchor*:** COR-050 defines it, but it was never renamed. Its namesake, the session anchor, is in "Found on the way".
+- **The same in every candidate:** the front matter, except B's definitions, which follow ISO's rules. Only the sections and the file's head differ.
+- **The file's head:** today's opening holds a semicolon. A keeps it as stamped, and B to D write it without one.
+- **Names in lower case:** each `name` is written as running text writes the term, as ISO's 16.5.5 asks. The stamp's default capitalises the slug (`SA/scripts/_lib/stamp.py`), so both terms take `--name`. Whether the system's name keeps its article is question 4.
+- **Derived from:**
+  - DEC-001 points 1, 4, 5, 6 and 7, and COR-050 points 3 and 5
+  - COR-050 as first accepted, for *recheck*
+  - COR-016, for a storyboard's walkthrough, and COR-009 point 1 and its context, for the hosting platform
+  - PR #1345's answer to question 12, for the system
+  - the use case's landing (`use-case/chosen-template.md`), for the system's example
+  - the CLI reference (`.pkit/cli/README.md`), for `pkit friction revalidate`
+
+**What the example left unclear.** The round decides none of these, but items 1 and 2 bear on questions 2 and 4.
+
+1. **The system's definition repeats its term.** "The system under discussion" is Cockburn's term of art, so its words are a citation. Read as a definition, it is circular, which ISO forbids (16.5.6). Its second half, naming pkit, carries the meaning, and B's definition leaves *system* out.
+2. **Three words may name the system.**
+   - **The methodology:** the core actors' main word for what pkit carries, used 27 times in `actors.md`. The AI agent's opening uses both words: "An AI agent working under the methodology, acting on the system from outside."
+   - **The system:** the adopter's needs use it ("Report a problem with the system") beside the methodology ("Install the methodology with one command").
+   - **pkit:** the operator's need uses it ("when pkit falls back to my installed tool"). The journey's decided example titles a use case "See how pkit is wired into my project".
+   - **Whether any two name one thing** is the author's to say (RS-WRITE-011), and no candidate claims it.
+3. **DEC-001 says *the software* too.** Its membership test asks whether "a change to the software can make it false". In project-kit's analysis that is the system, so item 2's question reaches it.
+4. ***Change* has more than one meaning in the records.**
+   - In DEC-001 point 6, a change carries a revalidation, and is "a tracked work item, a pull request, or a range of commits".
+   - In the core actors, it is the core's unit of work (PR #1345, question 11).
+   - This round's brief suggests "what reaches the default branch as one commit". That fits a pull request's squash commit (COR-009 point 1). It misses direct work, whose commits land as they were made (COR-009 point 5, and the landing's variant 2a).
+5. **The old names live on.** COR-016 gives each storyboard scenario a *Walkthrough*, and DEC-001 point 7 counts "a scripted walk-through" as a check. *Walk* is an ordinary verb, as in COR-050 point 9's "walks each artefact's history". *Recheck* is in no record today.
+6. **The system's reason for no anchor is the round's wording.** A reason for having no anchors is a person's decision, written only once they accept it (core rule 20). So the maintainer accepts its words when the term is stamped.
+
+### The candidates
+
+Each candidate is complete and filled, as the glossary would read on the default branch. A term is an entry of one collection file, so each candidate holds both terms in one file.
+
+- **A, today's template** (`term/A-todays-template.md`): exactly the parts of `SA/templates/glossary.md`.
+  - The entry holds `name`, `status`, `definition` and `replaces`, and the friction block.
+  - Its section holds prose, where the template's placeholder asks for "where it applies, what it is not, an example". A writer following `WRITE` puts the four outcomes in a list.
+- **B, an ISO terminological entry** (`term/B-iso-terminology-entry.md`): the entry ISO/IEC Directives Part 2 lays out in its clause 16, adapted only where pkit requires.
+  - The preferred term is the `name` and the heading. The definition stays the front matter's `definition`, in 16.5.6's form. It is a phrase that could replace the term, with no article first and no full stop.
+  - Each definition states its superordinate concept and what sets the term apart, after ISO 1087-1's intensional definition. The concepts are *review* for revalidation, and *software* for the system.
+  - The system's genus is not *platform*, the brief's word, since COR-009 already calls the hosting service a platform.
+  - The section's parts are the Directives': *Admitted terms*, *Deprecated terms*, *Example*, *Notes to entry* numbered from 1, and *Source*. *Source* says how a definition changed from its source, and *Related terms* holds the cross-references 16.5.4 allows.
+  - The Directives print these otherwise, as `EXAMPLE`, `Note 1 to entry:` and `[SOURCE: …]`. B makes each a label.
+  - **All six shown:** ISO makes every element but the term and the definition optional. B shows all six, so its cost is the most a project in ISO's style could take. One that shipped only examples and notes would come close to D.
+- **C, a ubiquitous-language entry** (`term/C-ddd-ubiquitous-language.md`): built from Evans's definitions and the DDD Crew's bounded context canvas. Neither gives a glossary entry's form, so C assembles one.
+  - *Bounded context* holds where the meaning applies. Evans's ubiquitous language is used "within a bounded context", and the canvas asks for "the key domain terms that exist within this context".
+  - *Invariants* holds what always holds of the term, each with its record. Evans states invariants as assertions, in the ubiquitous language.
+  - *Examples* holds scenarios that use the term. Evans asks the team to "Describe scenarios out loud using the elements and interactions of the model".
+  - The meaning is the front matter's `definition`, so C does not repeat it.
+- **D, an example and the distinctions** (`term/D-example-and-distinctions.md`): two noun-labelled parts, each from today's placeholder.
+  - *Example* holds one case of the term, in a sentence or two that use it as the analysis would.
+  - *Distinctions* holds each word the term could be confused with, labelled with that word, and how the two differ.
+  - Both are present in every term, under the rule for every kind.
+- **The design's first cut:** *Applies to*, *Not* and *Example*, optional, from today's placeholder (the design's part 8). Under the round's decisions it reads as D with a third part for the scope, so it has no file of its own. C's *Bounded context* fills that third part.
+
+**Sources.** The ISO entry, Evans's terms and Cockburn's were read from these:
+
+- **ISO:** ISO/IEC Directives, Part 2, ninth edition, 2021, clause 16, "Terms and definitions" ([PDF](https://www.cta.tech/media/1ebl2xah/iso-iec-directives-part-2.pdf), the version that marks its changes).
+  - 16.5.5 names three kinds of term: preferred, admitted, and deprecated, "no longer in use or whose use is discouraged". Terms are written in lower case, "in their basic grammatical form".
+  - 16.5.6: "The definition shall be written in such a form that it can replace the term in its context. It shall not start with an article ("the", "a") nor end with a full stop." Circular definitions "are not allowed".
+  - 16.5.7 to 16.5.10 give the examples, the notes to entry and the source. 16.5.4 allows cross-references to other entries.
+  - 16.5.2 sends the drafting of entries to ISO 10241-1, and the principles of terminology work to ISO 704.
+- **The intensional definition:** ISO 1087-1:2000, entry 3.3.2, "definition which describes the intension of a concept by stating the superordinate concept and the delimiting characteristics". It was read as María Pozzi quotes it, in a paper for the ISO/TC 37 conference of 2007 ([PDF](https://www.ttt.org/tc37/ISO%20Conference%202007_files/Maria_704%20860%201087.pdf)).
+- **Evans:** *Domain-Driven Design Reference*, dated June 2014 and published in 2015 ([PDF](https://www.domainlanguage.com/wp-content/uploads/2016/05/DDD_Reference_2015-03.pdf)).
+  - A ubiquitous language is "structured around the domain model". It is "used by all team members within a bounded context to connect all the activities of the team with the software".
+  - A context is "The setting in which a word or statement appears that determines its meaning."
+  - Its *Ubiquitous Language* pattern says "Recognize that a change in the language is a change to the model." It asks the team to "Describe scenarios out loud using the elements and interactions of the model".
+  - Its *Assertions* pattern says "State post-conditions of operations and invariants of classes and aggregates."
+- **The DDD Crew:** the Bounded Context Canvas, version 5 ([page](https://github.com/ddd-crew/bounded-context-canvas)). Its *Ubiquitous Language* section asks "What are the key domain terms that exist within this context, and what do they mean?"
+- **Cockburn:** *Writing Effective Use Cases*, pre-publication draft 3 of 21 February 2000, the introduction to its part 1 ([extract](https://www.ifi.uzh.ch/dam/jcr:00000000-25a0-3d08-0000-00000ce96422/weuc_extract.pdf)). "A stakeholder is someone or something with a vested interest in the behavior of the system under discussion (SuD)."
+- **Not verified:**
+  - ISO 704, ISO 1087 and ISO 10241-1 themselves, which are sold, not published. Their current editions are ISO 704:2022 and ISO 1087:2019, which search summaries quote as naming "the immediate generic concept".
+  - The Directives were read from a copy a third party hosts, since ISO's own pages refused the request.
+  - Evans's book of 2003 was not read. The Reference is his own summary of its definitions and patterns.
+
+### At a glance
+
+B, C and D carry much the same facts under different labels, and A carries them unlabelled. So the choice is which labels give each kind of content a predictable place, and at what cost to every term. Words are counted in the two sections, labels included, with the headings, the file's head and the front matter left out.
+
+| Candidate | Parts of a section | Required | Words | Captures what others miss | Repeats |
+|---|---|---|---|---|---|
+| A | 1, unlabelled: prose | None marked. Today's check catches a placeholder left in, not a section left empty. | 218 | Every kind of content, with no label to find one by | Its prose restates DEC-001 points 4 to 7 and COR-050 point 3. |
+| B | 6: *Admitted terms*, *Deprecated terms*, *Example*, *Notes to entry*, *Related terms*, *Source* | All six, under the rule for every kind. All but *Example* may read `None.`. | 301 | A definition that could replace its term, with no circle. A place for a second name the project admits. The source, the only home of the system's provenance. | *Deprecated terms* repeat `replaces`. The notes restate record points, and *Related terms* restate a word of the definition. |
+| C | 3: *Bounded context*, *Invariants*, *Examples* | All three. *Invariants* may read `None.`. | 258 | The rules that always hold of a term, each with its record. That the shipped hints' *the system* is every project's own. | Each invariant restates a record point the term anchors. |
+| D | 2: *Example*, *Distinctions* | Both. Each may read `None.`. | 214 | Each neighbouring word under a label of its own, with how it differs | The distinctions restate record points, as B's notes do: DEC-001 points 4, 6 and 7, COR-050 point 3 and COR-016. |
+
+### Fit with pkit
+
+The candidates differ less in what they say than in where they say it. D gives the two kinds of content both examples had, a case and the neighbouring words, a labelled place each.
+
+- **The definition stays data** (the design's Decided 2 and its part 6). Every candidate keeps it in the front matter, where a glossary point could carry it to living-docs (living-docs DEC-001).
+  - **The cost the design named:** a rendered glossary shows each term's heading, not its definition (the design's part 6). A generated view can show both later.
+  - **One sentence, or a phrase:** the schema asks for "a sentence", and the template's placeholder for one sentence. The design's part 8 gives `definition` no form.
+  - **ISO's substitution test, applied:** a definition "can replace the term in its context" (16.5.6).
+    - DEC-001's sentence passes once "A revalidation is" goes. In DEC-001 point 4's "Each carries anchors and a revalidation", it fails, since there the word means the record on the artefact. So the test found revalidation's second meaning, which each candidate now names.
+    - Substituted into "Report a problem with the system", B's definition of the system reads well only because *the* stays in the sentence (question 4).
+  - **ISO's ban on circles is a rule of its own** (16.5.6). It is the one that catches "the system under discussion".
+  - **What a script could check:** no article first, no full stop last, and not the term's own name. The last would have caught the system's decided definition.
+- **Renamed names kept** (DEC-001 point 1):
+  - Every candidate keeps them in `replaces`, newest first, as the schema's words allow: "the names the term was written as before". B repeats them as *Deprecated terms*.
+  - **Which names count:** DEC-001 point 1 keeps them "so that renaming a term does not break what cites it". *Recheck* was the act's name in an accepted record. *Walkthrough* and *walk* were working names in a design note, and the glossary has held no name yet (question 3).
+  - **The check of the design's part 7:** it would report a replaced name still in use, and never fail. `WRITE` reaches the analysis only, so the check would not read COR-016. It would read the glossary's own *Distinctions*, which names *walkthrough* on purpose, and every *walk* in an artefact.
+  - **A word the project avoids, never a name of the term:** no field holds it, so no check reports it. ISO lists it among the deprecated terms. In D it is a distinction, with what it means instead.
+- **Anchors** (DEC-001 point 4):
+  - **A term anchors where the software or a decision embodies it.** Revalidation anchors COR-050 and DEC-001, which define it.
+  - **A record a section only cites is no anchor.** COR-016 names a storyboard's walkthrough and does not embody revalidation, so no candidate anchors it. The system's sections cite DEC-001 point 1, which defines actors, not the system.
+  - **RS-WRITE-014, still proposed, would differ:** it asks for an anchor wherever an artefact depends on what a document says. Accepted, it would pull each neighbour's record into the term's anchors, and the system's `unanchored-because` would have to go (COR-050 point 12).
+  - **The system has no anchor.** A path anchor on the whole of pkit would match most changes, which COR-050 point 7 warns of. No record defines it. So it carries `unanchored-because` (DEC-001 point 9).
+  - **What a term's change flags:** no artefact anchors a term today (DEC-001 point 4). A page may later, by id (COR-050 point 2). Then every edit to a term's section flags that page, since an entry's content includes its section (COR-050 point 1).
+  - **Terms between themselves stay prose.** As anchors, two terms whose definitions use each other would form a cycle, an error under COR-050 point 5. B's *Related terms* gives a cross-reference by id, which no check reads.
+- **The rule for every kind:** each shipped part is present in every term.
+  - **A** ships no labelled part. Its prose is either a required opening, which would read `None.` wherever the definition says enough, or no part at all. RS-WRITE-001's *How* gives that empty section as its example.
+  - **B** costs every term six parts, and the system reads `None.` in three of them.
+  - **C** costs three. *Bounded context* reads "the analysis" for most terms, since one analysis describes one system.
+  - **D** costs two, and both examples have something for each.
+- **The writing rules:**
+  - **RS-WRITE-011, one term for one thing:** a writer takes the term from the glossary. *Distinctions* tells them which neighbouring word means something else, and *Example* shows the term in use.
+  - **RS-WRITE-008:** today's head holds a semicolon. B to D write it without one, and the stamp writes it once (the design's part 5).
+  - **RS-WRITE-002, labels, still proposed:** B's notes carry numbered labels, `Note 1 to entry`, so its labels differ from term to term.
+- **The membership test** (DEC-001): every part of C and D can go false with the software. B's *Source* records where words came from, and its *Related terms* change only with the glossary.
+- **What a script can check:**
+  - **Every candidate:** the heading against the id and the name, and the front matter against the schema, as today.
+  - **B, C and D:** each part present, in order and not empty.
+  - **A definition in ISO's form:** its first word, its last character and the term's own name. Whether the phrase can replace the term stays a person's judgement.
+
+### Recommendation
+
+Ship two parts in a term's section, *Example* and *Distinctions*, each required with `None.` allowed. The definition stays data, in ISO's form, with a form of its own that a script checks.
+
+- **The criterion:** the actor's, read for a term. A part ships when DEC-001 or today's template asks for it, both examples fill it, and it gives one kind of content a predictable place.
+  - **Why not recurrence:** no glossary exists yet, so nothing can recur. Today's template already asks every term for both, so a term is asked no more than today, only in labelled places.
+  - **The cost:** under the rule for every kind, both parts sit in every term of every project. A term that only pins a meaning down writes `None.` under *Distinctions*, and many will.
+- **Why each:**
+  - **The heading:** the stamp writes it, and the check holds it to the id and the name.
+  - **The definition:** DEC-001 point 1's account of a term, and data a glossary point can carry. It takes ISO's form (question 2).
+  - **`replaces`:** DEC-001 point 1's record of renames, newest first (question 3).
+  - **The name:** in lower case, with no article (question 4).
+  - **Example:** today's template asks for "an example", and ISO gives every entry room for examples (16.5.7). A case shows a reader the concept, and both terms had one. A term whose definition needs no case writes `None.`.
+  - **Distinctions:** today's template asks "what it is not". The skill gives three reasons to add a term: a meaning particular to the project, two words for one thing, or one word for two. *Distinctions* records the last two, and both terms had neighbours, from records or the maintainer's answer.
+- **What was weighed and left out:**
+  - **A's prose:** it holds every kind of content, with no label to find one by. Under the rule for every kind it is a required part, or no part.
+  - **Today's "where it applies", C's *Bounded context*:** in both examples it held a word used in two places, which *Distinctions* holds. For most terms it would read "the analysis".
+  - **ISO's admitted and deprecated terms:** a former name is `replaces`, and a word the project avoids is a distinction. An admitted term is a second name for one thing, which RS-WRITE-011 rules out in the analysis.
+  - **ISO's notes to entry and C's invariants:** they restate record points, as *Distinctions* does, but give no kind of content a place of its own. Anything goes in a note, and the records hold the rules.
+  - **ISO's source:** for an anchored term, the anchors name it. For an unanchored term nothing else holds it, so the system's source survives only as the pull request its distinction cites.
+  - **A general part, such as *Usage*:** it would take anything, as A's prose does. *Distinctions* keeps one kind of content in one place.
+- **Labels:** nouns, as every decided kind's are. *Distinctions* stands for the brief's "Not to be confused with", which is no noun.
+- **Ships with:** both parts ship with software-analysis. project-kit adds none of its own for the term.
+- **The file's head:** the stamp writes it without the semicolon, as B to D show.
+
+**The declaration #1363 would take.** The section's elements, in this order:
+
+| Element | Label | Required | Form | Hint | Example |
+|---|---|---|---|---|---|
+| `heading` | `## TERM-<slug> — <name>` | yes | heading | none, since the stamp writes it | `## TERM-template — template` |
+| `example` | Example | yes, and `None.` is allowed | none | One case of the term, in a sentence or two that use it as the analysis would. Write `None.` when the definition needs none. | the analyst builds the weekly report from the template the administrator published. |
+| `distinctions` | Distinctions | yes, and `None.` is allowed | none | Each word the term could be confused with, labelled with that word, and how the two differ. Include a word the project avoids for this thing. Write `None.` when there is none. | **Report:** what an analyst builds from a template. A template holds no figures. |
+
+The front matter's form, apart from the section:
+
+| Field | Form | Hint | Example |
+|---|---|---|---|
+| `name` | none | The term as running text writes it, in lower case unless it is a name, and with no article. | template |
+| `definition` | `definition`, a form of its own | What the term means, in a phrase of the same part of speech that could replace it. Start with its broader kind, with no article and no full stop. | layout an administrator publishes, from which an analyst builds a report |
+
+- **The hints:** each is one line, with short sentences and no semicolon (the design's part 5). They say what goes in a part, never how to format it.
+- **A verb or an adjective:** the definition's hint asks for the same part of speech, as ISO does. So *land* is defined by a verb phrase, and *stale* by an adjective phrase.
+- **The examples:** one neutral term runs through them all, the template of the journey's example, which an administrator publishes. Its distinction is the report, which the use case's example exports.
+- **The front matter's hints:** they stay the placeholders, written by hand, as the actor's needs' does. The placeholder check refuses one left in (`check.py`).
+
+**For the build:**
+
+- **The parts (#1363):** the two tables above. The term stays a collection kind, whose structure covers each entry's section and the file's head (the design's part 1).
+- **The definition's form (#1363 and #1365), on question 2's answer:** `definition` gets a form of its own, which checks its first word, its last character and the term's own name. It is one of the analysis's own forms, beside `variants`. #1363 also changes the schema's description of `definition`, which today asks for "a sentence" (`SA/schemas/term.schema.json`).
+- **The name (#1366), on question 4's answer:** the stamp writes a term's default name in lower case.
+- **The stamp and the template (#1366):** the section is rendered from the table, and the file's head loses its semicolon.
+- **The skill (#1369):** the term sub-procedure's *Fill it* list gives way to the hints. Its first step, "Does the word need pinning down?", stays, and *Distinctions* records its answer.
+- **DEC-001 first (#1358):** its point 1 names a term's stable id and its record of renames. The two parts and the two forms go beyond it, so #1358's refinement says so before any build cites it (core rule 2).
+- **WRITE's example (#1368):** RS-WRITE-001's *How* gives a term's empty section as its example. No term's section is empty under the rule for every kind, so #1368 replaces the example.
+- **The check of replaced names** (the design's part 7, not filed): it skips the term's own entry, whose *Distinctions* may name an old name on purpose.
+- **Avoided words, later:** a field of their own, such as `avoids:`, would let that check report them. It waits until a project needs one.
+- **project-kit's first terms:** when project-kit stamps them, the system's reason for no anchor needs the maintainer's acceptance first (core rule 20). Its definition rewords a decided answer, so the maintainer accepts that too.
+
+**Found on the way:**
+
+- **The shipped hints' *the system*.** software-analysis's templates and hints speak of *the system*, which in each project means its own software (`SA/templates/actors.md`). The use case left out *Scope* because it is always the system. A project that needs the word pinned down defines it in its glossary, as project-kit does.
+- **Three words for the system** ("What the example left unclear", item 2). It is an author's question for project-kit's analysis, to answer before the system is stamped (RS-WRITE-011).
+- **The session anchor.** COR-039 point 2 names "the session anchor (the repo the session is rooted in)", and the landing writes "the session's anchor" (`use-case/chosen-template.md`). So *anchor*, once stamped, needs that distinction.
+
+### Questions for the maintainer
+
+Each question is one decision, with a recommendation.
+
+1. **Does a term's section ship *Example* and *Distinctions*, each required with `None.` allowed?**
+   - **The case:** today's template asks every term, in prose, where it applies, what it is not, and for an example. The rule for every kind puts each shipped part in every term. Both terms filled both parts.
+   - **Recommendation:** yes. The two parts give what today's template asks a labelled place each, and ask a term for nothing more. Its third ask, the scope, held only distinctions in both terms.
+   - **Else:**
+     - *Distinctions* alone, since the case for an example is the weaker.
+     - Nothing ships, and project-kit adds both as its own optional parts, as it keeps *Place in the model* for the actor. software-analysis ships them once real glossaries show they recur (COR-007).
+2. **Is a definition a phrase in ISO's form?**
+   - **The case:** the schema asks for "a sentence", and DEC-001 writes its own definitions as sentences that name the term. ISO asks for a phrase that can replace the term, with no article first and no full stop, and never circular (16.5.6).
+   - **What filling showed:** the substitution test found revalidation's second meaning, and the ban on circles caught the system's decided definition.
+   - **Recommendation:** yes, ISO's form, with a form of its own that a script checks. A writer can run the test too: put the phrase where the term stands. The system's definition then needs new words, which the maintainer accepts when it is stamped, and B's are one proposal.
+   - **Else:** a sentence that names the term, such as "A revalidation is one review of …", checked as one sentence. The test stays a reviewer's.
+3. **Does `replaces` keep only the names a term carried in the analysis or in an accepted record?**
+   - **The case:** DEC-001 point 1 keeps the names "so that renaming a term does not break what cites it". The schema calls them "the names the term was written as before". Revalidation was *recheck* in COR-050 as accepted, and *walkthrough* and *walk* in a design note. Both of those are still in use for other things, and *walk* is an ordinary verb.
+   - **Recommendation:** yes. Revalidation's `replaces` would read `[recheck]`. A working name stays in its note, so the check of replaced names never reports a word nobody cited as the term.
+   - **Else:**
+     - Every earlier name, working names included, as the candidates show.
+     - Only the names the glossary itself held, so revalidation's would be empty.
+4. **Is a term's name written in lower case, with no article?**
+   - **The case:** the maintainer's answer names the term "The system". The stamp capitalises the slug by default, and the actors' names are capitalised. ISO writes a term in lower case and in its basic grammatical form (16.5.5).
+   - **Why it matters:** substitution works only when the article stays in the sentence. "With the system" becomes "with the software under discussion: …".
+   - **Recommendation:** yes. The name is `system`, and running text writes "the system", the reserved word with its article. The stamp's default for a term is the slug in lower case.
+   - **Else:** the name keeps its article, `the system`, as the candidates show. Or it keeps the stamp's capital, `System`.
+
+### Review
+
+The critic reviewed the first draft. Each finding below changed the draft, or is answered here.
+
+| Finding | Answer |
+|---|---|
+| Red flag: D's distinctions restate the records as B's notes do, yet only B was charged | "At a glance" charges D, and A's prose too. The comparison now weighs labels and a predictable place for each kind of content, and the criterion is the actor's. |
+| Red flag: *revalidation* has more than one meaning too, so the reason for passing over *change* fails | *Change* was passed over because filling it meant choosing its meaning, which is the maintainer's. Each candidate now names revalidation's record on the artefact and the revalidation record. The substitution test found the first. |
+| Red flag: anchoring every record a section cites was offered as a finding, and the system's example contradicts it | Withdrawn. A term anchors where a decision embodies it (DEC-001 point 4), so COR-016 is no anchor. RS-WRITE-014, still proposed, is named as the rule that would differ. |
+| `replaces` rested on an unstated reading of a former name | Question 3 asks it. *Recheck*, COR-050's word when accepted, joins the names, and the check's reach is corrected to the analysis. |
+| The name's case and article were decided without asking | Question 4 |
+| Question 2 reopened the system's decided definition, and B's genus *platform* clashes with COR-009 | The new words are the maintainer's to accept at the stamp. B's genus is *software*, and D names the platform as a distinction. |
+| B dropped DEC-001's "one", and its comma made the definition ambiguous | B keeps "one" and writes "which is". Its *Source* says what changed. |
+| The definition's hint fails for a verb or an adjective | The hint asks for the same part of speech, as ISO does. |
+| "A term flags nothing" holds only until a page anchors a term | Said so, with COR-050 points 1 and 2. |
+| Leaving avoided words to *Distinctions* gives up the only check, unsaid | Said so. A field such as `avoids:` is named for later. |
+| Dropping *Source* loses an unanchored term's provenance | Said so. The system's reason for no anchor now gives the reason alone. |
+| No script could check the definition, the draft said | Three checks are named, and a form of its own replaces the `sentence` form. |
+| *The methodology* was understated as the system's neighbour | Item 2 gives its 27 uses and the AI agent's opening. |
+| "System under discussion" is Cockburn's term of art | Verified in Cockburn's draft, and said so. ISO still reads it as circular. |
+| Core rule 20 was cited for definitions | It is cited for the reason for no anchor only. |
+| RS-WRITE-002 was used without saying it is proposed | Marked proposed. |
+| "The earlier kinds' criterion" was false, and the bar should rise | The criterion is the actor's: today's template asks for both parts, so a term is asked no more than today. The cost is stated. |
+| The case for a required example was thin | *Example* allows `None.`, and its case rests on today's template and ISO. |
+| The skill was misquoted | All three of its reasons are given, and *Distinctions* records two. |
+| D's distinctions for the system named no words, or no difference | They are *a system* and *a platform*, each with how it differs. |
+| "Each from a record" was false for the reserved word | "From records or the maintainer's answer" |
+| B was a strawman, all six parts required | Said so in B's entry: B shows the most a project in ISO's style could take. |
+| "Its rules follow from one test" was wrong | The ban on circles is a rule of its own, and the note says which caught what. |
+| B's *Related terms* and C's claims were misdescribed | Corrected. C's use case invariant names the system as what fulfils the goal. |
+| Counter-alternative: nothing ships, and project-kit adds both | Question 1's second "Else" |
+| Counter-alternative: *Example* with a general *Usage* part | Weighed, and left out. |
+| Counter-alternative: split question 1 | Its "Else" offers *Distinctions* alone. |
+| Counter-alternative: an `avoids:` list | Named for later. |
+| Counter-alternative: a form for the definition | Adopted |
+| Counter-alternative: fill *anchor* or *change* as a third term | Not adopted. Revalidation has neighbours of each kind, and the session anchor is in "Found on the way". |
+| Writing: a contradiction, a phrase that read as two decided terms, an unsourced quote, an unclear pronoun, A's inline series | Each fixed |
