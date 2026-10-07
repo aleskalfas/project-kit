@@ -16,7 +16,7 @@ The maintainer picks each analysis kind's parts here, one kind at a time, from c
 - **Paths:** `SA/` is `.pkit/capabilities/software-analysis/`.
 - **Citations:** records, rules and issues by permanent id, files by name, never by line number (RS-WRITE-014, proposed).
 - **Reviewed:** by the critic, before the maintainer saw it. Its findings and the answers are in "Review", at the end of each kind.
-- **Status:** the use case is decided, but for questions 4 and 6. The other four kinds follow it.
+- **Status:** the use case is fully decided. The other four kinds follow it.
 
 ## The use case
 
@@ -24,7 +24,7 @@ The maintainer chose nine parts: the design's five, two of them renamed, three o
 
 ### Decided: the use case
 
-The maintainer chose the use case's parts and their labels on 6 October, in comments on PR #1374. F fills them with both examples (`use-case/F-chosen-template.md`).
+The maintainer chose the use case's parts and their labels on 6 October, in comments on PR #1374, and then answered its last two questions. Every question of the use case is now decided. F fills the parts with both examples (`use-case/F-chosen-template.md`).
 
 - **Added, with the maintainer's reasons:**
   - *Other actors*, optional: the other actors who take part, each with what the use case must protect for them. It is Cockburn's stakeholders and interests, added for completeness.
@@ -35,13 +35,15 @@ The maintainer chose the use case's parts and their labels on 6 October, in comm
 - **Every label a noun:** the maintainer chose the labels after the parts, in a later comment on the pull request. *Other actors* and *Minimal guarantees* were first *Also involved* and *If it fails*.
 - **Otherwise, start small:** any other part is added once real use cases show it recurs.
 - **Where each part ships:** with software-analysis, as the round recommended. The maintainer's comments leave that as it was.
+- **The actor's voice ships too:** the goal is one sentence in the actor's own voice, as each of an actor's needs is (question 6). It is the mainstream user-story convention, not project-kit's alone. A project that prefers another voice replaces the hint in its own settings.
+- **The append-only check:** a check keeps a use case's steps and variants append-only, filed as #1375 (question 4).
 
 **The declaration #1363 takes, in this order:**
 
 | Element | Label | Required | Form | Hint | Example |
 |---|---|---|---|---|---|
 | `heading` | `# UC-NNN — <title>` | yes | heading | none, since the stamp writes it | `# UC-007 — Export the report as a file` |
-| `goal` | Goal | yes | `sentence` | What the actor wants from this use case, in one sentence. | Export the report as a file. |
+| `goal` | Goal | yes | `sentence` | What the actor wants from this use case, in one sentence in their own voice: start with the verb, with *I* and *my* where they refer to themselves. | Export my report as a file. |
 | `other-actors` | Other actors | no | none | Each other actor who takes part, and what this use case must protect for them. | **Auditor** (`ACT-auditor`): each export is logged with who made it. |
 | `preconditions` | Preconditions | yes, and `None.` is allowed | none | What the system, or an earlier use case, has already made true before the use case starts. Each is a state, not an event, and no step checks it. Write `None.` when there is none. | The analyst is signed in. |
 | `assumptions` | Assumptions | no | none | What must also be true for the use case to work, but nothing in the system secures. Name the record that admits each. | The disk keeps the file as the system wrote it (DEC-003). |
@@ -51,9 +53,9 @@ The maintainer chose the use case's parts and their labels on 6 October, in comm
 | `postconditions` | Postconditions | yes | none | The state that shows the goal is met. | The file holds the whole report. |
 | `minimal-guarantees` | Minimal guarantees | yes, and `None.` is allowed | none | What the system still guarantees when the use case ends early or fails. Name the record or code each rests on. Write `None.` when there is none. | A failed export leaves no partial file (DEC-003). |
 
-- **The hints:** each is one line, with short sentences, no semicolon and no project's voice (the design's part 5). They say what goes in a part, never how to format it.
+- **The hints:** each is one line, with short sentences and no semicolon (the design's part 5). They say what goes in a part, never how to format it.
 - **The examples:** one neutral use case runs through them all, the design's export. An auditor and a decision of the example's own complete it.
-- **The actor's voice:** the decision as recorded for this round gives the goal "in the actor's voice". The design keeps the voice as project-kit's own rule (RS-ANALYSIS-001, its part 9), so the shipped hint names none. Question 6 asks which holds.
+- **The actor's voice:** the goal's hint names it, and its example is in it (question 6). The voice is the method's now, so it is no project's style that the neutral floor of the design's part 5 keeps out.
 
 **The front matter gains `involves`:**
 
@@ -75,9 +77,9 @@ The maintainer chose the use case's parts and their labels on 6 October, in comm
 1. **Question 1, DEC-001 point 1's parts only:** no. Three parts ship beyond them, and any other waits until real use cases show it recurs. Each later kind is weighed in its turn.
 2. **Question 2, *Always holds*:** it comes now, as *Minimal guarantees*, required with `None.` allowed.
 3. **Question 3, *Variants* required:** yes, with `None.` allowed, as recommended.
-4. **Question 4, the append-only check:** still open.
+4. **Question 4, the append-only check:** option (a). A check keeps a use case's steps and variants append-only, filed as #1375. It depends on #1364.
 5. **Question 5, a fact the use case relies on that the system does not secure:** option (c). It goes in *Assumptions*, a part of its own, and *Preconditions* stay strict.
-6. **Question 6, the actor's voice in the goal hint:** still open.
+6. **Question 6, the actor's voice in the goal hint:** option (b). The first-person voice ships with software-analysis for every project, for an actor's needs and a use case's goal.
 
 **What filling F showed:**
 
@@ -89,6 +91,10 @@ The maintainer chose the use case's parts and their labels on 6 October, in comm
   - **How soon the service shows a change:** the code names it an assumption (`pull_request_landing.py`). ADR-061 point 7 admits that the service may still apply a change two readings did not see.
 - **The four questions, applied:** the committed change is a precondition. GitHub as the host is checked, so it stays variant 6e. The three facts above are assumptions.
 - **E's assumptions:** none, so E leaves the part out, as it leaves out *Other actors*.
+- **The goals, in the voice of question 6:** both already read so, and F keeps them as they are.
+  - The landing's starts with *Land*, and says *my change*.
+  - E's starts with *Think*. The developer never refers to itself in it, so it needs no *my*.
+  - E's repeats one of the developer's needs word for word, and the landing's is the first part of another (`ACT-developer`).
 - **Who is involved:** the landing involves four actors, and E involves none, so E shows the part left out.
   - The CI pipeline and the merge authoriser take part in steps 3 and 4.
   - The AI agent takes part where it acts for the developer, as in 2a.
@@ -109,7 +115,13 @@ The maintainer chose the use case's parts and their labels on 6 October, in comm
 - **The stamp (#1366):** it writes `involves` and each actor's anchor, as it writes the primary actor and its anchor today (`SA/scripts/_lib/stamp.py`).
 - **DEC-001 first (#1358):** its point 1 names a use case's parts, and its point 4 names a use case's anchors. The four new parts and `involves` go beyond both, so #1358's refinement says so before any build cites it (core rule 2).
 - **A possible form (#1365):** a form could hold the items of *Other actors* to `involves`, as `steps-match-front-matter` holds a journey's steps. The round does not decide it.
-- **The append-only check:** question 4, still open. It is filed once it is answered.
+- **The append-only check (#1375):** filed on question 4's answer. It compares a use case's steps and variants with the default branch's, and reports one renumbered or removed. It depends on #1364, whose check reads the steps and variants.
+- **The actor's voice moves to software-analysis** (question 6). It was project-kit's own rule, RS-ANALYSIS-001, planned in #1368.
+  - **The format rule (#1360):** it carries the voice for an actor's needs and a use case's goal.
+  - **The declaration (#1363):** the goal's hint and example above. The hint for an actor's `needs` names the same voice, in the actor's round.
+  - **The templates (#1366):** rendered from those hints, so every stamped goal and need shows the voice.
+  - **#1368 keeps only project-kit's own additions:** the rule on labels, the actors' labels as data, and its edits to `WRITE`. Its rule on the voice goes.
+  - **The design note changes with it:** its parts 5 and 9 still give the voice to project-kit's rule set (`2026-10-05-analysis-kind-structure.md`).
 
 ### The example
 
@@ -243,6 +255,7 @@ Ship D's five parts, all required, and ship no further part for now.
   - **Decided otherwise:** every label a noun. *Starts when* is now *Trigger*, and *Done when* is now *Postconditions*.
 - **Ships with:** every part ships with software-analysis. project-kit adds no part of its own for the use case.
 - **Note:** project-kit's style still reaches these parts through its rule sets, not as parts. Examples are `WRITE`, and RS-ANALYSIS-001's actor's voice for the goal once it is accepted.
+  - **Decided otherwise:** the actor's voice ships with software-analysis, in the goal's hint (question 6).
 
 The declaration #1363 would have taken, in this order, before the table in "Decided: the use case" superseded it:
 
@@ -261,7 +274,7 @@ The declaration #1363 would have taken, in this order, before the table in "Deci
 
 ### Questions for the maintainer
 
-Each question is one decision, with a recommendation. The maintainer settled questions 1 to 3 and question 5 on 6 October, and questions 4 and 6 are open. Questions 5 and 6 came from filling F.
+Each question is one decision, with a recommendation. The maintainer settled all six on 6 October. Questions 5 and 6 came from filling F.
 
 1. **Does software-analysis ship only DEC-001 point 1's parts, with any further part shipped once real artefacts show it recurs?**
    - **Recommendation:** yes. It settles the use case's further parts now, and the same choice returns for the other four kinds. It reverses nothing, since the design's part 8 left the same parts out.
@@ -278,7 +291,7 @@ Each question is one decision, with a recommendation. The maintainer settled que
 4. **Does a check keep steps and variants append-only, in place of the template's instruction line?**
    - **Recommendation:** yes, filed as an issue of its own. The check compares a use case's steps and variants with the base, and reports one renumbered or removed. It reaches the later editor, which is who the rule is for. A hint does not, since the writer deletes it at the first fill.
    - **Else:** the instruction line stays in every artefact, without its semicolon, or the rule lives in DEC-001 point 3 and the skill's *Later* alone.
-   - **Open.**
+   - **Decided:** option (a), as recommended. The check is filed as #1375, and depends on #1364.
 5. **Does *Preconditions* also hold a fact the use case relies on that the system does not guarantee?**
    - **The case:** the landing relies on `gh` reaching the repository the change was pushed to, as the caller's environment sets it up (ADR-061 point 4). No step checks it, and the chosen hint leaves it out.
    - **Recommendation:** yes. The hint would read "What already holds before the use case starts", and the landing would state the fact. A reader then learns what the use case trusts unchecked.
@@ -294,6 +307,10 @@ Each question is one decision, with a recommendation. The maintainer settled que
    - **The case:** the decision as recorded for this round gives the goal "in the actor's voice". The design keeps the voice as project-kit's own rule, since a voice is a project's style (its part 9, and COR-014).
    - **Recommendation:** no. The shipped hint asks for one sentence, and project-kit's goals keep the voice through RS-ANALYSIS-001.
    - **Else:** the shipped hint names the voice, and the design's parts 5 and 9 change with it.
+   - **Decided:** option (b), the shipped hint names the voice. It ships with software-analysis for every project, for an actor's needs and a use case's goal.
+     - **Why:** it is the mainstream user-story convention, not project-kit's alone.
+     - **Another voice:** a project that prefers one replaces the hint in its own settings.
+     - **The build:** the voice moves from #1368 to software-analysis, as "For the build" says.
 
 ### Review
 
