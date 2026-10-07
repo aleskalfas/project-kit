@@ -24,7 +24,7 @@ The maintainer chose nine parts: the design's five, two of them renamed, three o
 
 ### Decided: the use case
 
-The maintainer chose the use case's parts and their labels on 6 October, in comments on PR #1374, and then answered its last two questions. Every question of the use case is now decided. F fills the parts with both examples (`use-case/F-chosen-template.md`).
+The maintainer chose the use case's parts and their labels on 6 October, in comments on PR #1374, and then answered its last two questions. Every question of the use case is now decided. F fills the parts with both examples (`use-case/chosen-template.md`).
 
 - **Added, with the maintainer's reasons:**
   - *Other actors*, optional: the other actors who take part, each with what the use case must protect for them. It is Cockburn's stakeholders and interests, added for completeness.
@@ -130,7 +130,7 @@ The maintainer chose the use case's parts and their labels on 6 October, in comm
 The main example is a real core use case: the developer lands a change on the default branch.
 
 - **The need it serves:** the developer's need to land a change as one squash commit with a conventional title (`ACT-developer`).
-- **Why this one:** it crosses three actors and has twenty variants, so it tests every part. It is also heavy on mechanism, so a second, ordinary example checks the recommendation (`use-case/E-second-example.md`).
+- **Why this one:** it crosses three actors and has twenty variants, so it tests every part. It is also heavy on mechanism, so a second, ordinary example checks the recommendation (`use-case/considered/E-second-example.md`).
 - **Derived from:**
   - COR-009, for the squash merge, the conventional title and direct work when alone
   - COR-050 points 3, 6 and 12, for the change check and the answers shown before the merge
@@ -150,20 +150,20 @@ The main example is a real core use case: the developer lands a change on the de
 
 Each candidate is complete and filled, as the artefact would read on the default branch. Its id is `UC-xxx`, since the round stamps nothing into `tech-docs/analysis/`.
 
-- **A, today's template** (`use-case/A-todays-template.md`): exactly the parts of `SA/templates/use-case.md`. They are *Goal*, *Starts when*, *Main path*, *Variants* and *Done when*. The template's instruction line under *Variants* stays, as in every artefact filled from it.
-- **B, Cockburn's fully dressed form** (`use-case/B-fully-dressed.md`): his template's parts, in his order, adapted only where pkit requires.
+- **A, today's template** (`use-case/considered/A-todays-template.md`): exactly the parts of `SA/templates/use-case.md`. They are *Goal*, *Starts when*, *Main path*, *Variants* and *Done when*. The template's instruction line under *Variants* stays, as in every artefact filled from it.
+- **B, Cockburn's fully dressed form** (`use-case/considered/B-fully-dressed.md`): his template's parts, in his order, adapted only where pkit requires.
   - *Primary actor* is the front matter's `actor`, so the body does not repeat it.
   - The front matter carries the id and the friction block.
   - *Extensions* keep his numbering, a letter after the step and then numbered sub-steps, such as `7a1`.
   - *Goal in context* opens with the one-sentence goal (DEC-001 point 1). Its second sentence is the context his template asks for.
   - *Related information* holds two items, the frequency and the open issues. His template leaves that part to each project.
-- **C, Cockburn's casual form** (`use-case/C-casual.md`): the main path as a short story, then the variations in prose. His casual "Buy something" (Use Case 4) is the model.
+- **C, Cockburn's casual form** (`use-case/considered/C-casual.md`): the main path as a short story, then the variations in prose. His casual "Buy something" (Use Case 4) is the model.
 - **D, the design's first cut:** equal to A in its parts, their order and their labels. It differs from A in three ways, and only the first shows in a filled artefact:
   - no instruction line under *Variants*, so a filled D is A without that line
   - each part stamped with a one-line hint, which the writer replaces
   - every part required and checked, with *Variants* allowed to read `None.`
-- **E, a second example in the recommended parts** (`use-case/E-second-example.md`): the developer thinks a question through in a scratchpad note. It is an ordinary use case, with six steps and three variants.
-- **F, the chosen template** (`use-case/F-chosen-template.md`): the maintainer's nine parts, filled with both examples, the landing and E. It came after the recommendation, and "Decided: the use case" says what filling it showed.
+- **E, a second example in the recommended parts** (`use-case/considered/E-second-example.md`): the developer thinks a question through in a scratchpad note. It is an ordinary use case, with six steps and three variants.
+- **F, the chosen template** (`use-case/chosen-template.md`): the maintainer's nine parts, filled with both examples, the landing and E. It came after the recommendation, and "Decided: the use case" says what filling it showed.
 - **Note:** the brief for this round named A's third part *Steps*. The template's label is *Main path*, and the candidates keep it.
 
 **Sources.** Cockburn's forms and the RUP outline were read from these pages:
@@ -345,7 +345,7 @@ The maintainer chose five parts for the journey: *Goal*, *Steps*, *Variants*, *P
 
 ### Decided: the journey
 
-The maintainer decided the journey on 7 October, in comments on PR #1374. The journey is fully decided, and G fills its parts with the adopter's first day (`journey/G-chosen-template.md`).
+The maintainer decided the journey on 7 October, in comments on PR #1374. The journey is fully decided, and G fills its parts with the adopter's first day (`journey/chosen-template.md`).
 
 - **The name stays *journey*:** a summary-level path an actor takes across several use cases, with the seams between them.
   - It is explicitly not a UX journey map.
@@ -480,8 +480,8 @@ The main example is a real core journey of pkit: the adopter's first day with th
 
 Each candidate is complete and filled, as the artefact would read on the default branch. Its id is `JRN-xxx`, since the round stamps nothing into `tech-docs/analysis/`.
 
-- **A, today's template** (`journey/A-todays-template.md`): exactly the parts of `SA/templates/journey.md`. They are *Starts*, *Steps*, *Seams to watch* and *Done when*. The instruction line under *Seams to watch* stays, as in every artefact filled from it.
-- **B, a journey map** (`journey/B-journey-map.md`): NN/g's components and Adaptive Path's building blocks, adapted only where pkit requires.
+- **A, today's template** (`journey/considered/A-todays-template.md`): exactly the parts of `SA/templates/journey.md`. They are *Starts*, *Steps*, *Seams to watch* and *Done when*. The instruction line under *Seams to watch* stays, as in every artefact filled from it.
+- **B, a journey map** (`journey/considered/B-journey-map.md`): NN/g's components and Adaptive Path's building blocks, adapted only where pkit requires.
   - NN/g's *actor* and Adaptive Path's *lens* are the front matter's `actor`, so the body does not repeat it.
   - *Scenario and expectations* opens it, as in NN/g.
   - Each phase is a heading with *Doing*, *Touchpoints*, *Thinking*, *Feeling* and *Pain points*. Doing, thinking and feeling are Adaptive Path's names for NN/g's actions, mindsets and emotions.
@@ -492,16 +492,16 @@ Each candidate is complete and filled, as the artefact would read on the default
   - no instruction line under *Seams to watch*, so a filled C is A without that line, and it has no file of its own
   - each part stamped with a one-line hint, which the writer replaces
   - every part required and checked, *Steps* with the form `steps-match-front-matter` and *Seams to watch* with `seams-match-steps`
-- **D, Cockburn's summary-level use case** (`journey/D-summary-use-case.md`): his fully dressed parts at the summary level, adapted as the use case's B was.
+- **D, Cockburn's summary-level use case** (`journey/considered/D-summary-use-case.md`): his fully dressed parts at the summary level, adapted as the use case's B was.
   - His section 5.2 gives the model. A summary use case's steps are user-goal use cases, and it has one primary actor (Use Case 6, *Operate an Insurance Policy*).
   - Each step names its use case by id, in place of his italics. Step 6 names two, the adopter's UC-xx5 and the developer's landing.
   - Each break is an extension of the step where its condition arises. Its sub-steps say where the break shows and where the path resumes, as 1b does for a private install.
-- **E, the use case's decided parts** (`journey/E-use-case-parts.md`): the nine parts the maintainer chose for the use case, carried to the journey. *Steps* and *Seams* stand in place of *Main path* and *Variants*.
+- **E, the use case's decided parts** (`journey/considered/E-use-case-parts.md`): the nine parts the maintainer chose for the use case, carried to the journey. *Steps* and *Seams* stand in place of *Main path* and *Variants*.
   - Each seam pairs the earlier use case's *Postconditions* with the next one's *Preconditions*, then gives its *Risk*. These are the pairs the brief for this round suggested.
   - Each *Preconditions* follows the decided hint, a state that no step checks. Every one reads none, since each next command checks what it needs.
   - The front matter gains `involves`, as the use case's does.
-- **F, a second example in the recommended parts** (`journey/F-second-example.md`): the adopter upgrades the methodology and re-pins a rule set. It has two steps and one seam, and it leaves out both optional parts.
-- **G, the chosen template** (`journey/G-chosen-template.md`): the maintainer's five parts, filled with the adopter's first day. It came after the recommendation, and "Decided: the journey" says what filling it showed.
+- **F, a second example in the recommended parts** (`journey/considered/F-second-example.md`): the adopter upgrades the methodology and re-pins a rule set. It has two steps and one seam, and it leaves out both optional parts.
+- **G, the chosen template** (`journey/chosen-template.md`): the maintainer's five parts, filled with the adopter's first day. It came after the recommendation, and "Decided: the journey" says what filling it showed.
 
 **Sources.** The journey map's parts and Cockburn's summary level were read from these:
 
