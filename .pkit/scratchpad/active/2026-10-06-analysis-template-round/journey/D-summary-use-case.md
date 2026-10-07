@@ -11,13 +11,15 @@ pkit:
         - src/project_kit/install.py
         - src/project_kit/visibility.py
         - src/project_kit/status.py
+        - src/project_kit/capabilities.py
         - src/project_kit/capability_plans.py
         - src/project_kit/provisioning.py
         - src/project_kit/sync.py
         - src/project_kit/validate.py
+        - src/project_kit/friction_check.py
         - src/project_kit/default_branch.py
-      record: [COR-050, COR-053, COR-054, ADR-009, ADR-049]
-      artefact: [UC-xx1, UC-xx2, UC-xx3, UC-xx4, UC-xx5]
+      record: [COR-030, COR-050, COR-053, COR-054, ADR-009, ADR-049]
+      artefact: [UC-xx1, UC-xx2, UC-xx3, UC-xx4, UC-xx5, ACT-adopter]
 ---
 
 # JRN-xxx — Adopt the methodology in a project
@@ -31,14 +33,14 @@ pkit:
 **Stakeholders and interests:**
 
 - **Adopter:** wants the methodology working within a day, with the project's own files left alone (`ACT-adopter`).
-- **Developer:** lands the install and the settings on the default branch. They want each later change to pass the same checks in their clone as in the pipeline (`ACT-developer`).
+- **Developer:** lands the install, the settings and the pipeline's job on the default branch. They want each later change to pass the same checks in their clone as in the pipeline (`ACT-developer`).
 - **CI pipeline:** runs the checks with no person to answer, at the project's version, against the base its run names (`ACT-ci-pipeline`).
 
 **Precondition:** none. `pkit init` checks its target itself (1a).
 
 **Minimal guarantees:**
 
-- Until the pipeline requires the checks, no merge waits on them. So a project that stops at any step merges as before (COR-050 point 12).
+- Until the pipeline requires the methodology's checks, a merge made through the hosting service waits on none of them. So a project that stops at any step merges as before (COR-050 point 12 and `ACT-ci-pipeline`).
 - `pkit init` refuses an existing install before it writes anything, and points at `pkit sync` (the CLI reference).
 - The install merges into the project's harness settings, never removing an entry, and keeps a `.pre-pkit` backup (COR-002 and the CLI reference).
 
@@ -53,7 +55,7 @@ pkit:
 3. The adopter installs a capability the project needs (UC-xx3).
 4. The adopter sees the wiring again, with the capability's roles and points (UC-xx2).
 5. The adopter declares the project's settings, and they validate (UC-xx4).
-6. Once the developer has landed the install and the settings (UC-xx7), the adopter makes the project's merges wait on the methodology's checks (UC-xx5).
+6. The adopter makes the project's merges wait on the methodology's checks (UC-xx5). The developer lands the install, the settings and the pipeline's job on the default branch (UC-xx7).
 
 **Extensions:**
 
@@ -61,18 +63,18 @@ pkit:
   - **1a1.** `pkit init` refuses before writing anything, and points at `pkit sync`.
   - **1a2.** The journey resumes at step 2.
 - **1b.** The adopter keeps the install private with `pkit visibility private`:
-  - **1b1.** At step 2, status shows the wiring but not that it is private (`status.py`).
-  - **1b2.** At step 6, the pipeline's checkout holds no `.pkit/`, so `pkit validate` fails (ADR-009 point 3 and `validate.py`).
-  - **1b3.** The adopter runs `pkit visibility shared`, the developer lands the install, and the journey resumes at step 6.
-- **3a.** The installed backbone misses the capability's `requires_backbone` range:
-  - **3a1.** The install refuses, as its `--plan` showed.
-  - **3a2.** The adopter upgrades the methodology, and repeats step 3.
+  - **1b1.** At step 2, status shows the wiring, and only `pkit visibility` shows that it is private (ADR-009 and `status.py`).
+  - **1b2.** At step 6, the pipeline's checkout holds no `.pkit/`, since the install was never committed. Its first pkit command fails (ADR-009 point 3 and `validate.py`).
+  - **1b3.** The adopter runs `pkit visibility shared` and commits the install, and the journey resumes at step 6.
+- **3a.** The capability requires another capability, not yet installed:
+  - **3a1.** The install refuses, as its `--plan` showed (COR-030).
+  - **3a2.** The adopter installs the required one first, and repeats step 3.
 - **3b.** The install runs offline:
   - **3b1.** It warns that it could not provision the capability's query commands (`provisioning.py`).
   - **3b2.** Each gives no answer until `pkit sync` runs online, and the journey resumes at step 4.
-- **3c.** Another installed capability provides a role the new one provides:
-  - **3c1.** The two conflict, and status shows a `fix:` line for each provider (COR-053 points 1 and 7).
-  - **3c2.** The adopter chooses one provider (UC-xx6), and the journey resumes at step 4.
+- **4a.** Status suggests another capability, one that would provide a role the new one targets (COR-053 point 8):
+  - **4a1.** The adopter reads it with `pkit capabilities show <name>`.
+  - **4a2.** The adopter installs it, and the journey resumes at step 3.
 - **5a.** The project's pull requests merge into another branch than `main`:
   - **5a1.** At step 4, status did not show the default branch (`status.py`).
   - **5a2.** The adopter declares `repository.default-branch`. Otherwise the change check later compares with the wrong base, or refuses where no `main` resolves (COR-054 points 1 and 4).
@@ -84,7 +86,7 @@ pkit:
   - **6b2.** The adopter puts `pkit sync` before the checks, and the pipeline runs again.
 - **6c.** The friction mode is still `warning`:
   - **6c1.** The change check reports what it finds and passes (COR-050 point 12).
-  - **6c2.** The adopter sets `friction.mode` to `enforcing`, or leaves the check to report. Until a place is declared, it is dormant either way (COR-050 point 15).
+  - **6c2.** The adopter sets `friction.mode` to `enforcing`, or leaves the check to report. Until something in a declared place carries the methodology's container, the check is dormant either way (COR-050 point 15).
 
 **Technology and data variations:**
 
