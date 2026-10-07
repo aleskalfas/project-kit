@@ -35,7 +35,4 @@ pkit:
 **Relationships:**
 
 - **Use cases:** the primary actor of those that build and land a change, such as `UC-xxx — Land a change on the default branch`.
-- **AI agent** (`ACT-ai-agent`): the main session acts for the developer, and may dispatch agents for one role each.
-- **Merge authoriser** (`ACT-merge-authoriser`): authorises the developer's change before it merges. Where an agent commits straight to the default branch for the developer, the developer is that person.
-- **project-management's Implementer:** a work tracker's view of this role, which comes with that capability.
 - **Generalisation:** none.

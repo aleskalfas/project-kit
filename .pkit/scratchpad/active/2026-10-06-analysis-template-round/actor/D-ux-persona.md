@@ -29,7 +29,7 @@ pkit:
 
 **Experience:** fluent in git and pull requests. New to decision records and the friction check.
 
-**Context:** her job requires it, since the project gates its merges on the methodology's checks. She uses it for every change, several times a day, from a terminal and an agent session on her laptop.
+**Context:** her job requires the methodology, since the project gates its merges on the methodology's checks. She uses the methodology for every change, several times a day, from a terminal and an agent session on her laptop.
 
 **Behaviors:** she directs an agent to make most edits, and reads its diff before each commit. She runs the checks locally only after a push has failed in CI.
 

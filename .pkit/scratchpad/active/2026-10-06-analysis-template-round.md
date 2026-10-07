@@ -742,7 +742,7 @@ The critic reviewed the first draft. Each finding below changed the draft, or is
 
 ## The actor
 
-The round fills four candidates with the core developer, and a second actor in the recommended parts. It recommends five elements that ship with software-analysis, and four questions wait for the maintainer.
+The round fills four candidates with the core developer, and fills a second actor twice. It recommends what ships with software-analysis and what stays project-kit's, and four questions wait for the maintainer.
 
 ### The example
 
@@ -751,14 +751,17 @@ The main example is a real core actor, the developer, as merged on main (`tech-d
 - **One file per actor** (#1346): each candidate is the file `use-case-model/actors/ACT-developer.md` would be, headed `# ACT-developer — Developer`. Its front matter gains the `id` that #1346 adds to the actor's schema.
 - **Why this one:** the developer is the primary actor of both of the use case's examples, the landing and the scratchpad note. Its body uses four of the core actors' nine labels, and each core actor uses four or five.
 - **The same in every candidate:** the front matter, with its nine needs and its one anchor, COR-009, as on main. Only the body differs.
-- **A second example:** the CI pipeline (`actor/E-second-example.md`), an actor that is no person, as merged. It tests whether each candidate's parts fit a system.
-- **Derived from:** the core actors as merged, COR-008, COR-009 and ADR-061 for C's characteristics, and COR-050 for D's frustrations.
+- **A second example:** the CI pipeline, an actor that is no person. E holds it as merged, and F holds it in the parts software-analysis would ship alone.
+- **Derived from:**
+  - the core actors as merged
+  - COR-008, COR-009 and ADR-061, for C's characteristics
+  - COR-050, for D's frustrations
 
 **What the example left unclear.** The round decides none of these.
 
 1. **Records cited and not anchored.** The developer's *Core* cites ADR-061 point 3, and its one anchor is COR-009. The CI pipeline's *Note* cites PRJ-002, beside its anchors COR-054 and COR-050. So a change to ADR-061 point 3, which #1222 may bring, never flags the developer. The candidates keep main's anchors.
 2. **C's and D's citations.** C cites COR-008 and ADR-061, and D cites COR-050. Filled for real, each would anchor them, as the journey's candidates found for PRJ-004.
-3. **D's persona is invented.** No research of developers exists, so its name, age, bio and behaviours are made up, as the journey map's *Feeling* was inferred.
+3. **D's persona is invented.** No research of developers exists, so its name, age, bio and behaviours are made up. Its goals and frustrations could only come from the needs and the records, so they restate them.
 4. **No use case is stamped yet.** C's *Relationships* name the landing as `UC-xxx`, the id the use case's round gave it.
 
 ### The candidates
@@ -775,18 +778,20 @@ Each candidate is complete and filled, as the actor's file would read on the def
   - *Name* is the front matter's `name` and the heading.
   - *Brief description* holds the role's sphere of responsibility and what it needs the system for. The needs stay in the front matter, so it summarises them.
   - *Characteristics* holds RUP's list for a human actor, with the frequency of use its guidelines add. Age, gender and cultural background are left out, since nothing about the developer states them.
-  - *Relationships* holds the use cases, the other actors and the generalisation. RUP's *Diagrams* are left out, since the analysis has none.
+  - *Relationships* holds RUP's two kinds, the use cases the actor takes part in and its generalisation. RUP's *Diagrams* are left out, since the analysis has none.
 - **D, a UX persona** (`actor/D-ux-persona.md`): NN/g's common pieces, in its order, with three parts its example persona shows.
   - NN/g's pieces: *Persona* for the name and age, then *Tagline*, *Experience*, *Context*, *Goals and concerns* and *Quote*. The photo is left out, since the file is text.
-  - From its example persona: *Bio*, *Behaviors* and *Frustrations*.
+  - From its example persona: *Bio*, *Behaviors* and *Frustrations*. Its tasks are left out, since an actor's tasks are its use cases.
   - The needs stay in the front matter, as in every candidate.
 - **E, a second example** (`actor/E-second-example.md`): the CI pipeline as merged, in one file. Its opening says why it is an actor, and it uses *In the model*.
+- **F, the shipped parts alone** (`actor/F-shipped-parts-only.md`): the CI pipeline as an adopter's template would stamp it under the recommendation, with no label of project-kit's. Its two labels are the nouns question 2 recommends.
 
 **Sources.** RUP's actor and the persona were read from these pages:
 
 - **RUP:** the actor artefact ([page](https://www.cin.ufpe.br/~if682/RUP/process/artifact/ar_actor.htm)). Its properties are *Name*, *Brief Description*, *Characteristics*, *Relationships* and *Diagrams*.
   - *Brief Description* is "the actor's sphere of responsibility and what the actor needs the system for".
   - *Characteristics* are "for human actors". They are the physical environment, the number of users the actor represents, their domain knowledge, computer experience and other applications, and general characteristics.
+  - *Relationships* are "actor-generalizations, and communicates-associations in which the actor participates". A communicates-association links an actor to a use case.
   - Its tailoring says "Decide which properties to use and how to use them."
 - **RUP's guidelines for an actor** ([page](https://www.cin.ufpe.br/~if682/RUP/process/modguide/md_actor.htm)):
   - A brief description "should be, at most, a few sentences long".
@@ -804,15 +809,16 @@ Each candidate is complete and filled, as the actor's file would read on the def
 
 ### At a glance
 
-C and D say the most, and much of it describes people rather than the software. A says the least, and drops the layer line. Words are counted as in the earlier rounds: the body, labels included, with the heading and front matter left out.
+C and D say the most, and much of it describes people rather than their dealings with the system. A says the least, and drops the layer line. Words are counted as in the earlier rounds: the body, labels included, with the heading and front matter left out.
 
 | Candidate | Parts | Required | Words | Captures what others miss | Repeats |
 |---|---|---|---|---|---|
 | A | 1, unlabelled: who the role is, when they come, what they bring | None marked. Today's check catches a placeholder left in, not a part deleted. | 45 | Nothing. It reads fastest. | Nothing, but it drops the layer line and the note |
-| B | The opening, then 4 of the 9 labels: *Comes*, *Brings*, *Core*, *Note* | None marked | 93 | The layer line: what in the core makes the role, and what of it is provisional. A work tracker's view of the role. | *Core* names the actor's one anchor, in words. |
-| C | 3: *Brief description*, *Characteristics* with six items, *Relationships* with five | None marked. RUP leaves the choice to tailoring. | 234 | The other actors the developer works with, how many people play the role, and the applications they use | The brief description summarises the needs. *Frequency of use* is B's *Comes*, and *Environment* holds B's *Brings*. *Use cases* repeat the use cases' own `actor`. |
-| D | 9: *Persona*, *Tagline*, *Bio*, *Experience*, *Context*, *Behaviors*, *Goals and concerns*, *Frustrations*, *Quote* | None marked | 219 | Speed, a quality the developer weighs against accuracy and thoroughness | *Accuracy*, *Thoroughness*, every frustration and the quote restate needs, some inverted. *Context*'s frequency is B's *Comes*. |
-| E | The opening, then 5 of the 9 labels: *Comes*, *Brings*, *In the model*, *Core*, *Note* | As B | 180 | Why a system is an actor, and whose goals its runs serve | *Core* names the actor's two anchors, in words. |
+| B | The opening, then 4 of the 9 labels: *Comes*, *Brings*, *Core*, *Note* | None marked | 93 | The layer line: what in the core makes the role, and what of it is provisional. A work tracker's view of the role. | Nothing |
+| C | 3: *Brief description*, *Characteristics* with six items, *Relationships* with two | None marked. RUP leaves the choice to tailoring. | 175 | How many people play the role, the experience it asks, and the applications they use | The brief description summarises the needs. *Frequency of use* is B's *Comes*, and *Environment* and *Other applications* hold B's *Brings*. *Use cases* repeat the use cases' own `actor`. |
+| D | 9: *Persona*, *Tagline*, *Bio*, *Experience*, *Context*, *Behaviors*, *Goals and concerns*, *Frustrations*, *Quote* | None marked | 221 | Speed, a quality the developer weighs against accuracy and thoroughness | *Accuracy*, *Thoroughness*, every frustration and the quote restate needs, some inverted. *Context*'s frequency is B's *Comes*. |
+| E | The opening, then 5 of the 9 labels: *Comes*, *Brings*, *In the model*, *Core*, *Note* | As B | 180 | Why a system is an actor, and whose goals its runs serve | Nothing |
+| F | The opening, *Occasions*, *Context* | All three, as recommended | 61 | Why a system is an actor | Nothing. It lacks whose goals the runs serve, the layer and project-kit's wiring. |
 
 **The labels across the core actors.** Each core actor uses four or five of the nine. Every one has the opening, *Comes* and *Core*.
 
@@ -829,70 +835,75 @@ C and D say the most, and much of it describes people rather than the software. 
 | *Core* | all eight | 8 |
 | *Note* | CI pipeline, component author, developer, merge authoriser, operator | 5 |
 
-**What each source calls the same thing.** All three hold a name, the needs, a short description, when the actor comes and what it brings. Beyond those, each holds what the others lack.
+**What each source calls the same thing.** The core actors, RUP and the persona each say when the actor meets the system and what it comes with. Only the core actors and RUP describe the role itself.
 
-| B | RUP | NN/g's persona |
+| B | RUP | NN/g's persona, and Cooper |
 |---|---|---|
 | `name` and the heading | *Name* | the name, a person's rather than a role's |
-| `needs` | in *Brief Description*: "what the actor needs the system for" | *Goals and concerns* |
-| The opening, and *Does* | in *Brief Description*: "sphere of responsibility" | *Tagline* |
-| *Comes* | a characteristic: the frequency of use | in the context: "How often would they use it?" |
-| *Brings* | characteristics: the environment, domain knowledge and other applications | the experience level, and the device in the context |
+| `needs` | in *Brief Description*: "what the actor needs the system for" | *Goals and concerns*, and Cooper's goals |
+| The opening, and *Does* | in *Brief Description*: "sphere of responsibility" | none. The tagline sums up a person. |
+| *Comes* | a characteristic from the guidelines: the frequency of use | in the context: "How often would they use it?" |
+| *Brings* | characteristics: the environment and other applications | in the context: the device, and whether the job requires the product |
 | *Can be* | in the guidelines: several users can play one actor | none |
-| *In the model* and *Note*, in part | *Relationships* | none |
-| *Core*, *The setup*, *Always a person* | none | none |
-| none | the number of users, and general characteristics | the age, gender, photo, bio, behaviours, frustrations and quote |
+| *In the model*, *Core*, *Note*, *The setup*, *Always a person* | none | none |
+| none, since the use cases name their actors | *Relationships* | the example's tasks, and Cooper's tasks |
+| none | the number of users, domain knowledge, computer experience and general characteristics | the age, gender, photo, tagline, bio, experience level, behaviours, frustrations and quote, and Cooper's skill levels |
 
 ### Fit with pkit
 
-Only A, B and E keep every part to what the software can make false. C and D add facts about people, and restate needs.
+The parts about the role's dealings with the system fit pkit, and the parts about the people who play it do not. A, B, E and F hold only the first kind.
 
 - **The needs stay data** (the design's Decided 2, and #1346). Every candidate keeps them in the front matter, where the schema checks them and the readers filler reads them (`SA/scripts/_lib/readers.py`).
   - A body part that restates them is a second copy, which #1346 rules out.
   - C's *Brief description* summarises them. D's *Goals and concerns*, *Frustrations* and *Quote* restate four of them, some inverted.
-- **The voice** (the use case's question 6): every candidate keeps the needs in the actor's own voice, as merged.
-  - It holds for a system too. Each of E's needs starts with its verb, and none needs *I* or *my*.
-  - D's *Quote* is in the developer's voice, and restates a need.
+- **The voice** (the use case's question 6):
+  - Every candidate keeps the needs as merged. 51 of the 52 core needs start with their verb.
+  - The methodology maintainer's need starts with *Never*. It reads "Never ship a backbone change that breaks installed projects without the migration that carries them across". RS-WRITE-013 keeps that wording as its example, since "Ship … only with" changes the meaning.
+  - The design kept "*Never* may come before the verb" in project-kit's rule on the voice (its part 9, and #1368). The voice moved to software-analysis, and the decided hint says only "Start with the verb". So the exception has no home yet (question 4).
+  - The voice holds for a system. Each of E's needs starts with its verb, and none needs *I* or *my*.
 - **What reaches a reader** (DEC-001 point 8):
-  - The filler gives each actor as a reader, such as `act-developer`, with its name and needs as the description.
-  - The point's schema asks the description for "who the reader is and what they need" (living-docs' `readers.schema.json`).
-  - The opening says who the reader is, but a tool reads only front matter (the design's Decided 2). So the opening never reaches the point, in any candidate.
-  - No page names an actor as its reader yet. Every page names `user` or `maintainer` (question 4).
+  - The filler gives each actor as a reader, such as `act-developer`, with its name and its needs as the description.
+  - The point's schema asks the description for "Who the reader is and what they need from the documentation" (living-docs' `readers.schema.json`). The needs say what the role needs from the system. The opening, its *who*, never reaches the point.
+  - A tool reads only front matter (the design's Decided 2), so the opening would reach the point only as a field.
+  - No page names an actor as its reader yet. Every page names `user` or `maintainer`, so the round leaves this until one does ("For the build").
 - **Anchors** (DEC-001 point 4):
-  - **Records only, for the core actors.** *Core* says in words what the anchors hold as data. In the developer and the CI pipeline, each anchored record is one that *Core* names.
-  - **Cited and not anchored:** ADR-061 in B, and PRJ-002 in E, as "What the example left unclear" says.
+  - **Records only, for the core actors.** In the developer, the CI pipeline and the merge authoriser, the records an actor anchors are among those its *Core* names. *Core* names more, such as the acceptance gate and ADR-061 point 3 in the developer's.
+  - **Cited and not anchored:** five core actors cite a record or a file they do not anchor ("Found on the way").
   - **What an actor's change flags.** An artefact anchor changes whenever the anchored artefact's body or own fields change (COR-050 point 5).
     - A use case anchors its actor, and now each actor in `involves`. A journey anchors its actor.
     - So every edit to an actor's body flags each use case and journey that names it, and each needs an answer.
-    - A part that changes often costs most. When #1222 settles where the landing lives, B's *Core* changes. Every use case of the developer is then flagged, the scratchpad note's included, which the landing's home never touches.
-    - D's *Bio*, *Behaviors* and *Frustrations* change with the team, not with the software, and so does C's *Number of users*.
-  - **Relationships as data would cycle.** C's *Relationships* name other actors in prose. As data and anchors, two actors that name each other would form a cycle, which COR-050 point 5 makes an error. So relations between actors stay prose, as in B's *Note* and C's *Relationships*.
-- **The membership test** (DEC-001): an artefact belongs in the analysis "if a change to the software can make it false". The round applies it to each part, as the journey's round did to *Feeling*.
-  - **Can go false:** the needs, the opening, *Comes*, *Brings*, *Core* and *In the model*. Each says what the role does with the system, or what the system does for it.
-  - **Cannot:** D's *Persona*, *Tagline*, *Bio* and *Quote*, and C's *Number of users* and *Domain knowledge*. They describe people, and no change to the software makes them false.
-  - **Tied to a fact:** D's *Frustrations* can go false, since each rests on a record. Each also restates a need.
+    - A part that changes often costs most. When #1222 settles where the landing lives, B's *Core* changes. Every use case of the developer is then flagged, the scratchpad note's use case included, though the landing's home never touches it.
+    - project-kit's *Note* costs the same. It is side matter that no use case relies on (RS-WRITE-004). Each edit to it still flags every use case and journey of the actor.
+    - D's *Bio* and *Behaviors* change with the team, not with the software, and so does C's *Number of users*.
+  - **Relations between actors stay prose.** The component author's and the operator's *Note* each name another actor. As data and anchors, two actors that named each other would form a cycle, which COR-050 point 5 makes an error.
+- **The membership test** (DEC-001): an artefact belongs in the analysis "if a change to the software can make it false". The round applies it to each part, as the journey's round applied it to *Feeling*. The line falls between a part about the role's dealings with the system and a part about the people who play it.
+  - **The role's dealings:** the needs and the opening, and every label of B, E and F. C's *Brief description*, *Environment*, *Frequency of use*, *Other applications* and *Relationships*. D's *Context*, *Goals and concerns* and *Frustrations*, since each frustration rests on a record.
+  - **Closest to the line:** *Comes*. A person's occasions, such as the operator's "every working day", are a habit as much as a dealing.
+  - **The people:** D's *Persona*, *Tagline*, *Bio*, *Experience*, *Behaviors* and *Quote*. C's *Number of users*, *Domain knowledge* and *Computer experience*.
+    - As filled, C's *Number of users* and *Computer experience* rest on COR-008 and COR-009, so they can go false. As RUP means them, they count and rate people.
   - **D's evidence:** NN/g asks a persona to rest on user research. None exists, so D's facts about Dana are invented.
-- **An actor that is no person** (E):
+- **An actor that is no person** (E and F):
   - A and B hold it as they hold a person. E's opening adds why it is an actor, the skill's test "Is it an actor?" written into the artefact.
-  - RUP counts "another system" as an actor, but its *Characteristics* are "for human actors". So C would give the CI pipeline only a brief description and relationships.
+  - RUP counts "another system" as an actor, but limits its *Characteristics* to "human actors". Its tailoring would let a project keep the frequency of use for a system.
   - D has no form for a system, since a persona is a person.
+  - **In the shipped parts alone (F):** the opening, *Occasions* and *Context* still say what the pipeline is, when it runs and what it lacks. What goes is whose goals its runs serve (*In the model*), the layer (*Core*) and project-kit's wiring (*Note*).
   - *In the model* serves the two actors that are no person. It says whose goals their work serves, since a system's goals belong to people.
-- **What the use case and the journey ask of an actor:** each decided part that draws on an actor draws on the needs, *Comes* or *Brings*.
+- **What the use case and the journey ask of an actor:**
   - **A goal is a need** (DEC-001 point 1). The landing's goal is the first part of the developer's need to land a change. The use case's E repeats another need word for word. So the needs' hint mirrors the goal's.
-  - **A trigger is one of the actor's occasions.** The CI pipeline's *Comes* lists every event that starts its runs. The landing's trigger, the developer deciding a change is ready, is an occasion of "for every change". So *Comes* is the actor's side of its use cases' triggers.
+  - **A trigger is a meeting, in the use case's terms.** *Comes* says when the role meets the system, in the actor's terms. The landing's trigger, the developer deciding a change is ready, falls under "for every change". E's trigger, a question too large for one decision, falls under neither of the developer's occasions. So *Comes* sums up no triggers, and holds no copy of them.
   - **What a use case relies on, or protects.** The landing's precondition, a committed change, is what the developer's *Brings* names, the change. Its *Other actors* has the CI pipeline run its checks "with no person to answer, against the one base it names". That is the pipeline's *Brings*, and its second need.
-  - **Other actors need nothing more.** The use case's F found three of its four interests restating those actors' needs. So the needs are the interests, and an actor needs no part of its own for them.
+  - **Most interests are needs.** Three of the landing's four interests restate their actors' needs (the use case's F). The AI agent's interest restates none of its five needs. The agent may write answers before anyone accepts them, and never waits on a question nobody can answer. An interest that states no need may show a need the actor lacks.
+  - **An actor who takes no step.** The use case's example names an auditor in *Other actors*, whose interest is that each export is logged. The skill names "an outside auditor" as an actor too. Such an actor may never come to the system, so a required *Comes* needs `None.` (question 1).
   - **The journey's one actor:** a journey's goal combines several of its actor's needs, as the first day serves four of the adopter's. It needs nothing more of the actor.
-  - **So:** the use cases draw on the needs, *Comes* and *Brings*, and the opening tells a reader who the role is.
-- **The layer line, *Core*:** every core actor has one, and it is project-kit's.
+- **The layer line, *Core*:** every core actor has one, and no source has its counterpart.
   - It says what in the core makes the role exist. project-kit's analysis describes the core, and a capability's view of a role comes with that capability (the developer's *Note*).
-  - An adopter's analysis describes one system, with no layer to name.
-  - Its general form would say what in the system makes the role exist. DEC-001 point 4 already has each actor anchor that, or give `unanchored-because` where nothing does (question 3).
+  - A project whose system has layers, such as a platform and its plugins, may want the same line. A project with one layer has nothing to put there.
+  - The part of it a check could use is the records. DEC-001 point 4 already has each actor anchor what embodies it. An actor that nothing embodies gives `unanchored-because` instead (DEC-001 point 9 and COR-050 point 1).
 - **What a script can check:**
   - **A:** the heading against the id and the name, as #1346 asks. Then that some text follows it.
-  - **B and E:** the heading, the opening, each declared label in order and not empty, and each need one sentence. Under project-kit's closed list, a label outside the nine is reported (the design's part 4).
+  - **B, E and F:** the heading, the opening, each declared label in order and not empty, and each need one sentence. Under project-kit's closed list, a label outside its nine is reported (the design's part 4).
   - **C and D:** the same for their own labels. C's six characteristics are content, since only declared labels delimit (the design's part 1).
-  - **None of them:** whether a record the body names is among the anchors, or whether *Comes* covers each trigger of the actor's use cases. A later form could check the first, as the use case's round left a form for *Other actors* open.
+  - **None of them:** whether a record or a file the body names is among the anchors. A form could check it for every kind, and "For the build" names it.
 - **The writing rules:**
   - A's paragraph runs to four sentences, the most RS-WRITE-007 allows.
   - B and E are the style trial's output, and meet `WRITE` as merged.
@@ -900,42 +911,53 @@ Only A, B and E keep every part to what the software can make false. C and D add
 
 ### Recommendation
 
-Ship five elements with software-analysis: the heading, the needs, an opening, *Comes* and *Brings*. *Comes* is required and *Brings* optional. project-kit keeps its seven labels in its own `structures.yaml`, as the design's part 9 has them.
+Ship an opening and two labelled parts with software-analysis, beside the heading and the needs. Both parts are required, with `None.` allowed. They carry noun labels, which project-kit relabels *Comes* and *Brings*, and project-kit keeps its seven other labels in its own `structures.yaml`.
 
-- **The criterion:** an element ships when RUP, the persona and the core actors all hold it, and a use case or a reader draws on it. The five meet it, as the table of what each source calls the same thing shows.
+- **The criterion:** an element ships when DEC-001 or today's template asks for it, nearly every core actor holds it, and it fits a system too. RUP and the persona confirm or question an element, and never veto one.
 - **Why each:**
   - **The heading:** the stamp writes it, and #1346 checks it against the id and the name.
   - **The needs:** DEC-001 point 1's account of an actor, the readers point's data and the use cases' goals. Each is one sentence (the `sentence` form) in the actor's own voice (the use case's question 6).
-  - **The opening, required:** RUP's brief description, NN/g's tagline and every core actor's first line. It has no form, since three core actors' openings run to two sentences.
-  - **Comes, required:** RUP's frequency of use, NN/g's "How often would they use it?" and every core actor's. It is the actor's side of its use cases' triggers. It differs from the design's first cut (question 1).
-  - **Brings, optional:** RUP's environment, domain knowledge and other applications, and NN/g's experience level. Seven core actors have it. The AI agent's *Comes* says it keeps no memory between sessions beyond what the repository holds, so it brings nothing of its own.
+  - **The opening, required:** today's template asks who this is, and every core actor opens so. RUP's brief description is the same. It has no form, since three core actors' openings run to two sentences.
+  - **Occasions, required with `None.` allowed:** today's template asks when they come to the system, and every core actor answers it. It tells a reader of the use cases when the actor appears. An actor who takes no step, such as an outside auditor, writes `None.`.
+  - **Context, required with `None.` allowed:** today's template asks what they bring with them, and seven core actors answer it. A use case's preconditions and its other actors' interests draw on it. The AI agent would write `None.`.
 - **What was weighed and left out:**
-  - **RUP's further characteristics:** the number of users, domain knowledge and general characteristics describe people, and no change to the software makes them false. RUP also limits them to human actors.
-  - **RUP's relationships:** the use cases an actor takes part in are the use cases' own front matter, `actor` and `involves`. So a tool can list them, and the actor would hold a second copy. Relations between actors as data would form cycles. DEC-001 names no generalisation, and no core actor generalises another.
-  - **The persona:** it must rest on user research. Its goals, frustrations and quote restate needs, and its other parts cannot go false with the software.
-  - **project-kit's seven labels:** each stays project-kit's. *Can be*, *Does* and *In the model* recur in two or three core actors, and *The setup* and *Always a person* in one each. *Note* is project-kit's style (RS-WRITE-004), and *Core* is its layer line (question 3).
-  - **In the model, for actors that are no person:** both actors that use it are no person. So any project with a system actor might want it. It recurs in project-kit only, so it waits until real artefacts show it recurs elsewhere (the use case's question 1).
-- **Labels:** *Comes* and *Brings*, as the core actors have them (question 2).
-- **Ships with:** the five elements ship with software-analysis. project-kit's `structures.yaml` adds its seven labels under the kind `actor`, closed, naming RS-ANALYSIS-002.
+  - **RUP's further characteristics:** the number of users, domain knowledge, computer experience and general characteristics count and rate people. RUP also limits them to human actors.
+  - **RUP's relationships:** the use cases an actor takes part in are the use cases' own front matter, `actor` and `involves`. So a tool can list them, and the actor would hold a second copy. DEC-001 names no generalisation, and no core actor generalises another.
+  - **Relations between actors as data:** two actors that named each other would form a cycle. project-kit's *Note* keeps them in prose.
+  - **The persona:** it must rest on user research, and most of its parts describe a person. Where the needs are its only source, its goals and frustrations restate them.
+  - **project-kit's seven labels:** each stays project-kit's.
+    - *Can be* recurs in three core actors, and *Does* and *In the model* recur in two each. *The setup* and *Always a person* recur in one each.
+    - *Note* is project-kit's style (RS-WRITE-004), and *Core* is its layer line (question 3).
+  - **In the model, for actors that are no person:** both actors that use it are no person. So any project with a system actor might want it. F shows what a system actor loses without it. It recurs in project-kit only, so it waits until real artefacts show it recurs elsewhere (the use case's question 1).
+- **Labels:** the nouns *Occasions* and *Context*, which project-kit relabels *Comes* and *Brings* (question 2).
+- **Ships with:** the heading, the needs' form, the opening, *Occasions* and *Context* ship with software-analysis. project-kit's `structures.yaml` relabels the two, and adds its seven labels under the kind `actor`, closed, naming RS-ANALYSIS-002.
 
-**The declaration #1363 would take, in this order:**
+**The declaration #1363 would take.** The body's elements, in this order:
 
 | Element | Label | Required | Form | Hint | Example |
 |---|---|---|---|---|---|
 | `heading` | `# ACT-<slug> — <name>` | yes | heading | none, since the stamp writes it | `# ACT-analyst — Analyst` |
-| `needs` | the front matter's `needs` | yes, at least one | `sentence`, on each | What the actor needs from the system, each in one sentence in their own voice. Start with the verb, with *I* and *my* where they refer to themselves. | Export my report as a file. |
-| `opening` | none | yes | none | Who plays this role, and what they do with the system. | Someone who builds reports from their team's data. |
-| `comes` | Comes | yes | none | When the actor comes to the system, and how often. | At the end of each week, and whenever a manager asks for figures. |
-| `brings` | Brings | no | none | What the actor comes with, such as data, authority or a limit. | Their team's data, and a template an administrator published. |
+| `opening` | none | yes | none | What this role is, and what it does with the system. | Someone who builds reports from their team's figures. |
+| `occasions` | Occasions | yes, and `None.` is allowed | none | On what occasions the actor comes to the system. Write `None.` when there is none. | At the end of each week, and whenever a manager asks for figures. |
+| `context` | Context | yes, and `None.` is allowed | none | What the actor comes with, such as data, authority or a limit. Write `None.` when there is none. | A spreadsheet of their team's figures, and no right to publish a template. |
 
-- **The hints:** each is one line, with short sentences and no semicolon (the design's part 5). They say what goes in a part, never how to format it.
+The front matter's form, apart from the body:
+
+| Field | Form | Hint | Example |
+|---|---|---|---|
+| `needs` | `sentence`, on each item | What the actor needs from the system, each in one sentence in their own voice. Start with the verb, or with *Never* and the verb, with *I* and *my* where they refer to themselves. | Export my report as a file. |
+
+- **The hints:** each is one line, with short sentences and no semicolon (the design's part 5). They say what goes in a part, never how to format it. The opening's hint reads for a system as well as a person.
 - **The examples:** one neutral actor runs through them all, the analyst of the use case's and the journey's examples.
   - Its need is the use case's example goal, word for word, since a need is a goal (DEC-001 point 1).
-  - Its *Brings* names the template of the journey's example, which an administrator published.
-- **The needs' hint:** it is the goal's hint, made plural. The voice ships with software-analysis (the use case's question 6).
-- **A hint in the front matter:** `needs` is front matter, where YAML takes comments. How the stamp shows its hint there is #1366's to settle.
+  - Its *Context* names a limit, the template it cannot publish. In the journey's example, an administrator publishes it.
+- **The needs' hint:** it is the goal's hint, made plural, with question 4's *Never*.
+- **At least one need:** the schema's `minItems` asks for it, and binds with no rule. The structure adds only the `sentence` form.
+- **A hint in the front matter:** a `pkit:hint` comment cannot sit in YAML, and the template's front matter is written by hand (#1366).
+  - **The round's reading:** the needs' hint stays the placeholder need, as today's placeholder is. The placeholder check already refuses it when left in, since it reads fields too (`check.py`).
+  - That differs from #1363's and #1366's hints, which are body comments, so both say so.
 
-**project-kit's own, in `structures.yaml`:** the design's part 9 sketch, with a hint and an example for each. Each is optional, and the list is closed.
+**project-kit's own, in `structures.yaml`:** it relabels `occasions` *Comes* and `context` *Brings*. It adds the design's part 9 sketch, with a hint and an example for each. Each addition is optional, and the list is closed.
 
 | Element | Label | After | Hint | Example |
 |---|---|---|---|---|
@@ -943,43 +965,91 @@ Ship five elements with software-analysis: the heading, the needs, an opening, *
 | `always-a-person` | Always a person | `setup` | Why no agent may play this role. | the authorisation turns the answers an agent wrote into a person's decision (`ACT-merge-authoriser`) |
 | `can-be` | Can be | `always-a-person` | Who may play this role. | project-kit's maintainers, or a fork's (`ACT-methodology-maintainer`) |
 | `does` | Does | `can-be` | What this role does, where the opening is too short for it. | choose how much the agents may do without asking (`ACT-operator`) |
-| `in-the-model` | In the model | `brings` | How the role appears in the use cases, where its goals belong to others. | its needs are what the system must give an unattended runner (`ACT-ci-pipeline`) |
-| `core` | Core | `in-the-model` | What in the core makes this role exist, with the records that say so. | the permission model, its sandbox and the cross-repository gate are this role's controls (`ACT-operator`) |
+| `in-the-model` | In the model | `context` | How the role appears in the use cases, where its goals belong to others. | its needs are what the system must give an unattended runner (`ACT-ci-pipeline`) |
+| `core` | Core | `in-the-model` | What in the core makes this role exist, with the records that say so. | the checks bind once the project makes them a required status (COR-050 point 12) (`ACT-ci-pipeline`) |
 | `note` | Note | `core` | Side matter: the reason for a name, or an overlap with another role. | the name is not "approver", because project-management uses that word for a reviewer agent (`ACT-merge-authoriser`) |
 
-- **Their hints may carry project-kit's style,** since they are project-kit's own, and the examples quote its own actors. #1368 writes them, and this table is the round's input.
-- **The order** is the design's. *The setup* follows the opening, so it comes before the shipped *Comes* (the design's part 4).
+- **Their hints may carry project-kit's style,** since they are project-kit's own, and the examples quote its own actors.
+- **#1368 gains this work.** Its body names the seven labels, but not their hints and examples, and the design's sketch left them out.
+- **The order** is the design's. *The setup* follows the opening, so it comes before the shipped *Occasions* (the design's part 4).
 
 **For the build:**
 
-- **The parts (#1363):** the table above, in its order, with each part's hint and example. The actor is a document kind (#1346), and `needs` takes the `sentence` form on the front matter (the design's part 1).
-- **The schema (#1346):** it gains the `id` only, unless question 4 adds a field.
-- **The stamp and the template (#1366):** rendered from the table, with the hint for `needs` placed in the front matter.
-- **project-kit's labels (#1368):** `structures.yaml` as the design's part 9 sketches it, with the hints and examples above.
+- **The parts (#1363):** the two tables above, the body's elements in their order. The actor is a document kind (#1346).
+- **The schema (#1346):** it gains the `id` only.
+- **The stamp and the template (#1366):** the body is rendered from the table. The needs' hint is the placeholder need, in the front matter written by hand.
+- **What an actor is not (#1366 and #1369):** the template's head and the README say an actor is a role, not a persona. The journey's say it is not a UX journey map, and the skill already says "A role, not a person".
+- **project-kit's labels (#1368):** `structures.yaml` relabels the two shipped parts and adds the seven, with the hints and examples above.
+- **The voice's exception (#1360 and #1363), on question 4's answer:** the format rule's *How* lets *Never* come before the verb, and the hints for the needs and the goal say so. #1368's rule on the voice goes, as decided, so the exception moves here.
 - **The skill (#1369):** the actor sub-procedure's *Fill it* list gives way to the hints. Its first step, "Is it an actor?", stays, since no hint carries it.
-- **DEC-001 first (#1358):** its point 1 names an actor as a role with the needs it brings. A required *Comes*, and *Brings*, go beyond it. So #1358's refinement says so before any build cites it (core rule 2).
+- **DEC-001 first (#1358):** its point 1 names an actor as a role with the needs it brings. The opening, *Occasions* and *Context* go beyond it, so #1358's refinement says so before any build cites it (core rule 2).
+- **The readers point, later:** when a page first names an actor as its reader, its review shows whether the name and the needs say enough. If not, the opening becomes a front-matter field the filler reads, as a term's definition is data (the design's part 6).
+- **A possible form:** every record and file a body names is among its anchors. It would serve every kind, and the round does not decide it.
 
 **Found on the way:**
 
-- **Two core actors cite a record they do not anchor:** the developer cites ADR-061, and the CI pipeline cites PRJ-002. #1346 moves all eight actors, each with a revalidation, so that change could add them. RS-WRITE-014, still proposed, asks for such anchors.
+- **Five core actors cite what they do not anchor:**
+  - a record: the developer's ADR-061, the CI pipeline's PRJ-002 and the merge authoriser's DEC-028
+  - a file: CONTRIBUTING.md, in the methodology maintainer's *Brings* and the operator's *Note*
+- **Where to fix them:** #1346 moves all eight actors, each with a revalidation, so that change could add the missing anchors. RS-WRITE-014, still proposed, asks for such anchors.
 
 ### Questions for the maintainer
 
 Each question is one decision, with a recommendation.
 
-1. **Is *Comes* required?**
-   - **The case:** the design's first cut makes *Comes* and *Brings* optional. Every core actor has *Comes*, and RUP's characteristics and NN/g's context ask for it too. Every actor uses the system (DEC-001 point 1), so each comes at some time.
-   - **Recommendation:** yes, required, with no `None.`. *Brings* stays optional.
-   - **Else:** optional, as the design's first cut has it.
-2. **Do the actor's labels stay *Comes* and *Brings*, or become nouns?**
-   - **The case:** the maintainer made the use case's labels nouns, and the journey's are nouns too. The actor's two are verbs, from the style trial, and RS-WRITE-002's example quotes *Comes*.
-   - **Recommendation:** keep the verbs. Each completes a sentence about the actor the heading names. No noun fits *Brings* without narrowing it: *Resources* would leave out the CI pipeline's "no person to answer a prompt".
-   - **Else:** nouns, such as *Occasions* and *Context*. project-kit then relabels its own to match, and RS-WRITE-002's example changes with them (#1368).
+1. **Are the two labelled parts required, with `None.` allowed?**
+   - **The case:** the design's first cut makes both optional. Every core actor says when it comes, and seven say what they bring. An actor who takes no step, such as an outside auditor, has neither.
+   - **Recommendation:** yes, as the use case's *Preconditions*, *Variants* and *Minimal guarantees* are. A required part makes the writer consider it, and `None.` covers an actor with nothing to say.
+   - **Else:** both optional, as the design's first cut has them.
+2. **Do the shipped labels become nouns, with project-kit relabelling them *Comes* and *Brings*?**
+   - **The case:** the maintainer made every use case label a noun, and the journey's labels are nouns too. The actor's two are verbs from the style trial, and RS-WRITE-002's example quotes *Comes*.
+   - **Recommendation:** yes. Ship *Occasions* and *Context*, and project-kit relabels them in its `structures.yaml` (the design's part 4). Every shipped label is then a noun, and project-kit's actors and RS-WRITE-002's example stay as they are.
+   - **Else:** ship *Comes* and *Brings*, as the core actors have them. The shipped labels then differ in kind from the use case's and the journey's.
 3. **Does the layer line ship, as a part project-kit relabels *Core*?**
-   - **The case:** *Core* is in every core actor, as *Comes* is. It says what in the core makes the role exist, often naming the records the actor anchors. An adopter's analysis describes one system, with no layer to name.
-   - **Recommendation:** no, it stays project-kit's. DEC-001 point 4 already has each actor anchor what embodies it, or say why nothing does. A shipped part would state the anchors twice, once as data and once in words.
-   - **Else:** an optional shipped part, *Basis*, with the hint "What in the system makes this role exist. Name the record or code." project-kit relabels it *Core* (the design's part 4).
-4. **Does the opening become front-matter data, so the readers point says who the reader is?**
-   - **The case:** the point asks for "who the reader is and what they need". The filler gives the name and the needs, since a tool reads only front matter, so the opening never reaches the point.
-   - **Recommendation:** not now. The name and the needs say what a page must serve, and no page names an actor as its reader yet. Revisit when a page first does, and its review finds the name too little.
-   - **Else:** a one-sentence field, which the filler adds to the description. The opening leaves the body, as a term's definition is front-matter data (the design's part 6). Three core actors' openings then lose their second sentence to a label.
+   - **The case:** every core actor has *Core*. It says what in the core makes the role exist, and in three actors it names the records the actor anchors. No source has its counterpart, and a system with layers, such as a platform and its plugins, could use it.
+   - **Recommendation:** no, it stays project-kit's. A project whose system has layers adds it in its own `structures.yaml`, as project-kit does (the design's part 4). The part of it a check could use, the records, belongs in each actor's anchors (DEC-001 point 4).
+   - **Else:** an optional shipped part, *Basis*, with the hint "What in the system makes this role exist. Name the record or code." project-kit relabels it *Core*.
+4. **Does the voice let *Never* come before the verb?**
+   - **The case:** the decided voice starts each need and goal with its verb (the use case's question 6). The methodology maintainer's need starts with *Never*, and RS-WRITE-013 keeps that wording as its example of a rewrite that must keep the meaning. The design's exception for it went with #1368's rule on the voice.
+   - **Recommendation:** yes. The hints for the needs and the goal say "Start with the verb, or with *Never* and the verb", and #1360's rule says the same. The goal's decided hint gains those words.
+   - **Else:** the hints stay as decided. A writer who follows them would rewrite that need as "Ship … only with", the rewrite RS-WRITE-013 forbids.
+
+### Review
+
+The critic reviewed the first draft. Each finding below changed the draft, or is answered here.
+
+| Finding | Answer |
+|---|---|
+| Red flag: the hint for *Comes* asked how often, which the use case left to project management | The hint asks on what occasions. The case for the part rests on today's template and the core actors. |
+| Red flag: the needs' hint, "Start with the verb", would push the rewrite RS-WRITE-013 forbids for the maintainer's *Never* need | Question 4 asks to carry the design's exception into the hints and #1360's rule. |
+| Red flag: the criterion counted the tagline, domain knowledge and the experience level, which the round elsewhere filed as about people | The criterion is the earlier rounds': DEC-001 or today's template, recurrence in the core actors, and fit for a system. The sources confirm, and never veto. |
+| Two core actors were said to cite a record they do not anchor | Five do: three records, and one file twice ("Found on the way"). |
+| C's *Relationships* held other actors, which RUP's property does not | C keeps RUP's two kinds, the use cases and the generalisation. |
+| *Core* was said to state the anchors in words, and question 3 rested on it | The anchors are among what *Core* names. Question 3 rests on the design's part 4 instead. |
+| `unanchored-because` was credited to DEC-001 point 4 | DEC-001 point 9 and COR-050 point 1 |
+| RUP was said to ask the frequency of every actor | Its guidelines add it, for human actors. Its tailoring could keep it for a system. |
+| "The needs are the interests" generalised from three of four | Three of the four, and the AI agent's may show a missing need |
+| B's *Note* named a capability's role, not an actor | The component author's and the operator's *Note* name other actors. |
+| *Brings*' example named a template the system holds | The example is the analyst's spreadsheet, and a right the analyst lacks. |
+| The readers point's quote was cut short | Quoted whole, "from the documentation". The readers point moves to "For the build", until a page names an actor. |
+| A required *Comes* never met an actor who takes no step | Both parts allow `None.` (question 1). |
+| *Comes* was said to sum up the triggers, traced on the landing only | E's trigger falls under no occasion. *Comes* sums up no triggers, and holds no copy. |
+| `needs` sat in the body's order | The front matter's form has a table of its own. |
+| The needs' hint in the front matter was left to #1366 | The round reads it as the placeholder need, and names the change to #1363 and #1366. |
+| No actor was filled in the shipped parts alone | F fills the CI pipeline so, and "Fit with pkit" says what it loses. |
+| The membership and cost tests were applied selectively | Every part is classed, and the cost is charged to *Core* and *Note* too. |
+| No counterpart to the journey's naming | The template's head and the README say an actor is a role, not a persona. |
+| #1368 holds no hints for the seven labels | It gains that work. |
+| *Core*'s example named no record | It names COR-050 point 12. |
+| D dropped NN/g's tasks without a reason, and Cooper went unused | Tasks are use cases. Cooper's goals, tasks and skill levels are in the source table. |
+| The persona could veto any part | The sources no longer veto. |
+| Question 2 tested only *Resources* | Question 2 now recommends nouns, which project-kit relabels. |
+| Question 3 assumed an adopter's system has no layers | A layered project adds the line in its own `structures.yaml`. |
+| *Brings* optional rested on an inference about the AI agent | Both parts are required, and the AI agent writes `None.`. |
+| *Comes*, for a person, is a habit | Marked as closest to the line |
+| D's repeats come from how it was filled | Said so, among what the example left unclear |
+| Counter-alternative: *Comes* required with `None.` | Adopted, as question 1 |
+| Counter-alternative: noun labels, relabelled by project-kit | Adopted, as question 2 |
+| Counter-alternative: a form for what a body cites | Named in "For the build", and not decided |
+| Counter-alternative: Cockburn's kinds of actor | Not adopted. The use case's example auditor makes the case for `None.`, and the round could not read Cockburn's text on actors. |
+| Writing: elided verbs, series out of lists, ambiguous pronouns, hints framed for a person | Each fixed. The opening's hint reads for a system too. |
