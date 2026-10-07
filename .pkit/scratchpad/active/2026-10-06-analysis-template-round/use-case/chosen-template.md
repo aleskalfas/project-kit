@@ -1,4 +1,4 @@
-The maintainer's chosen parts, filled with both examples. Each artefact is shown whole, as it would read on the default branch, inside its own fence. The ordinary example has nothing for the two optional parts, *Other actors* and *Assumptions*, so it leaves both out.
+The maintainer's chosen parts, filled with both examples. Each artefact is shown whole, as it would read on the default branch, inside its own fence. Every part is present in both, by the rule for every kind. The ordinary example has nothing for *Other actors*, *Preconditions* or *Assumptions*, so each reads `None.`.
 
 ## The landing
 
@@ -110,7 +110,11 @@ pkit:
 
 **Goal:** Think a question too big for a decision through in a scratchpad note, and retire the note once it has produced something.
 
+**Other actors:** None.
+
 **Preconditions:** None.
+
+**Assumptions:** None.
 
 **Trigger:** the developer meets a question too large to settle in one decision record.
 

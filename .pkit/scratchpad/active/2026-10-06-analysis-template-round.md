@@ -16,27 +16,60 @@ The maintainer picks each analysis kind's parts here, one kind at a time, from c
 - **Paths:** `SA/` is `.pkit/capabilities/software-analysis/`.
 - **Citations:** records, rules and issues by permanent id, files by name, never by line number (RS-WRITE-014, proposed).
 - **Reviewed:** by the critic, before the maintainer saw it. Its findings and the answers are in "Review", at the end of each kind.
-- **Status:** the use case and the journey are fully decided, and the actor waits for the maintainer's answers. The glossary term and the revalidation record follow.
+- **Status:** the use case, the journey and the actor are fully decided, under one rule for every kind ("Decided: across kinds"). The glossary term and the revalidation record follow.
+
+## Decided: across kinds
+
+The maintainer set one rule for every kind on 7 October, in a comment on PR #1374. Every shipped part of a kind is present in every artefact.
+
+- **The rule:**
+  - Every part a kind ships is present in every artefact of that kind.
+  - A part with nothing to say reads `None.`.
+  - A missing part is always an error.
+  - A project's own additions stay outside the rule. Each is optional unless the project marks it required.
+- **Why:** `None.` is a deliberate answer. So a script can tell a part considered with nothing to say from a part forgotten.
+- **Where it is recorded:** in software-analysis DEC-001, by #1358's refinement.
+- **Its effects on the decided kinds:** six parts become required, with `None.` allowed.
+  - the use case's *Other actors* and *Assumptions*, which were optional
+  - the journey's *Variants* and *Minimal guarantees*, which were optional
+  - the actor's *Occasions* and *Context*, which the round had recommended so
+- **Which parts may read `None.`:** each kind's table says. A part that every artefact has something for may not, such as a goal, a main path or an actor's opening.
+  - **The round's reading:** the rule's "a part with nothing to say" leaves those parts as they were decided, required with no `None.`.
+- **Front matter, in the round's reading:** the rule is about a body's parts. A front-matter list with nothing to hold stays absent, as `replaces` does on a term never renamed (`SA/schemas/term.schema.json`).
+  - So a use case whose *Other actors* reads `None.` has no `involves`.
+  - A journey whose steps need nothing from outside it has no `relies-on`.
+- **What it changes in the design's first cut:**
+  - **Its part 1** checks an optional element only when present. That now holds only for a project's additions.
+  - **Its part 2** shows optional parts in a template, for the writer to delete. A shipped part is never deleted now, and the writer replaces its hint with `None.`.
+- **For the build:**
+  - **DEC-001 (#1358):** its paragraph on a kind's structure states the rule.
+  - **The declaration (#1363):** every shipped element is required. A flag on each says whether it may read `None.`, and `required: false` is left to a project's additions (the design's part 4).
+  - **The check (#1364):** a missing shipped part is an error, and `None.` passes only where its element allows it.
+  - **The stamp and the templates (#1366):** they render every shipped part with its hint. A project's optional addition is rendered too, and the writer deletes it when they have nothing for it.
+- **The kinds still to come:** the glossary term is weighed under the rule. The revalidation record's stamp writes `None found.` under *Gaps* (`SA/scripts/_lib/revalidation.py`), so its round weighs that against `None.`.
 
 ## The use case
 
-The maintainer chose nine parts: the design's five, two of them renamed, three of Cockburn's further parts, and *Assumptions*. The round had recommended the five alone, and its comparison and recommendation stay below as they were made.
+The maintainer chose nine parts: the design's five, two of them renamed, three of Cockburn's further parts, and *Assumptions*. Under the rule for every kind, all nine are present in every use case. The round had recommended the five alone, and its comparison and recommendation stay below as they were made.
 
 ### Decided: the use case
 
 The maintainer chose the use case's parts and their labels on 6 October, in comments on PR #1374, and then answered its last two questions. Every question of the use case is now decided. F fills the parts with both examples (`use-case/chosen-template.md`).
 
 - **Added, with the maintainer's reasons:**
-  - *Other actors*, optional: the other actors who take part, each with what the use case must protect for them. It is Cockburn's stakeholders and interests, added for completeness.
+  - *Other actors*, required with `None.` allowed: the other actors who take part, each with what the use case must protect for them. It is Cockburn's stakeholders and interests, added for completeness.
+    - **Required since 7 October,** by the rule for every kind. It was first optional.
   - *Preconditions*, required: what the system, or an earlier use case, has already made true before the use case starts. A journey's seams need them, since a seam is where one use case's end must meet the next one's start.
     - **The reason changed** with the journey's question 2. Journeys carry their own hand-overs, and the part records the rare state an earlier use case set up that nothing checks again.
-  - *Assumptions*, optional: what must also be true for the use case to work, but nothing in the system secures. Each names the record that admits it, and each is a candidate for a check. Question 5 gives the reasons.
+  - *Assumptions*, required with `None.` allowed: what must also be true for the use case to work, but nothing in the system secures. Each names the record that admits it, and each is a candidate for a check. Question 5 gives the reasons.
+    - **Required since 7 October,** by the rule for every kind. It was first optional.
   - *Minimal guarantees*, required: what the system still guarantees when the use case ends early or fails. pkit's safety guarantees need a part of their own. It is Cockburn's minimal guarantee, and the round's *Always holds*.
 - **Renamed:** *Starts when* is now *Trigger*, and *Done when* is now *Postconditions*, the pair to *Preconditions*.
 - **Every label a noun:** the maintainer chose the labels after the parts, in a later comment on the pull request. *Other actors* and *Minimal guarantees* were first *Also involved* and *If it fails*.
 - **Otherwise, start small:** any other part is added once real use cases show it recurs.
 - **Where each part ships:** with software-analysis, as the round recommended. The maintainer's comments leave that as it was.
 - **The actor's voice ships too:** the goal is one sentence in the actor's own voice, as each of an actor's needs is (question 6). It is the mainstream user-story convention, not project-kit's alone. A project that prefers another voice replaces the hint in its own settings.
+  - **It may start with *Never*:** a goal starts with its verb, or with *Never* and the verb (the actor's question 4).
 - **The append-only check:** a check keeps a use case's steps and variants append-only, filed as #1375 (question 4).
 
 **The declaration #1363 takes, in this order:**
@@ -44,10 +77,10 @@ The maintainer chose the use case's parts and their labels on 6 October, in comm
 | Element | Label | Required | Form | Hint | Example |
 |---|---|---|---|---|---|
 | `heading` | `# UC-NNN — <title>` | yes | heading | none, since the stamp writes it | `# UC-007 — Export the report as a file` |
-| `goal` | Goal | yes | `sentence` | What the actor wants from this use case, in one sentence in their own voice. Start with the verb, with *I* and *my* where they refer to themselves. | Export my report as a file. |
-| `other-actors` | Other actors | no | none | Each other actor who takes part, and what this use case must protect for them. | **Auditor** (`ACT-auditor`): each export is logged with who made it. |
+| `goal` | Goal | yes | `sentence` | What the actor wants from this use case, in one sentence in their own voice. Start with the verb, or with *Never* and the verb, with *I* and *my* where they refer to themselves. | Export my report as a file. |
+| `other-actors` | Other actors | yes, and `None.` is allowed | none | Each other actor who takes part, and what this use case must protect for them. Write `None.` when there is none. | **Auditor** (`ACT-auditor`): each export is logged with who made it. |
 | `preconditions` | Preconditions | yes, and `None.` is allowed | none | What the system, or an earlier use case, has already made true before the use case starts. Each is a state, not an event, and no step checks it. Write `None.` when there is none. | The analyst is signed in. |
-| `assumptions` | Assumptions | no | none | What must also be true for the use case to work, but nothing in the system secures. Name the record that admits each. | The disk keeps the file as the system wrote it (DEC-003). |
+| `assumptions` | Assumptions | yes, and `None.` is allowed | none | What must also be true for the use case to work, but nothing in the system secures. Name the record that admits each. Write `None.` when there is none. | The disk keeps the file as the system wrote it (DEC-003). |
 | `trigger` | Trigger | yes | none | The event that starts the use case, and who or what causes it. | The analyst asks to export the report on screen. |
 | `main-path` | Main path | yes | `numbered-steps` | Numbered steps from the start to the goal, each saying who does what. | 1. The analyst chooses `Export`. 2. The system writes the report to a file. |
 | `variants` | Variants | yes, and `None.` is allowed | `variants` | One for each condition, lettered after the step it branches from. Say what happens instead, and where the path rejoins or ends. Write `None.` when there is none. | 2a. The disk is full. The system says so and writes nothing, and the use case ends. |
@@ -58,10 +91,12 @@ The maintainer chose the use case's parts and their labels on 6 October, in comm
 - **The examples:** one neutral use case runs through them all, the design's export. An auditor and a decision of the example's own complete it.
 - **The actor's voice:** the goal's hint names it, and its example is in it (question 6). The voice is the method's now, so it is no project's style that the neutral floor of the design's part 5 keeps out.
 - **The goal's hint, split:** as one sentence it ran to 28 words, over RS-WRITE-005's limit. It is two sentences now, and asks the same. The journey's round found it.
+- **The goal's hint, with *Never*:** its second sentence gains "or with *Never* and the verb" (the actor's question 4). It runs to 19 words.
+- **`None.` where a part may read it:** the hints of *Other actors* and *Assumptions* gain the line the other three such parts have, "Write `None.` when there is none."
 
 **The front matter gains `involves`:**
 
-- **What it holds:** the actors of *Other actors*, by id, as a list, such as `involves: [ACT-merge-authoriser, ACT-ci-pipeline]`. It is absent where the part is.
+- **What it holds:** the actors of *Other actors*, by id, as a list, such as `involves: [ACT-merge-authoriser, ACT-ci-pipeline]`. It is absent where the part reads `None.`.
 - **Why data:** a tool takes data only from the front matter (the design's Decided 2). So a check can resolve each id to an actor.
 - **An anchor too:** each actor in it is an artefact anchor, as the primary actor is (DEC-001 point 4). A change to one flags the use case.
 
@@ -80,7 +115,7 @@ The maintainer chose the use case's parts and their labels on 6 October, in comm
 2. **Question 2, *Always holds*:** it comes now, as *Minimal guarantees*, required with `None.` allowed.
 3. **Question 3, *Variants* required:** yes, with `None.` allowed, as recommended.
 4. **Question 4, the append-only check:** option (a). A check keeps a use case's steps and variants append-only, filed as #1375. It depends on #1364.
-5. **Question 5, a fact the use case relies on that the system does not secure:** option (c). It goes in *Assumptions*, a part of its own, and *Preconditions* stay strict.
+5. **Question 5, a fact the use case relies on that the system does not secure:** option (c). It goes in *Assumptions*, a part of its own, and *Preconditions* stay strict. The part is required, with `None.` allowed, since the rule for every kind.
 6. **Question 6, the actor's voice in the goal hint:** option (b). The first-person voice ships with software-analysis for every project, for an actor's needs and a use case's goal.
 
 **What filling F showed:**
@@ -92,12 +127,12 @@ The maintainer chose the use case's parts and their labels on 6 October, in comm
   - **The title at a queue's merge:** the queue reads the title at the merge, and the landing makes no rule of a title changed since (ADR-061 point 8).
   - **How soon the service shows a change:** the code names it an assumption (`pull_request_landing.py`). ADR-061 point 7 admits that the service may still apply a change two readings did not see.
 - **The four questions, applied:** the committed change is a precondition. GitHub as the host is checked, so it stays variant 6e. The three facts above are assumptions.
-- **E's assumptions:** none, so E leaves the part out, as it leaves out *Other actors*.
+- **E's assumptions:** none, so E first left the part out, as it left out *Other actors*. Since the rule for every kind, both read `None.`.
 - **The goals, in the voice of question 6:** both already read so, and F keeps them as they are.
   - The landing's starts with *Land*, and says *my change*.
   - E's starts with *Think*. The developer never refers to itself in it, so it needs no *my*.
   - E's repeats one of the developer's needs word for word, and the landing's is the first part of another (`ACT-developer`).
-- **Who is involved:** the landing involves four actors, and E involves none, so E shows the part left out.
+- **Who is involved:** the landing involves four actors, and E involves none, so E's part reads `None.` and its front matter has no `involves`.
   - The CI pipeline and the merge authoriser take part in steps 3 and 4.
   - The AI agent takes part where it acts for the developer, as in 2a.
   - The operator answers the guard in 6a, which now names them.
@@ -108,7 +143,7 @@ The maintainer chose the use case's parts and their labels on 6 October, in comm
   - Auto-merge is not the landing's request, and a queue may merge a moved head before the next reading. F's items say both.
 - **Anchors:** every record and file F cites is among its anchors, so a change to one flags the use case (RS-WRITE-014). The landing gains COR-054, for the CI pipeline's base, and its four involved actors.
 - **What F changes from A:** the front matter's `involves` and anchors, the precondition taken out of A's *Starts when*, and 6a naming the operator. *Variants* drops A's instruction line, as D does. The steps and the other variants are A's.
-- **Length:** the landing runs to 1,443 words, against A's 960 and B's 1,282. E runs to 333, against 259 in the recommended parts.
+- **Length:** the landing runs to 1,443 words, against A's 960 and B's 1,282. E runs to 338 with its three parts that read `None.`, against 259 in the recommended parts.
 
 **For the build:**
 
@@ -183,7 +218,7 @@ B says the most and costs the most, and C cannot be cited. Words are counted in 
 | B | 12: *Goal in context*, *Scope*, *Level*, *Stakeholders and interests*, *Precondition*, *Minimal guarantees*, *Success guarantees*, *Trigger*, *Main success scenario*, *Extensions*, *Technology and data variations*, *Related information* | None marked. *Related information* holds whatever a project needs. | 1,282 | The scope (GitHub through `gh`), ADR-061 point 5's obligations in one place, four stakeholders' interests, technology variations, open issues | *Goal in context* repeats the goal, and its second sentence repeats the frequency. *Success guarantees* repeat *Done when*. *Level* reads "user goal" in every use case. Two interests repeat actors' needs, and *Open issues* repeat the tracker. |
 | C | 2, unlabelled: the story and the variations | None | 351 | Nothing. It reads fastest, as one story. | Nothing, but it drops the step numbers, the outcomes and the end as a part of its own |
 | D | 5, as A | All five, *Variants* allowed to read `None.` | 943 | As A, with hints and checks | Nothing |
-| F | 9: *Goal*, *Other actors*, *Preconditions*, *Assumptions*, *Trigger*, *Main path*, *Variants*, *Postconditions*, *Minimal guarantees* | All but *Other actors* and *Assumptions*. *Preconditions*, *Variants* and *Minimal guarantees* may read `None.`. | 1,443 | The other actors as data and anchors, the precondition apart from the trigger, three assumptions, and seven guarantees, each with its record or code | Three interests restate actors' needs. *Minimal guarantees* restates ADR-061 point 5's obligations, and *Assumptions* restate what its points 4, 7 and 8 admit. |
+| F | 9: *Goal*, *Other actors*, *Preconditions*, *Assumptions*, *Trigger*, *Main path*, *Variants*, *Postconditions*, *Minimal guarantees* | All nine. *Other actors*, *Preconditions*, *Assumptions*, *Variants* and *Minimal guarantees* may read `None.`, under the rule for every kind. | 1,443 | The other actors as data and anchors, the precondition apart from the trigger, three assumptions, and seven guarantees, each with its record or code | Three interests restate actors' needs. *Minimal guarantees* restates ADR-061 point 5's obligations, and *Assumptions* restate what its points 4, 7 and 8 admit. |
 
 **Note:** F came after the recommendation, and its row is added here to compare.
 
@@ -242,13 +277,13 @@ Ship D's five parts, all required, and ship no further part for now.
 - **Why no further part ships now:** software-analysis is installed in project-kit alone (the design's Decided 1). An optional part added later fails no artefact, since an optional element is checked only when present (the design's part 1). So a part ships once real use cases show it recurs (COR-007).
 - **What was weighed and left out:**
   - **A precondition, *Assumes*:** the main example's one fact, GitHub through `gh`, is checked by the landing, so it is variant 6e. It is also false for variant 2a. E's precondition would be "pkit is installed", true of every use case.
-    - **Decided otherwise:** *Preconditions* comes, required, since a journey's seams need it. The landing's committed change, which no step checks, is its one precondition. *Assumptions* comes too, optional, for what no step checks and nothing in the system secures (question 5).
+    - **Decided otherwise:** *Preconditions* comes, required, since a journey's seams need it. The landing's committed change, which no step checks, is its one precondition. *Assumptions* comes too, for what no step checks and nothing in the system secures (question 5). It is required with `None.` allowed, as *Preconditions* is, under the rule for every kind.
   - **A guarantee over every end, *Always holds*:** the strongest candidate. Question 2 asks about it.
     - **Decided otherwise:** it comes now as *Minimal guarantees*, required, since pkit's safety guarantees need a part of their own.
   - **Scope:** real in pkit, since a use case belongs to the core or to a capability. An area can carry it (`--area`, DEC-001 point 2), and so can the goal's wording.
   - **Level:** DEC-001 names no levels, and a journey already covers a path across use cases. A level would need a rule that DEC-001 lacks.
   - **Stakeholders and interests:** two of the main example's four interests repeat actors' needs, and the steps name the other actors.
-    - **Decided otherwise:** they come as *Other actors*, optional and limited to actors, for completeness. The actors are also listed as data in the front matter.
+    - **Decided otherwise:** they come as *Other actors*, limited to actors, for completeness. The part is required, with `None.` allowed, under the rule for every kind. The actors are also listed as data in the front matter.
   - **Success guarantees and Trigger:** they are *Done when* and *Starts when*.
   - **Technology and data variations:** a variant holds them, as 6e holds the host.
   - **Related information:** open issues belong to the tracker, which no anchor watches.
@@ -298,7 +333,7 @@ Each question is one decision, with a recommendation. The maintainer settled all
    - **The case:** the landing relies on `gh` reaching the repository the change was pushed to, as the caller's environment sets it up (ADR-061 point 4). No step checks it, and the chosen hint leaves it out.
    - **Recommendation:** yes. The hint would read "What already holds before the use case starts", and the landing would state the fact. A reader then learns what the use case trusts unchecked.
    - **Else:** the hint stays as chosen, and such a fact goes unstated until a step checks it and a variant can name it.
-   - **Decided:** option (c), a part of its own. *Preconditions* stay strict, and such a fact goes in *Assumptions*, optional, right after them.
+   - **Decided:** option (c), a part of its own. *Preconditions* stay strict, and such a fact goes in *Assumptions*, right after them. The part was optional, and the rule for every kind made it required, with `None.` allowed.
      - **Why:** the methodologies agree on keeping what is guaranteed apart from what is assumed. Cockburn keeps preconditions to what is guaranteed. Requirements standards list assumptions apart (IEEE 830, ISO/IEC/IEEE 29148 and Volere), and safety cases make assumptions explicit. A part in each use case puts the risk where it is.
      - **The test:** four questions place a fact the use case needs.
        - Does pkit make it true in this use case? Then it is a requirement.
@@ -341,7 +376,7 @@ The critic reviewed the first draft. Each finding below changed the draft, or is
 
 ## The journey
 
-The maintainer chose five parts for the journey: *Goal*, *Steps*, *Variants*, *Postconditions* and *Minimal guarantees*. Each step carries what it needs from the path, so the round's *Seams* part goes. The comparison and the recommendation stay below as they were made.
+The maintainer chose five parts for the journey: *Goal*, *Steps*, *Variants*, *Postconditions* and *Minimal guarantees*. Under the rule for every kind, all five are present in every journey. Each step carries what it needs from the path, so the round's *Seams* part goes. The comparison and the recommendation stay below as they were made.
 
 ### Decided: the journey
 
@@ -352,11 +387,12 @@ The maintainer decided the journey on 7 October, in comments on PR #1374. The jo
   - The engineering usage matches ours, such as critical user journeys in reliability engineering and end-to-end testing.
   - The hint and the README say so.
 - **The parts, in order:**
-  - *Goal*, required: one sentence in the actor's own voice, as a use case's goal is.
+  - *Goal*, required: one sentence in the actor's own voice, as a use case's goal is. It starts with its verb, or with *Never* and the verb (the actor's question 4).
   - *Steps*, required: one line for each step, the use case's id and its title exactly as the use case states it, such as `2. UC-002 — See how pkit is wired into my project`. Under a step, one line for each hand-over it relies on.
-  - *Variants*, optional: the journey's own branches.
+  - *Variants*, required with `None.` allowed: the journey's own branches.
   - *Postconditions*, required: the state that shows the whole path succeeded.
-  - *Minimal guarantees*, optional: what still holds when the path stops before its end.
+  - *Minimal guarantees*, required with `None.` allowed: what still holds when the path stops before its end.
+  - **Since 7 October:** *Variants* and *Minimal guarantees* were first optional. The rule for every kind made them required.
 - **A hand-over sits under the step that needs it:**
   - **From an earlier step:** `**Needs from step 1 (UC-001):** <what it receives>. <How that can break.>` The named step is an earlier step of this journey, with the right number and id.
   - **From a use case outside the journey,** typically another actor's: `**Needs from UC-006 (outside this journey):** <what it receives>. <How that can break.>` The journey's front matter lists that use case in `relies-on`.
@@ -376,13 +412,14 @@ The maintainer decided the journey on 7 October, in comments on PR #1374. The jo
 | Element | Label | Required | Form | Hint | Example |
 |---|---|---|---|---|---|
 | `heading` | `# JRN-NNN — <title>` | yes | heading | none, since the stamp writes it | `# JRN-003 — Build and export the first report` |
-| `goal` | Goal | yes | `sentence` | What the actor wants from the whole path, in one sentence in their own voice. Start with the verb, with *I* and *my* where they refer to themselves. | Build my first report and export it as a file. |
+| `goal` | Goal | yes | `sentence` | What the actor wants from the whole path, in one sentence in their own voice. Start with the verb, or with *Never* and the verb, with *I* and *my* where they refer to themselves. | Build my first report and export it as a file. |
 | `steps` | Steps | yes | `steps-match-front-matter` | One line for each use case in `steps`, in order: its id and its title as the use case states it. Under a step, add one line for each hand-over it needs from an earlier step or from a use case outside the journey. Say what it receives and how that can break. | `3. UC-007 — Export the report as a file`, and under it `**Needs from step 2 (UC-005):** the report the analyst saved. A report left unsaved is not offered for export.` |
-| `variants` | Variants | no | `variants`, read against *Steps* | One for each branch of the whole path, lettered after the step it leaves. Say where the path rejoins or ends. | 3a. The analyst wants a second report, and the path rejoins at step 2. |
+| `variants` | Variants | yes, and `None.` is allowed | `variants`, read against *Steps* | One for each branch of the whole path, lettered after the step it leaves. Say where the path rejoins or ends. Write `None.` when there is none. | 3a. The analyst wants a second report, and the path rejoins at step 2. |
 | `postconditions` | Postconditions | yes | none | The state that shows the whole path succeeded. | The analyst holds a file with their first report. |
-| `minimal-guarantees` | Minimal guarantees | no | none | What still holds when the path stops before its end. Name the record or code each rests on. | Stopping after any step leaves every saved report as it was (DEC-003). |
+| `minimal-guarantees` | Minimal guarantees | yes, and `None.` is allowed | none | What still holds when the path stops before its end. Name the record or code each rests on. Write `None.` when there is none. | Stopping after any step leaves every saved report as it was (DEC-003). |
 
 - **The hints:** each is one line, with short sentences and no semicolon (the design's part 5). They say what goes in a part, never how to format it. The stamp writes each hand-over's label, so the hint for *Steps* names none.
+- **Since 7 October:** the goal's hint gains "or with *Never* and the verb", as the use case's does. The hints of *Variants* and *Minimal guarantees* gain "Write `None.` when there is none."
 - **The examples:** one neutral journey runs through them all, the analyst's first report. Its last step is the use case's own example, the export. *Minimal guarantees*' example now names its record, as its hint asks.
 - **An outside need, in the example's terms:** `**Needs from UC-009 (outside this journey):** the template an administrator published. Without it, the analyst has nothing to build a report from.` The journey then lists `relies-on: [UC-009]`.
 
@@ -528,7 +565,7 @@ D says the most, and B gives a script the least to check. Words are counted as i
 | D | 12: *Goal in context*, *Scope*, *Level*, *Stakeholders and interests*, *Precondition*, *Minimal guarantees*, *Success guarantees*, *Trigger*, *Main success scenario*, *Extensions*, *Technology and data variations*, *Related information* | None marked | 793 | Where each break arises, where it shows and where the path resumes. The landing inside step 6, and the frequency. | *Success guarantees* restate UC-xx5's end, as A's *Done when* does. Two interests repeat actors' needs. *Open issues* repeat the tracker. |
 | E | 9: *Goal*, *Other actors*, *Preconditions*, *Assumptions*, *Trigger*, *Steps*, *Seams*, *Postconditions*, *Minimal guarantees* | As the use case's | 731 | The goal in the actor's voice, two assumptions and a guarantee of the whole path | Each seam quotes two use cases' parts, and every precondition reads none. *Trigger* restates the first step's. Both other actors take part only inside use cases. |
 | F | 4: *Goal*, *Steps*, *Seams*, *Postconditions* | All four | 156 | A seam that meets the next step's trigger | Nothing |
-| G | 5: *Goal*, *Steps* with each step's hand-overs, *Variants*, *Postconditions*, *Minimal guarantees* | *Goal*, *Steps* and *Postconditions* | 595 | Each hand-over under the step that needs it, naming the step it comes from. The landing as data and as an anchor. | Variant 1a restates the private install that step 6's hand-over from step 1 names. |
+| G | 5: *Goal*, *Steps* with each step's hand-overs, *Variants*, *Postconditions*, *Minimal guarantees* | All five. *Variants* and *Minimal guarantees* may read `None.`, under the rule for every kind. | 595 | Each hand-over under the step that needs it, naming the step it comes from. The landing as data and as an anchor. | Variant 1a restates the private install that step 6's hand-over from step 1 names. |
 
 **Note:** G came after the recommendation, and its row is added here to compare.
 
@@ -591,7 +628,7 @@ Only A, C, E and F keep a seam for each step after the first. Filling E and F sh
 
 Ship four required parts, *Goal*, *Steps*, *Seams* and *Postconditions*, and two optional ones, *Variants* and *Minimal guarantees*. Key each seam by the step that relies, check the one actor, and anchor the journey's actor.
 
-**Decided otherwise.** The maintainer nested each hand-over under the step that needs it, so no *Seams* part ships, as "Decided: the journey" says. This recommendation stays as it was made, and each point the decision turned is marked below.
+**Decided otherwise.** The maintainer nested each hand-over under the step that needs it, so no *Seams* part ships, as "Decided: the journey" says. The two optional parts became required, with `None.` allowed, under the rule for every kind. This recommendation stays as it was made, and each point the decisions turned is marked below.
 
 - **The criterion:** a part ships when filling showed that it holds what no step's use case holds. Each of the use case's further parts was weighed by it.
 - **Why the four:**
@@ -605,6 +642,7 @@ Ship four required parts, *Goal*, *Steps*, *Seams* and *Postconditions*, and two
   - *Variants*: the journey's own branches, as D's 1b and 4a are. A recovery across use cases, or a loop back to an earlier step, belongs to no single use case's variants.
   - *Minimal guarantees*: what still holds when the path stops before its end. E's first holds before UC-xx5 is ever reached, so it is the journey's.
   - F has neither, so it leaves both out.
+  - **Decided otherwise:** both are required, with `None.` allowed, under the rule for every kind. F would write `None.` in each.
 - **What was weighed and left out:**
   - **Preconditions:** the first step's hold them, and in both examples they read none.
   - **Trigger:** the first step's.
@@ -742,7 +780,99 @@ The critic reviewed the first draft. Each finding below changed the draft, or is
 
 ## The actor
 
-The round fills four candidates with the core developer, and fills a second actor twice. It recommends what ships with software-analysis and what stays project-kit's, and four questions wait for the maintainer.
+The maintainer chose an opening and two noun-labelled parts, *Occasions* and *Context*, both required with `None.` allowed. project-kit's own labels become nouns too, and stay project-kit's. The comparison and the recommendation stay below as they were made.
+
+### Decided: the actor
+
+The maintainer decided the actor on 7 October, in comments on PR #1374. The actor is fully decided. G shows it twice (`actor/chosen-template.md`): the developer as project-kit holds it, and the CI pipeline in the shipped parts alone.
+
+- **What ships with software-analysis:**
+  - the heading, which the stamp writes
+  - an opening, required: what the role is, and what it does with the system
+  - *Occasions*, required with `None.` allowed: when the actor comes to the system
+  - *Context*, required with `None.` allowed: what the actor comes with
+  - in the front matter, each need in one sentence, in the actor's own voice
+- **The round's questions:**
+  1. **Question 1, the two parts required:** answered by the rule for every kind. *Occasions* and *Context* are required, with `None.` allowed, as recommended.
+  2. **Question 2, the labels:** option (b). software-analysis ships the nouns *Occasions* and *Context*, and project-kit adopts nouns for its own actor parts too.
+     - **Decided otherwise:** the round recommended that project-kit relabel the two *Comes* and *Brings*. It relabels nothing that ships.
+     - **When:** the eight actors take the noun labels as they move to one file each (#1346).
+  3. **Question 3, the layer line:** it stays project-kit's own, as its *Core* part, and does not ship. As recommended.
+  4. **Question 4, *Never*:** option (a). A need or a goal starts with its verb, or with *Never* and the verb. The hints for the needs and for the use case's and the journey's goals say so, and #1360's format rule allows it. As recommended.
+- **project-kit's labels, in order:** its seven additions are optional, in its own settings. The two shipped parts sit among them.
+  - *Setup*, which was *The setup*
+  - *Human role*, which was *Always a person*
+  - *Role holders*, which was *Can be*
+  - *Activities*, which was *Does*
+  - *Occasions* and *Context*, the shipped parts, which were *Comes* and *Brings*
+  - *Place in the model*, which was *In the model*
+  - *Core* and *Note*, as they were
+- **As recommended:** the actor is a role, not a persona. RUP's further characteristics, its relationships and the persona's parts stay out, for the reasons the recommendation gives.
+
+**The declaration #1363 takes, for the body, in this order:**
+
+| Element | Label | Required | Form | Hint | Example |
+|---|---|---|---|---|---|
+| `heading` | `# ACT-<slug> — <name>` | yes | heading | none, since the stamp writes it | `# ACT-analyst — Analyst` |
+| `opening` | none | yes | none | What this role is, and what it does with the system. | Someone who builds reports from their team's figures. |
+| `occasions` | Occasions | yes, and `None.` is allowed | none | On what occasions the actor comes to the system. Write `None.` when there is none. | At the end of each week, and whenever a manager asks for figures. |
+| `context` | Context | yes, and `None.` is allowed | none | What the actor comes with, such as data, authority or a limit. Write `None.` when there is none. | A spreadsheet of their team's figures, and no right to publish a template. |
+
+**The front matter's form, apart from the body:**
+
+| Field | Form | Hint | Example |
+|---|---|---|---|
+| `needs` | `sentence`, on each item | What the actor needs from the system, each in one sentence in their own voice. Start with the verb, or with *Never* and the verb, with *I* and *my* where they refer to themselves. | Export my report as a file. |
+
+- **Both tables are the recommendation's,** unchanged. The decisions confirmed each shipped part, its label and its hint.
+- **The needs' hint in the front matter:** it stays the placeholder need, which the placeholder check refuses when left in (`check.py`). That differs from the body's hints, so #1363 and #1366 say so.
+
+**project-kit's additions, in its `structures.yaml` under the kind `actor`:**
+
+| Element | Label | After | Hint | Example |
+|---|---|---|---|---|
+| `setup` | Setup | `opening` | What this role keeps set up in the project. | which checks the project's merges wait on (`ACT-adopter`) |
+| `human-role` | Human role | `setup` | Why no agent may play this role. | the authorisation turns the answers an agent wrote into a person's decision (`ACT-merge-authoriser`) |
+| `role-holders` | Role holders | `human-role` | Who may play this role. | project-kit's maintainers, or a fork's (`ACT-methodology-maintainer`) |
+| `activities` | Activities | `role-holders` | What this role does, where the opening is too short for it. | choose how much the agents may do without asking (`ACT-operator`) |
+| `place-in-the-model` | Place in the model | `context` | How the role appears in the use cases, where its goals belong to others. | its needs are what the system must give an unattended runner (`ACT-ci-pipeline`) |
+| `core` | Core | `place-in-the-model` | What in the core makes this role exist, with the records that say so. | the checks bind once the project makes them a required status (COR-050 point 12) (`ACT-ci-pipeline`) |
+| `note` | Note | `core` | Side matter: the reason for a name, or an overlap with another role. | the name is not "approver", because project-management uses that word for a reviewer agent (`ACT-merge-authoriser`) |
+
+- **Each addition is optional,** and the list is closed, naming RS-ANALYSIS-002 (the design's part 4). An actor leaves out an addition it has nothing for.
+- **No relabel:** project-kit takes *Occasions* and *Context* as they ship, so its file relabels nothing.
+- **The ids follow the labels.** None has reached the default branch, so none is permanent yet (the design's part 4).
+- **The hints and the examples** are the recommendation's. The examples quote project-kit's own actors, as its own additions may.
+- **The order** is the maintainer's list. *Setup* names the opening, so it comes before the shipped *Occasions* (the design's part 4).
+
+**What filling G showed:**
+
+- **The relabel keeps every item's words.** The developer's two items read under *Occasions* and *Context* as they did under *Comes* and *Brings*. So the move changes labels and no claim (RS-WRITE-013).
+- **The developer uses two of the seven additions,** *Core* and *Note*. The other five show in other actors, as "At a glance" counts them.
+- **The anchors gain ADR-061,** which the developer's *Core* cites. #1346 adds it, as "For the build" says.
+- **The CI pipeline in the shipped parts alone** is F, unchanged, since F already had the noun labels. It shows what an adopter's actor holds when the project adds nothing of its own.
+- **An actor with nothing for *Context*:** the AI agent has no *Brings* today. Under the rule for every kind, its *Context* reads `None.`.
+- **Length:** the developer runs to 93 words, as B does. The CI pipeline runs to 61.
+
+**For the build:**
+
+- **The parts (#1363):** the two tables of the shipped parts above. The actor is a document kind (#1346).
+- **The schema (#1346):** it gains the `id` only.
+- **The move (#1346):** the eight actors move to one file each, and take the noun labels as they move.
+  - **The labels:** *The setup* becomes *Setup*, *Always a person* becomes *Human role*, and *Can be* becomes *Role holders*. *Does* becomes *Activities*, *Comes* and *Brings* become *Occasions* and *Context*, and *In the model* becomes *Place in the model*.
+  - **The words:** every item keeps them, so the move changes no claim.
+  - **The AI agent:** it gains *Context*, reading `None.`, under the rule for every kind.
+  - **The missing anchors:** the five citations the round found become anchors in the same change. These are ADR-061 in the developer, PRJ-002 in the CI pipeline and DEC-028 in the merge authoriser. CONTRIBUTING.md becomes a path anchor of the methodology maintainer and of the operator.
+  - **The revalidations:** each actor owes one for its move already (COR-050 point 3). A changed anchor list owes one too (COR-050 point 6), so the same answer covers both.
+- **The stamp and the template (#1366):** the body is rendered from the table, every shipped part with its hint. The needs' hint is the placeholder need, in the front matter written by hand.
+- **project-kit's labels (#1368):** `structures.yaml` carries the seven additions as data, each with its hint and example, under the kind `actor`, closed, naming RS-ANALYSIS-002. It relabels nothing.
+  - **WRITE's examples:** RS-WRITE-002's example quotes *Comes*. RS-WRITE-003's calls *Can be* the core actors' label, and RS-WRITE-006's says the same of *Brings*. #1368 already fixes RS-WRITE-002's stale example, so it brings all three in line with the new labels.
+- **The voice's exception (#1360 and #1363):** the format rule's *How* lets *Never* come before the verb. The hints for the needs and the goals say so. #1368's rule on the voice goes, as decided for the use case.
+- **What an actor is not (#1366 and #1369):** the template's head and the README say an actor is a role, not a persona.
+- **The skill (#1369):** the actor sub-procedure's *Fill it* list gives way to the hints. Its first step, "Is it an actor?", stays, since no hint carries it.
+- **DEC-001 first (#1358):** its point 1 names an actor as a role with the needs it brings. The opening, *Occasions* and *Context* go beyond it, so #1358's refinement says so before any build cites it (core rule 2).
+- **The readers point, later:** when a page first names an actor as its reader, its review shows whether the name and the needs say enough. If not, the opening becomes a front-matter field the filler reads.
+- **A possible form, not decided:** every record and file a body names is among its anchors. It would have caught the five citations above, and would serve every kind.
 
 ### The example
 
@@ -759,7 +889,8 @@ The main example is a real core actor, the developer, as merged on main (`tech-d
 
 **What the example left unclear.** The round decides none of these.
 
-1. **Records cited and not anchored.** The developer's *Core* cites ADR-061 point 3, and its one anchor is COR-009. The CI pipeline's *Note* cites PRJ-002, beside its anchors COR-054 and COR-050. So a change to ADR-061 point 3, which #1222 may bring, never flags the developer. The candidates keep main's anchors.
+1. **Records cited and not anchored.** The developer's *Core* cites ADR-061 point 3, and its one anchor is COR-009. The CI pipeline's *Note* cites PRJ-002, beside its anchors COR-054 and COR-050. So a change to ADR-061 point 3, which #1222 may bring, never flags the developer. The candidates A to F keep main's anchors.
+   - **Decided:** the citations become anchors when the actors move (#1346). G's developer anchors ADR-061.
 2. **C's and D's citations.** C cites COR-008 and ADR-061, and D cites COR-050. Filled for real, each would anchor them, as the journey's candidates found for PRJ-004.
 3. **D's persona is invented.** No research of developers exists, so its name, age, bio and behaviours are made up. Its goals and frustrations could only come from the needs and the records, so they restate them.
 4. **No use case is stamped yet.** C's *Relationships* name the landing as `UC-xxx`, the id the use case's round gave it.
@@ -768,23 +899,24 @@ The main example is a real core actor, the developer, as merged on main (`tech-d
 
 Each candidate is complete and filled, as the actor's file would read on the default branch after #1346.
 
-- **A, today's template** (`actor/A-todays-template.md`): the front matter and one prose section, as `SA/templates/actors.md` asks. Its placeholder asks who this is, when they come to the system, and what they bring with them. So A has no place for the developer's *Core* and *Note*, and drops them.
-- **B, the core actors' labels** (`actor/B-core-actors-labels.md`): the developer exactly as merged. These are project-kit's labels, from the style trial, as the design's part 9 lists them.
+- **A, today's template** (`actor/considered/A-todays-template.md`): the front matter and one prose section, as `SA/templates/actors.md` asks. Its placeholder asks who this is, when they come to the system, and what they bring with them. So A has no place for the developer's *Core* and *Note*, and drops them.
+- **B, the core actors' labels** (`actor/considered/B-core-actors-labels.md`): the developer exactly as merged. These are project-kit's labels, from the style trial, as the design's part 9 lists them.
   - The opening says who the role is, with no label.
   - The list, in order: *The setup*, *Always a person*, *Can be*, *Does*, *Comes*, *Brings*, *In the model*, *Core* and *Note*. Each actor leaves out a label it has nothing for (RS-WRITE-002).
   - The developer uses *Comes*, *Brings*, *Core* and *Note*.
 - **The design's first cut** ships B's opening, *Comes* and *Brings*, with the opening required (the design's part 8). project-kit adds the other seven labels (its part 9). So for project-kit the first cut reads as B, and it has no file of its own.
-- **C, RUP's actor description** (`actor/C-rup-actor.md`): RUP's actor properties, adapted only where pkit requires.
+- **C, RUP's actor description** (`actor/considered/C-rup-actor.md`): RUP's actor properties, adapted only where pkit requires.
   - *Name* is the front matter's `name` and the heading.
   - *Brief description* holds the role's sphere of responsibility and what it needs the system for. The needs stay in the front matter, so it summarises them.
   - *Characteristics* holds RUP's list for a human actor, with the frequency of use its guidelines add. Age, gender and cultural background are left out, since nothing about the developer states them.
   - *Relationships* holds RUP's two kinds, the use cases the actor takes part in and its generalisation. RUP's *Diagrams* are left out, since the analysis has none.
-- **D, a UX persona** (`actor/D-ux-persona.md`): NN/g's common pieces, in its order, with three parts its example persona shows.
+- **D, a UX persona** (`actor/considered/D-ux-persona.md`): NN/g's common pieces, in its order, with three parts its example persona shows.
   - NN/g's pieces: *Persona* for the name and age, then *Tagline*, *Experience*, *Context*, *Goals and concerns* and *Quote*. The photo is left out, since the file is text.
   - From its example persona: *Bio*, *Behaviors* and *Frustrations*. Its tasks are left out, since an actor's tasks are its use cases.
   - The needs stay in the front matter, as in every candidate.
-- **E, a second example** (`actor/E-second-example.md`): the CI pipeline as merged, in one file. Its opening says why it is an actor, and it uses *In the model*.
-- **F, the shipped parts alone** (`actor/F-shipped-parts-only.md`): the CI pipeline as an adopter's template would stamp it under the recommendation, with no label of project-kit's. Its two labels are the nouns question 2 recommends.
+- **E, a second example** (`actor/considered/E-second-example.md`): the CI pipeline as merged, in one file. Its opening says why it is an actor, and it uses *In the model*.
+- **F, the shipped parts alone** (`actor/considered/F-shipped-parts-only.md`): the CI pipeline as an adopter's template would stamp it under the recommendation, with no label of project-kit's. Its two labels are the nouns question 2 recommends.
+- **G, the chosen template** (`actor/chosen-template.md`): the developer as project-kit holds it after the decisions, and F's CI pipeline. It came after the recommendation, and "Decided: the actor" says what filling it showed.
 
 **Sources.** RUP's actor and the persona were read from these pages:
 
@@ -819,6 +951,9 @@ C and D say the most, and much of it describes people rather than their dealings
 | D | 9: *Persona*, *Tagline*, *Bio*, *Experience*, *Context*, *Behaviors*, *Goals and concerns*, *Frustrations*, *Quote* | None marked | 221 | Speed, a quality the developer weighs against accuracy and thoroughness | *Accuracy*, *Thoroughness*, every frustration and the quote restate needs, some inverted. *Context*'s frequency is B's *Comes*. |
 | E | The opening, then 5 of the 9 labels: *Comes*, *Brings*, *In the model*, *Core*, *Note* | As B | 180 | Why a system is an actor, and whose goals its runs serve | Nothing |
 | F | The opening, *Occasions*, *Context* | All three, as recommended | 61 | Why a system is an actor | Nothing. It lacks whose goals the runs serve, the layer and project-kit's wiring. |
+| G, the developer | The opening, *Occasions*, *Context*, then 2 of project-kit's 7 additions: *Core*, *Note* | The opening, *Occasions* and *Context*. The two parts may read `None.`. | 93 | As B, with noun labels and ADR-061 anchored | Nothing |
+
+**Note:** G came after the recommendation, and its row is added here to compare. Its CI pipeline is F's.
 
 **The labels across the core actors.** Each core actor uses four or five of the nine. Every one has the opening, *Comes* and *Core*.
 
@@ -913,6 +1048,8 @@ The parts about the role's dealings with the system fit pkit, and the parts abou
 
 Ship an opening and two labelled parts with software-analysis, beside the heading and the needs. Both parts are required, with `None.` allowed. They carry noun labels, which project-kit relabels *Comes* and *Brings*, and project-kit keeps its seven other labels in its own `structures.yaml`.
 
+**Decided otherwise.** The maintainer took the shipped parts as recommended, and project-kit adopts the nouns instead of relabelling them. Its own seven labels become nouns too, as "Decided: the actor" says. This recommendation stays as it was made, and each point the decision turned is marked below.
+
 - **The criterion:** an element ships when DEC-001 or today's template asks for it, nearly every core actor holds it, and it fits a system too. RUP and the persona confirm or question an element, and never veto one.
 - **Why each:**
   - **The heading:** the stamp writes it, and #1346 checks it against the id and the name.
@@ -928,11 +1065,14 @@ Ship an opening and two labelled parts with software-analysis, beside the headin
   - **project-kit's seven labels:** each stays project-kit's.
     - *Can be* recurs in three core actors, and *Does* and *In the model* recur in two each. *The setup* and *Always a person* recur in one each.
     - *Note* is project-kit's style (RS-WRITE-004), and *Core* is its layer line (question 3).
+    - **Decided otherwise, in their labels:** each stays project-kit's, and each becomes a noun.
   - **In the model, for actors that are no person:** both actors that use it are no person. So any project with a system actor might want it. F shows what a system actor loses without it. It recurs in project-kit only, so it waits until real artefacts show it recurs elsewhere (the use case's question 1).
 - **Labels:** the nouns *Occasions* and *Context*, which project-kit relabels *Comes* and *Brings* (question 2).
+  - **Decided otherwise:** project-kit takes *Occasions* and *Context* as they ship.
 - **Ships with:** the heading, the needs' form, the opening, *Occasions* and *Context* ship with software-analysis. project-kit's `structures.yaml` relabels the two, and adds its seven labels under the kind `actor`, closed, naming RS-ANALYSIS-002.
+  - **Decided otherwise:** project-kit's file relabels nothing, and adds its seven labels as nouns.
 
-**The declaration #1363 would take.** The body's elements, in this order:
+**The declaration #1363 would take.** The body's elements, in this order. "Decided: the actor" takes both tables below as they are.
 
 | Element | Label | Required | Form | Hint | Example |
 |---|---|---|---|---|---|
@@ -959,6 +1099,8 @@ The front matter's form, apart from the body:
 
 **project-kit's own, in `structures.yaml`:** it relabels `occasions` *Comes* and `context` *Brings*. It adds the design's part 9 sketch, with a hint and an example for each. Each addition is optional, and the list is closed.
 
+- **Decided otherwise:** the table in "Decided: the actor" replaces this one. It relabels nothing, and its seven labels are nouns.
+
 | Element | Label | After | Hint | Example |
 |---|---|---|---|---|
 | `setup` | The setup | `opening` | What this role keeps set up in the project. | which checks the project's merges wait on (`ACT-adopter`) |
@@ -975,6 +1117,7 @@ The front matter's form, apart from the body:
 
 **For the build:**
 
+- **Decided otherwise:** the list in "Decided: the actor" replaces this one.
 - **The parts (#1363):** the two tables above, the body's elements in their order. The actor is a document kind (#1346).
 - **The schema (#1346):** it gains the `id` only.
 - **The stamp and the template (#1366):** the body is rendered from the table. The needs' hint is the placeholder need, in the front matter written by hand.
@@ -992,27 +1135,32 @@ The front matter's form, apart from the body:
   - a record: the developer's ADR-061, the CI pipeline's PRJ-002 and the merge authoriser's DEC-028
   - a file: CONTRIBUTING.md, in the methodology maintainer's *Brings* and the operator's *Note*
 - **Where to fix them:** #1346 moves all eight actors, each with a revalidation, so that change could add the missing anchors. RS-WRITE-014, still proposed, asks for such anchors.
+  - **Decided:** they become anchors in #1346.
 
 ### Questions for the maintainer
 
-Each question is one decision, with a recommendation.
+Each question is one decision, with a recommendation. The maintainer settled all four on 7 October.
 
 1. **Are the two labelled parts required, with `None.` allowed?**
    - **The case:** the design's first cut makes both optional. Every core actor says when it comes, and seven say what they bring. An actor who takes no step, such as an outside auditor, has neither.
    - **Recommendation:** yes, as the use case's *Preconditions*, *Variants* and *Minimal guarantees* are. A required part makes the writer consider it, and `None.` covers an actor with nothing to say.
    - **Else:** both optional, as the design's first cut has them.
+   - **Decided:** answered by the rule for every kind. Both are required, with `None.` allowed, as recommended.
 2. **Do the shipped labels become nouns, with project-kit relabelling them *Comes* and *Brings*?**
    - **The case:** the maintainer made every use case label a noun, and the journey's labels are nouns too. The actor's two are verbs from the style trial, and RS-WRITE-002's example quotes *Comes*.
    - **Recommendation:** yes. Ship *Occasions* and *Context*, and project-kit relabels them in its `structures.yaml` (the design's part 4). Every shipped label is then a noun, and project-kit's actors and RS-WRITE-002's example stay as they are.
    - **Else:** ship *Comes* and *Brings*, as the core actors have them. The shipped labels then differ in kind from the use case's and the journey's.
+   - **Decided:** option (b). software-analysis ships *Occasions* and *Context*, and project-kit adopts nouns for its own actor parts too. It relabels nothing, and its seven labels become nouns when its eight actors move (#1346).
 3. **Does the layer line ship, as a part project-kit relabels *Core*?**
    - **The case:** every core actor has *Core*. It says what in the core makes the role exist, and in three actors it names the records the actor anchors. No source has its counterpart, and a system with layers, such as a platform and its plugins, could use it.
    - **Recommendation:** no, it stays project-kit's. A project whose system has layers adds it in its own `structures.yaml`, as project-kit does (the design's part 4). The part of it a check could use, the records, belongs in each actor's anchors (DEC-001 point 4).
    - **Else:** an optional shipped part, *Basis*, with the hint "What in the system makes this role exist. Name the record or code." project-kit relabels it *Core*.
+   - **Decided:** the layer line stays project-kit's own, as its *Core* part, and does not ship. As recommended.
 4. **Does the voice let *Never* come before the verb?**
    - **The case:** the decided voice starts each need and goal with its verb (the use case's question 6). The methodology maintainer's need starts with *Never*, and RS-WRITE-013 keeps that wording as its example of a rewrite that must keep the meaning. The design's exception for it went with #1368's rule on the voice.
    - **Recommendation:** yes. The hints for the needs and the goal say "Start with the verb, or with *Never* and the verb", and #1360's rule says the same. The goal's decided hint gains those words.
    - **Else:** the hints stay as decided. A writer who follows them would rewrite that need as "Ship … only with", the rewrite RS-WRITE-013 forbids.
+   - **Decided:** option (a), as recommended. The hints for the needs and for the use case's and the journey's goals say so, and #1360's format rule allows it.
 
 ### Review
 
