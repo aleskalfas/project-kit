@@ -339,11 +339,11 @@ The critic reviewed the first draft. Each finding below changed the draft, or is
 
 ## The journey
 
-The round recommends four parts for the journey: *Goal*, *Steps*, *Seams* and *Postconditions*. Four questions wait for the maintainer, and nothing of the journey is decided yet.
+The round recommends four required parts for the journey, *Goal*, *Steps*, *Seams* and *Postconditions*, and two optional ones, *Variants* and *Minimal guarantees*. Four questions wait for the maintainer, and nothing of the journey is decided yet.
 
 ### The example
 
-The example is a real core journey of pkit: the adopter's first day with the methodology.
+The main example is a real core journey of pkit: the adopter's first day with the methodology.
 
 - **The needs it serves:** four of the adopter's (`ACT-adopter`).
   - Install the methodology, and see its wiring into the project.
@@ -353,30 +353,31 @@ The example is a real core journey of pkit: the adopter's first day with the met
 - **One actor:** a journey is "an end-to-end path an actor takes" (DEC-001 point 1). The schema's single `actor`, the template and the skill say the same.
   - So the example keeps the adopter. The developer's landing of the install sits at a seam, not among the steps.
   - The sources agree. NN/g asks for "one point of view per map", and Cockburn's summary use case has one primary actor.
-  - **What nothing checks:** that each step's use case has the journey's actor. `check.py` holds a step to being a use case in force, and never compares its actor (question 2).
-- **The use cases:** none exists yet. Each id is `UC-xx` and a digit, so the seven stay apart:
+  - **What nothing checks:** that each step's use case has the journey's actor. `check.py` holds a step to being a use case in force, and never compares its actor.
+- **The use cases:** none exists yet. Each id is `UC-xx` and a digit, so the six stay apart:
   - `UC-xx1 — Install the methodology into a project`
   - `UC-xx2 — See how the methodology is wired into the project`
   - `UC-xx3 — Install a capability`
   - `UC-xx4 — Declare the project's settings`
   - `UC-xx5 — Make the project's merges wait on the methodology's checks`
-  - `UC-xx6 — Choose which installed capability provides a role`, the adopter's own, at a seam only
-  - `UC-xx7 — Land a change on the default branch`, the developer's, at a seam only. It is the landing of the use case's round.
-- **A repeated step:** step 4 repeats UC-xx2, as the schema allows. It tests `steps-match-front-matter` with a repeat, and the stamp's seams with a pair that runs back, UC-xx3 → UC-xx2.
+  - `UC-xx6 — Land a change on the default branch`, the developer's, at a seam only. It is the landing of the use case's round.
+- **A repeated step:** step 4 repeats UC-xx2, as the schema allows. It tests `steps-match-front-matter` with a repeat, and the seams with a pair that runs back, UC-xx3 → UC-xx2.
+- **A second example:** F, in the recommended parts. The adopter upgrades the methodology and re-pins a rule set, two more of the adopter's needs. It has no read-only step, where the first example reads status twice.
 - **Derived from:**
-  - the CLI reference (`.pkit/cli/README.md`), for `init`, `status`, a capability's install and plan, the configuration file, `sync`, `pin`, `validate` and the change check
+  - the CLI reference (`.pkit/cli/README.md`), for `init`, `status`, a capability's install and plan, the configuration file, `sync`, `pin`, `upgrade`, `validate` and the change check
   - ADR-009 point 3 for a private install, ADR-049 for the pin, and COR-050 points 12 and 15 for the friction mode
-  - COR-053 points 1, 7 and 8 for roles and plans, and COR-054 for the default branch
-  - the code: `install.py` for `init`'s closing steps, `status.py` for what status shows, and `provisioning.py`, `sync.py` and `validate.py` for what fails
+  - COR-030 for what a capability requires, COR-053 point 8 for plans and suggestions, COR-054 for the default branch, and COR-051 point 7 for F's pins
+  - the code: `install.py` for `init`'s closing steps, `status.py` for what status shows, and `capabilities.py`, `provisioning.py`, `sync.py` and `validate.py` for what fails
 - **Core only:** no capability is named. Step 6's pipeline is the project's, since the backbone ships no workflow (`ACT-ci-pipeline`).
-- **The same in every candidate:** the front matter, the steps and the facts at each seam. E adds `involves` to the front matter.
+- **The same in A to E:** the front matter, the steps and the facts at each seam. E adds `involves` to the front matter.
 
 **What the example left unclear.** The round decides none of these.
 
 1. **How `pkit` gets on the path.** `init`'s closing next steps recommend a symlink to a source checkout's dispatcher (`install.py`). The CLI reference recommends `uv tool install`, after PRJ-004, and keeps the symlink as a contributor's convenience. Question 4 asks about it.
 2. **Step 6 is mostly the hosting service's.** The adopter writes the pipeline's job, and sets the required status in the hosting service. The system's part is the checks' unattended run (`ACT-ci-pipeline`).
 3. **A newer pkit in the pipeline.** Without a pin, `pkit sync` writes the running pkit's own content (the CLI reference, on `sync`). So a newer pkit checks the project against newer content than its own, beside #1212's refusal of an older one.
-4. **The capability.** None is named, so seams 2 and 3 hold for any. A capability with no query command has nothing to provision, and seam 3's offline risk falls away.
+4. **The capability.** None is named, so the seams into and out of UC-xx3 hold for any. A capability with no query command has nothing to provision, and the offline risk falls away.
+5. **A role conflict.** Two installed providers of one role conflict until the project selects one (COR-053 points 1 and 7). No two capabilities that ship today provide one role (each one's `package.yaml`), so only a third party's or a home-grown capability could raise it.
 
 ### The candidates
 
@@ -396,11 +397,13 @@ Each candidate is complete and filled, as the artefact would read on the default
   - every part required and checked, *Steps* with the form `steps-match-front-matter` and *Seams to watch* with `seams-match-steps`
 - **D, Cockburn's summary-level use case** (`journey/D-summary-use-case.md`): his fully dressed parts at the summary level, adapted as the use case's B was.
   - His section 5.2 gives the model. A summary use case's steps are user-goal use cases, and it has one primary actor (Use Case 6, *Operate an Insurance Policy*).
-  - Each step names its use case by id, in place of his italics.
-  - A seam's break is an extension of the step where it shows. The landing sits inside step 6, as "Once the developer has landed …".
+  - Each step names its use case by id, in place of his italics. Step 6 names two, the adopter's UC-xx5 and the developer's landing.
+  - Each break is an extension of the step where its condition arises. Its sub-steps say where the break shows and where the path resumes, as 1b does for a private install.
 - **E, the use case's decided parts** (`journey/E-use-case-parts.md`): the nine parts the maintainer chose for the use case, carried to the journey. *Steps* and *Seams* stand in place of *Main path* and *Variants*.
-  - Each seam pairs the earlier use case's *Postconditions* with the next one's *Preconditions*, then gives its *Risk*. These are the seams as postcondition and precondition pairs that the brief suggested.
+  - Each seam pairs the earlier use case's *Postconditions* with the next one's *Preconditions*, then gives its *Risk*. These are the pairs the brief for this round suggested.
+  - Each *Preconditions* follows the decided hint, a state that no step checks. Every one reads none, since each next command checks what it needs.
   - The front matter gains `involves`, as the use case's does.
+- **F, a second example in the recommended parts** (`journey/F-second-example.md`): the adopter upgrades the methodology and re-pins a rule set. It has two steps and one seam, and it leaves out both optional parts.
 
 **Sources.** The journey map's parts and Cockburn's summary level were read from these:
 
@@ -412,45 +415,46 @@ Each candidate is complete and filled, as the artefact would read on the default
 - **Cockburn:** *Writing Effective Use Cases*, pre-publication draft 3 of 21 February 2000, section 5.2 ([extract](https://www.ifi.uzh.ch/dam/jcr:00000000-25a0-3d08-0000-00000ce96422/weuc_extract.pdf)). A summary use case "takes multiple user-goal sessions to complete", and the kite marks one whose steps are user-goal use cases.
 - **Not verified:**
   - The published edition of 2001, whose wording may differ from the draft's.
-  - The draft numbers two examples Use Case 6. Its table of contents gives the number to *Add New Service (Enterprise)*, and section 5.2 to *Operate an Insurance Policy*.
+  - The draft numbers two examples Use Case 6. Its table of contents gives the number to *Add New Service (Enterprise)*, and section 5.2 gives it to *Operate an Insurance Policy*.
   - Adaptive Path's own download link answered with a redirect, so the copy read is a third party's.
 
 ### At a glance
 
-D says the most and B the least that a script can check. Words are counted as in the use case's round: the body, labels included, with the heading and front matter left out.
+D says the most, and B gives a script the least to check. Words are counted as in the use case's round: the body, labels included, with the heading and front matter left out.
 
 | Candidate | Parts | Required | Words | Captures what others miss | Repeats |
 |---|---|---|---|---|---|
-| A | 4: *Starts*, *Steps*, *Seams to watch*, *Done when* | None marked. Today's check catches a placeholder left in, not a part deleted. | 699 | Over B and D, one seam for each pair of steps, named by the pair | The instruction line under *Seams to watch*, in every artefact |
-| B | *Scenario and expectations*, three phases of five parts each (*Doing*, *Touchpoints*, *Thinking*, *Feeling*, *Pain points*), then *Opportunities* | None marked | 577 | The touchpoints, the adopter's expectations, and fixes worth filing | *Thinking* repeats the actor's needs. *Pain points* hold the seams' facts, with no pair to name them. *Opportunities* belong to the tracker. |
-| C | 4, as A | All four | 679 | As A, with hints and checks | Nothing |
-| D | 12: *Goal in context*, *Scope*, *Level*, *Stakeholders and interests*, *Precondition*, *Minimal guarantees*, *Success guarantees*, *Trigger*, *Main success scenario*, *Extensions*, *Technology and data variations*, *Related information* | None marked | 758 | What the adopter does after each break, the landing inside step 6, and the frequency | *Success guarantees* repeat the last step's end. Two interests repeat actors' needs. *Open issues* repeat the tracker. |
-| E | 9: *Goal*, *Other actors*, *Preconditions*, *Assumptions*, *Trigger*, *Steps*, *Seams*, *Postconditions*, *Minimal guarantees* | As the use case's | 687 | The goal in the actor's voice, two assumptions of the whole path, and where each seam's precondition was made true | Each seam restates two use cases' parts. *Trigger* and *Minimal guarantees* restate the steps' use cases. Both other actors take part only in those use cases. |
+| A | 4: *Starts*, *Steps*, *Seams to watch*, *Done when* | None marked. Today's check catches a placeholder left in, not a part deleted. | 705 | Over B and D, a seam of its own between each two adjacent steps | The instruction line under *Seams to watch*, in every artefact. *Done when* restates UC-xx5's end, with UC-xx4's settings added. |
+| B | *Scenario and expectations*, three phases of five parts each (*Doing*, *Touchpoints*, *Thinking*, *Feeling*, *Pain points*), then *Opportunities* | None marked | 591 | The touchpoints, the adopter's expectations, and fixes worth filing | *Thinking* repeats the actor's needs. *Pain points* hold the seams' facts, with no step to name them. *Opportunities* belong to the tracker. |
+| C | 4, as A | All four | 685 | As A, with hints and checks | As A, without the instruction line |
+| D | 12: *Goal in context*, *Scope*, *Level*, *Stakeholders and interests*, *Precondition*, *Minimal guarantees*, *Success guarantees*, *Trigger*, *Main success scenario*, *Extensions*, *Technology and data variations*, *Related information* | None marked | 793 | Where each break arises, where it shows and where the path resumes. The landing inside step 6, and the frequency. | *Success guarantees* restate UC-xx5's end, as A's *Done when* does. Two interests repeat actors' needs. *Open issues* repeat the tracker. |
+| E | 9: *Goal*, *Other actors*, *Preconditions*, *Assumptions*, *Trigger*, *Steps*, *Seams*, *Postconditions*, *Minimal guarantees* | As the use case's | 731 | The goal in the actor's voice, two assumptions and a guarantee of the whole path | Each seam quotes two use cases' parts, and every precondition reads none. *Trigger* restates the first step's. Both other actors take part only inside use cases. |
+| F | 4: *Goal*, *Steps*, *Seams*, *Postconditions* | All four | 156 | A seam that meets the next step's trigger | Nothing |
 
 ### Fit with pkit
 
-Only A, C and E keep one seam for each pair of steps, as the stamp writes them. Filling E showed that no seam of the example is one step's postconditions meeting the next one's preconditions.
+Only A, C, E and F keep a seam for each step after the first. Filling E and F showed no seam that meets the next use case's *Preconditions*, since pkit's commands check what they need.
 
 - **Steps cited by id, matching the front matter** (the form `steps-match-front-matter`):
-  - A, C and E write one line for each step, `1. UC-xx1 — …`, in the order of `steps`. A form reads the id after the number.
-  - D writes the id last, in parentheses, and its step 6 names two use cases, UC-xx7 and UC-xx5. A form would have to find the step's own id among them.
+  - A, C, E and F write one line for each step, `1. UC-xx1 — …`, in the order of `steps`. A form reads the id after the number.
+  - D writes the id last, in parentheses, and its step 6 names two use cases. A form would have to find the step's own id among them.
   - B spreads the steps over three phases, each a heading. A form would read numbered items under headings, and the phases are no data.
 - **Seams matching the steps** (the form `seams-match-steps`):
-  - A, C and E give each pair of adjacent steps one item, labelled with the pair (`stamp.py`). A form matches the items to `steps` by position.
-  - B has no seam for each pair. Its pain points sit inside a phase, so a pair within one phase, UC-xx1 → UC-xx2, has nothing of its own.
-  - D makes each break an extension of the step where it shows. The pair is gone, and an extension cannot say which earlier step left the gap.
-- **Seams against the use cases' Preconditions and Postconditions:** E writes each seam as a pair, and none of its five seams is a pair in fact.
-  - Two next use cases have no precondition, since status runs in any project (UC-xx1 → UC-xx2 and UC-xx3 → UC-xx2).
-  - Two preconditions were made true by UC-xx1, not by the step just before (UC-xx2 → UC-xx3 and UC-xx2 → UC-xx4).
-  - One was made true by another actor's use case, the developer's landing (UC-xx4 → UC-xx5).
-  - **The nearest to a pair:** UC-xx4 → UC-xx5, where the landing carries the settings UC-xx4 declared to UC-xx5.
-  - **So a seam is better defined** by what the next step relies on from the steps before it, and by where that was made true. The use cases' parts are where a reviewer checks it.
+  - A, C and E give each pair of adjacent steps one item, labelled with the pair (`stamp.py`). F labels each item with the step that relies, as question 1 recommends. Either way, a form matches the items to `steps` by position.
+  - B has no seam for each step. Its pain points sit inside a phase, so the passage from UC-xx1 to UC-xx2, within one phase, has nothing of its own.
+  - D has no seams part. Each break is an extension of the step where its condition arises, and its sub-steps name where it shows, which may be steps later. A seam keyed by an adjacent pair cannot say that (question 1).
+- **Seams against the use cases' Preconditions:** the decided hint makes a precondition a state, not an event, that no step checks.
+  - **In E, every precondition reads none.** pkit's commands check what they need and refuse without it, as a capability's install does on a missing `.pkit/manifest.yaml` (`capabilities.py`). A fact a step checks belongs among the variants (the use case's question 5).
+  - **In F, the seam meets the next step's trigger,** the failed validation that starts the re-pin. It meets no precondition either.
+  - **What a seam holds instead:** what the next step relies on, which step or use case made it true, and how that can break. The step relied on is often not the one just before. UC-xx3 and UC-xx4 rely on UC-xx1's install, and the pipeline relies on the developer's landing.
+  - **This bears on a decided part.** The maintainer added *Preconditions* because "a journey's seams need them", and here they carry no seam (question 2).
 - **No script compares a seam with the use cases** (the design's Decided 2). A tool takes data only from front matter, and a seam and the use cases' parts are body text.
   - Friction catches a stale seam instead. A changed use case flags the journeys through it (DEC-001 point 4).
-  - E quotes both use cases at each seam, so a change to either makes the quote stale as well as the seam. A and C state each fact once.
+  - E quotes both use cases at each seam, so a change to either makes the quote stale as well as the seam. A, C and F state each fact once.
 - **Anchors** (DEC-001 point 4): a journey anchors to its steps' use cases, and to the code at its seams.
-  - **A seam's other use cases cannot be anchored.** `check.py` requires the use-case anchors to equal `steps` exactly. So UC-xx6 and UC-xx7 stay unanchored, and a change to the landing never flags the journey (question 1).
-  - **Records:** the seams cite five records. DEC-001 point 4 names none for a journey, but the stamp takes `--record` for every kind (`SA/README.md`), and RS-WRITE-014's *How* asks for the anchor. Every candidate anchors the five.
+  - **A seam's other use cases cannot be anchored.** `check.py` requires the use-case anchors to equal `steps` exactly. So the landing, UC-xx6, stays unanchored, and a change to it never flags the journey (question 3).
+  - **The journey's own actor:** DEC-001 point 4 anchors a journey to its use cases only. Its goal is in the actor's voice and serves the actor's needs, so every candidate anchors `ACT-adopter` too, as a use case anchors its actor. Without it, a changed need reaches the journey only once a step's use case is updated.
+  - **Records:** the seams cite six records. DEC-001 point 4 names none for a journey, but it anchors a use case to "the decisions they rely on". The stamp takes `--record` for every kind (`SA/README.md`), and every candidate anchors the six.
   - **Cited and not anchored:** B and D also cite PRJ-004, and D cites COR-002, which the shared front matter leaves out. Filled for real, each would anchor them.
   - **E's `involves`:** the journey's schema refuses an unknown field (`SA/schemas/journey.schema.json`), so `involves` needs a schema change, as the use case's does.
   - **Who flags what:** friction flags the whole journey, never one seam. This table is a reviewer's own mapping:
@@ -458,53 +462,59 @@ Only A, C and E keep one seam for each pair of steps, as the stamp writes them. 
   | Seam or part | The anchors that would flag it |
   |---|---|
   | UC-xx1 → UC-xx2 | UC-xx1, UC-xx2, `install.py`, `visibility.py`, `status.py` and ADR-009 |
-  | UC-xx2 → UC-xx3 | UC-xx2, UC-xx3, `status.py`, `capability_plans.py` and COR-053 |
-  | UC-xx3 → UC-xx2 | UC-xx3, UC-xx2, `provisioning.py`, `status.py` and COR-053 |
+  | UC-xx2 → UC-xx3 | UC-xx2, UC-xx3, `status.py`, `capabilities.py`, `capability_plans.py`, COR-030 and COR-053 |
+  | UC-xx3 → UC-xx2 | UC-xx3, UC-xx2, `provisioning.py`, `status.py`, `capability_plans.py` and COR-053 |
   | UC-xx2 → UC-xx4 | UC-xx2, UC-xx4, `status.py`, `default_branch.py` and COR-054 |
-  | UC-xx4 → UC-xx5 | UC-xx4, UC-xx5, `visibility.py`, `sync.py`, `validate.py`, `provisioning.py`, `default_branch.py`, ADR-009, ADR-049, COR-050 and COR-054. Not UC-xx7, which today's check keeps out. |
-  | B's *Thinking* and *Feeling* | None. A changed actor reaches them only once a step's use case is updated. |
-  | E's *Other actors* | `ACT-developer` and `ACT-ci-pipeline` directly. Without them, an actor's change reaches the journey only once a step's use case is updated. |
+  | UC-xx4 → UC-xx5 | UC-xx4, UC-xx5, `visibility.py`, `sync.py`, `validate.py`, `provisioning.py`, `friction_check.py`, `default_branch.py`, ADR-009, ADR-049, COR-050 and COR-054. Not UC-xx6, which today's check keeps out. |
+  | B's *Thinking* and *Feeling* | `ACT-adopter`, for the needs that *Thinking* restates. Nothing watches a feeling. |
+  | E's *Other actors* | `ACT-developer` and `ACT-ci-pipeline`, directly. Without them, an actor's change reaches the journey only once a step's use case is updated. |
 
 - **Revalidation:** take a change that makes `pkit status` show the default branch. `status.py` changes, so friction flags the journey.
   - **A and C:** seam UC-xx2 → UC-xx4 goes stale. A reviewer rereads five seams to find it.
-  - **B:** one pain point of *Gate the merges* goes stale, and one opportunity is met. Nothing flags an opportunity met in any other way, such as an issue closed.
+  - **B:** one pain point of *Gate the merges* goes stale, and one opportunity is met. Nothing flags an opportunity met in any other way, such as by an issue closed.
   - **D:** extension 5a goes stale.
   - **E:** the seam's *Risk* goes stale. Its quote of UC-xx2's *Postconditions* goes stale too, once UC-xx2 is updated for the change.
 - **What a script can check:**
   - **A and C:** the heading against the id and title, as today. Then each part present, in order and not empty, and the two forms.
+  - **E and F:** as A, and the goal one sentence. A seam's inner labels in E are content, since only declared labels delimit (the design's part 1).
   - **D:** the same for its parts, then *Level* from a closed list, and each extension after a step.
-  - **E:** as A, and the goal one sentence. A seam's inner labels are content, since only declared labels delimit (the design's part 1).
   - **B:** its labels in each phase, and its steps only as numbered items under the phases.
-  - **None of them:** whether a seam's words hold against the use cases. Whether a step's use case has the journey's actor is front matter, so a check could hold it (question 2).
-- **The membership test:** an artefact belongs in the analysis "if a change to the software can make it false" (DEC-001). B's *Thinking* and *Feeling* fail it, since no change to pkit makes "wary" false.
+  - **None of them:** whether a seam's words hold against the use cases. Whether a step's use case has the journey's actor is front matter, so a check could hold it (the recommendation).
+- **The membership test:** an artefact belongs in the analysis "if a change to the software can make it false" (DEC-001). B's *Feeling* rests on no research, so no revalidation can confirm it, and no anchor watches it. Only a feeling tied to a fact, as "reassured by the backup", can go false with the software.
 - **The writing rules:**
   - A's instruction line holds no semicolon, unlike the use case's.
   - B's phases are headings, where the other candidates use bold labels.
-  - D's step 6 names two use cases in one sentence of 23 words, near RS-WRITE-005's limit.
+  - D names steps by number in its prose, as "resumes at step 6". Such prose goes stale when a step is inserted.
 
 ### Recommendation
 
-Ship four parts, all required: *Goal*, *Steps*, *Seams* and *Postconditions*. Keep one actor, define the two forms, and anchor the use cases a seam relies on.
+Ship four required parts, *Goal*, *Steps*, *Seams* and *Postconditions*, and two optional ones, *Variants* and *Minimal guarantees*. Key each seam by the step that relies, check the one actor, and anchor the journey's actor.
 
-- **Why these four:** they are DEC-001 point 1's account of a journey, one actor's path across use cases and the seams between them. A, D and E filled each of them without strain, under their own labels.
-- **Why *Starts* splits:** it held where the actor begins and what they want by the end.
-  - What they want is the *Goal*, in the actor's voice, as the use case's goal is (question 6 of the use case).
-  - Where they begin is the first step's *Preconditions*, in that use case.
-- **Why *Done when* is renamed:** *Postconditions*, as for the use case, so every label is a noun.
-- **Why *Seams*, not *Seams to watch*:** shorter, and a noun as the other labels are. The hint carries what "to watch" said.
-- **Why no further part ships now:** each of the use case's further parts was held by a step's use case when E filled it (question 3).
-  - *Preconditions* and *Trigger* are the first step's.
-  - *Minimal guarantees* are each step's own. The one about the whole path, that no merge waits until the pipeline requires the checks, rests on UC-xx5's record.
-  - *Other actors* take part in the steps' use cases, and the use case's `involves` already lists them.
-  - *Assumptions*: both of E's are UC-xx5's.
+- **The criterion:** a part ships when filling showed that it holds what no step's use case holds. Each of the use case's further parts was weighed by it.
+- **Why the four:**
+  - *Steps* and *Seams* are DEC-001 point 1's journey, one actor's path across use cases and the seams between them.
+  - *Goal* and *Postconditions* come from today's template, its *Starts* and *Done when*, renamed as the use case's parts were. The goal is in the actor's voice, as the use case's is (the use case's question 6).
+  - A and E filled each of the four. D has no seams part.
+- **What a journey's end adds:** its *Postconditions* combine several steps' ends. "Under the settings the project declared" brings UC-xx4's end into UC-xx5's.
+- **Where the start goes:** *Starts* held where the actor begins and what they want. What they want is the *Goal*. Where they begin is the first step's *Trigger*, since strict *Preconditions* read none, as UC-xx1's do.
+- **The optional parts,** each holding what no step's use case holds:
+  - *Variants*: the journey's own branches, as D's 1b and 4a are. A recovery across use cases, or a loop back to an earlier step, belongs to no single use case's variants.
+  - *Minimal guarantees*: what still holds when the path stops before its end. E's first holds before UC-xx5 is ever reached, so it is the journey's.
+  - F has neither, so it leaves both out.
 - **What was weighed and left out:**
+  - **Preconditions:** the first step's hold them, and in both examples they read none.
+  - **Trigger:** the first step's.
+  - **Assumptions:** both of E's are UC-xx5's, the required status and the pipeline's network.
+  - **Other actors:** the developer and the CI pipeline take part only inside a use case, whose own *Other actors* names each with what it must protect. So completeness, the maintainer's reason for the use case's part, is met there. If the maintainer wants it on the journey too, it comes optional, with E's `involves`.
   - **B's touchpoints:** the steps' use cases name their commands.
-  - **B's thinking and feeling:** they fail DEC-001's membership test, and no anchor watches them.
+  - **B's thinking and feeling:** *Thinking* restates the actor's needs, and *Feeling* rests on no research.
   - **B's phases:** they group steps for a reader. A project may add sections of its own (the design's part 4).
   - **Opportunities and open issues:** they belong to the tracker, which no anchor watches.
   - **D's level and scope:** the kind implies the level, and the area folder shows the scope, as for the use case.
-  - **D's extensions:** each seam holds the break, and each step's variants hold what happens next.
-  - **E's pairs:** none of the example's five seams was a pair in fact, and each quote is one more copy to keep. The hint asks where each fact was made true instead.
+  - **E's pairs:** every precondition read none, and each quote is one more copy to keep.
+- **One actor, checked:** each step's use case has the journey's actor as its `actor`. Both are front matter, so the check and the stamp can hold it (the design's Decided 2). A use case the actor only takes part in, through its `involves`, is no step of theirs, and goes in question 3's list.
+- **The journey's actor, anchored:** the goal speaks for the actor and serves its needs, so the journey anchors it, as a use case anchors its own.
+- **Labels:** nouns, as the use case's are. *Seams to watch* becomes *Seams*, and the hint carries what "to watch" said.
 - **Ships with:** every part ships with software-analysis. project-kit adds no part of its own for the journey.
 
 The declaration #1363 takes, in this order:
@@ -514,57 +524,105 @@ The declaration #1363 takes, in this order:
 | `heading` | `# JRN-NNN — <title>` | yes | heading | none, since the stamp writes it | `# JRN-003 — Build and export the first report` |
 | `goal` | Goal | yes | `sentence` | What the actor wants from the whole path, in one sentence in their own voice. Start with the verb, with *I* and *my* where they refer to themselves. | Build my first report and export it as a file. |
 | `steps` | Steps | yes | `steps-match-front-matter` | One line for each use case in `steps`, in order: its id, then what the actor achieves in it. | 1. UC-003 — The analyst signs in. 2. UC-005 — The analyst builds the report. 3. UC-007 — The analyst exports the report as a file. |
-| `seams` | Seams | yes | `seams-match-steps` | One for each pair of steps, in order. Say what the next step relies on from the steps before it, and how that can break. Name the use case or record that makes it true. | **UC-005 → UC-007:** the export reads the report the analyst saved in UC-005. A report left unsaved is not offered for export. |
+| `seams` | Seams | yes | `seams-match-steps` | One for each step after the first, labelled with its id. Say what the step relies on, what made it true, and how that can break. Write `None.` when it relies on nothing. | **UC-007:** the report the analyst saved in UC-005. A report left unsaved is not offered for export. |
+| `variants` | Variants | no | `variants`, read against *Steps* | One for each branch of the whole path, lettered after the step it leaves. Say where the path rejoins or ends. | 3a. The analyst wants a second report, and the path rejoins at step 2. |
 | `postconditions` | Postconditions | yes | none | The state that shows the whole path succeeded. | The analyst holds a file with their first report. |
+| `minimal-guarantees` | Minimal guarantees | no | none | What still holds when the path stops before its end. Name the record or code each rests on. | Stopping after any step leaves every saved report as it was. |
 
 - **The hints:** each is one line, with short sentences and no semicolon (the design's part 5). They say what goes in a part, never how to format it.
 - **The examples:** one neutral journey runs through them all, the analyst's first report. Its last step is the use case's own example, the export.
-- **The goal's hint:** it is the use case's, split into two sentences. As one, it runs to 28 words, over RS-WRITE-005's limit. The use case's hint stays as the maintainer worded it.
+- **The goal's hint:** it is the use case's, split into two sentences. As one, it runs to 28 words, over RS-WRITE-005's limit.
+- **The order:** as the use case's, with *Variants* after the path and *Minimal guarantees* last.
 
-**The two forms, defined** (#1365):
+**The two forms, defined** (#1365), as question 1 recommends:
 
 - **`steps-match-front-matter`:** *Steps* holds one numbered item for each entry of `steps`, in the same order, numbered from 1.
   - Item n opens with its number, then the n-th id of `steps`, then ` — ` and text.
   - A repeated use case repeats its line.
-  - A journey's steps are cited by use-case id, never by number (`SA/schemas/revalidation-evidence.schema.json`). So renumbering after an inserted step breaks no citation.
-- **`seams-match-steps`:** *Seams* holds one top-level item for each pair of adjacent steps, in their order. So n steps give n − 1 items.
-  - Item i opens with the bold label `**<step i> → <step i+1>:**`, naming the ids of that pair, and holds text after it.
-  - Items match by position, since a repeated step can repeat a pair. The steps A, B, A, B give A → B twice.
-  - As for every list form, a line that is no top-level item is not judged, such as a lead sentence or a nested item.
+  - Evidence cites a journey's steps by use-case id, each once (`SA/schemas/revalidation-evidence.schema.json`). So renumbering after an inserted step breaks no evidence. It does break prose that names a step by number, such as a variant's "rejoins at step 2", which the same change edits.
+- **`seams-match-steps`:** *Seams* holds one top-level item for each step after the first, in the order of `steps`. So n steps give n − 1 items.
+  - Item i opens with the bold label `**<id>:**`, the id of step i + 1. Text or `None.` follows on the item's own line, and nested items may follow that.
+  - Items match by position, so a repeated step repeats its label. A use case repeated next to itself needs nothing special.
+  - As for every list form, a line that is no top-level item is not judged, such as a lead sentence.
+- **Keyed by pairs instead** (question 1's alternative): item i opens with `**<step i> → <step i+1>:**`. A use case repeated next to itself then gives a pair such as `UC-005 → UC-005`.
 - **What neither form checks:** whether the words are true. Friction flags the journey when a step's use case or a seam's anchor changes, and a reviewer rereads the seams (DEC-001 point 4).
+- **Withdrawn steps:** a journey in force may name no withdrawn use case (`check.py`). A withdrawn journey is history, so no form fails it (the design's part 1).
+- **The stamp:** it writes each step's line and each seam's label from `steps`, with one hint after each part's label. The forms refuse an item left with no text (the design's part 2).
 
 **For the build:**
 
 - **The parts (#1363):** the table above, in its order, with each part's hint and example.
 - **The forms (#1365):** as defined above.
-- **DEC-001 first (#1358):** its point 4 names a journey's anchors as its steps' use cases and the code at its seams. Records as anchors, and any list from question 1, go beyond it. So #1358's refinement says so before any build cites it (core rule 2).
-- **The front matter, on questions 1 and 2:**
-  - **Question 1 (b):** `SA/schemas/journey.schema.json` gains the list, and the check requires the use-case anchors to equal `steps` with it (`SA/scripts/_lib/check.py`). The stamp writes the list's anchors, as it writes the steps' (`SA/scripts/_lib/stamp.py`).
-  - **Question 2, yes:** the check compares each step's use case with the journey's `actor`, as its `actor` or among its `involves`.
+- **DEC-001 first (#1358):** its point 4 names a journey's anchors as its steps' use cases and the code at its seams. The journey's actor, its records and any list from question 3 go beyond it. So #1358's refinement says so before any build cites it (core rule 2).
+- **One actor, checked:** the check compares each step's `actor` with the journey's (`SA/scripts/_lib/check.py`), and the stamp refuses the same (`SA/scripts/_lib/stamp.py`). So the check accepts nothing the stamp would refuse. It is filed on the maintainer's answer to this recommendation.
+- **The journey's actor, anchored:** the stamp writes it among the artefact anchors, as it writes a use case's actor (`SA/scripts/_lib/stamp.py`).
+- **Question 3 (b):** `SA/schemas/journey.schema.json` gains the list. The check requires the use-case anchors to equal `steps` with it, and the stamp writes its anchors.
 - **The templates (#1366):** rendered from the table, so *Starts* and *Done when* go, and the instruction line with them.
 - **The skill and the README (#1369):** the journey sub-procedure's *Fill it* list gives way to the hints.
 
+**Found on the way:**
+
+- **Two hints for one goal.** The use case's goal hint runs to 28 words in one sentence, over RS-WRITE-005's limit. project-kit holds its templates to `WRITE` (the design's part 5), so the maintainer chooses whether the use case's hint splits too.
+- **`init`'s symlink under `uv tool install`.** With the tool installed, the source kit is the wheel's bundled tree (`install.py`). So the symlink `init` prints points inside the tool's own environment. Question 4 asks about the next steps.
+
 ### Questions for the maintainer
 
-Each question is one decision, with a recommendation.
+Each question is one decision, with a recommendation. Questions 1 to 3 shape the journey. Question 4 was found on the way.
 
-1. **Are the use cases a seam relies on, beyond the steps, anchored?**
-   - **The case:** seam UC-xx4 → UC-xx5 relies on the developer's landing, and seam UC-xx3 → UC-xx2 on the adopter's choice of a provider. Today's check requires the use-case anchors to equal `steps` exactly (`check.py`), so neither can be anchored.
+1. **Is each seam keyed by the step that relies on it, or by the pair of adjacent steps?**
+   - **The case:** the stamp writes one seam for each pair of adjacent steps (`stamp.py`). The example's steps rely on steps further back, as UC-xx3 and UC-xx4 rely on UC-xx1's install. A read-only step leaves a pair with nothing to say, such as UC-xx1 → UC-xx2.
+   - **Recommendation:** keyed by the step that relies, `**UC-xx3:**`, with `None.` allowed. The text names what the step relies on and what made it true. #1365 builds the form as defined above.
+   - **Else:** today's pair labels, with the hint asking what the next step relies on from any earlier step. The label then names the step just before, which may have no part in it.
+2. **Do *Preconditions* stay strict, now that they carry no seam here?**
+   - **The case:** the maintainer added *Preconditions* to the use case because a journey's seams need them. Under the decided hint, a precondition is a state that no step checks. pkit's commands check what they need, so every precondition in E reads none, and F's seam meets a trigger.
+   - **Recommendation:** yes, they stay strict. A seam states what a step relies on in its own words, checked or not, and *Preconditions* keep what nothing checks. Nothing decided changes, only the reason given for the part.
+   - **Else:** the hint loosens, so a precondition may hold what an earlier use case makes true even where a step checks it. Seams could then point at preconditions, at the cost of the line question 5 drew between preconditions and variants.
+3. **Are the use cases a journey relies on, beyond its steps, anchored?**
+   - **The case:** the pipeline gates later pull requests only once the developer's landing, UC-xx6, has put the install, the settings and the job on the default branch. Today's check requires the use-case anchors to equal `steps` exactly (`check.py`), so the landing cannot be anchored.
    - **The options:**
      - (a) name them in words only, as today
      - (b) list them in the front matter, as data and as anchors, and require the use-case anchors to equal `steps` with that list
      - (c) make them steps, so a journey may pass through another actor's use case
-   - **Recommendation:** (b). It keeps one actor (DEC-001 point 1), and anchors what the seams rely on (DEC-001 point 4). The list's name is the maintainer's, such as `relies-on`.
-   - **Else:** (a) leaves a stale seam to a reviewer's memory, since a change to the landing never flags the journey. (c) changes DEC-001 point 1, and a journey stops being one actor's path.
-2. **Does the check hold each step's use case to the journey's actor?**
-   - **The case:** nothing compares them today (`check.py`). A journey may list another actor's use case as a step, and it passes.
-   - **Recommendation:** yes. Each step's use case has the journey's actor as its `actor`, or among its `involves`, the use case's other actors. Both are front matter, so a script can check it (the design's Decided 2).
-   - **Else:** one actor stays the writer's care, as today.
-3. **Does the journey carry the use case's further parts?**
-   - **The case:** the maintainer gave the use case *Other actors*, *Preconditions*, *Assumptions*, *Trigger* and *Minimal guarantees*. E carries them to the journey, and each repeated what a step's use case holds.
-   - **Recommendation:** no. Ship *Goal*, *Steps*, *Seams* and *Postconditions*, and add a part once real journeys show it recurs.
-   - **Else:** some of E's parts ship too. *Minimal guarantees* was the strongest, since "a project that stops at any step merges as before" is about the whole path.
+     - (d) anchor the reliance where a use case states it: UC-xx5 lists the landing, and a journey reaches it through UC-xx5
+   - **Recommendation:** (b). It keeps one actor (DEC-001 point 1), and anchors what the journey relies on (DEC-001 point 4). The list's name is the maintainer's, such as `relies-on`.
+   - **Else:**
+     - (a) leaves a stale seam to a reviewer's memory, since a change to the landing never flags the journey.
+     - (c) changes DEC-001 point 1, and a journey stops being one actor's path.
+     - (d) serves every journey through UC-xx5 with one declaration. But anchors between use cases need a check against cycles, and the chain stops wherever UC-xx5 is revalidated as unchanged.
 4. **Do `init`'s closing next steps recommend `uv tool install`, as the CLI reference does?**
-   - **The case:** `init` ends by recommending a symlink to the source checkout's dispatcher, once per machine (`install.py`). The CLI reference recommends `uv tool install` after PRJ-004, and keeps the symlink for contributors. It bears on the journey's first step, and the round does not decide it.
-   - **Recommendation:** yes, in a Task of its own that brings `init`'s closing next steps in line with PRJ-004.
+   - **The case:** `init` ends by recommending a symlink to the source checkout's dispatcher, once per machine (`install.py`). The CLI reference recommends `uv tool install` after PRJ-004, and keeps the symlink for contributors. Under `uv tool install`, the symlink would point inside the tool's environment.
+   - **Recommendation:** yes, in a Task of its own that brings the next steps in line with PRJ-004. It is no template decision, so it is filed as the design note filed what it found on the way.
    - **Else:** the two keep differing, and UC-xx1 names no way to put `pkit` on the path.
+
+### Review
+
+The critic reviewed the first draft. Each finding below changed the draft, or is answered here.
+
+| Finding | Answer |
+|---|---|
+| Red flag: E's preconditions broke the decided hint, since a step checked each one, so the reasons no seam was a pair were wrong | E now follows the hint, and every precondition reads none. "Fit with pkit" gives the finding, and question 2 asks about it. |
+| Red flag: the reason for shipping no further part contradicted a guarantee of the whole path, which also claimed too much | *Minimal guarantees* ships optional, for the whole path. The guarantee now covers merges made through the hosting service only. |
+| Red flag: D was said to put each break at the step where it shows | D's extensions sit where the condition arises, and name where it shows. *Variants* ships optional for such branches. |
+| The seams form was keyed by adjacent pairs, against the round's own finding | Question 1 recommends keying by the step that relies, and the form is defined for both keys. |
+| The journey's start had no home | The first step's *Trigger* holds it (the recommendation). |
+| The journey's own branches had no part | *Variants*, optional |
+| Five errors of fact: suggestions with no capability, a backbone range no first day misses, a private install nothing reports, the landing's place, and dormancy | Each corrected in the four candidates. A role conflict, which no two shipped capabilities can raise, gives way to a suggestion. |
+| The anchors missed the modules behind three behaviours | `capabilities.py` and `friction_check.py` added. `connections.py` left with the role conflict. |
+| The journey's own actor was unanchored | Every candidate anchors it, and the recommendation says so. |
+| A proposed rule, RS-WRITE-014, was the reason to anchor records | DEC-001 point 4's decisions for a use case, and the stamp's `--record`, are the reasons now. |
+| Renumbering "breaks no citation" holds for evidence only | Limited to evidence, with prose that names a step by number |
+| The build of the actor check named only the check | The stamp refuses the same (for the build). |
+| Two hints for one goal | Listed under "Found on the way" |
+| "These four are DEC-001 point 1's account" | *Goal* and *Postconditions* come from today's template, and the recommendation says so. |
+| The claim that no seam is a pair rested on one example with two read-only steps | F, with no read-only step, meets a trigger, not a precondition. |
+| B's feeling dismissed by the membership test | It rests on no research, and only a feeling tied to a fact can go false. |
+| The repeat charged to D alone | A's *Done when* is charged too, and the recommendation says what a journey's end adds. |
+| "A, D and E filled each of them" | A and E did, and D has no seams part. |
+| *Other actors* dropped as a repeat, which the maintainer overrode for the use case | Answered under completeness: the use cases' own *Other actors* meet it. |
+| Question 1 mixed another actor's use case with the adopter's own | The adopter's own, a role conflict, left the example. Question 3 now covers the landing. |
+| Question 2 let in through `involves` what question 1 rejected | The check compares `actor` only, and an involved actor's use case goes in question 3's list. It is now part of the recommendation. |
+| Question 3 bundled five parts into one answer | The criterion weighs each part in the recommendation, and two ship optional. |
+| Question 4 is no template decision | Marked as found on the way. The round was asked to list it as a question. |
+| Missing questions: the seam's key, and strict preconditions | Now questions 1 and 2 |
+| Counter-alternative: anchor the reliance where a use case states it | Option (d) of question 3 |
+| Writing: two elided verbs, a changed meaning, an ambiguous pronoun, seams named by number | Each fixed |

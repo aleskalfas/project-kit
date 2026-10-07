@@ -74,7 +74,7 @@ pkit:
   - **Postconditions:** `.pkit/project/config.yaml` holds the settings, and `pkit validate` reports no error in them, in the adopter's clone (UC-xx4).
   - **Preconditions:** none. The pipeline's first pkit command checks for `.pkit/` itself, and refuses without it (UC-xx5 and `validate.py`).
   - **Risk:**
-    - Later pull requests carry the install, the settings and the pipeline's job only once they are on the default branch. The developer's `UC-xx7 — Land a change on the default branch` puts them there.
+    - Later pull requests carry the install, the settings and the pipeline's job only once they are on the default branch. The developer's `UC-xx6 — Land a change on the default branch` puts them there.
     - A private install is never committed, so the pipeline's `pkit sync` and `pkit validate` fail on a missing `.pkit/` (ADR-009 point 3 and `validate.py`).
     - Without a pin, the pipeline runs whatever pkit it installs. An older one makes `pkit sync` refuse, and a newer one syncs its own content (ADR-049, #1212 and `sync.py`).
     - A pipeline that skips `pkit sync` fails `pkit validate` with "environment not provisioned — run `pkit sync`".

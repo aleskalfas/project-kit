@@ -55,7 +55,7 @@ pkit:
 3. The adopter installs a capability the project needs (UC-xx3).
 4. The adopter sees the wiring again, with the capability's roles and points (UC-xx2).
 5. The adopter declares the project's settings, and they validate (UC-xx4).
-6. The adopter makes the project's merges wait on the methodology's checks (UC-xx5). The developer lands the install, the settings and the pipeline's job on the default branch (UC-xx7).
+6. The adopter makes the project's merges wait on the methodology's checks (UC-xx5). The developer lands the install, the settings and the pipeline's job on the default branch (UC-xx6).
 
 **Extensions:**
 
