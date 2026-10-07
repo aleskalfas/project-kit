@@ -4,19 +4,20 @@ TERM-revalidation:
   status: active
   definition: "A revalidation is one review of some artefacts against one version of the system: a proposed design, or the actual code."
   replaces:
+    - recheck
     - walkthrough
     - walk
   pkit:
     friction:
       anchors:
-        record: [COR-016, COR-050, "software-analysis:DEC-001"]
+        record: [COR-050, "software-analysis:DEC-001"]
 TERM-system:
   name: the system
   status: active
   definition: "The system under discussion: pkit, as the platform you install, run and extend."
   pkit:
     friction:
-      unanchored-because: "It names the whole of pkit, so an anchor on its code would match every change. Its meaning is the maintainer's answer on PR #1345, which no record holds."
+      unanchored-because: "It names the whole of pkit, so an anchor on its code would match every change. No record defines it."
 ---
 
 # Glossary
@@ -46,7 +47,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Invariants:**
 
 - Every actor is a role that uses it (DEC-001 point 1).
-- Every use case says how it fulfils one actor's goal (DEC-001 point 1).
+- Every use case says how the system fulfils one actor's goal (DEC-001 point 1).
 - No other software is called a system. Each is named for what it is, such as the hosting service or the harness (PR #1345, question 12).
 
 **Examples:**

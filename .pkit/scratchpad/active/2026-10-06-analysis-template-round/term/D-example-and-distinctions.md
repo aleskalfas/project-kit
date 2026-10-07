@@ -4,19 +4,20 @@ TERM-revalidation:
   status: active
   definition: "A revalidation is one review of some artefacts against one version of the system: a proposed design, or the actual code."
   replaces:
+    - recheck
     - walkthrough
     - walk
   pkit:
     friction:
       anchors:
-        record: [COR-016, COR-050, "software-analysis:DEC-001"]
+        record: [COR-050, "software-analysis:DEC-001"]
 TERM-system:
   name: the system
   status: active
   definition: "The system under discussion: pkit, as the platform you install, run and extend."
   pkit:
     friction:
-      unanchored-because: "It names the whole of pkit, so an anchor on its code would match every change. Its meaning is the maintainer's answer on PR #1345, which no record holds."
+      unanchored-because: "It names the whole of pkit, so an anchor on its code would match every change. No record defines it."
 ---
 
 # Glossary
@@ -29,8 +30,10 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
+- **The `revalidated` block:** where an artefact records its last revalidation, with its `at`, its outcome and its deferrals (COR-050 point 3). DEC-001 point 4 calls that record the artefact's revalidation too.
+- **A revalidation record:** the document a revalidation leaves when it is planned, or finds a gap or a regression (DEC-001 point 6). A routine revalidation leaves none.
 - **Testing:** it asks whether the software still does what a description says, and fixes the software. A revalidation asks whether the description is still true, and usually fixes the description (DEC-001 point 7).
-- **A storyboard's walkthrough:** the example dialogue of one scenario in a storyboard (COR-016). *Walkthrough* was an earlier name of this term.
+- **A storyboard's walkthrough:** the example dialogue of one scenario in a storyboard (COR-016). *Walkthrough* was the act's working name in the design behind DEC-001.
 
 ## TERM-system — the system
 
@@ -38,5 +41,5 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **An actor:** a role that uses the system, such as the CI pipeline or an AI agent (DEC-001 point 1).
-- **Other software:** never called a system. It is named for what it is, such as the hosting service or the harness (PR #1345, question 12).
+- **A system:** other software, such as the hosting service or the harness. The analysis names it for what it is, never a system (PR #1345, question 12).
+- **A platform:** in COR-009, the service a project's remote lives on. The definition calls pkit a platform in another sense, as what you install, run and extend.
