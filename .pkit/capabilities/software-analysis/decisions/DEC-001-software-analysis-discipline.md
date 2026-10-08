@@ -17,23 +17,30 @@ The core layer supplies the machinery this needs:
 - anchors and friction, which detect when what an artefact rests on has changed (COR-050);
 - connection points, through which components exchange knowledge and signals without depending on each other: data slots (COR-052) as one kind, addressed by role (COR-053).
 
-This record decides what the capability keeps, where, and how it stays true.
+This record decides what the capability keeps, in what shape, where, and how it stays true.
 
 ## Decision
 
-**The capability keeps four kinds of product knowledge (actors, use cases, journeys and glossary terms) as anchored artefacts, and keeps them true through revalidation: planned before code changes, and triggered by friction after.**
+**The capability keeps four kinds of product knowledge (actors, use cases, journeys and glossary terms) as anchored artefacts, each carrying every part its kind declares, and keeps them true through revalidation: planned before code changes, and triggered by friction after.**
 
 1. **What it keeps.**
-   - **Actors:** named roles that use the system, each with the needs it brings.
-   - **Use cases:** one actor's goal and how the system fulfils it: when it starts, the main path, variants, and when it is done.
-   - **Journeys:** an end-to-end path an actor takes across several use cases, including the seams between them where the path can break.
-   - **Glossary terms:** the domain words, each with a stable id separate from its display name and a record of names it replaces, so that renaming a term does not break what cites it.
+   - **Actors:** named roles that use the system, not personas. An actor says what the role is and does with the system, when it comes to the system and with what, and the needs it brings.
+   - **Use cases:** one actor's goal and how the system fulfils it: the other actors who take part and what it must protect for each, what holds before it starts, what starts it, the main path and its variants, the state that shows the goal is met, and what the system still guarantees when it ends early or fails. What holds before it starts is split in two. A precondition is a state the system or an earlier use case made true, which no step checks. An assumption is what must also hold that nothing in the system secures, and it names the record that admits it.
+   - **Journeys:** one actor's end-to-end path across several of its use cases, including the seams between them where the path can break. Each step carries its own seams: what it needs from an earlier step, or from a use case outside the journey, and how that can break. Like a use case, a journey states its goal, its own variants, the state that shows the whole path succeeded, and what still holds when it stops before its end. It is a summary-level path through the system, not a map of the actor's experience.
+   - **Glossary terms:** the domain words, each with a stable id separate from its display name and a record of names it replaces, so that renaming a term does not break what cites it. A term's name is written as running text writes it, in lower case and with no article. Its definition is a phrase that could stand in for the term, as terminology standards write one (ISO/IEC Directives, Part 2): its broader kind, then what sets it apart, with no article, no full stop and no repeat of the term. A term also gives an example, and the words it could be confused with and how each differs. The names it replaces are only those it carried in the analysis or in an accepted record; a working name that now means something else is one of the words it could be confused with.
 
-   A user story, in the sense of a need stated in one sentence, is an actor's need and a use case's goal, not a separate artefact.
+   An actor's need, and the goal of a use case or a journey, are each one sentence in the actor's own voice, starting with its verb, or with *Never* and the verb. A user story, in the sense of a need stated in one sentence, is an actor's need and a use case's goal, not a separate artefact. The voice is the common user-story convention, so the capability ships it, and a project that prefers another replaces the hint that asks for it.
+
+   **A kind's structure.** Each kind, the revalidation record (point 6) among them, declares its *structure* once, as data whose schema this capability ships: the parts of its body in their order, each with a hint, and the forms a script checks in a part or a front-matter field. The kind's template is rendered from that structure and shows exactly it, and the stamp renders a project's additions with it. Nothing reads a structure out of a template's text. Where the stamp leaves a part for a writer to fill, the part's hint is its placeholder, one marked line that says what goes there. A hint left in is refused whatever a rule's status, as any placeholder is, and the check's messages repeat the hint. A tool takes data from an artefact's front matter only: a body's parts serve readers and the check, never another tool.
+   - **The rule for every kind.** Every part a kind ships is present in every artefact or record of that kind, and a missing part is always an error. A part with nothing to say reads `None.`, where its structure allows it, so a script tells a part considered from a part forgotten. A project's own additions stay outside this rule: each is optional unless the project marks it required.
+   - **When it binds.** The capability's method rule set (COR-051 point 6) holds a format rule: an artefact carries its kind's declared structure. The structure is that rule's checkable part, beside it as a schema is (COR-051 point 1), and no part of the rule's content, so changing a structure leaves the set's version alone. The structure binds at the rule's status: under any status but accepted, the normal check reports nothing of it (COR-051 point 4). On request, a check previews a proposed rule as if it were accepted, and never fails on what it previews. A preview finding takes the severity that reports without judging, labelled `preview` (COR-055 point 4). A kind's schema checks its front matter whatever the rule's status.
+   - **What a project may change.** A project may relabel a shipped part and replace its hint and example, which tightens nothing. It may also tighten a structure, by adding parts or by requiring more of it, in data of its own in the capability's project tier. Each tightening names the project rule that asks for it. It never relaxes a shipped structure: it does not drop or loosen a shipped part, reorder the shipped parts, invent a form, or add a kind (point 11). A part's id is permanent once shipped, retired and never renamed, as a rule's id is (COR-051 point 3). A tightening binds at the status of the rule it names, and of the format rule, and reaches an artefact only where the scope of the set that names that rule covers it (COR-051 point 2).
+   - **Chosen at adoption.** Adopting the capability includes choosing each kind's parts. The shipped structure is a starting point a project reviews, never a default it skips.
+   - **When a structure changes.** Live artefacts, the actors, use cases, journeys and terms in force, describe the system as it is, so they are always migrated to the current structure. A revalidation record is the log of a revalidation that happened: it stays as written, and is checked against the structure in force when it was written. A withdrawn artefact is history too, and no part required after its withdrawal fails it.
 
 2. **Where it keeps them.** Everything lives under the project's internal documentation root (COR-049), in an `analysis` area laid out after a use-case model:
    - the glossary is one collection file, serving everything;
-   - the use-case model holds a collection file of actors, a folder of use cases (optionally grouped by functional area), and a folder of journeys;
+   - the use-case model holds a folder of actors, one file each, a folder of use cases (optionally grouped by functional area), and a folder of journeys;
    - revalidation records are kept in a folder of their own.
 
    **A kind with many files gets its own folder; a kind with one file is a file.** Folders appear only when something goes into them.
@@ -42,20 +49,20 @@ This record decides what the capability keeps, where, and how it stays true.
    - **Surface.** The capability declares no surface by default, since it cannot know a project's code. The project declares which paths its analysis ought to cover, in the friction key of its backbone configuration (COR-050).
    - **Ownership.** The artefacts live outside the capability's own subtree, so uninstalling the capability never removes them.
 
-   The exact layout and templates are in the capability's README. The friction block — anchors and revalidation — follows the core schema, inside the methodology's container in each artefact (COR-050, COR-053).
+   The exact layout is in the capability's README, and each kind's parts are in its declared structure (point 1). The friction block — anchors and revalidation — follows the core schema, inside the methodology's container in each artefact (COR-050, COR-053).
 
-3. **Identifiers.** Use cases and journeys are numbered within the project (`UC-NNN`, `JRN-NNN`), independent of any grouping. Moving a use case between areas never changes its id. Actors and terms are keyed by stable ids inside their collection files, with distinct prefixes (`ACT-` for actors, `TERM-` for terms), so that no two artefacts in the analysis share an id.
+3. **Identifiers.** Use cases and journeys are numbered within the project (`UC-NNN`, `JRN-NNN`), independent of any grouping. Moving a use case between areas never changes its id. Actors and terms are keyed by stable ids, an actor's naming its file and a term's its entry in the glossary, with distinct prefixes (`ACT-` for actors, `TERM-` for terms), so that no two artefacts in the analysis share an id.
    - **Append-only.** An artefact is withdrawn, never deleted, and its id is never reused: once settled, an id names one artefact for good. There is one exception, and only the project makes it; no tool infers it. Artefacts that nothing cites — a pilot abandoned before anything cited it, say — may be removed from the default branch, and the project may then name them; their ids are free again. Nothing else frees an id. Something cites an id when it names the artefact by that id and expects the analysis to answer for it; history fixed at a commit, such as a commit message, does not.
 
-     Inside a use case, steps are numbered and variants are lettered after the step they branch from. Both are append-only too, because journeys and evidence cite them.
+     Inside a use case, steps are numbered and variants are lettered after the step they branch from. Both are append-only too, because journeys and evidence cite them. A check compares each use case with the default branch's, and reports a step or a variant renumbered or removed. It binds with the kind's structure, and previews with it (point 1).
    - **Parallel work.** When two lines of work number a new artefact the same, the first to reach the default branch keeps the number. A check that compares the branch with its base reports the collision, and the other renumbers before merging. A new number is given past what the default branch holds, and past any base the stamp is named, while a collision is judged at the merge at hand — against the base of that comparison, an integration branch included (refinement per COR-054, point 3).
 
 4. **Every artefact says what makes it true.** Each carries anchors and a revalidation in the sense of the anchors-and-friction record (COR-050). Anchors run in one direction only, so they never form a cycle:
    - Actors and terms anchor to where the software or a decision embodies them. An actor with no such anchor is reported as unanchored, which is not an error.
-   - Use cases anchor to their actor, as an artefact anchor, and to the code they exercise and the decisions they rely on.
-   - Journeys anchor to the use cases they pass through, and to the code at the seams between them. A journey's ordered list of steps is the source. Its use-case anchors are written into its anchor field from that list by the capability's stamp and check, and validation requires the two to match, so the friction check sees them and the two cannot drift apart.
+   - Use cases anchor to their actor and to each other actor they involve, as artefact anchors, and to the code they exercise and the decisions they rely on. The other actors are listed in the use case's front matter, so a check resolves each to an actor.
+   - Journeys anchor to their actor; to the use cases they pass through, and to each use case outside the journey that a step relies on; and to the code and decisions at the seams between them. A journey's ordered list of steps, and its list of the use cases it relies on, are the source. Its use-case anchors are written into its anchor field from the two by the capability's stamp and check, and validation requires them to match, so the friction check sees them and they cannot drift apart.
 
-   A changed actor flags its use cases, and a changed use case flags the journeys through it. Friction is reported in that order. Revalidation is this capability's name for the act the core record calls by the same name; recording it on the artefact — its `at`, its outcome and any deferrals — is what clears friction (COR-050).
+   A changed actor flags the use cases and journeys that anchor to it, and a changed use case flags the journeys that pass through it or rely on it. Friction is reported in that order. Revalidation is this capability's name for the act the core record calls by the same name; recording it on the artefact — its `at`, its outcome and any deferrals — is what clears friction (COR-050).
 
 5. **Revalidation.** A **revalidation** is one review of some artefacts against one version of the system: a proposed design, or the actual code. It is an act, repeated whenever something triggers it:
    - **planned**: a change is proposed, before code;
@@ -72,7 +79,14 @@ This record decides what the capability keeps, where, and how it stays true.
 
    These four outcomes map onto the core record's two (refinement per COR-050): *holds* and *the code regressed* are recorded as `unchanged`, with the justification saying why the description stands — for a regression, naming the defect reported; *the analysis was stale* ends in `updated`; *a gap was found* ends in `updated` where the artefact itself changed, and in `unchanged` — the justification naming the gap and the artefact that fills it — where the gap is closed by a new artefact. Friction an agent or person chooses not to resolve yet is a core deferral, with its reason, not an outcome. Whoever performs the revalidation (a person, or an agent) records it on the artefacts it covered. An agent proposes the outcomes. Where "stale" versus "regressed" is ambiguous, a person decides before any revalidation is recorded. The analysis is never silently rewritten to match broken code.
 
-6. **Records only when there is something to say.** A revalidation that is planned, or that finds a gap or a regression, leaves a record in the revalidations folder. The record names the change that carried it (a tracked work item, a pull request, or a range of commits), the trigger, the artefacts covered with their outcomes, and the gaps with what resolved each. Records cite artefacts by id, including withdrawn ones, and are named by date and subject rather than numbered, so parallel work cannot collide. A routine revalidation that finds everything still holds writes no record: the artefact's own revalidation block, with its outcome and justification, is the record.
+6. **Records only when there is something to say.** A revalidation that is planned, or that finds a gap or a regression, leaves a record in the revalidations folder. The record names the change that carried it (a tracked work item, a pull request, or a range of commits), the trigger, the artefacts covered with their outcomes, and the gaps. Each gap is labelled with the artefacts it affects, and says what resolved it or carries its fix. A check holds the gaps to the outcomes: every artefact whose outcome is a regression or a gap is named by a gap, and every gap names an artefact the record covers. Records cite artefacts by id, including withdrawn ones, and are named by date and subject rather than numbered, so parallel work cannot collide. A routine revalidation that finds everything still holds writes no record: the artefact's own revalidation block, with its outcome and justification, is the record.
+
+   **What a planned record reviewed.** A planned record also names where the design it reviewed stood, in its front matter as `reviewed-against`. Each source of the design is named by what it is, its link where it lies outside the repository, and its version, a pointer that returns the text reviewed:
+   - text in the repository is pinned by a commit on the default branch, or by the change the record lands in, whose commit is found from the history as a revalidation's is (COR-050 point 3);
+   - text in a tracker is pinned by its link and the time it was read;
+   - a pull request's head, or a commit on a branch, is never a pointer: a rebase loses the one, and a squash leaves the other off the default branch (COR-009 point 1).
+
+   Validation checks the pointers' form. Whether each named commit is on the default branch is a check of its own, since validation reads the working tree only (COR-055 point 2). That check runs offline, and reports a commit it cannot place as unknown, never as a failure, because the pointers are provenance, not a gate.
 
 7. **Revalidation is not testing.** Revalidation asks whether *the description* is still true of the software, and usually fixes the description. Testing asks whether *the software* still does what the description says, and fixes the software. The capability owns revalidation. It does not run the software.
 
@@ -98,9 +112,21 @@ This record decides what the capability keeps, where, and how it stays true.
 
 **Why a use-case model layout.** Grouping actors with the use cases they take part in, and keeping the glossary apart because it serves everything, follows an established requirements practice that analysts and newcomers already recognise. Global ids with optional grouping get the benefit of functional areas without the cost of renumbering.
 
+**Why each kind's structure is data, with its template rendered from it.** A script checks only a structure it can read, and a template that writers copy drifts from any other statement of it. Declared once as data, the structure gives the check one home, and a template rendered from it cannot disagree with the check. The hint stands where the content goes, so the first writer, often an agent, meets what a part asks for rather than a bare label.
+
+**Why every shipped part is present, and `None.` is an answer.** A part left out reads the same as a part forgotten. Asking for every part, with `None.` where there is nothing to say, makes the writer consider each one, and lets a script see that they did. A project's own additions serve that project alone, so the project decides whether each binds.
+
+**Why a project reviews the shipped parts.** The shipped parts were chosen from established practice and tried on one project's examples. Only a project's own examples show whether they suit its system, and a default nobody reviewed binds its artefacts to a choice nobody made.
+
+**Why live artefacts move to a new structure, and records do not.** An actor, a use case, a journey or a term describes the system as it is, so it is read in today's shape. A record says what one revalidation found on its day. Its words are the decision of whoever performed it, and rewriting them into a later shape would change what was decided.
+
+**Why the actor's voice ships.** A need or a goal stated in one sentence, in the actor's voice and starting with its verb, is the common user-story convention, not one project's style. A project that writes them otherwise replaces the hint.
+
 **Why revalidation owns both planned and drift-triggered checks.** Checking before code and checking after an unplanned change are the same act with different triggers. One record shape, and one set of outcomes, serve both.
 
 **Why records only with findings.** Most revalidations find that everything holds. Writing a file each time would bury the few that matter. Git already records the routine ones through the revalidation recorded on the artefact.
+
+**Why a planned record names the design by pointer.** A pointer returns the exact text reviewed, which no version number does. A version an author declares on a document would tell a dependant one fact, whether the meaning changed, and a minor and a major would ask it the same. So documents carry no declared versions, and a record points at the text itself.
 
 **Why keep testing out.** Revalidation judges a description by reading; testing judges software by running it. Merging them would make this capability depend on executing arbitrary software, and would blur whose fix a failure demands. The evidence slot lets executed results inform revalidation without that coupling.
 
@@ -112,7 +138,17 @@ This record decides what the capability keeps, where, and how it stays true.
 
 - **Use-case sets per design, validated once.** Rejected. The knowledge would be scattered across designs and would stop being maintained after each one shipped.
 - **A flat analysis folder.** Rejected. Actors and terms get lost among many use cases, and there is no natural place for grouping or later modules.
+- **Actors kept in one collection file.** Rejected. An actor's needs would sit far from its description, and keeping them beside it in the body would make a tool read data from a body, or keep one fact in two places.
+- **Reading a kind's structure from its template.** Rejected. Required parts, a project's additions and its own content would need markup in the template, and a script would parse text a writer copies.
+- **Keeping a structure in its rule's content.** Rejected. Every change to a structure would version the rule set and flag the rule's dependants, though what the rule says had not moved.
+- **Optional shipped parts, left out where empty.** Rejected. A part left out reads the same as a part forgotten.
+- **Reporting a structure under a proposed rule.** Rejected. It would bind what nobody accepted (COR-051 point 4). The preview shows the same findings on request, and fails nothing.
+- **A journey's seams in a part of their own.** Rejected. It gives an overview of every hand-over, but splits each step from what it needs, and a journey is read as a path.
+- **The label reader in the backbone.** Not taken yet: this capability is the only component that reads declared labels (COR-007). The trigger to move it is a second component that must read them, such as living-docs shipping a page kind with labels, or letting a project add to a page kind's structure. Headings, labels, part extents and the generic forms would move. The analysis's own forms stay here.
 - **A record for every revalidation.** Rejected. Routine records would bury the ones with findings.
+- **Holding every record to today's structure.** Rejected. A part added later would fail every older record, and only rewriting the record would mend it.
+- **Naming the design a planned record reviewed in one line of text.** Rejected. No script can check it, and each source of a design stands at a version of its own.
+- **Versions an author declares on each document, for a record to name.** Rejected. See Rationale. A pointer serves every document, and a number adds nothing a dependant reads.
 - **Storing each artefact's current-or-stale state as truth.** Rejected. It would duplicate what anchors and git already answer; the core's tool-written status is a dated snapshot for visibility, never read for friction (COR-050).
 - **Including executed testing in this capability.** Rejected. See Rationale; the evidence slot covers the useful part.
 - **Requiring a documentation or work-tracking capability.** Rejected. The capability must be useful on its own.
@@ -123,6 +159,7 @@ This record decides what the capability keeps, where, and how it stays true.
 
 ## Implications
 
-- **The capability ships** the templates and layout for its artefacts, the declaration of its places and connections, commands to stamp artefacts and check their shape (friction itself is the core check), and an authoring skill that guides revalidation.
-- **Projects** keep their analysis under their internal documentation root and wire the core friction check into their continuous integration if they want it enforced.
+- **The capability ships** the layout for its artefacts, a declared structure per kind with the template rendered from it, its method rule set with the format rule, the declaration of its places and connections, commands to stamp artefacts and check their shape (friction itself is the core check), and an authoring skill that guides revalidation.
+- **Projects** keep their analysis under their internal documentation root, choose each kind's parts when they adopt the capability, keep their own additions in its project tier, and wire the core friction check into their continuous integration if they want it enforced.
+- **Records as written:** the way a record is checked against the structure in force when it was written comes with the first change to a record's structure that needs it.
 - **Documentation disciplines** can read actors and their needs through the readers point, without any dependency.
