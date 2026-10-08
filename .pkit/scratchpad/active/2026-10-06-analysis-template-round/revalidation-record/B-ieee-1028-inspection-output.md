@@ -5,6 +5,7 @@ The output an inspection leaves under IEEE 1028-2008, clause 6.7, adapted only w
 - **Adapted:** each anomaly gains what resolved it, which DEC-001 point 6 asks of a gap. Each disposition is an outcome of DEC-001 point 5, with its reason, in place of the standard's accept, accept with rework verification or reinspect.
 - **Left out:** the project (a), the meeting's duration (c), the size of the materials (e), the preparation and rework times (k and l), the rework estimate (n) and the savings (o). A revalidation has no meeting, and pkit measures none of these.
 - **The examples:** A's two, with the same front matter, people and evidence.
+- **Not verified:** the clause's items after the preparation time, and every item's letter, rest on no source the round could read (the note's "Sources").
 
 ## The planned record
 
