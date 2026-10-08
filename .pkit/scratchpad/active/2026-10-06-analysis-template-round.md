@@ -6,7 +6,7 @@ started: 2026-10-06
 
 # The analysis template round
 
-The maintainer picks each analysis kind's parts here, one kind at a time, from candidates filled with real pkit examples (#1362).
+The maintainer picked each analysis kind's parts here, one kind at a time, from candidates filled with real pkit examples (#1362).
 
 - **Why:** #1363 declares each kind's structure as data, so its parts are chosen first. The design's first cut is part 8 of the note for #1352, in PR #1353.
 - **The order:** the use case, the journey, the actor, the glossary term and the revalidation record.
@@ -16,7 +16,48 @@ The maintainer picks each analysis kind's parts here, one kind at a time, from c
 - **Paths:** `SA/` is `.pkit/capabilities/software-analysis/`.
 - **Citations:** records, rules and issues by permanent id, files by name, never by line number (RS-WRITE-014, proposed).
 - **Reviewed:** by the critic, before the maintainer saw it. Its findings and the answers are in "Review", at the end of each kind.
-- **Status:** the use case, the journey, the actor and the glossary term are fully decided, under one rule for every kind ("Decided: across kinds"). So is the author's question on the system's words ("Decided: two terms", under the term). The revalidation record is ready for the maintainer, with three questions ("The revalidation record").
+- **Status:** complete. All five kinds are fully decided, under one rule for every kind ("Decided: summary"). So is the author's question on the system's words ("Decided: two terms", under the term).
+
+## Decided: summary
+
+The maintainer decided all five kinds between 6 and 8 October, in comments on PR #1374, and the round is complete. One rule binds every kind, and each decision feeds the build issues below.
+
+- **The rule for every kind:** every part a kind ships is present in every artefact of that kind ("Decided: across kinds").
+  - A part with nothing to say reads `None.`, and a missing part is always an error.
+  - A project's own additions stay outside the rule. Each is optional unless the project marks it required.
+- **Each kind's parts:** the stamp writes every heading. Each kind's "Decided" section gives the hints and the examples.
+
+| Kind | Parts, in order | May read `None.` | Front matter | Chosen template |
+|---|---|---|---|---|
+| Use case | *Goal*, *Other actors*, *Preconditions*, *Assumptions*, *Trigger*, *Main path*, *Variants*, *Postconditions*, *Minimal guarantees* | *Other actors*, *Preconditions*, *Assumptions*, *Variants*, *Minimal guarantees* | `involves`: the other actors by id, each an anchor | `use-case/chosen-template.md` |
+| Journey | *Goal*, *Steps* with each step's needs nested under it, *Variants*, *Postconditions*, *Minimal guarantees* | *Variants*, *Minimal guarantees* | `relies-on`: the use cases outside the journey that a step needs, each an anchor | `journey/chosen-template.md` |
+| Actor | an opening with no label, *Occasions*, *Context* | *Occasions*, *Context* | `needs`: each one sentence in the actor's own voice | `actor/chosen-template.md` |
+| Glossary term | *Example*, *Distinctions*, in each term's section | *Example*, *Distinctions* | `name` in lower case with no article, `definition` a phrase in ISO's form, and `replaces` with names from the analysis or an accepted record only | `term/chosen-template.md` |
+| Revalidation record | *Outcomes*, *Gaps*, each gap naming the artefacts it affects | *Gaps* | `reviewed-against`, required when `trigger` is `planned`: a list of mappings with `title`, `url` and `version` | `revalidation-record/chosen-template.md` |
+
+- **Also decided across kinds:**
+  - **Every label a noun.**
+  - **The actor's voice ships with software-analysis:** an actor's need and the goal of a use case or a journey are one sentence in the actor's own voice. Each starts with its verb, or with *Never* and the verb.
+  - **project-kit's own additions:** seven optional actor parts, with noun labels, in its own settings. It adds no part to the other four kinds.
+  - **Live artefacts are always migrated** to each new structure. Revalidation records stay as written, each checked against the structure in force when it was written.
+
+**The build issues each decision feeds:**
+
+| Decision | Feeds |
+|---|---|
+| The rule for every kind | #1358, #1363, #1364, #1366 |
+| The use case's nine parts and `involves` | #1358, #1363, #1364, #1366 |
+| The use case's steps and variants kept append-only | #1375 |
+| The actor's voice, in needs and goals | #1360, #1363, #1366, and #1368, which loses its rule on the voice |
+| The journey's step lines, nested needs and `relies-on` | #1358, #1363, #1365, #1366 |
+| The actor's parts, and project-kit's noun labels | #1346, #1358, #1363, #1366, #1368 |
+| The term's parts and its front matter's forms | #1358, #1363, #1364, #1365, #1366, and #1368 for WRITE's example |
+| The record's parts, `gaps-match-outcomes` and `reviewed-against` | #1358, #1363, #1364 split in two, #1365, #1366 |
+| Records as written, live artefacts migrated | #1358 |
+| Hints in place of each kind's *Fill it* list | #1369 |
+
+- **Recorded as produced** when the note retires: #1358, #1363, #1364, #1365, #1366 and #1375.
+- **Not a template decision:** `pkit init`'s next steps, which the journey's round found, went to #1376.
 
 ## Decided: across kinds
 
