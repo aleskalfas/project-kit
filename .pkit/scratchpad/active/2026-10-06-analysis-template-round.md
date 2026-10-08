@@ -16,7 +16,7 @@ The maintainer picks each analysis kind's parts here, one kind at a time, from c
 - **Paths:** `SA/` is `.pkit/capabilities/software-analysis/`.
 - **Citations:** records, rules and issues by permanent id, files by name, never by line number (RS-WRITE-014, proposed).
 - **Reviewed:** by the critic, before the maintainer saw it. Its findings and the answers are in "Review", at the end of each kind.
-- **Status:** the use case, the journey, the actor and the glossary term are fully decided, under one rule for every kind ("Decided: across kinds"). The revalidation record follows. One author's question stays open for the maintainer ("Open: one thing, or three?", under the term).
+- **Status:** the use case, the journey, the actor and the glossary term are fully decided, under one rule for every kind ("Decided: across kinds"). So is the author's question on the system's words ("Decided: two terms", under the term). The revalidation record follows.
 
 ## Decided: across kinds
 
@@ -1222,7 +1222,8 @@ The maintainer decided the glossary term on 7 and 8 October, in comments on PR #
      - It starts with its broader kind, and says what sets it apart.
      - It carries no article, no full stop and no repeat of the term.
      - A form of its own lets a script check it.
-     - **The system's definition needs new words,** which the maintainer approves when the term is stamped. E uses B's, "software under discussion: pkit, as you install, run and extend it", to be approved by the maintainer when stamped.
+     - **The system's definition needs new words,** which the maintainer approves when the term is stamped. E first used B's, "software under discussion: pkit, as you install, run and extend it".
+     - **Since 8 October,** the words are the maintainer's, "software under discussion, which you install, run and extend" ("Decided: two terms").
   3. **Question 3, `replaces`:** option (a). It lists only the names the term carried in the analysis or in an accepted record. A working name goes under *Distinctions* when it means something else.
      - So revalidation's `replaces` reads `[recheck]`, and *walkthrough* is one of its distinctions.
   4. **Question 4, the name:** option (a). A term's name is written in lower case, with no article, such as `system` and `revalidation`. Running text adds the article.
@@ -1259,11 +1260,12 @@ The maintainer decided the glossary term on 7 and 8 October, in comments on PR #
 
 - **Revalidation's definition loses its first word, *one*.** With it, "a revalidation" would read "a one review", and the phrase would not start with its broader kind, *review*. The article in running text carries the count.
   - **Otherwise it is B's,** DEC-001 point 5's sentence in ISO's form. The maintainer sees the dropped *one* when the term is stamped, since the change of words chooses a reading (RS-WRITE-013).
-- **The system's definition is B's.** It passes the script's three checks, and its words are to be approved by the maintainer when stamped.
+- **The system's definition was B's.** It passed the script's three checks, and its words were to be approved by the maintainer when stamped.
+  - **Since 8 October,** E holds the maintainer's words, which pass the same three checks ("Decided: two terms").
 - **Revalidation's working names:** *walkthrough* is a distinction, which now also names DEC-001 point 7's scripted walk-through, a check that is run. *Walk* gets none. Its other use is the ordinary verb, as in COR-050 point 9's "walks each artefact's history", and the glossary pins no ordinary word.
 - **The system's platform:** B's definition no longer calls pkit a platform. So that distinction says only what COR-009's platform is.
 - **The headings:** `## TERM-system — system`, while running text keeps "the system".
-- **Length:** E runs to 222 words, against D's 214.
+- **Length:** E runs to 222 words, against D's 214. With the methodology's distinction of 8 October, it runs to 249.
 
 **For the build:**
 
@@ -1283,13 +1285,32 @@ The maintainer decided the glossary term on 7 and 8 October, in comments on PR #
 - **Avoided words, later:** a field of their own, such as `avoids:`, would let that check report them. It waits until a project needs one.
 - **project-kit's first terms:** when project-kit stamps them, the maintainer approves three texts first.
   - the system's definition, B's words
+    - **Since 8 October,** the maintainer's own words, without their first article ("Decided: two terms")
   - the system's reason for no anchor, the round's wording (core rule 20)
   - revalidation's definition, without DEC-001's *one*
   - **Before them,** the author's question below is answered.
+    - **Answered on 8 October:** *methodology* joins them as a term of its own ("Decided: two terms").
 
-### Open: one thing, or three?
+### Decided: two terms, the system and the methodology
 
-An author's question for project-kit's analysis, which the project manager puts to the maintainer (RS-WRITE-011). The round leaves it open.
+The maintainer answered the author's question on 8 October, in a comment on PR #1374. *System* and *methodology* are two terms for two things.
+
+- **The system:** "the software under discussion, which you install, run and extend".
+- **The methodology:** "the body of decision records, rules and conventions the system ships and enforces".
+- **Each term's *Distinctions*** points at the other.
+- ***pkit*** stays the product's name in prose and commands, while the analysis says *the system*.
+- **The actors' sentences** that use *the methodology* for the software switch to *the system*.
+  - Two examples are the adopter's "Install the methodology with one command…" and the component author's "Adapt the methodology to another harness…".
+  - The *methodology maintainer* keeps its name.
+- **In ISO's form** (question 2): a definition carries no article first. So the stamped definitions drop *the*, and the maintainer sees that when the terms are stamped.
+  - The system's reads "software under discussion, which you install, run and extend".
+  - The methodology's reads "body of decision records, rules and conventions the system ships and enforces".
+- **What it changes in the round:**
+  - **E's system** takes the maintainer's definition, and its *Distinctions* gain the methodology (`term/chosen-template.md`).
+  - **project-kit's first terms** gain *methodology*. Its example and its anchors, or its reason for none, are written when it is stamped (core rule 20).
+  - **The journey's example** says *the methodology* where it means the software, as in "Install the methodology into a project" (`journey/chosen-template.md`). Its use cases follow the decision when they are stamped.
+
+**The question, as it was asked.** It stays below as the round put it.
 
 - **The question:** do *the system*, *the methodology* and *pkit* name one thing?
 - **Where each is used,** in the core actors (`tech-docs/analysis/use-case-model/actors.md`):
@@ -1332,13 +1353,13 @@ Each candidate is the glossary, `glossary.md` under the analysis location, holdi
 **What the example left unclear.** The round decides none of these, but items 1 and 2 bear on questions 2 and 4.
 
 1. **The system's definition repeats its term.** "The system under discussion" is Cockburn's term of art, so its words are a citation. Read as a definition, it is circular, which ISO forbids (16.5.6). Its second half, naming pkit, carries the meaning, and B's definition leaves *system* out.
-   - **Decided:** a definition never repeats its term, so the system's takes new words. E uses B's, to be approved by the maintainer when stamped (question 2).
+   - **Decided:** a definition never repeats its term, so the system's takes new words (question 2). E first used B's, and holds the maintainer's since 8 October ("Decided: two terms").
 2. **Three words may name the system.**
    - **The methodology:** the core actors' main word for what pkit carries, used 19 times in `actors.md`. The word *methodology* is used 27 times there, counting the methodology maintainer's name. The AI agent's opening uses both words: "An AI agent working under the methodology, acting on the system from outside."
    - **The system:** the adopter's needs use it ("Report a problem with the system") beside the methodology ("Install the methodology with one command").
    - **pkit:** the operator's need uses it ("when pkit falls back to my installed tool"). The journey's decided example titles a use case "See how pkit is wired into my project".
    - **Whether any two name one thing** is the author's to say (RS-WRITE-011), and no candidate claims it.
-   - **Open:** "Open: one thing, or three?" asks it, for the maintainer.
+   - **Decided:** two terms, *system* and *methodology*, and *pkit* stays the product's name ("Decided: two terms").
 3. **DEC-001 says *the software* too.** Its membership test asks whether "a change to the software can make it false". In project-kit's analysis that is the system, so item 2's question reaches it.
 4. ***Change* has more than one meaning in the records.**
    - In DEC-001 point 6, a change carries a revalidation, and is "a tracked work item, a pull request, or a range of commits".
@@ -1405,7 +1426,7 @@ B, C and D carry much the same facts under different labels, and A carries them 
 | B | 6: *Admitted terms*, *Deprecated terms*, *Example*, *Notes to entry*, *Related terms*, *Source* | All six, under the rule for every kind. All but *Example* may read `None.`. | 301 | A definition that could replace its term, with no circle. A place for a second name the project admits. The source, the only home of the system's provenance. | *Deprecated terms* repeat `replaces`. The notes restate record points, and *Related terms* restate a word of the definition. |
 | C | 3: *Bounded context*, *Invariants*, *Examples* | All three. *Invariants* may read `None.`. | 258 | The rules that always hold of a term, each with its record. That the shipped hints' *the system* is every project's own. | Each invariant restates a record point the term anchors. |
 | D | 2: *Example*, *Distinctions* | Both. Each may read `None.`. | 214 | Each neighbouring word under a label of its own, with how it differs | The distinctions restate record points, as B's notes do: DEC-001 points 4, 6 and 7, COR-050 point 3 and COR-016. |
-| E | 2, as D | As D | 222 | As D, with definitions in ISO's form and `replaces` holding *recheck* alone | As D |
+| E | 2, as D | As D | 249, and 222 before the methodology's distinction | As D, with definitions in ISO's form and `replaces` holding *recheck* alone | As D |
 
 **Note:** E came after the recommendation, and its row is added here to compare.
 
@@ -1515,7 +1536,7 @@ The front matter's form, apart from the section:
 
 - **The shipped hints' *the system*.** software-analysis's templates and hints speak of *the system*, which in each project means its own software (`SA/templates/actors.md`). The use case left out *Scope* because it is always the system. A project that needs the word pinned down defines it in its glossary, as project-kit does.
 - **Three words for the system** ("What the example left unclear", item 2). It is an author's question for project-kit's analysis, to answer before the system is stamped (RS-WRITE-011).
-  - **Open:** "Open: one thing, or three?" asks it, for the maintainer.
+  - **Decided:** two terms, *system* and *methodology* ("Decided: two terms").
 - **The session anchor.** COR-039 point 2 names "the session anchor (the repo the session is rooted in)", and the landing writes "the session's anchor" (`use-case/chosen-template.md`). So *anchor*, once stamped, needs that distinction.
 
 ### Questions for the maintainer

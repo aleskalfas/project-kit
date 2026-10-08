@@ -1,7 +1,7 @@
 The maintainer's chosen shape, filled with both terms. The glossary is one collection file, so both terms sit in it. The file is shown whole inside one fence, as it would read on the default branch.
 
 - **Revalidation:** its `replaces` reads `[recheck]` (question 3). *Walkthrough*, a working name that means something else, is a distinction.
-- **System:** its name has no article (question 4). Its definition is B's, in ISO's form, to be approved by the maintainer when stamped (question 2).
+- **System:** its name has no article (question 4). Its definition is the maintainer's of 8 October, in ISO's form, so without its first article (question 2). Its *Distinctions* point at the methodology, the second term the maintainer named then.
 - **Both definitions:** each starts with its broader kind, with no article and no full stop, and never repeats its term. Revalidation's is B's without its first word, *one*, which the note explains.
 
 ````markdown
@@ -19,7 +19,7 @@ TERM-revalidation:
 TERM-system:
   name: system
   status: active
-  definition: "software under discussion: pkit, as you install, run and extend it"
+  definition: software under discussion, which you install, run and extend
   pkit:
     friction:
       unanchored-because: "It names the whole of pkit, so an anchor on its code would match every change. No record defines it."
@@ -48,4 +48,5 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **A system:** other software, such as the hosting service or the harness. The analysis names it for what it is, never a system (PR #1345, question 12).
 - **A platform:** in COR-009, the hosting service a project's remote lives on. It is other software, never the system.
+- **The methodology:** the body of decision records, rules and conventions the system ships and enforces. It is a term of its own, whose *Distinctions* point back here.
 ````
