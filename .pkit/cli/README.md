@@ -50,9 +50,8 @@ pkit:
         - src/project_kit/session_guard.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, COR-055, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059, ADR-061]
     revalidated:
-      at: 2026-10-08T08:35:35Z
-      outcome: unchanged
-      unchanged-because: the change makes the closing next steps of init recommend the install this page's section Installing pkit on PATH recommends, uv tool install from the distribution URL, in place of a symlink to a source checkout; the page already states that advice and never described the old step
+      at: 2026-10-08T10:29:18Z
+      outcome: updated
 ---
 
 # Command-line interface
