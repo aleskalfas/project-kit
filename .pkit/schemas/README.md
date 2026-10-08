@@ -19,9 +19,8 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-08T08:38:23Z
-      outcome: unchanged
-      unchanged-because: The change makes the friction pass skip fenced code when it cuts an entry's section, as the rule-set pass already did. It makes the rule-set pass take a heading's rule id only as a whole token, as the friction pass already did. This page already says an entry's content is its data plus the body section headed by its id, that headings inside fenced code are not sections, and that a heading opening like an id without being one is a finding. All of it now holds for both passes.
+      at: 2026-10-08T11:14:03Z
+      outcome: updated
 ---
 
 # Schemas
