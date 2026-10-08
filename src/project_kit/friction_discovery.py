@@ -87,11 +87,19 @@ is the one reader of those declarations and the one walker of the places:
 - `artefacts_document` — the one walk's answer as a stable document: the
   declared places with the files each matches and the skips validation
   applies, every file read with its place and its front matter's own fields,
-  every artefact with its anchors, and the held folders, declared as places
-  are, with every file each holds — of the working tree, or of a commit.
+  every artefact with its anchors, an entry's section span and the rule sets
+  whose scope covers it, and the held folders, declared as places are, with
+  every file each holds — of the working tree, or of a commit.
   `pkit friction artefacts --json` prints it, and a capability's script reads
   where artefacts are through it, at head or at another state, never by
   walking the places or listing a commit itself (ADR-057 points 1 and 2).
+- `entry_section` and `Artefact.span` — a collection entry's section, the
+  text both checks compare as its body, and the lines of its file that text
+  spans: one reading of where the section lies gives both (`_entry_body`), so
+  a reader of the span reads exactly what friction compares (COR-050 point 1).
+- `covering_rule_sets` — the rule sets whose scope covers each artefact
+  (COR-051 point 2): a scope is given as places, so each entry of it is read
+  as a place is (`listed_files_in_place`).
 - `content`, `parsed_at`, `deferral_reason` — what one artefact's block and
   fields say, read the same way by both checks and by the walk through an
   artefact's history (`friction_history`): its content, never the container
@@ -179,6 +187,10 @@ BACKBONE_COMPONENT = "backbone"
 
 # The front-matter key of a rule-set file whose values are its entries.
 RULES_KEY = "rules"
+
+# The front-matter key of a rule-set file that gives its scope: which artefacts
+# its rules apply to, as places (COR-051 point 2).
+SCOPE_KEY = "scope"
 
 # A signpost in a rule-set folder describes the folder; it is not a rule set,
 # as a README in a decision-record folder is not a record.
@@ -1756,6 +1768,20 @@ class Deferral:
 
 
 @dataclass(frozen=True)
+class SectionSpan:
+    """The lines of a file an entry's section spans, counted from 1, both included.
+
+    Lines are the file's text read with every line break as `\\n`
+    (`split_front_matter`), so a file written with `\\r\\n` has the lines one
+    written with `\\n` has. Joined with `\\n`, with one `\\n` after the last,
+    they are the section's text (`entry_section`).
+    """
+
+    first_line: int
+    last_line: int
+
+
+@dataclass(frozen=True)
 class Artefact:
     """One artefact found in a declared place, with its container parsed.
 
@@ -1768,6 +1794,9 @@ class Artefact:
     - `body`: the document's body, or the entry's section headed by its id
       (empty when the collection has no such section). Content, per COR-050,
       is this together with the carrier's own fields; later checks compare it.
+    - `span`: for an entry, the lines of its file its section spans — exactly
+      the text `body` holds — else `None`: for a document, and for an entry
+      with no section.
     - `container` / `friction`: the `pkit` value and its `friction` block, or
       `None` when absent; either may be a non-mapping when malformed — the
       block validator says so.
@@ -1794,6 +1823,7 @@ class Artefact:
     revalidated: Mapping[str, Any] | None = None
     rule_set: RuleSetPlace | None = None
     excluded_by: SettingsPath | None = None
+    span: SectionSpan | None = None
 
     @property
     def excluded(self) -> bool:
@@ -2236,7 +2266,19 @@ def _read_artefacts(
     written, body, reason = _parsed_front_matter(text)
     if written is None:
         return None, [], reason
-    return written, _artefacts_of_file(rel, place, written, body, rule_set=rule_set), None
+    body_line = _body_first_line(text, body)
+    found = _artefacts_of_file(rel, place, written, body, body_line, rule_set=rule_set)
+    return written, found, None
+
+
+def _body_first_line(text: str, body: str) -> int:
+    """The line of `text` its body opens on, counted from 1.
+
+    The body is a suffix of the text read with `\\n` line breaks, opening at a
+    line's start (`split_front_matter`), so the line breaks before it are the
+    text's less the body's own.
+    """
+    return universal_newlines(text).count("\n") - body.count("\n") + 1
 
 
 def _parsed_front_matter(text: str) -> tuple[Mapping[str, Any] | None, str, str | None]:
@@ -2260,14 +2302,16 @@ def _artefacts_of_file(
     place: Place,
     front_matter: Mapping[str, Any],
     body: str,
+    body_line: int,
     *,
     rule_set: RuleSetPlace | None = None,
 ) -> list[Artefact]:
     """One document, or one artefact per entry of a collection file.
 
-    A rule-set file (`rule_set` given) is a collection whose entries are the
-    values of its `rules` map, each a rule (COR-051 point 2); its other keys
-    are the set's own data, never entries.
+    `body_line` is the line of the file the body opens on, from which an
+    entry's span is counted. A rule-set file (`rule_set` given) is a
+    collection whose entries are the values of its `rules` map, each a rule
+    (COR-051 point 2); its other keys are the set's own data, never entries.
 
     Otherwise, a file is a collection when its front matter does not itself
     carry the container but at least one of its top-level mapping values does
@@ -2277,7 +2321,7 @@ def _artefacts_of_file(
     one document.
     """
     if rule_set is not None:
-        return _rules_of_file(rel, place, front_matter, body, rule_set)
+        return _rules_of_file(rel, place, front_matter, body, body_line, rule_set)
     entries = {k: v for k, v in front_matter.items() if isinstance(v, Mapping)}
     is_collection = CONTAINER_KEY not in front_matter and any(
         CONTAINER_KEY in entry for entry in entries.values()
@@ -2294,21 +2338,30 @@ def _artefacts_of_file(
                 body=body,
             )
         ]
-    return [
-        _artefact(
-            artefact_id=entry_id,
-            rel=rel,
-            kind=ArtefactKind.ENTRY,
-            place=place,
-            carrier=entry,
-            body=entry_section(body, entry_id),
+    found: list[Artefact] = []
+    for entry_id, entry in entries.items():
+        section, span = _entry_body(body, entry_id, body_line)
+        found.append(
+            _artefact(
+                artefact_id=entry_id,
+                rel=rel,
+                kind=ArtefactKind.ENTRY,
+                place=place,
+                carrier=entry,
+                body=section,
+                span=span,
+            )
         )
-        for entry_id, entry in entries.items()
-    ]
+    return found
 
 
 def _rules_of_file(
-    rel: str, place: Place, front_matter: Mapping[str, Any], body: str, rule_set: RuleSetPlace
+    rel: str,
+    place: Place,
+    front_matter: Mapping[str, Any],
+    body: str,
+    body_line: int,
+    rule_set: RuleSetPlace,
 ) -> list[Artefact]:
     """One artefact per rule of a rule-set file, in written order.
 
@@ -2319,19 +2372,24 @@ def _rules_of_file(
     rules = front_matter.get(RULES_KEY)
     if not isinstance(rules, Mapping):
         return []
-    return [
-        _artefact(
-            artefact_id=rule_id,
-            rel=rel,
-            kind=ArtefactKind.ENTRY,
-            place=place,
-            carrier=entry,
-            body=entry_section(body, rule_id),
-            rule_set=rule_set,
+    found: list[Artefact] = []
+    for rule_id, entry in rules.items():
+        if not isinstance(entry, Mapping):
+            continue
+        section, span = _entry_body(body, rule_id, body_line)
+        found.append(
+            _artefact(
+                artefact_id=rule_id,
+                rel=rel,
+                kind=ArtefactKind.ENTRY,
+                place=place,
+                carrier=entry,
+                body=section,
+                span=span,
+                rule_set=rule_set,
+            )
         )
-        for rule_id, entry in rules.items()
-        if isinstance(entry, Mapping)
-    ]
+    return found
 
 
 def _artefact(
@@ -2342,6 +2400,7 @@ def _artefact(
     place: Place,
     carrier: Mapping[str, Any],
     body: str,
+    span: SectionSpan | None = None,
     rule_set: RuleSetPlace | None = None,
 ) -> Artefact:
     container = carrier.get(CONTAINER_KEY)
@@ -2369,6 +2428,7 @@ def _artefact(
         anchors=anchors,
         revalidated=revalidated,
         rule_set=rule_set,
+        span=span,
     )
 
 
@@ -2448,6 +2508,35 @@ def entry_section(body: str, entry_id: str) -> str:
     The first heading that opens with the id (`heading_opens_with`) opens the
     section. It runs to the next heading of the same or a higher level. Both
     are read by `body_headings`, so a heading inside fenced code is neither.
+    The line breaks that end it are read as one.
+    """
+    section, _span = _entry_body(body, entry_id, 1)
+    return section
+
+
+def _entry_body(body: str, entry_id: str, body_line: int) -> tuple[str, SectionSpan | None]:
+    """An entry's section (`entry_section`), and the lines of its file it spans.
+
+    One reading of where the section lies gives both, so the span covers
+    exactly the text friction compares as the entry's body. `body_line` is the
+    line of the file `body` opens on. Without a section, `("", None)`.
+    """
+    extent = _section_extent(body, entry_id)
+    if extent is None:
+        return "", None
+    start, end = extent
+    first_line = body_line + body.count("\n", 0, start)
+    span = SectionSpan(first_line=first_line, last_line=first_line + body.count("\n", start, end))
+    return body[start:end] + "\n", span
+
+
+def _section_extent(body: str, entry_id: str) -> tuple[int, int] | None:
+    """Where the section headed by `entry_id` lies in `body`, or `None`.
+
+    `(start, end)`: the offset its heading opens at, which starts a line, and
+    the end of its text, before the line breaks that end it. The headings are
+    `body_headings`, so a heading inside fenced code neither opens the
+    section nor ends it.
     """
     headings = body_headings(body)
     for index, heading in enumerate(headings):
@@ -2456,8 +2545,9 @@ def entry_section(body: str, entry_id: str) -> str:
                 (later.start for later in headings[index + 1 :] if later.level <= heading.level),
                 len(body),
             )
-            return body[heading.start : end].rstrip("\n") + "\n"
-    return ""
+            start = heading.start
+            return start, start + len(body[start:end].rstrip("\n"))
+    return None
 
 
 def _yaml_reason(exc: YAMLError) -> str:
@@ -2466,6 +2556,54 @@ def _yaml_reason(exc: YAMLError) -> str:
     if mark is not None:
         return f"{problem} at line {mark.line + 1} col {mark.column + 1}"
     return str(problem)
+
+
+# --- rule-set scopes ----------------------------------------------------
+
+
+def covering_rule_sets(discovery: Discovery) -> dict[str, tuple[str, ...]]:
+    """The rule sets whose scope covers each artefact's file (COR-051 point 2).
+
+    Keyed by an artefact's path: the paths of the rule-set files whose scope
+    covers it, in path order. A file no scope covers is not a key. A scope is
+    given as places, so each of its entries is read as a place is
+    (`listed_files_in_place`), never matched by another rule. A rule-set file
+    is one the location rule claims, and a set without a scope covers nothing.
+    """
+    paths = sorted({artefact.path for artefact in discovery.artefacts})
+    covering: dict[str, list[str]] = {}
+    for found in discovery.files:  # by path
+        covered: set[str] = set()
+        for place in _scope_places(found):
+            covered.update(listed_files_in_place(place, paths))
+        for path in covered:
+            covering.setdefault(path, []).append(found.path)
+    return {path: tuple(rule_sets) for path, rule_sets in covering.items()}
+
+
+def _scope_places(found: DiscoveredFile) -> list[Place]:
+    """A rule-set file's scope, each entry the place it is given as, declared
+    where the file writes it; none for a file that is no rule set.
+
+    Read forgivingly, as discovery reads every declaration (`_texts`): an
+    entry that is not text is passed over, and the rule-set pass judges the
+    scope's shape.
+    """
+    if found.rule_set is None or found.front_matter is None:
+        return []
+    return [
+        Place(
+            pattern=entry,
+            declaration=SettingsPath(
+                value=entry,
+                resolved=entry,
+                file=found.path,
+                pointer=f"/{SCOPE_KEY}/{index}",
+                source=found.rule_set.place.source,
+            ),
+        )
+        for index, entry in _texts(found.front_matter.get(SCOPE_KEY))
+    ]
 
 
 # --- the reading document: `pkit friction artefacts` ---------------------
@@ -2557,8 +2695,13 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
       carries the `container` and a `friction` block, its `anchors` by kind as
       its friction block lists them (the values that are text, in written
       order), its `unanchored_because` — the reason its block gives for having
-      no anchors, whitespace folded, or `None` (COR-050 point 1) — and its own
-      `fields` (its front matter or entry, as written, the container left out).
+      no anchors, whitespace folded, or `None` (COR-050 point 1) — its own
+      `fields` (its front matter or entry, as written, the container left
+      out), its `span` — for an entry, the lines of its file its section
+      spans, `{first_line, last_line}`, exactly the text friction compares as
+      its body (`Artefact.span`), else `None` — and `in_scope_of`, the paths
+      of the rule-set files whose scope covers it (`covering_rule_sets`).
+      Both keys were added within version 1.
     - `held`: every folder of held documents a capability declares (COR-050
       point 1), in declaration order — each capability's by name, in written
       order, a malformed declaration where it was written — declared as a place
@@ -2615,6 +2758,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
     held_of: dict[HeldFolder, list[str]] = {}
     for held in discovery.held:
         held_of.setdefault(held.folder, []).append(held.path)
+    in_scope_of = covering_rule_sets(discovery)
 
     return {
         "schema_version": ARTEFACTS_SCHEMA_VERSION,
@@ -2660,6 +2804,8 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
                 "anchors": {kind: list(values) for kind, values in artefact.anchors.items()},
                 "unanchored_because": artefact.unanchored_because,
                 "fields": _own_fields(artefact.carrier),
+                "span": _span_entry(artefact.span),
+                "in_scope_of": list(in_scope_of.get(artefact.path, ())),
             }
             for artefact in discovery.artefacts
         ],
@@ -2757,6 +2903,13 @@ def _malformed_held_entry(declaration: MalformedDeclaration) -> dict[str, Any]:
         "files": [],
         "skipped": {"reason": SKIP_MALFORMED, "detail": declaration.reason},
     }
+
+
+def _span_entry(span: SectionSpan | None) -> dict[str, int] | None:
+    """An entry's section span as the document gives it, or `None`."""
+    if span is None:
+        return None
+    return {"first_line": span.first_line, "last_line": span.last_line}
 
 
 def _location_entry(location: PlaceLocation | None) -> dict[str, Any] | None:
