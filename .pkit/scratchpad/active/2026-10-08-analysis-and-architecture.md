@@ -47,6 +47,14 @@ The common thread: architecture and analysis are kept as separate descriptions, 
 
 B and D can combine: apart, anchored both ways, with the context view naming actors by id.
 
+## The maintainer's view, 8 October
+
+The analysis describes the requirements: what the system must do, and for whom. The architecture describes the solution: how the system is built to do it. So the two stay separate.
+
+- **This matches established practice.** Requirements engineering keeps the problem space apart from the solution space (the "what" from the "how"). RUP keeps its requirements discipline apart from analysis and design. 4+1 and arc42 keep the architecture as its own description, with scenarios as the bridge.
+- **It rules out A and C.** Both put solution views inside the analysis.
+- **B and D remain.** Both keep the two apart, and differ only in how they point at each other. Whether they link at all, and how, is the question left.
+
 ## Open questions
 
 - Does pkit need architecture views at all yet, beyond its decision records? If not, B is mostly about use cases anchoring to records, which they already may.
