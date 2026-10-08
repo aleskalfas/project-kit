@@ -151,13 +151,11 @@ def test_a_symlinked_folder_is_refused_not_adopted(tmp_path: Path) -> None:
     assert state.symlinked and not state.present
 
 
-def test_init_recommends_the_committed_gitignore_line(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_init_recommends_the_committed_gitignore_line(capsys: pytest.CaptureFixture[str]) -> None:
     # The local exclude covers this clone only; the backbone never writes the
     # adopter's .gitignore (ADR-009), so it recommends the line that covers
     # every clone.
-    install._print_next_steps(install.InstallContext(tmp_path, tmp_path, dry_run=False))
+    install._print_next_steps()
 
     out = capsys.readouterr().out
     steps = out.split("Add to your .gitignore")[1]

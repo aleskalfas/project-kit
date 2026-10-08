@@ -11,8 +11,9 @@ pkit:
         - src/project_kit/install.py
       record: [COR-001, COR-014]
     revalidated:
-      at: 2026-10-03T13:23:37Z
-      outcome: updated
+      at: 2026-10-08T08:34:57Z
+      outcome: unchanged
+      unchanged-because: the change rewrites only the install advice in init's closing next steps; how init places core.md and project.md, which this page describes, is untouched
 ---
 
 # Rules
