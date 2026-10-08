@@ -2,6 +2,14 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-10-06
+retired: 2026-10-08
+produced:
+  - '#1358'
+  - '#1363'
+  - '#1364'
+  - '#1365'
+  - '#1366'
+  - '#1375'
 ---
 
 # The analysis template round
@@ -56,7 +64,7 @@ The maintainer decided all five kinds between 6 and 8 October, in comments on PR
 | Records as written, live artefacts migrated | #1358 |
 | Hints in place of each kind's *Fill it* list | #1369 |
 
-- **Recorded as produced** when the note retires: #1358, #1363, #1364, #1365, #1366 and #1375.
+- **Recorded as produced,** in the note's front matter: #1358, #1363, #1364, #1365, #1366 and #1375.
 - **Not a template decision:** `pkit init`'s next steps, which the journey's round found, went to #1376.
 
 ## Decided: across kinds
