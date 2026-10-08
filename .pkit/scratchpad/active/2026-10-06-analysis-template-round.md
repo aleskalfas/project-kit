@@ -16,7 +16,7 @@ The maintainer picks each analysis kind's parts here, one kind at a time, from c
 - **Paths:** `SA/` is `.pkit/capabilities/software-analysis/`.
 - **Citations:** records, rules and issues by permanent id, files by name, never by line number (RS-WRITE-014, proposed).
 - **Reviewed:** by the critic, before the maintainer saw it. Its findings and the answers are in "Review", at the end of each kind.
-- **Status:** the use case, the journey, the actor and the glossary term are fully decided, under one rule for every kind ("Decided: across kinds"). So is the author's question on the system's words ("Decided: two terms", under the term). The revalidation record follows.
+- **Status:** the use case, the journey, the actor and the glossary term are fully decided, under one rule for every kind ("Decided: across kinds"). So is the author's question on the system's words ("Decided: two terms", under the term). The revalidation record's candidates are compared, and its recommendation follows.
 
 ## Decided: across kinds
 
@@ -1607,3 +1607,143 @@ The critic reviewed the first draft. Each finding below changed the draft, or is
 | Counter-alternative: a form for the definition | Adopted |
 | Counter-alternative: fill *anchor* or *change* as a third term | Not adopted. Revalidation has neighbours of each kind, and the session anchor is in "Found on the way". |
 | Writing: a contradiction, a phrase that read as two decided terms, an unsourced quote, an unclear pronoun, A's inline series | Each fixed |
+
+## The revalidation record
+
+The revalidation record is the round's last kind, and the maintainer has not decided it yet. Four candidates are filled with the same two records, and compared below.
+
+### The example
+
+Each candidate holds two records, each as it would read on the default branch in `revalidations/` under the analysis location.
+
+- **The planned record:** #1346's revalidation of the eight core actors, before code. #1346 moves each actor to a file of its own, with the labels the actor's round decided.
+  - **Why this one:** a planned revalidation always leaves a record (DEC-001 point 6). This one covers eight artefacts and finds one gap.
+  - **Its outcomes:** seven actors end `analysis-stale`, since the move is meant and each actor is updated. The merge authoriser ends `gap-found`.
+  - **Its gap:** the change check would ask for none of the eight answers the move needs. So the merge authoriser would see none of them in the check's list (#1352's note, part 6). #1359 makes the check ask, and #1346 waits for it.
+- **The regression:** a scheduled revalidation finds the landing regressed at its step 4, and the first day's journey holding. A commit cut each answer in the change check's list to its first line.
+  - **Why this one:** it is the other kind of record, one an agent proposes and a person confirms. It also copies the evidence it drew on.
+  - **The example's own:** the commit `3e9f1c2`, the defect `#xxxx` and the commit in the evidence. The test the evidence names is real, `test_the_human_view_ends_with_every_answer_in_full` in `tests/test_friction_check.py`.
+- **The people:** Alex performs the planned revalidation alone. analysis-resolver proposes the regression's outcomes, and Sam confirms them. Alex and Sam are the names in the README's example record.
+- **The ids:** `UC-xxx` is the landing, and `JRN-xxx` is the first day, as the use case's and the journey's rounds named them. The schema refuses such ids, since the round stamps nothing.
+- **The same in every candidate:** the front matter, with its outcomes and its evidence, and each outcome's justification. Only the parts around them differ.
+- **Derived from:**
+  - DEC-001 points 5 to 7, the record's schema, the template and its stamp (`SA/scripts/_lib/revalidation.py`)
+  - the README's "Revalidation records", and the analysis-resolver's storyboard for a regression recorded with its gap
+  - #1346, #1359 and part 6 of #1352's note, for the planned record, and "Decided: the actor" for each actor's labels
+  - the landing (`use-case/chosen-template.md`) and the first day (`journey/chosen-template.md`), for the regression
+
+**What the example left unclear.** The round decides none of these.
+
+1. **The change of a scheduled record.** The regression's `change` is one commit, `3e9f1c2`, as the storyboard's is `4c1d2e9`. DEC-001 point 6 names "a tracked work item, a pull request, or a range of commits".
+2. **The actors' words for the system.** The maintainer's decision of 8 October switches the actors' sentences that use *the methodology* for the software to *the system* ("Decided: two terms").
+   - If #1346 carries the switch, the adopter's and the component author's needs change in the move, and their outcome lines say so.
+   - No decision says which change carries it.
+3. **Where the planned record's gap sits.** The gap is in the change check, which no artefact describes yet. The record puts it on the merge authoriser, since it leaves that actor's first need with no behaviour.
+
+### The candidates
+
+Each candidate is complete and filled, as the records would read on the default branch.
+
+- **A, today's template** (`revalidation-record/A-todays-template.md`): exactly the parts of `SA/templates/revalidation-record.md`, as its stamp writes them.
+  - *Outcomes* holds one line for each artefact: `**<id> — <outcome>.**`, then its justification.
+  - *Gaps* holds one line for each gap, `<gap> — **resolved:** <what resolved it>`, or `None found.` when there is none.
+  - The stamp takes no evidence, so a person copies each entry into the front matter by hand.
+- **B, IEEE 1028's inspection output** (`revalidation-record/B-ieee-1028-inspection-output.md`): the documented evidence an inspection leaves under IEEE 1028-2008, clause 6.7, adapted only where pkit requires.
+  - Its parts, in the clause's order: *Team*, *Product*, *Inputs*, *Objectives*, *Anomaly list*, *Disposition*, *Waivers* and *Anomaly summary*.
+  - Each anomaly gains what resolved it, as DEC-001 point 6 asks of a gap. Each disposition is an outcome of DEC-001 point 5 with its reason, in place of the standard's dispositions.
+  - It leaves out the items a revalidation has no counterpart for, such as the meeting's duration and the rework time.
+- **C, an architecture decision record** (`revalidation-record/C-architecture-decision-record.md`): Michael Nygard's parts, in his order, adapted only where pkit requires.
+  - *Context* holds the forces: the change, the trigger and what the revalidation read.
+  - *Decision* holds each outcome in the active voice he asks for, "We record …".
+  - *Status* is always *accepted*, since a record is history, and names who accepted it.
+  - *Consequences* holds the gaps with what resolved each, beside what else follows.
+  - One of his records holds one decision, and a revalidation record holds one for each artefact.
+- **D, each gap by its artefact** (`revalidation-record/D-gaps-by-artefact.md`): A's two parts, as the earlier rounds' decisions shape them.
+  - *Gaps* reads `None.` when there is none, by the rule for every kind.
+  - Each gap opens with the id of the artefact it was found in, as a bold label. The journey's hand-overs name their step in the same way.
+  - What resolved the gap follows under a label of its own, *Resolved*.
+- **The design's first cut:** A's parts, with *Outcomes* of the form `outcomes-match-front-matter`, and no hints (the design's parts 2 and 8). A filled first cut reads as A, so it has no file of its own.
+- **The one record pkit has written:** the pilot analysis held one, `2026-09-29-multi-clone-coordination.md`. It was a planned revalidation of ten use cases and two journeys against EPIC #943's design.
+  - It was added in `780def2f`, before the stamp landed in `5f601406`. It was removed with the pilot in `6107ae77`.
+  - So it is no candidate. "Fit with pkit" reads what it grew beyond A's two parts.
+
+**Sources.** IEEE 1028 and Nygard's records were read from these:
+
+- **IEEE 1028:** *IEEE Standard for Software Reviews and Audits*, IEEE 1028-2008, clause 6.7, the output of an inspection.
+  - Its list starts with the project, the team, the meeting's duration, the product and the size of the materials.
+  - It goes on with the inputs, the objectives, the anomaly list, the disposition and any waivers. The preparation and rework times, an anomaly summary and estimates follow.
+- **Nygard:** Michael Nygard, "Documenting Architecture Decisions", 15 November 2011 ([page](https://www.cognitect.com/blog/2011/11/15/documenting-architecture-decisions)).
+  - A title is a short noun phrase, and the records are "numbered sequentially and monotonically".
+  - The decision is "stated in full sentences, with active voice", as "We will …".
+  - A status is "proposed" or "accepted", and a later decision may make it "deprecated" or "superseded".
+  - The consequences describe "the resulting context, after applying the decision". "All consequences should be listed here, not just the "positive" ones."
+- **Not verified:**
+  - IEEE 1028-2008 itself, which is sold, not published. Its list was read only in a search summary of a paper that reproduces it (arXiv 1401.0503). The summary named the items up to the waivers and the preparation time.
+  - So B's later items and their letters rest on no source the round could read.
+
+### At a glance
+
+A and D carry only what DEC-001 point 6 names. B and C add the version reviewed, and restate the front matter in prose. Words are counted in the body, labels included, with the heading and the front matter left out, for the planned record and then the regression.
+
+| Candidate | Parts | Required | Words | Captures what others miss | Repeats |
+|---|---|---|---|---|---|
+| A | 2: *Outcomes*, *Gaps* | None marked. The stamp writes both, and `None found.` when there is no gap. | 319 and 101 | Nothing over D | Each gap restates what its artefact's outcome line says. No gap names its artefact, so a reader ties the two by reading. |
+| B | 8: *Team*, *Product*, *Inputs*, *Objectives*, *Anomaly list*, *Disposition*, *Waivers*, *Anomaly summary* | None marked | 420 and 185 | The version reviewed and what else was read, in *Product* and *Inputs* | *Team* restates `by` and `confirmed-by`. *Objectives* is DEC-001 point 5's in every record, and *Waivers* reads `None.` in both. *Anomaly summary* counts the outcomes, and each anomaly's classification repeats its outcome. |
+| C | 4: *Context*, *Decision*, *Status*, *Consequences* | None marked | 428 and 163 | The version reviewed and why the revalidation ran, in *Context*. What follows beyond the gaps, in *Consequences*. | *Status* reads "Accepted" in every record, and names `by` or `confirmed-by` again. The regression's *Decision* opens by restating its outcomes. Three consequences forecast, such as the open regression the check will report. |
+| D | 2, as A | Both. *Gaps* may read `None.`, under the rule for every kind. | 310 and 100 | Each gap tied to its artefact by id, so a script can hold the gaps to the outcomes | Each gap restates what its artefact's outcome line says, as in A. |
+
+### Fit with pkit
+
+Every candidate keeps outcome lines a form can read. Only D lets a script tie each gap to its artefact, and only B and C say which version was reviewed.
+
+- **The outcomes match the front matter** (the form `outcomes-match-front-matter`, #1365):
+  - Every candidate writes one line for each entry of `outcomes`: `**<id> — <outcome>.**`, then the justification. The stamp writes the lines and the front matter from one list, so both keep its order (`revalidation.py`).
+  - B names the part *Disposition*, and C opens its *Decision* with a sentence. A list form judges only the part's list items, so the sentence passes (the design's part 1).
+  - The stamp refuses an outcome with no justification, and a form can refuse an empty one. Whether the justification is true stays a person's judgement.
+- **Each gap and its artefact** (DEC-001 points 5 and 6):
+  - DEC-001 point 5 makes a found gap an artefact's outcome, `gap-found`. Point 6 records "the gaps with what resolved each".
+  - The stamp refuses a regression or a found gap with no `--gap`. It takes a `--gap` whose artefacts all hold, though point 5 puts every gap on an outcome.
+  - **A:** no gap names its artefact. In the planned record, the merge authoriser's line points at "the gap". With two gaps, only the words tie each to its artefact.
+  - **B:** each anomaly names its artefact in its label, as D's gaps do. Its classification repeats the outcome.
+  - **C:** each gap is one consequence among others, labelled "A gap:" or "A regression:". A script can find it by that label, but no label names its artefact.
+  - **D:** each gap opens with its artefact's id. So a form can hold the gaps and the outcomes `code-regressed` and `gap-found` to each other.
+  - **The one real record:** its gaps were lettered, and many spanned artefacts. Gap E names UC-001, UC-004 and JRN-001, so a gap's label may need more than one id.
+- **Evidence copied whole** (DEC-001 point 7): every candidate keeps it in the front matter, the one place a tool reads (the design's Decided 2). No candidate repeats it in the body.
+  - The stamp takes no evidence, so a person copies each entry by hand. The check holds each copy to its own id, and warns where the point now holds otherwise (`check.py`).
+  - The template asks an outcome line to name its evidence "by its id". The regression's line names the test in words, since the id runs to 126 characters.
+- **Who decided** (DEC-001 point 5 and core rule 20):
+  - The front matter says it. `by` names who performed the revalidation, and `confirmed-by` names the person who confirmed an agent's outcomes. The stamp refuses an agent without that person.
+  - Every word of a record is a person's. The stamp writes each text from its command line, refuses a placeholder left in, and asks nothing (the README, "Revalidation records"). An agent proposes the command, and the person runs it.
+  - B's *Team* and C's *Status* restate who decided, in prose that no script can hold to the front matter.
+  - C's *Status* calls the performance an acceptance. Nygard's status follows a decision from proposed to accepted and later superseded, and a record never moves along it.
+- **`None.` against `None found.`** (the rule for every kind):
+  - The rule makes `None.` the deliberate answer of a part with nothing to say. *Gaps* has nothing to say in a planned record that finds no gap, and in a record of a stale outcome a person decided.
+  - `None found.` says the same in two words, and only in this part. A script would carry a second token for one part of one kind.
+  - **No record holds it today.** project-kit's analysis holds no record, and software-analysis is installed nowhere else (the design's Decided 1). So the stamp can switch with no record to change.
+  - *Outcomes* may not read `None.`, since the schema asks for at least one outcome.
+- **The version reviewed** (DEC-001 point 5): a revalidation is "one review of some artefacts against one version of the system: a proposed design, or the actual code".
+  - **The front matter names the change** that carried it, never the version. In both examples the change names the version as well, #1346's design and the code at `3e9f1c2`.
+  - **A design moves.** #1346's body may be edited before its code lands, and a scratchpad note retires. A later reader of A or D cannot tell which design the actors were reviewed against.
+  - **B and C hold it,** in *Product* and *Inputs*, and in *Context*. A and D hold it only where a line happens to cite it, as the planned gap cites part 6 of #1352's note.
+  - **The one real record opened with it,** under "The version walked". It named the design note as committed at `681e819`, and EPIC #943 as it stood on a named day.
+- **No revalidation of the record itself:** a record is a held document, not an anchored artefact, so it carries no friction block and nothing flags it (DEC-001 point 2).
+  - It is history, so a sentence about the past stays true.
+  - A forecast can go false unnoticed, such as C's "a change to ADR-061, PRJ-002, DEC-028 or CONTRIBUTING.md flags the actors that cite it".
+  - B's *Product* gives the actors "as the default branch holds them", which a later reader takes as the present.
+- **What the one real record grew** beyond A's two parts, in 2,343 words:
+  - an opening of 241 words, with the version walked and the three rounds of review behind the findings
+  - *Outcomes*, each line citing its gaps by letter, such as "(gap E)"
+  - *Gaps* of 1,476 words, in three sub-sections by when each gap was found, each gap lettered and labelled with its artefacts
+  - a fourth section, "Needs explicit human authorisation", listing decisions the fixes wait on
+  - **So a writer reached for** the version reviewed and a label naming each gap's artefacts. The fourth section belongs to the tracker, as the use case's open issues do.
+- **What a script can check:**
+  - **Every candidate:** the front matter against its schema, each cited id against the analysis, and each evidence copy against its own id, as today (`check.py`). Then the outcome lines against `outcomes`.
+  - **A and D:** both parts present and in order. Then each gap with its resolution, or the part reading `None found.` in A and `None.` in D.
+  - **D:** each gap's label names an artefact whose outcome is `code-regressed` or `gap-found`, and each such artefact is named by a gap.
+  - **B:** its eight parts present, and the summary's counts against the outcomes. A count a tool can compute is a copy to keep.
+  - **C:** its four parts present, and *Status* reading "Accepted".
+  - **The heading:** today's check reads no record's heading. A check could hold its date to `date` and to the file's name, as a use case's heading is held to its id and title.
+  - **None of them:** whether a justification is true, or whether the version a record names was the one reviewed.
+- **The writing rules:**
+  - **RS-WRITE-013:** a record's words are a person's decision, so they are never rewritten for style. A part that a later structure requires would fail every older record, and only a rewrite could add it.
+  - **RS-WRITE-001:** its *How* names a record's *Outcomes* as a section that is only a list, so it needs no opening sentence. C's *Decision* has one anyway.
