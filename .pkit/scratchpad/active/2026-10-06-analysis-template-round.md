@@ -47,8 +47,8 @@ The maintainer set one rule for every kind on 7 October, in a comment on PR #137
   - **The check (#1364):** a missing shipped part is an error, and `None.` passes only where its element allows it.
   - **The stamp and the templates (#1366):** they render every shipped part with its hint. A project's optional addition is rendered too, and the writer deletes it when they have nothing for it.
 - **The glossary term, under the rule:** both its parts are required, with `None.` allowed ("Decided: the glossary term").
-- **The kind still to come:** the revalidation record. Its stamp writes `None found.` under *Gaps* (`SA/scripts/_lib/revalidation.py`), so its round weighs that against `None.`.
-  - **The round's recommendation:** *Gaps* reads `None.`, as every other part does ("The revalidation record").
+- **The revalidation record, under the rule:** its stamp writes `None found.` under *Gaps* (`SA/scripts/_lib/revalidation.py`), so its round weighed that against `None.`.
+  - **Decided as recommended:** *Gaps* reads `None.`, as every other part does ("Decided: the revalidation record").
 
 ## The use case
 
@@ -1611,7 +1611,106 @@ The critic reviewed the first draft. Each finding below changed the draft, or is
 
 ## The revalidation record
 
-The revalidation record is the round's last kind, and the maintainer has not decided it yet. The round recommends today's two parts, each gap naming its artefacts, and asks three questions.
+The maintainer chose today's two parts, *Outcomes* and *Gaps*, both required, and each gap names the artefacts it affects. A planned record names the design it reviewed in its front matter, one source at a time. The comparison and the recommendation stay below as they were made.
+
+### Decided: the revalidation record
+
+The maintainer decided the revalidation record on 8 October, in comments on PR #1374. Its question 1 was answered through the document-versioning design (#1383, PR #1384). The revalidation record is fully decided, and E shows both records in the decided shape (`revalidation-record/chosen-template.md`).
+
+- **What ships with software-analysis:**
+  - the heading, which the stamp writes
+  - *Outcomes*, required: one line for each artefact in `outcomes`, in its order, with the reason for its outcome
+  - *Gaps*, required with `None.` allowed: each gap, starting with the ids of the artefacts it affects, then its *Resolution*
+  - in the front matter, `reviewed-against`, required when `trigger` is `planned` and left out otherwise
+- **The round's questions:**
+  1. **Question 1, the version reviewed:** yes, in the front matter, as `reviewed-against`. The document-versioning design gave its form.
+     - **A list of mappings:** one for each source, with `title`, `url` and `version`. These are the keys a captured source uses (living-docs DEC-001 point 4).
+     - **Text in this repository:** pinned by a commit on the default branch, or by `this change` when the design lands with the record. It has no `url`, as the document-versioning design says.
+     - **Text in the tracker:** pinned by its link and the time it was read.
+     - **Never a pointer:** a pull request's head, or a bare commit on a branch. A rebase loses a head reviewed mid-way, and a squash leaves a branch's commits off the default branch (COR-009 point 1).
+     - **Two checks:** the validator checks the form. A separate command checks offline that each named commit is reachable from the default branch, and reports "unknown" when it cannot tell.
+     - **Decided otherwise:** the round recommended the field as one line of text, which no script checks.
+  2. **Question 2, each gap's artefacts:** option (a), as recommended. Each gap starts with the ids of the artefacts it affects, taken from `outcomes`, then its *Resolution*.
+     - **A check holds the gaps to the outcomes:** every `code-regressed` or `gap-found` artefact is named by a gap, and every gap names an artefact in `outcomes`.
+  3. **Question 3, a record and a later structure:** decided in two halves.
+     - **Live artefacts are always migrated.** Actors, use cases, journeys and glossary terms describe the system as it is. So each change to their structure migrates them to the current shape.
+     - **Revalidation records stay as written.** A record is a log of a revalidation that happened. It is never rewritten, and each is checked against the structure in force when it was written.
+     - **Where each goes:** the principle goes into software-analysis DEC-001, by #1358. The mechanism comes with the first structure change that needs it.
+     - **As recommended,** with the first half added.
+- **`None.`, as recommended:** *Gaps* reads `None.` when there is none, in place of the stamp's `None found.`, under the rule for every kind. `None.` is then the part's whole content.
+- **As recommended, otherwise:**
+  - The label is *Resolution*, a noun that allows work still to come.
+  - B's and C's further parts stay out. So do the one real record's letters, its rounds of review and its list of what needs authorisation.
+  - project-kit adds no part of its own for the record.
+
+**The declaration #1363 takes, for the body, in this order:**
+
+| Element | Label | Required | Form | Hint | Example |
+|---|---|---|---|---|---|
+| `heading` | `# <date> — <subject>` | yes | heading, its date the front matter's `date` and the file's | none, since the stamp writes it | `# 2026-01-05 — Export to a chosen folder` |
+| `outcomes` | `## Outcomes` | yes | `outcomes-match-front-matter` | One line for each artefact in `outcomes`, in its order, with the reason for its outcome. Name any evidence the reason draws on. | `**UC-007 — gap-found.** The redesign lets the analyst choose the folder, and step 2 now says so. Variant 2b is new, as the gap says.` |
+| `gaps` | `## Gaps` | yes, and `None.` is allowed | `gaps-match-outcomes` | Each gap, labelled with the ids of the artefacts it affects, taken from `outcomes`. Then its resolution: the defect reported, the artefact written, or the work that carries the fix. Write `None.` when there is none. | `**UC-007:** a read-only folder makes the export write nothing, and no variant described it. **Resolution:** variant 2b written.` |
+
+**The front matter's new field, apart from the body:**
+
+| Field | Required | Form | Hint | Example |
+|---|---|---|---|---|
+| `reviewed-against` | when `trigger` is `planned`, and left out otherwise | a list of mappings, each with `title`, `version` and, outside this repository, `url` | Each source of the design reviewed: its title, its link unless it is in this repository, and its version. A version is a commit on the default branch, `this change`, or the time tracker text was read. | `- {title: "#42's body", url: "https://tracker.example/issues/42", version: "2026-01-05T10:00:00Z"}` and `- {title: the redesign note, version: 4c1d2e9}` |
+
+- **The body's table is the recommendation's,** with one change. The hint for *Gaps* takes the maintainer's words, the artefacts a gap affects, in place of "the artefacts whose outcomes record it".
+- **The field's table replaces the recommendation's.** Its hint names the three kinds of version, and its example gives one source from each place.
+- **The hints:** each is one line, with short sentences and no semicolon (the design's part 5). The stamp writes a record whole from its command line, so the hints serve the check's messages and the stamp's help (the design's part 2).
+- **The examples:** one neutral record runs through them all, a planned revalidation of the use case's export against a redesign.
+
+**The forms #1365 builds**, as the maintainer decided:
+
+- **`outcomes-match-front-matter`:** *Outcomes* holds one top-level item for each entry of `outcomes`, in the same order. Item n opens with `**<id> — <outcome>.**` for the n-th entry, exactly, and text follows.
+- **`gaps-match-outcomes`,** a new form: *Gaps* reads `None.` and nothing else, or holds one top-level item for each gap.
+  - Each item opens with a bold label of one or more ids, separated by commas and ended by a colon, such as `**UC-001, UC-004, JRN-001:**`. Each id is an entry of `outcomes`.
+  - Each `code-regressed` or `gap-found` entry is named in at least one label. So the part reads `None.` only where no outcome is one of the two.
+  - Each item holds `**Resolution:**` with text after it.
+- **What no form checks:** whether a justification is true, or whether the sources a record names were the ones reviewed.
+
+**What filling E showed:**
+
+- **Five sources:** one in this repository and four in the tracker.
+  - **The note:** part 6 of #1352's note, pinned by `0192e5fc`. That is PR #1353's squash commit on main, so the reachability command finds it.
+  - **The tracker:** #1346's body, and the maintainer's comments on the rule for every kind, on the actor and on the two terms. Each is pinned by its own link and the time it was read.
+- **Each comment by its own link:** the round's one line named the comments by pull request and day. The document-versioning design notes that each comment's own link, with its time, is exact.
+- **No `this change`:** #1346's design is in no file its change adds, so neither record shows it. A design note that lands in the same change as its record would.
+- **The regression:** its trigger is `scheduled`, so its front matter has no field. The code at `3e9f1c2` is the version it reviewed, which `change` and the evidence's `commit` already name.
+- **The gaps:** each label names one artefact, of `gap-found` or `code-regressed`, so both records pass `gaps-match-outcomes`. *Resolution* stands where D wrote *Resolved*.
+- **Length:** E runs to 310 and 100 words, as D does. The field is front matter, which the count leaves out.
+
+**For the build:**
+
+- **DEC-001 first (#1358):** its point 6 names what a record names. So #1358's refinement says the following before any build cites it (core rule 2).
+  - A planned record names where the design it reviewed stood, by pointer, in `reviewed-against`. A design that lands with its record is named by `this change`. Its commit is found from the history, as an `at`'s revalidation point is (COR-050 point 3).
+  - Each gap names the artefacts it affects.
+  - Live artefacts are migrated to each new structure, and revalidation records stay as written, each checked against the structure in force when it was written.
+  - **What it can also say,** as the recommendation found:
+    - where a gap in no artefact is recorded
+    - that a stale outcome a person decided leaves a record ("Found on the way")
+    - how an artefact that needs two outcomes is recorded ("Found on the way")
+- **The parts and the field (#1363):** the two tables above.
+  - **The schema:** the record's schema gains `reviewed-against` as a list of mappings, required by a condition on `trigger` (`SA/schemas/revalidation-record.schema.json`). Other records leave it out, as a term never renamed leaves out `replaces`.
+  - **The time's spelling:** #1363's to settle. E writes a UTC timestamp, as `at` is written.
+- **The check, split in two (#1364):**
+  - **The form, in the validator:** the keys, an absolute link where `url` is given, and a commit id, `this change` or a time as `version`. A validator reads the working tree only (COR-055 point 2).
+  - **Reachability, a command of its own beside `check-numbers`:** each commit of this repository that a record names is on the default branch. It reads the default branch only, offline, and reports "unknown" where it cannot tell, such as beyond a shallow clone's history.
+  - **Why "unknown" and no failure:** `reviewed-against` is provenance, not a gate. The numbering setting differs, since freeing an id is a gate.
+  - **The parts, as recommended:** a part missing, out of order or empty is reported, and `None.` passes in *Gaps* alone. The heading's date is held to `date` and to the file's name.
+  - **Records as written:** every record is written under today's structure, so the check judges each against it. The mechanism that keeps an older record under its own structure comes with the first change that needs it.
+- **The forms (#1365):** `outcomes-match-front-matter` as defined, and `gaps-match-outcomes` added to its list.
+- **The stamp and the template (#1366):**
+  - **`--reviewed-against` repeats,** one source each, and only a planned record takes it. How one flag carries a title, a link and a version is #1366's to settle.
+  - **Each `--gap` names its artefacts,** such as `--gap "UC-007: <gap> => <resolution>"`, and the stamp refuses what the form refuses.
+  - **The labels:** the stamp writes `**Resolution:**` where it wrote `**resolved:**`, and `None.` where it wrote `None found.`.
+  - **A project's addition:** the stamp renders none, as recommended. A writer adds one by hand before committing the record.
+- **What the change declares:** as recommended, a changeset for software-analysis (PRJ-002), and no migration.
+- **The docs ride along,** as the recommendation lists them:
+  - the skill's step 4, the README's "Revalidation records" and the template's head comment
+  - the stamp's own description of a gap, and the analysis-resolver's commands and its storyboard
 
 ### The example
 
@@ -1645,24 +1744,25 @@ Each candidate holds two records, each as it would read on the default branch in
 
 Each candidate is complete and filled, as the records would read on the default branch.
 
-- **A, today's template** (`revalidation-record/A-todays-template.md`): exactly the parts of `SA/templates/revalidation-record.md`, as its stamp writes them.
+- **A, today's template** (`revalidation-record/considered/A-todays-template.md`): exactly the parts of `SA/templates/revalidation-record.md`, as its stamp writes them.
   - *Outcomes* holds one line for each artefact: `**<id> — <outcome>.**`, then its justification.
   - *Gaps* holds one line for each gap, `<gap> — **resolved:** <what resolved it>`, or `None found.` when there is none.
   - The stamp takes no evidence, so a person copies each entry into the front matter by hand.
-- **B, IEEE 1028's inspection output** (`revalidation-record/B-ieee-1028-inspection-output.md`): the documented evidence an inspection leaves under IEEE 1028-2008, clause 6.7, adapted only where pkit requires.
+- **B, IEEE 1028's inspection output** (`revalidation-record/considered/B-ieee-1028-inspection-output.md`): the documented evidence an inspection leaves under IEEE 1028-2008, clause 6.7, adapted only where pkit requires.
   - Its parts, in the clause's order: *Team*, *Product*, *Inputs*, *Objectives*, *Anomaly list*, *Disposition*, *Waivers* and *Anomaly summary*.
   - Each anomaly gains what resolved it, as DEC-001 point 6 asks of a gap. Each disposition is an outcome of DEC-001 point 5 with its reason, in place of the standard's dispositions.
   - It leaves out the items a revalidation has no counterpart for, such as the meeting's duration and the rework time.
-- **C, an architecture decision record** (`revalidation-record/C-architecture-decision-record.md`): Michael Nygard's parts, in his order, adapted only where pkit requires.
+- **C, an architecture decision record** (`revalidation-record/considered/C-architecture-decision-record.md`): Michael Nygard's parts, in his order, adapted only where pkit requires.
   - *Context* holds the forces: the change, the trigger and what the revalidation read.
   - *Decision* holds each outcome in the active voice he asks for, "We record …".
   - *Status* is always *accepted*, since a record is history, and names who accepted it.
   - *Consequences* holds the gaps with what resolved each, beside what else follows.
   - One of his records holds one decision, and a revalidation record holds one for each artefact.
-- **D, each gap by its artefact** (`revalidation-record/D-gaps-by-artefact.md`): A's two parts, as the earlier rounds' decisions shape them.
+- **D, each gap by its artefact** (`revalidation-record/considered/D-gaps-by-artefact.md`): A's two parts, as the earlier rounds' decisions shape them.
   - *Gaps* reads `None.` when there is none, by the rule for every kind.
   - Each gap opens with the id of the artefact it was found in, as a bold label. The journey's hand-overs name their step in the same way.
   - What resolved the gap follows under a label of its own, *Resolved*.
+- **E, the chosen template** (`revalidation-record/chosen-template.md`): D's two parts, with both records in the decided shape. It came after the recommendation, and "Decided: the revalidation record" says what filling it showed.
 - **The design's first cut:** A's parts, with *Outcomes* of the form `outcomes-match-front-matter`, and no hints (the design's parts 2 and 8). A filled first cut reads as A, so it has no file of its own.
 - **The one record pkit has written:** the pilot analysis held one, `2026-09-29-multi-clone-coordination.md`. It was a planned revalidation of ten use cases and two journeys against EPIC #943's design.
   - It was added in `780def2f`, before the stamp landed in `5f601406`. It was removed with the pilot in `6107ae77`.
@@ -1692,6 +1792,9 @@ A and D carry only what DEC-001 point 6 names. B and C add the sources a revalid
 | B | 8: *Team*, *Product*, *Inputs*, *Objectives*, *Anomaly list*, *Disposition*, *Waivers*, *Anomaly summary* | None marked | 420 and 185 | What was read, in *Product* and *Inputs*: the design's sources, though not where each stood | *Team* restates `by` and `confirmed-by`. *Objectives* is DEC-001 point 5's in every record, and *Waivers* reads `None.` in both. *Anomaly summary* counts the outcomes, and each anomaly's classification repeats its outcome. |
 | C | 4: *Context*, *Decision*, *Status*, *Consequences* | None marked | 428 and 163 | The design's sources and why the revalidation ran, in *Context*. What follows beyond the gaps, in *Consequences*. | *Status* reads "Accepted" in every record, and names `by` or `confirmed-by` again. The regression's *Decision* opens by restating its outcomes. Three consequences forecast, such as the open regression the check will report. |
 | D | 2, as A | Both. *Gaps* may read `None.`, under the rule for every kind. | 310 and 100 | Each gap tied to its artefact by id, so a script can hold the gaps to the outcomes | Each gap restates what its artefact's outcome line says, as in A. |
+| E | 2, as D | As D | 310 and 100 | As D, with *Resolution*. The planned record pins the design it reviewed, source by source, in `reviewed-against`. | As D |
+
+**Note:** E came after the recommendation, and its row is added here to compare.
 
 ### Fit with pkit
 
@@ -1760,6 +1863,8 @@ Every candidate keeps outcome lines a form can read. Only D lets a script tie ea
 
 Ship today's two parts, *Outcomes* and *Gaps*, both required. *Gaps* reads `None.` when there is none, and each gap opens with the ids of the artefacts whose outcomes record it.
 
+**Decided as recommended, but for the field's form.** The maintainer took the two parts, each gap's ids and `None.`. `reviewed-against` became a list of mappings, and question 3 gained a second half. This recommendation stays as it was made, and each point the decisions turned is marked below.
+
 - **The criterion:** the earlier rounds', read for a record. A part ships when DEC-001 or today's template asks for it, both examples fill it, and it gives one kind of content a predictable place.
   - **The cost:** every record carries both parts. The stamp writes a record whole from its command line, so the cost falls on the command, not on hints to delete.
 - **Why each:**
@@ -1773,6 +1878,7 @@ Ship today's two parts, *Outcomes* and *Gaps*, both required. *Gaps* reads `None
 - **The version a planned record reviewed** (question 1): in a field of its front matter, `reviewed-against`, which only a planned record carries.
   - **Not a part:** DEC-001 point 6 and today's template do not ask for it, so it fails the criterion. In a record of any other trigger it would repeat `change` or the evidence's `commit`.
   - **Why it is asked anyway:** a planned record reviews a design that may be spread over several sources, or stand on another day than the record's. `change` and `date` then lose it, as "Fit with pkit" shows.
+  - **Decided otherwise, in its form:** the field is a list of mappings with `title`, `url` and `version`, one for each source, never one line of text ("Decided: the revalidation record").
 - **What was weighed and left out:**
   - **B's *Team* and C's *Status*:** `by` and `confirmed-by` say who performed and who confirmed, as data. Prose would repeat them, and no script could hold it to them.
   - **B's *Objectives*:** DEC-001 point 5 sets one objective for every revalidation, so the part would read the same in every record.
@@ -1785,6 +1891,7 @@ Ship today's two parts, *Outcomes* and *Gaps*, both required. *Gaps* reads `None
   - **Its list of what needs authorisation:** it belongs to the tracker, as the use case's open issues do.
 - **No hints in a record** (the design's part 2): the stamp writes every part from the command line. The hints and examples below serve the check's messages and the stamp's help.
 - **A record is history** (question 3): it is never failed for a part, a label or a form that came after it.
+  - **Decided, with a second half:** live artefacts are always migrated to the current shape, while records stay as written.
 - **Labels:** nouns, as every decided kind's are. The parts stay headings, as today's template has them.
 - **Ships with:** every part and the field ship with software-analysis. project-kit adds none of its own for the record.
 
@@ -1798,6 +1905,8 @@ Ship today's two parts, *Outcomes* and *Gaps*, both required. *Gaps* reads `None
 
 The front matter's new field, on question 1's answer:
 
+- **Decided otherwise:** the field's table in "Decided: the revalidation record" replaces this one. The field is a list of mappings, and its hint names a commit, `this change` or the time tracker text was read.
+
 | Field | Required | Hint | Example |
 |---|---|---|---|
 | `reviewed-against` | when `trigger` is `planned`, and left out otherwise | Where the design a planned revalidation reviewed stood: each source, by commit or by day. | `#42's body on 5 January 2026, and its design note at 4c1d2e9` |
@@ -1806,6 +1915,7 @@ The front matter's new field, on question 1's answer:
 - **The evidence's id:** today's template asks an outcome line to name its evidence "by its id". The hint drops "by its id", since the id runs to 126 characters and the front matter holds it whole.
 - **The example:** one neutral record runs through them all, a planned revalidation of the use case's export against a redesign.
 - **The planned example, filled:** `reviewed-against: "#1346's body on 8 October 2026, part 6 of #1352's note at 0192e5fc, and the maintainer's decisions in PR #1374's comments of 7 and 8 October"`. The regression's record leaves the field out.
+  - **Decided otherwise:** E names each of the five sources as a mapping, and each comment by its own link (`revalidation-record/chosen-template.md`).
 
 **The forms #1365 would build:**
 
@@ -1819,12 +1929,16 @@ The front matter's new field, on question 1's answer:
 
 **For the build:**
 
+- **Decided otherwise:** the list in "Decided: the revalidation record" replaces this one.
 - **The parts (#1363):** the table above. A record's parts are headings, as living-docs' page kinds are, so the declaration uses its `heading` type (the design's part 1).
 - **The field (#1363):** the record's schema gains `reviewed-against` as text, required by a condition on `trigger` (`SA/schemas/revalidation-record.schema.json`). Other records leave it out, as a term never renamed leaves out `replaces`.
+  - **Decided otherwise:** a list of mappings with `title`, `url` and `version`.
 - **The forms (#1365):** `outcomes-match-front-matter` as defined, and `gaps-match-outcomes` added to its list.
 - **The check (#1364):** it reports a part missing, out of order or empty, and lets `None.` pass in *Gaps* alone. It holds the heading's date to `date` and to the file's name. Every record is written under today's structure, so the check judges each against it (question 3).
+  - **Decided otherwise, in part:** #1364 splits in two. The validator checks the field's form, and a command of its own checks that each named commit is reachable.
 - **The stamp and the template (#1366):**
   - A planned record takes `reviewed-against` from a new flag, such as `--reviewed-against "<text>"`, which no other trigger takes.
+    - **Decided otherwise:** the flag repeats, one source each.
   - Each `--gap` names its artefacts, such as `--gap "UC-007: <gap> => <resolution>"`, and the stamp refuses what the form refuses.
   - The stamp writes `**Resolution:**` where it wrote `**resolved:**`, and `None.` where it wrote `None found.`.
   - **A project's addition:** the stamp refuses a placeholder, so it renders none. A writer adds one by hand before committing the record, and the check judges it as any addition.
@@ -1845,7 +1959,7 @@ The front matter's new field, on question 1's answer:
 
 ### Questions for the maintainer
 
-Each question is one decision, with a recommendation.
+Each question is one decision, with a recommendation. The maintainer settled all three on 8 October.
 
 1. **Does a planned record name the version it reviewed, in its front matter?**
    - **The case:** DEC-001 point 5 reviews artefacts "against one version of the system", and the front matter names only the change that carried it.
@@ -1855,14 +1969,22 @@ Each question is one decision, with a recommendation.
    - **Else:**
      - a body part, *Version reviewed*, in every record, which repeats `change` in most of them
      - nothing now. A planned record names its sources in its outcome lines, and the question returns once a second planned record shows the need recurs (COR-007).
+   - **Decided:** yes, as `reviewed-against`, required when `trigger` is `planned`. It was answered through the document-versioning design (#1383, PR #1384).
+     - **Decided otherwise, in its form:** a list of mappings with `title`, `url` and `version`, one for each source. Repository text is pinned by a commit on the default branch or by `this change`. Tracker text is pinned by its link and the time it was read.
+     - **The checks:** the validator checks the form. A separate command checks offline that each named commit is reachable from the default branch, and reports "unknown" when it cannot tell.
 2. **Does each gap name the artefacts whose outcomes record it?**
    - **The case:** today no gap names one, so only the words tie a gap to its outcome. The one real record's gaps named their artefacts in their labels, up to four in one gap.
    - **Recommendation:** yes, D's label of one or more ids from `outcomes`, then *Resolution*. A form holds the gaps to the outcomes, and the stamp's `--gap` names the ids.
    - **Else:** A's lines, with the tie left to the words. Or the one real record's letters, each gap given an id that the outcome lines cite.
+   - **Decided:** option (a), as recommended. Each gap starts with the ids of the artefacts it affects, taken from `outcomes`, then its *Resolution*. A check holds the gaps to the outcomes.
 3. **Is a record ever failed for a part, a label or a form that came after it?**
    - **The case:** a record is history, and its words are a person's (RS-WRITE-013). A part a later structure requires would fail every older record, and only a rewrite could mend it. The design spares a withdrawn artefact this (its part 1), and a record has no status.
    - **Recommendation:** never. #1358 states the principle now, and the first change to a record's structure brings the way to keep it. Until then every record is written under today's structure, so the check judges each against it.
    - **Else:** the check holds every record to the structure of the day. A later change then carries a migration that changes only what the stamp wrote. A part only a person can write needs a decision of its own.
+   - **Decided:** never, as recommended, in two halves.
+     - **Live artefacts are always migrated** to the current shape, since they describe the system as it is.
+     - **Revalidation records stay as written,** each checked against the structure in force when it was written.
+     - **Where each goes:** the principle into software-analysis DEC-001, by #1358, and the mechanism with the first structure change that needs it.
 
 ### Review
 
