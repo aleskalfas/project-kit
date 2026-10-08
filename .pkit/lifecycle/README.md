@@ -29,8 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-03T22:57:12Z
-      outcome: updated
+      at: 2026-10-08T11:14:02Z
+      outcome: unchanged
+      unchanged-because: This page lists pkit friction artefacts --json among the readings a script may call, sums up what it answers and leaves its keys to the CLI README. This change gives each artefact there two more keys, an entry's section span and the rule sets whose scope covers it, and cuts that section from the headings friction discovery already reads, fenced code skipped. The summary stays true, and nothing here says how a section is cut, so the page holds.
 ---
 
 # Lifecycle

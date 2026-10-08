@@ -396,6 +396,120 @@ def test_an_entry_moved_between_collection_files_needs_a_revalidation(repo: Adop
     assert result.findings[0].artefact == "RS-2"
 
 
+# An actor's friction block at the base: anchored to the engine, revalidated at T1.
+_ACTOR_BLOCK = {
+    "anchors": {"path": ["src/core/**"]},
+    "revalidated": {"at": T1, "outcome": "unchanged", "unchanged-because": "the engine holds"},
+}
+
+
+# An actor's needs: long enough that git reads a collection of one actor, removed, and
+# that actor's document, added, as a rename.
+_NEEDS = "\n".join(f"- The actor needs the engine's answer number {n}." for n in range(1, 31))
+
+
+def _actors(*entries: str) -> str:
+    """A collection file of actors, each an entry carrying `_ACTOR_BLOCK`, with its section."""
+    front = {entry: {"status": "accepted", "pkit": {"friction": _ACTOR_BLOCK}} for entry in entries}
+    sections = "".join(f"## {entry} — an actor\n\n{_NEEDS}\n\n" for entry in entries)
+    return f"---\n{json.dumps(front, indent=2)}\n---\n\n{sections}"
+
+
+def _actor(entry: str, **overrides: Any) -> str:
+    """The actor `entry` as a document of its own: its id a field, its section its body —
+    so its content differs from the entry's — and `_ACTOR_BLOCK` unless `overrides` say."""
+    values: dict[str, Any] = {
+        "anchors": {"path": ["src/core/**"]},
+        "at": T1,
+        "outcome": "unchanged",
+        "because": "the engine holds",
+    }
+    values.update(overrides)
+    body = f"# {entry} — an actor\n\n{_NEEDS}"
+    return document(entry, status="accepted", body=body, **values)
+
+
+def test_an_entry_that_becomes_a_document_needs_a_revalidation(repo: AdopterRepo) -> None:
+    """The document is paired with the entry it was, as a move (COR-050 point 3), never
+    read as new: a new artefact would count as revalidated (point 6)."""
+    _start(repo, {"docs/actors.md": _actors("ACT-1", "ACT-2")})
+    repo.commit(
+        "ACT-2 becomes a document of its own",
+        {"docs/actors.md": _actors("ACT-1"), "docs/actors/ACT-2.md": _actor("ACT-2")},
+    )
+    result = _run(repo)
+    assert _summary(result) == [("friction", "docs/actors/ACT-2.md", None, None)]
+    assert result.findings[0].artefact == "ACT-2"
+    assert "moved here from docs/actors.md#ACT-2" in result.findings[0].message
+
+
+def test_an_entry_whose_collection_git_pairs_with_its_document_needs_a_revalidation(
+    repo: AdopterRepo,
+) -> None:
+    """The collection's one entry becomes a document and the collection goes: git reads
+    the two files as a rename, and the document is still paired with the entry."""
+    _start(repo, {"docs/actors.md": _actors("ACT-1")})
+    repo.commit(
+        "ACT-1 becomes a document of its own",
+        {"docs/actors.md": None, "docs/actors/ACT-1.md": _actor("ACT-1")},
+    )
+    renamed = repo.git("diff", "-M", "--name-status", "main", "HEAD").stdout
+    assert renamed.startswith("R") and "docs/actors/ACT-1.md" in renamed
+    result = _run(repo)
+    assert _summary(result) == [("friction", "docs/actors/ACT-1.md", None, None)]
+    assert "moved here from docs/actors.md#ACT-1" in result.findings[0].message
+
+
+def test_an_entry_become_a_document_starts_its_history_at_the_move(repo: AdopterRepo) -> None:
+    """The `at` the entry carried before its last revalidation is new to the document,
+    whose history starts at the move, as `check --all` reads it — even where git pairs
+    the document with the collection's file. So the move's revalidation stands."""
+    repo.write({CONFIG: friction_config(), **SOURCE, "docs/actors.md": _actors("ACT-1")})
+    repo.commit("base", files=None)
+    revalidated = _actors("ACT-1").replace(T1, T2).replace("engine holds", "engine still holds")
+    repo.commit("revalidate ACT-1", {"docs/actors.md": revalidated})
+    repo.checkout("feature", create=True)
+    repo.commit(
+        "ACT-1 becomes a document, revalidated at its earlier time",
+        {
+            "docs/actors.md": None,
+            "docs/actors/ACT-1.md": _actor("ACT-1", outcome="updated", because=None),
+        },
+    )
+    assert repo.git("diff", "-M", "--name-status", "main", "HEAD").stdout.startswith("R")
+    assert _summary(_run(repo)) == [("answered", "docs/actors/ACT-1.md", None, "updated")]
+
+
+def test_a_document_that_becomes_an_entry_needs_a_revalidation(repo: AdopterRepo) -> None:
+    _start(repo, {"docs/actors.md": _actors("ACT-1"), "docs/actors/ACT-2.md": _actor("ACT-2")})
+    repo.commit(
+        "ACT-2 joins the collection",
+        {"docs/actors.md": _actors("ACT-1", "ACT-2"), "docs/actors/ACT-2.md": None},
+    )
+    result = _run(repo)
+    assert _summary(result) == [("friction", "docs/actors.md#ACT-2", None, None)]
+    assert "moved here from docs/actors/ACT-2.md" in result.findings[0].message
+
+
+def test_a_removed_entry_beside_an_unrelated_new_document_stays_a_removal_and_a_new_artefact(
+    repo: AdopterRepo,
+) -> None:
+    """Only the same id pairs an entry with a document: ACT-2 is removed — its dependant's
+    anchor turns dead — and ACT-3 is new, so it counts as revalidated."""
+    dependant = document("journey", anchors={"artefact": ["ACT-2"]}, at=T1, outcome="updated")
+    _start(repo, {"docs/actors.md": _actors("ACT-1", "ACT-2"), "docs/journey.md": dependant})
+    repo.commit(
+        "remove ACT-2; add ACT-3 as a document",
+        {"docs/actors.md": _actors("ACT-1"), "docs/actors/ACT-3.md": _actor("ACT-3")},
+    )
+    result = _run(repo)
+    assert _summary(result) == [
+        ("answered", "docs/actors/ACT-3.md", None, "new"),
+        ("dead-anchor", "docs/journey.md", "artefact:ACT-2", None),
+    ]
+    assert "the diff removed or moved its target" in result.findings[1].message
+
+
 def test_an_entry_body_section_is_part_of_its_content(repo: AdopterRepo) -> None:
     front = {
         "RS-1": {"status": "accepted"},
@@ -1475,6 +1589,22 @@ def test_a_renamed_document_lists_its_revalidation_against_its_base(repo: Adopte
     )
     assert _answers(_run(repo)) == [
         _written("unchanged", "moved, as is", asked=True, location="docs/cli/guide.md")
+    ]
+
+
+def test_an_entry_that_becomes_a_document_lists_its_revalidation(repo: AdopterRepo) -> None:
+    """The move asks for the revalidation, so it is listed as asked. The document carries
+    its id as a field, so its content differs from the entry's: the answer is `updated`."""
+    _start(repo, {"docs/actors.md": _actors("ACT-1", "ACT-2")})
+    moved = _actor("ACT-2", at=T2, outcome="updated", because=None)
+    repo.commit(
+        "ACT-2 becomes a document of its own, revalidated",
+        {"docs/actors.md": _actors("ACT-1"), "docs/actors/ACT-2.md": moved},
+    )
+    result = _run(repo)
+    assert _summary(result) == [("answered", "docs/actors/ACT-2.md", None, "updated")]
+    assert _answers(result) == [
+        _written("updated", None, asked=True, artefact="ACT-2", location="docs/actors/ACT-2.md")
     ]
 
 

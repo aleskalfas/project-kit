@@ -118,8 +118,6 @@ _yaml = YAML(typ="safe")
 _yaml_keeping_first = YAML(typ="safe")
 _yaml_keeping_first.allow_duplicate_keys = True  # the first value is kept
 
-_FENCE = re.compile(r"^[ \t]{0,3}(```|~~~)")
-_HEADING = re.compile(r"^(#{1,6})[ \t]+(.*?)[ \t]*#*[ \t]*$")
 _HEADING_ID = re.compile(rf"({RULE_ID_PATTERN})(?![A-Za-z0-9])")
 
 
@@ -520,22 +518,21 @@ def _duplicate_keys(text: str) -> tuple[DuplicateKey, ...]:
 
 
 def _sections(body: str) -> tuple[Section, ...]:
-    """The body headings that open with `RS-`, outside fenced code, in order."""
+    """The body headings that open with `RS-`, in order.
+
+    Read as the friction pass reads a rule's section (`fd.body_headings`,
+    `fd.heading_opens_with`), so the two find the same sections. A heading
+    opens with a rule id only when it opens with the id as a whole token.
+    """
     sections: list[Section] = []
-    fence: str | None = None
-    for line in body.splitlines():
-        marker = _FENCE.match(line)
-        if marker is not None:
-            fence = None if fence == marker.group(1) else (fence or marker.group(1))
+    for heading in fd.body_headings(body):
+        if not heading.title.startswith("RS-"):
             continue
-        if fence is not None:
-            continue
-        heading = _HEADING.match(line)
-        if heading is None or not heading.group(2).startswith("RS-"):
-            continue
-        text = heading.group(2).strip()
-        match = _HEADING_ID.match(text)
-        sections.append(Section(rule_id=match.group(1) if match else None, heading=text))
+        match = _HEADING_ID.match(heading.title)
+        rule_id = match.group(1) if match else None
+        if rule_id is not None and not fd.heading_opens_with(heading.title, rule_id):
+            rule_id = None
+        sections.append(Section(rule_id=rule_id, heading=heading.title))
     return tuple(sections)
 
 

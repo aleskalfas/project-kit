@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-04T10:55:03Z
+      at: 2026-10-08T11:14:05Z
       outcome: unchanged
-      unchanged-because: This map names the CLI reference by its role, the pkit command surface, and links it. This change rewrites what that reference says check --all compares and how it dates debt after a merge that takes a file whole from one side; the reference's role and place are unchanged, so the map holds.
+      unchanged-because: "This map names the CLI reference by its role, the pkit command surface, and the schemas area by its role, YAML schemas and their companions, and links both. This change adds to both what the friction artefacts document gives each artefact: an entry's section span and the rule sets whose scope covers it. Neither area's role or place changes, so the map holds."
 ---
 
 # project-kit

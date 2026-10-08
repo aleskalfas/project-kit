@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit init` ends by recommending the install the CLI reference recommends,
+  `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git`
+  (#1376). It recommended a symlink to the `pkit` of a source checkout. When
+  `init` ran from a `uv tool` install, that symlink pointed inside the tool's
+  own environment. A test now holds `init`'s advice and the CLI reference's to
+  the same command.
