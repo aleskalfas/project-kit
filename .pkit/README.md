@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-08T08:45:09Z
+      at: 2026-10-08T08:40:27Z
       outcome: unchanged
-      unchanged-because: The area index names the CLI and schemas areas and links their READMEs. It describes no key of the friction artefacts document or of a rule set, so what those READMEs now say of the two keys leaves it true.
+      unchanged-because: "This map names the CLI reference by its role, the pkit command surface, and links it. This change adds to that reference what the friction change check counts as a move: an entry that becomes a document of its own, or a document that becomes an entry. The reference's role and place are unchanged, so the map holds."
 ---
 
 # project-kit

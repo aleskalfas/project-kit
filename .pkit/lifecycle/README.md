@@ -29,9 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-08T08:44:49Z
+      at: 2026-10-08T08:38:21Z
       outcome: unchanged
-      unchanged-because: The table of reading commands names what friction artefacts lists and leaves its keys to the CLI README. The span and rule-set keys added to each artefact leave that row true, and nothing else here describes what this change touched.
+      unchanged-because: The change moves the reading of a Markdown body's headings into friction discovery, with fenced code skipped, so an entry's section and a rule-set file's sections are cut the same way. This page covers held folders, the anchor-kind registry and the artefacts document. It says nothing of how a section is cut from a body, so it still holds.
 ---
 
 # Lifecycle

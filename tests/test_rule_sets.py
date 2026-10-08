@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import io
 import json
+import re
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
@@ -299,6 +300,33 @@ def test_headings_in_fenced_code_are_not_sections(adopter: AdopterRepo) -> None:
     text = rule_set_text(cmn()) + "\n```markdown\n## RS-CMN-042 — an example, not a rule\n```\n"
     adopter.write({f"{PROJECT_SETS}/cmn.md": text})
     assert validate(adopter).findings == ()
+
+
+def test_both_readers_find_the_same_sections(adopter: AdopterRepo) -> None:
+    """The rule-set pass and the friction pass read a body's sections one way (#1372).
+
+    A heading inside fenced code opens no section and ends none, for either pass. A
+    heading opens with a rule id only when the id is a whole token.
+    """
+    path = f"{PROJECT_SETS}/cmn.md"
+    statement = "The statement of RS-CMN-001.\n"
+    example = "```markdown\n## RS-CMN-042 — an example, not a rule\n```\n\nMore of RS-CMN-001.\n"
+    text = rule_set_text(cmn()).replace(statement, f"{statement}\n{example}")
+    adopter.write({path: f"{text}\n## RS-CMN-007-draft — opens like an id, is not one\n"})
+    (rule_set,) = rs.discover_rule_sets(adopter.root).rule_sets
+    artefacts = {a.id: a.body for a in fd.discover_artefacts(adopter.root).artefacts}
+
+    written = set(re.findall(rs.RULE_ID_PATTERN, rule_set.body))
+    by_rule_set_pass = {s.rule_id for s in rule_set.sections if s.rule_id is not None}
+    by_friction_pass = {rule_id for rule_id in written if fd.entry_section(rule_set.body, rule_id)}
+    assert by_rule_set_pass == by_friction_pass == set(cmn()["rules"])
+    # The fenced heading does not end RS-CMN-001's section, for the rule or for its artefact.
+    rule = rule_set.rule("RS-CMN-001")
+    assert rule is not None
+    assert rule.section == f"## RS-CMN-001 — Rule RS-CMN-001\n\n{statement}\n{example}"
+    assert artefacts["RS-CMN-001"] == rule.section
+    # The heading that only opens like an id is the one finding.
+    assert [(f.kind, f.location) for f in validate(adopter).errors] == [(Kind.MALFORMED_ID, path)]
 
 
 # --- ids ----------------------------------------------------------------------------

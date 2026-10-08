@@ -797,7 +797,11 @@ def _counterparts(head: Side, base: Side, diff: Diff) -> dict[int, Artefact]:
     By location first, following the diff's renames; then, for an artefact
     with an identity of its own, by that identity among base artefacts whose
     location is gone at head — a move git did not detect as a rename, or an
-    entry moved between collection files. What finds none is new.
+    entry moved between collection files; last, by that identity across the
+    two kinds — an entry that became a document of its own, or a document
+    that became an entry, each with an identity of its own (COR-050 point 3).
+    Each pass pairs only one candidate, so an identity two base artefacts
+    share pairs neither. What finds none is new.
     """
     base_by_key: dict[tuple[str, str | None], Artefact] = {}
     for artefact in base.discovery.artefacts:
@@ -811,20 +815,28 @@ def _counterparts(head: Side, base: Side, diff: Diff) -> dict[int, Artefact]:
             matched[index] = before
             claimed.add(id(before))
     head_keys = {_key(a) for a in head_artefacts}
-    for index, artefact in enumerate(head_artefacts):
-        if index in matched or not _has_own_id(artefact):
-            continue
-        candidates = [
-            b
-            for b in base.discovery.artefacts
-            if id(b) not in claimed
-            and b.kind is artefact.kind
-            and b.id == artefact.id
-            and _key(b) not in head_keys
-        ]
-        if len(candidates) == 1:
-            matched[index] = candidates[0]
-            claimed.add(id(candidates[0]))
+
+    def same_kind(artefact: Artefact, b: Artefact) -> bool:
+        return b.kind is artefact.kind
+
+    def other_kind(artefact: Artefact, b: Artefact) -> bool:
+        return b.kind is not artefact.kind and _has_own_id(b)
+
+    for may_pair in (same_kind, other_kind):  # one kind first: no pairing across takes its place
+        for index, artefact in enumerate(head_artefacts):
+            if index in matched or not _has_own_id(artefact):
+                continue
+            candidates = [
+                b
+                for b in base.discovery.artefacts
+                if id(b) not in claimed
+                and may_pair(artefact, b)
+                and b.id == artefact.id
+                and _key(b) not in head_keys
+            ]
+            if len(candidates) == 1:
+                matched[index] = candidates[0]
+                claimed.add(id(candidates[0]))
     return matched
 
 
@@ -1126,9 +1138,12 @@ class _PutBack:
 def _same_file(artefact: Artefact, before: Artefact, diff: Diff) -> bool:
     """Whether head's artefact lives in its base counterpart's file — the same file, or
     one the diff renamed — so the file's history behind the base is the artefact's.
-    An entry moved to another collection file, or a document matched by its own id
-    across a move git did not pair, starts its history at the move (COR-050 point 3)."""
-    return diff.renamed_from.get(artefact.path, artefact.path) == before.path
+    An entry moved to another collection file, a document matched by its own id
+    across a move git did not pair, and an artefact of the other kind — an entry
+    that became a document, even in the file git paired with its collection —
+    start their history at the move (COR-050 point 3), as `check --all` reads it."""
+    same = diff.renamed_from.get(artefact.path, artefact.path) == before.path
+    return same and artefact.kind is before.kind
 
 
 class _Behind:

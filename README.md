@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-10-03T01:52:22Z
+      at: 2026-10-08T08:35:37Z
       outcome: unchanged
-      unchanged-because: install and sync now leave Python caches out of what they copy from the source; this page promises that an update never touches the adopter's own files and that every other file has one owner, which still holds, and names no file a copy carries
+      unchanged-because: the change makes the closing next steps of init recommend uv tool install from the distribution URL, the install this page's Install section already gives, in place of a symlink to a source checkout; the page does not describe those next steps
 ---
 
 # project-kit

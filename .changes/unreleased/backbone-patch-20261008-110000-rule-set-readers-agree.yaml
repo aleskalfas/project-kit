@@ -1,0 +1,14 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The rule-set pass of `pkit validate` and the friction pass find the same
+  sections in a rule-set file (#1372). Both now read a body's headings one
+  way, with fenced code skipped. Before, the friction pass read a heading
+  inside fenced code as a heading. It could take such a heading for an
+  entry's section, or end a section early at it, as at a `# comment` line in
+  a shell example. This holds for every collection file, not only rule sets.
+  A heading such as `RS-DOC-001-draft` no longer counts as the section of
+  `RS-DOC-001` in validation, as it never did for friction. Validation now
+  reports it as a heading that opens like a rule id but is not one.
