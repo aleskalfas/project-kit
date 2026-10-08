@@ -29,8 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-03T22:57:12Z
-      outcome: updated
+      at: 2026-10-08T08:44:49Z
+      outcome: unchanged
+      unchanged-because: The table of reading commands names what friction artefacts lists and leaves its keys to the CLI README. The span and rule-set keys added to each artefact leave that row true, and nothing else here describes what this change touched.
 ---
 
 # Lifecycle
