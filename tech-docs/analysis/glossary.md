@@ -1,4 +1,10 @@
 ---
+TERM-methodology:
+  name: methodology
+  status: active
+  definition: body of decision records, rules and conventions the system ships and enforces
+  pkit:
+    friction: {}
 TERM-system:
   name: system
   status: active
@@ -10,6 +16,16 @@ TERM-system:
 # Glossary
 
 The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
+
+## TERM-methodology — methodology
+
+**Example:** the developer records a decision beside the methodology's, and builds only on accepted records, as the methodology's acceptance gate asks.
+
+**Distinctions:**
+
+- **The system:** the software under discussion, which you install, run and extend. A sentence that means the software, such as one about installing it, says *the system* (PR #1374). It is a term of its own, whose *Distinctions* point back here.
+- **The methodology maintainer:** an actor, "whoever maintains a distribution of the methodology" (`ACT-methodology-maintainer`). The role also works on parts of the system, such as the backbone and its releases. So its name, which the maintainer kept (PR #1374), uses the word more widely than this term.
+- **A capability's discipline:** what one capability packages, for a project to install or leave out (COR-017). A capability the system ships carries one part of the methodology, never the whole. A capability a project or its organisation writes is their own (COR-031 and COR-041).
 
 ## TERM-system — system
 
