@@ -26,6 +26,7 @@ Documents need pointers, not declared numbers. Friction stays the reader's answe
 - **History shows a small gain:** at most 13 of 353 `unchanged` answers since 27 September followed an editorial change to a record. Most followed an addition, which only each reader could judge.
 - **The larger lever is elsewhere:** 51 of the 78 answers that a record's change caused name one point of that record. The dependant rested on another point.
 - **`reviewed-against` needs pointers under every alternative:** most of a reviewed design sits in issue bodies and comments, which no document version covers.
+- **Practice agrees:** it numbers contracts that others pin, flags links that a person clears, and lets only an editorial change skip review.
 
 ## Today
 
@@ -92,7 +93,37 @@ Three things go by the name, and each answers a different question.
 
 ## What practice does
 
-PRACTICE-TBD
+Practice numbers the documents others implement against, and flags a link when anything under it changes. The one class of change it lets skip review is the editorial one.
+
+- **Semantic Versioning** (semver.org): major, minor and patch are defined against a public API the software must declare. The specification is written for software, and leaves the bump to the author.
+  - **Documents with numbers of their own are contracts.** The AWS Encryption SDK specification gives each document a semantic version and a changelog of its own (its `VERSIONING.md`). OpenAPI's `info.version` is a string the API document's author declares.
+  - **An adaptation to prose exists, with no adoption seen.** SemVerNL ties a major to the meaning of an abstract, and a patch to no significant effect on meaning (`ptsteadman/semver-for-natural-language` on GitHub).
+- **Versioned documentation sites** version a whole set, never one page.
+  - **Docusaurus** copies the docs folder into a versioned folder when someone cuts a version. It advises versioning only when needed (docusaurus.io, "Versioning").
+  - **Read the Docs** builds a version from each git tag or branch. `latest` follows the default branch, and `stable` the highest release (Read the Docs, "Versions").
+- **Requirements tools** mark a link suspect on any change, and a person clears it. That is friction's shape.
+  - **DOORS Next:** "If you change the contents of either artifact, the status of the link becomes suspect." A team member then sets it valid or invalid (IBM documentation, "Link validity").
+  - **The status sits on the link, with no version number.** Each artifact's revisions are kept, and a baseline freezes a configuration at a milestone (IBM documentation and jazz.net).
+  - **DOORS Classic narrows what counts as a change by attribute.** Only attributes set to affect change dates make a link suspect (a jazz.net forum archive of 2012, quoting the DOORS help).
+  - **ReqIF** gives each element a `LAST-CHANGE` timestamp and no version number (the ReqIF 1.0 schema). COR-050's `at` is the same kind of marker.
+- **Standards bodies** class each change, and the editorial class needs no review.
+  - **W3C names five classes.** "The first two classes of change are considered editorial changes": no change to text content, and changes that do not functionally affect interpretation.
+  - **W3C's consequence:** "Editorial changes to a Recommendation require no technical review of the intended changes." (W3C Process Document of 18 August 2025)
+  - **W3C also points by address:** each specification has a dated "This version" address beside a "Latest version" one, as WCAG 2.2 has.
+  - **The IETF never changes what an RFC means.** A correction comes as a new RFC that obsoletes or updates the old one (RFC 2026 and RFC 7322). RFC 9720 allows a reissue only where the semantic content is preserved.
+  - **ISO** reviews each standard every five years, and confirms, amends, revises or withdraws it (ISO/TC 211's good practice on systematic review).
+- **Document control:** ISO 9001:2015 asks for control of changes, with version control only as an example (clause 7.5.3.2, read through a secondary source).
+- **GitHub:** `refs/pull/` is read-only, and a commit stays reachable through any pull request that references it (GitHub Docs, "Removing sensitive data from a repository").
+- **What follows for pkit:**
+  - **Numbers go to contracts that others pin.** pkit already numbers its rule sets (COR-051) and its components (PRJ-002).
+  - **A dependant of a change gets a flag that a person clears.** pkit's friction is that mechanism (COR-050).
+  - **The one class that practice lets an author settle alone is the editorial one.** W3C's line between editorial and substantive is alternative D's line below.
+  - **Sets get versions at releases and milestones.** That is alternative C, which pkit's release tags already give.
+  - **Pointers are dated addresses.** W3C's dated address and an RFC that never changes are alternative A's pointers.
+- **Not verified:**
+  - what ISO/IEC/IEEE 29148 and ISO/IEC/IEEE 15289 say on baselines, traceability and revision history, since both are paywalled
+  - any source that gives the bump to a role other than the author
+  - a GitHub statement that `refs/pull/N/head` outlives the branch. PR #1353 shows it does (Today, "Pointers").
 
 ## What a declaration could spare
 
@@ -181,6 +212,7 @@ The author of a change to a depended-on document may declare that it keeps the m
 
 - **Its shape follows COR-050's:** a marker and a reason in the changed document's friction block, as `at` and `unchanged-because` are. The reason must change in the same diff.
 - **The test belongs to the text alone:** the change adds, drops, weakens or narrows no claim, and swaps no term. That is RS-WRITE-013's list, which an author applies without knowing the readers.
+- **Practice draws the same line:** W3C's editorial changes do not functionally affect interpretation, and need no technical review (What practice does).
 - **Gains:**
   - An editorial change stops flagging dependants. One author's answer replaces one answer per dependant.
   - Optional: an author who does not declare gets today's behaviour.
