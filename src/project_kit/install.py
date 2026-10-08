@@ -24,6 +24,7 @@ import click
 
 from project_kit import treecopy, workspace
 from project_kit.router import (
+    DISTRIBUTION_GIT_URL,
     can_exec_source_dispatcher,
     dispatcher_repair,
     is_route_bypassed,
@@ -670,7 +671,7 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
     _render_runtime_ignore(ctx)
     ensure_agent_workspace(ctx)
     provision_query_commands(ctx)
-    _print_next_steps(ctx)
+    _print_next_steps()
 
 
 def ensure_agent_workspace(ctx: InstallContext) -> None:
@@ -1172,21 +1173,20 @@ def undeploy_capability_from_adapters(ctx: InstallContext, capability: str) -> t
     return tuple(lacking)
 
 
-def _print_next_steps(ctx: InstallContext) -> None:
-    source_kit = ctx.source_kit
+def _print_next_steps() -> None:
     click.echo()
     click.echo("Install complete. Recommended next steps:")
     click.echo()
-    click.echo("  1. (One-time per machine, skip if already done) Make pkit available on")
-    click.echo("     PATH. ONE symlink works for any number of project-kit-adopting")
-    click.echo("     projects on this machine — the dispatcher resolves the current")
-    click.echo("     project's root from CWD at invocation time:")
+    # The install the CLI reference recommends ("Installing pkit on PATH"). A test
+    # holds the two to the same command (#1376).
+    click.echo("  1. (Once per machine, skip if already done) Install pkit on PATH:")
     click.echo()
-    click.echo(f"       ln -s {source_kit}/cli/pkit ~/.local/bin/pkit")
+    click.echo(f"       uv tool install {DISTRIBUTION_GIT_URL}")
     click.echo()
-    click.echo("     Symlink the SOURCE pkit (the one you just invoked), not this")
-    click.echo("     project's just-installed copy. This project's .pkit/cli/pkit is a")
-    click.echo("     fallback for machines that don't have project-kit cloned.")
+    click.echo("     One install serves every project on this machine that uses")
+    click.echo("     project-kit. pkit finds the current project from the folder you")
+    click.echo("     run it in. To pin a version, see .pkit/cli/README.md, section")
+    click.echo('     "Installing pkit on PATH".')
     click.echo()
     click.echo("  2. Fill in adopter-side configs as needed:")
     click.echo(

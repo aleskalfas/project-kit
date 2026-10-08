@@ -11,6 +11,7 @@ file layout — they're invoked separately and need a real
 
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 
@@ -565,3 +566,31 @@ def test_bundled_source_kit_returns_on_disk_path_directly(
 
     resolved = install._bundled_source_kit()
     assert resolved == kit
+
+
+# ── the install advice init closes with (#1376) ───────────────────────────
+
+
+def _install_the_cli_reference_recommends() -> str:
+    """The command in the first code block after "Recommended" in the CLI
+    reference's section "Installing pkit on PATH"."""
+    reference = (install.find_source_kit() / "cli" / "README.md").read_text(encoding="utf-8")
+    section = reference.split("\n## Installing pkit on PATH\n", 1)[1].split("\n## ", 1)[0]
+    after_recommended = section.split("**Recommended", 1)[1]
+    block = re.search(r"```[^\n]*\n(.*?)```", after_recommended, re.DOTALL)
+    assert block, "no code block after the CLI reference's recommended install"
+    (command,) = block.group(1).strip().splitlines()
+    return command
+
+
+def test_init_recommends_the_install_the_cli_reference_recommends(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`init`'s closing next steps and the CLI reference recommend one install
+    (PRJ-004), so following either gives the same pkit."""
+    recommended = _install_the_cli_reference_recommends()
+
+    install._print_next_steps()
+
+    lines = [line.strip() for line in capsys.readouterr().out.splitlines()]
+    assert recommended in lines
