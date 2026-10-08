@@ -49,7 +49,10 @@ is the one reader of those declarations and the one walker of the places:
   collection file (a Markdown file whose front matter maps ids to entries;
   an entry's content is its data plus the body section headed by its id).
   A rule-set file is the collection whose entries are the values of its
-  `rules` map, one artefact per rule. A plain YAML file in a place is not a
+  `rules` map, one artefact per rule. `entry_section` cuts an entry's section
+  from the headings `body_headings` reads, with fenced code skipped. The
+  rule-set pass lists a file's sections from the same headings, so the two
+  find the same sections. A plain YAML file in a place is not a
   document (ADR-056 point 2). `parse_artefacts` is the reading of one file's
   text this walk applies; the whole-repository check applies it to a file's
   earlier versions too, so history is read by the same rule as the present.
@@ -187,7 +190,9 @@ _SKIPPED_TOP_LEVEL = frozenset({".git"})
 _GLOB_CHARS = frozenset("*?[")
 
 _FRONT_MATTER_FENCE = re.compile(r"^---[ \t]*$", re.MULTILINE)
-_HEADING = re.compile(r"^(#{1,6})[ \t]+(.*?)[ \t]*#*[ \t]*$", re.MULTILINE)
+# A line opening or closing fenced code: three backticks or tildes, indented at most three spaces.
+_CODE_FENCE = re.compile(r"^[ \t]{0,3}(```|~~~)")
+_HEADING = re.compile(r"^(#{1,6})[ \t]+(.*?)[ \t]*#*[ \t]*$")
 # What continues an id past a heading's opening characters: a word character, or a hyphen or
 # a dot joined to one — so `uc-login` is not the id opening `uc-login-sso` or `uc-login.v2`.
 _ID_CONTINUES = re.compile(r"\w|[-.]\w")
@@ -2393,25 +2398,65 @@ def split_front_matter(text: str) -> tuple[str | None, str]:
     return text[first_line_end + 1 : closing.start()], text[closing.end() :].lstrip("\n")
 
 
+@dataclass(frozen=True)
+class Heading:
+    """One heading of a Markdown body, outside fenced code."""
+
+    level: int  # how many `#` open it
+    title: str  # the text after them, stripped
+    start: int  # where its line starts in the body
+
+
+def body_headings(body: str) -> tuple[Heading, ...]:
+    """The headings of a Markdown body, in order, fenced code skipped.
+
+    The one reading of a body's sections. `entry_section` cuts an entry's
+    section from these headings, and the rule-set pass lists a rule-set
+    file's sections from them (`rule_sets`). So a heading inside fenced code
+    opens no section and ends none, for either. A line opening with three
+    backticks or three tildes, indented at most three spaces, opens a fence.
+    The next line opening with the same marker closes it, and a fence never
+    closed runs to the end of the body.
+    """
+    found: list[Heading] = []
+    fence: str | None = None
+    start = 0
+    for line in body.split("\n"):
+        marker = _CODE_FENCE.match(line)
+        if marker is not None:
+            fence = None if fence == marker.group(1) else (fence or marker.group(1))
+        elif fence is None:
+            heading = _HEADING.match(line)
+            if heading is not None:
+                found.append(Heading(len(heading.group(1)), heading.group(2).strip(), start))
+        start += len(line) + 1
+    return tuple(found)
+
+
+def heading_opens_with(title: str, entry_id: str) -> bool:
+    """Whether a heading's title opens with `entry_id` as a whole token.
+
+    The id must be followed by the end of the title, whitespace, or
+    punctuation that does not continue an id (`_ID_CONTINUES`).
+    """
+    return title.startswith(entry_id) and not _ID_CONTINUES.match(title, len(entry_id))
+
+
 def entry_section(body: str, entry_id: str) -> str:
     """The body section headed by `entry_id` (COR-050 point 1), or `""`.
 
-    A heading that opens with the id as a whole token — the id, then the end
-    of the heading, whitespace, or punctuation that does not continue an id
-    (`_ID_CONTINUES`) — opens the section; it runs to the next heading of the
-    same or a higher level.
+    The first heading that opens with the id (`heading_opens_with`) opens the
+    section. It runs to the next heading of the same or a higher level. Both
+    are read by `body_headings`, so a heading inside fenced code is neither.
     """
-    headings = list(_HEADING.finditer(body))
-    for index, match in enumerate(headings):
-        title = match.group(2).strip()
-        if title.startswith(entry_id) and not _ID_CONTINUES.match(title, len(entry_id)):
-            level = len(match.group(1))
-            end = len(body)
-            for later in headings[index + 1 :]:
-                if len(later.group(1)) <= level:
-                    end = later.start()
-                    break
-            return body[match.start() : end].rstrip("\n") + "\n"
+    headings = body_headings(body)
+    for index, heading in enumerate(headings):
+        if heading_opens_with(heading.title, entry_id):
+            end = next(
+                (later.start for later in headings[index + 1 :] if later.level <= heading.level),
+                len(body),
+            )
+            return body[heading.start : end].rstrip("\n") + "\n"
     return ""
 
 

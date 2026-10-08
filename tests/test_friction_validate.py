@@ -1545,6 +1545,28 @@ def test_entry_section_takes_the_id_as_a_whole_token() -> None:
     assert fd.entry_section("## uc-login.\n\ntext\n", "uc-login") == "## uc-login.\n\ntext\n"
 
 
+def test_entry_section_skips_headings_in_fenced_code() -> None:
+    """A heading inside fenced code opens no section and ends none (#1372)."""
+    login = (
+        "## uc-login — Sign in\n\n"
+        "```sh\n# install the client\nmake client\n```\n\n"
+        "~~~markdown\n## uc-logout — an example, not an entry\n~~~\n\n"
+        "still signing in\n"
+    )
+    body = f"{login}\n## uc-signup — Sign up\n\nsignup\n"
+    assert fd.entry_section(body, "uc-login") == login
+    assert fd.entry_section(body, "uc-logout") == ""
+
+
+def test_body_headings_skip_fenced_code_to_its_own_closing_marker() -> None:
+    """Tildes do not close a backtick fence, and a fence never closed runs to the end."""
+    body = "# One\n```\n~~~\n# not a heading\n```\n## Two ##\n   ~~~\n# not a heading either\n"
+    assert fd.body_headings(body) == (
+        fd.Heading(level=1, title="One", start=0),
+        fd.Heading(level=2, title="Two", start=body.index("## Two")),
+    )
+
+
 def test_is_inside_repository(tmp_path: Path) -> None:
     root = tmp_path / "repo"
     root.mkdir()
