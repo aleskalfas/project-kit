@@ -1,0 +1,15 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  `pkit friction check` asks for a revalidation when a collection entry
+  becomes a document of its own, as it does for any other move (#1359,
+  COR-050 point 3). The check pairs the document with the entry it was, where
+  the document's own `id` is the entry's key. Before, the entry read as removed
+  and the document as new, and a new artefact counts as revalidated, so the
+  move asked nothing. A document that becomes an entry is paired the same way.
+  Such an artefact starts its history at the move, as `pkit friction check
+  --all` reads it. Its content is compared as any other's, so a document that
+  now carries its `id` as a field answers `updated`. A removed entry beside a
+  new document with another id stays a removal and a new artefact.
