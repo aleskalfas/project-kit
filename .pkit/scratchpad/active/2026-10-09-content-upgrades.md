@@ -14,7 +14,7 @@ A design for #1394. It sets how a project's own records, analysis artefacts, pag
   - **software-analysis DEC-001** as refined in PR #1391, at `79ce83ea`, which has not landed
 - **Citations:** records by id and point. Code, READMEs and migration scripts by file and line at `78837af9`, since their text has no permanent ids.
 - **Reviewed:** by the critic and the architect. Their findings and the answers are in "Review", at the end.
-- **Next:** the maintainer answers the four questions, one at a time. The issues in "Slicing" are filed on the maintainer's go.
+- **Next:** the maintainer authorises the settled positions it reopens, then answers the four questions, one at a time. The issues in "Slicing" are filed on the maintainer's go.
 - **Note:** the file is named for upgrades, but the note calls the mechanism a *conversion*. "Upgrade" already names `pkit upgrade`, and one word for two things misleads (RS-WRITE-011).
 
 ## The question
@@ -23,17 +23,17 @@ When the methodology changes the format of content a project owns, how does that
 
 ## In short
 
-A conversion moves a project's own content from one format to the next. It is a step of upgrading with a contract of its own, and it changes nothing a person has not reviewed.
+A conversion moves a project's own content from one format to the next. Every lifecycle command reports it, and only a command of its own writes it, as a diff a person reviews.
 
-- **A step of upgrading:** `pkit upgrade` runs it on every run. The owner of a format ships its conversions beside its migrations.
-- **Its own contract:** a migration carries the methodology's data unattended. A conversion rewrites what a project wrote, so it produces a diff for review.
+- **Part of the lifecycle:** the owner of a format ships its conversions beside its migrations. `pkit upgrade`, `pkit sync`, `pkit status` and validation all say what is pending.
+- **One command writes:** a command of its own applies every pending conversion, whichever component ships it. One command, one operation and one consent (COR-004).
+- **Its own contract:** a migration carries the methodology's data by a carry-over its record names. A conversion rewrites what a project wrote, so it produces a diff for review.
 - **Keyed on the content, not on the version:** each conversion can tell which units are still in the old format. So a skipped version, a re-run or an interrupted run needs no ledger.
-- **Required or optional:** required when the owner's check fails the old format. Optional when the old format stays valid. A change that needs a person's writing gets a window before it is required.
-- **The tool alone, or a person's choice:** the tool converts what reads one way by the owner's rule. A choice that fixes an id is a person's, shown before the merge.
-- **Discovery:** the upgrade's output, `pkit status`, validation's severities and the owner's check on each change. `pkit sync` reports and never converts.
+- **Required or optional:** required when the owner's check fails the old format, optional when it stays valid. A change that needs a person's writing is optional first, for a window.
+- **The tool alone, or a person's choice:** the tool converts what the owner's rule reads one way. A choice that fixes an id is a person's, shown before the merge.
 - **A mixed state is legitimate and bounded:** old units may stay by the project's recorded choice. The owner's change check flags a new unit in the old format.
 - **Friction:** a converted unit flags its dependants. The conversion lists them with its evidence, and writes no answer and no justification.
-- **Placement:** a new core record, with COR-010 and COR-001 refined.
+- **Placement:** a new core record, which makes a conversion a delivery operation on extension content. COR-001, COR-004 and COR-010 are refined, and some settled positions reopen.
 - **#1387's question 4:** an optional backbone conversion turns a project's list-form records into headed points. project-kit's own records need not wait for it.
 
 ## The cases
@@ -82,23 +82,33 @@ Migrations carry a project's installed state across a version. No rule says plai
 
 ### What a migration may touch
 
-No one rule settles it, and three sources pull different ways.
+No one rule settles it. Several accepted records keep the core off a project's content, and two open a door.
 
-- **COR-001 keeps the core off project-owned paths:** "The core layer never reads from or writes to these paths", and they "are not touched by sync" (`.pkit/decisions/core/COR-001-content-mechanisms.md:33` and `:37`). The sentences sit under extension content, delivered by sync.
-- **COR-010 keeps removal off adopter content:** "Adopter content is never touched" (COR-010, "Lifecycle operations apply uniformly", item 4).
-- **COR-048 opens one door:** a configuration key may be written "by an upgrade migration that the owning record specifies, where running the upgrade is the consent" (COR-048 point 5).
-- **COR-053 opens another, inside documents:** a functionality block in an artefact's front matter "carries no version — the backbone owns its shape and migrates it" (COR-053 point 10).
-- **In practice, several scripts write project-owned files.** Each writes the methodology's data or wiring, never prose a person wrote:
+- **Records that keep the core off:**
+  - **COR-001:** "The core layer never reads from or writes to these paths", and they "are not touched by sync" (`.pkit/decisions/core/COR-001-content-mechanisms.md:33` and `:37`). A seeded file gets "no further claim" (`:113`).
+  - **COR-002:** "The core layer only contributes; it never subtracts" (`.pkit/decisions/core/COR-002-merge-delivery.md:96`).
+  - **COR-010:** "Adopter content is never touched" on removal (COR-010, "Lifecycle operations apply uniformly", item 4). Project-side records are "never core-managed by definition" (its Implications).
+  - **COR-017:** the disposition "never edit adopter prose" (`.pkit/decisions/core/COR-017-capability-pattern.md:132` and `:146`).
+  - **COR-023:** auto-migrating a project's data "is out of scope for v1", since "silent transformation is the wrong default" (`.pkit/decisions/core/COR-023-schema-binds-inline.md:72` and `:123`).
+  - **The decisions README:** "project-owned paths are never read or written by sync" (`.pkit/decisions/README.md:71`).
+- **Records that open a door:**
+  - **COR-048 point 5:** a configuration key may be written "by an upgrade migration that the owning record specifies, where running the upgrade is the consent".
+  - **COR-053 point 10:** a functionality block in an artefact's front matter "carries no version — the backbone owns its shape and migrates it".
+- **In practice, several scripts write project-owned files.** Each adds a default, moves a key or wires a line, and none rewrites prose a person wrote:
   - `.pkit/migrations/backbone/1.150.0/001-keep-process-journal-logging.sh:11` adds a configuration key, citing COR-048 point 5.
   - `.pkit/migrations/backbone/1.54.0/001-seed-architect-overlay-categories.sh:23` adds categories to the project's overlay.
   - project-management's `0.5.0/001` and `0.55.0/004` move keys between its configuration and the backbone's.
   - claude-code's `0.5.0/001` adds an include line to the host `CLAUDE.md`, under the merge contract (COR-002).
+- **Sync runs some of them.** A capability's migrations run inside sync's refresh (`src/project_kit/capabilities.py:1170-1173`, `src/project_kit/upgrade.py:917-920`).
+  - **So sync writes project-owned paths today:** project-management's `0.55.0/004` writes `.pkit/project/config.yaml` while claiming "the upgrade being the consent" (`.pkit/capabilities/project-management/migrations/0.55.0/004-default-branch-to-backbone.sh:33`).
+  - **That contradicts** COR-001 line 37, COR-048 point 1, and the decisions README's line 71.
 - **No migration has rewritten** a record, an analysis artefact, a page or a scratchpad note. Such changes were made by hand (#860, #1350), or avoided by tolerance.
 
 ### The ownership predicates
 
 - **`is_sync_managed`:** whether a path is the methodology's to manage (`.pkit/lifecycle/ownership.py:275`). Everything outside `.pkit/` reads as unmanaged (`.pkit/lifecycle/README.md:799`).
 - **`is_synced_copy`:** whether a path arrives as a copy a sync makes (`.pkit/lifecycle/ownership.py:402`). In the methodology's source repository nothing is a copy (`.pkit/lifecycle/README.md:809`).
+  - **An externally-sourced capability is no synced copy,** since only a `kit-shipped` registration is sync-managed (`.pkit/lifecycle/ownership.py:509`). Yet its files are fetched copies, used as they arrive (COR-041).
 - **No migration asks either.** A script runs in bash with `ROOT`, and nothing checks what it writes.
 
 ### Consent precedents
@@ -125,14 +135,18 @@ The lifecycle README contradicts itself at lines 758 and 767. Line 767 holds.
   - **`pkit sync`** moves each kit-shipped capability's version, and records the backbone's (`src/project_kit/sync.py:143`). It runs no backbone migration.
   - **`pkit upgrade`** does both through sync, then runs the backbone's migrations.
   - **`pkit capabilities upgrade`** moves one capability (`src/project_kit/cli.py:4314`).
-- **`pkit upgrade` returns early twice,** before sync and migrations: when the project is at the target (`src/project_kit/upgrade.py:190-201`), and in a pinned project at the latest release (`:553-555`).
+- **`pkit upgrade` returns early,** before sync and migrations, when the project is at the target (`src/project_kit/upgrade.py:190-201`). The pinned flow returns early at several more places (`:535`, `:551`, `:555`, `:563` and `:572`).
+- **A pinned raise runs in two processes.** The routed child runs the old pin's code, and hands the raise to a full upgrade under the target's code (`src/project_kit/upgrade.py:140-145` and `:435`).
+- **Backbone migrations can be stranded today.** Sync records the new backbone version and runs no backbone migration. A later upgrade then finds the project at the target and returns early.
 - **Why it matters here:** a step hooked behind those returns, or to one path, is skipped once another path has moved the version.
+- **Note:** COR-004 refuses one verb that compounds operations. Its example is an "update that does sync + merge + migrations", which conflates consent profiles (`.pkit/decisions/core/COR-004-cli-surface.md:27` and `:59`).
 
 ### Pins and skipped versions (ADR-049)
 
 - **A pin routes every command** to the pinned release's code (ADR-049 points 1, 2 and 4). So every clone of a project sees the conversions of the release its pin names.
 - **`pkit upgrade` goes to the latest release** (ADR-049 point 7) and flips the pin last (point 1, `src/project_kit/upgrade.py:219-227`). A project can skip many versions in one hop.
-- **There is no path down.** An older pkit refuses a project whose content or pin is newer. A project rolls back with `git checkout <ref> -- .pkit/` (`.pkit/lifecycle/README.md:732-739`).
+- **There is no path down.** An older pkit refuses to sync or upgrade a project whose content or pin is newer (`.pkit/lifecycle/README.md:732-739`). Read-only commands are not refused.
+- **A rollback restores `.pkit/`:** `git checkout <ref> -- .pkit/` restores kit-owned and project-owned state together (ADR-049 point 3, `.pkit/lifecycle/README.md:736`).
 
 ## Established practice
 
@@ -161,30 +175,34 @@ Each tool below answers part of the question. What each teaches is under its *Te
 
 ## Where a migration ends and a conversion begins
 
-A migration changes what the methodology keeps for itself. A conversion changes what the project wrote. The test is where the change lands, not which file holds it.
+A migration may write a project-owned path only by a mechanical carry-over that the record owning that content names. Everything else in a component's format is a conversion.
 
-- **A migration's ground:**
-  - installed state, and the manifests (COR-010)
-  - a configuration key a record owns (COR-048 point 5)
-  - the methodology's container in a document's front matter, such as the friction block (COR-053 point 10)
-  - wiring a merge contract delivers into a shared file, such as `CLAUDE.md`'s include line (COR-002)
-- **A conversion's ground:** everything a project wrote in a format a component defines.
-  - **Documents:** a record's or an artefact's body and its own fields, outside the container. Pages and rule-set files too.
+- **A mechanical carry-over,** the pattern of COR-048 point 5 made general:
+  - an additive default
+  - a key moved or renamed
+  - a block reshaped so that every value a person wrote stays byte for byte
+- **A conversion's ground:** every other change to what a project wrote in a component's format.
+  - **Documents:** a record's or an artefact's body and its own fields. Pages and rule-set files too.
   - **Project data:** a file the project fills in a component's format, such as a workflow override or `structures.yaml`.
-- **Why the line falls there:** a person reads and wrote the second kind. A change to it needs review, and friction treats it as content (COR-050 point 5). The first kind only tools read, so a migration may change it unattended.
-- **Traced against the cases:**
-  - **A change to the friction block's shape:** a migration, as COR-053 point 10 says. It stays inside the container, so it flags nobody.
-  - **Role-block keys rewritten at install:** container data, on COR-053 point 10's consent. Neither mechanism changes.
-  - **The overlay's categories and the journal key:** the methodology's data. Migrations, as today.
-  - **The include line in `CLAUDE.md`:** wiring under the merge contract. A migration, as today, though the file is the project's.
+  - **Declared-version blocks:** a role block's point block and a project filler each carry their schema version (COR-052 point 5, COR-053 point 10). Each goes inert when out of step. Reshaping one changes values a person or a tool wrote, so it is a conversion.
+- **Why the line falls there:** a carry-over loses nothing a person wrote, so it needs no review of meaning. Anything else rewrites a person's words or data, so a person reviews it.
+- **Traced against today's scripts and blocks:**
+  - **The overlay's categories and the journal key:** additive defaults. Migrations, as today.
+  - **project-management's `0.55.0/004`:** a value moved where COR-054 point 1 names its new home. A migration.
+  - **The include line in `CLAUDE.md`:** wiring under the merge contract (COR-002). A migration, though the file is the project's.
+  - **project-management's `0.55.0/002`:** deletes files only on proof that the project did not write them. A migration.
+  - **A change to the friction block's shape:** a migration, as COR-053 point 10 says, so long as every person-written value inside it stays unchanged. That covers `unchanged-because`, deferral reasons and `unanchored-because` (COR-050 points 1, 3 and 4).
+  - **Role-block keys rewritten at install:** COR-053 point 10's own consent. Neither mechanism changes.
   - **Workflow overrides at an old `schema_version`:** project data. The warning-only migration becomes a conversion the project can accept.
   - **Records, analysis artefacts and pages:** conversions.
-- **Note:** COR-010 already makes a `schema_version` bump a migration trigger. For a format a project fills, the trigger is met by a conversion.
+- **A change inside the container can still flag:** a record anchor stands on the record's whole file, and a path anchor on a file's content. Only an artefact anchor leaves the container out (COR-050 point 5).
+- **Note:** COR-010 and core rule 7 make a `schema_version` bump a migration trigger. For a format a project fills, a conversion meets the trigger.
 
 ## What a conversion is
 
 A conversion moves units of a project's own content from one format to the next. The component that owns the format ships it, and a person reviews what it writes.
 
+- **What kind of thing it is:** a delivery operation on extension content, as seeding is (COR-001). It is no fourth content mechanism. The file stays the project's, before and after.
 - **A unit:** one record, artefact, page or project data file. A collection entry is converted with its collection file.
 - **Who ships it:** the owner of the format.
   - **The backbone** owns the record format, so headed points are the backbone's.
@@ -198,25 +216,34 @@ A conversion moves units of a project's own content from one format to the next.
   - **the conversions it builds on,** if any
   - **a detect command and an apply command**
 - **Where it is declared:** a capability names its commands in its package metadata, as it names a validator (COR-055 point 3). The backbone keeps its own in its code.
-- **Detect:** a read-only query under the backbone's command limits (ADR-057 point 3). For each unit in reach it answers *convertible*, *needs a choice* with the candidates, *waiting* for an earlier conversion, or *interrupted*.
+- **Detect:** a read-only query under the backbone's command limits (ADR-057 point 3). For each unit in reach it answers *convertible*, *needs a choice* with the candidates, or *interrupted*.
   - **It reads units through the backbone's readers,** never by walking places itself (ADR-057 point 2). So a record at a path the overlay resolves, such as an ADR, is found as validation finds it.
+  - **A reader must exist for each kind of unit:** records with the ADR folder, artefacts through discovery, and data files through the data member's claims.
+- **Waiting is the backbone's to compute,** from the graph of what each conversion builds on. Detect does not answer it.
 - **Apply:** converts the units named, with the choices given. It writes the working tree and nothing else.
+  - **It is a writing action, not a query.** It needs a runner policy and a declaration of its own, the first action the command runner runs.
   - **A unit that spans several files is written whole.** Apply stages every file, then swaps them in. Detect reports a half-written unit as *interrupted*, and apply completes it.
+- **The backbone enforces the rules around apply,** never trusting each owner. It compares what git shows before and after the run:
+  - no synced copy touched
+  - each unit's container unchanged, read by friction's own reader
+  - no file written outside the units named
+- **A conversion that fails or gives no answer never fails a backbone operation.** It is reported, as a failing event subscriber is (COR-053 point 9). It gates only its own component.
 
 ### What it may touch
 
 A conversion touches only the format of project-owned units in its reach. Its owner sets the reach.
 
 - **The reach follows the format, not the tree.** The backbone's record conversion reaches every project-owned record, an incubated capability's included. In the source repository it reaches capability records too.
-- **Never a synced copy** (`is_synced_copy`). A synced copy arrives converted with the sync that brings it.
+- **Never a copy, by origin:** a `kit-shipped` capability's files and the backbone's trees arrive converted with the sync that brings them. An `externally-sourced` capability's files arrive as fetched (COR-041). `is_synced_copy` alone misses the second, so the reach is stated by origin (COR-031 D4).
 - **Never history:**
-  - a superseded record, whose body stays "as it stood" (`.pkit/decisions/README.md:161`)
+  - a superseded record, whose body stays "as it stood" (`.pkit/decisions/README.md:161`). A partially superseded record stays accepted, so it converts.
   - a revalidation record or a withdrawn artefact (DEC-001 point 1 as refined)
   - a scratchpad note
   - any other text a person decided
 - **Never an answer or an anchor:** a unit's `revalidated` block, its deferrals and its anchors stay byte for byte. Re-pointing an anchor is a revalidation, so it is a person's (COR-050 point 6).
 - **Never a claim of judgment:** it writes no `None.` into a part it adds, since `None.` says a person considered the part (DEC-001 point 1 as refined).
 - **Never a referrer:** a path anchor or a link to a file the conversion moves goes dead, an error the change owns (COR-050 points 7 and 12). The conversion lists the referrers it can find, and a person re-points them in the same change.
+- **Never a process definition's version or meaning:** a definition with live subjects keeps its own `version` (COR-053 point 2). The process's owner sets the reach.
 
 ## Required versus optional
 
@@ -224,7 +251,7 @@ A conversion is required when the owner's check fails a unit left in the old for
 
 - **Required:** the old format no longer passes, so the project cannot stay valid without converting.
   - **DEC-001's live artefacts** are "always migrated to the current structure" (DEC-001 point 1 as refined, "When a structure changes").
-  - **A COR-010 trigger:** the change breaks against what a project has. So the change that makes the check fail ships the required conversion in the same change-set.
+  - **A COR-010 trigger:** the change breaks against what a project has. So the required conversion ships no later than the change that makes the check fail.
 - **Optional:** the old format stays valid, and the new one gains something, such as part anchors.
   - **A project's list-form records** keep working unconverted. Their points cannot be anchored until converted (the part-anchors note, "Migration").
 - **How the class is declared:** in the conversion's declaration. A test holds it honest: the owner's check fails a unit in the old format exactly when the class is required.
@@ -232,6 +259,7 @@ A conversion is required when the owner's check fails a unit left in the old for
   - **Why:** DEC-001 refuses "a hint left in" whatever a rule's status (DEC-001 point 1 as refined, "Hints"). So a part the tool adds fails every live artefact at once, and no release can merge until each part is written.
   - **The precedent:** project-management's grace period for the old milestone line, and Rails' new defaults, offered before they are required.
   - **DEC-001 leaves it open:** the change that adds a part "settles how a part it adds is answered" (DEC-001 Implications, as refined).
+  - **For a data file,** a window needs data validation to accept a range of `schema_version`s, where today it refuses any mismatch (COR-023).
 - **A required conversion never builds on an optional one.** A project's choice to keep the optional one would leave the required one waiting for ever. The owner makes the earlier one required first.
 - **A required conversion that cannot finish alone** converts what it can and lists the rest. The owner's check keeps failing those units until a person settles them.
 
@@ -245,27 +273,31 @@ The tool converts a unit alone where the owner's rule reads it one way. A choice
 - **A reading confirmed by a person:** the decided design asks the person who converts a record to confirm the reading, since it comes from how the record is cited.
 - **How a choice is asked:**
   - **Interactively, on a terminal:** one unit at a time, with the candidates shown. The person picks one, or leaves the unit as it is.
-  - **As a proposal:** with no terminal, or on request, apply writes the diff it would make and each open choice to the agent workspace (core rule 16). A person or an agent fills the choices, and apply takes the file.
+  - **As a proposal:** on request, the command writes the diff it would make and each open choice to a file the caller names. A person or an agent fills the choices, and the command takes the file back with `--answers`.
   - **With nobody to ask and no answers,** a unit that needs a choice stays as it was and is listed. That is COR-048 point 5's rule.
-- **"Leave it as it is" is recorded,** in the project's choices for that conversion, naming the unit. Detect then skips it, and status shows it as kept.
+- **"Leave it as it is" is recorded in the unit,** in a functionality block of the methodology's container (COR-053 point 10). Detect then skips the unit, and status shows it as kept.
+  - **A new block name is a surface change,** checked against the role keys in use (COR-053 point 10, "Keys").
+  - **Not in a central list:** one file of per-unit entries would be the ledger "A mixed state" rejects. It would drift when a unit is converted by hand, and conflict across branches.
+  - **Its cost:** adding the block changes the record's file, so a record anchor on it flags its dependants once (COR-050 point 5).
 - **A choice that fixes a permanent id is a person's.** Citations and part anchors depend on it for good.
   - **An agent may propose it.** The conversion lists every id chosen, word for word, beside the change check's list of answers. The person who authorises the merge sees both (core rule 20's discipline).
 - **A transform checks its own claim:** one that moves text word for word checks that each unit's words are unchanged, apart from the structure it adds. It refuses a unit that fails.
 
 ## Discovery
 
-A project learns what is pending from six places. Each answers a different reader at a different moment.
+A project learns what is pending from every lifecycle command, and one command of its own does the writing. Each place answers a different reader at a different moment.
 
-- **`pkit upgrade` and its dry run,** on every run, whatever the versions:
-  - **before writing:** the required conversions it will apply, with their unit counts
-  - **after:** each file changed, the units that need a choice, the optional conversions available, and the dependants friction will ask
-- **`pkit sync`:** a closing line naming each required conversion with pending units, and the command that applies it. It converts nothing.
+- **The command that converts:** one command applies every pending conversion, whichever component ships it. Its dry run lists what it would write. Its name is settled in the build.
+- **`pkit upgrade` and `pkit sync`:** a closing section naming each pending conversion, its class and unit count, and the command that applies it. Neither converts.
+  - **The report comes from the release the project ends at,** after content and migrations. In a pinned raise, that is the inner run under the target's code.
+  - **Every run reports,** the early returns included. So a version moved earlier never hides a pending conversion.
+  - **It degrades, never fails:** where a capability's detect is not provisioned or gives no answer, the report says so and the command goes on.
 - **`pkit status`:** a section listing each conversion with pending units, its class, the count, and what the project chose to keep.
 - **`pkit validate`, a backbone member:**
-  - **error:** a required conversion with pending units, naming the command that converts them
-  - **warning:** an optional conversion in its window, before the release that requires it
-  - **info:** any other optional conversion with pending units the project has not chosen to keep
-  - **warning:** a recorded choice naming a conversion that no longer exists, as COR-048 point 2 reports a stale entry
+  - **states a fact:** a required conversion with pending units, naming the command. The owner's own check is the one that fails the unit.
+  - **asks for attention:** an optional conversion in its window, before the release that requires it
+  - **states a fact:** any other optional conversion with pending units the project has not chosen to keep
+  - **asks for attention:** a recorded choice naming a conversion that no longer exists, as COR-048 point 2 reports a stale entry
 - **The owner's check on each change:** it flags a unit the change adds, or converts back, in a superseded format.
   - **For records it exists already in the decided design:** `pkit decisions check-diff` warns of a new record whose Decision is a numbered list (the part-anchors note, "The numbering command").
   - **It is the owner's,** since only the owner knows its format. The mechanism lends it detect.
@@ -274,26 +306,31 @@ A project learns what is pending from six places. Each answers a different reade
 
 Some of these choices need a reason:
 
-- **Why sync never converts:** COR-001 says project-owned paths "are not touched by sync". Sync is the refresh people run often, so it reports and leaves the writing to the upgrade.
-- **Why every upgrade run:** a version moved by sync, or by an interrupted upgrade, would otherwise leave the step unreached for good.
-- **Why validation errs on a required conversion:** the owner's check fails the unit anyway. The backbone's finding names the fix, beside a bare structure error.
-- **Why info on an optional one, not a warning:** a mixed state is legitimate. Warnings for it would teach people to skip warnings.
+- **Why a command of its own:** each command performs one operation, and an "update" that compounds sync and migrations is rejected because it "conflates consent profiles" (COR-004).
+  - **Upgrade and sync overwrite silently** what the methodology owns. A conversion asks for choices and writes what the project wrote, so it is a different consent.
+  - **Next.js's lesson still holds:** one entry point offers whatever is pending. The entry point is the conversion command, which every lifecycle command names.
+- **Why sync never converts:** COR-001 says project-owned paths "are not touched by sync". Sync is the refresh people run often.
+- **Why validation does not fail twice:** a required conversion is required because the owner's check fails the old format. One failing finding is enough, and the backbone's names the fix.
+- **Why "states a fact" on an optional one, not "asks for attention":** a mixed state is legitimate. Warnings for it would teach people to skip warnings.
+- **The severity names:** the record says what a finding does, and the CLI reference names it, as COR-055 leaves the names to it.
 - **Where it binds:** the owner's change check binds only where the project wires it into its pipeline (COR-050 point 12, COR-054 point 3). Elsewhere, status shows the old count growing.
 - **Not proposed now:** an author-side check that a change to a format ships a conversion, as Django's `makemigrations --check`. A format also lives in code, such as a heading's reading, so the check would guess. It waits for a missed conversion (COR-007).
 
 ## A mixed state
 
-A mixed state is legitimate where the conversion is optional. Each unit's format is read from its shape, and what the project keeps is recorded once.
+A mixed state is legitimate where the conversion is optional. A document's format is read from its shape, and what the project keeps is recorded where it applies.
 
 - **Legitimate:** an optional conversion leaves the old format valid, as Rust's editions stay valid side by side.
 - **Bounded:** new units follow the current format. The stamp writes it, and the owner's change check flags a unit added in a superseded one.
-- **Deliberate:** a project that keeps its old units records the choice in the backbone configuration, with a reason. It covers a whole conversion, or the units it names.
-  - **Validation's info then goes quiet,** and status shows the choice.
+- **Deliberate:** a project that keeps a conversion's old units records the choice once, with a reason, in the backbone configuration. A single unit kept is recorded in that unit ("A person's reading").
+  - **The key is owned by the new record** (COR-048 point 2). The conversion command writes it, with COR-048 point 5's consent.
+  - **Uninstalling the owner** offers to clear the component's entries, with consent, as COR-048 point 2 asks of a key that names installed components.
+  - **Validation's fact then goes quiet,** and status shows the choice.
 - **Reported:** status counts the old units per conversion, and lists them on request.
 - **Two branches:** one converts a unit while another edits it in the old format, so they meet as a conflict. The owner's change check flags a resolution that brings the old format back.
-- **Inferred, not declared:** detect reads each unit's format from its shape.
-  - **Every known case shows its format:** a list or headings, a part present or missing, an entry or a file, a section present or not.
-  - **No marker on a unit.** It would add a field to every document, and repeat what the shape already says. The container has no place for one, since COR-053 point 10 admits only functionality and role blocks there.
+- **Inferred for documents, declared for data:** detect reads a document's format from its shape. A data file already declares its format in `schema_version` (COR-023).
+  - **Every known document case shows its format:** a list or headings, a part present or missing, an entry or a file, a section present or not.
+  - **No format marker on a document.** It would add a field to every document, and repeat what the shape already says.
   - **An owner whose old and new shapes look alike** changes the new shape until they differ.
 - **Not a ledger of applied conversions:** what is converted is read from the files. A ledger would drift from files edited by hand and conflict across branches, as COR-050 point 9 avoids for debt.
 - **Note:** Rust declares an edition because one text can mean two things in two editions. A document's format rarely has that problem.
@@ -302,19 +339,19 @@ A mixed state is legitimate where the conversion is optional. Each unit's format
 
 A conversion writes a diff to the working tree, and the review of that diff is the consent. The tool commits nothing, and rewrites nothing silently.
 
-- **What writes the diff:**
-  - **a required conversion:** `pkit upgrade`, whose dry run shows the plan first
-  - **an optional one:** its own command, run on purpose, asking once on a terminal and needing an explicit flag without one
+- **What writes the diff:** the conversion command, run on purpose. It asks once on a terminal, needs an explicit flag without one, and has a dry run.
 - **What consents:** the person's commit, then the pull request's review. Running the command only produces the diff to review.
 - **A clean start:** a run refuses when a file it would write has uncommitted changes from before the run. So the diff is the conversions' alone, as `ng update` refuses a changed tree.
-- **A chain on one unit:** two conversions crossed in one run that touch the same unit compose in the working tree. They land as one commit that names both.
+- **A chain on one unit:** two conversions in one run that touch the same unit compose in the working tree. They land as one commit that names both.
 - **How it lands:**
   - **Each conversion in a commit of its own,** apart from every other edit, except a chain as above.
-  - **A required one** rides in the upgrade's pull request, in a commit after the version change.
+  - **A required one** rides in the upgrade's pull request, in a commit after the version change, since that pull request fails without it.
   - **An optional one** lands in a pull request of its own.
   - **An optional one an edit forces,** as a point inserted into a list-form record, lands first in the same pull request, in a commit of its own (the part-anchors note, "Migration").
 - **Why apart:** the reviewer checks one claim, that the text is unchanged. Mixed with other edits, a reworded sentence could pass as format (RS-WRITE-013).
 - **Rolling back:** a conversion is undone by reverting its commit. `git checkout <ref> -- .pkit/` restores no unit outside `.pkit/`, such as an analysis artefact.
+  - **So ADR-049's rollback claim needs refining,** with the lines that repeat it (`src/project_kit/upgrade.py:476-483`, `src/project_kit/sync.py:214-215`, `.pkit/lifecycle/README.md:736`).
+  - **An older tool reads newer content:** read-only commands are not refused (`.pkit/lifecycle/README.md:739`). So an unpinned clone with an older pkit misreads converted units. A pin prevents that.
 - **Not proposed now:** the tool making the commit or the pull request, as `ng update --create-commits` does. The person's commit suffices until a chain shows otherwise (COR-007).
 
 ## Friction
@@ -331,7 +368,7 @@ A converted unit flags its dependants like any change. The conversion lists them
   - **The evidence:** its check that each unit's words are unchanged, and the part of the diff the dependant stands on.
 - **What it never gives:** an `unchanged-because` sentence. That sentence is "the one piece of judgment the tool cannot supply" (COR-050 point 3).
 - **What it never does:** write an answer. Writing is a separate command, never a side effect (COR-050 point 13).
-- **An agent that runs the conversion as its change** falls under core rule 20's exception, as for any change. It may write the answers the check asks, then shows the check's list to the person who authorises the merge.
+- **An agent that runs the conversion as its change** falls under core rule 20's exception, as for any change. It may write first the answers the check asks. Then it shows the check's list to the person who authorises the merge.
 - **This is #1384's question 2 again, in another form.** A conversion is the clearest case of an edit that keeps meaning. The maintainer deferred a marker for that on 8 October, to be revisited by a count between two releases (PR #1384). Conversions add to that count.
 - **Part anchors lower the cost later:** once a record is converted, a dependant anchored to one point is asked only when that point changes (#1387).
 
@@ -340,13 +377,15 @@ A converted unit flags its dependants like any change. The conversion lists them
 What is pending is what detect finds in the files, so the version a project came from does not matter.
 
 - **A skipped version:** a project jumping from 1.140 to 1.170 gets every conversion whose detect finds units. An optional conversion the project passed over at 1.150 is still offered at 1.170.
-- **Order:** by the version that introduced each conversion, then by what each builds on. Each apply reads the format its predecessor writes. A unit in an older format is *waiting* for that predecessor, never converted out of turn.
-- **Every upgrade run reaches the step,** before its early returns. So a version sync moved, or an interrupted run, never strands a conversion.
+- **Order:** by the graph of what each conversion builds on. Each apply reads the format its predecessor writes. A unit in an older format is *waiting* for that predecessor, never converted out of turn.
+  - **Not by version:** the backbone's and each component's versions are independent (COR-010), so they give no order across tiers.
+- **Nothing hangs on the version moving:** the command reads what is pending whatever moved the version, sync or an upgrade that stopped half-way. Every upgrade and sync run reports it.
 - **Keep the transform:** a conversion ships until a major release retires it, said in the changelog. Validation then names the format and the last release that converts it.
   - **Its cost:** detect runs in status and validation, within the backbone's command bound. A cheap detect reads what the owner's validator already reads.
 - **A re-run:** detect finds no converted unit, so a re-run does nothing. That is COR-010's script contract, kept by detection.
 - **A partial run:** each unit is written whole, or completed when *interrupted*. The next run continues where the last stopped.
-- **A pin:** a pinned project sees the conversions of its pin's release, in every clone. A pin raise runs the upgrade, so new ones arrive with it (ADR-049).
+- **A pin:** a pinned project sees the conversions of its pin's release, in every clone. A pin raise runs the upgrade, whose report names the new ones (ADR-049).
+  - **The pin still flips last,** whatever is pending. A pending conversion is not content that failed to land.
 
 ## The methodology's own source repository
 
@@ -355,100 +394,135 @@ Nothing runs a conversion automatically in project-kit's own repository. The cha
 - **No version moves there:** upgrade delegates to sync and runs no migrations (ADR-059 point 2, `src/project_kit/upgrade.py:115-127`).
 - **Nothing is a synced copy there** (`.pkit/lifecycle/README.md:809`). So a conversion's reach includes the core and capability records.
 - **What ships must be converted first:** an adopter's synced copies arrive as the source holds them, and no conversion may touch them. So the source applies each conversion to what it ships before the release.
-  - **A release gate:** `pkit release check` fails while detect finds a pending unit in a tree the release ships.
+  - **So a release that brings an optional conversion converts everything it ships,** though adopters may keep their own units.
+  - **A gate on the state, not on a change:** in the source repository, the validation member fails while a shipped tree holds a pending unit. `pkit release check` judges a change, so it is the wrong home (COR-055 point 2).
+  - **Per component:** a capability's pending unit gates that capability's release line, never the backbone's (COR-010, "The dependency direction cannot invert").
 - **project-kit's own records and artefacts** follow the same rules as an adopter's.
 - **#1387's D2 need not wait for this design.** The part-anchors note converts project-kit's 86 records by this mechanism if it has landed, and otherwise by a project-kit-only conversion (its "Slicing", D2).
   - **Converting the 40 synced records** is authoring where they are authored, not content following a format change.
 
 ## Placement
 
-A new core record holds the conversion's contract. COR-010 makes it a step of upgrading, and COR-001 names who may write a project's paths.
+A new core record holds the conversion's contract. COR-001, COR-004 and COR-010 are refined to make room for it.
 
-- **A new core record, "A project's own content follows format changes":** the line between migration and conversion, the reach, the two classes and the window, and consent. Also discovery and its severities, the mixed state, friction's obligations, keying on the files, and the source repository.
-- **Why not a fourth scope of COR-010:** COR-010's scopes order scripts that share one contract, unattended and keyed on the version window. A conversion differs in its keying, its consent, its friction and its discovery, so a scope would share only a name.
+- **A new core record, "A project's own content follows format changes":**
+  - **what a conversion is:** a delivery operation on extension content, and where a migration's ground ends
+  - **its reach, its two classes and the window**
+  - **its contract:** detect and apply, the rules the backbone enforces around apply, and failure that stays inside its component
+  - **consent, discovery and what each finding does**
+  - **the mixed state, friction's obligations, keying on the files, and the source repository**
+- **Its terms are core terms.** It states its rules without RS-WRITE-013 or PRJ-002, which are project-kit's, and cites no ADR.
+- **Why not a fourth scope of COR-010:** COR-010's scopes order scripts that share one contract, keyed on the version window and run unattended. A conversion differs in its keying, its consent, its friction and its discovery, so a scope would share only a name.
+- **COR-001, refined:** a principle in place of its absolute sentences. A core operation writes a project-owned path only where the record owning that content names it as a writer, with the consent that record sets.
+  - **It drops "never reads",** which validation already contradicts.
+  - **It says what "sync" means,** since sync already runs capability migrations that write project-owned paths ("Settled positions this reopens").
+- **COR-004, refined:** its list of operations gains conversion. The rule of one operation per command stands.
 - **COR-010, refined:**
-  - **The upgrade flow** gains a step that every run reaches: the conversions.
-  - **The mandatory rule** names the case: a change that makes the owner's check fail a project's content ships a required conversion.
-  - **Its migrations** stay on the migration's ground, as the new record draws it.
-- **COR-001, refined:** its extension contract keeps "not touched by sync". It drops "never reads", which validation already contradicts. The core writes a project-owned path only through a writer a record names:
-  - an upgrade migration, on its ground (COR-010)
-  - the configuration writer (COR-048 point 5)
-  - a conversion (the new record)
-- **COR-048, unchanged:** the new record owns its configuration key, for the recorded choices, under COR-048 point 2.
-- **COR-050 and COR-055, unchanged:** friction applies as it stands, and the severities exist.
+  - **The lifecycle** gains conversions beside migrations, reported by upgrade and sync and applied by their own command.
+  - **The mandatory rule** names the case: a required conversion ships no later than the change that makes the owner's check fail.
+  - **Its migrations** keep to a mechanical carry-over their record names.
+  - **Its Implications line** that project-side records are never core-managed points to the new record.
+- **Pointers to the new record** in COR-002's "never subtracts", COR-017's "never edit adopter prose", COR-023's v1 exclusion, and core rule 7.
+- **COR-048, COR-050 and COR-055, unchanged:** the new record owns its configuration key under COR-048 point 2, friction applies as it stands, and the severities exist.
+- **ADR-049, refined:** its rollback claim, and the pin flipping last whatever is pending.
 - **software-analysis DEC-001, once PR #1391 lands:** its line on structure changes cites the new record and its window.
-- **The lifecycle README:** the conversion step, lines 723 and 758 corrected, and the rollback line naming content outside `.pkit/`.
-- **The CLI README:** the command group, its name settled in the build.
-- **Note:** the new record must state its rules in core terms. RS-WRITE-013 and PRJ-002 are project-kit's, cited here as the source of each rule only.
+- **The lifecycle README:** conversions, lines 723 and 758 corrected, and the rollback line naming content outside `.pkit/`.
+- **The CLI README:** the conversion command, and what upgrade, sync and status report.
+- **An ADR, once the record is accepted:** project-kit's realisation of conversions, authored by the architect (COR-025).
+  - the home of the conversions' list, and the package-metadata literal
+  - apply's runner policy, refining ADR-057 point 5
+  - the validation member's place in ADR-058's ordered list
+  - the gate on shipped trees in the source repository
+
+## Settled positions this reopens
+
+Each is listed for the maintainer's authorisation, before a record changes.
+
+1. **COR-001's extension contract:** "never reads from or writes to these paths", and a seeded file "no further claim". Also the decisions README's "never read or written by sync" (`.pkit/decisions/README.md:71`).
+   - **The change:** the principle in "Placement", with each writer named by the record that owns the content.
+   - **A choice inside it:** sync already runs capability migrations that write project-owned paths. Either "sync" in COR-001 means propagation, with migrations a writer of their own, or capability migrations move out of sync.
+2. **COR-017's disposition, "never edit adopter prose".** A conversion edits it, only as a diff a person reviews.
+3. **COR-023's "Auto-migration is out of scope for v1"** for a project's data. A conversion offers the migration as a reviewed diff, never silently, which was COR-023's concern.
+4. **COR-002's "only contributes; it never subtracts".** A conversion that moves entries out of a collection file removes them there.
+5. **COR-010's Implications,** that project-side records are "never core-managed by definition". A conversion manages their format only, on the project's review.
+6. **ADR-049's rollback,** `git checkout <ref> -- .pkit/`. It no longer restores a converted unit outside `.pkit/`.
+
+- **Note:** COR-004's rule of one operation per command is kept, not reopened. Running conversions inside `pkit upgrade` would reopen it ("Alternatives weighed").
 
 ## Alternatives weighed
 
 - **A one-off command per format change,** the part-anchors note's first answer to its question 4. Rejected, for the maintainer's reason and Terraform's lesson. It tells a project nothing, and strands one that skips.
 - **Migrations that rewrite project content.** Rejected. A script runs unattended, cannot ask, keys on the version window, and leaves no diff anyone reviewed. project-management already refuses it for its overrides (DEC-033 D6).
 - **A fourth scope in COR-010,** named content. Weighed as question 1's alternative.
+- **Conversions inside `pkit upgrade`.** Weighed as question 2's alternative. It needs COR-004 refined, since upgrade would then hold two consents.
+  - **And the pinned raise:** a step in the routed child would run the old release's conversions first. A step anywhere must run once, in the process of the release the project ends at.
 - **Required at once, with no window.** Kept for changes the tool finishes alone. For writing only a person can do, it holds every release hostage.
 - **Tolerance only,** old formats valid for ever. Kept as an owner's choice per change. As a mechanism it never converges, and tells nobody anything.
 - **Sync converts, or refuses to move a version past a pending conversion.** Rejected. Sync never touches project-owned paths (COR-001), and refusing would block the routine refresh.
-- **A format marker on every unit.** Rejected, as "A mixed state" says.
-- **A ledger of applied conversions,** as Django's table. Rejected, since the files already say it.
+- **A format marker on every document.** Rejected, as "A mixed state" says.
+- **A ledger of applied conversions, or a central list of kept units.** Rejected, since the files already say it.
 - **The tool commits, or opens the pull request.** Not now (COR-007).
 - **Convert a unit whenever a change edits it.** Not a rule. An owner may require it where an edit needs the new format, as the record design does for an inserted point.
+- **An author-side check that a format change ships a conversion,** as Django's `makemigrations --check`. Not now. A format also lives in code, such as a heading's reading, so the check would guess. It waits for a missed conversion (COR-007).
 
 ## Recommendation
 
-Make conversions a step of upgrading with a contract of their own, in a new core record, keyed on what the files hold.
+Make conversions a delivery operation of their own, in a new core record, keyed on what the files hold. Every lifecycle command reports them, and one command applies them.
 
-- **Required ones** run on every `pkit upgrade`. The diff's review is the consent. A change that needs a person's writing gets a window first.
-- **Optional ones** run by their own command. A project may keep old units by a recorded choice, and the owner's change check keeps new units current.
-- **Sync reports,** and never converts.
-- **Discovery** comes from the upgrade's output, status, validation and the owner's change check.
+- **One command converts,** as a diff whose review is the consent. Upgrade, sync, status and validation name it.
+- **Required ones** are enforced by the owner's failing check. A change that needs a person's writing is optional first, for a window.
+- **Optional ones** may stay unconverted by a recorded choice, and the owner's change check keeps new units current.
 - **Friction's answers and their sentences** stay with people. The conversion gives the evidence.
 - **The first use** is #1387's B4, an optional backbone conversion of a project's records.
 
 ## Questions for the maintainer
 
-Each question is one decision, with a recommendation. Ask them one at a time.
+Each question is one decision, with a recommendation. Ask them one at a time, after the settled positions above are authorised.
 
-1. **Is a conversion a step of upgrading with its own contract, in a new core record?**
-   - **Recommendation:** yes. COR-010 gains the step and the trigger, and COR-001 names the writers of a project's paths. The contracts differ in keying, consent and friction.
+1. **Is a conversion a delivery operation of its own, in a new core record?**
+   - **Recommendation:** yes. COR-001, COR-004 and COR-010 are refined to make room for it. Its keying, consent and friction differ from a migration's.
    - **Else:** a fourth migration scope in COR-010, named content, with its own rules inside that record.
-2. **How does a required conversion run?**
-   - **Recommendation:** on every `pkit upgrade`, as a diff whose review is the consent. Sync only reports. A change that needs a person's writing ships optional first, with a window.
-   - **Else:** only by its own command, with validation failing until the project runs it.
+2. **Where does a conversion run?**
+   - **Recommendation:** by one command of its own, which every lifecycle command names. Validation's failing finding enforces a required one. COR-004 stands.
+   - **Else:** inside `pkit upgrade`, once per run, in the release the project ends at. COR-004 is refined to let upgrade hold that second consent.
 3. **How is a mixed state kept deliberate?**
-   - **Recommendation:** each unit's format is read from its shape. A project records what it keeps, per conversion or per unit, and the owner's change check flags a new unit in an old format.
+   - **Recommendation:** a document's format is read from its shape. A project records a kept conversion in its configuration and a kept unit in that unit. The owner's change check flags a new unit in an old format.
    - **Else:** each unit declares its format, as a crate declares its edition, and status counts the declarations.
 4. **How does a project's own record gain point ids (#1387, question 4)?**
    - **Recommendation:** by an optional backbone conversion, #1387's B4. It converts by the decided rule, and a person confirms each record's reading. project-kit's 86 records follow #1387's D2 and need not wait.
-   - **Else:** a required conversion, which turns every project record into headed points on upgrade.
+   - **Else:** a required conversion, which turns every project record into headed points.
 
 ## Slicing
 
-On the recommended answers, the work comes in four groups. The optional path comes first, since only #1387 reaches adopters now.
+On the recommended answers, the work comes in four groups. The optional path comes first, since only #1387 reaches adopters now. Each record is accepted before the work that cites it (the acceptance gate).
 
 - **A, the records:**
-  - **A1, the new core record,** through the decision-author skill.
-  - **A2, COR-010 and COR-001 refined,** through the decision-author skill.
-  - **A3, the lifecycle README and the CLI README:** the step, lines 723 and 758 corrected, and the rollback line.
+  - **A1, the new core record,** through the decision-author skill. It cites accepted records only.
+  - **A2, COR-001, COR-004 and COR-010 refined,** with the pointers in COR-002, COR-017, COR-023 and core rule 7. Through the decision-author skill.
+  - **A3, ADR-049 refined, and the conversions ADR,** authored by the architect.
+  - **A4, the lifecycle README and the CLI README:** conversions, lines 723 and 758 corrected, and the rollback line.
 - **B, the optional path, with #1387's B4 as its first conversion:**
-  - **B1, the declaration and the runner:** the backbone's list, the package-metadata entry, detect and apply under the command limits, staging and the proposal file.
-  - **B2, the step:** every `pkit upgrade` run reports, and the conversion's own command applies. Sync's closing line.
-  - **B3, discovery:** the status section, the validation member's info and warnings, and the configuration key for what a project keeps.
-  - **B4, the record conversion** (#1387's B4): detect and apply for headed points, refusing synced copies and superseded records. `pkit decisions check-diff` reads its detect.
+  - **B1, the declaration and the runner:** the backbone's list, the package-metadata entry, detect under the command limits, and apply under its own policy. Staging, the answers file, and the checks the backbone runs around apply.
+  - **B2, discovery:** the conversion command, the reports of upgrade and sync, the status section, the validation member, and the configuration key for what a project keeps.
+  - **B3, the record conversion** (#1387's B4): detect and apply for headed points, refusing copies and superseded records. `pkit decisions check-diff` reads its detect.
+    - **It waits** for #1387's record on a record's anatomy, which carries the rule of which lists are points.
 - **C, the required path,** when the first required change reaches an adopter:
-  - **C1, the step applies required conversions,** and validation's error.
-  - **C2, the window:** the release a conversion becomes required in, and the warning before it.
-- **D, the release gate in the source:** `pkit release check` fails while a shipped tree holds a pending unit.
+  - **C1, the window:** the release a conversion becomes required in, and the finding before it.
+  - **C2, data files:** a range of `schema_version`s during a window.
+- **D, the gate in the source:** the validation member fails while a shipped tree holds a pending unit, per component.
 - **The capabilities:** software-analysis's first structure change that reaches an adopter ships its conversion, and DEC-001 cites the record. living-docs' first page-kind change does the same. #1346 need not wait, since no adopter has actors.
 - **Changesets:** each issue declares its segment by PRJ-002. The segment is the maintainer's judgment.
 
 ## Found on the way
 
 1. **The lifecycle README's lines 723 and 758** say the backbone-wide upgrade moves no capability version. So do the comments at `src/project_kit/upgrade.py:794`, `:829-830` and `:1044-1054`. It does move them, through sync.
-2. **The backbone migrations README says it is "Empty today"** (`.pkit/migrations/backbone/README.md:5`), beside seven version directories.
-3. **`pkit migrations check-diff` reads renames and removals only** (`src/project_kit/migrations.py:244-284`). A modified template or schema that changes a format triggers nothing.
-4. **A page kind's structure checks headings only.** An empty section under a fixed heading passes (`.pkit/capabilities/living-docs/schemas/page-kinds.yaml:11-16`).
-5. **Each check on a change is a line of its own in a project's pipeline:** `friction check`, `migrations check-diff`, and the coming `decisions check-diff`. One command an adopter wires once would bind them all. That is a design of its own.
+2. **Backbone migrations can be stranded today.** Sync records the new backbone version and runs none (`src/project_kit/sync.py:143`). A later upgrade finds the project at the target and returns early (`src/project_kit/upgrade.py:190`). Worth an issue of its own.
+3. **Sync writes project-owned paths through capability migrations,** against COR-001 and COR-048 point 1. project-management's `0.55.0/004` claims "the upgrade being the consent", yet sync runs it.
+4. **`is_synced_copy` misses externally-sourced copies** (`.pkit/lifecycle/ownership.py:509`). A writer that asks only it may touch fetched files.
+5. **The backbone migrations README says it is "Empty today"** (`.pkit/migrations/backbone/README.md:5`), beside seven version directories.
+6. **`pkit migrations check-diff` reads renames and removals only** (`src/project_kit/migrations.py:244-284`). A modified template or schema that changes a format triggers nothing.
+7. **A page kind's structure checks headings only.** An empty section under a fixed heading passes (`.pkit/capabilities/living-docs/schemas/page-kinds.yaml:11-16`).
+8. **Each check on a change is a line of its own in a project's pipeline:** `friction check`, `migrations check-diff`, and the coming `decisions check-diff`. One command an adopter wires once would bind them all. That is a design of its own.
 
 ## Review
 
@@ -461,21 +535,21 @@ The critic found five red flags, fourteen gaps, six weak points, six counter-alt
 1. **A chain of conversions met the clean start and one commit per conversion.** **Answer:** accepted. The clean start is taken once, before the run. Two conversions on one unit compose and land as one commit naming both ("Consent and review").
 2. **Inferring from shape could not record "leave this unit as it is".** **Answer:** accepted, in two parts.
    - **The decided record design** says which lists are points, so a record without one is current, and detect never asks.
-   - **Where a person still answers "leave it",** the project's recorded choices name the unit ("A person's reading").
-3. **The hooks missed sync's move of the backbone's version and upgrade's early returns.** **Answer:** accepted. Every upgrade run reaches the step, before its early returns. Sync converts nothing and names what is pending, as COR-001 requires.
+   - **Where a person still answers "leave it",** the answer is recorded in the unit's container, after the architect's finding 11 ("A person's reading").
+3. **The hooks missed sync's move of the backbone's version and upgrade's early returns.** **Answer:** accepted, and then changed by the architect's finding 1. No command converts as a side effect. Every upgrade and sync run reports what is pending, early returns included, and one command converts.
 4. **No line between a migration and a conversion.** **Answer:** accepted. A new section draws it by where a change lands. It traces the line against six cases, from the friction block to records and pages.
 5. **The slicing cited the wrong part-anchors items.** **Answer:** accepted, from the note at `99636eca`. B4 is the conversion of an adopter's records, and D2 converts project-kit's 86.
 
 **Gaps:**
 
-6. **The COR-001 refinement broke shipped migrations.** **Answer:** accepted. COR-001 keeps "not touched by sync" and names three writers, an upgrade migration on its own ground among them.
+6. **The COR-001 refinement broke shipped migrations.** **Answer:** accepted. COR-001 gains a principle in place of a list of writers, after the architect's finding 3. Each shipped migration is a carry-over its record names.
 7. **Adopters are flagged by converted synced copies.** **Answer:** accepted. "Friction" states it, with the part-anchors note's single release.
 8. **Superseded records were missing.** **Answer:** accepted. They are history, never converted.
 9. **A conversion breaks references in other files.** **Answer:** accepted. It lists the referrers it finds, and a person re-points them in the same change.
 10. **A conversion that writes several files is not atomic.** **Answer:** accepted. Apply stages and swaps, and detect reports a half-written unit as *interrupted*.
 11. **A required conversion that needs writing holds the release hostage.** **Answer:** accepted. Such a change ships optional first, with a window, and the page-kind gap goes to "Found on the way".
 12. **A required conversion could build on an optional one.** **Answer:** accepted. It never does.
-13. **A marker in the container conflicts with COR-053 point 10.** **Answer:** accepted. The exception is gone. An owner makes its shapes differ instead.
+13. **A marker in the container conflicts with COR-053 point 10.** **Answer:** accepted. The format marker is gone, and an owner makes its shapes differ instead. The architect later read point 10 as admitting a new functionality block, which now holds a kept unit's answer.
 14. **An edit forces the optional record conversion.** **Answer:** accepted. A conversion an edit forces lands first in the same pull request, in a commit of its own.
 15. **The bound on a mixed state depends on each pipeline.** **Answer:** accepted. "Discovery" states the condition.
 16. **An agent would choose permanent ids.** **Answer:** accepted. A chosen id is listed word for word for the person who authorises the merge.
@@ -484,7 +558,7 @@ The critic found five red flags, fourteen gaps, six weak points, six counter-alt
 19. **Smaller gaps:**
     - **(a) install meets old units:** accepted. Install and register report them.
     - **(b) formats in code, and where "none owed" is recorded:** accepted. The author-side check is not proposed now.
-    - **(c) a stale choice:** accepted. It is a warning.
+    - **(c) a stale choice:** accepted. It asks for attention and never fails.
     - **(d) no support policy:** accepted. A conversion ships until a major release retires it, and detect reads what the validator reads.
     - **(e) reading through the engines:** accepted. Detect reads through the backbone's readers, overlay paths included.
     - **(f) project neutrality:** accepted. The record restates both rules in core terms.
@@ -493,7 +567,7 @@ The critic found five red flags, fourteen gaps, six weak points, six counter-alt
 
 **Weak reasoning:**
 
-20. **The analogy behind question 2 was thin.** **Answer:** accepted. The review of the diff is the consent, and running the command only produces it.
+20. **The analogy behind question 2 was thin.** **Answer:** accepted. The review of the diff is the consent, and running the command only produces it. Question 2 now asks where a conversion runs.
 21. **The case against refining COR-010 was weak, and the headline read as disagreeing with the maintainer.** **Answer:** accepted. The headline says a step of upgrading. Question 1's alternative is now a fourth scope, and the reason against it is the contract.
 22. **#1366 was read as tolerance.** **Answer:** accepted. It keeps old units failing. The tolerance examples are now the milestone line's grace period and #797.
 23. **The urgency was overstated.** **Answer:** accepted. Only #1387 reaches adopters, so the optional path is built first and the required path waits for a case.
@@ -515,8 +589,47 @@ The critic found five red flags, fourteen gaps, six weak points, six counter-alt
 - **F2, the labels:** B4 and D2, and the one-off command as the part-anchors note's first answer.
 - **F3:** the quoted words are the migration script's comment, not DEC-033 D6.
 - **F4:** an out-of-step point block is "inert and reported, its body unvalidated".
-- **F5:** COR-048 point 2 gives no severity, and the note proposes a warning.
+- **F5:** COR-048 point 2 gives no severity, and the note proposes one that never fails.
 - **F6:** #1366, as in 22.
 - **F7:** the pin is flipped last by ADR-049 point 1, and point 7 drops `--to`.
 - **F8:** PR #1384's question 2 was deferred, with a count to revisit it.
 - **F9:** sync also records the backbone's version.
+
+### The architect
+
+The architect found two blocking points, eleven it says should change, six smaller ones under one "could", and the documents to bring up to date. It agreed with keying on the files, writing no answer, refusing copies, the staged apply, the configuration key and a new core record.
+
+- **Its escalation:** five items need the maintainer's authorisation. COR-004's is avoided by the flip in finding 1. The other four are in "Settled positions this reopens", with COR-002's beside them.
+
+**Blocking:**
+
+1. **Question 2's recommendation reopened COR-004 without citing it.** COR-004 rejects an "update" that compounds sync and migrations, since it conflates consent profiles. **Answer:** accepted, and the recommendation flips. One command converts, every lifecycle command names it, and validation enforces a required one. Converting inside upgrade is now question 2's alternative, with COR-004 refined.
+2. **The line between migration and conversion was a list of exceptions on a false reason.** The friction block holds people's words, and a change inside the container still flags record and path anchors. **Answer:** accepted. The line is now the architect's test, a mechanical carry-over the owning record names. It is traced against every shipped script ("Where a migration ends and a conversion begins").
+
+**Should:**
+
+3. **The COR-001 refinement was an incomplete inventory, and sync already writes project-owned paths.** **Answer:** accepted. COR-001 gains a principle, and the choice about sync is a settled position for the maintainer. "Found on the way" records the contradiction.
+4. **"Before its early returns" was wrong for the pinned flows.** **Answer:** accepted. With a command of its own, nothing converts inside upgrade. Upgrade's report comes from the release the project ends at, and question 2's alternative states the same rule.
+5. **Dependency direction:** a capability's conversion must never fail a backbone operation. **Answer:** accepted. It is reported and gates only its own component, the gate on shipped trees included.
+6. **Apply's contract had gaps.** Apply is a writing action, the backbone should enforce its rules, and order cannot come from versions. **Answer:** accepted. Apply gets a runner policy, and the backbone checks what git shows around it. Order and *waiting* come from the graph of what each conversion builds on.
+7. **The reach missed externally-sourced copies.** **Answer:** accepted. The reach is stated by origin, and "Found on the way" records the gap in `is_synced_copy`.
+8. **Accepted records the proposal changes went uncited:** COR-023, COR-017, COR-002, COR-010's Implications and core rule 7. **Answer:** accepted. Each is cited in "Today" and "Placement", and COR-017 and COR-023 are settled positions.
+9. **ADR-049 needs refining, and an older tool misreads converted units.** **Answer:** accepted. "Consent and review" says both, and A3 refines ADR-049.
+10. **The release gate was in the wrong home.** `pkit release check` judges a change, and the gate is on state. **Answer:** accepted. In the source repository it is the validation member, per component. A release that brings an optional conversion converts all it ships.
+11. **What a project keeps:** uninstall clears entries, per-unit entries in one file are a ledger, and COR-053 point 10 does admit a new functionality block. **Answer:** accepted. A kept conversion is recorded in the configuration and a kept unit in the unit.
+12. **Backbone migrations can be stranded today.** **Answer:** accepted, in "Found on the way" as worth an issue of its own.
+13. **The acceptance gate:** A1 may cite only accepted records, and the record conversion waits for #1387's record. **Answer:** accepted. "Slicing" says both.
+
+**Could:**
+
+14. **Six smaller points:**
+    - **severity names:** accepted. The record says what a finding does.
+    - **double reporting:** accepted. The owner's check alone fails, and the backbone's finding names the fix.
+    - **the proposal channel:** accepted. It is a file the caller names, read back with `--answers`.
+    - **process definitions:** accepted. A conversion never touches a definition's version or meaning.
+    - **COR-010's mandatory rule:** accepted. It says "no later than the change that makes the check fail".
+    - **partially superseded records:** accepted. Such a record stays accepted, so it converts.
+
+**Documents:**
+
+15. **An ADR once A1 is accepted, and ADR-059 unchanged.** **Answer:** accepted. A3 is the architect's ADR, with the points the architect listed.
