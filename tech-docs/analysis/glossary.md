@@ -4,13 +4,15 @@ TERM-methodology:
   status: active
   definition: body of decision records, rules and conventions the system ships and enforces
   pkit:
-    friction: {}
+    friction:
+      unanchored-because: It names the whole body the system ships, so an anchor on its records and rules would match every change to them. COR-007 says what a methodology is in general, not what this word names here.
 TERM-system:
   name: system
   status: active
   definition: software under discussion, which you install, run and extend
   pkit:
-    friction: {}
+    friction:
+      unanchored-because: It names the whole of pkit, so an anchor on its code would match every change. No record defines it.
 ---
 
 # Glossary
