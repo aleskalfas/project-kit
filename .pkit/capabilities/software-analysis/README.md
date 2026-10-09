@@ -14,6 +14,11 @@ pkit:
     revalidated:
       at: 2026-10-05T00:52:46Z
       outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-001
+          reason: "DEC-001 refines ahead of the code: each kind's declared structure, actors as files of their own, the new anchors and a planned record's reviewed-against. This page describes what the capability ships, which this change leaves as it was; it changes, and is revalidated against the record, with the issues under EPIC #234 that apply it."
 ---
 
 # software-analysis capability

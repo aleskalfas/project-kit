@@ -1,0 +1,13 @@
+component: software-analysis
+kind: none
+body: >
+  Design-ahead: the capability's founding decision
+  ([software-analysis:DEC-001-software-analysis-discipline]) now covers each
+  kind's declared structure. Every part a kind ships is present in every
+  artefact, reading `None.` where there is nothing to say; the structure binds
+  at its format rule's status, with a preview on request; a project reviews the
+  shipped parts when it adopts the capability, and may add to them but never
+  relax them. Each actor becomes a file of its own, live artefacts are migrated
+  to each new structure while revalidation records stay as written, and a
+  planned record names the design it reviewed by pointer. Nothing you run
+  changes yet; the issues that apply it carry their own changesets.
