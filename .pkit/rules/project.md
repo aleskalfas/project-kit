@@ -8,3 +8,7 @@
 ## Writing
 
 3. **Write the analysis by `WRITE`.** Everything under `tech-docs/analysis/` follows the accepted rules of `WRITE`, project-kit's general writing rules (`tech-docs/rule-sets/writing.md`). Specific to project-kit's own writing rules, so this rule lives here rather than in core.
+
+## Decision records
+
+4. **Keep every point at its number until project-kit's records are converted.** A record's points keep their numbers for good ([project-kit#1387](https://github.com/aleskalfas/project-kit/issues/1387)). Until project-kit's records are written as numbered headings, a refinement never changes an existing point's number. To insert or drop a point, first convert that record to numbered headings by hand. A new point then takes the next unused number, and a dropped point leaves its stub. The conversion of project-kit's records removes this rule. Specific to project-kit's own records and their conversion, so this rule lives here rather than in core.
