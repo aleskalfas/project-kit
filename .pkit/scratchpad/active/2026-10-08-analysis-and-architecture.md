@@ -55,9 +55,19 @@ The analysis describes the requirements: what the system must do, and for whom. 
 - **It rules out A and C.** Both put solution views inside the analysis.
 - **B and D remain.** Both keep the two apart, and differ only in how they point at each other. Whether they link at all, and how, is the question left.
 
-## Open questions
+## The maintainer's decision, 10 October
 
-- Does pkit need architecture views at all yet, beyond its decision records? If not, B is mostly about use cases anchoring to records, which they already may.
-- Which direction must friction flow first: architecture → analysis, analysis → architecture, or both?
-- Where would a view live, and which agent keeps it: the architect, or a capability?
-- Does a use-case realisation (which components carry a use case) belong in the use case, in the view, or in neither?
+B and D together. The two stay apart, and each points at the other by anchors.
+
+- **A use case anchors to the architecture records it rests on.** Today's anchors already allow it, so nothing new is built.
+- **An architecture view, where one exists, anchors to the use cases it realises.** A change on either side then flags the other through friction (COR-050).
+- **An architecture context view, where one exists, names the analysis's actors by id** rather than describing them again.
+- **Why now:** it costs nothing to build, it follows 4+1's scenarios as the bridge, and the analysis build writes its use cases knowing the rule.
+- **Carried by #1447:** software-analysis DEC-001 point 11 states the rule, and the use-case kind's hint for its anchors names architecture records.
+
+## Open questions, as they stand
+
+- **Does pkit need architecture views yet, beyond its decision records?** Not yet. The rule covers a view when one exists.
+- **Which direction must friction flow first?** Both, by the decision. The use case's anchor to a record is the one that exists today.
+- **Where would a view live, and which agent keeps it?** Left until the first view. The architect keeps the architecture records today (COR-025).
+- **Does a use-case realisation belong in the use case, in the view, or in neither?** Left until the first view, since a realisation names components a view would describe.
