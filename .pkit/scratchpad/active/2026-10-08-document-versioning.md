@@ -12,7 +12,7 @@ A design for #1383. It asks whether pkit's documents should carry versions their
 - **Read from main at `30cfb15a`:** the records, the code and the history counts below.
 - **Citations:** records and rules by permanent id and point. Code by file and line at `30cfb15a`, since code has no permanent ids.
 - **Reviewed:** by the critic and the architect. Their findings and the answers are in "Review", at the end.
-- **Decided:** by the maintainer on 8 October. Questions 1 to 3 are answered in PR #1384's comments. Question 4 went to a design of its own, #1387, decided on 9 October.
+- **Decided:** by the maintainer on 8 October. Questions 1 to 3 are answered in PR #1384's comments. Question 4 went to a design of its own, #1387, decided on 9 October. What the pointer check fails on was decided on 11 October ("Slicing").
 - **Next:** the drafts in "Slicing" are filed on the maintainer's go.
 
 ## The question
@@ -342,7 +342,7 @@ A dependant anchors to the part of a document it rests on, so an edit to another
 - **E:** the same as A.
 - **What a script checks:**
   - **The form, in the capability's validator:** the keys, an absolute link, and a commit id or a time. A validator reads the working tree only (COR-055 point 2).
-  - **Reachability, in a command of its own beside `check-numbers`:** that a commit of this repository is on the default branch. It reads the default branch only, so no base named for a run reaches it (COR-054 point 3).
+  - **Reachability, in a command of its own beside `check-numbers`:** that a commit of this repository is on the default branch. It places each commit on the default branch only, so no base named for a run reaches that (COR-054 point 3). Which records a change adds is read against the run's base, as decided on 11 October ("Slicing").
   - **Offline in both:** validators and such commands run under the limits of COR-050 point 2 (COR-055 point 3).
   - **What it cannot place, it reports as unknown,** such as a commit beyond a shallow clone's history (COR-054 point 4).
   - **Why unknown and not failed:** the numbering setting treats a commit off the default branch as a problem, since freeing an id is a gate. `reviewed-against` is provenance, not a gate.
@@ -417,7 +417,7 @@ The maintainer decided questions 1 to 3 on 8 October, in comments on PR #1384. Q
    - **Text in this repository:** pinned by a commit on the default branch, or by `this change` when the design lands with the record.
    - **Text in the tracker:** pinned by its link and the time it was read.
    - **Never a pointer:** a pull request's head, or a bare branch commit.
-   - **The checks:** the validator checks the form. A separate command checks offline that each named commit is reachable from the default branch, and reports "unknown" when it cannot tell.
+   - **The checks:** the validator checks the form. A separate command checks offline that each named commit is reachable from the default branch, and reports "unknown" when it cannot tell. It fails only on records the change adds, as the maintainer decided on 11 October ("Slicing").
    - **Why:** a pointer returns the text reviewed, which no number does. Text in the tracker has no version any alternative gives, and a list lets a script check each source.
    - **Not taken:** one line of text, as the template round proposed, which no script checks. Nor capturing the tracker text in the record.
 4. **How is anchoring to part of a document (E) taken forward?** **Decided: design the mechanism now,** the alternative, by the maintainer on 8 October.
@@ -439,9 +439,13 @@ Each change the decisions need is carried by a filed issue, a merged change, or 
 - **The form, checked by validation:** the keys, an absolute link, and a full commit id, `this change` or a time, each with or without a link as its source needs.
   - **The round gave it to #1364,** whose body checks only a body's structure.
   - **To file:** in the edit to #1363, in the record's schema. Validation applies that schema whatever the format rule's status, and the stamp, the validator and the reachability command then read one definition.
-- **Reachability, a command of its own beside `check-numbers`:** each commit of this repository that a planned record names is on the default branch. It reads the default branch only, offline, and reports a commit it cannot place as unknown.
+- **Reachability, a command of its own beside `check-numbers`:** each commit of this repository that a planned record names is on the default branch. It places commits on the default branch only, offline, and reports a commit it cannot place as unknown.
+  - **Decided: it fails only on a record the change adds,** by the maintainer on 11 October. On a record the base already holds, it reports and never fails.
+    - **Why:** a squash merge leaves a reviewed branch commit off the default branch, so naming one is an easy slip, caught where it can still be fixed. A record is never rewritten, so after a history rewrite, such as removing a secret, failing on older records would fail every change for good.
+    - **Its cost:** it reads which records are new against the run's base, as the change check reads its change. The base reaches only that.
+    - **Not taken:** failing on every record, and reporting only, which would let the usual slip through.
   - **The round gave it to #1364 too,** whose body does not name it.
-  - **To file:** "pkit analysis check-pointers fails on a reviewed commit the default branch does not hold". It is a Task of its own, since it needs only #1363 while #1364 waits on #1360 and #1361.
+  - **To file:** "pkit analysis check-pointers fails a change that adds a record pointing off the default branch". It is a Task of its own, since it needs only #1363 while #1364 waits on #1360 and #1361.
 - **The stamp:** `--reviewed-against` repeats, one source each.
   - **Carried by #1366, in part.** The round gave it the flag, but its body does not name it.
   - **To file:** an edit to #1366 that adds the flag.
