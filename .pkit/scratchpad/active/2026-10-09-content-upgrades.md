@@ -16,7 +16,12 @@ A design for #1394. It sets how a project's own records, analysis artefacts, pag
 - **Reviewed:** by the critic and the architect. Their findings and the answers are in "Review", at the end.
 - **Decided:** by the maintainer on 10 October, on PR #1395. "Decisions" gives each answer and its reason, and "Settled positions this reopens" says what was authorised.
 - **The sync design:** which command moves a version is decided in #1429, a design of its own. Conversions do not depend on it. This design is finished first, and #1429's follows.
-- **Next:** the issues in "Slicing" are filed on the maintainer's go.
+- **Filed:** on 10 October, as #1431 to #1445; #1394's comment lists them in build order. The filing changes "Slicing" in five ways, each the maintainer's:
+  - the required path (C1, C2) and the gate in the source (D) are built in this arc, as #1440, #1441 and #1442;
+  - B1 is #1435 (the mechanism and the command, units of several files included) and #1437 (the skill, a part's drafting included);
+  - B2 is #1436 (status, validation, what a project keeps) and #1444 (the reports of every version transition, sync and install, after #1429's build);
+  - `pkit migrations check-diff` detects a `schema_version` bump that ships no migration or conversion (#1443);
+  - one command for every check on a change is a design of its own (#1445).
 - **Note:** the file is named for upgrades, but the note calls the mechanism a *conversion*. "Upgrade" already names `pkit upgrade`, and one word for two things misleads (RS-WRITE-011).
 
 ## The question
