@@ -1,0 +1,14 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit friction artefacts --json` gives two more keys on each artefact. `span`
+  is, for a collection entry, the lines of its file that its section spans,
+  `{first_line, last_line}`. These are exactly the text friction compares as
+  the entry's body, so a script reads the section without finding it itself.
+  It is `null` for a document and for an entry with no section.
+  `in_scope_of` lists the rule-set files whose scope covers the artefact's
+  file, in path order. A scope is read as a place is, and an artefact that no
+  rule set covers has an empty list. Both keys are added, so the document's
+  `schema_version` stays 1.

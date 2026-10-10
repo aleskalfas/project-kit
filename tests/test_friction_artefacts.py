@@ -10,7 +10,9 @@ calls instead of re-reading the declarations or walking the places itself:
   malformed declaration;
 - every **file** the walk read, with the places matching it, its rule-set
   claim, whether it is excluded, and its front matter's own fields;
-- every **artefact**, with its id, kind, place and own fields;
+- every **artefact**, with its id, kind, place and own fields — an entry with
+  the span of its section, exactly the text friction compares, and each
+  artefact with the rule sets whose scope covers it (#1361);
 - every **folder of held documents**, declared as a place is, and every file it
   holds, with the places that left it out — never a file or an artefact of any
   place (#1130);
@@ -60,6 +62,42 @@ RS-CMN-001:
 
 ## RS-CMN-001 — Name things
 """
+
+
+# A collection whose sections open after blank lines: one with a sub-heading and
+# blank lines after it, one last in the file with no line break at its end, and
+# an entry with no section of its own.
+SECTIONED = """---
+title: Terms
+term-a:
+  pkit:
+    friction:
+      anchors: {path: [src/**]}
+term-b:
+  pkit:
+    friction:
+      anchors: {path: [src/**]}
+term-c:
+  meaning: no section of its own
+---
+
+
+# Terms
+
+## term-a — First
+
+The first term.
+
+### term-a detail
+
+More of it.
+
+
+## term-b: Second
+
+The second term, last in the file"""
+
+TERMS = "notes/terms.md"
 
 
 def _run(*args: str) -> Any:
@@ -260,6 +298,122 @@ def test_a_rule_set_file_names_the_rule_set_place_claiming_it(adopter: AdopterRe
         {"component": None},
     )
     assert rule_set["fields"] == {"rule-set": "CMN", "version": "1.0.0", "rules": {}}
+
+
+# --- an entry's span (#1361) --------------------------------------------------------------
+
+
+def _spans(document: dict[str, Any], path: str) -> dict[str, Any]:
+    return {a["location"]: a["span"] for a in document["artefacts"] if a["path"] == path}
+
+
+def _lines(text: str, span: dict[str, int]) -> str:
+    """The span's lines of `text`, joined as a section's text is: one line break after each."""
+    return "\n".join(text.split("\n")[span["first_line"] - 1 : span["last_line"]]) + "\n"
+
+
+def test_an_entry_gives_the_lines_of_its_section(adopter: AdopterRepo) -> None:
+    """COR-050 point 1: the section headed by the entry's id, the blank lines after it
+    left out; a key added within the document's version."""
+    adopter.write({TERMS: SECTIONED})
+    document = _document()
+    assert document["schema_version"] == 1
+    assert _spans(document, TERMS) == {
+        f"{TERMS}#term-a": {"first_line": 18, "last_line": 24},  # its sub-heading included
+        f"{TERMS}#term-b": {"first_line": 27, "last_line": 29},  # last, no line break at its end
+        f"{TERMS}#term-c": None,  # no section of its own
+    }
+    assert _spans(document, "notes/guide.md") == {"notes/guide.md": None}  # a document
+
+
+def test_a_span_covers_exactly_the_text_friction_compares(adopter: AdopterRepo) -> None:
+    """ADR-057 point 2: one home for an entry's extent, so the span and the body agree."""
+    adopter.write({TERMS: SECTIONED})
+    spans = _spans(_document(), TERMS)
+    bodies = {a.location: a.body for a in fd.discover_artefacts(adopter.root).artefacts}
+    for location in (f"{TERMS}#term-a", f"{TERMS}#term-b"):
+        assert _lines(SECTIONED, spans[location]) == bodies[location]
+
+
+def test_a_rule_gives_the_lines_of_its_section(adopter: AdopterRepo) -> None:
+    rule_set = (
+        "---\nrule-set: CMN\nversion: 1.0.0\nrules:\n  RS-CMN-001: {status: proposed}\n---\n\n"
+        "# Common rules\n\n## RS-CMN-001 — Name things\n\nName things by their role.\n"
+    )
+    adopter.write({"tech-docs/rule-sets/cmn.md": rule_set})
+    spans = _spans(_document(), "tech-docs/rule-sets/cmn.md")
+    assert spans == {"tech-docs/rule-sets/cmn.md#RS-CMN-001": {"first_line": 10, "last_line": 12}}
+    span = spans["tech-docs/rule-sets/cmn.md#RS-CMN-001"]
+    assert _lines(rule_set, span) == "## RS-CMN-001 — Name things\n\nName things by their role.\n"
+
+
+def test_a_span_counts_lines_whatever_the_file_s_line_breaks(adopter: AdopterRepo) -> None:
+    """A file written with `\\r\\n` has the lines the same file written with `\\n` has."""
+    adopter.write({TERMS: SECTIONED})
+    spans = _spans(_document(), TERMS)
+    (adopter.root / TERMS).write_bytes(SECTIONED.replace("\n", "\r\n").encode("utf-8"))
+    assert _spans(_document(), TERMS) == spans
+
+
+def test_at_a_commit_the_span_is_that_state_s(adopter: AdopterRepo) -> None:
+    adopter.write({TERMS: SECTIONED})
+    adopter.commit("terms")
+    adopter.write({TERMS: SECTIONED.replace("# Terms\n", "# Terms\n\nTwo more lines.\n")})
+    assert _spans(_document(), TERMS)[f"{TERMS}#term-a"] == {"first_line": 20, "last_line": 26}
+    at_head = json.loads(_run("--at", "HEAD", "--json").output)
+    assert _spans(at_head, TERMS)[f"{TERMS}#term-a"] == {"first_line": 18, "last_line": 24}
+
+
+# --- the rule sets whose scope covers an artefact (#1361) -----------------------------------
+
+
+def _rule_set(name: str, scope: str | None = None) -> str:
+    scope_line = "" if scope is None else f"scope: {scope}\n"
+    return f"---\nrule-set: {name}\nversion: 1.0.0\n{scope_line}rules: {{}}\n---\n"
+
+
+def _in_scope_of() -> dict[str, list[str]]:
+    document = _document()
+    assert document["schema_version"] == 1  # a key added within the document's version
+    return {a["location"]: a["in_scope_of"] for a in document["artefacts"]}
+
+
+def test_each_artefact_names_the_rule_sets_whose_scope_covers_it(adopter: AdopterRepo) -> None:
+    """COR-051 point 2: a scope is given as places, so it is read as a place is — a
+    folder covers every document beneath it, a glob what it matches, a file itself."""
+    notes = "tech-docs/rule-sets/notes.md"
+    guides = "tech-docs/rule-sets/guides.md"
+    method = ".pkit/capabilities/evidence/rule-sets/ev.md"
+    adopter.write(
+        {
+            notes: _rule_set("NOTES", "[notes]"),
+            guides: _rule_set("GUIDES", "['handbook/**', notes/guide.md]"),
+            method: _rule_set("EV", "['handbook/guides/*.md']"),
+            "tech-docs/rule-sets/none.md": _rule_set("NONE"),  # no scope: it covers nothing
+        }
+    )
+    assert _in_scope_of() == {
+        "notes/guide.md": [guides, notes],  # in path order
+        "notes/rules.md#RS-CMN-001": [notes],  # an entry, by its file
+        "tech-docs/evidence/run.md": [],  # no rule set covers it
+        "handbook/guides/start.md": [method, guides],  # a method rule set's scope too
+    }
+
+
+def test_a_scope_leaving_the_repository_covers_nothing(adopter: AdopterRepo) -> None:
+    adopter.write({"tech-docs/rule-sets/away.md": _rule_set("AWAY", "['../notes', '/notes']")})
+    assert all(sets == [] for sets in _in_scope_of().values())
+
+
+def test_a_scope_entry_that_is_not_text_is_passed_over(adopter: AdopterRepo) -> None:
+    """Read forgivingly, as discovery reads a declaration; the rule-set pass judges the shape."""
+    notes = "tech-docs/rule-sets/notes.md"
+    adopter.write({notes: _rule_set("NOTES", "[{not: text}, notes/guide.md]")})
+    assert _in_scope_of()["notes/guide.md"] == [notes]
+
+
+def test_without_a_rule_set_no_artefact_is_in_scope(adopter: AdopterRepo) -> None:
+    assert all(sets == [] for sets in _in_scope_of().values())
 
 
 def test_the_document_is_the_one_discovery(adopter: AdopterRepo) -> None:
