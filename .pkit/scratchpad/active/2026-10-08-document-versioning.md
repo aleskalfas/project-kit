@@ -12,7 +12,8 @@ A design for #1383. It asks whether pkit's documents should carry versions their
 - **Read from main at `30cfb15a`:** the records, the code and the history counts below.
 - **Citations:** records and rules by permanent id and point. Code by file and line at `30cfb15a`, since code has no permanent ids.
 - **Reviewed:** by the critic and the architect. Their findings and the answers are in "Review", at the end.
-- **Next:** the maintainer answers the four questions, one at a time. The issues in "Slicing" are filed on the maintainer's go.
+- **Decided:** by the maintainer on 8 October. Questions 1 to 3 are answered in PR #1384's comments. Question 4 went to a design of its own, #1387, decided on 9 October.
+- **Next:** the drafts in "Slicing" are filed on the maintainer's go.
 
 ## The question
 
@@ -20,7 +21,7 @@ Should pkit's documents carry versions their authors declare, and how does a rec
 
 ## In short
 
-No semantic versions for documents, and no meaning marker yet. Friction's cost comes from what a dependant rests on, not from how an author classes a change.
+No semantic versions for documents, and no meaning marker yet. Friction's cost comes from what a dependant rests on, not from how an author classes a change. The maintainer decided so, and chose to anchor to parts now ("Decisions").
 
 - **Why not semver:** a minor spares no dependant, and a major asks no more than today. pkit's rule sets already make an added rule a major (COR-051 point 7).
 - **What semver reduces to:** one fact, whether the meaning changed. Alternative D carries it as a marker that moves only when the meaning changes.
@@ -28,9 +29,9 @@ No semantic versions for documents, and no meaning marker yet. Friction's cost c
 - **Why D can wait:** of 182 answers that a document's edit caused since 27 September, 4 followed an edit that kept the meaning. None was on a record adopters receive.
   - **It adds, and migrates no data:** a document without a marker keeps today's reading, so D can come later.
 - **Where the cost is:** 97 of the 182 came from two dependants anchored to whole documents while resting on a part.
-  - **Both can be fixed on the dependant's side first,** with what exists. Each restates part of what it anchors.
-  - **A backbone mechanism for finer anchors (alternative E) would reopen settled decisions.** It waits until the need recurs (COR-007).
-  - **What cannot wait for adopters is whether a record's points are stable identifiers.** Records and adopters cite points, and refining in place renumbers them.
+  - **The maintainer chose to anchor to parts now,** through a design of its own (#1387). It reopens settled decisions, which the maintainer authorised.
+  - **Its precondition is decided too:** a record's points keep their numbers for good. Records and adopters cite points, and refining in place renumbered them.
+  - **The two dependants re-point to the parts they rest on,** in place of the fixes on the dependant's side this note proposed.
 - **`reviewed-against` takes pointers under every alternative:**
   - **Text in a repository:** a commit on its default branch, or the change the record lands in. A pull request's head is no pointer, since a rebase loses it.
   - **Text in the tracker:** an absolute link, with the time of the version read.
@@ -355,7 +356,7 @@ A dependant anchors to the part of a document it rests on, so an edit to another
 
   - `0192e5fc` is PR #1353's squash commit on main, so it stays reachable.
   - The comments are pointed at by pull request and day. Each comment's own link, with its time, would be exact.
-- **Note:** the field exists only if the maintainer answers yes to the template round's question 1. Question 3 below assumes so.
+- **Note:** the maintainer answered yes to the template round's question 1, so the field exists (#1362's note, "Decided: the revalidation record").
 
 ## Interactions
 
@@ -376,66 +377,102 @@ A dependant anchors to the part of a document it rests on, so an edit to another
 
 ## Recommendation
 
-Choose A for `reviewed-against`. Give documents no semantic versions, leave the meaning marker for later, and fix the two costly cases with what exists.
+The decided design: pointers for `reviewed-against`, no semantic versions on documents, the meaning marker later, and part anchors now, through a design of their own.
 
-- **A for `reviewed-against`:** a list of sources, each with a title, an absolute link where it is not this repository, and a commit or a time.
+- **A for `reviewed-against`:** a planned record lists the sources of the design it reviewed, in its front matter. Each source is a mapping with `title`, `url` and `version`.
+  - **Text in this repository:** a commit on the default branch, or `this change` when the design lands with the record. It has no `url`.
+  - **Text in the tracker:** its link and the time it was read.
+  - **Never a pointer:** a pull request's head, or a commit the default branch does not hold.
+  - **Two checks:** the validator checks the form. A command of its own checks offline that each named commit is on the default branch, and reports "unknown" when it cannot tell.
 - **Not B:** friction reads one bit of the number. A minor and a major ask the same, and the segment is a judgment nobody reads.
 - **D later:**
   - **The history shows little for it:** 4 of 182 answers, and none on a record adopters receive.
   - **It adds, and migrates no data.** A document without a marker keeps today's reading.
-  - **When to reopen it:** the release-to-release count shows syncs whose edits all keep the meaning.
+  - **When to reopen it:** between two releases, the edits to records adopters receive are measured. A sync whose edits all keep the meaning is what D would spare.
   - **It ships as a surface change then,** likely a record of its own. It lets an upstream author clear an adopter's friction.
-- **E's mechanism later, its precondition now:**
-  - **The two costly cases first, with what exists:** living-docs DEC-001 cites the seven rules instead of restating them, and the area index is generated.
-  - **Whether a record's points are stable identifiers, decided now:** citations by point are everywhere, and adopters' records will cite core points the same way.
-  - **A backbone mechanism waits** until the need recurs after those fixes (COR-007). It would reopen the decisions E lists.
+- **E now, by #1387's design:**
+  - **A record's points** become headings that keep their numbers for good. A retired point keeps its id, with a stub where it was.
+  - **An anchor can name a part:** a record's point, or a page's section or lead. Friction then compares only that part.
+  - **The two costly dependants** re-point to the parts they rest on, and are counted again by part.
 - **Not C now:** release tags already baseline the repository. A tag per review is the fallback where a design must be reviewed before it lands.
+- **Rule sets keep their versions,** since inheriting sets pin them. What each part of a set's version means, and a check that it moves, were found on the way (items 2 and 3).
 
-## Questions for the maintainer
+## Decisions
 
-Each question is one decision, with a recommendation. Ask them one at a time.
+The maintainer decided questions 1 to 3 on 8 October, in comments on PR #1384. Question 4 went to a design of its own, #1387, which the maintainer decided on 9 October.
 
-1. **Do documents carry semantic versions their authors declare?**
-   - **Recommendation:** no. Friction reads one fact from a version, whether the meaning changed, and minor and major ask the same.
-   - **Else:** B for documents others anchor, where a patch spares the dependants.
-2. **Does a depended-on document carry a meaning marker (D) now?**
-   - **Recommendation:** not now. It would have spared 4 of 182 answers, and none on a record adopters receive. It can come later without a data migration.
-   - **Else:** design it now, as a record of its own, since it touches COR-050, COR-053, COR-025 and the decisions README.
-3. **What form does `reviewed-against` take?**
-   - **Recommendation:** a list of mappings, one source each, with a captured source's keys: `title`, `url` and `version`. A command beside `check-numbers` checks this repository's commits.
-   - **Else:** one line of text, as the template round proposes, which no script checks. Or capture the tracker text in the record.
-4. **How is anchoring to part of a document (E) taken forward?**
-   - **Recommendation:** fix the two costly cases with what exists, and decide now whether a record's points are stable identifiers. A backbone mechanism waits until the need recurs.
-   - **Else:** design the mechanism now. That needs the maintainer's leave to reopen:
-     - what an anchor rests on, whole files, and the precision ADR-057 and living-docs DEC-001 keep at a file
-     - the two alternatives COR-050 rejected, anchors per section and anchors on every statement
-     - the decisions README's rule that a new point goes where it belongs, for every project's records
+1. **Do documents carry semantic versions their authors declare?** **Decided: no,** as recommended, by the maintainer on 8 October.
+   - **Why:** friction reads one fact from a version, whether the meaning changed. A minor and a major ask the same, so the segment is a judgment nobody reads.
+   - **Where it stands:** software-analysis DEC-001 point 6 says the capability's artefacts and records carry no declared versions (PR #1391).
+   - **What keeps its number:** rule sets and components, since others pin them (COR-051 point 7, PRJ-002).
+   - **Not taken:** B for documents others anchor, where a patch spares the dependants.
+2. **Does a depended-on document carry a meaning marker (D) now?** **Decided: not now,** as recommended, by the maintainer on 8 October.
+   - **What it means:** a change cannot yet mark a document's meaning as unchanged. Every edit to an anchored document asks its dependants, as today.
+   - **Why:** it would have spared 4 of 182 answers, and none on a record adopters receive. It can come later without a data migration.
+   - **The trigger to revisit,** as the maintainer recorded it: between two releases, measure how many edits to records adopters receive kept the meaning (D, "A trigger that can be measured now").
+   - **No issue:** this note keeps the measure, the trigger and the list of records D would touch.
+   - **Not taken:** designing D now, as a record of its own.
+3. **What form does `reviewed-against` take?** **Decided: a list of mappings,** as recommended, by the maintainer on 8 October.
+   - **The answer:** a planned revalidation record names the version of the design it reviewed, in its front matter. It is a list of mappings with `title`, `url` and `version`, the keys a captured source uses.
+   - **Text in this repository:** pinned by a commit on the default branch, or by `this change` when the design lands with the record.
+   - **Text in the tracker:** pinned by its link and the time it was read.
+   - **Never a pointer:** a pull request's head, or a bare branch commit.
+   - **The checks:** the validator checks the form. A separate command checks offline that each named commit is reachable from the default branch, and reports "unknown" when it cannot tell.
+   - **Why:** a pointer returns the text reviewed, which no number does. Text in the tracker has no version any alternative gives, and a list lets a script check each source.
+   - **Not taken:** one line of text, as the template round proposed, which no script checks. Nor capturing the tracker text in the record.
+4. **How is anchoring to part of a document (E) taken forward?** **Decided: design the mechanism now,** the alternative, by the maintainer on 8 October.
+   - **Why:** 97 of the 182 answers a document caused came from two dependants that rest on a part. Anchors on the part could have spared up to 90 of them.
+   - **What it reopens:** the settled positions E lists, and others #1387's design found. The maintainer chose it knowing that, and authorised all seven on 9 October.
+   - **Where it was designed:** #1387, in its note `2026-10-08-part-anchors.md` (PR #1392). The maintainer decided its questions on 9 October.
+   - **What that design decided:** a record's points become headings with permanent ids, and a retired point keeps its id with a stub. An anchor can name a record's point, or a page's section or lead.
+   - **The two costly dependants:** they re-point to the parts they rest on, in place of the fixes this note proposed. living-docs DEC-001 point 3 keeps restating the rules, and the area index is trimmed to its sources' leads, not generated.
+   - **The issues that carry it:** #1401, #1407, #1412, #1414, #1416, #1417, #1419, #1421, #1422, #1423, #1424, #1425, #1426 and #1427.
+   - **Not taken:** fixing the two cases with what exists, and letting a backbone mechanism wait until the need recurs.
 
 ## Slicing
 
-On the recommended answers, the work rides on issues the template round already planned, plus new ones.
+Each change the decisions need is carried by a filed issue, a merged change, or a draft to file. Where an issue carries a change only in part, the missing part is named.
 
-- **#1363, the field:** `reviewed-against` is a list of mappings with `title`, `url` and `version`, required when `trigger` is `planned`.
-- **#1364, split in two:**
-  - **The form, in the validator:** the keys, an absolute link, and a commit id or a time.
-  - **Reachability, a command of its own beside `check-numbers`:** this repository's commits on the default branch, read from the default branch only. It reports a commit it cannot place as unknown, and says why that differs from the numbering setting.
-- **#1366, the stamp:** `--reviewed-against` repeats, one source each.
-- **#1358, DEC-001's refinement:** point 6 says a planned record names where the design it reviewed stood, by pointer.
-  - **The same change:** a design that lands with its record is named by the change, resolved from the history as `at` is.
-  - **Item 1 of "Found on the way"** rides here too.
-- **New, first: a record's points as stable identifiers.** A core question for the decisions README, and perhaps COR-051's identifier families.
-- **New: the two costly dependants.**
-  - **The seven rules and living-docs DEC-001 point 3:** the record cites the rules instead of restating them, and the rules drop their anchor on the whole record.
-  - **The area index:** generated from each area README's role, so it drops its anchors on the READMEs whole.
-  - **Then the count again,** at the level of points, before any mechanism relies on it.
-- **New, found on the way:** a rule set's version, checked by the change check when its accepted rules change (item 2). Consider a major alone (item 3).
-- **On question 2, no issue:** this note keeps the measure, the trigger and the list of records D would touch.
+- **`reviewed-against`, the field:** a list of mappings with `title`, `url` and `version` in the revalidation record's schema, required when `trigger` is `planned`.
+  - **Carried by #1363, in part.** The template round's note gives the field to #1363 ("For the build"), but #1363's body names neither the field nor the record's schema.
+  - **To file:** an edit to #1363 that adds the field, its hint and example, and its form.
+- **The form, checked by validation:** the keys, an absolute link, and a full commit id, `this change` or a time, each with or without a link as its source needs.
+  - **The round gave it to #1364,** whose body checks only a body's structure.
+  - **To file:** in the edit to #1363, in the record's schema. Validation applies that schema whatever the format rule's status, and the stamp, the validator and the reachability command then read one definition.
+- **Reachability, a command of its own beside `check-numbers`:** each commit of this repository that a planned record names is on the default branch. It reads the default branch only, offline, and reports a commit it cannot place as unknown.
+  - **The round gave it to #1364 too,** whose body does not name it.
+  - **To file:** "pkit analysis check-pointers fails on a reviewed commit the default branch does not hold". It is a Task of its own, since it needs only #1363 while #1364 waits on #1360 and #1361.
+- **The stamp:** `--reviewed-against` repeats, one source each.
+  - **Carried by #1366, in part.** The round gave it the flag, but its body does not name it.
+  - **To file:** an edit to #1366 that adds the flag.
+- **DEC-001's refinement:** point 6 names where the design a planned record reviewed stood, by pointer. A design that lands with its record is named by the change, and its commit is found from the history, as `at`'s is.
+  - **Merged:** PR #1391, which closed #1358, as `839f7ef`. Point 6 says so on main.
+  - **It also says** that the capability's artefacts and records carry no declared versions (question 1).
+- **A record's points as stable identifiers:** carried by #1387's build.
+  - **The decisions:** a core record that fixes a record's points for good (#1407), and ADR-057's two homes (#1412). The decisions README follows (#1422).
+  - **The reading, validation and the numbering command:** #1414, #1416 and #1417.
+  - **Friction for points:** #1419. Page sections follow (#1423), and living-docs learns part anchors (#1424).
+  - **project-kit's records:** six amendment sections are folded first (#1401), and the records are converted (#1421).
+  - **Until then:** project-kit's operational rules keep every point at its number (#1399, merged in PR #1400).
+- **The two costly dependants:** carried by #1387's slice G, in the shape that design decided.
+  - **The seven rules:** each anchors to the points of living-docs DEC-001 it rests on (#1426). DEC-001 point 3 keeps restating them.
+  - **The area index:** says no more than its sources' leads, and anchors to them and two sections (#1425). It is not generated.
+  - **The count again, by part:** #1427.
+- **Found on the way, item 1, a commit range:** merged in PR #1391. Point 6 reads "a range of commits on the default branch", as the maintainer decided.
+  - **Carried in part:** the texts that describe `change` still say "a range of commits". They are the record's schema, the stamp's help, the analysis-author skill, the template and the README's example.
+  - **To file:** in the edits to #1363 and #1366.
+- **Found on the way, items 2 and 3, a rule set's version:** carried by no issue. The rule-set reviewer's issues do not name them.
+  - **First, the maintainer's:** whether a rule set's version is checked at all. These are findings, not decisions.
+  - **To file, if so:** "Decide what each part of a rule set's version means, and whether a change checks it", a refinement of COR-051 point 7. It also decides which sets the rule binds.
+  - **Then:** "pkit rule-sets check-diff fails a change that makes a rule set's major due without moving it", once the refinement decides a check.
+- **Question 2, the meaning marker:** no issue. This note keeps the measure, the trigger and the list of records D would touch.
 
 ## Found on the way
 
 1. **A commit range in a record's `change`:** software-analysis DEC-001 point 6 lets a record name "a range of commits", and the schema's example is `abc1234..def5678`. A range of branch commits leaves main with the squash (COR-009 point 1).
 2. **A rule set's version is declared and never checked:** nothing checks that it moved when an accepted rule changed. The schemas README states the rule only in prose.
-   - **Where a check would run:** it compares a change with a base, so it is the change check's, not validation's (COR-055 point 2).
+   - **Where a check would run:** it compares a change with a base, so it is a command of its own, not validation (COR-055 point 2).
+   - **Not the friction change check:** it only warns in warning mode, and is dormant where nothing is anchored (COR-050 points 12 and 15). #1387's design placed its numbering check the same way.
 3. **COR-051 point 7 defines only the major,** and a minor or a patch of a rule set has no stated meaning.
    - **The argument against B applies here too:** every change that matters to an inheriting set is a major, and pins read only the major. A major alone may be the honest form, and it is cheapest to change before adopters.
 
@@ -517,7 +554,7 @@ The architect found one architectural concern, three fit issues, two drifts and 
    - **Answer:** accepted. The form stays in the validator, and reachability moves to a command of its own beside `check-numbers`. The claim that offline was this design's choice is gone.
    - **The severities differ on purpose:** an unplaced commit is unknown for provenance, and a problem for the numbering setting's gate. The note says so.
 3. **F2, a record cannot name the commit it lands in.** **Answer:** accepted, option b. A design in the same change is named by the change, and its commit is found from the history, as `at`'s is.
-4. **F3, a rule set's version check compares a change with a base.** **Answer:** accepted. "Found on the way" places it in the change check, and weighs a major alone.
+4. **F3, a rule set's version check compares a change with a base.** **Answer:** accepted. "Found on the way" places it in a command of its own, and weighs a major alone.
 
 **Drift:**
 
@@ -531,7 +568,7 @@ The architect found one architectural concern, three fit issues, two drifts and 
 
 **Worth recording:**
 
-7. **W1, whether a record's points are stable identifiers cannot wait for adopters.** **Answer:** accepted. It is the first new issue in "Slicing", and question 4's recommendation.
+7. **W1, whether a record's points are stable identifiers cannot wait for adopters.** **Answer:** accepted. It became the first decision of #1387's design (Decisions, question 4).
 8. **W2, several components record which version of a text was read.** **Answer:** accepted in part. `reviewed-against` takes a captured source's keys, and requires an absolute link. Moving the form into core waits for a further case (COR-007).
 
 **No concern:** rejecting B, A as software-analysis's own, dropping pull-request heads, any merge style, and no growth in the configuration.
