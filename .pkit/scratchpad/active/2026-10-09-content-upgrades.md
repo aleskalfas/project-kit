@@ -47,7 +47,7 @@ Four format changes are decided or planned. One reaches adopters' own content to
 
 | Case | Owner | Class | Who converts |
 |---|---|---|---|
-| A record's points become headings (#1387) | backbone | optional | the tool, by the decided rule. A person confirms the reading. |
+| A record's points become headings (#1387) | backbone | optional | the tool, by the decided rule. Where a record's reading is ambiguous, a person answers, or approves an agent's proposal. |
 | An analysis kind's structure changes (DEC-001 point 1 as refined, #1363 to #1368) | software-analysis | required for live artefacts. Never for revalidation records or withdrawn artefacts. | the tool adds the part's heading and hint. A person fills the part. |
 | Actors move to one file each (#1346) | software-analysis | required | the tool. Each move owes a revalidation, a person's decision (COR-050 point 3). |
 | A page kind's structure changes (`page-kinds.yaml`, RS-LDOC-004) | living-docs | required where the validator fails a page without the new section | the tool adds the heading. A person writes the section. |
@@ -296,6 +296,7 @@ A project learns what is pending from every lifecycle command, and one command o
   - **The report comes from the release the project ends at,** after content and migrations. In a pinned raise, that is the inner run under the target's code.
   - **Every run reports,** the early returns included. So a version moved earlier never hides a pending conversion.
   - **It degrades, never fails:** where a capability's detect is not provisioned or gives no answer, the report says so and the command goes on.
+  - **These hooks rest on today's upgrade flow,** which #1429 restructures. Where each report sits follows #1429's design, and B2 is built after it.
 - **`pkit status`:** a section listing each conversion with pending units, its class, the count, and what the project chose to keep.
 - **`pkit validate`, a backbone member:**
   - **states a fact:** a required conversion with pending units, naming the command. The owner's own check is the one that fails the unit.
@@ -511,7 +512,8 @@ The maintainer decided the four questions on 10 October, on PR #1395, one at a t
 5. **How does an agent take part in a conversion?**
    - **Decided:** a skill drives it. pkit's commands stay deterministic and never call a language model.
    - **How:** a conversion that needs a reading writes a proposal and answers file from its dry run. An agent, guided by a skill, fills the open choices and drafts any content that must be written. The person reviews and approves the diff, and `--answers` applies it.
-   - **Whose skill:** the conversion's owner ships it, or one general skill serves every conversion.
+   - **Whose skill (decided 10 October):** one general skill, paired with the conversion command (COR-005), serves every conversion. What is specific to a conversion is data its owner writes into the proposal file: each choice carries its question and its options, and each part to write carries its hint and the rule set that governs it.
+     - **Not taken now:** a skill per owner or per conversion. Every format change would also need a skill, and agents would have to find the right one. An owner adds a skill of its own only when a conversion proves its hints are not enough (COR-007).
    - **Without an agent,** a person fills the same file, or answers the same choices on the terminal.
    - **Why:** pkit runs the same with or without an agent. The skill gives the agent what it needs to fill the file well, and a person still approves every word.
 6. **How is a conversion's completion judged?**
@@ -532,10 +534,11 @@ On the decided design, the work comes in four groups. The optional path comes fi
   - **A2, COR-001, COR-004 and COR-010 refined,** with COR-002, COR-017 and COR-023 reworded as authorised, and a pointer in core rule 7. Through the decision-author skill.
     - **Shared with #1429:** COR-001's named-writer principle and COR-004's operation list. Whichever design's record lands first carries the principle, and the other adds its instance.
   - **A3, ADR-049 refined, and the conversions ADR,** authored by the architect.
+    - **Shared with #1429,** whose ADR partially supersedes ADR-049. ADR-049's lines are written once, as for A2.
   - **A4, the lifecycle README and the CLI README:** conversions, and the rollback line. The correction of lines 723 and 758 moves to #1429.
 - **B, the optional path, with #1387's B4 as its first conversion:**
   - **B1, the declaration, the runner and the skill:** the backbone's list, the package-metadata entry, detect under the command limits, and apply under its own policy. Staging, the answers file, and the checks the backbone runs around apply.
-    - **The skill** drives a conversion in the harness. It runs the dry run, which writes the proposal file. The agent fills the open choices and drafts any part that must be written. The person approves the diff, and the skill applies it with `--answers`. An owner that ships its own skill ships it with its conversion.
+    - **The skill** drives a conversion in the harness. It runs the dry run, which writes the proposal file. The agent fills the open choices and drafts any part that must be written. The person approves the diff, and the skill applies it with `--answers`. One general skill, paired with the command, serves every conversion. Each conversion's choices, questions, options, hints and governing rule sets reach it through the proposal file.
   - **B2, discovery:** the conversion command, the reports of upgrade and sync, the status section, the validation member, and the configuration key for what a project keeps.
     - **It is built after #1429's build,** which changes the commands whose reports it adds.
   - **B3, the record conversion** (#1387's B4), filed under #1394: detect and apply for headed points, refusing copies and superseded records. `pkit decisions check-diff` reads its detect.
