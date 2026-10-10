@@ -445,10 +445,11 @@ Each change the decisions need is carried by a filed issue, a merged change, or 
     - **Its cost:** it reads which records are new against the run's base, as the change check reads its change. The base reaches only that.
     - **Not taken:** failing on every record, and reporting only, which would let the usual slip through.
   - **The round gave it to #1364 too,** whose body does not name it.
-  - **To file:** "pkit analysis check-pointers fails a change that adds a record pointing off the default branch". It is a Task of its own, since it needs only #1363 while #1364 waits on #1360 and #1361.
+  - **Filed:** #1448, "pkit analysis check-pointers fails a change that adds a record pointing off the default branch". It is a Task of its own, since it needs only #1363 while #1364 waits on #1360 and #1361.
 - **The stamp:** `--reviewed-against` repeats, one source each.
   - **Carried by #1366, in part.** The round gave it the flag, but its body does not name it.
   - **To file:** an edit to #1366 that adds the flag.
+  - **Decided: the stamp warns on a commit off the default branch, and still writes,** by the maintainer on 11 October. It places the commit as #1448 does. Refusing would leave no way to write the record while the design's pull request is open. Added to #1366.
 - **DEC-001's refinement:** point 6 names where the design a planned record reviewed stood, by pointer. A design that lands with its record is named by the change, and its commit is found from the history, as `at`'s is.
   - **Merged:** PR #1391, which closed #1358, as `839f7ef`. Point 6 says so on main.
   - **It also says** that the capability's artefacts and records carry no declared versions (question 1).
