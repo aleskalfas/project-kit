@@ -13,9 +13,8 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-01T01:25:06Z
-      outcome: unchanged
-      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
+      at: 2026-10-11T18:03:36Z
+      outcome: updated
 ---
 
 # Claude Code adapter
@@ -49,11 +48,11 @@ The kit's permissions story for Claude Code — what allows and denies are pre-c
 
 The file Claude Code actually reads is the adopter's `.claude/settings.json`, merged from these two by `merge-settings.sh`, which `pkit init`, `pkit sync` and `pkit merge` run (COR-002 / COR-004). See **How adopters use this adapter** below.
 
-Top-level keys outside `permissions` (e.g. `agent`, `model`) in either `core/settings.json` or `project/settings.json` flow through to `.claude/settings.json` with last-write-wins precedence (project overrides core; an existing adopter entry overrides both). Permissions keep their existing union-deduped semantics.
+Top-level keys outside `permissions` (e.g. `agent`, `model`) in either `core/settings.json` or `project/settings.json` flow through to `.claude/settings.json` with last-write-wins precedence (project overrides core; an existing adopter entry overrides both). Keys under `permissions` merge as **What the merge keeps under `permissions`** below says.
 
 **Ownership modes (COR-002 authoritative-region tier).** By default (`ownership_mode: additive`) the merge is append/union/baseline-enforce — it only ever *adds* to `permissions` and re-asserts the safety denies, never removing adopter entries. Under `ownership_mode: managed` (set via `pkit permissions mode managed`), the realizer **owns the `permissions` region** and regenerates it **wholesale** from its model projection: the merge replaces `.permissions` with the projection supplied per-run (via `$PKIT_MANAGED_REGION_FILE`, written by `pkit permissions apply`) instead of unioning it, so a grant removed from the model vanishes (drift heals down to empty) — everything *outside* `.permissions` stays byte-for-byte adopter-owned. This needs no in-file markers and no strip-logic: `permissions` is already stripped from every source and recomputed each run, so managed mode only swaps the *source* of that recompute. The owned region is the fixed realizer constant `.permissions` (the hook rides the separate top-level `hooks` key); the gate is the `ownership_mode` config flag, never file-presence, so a stray region file can't reactivate managed behaviour. Managed mode only replaces when a projection is actually supplied: a plain `pkit sync` in managed mode with no projection in hand falls through to the additive default (it never blanks the region). *(The `apply` realizer that generates the projection is a later increment; this section documents the merge-primitive tier it builds on.)*
 
-**Capability-contributed overlays** (per [project-management:DEC-030]). Installed capabilities can ship per-harness overlay templates and adopter-toggled live overlays under `.pkit/capabilities/<cap>/adapters/claude-code/overlay.template.json` (core-owned) and `.pkit/capabilities/<cap>/project/adapter-overlays/claude-code.json` (adopter-owned). `merge-settings.sh` walks manifest-registered capabilities; each capability whose adopter-owned overlay file is *present* contributes its top-level keys into the merge chain between `project/settings.json` and the existing target. The opt-in flow is the capability's own `enable-*` / `disable-*` CLI subcommand pair; for project-management, see `pkit project-management enable-default-agent`. Overlay `permissions` keys are reserved — silently stripped at merge time so overlays cannot influence allow/deny.
+**Capability-contributed overlays** (per [project-management:DEC-030]). Installed capabilities can ship per-harness overlay templates and adopter-toggled live overlays under `.pkit/capabilities/<cap>/adapters/claude-code/overlay.template.json` (core-owned) and `.pkit/capabilities/<cap>/project/adapter-overlays/claude-code.json` (adopter-owned). `merge-settings.sh` walks manifest-registered capabilities; each capability whose adopter-owned overlay file is *present* contributes its top-level keys into the merge chain between `project/settings.json` and the existing target. The opt-in flow is the capability's own `enable-*` / `disable-*` CLI subcommand pair; for project-management, see `pkit project-management enable-default-agent`. Overlay `permissions` keys are reserved — silently stripped at merge time so overlays cannot influence any key under `permissions`.
 
 ### `merge-claude-md.sh`
 
@@ -169,6 +168,19 @@ The install/sync runtime (`pkit init` / `pkit sync`) automates all adapter primi
 4. **Agents.** Run `.pkit/adapters/claude-code/deploy-agents.sh`.
 5. **Undeploy one capability.** Not a setup step: `pkit capabilities uninstall` runs `.pkit/adapters/claude-code/undeploy-capability.sh <name>` where the capability's files stay. Running it by hand is safe, but a capability still registered is deployed again by the next sync.
 6. **Permission enforcement (opt-in).** Run `pkit permissions enable` to register the PreToolUse hook; `pkit permissions disable` to remove it. See *Live permission enforcement* above.
+
+### What the merge keeps under `permissions`
+
+The merge keeps every key under `permissions`. It reads three files: the baseline `settings/core/settings.json`, the project's additions `settings/project/settings.json`, and the existing `.claude/settings.json`. Each key merges in one of two ways.
+
+- **Unioned.** `allow`, `deny`, `ask` and `additionalDirectories` hold the entries of all three files, each entry once. `allow` also gets a `Skill(<name>)` grant for every deployed skill. `allow` and `deny` are always written. `ask` and `additionalDirectories` are written only when one of the three files has them.
+- **One value wins.** Every other key, such as `defaultMode`, keeps one value. The additions win over the baseline. The existing `.claude/settings.json` wins over both. This is the same precedence top-level keys have.
+
+A union only adds. Taking an entry out of the additions leaves it in `.claude/settings.json`, so remove it there too. An entry the baseline ships, such as a safety deny, comes back on the next merge if you remove it.
+
+A key that keeps one value behaves the same way once `.claude/settings.json` has it. Changing it in the additions, or taking it out, does not reach the file. Change or remove it in `.claude/settings.json` too.
+
+Two cases stay as they were. A capability overlay cannot set any key under `permissions`: the merge drops an overlay's `permissions` before it runs ([project-management:DEC-030]). In managed ownership mode, a supplied projection (`$PKIT_MANAGED_REGION_FILE`) replaces `permissions` whole, and none of the keys above survives it (ADR-002).
 
 ### Git footprint (per ADR-009)
 

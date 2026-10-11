@@ -8,6 +8,11 @@
 #   entries in .claude/settings.json (deduped).
 # - Denies similarly unioned (baseline-enforce: kit denies are re-added if
 #   the adopter has removed them).
+# - `ask` and `additionalDirectories` are unioned the same way (deduped),
+#   and appear in the output only when some source carries them.
+# - Every other key under `permissions` (e.g. `defaultMode`) follows the
+#   precedence of top-level keys: project overrides core, and an existing
+#   target entry overrides both.
 # - Per-skill grants: emits `Skill(<name>)` for every kit-shipped skill
 #   under `.pkit/skills/{core,project}/` and every capability-shipped
 #   skill under `.pkit/capabilities/*/skills/`. The deploy is the trust
@@ -29,9 +34,9 @@
 #   deliberate asymmetry vs. collect_skill_grants's directory-presence
 #   walk; settings keys are higher-stakes than skill allows.
 #   A top-level `permissions` key inside an overlay is silently stripped
-#   by step 2 below (the existing del(.permissions) on every source),
-#   so capability overlays cannot influence permissions; the reserved-key
-#   contract per DEC-030 is enforced mechanically.
+#   before the merge runs (collect_capability_overlay_sources below), so
+#   capability overlays cannot influence any key under permissions; the
+#   reserved-key contract per DEC-030 is enforced mechanically.
 # - Idempotent: re-running on a current file reports "exists".
 # - Output uses tagged status lines.
 #
@@ -127,9 +132,9 @@ list_installed_capabilities() {
 # For each installed capability, emit a tmp file path containing the
 # overlay's content with `.permissions` stripped — the reserved-key
 # rule per DEC-030. Stripping at the source step means the permissions
-# union in the jq filter never sees overlay permissions (so an overlay
-# cannot influence allow/deny), while non-permissions top-level keys
-# flow through the reduction step normally.
+# step in the jq filter never sees overlay permissions (so an overlay
+# cannot influence any key under permissions), while non-permissions
+# top-level keys flow through the reduction step normally.
 #
 # Per DEC-030, file presence at <cap>/project/adapter-overlays/
 # claude-code.json is the activation signal; absence means inactive.
@@ -219,10 +224,17 @@ if [ "$ownership_mode" = "managed" ] \
 fi
 
 # Two-layer merge:
-#   1. Compute `permissions` with the existing union-deduped semantics
-#      for `allow` / `deny` (byte-for-byte unchanged vs. earlier
-#      versions of this script for any input that only used those
-#      sub-keys).
+#   1. Compute `permissions` from the sources' `permissions` objects.
+#      `allow` (plus the skill grants) and `deny` are unioned and deduped,
+#      and always present. `ask` and `additionalDirectories` are unioned
+#      and deduped the same way, and present only when some source has
+#      the key. Every other key under `permissions` (e.g. `defaultMode`)
+#      is reduced with jq's `*` in source order, the same precedence as
+#      step 2 gives top-level keys. Key order is allow, deny, ask,
+#      additionalDirectories, then the rest, so an input that only uses
+#      `allow` / `deny` merges byte-for-byte as earlier versions of this
+#      script did. Overlay sources reach this step with `permissions`
+#      already stripped (collect_capability_overlay_sources above).
 #   2. Reduce all sources (with `permissions` stripped) with jq's `*`
 #      operator — recursive merge, last-write-wins for scalars and
 #      arrays, deep-merge for nested objects. Source order is core →
@@ -237,11 +249,22 @@ fi
 #      additive `$perms`, so the default path is unchanged.
 merged=$(jq -s --argjson grants "$skill_grants_json" --argjson managed_region "$managed_region" '
     . as $sources
+    | def union($k): [$sources[].permissions[$k] // []] | add | unique;
+      def present($k): [$sources[].permissions | objects | select(has($k))] | length > 0;
+      def unioned_if_present($k): if present($k) then {($k): union($k)} else {} end;
+      (reduce $sources[] as $s ({};
+          . * ((($s.permissions | objects) // {}) | del(.allow, .deny, .ask, .additionalDirectories))
+      )) as $other_perms
     | {
-          permissions: {
-              allow: ([$sources[].permissions.allow // []] | add | . + $grants | unique),
-              deny:  ([$sources[].permissions.deny  // []] | add | unique)
-          }
+          permissions: (
+              {
+                  allow: (union("allow") | . + $grants | unique),
+                  deny:  union("deny")
+              }
+              + unioned_if_present("ask")
+              + unioned_if_present("additionalDirectories")
+              + $other_perms
+          )
       } as $perms
     | (reduce $sources[] as $s ({}; . * ($s | del(.permissions))))
       * { permissions: (if $managed_region == null then $perms.permissions else $managed_region end) }

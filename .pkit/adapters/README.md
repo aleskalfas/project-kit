@@ -11,9 +11,9 @@ pkit:
       record: [COR-005, COR-006, COR-047]
       artefact: [.pkit/adapters/claude-code/README.md]
     revalidated:
-      at: 2026-09-30T21:21:38Z
+      at: 2026-10-11T18:03:38Z
       outcome: unchanged
-      unchanged-because: the ADRs state the same decisions without their dated trailers, and references cite their points instead of their amendments (#860)
+      unchanged-because: the claude-code README now says which keys under permissions the settings merge keeps and how each merges; this page names merge-settings.sh as a deploy primitive and its run order but not how it merges, so nothing it says changes
 ---
 
 # Adapters
