@@ -12,7 +12,7 @@ A design for #1383. It asks whether pkit's documents should carry versions their
 - **Read from main at `30cfb15a`:** the records, the code and the history counts below.
 - **Citations:** records and rules by permanent id and point. Code by file and line at `30cfb15a`, since code has no permanent ids.
 - **Reviewed:** by the critic and the architect. Their findings and the answers are in "Review", at the end.
-- **Decided:** by the maintainer on 8 October. Questions 1 to 3 are answered in PR #1384's comments. Question 4 went to a design of its own, #1387, decided on 9 October. What the pointer check fails on, the stamp's warning, and that a rule set's version is checked were decided on 11 October ("Slicing").
+- **Decided:** by the maintainer on 8 October. Questions 1 to 3 are answered in PR #1384's comments. Question 4 went to a design of its own, #1387, decided on 9 October. What the pointer check fails on, the stamp's warning, and that a rule set's version is checked were decided on 11 October ("Slicing"). Question 2 was reopened the same day: the meaning marker is designed before adopters, in #1451.
 - **Next:** the drafts in "Slicing" are filed on the maintainer's go.
 
 ## The question
@@ -21,7 +21,7 @@ Should pkit's documents carry versions their authors declare, and how does a rec
 
 ## In short
 
-No semantic versions for documents, and no meaning marker yet. Friction's cost comes from what a dependant rests on, not from how an author classes a change. The maintainer decided so, and chose to anchor to parts now ("Decisions").
+No semantic versions for documents. Friction's cost comes from what a dependant rests on, not from how an author classes a change. The maintainer decided so, and chose to anchor to parts now ("Decisions"). The meaning marker, first left for later, is designed before adopters (#1451), as the maintainer decided on reopening question 2.
 
 - **Why not semver:** a minor spares no dependant, and a major asks no more than today. pkit's rule sets already make an added rule a major (COR-051 point 7).
 - **What semver reduces to:** one fact, whether the meaning changed. Alternative D carries it as a marker that moves only when the meaning changes.
@@ -412,6 +412,10 @@ The maintainer decided questions 1 to 3 on 8 October, in comments on PR #1384. Q
    - **The trigger to revisit,** as the maintainer recorded it: between two releases, measure how many edits to records adopters receive kept the meaning (D, "A trigger that can be measured now").
    - **No issue:** this note keeps the measure, the trigger and the list of records D would touch.
    - **Not taken:** designing D now, as a record of its own.
+   - **Reopened on 11 October: designed before adopters,** by the maintainer, in #1451, after #1429's design.
+     - **Why:** the cost of a wording edit lands on every adopter anchored to the record, and the count above saw eleven days while records mostly grew. Changing friction's rules is cheapest before adopters rely on them. Practice has separated editorial from substantive changes from the start, as W3C and the IETF do.
+     - **What the design must settle first:** trust across projects, since a reason written upstream would clear an adopter's friction.
+     - **The trigger above is no longer needed.**
 3. **What form does `reviewed-against` take?** **Decided: a list of mappings,** as recommended, by the maintainer on 8 October.
    - **The answer:** a planned revalidation record names the version of the design it reviewed, in its front matter. It is a list of mappings with `title`, `url` and `version`, the keys a captured source uses.
    - **Text in this repository:** pinned by a commit on the default branch, or by `this change` when the design lands with the record.
@@ -471,7 +475,7 @@ Each change the decisions need is carried by a filed issue, a merged change, or 
   - **Filed:** #1449, "Decide what each part of a rule set's version means and which sets it binds", a refinement of COR-051 point 7.
   - **Then:** #1450, "pkit rule-sets check-diff fails a change that makes a rule set's major due without moving it", after #1449 is accepted and #1408 lands.
   - **Not taken:** deciding the check with the refinement, and leaving the rule in prose.
-- **Question 2, the meaning marker:** no issue. This note keeps the measure, the trigger and the list of records D would touch.
+- **Question 2, the meaning marker:** reopened on 11 October. Filed #1451, "Design how a document marks an edit that keeps its meaning", after #1429's design and before the first adopter. It starts from D, and from the list of records D would touch.
 
 ## Found on the way
 
