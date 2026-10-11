@@ -15,6 +15,11 @@ pkit:
       at: 2026-10-04T10:55:05Z
       outcome: unchanged
       unchanged-because: This page says the core check flags a page when what it is anchored to changed and nobody revalidated it, and that any change to a captured source's file asks the pages anchored to it. COR-050's refinement only adds a case to its rationale's list of where the two checks part; when a page is flagged and what clears it are as the page says.
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "COR-051 binds an accepted rule only where a route from a scoped project set reaches its set, so a method rule set binds nothing until such a set inherits it. This page says a page's format is an error while RS-LDOC-004 is accepted, citing COR-051 point 4, and its spaces' definitions carry no scope. It follows with #1476, which refines living-docs DEC-001 so LDOC binds through the space definitions, each given a scope."
 ---
 
 # living-docs capability

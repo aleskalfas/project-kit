@@ -1,0 +1,17 @@
+component: backbone
+kind: none
+body: >
+  Design-ahead: COR-051 (accepted) states how an accepted rule comes to bind
+  on an artefact. A route leads from an artefact, through a set whose scope
+  selects it, along that set's pins. A rule binds where a route reaches its
+  set with no pin behind on the way. So an inherited rule binds within the
+  scope of the set that inherits it, a shared set with no scope of its own
+  applies where its inheritors reach, and a parent that declares a scope
+  keeps it. A fill binds only where the rule it fills binds, and only while
+  both are accepted. A successor binds where its own set reaches. Two routes
+  that pin one set at different majors, or sets that fill one extension point
+  differently, are a validation error. A scope selects by `paths` and
+  `exclude`, and a set that ships with a component takes no scope. A rule's
+  owner declares, beside the rule and outside its content, the part a check
+  enforces, naming the check and whose it is. It is record text only, and
+  nothing you run changes. The build Tasks that realise it carry the real changesets.
