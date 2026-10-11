@@ -15,7 +15,7 @@ A design for #1429. It sets the shape of the maintainer's decision that `pkit sy
 - **Shared with #1394's design** (`.pkit/scratchpad/active/2026-10-09-content-upgrades.md`): COR-001's named-writer principle, COR-004's list of operations, COR-010, COR-017 and ADR-049. Each is written once. Whichever design's record lands first carries the principle, and the other adds its instance.
 - **Its build** is ordered after #1410 and before #1444, as the maintainer set. Where it falls against #1435 to #1442 is question 8. It shares the version guard with #1435, the messages of upgrade and sync with #1438, and status with #1436 and #1440.
 - **Reviewed:** by the critic and then the architect. Their findings and the answers are in "Review".
-- **Decided so far:** questions 1 to 4, by the maintainer on 11 October. Each answer is under its question.
+- **Decided so far:** questions 1 to 5, by the maintainer on 11 October. Each answer is under its question.
 
 ## The question
 
@@ -439,6 +439,7 @@ One decision each. Question 1 has a deadline and comes first. The rest are in or
   - **Its cost:** sync writes two project-owned files, so the decision's "writes no project-owned path" is false for them, and COR-001, COR-002 and COR-004 change.
 - **Alternative:** merge leaves sync, and runs at init, in a transition, at a capability's install or upgrade, and on `pkit merge`.
   - **Its cost:** every edit to a project's settings additions and every new project skill needs `pkit merge`, against core rule 6's workflow and the adapter's README. project-kit's maintainers need it for every new core skill.
+- **Decided: merge stays in sync,** as recommended, by the maintainer on 11 October. Sync's merge adds only what the project already decided: its own additions, the grants of deployed skills, and its current release's baseline. For a tagged install (question 10), a new release's permissions arrive only through a transition, which question 11 takes up.
 
 ### 6. Which command creates a missing seed path?
 
@@ -489,6 +490,33 @@ One decision each. Question 1 has a deadline and comes first. The rest are in or
   - **Its cost:** the printed command names a version that ages, an untagged install stays possible and unchecked, and a component-only release reaches a tagged project only with the next backbone tag.
 - **Alternative:** an untagged build stamps a development version, such as `1.149.0+g<sha>`, so it never equals a project's recorded version.
   - **Its cost:** every untagged install meets the stop in every project, and the router reads such a version as unordered.
+
+### 11. Does a transition ask before it adds a permission?
+
+Added on 11 October, after question 5, when the maintainer asked whether merge needs a person's approval. The critic's review changed the recommendation ("The critic on question 11").
+
+- **The question:** a release's settings baseline adds an allow entry, so Claude may do without asking what it asked about before. Does the transition ask a person first?
+- **Example:** the baseline's 26 allows include `Bash(git:*)`, `Bash(ssh:*)`, `Edit` and `Write`. A release adds `Bash(curl:*)`. Today an upgrade merges it without asking, and so does a sync that moves the version. After question 5, only a transition brings it, for a tagged install (question 10).
+- **How often:** the baseline has not changed since project-kit's first commit, across 26 releases.
+- **What the person already consents to:** choosing the target runs that release's code. That is its migrations, and every new `pkit` command and shipped script, which `Bash(pkit:*)` and `Bash(.pkit/**/*.sh)` already allow. One consent covers a transition's parts (question 2).
+- **Recommended: show, don't ask.**
+  - **The report lists each widening the settings merge brings:** added allow entries, and added top-level keys such as `hooks`, `env` or `sandbox`. The changelog names them too.
+  - **The person reviews them in the transition's diff** before it reaches the default branch. In a pipeline, that diff is a pull request.
+  - **To bring the question back for an entry,** the project writes an `ask` rule in its additions. Claude Code ranks `ask` above `allow`. A deny forbids the command outright instead.
+  - **What it needs:** merge keeps a project's `ask` rules (Found on the way, 20).
+  - **Practice:** apt, npm and pip ask nothing per permission on an upgrade. The person trusts the release whose code they run, and reviews the change.
+- **Alternative: ask on a terminal.**
+  - **The set:** the target baseline's allows that are absent from the project's settings and its additions, read before the copy runs. That is COR-002's "diff between baseline and adopter content", so an entry the project already holds is not asked about.
+  - **Declining** writes each entry as an `ask` rule in the project's additions, so Claude asks. Deleting the line allows it.
+  - **With nobody to answer,** the transition holds the entries back the same way, as COR-048 point 5 sets for a configuration key. The report names a terminal `pkit merge`, and a flag accepts them in a pipeline.
+  - **Practice:** Chrome installs an extension update that asks for new permissions with warnings, and keeps it disabled until the user accepts them.
+  - **Its cost:**
+    - a named exception to question 2's one consent;
+    - a transition that writes a project-owned path;
+    - prompts about narrow entries, since recency cannot tell them from broad ones;
+    - COR-002's second tier superseded, since it defines that tier by breadth, not recency;
+    - and it covers one channel of widening only.
+- **Managed permissions** (COR-028, `ownership_mode: managed`) are not built (#252). Until they are, a managed project's transition takes the additive merge, under either option.
 
 ## Settled positions this reopens
 
@@ -634,6 +662,7 @@ A draft of the build issues, for filing after the maintainer decides. Each recor
 17. **Commands that write a project's files in the running release's format** (`pkit new`, `pkit config set`, `pkit agents reconcile --write`, `pkit permissions apply`, `pkit visibility`) are not guarded. A follow-up decides whether they stop.
 18. **Stale texts the build rewrites:** `1.54.0/001`'s skip text, "install/sync seeds a complete one", and `1.150.0/001-untrack-runtime-ignored-files`'s header, which reasons from "sync has already recorded the new version".
 19. **ADR-049's amendment says it owes a successor record,** "a successor record is owed", while #1401 plans to fold it in place. That is #1401's question, but R3 and settled position 14 depend on its answer.
+20. **The settings merge erases a project's `ask` rules, `defaultMode` and `additionalDirectories`.** `merge-settings.sh` rebuilds `permissions` with only `allow` and `deny`. So every merge drops the rest of `permissions` from `.claude/settings.json`, and the additions cannot carry them either. Found by the critic on question 11.
 
 ## Review
 
@@ -752,3 +781,31 @@ The architect found the shape right: the split, target first and completion last
 **Escalations (26 to 31):** each is in "Settled positions this reopens", for the maintainer's authorisation. The ADR-049 amendment's successor is #1401's question, recorded as Found 19.
 
 **Where the note is right (32 to 45):** noted.
+
+### The critic on question 11
+
+The critic reviewed question 11 as first drafted: ask on a terminal about the allows added since the release the project leaves, record declines, and refuse with nobody to answer. It found three red flags, and they flipped the recommendation to show, don't ask. Each finding is answered, numbered as the critic numbered them.
+
+**Red flags:**
+
+1. **Refusing contradicted the note's own merge tier and COR-048 point 5,** which write nothing when nobody can answer. **Answer:** accepted. The alternative now holds the entries back, and a flag accepts them.
+2. **Asking contradicts question 2's one consent,** and COR-004's rejection of a verb that is silent here and asking there. **Answer:** accepted. It is the alternative's first cost, and a reason the recommendation flips.
+3. **Managed permissions are not built** (#252), so "nothing is asked" gave the strictest projects the least consent. **Answer:** accepted. The question says so, under either option.
+
+**Gaps:**
+
+4. **The set broke on a first install, an entry the project already holds, a re-added entry, an interrupted transition and a narrowed entry.** **Answer:** accepted. The alternative's set is COR-002's, read before the copy runs. A narrowed entry is reported by neither option, and the merge only appends. Question 5's line now holds for a tagged install only.
+5. **Settings allows are one channel of widening among several:** `Bash(pkit:*)`, shipped scripts, the enforcement hook's profiles, and top-level keys such as `hooks`. **Answer:** accepted. The recommended report lists added top-level keys too, and the question names what the person already consents to.
+6. **The decline record had no home, owner or writer.** **Answer:** accepted. A decline is an `ask` rule in the project's additions, a path the merge already reads.
+7. **Redefining COR-002's second tier by recency supersedes it.** **Answer:** accepted. It is among the alternative's costs.
+8. **Who answers the panel was unstated, and how often a release adds an allow.** **Answer:** accepted. Only a person answers. The baseline has not changed across 26 releases.
+
+**Weak reasoning:**
+
+9. **"Needs no classification metadata" hid the trade of breadth for recency.** **Answer:** accepted, in the alternative's costs.
+10. **Chrome holds an update disabled and asks only about warned permissions,** which is classification, not refusal. **Answer:** accepted. The practice line says so.
+11. **The parallel with question 4 is weak:** an absent allow has a safe default, since Claude asks. **Answer:** accepted. The alternative holds back instead.
+12. **A deny forbids where an `ask` rule restores the question,** and the merge erases `ask`. **Answer:** accepted. `ask` is the remedy in both options, and the erasure is Found on the way 20.
+13. **No threat model.** **Answer:** accepted. The person who chooses the target already runs its code. The gate is over the agent's latitude, which the recommended report covers.
+
+**Counter-alternatives:** A (hold back) and B (`ask` rules) are the alternative's shape. C (COR-002's set) is its set. D (ask at the permission model's level) waits for #252. E (broad and new) needs the classification COR-002 left unbuilt.
