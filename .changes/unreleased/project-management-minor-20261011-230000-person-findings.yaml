@@ -2,6 +2,7 @@ component: project-management
 kind: minor
 custom:
   category: Added
+  pr: "1478"
 body: >
   A reviewer's findings now carry tags that say what each does to the merge
   (#1405, DEC-028): `[block]` withholds the approval, `[advisory]` withholds
