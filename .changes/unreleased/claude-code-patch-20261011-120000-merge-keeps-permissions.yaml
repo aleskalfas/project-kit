@@ -1,0 +1,18 @@
+component: claude-code
+kind: patch
+custom:
+  category: Fixed
+  pr: "1466"
+body: >
+  `merge-settings.sh` keeps every key under `permissions`. It used to rebuild
+  `permissions` from `allow` and `deny` alone, so every `pkit init`, `pkit
+  sync`, `pkit upgrade` and `pkit merge` erased `ask`, `defaultMode`,
+  `additionalDirectories` and any other key there from `.claude/settings.json`,
+  and ignored them in the project's additions. Now `ask` and `additionalDirectories` are
+  unioned across the baseline, the additions and the existing file, without
+  duplicates, as `allow` is. Every other key, such as `defaultMode`, takes the
+  precedence top-level keys have: the additions over the baseline, and the
+  existing file over both. A file with only `allow` and `deny` merges byte for
+  byte as before. A capability overlay still cannot set anything under
+  `permissions`, and a managed region still replaces `permissions` whole. The
+  adapter README documents each key under "How adopters use this adapter".
