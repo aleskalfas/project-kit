@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-10-08T08:35:37Z
+      at: 2026-10-11T18:32:05Z
       outcome: unchanged
-      unchanged-because: the change makes the closing next steps of init recommend uv tool install from the distribution URL, the install this page's Install section already gives, in place of a symlink to a source checkout; the page does not describe those next steps
+      unchanged-because: ADR-049's change moves its amendment's content into its body and decides nothing new; the page's one sentence on pinning, that a project can pin itself to a fixed version, holds under ADR-049 as it did before
 ---
 
 # project-kit
