@@ -15,7 +15,7 @@ A design for #1429. It sets the shape of the maintainer's decision that `pkit sy
 - **Shared with #1394's design** (`.pkit/scratchpad/active/2026-10-09-content-upgrades.md`): COR-001's named-writer principle, COR-004's list of operations, COR-010, COR-017 and ADR-049. Each is written once. Whichever design's record lands first carries the principle, and the other adds its instance.
 - **Its build** is ordered after #1410 and before #1444, as the maintainer set. Where it falls against #1435 to #1442 is question 8. It shares the version guard with #1435, the messages of upgrade and sync with #1438, and status with #1436 and #1440.
 - **Reviewed:** by the critic and then the architect. Their findings and the answers are in "Review".
-- **Decided so far:** questions 1 to 6 and 11, by the maintainer on 11 October. Each answer is under its question.
+- **Decided so far:** questions 1 to 7 and 11, by the maintainer on 11 October. Each answer is under its question.
 
 ## The question
 
@@ -462,6 +462,7 @@ One decision each. Question 1 has a deadline and comes first. The rest are in or
   - **Its cost:** someone with a newer pkit pins or upgrades before installing a capability, and on a floating install meets it at every release.
 - **Alternative:** they keep copying from the running pkit, checked only by `requires_backbone`.
   - **Its cost:** mixes no test covers, and a capability whose migrations assume a backbone the project never moved to.
+- **Decided: yes,** as recommended, by the maintainer on 11 October. Both commands call sync's guard, with its remedies. B6 carries it.
 
 ### 8. Where does this build fall against the conversion build?
 
@@ -634,7 +635,7 @@ A draft of the build issues, for filing after the maintainer decides. Each recor
   - the dependency check on the versions installed, after #1410
   - **Docs:** the lifecycle README's upgrade flow and per-component upgrade
 - **B5, [Task] the pinned flows:** the routed child finishes its own pin, offline included, and upgrade refuses under the router's fallback. After R3. **Names #1438,** which rewrites upgrade's and sync's messages too.
-- **B6, [Task] capability install and upgrade use sync's guard,** if question 7 is answered yes.
+- **B6, [Task] capability install and upgrade use sync's guard** (question 7).
 - **B7, [Task] the recommended install is tagged,** as question 10 decides.
 - **Later:** `--force` removed, a release after B3.
 - **Later, not filed:** names that cannot clash, by a prefix on every skill and agent the methodology ships (question 4).
