@@ -625,6 +625,13 @@ def test_kept_permissions_keys_re_run_reports_exists(adapter_tree: Path) -> None
 
     first = _run_merge(adapter_tree)
     assert first.returncode == 0, first.stderr
+    assert _read_target(adapter_tree)["permissions"] == {
+        "allow": ["Bash(ls)"],
+        "deny": ["Bash(rm)"],
+        "ask": ["Bash(git push:*)"],
+        "additionalDirectories": ["../shared"],
+        "defaultMode": "acceptEdits",
+    }
     target = adapter_tree / ".claude" / "settings.json"
     mtime_before = target.stat().st_mtime_ns
 
