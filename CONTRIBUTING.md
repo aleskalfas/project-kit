@@ -18,9 +18,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-09T17:22:48Z
+      at: 2026-10-11T22:33:34Z
       outcome: unchanged
-      unchanged-because: ADR-055 point 3 gains that project-kit's shipped analysis templates and structures follow WRITE. This guide cites ADR-055 only for point 5's friction gate, merge queue and whole-repository report, which the change leaves as they were.
+      unchanged-because: ADR-055 now states what living-docs DEC-001 point 1 decides. Its Context and point 3 say project-kit may declare its .pkit/ READMEs as places and that being a place grants no write authority, point 3 no longer says the core owns the shipped templates, point 2 drops its revision wording, and its Implications keep one open question for onboarding. This guide cites ADR-055 only for point 5's friction gate, merge queue and whole-repository report, which the change leaves as they were.
 ---
 
 # Contributing to project-kit
