@@ -87,7 +87,7 @@ from project_kit.scratchpads import (
 )
 from project_kit.status import report_status
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
-from project_kit.sync import run_sync
+from project_kit.sync import refuse_stranding_backbone_migrations, run_sync
 from project_kit.upgrade import (
     freeze_at_content,
     reconcile_pin,
@@ -3872,6 +3872,9 @@ def sync(dry_run: bool, force: bool) -> None:
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
+    # The sync command's guard, not `run_sync`'s: `pkit upgrade` runs `run_sync`
+    # and then the backbone migrations this refuses to strand (#1452).
+    refuse_stranding_backbone_migrations(target_root)
     run_sync(target_root, dry_run=dry_run, force=force)
 
 

@@ -32,6 +32,7 @@ from project_kit.manifest import (
     read_kit_version,
     write_backbone_manifest,
 )
+from project_kit.migrations import pending_migration_scripts
 from project_kit.router import DISTRIBUTION_GIT_URL, read_version_pin
 
 
@@ -265,6 +266,96 @@ def _parse_version(text: str | None) -> Version | None:
         return Version(text)
     except InvalidVersion:
         return None
+
+
+def refuse_stranding_backbone_migrations(target_root: Path) -> None:
+    """Refuse a sync that would record a version past backbone migrations (#1452).
+
+    Sync runs no backbone migration, yet its last step records the running pkit's
+    version as the project's `backbone_version`. A sync across a version that
+    ships backbone migrations would strand them: a later `pkit upgrade` finds the
+    project at its target and runs none. So the sync command refuses, before
+    anything is written, when a version directory under the source's
+    `migrations/backbone/` holds a script, above the recorded version and at or
+    below the version sync would record. It names `pkit upgrade`, which syncs and
+    then runs those migrations.
+
+    The sync command calls this at its entry; `run_sync` does not, since
+    `pkit upgrade` runs `run_sync` as its propagation step and must keep doing so.
+    The methodology's own repository moves no version, so its sync is never
+    refused. Nothing overrides the refusal, `--force` included, and a dry run
+    refuses too. Only an unambiguous order refuses, as in
+    `refuse_content_downgrade`: a recorded version that is absent or not valid
+    semver is not compared. A stop-gap: #1429's design replaces it with a guard
+    under which sync moves no version.
+    """
+    if not (target_root / ".pkit").is_dir():
+        return  # `run_sync` refuses this with its own message.
+    source_kit = install.find_source_kit()
+    if install.is_self_host(target_root, source_kit):
+        return
+    # `run_sync`'s own entry refusals, in its order, each with its own message
+    # and remedy: a source in the gap (ADR-059), an incomplete bundle (#333), and
+    # a pkit older than the project's content or pin (#1212), whose remedy is
+    # another pkit rather than `pkit upgrade`. They only read, so `run_sync`
+    # repeating them changes nothing.
+    install.refuse_propagation_into_source(target_root, source_kit, command="sync")
+    install.refuse_if_source_kit_incomplete(source_kit)
+    refuse_content_downgrade(target_root, source_kit, command="sync")
+
+    manifest = read_backbone_manifest(target_root)
+    recorded = manifest.backbone_version if manifest is not None else None
+    target = read_kit_version(source_kit)
+    stranded = _backbone_migrations_crossed(source_kit, recorded, target)
+    if not stranded:
+        return
+
+    lines = [
+        f"refusing to run `pkit sync`: it would move this project from {recorded} to "
+        f"{target} (`backbone_version` in .pkit/manifest.yaml), past backbone migrations "
+        "that sync does not run:",
+        *(
+            f"  .pkit/migrations/backbone/{version_dir.name}/ ("
+            + ", ".join(script.name for script in scripts)
+            + ")"
+            for version_dir, scripts in stranded.items()
+        ),
+        f"Sync would record {target} and run none of them, so a later `pkit upgrade` "
+        "would find the project at its target and run none either. Nothing was written, "
+        "and no flag overrides this refusal.",
+        "Run `pkit upgrade` instead: it syncs the same content, then runs these migrations.",
+    ]
+    raise click.ClickException("\n       ".join(lines))
+
+
+def _backbone_migrations_crossed(
+    source_kit: Path, recorded: str | None, target: str
+) -> dict[Path, list[Path]]:
+    """The source's backbone migration scripts above *recorded* and at or below
+    *target*, by version directory in the order they run.
+
+    The window is upgrade's own (`migrations.pending_migration_scripts`), so a
+    sync is refused for exactly the scripts the upgrade it names would run. It is
+    empty when either version is absent or not valid semver, so only an
+    unambiguous order refuses.
+    """
+    parsed, parsed_target = _parse_version(recorded), _parse_version(target)
+    if parsed is None or parsed_target is None:
+        return {}
+    scripts = pending_migration_scripts(
+        source_kit / "migrations" / "backbone",
+        _release_triple(parsed),
+        _release_triple(parsed_target),
+    )
+    crossed: dict[Path, list[Path]] = {}
+    for script in scripts:
+        crossed.setdefault(script.parent, []).append(script)
+    return crossed
+
+
+def _release_triple(version: Version) -> str:
+    """*version* as the `X.Y.Z` the migration window reads."""
+    return f"{version.major}.{version.minor}.{version.micro}"
 
 
 def _hint_settings_consolidation(target_root: Path) -> None:
