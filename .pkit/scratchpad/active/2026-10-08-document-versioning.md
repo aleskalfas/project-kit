@@ -12,7 +12,7 @@ A design for #1383. It asks whether pkit's documents should carry versions their
 - **Read from main at `30cfb15a`:** the records, the code and the history counts below.
 - **Citations:** records and rules by permanent id and point. Code by file and line at `30cfb15a`, since code has no permanent ids.
 - **Reviewed:** by the critic and the architect. Their findings and the answers are in "Review", at the end.
-- **Decided:** by the maintainer on 8 October. Questions 1 to 3 are answered in PR #1384's comments. Question 4 went to a design of its own, #1387, decided on 9 October. What the pointer check fails on was decided on 11 October ("Slicing").
+- **Decided:** by the maintainer on 8 October. Questions 1 to 3 are answered in PR #1384's comments. Question 4 went to a design of its own, #1387, decided on 9 October. What the pointer check fails on, the stamp's warning, and that a rule set's version is checked were decided on 11 October ("Slicing").
 - **Next:** the drafts in "Slicing" are filed on the maintainer's go.
 
 ## The question
@@ -466,10 +466,11 @@ Each change the decisions need is carried by a filed issue, a merged change, or 
 - **Found on the way, item 1, a commit range:** merged in PR #1391. Point 6 reads "a range of commits on the default branch", as the maintainer decided.
   - **Carried in part:** the texts that describe `change` still say "a range of commits". They are the record's schema, the stamp's help, the analysis-author skill, the template and the README's example.
   - **To file:** in the edits to #1363 and #1366.
-- **Found on the way, items 2 and 3, a rule set's version:** carried by no issue. The rule-set reviewer's issues do not name them.
-  - **First, the maintainer's:** whether a rule set's version is checked at all. These are findings, not decisions.
-  - **To file, if so:** "Decide what each part of a rule set's version means, and whether a change checks it", a refinement of COR-051 point 7. It also decides which sets the rule binds.
-  - **Then:** "pkit rule-sets check-diff fails a change that makes a rule set's major due without moving it", once the refinement decides a check.
+- **Found on the way, items 2 and 3, a rule set's version:** the rule-set reviewer's issues do not name them.
+  - **Decided: a change's version is checked,** by the maintainer on 11 October. A set's major is the only signal an inheriting set's owner gets, and `LDOC` reaches every adopter, so a missed bump reaches them all. Practice checks a version others pin, as Elm's package manager and `cargo-semver-checks` do.
+  - **Filed:** #1449, "Decide what each part of a rule set's version means and which sets it binds", a refinement of COR-051 point 7.
+  - **Then:** #1450, "pkit rule-sets check-diff fails a change that makes a rule set's major due without moving it", after #1449 is accepted and #1408 lands.
+  - **Not taken:** deciding the check with the refinement, and leaving the rule in prose.
 - **Question 2, the meaning marker:** no issue. This note keeps the measure, the trigger and the list of records D would touch.
 
 ## Found on the way
