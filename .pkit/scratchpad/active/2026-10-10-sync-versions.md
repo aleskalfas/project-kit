@@ -15,7 +15,7 @@ A design for #1429. It sets the shape of the maintainer's decision that `pkit sy
 - **Shared with #1394's design** (`.pkit/scratchpad/active/2026-10-09-content-upgrades.md`): COR-001's named-writer principle, COR-004's list of operations, COR-010, COR-017 and ADR-049. Each is written once. Whichever design's record lands first carries the principle, and the other adds its instance.
 - **Its build** is ordered after #1410 and before #1444, as the maintainer set. Where it falls against #1435 to #1442 is question 8. It shares the version guard with #1435, the messages of upgrade and sync with #1438, and status with #1436 and #1440.
 - **Reviewed:** by the critic and then the architect. Their findings and the answers are in "Review".
-- **Decided so far:** questions 1 to 5, by the maintainer on 11 October. Each answer is under its question.
+- **Decided so far:** questions 1 to 5 and 11, by the maintainer on 11 October. Each answer is under its question.
 
 ## The question
 
@@ -517,6 +517,7 @@ Added on 11 October, after question 5, when the maintainer asked whether merge n
     - COR-002's second tier superseded, since it defines that tier by breadth, not recency;
     - and it covers one channel of widening only.
 - **Managed permissions** (COR-028, `ownership_mode: managed`) are not built (#252). Until they are, a managed project's transition takes the additive merge, under either option.
+- **Decided: show, don't ask,** as recommended, by the maintainer on 11 October. The transition's report and the changelog list each widening the settings merge brings, and an `ask` rule in the additions brings a question back. B4 carries the report. Found on the way 20 is a bug of its own, which the remedy needs.
 
 ## Settled positions this reopens
 
@@ -624,6 +625,7 @@ A draft of the build issues, for filing after the maintainer decides. Each recor
   - **Names #1435:** the shared guard. Whichever lands second depends on the first.
   - **Docs:** the CLI reference's `sync`, `init` recovery and `pin` entries, and the lifecycle README's "No path down". The changeset segment is question 9's.
 - **B4, [Task] every migration in COR-010's order:**
+  - the report lists each widening the settings merge brings: added allow entries and added top-level keys (question 11)
   - backbone, then adapters from the bundle, then capabilities in dependency order, then merge and the rest
   - `install._install_adapter`'s copy set reviewed, `permission-enforcement.yaml` included, and a release's new adapter registered
   - a new collision resolved inside the transition, and the gates with their override
@@ -662,7 +664,7 @@ A draft of the build issues, for filing after the maintainer decides. Each recor
 17. **Commands that write a project's files in the running release's format** (`pkit new`, `pkit config set`, `pkit agents reconcile --write`, `pkit permissions apply`, `pkit visibility`) are not guarded. A follow-up decides whether they stop.
 18. **Stale texts the build rewrites:** `1.54.0/001`'s skip text, "install/sync seeds a complete one", and `1.150.0/001-untrack-runtime-ignored-files`'s header, which reasons from "sync has already recorded the new version".
 19. **ADR-049's amendment says it owes a successor record,** "a successor record is owed", while #1401 plans to fold it in place. That is #1401's question, but R3 and settled position 14 depend on its answer.
-20. **The settings merge erases a project's `ask` rules, `defaultMode` and `additionalDirectories`.** `merge-settings.sh` rebuilds `permissions` with only `allow` and `deny`. So every merge drops the rest of `permissions` from `.claude/settings.json`, and the additions cannot carry them either. Found by the critic on question 11.
+20. **The settings merge erases a project's `ask` rules, `defaultMode` and `additionalDirectories`.** `merge-settings.sh` rebuilds `permissions` with only `allow` and `deny`. So every merge drops the rest of `permissions` from `.claude/settings.json`, and the additions cannot carry them either. Found by the critic on question 11. A bug of its own, to file with the others, since question 11's remedy needs it.
 
 ## Review
 
