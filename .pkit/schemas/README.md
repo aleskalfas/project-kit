@@ -19,8 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-08T11:14:03Z
-      outcome: updated
+      at: 2026-10-11T21:34:46Z
+      outcome: unchanged
+      unchanged-because: "COR-050 and COR-051 gain a type on a place and a types key in a scope (COR-056). No schema ships either yet, so this page's account of the configuration, package and rule-set schemas still matches them. The COR-051 deferral stays: its scope row follows with #1406, which brings types with the scope's form."
       deferred:
         - anchor:
             kind: record

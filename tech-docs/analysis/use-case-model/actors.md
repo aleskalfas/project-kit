@@ -49,6 +49,10 @@ ACT-ci-pipeline:
         record:
           - COR-054
           - COR-050
+      revalidated:
+        at: 2026-10-11T21:34:51Z
+        outcome: unchanged
+        unchanged-because: COR-050's refinement lets a place name a type, which no friction check reads. The pipeline's needs are to run the checks unattended against a named base, which this leaves as it was, so the actor holds.
 ACT-component-author:
   name: Component author
   status: active
@@ -98,6 +102,10 @@ ACT-merge-authoriser:
       anchors:
         record:
           - COR-050
+      revalidated:
+        at: 2026-10-11T21:34:52Z
+        outcome: unchanged
+        unchanged-because: COR-050's refinement lets a place name a type, which no friction check reads. Seeing a change's answers word for word before a merge, and accepting a drafted record or rule, are untouched, so the actor holds.
 ACT-methodology-maintainer:
   name: Methodology maintainer
   status: active

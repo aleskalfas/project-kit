@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, ADR-051, ADR-052]
     revalidated:
-      at: 2026-10-04T10:54:53Z
+      at: 2026-10-11T21:34:22Z
       outcome: unchanged
-      unchanged-because: "This page rests on COR-050 for who may write a friction answer and when: an agent making a change writes the answers its change owes and shows the change check's own list to the person who authorises the merge. COR-050's refinement here only adds a case to its rationale's list of where the two checks part — a line of work holding a copied revalidation merging the line that holds the original; who writes an answer, when, and what is shown are untouched, so the page holds."
+      unchanged-because: COR-050's refinement lets a place name a type for the artefacts it holds, which COR-056 defines and no friction check reads. This page rests on COR-050 for who may write a friction answer and when, and what is shown before a merge. None of that changes, so the page holds.
 ---
 
 # Agents
