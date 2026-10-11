@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-11T00:45:50Z
+      at: 2026-10-11T21:10:46Z
       outcome: unchanged
-      unchanged-because: This map names the lifecycle README by its role, which includes the upgrade procedure, and the CLI reference by its role, the pkit command surface, and links both. This change adds to both the sync command's refusal to strand backbone migrations. Neither area's role or place changes, so the map holds.
+      unchanged-because: This map names the CLI reference by its role, the pkit command surface, and the agents area by its role, the roles harnesses delegate against, and links both. This change rewords how the change check's closing list reads, in both. Neither area's role or place changes, so the map holds.
 ---
 
 # project-kit

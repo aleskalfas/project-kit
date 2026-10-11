@@ -1464,6 +1464,28 @@ def test_a_record_edited_and_re_answered_then_both_reverted(
     assert _summary(result) == owed
 
 
+def test_an_at_written_back_names_only_what_this_change_modifies(timeline: Timeline) -> None:
+    """An `at` written back is judged against its earlier point, so it is asked about the
+    record amended since. This change touches only the guide: the answers list names no
+    anchor as one this change modifies (#1468)."""
+    repo = timeline.adopter
+    timeline.start({"docs/guide.md": guide(anchors=ANCHORED)})
+    timeline.commit("amend the record", {RECORD: _record(timeline) + "\nAmended.\n"})
+    revalidated = timeline.commit(
+        "revalidate the guide",
+        {"docs/guide.md": guide(anchors=ANCHORED, at=T2, because="checked the record")},
+    )
+    repo.checkout("undo", create=True)
+    timeline.revert(revalidated)
+
+    change = fc.run_change_check(repo.root, "main")
+    assert _friction(change) == [("docs/guide.md", "record:COR-050")]  # asked since the point
+    (written,) = change.answers
+    assert (written.status, written.changed) == (fc.AnswerStatus.WRITTEN_BACK, ())
+    assert json.loads(fc.render_json(change))["answers"][0]["changed"] == []
+    assert "which this change modifies" not in fc.render_human(change)
+
+
 @pytest.mark.parametrize("outcome", ["unchanged", "updated"])
 def test_reverting_a_revalidation_with_the_change_it_answered_owes_nothing(
     timeline: Timeline, outcome: str
@@ -1490,8 +1512,8 @@ def test_reverting_a_revalidation_with_the_change_it_answered_owes_nothing(
     assert [f.kind for f in change.findings] == []
     (written,) = change.answers
     assert (written.status, written.asked) == (fc.AnswerStatus.WRITTEN_BACK, False)
-    assert "written back: an `at` it carried before, which answers nothing" in fc.render_human(
-        change
+    assert "re-check date set back to one it had before, which answers nothing" in (
+        fc.render_human(change)
     )
 
     timeline.adopter.checkout("main")
@@ -3024,7 +3046,7 @@ def test_a_deferral_put_back_that_covers_its_anchor_stands_flagged_put_back(
         True,
     )
     assert json.loads(fc.render_json(change))["answers"][1]["put_back"] is True
-    assert "put back: an entry it carried before, covering the anchor" in fc.render_human(change)
+    assert "an entry it had before, covering the anchor as it stood then" in fc.render_human(change)
 
     repo.checkout("main")
     timeline.merge("undo")
