@@ -970,11 +970,13 @@ def _named_sync_remedies(output: str) -> list[Path | None]:
 def _run_sync_remedy(monkeypatch: pytest.MonkeyPatch, remedy: Path | None) -> list[Path]:
     """Run a named `pkit sync` remedy — `cd` into its directory, if it names one,
     then invoke `sync` — and return the project roots sync would refresh.
-    `run_sync` is stubbed: the unit under test is the root sync resolves."""
+    `run_sync` and the command's version guard (#1452) are stubbed: the unit
+    under test is the root sync resolves."""
     refreshed: list[Path] = []
     monkeypatch.setattr(
         cli, "run_sync", lambda root, dry_run=False, force=False: refreshed.append(root)
     )
+    monkeypatch.setattr(cli, "refuse_stranding_backbone_migrations", lambda _root: None)
     if remedy is not None:
         monkeypatch.chdir(remedy)
     result = CliRunner().invoke(main, ["sync"])
