@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Fixed
+  pr: "1481"
 body: >
   `pkit upgrade` installs a newer pkit tool only when the running pkit is the
   `uv`-installed tool (#1473). Run through `uv run`, a pip install, or a
