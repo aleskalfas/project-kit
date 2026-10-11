@@ -16,6 +16,7 @@ A design for #1429. It sets the shape of the maintainer's decision that `pkit sy
 - **Its build** is ordered after #1410 and before #1444, as the maintainer set. Where it falls against #1435 to #1442 is question 8. It shares the version guard with #1435, the messages of upgrade and sync with #1438, and status with #1436 and #1440.
 - **Reviewed:** by the critic and then the architect. Their findings and the answers are in "Review".
 - **Decided:** all eleven questions, by the maintainer on 11 October. Each answer is under its question.
+- **Authorised:** the 16 settled positions this design reopens, by the maintainer on 11 October ("Settled positions this reopens").
 
 ## The question
 
@@ -527,7 +528,7 @@ Added on 11 October, after question 5, when the maintainer asked whether merge n
 
 ## Settled positions this reopens
 
-Each accepted sentence below changes, for the maintainer's authorisation. Items 8, 9 and 10 change under the recommended answers to questions 5 and 6, and the rest under the design itself.
+Each accepted sentence below changes, for the maintainer's authorisation. Items 8, 9 and 10 change under the answers to questions 5 and 6, and the rest under the design itself.
 
 1. **COR-017, "Lifecycle: install, sync, uninstall":** "**Sync** (`pkit sync`) auto-upgrades installed capabilities along with the rest of kit content." and "When sync would introduce a new collision [...], sync refuses to upgrade that specific capability and instructs the adopter to run `pkit capabilities upgrade X --interactive` to resolve."
    - **The change:** partially superseded. A version transition moves the capabilities and resolves a new collision with the install-time flow (question 4). Sync keeps a capability at its recorded version.
