@@ -8,9 +8,10 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 **In plain terms:** adopter feedback about pkit-the-tool has no home today — it
 gets pasted into a chat and lost. This adds a built-in `pkit report` command so an
-adopter files a **bug** or freeform **feedback** to **project-kit's own tracker**,
-agent-assisted, with pkit + capability versions auto-attached and home paths
-stripped, and can then **watch their reports move** (states, maintainer comments,
+adopter files a **bug**, a **change-request** or freeform **feedback** to
+**project-kit's own tracker**, agent-assisted, with pkit + capability versions
+auto-attached and home paths stripped, and can then **watch their reports move**
+(states, maintainer comments,
 and the issues that will fix them) from the CLI. Maintainers (working *in* the
 project-kit repo) get the receiving side — an inbox and a link verb. The point is
 adoption: a reporter who sees their feedback acted on trusts the tool and keeps
@@ -46,14 +47,25 @@ The command family has two sides, and *the split is the decision* (the per-comma
 surface is spec'd once in `.pkit/cli/README.md`, not re-enumerated here):
 
 - **Reporter side — universal**, available in any adopting repo: compose+file a
-  **bug** (structured) or **feedback** (freeform), and read back the invoker's own
-  reports and their progress. Representative verbs: `report bug|feedback`,
-  `report` (list), `report show`.
+  **bug** (structured), a **change-request** (structured-ish, with its own
+  motivation / desired-behaviour / current-workaround compose template) or
+  **feedback** (freeform), and read back the invoker's own reports and their
+  progress. Representative verbs: `report bug|change-request|feedback`,
+  `report` (list), `report show`. Each kind is a sibling verb — a change-request is
+  not a `--kind` flag on `feedback` — because the verbs split by structured versus
+  freeform. A filed change-request carries a `[CR]` title prefix plus a body
+  kind-marker, so the inbox classifies it even when the GitHub label is dropped on
+  a URL-filed issue.
 - **Maintainer side — target-repo-gated**, enabled *only when the current repo is
   the report target* (the structural "just for project-kit developers" gate; inert
   elsewhere — a fork's maintainer side follows its own configured target). It
   triages incoming reports and maintains the fix-linkage. Representative verbs:
-  `report inbox`, `report link|unlink`.
+  `report inbox`, `report link|unlink`. `report inbox` filters with `--kind` and
+  `--group-by project`; with `--resolved` it lists the open feedbacks and
+  change-requests whose `## Tracked by` issues are all closed and — interactively
+  only — prompts for a closing comment and close, never autonomously (`--yes`
+  lists without closing, the same produce-don't-act asymmetry as the reporter
+  side).
 - A `--on-behalf-of @login` modifier files under the invoker's identity with an
   attribution (see below).
 
@@ -92,27 +104,13 @@ consent check (public repo + their name).
 
 ### Safety obligations (detailed in [pkit:ADR-047])
 
-The reporter side is a **cross-repo write** to the fixed upstream — the first
-realization of [COR-039](../core/COR-039-session-repo-mutation-boundary.md)'s
+The reporter side, whichever kind it files, is a **cross-repo write** to the fixed
+upstream — the first realization of [COR-039](../core/COR-039-session-repo-mutation-boundary.md)'s
 reserved cross-repo exception. It is bound by: a per-invocation **target-naming
 confirm**; **URL-first, `gh`-file opt-in**; **`--yes`/autonomy degrades to a draft**,
 never auto-posts; and **redaction by construction** of the environment block. The
 maintainer side is a same-repo edit (the dev's cwd *is* the target) and carries none
 of this.
-
-### Refinement — 2026-08-10 (issue #639)
-
-A third kind, **change-request** (`report change-request`), joins bug/feedback as a
-sibling verb — not a `--kind` flag on `feedback` — because it follows this record's
-structured-vs-freeform verb split (a CR is structured-ish, with its own
-motivation / desired-behaviour / current-workaround compose template). Filed CRs
-carry a `[CR]` title prefix plus a body kind-marker so the inbox classifies them
-even when the GitHub label is dropped on URL-filed issues. `report inbox` grew
-`--kind` / `--group-by project` filtering and `--resolved`: open feedbacks/CRs whose
-`## Tracked by` issues are all closed are listed and — interactively only — prompted
-for a closing comment + close, never autonomously (`--yes` lists without closing,
-the same produce-don't-act asymmetry as the reporter side). [pkit:ADR-047]'s three
-bars are unchanged.
 
 ## Rationale
 
