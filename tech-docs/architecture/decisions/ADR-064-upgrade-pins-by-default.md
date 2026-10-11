@@ -1,7 +1,7 @@
 ---
 id: ADR-064
 title: pkit upgrade pins an un-pinned project by default
-status: proposed
+status: accepted
 date: 2026-10-11
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
@@ -91,4 +91,4 @@ When the pin cannot be fetched, the router warns and runs the installed tool ins
 - **Where the code differs on pinned projects.** With a pin equal to the installed tool, the code runs the tool in-process and takes the tool step, and without a terminal the project does not advance. With a pin the router could not fetch, it takes the tool step and raises the pin to a newer installed tool's version, not to the latest release. #1462 tracks both. Under that fallback a newer tool's `sync` also brings the content past the pin, which #1460 tracks.
 - **An interrupted upgrade is not finished by running it again.** The upgrade's sync records the target version in `.pkit/manifest.yaml` before the migrations run. So a second run finds nothing to upgrade. It writes the default pin, or raises the pin, over content whose migrations never ran. Writing the pin last keeps the pin from naming content that never landed, and no more. #1459 tracks the recovery.
 - **The latest-release check is ADR-063's.** A pinned raise asks the release source the way the tool step does (ADR-063 point 1): one source, the distribution URL compiled into the tool.
-- **Stands on** ADR-039, ADR-049 in the parts that stand, and ADR-059, all accepted, and on ADR-063, proposed with this record.
+- **Stands on** ADR-039, ADR-049 in the parts that stand, ADR-059 and ADR-063, all accepted.

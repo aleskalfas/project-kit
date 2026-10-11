@@ -1,7 +1,7 @@
 ---
 id: ADR-063
 title: pkit upgrade updates a stale tool, and prints the command where it cannot or may not
-status: proposed
+status: accepted
 date: 2026-10-11
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 supersedes: ADR-044
@@ -92,4 +92,4 @@ Replacing the tool is a network write outside any one project. Where a sandbox c
 - **A pkit run another way.** The step does not check that the running pkit is the installed tool. Run through `uvx`, `uv run` or a pip install, at a terminal it installs the `uv` tool and hands the upgrade to the `pkit` the `PATH` finds. That overrides a version the operator chose, unless `--no-self-update` is passed. This is a gap in the code, not a choice of this record.
 - **Pre-release tags.** The lookup counts a pre-release tag as a release. A pre-release above the latest release would be installed, and a pinned raise would write it as the pin. `pkit pin` and the release step's floors both refuse a pre-release, so this is a gap in the code, not a choice.
 - **No migration.** The behaviour lives in the upgrading code. A machine gets it with the first upgrade run by a tool that carries it, and no installed state changes shape.
-- **Stands on** ADR-033, ADR-039, ADR-049, ADR-059, COR-007, COR-010, COR-041 and PRJ-004, all accepted, and on ADR-064, proposed with this record.
+- **Stands on** ADR-033, ADR-039, ADR-049, ADR-059, ADR-064, COR-007, COR-010, COR-041 and PRJ-004, all accepted.
