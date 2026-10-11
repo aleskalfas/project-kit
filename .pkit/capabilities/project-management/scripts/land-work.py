@@ -9,8 +9,9 @@
 """Project-management capability — land-work (#1203).
 
 Lands an issue's pull request in one command: waits for the checks on the PR's
-head, has the reviewers whose verdicts are not fresh review that head, lists
-the answers the change wrote, and merges it through `done-work`. It composes
+head, has the reviewers whose verdicts are not fresh review that head, shows
+the findings they left for a person to judge, lists the answers the change
+wrote, and merges it through `done-work`. It composes
 the verbs' own functions — the CI gate's reading (`_lib.ci_checks`),
 `review-pr`'s review, `done-work`'s merge — and adds no review loop or merge
 mechanic of its own. The rules it adds are on the answers the change wrote
@@ -52,6 +53,21 @@ It stops at the first step that cannot go on, and its last line says why.
           `_lib.agent_verdicts.findings`). In human mode, and with no local
           reviewer registered, there is nothing to run: the approval is
           `done-work`'s gate.
+  findings to judge
+          Each `[person]` finding, printed whole with the verdict's reviewer,
+          from each reviewer's latest verdict as the merge gate selects it
+          (`gate_candidates`, `gate_membership`), in either review mode; a
+          verdict that no longer stands for the pinned head, by the gate's
+          freshness rule, is printed marked stale. Its line begins
+          `findings to judge:` (`FINDINGS`); a run with none prints nothing.
+          A `--yes` run merges only when it found, at its start, every such
+          verdict, and each stands for the pinned head; one posted by this
+          run, or while it ran up to this step's read, stops it at `ready:`,
+          and one that does not stand for the head stops every `--yes` run
+          there, naming the review it waits for (DEC-055 point 3). Verdicts
+          that cannot be read, or whose reviewers cannot be resolved, stop the
+          run; this step comes before the answers', so such a stop has
+          written nothing.
   answers The change check's list of the answers the change wrote, and the
           friction settings it alters, derived at the pinned head against the
           PR's base (`_lib.friction_answers`), printed word for word, in the
@@ -66,19 +82,6 @@ It stops at the first step that cannot go on, and its last line says why.
           description cannot hold, and — where there is a list — a base whose
           commits since the head left it changed a file the list's words are
           on.
-  findings to judge
-          Each `[person]` finding, printed whole with the verdict's reviewer,
-          from each reviewer's latest verdict as the merge gate selects it
-          (`gate_candidates`, `gate_membership`), in either review mode; a
-          verdict that no longer stands for the pinned head, by the gate's
-          freshness rule, is printed marked stale. Its line begins
-          `findings to judge:` (`FINDINGS`); a run with none prints nothing.
-          A `--yes` run merges only when it found, at its start, every such
-          verdict, and each stands for the pinned head; one posted by this
-          run or while it ran stops it at `ready:`, and one that does not
-          stand for the head stops every `--yes` run there, naming the review
-          it waits for (DEC-055 point 3). Verdicts that cannot be read, or
-          whose reviewers cannot be resolved, stop the run.
   merge   `done-work` with the pinned head. Without `--yes`, off a terminal,
           land-work merges nothing: it runs `done-work`'s gates as a dry run
           and stops with a `ready:` line naming the head and the command that
@@ -476,8 +479,11 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
     if ci == _CI_PR_MERGED:
         return _merge(args, None, config)
     review = _review(args, head, config)
-    answers = _answers(args, head, config, capability_root)
+    # Before the answers: a step that stops the run after the list was
+    # written must end it ready (`_AnswersEnd.wrote`), and this one stops on
+    # what it cannot read.
     to_judge = _findings(args, head, config, capability_root, found)
+    answers = _answers(args, head, config, capability_root)
     if args.dry_run and (ci != _CI_PASSED or not review.clear):
         _say(
             f"merge: (dry-run) would hand PR #{head.pr_number} at {short_sha(head.oid)} to "

@@ -606,6 +606,7 @@ def test_an_untagged_finding_counts_as_advisory(av) -> None:
         "**person:**",
         "[Person]",
         "PERSON:",
+        "*[person]*",
     ],
 )
 def test_a_tag_is_read_leniently(av, head) -> None:
@@ -614,8 +615,33 @@ def test_a_tag_is_read_leniently(av, head) -> None:
 
 
 @pytest.mark.parametrize(
+    "text", ["[person]— RS-1", "[person], RS-1", "[person](RS-1)", "[person]."]
+)
+def test_punctuation_right_after_a_tag_still_ends_it(av, text) -> None:
+    """A `[person]` finding read as untagged would never hold a run."""
+    (finding,) = av.findings(f"Reviewer agent: APPROVED\n\n- {text} a reading\n")
+    assert finding.tag == av.TAG_PERSON
+
+
+def test_a_fence_a_finding_leaves_open_ends_with_it(av) -> None:
+    """GitHub closes an item's fence where the item ends: a finding after one
+    left open is still a finding, and still holds."""
+    body = (
+        "Reviewer agent: APPROVED\n\n"
+        "- [advisory] quoting the change:\n"
+        "  ```\n"
+        "  - [block] inside the open fence\n"
+        "- [person] RS-1 — a reading.\n"
+    )
+    assert [(f.tag, f.first_line) for f in av.findings(body)] == [
+        (av.TAG_ADVISORY, "[advisory] quoting the change:"),
+        (av.TAG_PERSON, "[person] RS-1 — a reading."),
+    ]
+
+
+@pytest.mark.parametrize(
     "head",
-    ["person said so", "[nit]", "[x]", "personal note:", "`person`al", "[ ] a box"],
+    ["person said so", "[nit]", "[x]", "personal note:", "`person`al", "[ ] a box", "[person]s"],
 )
 def test_what_is_not_a_tag(av, head) -> None:
     (finding,) = av.findings(f"Reviewer agent: APPROVED\n\n- {head} and more\n")

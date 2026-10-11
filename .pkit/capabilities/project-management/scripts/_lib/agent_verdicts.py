@@ -556,13 +556,14 @@ _ITEM_RE = re.compile(
 # A fence opening or closing a fenced block.
 _FENCE_RE = re.compile(r"^(?P<indent> *)(?P<fence>`{3,}|~{3,})")
 # A tag at the head of an item's text, in any of the forms DEC-028's grammar
-# reads leniently: `[person]`, bold (`**[person]**`, `**person**`), backticks
-# (`` `person` ``), a trailing colon (`person:`, `**person**:`), any case. A
-# bare word is a tag only with its colon; the tag ends where the text does or
-# at a space.
+# reads leniently: `[person]`, bold or italic (`**[person]**`, `**person**`,
+# `*[person]*`), backticks (`` `person` ``), a trailing colon (`person:`,
+# `**person**:`), any case. A bare word is a tag only with its colon; the tag
+# ends where the text does or at anything but a letter, a digit or `_` — a
+# space, a dash, a comma, a parenthesis.
 _TAG_RE = re.compile(
-    r"(?P<wrap>\*\*|__|`)?(?P<bracket>\[)?(?P<word>[A-Za-z][A-Za-z-]*)(?(bracket)\])"
-    r"(?P<inner>:)?(?(wrap)(?P=wrap))(?P<outer>:)?(?=\s|$)"
+    r"(?P<wrap>\*\*|__|\*|_|`)?(?P<bracket>\[)?(?P<word>[A-Za-z][A-Za-z-]*)(?(bracket)\])"
+    r"(?P<inner>:)?(?(wrap)(?P=wrap))(?P<outer>:)?(?=\W|$)"
 )
 
 
@@ -594,7 +595,8 @@ def findings(body: str) -> list[Finding]:
     continuation lines and its sub-items (DEC-028, "Finding tags"). The
     verdict line — the comment's first line, when it is one — and the verdict
     marker are not findings, and text in a fenced block carries no tag: a
-    fence inside an item belongs to that item, one outside every item to none.
+    fence inside an item belongs to that item, one outside every item to none,
+    and an item's fence it never closes ends with the item.
     A line indented to an item's text continues the item, as does an
     unindented line straight after it; a blank line followed by an unindented
     one ends it.
@@ -611,6 +613,11 @@ def findings(body: str) -> list[Finding]:
     in_item = False
     blank = False
     for line in lines:
+        if fence and in_item and line.strip() and _columns(line) < content:
+            # A line indented less than the item's text ends the item, and a
+            # fence the item left open with it, as CommonMark reads it: a
+            # finding after an unclosed fence is never swallowed.
+            fence, in_item = "", False
         if fence:
             if in_item and current is not None:
                 current.append(line)

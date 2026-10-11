@@ -2191,6 +2191,19 @@ def test_verdicts_that_cannot_be_read_for_the_findings_stop_the_run(world, capsy
     assert run.github.merges == []
 
 
+def test_findings_that_cannot_be_read_stop_before_the_list_is_written(world, capsys) -> None:
+    """The findings are read before the answers' list is written: a run that
+    wrote the list must end ready, never on a stop whose next step is the same
+    `--yes` again (DEC-055 point 3)."""
+    run = _answers_world(world)
+    run.github.fails.append(_findings_read(run))
+    rc, out, _err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE
+    assert out.splitlines()[-1].startswith(f"{_FINDINGS}: PR #{PR}'s verdicts could not be read")
+    assert run.github.bodies == []
+    assert run.github.merges == []
+
+
 def test_a_person_finding_from_a_reviewer_the_gate_does_not_require_holds_nothing(
     world, capsys
 ) -> None:
