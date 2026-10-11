@@ -1,0 +1,6 @@
+component: backbone
+kind: none
+body: >
+  The adapters README is revalidated, unchanged, against the claude-code
+  README's new account of what the settings merge keeps under `permissions`.
+  Only its revalidation front matter changed. No command changed.
