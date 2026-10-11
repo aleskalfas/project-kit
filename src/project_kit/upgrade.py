@@ -37,9 +37,11 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 import click
 from packaging.version import InvalidVersion, Version
@@ -589,6 +591,14 @@ _LS_REMOTE_TIMEOUT_SECONDS = 5.0
 #: the version comparison that already no-ops once the tool is current).
 _SELF_UPDATED_ENV = "PKIT_SELF_UPDATED"
 
+#: The directory `uv tool install` gives pkit's environment under `uv tool dir`:
+#: the distribution's name.
+_TOOL_ENVIRONMENT = "project-kit"
+
+#: Bounded like the release lookup: `uv tool dir` is local and quick, but asking
+#: it must never hang `pkit upgrade`. A timeout answers "not the installed tool".
+_UV_TOOL_DIR_TIMEOUT_SECONDS = 5.0
+
 
 def run_tool_update(dry_run: bool = False, self_update: bool = True) -> None:
     """`pkit upgrade` run **outside any project**: update the global tool only.
@@ -616,13 +626,17 @@ def _maybe_self_update_tool(*, self_update: bool, dry_run: bool) -> None:
       timeout) warns and returns; the caller proceeds unchanged.
     - **Act (amended).** When the tool is behind and self-update is allowed
       (`self_update`, an interactive TTY, not a dry-run, not the guarded re-exec
-      child), run `uv tool install --force …@v<latest>` and **re-exec** the same
+      child, and the running pkit is the installed tool), run
+      `uv tool install --force …@v<latest>` and **re-exec** the same
       command under the new version (never returns on success). Pin-by-default
       (v1.145.0) insulates projects from the global tool, so this no longer has
       cross-project blast radius.
     - **Instruct (degrade).** Otherwise (non-interactive, `--no-self-update`, a
-      failed/declined install, or a dry-run) fall back to printing the exact
-      command — today's behaviour. Never fails `pkit upgrade`.
+      failed/declined install, a dry-run, or a pkit run through `uvx`, `uv run`
+      or pip) fall back to printing the exact command and go on under the
+      running pkit — today's behaviour. Never fails `pkit upgrade`, except that
+      a failed hand-over after a successful install stops it before it pins
+      (#1473).
     """
     latest = _latest_released_version()
     if latest is None:
@@ -648,19 +662,34 @@ def _maybe_self_update_tool(*, self_update: bool, dry_run: bool) -> None:
         click.echo(f"pkit tool is current (v{running}).")
         return
 
-    # Stale. Act when allowed; otherwise instruct.
-    if self_update and not dry_run and _self_update_allowed():
-        if _self_update_tool(latest):
-            _reexec_after_self_update()  # never returns on success
-        # Install failed/declined → fall through to instruct.
-    elif self_update and dry_run:
-        click.echo()
-        click.echo(
-            f"A newer pkit tool is available: v{latest} (you are running "
-            f"v{running}). (dry-run) would run `uv tool install --force "
-            f"{DISTRIBUTION_GIT_URL}@v{latest}` and re-run this upgrade."
+    # Stale, and this run is the one a successful install handed the upgrade
+    # to: the `pkit` the PATH found is not the new tool. Going on would bring
+    # the project to this pkit's older bundle and pin it there (#1473).
+    if self_update and not dry_run and os.environ.get(_SELF_UPDATED_ENV) == "1":
+        _stop_failed_hand_over(
+            f"a newer pkit tool (v{latest}) was installed, but the `pkit` your PATH "
+            f"runs first is v{running}, from {sys.prefix}"
         )
-        return
+
+    # Stale. Act when allowed and this pkit is the installed tool; otherwise
+    # instruct and go on under this pkit. The installed-tool check asks `uv`, so
+    # it comes after the cheaper checks that already rule the install out.
+    if self_update and dry_run:
+        if _running_is_installed_tool():
+            click.echo()
+            click.echo(
+                f"A newer pkit tool is available: v{latest} (you are running "
+                f"v{running}). (dry-run) would run `uv tool install --force "
+                f"{DISTRIBUTION_GIT_URL}@v{latest}` and re-run this upgrade."
+            )
+            return
+        _report_not_the_installed_tool()
+    elif self_update and _self_update_allowed():
+        if not _running_is_installed_tool():
+            _report_not_the_installed_tool()
+        elif _self_update_tool(latest):
+            _reexec_after_self_update(latest)  # never returns
+        # Not the installed tool, or the install failed/declined → instruct.
 
     _instruct_tool_update(latest, running)
 
@@ -700,18 +729,83 @@ def _self_update_tool(latest: Version) -> bool:
     return proc.returncode == 0
 
 
-def _reexec_after_self_update() -> None:
+def _running_is_installed_tool() -> bool:
+    """True only when this process runs from the environment `uv tool install`
+    made for pkit: `sys.prefix` is `<uv tool dir>/project-kit`.
+
+    That environment is the tool the install replaces, and the `pkit` the
+    hand-over expects to find. A pkit run through `uvx` runs from uv's cache,
+    one run by `uv run` from a project's virtual environment, and a pip install
+    from wherever pip put it. None of them is that tool, so the upgrade must
+    not replace the tool and hand itself to another pkit (#1473). Any doubt
+    answers False: `uv` missing, failing or slow, an answer that is not one
+    path, or a path that cannot be resolved. False costs only the printed
+    command.
+    """
+    try:
+        completed = subprocess.run(
+            ["uv", "tool", "dir"],
+            capture_output=True,
+            text=True,
+            timeout=_UV_TOOL_DIR_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    tool_dir = completed.stdout.strip()
+    if completed.returncode != 0 or not tool_dir or "\n" in tool_dir:
+        return False
+    try:
+        return Path(sys.prefix).resolve() == (Path(tool_dir) / _TOOL_ENVIRONMENT).resolve()
+    except (OSError, RuntimeError):
+        return False
+
+
+def _report_not_the_installed_tool() -> None:
+    """Say why a stale pkit that could otherwise install does not (#1473)."""
+    click.echo()
+    click.echo(
+        f"This pkit is not the `uv`-installed tool (it runs from {sys.prefix}), so "
+        "the upgrade installs nothing and goes on under this pkit."
+    )
+
+
+def _rerun_command() -> list[str]:
+    """The command the hand-over runs, and the one a stopped upgrade names."""
+    return ["pkit", *sys.argv[1:]]
+
+
+def _stop_failed_hand_over(what_happened: str) -> NoReturn:
+    """Stop the upgrade after a successful install whose hand-over failed.
+
+    Raised before the project's own steps, so nothing is synced, migrated or
+    pinned: going on under this older pkit would pin the project at its release
+    (#1473). Names the command to re-run once the new tool is the `pkit` the
+    PATH finds.
+    """
+    raise click.ClickException(
+        f"{what_happened}, so the upgrade stopped before it synced or pinned "
+        "anything. Make sure uv's tool directory (`uv tool dir --bin`) comes first "
+        "on your PATH (`uv tool update-shell` adds it), then re-run:\n\n"
+        f"    {shlex.join(_rerun_command())}"
+    )
+
+
+def _reexec_after_self_update(latest: Version) -> NoReturn:
     """Re-exec the same `pkit` command under the freshly-installed tool, so the
     content sync + pin run under the new bundle — one seamless upgrade. Sets the
     guard env so the child never self-updates again. Replaces the process image
-    (does not return) on success; on an exec failure, returns so the caller can
-    proceed with the (old) in-process upgrade rather than bricking."""
+    on success. When `pkit` cannot be started, it stops the upgrade before the
+    project's steps rather than going on under the old pkit (#1473). Never
+    returns."""
     click.echo("Re-running the upgrade under the new version …")
     env = {**os.environ, _SELF_UPDATED_ENV: "1"}
     try:
-        os.execvpe("pkit", ["pkit", *sys.argv[1:]], env)
-    except OSError:
-        return  # exec failed; caller continues under the old binary
+        os.execvpe("pkit", _rerun_command(), env)
+    except OSError as exc:
+        _stop_failed_hand_over(
+            f"pkit v{latest} was installed, but `pkit` could not be started to "
+            f"finish the upgrade under it ({exc.strerror or exc})"
+        )
 
 
 def _instruct_tool_update(latest: Version, running: Version) -> None:
