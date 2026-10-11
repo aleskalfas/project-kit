@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-10-11T18:03:37Z
+      at: 2026-10-11T21:42:05Z
       outcome: unchanged
-      unchanged-because: the change makes the settings merge keep every key under permissions, such as ask, defaultMode and additionalDirectories, where it used to keep only allow and deny; this page already says the merge keeps the project's settings and puts back a removed kit deny, which still holds
+      unchanged-because: This change makes pkit upgrade install a newer tool only when the running pkit is the uv-installed tool, and stop before it pins when the hand-over to the new tool fails. This page says only that pkit upgrade pulls new versions and runs migrations, and gives the uv tool install command, which both still hold.
 ---
 
 # project-kit
