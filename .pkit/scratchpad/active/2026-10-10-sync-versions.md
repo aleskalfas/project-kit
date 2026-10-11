@@ -15,7 +15,7 @@ A design for #1429. It sets the shape of the maintainer's decision that `pkit sy
 - **Shared with #1394's design** (`.pkit/scratchpad/active/2026-10-09-content-upgrades.md`): COR-001's named-writer principle, COR-004's list of operations, COR-010, COR-017 and ADR-049. Each is written once. Whichever design's record lands first carries the principle, and the other adds its instance.
 - **Its build** is ordered after #1410 and before #1444, as the maintainer set. Where it falls against #1435 to #1442 is question 8. It shares the version guard with #1435, the messages of upgrade and sync with #1438, and status with #1436 and #1440.
 - **Reviewed:** by the critic and then the architect. Their findings and the answers are in "Review".
-- **Decided so far:** question 1, by the maintainer on 11 October. Each answer is under its question.
+- **Decided so far:** questions 1 and 2, by the maintainer on 11 October. Each answer is under its question.
 
 ## The question
 
@@ -399,6 +399,7 @@ One decision each. Question 1 has a deadline and comes first. The rest are in or
   - **Its cost:** a foundational record on the command surface is overturned in part, one command carries several parts, and one more core record exists.
 - **Alternative:** COR-004 stays as it is, and the realising ADR records `pkit upgrade` as a named exception to it.
   - **Its cost:** a core rule with an exception only project-kit's own ADR knows of, so an adopter reading the core records finds a rule the tool breaks.
+- **Decided: yes,** as recommended, by the maintainer on 11 October. A version transition is one operation on COR-004's list, and the new core record holds the principle. R1 carries it.
 
 ### 3. How do projects already stranded recover?
 
