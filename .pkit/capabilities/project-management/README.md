@@ -17,6 +17,11 @@ pkit:
     revalidated:
       at: 2026-10-11T18:37:49Z
       outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "The README gains the [person] findings and the hold with the code of #1405, in the same pull request, once the maintainer accepts the refined DEC-028 and DEC-055."
 ---
 
 # project-management capability
