@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Fixed
+  pr: "1477"
 body: >
   `pkit upgrade` takes the latest release from the release tags only (#1472).
   It counted a pre-release or dev release tag as a release, so a pre-release
