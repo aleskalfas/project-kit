@@ -16,7 +16,8 @@ A design for #1429. It sets the shape of the maintainer's decision that `pkit sy
 - **Its build** is ordered after #1410 and before #1444, as the maintainer set. Where it falls against #1435 to #1442 is question 8. It shares the version guard with #1435, the messages of upgrade and sync with #1438, and status with #1436 and #1440.
 - **Reviewed:** by the critic and then the architect. Their findings and the answers are in "Review".
 - **Decided:** all eleven questions, by the maintainer on 11 October. Each answer is under its question.
-- **Authorised:** the 16 settled positions this design reopens, by the maintainer on 11 October ("Settled positions this reopens").
+- **Authorised:** the 16 settled positions this design reopens, by the maintainer on 11 October ("Settled positions this reopens"). Position 17, found while filing, waits for the maintainer.
+- **Filed:** #1454 to #1464 on 11 October ("Slicing"). B7 waits for position 17.
 
 ## The question
 
@@ -523,12 +524,12 @@ Added on 11 October, after question 5, when the maintainer asked whether merge n
     - prompts about narrow entries, since recency cannot tell them from broad ones;
     - COR-002's second tier superseded, since it defines that tier by breadth, not recency;
     - and it covers one channel of widening only.
-- **Managed permissions** (COR-028, `ownership_mode: managed`) are not built (#252). Until they are, a managed project's transition takes the additive merge, under either option.
+- **Managed permissions** (COR-028, `ownership_mode: managed`) are not built: ADR-002 settles them on paper and builds them on demand. Until they are, a managed project's transition takes the additive merge, under either option.
 - **Decided: show, don't ask,** as recommended, by the maintainer on 11 October. The transition's report and the changelog list each widening the settings merge brings, and an `ask` rule in the additions brings a question back. B4 carries the report. Found on the way 20 is a bug of its own, which the remedy needs.
 
 ## Settled positions this reopens
 
-Each accepted sentence below changes, for the maintainer's authorisation. Items 8, 9 and 10 change under the answers to questions 5 and 6, and the rest under the design itself.
+Each accepted sentence below changes, for the maintainer's authorisation. Items 8, 9 and 10 change under the answers to questions 5 and 6, item 17 under question 10, and the rest under the design itself.
 
 1. **COR-017, "Lifecycle: install, sync, uninstall":** "**Sync** (`pkit sync`) auto-upgrades installed capabilities along with the rest of kit content." and "When sync would introduce a new collision [...], sync refuses to upgrade that specific capability and instructs the adopter to run `pkit capabilities upgrade X --interactive` to resolve."
    - **The change:** partially superseded. A version transition moves the capabilities and resolves a new collision with the install-time flow (question 4). Sync keeps a capability at its recorded version.
@@ -567,6 +568,8 @@ Each accepted sentence below changes, for the maintainer's authorisation. Items 
     - **The change:** wording only. It continues with the transition to the current bundle's version. Its Implications and its amendment say the same.
 16. **The decisions README, "The no-shared-files invariant":** "project-owned paths are never read or written by sync." and "Sync **cannot** produce a conflict. You can run it whenever you like — it cannot break anything you wrote."
     - **The change:** sync writes project-owned paths only through merge delivery, and it reads the manifest. Sync still cannot produce a conflict, but it stops when the running pkit is not the project's. #1432 may make part of the change first.
+17. **PRJ-004, "Decision":** "The canonical install path is: `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git`", with a tag such as `@v0.5.0` listed as an option.
+    - **The change, under question 10:** refined in place. The canonical install path names a release tag, `@v<version>`, and an install from main is the development install. B7 carries it, and the maintainer accepts the refinement before B7's code changes.
 
 ## Corrections to the first reviews
 
@@ -600,39 +603,40 @@ The critic and the architect reviewed the bare direction on 10 October. Where th
 A draft of the build issues, for filing after the maintainer decides. Each record is accepted before the work that cites it, and each slice leaves adopters safe if a release is cut after it.
 
 - **B0, [Task] the stop-gap, for the next release** (question 1), filed as #1452: the sync command, at its entry point, refuses to move `backbone_version` past a version directory holding backbone migrations, and names `pkit upgrade`. `run_upgrade`'s call to `run_sync` is not touched. Needs no record: COR-010's order already puts recorded versions after migrations.
-- **R1, [Docs] the core record and the refinements:**
+- **R1, #1455, [Docs] the core record and the refinements:**
   - the new core record through the decision-author skill, partially superseding COR-017's sync paragraph, COR-004's compound-verb sentence and, as questions 5 and 6 decide, its sync-and-merge paragraph and COR-001's seeding cadence
   - COR-001, COR-002, COR-004's operation list, COR-010 and COR-048 point 1 refined, the decisions README's lines, core rule 5 and the migration-author skill's contract
   - a `none` changeset, as #1431's
   - **Shared with #1431 and #1432:** whichever lands first carries COR-001's principle, and the other adds its instance. COR-004's list gains both operations in place.
-- **R2, [Docs] the realising ADR, by the architect,** after R1 only. No changeset.
-- **R3, [Docs] ADR-049 and ADR-044 refined,** after #1401, which folds ADR-049's amendment, and in step with #1433, which refines ADR-049's rollback and whose text names a supersession this design does not make.
-- **B1, [Task] a capability's record under its `project/`:**
+- **R2, #1456, [Docs] the realising ADR, by the architect,** after R1 only. No changeset.
+- **R3, #1457, [Docs] ADR-049 and ADR-044 refined,** after #1401, which folds ADR-049's amendment, and in step with #1433, which refines ADR-049's rollback and whose text names a supersession this design does not make.
+- **B1, #1458, [Task] a capability's record under its `project/`:**
   - the code that writes the record moves it, reads both places, and rewrites the registry path
   - skips read from where they are written, and a restamp that keeps `backend_state`
   - every record read before propagation
   - **Safe alone:** it fixes the lost skips today, and changes nothing else a project sees
-- **B2, [Task] a transition records its target first and its completion last:**
+- **B2, #1459, [Task] a transition records its target first and its completion last:**
   - the manifest key, written by init and by the release step in project-kit's own manifest
   - adapter records written at their bundled version, with no migration
   - the early return keyed on every recorded version
   - the backbone window from `completed_version`
   - a missing manifest or a broken version seeded by upgrade, and the messages that named sync
   - the replay for a missing key, with `1.31.0/001` and `1.0.0/001` rewritten first and the fixtures
-  - status showing an incomplete transition. **Names #1436 and #1440,** which extend status too
+  - status showing an incomplete transition, and each component a transition would move. **Names #1436 and #1440,** which extend status too
   - **Safe alone:** a sync under this code still moves `backbone_version` and leaves the completion key, so the next upgrade finds them apart and finishes the migrations
   - **Docs:** the lifecycle README's manifest format and upgrade flow
   - Its changeset is a backbone minor (question 9).
-- **B3, [Task] sync never moves a version:**
+- **B3, #1460, [Task] sync never moves a version:**
   - the propagation step split from the sync command
   - the guard on the sync command in both directions and on an incomplete transition, refusing under `--dry-run`, with a message per state. Upgrade keeps the older direction only
   - a capability copied at its recorded version only, others skipped and reported, an externally-sourced one skipped by origin, adapters copied with the backbone
   - no manifest write, no seed and no migration in sync
-  - upgrade calls the step and runs each capability's migrations itself, after the copy, with project-management's `0.15.0/001` and `0.24.0/001` fixed for that order
+  - #1452's stop-gap removed, the guard taking its place
+  - upgrade calls the step and runs each capability's migrations itself, after the copy, with project-management's `0.15.0/001` and `0.24.0/001` fixed for that order. Upgrade creates a missing seed path (question 6)
   - `--force` accepted and ignored for one release, with a guidance migration
   - **Names #1435:** the shared guard. Whichever lands second depends on the first.
   - **Docs:** the CLI reference's `sync`, `init` recovery and `pin` entries, and the lifecycle README's "No path down". Its changeset is a backbone major (question 9).
-- **B4, [Task] every migration in COR-010's order:**
+- **B4, #1461, [Task] every migration in COR-010's order:**
   - the report lists each widening the settings merge brings: added allow entries and added top-level keys (question 11)
   - backbone, then adapters from the bundle, then capabilities in dependency order, then merge and the rest
   - `install._install_adapter`'s copy set reviewed, `permission-enforcement.yaml` included, and a release's new adapter registered
@@ -640,10 +644,10 @@ A draft of the build issues, for filing after the maintainer decides. Each recor
   - `pkit capabilities upgrade` as a transition of one component
   - the dependency check on the versions installed, after #1410
   - **Docs:** the lifecycle README's upgrade flow and per-component upgrade
-- **B5, [Task] the pinned flows:** the routed child finishes its own pin, offline included, and upgrade refuses under the router's fallback. After R3. **Names #1438,** which rewrites upgrade's and sync's messages too.
-- **B6, [Task] capability install and upgrade use sync's guard** (question 7).
+- **B5, #1462, [Task] the pinned flows:** the routed child finishes its own pin, offline included, and upgrade refuses under the router's fallback. A pinned project whose installed pkit equals its pin advances as a routed child does (Found on the way 9). After R3. **Names #1438,** which rewrites upgrade's and sync's messages too.
+- **B6, #1463, [Task] capability install and upgrade use sync's guard** (question 7).
 - **B7, [Task] the recommended install is tagged** (question 10).
-- **Later:** `--force` removed, a release after B3.
+- **Later, #1464:** `--force` removed, a release after B3.
 - **Later, not filed:** names that cannot clash, by a prefix on every skill and agent the methodology ships (question 4).
 
 **Order:** B0 in the next release. Then #1410, R1, R2, B1 to B4, R3, B5 to B7, and then, under question 8's recommendation, the conversion build from #1435 to #1444. B1 comes before B2 and B3, since both read a capability's record.
@@ -658,21 +662,22 @@ A draft of the build issues, for filing after the maintainer decides. Each recor
 6. **The next release ships two `1.150.0/` migrations, and a sync strands them** for an unpinned project. The journal one matters: logging stops silently. Question 1.
 7. **#1212 is unreleased.** Every released pkit writes its older content over a newer project. The protection this design leans on starts with the next release.
 8. **Upgrade under the router's fallback raises the pin to the installed version,** not to the latest release ADR-049 point 3 names. Taken by B5.
-9. **A pinned project whose installed pkit equals its pin** runs `pkit upgrade` as itself, not as the routed child. Without a terminal it reports "Already at backbone" and does not advance, while ADR-049 point 5 says a pinned upgrade advances with no `uv` step.
-10. **COR-048 point 1 says an upgrade never writes the configuration file.** Point 5 lets an upgrade migration write it, and `1.150.0/001-keep-process-journal-logging` and project-management's `0.55.0/004` do.
-11. **COR-010's Context says COR-004 "names the upgrade command".** COR-004 names no upgrade.
+9. **A pinned project whose installed pkit equals its pin** runs `pkit upgrade` as itself, not as the routed child. Without a terminal it reports "Already at backbone" and does not advance, while ADR-049 point 5 says a pinned upgrade advances with no `uv` step. Taken by B5.
+10. **COR-048 point 1 says an upgrade never writes the configuration file.** Point 5 lets an upgrade migration write it, and `1.150.0/001-keep-process-journal-logging` and project-management's `0.55.0/004` do. Taken by R1.
+11. **COR-010's Context says COR-004 "names the upgrade command".** COR-004 names no upgrade. Taken by R1.
 12. **The CLI reference contradicts the code and itself:**
     - its `upgrade` entry says migrations run "then runs `sync`", while the code runs sync first
     - it says an unpinned upgrade writes "no pin file", while upgrade pins by default
     - its `sync` entry says sync does not invoke merge, while the claude-code adapter's README and the code say it does
+    - **Taken by** B3 for the `sync` entry and B4 for the `upgrade` entry
 13. **`_sync_installed_capabilities` treats an externally-sourced registration as shipped.** It refreshes it from the bundle when the methodology ships a capability of that name, and reports it orphaned otherwise. Taken by B3.
 14. **A capability refresh with no readable version runs every shipped migration,** when both its record and its installed `package.yaml` fail to read. project-management's `0.54.0/001` is among them, which grandfathers a bootstrap that may never have happened. B3 ends it in sync.
-15. **The lifecycle README says "a corrupt `backbone_version` is one sync repairs".** Sync repairs it by recording the running pkit's version, whatever the files hold.
+15. **The lifecycle README says "a corrupt `backbone_version` is one sync repairs".** Sync repairs it by recording the running pkit's version, whatever the files hold. Taken by B2.
 16. **Read-only commands under another release stay silent.** `pkit validate` with a newer pkit judges older content by newer rules, which ADR-049's Rationale calls the worst case. #1436 reports that mismatch in status and validation.
 17. **Commands that write a project's files in the running release's format** (`pkit new`, `pkit config set`, `pkit agents reconcile --write`, `pkit permissions apply`, `pkit visibility`) are not guarded. A follow-up decides whether they stop.
-18. **Stale texts the build rewrites:** `1.54.0/001`'s skip text, "install/sync seeds a complete one", and `1.150.0/001-untrack-runtime-ignored-files`'s header, which reasons from "sync has already recorded the new version".
+18. **Stale texts the build rewrites:** `1.54.0/001`'s skip text, "install/sync seeds a complete one", and `1.150.0/001-untrack-runtime-ignored-files`'s header, which reasons from "sync has already recorded the new version". Taken by B2.
 19. **ADR-049's amendment says it owes a successor record,** "a successor record is owed", while #1401 plans to fold it in place. That is #1401's question, but R3 and settled position 14 depend on its answer.
-20. **The settings merge erases a project's `ask` rules, `defaultMode` and `additionalDirectories`.** `merge-settings.sh` rebuilds `permissions` with only `allow` and `deny`. So every merge drops the rest of `permissions` from `.claude/settings.json`, and the additions cannot carry them either. Found by the critic on question 11. A bug of its own, to file with the others, since question 11's remedy needs it.
+20. **The settings merge erases a project's `ask` rules, `defaultMode` and `additionalDirectories`.** `merge-settings.sh` rebuilds `permissions` with only `allow` and `deny`. So every merge drops the rest of `permissions` from `.claude/settings.json`, and the additions cannot carry them either. Found by the critic on question 11. A bug of its own, since question 11's remedy needs it: filed as #1454, which B4 depends on.
 
 ## Review
 
