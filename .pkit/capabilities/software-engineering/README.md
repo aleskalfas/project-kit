@@ -13,9 +13,8 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
     revalidated:
-      at: 2026-10-03T13:23:58Z
-      outcome: unchanged
-      unchanged-because: The page names software-engineer as the producer agent that reads the project's conventions corpus, conforms to it and defers judgment to the reviewers, deployed with its placeholder resolved under COR-013; the agent's new section on answering its own change's friction, and COR-013's rule that a command's write is named in the body rather than in owns, leave each of those statements true.
+      at: 2026-10-11T18:32:02Z
+      outcome: updated
 ---
 
 # software-engineering capability
@@ -83,5 +82,5 @@ Inside this capability's own content, cite decisions by their filename stem: `[s
 
 - The kit's **agents area + overlay mechanism** ([COR-013](../../decisions/core/COR-013-agent-architecture.md)) — every agent (the producer and the panel) is deployed and its `<project-conventions>` placeholder resolved by `deploy-agents.sh`.
 - The **reviewer stack** ([COR-024](../../decisions/core/COR-024-critic-and-architect-agents.md)) — `critic` / `architect` / `convention-compliance-reviewer` are how the producer's work gets checked. They ship in core; no separate install.
-- **project-management** ([COR-030](../../decisions/core/COR-030-capability-dependencies.md)) — a declared `requires_capabilities` dependency. The code-review panel registers through pm's reviewer-contribution socket and folds through its merge gate ([project-management:DEC-028] / [project-management:DEC-032], including the `type`-axis + `touches-code` floor amendment the panel's activation relies on). The lifecycle gates install/upgrade/uninstall on it.
+- **project-management** ([COR-030](../../decisions/core/COR-030-capability-dependencies.md)) — a declared `requires_capabilities` dependency. The code-review panel registers through pm's reviewer-contribution socket and folds through its merge gate ([project-management:DEC-028] / [project-management:DEC-032], including the `type` axis and the `touches-code` floor of DEC-032 D1 that the panel's activation relies on). The lifecycle gates install/upgrade/uninstall on it.
 - Convention *content* is out of scope here — the corpus is adopter-owned (see DEC-001's Implications).
