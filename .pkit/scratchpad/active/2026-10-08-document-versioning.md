@@ -13,7 +13,7 @@ A design for #1383. It asks whether pkit's documents should carry versions their
 - **Citations:** records and rules by permanent id and point. Code by file and line at `30cfb15a`, since code has no permanent ids.
 - **Reviewed:** by the critic and the architect. Their findings and the answers are in "Review", at the end.
 - **Decided:** by the maintainer on 8 October. Questions 1 to 3 are answered in PR #1384's comments. Question 4 went to a design of its own, #1387, decided on 9 October. What the pointer check fails on, the stamp's warning, and that a rule set's version is checked were decided on 11 October ("Slicing"). Question 2 was reopened the same day: the meaning marker is designed before adopters, in #1451.
-- **Next:** the drafts in "Slicing" are filed on the maintainer's go.
+- **Filed:** #1448, #1449, #1450 and #1451 on 11 October, with edits to #1363, #1365 and #1366 ("Slicing").
 
 ## The question
 
@@ -439,10 +439,10 @@ Each change the decisions need is carried by a filed issue, a merged change, or 
 
 - **`reviewed-against`, the field:** a list of mappings with `title`, `url` and `version` in the revalidation record's schema, required when `trigger` is `planned`.
   - **Carried by #1363, in part.** The template round's note gives the field to #1363 ("For the build"), but #1363's body names neither the field nor the record's schema.
-  - **To file:** an edit to #1363 that adds the field, its hint and example, and its form.
+  - **Edited on 10 October:** #1363 adds the field, its hint and example, and its form.
 - **The form, checked by validation:** the keys, an absolute link, and a full commit id, `this change` or a time, each with or without a link as its source needs.
   - **The round gave it to #1364,** whose body checks only a body's structure.
-  - **To file:** in the edit to #1363, in the record's schema. Validation applies that schema whatever the format rule's status, and the stamp, the validator and the reachability command then read one definition.
+  - **Edited on 10 October:** in #1363, in the record's schema. Validation applies that schema whatever the format rule's status, and the stamp, the validator and the reachability command then read one definition.
 - **Reachability, a command of its own beside `check-numbers`:** each commit of this repository that a planned record names is on the default branch. It places commits on the default branch only, offline, and reports a commit it cannot place as unknown.
   - **Decided: it fails only on a record the change adds,** by the maintainer on 11 October. On a record the base already holds, it reports and never fails.
     - **Why:** a squash merge leaves a reviewed branch commit off the default branch, so naming one is an easy slip, caught where it can still be fixed. A record is never rewritten, so after a history rewrite, such as removing a secret, failing on older records would fail every change for good.
@@ -452,7 +452,7 @@ Each change the decisions need is carried by a filed issue, a merged change, or 
   - **Filed:** #1448, "pkit analysis check-pointers fails a change that adds a record pointing off the default branch". It is a Task of its own, since it needs only #1363 while #1364 waits on #1360 and #1361.
 - **The stamp:** `--reviewed-against` repeats, one source each.
   - **Carried by #1366, in part.** The round gave it the flag, but its body does not name it.
-  - **To file:** an edit to #1366 that adds the flag.
+  - **Edited on 10 October:** #1366 adds the flag.
   - **Decided: the stamp warns on a commit off the default branch, and still writes,** by the maintainer on 11 October. It places the commit as #1448 does. Refusing would leave no way to write the record while the design's pull request is open. Added to #1366.
 - **DEC-001's refinement:** point 6 names where the design a planned record reviewed stood, by pointer. A design that lands with its record is named by the change, and its commit is found from the history, as `at`'s is.
   - **Merged:** PR #1391, which closed #1358, as `839f7ef`. Point 6 says so on main.
@@ -469,7 +469,7 @@ Each change the decisions need is carried by a filed issue, a merged change, or 
   - **The count again, by part:** #1427.
 - **Found on the way, item 1, a commit range:** merged in PR #1391. Point 6 reads "a range of commits on the default branch", as the maintainer decided.
   - **Carried in part:** the texts that describe `change` still say "a range of commits". They are the record's schema, the stamp's help, the analysis-author skill, the template and the README's example.
-  - **To file:** in the edits to #1363 and #1366.
+  - **Edited on 10 October:** #1363 and #1366.
 - **Found on the way, items 2 and 3, a rule set's version:** the rule-set reviewer's issues do not name them.
   - **Decided: a change's version is checked,** by the maintainer on 11 October. A set's major is the only signal an inheriting set's owner gets, and `LDOC` reaches every adopter, so a missed bump reaches them all. Practice checks a version others pin, as Elm's package manager and `cargo-semver-checks` do.
   - **Filed:** #1449, "Decide what each part of a rule set's version means and which sets it binds", a refinement of COR-051 point 7.
