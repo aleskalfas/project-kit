@@ -767,6 +767,53 @@ def test_tool_step_hand_over_to_a_pkit_still_behind_pins_nothing(
     assert router.read_version_pin(installed_target) is None
 
 
+def test_tool_step_hand_over_to_the_installed_tool_still_behind_goes_on(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The run the hand-over started is the installed tool, yet still behind: the
+    release just installed reports a version below its tag. The PATH is not at
+    fault, so it does not stop. The guard keeps it from installing again; it
+    prints the command and goes on to the project's own steps."""
+    environment = _stale_at_a_terminal(stub_ls_remote, monkeypatch, tmp_path)
+    monkeypatch.setenv(upgrade._SELF_UPDATED_ENV, "1")
+    monkeypatch.setattr(upgrade.sys, "prefix", str(environment))
+    execs = _record_exec(monkeypatch)
+
+    upgrade.run_upgrade(installed_target)
+
+    out = capsys.readouterr().out
+    assert f"uv tool install --force {upgrade.DISTRIBUTION_GIT_URL}@v2.5.0" in out
+    assert stub_ls_remote.install_calls == []
+    assert execs == []
+    assert router.read_version_pin(installed_target) == _recorded_version(installed_target)
+
+
+def test_tool_step_guard_without_a_terminal_does_not_stop(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The guard set where no install ran — no terminal, so no hand-over could
+    have started this run — prints the command and goes on, as it always did."""
+    _stale_at_a_terminal(stub_ls_remote, monkeypatch, tmp_path)
+    monkeypatch.setattr(upgrade, "_is_tty", lambda _stream: False)
+    monkeypatch.setenv(upgrade._SELF_UPDATED_ENV, "1")
+    monkeypatch.setattr(upgrade.sys, "prefix", str(tmp_path / "pip-env"))
+
+    upgrade.run_upgrade(installed_target)
+
+    out = capsys.readouterr().out
+    assert f"uv tool install --force {upgrade.DISTRIBUTION_GIT_URL}@v2.5.0" in out
+    assert stub_ls_remote.install_calls == []
+    assert router.read_version_pin(installed_target) == _recorded_version(installed_target)
+
+
 def test_running_is_installed_tool_when_prefix_is_the_tool_environment(
     stub_ls_remote: _RecordingRun, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -786,6 +833,11 @@ def test_running_is_installed_tool_when_prefix_is_the_tool_environment(
         pytest.param({"tool_dir_returncode": 2}, id="uv-fails"),
         pytest.param({"tool_dir_stdout": "\n"}, id="no-path"),
         pytest.param({"tool_dir_stdout": "/a\n/b\n"}, id="two-paths"),
+        pytest.param(
+            {"tool_dir_exc": UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")},
+            id="undecodable",
+        ),
+        pytest.param({"tool_dir_stdout": "/a\x00b\n"}, id="nul-in-path"),
     ],
 )
 def test_running_is_installed_tool_answers_no_when_uv_cannot_tell(

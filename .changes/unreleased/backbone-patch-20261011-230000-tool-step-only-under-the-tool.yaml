@@ -4,14 +4,14 @@ custom:
   category: Fixed
 body: >
   `pkit upgrade` installs a newer pkit tool only when the running pkit is the
-  `uv`-installed tool (#1473). Run through `uvx`, `uv run` or a pip install,
-  it used to install the `uv` tool at a terminal and hand the upgrade to
-  whichever `pkit` the `PATH` found, overriding the version the operator
-  chose. Now it says it is not the installed tool, prints the newer release
-  and its install command, and goes on under the pkit that started it. When
-  `uv` cannot say where its tools live, it prints the command too. And when
-  the install succeeds but the hand-over fails, because `pkit` cannot be
-  started or the `pkit` the `PATH` runs first is still the older one, the
-  upgrade stops before it syncs or pins anything and names the command to
-  re-run. It used to go on under the old pkit and pin the project at the old
-  release.
+  `uv`-installed tool (#1473). Run through `uv run`, a pip install, or a
+  `uvx` that uv serves from its cache, it used to install the `uv` tool at a
+  terminal and hand the upgrade to whichever `pkit` the `PATH` found,
+  overriding the version the operator chose. Now it says it is not the
+  installed tool, prints the newer release and its install command, and goes
+  on under the pkit that started it. When `uv` cannot say where its tools
+  live, it prints the command too. And when the install succeeds but the
+  hand-over fails, because `pkit` cannot be started or the `pkit` the `PATH`
+  runs first is another, older pkit, the upgrade stops before it syncs or
+  pins anything and names the command to re-run. It used to go on under the
+  old pkit and pin the project at the old release.

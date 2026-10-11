@@ -632,8 +632,8 @@ def _maybe_self_update_tool(*, self_update: bool, dry_run: bool) -> None:
       (v1.145.0) insulates projects from the global tool, so this no longer has
       cross-project blast radius.
     - **Instruct (degrade).** Otherwise (non-interactive, `--no-self-update`, a
-      failed/declined install, a dry-run, or a pkit run through `uvx`, `uv run`
-      or pip) fall back to printing the exact command and go on under the
+      failed/declined install, a dry-run, or a pkit that is not the installed
+      tool) fall back to printing the exact command and go on under the
       running pkit — today's behaviour. Never fails `pkit upgrade`, except that
       a failed hand-over after a successful install stops it before it pins
       (#1473).
@@ -663,9 +663,14 @@ def _maybe_self_update_tool(*, self_update: bool, dry_run: bool) -> None:
         return
 
     # Stale, and this run is the one a successful install handed the upgrade
-    # to: the `pkit` the PATH found is not the new tool. Going on would bring
-    # the project to this pkit's older bundle and pin it there (#1473).
-    if self_update and not dry_run and os.environ.get(_SELF_UPDATED_ENV) == "1":
+    # to: it carries the guard and the terminal the install ran at. Not the
+    # installed tool: the PATH found another, older `pkit` first, and going on
+    # would bring the project to its bundle and pin it there (#1473). The
+    # installed tool: the release just installed reports a version below its
+    # tag, or a release landed during the install, so it carries on, and the
+    # guard keeps it from installing.
+    handed_over = os.environ.get(_SELF_UPDATED_ENV) == "1" and _at_a_terminal()
+    if self_update and not dry_run and handed_over and not _running_is_installed_tool():
         _stop_failed_hand_over(
             f"a newer pkit tool (v{latest}) was installed, but the `pkit` your PATH "
             f"runs first is v{running}, from {sys.prefix}"
@@ -700,6 +705,11 @@ def _self_update_allowed() -> bool:
     instruct so a network install is never forced under automation."""
     if os.environ.get(_SELF_UPDATED_ENV) == "1":
         return False
+    return _at_a_terminal()
+
+
+def _at_a_terminal() -> bool:
+    """True iff both standard input and standard output are terminals."""
     return _is_tty(sys.stdin) and _is_tty(sys.stdout)
 
 
@@ -734,13 +744,15 @@ def _running_is_installed_tool() -> bool:
     made for pkit: `sys.prefix` is `<uv tool dir>/project-kit`.
 
     That environment is the tool the install replaces, and the `pkit` the
-    hand-over expects to find. A pkit run through `uvx` runs from uv's cache,
-    one run by `uv run` from a project's virtual environment, and a pip install
-    from wherever pip put it. None of them is that tool, so the upgrade must
-    not replace the tool and hand itself to another pkit (#1473). Any doubt
-    answers False: `uv` missing, failing or slow, an answer that is not one
-    path, or a path that cannot be resolved. False costs only the printed
-    command.
+    hand-over expects to find. A `uvx` run that uv serves from its cache, a
+    `uv run` from a project's virtual environment, and a pip install run from
+    elsewhere. None of them is that tool, so the upgrade must not replace the
+    tool and hand itself to another pkit (#1473). A `uvx` run that uv serves
+    from the installed tool's environment, as it does when that tool meets the
+    request (not under `--isolated`), is that tool, and is treated as it. Any
+    doubt answers False: `uv` missing, failing or slow, an answer that is not
+    one path, or a path that cannot be read or resolved. False costs only the
+    printed command.
     """
     try:
         completed = subprocess.run(
@@ -749,14 +761,16 @@ def _running_is_installed_tool() -> bool:
             text=True,
             timeout=_UV_TOOL_DIR_TIMEOUT_SECONDS,
         )
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, ValueError, subprocess.SubprocessError):
+        # ValueError covers output that does not decode as text.
         return False
     tool_dir = completed.stdout.strip()
     if completed.returncode != 0 or not tool_dir or "\n" in tool_dir:
         return False
     try:
         return Path(sys.prefix).resolve() == (Path(tool_dir) / _TOOL_ENVIRONMENT).resolve()
-    except (OSError, RuntimeError):
+    except (OSError, ValueError, RuntimeError):
+        # ValueError covers a path with a NUL byte; RuntimeError a symlink loop.
         return False
 
 
@@ -765,7 +779,7 @@ def _report_not_the_installed_tool() -> None:
     click.echo()
     click.echo(
         f"This pkit is not the `uv`-installed tool (it runs from {sys.prefix}), so "
-        "the upgrade installs nothing and goes on under this pkit."
+        "the upgrade installs nothing and stays with this pkit."
     )
 
 
