@@ -2,6 +2,7 @@ component: backbone
 kind: minor
 custom:
   category: Changed
+  pr: "1453"
 body: >
   This release ships two backbone migrations: run `pkit upgrade` to take it,
   not `pkit sync`. `pkit sync` now refuses to record a backbone version past
