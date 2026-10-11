@@ -2,6 +2,7 @@ component: claude-code
 kind: patch
 custom:
   category: Fixed
+  pr: "1466"
 body: >
   `merge-settings.sh` keeps every key under `permissions`. It used to rebuild
   `permissions` from `allow` and `deny` alone, so every `pkit init`, `pkit
