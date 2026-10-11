@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 
@@ -1169,3 +1170,175 @@ def test_read_only_commands_run_under_a_pkit_older_than_the_content(
 
     assert result.exit_code == 0, result.output
     assert _NEWER in result.output
+
+
+# --- sync never strands backbone migrations (#1452) ------------------------------
+
+# The version directory the stop-gap was built for, and the scripts it holds.
+_MIGRATED = "1.150.0"
+_MIGRATED_SCRIPTS = ("001-keep-process-journal-logging.sh", "001-untrack-runtime-ignored-files.sh")
+
+
+def _source_at(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, version: str) -> Path:
+    """A throwaway copy of the live source whose pkit is *version*, resolved as this
+    run's source. The copy carries the real `migrations/backbone/` tree, so which
+    directories a sync crosses is the real tree's, read at a fixed version."""
+    import shutil
+
+    source = tmp_path / "source-copy" / ".pkit"
+    shutil.copytree(install.find_source_kit(), source)
+    (source / "VERSION").write_text(f"{version}\n", encoding="utf-8")
+    monkeypatch.setattr(install, "find_source_kit", lambda: source)
+    return source
+
+
+def _cli_sync(*args: str):
+    from click.testing import CliRunner
+
+    from project_kit.cli import main
+
+    return CliRunner().invoke(main, ["sync", *args])
+
+
+@pytest.mark.parametrize("flags", [(), ("--dry-run",), ("--force",)], ids=["", "dry-run", "force"])
+def test_sync_refuses_to_record_a_version_past_backbone_migrations(
+    installed_target: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    flags: tuple[str, ...],
+) -> None:
+    """A project at 1.149.0 synced by a 1.150.0 pkit would record 1.150.0 and run
+    neither `1.150.0/` migration, and a later upgrade would run none either. Sync
+    refuses before writing anything, naming the versions, the directory and
+    `pkit upgrade`. A dry run refuses too, and `--force` does not override it."""
+    _source_at(tmp_path, monkeypatch, _MIGRATED)
+    _record_content_version(installed_target, "1.149.0")
+    before = _tree_bytes(installed_target)
+
+    result = _cli_sync(*flags)
+
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert f"it would move this project from 1.149.0 to {_MIGRATED}" in output
+    assert f".pkit/migrations/backbone/{_MIGRATED}/ ({', '.join(_MIGRATED_SCRIPTS)})" in output
+    assert "Nothing was written, and no flag overrides this refusal." in output
+    assert "Run `pkit upgrade` instead" in output
+    assert "Syncing project-kit" not in output  # refused before sync began
+    assert _tree_bytes(installed_target) == before
+
+
+def test_sync_names_every_version_directory_it_would_cross(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A project several releases behind crosses each directory with a script."""
+    _source_at(tmp_path, monkeypatch, _MIGRATED)
+    _record_content_version(installed_target, "1.93.0")
+
+    result = _cli_sync()
+
+    assert result.exit_code != 0
+    crossed = re.findall(r"\.pkit/migrations/backbone/([0-9.]+)/ \(", result.output)
+    assert crossed == ["1.140.0", _MIGRATED]
+
+
+def test_sync_across_no_backbone_migration_moves_the_version(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No version directory with a script between the recorded version and this
+    pkit's: sync moves the version as before. A directory without a script is
+    crossed freely."""
+    source = _source_at(tmp_path, monkeypatch, "1.149.0")
+    empty = source / "migrations" / "backbone" / "1.145.0"
+    empty.mkdir()
+    (empty / "README.md").write_text("No script.\n", encoding="utf-8")
+    _record_content_version(installed_target, "1.141.0")
+
+    result = _cli_sync()
+
+    assert result.exit_code == 0, result.output
+    manifest = read_backbone_manifest(installed_target)
+    assert manifest is not None
+    assert manifest.backbone_version == "1.149.0"
+
+
+@pytest.mark.parametrize("recorded", ["not-a-version", None], ids=["not-a-version", "absent"])
+def test_sync_does_not_order_a_recorded_version_that_is_not_one(
+    installed_target: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    recorded: str | None,
+) -> None:
+    """Only an unambiguous order refuses: a recorded version that is absent or not
+    valid semver is not compared, so sync repairs it as before."""
+    _source_at(tmp_path, monkeypatch, _MIGRATED)
+    if recorded is None:
+        (installed_target / ".pkit" / "manifest.yaml").unlink()
+    else:
+        _record_content_version(installed_target, recorded)
+
+    result = _cli_sync()
+
+    assert result.exit_code == 0, result.output
+    manifest = read_backbone_manifest(installed_target)
+    assert manifest is not None
+    assert manifest.backbone_version == _MIGRATED
+
+
+def test_sync_is_never_refused_in_the_methodology_source(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """project-kit's own sync moves no version, so it runs as today even where its
+    manifest records a version far behind its migrations. Its primitives are
+    stubbed, as in the self-host test above, so nothing is written here."""
+    from project_kit.manifest import BackboneManifest
+
+    source_repo = install.find_source_kit().parent
+    monkeypatch.chdir(source_repo)
+    monkeypatch.setattr(
+        sync, "read_backbone_manifest", lambda _root: BackboneManifest(backbone_version="0.1.0")
+    )
+    for primitive in (
+        "run_installed_adapter_primitives",
+        "_render_runtime_ignore",
+        "ensure_agent_workspace",
+        "provision_query_commands",
+    ):
+        monkeypatch.setattr(install, primitive, lambda _ctx: None)
+
+    result = _cli_sync()
+
+    assert result.exit_code == 0, result.output
+    assert "Self-host sync complete" in result.output
+
+
+def test_sync_command_refuses_a_pin_ahead_of_this_pkit_before_naming_upgrade(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A pin ahead of this pkit is #1212's refusal, whose remedy is the pinned
+    pkit: `pkit upgrade` under this one would refuse too. So that refusal comes
+    first, even where the sync would also cross a migration directory."""
+    _source_at(tmp_path, monkeypatch, _MIGRATED)
+    _record_content_version(installed_target, "1.149.0")
+    _write_pin(installed_target, _NEWER)
+
+    result = _cli_sync()
+
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert f"older than this project's pin ({_NEWER}, in .pkit/version-pin)" in output
+    assert "Run `pkit upgrade` instead" not in output
+
+
+def test_sync_command_refuses_an_incomplete_source_with_its_own_message(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The guard reads the source's version only after the source is known to be
+    whole, so an incomplete bundle is refused cleanly, as `run_sync` refuses it."""
+    incomplete = tmp_path / "broken-source" / ".pkit"
+    incomplete.mkdir(parents=True)  # no decisions/ subdir
+    monkeypatch.setattr(install, "find_source_kit", lambda: incomplete)
+
+    result = _cli_sync()
+
+    assert result.exit_code != 0
+    assert "methodology source not found" in result.output

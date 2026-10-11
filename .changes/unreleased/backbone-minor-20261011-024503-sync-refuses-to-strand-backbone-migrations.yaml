@@ -1,0 +1,17 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+  pr: "1453"
+body: >
+  This release ships two backbone migrations: run `pkit upgrade` to take it,
+  not `pkit sync`. `pkit sync` now refuses to record a backbone version past
+  a version that ships backbone migrations (#1452). Sync runs no backbone
+  migration, so it used to record the new version and strand them. A later
+  `pkit upgrade` then found the project at its target and ran none. The
+  refusal comes before anything is written. It names both versions, each
+  version directory with migrations, and `pkit upgrade`, which syncs and then
+  runs them. `--force` does not override it, and `--dry-run` refuses too. A
+  pipeline that runs `pkit sync` under a newer pkit stops here until the
+  project is upgraded. A sync that crosses no backbone migration runs as
+  before.

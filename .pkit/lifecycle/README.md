@@ -29,9 +29,8 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-08T11:14:02Z
-      outcome: unchanged
-      unchanged-because: This page lists pkit friction artefacts --json among the readings a script may call, sums up what it answers and leaves its keys to the CLI README. This change gives each artefact there two more keys, an entry's section span and the rule sets whose scope covers it, and cuts that section from the headings friction discovery already reads, fenced code skipped. The summary stays true, and nothing here says how a section is cut, so the page holds.
+      at: 2026-10-11T00:45:48Z
+      outcome: updated
 ---
 
 # Lifecycle
@@ -739,6 +738,18 @@ The target of a backbone upgrade, and the content a sync writes, is the running 
 Only an unambiguous order refuses, as with the capability guard below: a recorded version that is absent or not valid semver is not compared, so a corrupt `backbone_version` is one sync repairs and a pin that is not a version blocks nothing. Read-only commands are unaffected. In a pinned project's `upgrade`, the check comes after the branch that runs as the pin's own code and auto-advances the pin, because that branch is how content left ahead of its pin by an interrupted raise is recovered.
 
 The CLI README's `sync` entry carries the operator-facing detail: the refusal's remedies and the router's notice when it runs a pkit older than the pin.
+
+### No migration passed over: a sync refuses to strand one (#1452)
+
+Sync, run on its own, records the running pkit's version as the project's `backbone_version`, but runs no backbone migration (step 3). A sync across a version that ships backbone migrations would strand them. A later upgrade would find the project at its target and run none. So the sync command refuses such a sync, the mirror of the refusal above.
+
+- **When it refuses:** a version directory under the methodology's `migrations/backbone/` holds a script. Its version is above the recorded one, and at or below the running pkit's. The window is step 3's own.
+- **What it does:** exit non-zero, name both versions and each such directory, and write nothing. It names `pkit upgrade` as the remedy.
+- **Where it sits:** at the sync command's entry, after sync's other refusals there, the one above among them. It is not in the propagation that step 2 runs. So upgrade's own sync is not refused, and the remedy works.
+- **No override:** `sync --force` does not override it, and a dry run refuses too.
+- **What it leaves alone:** a sync that crosses no such directory, and self-host sync, which moves no version. Capability migrations are not stranded, since sync runs them.
+- **Only an unambiguous order:** a recorded version that is absent or not valid semver is not compared, as above.
+- **Note:** the refusal is a stop-gap. The sync design in #1429 replaces it with a guard under which sync moves no version.
 
 ### Per-component upgrade
 

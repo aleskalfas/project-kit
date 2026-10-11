@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -1437,6 +1438,51 @@ def test_upgrade_as_the_pinned_child_still_raises_a_pin_behind_its_content(
 
     assert raised_to == [_NEWER]
     assert router.read_version_pin(installed_target) == _NEWER
+
+
+# --- the remedy sync's refusal names runs the migrations (#1452) -----------------
+
+
+def test_upgrade_across_a_backbone_migration_directory_runs_it_and_records_the_version(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`pkit upgrade` is the remedy the sync command's refusal names, and that
+    refusal is not on upgrade's path: from 1.149.0 under a 1.150.0 pkit, upgrade
+    runs both `1.150.0/` migrations and records 1.150.0."""
+    from click.testing import CliRunner
+
+    from project_kit.cli import main
+
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)
+    source = _real_source_copy(tmp_path)
+    (source / "VERSION").write_text("1.150.0\n", encoding="utf-8")
+    # The release that ships 1.150.0 broadens each range to admit it. The copy
+    # admits it the same way, so compatibility does not stop the upgrade.
+    for package_yaml in source.glob("*/*/package.yaml"):
+        text = package_yaml.read_text(encoding="utf-8")
+        admitted = re.sub(
+            r"^requires_backbone: .*$", 'requires_backbone: ">=0.1.0,<2.0.0"', text, flags=re.M
+        )
+        package_yaml.write_text(admitted, encoding="utf-8")
+    monkeypatch.setattr(upgrade, "find_source_kit", lambda: source)
+    monkeypatch.setattr(install, "find_source_kit", lambda: source)
+    _record_content_version(installed_target, "1.149.0")
+    # A journal the project kept, so `keep-process-journal-logging` keeps logging on.
+    process_dir = installed_target / ".pkit" / "capabilities" / "kept" / "project" / "process"
+    process_dir.mkdir(parents=True)
+    (process_dir / "subject.journal.jsonl").write_text("{}\n", encoding="utf-8")
+
+    result = CliRunner().invoke(main, ["upgrade", "--no-self-update", "--no-pin"])
+
+    assert result.exit_code == 0, result.output
+    assert "running 2 backbone migration(s) (1.149.0 -> v1.150.0)" in result.output
+    assert "1.150.0/001-keep-process-journal-logging.sh" in result.output
+    assert "1.150.0/001-untrack-runtime-ignored-files.sh" in result.output
+    assert _recorded_version(installed_target) == "1.150.0"
+    # What `keep-process-journal-logging` writes, and nothing else does.
+    config = (installed_target / ".pkit" / "project" / "config.yaml").read_text(encoding="utf-8")
+    assert "Recorded by\n# the 1.150.0 upgrade" in config
+    assert "    enabled: true" in config
 
 
 @pytest.mark.parametrize("stdin", [None, "closed"])
