@@ -19,7 +19,7 @@ pkit:
         - anchor:
             kind: record
             value: COR-051
-          reason: COR-051 binds an accepted rule only where a route from a scoped project set reaches its set, so a method rule set binds nothing until such a set inherits it. This page says a page's format is an error while RS-LDOC-004 is accepted, citing COR-051 point 4, and its spaces' definitions carry no scope. It follows once the maintainer settles how living-docs' checks meet that reach, and living-docs DEC-001 is refined to match.
+          reason: "COR-051 binds an accepted rule only where a route from a scoped project set reaches its set, so a method rule set binds nothing until such a set inherits it. This page says a page's format is an error while RS-LDOC-004 is accepted, citing COR-051 point 4, and its spaces' definitions carry no scope. It follows with #1476, which refines living-docs DEC-001 so LDOC binds through the space definitions, each given a scope."
 ---
 
 # living-docs capability
