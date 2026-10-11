@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-10-11T18:03:37Z
+      at: 2026-10-11T21:14:25Z
       outcome: unchanged
-      unchanged-because: the change makes the settings merge keep every key under permissions, such as ask, defaultMode and additionalDirectories, where it used to keep only allow and deny; this page already says the merge keeps the project's settings and puts back a removed kit deny, which still holds
+      unchanged-because: the change makes pkit upgrade skip pre-release and dev release tags when it looks up the latest release, so the tool update and a pinned raise act on a release; this page says only that upgrade pulls new versions and runs migrations and that a project can pin itself, which still holds
 ---
 
 # project-kit
