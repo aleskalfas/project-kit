@@ -457,3 +457,237 @@ def test_managed_mode_without_region_falls_back_to_additive(adapter_tree: Path) 
     assert result.returncode == 0, result.stderr
     allow = _read_target(adapter_tree)["permissions"]["allow"]
     assert "Bash(git:*)" in allow and "Bash(rm:*)" in allow
+
+
+# --- every key under `permissions` is kept (#1454) -------------------------
+
+
+def _seed(adapter_tree: Path, layer: str, payload: dict) -> None:
+    """Write one source: `core` / `project` settings, or the existing `target`."""
+    if layer == "target":
+        _set_target(adapter_tree, payload)
+    else:
+        _write_settings(adapter_tree, layer, payload)
+
+
+@pytest.mark.parametrize("layer", ["core", "project", "target"])
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("ask", ["Bash(git push:*)"]),
+        ("additionalDirectories", ["../shared"]),
+        ("defaultMode", "acceptEdits"),
+        ("disableBypassPermissionsMode", "disable"),
+    ],
+)
+def test_permissions_key_is_kept_from_each_source(
+    adapter_tree: Path, layer: str, key: str, value: object
+) -> None:
+    """A key under `permissions` held by one source survives the merge."""
+    _write_settings(adapter_tree, "core", {"permissions": {"allow": [], "deny": []}})
+    _seed(adapter_tree, layer, {"permissions": {"allow": [], "deny": [], key: value}})
+
+    result = _run_merge(adapter_tree)
+
+    assert result.returncode == 0, result.stderr
+    assert _read_target(adapter_tree)["permissions"][key] == value
+
+
+@pytest.mark.parametrize(
+    ("key", "core", "project", "target", "expected"),
+    [
+        (
+            "ask",
+            ["Bash(git push:*)", "Bash(npm publish:*)"],
+            ["Bash(git push:*)", "Bash(gh pr merge:*)"],
+            ["Bash(npm publish:*)", "Bash(terraform apply:*)"],
+            [
+                "Bash(gh pr merge:*)",
+                "Bash(git push:*)",
+                "Bash(npm publish:*)",
+                "Bash(terraform apply:*)",
+            ],
+        ),
+        (
+            "additionalDirectories",
+            ["../shared"],
+            ["../shared", "../docs"],
+            ["../docs", "/opt/data"],
+            ["../docs", "../shared", "/opt/data"],
+        ),
+    ],
+)
+def test_ask_and_additional_directories_are_unioned_without_duplicates(
+    adapter_tree: Path, key: str, core: list, project: list, target: list, expected: list
+) -> None:
+    """`ask` and `additionalDirectories` union across the sources, deduped, as `allow` does."""
+    _write_settings(adapter_tree, "core", {"permissions": {"allow": [], "deny": [], key: core}})
+    _write_settings(adapter_tree, "project", {"permissions": {key: project}})
+    _set_target(adapter_tree, {"permissions": {"allow": [], "deny": [], key: target}})
+
+    result = _run_merge(adapter_tree)
+
+    assert result.returncode == 0, result.stderr
+    assert _read_target(adapter_tree)["permissions"][key] == expected
+
+
+def test_default_mode_additions_override_baseline(adapter_tree: Path) -> None:
+    """The project's additions win over the baseline for `defaultMode`."""
+    _write_settings(
+        adapter_tree, "core", {"permissions": {"allow": [], "deny": [], "defaultMode": "default"}}
+    )
+    _write_settings(adapter_tree, "project", {"permissions": {"defaultMode": "acceptEdits"}})
+
+    result = _run_merge(adapter_tree)
+
+    assert result.returncode == 0, result.stderr
+    assert _read_target(adapter_tree)["permissions"]["defaultMode"] == "acceptEdits"
+
+
+def test_default_mode_existing_file_overrides_both(adapter_tree: Path) -> None:
+    """The existing `.claude/settings.json` wins over the additions and the baseline."""
+    _write_settings(
+        adapter_tree, "core", {"permissions": {"allow": [], "deny": [], "defaultMode": "default"}}
+    )
+    _write_settings(adapter_tree, "project", {"permissions": {"defaultMode": "acceptEdits"}})
+    _set_target(adapter_tree, {"permissions": {"allow": [], "deny": [], "defaultMode": "plan"}})
+
+    result = _run_merge(adapter_tree)
+
+    assert result.returncode == 0, result.stderr
+    assert _read_target(adapter_tree)["permissions"]["defaultMode"] == "plan"
+
+
+def test_allow_and_deny_only_merges_byte_for_byte_as_before(adapter_tree: Path) -> None:
+    """With only `allow` / `deny` under `permissions`, the output is exactly the old bytes.
+
+    The expected text was captured from the script before #1454: key order,
+    sorting and indentation are all pinned, and no `ask` /
+    `additionalDirectories` key appears when no source has one.
+    """
+    (adapter_tree / ".pkit" / "skills" / "core" / "foo.md").write_text("x", encoding="utf-8")
+    _write_settings(
+        adapter_tree,
+        "core",
+        {
+            "permissions": {"allow": ["Bash(ls)", "Bash(grep)"], "deny": ["Bash(rm)"]},
+            "model": "sonnet",
+        },
+    )
+    _write_settings(
+        adapter_tree,
+        "project",
+        {"permissions": {"allow": ["Bash(pwd)", "Bash(ls)"]}, "agent": "project-default"},
+    )
+    _set_target(
+        adapter_tree,
+        {"permissions": {"deny": ["Bash(sudo)"], "allow": ["Bash(git)"]}, "agent": "adopter"},
+    )
+
+    result = _run_merge(adapter_tree)
+
+    assert result.returncode == 0, result.stderr
+    expected = (
+        "{\n"
+        '  "model": "sonnet",\n'
+        '  "agent": "adopter",\n'
+        '  "permissions": {\n'
+        '    "allow": [\n'
+        '      "Bash(git)",\n'
+        '      "Bash(grep)",\n'
+        '      "Bash(ls)",\n'
+        '      "Bash(pwd)",\n'
+        '      "Skill(foo)"\n'
+        "    ],\n"
+        '    "deny": [\n'
+        '      "Bash(rm)",\n'
+        '      "Bash(sudo)"\n'
+        "    ]\n"
+        "  }\n"
+        "}\n"
+    )
+    target = adapter_tree / ".claude" / "settings.json"
+    assert target.read_text(encoding="utf-8") == expected
+
+
+def test_kept_permissions_keys_re_run_reports_exists(adapter_tree: Path) -> None:
+    """A second run with every kept key in place rewrites nothing."""
+    _write_settings(
+        adapter_tree,
+        "core",
+        {"permissions": {"allow": ["Bash(ls)"], "deny": ["Bash(rm)"], "ask": ["Bash(git push:*)"]}},
+    )
+    _write_settings(
+        adapter_tree,
+        "project",
+        {"permissions": {"additionalDirectories": ["../shared"], "defaultMode": "acceptEdits"}},
+    )
+
+    first = _run_merge(adapter_tree)
+    assert first.returncode == 0, first.stderr
+    target = adapter_tree / ".claude" / "settings.json"
+    mtime_before = target.stat().st_mtime_ns
+
+    second = _run_merge(adapter_tree)
+    assert second.returncode == 0, second.stderr
+    assert "exists" in second.stdout, f"expected 'exists' in stdout, got: {second.stdout!r}"
+    assert target.stat().st_mtime_ns == mtime_before, "target was rewritten on idempotent re-run"
+
+
+def test_capability_overlay_cannot_carry_any_permissions_key(adapter_tree: Path) -> None:
+    """An overlay's `permissions` stays stripped for every key, not only `allow` / `deny`."""
+    _write_settings(adapter_tree, "core", {"permissions": {"allow": [], "deny": []}})
+    _install_capability(
+        adapter_tree,
+        "project-management",
+        overlay={
+            "agent": "project-manager",
+            "permissions": {
+                "allow": ["Bash(rm -rf)"],
+                "ask": ["Bash(overlay:*)"],
+                "additionalDirectories": ["/overlay"],
+                "defaultMode": "bypassPermissions",
+            },
+        },
+    )
+
+    result = _run_merge(adapter_tree)
+
+    assert result.returncode == 0, result.stderr
+    merged = _read_target(adapter_tree)
+    assert merged.get("agent") == "project-manager"
+    assert merged["permissions"] == {"allow": [], "deny": []}, (
+        "overlay's permissions leaked into merged permissions"
+    )
+
+
+def test_managed_region_replaces_kept_permissions_keys_too(adapter_tree: Path) -> None:
+    """A managed region still replaces `permissions` whole: no kept key survives it."""
+    _write_settings(
+        adapter_tree,
+        "core",
+        {"permissions": {"allow": [], "deny": [], "ask": ["Bash(core:*)"]}},
+    )
+    _write_settings(adapter_tree, "project", {"permissions": {"defaultMode": "acceptEdits"}})
+    _set_target(
+        adapter_tree,
+        {
+            "permissions": {
+                "allow": ["Bash(rm:*)"],
+                "deny": [],
+                "ask": ["Bash(target:*)"],
+                "additionalDirectories": ["../shared"],
+                "defaultMode": "plan",
+            }
+        },
+    )
+    _set_mode(adapter_tree, "managed")
+    env = _region_file(adapter_tree, {"allow": ["Bash(gh:*)"], "deny": ["Bash(sudo:*)"]})
+
+    result = _run_merge(adapter_tree, env=env)
+
+    assert result.returncode == 0, result.stderr
+    assert _read_target(adapter_tree)["permissions"] == {
+        "allow": ["Bash(gh:*)"],
+        "deny": ["Bash(sudo:*)"],
+    }
