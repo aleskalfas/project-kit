@@ -64,7 +64,7 @@ The reviewers that check a project's work form a stack, each at its own stage an
 
 ## Rationale
 
-**Why one reviewer that reads the rules.** A rule copied into a reviewer's instructions loses what makes it a rule. It loses an id a finding can cite, a status, and the review that accepts it (COR-051). They also drift from the set they came from. A reviewer that reads the backbone's one answer judges exactly the rules that bind, and nothing a copy kept after the set changed. One contract then serves every kind of artefact. What differs between kinds lives in the rule sets, where a project already keeps it. The reviewer stack rejected one reviewer for two roles at different stages (COR-024). This is one role, at one stage.
+**Why one reviewer that reads the rules.** A rule copied into a reviewer's instructions loses what makes it a rule. It loses an id a finding can cite, a status, and the review that accepts it (COR-051). It also drifts from the set it came from. A reviewer that reads the backbone's one answer judges exactly the rules that bind, and nothing a copy kept after the set changed. One contract then serves every kind of artefact. What differs between kinds lives in the rule sets, where a project already keeps it. The reviewer stack rejected one reviewer for two roles at different stages (COR-024). This is one role, at one stage.
 
 **Why its instructions hold no rule.** A rule written into the instructions would bind wherever the agent runs, with no status and no scope. It would also bind past the pins that hold back a shared set's new rules (COR-051 point 7).
 
