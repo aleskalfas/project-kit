@@ -1,6 +1,7 @@
 component: backbone
 kind: none
 body: >
-  The CLI reference's friction revalidation answers ADR-049's change, which
-  folds its amendment section into the record and decides nothing new; the
-  page's text and the backbone's behaviour are unchanged.
+  The CLI reference cites ADR-044 without "amended", since the record no
+  longer carries an amendment section, and its friction revalidation answers
+  ADR-049's fold, which decides nothing new; the backbone's behaviour is
+  unchanged.
