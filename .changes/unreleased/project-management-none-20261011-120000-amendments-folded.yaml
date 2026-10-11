@@ -1,0 +1,7 @@
+component: project-management
+kind: none
+body: >
+  DEC-028, DEC-032 and DEC-046 fold their amendment sections into the records
+  in place, and the capability README cites DEC-046 point 1 in place of its
+  amendment; no claim is added, dropped or changed, and the capability's
+  behaviour is unchanged.
