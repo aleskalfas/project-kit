@@ -6,8 +6,8 @@ body: >
   `merge-settings.sh` keeps every key under `permissions`. It used to rebuild
   `permissions` from `allow` and `deny` alone, so every `pkit init`, `pkit
   sync`, `pkit upgrade` and `pkit merge` erased `ask`, `defaultMode`,
-  `additionalDirectories` and any other key there, from `.claude/settings.json`
-  and from the project's additions. Now `ask` and `additionalDirectories` are
+  `additionalDirectories` and any other key there from `.claude/settings.json`,
+  and ignored them in the project's additions. Now `ask` and `additionalDirectories` are
   unioned across the baseline, the additions and the existing file, without
   duplicates, as `allow` is. Every other key, such as `defaultMode`, takes the
   precedence top-level keys have: the additions over the baseline, and the

@@ -178,6 +178,8 @@ The merge keeps every key under `permissions`. It reads three files: the baselin
 
 A union only adds. Taking an entry out of the additions leaves it in `.claude/settings.json`, so remove it there too. An entry the baseline ships, such as a safety deny, comes back on the next merge if you remove it.
 
+A key that keeps one value behaves the same way once `.claude/settings.json` has it. Changing it in the additions, or taking it out, does not reach the file. Change or remove it in `.claude/settings.json` too.
+
 Two cases stay as they were. A capability overlay cannot set any key under `permissions`: the merge drops an overlay's `permissions` before it runs ([project-management:DEC-030]). In managed ownership mode, a supplied projection (`$PKIT_MANAGED_REGION_FILE`) replaces `permissions` whole, and none of the keys above survives it (ADR-002).
 
 ### Git footprint (per ADR-009)
