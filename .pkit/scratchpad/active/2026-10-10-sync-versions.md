@@ -15,7 +15,7 @@ A design for #1429. It sets the shape of the maintainer's decision that `pkit sy
 - **Shared with #1394's design** (`.pkit/scratchpad/active/2026-10-09-content-upgrades.md`): COR-001's named-writer principle, COR-004's list of operations, COR-010, COR-017 and ADR-049. Each is written once. Whichever design's record lands first carries the principle, and the other adds its instance.
 - **Its build** is ordered after #1410 and before #1444, as the maintainer set. Where it falls against #1435 to #1442 is question 8. It shares the version guard with #1435, the messages of upgrade and sync with #1438, and status with #1436 and #1440.
 - **Reviewed:** by the critic and then the architect. Their findings and the answers are in "Review".
-- **Decided so far:** questions 1 to 7 and 11, by the maintainer on 11 October. Each answer is under its question.
+- **Decided so far:** questions 1 to 8 and 11, by the maintainer on 11 October. Each answer is under its question.
 
 ## The question
 
@@ -473,6 +473,7 @@ One decision each. Question 1 has a deadline and comes first. The rest are in or
   - **Its cost:** the conversion build waits for this one.
 - **Alternative:** the conversion build first, up to #1442, then this build, then #1444.
   - **Its cost:** #1435 builds the guard's newer direction itself, and three pairs of issues edit the same code twice.
+- **Decided: before #1435,** as recommended, by the maintainer on 11 October. The order is "Slicing"'s: this build, then #1435 to #1442, then #1444. Each pair's later issue depends on the earlier.
 
 ### 9. Which changeset segments?
 
