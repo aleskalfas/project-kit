@@ -1,0 +1,20 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  A reviewer's findings now carry tags that say what each does to the merge
+  (#1405, DEC-028): `[block]` withholds the approval, `[advisory]` withholds
+  and holds nothing (a finding with no tag counts as one), and `[person]`
+  leaves the finding to the person who authorises the merge. `review-pr`'s
+  brief names the three tags, and that they widen no reviewer's remit.
+  `pm-reviewer` writes its severity after the tag, as `[block] (hard-reject)`;
+  a severity written alone by an older copy of it is still read. `land-work`
+  prints each `[person]` finding whole, beside the answers, before it stops
+  ready or asks, and holds a `--yes` run (DEC-055 point 3): it merges only on
+  verdicts carrying them that it found when it started, standing for the head
+  it merges. A verdict posted by the run or while it ran stops it on `ready:`,
+  and the identical command then merges; a verdict for another head stops
+  every `--yes` run until its reviewer reviews the head again. A remote
+  reviewer gets no brief, so if you run one, have its setup write the tags:
+  its untagged findings count as `[advisory]` and never reach the person.
