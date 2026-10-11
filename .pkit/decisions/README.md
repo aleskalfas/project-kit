@@ -12,9 +12,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-08T08:38:19Z
+      at: 2026-10-11T18:49:52Z
       outcome: unchanged
-      unchanged-because: "The change makes the rule-set pass read a rule-set file's sections as the friction pass reads them: fenced code skipped, and a heading opening with a rule id only as a whole token. This page says only that each rule's statement sits in a body section headed by the rule's id. It names no reading of headings or fences, so it still holds."
+      unchanged-because: COR-051's refinement adds how an accepted rule comes to bind on an artefact, the scope's form and declared check parts. This page's section on rule sets describes none of them. It summarises statuses, the acceptance gate, origins, where sets live, citing and validation, and each of its sentences still holds, including that a project inherits a method rule set by pinning its major.
 ---
 
 # Decision records
