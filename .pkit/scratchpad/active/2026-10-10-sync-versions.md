@@ -15,7 +15,7 @@ A design for #1429. It sets the shape of the maintainer's decision that `pkit sy
 - **Shared with #1394's design** (`.pkit/scratchpad/active/2026-10-09-content-upgrades.md`): COR-001's named-writer principle, COR-004's list of operations, COR-010, COR-017 and ADR-049. Each is written once. Whichever design's record lands first carries the principle, and the other adds its instance.
 - **Its build** is ordered after #1410 and before #1444, as the maintainer set. Where it falls against #1435 to #1442 is question 8. It shares the version guard with #1435, the messages of upgrade and sync with #1438, and status with #1436 and #1440.
 - **Reviewed:** by the critic and then the architect. Their findings and the answers are in "Review".
-- **Decided so far:** questions 1 to 8 and 11, by the maintainer on 11 October. Each answer is under its question.
+- **Decided so far:** questions 1 to 9 and 11, by the maintainer on 11 October. Each answer is under its question.
 
 ## The question
 
@@ -484,6 +484,8 @@ One decision each. Question 1 has a deadline and comes first. The rest are in or
   - **Its cost:** a command that worked fails, under a minor number. That includes a pinned project whose pipeline installs a newer pkit over HTTPS: the router's fetch over SSH fails there, so the pipeline falls back and stops.
 - **Alternative:** major for the sync change, since a working command now fails and COR-017's contract inverts.
   - **Its cost:** a major number for a change most adopters do not see.
+- **Decided: major for the sync change, minor for the replay,** by the maintainer on 11 October, against the first recommendation. PRJ-002 D2 defines major as a breaking change to existing surface, and a sync that worked now stops. Unlike #1452, which fixed a defect, B3 changes what the command does.
+  - **No release until the maintainer cuts one,** decided the same day. The planned builds ship together, so the one release takes the highest pending segment and is 2.0.0. With no adopters, the major costs only its number, and the release step widens every shipped component's range.
 
 ### 10. What does a version name for an untagged install?
 
@@ -618,6 +620,7 @@ A draft of the build issues, for filing after the maintainer decides. Each recor
   - status showing an incomplete transition. **Names #1436 and #1440,** which extend status too
   - **Safe alone:** a sync under this code still moves `backbone_version` and leaves the completion key, so the next upgrade finds them apart and finishes the migrations
   - **Docs:** the lifecycle README's manifest format and upgrade flow
+  - Its changeset is a backbone minor (question 9).
 - **B3, [Task] sync never moves a version:**
   - the propagation step split from the sync command
   - the guard on the sync command in both directions and on an incomplete transition, refusing under `--dry-run`, with a message per state. Upgrade keeps the older direction only
@@ -626,7 +629,7 @@ A draft of the build issues, for filing after the maintainer decides. Each recor
   - upgrade calls the step and runs each capability's migrations itself, after the copy, with project-management's `0.15.0/001` and `0.24.0/001` fixed for that order
   - `--force` accepted and ignored for one release, with a guidance migration
   - **Names #1435:** the shared guard. Whichever lands second depends on the first.
-  - **Docs:** the CLI reference's `sync`, `init` recovery and `pin` entries, and the lifecycle README's "No path down". The changeset segment is question 9's.
+  - **Docs:** the CLI reference's `sync`, `init` recovery and `pin` entries, and the lifecycle README's "No path down". Its changeset is a backbone major (question 9).
 - **B4, [Task] every migration in COR-010's order:**
   - the report lists each widening the settings merge brings: added allow entries and added top-level keys (question 11)
   - backbone, then adapters from the bundle, then capabilities in dependency order, then merge and the rest
