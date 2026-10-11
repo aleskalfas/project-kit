@@ -1,0 +1,7 @@
+component: living-docs
+kind: none
+body: >
+  Internal. The README defers its anchor on COR-051, refined to say where
+  an accepted rule binds, until the maintainer settles how living-docs'
+  checks meet that reach. Only the README's friction block changes, and
+  nothing you run or read changes.
