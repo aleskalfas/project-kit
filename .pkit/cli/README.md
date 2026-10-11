@@ -50,7 +50,7 @@ pkit:
         - src/project_kit/session_guard.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, COR-055, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059, ADR-061]
     revalidated:
-      at: 2026-10-08T10:29:18Z
+      at: 2026-10-11T00:45:46Z
       outcome: updated
 ---
 
@@ -243,6 +243,17 @@ Re-runs propagation only. Pulls current canonical core content into your project
 **Capability downgrade guard (`--force`).** When sync reconciles an installed kit-shipped capability against its kit source (auto-upgrade per COR-017), it compares the source version to the installed version of record (the per-component `manifest.yaml`, falling back to the installed `package.yaml`). If the source is **older** than what's installed — the sign of a stale or mis-pinned source — sync **refuses** that capability's refresh, printing a `refused` line naming both versions, and leaves the installed tree untouched rather than silently downgrading it. Pass **`--force`** to override: the downgrade then proceeds, but a loud `downgrade` line records the deliberate overwrite. A source version equal to or newer than installed refreshes normally, unaffected by the guard. (This is the fix for issue #524, where a stale source silently overwrote a newer committed capability tree.)
 
 **Refused when this pkit is older than the project (#1212).** The content `sync` writes is the running pkit's own version's, so before it writes anything it compares that version with the project's recorded content version (`.pkit/manifest.yaml`'s `backbone_version`) and with its pin (`.pkit/version-pin`), if there is one. If either is **newer** than the running pkit, `sync` **refuses**: it exits non-zero, writes nothing, names the versions, and says how to get the right pkit. A project that pins a version is run at its pin: reconnect and re-run (the router runs the pin whenever it can fetch it), or run it directly with `uvx --from …@v<pin> project-kit sync`. `pkit pin <version>` moves the pin instead, to a version no older than the content. A project whose content is ahead of its pin (the state an interrupted pin raise leaves) is pinned at its content with `pkit pin <content version>`. A project with no pin needs a pkit at its content's version, run with `uvx` or installed. An older pkit is a normal state, not a defect: a pin raise leaves the installed tool where it was, and when the router cannot fetch a project's pin (offline, say) it runs the installed tool instead, saying so on stderr once per command, and saying when that tool is older than the pin. Read-only commands run normally under it; only `sync` and `upgrade` refuse. **Nothing overrides this refusal**: not `--force` (which overrides only the capability downgrade guard above) and not `--dry-run`, which refuses too. pkit's migrations are forward-only (COR-010) and a pin is never moved down (ADR-049), so there is no path down for it to take; rolling a project back is `git checkout <ref> -- .pkit/`. Only an unambiguous order refuses: a recorded content version that is not valid semver (a corrupt manifest, which `sync` repairs) or a pin that is not a version is not compared.
+
+**Refused when it would strand backbone migrations (#1452).** Sync runs no backbone migration, yet it records the running pkit's version as the project's `backbone_version`. A later `pkit upgrade` would then find the project at its target and run none. So before it writes anything, `sync` refuses to move the version past a backbone migration.
+
+- **When it refuses:** a version directory under the methodology's `migrations/backbone/` holds a script. Its version is above the recorded one, and at or below the running pkit's.
+- **What it says:** both versions, each such directory with its scripts, and the remedy. It exits non-zero and writes nothing.
+- **The remedy:** `pkit upgrade`, which syncs the same content and then runs those migrations.
+- **No override:** not `--force`, which overrides only the capability downgrade guard, and not `--dry-run`, which refuses too.
+- **Not refused:** a sync that crosses no such directory moves the version as before. Self-host sync moves no version, so it is never refused.
+- **Only an unambiguous order:** a recorded version that is absent or not valid semver is not compared.
+- **In a pipeline:** a pipeline that runs `pkit sync` under a newer pkit stops here until the project is upgraded.
+- **Note:** the refusal is a stop-gap. The sync design in #1429 replaces it with a guard under which sync moves no version.
 
 On **self-host** (project-kit itself, where the source *is* the installed `.pkit/`), propagation would copy files onto themselves — so `sync` skips propagation and runs only the adapter deploy primitives instead, re-wiring the harness (`.claude/` agents, skills, settings, CLAUDE.md) from the source you just edited. This is the self-host way to apply source edits to the harness; you don't (and can't) `sync`/`upgrade` project-kit onto itself otherwise. (The downgrade guard reconciles capabilities, which self-host skips, so it never fires there.)
 
