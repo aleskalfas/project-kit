@@ -377,7 +377,7 @@ A dependant anchors to the part of a document it rests on, so an edit to another
 
 ## Recommendation
 
-The decided design: pointers for `reviewed-against`, no semantic versions on documents, the meaning marker later, and part anchors now, through a design of their own.
+The decided design: pointers for `reviewed-against`, no semantic versions on documents, the meaning marker later, and part anchors now, through a design of their own. The maintainer later reopened the marker: it is designed before adopters, in #1451 ("Decisions", question 2).
 
 - **A for `reviewed-against`:** a planned record lists the sources of the design it reviewed, in its front matter. Each source is a mapping with `title`, `url` and `version`.
   - **Text in this repository:** a commit on the default branch, or `this change` when the design lands with the record. It has no `url`.
@@ -410,7 +410,7 @@ The maintainer decided questions 1 to 3 on 8 October, in comments on PR #1384. Q
    - **What it means:** a change cannot yet mark a document's meaning as unchanged. Every edit to an anchored document asks its dependants, as today.
    - **Why:** it would have spared 4 of 182 answers, and none on a record adopters receive. It can come later without a data migration.
    - **The trigger to revisit,** as the maintainer recorded it: between two releases, measure how many edits to records adopters receive kept the meaning (D, "A trigger that can be measured now").
-   - **No issue:** this note keeps the measure, the trigger and the list of records D would touch.
+   - **No issue, until 11 October:** this note kept the measure, the trigger and the list of records D would touch.
    - **Not taken:** designing D now, as a record of its own.
    - **Reopened on 11 October: designed before adopters,** by the maintainer, in #1451, after #1429's design.
      - **Why:** the cost of a wording edit lands on every adopter anchored to the record, and the count above saw eleven days while records mostly grew. Changing friction's rules is cheapest before adopters rely on them. Practice has separated editorial from substantive changes from the start, as W3C and the IETF do.
