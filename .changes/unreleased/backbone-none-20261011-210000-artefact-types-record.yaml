@@ -7,5 +7,7 @@ body: >
   project gives a type on its places in the backbone configuration. The
   backbone resolves each artefact's type from the places that match its
   file. COR-050 points 1 and 14 admit a type on a place, and a COR-051 scope
-  also selects by `types`. It is record text only, and nothing you run
-  changes. The build Task (#1406) carries the real changeset.
+  also selects by `types`. The agents, CLI, decisions and schemas READMEs and
+  two analysis actors are revalidated unchanged against the refinements. It
+  is record text only, and nothing you run changes. The build Task (#1406)
+  carries the real changeset.
