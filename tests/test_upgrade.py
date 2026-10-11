@@ -1052,6 +1052,22 @@ def test_max_released_tag_skips_a_pre_release_above_the_latest_release(above: st
     assert upgrade._max_released_tag(_tag_output("1.0.0", "2.0.0", above)) == Version("2.0.0")
 
 
+@pytest.mark.parametrize(
+    "above",
+    [
+        pytest.param("2.1.0.post1", id="post-release"),
+        pytest.param("2.1.0+build", id="local-version"),
+        pytest.param("2.1", id="two-part"),
+        pytest.param("02.1.0", id="zero-padded"),
+    ],
+)
+def test_max_released_tag_skips_a_tag_the_release_step_never_writes(above: str) -> None:
+    """Only a tag the release test accepts counts, so the version found is spelled
+    as its tag: a padded `v02.1.0` would otherwise come back as 2.1.0 and the tool
+    step would install `@v2.1.0`, a tag that may not exist."""
+    assert upgrade._max_released_tag(_tag_output("1.0.0", "2.0.0", above)) == Version("2.0.0")
+
+
 def test_max_released_tag_is_none_when_only_pre_releases_are_tagged() -> None:
     """A tag list holding only pre-releases and dev releases has no release."""
     assert upgrade._max_released_tag(_tag_output("1.0.0rc1", "1.0.0b2", "1.0.0.dev1")) is None
