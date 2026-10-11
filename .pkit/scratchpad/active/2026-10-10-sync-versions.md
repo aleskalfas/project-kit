@@ -15,7 +15,7 @@ A design for #1429. It sets the shape of the maintainer's decision that `pkit sy
 - **Shared with #1394's design** (`.pkit/scratchpad/active/2026-10-09-content-upgrades.md`): COR-001's named-writer principle, COR-004's list of operations, COR-010, COR-017 and ADR-049. Each is written once. Whichever design's record lands first carries the principle, and the other adds its instance.
 - **Its build** is ordered after #1410 and before #1444, as the maintainer set. Where it falls against #1435 to #1442 is question 8. It shares the version guard with #1435, the messages of upgrade and sync with #1438, and status with #1436 and #1440.
 - **Reviewed:** by the critic and then the architect. Their findings and the answers are in "Review".
-- **Decided so far:** questions 1 and 2, by the maintainer on 11 October. Each answer is under its question.
+- **Decided so far:** questions 1 to 3, by the maintainer on 11 October. Each answer is under its question.
 
 ## The question
 
@@ -411,6 +411,7 @@ One decision each. Question 1 has a deadline and comes first. The rest are in or
   - **Its cost:** every adopter's first upgrade runs eight scripts. Three of them can re-add what a project removed after they ran.
 - **Alternative:** a missing key means complete. A stranded project recovers by a command that runs the backbone migrations from a version its operator names, which the changelog explains.
   - **Its cost:** a project stays stranded unless its operator learns it. Each script can tell its own state from the files, but nothing tells the operator which scripts to run.
+- **Decided: replay once,** as recommended, by the maintainer on 11 October. A missing `completed_version` means unknown, and the first upgrade runs every backbone migration once, under the stronger script contract. `1.31.0/001` and `1.0.0/001` are rewritten before the replay ships. B2 carries it, and R1 the contract.
 
 ### 4. How does a transition meet a new collision?
 
