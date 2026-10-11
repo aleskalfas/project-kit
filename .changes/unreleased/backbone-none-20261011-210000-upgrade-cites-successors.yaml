@@ -1,0 +1,9 @@
+component: backbone
+kind: none
+body: >
+  ADR-063 and ADR-064 are accepted and replace the amendments that reversed
+  ADR-044 and ADR-049. The `pkit upgrade` help, the CLI reference and the
+  README now cite them, and say what the upgrade already does: it updates a
+  stale tool outside any project and in an un-pinned project, and pins an
+  un-pinned project by default. The help no longer says an already-pinned
+  project advances its pin either way. Nothing you run behaves differently.
