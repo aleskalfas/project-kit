@@ -15,7 +15,7 @@ A design for #1429. It sets the shape of the maintainer's decision that `pkit sy
 - **Shared with #1394's design** (`.pkit/scratchpad/active/2026-10-09-content-upgrades.md`): COR-001's named-writer principle, COR-004's list of operations, COR-010, COR-017 and ADR-049. Each is written once. Whichever design's record lands first carries the principle, and the other adds its instance.
 - **Its build** is ordered after #1410 and before #1444, as the maintainer set. Where it falls against #1435 to #1442 is question 8. It shares the version guard with #1435, the messages of upgrade and sync with #1438, and status with #1436 and #1440.
 - **Reviewed:** by the critic and then the architect. Their findings and the answers are in "Review".
-- **Decided so far:** questions 1 to 5 and 11, by the maintainer on 11 October. Each answer is under its question.
+- **Decided so far:** questions 1 to 6 and 11, by the maintainer on 11 October. Each answer is under its question.
 
 ## The question
 
@@ -452,6 +452,7 @@ One decision each. Question 1 has a deadline and comes first. The rest are in or
   - **Its cost:** COR-001's seeding cadence is partially superseded for the transition, which also re-creates a seed the project deleted on purpose. COR-004's `init` rationale on resurfacing seeded content changes with it.
 - **Alternative:** sync and the transition both create a missing seed path.
   - **Its cost:** COR-001's cadence is superseded for sync too, and a seed the project deleted on purpose returns on every sync.
+- **Decided: the transition alone,** as recommended, by the maintainer on 11 October. It creates a declared seed path that is missing and never writes over one that exists. Sync creates none. A seed deleted on purpose returns at the next transition, since no release declares its seeds as a list: install's code writes them. R1 carries the cadence, B3 removes sync's seeding.
 
 ### 7. Do `pkit capabilities install` and `upgrade` stop on a version mismatch?
 
