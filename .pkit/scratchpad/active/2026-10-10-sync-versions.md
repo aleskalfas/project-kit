@@ -15,7 +15,7 @@ A design for #1429. It sets the shape of the maintainer's decision that `pkit sy
 - **Shared with #1394's design** (`.pkit/scratchpad/active/2026-10-09-content-upgrades.md`): COR-001's named-writer principle, COR-004's list of operations, COR-010, COR-017 and ADR-049. Each is written once. Whichever design's record lands first carries the principle, and the other adds its instance.
 - **Its build** is ordered after #1410 and before #1444, as the maintainer set. Where it falls against #1435 to #1442 is question 8. It shares the version guard with #1435, the messages of upgrade and sync with #1438, and status with #1436 and #1440.
 - **Reviewed:** by the critic and then the architect. Their findings and the answers are in "Review".
-- **Decided so far:** questions 1 to 9 and 11, by the maintainer on 11 October. Each answer is under its question.
+- **Decided:** all eleven questions, by the maintainer on 11 October. Each answer is under its question.
 
 ## The question
 
@@ -495,6 +495,7 @@ One decision each. Question 1 has a deadline and comes first. The rest are in or
   - **Its cost:** the printed command names a version that ages, an untagged install stays possible and unchecked, and a component-only release reaches a tagged project only with the next backbone tag.
 - **Alternative:** an untagged build stamps a development version, such as `1.149.0+g<sha>`, so it never equals a project's recorded version.
   - **Its cost:** every untagged install meets the stop in every project, and the router reads such a version as unordered.
+- **Decided: a tagged install,** as recommended, by the maintainer on 11 October. Under the release hold (question 9), the recommended install gives the last release, and an install from main is the development install, which no version vouches for. B7 carries it.
 
 ### 11. Does a transition ask before it adds a permission?
 
@@ -640,7 +641,7 @@ A draft of the build issues, for filing after the maintainer decides. Each recor
   - **Docs:** the lifecycle README's upgrade flow and per-component upgrade
 - **B5, [Task] the pinned flows:** the routed child finishes its own pin, offline included, and upgrade refuses under the router's fallback. After R3. **Names #1438,** which rewrites upgrade's and sync's messages too.
 - **B6, [Task] capability install and upgrade use sync's guard** (question 7).
-- **B7, [Task] the recommended install is tagged,** as question 10 decides.
+- **B7, [Task] the recommended install is tagged** (question 10).
 - **Later:** `--force` removed, a release after B3.
 - **Later, not filed:** names that cannot clash, by a prefix on every skill and agent the methodology ships (question 4).
 
