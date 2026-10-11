@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
     revalidated:
-      at: 2026-10-11T18:32:05Z
+      at: 2026-10-11T18:03:37Z
       outcome: unchanged
-      unchanged-because: ADR-049's change moves its amendment's content into its body and decides nothing new; the page's one sentence on pinning, that a project can pin itself to a fixed version, holds under ADR-049 as it did before
+      unchanged-because: the change makes the settings merge keep every key under permissions, such as ask, defaultMode and additionalDirectories, where it used to keep only allow and deny; this page already says the merge keeps the project's settings and puts back a removed kit deny, which still holds
 ---
 
 # project-kit

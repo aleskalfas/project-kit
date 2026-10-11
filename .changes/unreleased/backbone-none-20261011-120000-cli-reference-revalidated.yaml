@@ -1,7 +1,0 @@
-component: backbone
-kind: none
-body: >
-  The CLI reference cites ADR-044 without "amended", since the record no
-  longer carries an amendment section, and its friction revalidation answers
-  ADR-049's fold, which decides nothing new; the backbone's behaviour is
-  unchanged.
