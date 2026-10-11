@@ -1,10 +1,13 @@
 ---
 id: ADR-044
 title: pkit upgrade detects a stale tool and instructs; it does not self-install
-status: accepted
+status: superseded
 date: 2026-08-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
+superseded_by: ADR-063
 ---
+
+> **Superseded by [ADR-063](ADR-063-upgrade-updates-the-tool.md).** At a terminal, outside any project or in an un-pinned project, `pkit upgrade` installs the latest release with `uv` when the installed tool is behind it, and runs again under the new tool. Where it cannot or may not install, it prints the command. ADR-063 restates what of this record still holds.
 
 `pkit upgrade` refreshes a project's `.pkit/` **from the installed tool's bundled kit** — it cannot update the *tool* itself, and today it can't even tell you the tool is behind: an adopter on a stale tool sees *"nothing to upgrade"* and has no idea the fix lives in a different command (`uv`). This ADR makes `pkit upgrade` **detect** a newer released tool and **print the exact command** to update it. It deliberately does **not** run `uv tool install` itself in this increment: auto-installing would replace the global binary every project on the machine shares, the confinement sandbox would gate that with its own prompt regardless (so the "seamless" auto-run saves a sandboxed operator nothing), and the genuinely seamless end-state — **option D** (deferred): a per-project pin the router serves via `uvx`, with no global mutation at all — retires the auto-install path rather than building on it. Detect-and-instruct is the smallest change that kills the actual confusion, ships safely, and commits us to nothing the seamless design would undo.
 
