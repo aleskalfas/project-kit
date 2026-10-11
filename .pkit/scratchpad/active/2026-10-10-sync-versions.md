@@ -15,6 +15,7 @@ A design for #1429. It sets the shape of the maintainer's decision that `pkit sy
 - **Shared with #1394's design** (`.pkit/scratchpad/active/2026-10-09-content-upgrades.md`): COR-001's named-writer principle, COR-004's list of operations, COR-010, COR-017 and ADR-049. Each is written once. Whichever design's record lands first carries the principle, and the other adds its instance.
 - **Its build** is ordered after #1410 and before #1444, as the maintainer set. Where it falls against #1435 to #1442 is question 8. It shares the version guard with #1435, the messages of upgrade and sync with #1438, and status with #1436 and #1440.
 - **Reviewed:** by the critic and then the architect. Their findings and the answers are in "Review".
+- **Decided so far:** question 1, by the maintainer on 11 October. Each answer is under its question.
 
 ## The question
 
@@ -384,6 +385,7 @@ One decision each. Question 1 has a deadline and comes first. The rest are in or
   - **Its cost:** an issue outside this design's slicing, and a refusal the full guard later replaces.
 - **Alternative:** the changelog alone tells adopters to run `pkit upgrade` and not `pkit sync`.
   - **Its cost:** a project that syncs anyway loses its migrations until this build's replay recovers it.
+- **Decided: yes,** as recommended, by the maintainer on 11 October. Filed as #1452, a High bug under #332, built before the next release is cut. It is B0 in "Slicing".
 
 ### 2. Is `pkit upgrade` one operation, a version transition, and where does that rule live?
 
@@ -553,7 +555,7 @@ The critic and the architect reviewed the bare direction on 10 October. Where th
 
 A draft of the build issues, for filing after the maintainer decides. Each record is accepted before the work that cites it, and each slice leaves adopters safe if a release is cut after it.
 
-- **B0, [Task] the stop-gap, for the next release** (question 1): the sync command, at its entry point, refuses to move `backbone_version` past a version directory holding backbone migrations, and names `pkit upgrade`. `run_upgrade`'s call to `run_sync` is not touched. Needs no record: COR-010's order already puts recorded versions after migrations.
+- **B0, [Task] the stop-gap, for the next release** (question 1), filed as #1452: the sync command, at its entry point, refuses to move `backbone_version` past a version directory holding backbone migrations, and names `pkit upgrade`. `run_upgrade`'s call to `run_sync` is not touched. Needs no record: COR-010's order already puts recorded versions after migrations.
 - **R1, [Docs] the core record and the refinements:**
   - the new core record through the decision-author skill, partially superseding COR-017's sync paragraph, COR-004's compound-verb sentence and, as questions 5 and 6 decide, its sync-and-merge paragraph and COR-001's seeding cadence
   - COR-001, COR-002, COR-004's operation list, COR-010 and COR-048 point 1 refined, the decisions README's lines, core rule 5 and the migration-author skill's contract
