@@ -63,6 +63,27 @@ alongside an approval gate is the live case) **qualifies each** — `--bypass` f
 primary, `--bypass-<gate>` for the rest — so overriding one gate never silently
 clears another.
 
+The suffix names a fixed gate, or takes a parameter: the family has a
+**parameterised, repeatable** member, `done-work --bypass-reviewer <name>
+--bypass-reviewer-reason "<r>"`, a per-reviewer override of the approval gate
+([project-management:DEC-050-per-reviewer-override]) whose target is a reviewer
+name. It is a member of the `--bypass` family (audited, reason-required,
+bypassable-with-audit), not a new `--override-*` verb. **A command with more than
+one reason-carrying bypass qualifies each reason after its flag,** as
+`--bypass-reviewer-reason` is: by this point's convention the bare
+`--bypass-reason` pairs with the whole-gate `--bypass`, and `done-work` carries
+three bypass-family flags, so an
+unqualified reason would not say which one it belongs to.
+
+One **deliberate exception** exists, recorded rather than silent: `done-work` also
+accepts the bare `--bypass-reason` as a *deprecated alias* for
+`--bypass-reviewer-reason`, because that spelling shipped in project-management
+0.54.0 before the qualified form existed and renaming released CLI surface would
+owe a migration ([pkit:COR-010]). It shares one destination with the canonical
+flag, warns, refuses if both are supplied, and retires at the next major — so the
+convention governs everything new, and the exception is a time-boxed compatibility
+debt (see [project-management:DEC-050-per-reviewer-override] Decision 1).
+
 **2. `--force` — the operator's override of a `hard-reject` finding or a hard
 precondition.** Boolean. It covers **two** firm stops: a DEC-014 `hard-reject`
 *finding*, and a **script-level precondition** the methodology treats as firm but
@@ -153,7 +174,3 @@ a universal comment would force inventing an annotation surface where none exist
 - **No behaviour change / no migration.** No flag is renamed, no gate changes
   severity; the schema field is additive. Version impact is the adopter's
   docs/wording bump policy.
-
-## Amendment (2026-08-21) — parameterised bypass member (DEC-050)
-
-[project-management:DEC-050] extends this family with a **parameterised, repeatable** member: `done-work --bypass-reviewer <name> --bypass-reviewer-reason "<r>"`, a per-reviewer override of the approval gate. Note its reason flag is **suffixed with its own flag's name**: the bare `--bypass-reason` above pairs with the whole-gate `--bypass`, and `done-work` now carries three bypass-family flags, so an unqualified reason would not say which one it belongs to. A command with more than one reason-carrying bypass qualifies each reason after its flag. One **deliberate exception** exists, recorded rather than silent: `done-work` also accepts the bare `--bypass-reason` as a *deprecated alias* for `--bypass-reviewer-reason`, because that spelling shipped in project-management 0.54.0 before the qualified form existed and renaming released CLI surface would owe a migration ([pkit:COR-010]). It shares one destination with the canonical flag, warns, refuses if both are supplied, and retires at the next major — so the convention above governs everything new, and the exception is a time-boxed compatibility debt (see [project-management:DEC-050-per-reviewer-override] Decision 1). This is the one shape this record did not contemplate — its `--bypass[-<gate>]` suffix was a *fixed* gate name, whereas `--bypass-reviewer`'s target is a reviewer-name *parameter*. It remains a member of the `--bypass` family (audited, reason-required, bypassable-with-audit), not a new `--override-*` verb — the convention holds; only the suffix gains a parameterised form.
