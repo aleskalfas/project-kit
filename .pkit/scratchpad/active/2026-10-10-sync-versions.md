@@ -15,7 +15,7 @@ A design for #1429. It sets the shape of the maintainer's decision that `pkit sy
 - **Shared with #1394's design** (`.pkit/scratchpad/active/2026-10-09-content-upgrades.md`): COR-001's named-writer principle, COR-004's list of operations, COR-010, COR-017 and ADR-049. Each is written once. Whichever design's record lands first carries the principle, and the other adds its instance.
 - **Its build** is ordered after #1410 and before #1444, as the maintainer set. Where it falls against #1435 to #1442 is question 8. It shares the version guard with #1435, the messages of upgrade and sync with #1438, and status with #1436 and #1440.
 - **Reviewed:** by the critic and then the architect. Their findings and the answers are in "Review".
-- **Decided so far:** questions 1 to 3, by the maintainer on 11 October. Each answer is under its question.
+- **Decided so far:** questions 1 to 4, by the maintainer on 11 October. Each answer is under its question.
 
 ## The question
 
@@ -422,6 +422,12 @@ One decision each. Question 1 has a deadline and comes first. The rest are in or
   - **Its cost:** a transition in a pipeline refuses while a collision is open, and COR-017's sentence on sync's collision refusal is superseded by a different flow.
 - **Alternative:** the transition holds that capability back at its old version and reports it, and the project resolves it later with `pkit capabilities upgrade X --interactive`.
   - **Its cost:** a project mixes two releases. Every gate needs COR-030's warn-and-override disposition to avoid a hard block. And the interactive upgrade must be allowed past sync's guard, or the two remedies point at each other.
+- **Decided: ask about each clash,** as recommended, by the maintainer on 11 October. The transition reuses the install flow's override, skip or inspect (`capabilities.detect_upgrade_collisions`), and refuses when nobody can answer. No release ships a clashing name today, so the flow waits for the first one. B4 carries it.
+  - **Later, not filed: names that cannot clash.** Every skill and agent the methodology ships would carry a prefix its projects never use, such as `pkit-critic` or `pkit-decision-author`. A check refuses a project's own skill or agent with the prefix. A deliberate replacement keeps COR-001's suspension, under the same full name. Accidental clashes then cannot happen, and this flow is no longer needed.
+    - **Why a prefix, not plugins:** Claude Code namespaces only a plugin's skills and agents (`software-engineering:code-reviewer`). Outside a plugin, an agent's name cannot hold a colon. A plugin committed in the repository loads only behind the workspace trust dialog or extra settings. Its agents rank lowest, and other harnesses have no plugins. A prefix is how one shared namespace is split elsewhere: every function of Emacs's `magit` package starts with `magit-`, and C libraries do the same (`curl_easy_init`).
+    - **Also covers a person's own skill:** in Claude Code a personal skill beats the project's skill of the same name.
+    - **Why not now:** no clash exists. The rename touches every reference to a skill or agent: the rules, the skills and agents that call each other, the review configuration, the overlay and the permission grants. Adopters then get a migration. It would delay the software-analysis and living-docs work, and a later rename is an ordinary migration.
+    - **It reopens** COR-017's "Collision prevention", which catches skill and agent clashes at install rather than preventing them.
 
 ### 5. Does merge stay in sync?
 
@@ -600,6 +606,7 @@ A draft of the build issues, for filing after the maintainer decides. Each recor
 - **B6, [Task] capability install and upgrade use sync's guard,** if question 7 is answered yes.
 - **B7, [Task] the recommended install is tagged,** as question 10 decides.
 - **Later:** `--force` removed, a release after B3.
+- **Later, not filed:** names that cannot clash, by a prefix on every skill and agent the methodology ships (question 4).
 
 **Order:** B0 in the next release. Then #1410, R1, R2, B1 to B4, R3, B5 to B7, and then, under question 8's recommendation, the conversion build from #1435 to #1444. B1 comes before B2 and B3, since both read a capability's record.
 
