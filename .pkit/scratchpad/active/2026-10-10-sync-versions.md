@@ -16,8 +16,8 @@ A design for #1429. It sets the shape of the maintainer's decision that `pkit sy
 - **Its build** is ordered after #1410 and before #1444, as the maintainer set. Where it falls against #1435 to #1442 is question 8. It shares the version guard with #1435, the messages of upgrade and sync with #1438, and status with #1436 and #1440.
 - **Reviewed:** by the critic and then the architect. Their findings and the answers are in "Review".
 - **Decided:** all eleven questions, by the maintainer on 11 October. Each answer is under its question.
-- **Authorised:** the 16 settled positions this design reopens, by the maintainer on 11 October ("Settled positions this reopens"). Position 17, found while filing, waits for the maintainer.
-- **Filed:** #1454 to #1464 on 11 October ("Slicing"). B7 waits for position 17.
+- **Authorised:** the 17 settled positions this design reopens, by the maintainer on 11 October ("Settled positions this reopens"). Position 17 was found while filing, and authorised on its own.
+- **Filed:** #1454 to #1465 on 11 October ("Slicing").
 
 ## The question
 
@@ -646,7 +646,7 @@ A draft of the build issues, for filing after the maintainer decides. Each recor
   - **Docs:** the lifecycle README's upgrade flow and per-component upgrade
 - **B5, #1462, [Task] the pinned flows:** the routed child finishes its own pin, offline included, and upgrade refuses under the router's fallback. A pinned project whose installed pkit equals its pin advances as a routed child does (Found on the way 9). After R3. **Names #1438,** which rewrites upgrade's and sync's messages too.
 - **B6, #1463, [Task] capability install and upgrade use sync's guard** (question 7).
-- **B7, [Task] the recommended install is tagged** (question 10).
+- **B7, #1465, [Task] the recommended install is tagged** (question 10).
 - **Later, #1464:** `--force` removed, a release after B3.
 - **Later, not filed:** names that cannot clash, by a prefix on every skill and agent the methodology ships (question 4).
 
