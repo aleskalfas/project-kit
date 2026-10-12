@@ -33,6 +33,7 @@ from project_kit import config_validate as cv
 from project_kit import friction_discovery as fd
 from project_kit import package_validate as pv
 from project_kit import rule_sets as rs
+from project_kit import validators
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 
@@ -521,6 +522,8 @@ def test_each_type_finding_has_one_member_and_severity() -> None:
         fd.TypeFindingKind.UNDECLARED: ("packages", "report"),
         fd.TypeFindingKind.SCOPE_UNKNOWN: ("rule-sets", "error"),
     }
+    registered = {validator.name for validator in validators.BACKBONE_VALIDATORS}
+    assert {member for member, _severity in fd.TYPE_FINDINGS.values()} <= registered
 
 
 # --- the scope: paths, exclude and types (COR-051 point 2) ----------------------------------
@@ -629,6 +632,9 @@ def test_the_document_gives_each_artefact_its_type_and_lists_the_registries(
         "evidence:page",
         "evidence:log",
     }
+    human = CliRunner().invoke(main, ["friction", "artefacts"])
+    assert "  notes  (project, type own)  1 file(s)" in human.output
+    assert "(capability:evidence, location runs, type evidence:run)" in human.output
 
 
 # --- the schemas -------------------------------------------------------------------------
