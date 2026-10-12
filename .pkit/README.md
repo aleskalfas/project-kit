@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-12T15:28:48Z
+      at: 2026-10-12T11:22:18Z
       outcome: unchanged
-      unchanged-because: "This map names the CLI reference, the lifecycle README and the schemas README by their roles and links them. This change adds artefact types to all three: the configuration and package keys, how discovery resolves a type, the artefacts document's new keys and a scope's three keys. No area's role or place changes, so the map holds."
+      unchanged-because: This map names the CLI reference, the rules area, the agents area and the schemas area by their roles and links them. This change refines, in their text, who checks the answers a change writes, and leaves each area's role and place as they were, so the map holds.
 ---
 
 # project-kit
