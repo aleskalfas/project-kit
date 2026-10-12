@@ -18,9 +18,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-09T17:22:48Z
+      at: 2026-10-12T09:40:57Z
       outcome: unchanged
-      unchanged-because: ADR-055 point 3 gains that project-kit's shipped analysis templates and structures follow WRITE. This guide cites ADR-055 only for point 5's friction gate, merge queue and whole-repository report, which the change leaves as they were.
+      unchanged-because: tests/README.md gains a section on turning signing off in a repository a test commits in. This guide points to it for running the suite, writing tests with the adopter-repository fixture and type checking, which the change leaves as they were.
 ---
 
 # Contributing to project-kit
