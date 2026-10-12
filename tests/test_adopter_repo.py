@@ -6,8 +6,9 @@ from __future__ import annotations
 
 import contextlib
 import os
+import subprocess
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from project_kit import install as install_mod
 from project_kit.manifest import read_backbone_manifest
 from tests.adopter_repo import (
     HISTORY_EPOCH,
+    REFUSED_TO_SIGN,
     SEED_CONTENT,
     SEED_CONTENT_REVIEWED,
     AdopterRepo,
@@ -25,6 +27,7 @@ from tests.adopter_repo import (
     Author,
     GitRepo,
     MakeAdopterRepo,
+    sign_nothing,
 )
 
 # --- bare adopter ---------------------------------------------------------------
@@ -201,6 +204,78 @@ def test_gitrepo_stands_alone(tmp_path: Path) -> None:
     second = repo.commit("more", {"README.md": "hi again\n"})
     assert repo.shas() == [second, first]
     assert repo.current_branch() == "main"
+
+
+# --- signing (#1484) --------------------------------------------------------------
+
+_IDENTITY = ("-c", "user.name=t", "-c", "user.email=t@example.com")
+
+
+def _git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *_IDENTITY, *args], cwd=root, capture_output=True, text=True, check=False
+    )
+
+
+@pytest.mark.parametrize(
+    "signing",
+    [
+        ("-c", "gpg.format=openpgp"),
+        ("-c", "gpg.format=ssh", "-c", "user.signingkey=key::ssh-ed25519 AAAAC3NzaC1lZDI1NTE5"),
+    ],
+    ids=["openpgp", "ssh"],
+)
+def test_a_commit_where_signing_is_left_on_is_refused_at_once(
+    tmp_path: Path, signing: tuple[str, ...]
+) -> None:
+    """The suite's git signs every commit with a program that refuses
+    (`signing_refused`): a repository that leaves signing on fails its first commit,
+    however the machine signs, and asks no signing agent."""
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    # Read before the commit is tried, so a guard that is not there fails here instead
+    # of asking the developer's agent.
+    assert _git(tmp_path, "config", "--get", "commit.gpgsign").stdout.strip() == "true"
+    for program in ("gpg.program", "gpg.openpgp.program", "gpg.ssh.program", "gpg.x509.program"):
+        resolved = _git(tmp_path, "config", "--get", program).stdout.strip()
+        assert Path(resolved).name == "refuse-to-sign", program
+    done = _git(tmp_path, *signing, "commit", "-q", "--allow-empty", "-m", "a commit")
+    assert done.returncode != 0
+    assert REFUSED_TO_SIGN in done.stderr
+    assert _git(tmp_path, "rev-parse", "-q", "--verify", "HEAD").returncode != 0
+
+
+def _made_by_git_repo(root: Path, _make: MakeAdopterRepo) -> Path:
+    return GitRepo.init(root).root
+
+
+def _signing_nothing(root: Path, _make: MakeAdopterRepo) -> Path:
+    root.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    sign_nothing(root)
+    return root
+
+
+def _copied_from_a_template(root: Path, make: MakeAdopterRepo) -> Path:
+    return make(history=True, root=root, chdir=False).root
+
+
+@pytest.mark.parametrize("made", [_made_by_git_repo, _signing_nothing, _copied_from_a_template])
+def test_a_repository_the_helpers_make_signs_nothing(
+    made: Callable[[Path, MakeAdopterRepo], Path],
+    make_adopter_repo: MakeAdopterRepo,
+    tmp_path: Path,
+) -> None:
+    """`GitRepo.init`, `sign_nothing` and a copy of an adopter template turn signing
+    off in the repository's own configuration: a commit and an annotated tag made
+    there succeed under the suite's refusing global configuration, unsigned."""
+    root = made(tmp_path / "repo", make_adopter_repo)
+    for key in ("commit.gpgsign", "tag.gpgsign"):
+        assert _git(root, "config", "--local", "--get", key).stdout.strip() == "false"
+    committed = _git(root, "commit", "-q", "--allow-empty", "-m", "a commit")
+    assert committed.returncode == 0, committed.stderr
+    assert _git(root, "tag", "-a", "-m", "a tag", "a-tag").returncode == 0
+    for name in ("HEAD", "a-tag"):
+        assert "-----BEGIN" not in _git(root, "cat-file", "-p", name).stdout
 
 
 # --- templates (#1204) ------------------------------------------------------------

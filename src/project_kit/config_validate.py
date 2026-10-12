@@ -27,6 +27,13 @@ checks the owning records ask for:
   pass is the one owner of these findings and of the `friction.mode` enum
   (the schema); the friction pass reads the settings and reports only on the
   artefacts.
+- **Types on the project's places** (COR-056 points 2 and 3): the type
+  findings artefact discovery raises and names this pass to report, at the
+  severity it names (`friction_discovery.TYPE_FINDINGS`; ADR-057 point 2). A
+  project place giving a component's type that is not installed, not declared
+  or not admitted on a project's places, a bare project type taking the name of
+  a declared type, and a tie the project can mend are errors. A typed project
+  place that yields to a component's place is a report.
 - **Connections** (COR-053 point 7, COR-052 point 4): each provider or
   contributor selection names an installed capability, read from the
   backbone manifest — otherwise an error naming the fix. A provider selection
@@ -40,7 +47,7 @@ checks the owning records ask for:
 
 Findings are structured records (a JSON Pointer into the file, a severity,
 a message) in a deterministic order: shape findings by position, then the
-repository checks in a fixed order — docs, friction, connections — each entry
+repository checks in a fixed order — docs, friction, types, connections — each entry
 in written order. Only errors fail validation.
 """
 
@@ -51,7 +58,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
@@ -63,10 +70,12 @@ from ruamel.yaml.error import YAMLError
 from project_kit import backbone_schemas, validators
 from project_kit import connections as wiring
 from project_kit.friction_discovery import (
+    CONFIGURATION_MEMBER,
     SettingsPath,
     is_inside_repository,
     pattern_matches_any,
     read_friction_settings,
+    shared_types,
 )
 from project_kit.manifest import read_backbone_manifest
 from project_kit.project_config import PROJECT_CONFIG_RELPATH, project_config_path
@@ -96,11 +105,13 @@ ADDRESS_FORMS = {
 
 
 class Severity(Enum):
-    """Whether a finding fails validation, is only reported, or merely informs."""
+    """Whether a finding fails validation, asks for attention, merely informs, or is
+    reported rather than judged (ADR-058 point 2)."""
 
     ERROR = "error"
     WARNING = "warning"
     INFO = "info"
+    REPORT = "report"
 
 
 @dataclass(frozen=True)
@@ -196,6 +207,7 @@ def run_configuration_pass(target_root: Path) -> ConfigReport:
     flagged = frozenset(f.path for f in findings)
     findings.extend(_docs_findings(target_root, config.get(DOCS_KEY), flagged))
     findings.extend(_friction_findings(target_root, config.get(FRICTION_KEY), flagged))
+    findings.extend(_type_findings(target_root))
     findings.extend(_connections_findings(target_root, config.get(CONNECTIONS_KEY), flagged))
     return ConfigReport(
         location=location, present=True, schema_present=True, findings=tuple(findings)
@@ -303,6 +315,8 @@ def _friction_findings(
 
     A key whose value is not a list was refused whole by the shape pass, and a
     pattern the shape pass refused is not judged again: one finding per mistake.
+    A place written `{path, type}` (COR-056 point 2) has its pattern at its
+    `path`, where it is judged and where the shape pass would have refused it.
     """
     if not isinstance(friction, Mapping):
         return []
@@ -310,18 +324,34 @@ def _friction_findings(
     listing = functools.cache(lambda: working_tree(target_root).files())  # on first need
     findings: list[ConfigFinding] = []
     for key in FRICTION_PATTERN_KEYS:
-        if not isinstance(friction.get(key), list):
+        written: Any = cast("Mapping[str, Any]", friction).get(key)
+        if not isinstance(written, list):
             continue  # the shape pass already reported it
         declared: tuple[SettingsPath, ...] = getattr(settings, key)
         for setting in declared:
-            if setting.is_capability or setting.pointer in flagged:
-                continue  # a capability's is the packages pass's; a refused one is reported
-            findings.extend(_pattern_findings(target_root, setting, listing))
+            if setting.is_capability:
+                continue  # a capability's is the packages pass's
+            pointer = _pattern_pointer(setting.pointer, cast("list[Any]", written))
+            if setting.pointer in flagged or pointer in flagged:
+                continue  # a refused one is reported
+            findings.extend(_pattern_findings(target_root, setting, pointer, listing))
     return findings
 
 
+def _pattern_pointer(pointer: str, written: Sequence[Any]) -> str:
+    """Where a pattern is written: at the entry, or at its `path` when the entry
+    is a typed place, `{path, type}` (COR-056 point 2)."""
+    index = _last_segment(pointer)
+    if index.isdigit() and int(index) < len(written) and isinstance(written[int(index)], Mapping):
+        return f"{pointer}/path"
+    return pointer
+
+
 def _pattern_findings(
-    target_root: Path, setting: SettingsPath, listing: Callable[[], Sequence[str]]
+    target_root: Path,
+    setting: SettingsPath,
+    pointer: str,
+    listing: Callable[[], Sequence[str]],
 ) -> list[ConfigFinding]:
     """One path or glob: stays inside the repository (error otherwise); matches
     something (warning otherwise).
@@ -335,7 +365,7 @@ def _pattern_findings(
     if not is_inside_repository(target_root, pattern):
         return [
             ConfigFinding(
-                setting.pointer,
+                pointer,
                 Severity.ERROR,
                 f"friction pattern {pattern!r} leaves the repository (absolute, climbing above "
                 f"the root, or resolving outside it through a link); every path in these "
@@ -345,13 +375,30 @@ def _pattern_findings(
     if not pattern_matches_any(pattern, listing()):
         return [
             ConfigFinding(
-                setting.pointer,
+                pointer,
                 Severity.WARNING,
                 f"friction pattern {pattern!r} matches nothing in the repository; a dead "
                 f"pattern keeps silence looking like health (COR-050 point 12).",
             )
         ]
     return []
+
+
+# --- types on the project's places (COR-056) ----------------------------------
+
+
+def _type_findings(target_root: Path) -> list[ConfigFinding]:
+    """The type findings discovery names this pass to report (ADR-057 point 2): what
+    the project's places get wrong about types, each at its declaration and at the
+    severity discovery's one table gives it (`friction_discovery.TYPE_FINDINGS`).
+
+    A type value the shape pass refused gives no type, so discovery raises no type
+    finding on it: one finding per mistake.
+    """
+    return [
+        ConfigFinding(finding.pointer, Severity(finding.severity.value), finding.message)
+        for finding in shared_types(target_root).reported_by(CONFIGURATION_MEMBER)
+    ]
 
 
 # --- connections (COR-053, COR-052) ------------------------------------------
@@ -488,6 +535,7 @@ UMBRELLA_SEVERITY = {
     Severity.ERROR: validators.Severity.ERROR,
     Severity.WARNING: validators.Severity.WARNING,
     Severity.INFO: validators.Severity.INFO,
+    Severity.REPORT: validators.Severity.REPORT,
 }
 
 

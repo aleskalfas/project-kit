@@ -1,0 +1,17 @@
+component: project-management
+kind: patch
+custom:
+  category: Changed
+body: >
+  The pull request's `## Documentation this change affects` section and
+  `land-work`'s printed list read as the change check's own list does. They
+  state the question once: these documents rely on something this change
+  modifies, and each answer says whether the document is still true. Each
+  entry names the document, the anchors the change modified that it relies
+  on, and the outcome in plain words: "updated in this change", "still
+  accurate" or "out of date, fixed later", with its words quoted in full.
+  Every flag the change check puts on an answer now shows, a deferral or an
+  `at` written back and a deferral put back included. A backbone whose check
+  names no changed anchors still gives a list, without them. A list written
+  before this release differs from the one `land-work` derives, so
+  `land-work` writes it again and stops at `ready:` once.

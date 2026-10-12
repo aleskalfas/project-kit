@@ -25,6 +25,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.adopter_repo import sign_nothing
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GUARD_PY = (
     REPO_ROOT
@@ -69,6 +71,7 @@ def _git_init_with_origin(path: Path, origin_url: str) -> None:
 def _add_worktree(repo: Path, dest: Path) -> None:
     """Add a linked worktree of `repo` at `dest` (needs a commit to branch from)."""
     # A worktree needs at least one commit on the repo to attach to.
+    sign_nothing(repo)
     _git(
         [
             "-c",

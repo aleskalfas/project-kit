@@ -122,10 +122,9 @@ from project_kit.friction_discovery import (
     ResolverCommand,
     SettingsPath,
     UnreadableFile,
-    discover_artefacts,
     is_inside_repository,
-    read_friction_settings,
     registered_anchor_kinds,
+    shared_discovery,
     synced_copy_test,
     unresolved_kind_reason,
 )
@@ -204,8 +203,8 @@ def validate_friction(target_root: Path) -> FrictionValidation:
     container, deferral, unresolved-kind and cycle findings run only when the
     pass is awake.
     """
-    settings = read_friction_settings(target_root)
-    discovery = discover_artefacts(target_root, settings)
+    discovery = shared_discovery(target_root)
+    settings = discovery.settings
     findings: list[FrictionFinding] = []
     findings.extend(_capability_place_findings(target_root, settings))
     findings.extend(_synced_place_findings(target_root, discovery))

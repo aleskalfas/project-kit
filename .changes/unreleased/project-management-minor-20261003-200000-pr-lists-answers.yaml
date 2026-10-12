@@ -13,7 +13,7 @@ body: >
   section of its own, `## Documentation this change affects`, last before the
   provenance footer, in plain words for a reader who does not know the
   methodology — an opening paragraph, then each document with what was decided
-  (updated, still accurate, set aside for later) — every word of an artefact's
+  (updated in this change, still accurate, out of date and fixed later) — every word of an artefact's
   as the check's human view shows it, with each change to the
   friction places or exclusions the change makes — read through `pkit friction
   artefacts --json --at` at both ends — as it was and as it is; it never

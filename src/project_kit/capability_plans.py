@@ -20,7 +20,9 @@ Three readers of the one wiring resolver (`connections`, ADR-057 points 2 and
   conflicts it would open and the command that resolves each, what the
   capability needs that the project does not give it (the errors the install
   would put on the capability itself — unmet mandatory marks, mandatory
-  cycles, required versions), and the role blocks whose meaning changes; an
+  cycles, required versions), the role blocks whose meaning changes, and the
+  types it would bring whose names a bare project type uses (COR-056 point 2,
+  read by artefact discovery's one comparison); an
   uninstall plan names the fillers lost, the counterparts left without a
   provider — processes among them — the artefacts whose role blocks would be
   orphaned, and the selections left naming the capability. A plan writes
@@ -58,7 +60,12 @@ from project_kit import backbone_schemas as bs
 from project_kit import capabilities as caps
 from project_kit import cli_render
 from project_kit import connections as cx
-from project_kit.friction_discovery import discover_artefacts
+from project_kit.friction_discovery import (
+    bare_type_collisions,
+    declared_types,
+    discover_artefacts,
+    read_friction_settings,
+)
 from project_kit.package_validate import POINT_SEPARATOR, Severity
 
 # The operations a plan is computed for.
@@ -415,6 +422,15 @@ class Conflict:
 
 
 @dataclass(frozen=True)
+class TypeNameTaken:
+    """A type the capability would bring whose name a bare project type uses
+    (COR-056 point 2): installed, it would fail validation on each place."""
+
+    type: str  # the capability's type, `<capability>:<name>`
+    places: tuple[str, ...]  # each project place giving the bare type, `<file>:<pointer>`
+
+
+@dataclass(frozen=True)
 class InstallPlan:
     capability: str
     version: str | None
@@ -423,6 +439,7 @@ class InstallPlan:
     conflicts: tuple[Conflict, ...]
     needs: tuple[FindingRef, ...]  # the errors the install would put on the capability itself
     role_blocks: tuple[RoleBlockChange, ...]
+    type_names: tuple[TypeNameTaken, ...] = ()  # its types whose names the project uses
 
 
 @dataclass(frozen=True)
@@ -475,7 +492,22 @@ def plan_install(target_root: Path, candidate: Candidate) -> InstallPlan:
         conflicts=conflicts,
         needs=needs,
         role_blocks=role_block_changes(target_root, before, after),
+        type_names=_type_names_taken(target_root, candidate),
     )
+
+
+def _type_names_taken(target_root: Path, candidate: Candidate) -> tuple[TypeNameTaken, ...]:
+    """The candidate's types whose names a bare project type uses, each with the
+    project places giving it, read by discovery's one comparison
+    (`bare_type_collisions`, COR-056 point 2). The project renames its own type
+    before it installs the capability, or its validation fails."""
+    places = read_friction_settings(target_root).places
+    taken: dict[str, list[str]] = {}
+    for place, declared in bare_type_collisions(
+        declared_types(candidate.name, candidate.package), places
+    ):
+        taken.setdefault(declared.type, []).append(f"{place.file}:{place.pointer}/type")
+    return tuple(TypeNameTaken(type_, tuple(where)) for type_, where in taken.items())
 
 
 def plan_uninstall(target_root: Path, name: str, origin: str) -> UninstallPlan:
@@ -833,6 +865,17 @@ def render_install_plan(plan: InstallPlan) -> str:
         conflict_lines.extend(f"  {command}" for command in conflict.resolve)
     lines.extend(_section("Role conflicts", conflict_lines))
     lines.extend(_section("What it needs", [_finding_text(f) for f in plan.needs]))
+    lines.extend(
+        _section(
+            "Type names the project uses",
+            [
+                f"{taken.type}: a bare project type takes its name at {', '.join(taken.places)}. "
+                f"Rename the project's type before the install, or validation fails "
+                f"(COR-056 point 2)"
+                for taken in plan.type_names
+            ],
+        )
+    )
     lines.extend(_role_block_section(plan.role_blocks))
     lines.extend(_diff_tail(plan.diff, "install"))
     return "\n".join(lines) + "\n"
