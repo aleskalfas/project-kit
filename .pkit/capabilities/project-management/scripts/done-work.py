@@ -2502,7 +2502,8 @@ def _author_unread_refusal(pr_number: int | None) -> str:
             "approval, on either path, and refuses (fail-closed, DEC-032 D5).",
             "            Remediation:",
             "              a) Transient gh failure — retry `done-work`.",
-            '              b) If persistent, merge with `done-work --bypass "<reason>"`.',
+            "              b) If persistent — GitHub itself returns no author for the "
+            'PR — merge with `done-work --bypass "<reason>"`.',
         ]
     )
 

@@ -470,10 +470,10 @@ def gate_membership(
     An author that could not be read — `author_login` empty, as `pr_author`
     returns it, or one `pr_author` would not return — leaves no reviewer
     known to be someone else, so both predicates accept nobody and no verdict
-    counts on either path. Excluding
-    an empty login would exclude nobody, and every reviewer would count as
-    independent of an author nobody read (#1485): the gate fails closed
-    instead (DEC-032 D5). The callers say why to whoever runs them.
+    counts on either path. Excluding an empty login would exclude nobody, and
+    every reviewer would count as independent of an author nobody read
+    (#1485): the gate fails closed instead (DEC-032 D5). The callers say why
+    to whoever runs them.
     """
     if not _names_an_author(author_login):
         return _nobody, _nobody
