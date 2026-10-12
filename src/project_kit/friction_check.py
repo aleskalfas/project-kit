@@ -2238,8 +2238,8 @@ def _shown(text: str) -> str:
     return "".join(ch if ch.isprintable() else ascii(ch)[1:-1] for ch in text)
 
 
-#: The question the answers list answers, stated once above it: the person who
-#: authorises the merge reads each answer against it (COR-050 point 3).
+#: The question the answers list answers, stated once above it: the reviewer of
+#: a change's answers reads each answer against it (COR-050 point 3).
 ANSWERS_QUESTION = (
     "these documents rely on something this change modifies, and each answer says whether "
     "the document is still true"
