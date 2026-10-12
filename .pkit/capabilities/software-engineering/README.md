@@ -13,9 +13,8 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
     revalidated:
-      at: 2026-10-11T22:28:59Z
-      outcome: unchanged
-      unchanged-because: "COR-024's refinement admits rule-set-reviewer to the reviewer stack, on the diff (COR-057). That agent ships with #1385. The three stack agents this page names still ship in core and still check the producer's work, so the page holds."
+      at: 2026-10-12T19:46:57Z
+      outcome: updated
 ---
 
 # software-engineering capability
