@@ -50,8 +50,9 @@ pkit:
         - src/project_kit/session_guard.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, COR-055, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059, ADR-061]
     revalidated:
-      at: 2026-10-12T19:16:25Z
-      outcome: updated
+      at: 2026-10-12T19:47:29Z
+      outcome: unchanged
+      unchanged-because: ADR-059's Context names the backbone's friction validation, not living-docs, as what uses `is_synced_copy` to refuse a synced copy as a place. This page cites ADR-059 for the refusals in the source repository, for `pin` and for the capability verbs in place, which the record's points decide and the change leaves as they were.
 ---
 
 # Command-line interface
