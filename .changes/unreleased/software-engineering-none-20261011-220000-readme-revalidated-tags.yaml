@@ -1,7 +1,8 @@
 component: software-engineering
 kind: none
 body: >
-  Internal. The README is revalidated unchanged against project-management
-  DEC-028's finding tags: the panel's block and advisory lines match them.
-  Only the README's friction block changes, and nothing you run or read
-  changes.
+  The README's block-threshold paragraph states project-management DEC-028's
+  three finding tags for the panel. A [person] finding cites an accepted rule
+  of the project's conventions that does not settle the change. It withholds
+  no approval and goes to the person who authorises the merge. The README is
+  revalidated as updated. No agent's own instructions change.
