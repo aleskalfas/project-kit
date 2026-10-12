@@ -9,25 +9,29 @@ body: >
   change, and the revalidation of a combined state it owes after a conflict.
   A reviewer other than that agent, one the project chooses, checks every
   `unchanged` and `deferred` reason among them against the change, from the
-  change check's own list, and blocks the merge when one does not hold. A
-  deferral holds only if it names an open follow-up. For each document
-  revalidated as `updated`, the change's author says in the pull request
-  what changed in it, in one sentence. The reviewer checks it against the
-  diff, and blocks the merge when a document has no sentence or its sentence
-  does not match what changed. The person who authorises the merge is told
-  those sentences and which documents are left out of date until which
-  follow-up, as information: a change with answers merges under the same
-  authorisation as any other. Every other answer, and every reason for
-  having no anchors (point 1), is a person's decision, accepted before it is
-  written. COR-013 says a write made by one of the methodology's mutating
-  commands is the command's and is not declared in `owns`: the agent's body,
-  or a skill it hands the work to, names the command and the conditions for
-  running it. The agents README gains "Friction writers" — an agent making a
-  change answers what its own change owes, and a reviewer other than it
-  checks those answers; an agent whose task is the answer runs a writer only
-  when its body, or a skill its body hands the work to, names it, it can ask
-  the person, the person was shown every word first, and it is not a
-  reviewer — and its `owns` bullet says the same of command-routed writes.
+  change check's own list, and blocks the merge when one does not hold. Two
+  cases leave a change's answers unchecked by any reviewer, a limit the
+  record accepts: a person skipped the review on record, or the project
+  chose no such reviewer. A deferral holds only if it names an open follow-up. For each
+  document revalidated as `updated`, the change's author says in the pull
+  request what changed in it, in one sentence. The reviewer checks it
+  against the diff, and blocks the merge when a document has no sentence or
+  its sentence does not match what changed. The person who authorises the
+  merge is told those sentences and which documents are left out of date
+  until which follow-up, as information: a change with answers merges under
+  the same authorisation as any other. Every other answer, and every reason
+  for having no anchors (point 1), is a person's decision, accepted before
+  it is written. COR-013 says a write made by one of the methodology's
+  mutating commands is the command's and is not declared in `owns`: the
+  agent's body, or a skill it hands the work to, names the command and the
+  conditions for running it. The agents README gains "Friction writers" —
+  an agent making a change answers what its own change owes, and a reviewer
+  other than it checks those answers, unless a person skipped the review on
+  record or the project chose no such reviewer; an agent whose task is the
+  answer runs a writer only when its body, or a skill its body hands the
+  work to, names it, it can ask the person, the person was shown every word
+  first, and it is not a reviewer — and its `owns` bullet says the same of
+  command-routed writes.
   The core rules gain rule 20, "A reviewer checks the answers your change
   owes, and a person decides any other answer on an artefact", and the
   `agent-author` skill says that a path an agent writes only through a
