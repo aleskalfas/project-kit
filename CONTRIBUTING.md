@@ -18,9 +18,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-12T18:49:21Z
+      at: 2026-10-12T19:11:08Z
       outcome: unchanged
-      unchanged-because: "This guide cites COR-050 for the friction gate: what fails a pull request, how to answer, how to resolve a conflicting block, who checks the answers and what the person authorising the merge is told. COR-050's refinement lets a place name a type, which no friction check reads, so the guide holds."
+      unchanged-because: tests/README.md gains a section on turning signing off in a repository a test commits in. This guide points to it for running the suite, writing tests with the adopter-repository fixture and type checking, which the change leaves as they were.
 ---
 
 # Contributing to project-kit
