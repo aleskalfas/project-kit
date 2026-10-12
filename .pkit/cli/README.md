@@ -50,9 +50,8 @@ pkit:
         - src/project_kit/session_guard.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, COR-055, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059, ADR-061]
     revalidated:
-      at: 2026-10-12T18:49:18Z
-      outcome: unchanged
-      unchanged-because: "COR-050's refinement lets a place name a type, and lets the uninstall and a component's migration write types on the project's places (COR-056). No command reads, writes or reports a type yet. So the page's account of friction.places, of the configuration file that upgrade and every uninstall leave alone, and of the artefacts document still matches the commands. The typed place follows with #1406, the uninstall's write with #1498."
+      at: 2026-10-12T19:27:19Z
+      outcome: updated
 ---
 
 # Command-line interface

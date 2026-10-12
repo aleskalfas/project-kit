@@ -19,14 +19,13 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-12T18:49:26Z
-      outcome: unchanged
-      unchanged-because: "COR-050 and COR-051 gain a type on a place and a types key in a scope (COR-056). No schema ships either yet, so this page's account of the configuration, package and container schemas, and of where artefacts are looked for, still matches them. Its rule-set scope row already differs from COR-051 and stays deferred: #1406 brings the scope's form, types included."
+      at: 2026-10-12T19:27:20Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
             value: COR-051
-          reason: "COR-051 gives a scope the keys paths and exclude, drops the narrowing by a consuming component, pins every inheritance, makes a change to what a set inherits need a new major, and binds an accepted rule only where a route reaches its set. The page's rule-set section says otherwise in its scope row, its version row and its statuses paragraph. It follows with the build Tasks that realise the refinement: #1406 for the scope's form, and #1408 for where rules bind and its validation errors."
+          reason: "COR-051 makes a change to what a set inherits need a new major, and binds an accepted rule only where a route reaches its set. The page's rule-set section says otherwise in its version row and its statuses paragraph. Both follow with #1408, which builds where rules bind and their validation errors."
 ---
 
 # Schemas
