@@ -12,9 +12,8 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-11T21:34:38Z
-      outcome: unchanged
-      unchanged-because: "COR-050's refinement lets a place name a type, which COR-056 defines and no friction check reads. This page describes the capability's places, its held folder and the unanchored reason as the backbone reads them today. The capability declares no types yet, so each statement holds. Its types follow with the issues under EPIC #234."
+      at: 2026-10-12T18:12:45Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
@@ -56,6 +55,21 @@ analysis/
 A kind with many files gets a folder, and a kind with one file is a file. Folders appear only when something goes into them. These files belong to your project: uninstalling the capability leaves them in place.
 
 **What the capability declares for you**, in its package metadata: the location `analysis`, a sub-path of the internal root, and the four places inside it that hold anchored artefacts — the glossary, the actors, the use cases and the journeys. The revalidation records describe an act rather than an anchored artefact, so their folder is not a place: the capability declares it as a folder of **held documents** (`friction.held`; DEC-001 point 2, COR-050 point 1). The core lists each record with this capability as its owner, and no place reads one as an artefact — not your documentation root, not another capability's place — so a record is never an unanchored artefact in the friction measures, nor a document a documentation capability asks you to classify. The location is **recorded the first time you stamp an artefact**, in `.pkit/capabilities/software-analysis/project/docs-locations.yaml`, so changing the root later moves nothing already written. The capability declares no surface: the code your analysis ought to cover is yours to declare, in the `friction.surface` key of `.pkit/project/config.yaml`.
+
+**The types its places give.** Each place names a type from the capability's type registry, `friction.types` in its package metadata (DEC-001 point 2, COR-056). So a rule set's scope selects the analysis's artefacts by what they are, without naming the folder your analysis lies in.
+
+| Place | Each artefact in it | Type |
+|---|---|---|
+| `glossary.md` | an entry | `software-analysis:term` |
+| `use-case-model/actors.md` | an entry | `software-analysis:actor` |
+| `use-case-model/use-cases/` | a file, one in an area's folder included | `software-analysis:use-case` |
+| `use-case-model/journeys/` | a file | `software-analysis:journey` |
+
+- **A scope names a type in full**, as `software-analysis:use-case`. The alias `analysis` names no type.
+- **No project place may give one.** None of the four admits a project place, since the capability checks only the artefacts in its own places. `pkit validate` fails a place in `.pkit/project/config.yaml` that gives one. While the capability is installed, it also fails a bare type of your own that takes one of their names (`actor`, `use-case`, `journey` or `term`).
+- **No kind field.** The check holds every file in a place to that place's kind, so each artefact takes the place's type without declaring anything.
+- **A revalidation record has no type.** It is a held document, not an artefact.
+- **Where to read it:** `pkit friction artefacts --json` gives each artefact its type and the place that gave it, and lists the registry under `types`.
 
 ## Stamping artefacts: `pkit analysis new`
 
@@ -433,7 +447,7 @@ An install plan predicts the wiring, not the data (COR-053 point 7): it shows th
 
 ## What's shipped now, what's next
 
-Shipped: the decision; the analysis location and its places; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
+Shipped: the decision; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
 
 ## Citing this capability's decisions
 
