@@ -698,13 +698,16 @@ def test_unread_author_is_not_satisfied_by_overriding_every_slot(dw, rc, monkeyp
         monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[],
-        pr_view={"author": None},
+        pr_view={"author": None, "headRefOid": "a" * 40},
     )
     result = dw._check_agent_gate(
         99, {}, _config(), "resolved", CAP_ROOT, override_reviewers=("reviewer",)
     )
     assert result.passed is False
     assert "the PR's author could not be read" in result.refusal_message
+    # The refusal names the head it read, so a run pinned to another head
+    # reports the move rather than this refusal.
+    assert result.head_oid == "a" * 40
 
 
 def test_a_readable_author_excludes_only_its_own_verdict(dw, rc, monkeypatch) -> None:

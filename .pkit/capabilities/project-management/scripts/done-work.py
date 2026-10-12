@@ -2082,7 +2082,7 @@ def _check_agent_gate(
     # else: `gate_membership` then counts no verdict, and the gate REFUSES
     # here, saying why, rather than list every reviewer as missing (#1485).
     if not author_login:
-        return refuse(_author_unread_refusal(pr_number))
+        return refuse(_author_unread_refusal(pr_number), head_oid=head_sha(data))
 
     # The one freshness rule (#1179), shared with `review-pr`'s skip and
     # `show-pr`'s stale marker: a verdict naming its reviewed head stands
