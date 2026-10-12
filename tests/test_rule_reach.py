@@ -143,9 +143,7 @@ def _filling(**overrides: Any) -> dict[str, Any]:
 
 
 def _offering() -> dict[str, Any]:
-    return rule_set(
-        "CMN", entries={**rules("RS-CMN-001", offers=["where"]), **rules("RS-CMN-002")}
-    )
+    return rule_set("CMN", entries={**rules("RS-CMN-001", offers=["where"]), **rules("RS-CMN-002")})
 
 
 def test_a_fill_binds_where_the_rule_it_fills_binds_through_the_filling_set(
@@ -555,7 +553,10 @@ def _start(repo: AdopterRepo) -> None:
         a=guide(),
         b=page("B"),
         c=page("C"),
-        old=page("Old", body="An old guide, about something else entirely, and long enough to stand apart."),
+        old=page(
+            "Old",
+            body="An old guide, about something else entirely, and long enough to stand apart.",
+        ),
     )
     repo.write(SOURCE)
     repo.commit("base", files=None)
@@ -590,7 +591,9 @@ def test_altered_lists_added_removed_and_changed_with_the_rules_at_each_state(
         {
             f"{GUIDES}/c.md": page("C", body="A new body."),
             f"{GUIDES}/old.md": None,
-            f"{GUIDES}/new.md": page("New", body="A new guide on another subject: nothing in it is the old one."),
+            f"{GUIDES}/new.md": page(
+                "New", body="A new guide on another subject: nothing in it is the old one."
+            ),
         },
     )
     repo.write({f"{SETS}/doc.md": rule_set_text(rule_set("DOC", scope=scoped(f"{GUIDES}/**")))})
