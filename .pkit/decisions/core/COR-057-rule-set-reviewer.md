@@ -29,7 +29,7 @@ The reviewers that check a project's work form a stack, each at its own stage an
    - **No rules of its own.** Its instructions say how to judge, never what to require. They hold no rule.
    - **What it reads.** It reads the change, and each altered artefact at the base and at the head. It also reads what each rule names as what it needs, such as the artefact's anchors or the artefacts it must agree with. A fact a rule needs but does not name, it does not guess (point 3).
    - **A check's part.** A part of a rule that the rule's owner declares a check enforces is that check's while the check is there (COR-051 point 2). The reviewer does not judge that part, and runs no check. A part whose declared check is not there is the reviewer's. So is every other part, even one that a script could check.
-   - **Never an answer.** An answer on an artefact, such as a revalidation, a deferral or a reason for having no anchors, is a person's decision (COR-050 point 3). The reviewer writes none, and judges none.
+   - **Never an answer.** An answer on an artefact, such as a revalidation, a deferral or a reason for having no anchors, is written by the agent making the change, where its change owes it, or decided by a person, and the answers a change owes are checked by a reviewer the project chooses (COR-050 point 3). This reviewer writes none, and judges none.
    - **Read-only.** It changes nothing it reviews.
 
 2. **What the change owns.** The reviewer judges only a break the change owns.
