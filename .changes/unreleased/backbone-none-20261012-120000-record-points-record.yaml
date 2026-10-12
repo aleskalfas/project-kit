@@ -1,0 +1,15 @@
+component: backbone
+kind: none
+body: >
+  Design-ahead: COR-058 fixes a decision record's points for good. A point
+  is a heading that opens with its id, such as `### 5. Title` or
+  `### D1 — Title`. A new point goes where it belongs and takes the next
+  unused number, and no point is ever renumbered. A retired point keeps its
+  id in the record's `retired-points`, with the points that took its text,
+  and a one-line stub stays where it was. Validation holds each stub to
+  its entry, and a command of its own checks a change's numbering, of points
+  and of records, against its base. A record in list form keeps working
+  until it is converted.
+  COR-051's rejected prose markers name the exception. It is record text
+  only, and nothing you run changes. The build Tasks (#1414, #1416, #1417)
+  carry the real changesets.
