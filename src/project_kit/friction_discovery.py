@@ -2839,7 +2839,8 @@ class ArtefactType:
       backbone gives, and for an artefact with no type.
     - `conflict`: in a tie, each tied type the artefact counts as, with the
       place giving it. A type with a kind field counts only where the artefact
-      declares its kind. Empty when there is no tie.
+      declares its kind. Empty when there is no tie, and when the artefact
+      declares the kind of no tied type: it then has no type.
     - `places`: every place that matches its file, in COR-056 point 3's order,
       each with its rank.
     """
