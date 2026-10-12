@@ -13,8 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
     revalidated:
-      at: 2026-10-11T18:32:02Z
-      outcome: updated
+      at: 2026-10-12T18:31:40Z
+      outcome: unchanged
+      unchanged-because: COR-030's refinement adds an optional dependency, which need not be installed and never blocks an uninstall. This page names software-engineering's dependency on project-management, which carries no optional mark. So it stays required, and the lifecycle gates install, upgrade and uninstall on it as the page says.
 ---
 
 # software-engineering capability
