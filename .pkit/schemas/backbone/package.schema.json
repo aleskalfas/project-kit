@@ -564,7 +564,7 @@
       }
     },
     "friction": {
-      "title": "The `friction` block (COR-050 points 1, 2 and 8)",
+      "title": "The `friction` block (COR-050 points 1, 2 and 8; COR-056 point 2)",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -576,6 +576,16 @@
           },
           "additionalProperties": {
             "$ref": "#/$defs/anchor-kind"
+          }
+        },
+        "types": {
+          "description": "This component's type registry (COR-056 point 2): a mapping from a type's name to its entry. The type's full name is `<component>:<name>`. A place of this component names one with `type`. The backbone resolves each artefact's type from the places that match its file. `pkit friction artefacts --json` lists every registry and gives each artefact its type.",
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/type-name"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/friction-type"
           }
         },
         "places": {
@@ -626,10 +636,45 @@
         "path": {
           "$ref": "#/$defs/relative-path"
         },
+        "type": {
+          "description": "The type the artefacts in this place take: a name this component's `types` declares (COR-056 point 2). A name it does not declare gives no type, and validation reports it without failing (checked in Python).",
+          "$ref": "#/$defs/type-name"
+        },
         "description": {
           "$ref": "#/$defs/non-empty-string"
         }
       }
+    },
+    "friction-type": {
+      "title": "One type of the component's type registry (COR-056 point 2)",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "description"
+      ],
+      "properties": {
+        "description": {
+          "description": "What an artefact of the type is.",
+          "$ref": "#/$defs/non-empty-string"
+        },
+        "kind-field": {
+          "description": "The artefact's own field in which an artefact of the type declares its kind, outside the `pkit` container (COR-056 point 4). Where the place that wins gives this type, an artefact takes it only when the field is present and not empty, and otherwise has no type.",
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$",
+          "not": {
+            "const": "pkit"
+          }
+        },
+        "project-places": {
+          "description": "Whether a project may give this type to its own places, as `{path, type}` in its configuration. Default `false`: an entry that does not say admits no project place.",
+          "type": "boolean"
+        }
+      }
+    },
+    "type-name": {
+      "description": "A type's name within its owner: a word of lower-case letters and digits, joined by single hyphens. It holds no `:` and no `/` (COR-056 point 1).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
     },
     "friction-held": {
       "description": "A folder of held documents: `path`, a folder — never a glob — inside the declared location `location` names (COR-050 point 1).",
