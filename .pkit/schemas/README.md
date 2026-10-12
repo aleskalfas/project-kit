@@ -19,13 +19,13 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-12T15:28:35Z
+      at: 2026-10-12T19:27:20Z
       outcome: updated
       deferred:
         - anchor:
             kind: record
             value: COR-051
-          reason: "COR-051 gives a scope the keys paths and exclude, drops the narrowing by a consuming component, pins every inheritance, makes a change to what a set inherits need a new major, and binds an accepted rule only where a route reaches its set. The page's rule-set section says otherwise in its scope row, its version row and its statuses paragraph. It follows with the build Tasks that realise the refinement: #1406 for the scope's form, and #1408 for where rules bind and its validation errors."
+          reason: "COR-051 makes a change to what a set inherits need a new major, binds an accepted rule only where a route reaches its set, and has a set's front matter declare the parts of its rules that checks enforce. The page's rule-set section says otherwise in its version row, its statuses paragraph and its key table, which has no checks key and refuses unknown keys. All three follow with #1408, which builds where rules bind, the declared check parts and their validation errors."
 ---
 
 # Schemas
@@ -436,7 +436,7 @@ pkit:                                     RS-CMN-001:
 |---|---|
 | `anchors` | What makes the artefact true, grouped by kind — `path` (files or globs relative to the repository root, `**` across folders), `record` (an identified record, such as a decision), `artefact` (another artefact by its id; a document may also be named by its repository-relative path), and any kind an installed capability registers (`friction.kinds` in its package metadata; living-docs registers `source`, an outside source captured as the version read; the lifecycle README, "How a registered anchor kind is resolved") — a kind is a word, its values a list as for the three. Each list is non-empty with unique entries. An artefact without anchors is *unanchored* — reported, never an error. |
 | `unanchored-because` | Instead of `anchors`, for an artefact with nothing to anchor to: the reason a person accepted it with none, such as a person's part in the work that no code carries out — non-empty text (COR-050 point 1). The unanchored measure lists such an artefact apart, with its reason, and counts only those without one (point 8; the CLI README, "friction check --all"). It never stands beside anchors: validation refuses the pair (below). |
-| `revalidated` | The last revalidation, written on a person's decision — by hand, or with `pkit friction revalidate` and `pkit friction defer`. `at` — a UTC timestamp `YYYY-MM-DDTHH:MM:SSZ`; the revalidation point is the commit where the artefact first carried its parsed value; writing back an earlier value is not a revalidation (COR-050 point 3). `outcome` — `updated` or `unchanged`; `at` and `outcome` come together. `unchanged-because` — required with `outcome: unchanged`: why the content still holds against *this* change. `deferred` — one entry per anchor whose friction is deliberately postponed: `anchor: {kind, value}` — any anchor of the artefact, named by its kind and value — plus a `reason`; kept sorted by anchor. An artefact never yet revalidated may carry `deferred` alone; an empty `revalidated` is refused. |
+| `revalidated` | The last revalidation, written on a person's decision, or by an agent making a change and checked by a reviewer (COR-050 point 3) — by hand, or with `pkit friction revalidate` and `pkit friction defer`. `at` — a UTC timestamp `YYYY-MM-DDTHH:MM:SSZ`; the revalidation point is the commit where the artefact first carried its parsed value; writing back an earlier value is not a revalidation (COR-050 point 3). `outcome` — `updated` or `unchanged`; `at` and `outcome` come together. `unchanged-because` — required with `outcome: unchanged`: why the content still holds against *this* change. `deferred` — one entry per anchor whose friction is deliberately postponed: `anchor: {kind, value}` — any anchor of the artefact, named by its kind and value — plus a `reason`; kept sorted by anchor. An artefact never yet revalidated may carry `deferred` alone; an empty `revalidated` is refused. |
 | `last-check` | Tool-written only — by `pkit friction record-status`, the command the after-merge job runs, and only when the status changes: `state` (`current` / `stale` / `deferred`), `as-of` (the commit checked against), `since` (where staleness came from). Never read for friction. |
 
 Unknown keys anywhere in the block are refused, except under `anchors`, where a key is a kind: any word is admitted, and a kind nothing installed resolves is reported, not refused (below). The block carries no version; it is migrated when it changes, preserving the parsed value of `at`.

@@ -12,9 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-11T21:34:53Z
+      at: 2026-10-12T18:49:28Z
       outcome: unchanged
-      unchanged-because: "COR-050 and COR-051 gain a type on a place and a types key in a scope (COR-056). This page describes how the capability finds pages and spaces today, by its own claims and order of places, which nothing has changed yet. Its pages' type follows with its issue under EPIC #234. The COR-051 deferral to #1476 stays."
+      unchanged-because: "COR-050 and COR-051 gain a type on a place and a types key in a scope (COR-056). This page describes how the capability finds pages and spaces today, by its own claims and order of places, which nothing has changed yet. Its pages' type follows with #1411. Its spaces' definitions carry no scope, which the COR-051 deferral to #1476 covers."
       deferred:
         - anchor:
             kind: record

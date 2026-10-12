@@ -717,7 +717,7 @@ def _review_brief(
     sha: str = "",
 ) -> str:
     """The prompt each reviewer receives: the PR, the head under review, a
-    fallback for its diff, the verdict grammar.
+    fallback for its diff, the verdict grammar, and the finding tags.
 
     The brief names the head commit the reviewer is reviewing (#1179) — the
     one its verdict will be recorded against — so the reviewer can tell when
@@ -727,6 +727,10 @@ def _review_brief(
     when the head could not be read), which diffs from their merge base. An
     unknown base is left as a placeholder the reviewer fills from the PR's
     `baseRefName`.
+
+    The brief names DEC-028's three finding tags and what each does to the
+    merge (`FINDING_TAGS`), and that they widen no remit, so every local
+    reviewer tags its findings alike (#1405).
     """
     reviewing = (
         f"You are reviewing its head commit {sha}; your verdict is recorded against that commit. "
@@ -743,8 +747,30 @@ def _review_brief(
         f"VERY FIRST LINE in one of these exact forms:\n\n"
         f"  Reviewer agent (local, {name}): APPROVED\n"
         f"  Reviewer agent (local, {name}): CHANGES_REQUESTED\n\n"
-        "Then add any commentary, findings, or rationale below."
+        "Then add any commentary, findings, or rationale below.\n\n" + FINDING_TAGS
     )
+
+
+#: What the brief says of DEC-028's finding tags (#1405): the three tags, what
+#: each does to the merge, and that they widen no reviewer's remit.
+FINDING_TAGS = (
+    "Write each finding as a top-level item of a bulleted list that begins with one of "
+    "three tags, which say what the finding does to the merge:\n\n"
+    "- `[block]` — an objective failure the change owns, one your remit settles with no "
+    "reading left to choose. It withholds your approval: request changes exactly when you "
+    "have one.\n"
+    "- `[person]` — a finding for the person who authorises the merge. It cites by id an "
+    "accepted rule that binds on an artefact the change alters, and judges a passage the "
+    "change owns where that rule needs a reading it does not settle, or a fact it does not "
+    "name. It withholds no approval.\n"
+    "- `[advisory]` — any other finding: a defect the change does not own, written "
+    "`[advisory] (pre-existing: <reason>)`, a point your remit settles as not blocking, or "
+    "a point of taste. It withholds and holds nothing. A finding with no tag counts as "
+    "one.\n\n"
+    "Write any grade of your own after the tag, as `[block] (hard-reject)`. The tags widen "
+    "no remit: judge only what your own instructions have you judge, and cite a rule in a "
+    "`[block]` or a `[person]` finding only when they have you judge that rule."
+)
 
 
 def _format_verdict_comment(

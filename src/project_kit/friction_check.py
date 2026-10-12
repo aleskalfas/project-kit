@@ -350,6 +350,12 @@ class WrittenAnswer:
       the same anchor and reason, so its point is that entry's (COR-050 point 4) —
       `stands` where it covers its anchor as it stood there, `written-back` where
       it covers nothing.
+    - `changed`: the anchors the diff from the base changed that the answer is
+      about, in the order the check asks them — for a revalidation, each anchor
+      the diff asks the artefact about; for a deferral, its anchor where it is
+      one of them. Read against the base even for an `at` written back, which is
+      judged against earlier points. Empty for anything else, and for a new
+      artefact, which nothing asks.
     """
 
     artefact: str  # the artefact's id
@@ -362,6 +368,7 @@ class WrittenAnswer:
     status: AnswerStatus
     new: bool
     put_back: bool = False
+    changed: tuple[Anchor, ...] = ()
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -375,6 +382,7 @@ class WrittenAnswer:
             "status": self.status.value,
             "new": self.new,
             "put_back": self.put_back,
+            "changed": [_anchor_json(anchor) for anchor in self.changed],
         }
 
 
@@ -1408,13 +1416,17 @@ class _Behind:
 class _Judged:
     """What the answers list reads of `_judge`'s reading of one artefact: the
     revalidation as judged, whether its `at` is written back — a value it carried
-    before, never an `at` removed — the deferrals put back and those that answered a
-    question."""
+    before, never an `at` removed — the deferrals put back, those that answered a
+    question, and the anchors the diff from the base changed under it (`changed`),
+    each once in the order the diff asks them. Against the base always: an `at`
+    written back is judged against earlier points, whose questions can name an
+    anchor this change never touched."""
 
     revalidation: _Revalidation | None = None
     written_back: bool = False
     put_back: frozenset[Anchor] = frozenset()
     covering: frozenset[Anchor] = frozenset()
+    changed: tuple[Anchor, ...] = ()
 
 
 def _judge(
@@ -1490,10 +1502,14 @@ def _judge(
         ]
         notes = list(dict.fromkeys(note for _asked, noted in readings for note in noted))
         revalidation = None
+        against_base, _left_out = _questions(
+            artefact, before, resolving, head, base, diff, kinds, _AGAINST_BASE
+        )
     else:
         questions, notes = _questions(
             artefact, before, resolving, head, base, diff, kinds, _AGAINST_BASE
         )
+        against_base = questions
         revalidation = None if written is not None else _revalidation(artefact, before)
     standing = revalidation.answer if revalidation is not None else None
     deferred_now = {d.anchor for d in artefact.deferrals}
@@ -1562,6 +1578,7 @@ def _judge(
         written is not None and parsed_at(artefact) is not None,
         frozenset(anchor for anchor, back in put_backs.items() if back is not None),
         frozenset(covering),
+        tuple(dict.fromkeys(q.anchor for q in against_base if q.anchor is not None)),
     )
     return findings, questions, judged
 
@@ -1738,8 +1755,13 @@ def _written_answers(
       each deferral entry, its `unanchored-because` — never a bare `at`; nothing
       in it was asked for.
 
+    Each entry names the anchors the diff from the base changed that it is about
+    (`changed`, read from `judged`): a revalidation every one, a deferral its own
+    anchor where it is one.
+
     What the change removed is not listed.
     """
+    changed = judged.changed
 
     def entry(
         answer: str | None,
@@ -1751,6 +1773,10 @@ def _written_answers(
         kept: tuple[KeptDeferral, ...] = (),
         put_back: bool = False,
     ) -> WrittenAnswer:
+        if anchor is not None:
+            about = (anchor,) if anchor in changed else ()
+        else:  # a reason for having no anchors is about none, even beside anchors
+            about = () if answer == UNANCHORED else changed
         return WrittenAnswer(
             artefact.id,
             artefact.location,
@@ -1762,6 +1788,7 @@ def _written_answers(
             status,
             new=before is None,
             put_back=put_back,
+            changed=about,
         )
 
     # By anchor, an anchor's entries in written order (the sort is stable).
@@ -2267,13 +2294,36 @@ def _shown(text: str) -> str:
     return "".join(ch if ch.isprintable() else ascii(ch)[1:-1] for ch in text)
 
 
+#: The question the answers list answers, stated once above it: the reviewer of
+#: a change's answers reads each answer against it (COR-050 point 3).
+ANSWERS_QUESTION = (
+    "these documents rely on something this change modifies, and each answer says whether "
+    "the document is still true"
+)
+
+#: Each answer as the list says it: whether the document is still true.
+OUTCOME_WORDS = {
+    Answer.UPDATED.value: "updated in this change",
+    Answer.UNCHANGED.value: "still accurate",
+    Answer.DEFERRED.value: "out of date, fixed later",
+    UNANCHORED: "not tied to anything",
+}
+#: A revalidation whose `outcome` is neither `updated` nor `unchanged`.
+NO_OUTCOME = "no decision recorded"
+
+# What an anchor of a core kind is named in the list; another kind is `kind:value`.
+_ANCHOR_NOUNS = {"path": "", "record": "decision record ", "artefact": "document "}
+
+
 def _answers_lines(result: ChangeCheck) -> list[str]:
-    """The closing section: one line per answer the change wrote, its words in full."""
+    """The closing section: the question once, then each answer the change wrote, its
+    words in full (`_answer_lines`)."""
     lines = [
         cli_render.style("heading", "Answers written in this change")
-        + cli_render.style("muted", " — read from the artefacts, word for word")
+        + cli_render.style("muted", f" — {ANSWERS_QUESTION}")
     ]
-    lines.extend(f"  {_answer_line(answer)}" for answer in result.answers)
+    for answer in result.answers:
+        lines.extend(f"  {line}" for line in _answer_lines(answer))
     if not result.answers:
         lines.append("  none")
     if result.unreadable:
@@ -2285,36 +2335,64 @@ def _answers_lines(result: ChangeCheck) -> list[str]:
     return lines
 
 
-def _answer_line(answer: WrittenAnswer) -> str:
-    """`<location>  <answer> [<anchor>] (<flags>) — "<words>"`, every word written, any
-    character that is not printable escaped (`_shown`)."""
-    what = answer.answer or "no outcome"
-    if answer.anchor is not None:
-        what += f" {answer.anchor.kind} {answer.anchor.value}"
-    flags = ["new"] if answer.new else []
+def _anchor_named(anchor: Anchor) -> str:
+    """An anchor as the list names it: a path as written, a record or an artefact by
+    what it is, another kind as `kind:value`."""
+    noun = _ANCHOR_NOUNS.get(anchor.kind)
+    return f"{noun}{anchor.value}" if noun is not None else f"{anchor.kind}:{anchor.value}"
+
+
+def _and(items: Sequence[str]) -> str:
+    """`a`, `a and b`, `a, b and c`."""
+    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} and {items[-1]}"
+
+
+def _answer_flags(answer: WrittenAnswer) -> list[str]:
+    """Every flag the check puts on an answer, in plain words."""
+    flags = ["new document"] if answer.new else []
     if not answer.asked:
-        flags.append("not asked for")
+        flags.append("not asked for by this change")
     if answer.status is AnswerStatus.BUMP:
-        flags.append("the diff does not bear it out")
+        flags.append("re-check date changed with nothing behind it")
     if answer.status is AnswerStatus.EDITED:
-        flags.append("edited without a revalidation")
+        flags.append("edited without a new re-check")
     if answer.status is AnswerStatus.WRITTEN_BACK:
         flags.append(
-            "written back: an `at` it carried before, which answers nothing"
+            "re-check date set back to one it had before, which answers nothing"
             if answer.anchor is None
-            else "written back: an entry it carried before, which covers only what that one did"
+            else "an entry it had before, which covers only what that one did"
         )
     elif answer.put_back:
-        flags.append("put back: an entry it carried before, covering the anchor as it stood there")
-    flags.extend(
-        f"keeps the deferral of {kept.anchor.kind} {kept.anchor.value}"
-        + ("" if kept.reason is None else f' — "{kept.reason}"')
-        for kept in answer.kept
-    )
-    line = f"{answer.location}  {what}"
-    if flags:
-        line += f" ({'; '.join(flags)})"
-    return _shown(line if answer.reason is None else f'{line} — "{answer.reason}"')
+        flags.append("an entry it had before, covering the anchor as it stood then")
+    return flags
+
+
+def _answer_lines(answer: WrittenAnswer) -> list[str]:
+    """`<location> relies on <changed anchors>, which this change modifies. <Outcome>
+    (<flag>) (<flag>): "<words>"`, then each deferral a revalidation kept on a line
+    of its own. A deferral the change did not ask about names its anchor without
+    saying the change modifies it, and an answer about no anchor reads `<location> —
+    <outcome>`. Every word written, any character that is not printable escaped
+    (`_shown`)."""
+    outcome = OUTCOME_WORDS.get(answer.answer, answer.answer) if answer.answer else NO_OUTCOME
+    sentence = outcome[:1].upper() + outcome[1:]
+    if answer.changed:
+        relied = _and([_anchor_named(anchor) for anchor in answer.changed])
+        line = f"{answer.location} relies on {relied}, which this change modifies. {sentence}"
+    elif answer.anchor is not None:
+        line = f"{answer.location} relies on {_anchor_named(answer.anchor)}. {sentence}"
+    else:
+        line = f"{answer.location} — {outcome}"
+    line += "".join(f" ({flag})" for flag in _answer_flags(answer))
+    if answer.reason is not None:
+        line += f': "{answer.reason}"'
+    kept = [
+        f"  (still out of date for changes to {_anchor_named(held.anchor)}, fixed later"
+        + ("" if held.reason is None else f': "{held.reason}"')
+        + ")"
+        for held in answer.kept
+    ]
+    return [_shown(text) for text in (line, *kept)]
 
 
 def _header_lines(result: ChangeCheck) -> list[str]:

@@ -1210,6 +1210,7 @@ def _written(answer: str | None, reason: str | None, **fields: Any) -> dict[str,
         "status": "stands",
         "new": False,
         "put_back": False,
+        "changed": [],
     }
     entry.update(fields)
     return entry
@@ -1249,7 +1250,7 @@ def test_a_deferral_introduced_for_a_changed_anchor_is_asked_for(repo: AdopterRe
         },
     )
     assert _answers(_run(repo)) == [
-        _written("deferred", "rewrite after the rename", anchor=CLI, asked=True)
+        _written("deferred", "rewrite after the rename", anchor=CLI, asked=True, changed=[CLI])
     ]
 
 
@@ -1277,9 +1278,10 @@ def test_a_deferral_beside_a_standing_revalidation_is_not_asked_for(repo: Adopte
             ),
         },
     )
+    # Both are about the anchor the diff changed: the revalidation answers it.
     assert _answers(_run(repo)) == [
-        _written("unchanged", "a refactor", asked=True),
-        _written("deferred", "and a rename later", anchor=CLI),
+        _written("unchanged", "a refactor", asked=True, changed=[CLI]),
+        _written("deferred", "and a rename later", anchor=CLI, changed=[CLI]),
     ]
 
 
@@ -1332,8 +1334,8 @@ def test_of_an_anchor_deferred_twice_the_first_entry_is_the_one_asked_for(
         {"src/cli/main.py": "print('cli v3')\n", "docs/guide.md": guide(deferred=twice)},
     )
     assert _answers(_run(repo)) == [
-        _written("deferred", "first reason", anchor=CLI, asked=True),
-        _written("deferred", "second reason", anchor=CLI),
+        _written("deferred", "first reason", anchor=CLI, asked=True, changed=[CLI]),
+        _written("deferred", "second reason", anchor=CLI, changed=[CLI]),
     ]
 
 
@@ -1354,6 +1356,7 @@ def test_a_kept_deferral_is_listed_only_on_the_revalidation(repo: AdopterRepo) -
             "a refactor",
             asked=True,
             kept=[{"anchor": CORE, "reason": "waiting on the engine"}],
+            changed=[CLI],
         )
     ]
 
@@ -1418,7 +1421,7 @@ def test_a_revalidation_of_a_changed_anchor_is_asked_for(repo: AdopterRepo) -> N
         "change the CLI; the guide still holds",
         {"src/cli/main.py": "print('v2')\n", "docs/guide.md": guide(at=T2, because="a refactor")},
     )
-    assert _answers(_run(repo)) == [_written("unchanged", "a refactor", asked=True)]
+    assert _answers(_run(repo)) == [_written("unchanged", "a refactor", asked=True, changed=[CLI])]
 
 
 def test_a_justification_reworded_beside_a_question_is_not_asked_for(repo: AdopterRepo) -> None:
@@ -1438,13 +1441,14 @@ def test_a_justification_reworded_beside_a_question_is_not_asked_for(repo: Adopt
     result = _run(repo)
     assert _summary(result) == [("answered", "docs/guide.md", "path:src/cli/**", "deferred")]
     assert _answers(result) == [
-        _written("unchanged", "the CLI surface, as described", status="edited"),
-        _written("deferred", "rewrite after the rename", anchor=CLI, asked=True),
+        _written("unchanged", "the CLI surface, as described", status="edited", changed=[CLI]),
+        _written("deferred", "rewrite after the rename", anchor=CLI, asked=True, changed=[CLI]),
     ]
     section = fc.render_human(result).split("Answers written in this change", 1)[1]
     assert (
-        'docs/guide.md  unchanged (not asked for; edited without a revalidation) — "the CLI '
-        'surface, as described"' in section
+        "docs/guide.md relies on src/cli/**, which this change modifies. Still accurate (not "
+        'asked for by this change) (edited without a new re-check): "the CLI surface, as '
+        'described"' in section
     )
 
 
@@ -1454,7 +1458,7 @@ def test_a_bump_beside_a_question_is_not_asked_for(repo: AdopterRepo) -> None:
         "change the CLI; bump the marker",
         {"src/cli/main.py": "print('cli v3')\n", "docs/guide.md": guide(at=T2)},
     )
-    assert _answers(_run(repo)) == [_written("unchanged", HOLDS, status="bump")]
+    assert _answers(_run(repo)) == [_written("unchanged", HOLDS, status="bump", changed=[CLI])]
 
 
 def test_a_bump_is_listed_as_the_check_judges_it(repo: AdopterRepo) -> None:
@@ -1544,8 +1548,21 @@ def test_answers_on_collection_entries_are_listed_by_entry(repo: AdopterRepo) ->
     rule = {"artefact": "RS-1", "location": "docs/rules.md#RS-1"}
     other = {"artefact": "RS-2", "location": "docs/rules.md#RS-2"}
     assert _answers(result) == [
-        _written("unchanged", "a renamed constant; the rule reads the same", asked=True, **rule),
-        _written("deferred", "rewrite once the engine settles", anchor=CORE, asked=True, **other),
+        _written(
+            "unchanged",
+            "a renamed constant; the rule reads the same",
+            asked=True,
+            changed=[CORE],
+            **rule,
+        ),
+        _written(
+            "deferred",
+            "rewrite once the engine settles",
+            anchor=CORE,
+            asked=True,
+            changed=[CORE],
+            **other,
+        ),
     ]
 
 
@@ -1741,9 +1758,10 @@ def test_the_human_view_ends_with_every_answer_in_full(repo: AdopterRepo) -> Non
     text = fc.render_human(_run(repo))
     section = text.split("Answers written in this change", 1)[1].splitlines()[1:]
     assert section == [
-        f"  docs/guide.md  unchanged (not asked for; keeps the deferral of path src/core/** — "
-        f'"kept: {long}") — "{long}"',
-        f'  docs/guide.md  deferred path src/cli/** (not asked for) — "deferred: {long}"',
+        f'  docs/guide.md — still accurate (not asked for by this change): "{long}"',
+        f'    (still out of date for changes to src/core/**, fixed later: "kept: {long}")',
+        "  docs/guide.md relies on src/cli/**. Out of date, fixed later (not asked for by this "
+        f'change): "deferred: {long}"',
     ]
 
 
@@ -1775,23 +1793,90 @@ def test_the_human_view_escapes_what_a_terminal_would_act_on(repo: AdopterRepo) 
     )
     result = _run(repo)
     words = "later\x1b[1A\x1b[2K all fine \u202edesrever"
-    assert _answers(result) == [_written("deferred", words, anchor=CLI, asked=True)]
+    assert _answers(result) == [_written("deferred", words, anchor=CLI, asked=True, changed=[CLI])]
     assert "\\u001b[1A" in fc.render_json(result)
 
     text = fc.render_human(result)
     assert "\x1b" not in text and "\u202e" not in text
     shown = "later\\x1b[1A\\x1b[2K all fine \\u202edesrever"
     assert f"answered: deferred — {shown}" in text  # the finding
-    assert f'docs/guide.md  deferred path src/cli/** — "{shown}"' in text  # the list
+    listed = (
+        "docs/guide.md relies on src/cli/**, which this change modifies. Out of date, fixed "
+        f'later: "{shown}"'
+    )
+    assert listed in text  # the list
 
 
 def test_the_human_view_says_none_when_nothing_was_written(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": guide()})
     repo.commit("change the CLI only", {"src/cli/main.py": "print('n')\n"})
     text = fc.render_human(_run(repo))
-    assert text.endswith(
-        "Answers written in this change — read from the artefacts, word for word\n  none\n"
+    assert text.endswith(f"Answers written in this change — {fc.ANSWERS_QUESTION}\n  none\n")
+
+
+def test_each_answer_names_what_changed_under_its_document_and_whether_it_holds(
+    repo: AdopterRepo,
+) -> None:
+    """The list states its question once, then each line names the document, the anchors
+    the change modified that it relies on — a path, or another document — and the outcome
+    in plain words, its words quoted (#1468). The JSON document carries those anchors."""
+    both = {"path": ["src/cli/**", "src/core/**"]}
+    on_guide = {"artefact": ["guide"]}
+    util = {"path": ["src/util/**"]}
+    _start(
+        repo,
+        {
+            "src/util/x.py": "X = 1\n",
+            "docs/api.md": document("api", anchors={"path": ["src/cli/**"]}, at=T1),
+            "docs/faq.md": document("faq", anchors=util, at=T1, outcome="unchanged", because="a"),
+            "docs/guide.md": guide(anchors=both),
+            "docs/notes.md": document("notes", anchors=on_guide, at=T1, outcome="unchanged"),
+        },
     )
+    repo.commit(
+        "change the CLI and the engine; answer for every page",
+        {
+            "src/cli/main.py": "print('cli v3')\n",
+            "src/core/engine.py": "ENGINE = 2\n",
+            "docs/api.md": document(
+                "api",
+                anchors={"path": ["src/cli/**"]},
+                at=T1,
+                deferred=[("path", "src/cli/**", "rewrite with the redesign")],
+            ),
+            "docs/faq.md": document("faq", anchors=util, at=T2, outcome="unchanged", because="b"),
+            "docs/guide.md": guide(
+                anchors=both, at=T2, outcome="updated", because=None, body="Rewritten."
+            ),
+            "docs/notes.md": document(
+                "notes",
+                anchors=on_guide,
+                at=T2,
+                outcome="unchanged",
+                because="the guide's rewrite leaves the notes true",
+            ),
+        },
+    )
+    result = _run(repo)
+    assert [entry["changed"] for entry in json.loads(fc.render_json(result))["answers"]] == [
+        [CLI],
+        [],
+        [CLI, CORE],
+        [{"kind": "artefact", "value": "guide"}],
+    ]
+    section = fc.render_human(result).split("Answers written in this change", 1)[1].splitlines()
+    assert section == [
+        f" — {fc.ANSWERS_QUESTION}",
+        "  docs/api.md relies on src/cli/**, which this change modifies. Out of date, fixed "
+        'later: "rewrite with the redesign"',
+        '  docs/faq.md — still accurate (not asked for by this change): "b"',
+        "  docs/guide.md relies on src/cli/** and src/core/**, which this change modifies. "
+        "Updated in this change",
+        "  docs/notes.md relies on document guide, which this change modifies. Still accurate: "
+        '"the guide\'s rewrite leaves the notes true"',
+    ]
+    # The bare word `unchanged` is never the outcome shown.
+    assert not any("unchanged" in line for line in section)
 
 
 # --- a head named: `--head <rev>` -----------------------------------------------------------------
