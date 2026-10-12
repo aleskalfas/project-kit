@@ -12,9 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-04T10:55:05Z
+      at: 2026-10-12T11:22:23Z
       outcome: unchanged
-      unchanged-because: This page says the core check flags a page when what it is anchored to changed and nobody revalidated it, and that any change to a captured source's file asks the pages anchored to it. COR-050's refinement only adds a case to its rationale's list of where the two checks part; when a page is flagged and what clears it are as the page says.
+      unchanged-because: This page says its agent never runs a friction writer, because the answer is a person's decision and the agent cannot ask. The agent makes no change of its own, so any answer it would write is one COR-050 point 3 leaves a person's decision. The reviewer of a change's answers concerns only the agent making the change, so the page holds.
       deferred:
         - anchor:
             kind: record

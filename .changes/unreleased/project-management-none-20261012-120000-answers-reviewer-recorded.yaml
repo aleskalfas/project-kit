@@ -1,0 +1,10 @@
+component: project-management
+kind: none
+body: >
+  DEC-055 records that a reviewer the project chooses checks the answers a
+  change wrote, that the pull request's list gives the author's sentence on
+  what changed in each updated document, and that a change with answers
+  merges under the same authorisation as any other. The commands follow in a
+  later change, so nothing an adopter runs changes yet. The README states the
+  rule as COR-050 point 3 gives it, and its friction block defers the
+  description of the commands to that change.
