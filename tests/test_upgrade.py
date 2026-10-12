@@ -1020,19 +1020,84 @@ def test_tool_staleness_ignores_malformed_tags(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Non-release and malformed tags are skipped; the highest valid `v<semver>`
-    wins. No parseable tag degrades like a failed lookup."""
+    """Non-release, malformed and pre-release tags are skipped; the highest
+    release tag wins, so the tool step never offers a pre-release (#1472)."""
     stub_ls_remote.ls_remote_returncode = 0
     stub_ls_remote.ls_remote_stdout = (
         "0000000000000000000000000000000000000000\trefs/tags/not-a-version\n"
         "0000000000000000000000000000000000000000\trefs/tags/v-broken\n"
         "0000000000000000000000000000000000000000\trefs/tags/v3.1.0\n"
+        "0000000000000000000000000000000000000000\trefs/tags/v3.2.0rc1\n"
     )
     monkeypatch.setattr(upgrade, "running_version", lambda: "1.0.0")
 
     upgrade.run_upgrade(installed_target)
 
-    assert "A newer pkit tool is available: v3.1.0" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "A newer pkit tool is available: v3.1.0" in out
+    assert "3.2.0rc1" not in out
+
+
+@pytest.mark.parametrize(
+    "above",
+    [
+        pytest.param("2.1.0rc1", id="release-candidate"),
+        pytest.param("2.1.0a1", id="alpha"),
+        pytest.param("2.1.0b1", id="beta"),
+        pytest.param("2.1.0.dev1", id="dev-release"),
+        pytest.param("2.1.0rc1.dev1", id="dev-release-of-a-pre-release"),
+    ],
+)
+def test_max_released_tag_skips_a_pre_release_above_the_latest_release(above: str) -> None:
+    """A pre-release or dev release tagged above the latest release is skipped:
+    the latest release wins, as `pkit pin` and the release step refuse it (#1472)."""
+    assert upgrade._max_released_tag(_tag_output("1.0.0", "2.0.0", above)) == Version("2.0.0")
+
+
+@pytest.mark.parametrize(
+    "above",
+    [
+        pytest.param("2.1.0.post1", id="post-release"),
+        pytest.param("2.1.0+build", id="local-version"),
+        pytest.param("2.1", id="two-part"),
+        pytest.param("02.1.0", id="zero-padded"),
+    ],
+)
+def test_max_released_tag_skips_a_tag_the_release_step_never_writes(above: str) -> None:
+    """Only a tag the release test accepts counts, so the version found is spelled
+    as its tag: a padded `v02.1.0` would otherwise come back as 2.1.0 and the tool
+    step would install `@v2.1.0`, a tag that may not exist."""
+    assert upgrade._max_released_tag(_tag_output("1.0.0", "2.0.0", above)) == Version("2.0.0")
+
+
+def test_max_released_tag_is_none_when_only_pre_releases_are_tagged() -> None:
+    """A tag list holding only pre-releases and dev releases has no release."""
+    assert upgrade._max_released_tag(_tag_output("1.0.0rc1", "1.0.0b2", "1.0.0.dev1")) is None
+
+
+def test_upgrade_pinned_child_never_raises_the_pin_to_a_pre_release(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A pre-release tagged above the latest release is not what a pinned raise
+    writes: the pin is raised to the latest release (#1472)."""
+    router.pin_file_path(installed_target).write_text("1.0.0\n", encoding="utf-8")
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    stub_ls_remote.ls_remote_returncode = 0
+    stub_ls_remote.ls_remote_stdout = _tag_output("1.0.0", "2.0.0", "2.1.0rc1")
+    raised_to: list[str] = []
+
+    def _reconciled(pin: str, _argv: list[str], _environ: object = None) -> int:
+        raised_to.append(pin)
+        return 0
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _reconciled)
+
+    upgrade.run_upgrade(installed_target)
+
+    assert raised_to == ["2.0.0"]
+    assert router.read_version_pin(installed_target) == "2.0.0"
 
 
 def test_tool_staleness_not_reached_on_source_checkout_run_by_other_code(
