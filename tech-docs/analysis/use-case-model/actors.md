@@ -49,6 +49,10 @@ ACT-ci-pipeline:
         record:
           - COR-054
           - COR-050
+      revalidated:
+        at: 2026-10-12T18:49:33Z
+        outcome: unchanged
+        unchanged-because: COR-050's refinement lets a place name a type, which no friction check reads. The pipeline needs the checks to run unattended against a named base, report in a machine-readable form and gate the merge. This change leaves each as it was, so the actor holds.
 ACT-component-author:
   name: Component author
   status: active
@@ -89,15 +93,19 @@ ACT-merge-authoriser:
   name: Merge authoriser
   status: active
   needs:
-    - See every answer the change wrote on its artefacts, word for word from the check's own list, before I authorise its merge.
-    - Have my authorisation cover only what I was shown, and be asked again for anything written or reworded after.
-    - Be shown the same list before an agent commits straight to the default branch for me.
+    - Before I authorise a merge, be told what changed in each document the change updated, and which documents wait for which follow-up.
+    - Leave the check of an agent's answers to a reviewer other than that agent, and authorise the merge as I authorise any other.
+    - Be told the same before an agent commits straight to the default branch for me.
     - Have a decision record or rule an agent drafted become binding only through my own review of it.
   pkit:
     friction:
       anchors:
         record:
           - COR-050
+      revalidated:
+        at: 2026-10-12T18:49:35Z
+        outcome: unchanged
+        unchanged-because: COR-050's refinement lets a place name a type, which no friction check reads, and adds two writes of types on the project's places. Being told before a merge what changed and what waits, leaving the answers' check to a reviewer, and accepting a drafted record or rule are untouched, so the actor holds.
 ACT-methodology-maintainer:
   name: Methodology maintainer
   status: active
@@ -205,10 +213,10 @@ The person who builds: decisions, rules, notes, code and its documentation, one 
 
 The person who authorises a change's merge into the default branch. Where work is committed there directly, it is the person the agent works for, before the commit.
 
-- **Always a person:** the authorisation turns the answers an agent wrote into a person's decision. The same person's review turns a record or rule an agent drafted into a binding one.
+- **Always a person:** they authorise the merge after they are told what the change updated and what it leaves out of date. The same person's review turns a record or rule an agent drafted into a binding one.
 - **Comes:** at the end of each change, and whenever a drafted record or rule waits for acceptance.
 - **Brings:** the authority to land the change.
-- **Core:** two core rules make this role, and neither needs a work tracker. COR-050 point 3 covers seeing a change's answers before a merge or direct commit, and the acceptance gate covers accepting a record or rule.
+- **Core:** two core rules make this role, and neither needs a work tracker. COR-050 point 3 covers being told what a change updated before its merge or direct commit. The acceptance gate covers accepting a record or rule.
 - **Note:** the name is not "approver", because project-management uses that word for a reviewer agent (DEC-028).
 
 ## ACT-methodology-maintainer — Methodology maintainer

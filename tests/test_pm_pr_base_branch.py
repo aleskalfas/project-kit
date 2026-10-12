@@ -24,6 +24,8 @@ from typing import Any
 
 import pytest
 
+from tests.adopter_repo import sign_nothing
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 SCRIPTS = CAP_ROOT / "scripts"
@@ -295,6 +297,7 @@ def integration_clone(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, pkit_on_p
     start-work leaves it: no local integration branch, feature branch cut from
     the remote-tracking ref, one commit ahead."""
     _git(tmp_path, "init", "-q", "-b", "main")
+    sign_nothing(tmp_path)
     _git(tmp_path, "commit", "-q", "--allow-empty", "-m", "root")
     sha = _git(tmp_path, "rev-parse", "HEAD")
     _git(tmp_path, "update-ref", "refs/remotes/origin/integration/foo", sha)
