@@ -27,6 +27,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.adopter_repo import sign_nothing
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
@@ -73,6 +75,7 @@ class _Repo:
         self.root = root
         root.mkdir()
         self.git("init", "-q", "-b", "main")
+        sign_nothing(root)
 
     def git(self, *args: str) -> str:
         proc = subprocess.run(

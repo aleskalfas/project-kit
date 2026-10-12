@@ -85,7 +85,7 @@ class GitRepo:
         repo.git("init", "-q", f"--initial-branch={branch}")
         repo.git("config", "user.name", DEFAULT_AUTHOR.name)
         repo.git("config", "user.email", DEFAULT_AUTHOR.email)
-        repo.git("config", "commit.gpgsign", "false")
+        sign_nothing(root)
         # No automatic maintenance: a commit would otherwise detach `gc --auto`,
         # whose writes under .git (info/refs, objects/info/packs, the multi-pack
         # index) land at any later moment and break a byte-for-byte reading of
@@ -227,6 +227,78 @@ class GitRepo:
         message = message or f"squash-merge {branch}"
         self.git("commit", "-q", "-m", message, author=author, date=date)
         return self.head()
+
+
+def sign_nothing(root: Path) -> None:
+    """Turn signing off in the repository at `root`, in its own configuration, so no
+    commit or tag made there asks the developer's signing agent for anything (#1484).
+    The repository's configuration overrides the developer's global one, and a clone
+    does not inherit it: call this in every repository a test makes and commits in —
+    `git init`ed, cloned — before its first commit. `GitRepo.init` calls it."""
+    for key in ("commit.gpgsign", "tag.gpgsign"):
+        subprocess.run(["git", "config", key, "false"], cwd=root, check=True, capture_output=True)
+
+
+#: What the signing program of a test session says when git asks it to sign.
+REFUSED_TO_SIGN = (
+    "refused to sign: a test commits in a repository that has not turned signing off "
+    '(tests/README.md, "A repository a test commits in")'
+)
+
+_REFUSE = f"""#!/bin/sh
+echo '{REFUSED_TO_SIGN}' >&2
+exit 1
+"""
+
+_REFUSING_GLOBAL_CONFIG = """\
+# A test session's global git configuration (`refusing_global_config`, tests/adopter_repo.py).
+[include]
+{include}
+[commit]
+    gpgSign = true
+[gpg]
+    program = {refuse}
+[gpg "openpgp"]
+    program = {refuse}
+[gpg "x509"]
+    program = {refuse}
+[gpg "ssh"]
+    program = {refuse}
+    defaultKeyCommand = {refuse}
+"""
+
+
+def refusing_global_config(directory: Path, environment: Mapping[str, str]) -> Path:
+    """A global git configuration, written into `directory`, that signs every commit
+    with a program that refuses (#1484): the user's own global files first, the ones
+    git reads in `environment`, then signing turned on and every signing program the
+    refusing one. A repository's own configuration overrides it, so a commit fails
+    there unless the repository has turned signing off (`sign_nothing`). The suite's
+    git reads it (`signing_refused`, `tests/conftest.py`)."""
+    refuse = directory / "refuse-to-sign"
+    refuse.write_text(_REFUSE, encoding="utf-8")
+    refuse.chmod(0o755)
+    # The user's global files, in the order git reads them. `~` is each git process's
+    # HOME, so a test that moves HOME moves what is read.
+    own, xdg = environment.get("GIT_CONFIG_GLOBAL"), environment.get("XDG_CONFIG_HOME")
+    if own:
+        files = [own]
+    else:
+        files = [f"{xdg}/git/config" if xdg else "~/.config/git/config", "~/.gitconfig"]
+    config = directory / "gitconfig"
+    config.write_text(
+        _REFUSING_GLOBAL_CONFIG.format(
+            include="\n".join(f"    path = {_quoted(f)}" for f in files),
+            refuse=_quoted(str(refuse)),
+        ),
+        encoding="utf-8",
+    )
+    return config
+
+
+def _quoted(value: str) -> str:
+    """`value` as a git configuration file spells a string."""
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
 def _identity_env(author: Author | None, date: datetime | None) -> dict[str, str] | None:
