@@ -1,0 +1,15 @@
+component: backbone
+kind: none
+body: >
+  Design-ahead: COR-057 introduces the rule-set reviewer, a core agent that
+  judges a change against the accepted rules that bind on each artefact it
+  alters. It takes its rules only from the rule sets, through the backbone's
+  one answer, and judges only what the change owns and only the parts no
+  check is declared to enforce. It never writes or judges an answer, and it
+  takes its verdict's form from whoever invokes it. It is advisory unless a
+  gate requires it. A component that contributes it to a gate covers every
+  ruled artefact, and does so only on evidence that it judges well by hand.
+  COR-024's reviewer stack admits it on the diff, beside the
+  convention-compliance reviewer. It is record text only, and nothing you
+  run changes. The build Task (#1385) ships the agent and carries the real
+  changeset.

@@ -15,12 +15,15 @@ from pathlib import Path
 import pytest
 
 from project_kit import session_guard
+from tests.adopter_repo import sign_nothing
 
 
 def repository(path: Path, origin: str) -> Path:
-    """A git repository at `path` whose `origin` is `origin`."""
+    """A git repository at `path` whose `origin` is `origin`, with signing turned off
+    for a test that commits in it (`sign_nothing`)."""
     path.mkdir(parents=True)
     subprocess.run(["git", "init", "-q"], cwd=path, check=True, capture_output=True)
+    sign_nothing(path)
     subprocess.run(
         ["git", "remote", "add", "origin", origin], cwd=path, check=True, capture_output=True
     )

@@ -12,6 +12,7 @@ from click.testing import CliRunner
 
 from project_kit import changesets, release
 from project_kit.cli import main
+from tests.adopter_repo import sign_nothing
 
 
 def _git(repo: Path, *args: str) -> None:
@@ -24,6 +25,7 @@ def _make_repo(tmp_path: Path) -> Path:
     _git(repo, "init", "-q")
     _git(repo, "config", "user.email", "t@example.com")
     _git(repo, "config", "user.name", "T")
+    sign_nothing(repo)  # its worktrees share it
 
     source_kit = repo / ".pkit"
     (source_kit / "cli").mkdir(parents=True)

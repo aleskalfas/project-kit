@@ -85,12 +85,15 @@ def many(path: str, rule: str, n: int) -> list[Reported]:
 class Tree:
     """The fixture repository, and the gate run over it."""
 
+    #: Who commits, and no signing: every commit here is made through `git`.
+    IDENTITY = ("-c", "user.name=t", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false")
+
     def __init__(self, root: Path) -> None:
         self.root = root
 
     def git(self, *args: str) -> str:
         done = subprocess.run(
-            ["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *args],
+            ["git", *self.IDENTITY, *args],
             cwd=self.root,
             capture_output=True,
             text=True,

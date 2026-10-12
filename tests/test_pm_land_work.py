@@ -27,6 +27,7 @@ from typing import Any
 import pytest
 
 from tests import pull_request_backbone
+from tests.adopter_repo import sign_nothing
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
@@ -434,6 +435,7 @@ def clone(tmp_path_factory: pytest.TempPathFactory) -> _Clone:
     _git(work, "init", "-q", "-b", "main")
     _git(work, "config", "user.email", "octocat@example.com")
     _git(work, "config", "user.name", "Octo Cat")
+    sign_nothing(work)  # each test's copy keeps it, so no commit in a copy is signed either
     # Relative, so a copy of `root` pushes to its own copy of the origin.
     _git(work, "remote", "add", "origin", "../origin.git")
     (work / ".gitignore").write_text(".pkit/\n.claude/\n", encoding="utf-8")

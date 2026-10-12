@@ -25,6 +25,7 @@ from typing import Any
 import pytest
 
 from project_kit import session_guard
+from tests.adopter_repo import sign_nothing
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAPABILITY_GUARD = (
@@ -62,6 +63,7 @@ def _plain(path: Path) -> Path:
 
 
 def _worktree(repository: Path, path: Path) -> Path:
+    sign_nothing(repository)
     _git(
         repository,
         "-c",
