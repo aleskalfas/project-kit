@@ -1,7 +1,7 @@
 ---
 id: COR-056
 title: An artefact's type is declared by its owner, on the place that holds it
-status: proposed
+status: accepted
 date: 2026-10-11
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
