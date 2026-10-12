@@ -25,7 +25,7 @@ pkit:
         - anchor:
             kind: record
             value: COR-051
-          reason: "COR-051 pins every inheritance, makes a change to what a set inherits need a new major, and binds an accepted rule only where a route reaches its set. The page's rule-set section says otherwise in its version row and its statuses paragraph. Both follow with #1408, which builds where rules bind and their validation errors."
+          reason: "COR-051 gives a scope the keys paths and exclude, drops the narrowing by a consuming component, pins every inheritance, makes a change to what a set inherits need a new major, and binds an accepted rule only where a route reaches its set. The page's rule-set section says otherwise in its scope row, its version row and its statuses paragraph. It follows with the build Tasks that realise the refinement: #1406 for the scope's form, and #1408 for where rules bind and its validation errors."
 ---
 
 # Schemas
