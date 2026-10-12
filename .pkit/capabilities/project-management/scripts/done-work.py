@@ -230,6 +230,7 @@ from _lib.agent_verdicts import (
     PATH_REMOTE,
     Verdict,
     gate_candidates,
+    gate_membership,
     gate_verdicts,
     latest_commit_timestamp,
 )
@@ -271,6 +272,7 @@ from _lib.placeholder_detection import (
 # The one wiring of the required reviewers and the freshness rule (#1195),
 # shared with review-pr's skip and show-pr's stale marking.
 from _lib.pr_review import REVIEW_VIEW_FIELDS, PrReview, resolve_pr_review
+from _lib.pr_review import remote_baseline as remote_baseline_of
 
 # The closing-reference reader `open-pr` and `validate-pr` use, so all three
 # agree on which issues a PR closes (#1086).
@@ -1958,11 +1960,7 @@ def _check_agent_gate(
 
     # Baseline required remote reviewer names (DEC-028's static list); the
     # local baseline is read with the resolution, below.
-    remote_baseline = [
-        entry.get("github_login")
-        for entry in remote_registered
-        if isinstance(entry, dict) and entry.get("github_login")
-    ]
+    remote_baseline = remote_baseline_of(config)
 
     # --- DEC-032 D1: resolve the required-local set for this PR. -----------
     # Baseline ∪ contributed, de-duped, through the ONE wiring `review-pr`
@@ -2081,19 +2079,19 @@ def _check_agent_gate(
     #   * membership — remote verdicts count only from a baseline login that is
     #     not the PR author (DEC-028 step 2/3); local verdicts only from a name
     #     in the resolved required set (DEC-032 D1).
-    # The membership + author-exclusion predicates are defined ONCE and shared
-    # by both reads below, so the gate and the audit can never disagree about
-    # *whose* verdicts count — the divergence that let a PR author's own
-    # self-approval, which the gate correctly refuses, describe the audit's
-    # state at override time.
+    # The membership + author-exclusion predicates are defined ONCE
+    # (`gate_membership`, which land-work's hold on `[person]` findings reads
+    # too) and shared by both reads below, so the gate and the audit can never
+    # disagree about *whose* verdicts count — the divergence that let a PR
+    # author's own self-approval, which the gate correctly refuses, describe
+    # the audit's state at override time.
     remote_baseline_set = set(remote_baseline)
     required_local_set = set(required_local)
-
-    def remote_reviewer_ok(login: str) -> bool:
-        return login in remote_baseline_set and login != author_login
-
-    def local_reviewer_ok(name: str) -> bool:
-        return name in required_local_set
+    remote_reviewer_ok, local_reviewer_ok = gate_membership(
+        remote_baseline=remote_baseline_set,
+        required_local=required_local_set,
+        author_login=author_login,
+    )
 
     verdicts = gate_verdicts(
         comments,

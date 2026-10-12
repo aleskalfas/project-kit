@@ -16,8 +16,8 @@ line is one of two recognised shapes:
     remote path:  Reviewer agent: APPROVED | CHANGES_REQUESTED
     local path:   Reviewer agent (local, <name>): APPROVED | CHANGES_REQUESTED
 
-Three consumers read these comments and MUST agree on what they say (COR-007 —
-one parser, not three):
+Every consumer reads these comments through this module and MUST agree on
+what they say (COR-007 — one parser, not one per consumer):
 
   * `done-work`'s agent-mode gate collapses to the latest verdict *token* per
     reviewer (restricted to the resolved required set), keeps it only when it
@@ -30,6 +30,14 @@ one parser, not three):
     reviewer so an operator can read the reasons through the governed pm
     surface (issue #544); `show-pr --field review-history` surfaces the full
     sequence behind that reduction (`all_verdicts`, issue #905).
+  * `land-work`'s hold on `[person]` findings (#1405) reads the gate's
+    selection too (`gate_candidates`, judged by the same freshness rule), so
+    the findings it shows and holds a run on are those of the verdicts the
+    gate reads ([project-management:DEC-055-pr-lists-answers] point 3).
+
+The findings under a verdict carry tags (DEC-028 "Finding tags"), and this
+module reads them too (`findings`), so every consumer tells a `[block]`, an
+`[advisory]` and a `[person]` finding apart alike.
 
 What counts as fresh is not decided here: each consumer hands in the one
 freshness predicate (`_lib.verdict_freshness`, #1179), and this module only
@@ -54,7 +62,7 @@ That keeps this module pure-logic and unit-testable without a live repo.
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
 APPROVED = "APPROVED"
@@ -371,6 +379,21 @@ def latest_verdicts_per_reviewer(
     )
 
 
+def marked_candidates(comments: list) -> list[Verdict]:
+    """Each reviewer's latest marker-carrying verdict, whoever the reviewer:
+    the gate's selection before its membership predicates (`gate_candidates`
+    is this, filtered by them).
+
+    Not a gate path (ADR-042 D6): a consumer reads it only to ask whether any
+    such verdict has some property — land-work's check that one carries a
+    `[person]` finding before it resolves the required set. Membership keys on
+    the same reviewer identity the latest-per-reviewer reduction does, so what
+    `gate_candidates` selects is always a subset of this, and a check that
+    finds nothing here finds nothing there.
+    """
+    return latest_verdicts_per_reviewer(comments, require_marker=True)
+
+
 def gate_candidates(
     comments: list,
     *,
@@ -380,7 +403,7 @@ def gate_candidates(
     """Each required reviewer's current verdict as the gate reads it, before
     freshness is judged (DEC-028 steps 2, 3 and 5).
 
-    The latest marker-carrying verdict per reviewer (`require_marker=True`,
+    The latest marker-carrying verdict per reviewer (`marked_candidates`,
     #593) from an identity the membership predicates accept. The membership
     predicates are REQUIRED keyword arguments, so a verdict from an unrequired
     identity — the PR author's self-approval included — cannot reach the gate
@@ -397,12 +420,39 @@ def gate_candidates(
         scoping the count to the resolved required set (and excluding the PR
         author on the remote path, DEC-028 step 3).
     """
-    return latest_verdicts_per_reviewer(
-        comments,
-        local_reviewer_ok=local_reviewer_ok,
-        remote_reviewer_ok=remote_reviewer_ok,
-        require_marker=True,
-    )
+    return [
+        verdict
+        for verdict in marked_candidates(comments)
+        if (remote_reviewer_ok if verdict.path == PATH_REMOTE else local_reviewer_ok)(
+            verdict.reviewer
+        )
+    ]
+
+
+def gate_membership(
+    *,
+    remote_baseline: Iterable[str],
+    required_local: Iterable[str],
+    author_login: str,
+) -> tuple[Callable[[str], bool], Callable[[str], bool]]:
+    """Whose verdicts the gate reads: `(remote_reviewer_ok, local_reviewer_ok)`
+    for `gate_candidates` and `gate_verdicts` (DEC-028 steps 2 and 3, DEC-032 D1).
+
+    A remote verdict counts only from a login in `remote_baseline` that is not
+    `author_login`, the PR's author; a local verdict only from a name in
+    `required_local`, the PR's resolved required set. Stated once, so the gate
+    and land-work's hold on `[person]` findings agree on whose verdicts count.
+    """
+    remote = frozenset(remote_baseline)
+    local = frozenset(required_local)
+
+    def remote_reviewer_ok(login: str) -> bool:
+        return login in remote and login != author_login
+
+    def local_reviewer_ok(name: str) -> bool:
+        return name in local
+
+    return remote_reviewer_ok, local_reviewer_ok
 
 
 def gate_verdicts(
@@ -444,3 +494,192 @@ def gate_verdicts(
         )
         if is_fresh(verdict)
     ]
+
+
+# ---- finding tags (DEC-028 "Finding tags", #1405) ----------------------------
+#
+# Each finding under a verdict is a top-level item of a bulleted or numbered
+# list, with a tag at its head saying what it does to the merge. The verdict
+# line alone decides the gate; the tags tell a consumer which findings block,
+# which a person must judge, and which only inform.
+
+#: An objective failure the change owns: it withholds the approval.
+TAG_BLOCK = "block"
+#: Any other finding: it withholds and holds nothing. An untagged finding is one.
+TAG_ADVISORY = "advisory"
+#: A finding the person who authorises the merge judges: it withholds no
+#: approval, and the landing command shows it and holds on it (DEC-055 point 3).
+TAG_PERSON = "person"
+TAGS = (TAG_BLOCK, TAG_ADVISORY, TAG_PERSON)
+
+#: Words read as a tag though they are not one: the validation severities
+#: `pm-reviewer` classified its findings by before the tags (#1405). It now
+#: writes its severity after the tag, as `[block] (hard-reject)`, but an
+#: adopter's copy of the agent may still write the severity alone. A
+#: compatibility reading of that copy's words, not a tag of DEC-028's.
+TAG_ALIASES = {
+    "hard-reject": TAG_BLOCK,
+    "warning": TAG_ADVISORY,
+}
+#: The severity whose meaning hung on its audit comment: that copy approved
+#: with it only when the audit was there, so it reads as the verdict says —
+#: `[block]` under a CHANGES_REQUESTED, `[advisory]` under an APPROVED.
+_BY_VERDICT = "bypassable-with-audit"
+
+
+@dataclass(frozen=True)
+class Finding:
+    """One finding of a verdict: a top-level list item, with its sub-items.
+
+    * `tag` — `TAG_BLOCK`, `TAG_ADVISORY` or `TAG_PERSON`; an untagged
+      finding counts as `TAG_ADVISORY` (DEC-028).
+    * `text` — the item as written, its list marker dropped and its
+      continuation lines and sub-items kept under it, unindented to the
+      item's own text, joined by newlines; the tag stays where it was written.
+    * `tagged` — whether the item began with a tag, or with an alias of one.
+    """
+
+    tag: str
+    text: str
+    tagged: bool
+
+    @property
+    def first_line(self) -> str:
+        return self.text.split("\n", 1)[0]
+
+
+# A list item's first line: up to three spaces, a bullet or a number, then its
+# text after at least one space (or nothing at all).
+_ITEM_RE = re.compile(
+    r"^(?P<indent> {0,3})(?P<marker>[-*+]|\d{1,9}[.)])(?P<gap>[ ]+|$)(?P<text>.*)$"
+)
+# A fence opening or closing a fenced block.
+_FENCE_RE = re.compile(r"^(?P<indent> *)(?P<fence>`{3,}|~{3,})")
+# A tag at the head of an item's text, in any of the forms DEC-028's grammar
+# reads leniently: `[person]`, bold or italic (`**[person]**`, `**person**`,
+# `*[person]*`), backticks (`` `person` ``), a trailing colon (`person:`,
+# `**person**:`), any case. A bare word is a tag only with its colon; the tag
+# ends where the text does or at anything but a letter, a digit or `_` — a
+# space, a dash, a comma, a parenthesis.
+_TAG_RE = re.compile(
+    r"(?P<wrap>\*\*|__|\*|_|`)?(?P<bracket>\[)?(?P<word>[A-Za-z][A-Za-z-]*)(?(bracket)\])"
+    r"(?P<inner>:)?(?(wrap)(?P=wrap))(?P<outer>:)?(?=\W|$)"
+)
+
+
+def _tag_of(text: str, token: str | None) -> str | None:
+    """The tag `text` begins with — an alias read as the tag it stands for,
+    under a verdict of `token` (None when the body names none) — or None when
+    it begins with none."""
+    match = _TAG_RE.match(text)
+    if match is None:
+        return None
+    if not (match["wrap"] or match["bracket"] or match["inner"] or match["outer"]):
+        return None
+    word = match["word"].lower()
+    if word in TAGS:
+        return word
+    if word == _BY_VERDICT:
+        return TAG_ADVISORY if token == APPROVED else TAG_BLOCK
+    return TAG_ALIASES.get(word)
+
+
+def _columns(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def findings(body: str) -> list[Finding]:
+    """The findings of a verdict comment's `body`, in the order written.
+
+    A finding is a top-level item of a bulleted or numbered list, with its
+    continuation lines and its sub-items (DEC-028, "Finding tags"). The
+    verdict line — the comment's first line, when it is one — and the verdict
+    marker are not findings, and text in a fenced block carries no tag: a
+    fence inside an item belongs to that item, one outside every item to none,
+    and an item's fence it never closes ends with the item.
+    A line indented to an item's text continues the item, as does an
+    unindented line straight after it; a blank line followed by an unindented
+    one ends it.
+    """
+    lines = body.expandtabs(4).splitlines()
+    token = parse_verdict_line(lines[0].strip())[0] if lines else None
+    if token is not None:
+        lines = lines[1:]
+    items: list[tuple[str, list[str], int]] = []
+    current: list[str] | None = None
+    first = ""
+    content = 0
+    fence = ""
+    in_item = False
+    blank = False
+    for line in lines:
+        if fence and in_item and line.strip() and _columns(line) < content:
+            # A line indented less than the item's text ends the item, and a
+            # fence the item left open with it, as CommonMark reads it: a
+            # finding after an unclosed fence is never swallowed.
+            fence, in_item = "", False
+        if fence:
+            if in_item and current is not None:
+                current.append(line)
+            closing = _FENCE_RE.match(line)
+            if (
+                closing is not None
+                and closing["fence"][0] == fence[0]
+                and len(closing["fence"]) >= len(fence)
+                and not line[closing.end() :].strip()
+            ):
+                fence = ""
+            continue
+        if not line.strip():
+            if current is not None:
+                current.append("")
+            blank = True
+            continue
+        if _VERDICT_MARKER_RE.fullmatch(line.strip()):
+            current, blank = None, True
+            continue
+        indent = _columns(line)
+        opening = _FENCE_RE.match(line)
+        if current is not None and indent >= content:
+            current.append(line)
+            if opening is not None:
+                fence, in_item = opening["fence"], True
+            blank = False
+            continue
+        item = _ITEM_RE.match(line)
+        if item is not None:
+            current = []
+            first = item["text"].strip()
+            content = len(item["indent"]) + len(item["marker"]) + max(len(item["gap"]), 1)
+            items.append((first, current, content))
+            blank = False
+            continue
+        if opening is not None:
+            current, fence, in_item = None, opening["fence"], False
+            blank = False
+            continue
+        if current is not None and not blank:
+            current.append(line)
+            continue
+        current = None
+        blank = False
+    found: list[Finding] = []
+    for first, rest, column in items:
+        while rest and not rest[-1]:
+            rest.pop()
+        under = [line[min(column, _columns(line)) :] for line in rest]
+        tag = _tag_of(first, token)
+        found.append(
+            Finding(
+                tag=tag or TAG_ADVISORY,
+                text="\n".join([first, *under]),
+                tagged=tag is not None,
+            )
+        )
+    return found
+
+
+def tagged(body: str, tag: str) -> list[Finding]:
+    """The findings of `body` that count as `tag` — an untagged one as
+    `TAG_ADVISORY`."""
+    return [finding for finding in findings(body) if finding.tag == tag]
