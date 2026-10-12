@@ -732,3 +732,58 @@ def test_gate_membership_is_the_gates(av) -> None:
         remote_baseline=["author"], required_local=(), author_login="author"
     )
     assert not remote_ok("author")
+
+
+@pytest.mark.parametrize("author_login", ["", "   ", "app/", None])
+def test_gate_membership_counts_no_remote_reviewer_when_the_author_is_unread(
+    av, author_login
+) -> None:
+    """An author that could not be read excludes nobody, so every remote
+    reviewer would count as independent of it: the remote path counts no one
+    instead. The local path never excluded the author (DEC-028 step 3), so a
+    required local reviewer counts as before, and no one else does (#1485)."""
+    remote_ok, local_ok = av.gate_membership(
+        remote_baseline=["review-bot"], required_local=("pm-reviewer",), author_login=author_login
+    )
+    assert not remote_ok("review-bot")
+    assert not remote_ok("")
+    assert local_ok("pm-reviewer")
+    assert not local_ok("stranger")
+    comments = [
+        _local("pm-reviewer", "APPROVED"),
+        _local("stranger", "APPROVED"),
+        _remote("APPROVED", author="review-bot"),
+    ]
+    selected = av.gate_candidates(
+        comments, local_reviewer_ok=local_ok, remote_reviewer_ok=remote_ok
+    )
+    assert [(v.path, v.reviewer) for v in selected] == [(av.PATH_LOCAL, "pm-reviewer")]
+
+
+@pytest.mark.parametrize(
+    "pr_view",
+    [
+        {},
+        {"author": None},
+        {"author": "octocat"},
+        {"author": {}},
+        {"author": {"login": None}},
+        {"author": {"login": 42}},
+        {"author": {"login": ""}},
+        {"author": {"login": "  "}},
+        # How `gh` writes an author GitHub returns as null: an app with no login.
+        {"author": {"is_bot": True, "login": "app/"}},
+        {"author": {"is_bot": True, "login": "app/ "}},
+        None,
+        [],
+    ],
+)
+def test_pr_author_is_empty_when_it_cannot_be_read(av, pr_view) -> None:
+    assert av.pr_author(pr_view) == ""
+
+
+def test_pr_author_reads_the_login_as_given(av) -> None:
+    assert av.pr_author({"author": {"login": "octocat", "name": "Octo Cat"}}) == "octocat"
+    # An app's login is read as `gh` writes it, prefix and all, as before.
+    app = {"author": {"is_bot": True, "login": "app/dependabot"}}
+    assert av.pr_author(app) == "app/dependabot"

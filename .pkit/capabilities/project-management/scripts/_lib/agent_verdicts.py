@@ -429,6 +429,30 @@ def gate_candidates(
     ]
 
 
+#: How `gh` prefixes the login of a PR author that has no user id (an app).
+_APP_PREFIX = "app/"
+
+
+def pr_author(pr_view: object) -> str:
+    """The login of the PR's author in a `gh pr view --json author` answer, or
+    "" when it cannot be read: no `author`, one that is not an object, or a
+    login that is missing, not a string, or blank — `app/` with nothing after
+    it included, which is how `gh` writes an author GitHub returns as null
+    (an author with no user id is written as an app, `app/<login>`). Each
+    consumer that judges whose verdicts count — the merge gate and
+    land-work's findings step — reads the author here, so none takes an
+    author it could not read for a login no reviewer has (#1485). A login it
+    can read is returned as `gh` wrote it."""
+    author = pr_view.get("author") if isinstance(pr_view, dict) else None
+    login = author.get("login") if isinstance(author, dict) else None
+    return login if _names_an_author(login) else ""
+
+
+def _names_an_author(login: object) -> bool:
+    """Whether `login` names someone: a string with a login after any `app/`."""
+    return isinstance(login, str) and bool(login.removeprefix(_APP_PREFIX).strip())
+
+
 def gate_membership(
     *,
     remote_baseline: Iterable[str],
@@ -440,10 +464,21 @@ def gate_membership(
 
     A remote verdict counts only from a login in `remote_baseline` that is not
     `author_login`, the PR's author; a local verdict only from a name in
-    `required_local`, the PR's resolved required set. Stated once, so the gate
-    and land-work's hold on `[person]` findings agree on whose verdicts count.
+    `required_local`, the PR's resolved required set, with no author
+    exclusion — the developer attests they ran the agent (DEC-028 step 3).
+    Stated once, so the gate and land-work's hold on `[person]` findings agree
+    on whose verdicts count.
+
+    An author that could not be read — `author_login` empty, as `pr_author`
+    returns it, or one `pr_author` would not return — leaves no remote
+    reviewer known to be someone else, so the remote predicate accepts nobody.
+    Excluding an empty login would exclude nobody, and every remote reviewer
+    would count as independent of an author nobody read (#1485): the remote
+    path fails closed instead (DEC-032 D5). The local predicate never reads the
+    author, so a local verdict counts as it does with the author read. The
+    callers say why to whoever runs them.
     """
-    remote = frozenset(remote_baseline)
+    remote = frozenset(remote_baseline) if _names_an_author(author_login) else frozenset()
     local = frozenset(required_local)
 
     def remote_reviewer_ok(login: str) -> bool:

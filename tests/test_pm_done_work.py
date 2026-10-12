@@ -65,7 +65,9 @@ def _mark_bootstrapped(cap_root: Path) -> None:
     )
 
 
-def _stub_pr_view(reviews, comments, author_login="author"):
+def _stub_pr_view(reviews, comments, author_login: str | None = "author"):
+    """`author_login=None` stands for a PR whose author GitHub returns as null."""
+
     def fake_gh_run(args, config, **kwargs):
         import subprocess
 
@@ -74,7 +76,7 @@ def _stub_pr_view(reviews, comments, author_login="author"):
             returncode=0,
             stdout=json.dumps(
                 {
-                    "author": {"login": author_login},
+                    "author": None if author_login is None else {"login": author_login},
                     "reviews": reviews,
                     "comments": comments,
                 }
@@ -157,6 +159,71 @@ def test_gate_refuses_approved_comment_from_author(dw, monkeypatch) -> None:
     )
     result = dw._check_approval_gate(99, {}, None, {})
     assert result.passed is False
+
+
+@pytest.mark.parametrize(
+    "author_login", ["", None, "app/"], ids=["empty-login", "null-author", "gh-null-author"]
+)
+def test_gate_counts_no_approved_comment_when_the_author_is_unread(
+    dw, monkeypatch, author_login
+) -> None:
+    """With the PR's author unread, no commenter is known to be a non-author:
+    no `Approved` comment counts, and the refusal says why (#1485)."""
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view(
+            reviews=[],
+            comments=[{"author": {"login": "reviewer"}, "body": "Approved"}],
+            author_login=author_login,
+        ),
+    )
+    result = dw._check_approval_gate(99, {}, None, {})
+    assert result.passed is False
+    assert result.refusal_message.splitlines() == [
+        "[refused] approval gate not satisfied for PR #99.",
+        "          → No APPROVED review present (latest state: none).",
+        "          → The PR's author could not be read, so no `Approved`-prefix comment "
+        "counts: none can be told from the author's own.",
+        "          → No --bypass supplied.",
+        "          Remediations:",
+        "            - Request a review and have it approved.",
+        "            - Run `done-work` again once `gh pr view` returns the PR's author.",
+        '            - Re-run with `--bypass "<reason>"`.',
+    ]
+
+
+def test_gate_refusal_with_a_readable_author_is_unchanged(dw, monkeypatch) -> None:
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view(reviews=[], comments=[{"author": {"login": "author"}, "body": "Approved"}]),
+    )
+    result = dw._check_approval_gate(99, {}, None, {})
+    assert result.passed is False
+    assert result.refusal_message.splitlines() == [
+        "[refused] approval gate not satisfied for PR #99.",
+        "          → No APPROVED review present (latest state: none).",
+        "          → No `Approved`-prefix comment from a non-author.",
+        "          → No --bypass supplied.",
+        "          Remediations:",
+        "            - Request a review and have it approved.",
+        "            - Have a non-author commenter post a comment starting with `Approved`.",
+        '            - Re-run with `--bypass "<reason>"`.',
+    ]
+
+
+def test_gate_counts_an_approved_review_when_the_author_is_unread(dw, monkeypatch) -> None:
+    """GitHub keeps a PR's author from approving it, so an APPROVED review
+    stands without the author's read (#1485)."""
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view(reviews=[{"state": "APPROVED"}], comments=[], author_login=None),
+    )
+    result = dw._check_approval_gate(99, {}, None, {})
+    assert result.passed is True
+    assert result.passed_via == "APPROVED review"
 
 
 def test_gate_case_sensitive_approved_prefix(dw, monkeypatch) -> None:
