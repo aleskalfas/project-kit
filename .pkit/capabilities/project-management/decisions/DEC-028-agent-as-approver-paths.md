@@ -60,7 +60,7 @@ Reviewer agent: CHANGES_REQUESTED
 
 The verdict vocabulary (`APPROVED`, `CHANGES_REQUESTED`) matches GitHub's native PR-review state names — transferable mental model, and future migration from comment-based sentinels to actual `gh pr review` objects is mechanically straightforward (the verdict maps to the Review state).
 
-> **Amended by [project-management:DEC-047-freeform-comment-verb] (#593).** The verdict comment additionally carries a **provenance marker**, `<!-- pkit-verdict -->` — `<!-- pkit-verdict sha=<oid> base=<oid> -->` when it names the head the reviewer reviewed and the base branch's head it was reviewed against (see "Stale-verdict handling") — and **the gate counts a verdict only when that marker is present**. The reviewer path stamps it (`review-pr.py` on post; a directly-posting reviewer includes it); `agent_verdicts.gate_verdicts` requires it (`require_marker=True`). This closes the read side of the sentinel-spoof DEC-047 guards on the write side: a bare verdict-grammar first line — hand-typed, or slipped past a write-side guard — no longer satisfies the merge gate unless it was stamped by the reviewer path. The **read surface** (`show-pr --field review`) stays permissive and still displays every verdict-shaped comment, marked or not; only the *gate* requires the marker. The first-line grammar is unchanged (the marker is a separate line), so this is a refinement, not a change to what a verdict *looks* like.
+The verdict comment also carries a **provenance marker** on a line of its own, `<!-- pkit-verdict -->` — `<!-- pkit-verdict sha=<oid> base=<oid> -->` when it names the head the reviewer reviewed and the base branch's head it was reviewed against (see "Stale-verdict handling") — and **the gate counts a verdict only when that marker is present**. The reviewer path stamps it (`review-pr` on post; a directly-posting reviewer includes it), and the gate-checker requires it (step 2 of "Gate-checker algorithm"). The marker guards the read side against the sentinel spoof that [project-management:DEC-047-freeform-comment-verb] guards against on the write side: a bare verdict-grammar first line — hand-typed, or slipped past a write-side guard — does not satisfy the merge gate unless the reviewer path stamped it. The **read surface** (`show-pr --field review`) is permissive and displays every verdict-shaped comment, marked or not; only the *gate* requires the marker.
 
 A comment without the `Reviewer agent:` first-line prefix is implicitly informational commentary — no special verdict needed. Comments from the agent without the prefix do not affect the gate.
 
@@ -130,6 +130,7 @@ The **strict-composition** question (when both paths are configured, should the 
 When a remote-registered agent reviews, it posts the verdict comment using its own GitHub identity (bot account, GitHub App installation, service account). The verdict satisfies the gate via **identity match + author exclusion**:
 
 - Comment first line exactly `Reviewer agent: APPROVED`.
+- The comment carries the verdict marker (see "The verdict signal").
 - Comment author matches `review.agents.remote_registered[0].github_login`.
 - Comment author is **not** the PR author (author-exclusion enforced).
 - The verdict is fresh (see "Stale-verdict handling").
@@ -141,6 +142,7 @@ The remote path's invocation is **adopter-managed** — the kit does not ship th
 When a local-registered agent reviews, it runs on the developer's machine via a kit-shipped command (see "Invocation commands" below). The agent's output is posted as a PR comment by the **developer's** gh identity, with a structured attestation indicating the local path:
 
 - Comment first line exactly `Reviewer agent (local, <name>): APPROVED` — where `<name>` matches an entry in `review.agents.local_registered:`.
+- The comment carries the verdict marker (see "The verdict signal").
 - Comment author is the developer who ran the local command (typically the PR author in a solo workflow).
 - **Author-exclusion is relaxed** for the local path — the developer attests they ran the agent and is taking responsibility for the verdict.
 - The verdict is fresh (see "Stale-verdict handling").
@@ -200,7 +202,7 @@ The gate-checker takes **each agent's latest verdict by timestamp**, then requir
 The pm capability's `done-work` runs the algorithm:
 
 1. Determine which paths are configured (either or both of `remote_registered:` and `local_registered:` non-empty).
-2. Find all PR comments with first line matching the verdict shape of any configured path — `Reviewer agent: APPROVED` (remote) or `Reviewer agent (local, <name>): APPROVED` (local).
+2. Find all PR comments that carry the verdict marker (see "The verdict signal") and whose first line matches the verdict shape of any configured path — `Reviewer agent: <VERDICT>` (remote) or `Reviewer agent (local, <name>): <VERDICT>` (local), per "Verdict-line grammar and the consumer scan contract".
 3. **Remote path filter**: author matches `review.agents.remote_registered[0].github_login` AND author is not the PR author.
    **Local path filter**: `<name>` matches an entry in `review.agents.local_registered:`. No author-exclusion check.
 4. **Latest-per-agent**: among comments passing steps 2–3, take the latest by timestamp per agent identity (remote) or per `<name>` (local). An earlier verdict the latest superseded takes no further part.
@@ -288,6 +290,7 @@ When the most recent verdict is `CHANGES_REQUESTED`, the refusal message surface
 | Two execution paths | Remote (bot identity) and local (developer attestation of locally-run agent). Project may use either or both. |
 | Verdict format — remote path | First line: `Reviewer agent: APPROVED` or `Reviewer agent: CHANGES_REQUESTED`. Body below is freeform commentary. |
 | Verdict format — local path | First line: `Reviewer agent (local, <name>): APPROVED` or `Reviewer agent (local, <name>): CHANGES_REQUESTED`. `<name>` matches `review.agents.local_registered:` entry. Body below is freeform commentary. |
+| Verdict marker | `<!-- pkit-verdict -->`, with the reviewed head and base when known, on a line of its own. The gate counts only a verdict that carries it; the read surface shows every verdict-shaped comment. |
 | Verdict vocabulary at v1 | `APPROVED` (satisfies gate) and `CHANGES_REQUESTED` (does not satisfy gate). Matches GitHub native PR-review state names for transferable mental model. |
 | Verdict-line grammar | Remote: `Reviewer agent: <VERDICT>`; local: `Reviewer agent (local, <name>): <VERDICT>`; `<VERDICT>` ∈ {`APPROVED`, `CHANGES_REQUESTED`}; matched after stripping surrounding whitespace. |
 | Consumer scan contract | A consumer extracting a verdict from an agent's raw output scans for the first grammar-matching line **anywhere** in the output (not line-1-only — reasoning agents emit preamble). First match wins; no match anywhere → fail closed (no verdict posted, gate unsatisfied, full output surfaced for debugging). |
