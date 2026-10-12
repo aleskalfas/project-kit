@@ -9,8 +9,10 @@ body: >
   names no author (no login, a blank one, or `app/` alone, which is how it
   writes an author GitHub returns as null), the agent-mode gate counts no
   remote reviewer's verdict, and refuses, naming the unread author, where a
-  required reviewer is registered only on the remote path; a local reviewer's
-  verdict counts as before. The human-mode gate counts no `Approved` comment
+  required reviewer is registered only on the remote path or a
+  `--bypass-reviewer` override names a reviewer on the remote path; only the
+  whole-gate `--bypass` gets past that refusal, and a local reviewer's verdict
+  counts as before. The human-mode gate counts no `Approved` comment
   and says why, while an APPROVED review still counts; and `land-work` stops
   at its findings step, with nothing merged, when a remote reviewer's verdict
   carries a `[person]` finding. A readable author is handled as before.
