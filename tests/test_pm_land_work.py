@@ -525,7 +525,9 @@ def _steps(out: str) -> list[str]:
 
 #: How the line of the step that lists the answers begins (land-work's `STEP`).
 _STEP = "documents this change affects"
-_STEP_NAMES = {"head", "ci", "review", _STEP, "merge"}
+#: How the line of the step that prints the `[person]` findings begins (`FINDINGS`).
+_FINDINGS = "findings to judge"
+_STEP_NAMES = {"head", "ci", "review", _STEP, _FINDINGS, "merge"}
 #: The description's section of the answers, and the heading an earlier run wrote it under.
 _HEADING = "## Documentation this change affects"
 _FORMER_HEADING = "## Friction answers"
@@ -2008,3 +2010,277 @@ def test_a_base_that_changed_the_listed_settings_is_refused(world, capsys, monke
     monkeypatch.setattr(answers, "settings_change", lambda merge_base, head: ())
     rc, out, err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
     assert rc == 0, out + err
+
+
+# ---- the findings to judge (DEC-028's finding tags, DEC-055 point 3) ---------------
+
+_PERSON = (
+    "Approved, with one point for you.\n"
+    "\n"
+    "- [person] RS-GUIDE-003, `docs/install.md` line 12 — whether the new paragraph says "
+    "only what the page's reader needs.\n"
+    "  - the paragraph on worktrees\n"
+    "- [advisory] A name could be clearer.\n"
+)
+
+
+def _person_lines(name: str, stale: str = "") -> list[str]:
+    """How land-work prints `_PERSON`'s `[person]` finding: whole, under its reviewer."""
+    under = " " * len(f"  [{name}] ")
+    return [
+        f"  [{name}] {stale}[person] RS-GUIDE-003, `docs/install.md` line 12 — whether the new "
+        "paragraph says only what the page's reader needs.",
+        f"{under}- the paragraph on worktrees",
+    ]
+
+
+def _comment(run: _Run, body: str) -> dict[str, Any]:
+    """A comment as the fake GitHub posts one, next in time."""
+    n = len(run.github.comments)
+    return {
+        "author": {"login": "octocat"},
+        "body": body,
+        "createdAt": f"2026-10-01T11:{n:02d}:00Z",
+        "url": f"https://github.com/o/r/pull/{PR}#c{n}",
+        "viewerDidAuthor": True,
+        "lastEditedAt": None,
+    }
+
+
+def _verdict(run: _Run, name: str, body: str, *, sha: str) -> dict[str, Any]:
+    """A local reviewer's approval of `sha`, as review-pr posts it."""
+    posted = run.land.review_pr._format_verdict_comment(
+        name, "APPROVED", body, sha=sha, base=run.github.base
+    )
+    return _comment(run, posted)
+
+
+def _findings_read(run: _Run) -> Callable[[list[str]], bool]:
+    fields = ",".join(run.land._FINDINGS_VIEW)
+    return lambda argv: argv[:2] == ["pr", "view"] and argv[-1] == fields
+
+
+def _merge_line(run: _Run) -> str:
+    return f"merge with: pkit pm land-work {ISSUE} --yes --expect-head {run.github.head}"
+
+
+def test_a_person_finding_this_run_posted_stops_it_ready_and_the_rerun_merges(
+    world, capsys
+) -> None:
+    """The `--yes` came before the verdict: the finding is printed whole, and the
+    run stops ready. Its identical re-run found the verdict when it started,
+    standing for the head, and merges."""
+    run = world()
+    head = run.github.head
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_READY == 8
+    lines = out.splitlines()
+    at = lines.index(_person_lines("code-reviewer")[0])
+    assert lines[at : at + 3] == [*_person_lines("code-reviewer"), f"{_FINDINGS}: 1, above"]
+    assert lines[-1] == (
+        f"ready: {_short(head)} — CI passed, all required verdicts approved, 1 finding to judge "
+        "above (code-reviewer's verdict came after this run's --yes was given, so the --yes does "
+        f"not cover its finding); {_merge_line(run)}"
+    )
+    assert run.github.merges == []
+
+    run.invoked.clear()
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+    assert run.invoked == []
+    lines = out.splitlines()
+    merged = lines.index(f"merge: merged as {'c' * 7}")
+    assert lines.index(_person_lines("code-reviewer")[0]) < merged
+    assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_a_person_finding_found_at_the_start_for_the_head_merges(world, capsys) -> None:
+    """The person is shown the finding at the `ready:` stop and authorises that
+    head: the run that merges found the verdict when it started."""
+    run = world()
+    head = run.github.head
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    lines = out.splitlines()
+    assert _person_lines("code-reviewer")[0] in lines
+    assert lines[-1] == (
+        f"ready: {_short(head)} — CI passed, all required verdicts approved, 1 finding to judge "
+        f"above; {_merge_line(run)}"
+    )
+    rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
+    assert rc == 0, out + err
+    assert f"{_FINDINGS}: 1, above" in out.splitlines()
+    assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_a_person_finding_posted_while_the_run_ran_stops_it_ready(world, capsys) -> None:
+    run = world()
+    head = run.github.head
+    assert run.run(capsys=capsys)[0] == run.land.EXIT_READY
+    late = _verdict(run, "reviewer", _PERSON, sha=head)
+    run.github.before(_findings_read(run), lambda: run.github.comments.append(late))
+    rc, out, _err = run.run("--yes", "--expect-head", head, capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    lines = out.splitlines()
+    assert _person_lines("reviewer")[0] in lines
+    assert lines[-1] == (
+        f"ready: {_short(head)} — CI passed, all required verdicts approved, 1 finding to judge "
+        "above (reviewer's verdict came after this run's --yes was given, so the --yes does not "
+        f"cover its finding); {_merge_line(run)}"
+    )
+    assert run.github.merges == []
+    rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
+    assert rc == 0, out + err
+    assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_a_person_finding_for_another_head_holds_every_run_until_a_review(world, capsys) -> None:
+    """Human review mode re-runs no reviewer: a verdict reviewed at an earlier
+    head is printed marked stale, and every `--yes` run stops ready, naming the
+    review it waits for, until the reviewer posts a verdict for the head."""
+    run = world(mode="human")
+    old = run.github.head
+    run.github.comments.append(_verdict(run, "code-reviewer", _PERSON, sha=old))
+    new = run.push_new_head("fix.txt")
+    run.github.checks[new] = [_GREEN]
+    run.github.comments.append(_comment(run, "Approved — looks right."))
+    stale = f"(stale: reviewed {_short(old)}; changed since: fix.txt) "
+    ready = (
+        f"ready: {_short(new)} — CI passed, the PR is approved, 1 finding to judge above "
+        f"(code-reviewer's verdict does not stand for {_short(new)}, so no --yes covers its "
+        f"finding until code-reviewer posts one that does; `review-pr {ISSUE}` runs a local "
+        f"reviewer again); {_merge_line(run)}"
+    )
+    for _ in range(2):
+        rc, out, _err = run.run("--yes", "--expect-head", new, capsys=capsys)
+        assert rc == run.land.EXIT_READY
+        lines = out.splitlines()
+        at = lines.index(_person_lines("code-reviewer", stale)[0])
+        assert lines[at : at + 3] == [
+            *_person_lines("code-reviewer", stale),
+            f"{_FINDINGS}: 1, above (1 marked stale)",
+        ]
+        assert lines[-1] == ready
+        assert run.github.merges == []
+
+    run.github.comments.append(_verdict(run, "code-reviewer", _PERSON, sha=new))
+    rc, out, err = run.run("--yes", "--expect-head", new, capsys=capsys)
+    assert rc == 0, out + err
+    assert _person_lines("code-reviewer")[0] in out.splitlines()
+    assert [merge[-1] for merge in run.github.merges] == [new]
+
+
+def test_verdicts_that_could_not_be_read_at_the_start_hold_the_run(world, capsys) -> None:
+    """What the run found at its start is what it read then: a read that failed
+    found nothing, so the finding is new to it — the hold fails toward a stop."""
+    run = world()
+    head = run.github.head
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    assert run.run(capsys=capsys)[0] == run.land.EXIT_READY
+    run.github.fails.append(lambda argv: argv[:2] == ["pr", "view"] and argv[-1] == "comments")
+    rc, out, _err = run.run("--yes", "--expect-head", head, capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert out.splitlines()[-1] == (
+        f"ready: {_short(head)} — CI passed, all required verdicts approved, 1 finding to judge "
+        "above (the verdicts could not be read when this run started, so its --yes does not "
+        f"cover its finding); {_merge_line(run)}"
+    )
+    assert run.github.merges == []
+
+
+def test_verdicts_that_cannot_be_read_for_the_findings_stop_the_run(world, capsys) -> None:
+    run = world()
+    run.github.fails.append(_findings_read(run))
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE
+    assert out.splitlines()[-1] == (
+        f"{_FINDINGS}: PR #{PR}'s verdicts could not be read: HTTP 502: Bad Gateway. Nothing "
+        f"was merged; run `land-work {ISSUE}` again"
+    )
+    assert run.github.merges == []
+
+
+def test_findings_that_cannot_be_read_stop_before_the_list_is_written(world, capsys) -> None:
+    """The findings are read before the answers' list is written: a run that
+    wrote the list must end ready, never on a stop whose next step is the same
+    `--yes` again (DEC-055 point 3)."""
+    run = _answers_world(world)
+    run.github.fails.append(_findings_read(run))
+    rc, out, _err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE
+    assert out.splitlines()[-1].startswith(f"{_FINDINGS}: PR #{PR}'s verdicts could not be read")
+    assert run.github.bodies == []
+    assert run.github.merges == []
+
+
+def test_a_person_finding_from_a_reviewer_the_gate_does_not_require_holds_nothing(
+    world, capsys
+) -> None:
+    run = world()
+    run.github.comments.append(_verdict(run, "stranger", _PERSON, sha=run.github.head))
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+    assert "[stranger]" not in out
+    assert not any(step.startswith(f"{_FINDINGS}:") for step in _steps(out))
+
+
+def test_a_person_finding_in_an_unmarked_verdict_holds_nothing(world, capsys) -> None:
+    """Only a marked verdict is one the gate reads: a verdict-shaped comment with
+    no marker — typed by hand, say — neither shows its finding nor holds."""
+    run = world()
+    head = run.github.head
+    assert run.run(capsys=capsys)[0] == run.land.EXIT_READY
+    # The latest comment of its shape, but with no marker.
+    run.github.comments.append(
+        _comment(run, f"Reviewer agent (local, code-reviewer): APPROVED\n\n{_PERSON}")
+    )
+    rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
+    assert rc == 0, out + err
+    assert _person_lines("code-reviewer")[0] not in out.splitlines()
+    assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_findings_with_no_person_tag_land_as_today(world, capsys) -> None:
+    """An untagged finding counts as `[advisory]`, and a tag in a fenced block
+    is no tag: no step prints, and nothing holds the `--yes`."""
+    run = world()
+    head = run.github.head
+    run.answers["code-reviewer"] = (
+        "APPROVED",
+        "Fine.\n\n- An untagged note.\n- [advisory] A name could be clearer.\n\n"
+        "```\n- [person] quoted in a fence\n```\n",
+    )
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+    lines = out.splitlines()
+    assert "  [code-reviewer] An untagged note." in lines
+    assert "  [code-reviewer] [advisory] A name could be clearer." in lines
+    assert _steps(out) == [
+        f"head: {_short(head)} (PR #{PR}, {BRANCH})",
+        f"ci: passed on {_short(head)} (8m, run https://github.com/o/r/actions/runs/77)",
+        "review: 0 kept fresh, 2 re-run — all approved; 2 advisories above (every verdict in "
+        f"full: `show-pr {PR} --field review`)",
+        f"{_STEP}: none",
+        f"merge: merged as {'c' * 7}",
+    ]
+
+
+def test_at_a_terminal_the_prompt_follows_the_findings(world, capsys, monkeypatch) -> None:
+    run = world()
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    before: list[str] = []
+
+    def answer(prompt: str = "") -> str:
+        before.append(capsys.readouterr().out)
+        return "y"
+
+    monkeypatch.setattr("builtins.input", answer)
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == 0, out + err
+    (printed,) = before
+    shown = printed.splitlines()
+    at = shown.index(_person_lines("code-reviewer")[0])
+    assert shown[at : at + 3] == [*_person_lines("code-reviewer"), f"{_FINDINGS}: 1, above"]
