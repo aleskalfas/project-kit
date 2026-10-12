@@ -29,12 +29,15 @@
       }
     },
     "scope": {
-      "description": "Which artefacts the rules apply to, given as places: repository-relative paths or globs. A consuming component may narrow it (COR-051 point 2).",
-      "type": "array",
-      "minItems": 1,
-      "uniqueItems": true,
-      "items": {
-        "$ref": "#/$defs/non-empty-string"
+      "description": "Which artefacts the set's rules apply to (COR-051 point 2), by the paths of their files and by their types. A mapping of `paths`, `exclude` and `types`, with `paths` or `types` or both. A plain list of paths is its `paths`. A method rule set takes no scope (checked in Python).",
+      "if": {
+        "type": "array"
+      },
+      "then": {
+        "$ref": "#/$defs/scope-paths"
+      },
+      "else": {
+        "$ref": "#/$defs/scope"
       }
     },
     "rules": {
@@ -208,6 +211,57 @@
     "decision-id": {
       "type": "string",
       "pattern": "^(?:(?:COR|PRJ|ADR)-[0-9]{3,}|[a-z](?:[a-z0-9-]*[a-z0-9])?:DEC-[0-9]{3,})$"
+    },
+    "scope": {
+      "title": "A scope (COR-051 point 2)",
+      "description": "An artefact is in the scope when `paths` and `types` both select it and `exclude` does not leave it out.",
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "paths"
+          ]
+        },
+        {
+          "required": [
+            "types"
+          ]
+        }
+      ],
+      "properties": {
+        "paths": {
+          "description": "An artefact is selected when one of these matches its file. Without `paths`, every file matches.",
+          "$ref": "#/$defs/scope-paths"
+        },
+        "exclude": {
+          "description": "A selected artefact is left out when one of these matches its file. Without `exclude`, nothing is left out.",
+          "$ref": "#/$defs/scope-paths"
+        },
+        "types": {
+          "description": "An artefact is selected when its type, or a type in contention for it, is one of these (COR-056 point 3). Without `types`, every artefact matches, with a type or with none. Each must be a type its owner declares (checked in Python).",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/type"
+          }
+        }
+      }
+    },
+    "scope-paths": {
+      "description": "Paths relative to the repository root, each read as a place is: a file, a folder with everything beneath it, or a glob in which `**` matches across folders.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/non-empty-string"
+      }
+    },
+    "type": {
+      "description": "A type (COR-056 point 1): `<component>:<name>` for a component's, `backbone:<name>` for the backbone's, a bare `<name>` for the project's own.",
+      "type": "string",
+      "pattern": "^(?:(?:[a-z]|[a-z][a-z0-9-]*[a-z0-9]):)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
     },
     "non-empty-string": {
       "type": "string",

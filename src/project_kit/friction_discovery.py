@@ -87,9 +87,10 @@ is the one reader of those declarations and the one walker of the places:
 - `artefacts_document` — the one walk's answer as a stable document: the
   declared places with the files each matches and the skips validation
   applies, every file read with its place and its front matter's own fields,
-  every artefact with its anchors, an entry's section span and the rule sets
-  whose scope covers it, and the held folders, declared as places are, with
-  every file each holds — of the working tree, or of a commit.
+  every artefact with its anchors, an entry's section span, its type and the
+  rule sets whose scope covers it, every declared type, and the held folders,
+  declared as places are, with every file each holds — of the working tree, or
+  of a commit.
   `pkit friction artefacts --json` prints it, and a capability's script reads
   where artefacts are through it, at head or at another state, never by
   walking the places or listing a commit itself (ADR-057 points 1 and 2).
@@ -97,9 +98,19 @@ is the one reader of those declarations and the one walker of the places:
   text both checks compare as its body, and the lines of its file that text
   spans: one reading of where the section lies gives both (`_entry_body`), so
   a reader of the span reads exactly what friction compares (COR-050 point 1).
+- `Discovery.types` (`resolve_types`) — every artefact's type (COR-056): the
+  backbone's own types and the installed components' type registries
+  (`FrictionSettings.type_registry`), the type each place names, and the order
+  of the places matching a file (`place_specificity`). Every rule is
+  `backbone:rule`, a project place yields to a component's place that is not
+  root-wide, a root-wide place comes last, and otherwise the more specific
+  place wins. A kind field gates a type, and a tie counts as each type in
+  contention. The type findings are raised here, once, and one table names the
+  member that reports each and its severity (`TYPE_FINDINGS`; ADR-057 point 2).
 - `covering_rule_sets` — the rule sets whose scope covers each artefact
-  (COR-051 point 2): a scope is given as places, so each entry of it is read
-  as a place is (`listed_files_in_place`).
+  (COR-051 point 2): its `paths` and `exclude` are each read as a place is
+  (`listed_files_in_place`), and its `types` select by the one resolution of
+  types. A plain list is its `paths`.
 - `content`, `parsed_at`, `deferral_reason` — what one artefact's block and
   fields say, read the same way by both checks and by the walk through an
   artefact's history (`friction_history`): its content, never the container
@@ -158,6 +169,27 @@ LOCATION_KEY = "location"
 PLACES_KEY = "places"
 HELD_KEY = "held"
 _ENTRY_NOUN = {PLACES_KEY: "place", HELD_KEY: "held folder"}
+
+# A type (COR-056 points 1 and 2): the key of a component's type registry in
+# its `friction` block, the keys of a registry entry, and the key of the type a
+# place names — a component's place in its package metadata, a project's place
+# written `{path, type}` in the backbone configuration.
+TYPES_KEY = "types"
+TYPE_KEY = "type"
+TYPE_DESCRIPTION_KEY = "description"
+KIND_FIELD_KEY = "kind-field"
+PROJECT_PLACES_KEY = "project-places"
+
+#: A type's name within its owner, and the whole of a bare project type: a word
+#: of lower-case letters and digits, joined by single hyphens, so it holds no
+#: `:` and no `/` (COR-056 point 1).
+TYPE_NAME_PATTERN = r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*"
+_TYPE_NAME = re.compile(TYPE_NAME_PATTERN)
+#: A type as a place or a scope writes it: `<owner>:<name>`, or a bare `<name>`.
+_TYPE = re.compile(rf"(?:(?P<owner>[a-z](?:[a-z0-9-]*[a-z0-9])?):)?(?P<name>{TYPE_NAME_PATTERN})")
+
+# Who declares a place the project's configuration declares.
+PROJECT_SOURCE = "project"
 
 # The friction modes COR-050 point 12 names; `warning` is the default (point 14).
 FRICTION_MODES: tuple[str, ...] = ("warning", "enforcing")
@@ -261,6 +293,10 @@ class SettingsPath:
     joined). `file` is the declaring file relative to the project root and
     `pointer` a JSON Pointer to the value in it, so a finding can name both.
     `location` is the documentation location a capability place names, if any.
+    `type` is the type a place names, in full (COR-056 point 2): for a
+    project's place as written, for a capability's place `<capability>:<name>`
+    — `None` when it names none, or a value its schema refuses. Whether the
+    place gives that type is the type resolution's to judge (`Types`).
     """
 
     value: str
@@ -269,6 +305,7 @@ class SettingsPath:
     pointer: str
     source: str  # "project" or "capability:<name>"
     location: PlaceLocation | None = None
+    type: str | None = None
 
     @property
     def is_capability(self) -> bool:
@@ -296,6 +333,45 @@ class MalformedDeclaration:
 
 
 @dataclass(frozen=True)
+class DeclaredType:
+    """One type its owner declares (COR-056 point 2): an entry of a component's
+    type registry, or one of the backbone's own types.
+
+    `owner` is the component, or `backbone`, and `name` the type's name within
+    it. `kind_field` is the artefact's own field in which an artefact of the
+    type declares its kind (point 4), or `None`. `project_places` is whether a
+    project may give the type to its own places: an entry that does not say
+    admits none, and the backbone's types admit none.
+    """
+
+    owner: str
+    name: str
+    description: str | None = None
+    kind_field: str | None = None
+    project_places: bool = False
+
+    @property
+    def type(self) -> str:
+        """The type's full name, `<owner>:<name>`."""
+        return f"{self.owner}:{self.name}"
+
+
+#: The backbone's type for rules: every rule takes it, whatever place matches its
+#: file (COR-056 point 3).
+RULE_TYPE = f"{BACKBONE_COMPONENT}:rule"
+
+#: The backbone's own types (COR-056 point 2). The backbone gives them without
+#: any place, and no place may name one.
+BACKBONE_TYPES: tuple[DeclaredType, ...] = (
+    DeclaredType(
+        owner=BACKBONE_COMPONENT,
+        name="rule",
+        description="A rule: one entry of a rule-set file (COR-051 point 2).",
+    ),
+)
+
+
+@dataclass(frozen=True)
 class FrictionSettings:
     """The `friction` settings discovery reads (COR-050 points 1 and 14).
 
@@ -310,6 +386,11 @@ class FrictionSettings:
     7). `held` are the capabilities' folders of held documents, resolved as
     their places are; a project declares none. `internal_root` and
     `user_root` are the documentation roots, read from the same state.
+    `types` are the installed capabilities' type registries, each by name in
+    written order, and `installed` the installed capabilities' names (COR-056
+    point 2). `refused_types` are the project's places whose `type` the
+    configuration's schema refuses, each with that value as written in
+    `value`: they give no type, and a reader warns (`refused_type_warnings`).
     """
 
     mode: Any
@@ -323,11 +404,30 @@ class FrictionSettings:
     held: tuple[SettingsPath, ...] = ()
     malformed_held: tuple[MalformedDeclaration, ...] = ()
     exclude_unreadable: str | None = None
+    types: tuple[DeclaredType, ...] = ()
+    installed: tuple[str, ...] = ()
+    refused_types: tuple[SettingsPath, ...] = ()
 
     @property
     def roots(self) -> dict[str, str]:
         """The documentation roots by audience, repository-relative (COR-049 point 1)."""
         return {docs_roots.INTERNAL_KEY: self.internal_root, docs_roots.USER_KEY: self.user_root}
+
+    @property
+    def type_registry(self) -> dict[str, DeclaredType]:
+        """Every declared type by its full name: the backbone's own, then each
+        installed capability's registry (COR-056 points 2 and 6)."""
+        return {declared.type: declared for declared in (*BACKBONE_TYPES, *self.types)}
+
+    @property
+    def project_types(self) -> frozenset[str]:
+        """The bare types the project's places give: a project declares its own
+        type by giving it on one of its places (COR-056 point 2)."""
+        return frozenset(
+            place.type
+            for place in self.places
+            if place.source == PROJECT_SOURCE and place.type is not None and ":" not in place.type
+        )
 
     @property
     def mode_or_default(self) -> str:
@@ -392,15 +492,18 @@ def read_friction_settings(
             for index, text in _texts(friction.get(key))
         )
 
-    places = list(project_paths(PLACES_KEY))
+    refused_types: list[SettingsPath] = []
+    places = list(_project_places(friction.get(PLACES_KEY), config_rel, refused_types))
     surface = list(project_paths("surface"))
     exclude = list(project_paths("exclude"))
     held: list[SettingsPath] = []
     malformed_places: list[MalformedDeclaration] = []
     malformed_surface: list[MalformedDeclaration] = []
     malformed_held: list[MalformedDeclaration] = []
+    types: list[DeclaredType] = []
+    installed = installed_capability_names(target_root, tree)
 
-    for name in installed_capability_names(target_root, tree):
+    for name in installed:
         package_rel = (CAPABILITIES_DIR / name / "package.yaml").as_posix()
         package = load(package_rel)
         recorded = load(docs_roots.capability_locations_relpath(name).as_posix())
@@ -414,6 +517,7 @@ def read_friction_settings(
         found, malformed = _capability_surface(name, package, package_rel)
         surface.extend(found)
         malformed_surface.extend(malformed)
+        types.extend(declared_types(name, package))
 
     return FrictionSettings(
         mode=mode,
@@ -427,7 +531,109 @@ def read_friction_settings(
         held=tuple(held),
         malformed_held=tuple(malformed_held),
         exclude_unreadable=_exclude_unreadable(config, unparsed),
+        types=tuple(types),
+        installed=tuple(installed),
+        refused_types=tuple(refused_types),
     )
+
+
+def _project_places(
+    value: Any, config_rel: str, refused_types: list[SettingsPath]
+) -> Iterator[SettingsPath]:
+    """The project's `friction.places`, each a bare path or `{path, type}` (COR-056
+    point 2), read forgivingly: an entry in neither shape, or with no path, is
+    passed over, and the configuration pass refuses it. A lone text counts as one
+    entry. A `type` the configuration's schema refuses gives no type (point 3),
+    and is kept in `refused_types`, its pointer at the `type`, so a reader warns.
+    """
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, Sequence):
+        return
+    for index, item in enumerate(cast(Sequence[Any], value)):
+        type_: str | None = None
+        pointer = f"/{FRICTION_KEY}/{PLACES_KEY}/{index}"
+        if isinstance(item, Mapping):
+            entry = _mapping_or_empty(item)
+            path = _text_or_none(entry.get(PATH_KEY))
+            type_ = project_place_type(entry.get(TYPE_KEY))
+            if path is not None and type_ is None and TYPE_KEY in entry:
+                refused_types.append(
+                    SettingsPath(
+                        value=repr(entry.get(TYPE_KEY)),
+                        resolved=path,
+                        file=config_rel,
+                        pointer=f"{pointer}/{TYPE_KEY}",
+                        source=PROJECT_SOURCE,
+                    )
+                )
+        else:
+            path = _text_or_none(item)
+        if path is None:
+            continue
+        yield SettingsPath(
+            value=path,
+            resolved=path,
+            file=config_rel,
+            pointer=pointer,
+            source=PROJECT_SOURCE,
+            type=type_,
+        )
+
+
+def refused_type_warnings(settings: FrictionSettings) -> list[str]:
+    """A warning for each project place whose `type` the configuration's schema
+    refuses: a reader reads it as no type and says so (COR-056 point 3, COR-048
+    point 4), and `pkit validate` refuses it."""
+    return [
+        f"warning: the place {refused.resolved!r} ({refused.file}:{refused.pointer}) names "
+        f"the type {refused.value}, which is not a type a place may give, so it gives no "
+        f"type (COR-056 point 3). `pkit validate` reports it."
+        for refused in settings.refused_types
+    ]
+
+
+def project_place_type(value: Any) -> str | None:
+    """The type a project's place names, when the configuration's schema admits the
+    value: a bare type of the project's own, or `<component>:<name>` — never one of
+    the backbone's, which no place may name (COR-056 point 2). Any other value gives
+    no type (point 3)."""
+    if not isinstance(value, str):
+        return None
+    match = _TYPE.fullmatch(value)
+    if match is None or match["owner"] == BACKBONE_COMPONENT:
+        return None
+    return value
+
+
+def declared_types(name: str, package: Mapping[str, Any]) -> list[DeclaredType]:
+    """A component's type registry, `friction.types` (COR-056 point 2), in written order.
+
+    Read forgivingly: a name that is not a type's name, an entry that is not a
+    mapping, or a `kind-field` that is not text, or is the methodology's
+    container, declares nothing, and the package schema refuses it. A type read
+    without the kind field its entry names would type every document of its
+    places, the reach the kind field exists to prevent.
+    """
+    registry = _mapping_or_empty(_mapping_or_empty(package.get(FRICTION_KEY)).get(TYPES_KEY))
+    found: list[DeclaredType] = []
+    for type_name, raw in registry.items():
+        if not _TYPE_NAME.fullmatch(type_name) or not isinstance(raw, Mapping):
+            continue
+        entry = _mapping_or_empty(raw)
+        kind_field = entry.get(KIND_FIELD_KEY)
+        if kind_field is not None and _text_or_none(kind_field) in (None, CONTAINER_KEY):
+            continue
+        found.append(
+            DeclaredType(
+                owner=name,
+                name=type_name,
+                description=_text_or_none(entry.get(TYPE_DESCRIPTION_KEY)),
+                kind_field=_text_or_none(kind_field),
+                project_places=entry.get(PROJECT_PLACES_KEY) is True,
+            )
+        )
+    return found
 
 
 def _exclude_unreadable(config: Mapping[str, Any], unparsed: str | None) -> str | None:
@@ -502,6 +708,9 @@ def _capability_places(
     names (COR-049 points 4 and 5). Without one, `path` is repository-relative.
     A held folder lies within one of the capability's locations, so it names
     one, and its `path` is a folder inside it (`_resolve_capability_place`).
+    A place may also name a type of the capability's own registry, `type`,
+    kept in full as `<capability>:<name>` (COR-056 point 2). A name the
+    package schema refuses names no type.
     Only that shape is read: an entry written as plain text or in any other
     shape, or naming a location the capability does not declare or that the
     reading cannot place, gives the walk nothing it could follow, so it is
@@ -534,6 +743,7 @@ def _capability_places(
             )
             continue
         path, pattern, location = resolved
+        written_type = _mapping_or_empty(entry).get(TYPE_KEY) if key == PLACES_KEY else None
         places.append(
             SettingsPath(
                 value=path,
@@ -546,6 +756,11 @@ def _capability_places(
                         name=location[0], path=location[1], root=location_roots.get(location[0])
                     )
                     if location is not None
+                    else None
+                ),
+                type=(
+                    f"{name}:{written_type}"
+                    if isinstance(written_type, str) and _TYPE_NAME.fullmatch(written_type)
                     else None
                 ),
             )
@@ -2009,6 +2224,12 @@ class Discovery:
     def with_container(self) -> tuple[Artefact, ...]:
         return tuple(a for a in self.artefacts if a.has_container)
 
+    @functools.cached_property
+    def types(self) -> Types:
+        """Every artefact's type and the type findings (COR-056), resolved once for
+        this discovery (`resolve_types`). Friction never reads them."""
+        return resolve_types(self)
+
     @property
     def is_dormant(self) -> bool:
         """No places declared, or nothing in them to judge (COR-050 point 15).
@@ -2558,52 +2779,687 @@ def _yaml_reason(exc: YAMLError) -> str:
     return str(problem)
 
 
+# --- artefact types (COR-056) ---------------------------------------------------
+#
+# An artefact may have one type: a declared name for what it is. A component
+# declares its types in a type registry and names them on its places, and the
+# project names types on its own places. Discovery resolves every artefact's type
+# here, from the places that match its file, in the order the types record sets
+# (COR-056 point 3). It is the one home of that resolution, and of the findings
+# about it (ADR-057 point 2): every reader takes an artefact's type from it, and
+# none ranks places itself. Friction never reads a type.
+
+# How a place reads against a file it matches (COR-056 point 3): at equal length
+# of literal part, an exact file before a glob, and a glob before a folder.
+_FILE, _GLOB, _FOLDER = 0, 1, 2
+
+
+def place_specificity(pattern: str, path: str) -> tuple[int, int]:
+    """`(length of its literal part, form)` of a place matching the file `path`
+    (COR-056 point 3), the form `0` for an exact file, `1` for a glob, `2` for a
+    folder.
+
+    A place's literal part is its path up to its first wildcard, counted in
+    characters. A folder's is its path followed by `/`. A glob that is a folder
+    followed by `/**` alone is read as that folder, so one place spelt two ways
+    ranks the same. A path without wildcards is the exact file when it is `path`
+    itself, else the folder holding it. The whole repository, `.` or `**`, is a
+    folder whose literal part is empty.
+    """
+    normal = _normal(pattern)
+    if normal in (".", "**"):
+        return 0, _FOLDER
+    if any(ch in _GLOB_CHARS for ch in normal):
+        folder, _, last = normal.rpartition("/")
+        if last == "**" and folder and not any(ch in _GLOB_CHARS for ch in folder):
+            return len(folder) + 1, _FOLDER
+        return min(normal.index(ch) for ch in _GLOB_CHARS if ch in normal), _GLOB
+    if normal == path:
+        return len(normal), _FILE
+    return len(normal) + 1, _FOLDER
+
+
+@dataclass(frozen=True)
+class RankedPlace:
+    """A place that matches an artefact's file, with its rank among them: `1` for
+    the first, and places that rank equal share one (COR-056 point 3)."""
+
+    place: Place
+    rank: int
+
+
+@dataclass(frozen=True)
+class ArtefactType:
+    """An artefact's type, as discovery resolves it (COR-056 points 3, 4 and 6).
+
+    - `type`: its full name, or `None`. A rule's is `backbone:rule`. An
+      artefact has none when no typed place types it, when it declines the
+      kind the winning type asks for, or while a tie stands.
+    - `place`: the place that gave it. `None` for a rule, whose type the
+      backbone gives, and for an artefact with no type.
+    - `conflict`: in a tie, each tied type the artefact counts as, with the
+      place giving it. A type with a kind field counts only where the artefact
+      declares its kind. Empty when there is no tie, and when the artefact
+      declares the kind of no tied type: it then has no type.
+    - `places`: every place that matches its file, in COR-056 point 3's order,
+      each with its rank.
+    """
+
+    type: str | None = None
+    place: Place | None = None
+    conflict: tuple[tuple[str, Place], ...] = ()
+    places: tuple[RankedPlace, ...] = ()
+
+    @property
+    def counts_as(self) -> frozenset[str]:
+        """The types the artefact counts as, which a scope's `types` selects by: its
+        type, or each type in contention while a tie stands (COR-056 point 3)."""
+        if self.type is not None:
+            return frozenset({self.type})
+        return frozenset(type_ for type_, _place in self.conflict)
+
+
+class TypeFindingKind(Enum):
+    """What a type finding is about: one of the findings COR-056 points 2 and 3 list."""
+
+    NOT_ADMITTED = "type-not-admitted"  # a project place giving a component's type it may not give
+    NAME_TAKEN = "type-name-taken"  # a bare project type taking a declared type's name
+    TIE = "type-tie"  # typed places, one the project's, ranking equal with different types
+    YIELDS = "type-yields"  # a typed project place yielding to a component's place
+    COMPONENT_TIE = "type-tie-components"  # a tie between places only components declare
+    OUTRANKS = "type-outranks"  # one component's typed place typing another's file
+    UNDECLARED = "type-undeclared"  # a component's place naming a type its registry lacks
+    SCOPE_UNKNOWN = "scope-unknown-type"  # a scope naming a type nobody declares
+
+
+CONFIGURATION_MEMBER = "configuration"
+PACKAGES_MEMBER = "packages"
+RULE_SETS_MEMBER = "rule-sets"
+
+#: The one table that names, for each type finding, the validation member that
+#: reports it and its severity (ADR-057 point 2). COR-056 decides the severity:
+#: what it fails is an `error`, and what it reports without failing is a
+#: `report`. A finding is reported by the member that validates the declaration
+#: it is about: the project's places, a component's places, or a rule set's scope.
+TYPE_FINDINGS: Mapping[TypeFindingKind, tuple[str, validators.Severity]] = {
+    TypeFindingKind.NOT_ADMITTED: (CONFIGURATION_MEMBER, validators.Severity.ERROR),
+    TypeFindingKind.NAME_TAKEN: (CONFIGURATION_MEMBER, validators.Severity.ERROR),
+    TypeFindingKind.TIE: (CONFIGURATION_MEMBER, validators.Severity.ERROR),
+    TypeFindingKind.YIELDS: (CONFIGURATION_MEMBER, validators.Severity.REPORT),
+    TypeFindingKind.COMPONENT_TIE: (PACKAGES_MEMBER, validators.Severity.REPORT),
+    TypeFindingKind.OUTRANKS: (PACKAGES_MEMBER, validators.Severity.REPORT),
+    TypeFindingKind.UNDECLARED: (PACKAGES_MEMBER, validators.Severity.REPORT),
+    TypeFindingKind.SCOPE_UNKNOWN: (RULE_SETS_MEMBER, validators.Severity.ERROR),
+}
+
+
+@dataclass(frozen=True)
+class TypeFinding:
+    """One type finding, located at the declaration it is about: `file`, relative to
+    the project root, and `pointer`, a JSON Pointer into it. `source` is who
+    declares it: `project`, `capability:<name>`, or a rule set's owner. Its member
+    and severity are the table's (`TYPE_FINDINGS`)."""
+
+    kind: TypeFindingKind
+    file: str
+    pointer: str
+    source: str
+    message: str
+
+    @property
+    def member(self) -> str:
+        return TYPE_FINDINGS[self.kind][0]
+
+    @property
+    def severity(self) -> validators.Severity:
+        return TYPE_FINDINGS[self.kind][1]
+
+
+@dataclass(frozen=True)
+class Types:
+    """Every artefact's type, and the findings about types, of one discovery.
+
+    `registry` holds every declared type by its full name: the backbone's own,
+    then each installed component's. `places` holds the type each typed place
+    gives. `artefacts` holds each artefact's type, by its location. `findings`
+    are the type findings, in a deterministic order.
+    """
+
+    registry: Mapping[str, DeclaredType]
+    places: Mapping[Place, str]
+    artefacts: Mapping[str, ArtefactType]
+    findings: tuple[TypeFinding, ...] = ()
+
+    def of(self, artefact: Artefact) -> ArtefactType:
+        """`artefact`'s type: no type for one discovery did not walk."""
+        return self.artefacts.get(artefact.location, ArtefactType())
+
+    def reported_by(self, member: str) -> tuple[TypeFinding, ...]:
+        """The type findings the table names `member` to report."""
+        return tuple(finding for finding in self.findings if finding.member == member)
+
+
+def declares_kind(declared: DeclaredType | None, carrier: Mapping[str, Any]) -> bool:
+    """Whether an artefact may take `declared` as its kind field asks (COR-056 point 4).
+
+    A type with no kind field asks nothing. Otherwise the artefact's own field —
+    a document's front-matter field, an entry's own field — must be present and
+    not empty. Which kind it names is the type owner's, never read here.
+    """
+    if declared is None or declared.kind_field is None:
+        return True
+    value = carrier.get(declared.kind_field)
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, Mapping | list):
+        return bool(cast("Mapping[Any, Any] | list[Any]", value))
+    return True
+
+
+def unknown_type(named: str, settings: FrictionSettings) -> str | None:
+    """Why the type `named` is one no owner declares, or `None` when one does.
+
+    A component's type is declared by its installed component's type registry,
+    the backbone's by the backbone, and a bare type by a project place that gives
+    it (COR-056 point 2). The reason says which owner is missing, or which owner
+    lacks the type.
+    """
+    owner, sep, name = named.partition(":")
+    if not sep:
+        if named in settings.project_types:
+            return None
+        return (
+            "and no place of the project gives it: a project declares its own type by "
+            "giving it on one of its places, `{path, type}` in `friction.places`"
+        )
+    registry = settings.type_registry
+    if named in registry:
+        return None
+    if owner == BACKBONE_COMPONENT:
+        known = ", ".join(t.type for t in BACKBONE_TYPES)
+        return f"and the backbone declares no type {name!r} (its types: {known})"
+    if owner not in settings.installed:
+        return f"and no installed component is named {owner!r}"
+    declared = sorted(t.name for t in settings.types if t.owner == owner)
+    listed = f" (it declares: {', '.join(declared)})" if declared else ""
+    return f"and {owner}'s type registry declares no type {name!r}{listed}"
+
+
+def bare_type_collisions(
+    declared: Iterable[DeclaredType], places: Iterable[SettingsPath]
+) -> list[tuple[SettingsPath, DeclaredType]]:
+    """Each project place whose bare type takes the name of a `declared` type, with
+    that type: the place in written order, then each type it collides with
+    (COR-056 point 2).
+
+    The one comparison of a bare project type with a declared type's name. Validation
+    refuses a collision with a type the backbone or an installed component declares,
+    and the install plan reports one with a type the component would bring.
+    """
+    types = list(declared)
+    return [
+        (place, declared_type)
+        for place in places
+        if place.source == PROJECT_SOURCE and place.type is not None and ":" not in place.type
+        for declared_type in types
+        if declared_type.name == place.type
+    ]
+
+
+class _Order:
+    """The order of places COR-056 point 3 sets, over one discovery."""
+
+    def __init__(self, discovery: Discovery) -> None:
+        settings = discovery.settings
+        self.registry = settings.type_registry
+        self._roots = tuple(settings.roots.values())
+        self._walk = {place: index for index, place in enumerate(discovery.places)}
+        self._root_wide: dict[Place, bool] = {}
+
+    def root_wide(self, place: Place) -> bool:
+        """Whether `place` equals or encloses a documentation root (`_encloses`)."""
+        if place not in self._root_wide:
+            self._root_wide[place] = any(_encloses(place, root) for root in self._roots)
+        return self._root_wide[place]
+
+    def gives(self, place: Place) -> str | None:
+        """The type `place` gives, or `None` (COR-056 points 2 and 3).
+
+        An untyped place gives none. Neither does a component's place naming a type
+        its own registry does not declare, nor a project place naming a component's
+        type no installed registry declares. A bare project type gives itself, and
+        any other declared type counts until its declaration is mended, though
+        validation fails on it.
+        """
+        named = place.declaration.type
+        if named is None:
+            return None
+        if ":" not in named:
+            return named if place.source == PROJECT_SOURCE else None
+        return named if named in self.registry else None
+
+    def yielded_to(self, places: Sequence[Place]) -> Place | None:
+        """The first component's place among `places` that is not root-wide: where one
+        matches a file, no project place gives that file a type (COR-056 point 3)."""
+        return next(
+            (p for p in places if p.source != PROJECT_SOURCE and not self.root_wide(p)), None
+        )
+
+    def ranked(self, path: str, places: Sequence[Place]) -> tuple[RankedPlace, ...]:
+        """`places`, all matching the file `path`, in COR-056 point 3's order.
+
+        A project place that yields to a component's place comes after every place
+        that does not. Then a place that is not root-wide comes before one that is.
+        Then the longer literal part comes first, and at equal length an exact file,
+        then a glob, then a folder. Places that rank equal share a rank and keep walk
+        order.
+        """
+        yielding = self.yielded_to(places) is not None
+
+        def key(place: Place) -> tuple[bool, bool, int, int]:
+            length, form = place_specificity(place.pattern, path)
+            return (
+                yielding and place.source == PROJECT_SOURCE,
+                self.root_wide(place),
+                -length,
+                form,
+            )
+
+        ordered = sorted(places, key=lambda p: (key(p), self._walk.get(p, len(self._walk))))
+        ranked: list[RankedPlace] = []
+        previous: tuple[bool, bool, int, int] | None = None
+        rank = 0
+        for place in ordered:
+            current = key(place)
+            if current != previous:
+                rank, previous = rank + 1, current
+            ranked.append(RankedPlace(place, rank))
+        return tuple(ranked)
+
+    def contenders(
+        self, ranked: Sequence[RankedPlace], yielded_to: Place | None
+    ) -> list[tuple[str, Place]]:
+        """The typed places that rank first, each with the type it gives, in order.
+
+        A place that gives no type takes no part, and a project place that yields
+        is out of contention (COR-056 point 3).
+        """
+        typed = [
+            (r.rank, given, r.place)
+            for r in ranked
+            if (given := self.gives(r.place)) is not None
+            and not (yielded_to is not None and r.place.source == PROJECT_SOURCE)
+        ]
+        if not typed:
+            return []
+        first = typed[0][0]
+        return [(given, place) for rank, given, place in typed if rank == first]
+
+
+def resolve_types(discovery: Discovery) -> Types:
+    """Every artefact's type, and the type findings, of `discovery` (COR-056).
+
+    The one resolution (ADR-057 point 2): `Discovery.types` gives it, and the
+    reading document, the scopes and the validation members read it there.
+    """
+    order = _Order(discovery)
+    places_of = {found.path: found.places for found in discovery.files}
+    artefacts = {
+        artefact.location: _artefact_type(
+            order, artefact, places_of.get(artefact.path, (artefact.place,))
+        )
+        for artefact in discovery.artefacts
+    }
+    findings = [
+        *_declaration_findings(discovery.settings),
+        *_ranking_findings(discovery, order, artefacts),
+        *_scope_type_findings(discovery),
+    ]
+    given = {place: type_ for place in discovery.places if (type_ := order.gives(place))}
+    return Types(
+        registry=order.registry, places=given, artefacts=artefacts, findings=tuple(findings)
+    )
+
+
+def _artefact_type(order: _Order, artefact: Artefact, places: Sequence[Place]) -> ArtefactType:
+    """One artefact's type (COR-056 points 3 and 4).
+
+    Every rule is `backbone:rule`. Otherwise the typed places that rank first
+    decide. One type among them is the artefact's when it declares the kind its
+    type asks for, and otherwise it has none: no less specific place types it
+    instead. Several types among them are a tie, and the artefact counts as each
+    whose kind it declares.
+    """
+    ranked = order.ranked(artefact.path, places)
+    if artefact.rule_set is not None:
+        return ArtefactType(type=RULE_TYPE, places=ranked)
+    first: dict[str, Place] = {}
+    for given, place in order.contenders(ranked, order.yielded_to(places)):
+        first.setdefault(given, place)
+    counted = tuple(
+        (given, place)
+        for given, place in first.items()
+        if declares_kind(order.registry.get(given), artefact.carrier)
+    )
+    if len(first) == 1:
+        if counted:
+            return ArtefactType(type=counted[0][0], place=counted[0][1], places=ranked)
+        return ArtefactType(places=ranked)
+    return ArtefactType(conflict=counted, places=ranked)
+
+
+def _declaration_findings(settings: FrictionSettings) -> Iterator[TypeFinding]:
+    """What the places' own declarations of a type get wrong (COR-056 point 2), each
+    at the place's `type`, in written order: a project place giving a component's
+    type it may not give, a bare project type taking a declared type's name, and a
+    component's place naming a type its own registry does not declare."""
+    registry = settings.type_registry
+    collisions: dict[str, list[DeclaredType]] = {}
+    for place, declared in bare_type_collisions(registry.values(), settings.places):
+        collisions.setdefault(place.pointer, []).append(declared)
+    for place in settings.places:
+        named = place.type
+        if named is None:
+            continue
+        pointer = f"{place.pointer}/{TYPE_KEY}"
+        if place.source != PROJECT_SOURCE:
+            if named not in registry:
+                owner, _sep, name = named.partition(":")
+                yield TypeFinding(
+                    TypeFindingKind.UNDECLARED,
+                    place.file,
+                    pointer,
+                    place.source,
+                    f"place {place.value!r} names the type {name!r}, which {owner}'s type "
+                    f"registry (`friction.types`) does not declare, so it gives no type. "
+                    f"Reported, not failed: the project cannot mend a component's package "
+                    f"metadata (COR-056 points 2 and 3).",
+                )
+            continue
+        if ":" in named:
+            owner = named.partition(":")[0]
+            problem = unknown_type(named, settings)
+            if problem is not None:
+                message = (
+                    f"place {place.value!r} gives the type {named!r}, {problem}. It gives no "
+                    f"type until that is mended (COR-056 points 2 and 3)."
+                )
+            elif not registry[named].project_places:
+                message = (
+                    f"place {place.value!r} gives {owner}'s type {named!r}, which {owner} "
+                    f"does not admit on a project's places (`project-places` in its type "
+                    f"registry). The type still counts until the place is mended "
+                    f"(COR-056 points 2 and 3)."
+                )
+            else:
+                continue
+            yield TypeFinding(
+                TypeFindingKind.NOT_ADMITTED, place.file, pointer, place.source, message
+            )
+        elif place.pointer in collisions:
+            taken = ", ".join(declared.type for declared in collisions[place.pointer])
+            yield TypeFinding(
+                TypeFindingKind.NAME_TAKEN,
+                place.file,
+                pointer,
+                place.source,
+                f"place {place.value!r} gives the bare type {named!r}, which takes the name "
+                f"of {taken}. A bare project type never takes the name of a type the "
+                f"backbone or an installed component declares: write that type in full, "
+                f"or rename the project's own. It still counts as the project's {named!r} "
+                f"until mended (COR-056 point 2).",
+            )
+
+
+def _ranking_findings(
+    discovery: Discovery, order: _Order, artefacts: Mapping[str, ArtefactType]
+) -> Iterator[TypeFinding]:
+    """What the order of places makes of the files that hold artefacts (COR-056
+    point 3): a typed project place that yields to a component's place, a tie, and
+    one component's typed place that types another component's file. Each is
+    reported once per pair or group of places, naming how many files it reaches,
+    at the declaration whose owner can mend it. A rule-set file is passed over:
+    every rule is `backbone:rule`.
+    """
+    by_path: dict[str, list[Artefact]] = {}
+    for artefact in discovery.artefacts:
+        if artefact.rule_set is None:
+            by_path.setdefault(artefact.path, []).append(artefact)
+    yields: dict[tuple[Place, Place], list[str]] = {}
+    ties: dict[tuple[Place, ...], tuple[list[tuple[str, Place]], list[str]]] = {}
+    outranks: dict[tuple[Place, Place], tuple[str, list[str]]] = {}
+    for found in discovery.files:  # by path
+        held = by_path.get(found.path)
+        if not held:
+            continue
+        yielded_to = order.yielded_to(found.places)
+        if yielded_to is not None:
+            for place in found.places:
+                if place.source == PROJECT_SOURCE and order.gives(place) is not None:
+                    yields.setdefault((place, yielded_to), []).append(found.path)
+        contenders = order.contenders(order.ranked(found.path, found.places), yielded_to)
+        if len({given for given, _place in contenders}) > 1:
+            group = tuple(place for _given, place in contenders)
+            ties.setdefault(group, (contenders, []))[1].append(found.path)
+        for artefact in held:
+            resolved = artefacts[artefact.location]
+            winner = resolved.place
+            if winner is None or resolved.type is None or winner.source == PROJECT_SOURCE:
+                continue
+            for place in found.places:
+                if place.source in (PROJECT_SOURCE, winner.source) or order.root_wide(place):
+                    continue
+                files = outranks.setdefault((winner, place), (resolved.type, []))[1]
+                if found.path not in files:
+                    files.append(found.path)
+    for (place, component), files in yields.items():
+        yield TypeFinding(
+            TypeFindingKind.YIELDS,
+            place.declaration.file,
+            place.declaration.pointer,
+            place.source,
+            f"place {place.declaration.value!r} gives the type {order.gives(place)!r}, but it "
+            f"yields to {_declarer(component.source)}'s place {_normal(component.pattern)!r} "
+            f"on {_files(files)}: where a component's own place that is not root-wide matches "
+            f"a file, no project place gives it a type. Reported, not failed "
+            f"(COR-056 point 3).",
+        )
+    for group, (contenders, files) in ties.items():
+        tied = _listed(
+            [
+                f"{_declarer(place.source)}'s place {_normal(place.pattern)!r} (type {given!r})"
+                for given, place in contenders
+            ]
+        )
+        projects = [place for place in group if place.source == PROJECT_SOURCE]
+        kind = TypeFindingKind.TIE if projects else TypeFindingKind.COMPONENT_TIE
+        closing = (
+            "Narrow a place, or give the places one type: until then the artefact counts as "
+            "each type in contention (COR-056 point 3)."
+            if projects
+            else "Reported, not failed: the project cannot mend it in its own files, and the "
+            "artefact counts as each type in contention (COR-056 point 3)."
+        )
+        for place in projects or group:
+            yield TypeFinding(
+                kind,
+                place.declaration.file,
+                place.declaration.pointer,
+                place.source,
+                f"{tied} rank equal and give different types on {_files(files)}. {closing}",
+            )
+    for (winner, place), (given, files) in outranks.items():
+        yield TypeFinding(
+            TypeFindingKind.OUTRANKS,
+            winner.declaration.file,
+            winner.declaration.pointer,
+            winner.source,
+            f"place {winner.declaration.value!r} takes precedence over "
+            f"{_declarer(place.source)}'s place {_normal(place.pattern)!r} and gives the type "
+            f"{given!r} on {_files(files)}. Reported, and the type stands (COR-056 point 3).",
+        )
+
+
+def _files(files: Sequence[str]) -> str:
+    """How a finding names the files it reaches: how many, and the first."""
+    return f"{len(files)} file(s), such as {files[0]!r}"
+
+
+def _listed(items: Sequence[str]) -> str:
+    """`a`, `a and b`, `a, b and c`."""
+    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} and {items[-1]}"
+
+
+def _scope_type_findings(discovery: Discovery) -> Iterator[TypeFinding]:
+    """Each type a rule set's scope names that no owner declares (COR-051 point 2,
+    COR-056 point 2), at the entry, rule-set files by path. A value the rule-set
+    schema refuses is that schema's finding, never judged here."""
+    settings = discovery.settings
+    for found in discovery.files:  # by path
+        if found.rule_set is None or found.front_matter is None:
+            continue
+        scope = found.front_matter.get(SCOPE_KEY)
+        if not isinstance(scope, Mapping):
+            continue
+        named = cast("Mapping[str, Any]", scope).get(TYPES_KEY)
+        if not isinstance(named, list):
+            continue
+        for index, value in enumerate(cast("list[Any]", named)):
+            if not isinstance(value, str) or _TYPE.fullmatch(value) is None:
+                continue
+            problem = unknown_type(value, settings)
+            if problem is None:
+                continue
+            yield TypeFinding(
+                TypeFindingKind.SCOPE_UNKNOWN,
+                found.path,
+                f"/{SCOPE_KEY}/{TYPES_KEY}/{index}",
+                found.rule_set.place.source,
+                f"the scope names the type {value!r}, {problem}, so it selects nothing by "
+                f"it. A type in a scope is one its owner declares (COR-051 point 2, "
+                f"COR-056 point 2).",
+            )
+
+
+def shared_discovery(target_root: Path) -> Discovery:
+    """The working tree's discovery, walked once per validate run
+    (`validators.once_per_run`): the `friction` member and the members that report
+    type findings read this one walk (ADR-057 point 2)."""
+    return validators.once_per_run(
+        ("discovery", target_root), lambda: discover_artefacts(target_root)
+    )
+
+
+def shared_types(target_root: Path) -> Types:
+    """The working tree's types, resolved once per validate run over the one walk
+    (`shared_discovery`): each member that reports type findings reads this one
+    answer (ADR-057 point 2)."""
+    return shared_discovery(target_root).types
+
+
 # --- rule-set scopes ----------------------------------------------------
 
 
-def covering_rule_sets(discovery: Discovery) -> dict[str, tuple[str, ...]]:
-    """The rule sets whose scope covers each artefact's file (COR-051 point 2).
+@dataclass(frozen=True)
+class Scope:
+    """A rule-set file's scope as discovery reads it (COR-051 point 2).
 
-    Keyed by an artefact's path: the paths of the rule-set files whose scope
-    covers it, in path order. A file no scope covers is not a key. A scope is
-    given as places, so each of its entries is read as a place is
-    (`listed_files_in_place`), never matched by another rule. A rule-set file
-    is one the location rule claims, and a set without a scope covers nothing.
+    `paths` select by file, and `None` means every file matches. `exclude` leaves
+    a selected file out. `types` select by type, and `None` means every artefact
+    matches, with a type or with none. Each path is read as a place is.
     """
+
+    paths: tuple[Place, ...] | None
+    exclude: tuple[Place, ...]
+    types: frozenset[str] | None
+
+
+def covering_rule_sets(discovery: Discovery) -> dict[str, tuple[str, ...]]:
+    """The rule sets whose scope covers each artefact (COR-051 point 2).
+
+    Keyed by an artefact's location: the paths of the rule-set files whose scope
+    covers it, in path order. An artefact no scope covers is not a key. An
+    artefact is in a scope when `paths` and `types` both select it and `exclude`
+    does not leave it out. Each path is read as a place is
+    (`listed_files_in_place`), never matched by another rule. A type is read from
+    the one resolution (`Discovery.types`): an artefact counts as its type, or
+    as each type in contention while a tie stands (COR-056 point 3). A rule-set
+    file is one the location rule claims, and a set without a scope covers
+    nothing.
+    """
+    types = discovery.types
     paths = sorted({artefact.path for artefact in discovery.artefacts})
     covering: dict[str, list[str]] = {}
     for found in discovery.files:  # by path
-        covered: set[str] = set()
-        for place in _scope_places(found):
-            covered.update(listed_files_in_place(place, paths))
-        for path in covered:
-            covering.setdefault(path, []).append(found.path)
-    return {path: tuple(rule_sets) for path, rule_sets in covering.items()}
+        scope = _scope(found)
+        if scope is None:
+            continue
+        selected = set(paths) if scope.paths is None else _matched(scope.paths, paths)
+        left_out = _matched(scope.exclude, paths)
+        for artefact in discovery.artefacts:
+            if artefact.path not in selected or artefact.path in left_out:
+                continue
+            if scope.types is not None and not types.of(artefact).counts_as & scope.types:
+                continue
+            covering.setdefault(artefact.location, []).append(found.path)
+    return {location: tuple(rule_sets) for location, rule_sets in covering.items()}
 
 
-def _scope_places(found: DiscoveredFile) -> list[Place]:
-    """A rule-set file's scope, each entry the place it is given as, declared
-    where the file writes it; none for a file that is no rule set.
+def _matched(places: Iterable[Place], paths: Sequence[str]) -> set[str]:
+    """The files of `paths` one of `places` matches, each read as a place is."""
+    return {path for place in places for path in listed_files_in_place(place, paths)}
 
-    Read forgivingly, as discovery reads every declaration (`_texts`): an
-    entry that is not text is passed over, and the rule-set pass judges the
-    scope's shape.
+
+def _scope(found: DiscoveredFile) -> Scope | None:
+    """A rule-set file's scope, or `None` for a file that is no rule set, or a set
+    without a scope.
+
+    A plain list is the scope's `paths` (COR-051 point 2). Read forgivingly, as
+    discovery reads every declaration (`_texts`): an entry that is not text is
+    passed over, and a type its schema refuses too. A key whose entries are all
+    passed over selects nothing, and a mapping with neither `paths` nor `types`
+    covers nothing. The rule-set pass judges the shape.
     """
     if found.rule_set is None or found.front_matter is None:
-        return []
-    return [
-        Place(
-            pattern=entry,
-            declaration=SettingsPath(
-                value=entry,
-                resolved=entry,
-                file=found.path,
-                pointer=f"/{SCOPE_KEY}/{index}",
-                source=found.rule_set.place.source,
-            ),
+        return None
+    raw = found.front_matter.get(SCOPE_KEY)
+    if raw is None:
+        return None
+    source = found.rule_set.place.source
+
+    def places(value: Any, pointer: str) -> tuple[Place, ...]:
+        return tuple(
+            Place(
+                pattern=entry,
+                declaration=SettingsPath(
+                    value=entry,
+                    resolved=entry,
+                    file=found.path,
+                    pointer=f"{pointer}/{index}",
+                    source=source,
+                ),
+            )
+            for index, entry in _texts(value)
         )
-        for index, entry in _texts(found.front_matter.get(SCOPE_KEY))
-    ]
+
+    if not isinstance(raw, Mapping):
+        return Scope(paths=places(raw, f"/{SCOPE_KEY}"), exclude=(), types=None)
+    scope = cast("Mapping[str, Any]", raw)
+    if "paths" not in scope and TYPES_KEY not in scope:
+        return None
+    return Scope(
+        paths=places(scope.get("paths"), f"/{SCOPE_KEY}/paths") if "paths" in scope else None,
+        exclude=places(scope.get("exclude"), f"/{SCOPE_KEY}/exclude"),
+        types=(
+            frozenset(
+                value for _index, value in _texts(scope.get(TYPES_KEY)) if _TYPE.fullmatch(value)
+            )
+            if TYPES_KEY in scope
+            else None
+        ),
+    )
 
 
 # --- the reading document: `pkit friction artefacts` ---------------------
@@ -2682,8 +3538,9 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
       the `location` it names (`name`, `path`, `root`), the resolved `path`,
       `rule_sets` (the component owning the rule sets in it) when it holds rule
       sets, the documentation roots it `encloses`, the `files` it matches and
-      the `synced` copies it matches but are never walked, and `skipped` — why
-      it holds nothing (`malformed`, `outside-repository`), with the detail.
+      the `synced` copies it matches but are never walked, `skipped` — why
+      it holds nothing (`malformed`, `outside-repository`), with the detail —
+      and the `type` it gives, or `None` (COR-056 point 2).
     - `files`: every Markdown file the walk read, by path, with the `places`
       that match it (indices into `places`, the first the one it was read
       under), the rule-set place that claims it (`rule_set`), whether
@@ -2701,7 +3558,17 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
       spans, `{first_line, last_line}`, exactly the text friction compares as
       its body (`Artefact.span`), else `None` — and `in_scope_of`, the paths
       of the rule-set files whose scope covers it (`covering_rule_sets`).
-      Both keys were added within version 1.
+      Both keys were added within version 1, and so were its type's four
+      (COR-056 point 6; `Discovery.types`): its `type`, the `type_place` that
+      gave it (an index into `places`, `None` for a rule and with no type),
+      the `type_conflict` while a tie stands (each tied type it counts as,
+      `{type, place}`), and its `ranked_places`, every place that matches its
+      file in COR-056 point 3's order (`{place, rank}`, places that rank
+      equal sharing a rank).
+    - `types`: every declared type by its full name — the backbone's own and
+      each installed component's type registry — with its `component`,
+      `name`, `description`, `kind_field` and `project_places`. Added within
+      version 1.
     - `held`: every folder of held documents a capability declares (COR-050
       point 1), in declaration order — each capability's by name, in written
       order, a malformed declaration where it was written — declared as a place
@@ -2759,6 +3626,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
     for held in discovery.held:
         held_of.setdefault(held.folder, []).append(held.path)
     in_scope_of = covering_rule_sets(discovery)
+    types = discovery.types
 
     return {
         "schema_version": ARTEFACTS_SCHEMA_VERSION,
@@ -2777,6 +3645,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
                 roots=roots,
                 files=files_of.get(entry, []),
                 synced=synced_of.get(entry, []),
+                type_=types.places.get(entry),
             )
             for position, entry in enumerate(entries)
         ],
@@ -2805,10 +3674,21 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
                 "unanchored_because": artefact.unanchored_because,
                 "fields": _own_fields(artefact.carrier),
                 "span": _span_entry(artefact.span),
-                "in_scope_of": list(in_scope_of.get(artefact.path, ())),
+                "in_scope_of": list(in_scope_of.get(artefact.location, ())),
+                **_type_entry(types.of(artefact), index),
             }
             for artefact in discovery.artefacts
         ],
+        "types": {
+            name: {
+                "component": declared.owner,
+                "name": declared.name,
+                "description": declared.description,
+                "kind_field": declared.kind_field,
+                "project_places": declared.project_places,
+            }
+            for name, declared in types.registry.items()
+        },
         "held": [
             _malformed_held_entry(entry)
             if isinstance(entry, MalformedDeclaration)
@@ -2845,6 +3725,7 @@ def _place_entry(
     roots: docs_roots.Roots,
     files: Sequence[str],
     synced: Sequence[str],
+    type_: str | None,
 ) -> dict[str, Any]:
     declaration = place.declaration
     skipped = None
@@ -2873,6 +3754,22 @@ def _place_entry(
         "files": list(files),
         "synced": list(synced),
         "skipped": skipped,
+        "type": type_,
+    }
+
+
+def _type_entry(resolved: ArtefactType, index: Mapping[Place, int]) -> dict[str, Any]:
+    """An artefact's type as the document gives it: `type`, `type_place`,
+    `type_conflict` and `ranked_places` (COR-056 point 6)."""
+    return {
+        "type": resolved.type,
+        "type_place": index[resolved.place] if resolved.place is not None else None,
+        "type_conflict": [
+            {"type": given, "place": index[place]} for given, place in resolved.conflict
+        ],
+        "ranked_places": [
+            {"place": index[ranked.place], "rank": ranked.rank} for ranked in resolved.places
+        ],
     }
 
 
@@ -2933,6 +3830,7 @@ def _malformed_entry(declaration: MalformedDeclaration) -> dict[str, Any]:
         "files": [],
         "synced": [],
         "skipped": {"reason": SKIP_MALFORMED, "detail": declaration.reason},
+        "type": None,
     }
 
 
@@ -2985,12 +3883,15 @@ def render_artefacts_human(document: Mapping[str, Any]) -> str:
 
 
 def _declaration_line(entry: Mapping[str, Any], owner: str) -> str:
-    """A declared place's or held folder's line: where, whose, how many files."""
+    """A declared place's or held folder's line: where, whose, the type a place
+    gives, how many files."""
     where = entry["path"]
     if where is None:
         where = f"{entry['file']} {entry['pointer']}"
     if entry["location"] is not None:
         owner += f", location {entry['location']['name']}"
+    if entry.get("type") is not None:
+        owner += f", type {entry['type']}"
     return f"  {where}  ({owner})  {len(entry['files'])} file(s)"
 
 

@@ -11,6 +11,7 @@ tested on the check's document shape.
 from __future__ import annotations
 
 import importlib.util
+import re
 import shutil
 import signal
 import subprocess
@@ -59,6 +60,8 @@ def _entry(
     status: str = "stands",
     new: bool = False,
     kept: list[tuple[tuple[str, str], str | None]] | None = None,
+    changed: list[tuple[str, str]] | None = None,
+    put_back: bool = False,
 ) -> dict[str, Any]:
     """One entry of the change check's `answers`, as `--json` gives it."""
     return {
@@ -74,6 +77,8 @@ def _entry(
         "asked": asked,
         "status": status,
         "new": new,
+        "put_back": put_back,
+        "changed": [{"kind": kind, "value": value} for kind, value in (changed or [])],
     }
 
 
@@ -102,9 +107,16 @@ def test_the_markers_are_the_schemas(fa: ModuleType) -> None:
 
 
 def test_each_answer_is_listed_with_its_words_and_marks(fa: ModuleType) -> None:
+    """The section states the question once; each line names the document, the anchors
+    the change modified that it relies on, and whether it is still true, with every flag
+    and the words in full (#1468)."""
+    merge_settings = ("path", ".pkit/adapters/claude-code/merge-settings.sh")
     document = _document(
         _entry(
-            "docs/install.md", "unchanged", "The flag rename leaves the install steps as written."
+            "README.md",
+            "unchanged",
+            "the change makes the settings merge keep every key under permissions",
+            changed=[merge_settings],
         ),
         _entry(
             "docs/cli.md",
@@ -113,14 +125,33 @@ def test_each_answer_is_listed_with_its_words_and_marks(fa: ModuleType) -> None:
             anchor=("path", "src/cli/**"),
             asked=False,
         ),
-        _entry("docs/api.md", "updated", None, status="bump"),
+        _entry("docs/api.md", "updated", None, status="bump", changed=[("path", "src/api/**")]),
         _entry("docs/faq.md", None, "Reworded.", status="edited", asked=False),
         _entry("docs/new.md", "unanchored", "A rule of the method.", asked=False, new=True),
         _entry(
             "docs/guide.md",
             "unchanged",
             "The guide holds.",
+            changed=[("artefact", "ACT-clone"), ("record", "COR-050")],
             kept=[(("record", "DEC-1"), "Waiting on the record."), (("path", "x/**"), None)],
+        ),
+        _entry("docs/old.md", "unchanged", "Reverted.", status="written-back", asked=False),
+        _entry(
+            "docs/back.md",
+            "deferred",
+            "Later.",
+            anchor=("path", "y/**"),
+            changed=[("path", "y/**")],
+            put_back=True,
+        ),
+        _entry(
+            "docs/gone.md",
+            "deferred",
+            "Later.",
+            anchor=("path", "z/**"),
+            status="written-back",
+            asked=False,
+            put_back=True,
         ),
     )
     assert fa.render(document, HEAD) == "\n".join(
@@ -128,25 +159,34 @@ def test_each_answer_is_listed_with_its_words_and_marks(fa: ModuleType) -> None:
             "## Documentation this change affects",
             "",
             f"<!-- pkit-friction-answers:start head={HEAD} base={MERGE_BASE} -->",
-            "This change modified things the documents below rely on. For each one it records "
-            "what was decided: updated, still accurate (with the reason), or set aside for later "
-            "(with the reason). Read these before approving the merge.",
+            "These documents rely on something this change modifies, and each answer says "
+            "whether the document is still true. Read them before approving the merge.",
             "",
             "As of commit `1a2b3c4`.",
             "",
-            "1. `docs/install.md` — **still accurate**: "
-            '"``The flag rename leaves the install steps as written.``"',
-            "2. `docs/cli.md` — **set aside for later** for changes to `src/cli/**` (not "
-            'required by this change): "``Rewritten with the redesign.``"',
-            "3. `docs/api.md` — **updated** (re-check date changed with nothing behind it)",
-            "4. `docs/faq.md` — **no decision recorded** (not required by this change) (reason "
-            'changed without a new re-check): "``Reworded.``"',
-            "5. `docs/new.md` — **not tied to anything** (new document) (not required by this "
+            "1. `README.md` relies on `.pkit/adapters/claude-code/merge-settings.sh`, which this "
+            'change modifies. **Still accurate**: "``the change makes the settings merge keep '
+            'every key under permissions``"',
+            "2. `docs/cli.md` relies on `src/cli/**`. **Out of date, fixed later** (not asked for "
+            'by this change): "``Rewritten with the redesign.``"',
+            "3. `docs/api.md` relies on `src/api/**`, which this change modifies. **Updated in "
+            "this change** (re-check date changed with nothing behind it)",
+            "4. `docs/faq.md` — **no decision recorded** (not asked for by this change) (edited "
+            'without a new re-check): "``Reworded.``"',
+            "5. `docs/new.md` — **not tied to anything** (new document) (not asked for by this "
             'change): "``A rule of the method.``"',
-            '6. `docs/guide.md` — **still accurate**: "``The guide holds.``"',
-            "   - (still set aside for changes to decision record `DEC-1`: "
+            "6. `docs/guide.md` relies on document `ACT-clone` and decision record `COR-050`, "
+            'which this change modifies. **Still accurate**: "``The guide holds.``"',
+            "   - (still out of date for changes to decision record `DEC-1`, fixed later: "
             '"``Waiting on the record.``")',
-            "   - (still set aside for changes to `x/**`)",
+            "   - (still out of date for changes to `x/**`, fixed later)",
+            "7. `docs/old.md` — **still accurate** (not asked for by this change) (re-check date "
+            'set back to one it had before, which answers nothing): "``Reverted.``"',
+            "8. `docs/back.md` relies on `y/**`, which this change modifies. **Out of date, fixed "
+            'later** (an entry it had before, covering the anchor as it stood then): "``Later.``"',
+            "9. `docs/gone.md` relies on `z/**`. **Out of date, fixed later** (not asked for by "
+            "this change) (an entry it had before, which covers only what that one did): "
+            '"``Later.``"',
             "<!-- pkit-friction-answers:end -->",
         ]
     )
@@ -155,22 +195,96 @@ def test_each_answer_is_listed_with_its_words_and_marks(fa: ModuleType) -> None:
 @pytest.mark.parametrize(
     ("anchor", "said"),
     [
-        (("path", "src/cli/**"), "for changes to `src/cli/**`"),
-        (("record", "COR-050"), "for changes to decision record `COR-050`"),
-        (("artefact", "ACT-clone"), "for changes to document `ACT-clone`"),
-        (("symbol", "pkg.run"), "for changes to `symbol:pkg.run`"),
+        (("path", "src/cli/**"), "`src/cli/**`"),
+        (("record", "COR-050"), "decision record `COR-050`"),
+        (("artefact", "ACT-clone"), "document `ACT-clone`"),
+        (("symbol", "pkg.run"), "`symbol:pkg.run`"),
     ],
 )
-def test_an_anchor_is_named_as_what_a_change_to_it_is_a_change_to(
+def test_an_anchor_is_named_in_plain_words(
     fa: ModuleType, anchor: tuple[str, str], said: str
 ) -> None:
     """An anchor of a core kind in plain words; one of a kind a capability
     registers as the change check names it, its kind in the code span too."""
-    document = _document(_entry("docs/a.md", "deferred", "Later.", anchor=anchor))
+    document = _document(_entry("docs/a.md", "deferred", "Later.", anchor=anchor, changed=[anchor]))
     section = fa.render(document, HEAD)
-    assert section is not None and f"**set aside for later** {said}: " in section
-    (line,) = fa.lines(document)
-    assert line == f'1. docs/a.md — set aside for later {said.replace("`", "")}: "Later."'
+    modifies = f"relies on {said}, which this change modifies. **Out of date, fixed later**: "
+    assert section is not None and modifies in section
+    plain = said.replace("`", "")
+    assert fa.lines(document) == [
+        fa.QUESTION,
+        f"1. docs/a.md relies on {plain}, which this change modifies. Out of date, fixed later: "
+        '"Later."',
+    ]
+
+
+def test_an_answer_from_a_backbone_without_changed_anchors_still_reads(fa: ModuleType) -> None:
+    """A document of a backbone that predates `changed` names no anchor it relies on, and
+    still reads: the document, then the outcome."""
+    entry = _entry("docs/a.md", "unchanged", "Holds.")
+    del entry["changed"]
+    assert fa.lines(_document(entry)) == [fa.QUESTION, '1. docs/a.md — still accurate: "Holds."']
+
+
+def test_the_list_reads_as_the_change_check_s_own(fa: ModuleType) -> None:
+    """All three places read the same way (#1468): the question is the change check's,
+    and each answer's line, flags and kept deferrals are, word for word, the line the
+    change check's closing list gives it."""
+    from project_kit import friction_check as fc
+    from project_kit.friction_discovery import Anchor
+
+    status = fc.AnswerStatus
+
+    def written(answer: str | None, reason: str | None, **fields: Any) -> Any:
+        values: dict[str, Any] = {
+            "anchor": None,
+            "kept": (),
+            "asked": True,
+            "status": status.STANDS,
+            "new": False,
+        }
+        values.update(fields)
+        return fc.WrittenAnswer("doc", "docs/doc.md", answer, reason=reason, **values)
+
+    cli, core = Anchor("path", "src/cli/**"), Anchor("path", "src/core/**")
+    answers = [
+        written("unchanged", "Holds.", changed=(cli,)),
+        written("updated", None, changed=(cli, Anchor("artefact", "guide"), core)),
+        written("deferred", "Later.", anchor=cli, changed=(cli,)),
+        written("deferred", "Later.", anchor=core, asked=False),
+        written(None, "Reworded.", asked=False, status=status.EDITED),
+        written("unanchored", "A rule.", asked=False, new=True),
+        written("unchanged", "Holds.", asked=False, status=status.BUMP),
+        written("unchanged", "Back.", asked=False, status=status.WRITTEN_BACK),
+        written("deferred", "Again.", anchor=cli, changed=(cli,), put_back=True),
+        written(
+            "deferred",
+            "Again.",
+            anchor=core,
+            asked=False,
+            status=status.WRITTEN_BACK,
+            put_back=True,
+        ),
+        written(
+            "unchanged",
+            "Holds.",
+            changed=(Anchor("record", "COR-050"), Anchor("symbol", "pkg.run")),
+            kept=(fc.KeptDeferral(core, "Kept."), fc.KeptDeferral(cli, None)),
+        ),
+        written(None, "Edited.", changed=(cli,), asked=False, status=status.EDITED),
+        written(
+            "unchanged",
+            "fine\x1b[2Kgone \u202eesrever",
+            changed=(Anchor("path", "src/\u200bx/**"),),
+            kept=(fc.KeptDeferral(core, "kept\nnext"),),
+        ),
+    ]
+    question = fc.ANSWERS_QUESTION
+    assert f"{question[:1].upper()}{question[1:]}." == fa.QUESTION
+    checks = [line.strip() for answer in answers for line in fc._answer_lines(answer)]
+    listed = fa.lines(_document(*(answer.as_json() for answer in answers)))
+    assert listed[0] == fa.QUESTION
+    assert [re.sub(r"^\d+\. ", "", line.strip()) for line in listed[1:]] == checks
 
 
 def test_the_check_s_terms_stay_out_of_the_section(fa: ModuleType) -> None:
@@ -230,7 +344,8 @@ def test_non_printable_characters_are_shown_escaped_as_the_human_view_shows_them
     assert "`docs/a\\u200b.md`" in section
     assert all(ch.isprintable() for line in section.splitlines() for ch in line)
     assert fa.lines(document) == [
-        '1. docs/a\\u200b.md — still accurate: "fine\\x1b[1A\\x1b[2Kgone \\u202eesrever\\nnext"'
+        fa.QUESTION,
+        '1. docs/a\\u200b.md — still accurate: "fine\\x1b[1A\\x1b[2Kgone \\u202eesrever\\nnext"',
     ]
 
 
@@ -249,11 +364,12 @@ def test_the_terminal_list_carries_every_word_and_mark(fa: ModuleType) -> None:
         _entry("docs/g.md", "unchanged", "Holds.", kept=[(("path", "x/**"), "Kept.")]),
     )
     assert fa.lines(document) == [
+        fa.QUESTION,
         '1. docs/install.md — still accurate: "Holds."',
-        "2. docs/cli.md — set aside for later for changes to src/** (not required by this "
+        "2. docs/cli.md relies on src/**. Out of date, fixed later (not asked for by this "
         'change): "Later."',
         '3. docs/g.md — still accurate: "Holds."',
-        '   (still set aside for changes to x/**: "Kept.")',
+        '   (still out of date for changes to x/**, fixed later: "Kept.")',
     ]
 
 
@@ -899,7 +1015,7 @@ def test_settings_follow_the_documents_one_line_each(fa: ModuleType) -> None:
     section = fa.render(_document(_entry("a.md", "updated")), HEAD, settings)
     assert section is not None
     assert section.splitlines()[-7:] == [
-        "1. `a.md` — **updated**",
+        "1. `a.md` — **updated in this change**",
         "",
         "It also changes which documents are checked:",
         "",

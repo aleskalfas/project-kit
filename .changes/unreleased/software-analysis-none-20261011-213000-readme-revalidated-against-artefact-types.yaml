@@ -1,0 +1,6 @@
+component: software-analysis
+kind: none
+body: >
+  Internal. The README is revalidated unchanged against COR-050's refinement
+  admitting a type on a place (COR-056). It keeps its DEC-001 deferral. Only
+  the README's friction block changes, and nothing you run or read changes.

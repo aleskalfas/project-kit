@@ -28,6 +28,8 @@ The mechanism has to answer:
 
 This DEC settles all four for both paths, **singleton at v1** (one remote agent OR one local agent OR both — but no multi-agent pipelines yet). Multi-agent review pipelines (N agents in sequence) are deferred per COR-007 until a second specialist-agent use case appears.
 
+A verdict also carries findings. The commands that read it must tell which findings hold up the change, which only inform, and which a person must judge. This DEC settles that with three finding tags.
+
 This DEC builds on DEC-027's mode resolution and on DEC-026's `done-work` gate. DEC-026 and DEC-027 must accept before DEC-028 can accept (the cite-graph is one-directional: DEC-028 → DEC-027 + DEC-026, not bidirectional).
 
 ## Decision
@@ -45,16 +47,15 @@ The agent posts a PR comment whose **first line** carries an uppercase verdict, 
 | `Reviewer agent: APPROVED` | Satisfies `done-work`'s gate in `agent` mode. |
 | `Reviewer agent: CHANGES_REQUESTED` | Explicit "needs work" signal. Does not satisfy the gate. Informational signal to the author and to any reviewer-watching automation. |
 
-The first line is the gate signal; the rest of the body (everything after the first newline) is **freeform commentary** — findings, summary, rationale, links. Example:
+The first line is the gate signal; the rest of the body (everything after the first newline) is **freeform commentary** — findings, summary, rationale, links. Only the findings have a form: each is a list item that begins with a tag saying what the finding does to the merge (see "Finding tags" below). Example:
 
 ```
 Reviewer agent: CHANGES_REQUESTED
 
-Three findings:
-
-1. `find_target_root` in `install.py` line 122 — `.git` should be tested with `.exists()` not `.is_dir()` to cover worktrees.
-2. Tests at `tests/test_install.py` don't cover the worktree-no-git case.
-3. The docstring on line 105 says "Mirrors the bash dispatcher" but the dispatcher hasn't been updated.
+- [block] `find_target_root` in `install.py` line 122 — `.git` should be tested with `.exists()` not `.is_dir()` to cover worktrees.
+- [block] Tests at `tests/test_install.py` don't cover the worktree-no-git case.
+- [advisory] (pre-existing: the change neither edits nor calls it) `find_source_root` on line 140 tests `.git` with `.is_dir()` too.
+- [person] RS-GUIDE-003, `docs/install.md` line 12 — whether the new paragraph on worktrees says only what the page's reader needs.
 ```
 
 The verdict vocabulary (`APPROVED`, `CHANGES_REQUESTED`) matches GitHub's native PR-review state names — transferable mental model, and future migration from comment-based sentinels to actual `gh pr review` objects is mechanically straightforward (the verdict maps to the Review state).
@@ -75,6 +76,22 @@ The scan resolves the two edge cases deterministically:
 - **No matching line anywhere** — the consumer **fails closed**: it posts no verdict (so the gate stays unsatisfied) and surfaces the agent's *full* output, not a truncated fragment, so the operator can debug the non-conforming run. A missing or unparseable verdict never silently satisfies the gate and never silently disappears.
 
 This contract is the bridge between the freeform output a reasoning agent produces and the exact-grammar signal the gate-checker consumes (per the gate-checker algorithm below). It also pins the verdict to a single agent: a consumer invoking a named local agent accepts only that agent's grammar form (`<name>` bound), so one agent's output cannot post another's verdict.
+
+### Finding tags
+
+A verdict says whether the reviewer approves. Each finding under it says what it does to the merge, with one of three tags at its head:
+
+- **`[block]` withholds the approval.** It names an objective failure the change owns, one the reviewer's remit settles with no reading left to choose.
+- **`[person]` withholds no approval, and leaves the finding to the person who authorises the merge.** It cites by id an accepted rule that binds on an artefact the change alters (COR-051 point 7), and it judges a passage the change owns. Judging the passage against that rule needs a reading the rule does not settle, or a fact the rule does not name. The command that lands the pull request shows the finding to that person. A landing run given its authorisation in advance merges only if it found the finding's verdict when it started, and that verdict stands for the head it merges ([project-management:DEC-055-pr-lists-answers] point 3). It is not a blocking finding. This capability's skill says which findings a fix round carries.
+- **`[advisory]` withholds nothing and holds nothing.** It is any other finding. It may name a defect the change does not own, a point the reviewer's remit settles as not blocking, or a point of taste. A pre-existing defect the change does not own is tagged `[advisory] (pre-existing: <reason>)`.
+
+**What a reviewer tags.** What the change owns, and what a pre-existing finding's reason says, is each reviewer's own discipline. Which rules a reviewer judges is its own remit too, and the tags widen no remit. A reviewer cites a rule, in a `[block]` or a `[person]` finding, only when its own instructions have it judge that rule. The tags bind every reviewer's verdict, on either path. A remote reviewer gets no brief, so whoever sets it up has it write them.
+
+**Tags and grades.** A tag is not a validation severity ([project-management:DEC-014-validation-severity-model]). A severity says how this capability answers a failed validation of its own. A tag says what a finding does to the merge. A reviewer that also grades its findings writes its grade after the tag, as `[block] (hard-reject)`.
+
+**The grammar.** A tag is the first thing in a top-level item of a bulleted or numbered list, in square brackets and lower case, as `[person]`. The finding is that item, with its sub-items. A consumer reading tags is lenient about their form, as the scan above is lenient about the verdict line's position: bold, backticks, a trailing colon or another case still mark a tag. Text in a fenced block carries no tag.
+
+**What decides the gate.** The verdict line alone decides the gate. A reviewer with a `[block]` finding requests changes, and one with none approves. A reviewer that could not review the change requests changes and says why. A finding with no tag counts as `[advisory]`. So a finding a person must judge reaches that person, and holds a merge, only when its reviewer tags it `[person]`.
 
 ### Two paths, two registration lists
 
@@ -160,7 +177,7 @@ The two commands share the `review` verb across different subjects (`work` for t
 
 The `done-work` refusal template (see below) names `review-pr` as the remediation when the agent gate isn't satisfied — closing the discoverability gap that automatic invocation would have addressed.
 
-**`review-pr` in `human` mode (per DEC-027).** The command runs regardless of resolved mode — it's a tool, not a gate-satisfaction trigger. In `human` mode, the verdict comments are informational (pre-flight checks the developer wants before requesting human review); the gate is DEC-026's three-way OR and ignores the local-path verdict format. A developer in `human` mode who runs `review-pr` and sees `CHANGES_REQUESTED` fixes the findings and re-runs before requesting human review — but `done-work`'s gate path doesn't change. This makes `review-pr` useful in both modes: gate-satisfying in `agent`, advisory in `human`.
+**`review-pr` in `human` mode (per DEC-027).** The command runs regardless of resolved mode — it's a tool, not a gate-satisfaction trigger. In `human` mode, the verdict comments are informational (pre-flight checks the developer wants before requesting human review); the gate is DEC-026's three-way OR and ignores the local-path verdict format. A developer in `human` mode who runs `review-pr` and sees `CHANGES_REQUESTED` fixes the findings and re-runs before requesting human review — but `done-work`'s gate path doesn't change. This makes `review-pr` useful in both modes: gate-satisfying in `agent`, advisory in `human`. In `human` mode a verdict does not gate. Its `[person]` findings are still shown to the person who authorises the merge, and still hold a landing run authorised in advance ([project-management:DEC-055-pr-lists-answers] point 3). The landing command re-runs no reviewer in this mode, so a stale verdict's `[person]` finding holds such a run until its reviewer posts a verdict that stands for the head.
 
 ### Multi-local-agent composition
 
@@ -224,7 +241,7 @@ A verdict stays fresh until the author changes something its reviewer checks. Th
 
 **What it does not cover.** A clean merge of the base branch leaves every verdict fresh, so a semantic conflict the base introduces — changes that merge cleanly but no longer work together — is not re-reviewed. CI on the merged result is the backstop.
 
-`done-work`'s gate, `review-pr`'s skip of a reviewer whose verdict is fresh, and `show-pr --field review` apply this one rule, so they never disagree about which verdict stands. Each names a stale verdict's reason; `review-pr` names it for every reviewer it re-runs.
+Every command that judges whether a verdict stands applies this one rule, so none disagrees about which verdict stands. Each names a stale verdict's reason; `review-pr` names it for every reviewer it re-runs.
 
 This handles the common cycle: agent reviews, posts `APPROVED`; author pushes a fix the reviewer checks; the prior `APPROVED` is stale; agent must re-review and post a fresh verdict (remote path: triggered out-of-band; local path: developer runs `review-pr` to re-invoke).
 
@@ -275,6 +292,7 @@ When the most recent verdict is `CHANGES_REQUESTED`, the refusal message surface
 | Verdict-line grammar | Remote: `Reviewer agent: <VERDICT>`; local: `Reviewer agent (local, <name>): <VERDICT>`; `<VERDICT>` ∈ {`APPROVED`, `CHANGES_REQUESTED`}; matched after stripping surrounding whitespace. |
 | Consumer scan contract | A consumer extracting a verdict from an agent's raw output scans for the first grammar-matching line **anywhere** in the output (not line-1-only — reasoning agents emit preamble). First match wins; no match anywhere → fail closed (no verdict posted, gate unsatisfied, full output surfaced for debugging). |
 | Comments without the prefix | Implicitly informational. Do not affect the gate. |
+| Finding tags | Each finding begins with `[block]`, `[advisory]` or `[person]`, with any grade of the reviewer's own after it. `[block]` is an objective failure the change owns, and withholds the approval. `[advisory]` withholds and holds nothing. `[person]` cites an accepted rule that binds on what the change alters but does not settle it. It withholds no approval and is not a blocking finding. It is shown to the person who authorises the merge, and a landing run authorised in advance merges only if it found the finding's verdict when it started, and that verdict stands for the head it merges (DEC-055 point 3). The tags widen no reviewer's remit, and a consumer reads their form leniently. The verdict line alone decides the gate, and an untagged finding counts as `[advisory]`. |
 | Remote-path identity check | Author matches `review.agents.remote_registered[0].github_login` AND author is not the PR author. |
 | Local-path identity check | Author-exclusion **relaxed** — the developer attests they ran the agent. The local agent name must be in `review.agents.local_registered:` AND a file must exist at `.claude/agents/<name>.md`. |
 | Freshness | Judged on each reviewer's latest verdict only; a superseded verdict never counts. A verdict naming its reviewed head stays fresh until the author's changes since reach what its reviewer is required for — a change satisfying one of its floors for an `APPROVED` from a reviewer whose every rule is a floor, any change for every other `APPROVED` and for every `CHANGES_REQUESTED`; a clean merge of the base is no change. A verdict naming its reviewed base goes stale once that base is outside the base branch's history. A verdict naming no head must post-date the latest commit. A missing commit is fetched first; what the fetch does not settle makes the verdict stale, never fresh. Both paths. |
@@ -300,6 +318,14 @@ When the most recent verdict is `CHANGES_REQUESTED`, the refusal message surface
 **Why first-line-exact-match (not whole-body-exact-match or arbitrary regex).** A whole-body-exact-match (where the comment is *only* `Reviewer agent: APPROVED` with nothing else) conflates the *gate signal* with the *commentary*: findings the agent wants to surface require a separate comment with a different shape. First-line-exact-match separates them cleanly — the first line is the signal (machine-parseable, auditable at a glance), the rest of the comment is the explanation (free-form, human-readable). Anyone scanning the PR thread sees the verdict line and knows the state; anyone wanting detail reads on.
 
 **Why GitHub-aligned verdicts (`APPROVED` / `CHANGES_REQUESTED`).** Three reasons: (a) the vocabulary is already in adopters' mental models from GitHub's native PR review — no new terminology to learn; (b) the verdicts map 1:1 to GitHub Review states (`APPROVED`, `CHANGES_REQUESTED`, `COMMENTED`, `DISMISSED`), so future migration from comment-based verdicts to actual `gh pr review` objects is a mechanical change with no semantic shift; (c) "REJECTED" was considered and rejected as too terminal — `CHANGES_REQUESTED` correctly signals "iterate, don't abandon".
+
+**Why three finding tags.** A finding a person must judge fits neither `[block]` nor `[advisory]`. As `[block]`, it would hold the change at `CHANGES_REQUESTED` on a judgement call until someone overrides the reviewer ([project-management:DEC-050-per-reviewer-override]). That trains the override reflex that blocking only on objective failures exists to avoid. As `[advisory]`, it would ride an approval, and no step would bring it to anyone. `[person]` brings it to the person placed to judge it, the one who authorises the merge, and blocks the change on nothing.
+
+**Why a `[person]` finding holds a merge and a point of taste does not.** A `[person]` finding judges the change under an accepted rule, and an accepted rule binds on the artefacts its set reaches (COR-051 points 4 and 7). A point of taste binds nothing, so it stays `[advisory]`. So does a judgement call within the reviewer's remit that no rule backs, since the reviewer's own reading binds the change to nothing. The finding cites its rule by id, so a reader can check which side of the line it falls on, and the line does not rest on how sure the reviewer is.
+
+**Why the tags widen no remit.** Every local reviewer gets the same brief. If the tags let a reviewer cite any rule it came across, every reviewer could block or hold merges under rules nobody asked it to judge. Nobody would have tried it on those rules either. Which rules a reviewer judges stays in its own instructions, where its owner decides it.
+
+**Why an untagged finding holds nothing.** Reading an untagged finding as `[person]` would hold merges on every line of commentary, from every reviewer whose instructions do not name the tags. What this gives up is a finding a reviewer means for a person but leaves untagged. The landing command's hold on a `[person]` finding cannot prove that a person read it in any case ([project-management:DEC-055-pr-lists-answers] point 5).
 
 **Why two verdicts at v1 (not three, not just one).** GitHub natively supports four review states (`APPROVED`, `CHANGES_REQUESTED`, `COMMENTED`, `DISMISSED`). For v1, only `APPROVED` and `CHANGES_REQUESTED` carry verdict semantics. `COMMENTED` is unnecessary — any comment without the `Reviewer agent:` prefix is already implicitly commentary. `DISMISSED` doesn't apply to comments (it's a transition on a GitHub Review object). Two verdicts cover the gate-relevant cases; the third (commentary) is absence-of-verdict.
 
@@ -376,6 +402,7 @@ The "discoverability gap" concern (developer forgets to run `review-pr` after `r
 - `done-work` extended: when resolved mode is `agent` (per DEC-027), the gate-checker query runs the seven-step algorithm above. If satisfied via the configured path(s), merge proceeds; if not, the refusal template fires.
 - The pm capability gains a new `review-pr` verb-subject script at `.pkit/capabilities/project-management/scripts/review-pr.py`. It fits DEC-020's verb-subject convention (verb=`review`, subject=`pr` — `pr` is an established entity); it is sibling to DEC-026's seven-command lifecycle palette, not a member of it. `review-work` is unchanged by this DEC.
 - `review-pr <N>` reads `review.agents.local_registered:`, validates each name against `.claude/agents/`, dispatches each agent in parallel against the PR's diff, captures verdicts, and posts each as a comment in the local-path format under the developer's gh identity, and as a native review where GitHub permits one (see "Invocation command (local path)").
+- `review-pr`'s brief names the three finding tags, what each means, and that they widen no remit, so every local reviewer tags its findings alike. `pm-reviewer` writes its severity after the tag. Its `[block]` findings are exactly the ones that make it request changes. The command that lands a pull request reads the tags: it prints the `[block]` findings of a `CHANGES_REQUESTED`, and prints and holds on `[person]` findings as [project-management:DEC-055-pr-lists-answers] point 3 says.
 - **Local-path default reviewer agent.** The pm capability ships a default `pm-reviewer` agent at `.pkit/capabilities/project-management/agents/pm-reviewer.md` (per COR-026 — discipline-implying agents live in the capability that ships the discipline). Adopters who configure `local_registered: name: pm-reviewer` get the kit-shipped default; adopters may also replace or add to it with their own agents under `.claude/agents/` (subject to v1's singleton-per-path constraint). The reviewer agent's body emits the local-path verdict format and applies the capability's conventions (Conventional Commits, branch/type alignment, classification axes, surface-change discipline). The remote path ships no default — bot identity, GitHub App, or service-account setup is adopter-managed. The methodology specifies the contract; the local-path agent implementation is now kit-shipped via this capability, the remote-path agent implementation is adopter-side.
 - DEC-026's `done-work` approval-gate row is mode-conditional after this DEC lands: in `human` mode, the three-way OR per DEC-026; in `agent` mode, the remote-or-local agent paths from this DEC plus `--bypass`.
 - v1 ships singleton-per-path support. Multi-agent pipelines are a future DEC after COR-007 recurrence; the all-must-approve rule for multi-local is the contract that future extension will inherit. The list shapes of `remote_registered:` and `local_registered:` are forward-compatible — extending each to lists of N agents is additive, not breaking.
