@@ -19,6 +19,10 @@ Approval gate (human-mode three-way OR per DEC-026):
   1. Latest review on the PR is APPROVED, OR
   2. The PR's last non-author comment starts with `Approved`, OR
   3. `--bypass "<reason>"` is supplied (writes an audit comment).
+A PR whose author cannot be read counts no comment in 2, and in agent mode no
+remote verdict: no such commenter or reviewer is known to be someone else. A
+local verdict, which DEC-028 checks without author exclusion, counts as
+before (#1485).
 
 Checkbox close-gate (DEC-007, #734): a pre-flight in front of the merge —
 every `- [ ]` in the body of every issue the PR closes must be ticked, else
@@ -230,8 +234,10 @@ from _lib.agent_verdicts import (
     PATH_REMOTE,
     Verdict,
     gate_candidates,
+    gate_membership,
     gate_verdicts,
     latest_commit_timestamp,
+    pr_author,
 )
 
 # DEC-049's canonical audit-comment format + projection knob — the ONE
@@ -271,6 +277,7 @@ from _lib.placeholder_detection import (
 # The one wiring of the required reviewers and the freshness rule (#1195),
 # shared with review-pr's skip and show-pr's stale marking.
 from _lib.pr_review import REVIEW_VIEW_FIELDS, PrReview, resolve_pr_review
+from _lib.pr_review import remote_baseline as remote_baseline_of
 
 # The closing-reference reader `open-pr` and `validate-pr` use, so all three
 # agree on which issues a PR closes (#1086).
@@ -1684,7 +1691,7 @@ def _check_approval_gate(
             passed=False,
             refusal_message="error: gh pr view returned malformed JSON.",
         )
-    author_login = (data.get("author") or {}).get("login") or ""
+    author_login = pr_author(data)
 
     # Path 1: latest APPROVED review (latest non-COMMENTED state).
     reviews = data.get("reviews") or []
@@ -1697,7 +1704,10 @@ def _check_approval_gate(
         return _GateResult(passed=True, passed_via="APPROVED review")
 
     # Path 2: last non-author comment starts with `Approved` (case-sensitive).
-    comments = data.get("comments") or []
+    # With the PR's author unread, no commenter is known to be a non-author,
+    # so no such comment counts (#1485); GitHub keeps the author from
+    # approving a review itself, so path 1 stands without the read.
+    comments = (data.get("comments") or []) if author_login else []
     for c in reversed(comments):
         if not isinstance(c, dict):
             continue
@@ -1710,18 +1720,31 @@ def _check_approval_gate(
             )
 
     # Refused.
+    if author_login:
+        comment_line = "          → No `Approved`-prefix comment from a non-author.\n"
+        comment_remedy = (
+            "            - Have a non-author commenter post a comment starting with `Approved`.\n"
+        )
+    else:
+        comment_line = (
+            "          → The PR's author could not be read, so no "
+            "`Approved`-prefix comment counts: none can be told from the "
+            "author's own.\n"
+        )
+        comment_remedy = (
+            "            - Run `done-work` again once `gh pr view` returns the PR's author.\n"
+        )
     return _GateResult(
         passed=False,
         refusal_message=(
             f"[refused] approval gate not satisfied for PR #{pr_number}.\n"
             "          → No APPROVED review present (latest state: "
             f"{latest_states[-1] if latest_states else 'none'}).\n"
-            "          → No `Approved`-prefix comment from a non-author.\n"
+            f"{comment_line}"
             "          → No --bypass supplied.\n"
             "          Remediations:\n"
             "            - Request a review and have it approved.\n"
-            "            - Have a non-author commenter post a comment "
-            "starting with `Approved`.\n"
+            f"{comment_remedy}"
             '            - Re-run with `--bypass "<reason>"`.'
         ),
     )
@@ -1958,11 +1981,7 @@ def _check_agent_gate(
 
     # Baseline required remote reviewer names (DEC-028's static list); the
     # local baseline is read with the resolution, below.
-    remote_baseline = [
-        entry.get("github_login")
-        for entry in remote_registered
-        if isinstance(entry, dict) and entry.get("github_login")
-    ]
+    remote_baseline = remote_baseline_of(config)
 
     # --- DEC-032 D1: resolve the required-local set for this PR. -----------
     # Baseline ∪ contributed, de-duped, through the ONE wiring `review-pr`
@@ -2046,7 +2065,7 @@ def _check_agent_gate(
         data = json.loads(proc.stdout)
     except (ValueError, json.JSONDecodeError):
         return refuse("error: gh pr view returned malformed JSON.")
-    author_login = (data.get("author") or {}).get("login") or ""
+    author_login = pr_author(data)
     comments = data.get("comments") or []
     commits = data.get("commits") or []
 
@@ -2059,6 +2078,22 @@ def _check_agent_gate(
     # unestablishable head is not "no freshness check".
     if not latest_commit_timestamp(commits):
         return refuse(_freshness_unresolvable_refusal(pr_number))
+
+    # The PR's author, which a remote verdict must not come from (DEC-028
+    # step 3). One that cannot be read leaves no remote reviewer known to be
+    # someone else, so `gate_membership` counts no remote verdict (#1485); a
+    # local verdict, checked with no author exclusion, counts as before. The
+    # gate REFUSES here, saying why, for each reviewer on the remote path it
+    # would have to judge: one only a remote verdict can satisfy, which then
+    # cannot be satisfied, and one a per-reviewer override names, whose audit
+    # could not record the remote verdict the override waives (DEC-050).
+    # Otherwise it decides below as it does with the author read, save that a
+    # reviewer on both paths is satisfied only by its local verdict.
+    unjudged = [
+        name for name in remote_baseline if name not in required_local or name in override_set
+    ]
+    if not author_login and unjudged:
+        return refuse(_author_unread_refusal(pr_number, unjudged), head_oid=head_sha(data))
 
     # The one freshness rule (#1179), shared with `review-pr`'s skip and
     # `show-pr`'s stale marker: a verdict naming its reviewed head stands
@@ -2081,19 +2116,19 @@ def _check_agent_gate(
     #   * membership — remote verdicts count only from a baseline login that is
     #     not the PR author (DEC-028 step 2/3); local verdicts only from a name
     #     in the resolved required set (DEC-032 D1).
-    # The membership + author-exclusion predicates are defined ONCE and shared
-    # by both reads below, so the gate and the audit can never disagree about
-    # *whose* verdicts count — the divergence that let a PR author's own
-    # self-approval, which the gate correctly refuses, describe the audit's
-    # state at override time.
+    # The membership + author-exclusion predicates are defined ONCE
+    # (`gate_membership`, which land-work's hold on `[person]` findings reads
+    # too) and shared by both reads below, so the gate and the audit can never
+    # disagree about *whose* verdicts count — the divergence that let a PR
+    # author's own self-approval, which the gate correctly refuses, describe
+    # the audit's state at override time.
     remote_baseline_set = set(remote_baseline)
     required_local_set = set(required_local)
-
-    def remote_reviewer_ok(login: str) -> bool:
-        return login in remote_baseline_set and login != author_login
-
-    def local_reviewer_ok(name: str) -> bool:
-        return name in required_local_set
+    remote_reviewer_ok, local_reviewer_ok = gate_membership(
+        remote_baseline=remote_baseline_set,
+        required_local=required_local_set,
+        author_login=author_login,
+    )
 
     verdicts = gate_verdicts(
         comments,
@@ -2124,6 +2159,15 @@ def _check_agent_gate(
                 mode_source=mode_source,
                 slots=slots,
                 opted_out=resolution.opted_out,
+                # A reviewer registered on both paths, which only its local
+                # verdict can satisfy while the author is unread (#1485).
+                remote_uncounted=[
+                    f"remote agent (@{slot.reviewer})"
+                    for slot in slots
+                    if not author_login
+                    and not slot.satisfied
+                    and slot.reviewer in remote_baseline_set
+                ],
                 stale=_stale_verdicts(
                     slots=slots,
                     comments=comments,
@@ -2458,6 +2502,44 @@ def _freshness_unresolvable_refusal(pr_number: int | None) -> str:
     )
 
 
+def _author_unread_refusal(pr_number: int | None, unjudged: list[str]) -> str:
+    """Refusal text when the PR's author cannot be read and the gate would
+    have to judge a reviewer on the remote path (#1485): one only a remote
+    verdict can satisfy, or one a per-reviewer override names.
+
+    A remote verdict counts only from a reviewer who is not the PR's author
+    (DEC-028 step 3). With no author read, no remote reviewer is known to be
+    someone else, so the gate counts no remote verdict: a reviewer only a
+    remote verdict can satisfy cannot be satisfied, and an override's audit
+    could not record the remote verdict it waives (DEC-050). The gate refuses
+    (fail-closed, DEC-032 D5) — never counting a remote reviewer as
+    independent of an author it could not read. A local verdict counts as
+    before; the refusal says so, so the operator does not re-run local
+    reviewers to no end.
+    """
+    reviewers = ", ".join(f"remote agent (@{name})" for name in unjudged)
+    return "\n".join(
+        [
+            f"[refused] agent-mode approval gate cannot be resolved for PR "
+            f"#{pr_number} — the PR's author could not be read.",
+            "            → `gh pr view` named no author: no login, a blank one, or `app/` alone.",
+            f"            → remote reviewers the gate would have to judge: {reviewers}",
+            "            A remote verdict counts only from a reviewer who is not "
+            "the PR's author (DEC-028 step 3); with no author read, the gate "
+            "cannot tell a remote reviewer from the author, so it counts no "
+            "remote verdict. A reviewer only a remote verdict can satisfy "
+            "cannot be satisfied, and an override's audit could not record "
+            "the remote verdict it waives (DEC-050): the gate refuses "
+            "(fail-closed, DEC-032 D5). A local verdict counts as before.",
+            "            Remediation:",
+            "              a) Transient gh failure — retry `done-work`.",
+            "              b) If persistent — GitHub itself returns no author for the "
+            'PR — merge with `done-work --bypass "<reason>"`; a per-reviewer '
+            "override does not get past this refusal.",
+        ]
+    )
+
+
 def _closing_issue_unresolvable_refusal(reason: str) -> str:
     """Refusal text when the PR's closing-issue classification is unknown.
 
@@ -2522,6 +2604,7 @@ def _agent_gate_refusal(
     slots: list[_Slot],
     opted_out: tuple = (),
     stale: dict[str, tuple[Verdict, str]] | None = None,
+    remote_uncounted: list[str] | None = None,
 ) -> str:
     """Refusal text naming the full resolved required set + who is unsatisfied.
 
@@ -2534,7 +2617,9 @@ def _agent_gate_refusal(
     names `review-pr <N> --force` as the way to have it re-review the PR as it
     stands. Contributions the project opts out of (#148) are named after the
     set with their reasons, so a reviewer missing from it reads as withdrawn,
-    not forgotten.
+    not forgotten. `remote_uncounted` names the unsatisfied reviewers whose
+    remote verdict does not count because the PR's author could not be read
+    (#1485), so a remote approval the gate passed over is not a mystery.
 
     It reads the same `_Slot` records the pass path's `passed_via` reads, which
     is what keeps the two honest with each other: a reviewer with a genuine fresh
@@ -2561,6 +2646,11 @@ def _agent_gate_refusal(
         lines.append(
             f"            → opted out ({OPT_OUT_PATH}): {opt_out.reviewer} "
             f"(capability `{opt_out.capability}`) — {opt_out.reason}"
+        )
+    if remote_uncounted:
+        lines.append(
+            "            → the PR's author could not be read, so no remote verdict "
+            f"counts (DEC-028 step 3) for: {', '.join(remote_uncounted)}"
         )
     missing = ", ".join(slot.label for slot in slots if not slot.satisfied)
     lines.append(f"            → still missing a fresh APPROVED: {missing}")

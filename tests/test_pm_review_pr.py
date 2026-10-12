@@ -488,6 +488,20 @@ def test_review_brief_names_the_local_diff_for_a_refused_diff(rpr) -> None:
     assert "Reviewer agent (local, reviewer): APPROVED" in brief
 
 
+def test_review_brief_names_the_finding_tags_and_widens_no_remit(rpr) -> None:
+    """DEC-028's finding tags (#1405): every local reviewer is told the three
+    tags, what each does to the merge, and that they widen no remit."""
+    brief = rpr._review_brief("reviewer", 99, base="main", head="HEAD")
+    assert brief.endswith(rpr.FINDING_TAGS)
+    for tag in ("`[block]`", "`[person]`", "`[advisory]`"):
+        assert f"- {tag} — " in brief
+    assert "request changes exactly when you have one" in brief
+    assert "It withholds no approval" in brief
+    assert "A finding with no tag counts as one" in brief
+    assert "`[block] (hard-reject)`" in brief
+    assert "The tags widen no remit" in brief
+
+
 def test_review_brief_leaves_an_unknown_base_as_a_placeholder(rpr) -> None:
     brief = rpr._review_brief("reviewer", 99, base=None, head="HEAD")
     assert "`git diff origin/<base>...HEAD`" in brief
@@ -1497,7 +1511,7 @@ def test_resolution_error_not_code_names_the_key(rpr) -> None:
     assert "transient" not in msg
 
 
-# ---- native GitHub review delivery (DEC-028, amended) ----------------
+# ---- native GitHub review delivery (DEC-028, "Invocation command (local path)") ----
 
 import json as _json  # noqa: E402
 

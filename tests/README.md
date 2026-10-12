@@ -219,3 +219,27 @@ kit (`_make_kit` in `test_changesets.py`, `test_release.py`,
 markers for the entry-point router (`_make_adopter` in `test_router.py`) — stay
 as they are. Their tests assert on the synthetic values; a real install would
 change what they test, not just how the tree is built.
+
+## A repository a test commits in
+
+**A fixture that commits turns signing off in its temporary repository**
+(#1484). A developer's git configuration may sign every commit through an agent,
+such as 1Password's, that asks on their screen and fails when nobody answers. The
+repository's own configuration overrides it. `GitRepo.init` turns signing off in
+every repository it makes, the adopter templates included. A fixture that makes
+its own repository, by `git init` or `git clone`, calls `sign_nothing(root)` from
+`tests/adopter_repo.py` before its first commit: no commit or tag made there is
+signed. A clone does not inherit the setting, so a clone a test commits in needs
+the call too; a copied directory and a linked worktree keep it. Where only the
+test's own commands commit, `-c commit.gpgsign=false` on each of them does the
+same. Never turn signing off in the developer's configuration or the checkout's.
+
+**The suite refuses to sign.** An autouse fixture, `signing_refused`, points
+`GIT_CONFIG_GLOBAL` at a configuration of the session's own
+(`refusing_global_config`): the user's own global files first, then signing on
+for every commit and a signing program that refuses. A commit in a repository
+that has not turned signing off fails at once, on every machine and in CI, with a
+message naming this section, and no test reaches the developer's signing agent. A
+test that sets `GIT_CONFIG_GLOBAL` itself, or runs git with an environment of its
+own, is outside the guard; turn signing off in its repositories all the same.
+`tests/test_adopter_repo.py` pins the guard and the helpers.

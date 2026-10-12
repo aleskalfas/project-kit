@@ -1,0 +1,7 @@
+component: backbone
+kind: none
+body: >
+  The CLI and lifecycle READMEs are revalidated, unchanged, against
+  ADR-059's Context, which names the backbone's friction validation as what
+  refuses a synced copy as a place. Only their revalidation front matter
+  changed. No command changed.
