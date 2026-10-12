@@ -1,0 +1,19 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  The capability declares the types of its artefacts (DEC-001 point 2,
+  COR-056, #1409). Its type registry, `friction.types`, holds `actor`,
+  `use-case`, `journey` and `term`, each with a description. None admits a
+  project place, and none names a kind field. Each place names its type: the
+  actors' entries are `software-analysis:actor`, the use cases
+  `software-analysis:use-case`, the journeys `software-analysis:journey` and
+  the glossary's entries `software-analysis:term`. A revalidation record stays
+  held, with no type. `pkit friction artefacts --json` gives each analysis
+  artefact its type, so a rule set's scope can select them by type. While the
+  capability is installed, a project's own bare type cannot take one of the
+  four names. The package metadata uses the type registry and a place's
+  `type`, which the backbone this release ships reads, so the capability
+  requires it.
