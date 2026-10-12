@@ -7,8 +7,9 @@ description: Authoring code under a project's own conventions — ships the soft
 requires_backbone: ">=1.0.0,<2.0.0"
 # The code-review panel ([software-engineering:DEC-002]) registers its reviewers
 # through pm's reviewer-contribution socket and folds through pm's merge gate
-# (DEC-028/DEC-032), including the type-axis + diff-touches-code floor amendment
-# the panel's activation relies on. COR-030 declares the versioned dependency.
+# (DEC-028/DEC-032), including the type axis + diff-touches-code floor of
+# DEC-032 D1 that the panel's activation relies on. COR-030 declares the
+# versioned dependency.
 requires_capabilities:
   - name: project-management
     version: ">=0.54.0,<1.0.0"
