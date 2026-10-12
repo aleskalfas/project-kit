@@ -3,8 +3,9 @@
 Held to software-analysis DEC-001 points 2 to 4:
 
 - the **package metadata** — the analysis location, the `analysis` sub-path of
-  the internal root, and one place per kind inside it; the revalidation
-  records' folder is not one, and no surface is declared;
+  the internal root, and one place per kind inside it, each giving its kind's
+  type from the capability's type registry (#1409); the revalidation records'
+  folder is not one, and no surface is declared;
 - the **stamp**, `pkit analysis new` (the capability's alias) — ids: `UC-NNN`
   and `JRN-NNN` numbered past the working tree and the default branch,
   withdrawn ones included, `ACT-<slug>` and `TERM-<slug>`; the location
@@ -124,6 +125,35 @@ def _kind_of_place_keys() -> list[str]:
     return [str(ast.literal_eval(key)) for key in value.keys if key is not None]
 
 
+def _kind_names() -> dict[str, str]:
+    """The kinds `_lib/model.py` names, by constant: its one tuple assignment
+    `ACTOR, TERM, USE_CASE, JOURNEY = "actor", …`."""
+    source = (CAPABILITY / "scripts" / "_lib" / "model.py").read_text(encoding="utf-8")
+    for node in ast.parse(source).body:
+        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Tuple):
+            continue
+        target = node.targets[0]
+        if isinstance(target, ast.Tuple) and any(
+            isinstance(name, ast.Name) and name.id == "ACTOR" for name in target.elts
+        ):
+            constants = [name.id for name in target.elts if isinstance(name, ast.Name)]
+            values = [str(ast.literal_eval(value)) for value in node.value.elts]
+            return dict(zip(constants, values, strict=True))
+    raise AssertionError("_lib/model.py names no kinds")
+
+
+def _kind_of_place() -> dict[str, str]:
+    """`_lib/model.py`'s KIND_OF_PLACE: each place's path, and the kind it holds."""
+    value = _model_value("KIND_OF_PLACE")
+    assert isinstance(value, ast.Dict)
+    names = _kind_names()
+    return {
+        str(ast.literal_eval(key)): names[kind.id]
+        for key, kind in zip(value.keys, value.values, strict=True)
+        if key is not None and isinstance(kind, ast.Name)
+    }
+
+
 def _model_constant(name: str) -> Any:
     """A literal constant `_lib/model.py` defines."""
     return ast.literal_eval(_model_value(name))
@@ -134,6 +164,66 @@ def test_the_scripts_know_each_place_by_the_package_s_own_words() -> None:
     places: list[dict[str, str]] = package["friction"]["places"]
     assert sorted(place["path"] for place in places) == sorted(_kind_of_place_keys())
     assert {place["location"] for place in places} == {"analysis"}
+
+
+def test_each_place_names_the_type_of_its_kind_from_the_registry() -> None:
+    """One type per kind of anchored artefact, each with a description, none naming a
+    kind field or admitting a project place; each place gives the type of the kind the
+    scripts read it as (DEC-001 point 2; COR-056 point 2)."""
+    package = load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
+    registry: dict[str, dict[str, Any]] = package["friction"]["types"]
+    assert sorted(registry) == sorted(_kind_names().values())
+    for name, entry in registry.items():
+        assert entry["description"], name
+        assert "kind-field" not in entry, name
+        assert entry.get("project-places", False) is False, name
+    places: list[dict[str, str]] = package["friction"]["places"]
+    assert {place["path"]: place["type"] for place in places} == _kind_of_place()
+    held: list[dict[str, str]] = package["friction"]["held"]
+    assert all("type" not in folder for folder in held)  # a held record takes no type
+
+
+def test_the_artefacts_document_gives_each_analysis_artefact_its_place_s_type(
+    seeded: AdopterRepo,
+) -> None:
+    """`pkit friction artefacts --json` over the shipped places (COR-056 point 6): an
+    actor and a term take the type of their collection file's place, a use case or a
+    journey that of its folder — a use case in a functional area's folder included —
+    and a revalidation record, held, is no artefact and takes none."""
+    stamped(seeded, "term", "suite")
+    stamped(seeded, "use-case", "export", "--actor", "ACT-tester", "--area", "reports")
+    record = f"{RECORDS}/2026-10-12-run-suite.md"
+    seeded.write({record: "---\nchange: '#1'\n---\n"})
+    listing = CliRunner().invoke(main, ["friction", "artefacts", "--json"])
+    assert listing.exit_code == 0, listing.output
+    document = json.loads(listing.output)
+    places = document["places"]
+    analysis = [a for a in document["artefacts"] if a["location"].startswith(f"{ANALYSIS}/")]
+    assert {a["id"]: a["type"] for a in analysis} == {
+        "ACT-tester": "software-analysis:actor",
+        "TERM-suite": "software-analysis:term",
+        "UC-001": "software-analysis:use-case",
+        "UC-002": "software-analysis:use-case",
+        "UC-003": "software-analysis:use-case",
+        "JRN-001": "software-analysis:journey",
+    }
+    in_area = next(a for a in analysis if a["id"] == "UC-003")
+    assert in_area["path"] == f"{USE_CASES}/reports/UC-003-export.md"
+    for artefact in analysis:
+        given = places[artefact["type_place"]]
+        assert given["source"] == "capability:software-analysis", artefact["id"]
+        assert artefact["type_conflict"] == [], artefact["id"]
+    registry = {
+        name: (entry["kind_field"], entry["project_places"])
+        for name, entry in document["types"].items()
+        if entry["component"] == "software-analysis"
+    }
+    assert registry == {
+        f"software-analysis:{kind}": (None, False)
+        for kind in ("actor", "use-case", "journey", "term")
+    }
+    assert [held["path"] for held in document["held_files"]] == [record]
+    assert record not in {a["path"] for a in document["artefacts"]}
 
 
 def test_the_scripts_know_the_records_folder_by_the_package_s_own_words() -> None:
