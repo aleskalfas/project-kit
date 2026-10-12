@@ -2281,6 +2281,21 @@ def test_a_local_person_finding_on_a_pr_whose_author_cannot_be_read_holds_as_bef
     assert [merge[-1] for merge in run.github.merges] == [head]
 
 
+def test_a_person_finding_from_an_unrequired_remote_login_holds_nothing_when_the_author_is_unread(
+    world, capsys
+) -> None:
+    """Only a required remote reviewer's verdict is one an unread author could
+    hide: a remote verdict from a login the gate does not require stops
+    nothing and holds nothing, as with the author read (#1485)."""
+    run = world()
+    run.github.author = None
+    run.github.comments.append(_remote_verdict(run, "stranger", _PERSON, sha=run.github.head))
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+    assert "[stranger]" not in out
+    assert not any(step.startswith(f"{_FINDINGS}:") for step in _steps(out))
+
+
 def test_a_person_finding_from_a_reviewer_the_gate_does_not_require_holds_nothing(
     world, capsys
 ) -> None:

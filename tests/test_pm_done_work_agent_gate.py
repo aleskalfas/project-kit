@@ -688,7 +688,7 @@ def test_fail_closed_unread_author_refuses_a_remote_only_reviewer(
         "[refused] agent-mode approval gate cannot be resolved for PR #99 — the PR's author "
         "could not be read.",
         "            → `gh pr view` named no author: no login, a blank one, or `app/` alone.",
-        "            → required on the remote path only: remote agent (@review-bot)",
+        "            → remote reviewers the gate would have to judge: remote agent (@review-bot)",
     ]
     assert "counts no remote verdict" in result.refusal_message
     assert "A local verdict counts as before." in result.refusal_message
@@ -750,8 +750,8 @@ def test_unread_author_refusal_is_not_passed_by_overriding_the_remote_reviewer(
     dw, rc, monkeypatch
 ) -> None:
     """A per-reviewer override waives a slot, not the read: its audit could not
-    tell the remote reviewer's verdict from the author's own, so the gate still
-    refuses, and only the whole-gate `--bypass` gets past it (#1485)."""
+    record the remote verdict it waives, so the gate still refuses, and only
+    the whole-gate `--bypass` gets past it (#1485)."""
     _wire(
         dw,
         monkeypatch,
@@ -790,7 +790,7 @@ def test_unread_author_counts_only_the_local_verdict_of_a_reviewer_on_both_paths
     assert "local agent (reviewer): none" in lines
     assert (
         "→ the PR's author could not be read, so no remote verdict counts (DEC-028 step 3) "
-        "for: local agent (reviewer)"
+        "for: remote agent (@reviewer)"
     ) in lines
 
     _wire(
@@ -801,6 +801,27 @@ def test_unread_author_counts_only_the_local_verdict_of_a_reviewer_on_both_paths
         pr_view={"author": None},
     )
     assert dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT).passed is True
+
+
+def test_unread_author_refuses_an_override_of_a_reviewer_on_both_paths(dw, rc, monkeypatch) -> None:
+    """An override of a reviewer on both paths would waive its remote verdict
+    too, which the audit could not record with the author unread: the gate
+    refuses, as it does for a remote-only reviewer, while the same override
+    passes with the author read (#1485)."""
+    collection = rc.ContributionCollection(rules=())
+    comments = [_remote_verdict_comment("CHANGES_REQUESTED", author="reviewer")]
+    config = _config(local=("reviewer",), remote=("reviewer",))
+    override = ("reviewer",)
+    _wire(dw, monkeypatch, collection=collection, comments=comments)
+    read = dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT, override_reviewers=override)
+    assert read.passed is True, read.refusal_message
+    _wire(dw, monkeypatch, collection=collection, comments=comments, pr_view={"author": None})
+    unread = dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT, override_reviewers=override)
+    assert unread.passed is False
+    assert (
+        "            → remote reviewers the gate would have to judge: remote agent (@reviewer)"
+        in unread.refusal_message.splitlines()
+    )
 
 
 def test_a_readable_author_excludes_only_its_own_verdict(dw, rc, monkeypatch) -> None:
