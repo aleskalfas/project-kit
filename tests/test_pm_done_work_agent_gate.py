@@ -653,6 +653,76 @@ def test_fail_closed_commit_missing_timestamp_fields_refuses(dw, rc, monkeypatch
     assert "freshness anchor is unknown" in result.refusal_message
 
 
+@pytest.mark.parametrize(
+    "pr_view",
+    [{"author": {"login": ""}}, {"author": None}, {"author": {}}],
+    ids=["empty-login", "null-author", "no-login"],
+)
+def test_fail_closed_unread_author_counts_no_verdict(dw, rc, monkeypatch, pr_view) -> None:
+    """With the PR's author unread, no reviewer is known to be someone else:
+    a fresh APPROVED on each path counts for nothing, and the refusal names the
+    author as why — never every reviewer counted as independent (#1485)."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[
+            _local_verdict_comment("reviewer", "APPROVED"),
+            _remote_verdict_comment("APPROVED", author="review-bot"),
+        ],
+        pr_view=pr_view,
+    )
+    config = _config(local=("reviewer",), remote=("review-bot",))
+    result = dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert result.refusal_message.splitlines()[:2] == [
+        "[refused] agent-mode approval gate cannot be resolved for PR #99 — the PR's author "
+        "could not be read.",
+        "            → `gh pr view` returned no author login.",
+    ]
+    assert "counts no verdict as an approval" in result.refusal_message
+
+
+def test_unread_author_is_not_satisfied_by_overriding_every_slot(dw, rc, monkeypatch) -> None:
+    """An unread author is a fact the gate cannot judge, like an unknown head:
+    a per-reviewer override waives a slot, not the read, so the gate still
+    refuses (#1485)."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[],
+        pr_view={"author": None},
+    )
+    result = dw._check_agent_gate(
+        99, {}, _config(), "resolved", CAP_ROOT, override_reviewers=("reviewer",)
+    )
+    assert result.passed is False
+    assert "the PR's author could not be read" in result.refusal_message
+
+
+def test_a_readable_author_excludes_only_its_own_verdict(dw, rc, monkeypatch) -> None:
+    """A readable author keeps today's gate: its own verdict is excluded, and
+    every other reviewer's still counts."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[
+            _remote_verdict_comment("APPROVED", author="review-bot"),
+            _remote_verdict_comment("APPROVED", author="author"),
+        ],
+        pr_author="author",
+    )
+    config = _config(local=(), remote=("review-bot", "author"))
+    result = dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT)
+    assert result.passed is False
+    lines = [line.strip() for line in result.refusal_message.splitlines()]
+    assert "remote agent (@review-bot): APPROVED" in lines
+    assert "remote agent (@author): none" in lines
+    assert "author could not be read" not in result.refusal_message
+
+
 # ---- latest-per-agent BY TIMESTAMP, not list order (#145 finding 4) ------
 
 

@@ -19,6 +19,8 @@ Approval gate (human-mode three-way OR per DEC-026):
   1. Latest review on the PR is APPROVED, OR
   2. The PR's last non-author comment starts with `Approved`, OR
   3. `--bypass "<reason>"` is supplied (writes an audit comment).
+A PR whose author cannot be read counts no comment in 2, and in agent mode no
+verdict at all: no reviewer is known to be someone else (#1485).
 
 Checkbox close-gate (DEC-007, #734): a pre-flight in front of the merge —
 every `- [ ]` in the body of every issue the PR closes must be ticked, else
@@ -233,6 +235,7 @@ from _lib.agent_verdicts import (
     gate_membership,
     gate_verdicts,
     latest_commit_timestamp,
+    pr_author,
 )
 
 # DEC-049's canonical audit-comment format + projection knob — the ONE
@@ -1686,7 +1689,7 @@ def _check_approval_gate(
             passed=False,
             refusal_message="error: gh pr view returned malformed JSON.",
         )
-    author_login = (data.get("author") or {}).get("login") or ""
+    author_login = pr_author(data)
 
     # Path 1: latest APPROVED review (latest non-COMMENTED state).
     reviews = data.get("reviews") or []
@@ -1699,7 +1702,10 @@ def _check_approval_gate(
         return _GateResult(passed=True, passed_via="APPROVED review")
 
     # Path 2: last non-author comment starts with `Approved` (case-sensitive).
-    comments = data.get("comments") or []
+    # With the PR's author unread, no commenter is known to be a non-author,
+    # so no such comment counts (#1485); GitHub keeps the author from
+    # approving a review itself, so path 1 stands without the read.
+    comments = (data.get("comments") or []) if author_login else []
     for c in reversed(comments):
         if not isinstance(c, dict):
             continue
@@ -1712,18 +1718,31 @@ def _check_approval_gate(
             )
 
     # Refused.
+    if author_login:
+        comment_line = "          → No `Approved`-prefix comment from a non-author.\n"
+        comment_remedy = (
+            "            - Have a non-author commenter post a comment starting with `Approved`.\n"
+        )
+    else:
+        comment_line = (
+            "          → The PR's author could not be read, so no "
+            "`Approved`-prefix comment counts: none can be told from the "
+            "author's own.\n"
+        )
+        comment_remedy = (
+            "            - Run `done-work` again once `gh pr view` returns the PR's author.\n"
+        )
     return _GateResult(
         passed=False,
         refusal_message=(
             f"[refused] approval gate not satisfied for PR #{pr_number}.\n"
             "          → No APPROVED review present (latest state: "
             f"{latest_states[-1] if latest_states else 'none'}).\n"
-            "          → No `Approved`-prefix comment from a non-author.\n"
+            f"{comment_line}"
             "          → No --bypass supplied.\n"
             "          Remediations:\n"
             "            - Request a review and have it approved.\n"
-            "            - Have a non-author commenter post a comment "
-            "starting with `Approved`.\n"
+            f"{comment_remedy}"
             '            - Re-run with `--bypass "<reason>"`.'
         ),
     )
@@ -2044,7 +2063,7 @@ def _check_agent_gate(
         data = json.loads(proc.stdout)
     except (ValueError, json.JSONDecodeError):
         return refuse("error: gh pr view returned malformed JSON.")
-    author_login = (data.get("author") or {}).get("login") or ""
+    author_login = pr_author(data)
     comments = data.get("comments") or []
     commits = data.get("commits") or []
 
@@ -2057,6 +2076,13 @@ def _check_agent_gate(
     # unestablishable head is not "no freshness check".
     if not latest_commit_timestamp(commits):
         return refuse(_freshness_unresolvable_refusal(pr_number))
+
+    # The PR's author, which a remote verdict must not come from (DEC-028
+    # step 3). One that cannot be read leaves no reviewer known to be someone
+    # else: `gate_membership` then counts no verdict, and the gate REFUSES
+    # here, saying why, rather than list every reviewer as missing (#1485).
+    if not author_login:
+        return refuse(_author_unread_refusal(pr_number))
 
     # The one freshness rule (#1179), shared with `review-pr`'s skip and
     # `show-pr`'s stale marker: a verdict naming its reviewed head stands
@@ -2449,6 +2475,31 @@ def _freshness_unresolvable_refusal(pr_number: int | None) -> str:
             "            Verdict freshness is judged against the PR's head "
             "(DEC-028); without it a stale APPROVED cannot be distinguished from "
             "a fresh one, so the gate refuses (fail-closed, DEC-032 D5).",
+            "            Remediation:",
+            "              a) Transient gh failure — retry `done-work`.",
+            '              b) If persistent, merge with `done-work --bypass "<reason>"`.',
+        ]
+    )
+
+
+def _author_unread_refusal(pr_number: int | None) -> str:
+    """Refusal text when the PR's author cannot be read (#1485).
+
+    A remote verdict counts only from a reviewer who is not the PR's author
+    (DEC-028 step 3). With no author read, no reviewer is known to be someone
+    else, so the gate counts no verdict as an approval, on either path, and
+    refuses (fail-closed, DEC-032 D5) — never counting every reviewer as
+    independent of an author it could not read.
+    """
+    return "\n".join(
+        [
+            f"[refused] agent-mode approval gate cannot be resolved for PR "
+            f"#{pr_number} — the PR's author could not be read.",
+            "            → `gh pr view` returned no author login.",
+            "            A remote verdict counts only from a reviewer who is not "
+            "the PR's author (DEC-028); with no author read, the gate cannot "
+            "tell a reviewer from the author, so it counts no verdict as an "
+            "approval, on either path, and refuses (fail-closed, DEC-032 D5).",
             "            Remediation:",
             "              a) Transient gh failure — retry `done-work`.",
             '              b) If persistent, merge with `done-work --bypass "<reason>"`.',

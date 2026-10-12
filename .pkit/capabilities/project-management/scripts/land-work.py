@@ -65,9 +65,9 @@ It stops at the first step that cannot go on, and its last line says why.
           run, or while it ran up to this step's read, stops it at `ready:`,
           and one that does not stand for the head stops every `--yes` run
           there, naming the review it waits for (DEC-055 point 3). Verdicts
-          that cannot be read, or whose reviewers cannot be resolved, stop the
-          run; this step comes before the answers', so such a stop has
-          written nothing.
+          that cannot be read, or whose reviewers cannot be resolved — a PR
+          whose author cannot be read included — stop the run; this step
+          comes before the answers', so such a stop has written nothing.
   answers The change check's list of the answers the change wrote, and the
           friction settings it alters, derived at the pinned head against the
           PR's base (`_lib.friction_answers`), printed word for word, in the
@@ -146,6 +146,7 @@ from _lib.agent_verdicts import (
     gate_candidates,
     gate_membership,
     marked_candidates,
+    pr_author,
     tagged,
 )
 from _lib.audit import short_sha
@@ -1241,7 +1242,8 @@ def _findings(
     holds nothing. A run with no `[person]` finding prints nothing, and goes
     on as it would without the step. Stops the run when the verdicts cannot
     be read, the head moved, or — with a `[person]` finding to show — the
-    reviewers whose verdicts count cannot be resolved."""
+    reviewers whose verdicts count cannot be resolved, as when the PR's
+    author cannot be read."""
     issue, number = head.issue, head.pr_number
     data = _view(number, _FINDINGS_VIEW, config)
     if isinstance(data, str):
@@ -1263,21 +1265,19 @@ def _findings(
     # selection: without one there is nothing to show, from anyone.
     if not any(_person(verdict) for verdict in marked_candidates(comments)):
         return _FindingsEnd()
+    # A remote verdict counts only from someone other than the PR's author:
+    # with no author read, whose verdicts count cannot be told (#1485).
+    author = pr_author(data)
+    if not author:
+        raise _unresolved(issue, f"PR #{number}'s author could not be read")
     review = done_work._resolve_review(number, config, capability_root.parent.parent.parent)
     if not review.resolution.ok:
         error = review.resolution.error
-        why = error.message if error is not None else "the resolution failed"
-        raise _Stop(
-            EXIT_UNREADABLE,
-            f"{FINDINGS}: whose verdicts count could not be resolved ({why}), so the "
-            f"findings a reviewer left for a person to judge cannot be shown. Nothing was "
-            f"merged; run `land-work {issue}` again",
-        )
-    author = data.get("author")
+        raise _unresolved(issue, error.message if error is not None else "the resolution failed")
     remote_ok, local_ok = gate_membership(
         remote_baseline=remote_baseline(config),
         required_local=review.resolution.required_local,
-        author_login=str(author.get("login") or "") if isinstance(author, dict) else "",
+        author_login=author,
     )
     freshness = review.freshness_rule(data)
     judged = [
@@ -1296,6 +1296,17 @@ def _findings(
     held = _held(args, head, judged, found)
     _say(f"{FINDINGS}: {count}, above" + (f" ({stale} marked stale)" if stale else ""))
     return _FindingsEnd(count, held)
+
+
+def _unresolved(issue: int, why: str) -> _Stop:
+    """The stop when whose verdicts count cannot be told, and so which
+    `[person]` findings to show: nothing is shown and nothing merged."""
+    return _Stop(
+        EXIT_UNREADABLE,
+        f"{FINDINGS}: whose verdicts count could not be resolved ({why}), so the "
+        f"findings a reviewer left for a person to judge cannot be shown. Nothing was "
+        f"merged; run `land-work {issue}` again",
+    )
 
 
 def _person(verdict: Verdict) -> tuple[Finding, ...]:

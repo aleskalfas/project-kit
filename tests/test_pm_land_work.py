@@ -128,6 +128,8 @@ class _FakeGitHub:
     bodies: list[str] = field(default_factory=list)
     #: The branch the PR merges into.
     base_branch: str = "main"
+    #: The PR's author as GitHub returns it; None for one it returns as null.
+    author: dict[str, Any] | None = field(default_factory=lambda: {"login": "author"})
     _reads: dict[str, int] = field(default_factory=dict)
 
     # -- what the pm scripts ask (`_lib.gh.gh_run`) --
@@ -213,7 +215,7 @@ class _FakeGitHub:
             "mergeable": self.mergeable,
             "isCrossRepository": False,
             "mergedAt": "2026-10-01T12:00:00Z" if merged else None,
-            "author": {"login": "author"},
+            "author": self.author,
             "body": self.body,
             "comments": self.comments,
             "commits": [{"oid": self.head, "committedDate": "2026-10-01T09:00:00Z"}],
@@ -2200,6 +2202,26 @@ def test_findings_that_cannot_be_read_stop_before_the_list_is_written(world, cap
     rc, out, _err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
     assert rc == run.land.EXIT_UNREADABLE
     assert out.splitlines()[-1].startswith(f"{_FINDINGS}: PR #{PR}'s verdicts could not be read")
+    assert run.github.bodies == []
+    assert run.github.merges == []
+
+
+@pytest.mark.parametrize("author", [None, {"login": ""}], ids=["null-author", "empty-login"])
+def test_a_pr_whose_author_cannot_be_read_stops_before_its_findings(world, capsys, author) -> None:
+    """With no author read, whose verdicts count cannot be told, so a `[person]`
+    finding is neither shown as the gate's nor passed over: the run stops before
+    the answers' list is written, with nothing merged (#1485)."""
+    run = world()
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    run.github.author = author
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE
+    assert out.splitlines()[-1] == (
+        f"{_FINDINGS}: whose verdicts count could not be resolved (PR #{PR}'s author could "
+        "not be read), so the findings a reviewer left for a person to judge cannot be shown. "
+        f"Nothing was merged; run `land-work {ISSUE}` again"
+    )
+    assert _person_lines("code-reviewer")[0] not in out.splitlines()
     assert run.github.bodies == []
     assert run.github.merges == []
 

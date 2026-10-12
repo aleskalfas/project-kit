@@ -732,3 +732,44 @@ def test_gate_membership_is_the_gates(av) -> None:
         remote_baseline=["author"], required_local=(), author_login="author"
     )
     assert not remote_ok("author")
+
+
+@pytest.mark.parametrize("author_login", ["", "   ", None])
+def test_gate_membership_counts_no_one_when_the_author_is_unread(av, author_login) -> None:
+    """An author that could not be read excludes nobody, so every reviewer
+    would count as independent of it: the gate counts no one, on either path,
+    instead (#1485)."""
+    remote_ok, local_ok = av.gate_membership(
+        remote_baseline=["review-bot"], required_local=("pm-reviewer",), author_login=author_login
+    )
+    assert not remote_ok("review-bot")
+    assert not remote_ok("")
+    assert not local_ok("pm-reviewer")
+    comments = [_local("pm-reviewer", "APPROVED"), _remote("APPROVED", author="review-bot")]
+    selected = av.gate_candidates(
+        comments, local_reviewer_ok=local_ok, remote_reviewer_ok=remote_ok
+    )
+    assert selected == []
+
+
+@pytest.mark.parametrize(
+    "pr_view",
+    [
+        {},
+        {"author": None},
+        {"author": "octocat"},
+        {"author": {}},
+        {"author": {"login": None}},
+        {"author": {"login": 42}},
+        {"author": {"login": ""}},
+        {"author": {"login": "  "}},
+        None,
+        [],
+    ],
+)
+def test_pr_author_is_empty_when_it_cannot_be_read(av, pr_view) -> None:
+    assert av.pr_author(pr_view) == ""
+
+
+def test_pr_author_reads_the_login_as_given(av) -> None:
+    assert av.pr_author({"author": {"login": "octocat", "name": "Octo Cat"}}) == "octocat"
