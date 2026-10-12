@@ -1,7 +1,7 @@
 ---
 id: COR-057
 title: One reviewer judges a change against the accepted rules that bind on what it alters
-status: proposed
+status: accepted
 date: 2026-10-11
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
