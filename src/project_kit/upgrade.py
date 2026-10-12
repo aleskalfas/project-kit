@@ -75,6 +75,7 @@ from project_kit.router import (
     write_version_pin,
 )
 from project_kit.sync import refuse_content_downgrade, run_sync
+from project_kit.versioning import is_release_version
 
 # Capability-dependency check (COR-030) — imported lazily below to avoid
 # any circular-import issues at module load time. The functions used are:
@@ -729,11 +730,11 @@ def _instruct_tool_update(latest: Version, running: Version) -> None:
 
 
 def _latest_released_version() -> Version | None:
-    """Query the distribution source for the highest released `v<semver>` tag.
+    """Query the distribution source for the highest release tag, pre-releases skipped.
 
     Best-effort per ADR-063 point 1: returns None on *any* failure — `git` missing
     (`OSError`), the source unreachable (non-zero exit), a bounded-timeout expiry,
-    or output with no parseable `v<semver>` tag. The caller degrades loudly. Uses
+    or output with no release tag (`_max_released_tag`). The caller degrades loudly. Uses
     the same compiled distribution URL the router pins against (`router`), so tool
     detection and route-2 pinning share one source of truth.
     """
@@ -753,24 +754,25 @@ def _latest_released_version() -> Version | None:
 
 
 def _max_released_tag(ls_remote_output: str) -> Version | None:
-    """Pick the highest `v<semver>` tag from `git ls-remote --tags` output.
+    """Pick the highest release tag from `git ls-remote --tags` output.
 
     Each line is `<sha>\trefs/tags/<tag>`. Annotated tags also emit a
     dereferenced `<tag>^{}` peel line; the `^{}` suffix is stripped so both
-    resolve to the same version. Only `v`-prefixed valid semver tags count;
-    anything else (a non-release tag, a malformed ref) is skipped. Returns None
-    when no release tag is present.
+    resolve to the same version. Only a `v` followed by a release version
+    counts, tested as the release step tests a floor
+    (`versioning.is_release_version`): `major.minor.patch`, no part padded by
+    a leading zero. Every pre-release and dev release is skipped (`v2.0.0rc1`,
+    `v2.0.0.dev1`), even one above the latest release, as is any other tag (a
+    non-release tag, a malformed ref). So what the tool step installs and a
+    pinned raise writes is a release `pkit pin` accepts. Returns None when no
+    release tag is present.
     """
     versions: list[Version] = []
     for line in ls_remote_output.splitlines():
         ref = line.rpartition("refs/tags/")[2].strip()
         ref = ref.removesuffix("^{}")
-        if not ref.startswith("v"):
-            continue
-        try:
+        if ref.startswith("v") and is_release_version(ref[1:]):
             versions.append(Version(ref[1:]))
-        except InvalidVersion:
-            continue
     return max(versions) if versions else None
 
 

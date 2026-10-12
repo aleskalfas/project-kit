@@ -17,8 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-11T20:51:23Z
-      outcome: updated
+      at: 2026-10-12T20:51:41Z
+      outcome: unchanged
+      unchanged-because: the change makes pkit upgrade skip pre-release and dev release tags when it looks up the latest release, so the tool update and a pinned raise act on a release; this page says only that upgrade pulls new versions, runs migrations and pins the project to the version it reached unless --no-pin is passed, which still holds
 ---
 
 # project-kit

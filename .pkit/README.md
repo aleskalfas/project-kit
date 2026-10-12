@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-12T20:31:30Z
+      at: 2026-10-12T20:51:42Z
       outcome: unchanged
-      unchanged-because: The CLI reference now cites ADR-063 and ADR-064 for the upgrade's tool update and default pin, and rewrites two paragraphs of its upgrade section to match; its role as the pkit command surface and its place do not change, so this map holds
+      unchanged-because: This change makes the CLI reference say that the upgrade's tool update skips pre-release and dev release tags when it looks up the latest release. This map names the CLI reference by its role, the pkit command surface, and links it; neither that role nor its place changes, so the map holds.
 ---
 
 # project-kit
