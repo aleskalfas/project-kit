@@ -1,0 +1,12 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The merge gate no longer counts every reviewer as independent of a pull
+  request's author it could not read. When `gh pr view` returns no author
+  login, the agent-mode gate counts no verdict as an approval and refuses,
+  naming the unread author; the human-mode gate counts no `Approved`
+  comment and says why, while an APPROVED review still counts; and
+  `land-work` stops at its findings step, with nothing merged, when a
+  `[person]` finding is waiting. A readable author is handled as before.
