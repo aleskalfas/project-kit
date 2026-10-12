@@ -1452,7 +1452,11 @@ def _answer(location: str, reason: str | None, **fields: Any) -> dict[str, Any]:
     }
 
 
-INSTALL = _answer("docs/install.md", "The flag rename leaves the install steps as written.")
+INSTALL = _answer(
+    "docs/install.md",
+    "The flag rename leaves the install steps as written.",
+    changed=[{"kind": "path", "value": "src/cli/flags.py"}],
+)
 DEFERRED = _answer(
     "docs/cli.md",
     "Rewritten with the redesign.",
@@ -1460,9 +1464,14 @@ DEFERRED = _answer(
     anchor={"kind": "path", "value": "src/cli/**"},
     asked=False,
 )
+#: The list as land-work prints it: the question once, then each answer — the document,
+#: the anchors the change modified that it relies on, and whether it still holds (#1468).
 LISTED = [
-    '  1. docs/install.md — still accurate: "The flag rename leaves the install steps as written."',
-    "  2. docs/cli.md — set aside for later for changes to src/cli/** (not required by this "
+    "  These documents rely on something this change modifies, and each answer says whether "
+    "the document is still true.",
+    "  1. docs/install.md relies on src/cli/flags.py, which this change modifies. Still "
+    'accurate: "The flag rename leaves the install steps as written."',
+    "  2. docs/cli.md relies on src/cli/**. Out of date, fixed later (not asked for by this "
     'change): "Rewritten with the redesign."',
 ]
 #: Where the step's line says the list is.
@@ -1494,7 +1503,7 @@ def test_the_answers_are_printed_above_ready_and_written_into_the_description(
     assert rc == run.land.EXIT_READY
     lines = out.splitlines()
     at = lines.index(LISTED[0])
-    assert lines[at : at + 3] == [
+    assert lines[at : at + 4] == [
         *LISTED,
         f"{_STEP}: 2, {_IN_THE_DESCRIPTION} (written now)",
     ]
@@ -1918,7 +1927,7 @@ def test_a_list_an_earlier_run_wrote_under_the_former_heading_is_written_again(
     run = _answers_world(world)
     section = run.section()
     assert section.startswith(f"{_HEADING}\n")
-    earlier = section.replace(_HEADING, _FORMER_HEADING, 1).replace("still accurate", "unchanged")
+    earlier = section.replace(_HEADING, _FORMER_HEADING, 1).replace("Still accurate", "unchanged")
     run.github.body = f"{_PR_BODY}\n{earlier}\n"
     rc, out, _err = run.run(capsys=capsys)
     assert rc == run.land.EXIT_READY
