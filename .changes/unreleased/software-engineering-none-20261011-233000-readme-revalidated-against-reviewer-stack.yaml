@@ -1,0 +1,6 @@
+component: software-engineering
+kind: none
+body: >
+  Internal. The README is revalidated unchanged against COR-024, refined to
+  admit the rule-set reviewer to the reviewer stack (COR-057). Only the
+  README's friction block changes, and nothing you run or read changes.
