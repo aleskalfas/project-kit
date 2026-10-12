@@ -29,8 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-12T19:37:12Z
-      outcome: updated
+      at: 2026-10-12T20:08:06Z
+      outcome: unchanged
+      unchanged-because: ADR-059's Context names the backbone's friction validation, not living-docs, as what uses `is_synced_copy` to refuse a synced copy as a place. This page already names the friction pass as that predicate's consumer. What it cites ADR-059 for, the source repository's definition, its two tests and the capability verbs in place, the change leaves as it was.
 ---
 
 # Lifecycle
