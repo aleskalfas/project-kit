@@ -311,8 +311,9 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
         "--no-native",
         action="store_true",
         help="Don't post a native GitHub review (APPROVE / REQUEST_CHANGES) — "
-        "only the comment verdict. Per DEC-028 (amended). The native review is "
-        "what shows in the PR UI and satisfies branch protection; it is skipped "
+        "only the comment verdict. Per project-management DEC-028, 'Invocation "
+        "command (local path)'. The native review is what shows in the PR UI "
+        "and satisfies branch protection; it is skipped "
         "automatically when you authored the PR (GitHub blocks self-approval).",
     )
     parser.add_argument(
@@ -557,13 +558,14 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
         print(f"  [{name}] posted {verdict}")
         run.posted[name] = (verdict, comment)
 
-        # DEC-028 (amended): also deliver a NATIVE GitHub review carrying the
-        # verdict state, so it shows in the PR UI and satisfies branch-protection
-        # "required approving reviews". The comment above is what done-work's gate
-        # reads; the native review is the GitHub-facing signal. Best-effort — a
-        # failure or a self-approval degrade never fails review-pr (the comment
-        # verdict stands). GitHub attaches a native review to the PR's current
-        # head, so it is skipped when that is not the head the reviewer saw.
+        # DEC-028, "Invocation command (local path)": also deliver a NATIVE
+        # GitHub review carrying the verdict state, so it shows in the PR UI and
+        # satisfies branch-protection "required approving reviews". The comment
+        # above is what done-work's gate reads; the native review is the
+        # GitHub-facing signal. Best-effort — a failure or a self-approval
+        # degrade never fails review-pr (the comment verdict stands). GitHub
+        # attaches a native review to the PR's current head, so it is skipped
+        # when that is not the head the reviewer saw.
         if not args.no_native:
             if head_unchanged:
                 _deliver_native_review(pr_number, verdict, comment, config)
@@ -838,7 +840,7 @@ def _report_head_check(name: str, reviewed: str, now: str) -> bool:
     return False
 
 
-# ---- native GitHub review delivery (DEC-028, amended) ----------------
+# ---- native GitHub review delivery (DEC-028, "Invocation command (local path)") ----
 
 
 def _deliver_native_review(
@@ -847,7 +849,9 @@ def _deliver_native_review(
     body: str,
     config: dict,
 ) -> None:
-    """Post a native `gh pr review` carrying the verdict state (DEC-028, amended).
+    """Post a native `gh pr review` carrying the verdict state.
+
+    Per DEC-028, "Invocation command (local path)".
 
     APPROVED → `--approve`, CHANGES_REQUESTED → `--request-changes`. The verdict
     comment (already posted) carries the pkit gate marker; this native review is

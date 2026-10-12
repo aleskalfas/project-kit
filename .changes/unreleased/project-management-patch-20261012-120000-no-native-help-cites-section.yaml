@@ -1,0 +1,8 @@
+component: project-management
+kind: patch
+custom:
+  category: Changed
+  pr: "1492"
+body: >
+  The help for `review-pr --no-native` names the section of the capability's
+  decision that describes native review delivery.

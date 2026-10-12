@@ -15,8 +15,9 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-12T20:08:49Z
-      outcome: updated
+      at: 2026-10-12T20:32:05Z
+      outcome: unchanged
+      unchanged-because: This change restates DEC-028's and DEC-032's refinements as fact, corrects the constraint DEC-028's self-approval degrade names, and has DEC-050 cite DEC-028, DEC-032 and DEC-046 as they stand. In the scripts and the review-contributions schema it changes only comments, docstrings, a field description and review-pr's --no-native help, which now cite DEC-028's sections and DEC-032 D1. No command, gate or field behaves differently, and this page names neither record as amended.
       deferred:
         - anchor:
             kind: path
