@@ -12,14 +12,13 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-12T18:49:01Z
-      outcome: unchanged
-      unchanged-because: "COR-050's refinement lets a place name a type, which COR-056 defines and no friction check reads. This page describes the capability's four places, its held folder, the unanchored reason and who runs the friction writers, as the backbone reads them today. The capability declares no types yet, so each statement holds. Its types follow with #1409."
+      at: 2026-10-12T20:10:50Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
             value: software-analysis:DEC-001
-          reason: "DEC-001 refines ahead of the code: each kind's declared structure, actors as files of their own, the new anchors and a planned record's reviewed-against. This page describes what the capability ships, which this change leaves as it was; it changes, and is revalidated against the record, with the issues under EPIC #234 that apply it."
+          reason: "DEC-001 refines ahead of the code: each kind's declared structure, actors as files of their own, the new anchors and a planned record's reviewed-against. The capability does not ship them yet, so this page describes what it ships: the actors in one collection file, a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #234 that apply them. #1363 declares the structure and reviewed-against, and #1346 gives each actor its file. The new anchors follow under EPIC #234, which has no Task for them yet."
 ---
 
 # software-analysis capability
