@@ -121,6 +121,10 @@ ACT-methodology-maintainer:
         record:
           - ADR-059
           - PRJ-002
+      revalidated:
+        at: 2026-10-12T09:23:19Z
+        outcome: unchanged
+        unchanged-because: ADR-059's Context names the backbone's friction validation, not living-docs, as what refuses a synced copy as a place. The record's definition of the source repository is as it was. So the maintainer's need to develop the methodology where no sync copies over their work stands.
 ACT-operator:
   name: Operator
   status: active

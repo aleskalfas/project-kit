@@ -10,9 +10,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-03T14:01:25Z
+          at: 2026-10-12T09:23:21Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 4 gains how a page anchors a source outside the repository — the source kind, each source captured as one file holding the version read; it says nothing of the links between pages, so the paths the user space's readers take through its pages stay unbroken
+          unchanged-because: living-docs DEC-001 point 1 names the backbone's friction validation as what refuses a synced tree as a place. It says nothing of the links between pages, so the paths the user space's readers take through its pages stay unbroken.
 ---
 
 # The user space's definition
