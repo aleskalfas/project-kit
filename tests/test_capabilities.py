@@ -30,7 +30,7 @@ def _stage_capability_in_source(
     version: str = "0.1.0",
     description: str = "Test capability.",
     requires_backbone: str = ">=0.1.0,<99.0.0",
-    requires_capabilities: list[dict[str, str]] | None = None,
+    requires_capabilities: list[dict[str, Any]] | None = None,
     with_skills: tuple[str, ...] = (),
     with_agents: tuple[str, ...] = (),
     with_decisions: tuple[str, ...] = (),
@@ -52,6 +52,8 @@ def _stage_capability_in_source(
         for req in requires_capabilities:
             lines.append(f"  - name: {req['name']}")
             lines.append(f'    version: "{req["version"]}"')
+            if req.get("optional"):
+                lines.append("    optional: true")
         req_caps_block = "\n" + "\n".join(lines) + "\n"
     (cap_dir / "package.yaml").write_text(
         f"""schema_version: 1
@@ -1449,7 +1451,7 @@ def _install_capability_with_manifest(
     name: str,
     *,
     version: str = "0.1.0",
-    requires_capabilities: list[dict[str, str]] | None = None,
+    requires_capabilities: list[dict[str, Any]] | None = None,
 ) -> None:
     """Stage a capability in source and install it into the target.
 
@@ -1837,6 +1839,235 @@ def test_cli_upgrade_dependency_no_desync_proceeds_cleanly(
     assert installed_ver == "0.5.0"
 
 
+# --- optional dependencies (COR-030) ---
+
+
+OPTIONAL_EVIDENCE = {"name": "evidence", "version": ">=0.2.0,<0.4.0", "optional": True}
+REQUIRED_EVIDENCE = {"name": "evidence", "version": ">=0.2.0,<0.4.0"}
+
+
+def _cli(kit_source: Path, monkeypatch, *args: str):
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    return CliRunner().invoke(main, ["capabilities", *args])
+
+
+def test_read_package_yaml_parses_the_optional_mark(kit_source: Path) -> None:
+    """`optional: true` marks an entry optional; any other value leaves it required."""
+    cap_dir = _stage_capability_in_source(kit_source, "consumer")
+    package = cap_dir / "package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8")
+        + "requires_capabilities:\n"
+        + '  - {name: evidence, version: ">=0.1.0", optional: true}\n'
+        + '  - {name: living-docs, version: ">=0.1.0", optional: "yes"}\n'
+        + '  - {name: software-analysis, version: ">=0.1.0"}\n',
+        encoding="utf-8",
+    )
+    source = caps.find_capability_in_source(kit_source, "consumer")
+    assert source is not None
+    assert [(d.name, d.optional) for d in source.package.requires_capabilities] == [
+        ("evidence", True),
+        ("living-docs", False),
+        ("software-analysis", False),
+    ]
+
+
+def test_package_as_mapping_keeps_the_optional_mark() -> None:
+    """The rendered mapping a hand-built source is validated from keeps the mark."""
+    package = caps.CapabilityPackage(
+        name="consumer",
+        version="0.1.0",
+        description="d",
+        requires_backbone=">=0.1.0",
+        requires_capabilities=(
+            caps.CapabilityDependency("evidence", ">=0.1.0", optional=True),
+            caps.CapabilityDependency("living-docs", ">=0.1.0"),
+        ),
+    )
+    assert caps._package_as_mapping(package)["requires_capabilities"] == [
+        {"name": "evidence", "version": ">=0.1.0", "optional": True},
+        {"name": "living-docs", "version": ">=0.1.0"},
+    ]
+
+
+def test_check_deps_passes_an_absent_optional_dependency(kit_target: Path) -> None:
+    deps = (caps.CapabilityDependency("evidence", ">=0.1.0,<2.0.0", optional=True),)
+    assert caps.check_capability_dependencies(kit_target, deps) == []
+
+
+def test_check_deps_refuses_an_installed_optional_dependency_out_of_range(
+    kit_target: Path, kit_source: Path
+) -> None:
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.1.0")
+    deps = (caps.CapabilityDependency("evidence", ">=0.2.0,<2.0.0", optional=True),)
+    conflicts = caps.check_capability_dependencies(kit_target, deps)
+    assert [(c.dep_name, c.reason, c.installed_version) for c in conflicts] == [
+        ("evidence", "out-of-range", "0.1.0")
+    ]
+
+
+def test_cli_install_passes_an_absent_optional_dependency(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _stage_capability_in_source(kit_source, "consumer", requires_capabilities=[OPTIONAL_EVIDENCE])
+    result = _cli(kit_source, monkeypatch, "install", "consumer")
+    assert result.exit_code == 0, result.output
+    assert caps.is_installed(kit_target, "consumer")
+
+
+def test_cli_install_refuses_an_installed_optional_dependency_out_of_range(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.5.0")
+    _stage_capability_in_source(kit_source, "consumer", requires_capabilities=[OPTIONAL_EVIDENCE])
+    result = _cli(kit_source, monkeypatch, "install", "consumer")
+    assert result.exit_code != 0
+    assert "unsatisfied dependencies" in result.output
+    assert "required but v0.5.0 is installed" in result.output
+    assert not caps.is_installed(kit_target, "consumer")
+
+
+@pytest.mark.parametrize(
+    "entry", [OPTIONAL_EVIDENCE, REQUIRED_EVIDENCE], ids=["optional", "required"]
+)
+def test_cli_install_of_a_dependency_outside_a_dependents_range_needs_force(
+    kit_target: Path, kit_source: Path, monkeypatch, entry: dict[str, Any]
+) -> None:
+    """Installing a capability outside a range an installed capability declares for it
+    warns, naming the dependent and its range, and refuses unless --force (COR-030).
+    A required dependency reaches this state after a forced uninstall."""
+    _install_capability_with_manifest(
+        kit_target, kit_source, "consumer", requires_capabilities=[entry]
+    )
+    _stage_capability_in_source(kit_source, "evidence", version="0.5.0")
+
+    refused = _cli(kit_source, monkeypatch, "install", "evidence")
+    assert refused.exit_code != 0
+    assert "Warning: installing 'evidence' v0.5.0 would desync 1 installed dependent(s)" in (
+        refused.output
+    )
+    assert "'consumer' declares 'evidence' >=0.2.0,<0.4.0 (v0.5.0 is outside this range)" in (
+        refused.output
+    )
+    assert "refusing to install: v0.5.0 would desync installed dependents" in refused.output
+    assert "--force" in refused.output
+    assert not caps.is_installed(kit_target, "evidence")
+
+    forced = _cli(kit_source, monkeypatch, "install", "evidence", "--force")
+    assert forced.exit_code == 0, forced.output
+    assert "Warning (--force): installing 'evidence' v0.5.0 desyncs 1 dependent(s)" in (
+        forced.output
+    )
+    assert "'consumer' declares 'evidence' >=0.2.0,<0.4.0" in forced.output
+    assert caps.get_installed_capability_version(kit_target, "evidence") == "0.5.0"
+
+
+def test_cli_install_of_a_dependency_inside_its_dependents_range_is_clean(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _install_capability_with_manifest(
+        kit_target, kit_source, "consumer", requires_capabilities=[OPTIONAL_EVIDENCE]
+    )
+    _stage_capability_in_source(kit_source, "evidence", version="0.3.0")
+    result = _cli(kit_source, monkeypatch, "install", "evidence")
+    assert result.exit_code == 0, result.output
+    assert "Warning" not in result.output
+    assert caps.is_installed(kit_target, "evidence")
+
+
+def test_find_declared_dependents_includes_an_optional_dependent(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """The upgrade and install gates read every declaring capability, optional ones too;
+    only the uninstall gate filters them out, at its call site."""
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
+    _install_capability_with_manifest(
+        kit_target, kit_source, "consumer", requires_capabilities=[OPTIONAL_EVIDENCE]
+    )
+    assert caps.find_declared_dependents(kit_target, "evidence") == ["consumer"]
+    entry = caps.declared_dependency(kit_target, "consumer", "evidence")
+    assert entry is not None and entry.optional
+
+
+def test_cli_uninstall_is_not_blocked_by_an_optional_dependent(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """An optional dependency never blocks uninstalling its target (COR-030)."""
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
+    _install_capability_with_manifest(
+        kit_target, kit_source, "consumer", requires_capabilities=[OPTIONAL_EVIDENCE]
+    )
+    result = _cli(kit_source, monkeypatch, "uninstall", "evidence")
+    assert result.exit_code == 0, result.output
+    assert "Removed capability 'evidence'" in result.output
+    assert not caps.is_installed(kit_target, "evidence")
+    assert caps.is_installed(kit_target, "consumer")
+
+
+def test_cli_uninstall_names_only_the_required_dependents(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
+    _install_capability_with_manifest(
+        kit_target, kit_source, "consumer", requires_capabilities=[OPTIONAL_EVIDENCE]
+    )
+    _install_capability_with_manifest(
+        kit_target, kit_source, "needs-it", requires_capabilities=[REQUIRED_EVIDENCE]
+    )
+    result = _cli(kit_source, monkeypatch, "uninstall", "evidence")
+    assert result.exit_code != 0
+    assert "1 installed capability(ies) declare a required dependency on it" in result.output
+    assert "- needs-it" in result.output
+    assert "- consumer" not in result.output
+    assert caps.is_installed(kit_target, "evidence")
+
+
+def test_cli_upgrade_dependent_passes_an_absent_optional_dependency(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _install_capability_with_manifest(kit_target, kit_source, "consumer", version="0.1.0")
+    _stage_capability_in_source(
+        kit_source, "consumer", version="0.2.0", requires_capabilities=[OPTIONAL_EVIDENCE]
+    )
+    result = _cli(kit_source, monkeypatch, "upgrade", "consumer")
+    assert result.exit_code == 0, result.output
+    assert caps.get_installed_capability_version(kit_target, "consumer") == "0.2.0"
+
+
+def test_cli_upgrade_dependent_refuses_an_installed_optional_dependency_out_of_range(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.1.0")
+    _install_capability_with_manifest(kit_target, kit_source, "consumer", version="0.1.0")
+    _stage_capability_in_source(
+        kit_source, "consumer", version="0.2.0", requires_capabilities=[OPTIONAL_EVIDENCE]
+    )
+    result = _cli(kit_source, monkeypatch, "upgrade", "consumer")
+    assert result.exit_code != 0
+    assert "unsatisfied dependencies" in result.output
+
+
+def test_cli_upgrade_dependency_past_an_optional_dependents_range_needs_force(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
+    _install_capability_with_manifest(
+        kit_target, kit_source, "consumer", requires_capabilities=[OPTIONAL_EVIDENCE]
+    )
+    _stage_capability_in_source(kit_source, "evidence", version="0.5.0")
+    refused = _cli(kit_source, monkeypatch, "upgrade", "evidence")
+    assert refused.exit_code != 0
+    assert "refusing to upgrade: the new version would desync installed dependents" in (
+        refused.output
+    )
+    assert "'consumer' declares 'evidence' >=0.2.0,<0.4.0" in refused.output
+    forced = _cli(kit_source, monkeypatch, "upgrade", "evidence", "--force")
+    assert forced.exit_code == 0, forced.output
+    assert caps.get_installed_capability_version(kit_target, "evidence") == "0.5.0"
+
+
 # --- detect_incubated_collisions (COR-031 register pre-flight) ---------
 
 
@@ -2002,6 +2233,30 @@ def test_cli_register_refuses_on_unsatisfied_dependency(
     assert result.exit_code != 0
     assert "unsatisfied dependencies" in result.output
     assert not caps.is_installed(kit_target, "homegrown")
+
+
+def test_cli_register_of_a_dependency_outside_a_dependents_range_needs_force(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Register is install's no-copy variant, so it gates the ranges installed
+    capabilities declare for it the same way (COR-030, COR-031 D1)."""
+    _install_capability_with_manifest(
+        kit_target, kit_source, "consumer", requires_capabilities=[OPTIONAL_EVIDENCE]
+    )
+    _stage_capability_in_repo(kit_target, "evidence", version="0.5.0")
+
+    refused = _cli(kit_source, monkeypatch, "register", "evidence")
+    assert refused.exit_code != 0
+    assert "Warning: registering 'evidence' v0.5.0 would desync 1 installed dependent(s)" in (
+        refused.output
+    )
+    assert "'consumer' declares 'evidence' >=0.2.0,<0.4.0" in refused.output
+    assert not caps.is_installed(kit_target, "evidence")
+
+    forced = _cli(kit_source, monkeypatch, "register", "evidence", "--force")
+    assert forced.exit_code == 0, forced.output
+    assert "Warning (--force): registering 'evidence' v0.5.0" in forced.output
+    assert caps.is_installed(kit_target, "evidence")
 
 
 def test_cli_register_refuses_on_backbone_mismatch(

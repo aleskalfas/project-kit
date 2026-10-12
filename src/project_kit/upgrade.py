@@ -793,9 +793,11 @@ def _resolve_compatibility(
 
     Also checks capability dependency requirements (COR-030): for each installed
     capability that declares ``requires_capabilities``, verifies that each
-    declared dependency is installed and its installed version satisfies the
-    range. Uses *installed* versions for both sides (backbone upgrade does not
-    change capability versions). Conflicts are refused with an actionable hint.
+    required dependency is installed and each installed one satisfies its
+    range. Uses the *installed* copies and versions of both sides, as they stand
+    before this upgrade's sync — which refreshes every installed kit-shipped
+    capability from source and re-stamps its version. Conflicts are refused with
+    an actionable hint.
     """
     from project_kit.connections import REQUIRES_BACKBONE_KEY, range_admits, read_package
 
@@ -828,10 +830,12 @@ def _resolve_compatibility(
         )
 
     # Capability-dependency check (COR-030): refuse backbone upgrade when an
-    # installed capability's declared dependency is absent or out of range.
-    # Backbone upgrade uses installed versions for both sides — it does not
-    # change capability versions (sync propagates kit-owned content but does
-    # not bump capability versions; `pkit capabilities upgrade` does that).
+    # installed capability's required dependency is absent, or an installed one
+    # is out of range. It reads the installed copies and versions of both sides,
+    # as they stand before this upgrade's sync. That sync refreshes every installed
+    # kit-shipped capability from source and re-stamps its version, and this check
+    # does not read the versions it installs (#1429 changes which command moves
+    # a capability's version).
     _check_capability_dep_conflicts_for_upgrade(target_root, components)
 
 
@@ -1046,19 +1050,22 @@ def _check_capability_dep_conflicts_for_upgrade(
     """Refuse backbone upgrade when any installed capability has an unsatisfied dependency.
 
     Iterates over every installed capability in the registry, reads its
-    installed ``package.yaml`` (not the source copy — backbone upgrade does
-    not change capability versions, so the installed copy is authoritative),
-    and calls ``capabilities.check_capability_dependencies`` to evaluate each
-    declared ``requires_capabilities`` entry against the installed state.
+    installed ``package.yaml`` (not the source copy), and calls
+    ``capabilities.check_capability_dependencies`` to evaluate each declared
+    ``requires_capabilities`` entry against the installed state, as it stands
+    before this upgrade's sync. That sync refreshes every installed kit-shipped
+    capability from source and re-stamps its version; this check does not read
+    the versions it installs. An optional dependency that is not installed
+    passes.
 
     This is the backbone-wide half of the capability-dependency gate
     (COR-030). The single-capability-upgrade half lives in
     ``upgrade_capability_cmd`` in ``cli.py``.
 
-    Direction: backbone upgrade is not moving any capability version, so
-    any desync found here is pre-existing. We apply the "dependent against
-    out-of-range dependency" disposition (refuse with hint) rather than the
-    "dependency past dependent's range" disposition (warn + force), because
+    Direction: the check reads the state before the sync moves any capability
+    version, so any desync found here is pre-existing. We apply the "dependent
+    against out-of-range dependency" disposition (refuse with hint) rather than
+    the "dependency past dependent's range" disposition (warn + force), because
     the operator can resolve by first upgrading the dependency capability.
     """
     from project_kit import capabilities as caps

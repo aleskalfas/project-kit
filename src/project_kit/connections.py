@@ -105,6 +105,7 @@ from ruamel.yaml import YAML
 
 from project_kit import backbone_schemas as bs
 from project_kit import docs_roots, rule_sets, validators
+from project_kit.capabilities import is_optional_dependency
 from project_kit.manifest import read_backbone_manifest, read_component_manifest
 from project_kit.package_validate import (
     POINT_SEPARATOR,
@@ -1323,7 +1324,9 @@ def _range_findings(
 ) -> tuple[list[Finding], dict[Relation, int]]:
     """`requires_backbone` against the installed backbone; `requires_capabilities`
     ranges against installed versions (COR-030): the dependent carries the error,
-    the dependency is warned with each dependent named. With how many were checked."""
+    the dependency is warned with each dependent named. An optional dependency that
+    is not installed passes; an installed one meets its range as a required one
+    does. With how many were checked."""
     findings: list[Finding] = []
     checked = {Relation.BACKBONE_RANGE: 0, Relation.CAPABILITY_RANGE: 0}
     capabilities = {i.name: i for i in declarations.installed if i.kind == CAPABILITY}
@@ -1359,6 +1362,8 @@ def _range_findings(
             pointer = f"/requires_capabilities/{index}"
             target = capabilities.get(name)
             if target is None:
+                if is_optional_dependency(dependency):
+                    continue  # the dependent works without it (COR-030)
                 findings.append(
                     Finding(
                         component.file,

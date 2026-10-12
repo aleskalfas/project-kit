@@ -397,6 +397,15 @@ def test_an_address_that_is_not_words_is_refused(
             "/requires_capabilities",
             "not of type 'array'",
         ),
+        (
+            {
+                "requires_capabilities": [
+                    {"name": "evidence", "version": ">=0.1", "optional": "yes"}
+                ]
+            },
+            "/requires_capabilities/0/optional",
+            "not of type 'boolean'",
+        ),
         ({"aliases": ["Bad Name"]}, "/aliases/0", "does not match"),
         ({"footprint": [".claude", ".claude"]}, "/footprint", "non-unique"),
         (
@@ -416,6 +425,17 @@ def test_wrong_type_is_an_error(
     errors = _messages(_validate(_package(**overrides), schema, component_dir), pv.Severity.ERROR)
     assert path in errors, errors
     assert fragment in errors[path]
+
+
+def test_a_dependency_may_be_marked_optional(schema: dict[str, Any], component_dir: Path) -> None:
+    """`optional: true` on a `requires_capabilities` entry is part of the schema (COR-030)."""
+    raw = _package(
+        requires_capabilities=[
+            {"name": "evidence", "version": ">=0.1", "optional": True},
+            {"name": "living-docs", "version": ">=0.1", "optional": False},
+        ]
+    )
+    assert _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR) == {}
 
 
 def test_a_file_that_is_not_a_mapping_is_one_root_error(

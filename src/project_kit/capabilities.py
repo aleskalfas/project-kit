@@ -13,9 +13,12 @@ Click prompts are available.
 Capability dependencies (COR-030): a capability may declare
 ``requires_capabilities`` in its ``package.yaml`` — an optional list of
 ``{name, version}`` entries, each expressing a semver range that a
-dependency capability's installed version must satisfy. The install
-pre-flight, both upgrade entry points, and the uninstall gate enforce
-this contract. See ``check_capability_dependencies``.
+dependency capability's installed version must satisfy. An entry marked
+``optional: true`` need not be installed, but an installed one must satisfy
+its range. The install pre-flight, both upgrade entry points, and the
+uninstall gate enforce this contract; an optional dependency never blocks
+uninstalling the capability it names. See ``check_capability_dependencies``
+and ``find_declared_dependents``.
 
 Mandatory process connections (COR-053 point 6): an entry of a capability's
 generated ``depends-on`` list may carry a mandatory mark — its upstream process
@@ -33,9 +36,10 @@ from __future__ import annotations
 import datetime as _dt
 import re
 import shutil
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path, PurePath
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import click
 from ruamel.yaml import YAML
@@ -157,12 +161,27 @@ _COMPONENT_AREAS: dict[ComponentKind, str] = {"adapter": "adapters", "capability
 _CAPABILITY_PROJECT_SUBTREE = "project"
 
 
+# The key that marks a `requires_capabilities` entry optional (COR-030).
+OPTIONAL_DEPENDENCY_KEY = "optional"
+
+
+def is_optional_dependency(entry: Mapping[str, Any]) -> bool:
+    """Whether a raw `requires_capabilities` entry is an optional dependency (COR-030).
+
+    Only `optional: true` marks one; any other value, or none, reads as a
+    required dependency, the stricter reading. The lifecycle gates and
+    validation read the mark through this one predicate.
+    """
+    return entry.get(OPTIONAL_DEPENDENCY_KEY) is True
+
+
 @dataclass(frozen=True)
 class CapabilityDependency:
     """One entry from the ``requires_capabilities`` list in a ``package.yaml``."""
 
     name: str  # capability name (e.g. "evidence")
     version: str  # semver range string (e.g. ">=0.2.0,<1.0.0")
+    optional: bool = False  # `optional: true` — need not be installed (COR-030)
 
 
 @dataclass(frozen=True)
@@ -508,7 +527,9 @@ def check_capability_dependencies(
     auto-installs.
 
     For each ``CapabilityDependency`` in ``requires_capabilities``:
-    - If the dependency is not installed → conflict with reason "absent".
+    - If a required dependency is not installed → conflict with reason
+      "absent". An optional one that is not installed passes: the dependent
+      works without it (COR-030).
     - If the dependency is installed but its version does not satisfy the
       declared semver range → conflict with reason "out-of-range".
     - If the range string is invalid (unparseable) → silently skip (the
@@ -531,6 +552,8 @@ def check_capability_dependencies(
     conflicts: list[CapabilityDependencyConflict] = []
     for dep in requires_capabilities:
         if not is_installed(target_root, dep.name):
+            if dep.optional:
+                continue
             conflicts.append(
                 CapabilityDependencyConflict(
                     dep_name=dep.name,
@@ -565,11 +588,13 @@ def check_capability_dependencies(
 def find_declared_dependents(target_root: Path, dep_name: str) -> list[str]:
     """Find all installed capabilities that declare *dep_name* in their requires_capabilities.
 
-    Used by the uninstall gate (COR-030) to refuse removal when another
-    installed capability depends on the target. Walks the backbone
-    manifest's component registry, filters to capabilities, and reads
-    each one's per-component manifest + installed package.yaml to
-    extract ``requires_capabilities``.
+    Every declaring capability is returned, whether its entry is required or
+    optional: the install and upgrade gates judge each declared range
+    (COR-030). The uninstall gate keeps only the dependents that declare the
+    target required, at its call site, since an optional dependency never
+    blocks uninstalling its target. Walks the backbone manifest's component
+    registry, filters to capabilities, and reads each one's installed
+    package.yaml to extract ``requires_capabilities``.
 
     Returns a sorted list of dependent capability names (may be empty).
     """
@@ -597,6 +622,21 @@ def find_declared_dependents(target_root: Path, dep_name: str) -> list[str]:
 
     dependents.sort()
     return dependents
+
+
+def declared_dependency(
+    target_root: Path, dependent: str, dep_name: str
+) -> CapabilityDependency | None:
+    """The entry the installed capability *dependent* declares for *dep_name* in its
+    ``requires_capabilities`` (COR-030), or None when it declares none or its
+    package.yaml does not read — the one reader of a found dependent's entry."""
+    pkg_yaml_path = target_root / ".pkit" / "capabilities" / dependent / "package.yaml"
+    if not pkg_yaml_path.is_file():
+        return None
+    pkg = _read_package_yaml(pkg_yaml_path)
+    if pkg is None:
+        return None
+    return next((dep for dep in pkg.requires_capabilities if dep.name == dep_name), None)
 
 
 @dataclass(frozen=True)
@@ -1060,7 +1100,9 @@ def _package_as_mapping(package: CapabilityPackage) -> dict[str, Any]:
         raw["requires_backbone"] = package.requires_backbone
     if package.requires_capabilities:
         raw["requires_capabilities"] = [
-            {"name": dep.name, "version": dep.version} for dep in package.requires_capabilities
+            {"name": dep.name, "version": dep.version}
+            | ({OPTIONAL_DEPENDENCY_KEY: True} if dep.optional else {})
+            for dep in package.requires_capabilities
         ]
     return raw
 
@@ -1560,7 +1602,8 @@ def _parse_requires_capabilities(
 ) -> tuple[CapabilityDependency, ...]:
     """Parse the ``requires_capabilities`` list from a package.yaml value.
 
-    Accepts a list of ``{name: str, version: str}`` dicts. Silently
+    Accepts a list of ``{name: str, version: str}`` dicts, each optionally
+    marked ``optional: true`` (``is_optional_dependency``). Silently
     skips entries that are malformed — a capability with a broken dep
     declaration is still usable; the install gate will simply not enforce
     the malformed entry (a future schema validation pass can surface it).
@@ -1580,7 +1623,13 @@ def _parse_requires_capabilities(
             continue
         if not dep_name or not dep_version:
             continue
-        out.append(CapabilityDependency(name=dep_name, version=dep_version))
+        out.append(
+            CapabilityDependency(
+                name=dep_name,
+                version=dep_version,
+                optional=is_optional_dependency(cast("Mapping[str, Any]", entry)),
+            )
+        )
     return tuple(out)
 
 
