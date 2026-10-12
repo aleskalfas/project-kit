@@ -1511,7 +1511,7 @@ def test_resolution_error_not_code_names_the_key(rpr) -> None:
     assert "transient" not in msg
 
 
-# ---- native GitHub review delivery (DEC-028, amended) ----------------
+# ---- native GitHub review delivery (DEC-028, "Invocation command (local path)") ----
 
 import json as _json  # noqa: E402
 

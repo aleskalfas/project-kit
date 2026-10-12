@@ -14,8 +14,9 @@ pkit:
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
       source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-03T14:41:09Z
-      outcome: updated
+      at: 2026-10-11T20:51:31Z
+      outcome: unchanged
+      unchanged-because: PRJ-004 changed only its citation of the tool update, which now runs or prints a uv command under ADR-063 where it printed one under ADR-044; this page cites PRJ-004 for the git-URL install, the release tags and the notes-only releases, none of which changed
 ---
 
 # Release flow — changesets + the release step

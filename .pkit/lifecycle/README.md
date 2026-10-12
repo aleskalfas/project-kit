@@ -29,8 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-12T20:18:20Z
-      outcome: updated
+      at: 2026-10-12T20:31:28Z
+      outcome: unchanged
+      unchanged-because: upgrade.py changed only in comments and docstrings, which now cite ADR-063 and ADR-064 where they cited ADR-044 and the amendment removed from ADR-049; no behaviour changed, so this page's upgrade flow, its refusal of an older pkit and its ADR-049 citation for a pin never moved down still hold
 ---
 
 # Lifecycle

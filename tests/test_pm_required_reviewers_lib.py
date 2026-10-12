@@ -361,7 +361,7 @@ def test_collection_gated_before_closing_issues(rr, rc) -> None:
     assert res.error.kind == rr.ERROR_COLLECTION
 
 
-# ---- type-axis resolution (DEC-032 amendment) -------------------------
+# ---- type-axis resolution (DEC-032 D1) --------------------------------
 
 
 def _type_collection(rc, *, values=("feature",), reviewer="code-reviewer"):
@@ -451,7 +451,7 @@ def test_type_and_workstream_both_read(rr, rc) -> None:
     assert only_type.required_local == ("reviewer",)
 
 
-# ---- wildcard / axis-present predicate (DEC-032 amendment) -------------
+# ---- wildcard / axis-present predicate (DEC-032 D1) --------------------
 
 
 def _wildcard_type_collection(rc, *, reviewer="code-reviewer"):
@@ -489,7 +489,7 @@ def test_wildcard_requires_axis_present(rr, rc) -> None:
     assert res.required_local == ("reviewer",)
 
 
-# ---- diff-property floor (DEC-032 amendment) --------------------------
+# ---- diff-property floor (DEC-032 D1) ---------------------------------
 
 
 def _floor_collection(rc, *, reviewer="code-reviewer"):

@@ -115,7 +115,7 @@ def pr_changed_files(
     *,
     gh_run: GhRunFn,
 ) -> list[str] | _Unresolvable:
-    """The PR's changed-file paths, via GitHub's paginated files API (DEC-032 amendment).
+    """The PR's changed-file paths, via GitHub's paginated files API (DEC-032 D1).
 
     Feeds the resolver's diff-property floor (`touches-code`), so the SOURCE of
     the file set must be complete. Two sources were rejected for missing part

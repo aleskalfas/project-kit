@@ -25,7 +25,7 @@ seam (`reviewers_for_floors`). This module adds the layer above it the two
 consumers share:
 
   * fetching the PR's closing-issue classifications — keyed on the
-    `workstream` and `type` axes (DEC-032 amendment) — and, when a
+    `workstream` and `type` axes (DEC-032 D1) — and, when a
     floor-carrying contribution is installed, the PR's changed files (the
     `gh` round-trips),
   * the fail-closed distinction between "PR closes no classified issue"
@@ -132,9 +132,9 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
 # Classification axes the required-reviewer resolution keys contributed
 # match-predicates on (DEC-012), read off a closing issue's `<axis>:<value>`
 # labels via the `axis_labels` seam. Both are `mutually_exclusive`, so each is
-# single-valued per issue (the multi-value guard below is per-axis). The
-# DEC-032 amendment added `type` alongside `workstream`; this is the single
-# place to widen when a further mutually-exclusive axis is keyed. It mirrors
+# single-valued per issue (the multi-value guard below is per-axis). DEC-032
+# D1 keys on `type` alongside `workstream`; this is the single place to widen
+# when a further mutually-exclusive axis is keyed. It mirrors
 # `review_contributions.SUPPORTED_MATCH_AXES` — the collector validates which
 # axes a rule may name; this reads those same axes off the issue.
 CLASSIFICATION_AXES = ("workstream", "type")
@@ -154,7 +154,7 @@ ERROR_CLOSING_ISSUES = "closing-issues-unresolvable"
 # malformed JSON) while a floor-carrying contribution is installed. A floor
 # reviewer it might require cannot be dropped, so the consumer fails closed.
 # Only reached when a floor-carrying rule exists — floor-free collections
-# never fetch the diff (DEC-032 amendment).
+# never fetch the diff (DEC-032 D1).
 ERROR_CHANGED_FILES = "changed-files-unresolvable"
 # The PR changes more files than GitHub will list, so its changed-file set
 # cannot be read in full. The same unknown as ERROR_CHANGED_FILES, kept apart
@@ -372,7 +372,7 @@ ClosingIssueNumbersFn = Callable[[int], "list[int] | _Unresolvable"]
 IssueLabelsFn = Callable[[int], "list | None"]
 # Type of the injected changed-files resolver. Returns the PR's changed-file
 # paths, or an `_Unresolvable` when the diff could not be determined. Only
-# called when a floor-carrying contribution is installed (DEC-032 amendment).
+# called when a floor-carrying contribution is installed (DEC-032 D1).
 ChangedFilesFn = Callable[[int], "list[str] | _Unresolvable"]
 
 
@@ -413,7 +413,7 @@ def resolve_required_local_reviewers(
     #1178): the changed paths it matches are dropped before any floor reads
     the diff. Default: the shipped list, as when the config sets none.
 
-    The contributed set is the UNION of two match paths (DEC-032 amendment):
+    The contributed set is the UNION of two match paths (DEC-032 D1):
 
       * **classification** — rules whose match-predicate holds for the
         classification (`workstream` / `type` axes) of any closing issue.
@@ -564,7 +564,7 @@ def _floor_rules(
     changed_files: ChangedFilesFn,
     not_code: NotCode = DEFAULT_NOT_CODE,
 ) -> tuple[ContributionRule, ...] | _Unresolvable:
-    """Floor-carrying rules the PR's diff satisfies (DEC-032 amendment).
+    """Floor-carrying rules the PR's diff satisfies (DEC-032 D1).
 
     Short-circuits when no installed contribution carries a floor — a
     floor-free project never fetches the diff (no extra `gh` round-trip, and no
@@ -588,7 +588,7 @@ def satisfied_floors(
     changed_paths: list[str] | tuple[str, ...],
     not_code: NotCode = DEFAULT_NOT_CODE,
 ) -> set[str]:
-    """The set of floor kinds a set of changed paths satisfies (DEC-032 amendment).
+    """The set of floor kinds a set of changed paths satisfies (DEC-032 D1).
 
     Maps the raw diff to the abstract floor-kind vocabulary the collection
     matches on, keeping the collection ignorant of *how* a diff property is
@@ -762,8 +762,9 @@ def diff_touches_code(changed_paths: list[str]) -> bool:
     mixing docs with any code file touches code (the presence of one code file
     is enough — a docs-only PR is the sole non-touching case). An empty diff (no
     changed files) does not touch code. The suffix sets are a small, central
-    allow-list, easy to adjust as the panel's mandate sharpens (DEC-032
-    amendment names this the genuine design point).
+    allow-list, easy to adjust as the panel's mandate sharpens (DEC-032 D1
+    defines the floor as any non-docs source change and leaves which files
+    are docs to this list).
 
     This predicate reads the paths it is given. The adopter's not-code list
     (`NotCode`, #1178) is applied before it, by `satisfied_floors`, so a path

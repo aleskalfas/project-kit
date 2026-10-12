@@ -114,19 +114,19 @@ CONTRIBUTIONS_FILENAME = "review-contributions.yaml"
 
 # Classification axes a `match` predicate may key on (per DEC-012). Both are
 # `mutually_exclusive` in `classification.yaml`, so the single-value-per-axis
-# read (and the resolver's per-axis multi-value guard) generalise cleanly. The
-# DEC-032 amendment (2026-08-20) added `type` alongside `workstream`; this tuple
-# is the single place to widen when a further mutually-exclusive axis is keyed.
+# read (and the resolver's per-axis multi-value guard) generalise cleanly.
+# DEC-032 D1 keys on `type` alongside `workstream`; this tuple is the single
+# place to widen when a further mutually-exclusive axis is keyed.
 SUPPORTED_MATCH_AXES = ("workstream", "type")
 
 # The wildcard / axis-present token a `match.<axis>` value may carry (DEC-032
-# amendment). A rule matching EVERY value of an axis writes `<axis>: "*"` rather
+# D1). A rule matching EVERY value of an axis writes `<axis>: "*"` rather
 # than enumerating the fixed value set — forward-safe if a value is added later
 # (enumerating would silently drop the rule for the new value). A `"*"` scalar
 # parses to the `MATCH_ANY` sentinel; `"*"` inside a list is a literal value.
 WILDCARD_TOKEN = "*"
 
-# Diff-property floor kinds a rule may carry (DEC-032 amendment). A floor keys on
+# Diff-property floor kinds a rule may carry (DEC-032 D1). A floor keys on
 # the PR's *diff*, not a closing issue's classification, so it backstops D1's
 # classification gate-escape for a floor-carrying reviewer. Only one kind exists
 # now — `touches-code` (the diff touches non-documentation source). The tuple is
@@ -289,7 +289,7 @@ class ContributionCollection:
         )
 
     def reviewers_for_floors(self, satisfied_floors: Iterable[str]) -> tuple[ContributionRule, ...]:
-        """Rules whose diff-property floor is in `satisfied_floors` (DEC-032 amendment).
+        """Rules whose diff-property floor is in `satisfied_floors` (DEC-032 D1).
 
         The diff-keyed counterpart to `reviewers_for`. `satisfied_floors` is the
         set of floor kinds the PR's *diff* satisfies (the resolver evaluates the

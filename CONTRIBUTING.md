@@ -18,9 +18,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-12T19:31:29Z
+      at: 2026-10-12T20:31:25Z
       outcome: unchanged
-      unchanged-because: ADR-055 now states what living-docs DEC-001 point 1 decides. Its Context says no sync copies into project-kit's .pkit/, point 3 says project-kit may declare its .pkit/ READMEs as places and that being a place grants no write authority, point 3 no longer says the core owns the shipped templates, point 2 drops its revision wording, and its Implications keep one open question for onboarding. This guide cites ADR-055 only for point 5, on the friction gate, the merge queue, the whole-repository report and the escape hatch, which the change leaves as it was.
+      unchanged-because: router.py changed only in two docstrings, which now cite ADR-063 for the tool staleness probe and ADR-064 for the default pin; this page describes the routes, the degrade when a pin cannot be fetched and the escape hatches, none of which changed
 ---
 
 # Contributing to project-kit
@@ -106,7 +106,7 @@ Prefer not to install globally? `uv run pkit …` inside a source checkout alway
 
 project-kit's methodology is captured in two layers.
 
-**The math — `.pkit/decisions/README.md`.** The spec of the decision-record system: schema, statuses, namespaces, the no-shared-files invariant, what's structural and what's contractual. The spec describes the framework, not any particular decision in it. This file is synced into every adopter, including project-kit's own tree (project-kit self-hosts), so it speaks in adopter voice.
+**The math — `.pkit/decisions/README.md`.** The spec of the decision-record system: schema, statuses, namespaces, the no-shared-files invariant, what's structural and what's contractual. The spec describes the framework, not any particular decision in it. This file is synced into every adopter, so it speaks in adopter voice.
 
 **The physics — `.pkit/decisions/core/COR-NNN-*.md`.** The kit's actual architectural decisions. Each record is a substantive choice the kit has made among viable alternatives, about how it works.
 
