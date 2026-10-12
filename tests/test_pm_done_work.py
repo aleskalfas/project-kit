@@ -161,7 +161,9 @@ def test_gate_refuses_approved_comment_from_author(dw, monkeypatch) -> None:
     assert result.passed is False
 
 
-@pytest.mark.parametrize("author_login", ["", None], ids=["empty-login", "null-author"])
+@pytest.mark.parametrize(
+    "author_login", ["", None, "app/"], ids=["empty-login", "null-author", "gh-null-author"]
+)
 def test_gate_counts_no_approved_comment_when_the_author_is_unread(
     dw, monkeypatch, author_login
 ) -> None:

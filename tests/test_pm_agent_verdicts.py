@@ -734,7 +734,7 @@ def test_gate_membership_is_the_gates(av) -> None:
     assert not remote_ok("author")
 
 
-@pytest.mark.parametrize("author_login", ["", "   ", None])
+@pytest.mark.parametrize("author_login", ["", "   ", "app/", None])
 def test_gate_membership_counts_no_one_when_the_author_is_unread(av, author_login) -> None:
     """An author that could not be read excludes nobody, so every reviewer
     would count as independent of it: the gate counts no one, on either path,
@@ -763,6 +763,9 @@ def test_gate_membership_counts_no_one_when_the_author_is_unread(av, author_logi
         {"author": {"login": 42}},
         {"author": {"login": ""}},
         {"author": {"login": "  "}},
+        # How `gh` writes an author GitHub returns as null: an app with no login.
+        {"author": {"is_bot": True, "login": "app/"}},
+        {"author": {"is_bot": True, "login": "app/ "}},
         None,
         [],
     ],
@@ -773,3 +776,6 @@ def test_pr_author_is_empty_when_it_cannot_be_read(av, pr_view) -> None:
 
 def test_pr_author_reads_the_login_as_given(av) -> None:
     assert av.pr_author({"author": {"login": "octocat", "name": "Octo Cat"}}) == "octocat"
+    # An app's login is read as `gh` writes it, prefix and all, as before.
+    app = {"author": {"is_bot": True, "login": "app/dependabot"}}
+    assert av.pr_author(app) == "app/dependabot"

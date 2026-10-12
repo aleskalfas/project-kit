@@ -2495,7 +2495,7 @@ def _author_unread_refusal(pr_number: int | None) -> str:
         [
             f"[refused] agent-mode approval gate cannot be resolved for PR "
             f"#{pr_number} — the PR's author could not be read.",
-            "            → `gh pr view` returned no author login.",
+            "            → `gh pr view` named no author: no login, a blank one, or `app/` alone.",
             "            A remote verdict counts only from a reviewer who is not "
             "the PR's author (DEC-028); with no author read, the gate cannot "
             "tell a reviewer from the author, so it counts no verdict as an "

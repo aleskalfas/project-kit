@@ -655,8 +655,14 @@ def test_fail_closed_commit_missing_timestamp_fields_refuses(dw, rc, monkeypatch
 
 @pytest.mark.parametrize(
     "pr_view",
-    [{"author": {"login": ""}}, {"author": None}, {"author": {}}],
-    ids=["empty-login", "null-author", "no-login"],
+    [
+        {"author": {"login": ""}},
+        {"author": None},
+        {"author": {}},
+        # How `gh` writes an author GitHub returns as null.
+        {"author": {"is_bot": True, "login": "app/"}},
+    ],
+    ids=["empty-login", "null-author", "no-login", "gh-null-author"],
 )
 def test_fail_closed_unread_author_counts_no_verdict(dw, rc, monkeypatch, pr_view) -> None:
     """With the PR's author unread, no reviewer is known to be someone else:
@@ -678,7 +684,7 @@ def test_fail_closed_unread_author_counts_no_verdict(dw, rc, monkeypatch, pr_vie
     assert result.refusal_message.splitlines()[:2] == [
         "[refused] agent-mode approval gate cannot be resolved for PR #99 — the PR's author "
         "could not be read.",
-        "            → `gh pr view` returned no author login.",
+        "            → `gh pr view` named no author: no login, a blank one, or `app/` alone.",
     ]
     assert "counts no verdict as an approval" in result.refusal_message
 

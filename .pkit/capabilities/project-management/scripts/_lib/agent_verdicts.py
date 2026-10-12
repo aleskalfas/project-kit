@@ -429,15 +429,28 @@ def gate_candidates(
     ]
 
 
+#: How `gh` prefixes the login of a PR author that has no user id (an app).
+_APP_PREFIX = "app/"
+
+
 def pr_author(pr_view: object) -> str:
     """The login of the PR's author in a `gh pr view --json author` answer, or
     "" when it cannot be read: no `author`, one that is not an object, or a
-    login that is missing, not a string, or blank. Each consumer reads the
-    author here, so none takes an author it could not read for a login no
-    reviewer has (#1485)."""
+    login that is missing, not a string, or blank — `app/` with nothing after
+    it included, which is how `gh` writes an author GitHub returns as null
+    (an author with no user id is written as an app, `app/<login>`). Each
+    consumer that judges whose verdicts count — the merge gate and
+    land-work's findings step — reads the author here, so none takes an
+    author it could not read for a login no reviewer has (#1485). A login it
+    can read is returned as `gh` wrote it."""
     author = pr_view.get("author") if isinstance(pr_view, dict) else None
     login = author.get("login") if isinstance(author, dict) else None
-    return login if isinstance(login, str) and login.strip() else ""
+    return login if _names_an_author(login) else ""
+
+
+def _names_an_author(login: object) -> bool:
+    """Whether `login` names someone: a string with a login after any `app/`."""
+    return isinstance(login, str) and bool(login.removeprefix(_APP_PREFIX).strip())
 
 
 def gate_membership(
@@ -455,13 +468,14 @@ def gate_membership(
     and land-work's hold on `[person]` findings agree on whose verdicts count.
 
     An author that could not be read — `author_login` empty, as `pr_author`
-    returns it — leaves no reviewer known to be someone else, so both
-    predicates accept nobody and no verdict counts on either path. Excluding
+    returns it, or one `pr_author` would not return — leaves no reviewer
+    known to be someone else, so both predicates accept nobody and no verdict
+    counts on either path. Excluding
     an empty login would exclude nobody, and every reviewer would count as
     independent of an author nobody read (#1485): the gate fails closed
     instead (DEC-032 D5). The callers say why to whoever runs them.
     """
-    if not isinstance(author_login, str) or not author_login.strip():
+    if not _names_an_author(author_login):
         return _nobody, _nobody
     remote = frozenset(remote_baseline)
     local = frozenset(required_local)

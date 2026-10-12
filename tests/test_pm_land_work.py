@@ -2206,7 +2206,11 @@ def test_findings_that_cannot_be_read_stop_before_the_list_is_written(world, cap
     assert run.github.merges == []
 
 
-@pytest.mark.parametrize("author", [None, {"login": ""}], ids=["null-author", "empty-login"])
+@pytest.mark.parametrize(
+    "author",
+    [None, {"login": ""}, {"is_bot": True, "login": "app/"}],
+    ids=["null-author", "empty-login", "gh-null-author"],
+)
 def test_a_pr_whose_author_cannot_be_read_stops_before_its_findings(world, capsys, author) -> None:
     """With no author read, whose verdicts count cannot be told, so a `[person]`
     finding is neither shown as the gate's nor passed over: the run stops before
