@@ -1,0 +1,7 @@
+component: living-docs
+kind: none
+body: >
+  Internal. The README is revalidated unchanged against COR-051, refined so
+  that only a required capability dependency admits rule-set inheritance
+  across capabilities. Only the README's friction block changes, and nothing
+  you run or read changes.

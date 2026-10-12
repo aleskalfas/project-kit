@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-12T20:31:30Z
+      at: 2026-10-12T21:25:25Z
       outcome: unchanged
-      unchanged-because: The CLI reference now cites ADR-063 and ADR-064 for the upgrade's tool update and default pin, and rewrites two paragraphs of its upgrade section to match; its role as the pkit command surface and its place do not change, so this map holds
+      unchanged-because: The lifecycle, CLI and schemas references gain the optional capability dependency, the install gate on the ranges installed capabilities declare and its --force. This map names each by its role and links it, and no role or place changes, so it holds.
 ---
 
 # project-kit

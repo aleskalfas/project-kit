@@ -13,9 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
     revalidated:
-      at: 2026-10-12T20:32:06Z
+      at: 2026-10-12T21:25:26Z
       outcome: unchanged
-      unchanged-because: This change restates project-management DEC-028's and DEC-032's refinements as fact and corrects the constraint DEC-028's self-approval degrade names. DEC-002 and review-contributions.yaml now cite DEC-032 D1 in place of its amendment, and the panel's rules in that file are unchanged. The panel's activation, verdict grammar, verdict marker and finding tags are as this page states them, and it already cites DEC-032 D1.
+      unchanged-because: COR-030's refinement adds an optional dependency, which need not be installed and never blocks an uninstall, and gates installing a dependency outside a range an installed dependent declares. This page names software-engineering's dependency on project-management, which carries no optional mark. So it stays required, and the lifecycle gates install, upgrade and uninstall on it as the page says.
 ---
 
 # software-engineering capability

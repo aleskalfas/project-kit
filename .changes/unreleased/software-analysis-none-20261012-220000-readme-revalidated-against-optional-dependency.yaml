@@ -1,0 +1,6 @@
+component: software-analysis
+kind: none
+body: >
+  Internal. The README is revalidated unchanged against COR-052, refined to
+  tell a required capability dependency from an optional one. Only the
+  README's friction block changes, and nothing you run or read changes.
