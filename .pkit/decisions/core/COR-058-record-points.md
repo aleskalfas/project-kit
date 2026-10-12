@@ -1,7 +1,7 @@
 ---
 id: COR-058
 title: A decision record's points keep their ids for good
-status: proposed
+status: accepted
 date: 2026-10-12
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
