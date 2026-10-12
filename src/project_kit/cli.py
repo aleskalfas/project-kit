@@ -1811,6 +1811,9 @@ def friction_artefacts_command(at: str | None, as_json: bool) -> None:
     document = validators.as_one_run(
         lambda: friction_discovery.artefacts_document(target_root, tree)
     )
+    settings = friction_discovery.read_friction_settings(target_root, tree)
+    for warning in friction_discovery.refused_type_warnings(settings):
+        click.echo(warning, err=True)
     if as_json:
         click.echo(friction_discovery.render_artefacts_json(document), nl=False)
     else:

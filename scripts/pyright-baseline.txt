@@ -40,7 +40,7 @@ src/project_kit/command_runner.py reportUnknownArgumentType 2
 src/project_kit/command_runner.py reportUnknownMemberType 2
 src/project_kit/config_validate.py reportAttributeAccessIssue 2
 src/project_kit/config_validate.py reportUnknownArgumentType 8
-src/project_kit/config_validate.py reportUnknownMemberType 8
+src/project_kit/config_validate.py reportUnknownMemberType 7
 src/project_kit/config_validate.py reportUnknownVariableType 11
 src/project_kit/connections.py reportPrivateUsage 2
 src/project_kit/connections.py reportUnknownArgumentType 1
