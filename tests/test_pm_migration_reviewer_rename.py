@@ -551,7 +551,8 @@ def test_project_namespace_reviewer_keeps_its_registration(tmp_path, form, deplo
     """An adopter's own `reviewer` agent source under .pkit/agents/project/
     owns the registration — undeployed (pm-reviewer.md present, reviewer.md
     absent) or deployed (project wins the name collision, so even a marker copy
-    is the adopter's). Config and files are left alone (DEC-028's amendment)."""
+    is the adopter's). Config and files are left alone (DEC-028, "Two paths,
+    two registration lists")."""
     cap = _install(tmp_path, deployed=deployed, new_deployed=True, project_agent=form)
     proc = _run(tmp_path)
     assert proc.returncode == 0, proc.stderr

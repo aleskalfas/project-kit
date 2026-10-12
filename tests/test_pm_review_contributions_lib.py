@@ -244,7 +244,7 @@ def test_parse_rule_unsupported_axis(rc) -> None:
 
 
 def test_parse_type_axis_rule(rc) -> None:
-    # `type` is now a keyable axis (DEC-032 amendment).
+    # `type` is a keyable axis (DEC-032 D1).
     data = {
         "contributions": [
             {"match": {"type": "feature"}, "reviewer": "code-reviewer"},
