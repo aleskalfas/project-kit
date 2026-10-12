@@ -15,11 +15,11 @@ pkit:
         - src/project_kit/refs.py
         - .pkit/adapters/claude-code/merge-claude-md.sh
         - .pkit/adapters/claude-code/merge-settings.sh
-      record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049]
+      record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-11T21:42:05Z
+      at: 2026-10-12T21:33:12Z
       outcome: unchanged
-      unchanged-because: This change makes pkit upgrade install a newer tool only when the running pkit is the uv-installed tool, and stop before it pins when the hand-over to the new tool fails. This page says only that pkit upgrade pulls new versions and runs migrations, and gives the uv tool install command, which both still hold.
+      unchanged-because: "upgrade.py changed only in comments and docstrings: the backbone-wide upgrade's dependency check passes an absent optional dependency, and reads capability versions from before the sync that moves them. This page says pkit upgrade pulls new versions, runs the migrations and pins the project, none of which changed, so it holds."
 ---
 
 # project-kit
@@ -91,7 +91,7 @@ Think of pkit as a **package manager for your project's methodology**. Four idea
 1. **The tool vs. the install.** `pkit` (the CLI) manages `.pkit/` (the methodology in your repo) — exactly like a package manager and the packages it installs.
 2. **Capabilities are packages.** A small always-there **backbone**, plus **opt-in capabilities** — disciplines you install only if you want them (issue-tracking, code-review, citations). Add what you need, ignore the rest.
 3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched, apart from the two merges above). That's *why* updates can't conflict, and why you keep everything you write.
-4. **Versioned, upgrades cleanly.** `pkit upgrade` pulls new versions and runs any migrations automatically — like upgrading a dependency; a project can even pin itself to a fixed version if you want.
+4. **Versioned, upgrades cleanly.** `pkit upgrade` pulls new versions and runs any migrations automatically — like upgrading a dependency — then pins the project to the version it reached, so the project keeps that version when the installed pkit moves on (`--no-pin` skips the pin).
 
 The shape of `.pkit/`:
 

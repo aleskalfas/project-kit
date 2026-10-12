@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import os
 import sys
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 
 import pytest
@@ -18,6 +18,7 @@ from tests.adopter_repo import (
     Prepare,
     build_adopter_repo,
     prepared,
+    refusing_global_config,
     stub_adapter_primitives,
 )
 
@@ -44,14 +45,30 @@ def outside_any_session(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(session_guard.CLAUDE_CODE_ANCHOR, raising=False)
 
 
+@pytest.fixture(scope="session", autouse=True)
+def signing_refused(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+    """Every git process of the session reads a global configuration that signs
+    every commit with a program that refuses (`refusing_global_config`, #1484): a
+    commit in a repository that has not turned signing off fails at once, on every
+    machine, and no test reaches the developer's signing agent. A test that sets
+    `GIT_CONFIG_GLOBAL` itself, or runs git with an environment of its own, steps
+    outside it."""
+    config = refusing_global_config(tmp_path_factory.mktemp("signing-refused"), os.environ)
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(config))
+        yield
+
+
 @pytest.fixture(scope="session")
-def adopter_templates(tmp_path_factory: pytest.TempPathFactory) -> AdopterTemplates:
+def adopter_templates(
+    tmp_path_factory: pytest.TempPathFactory, signing_refused: None
+) -> AdopterTemplates:
     """The adopter repositories this session has built, each copied for the tests
     that ask for its shape. Its pytest-xdist workers share them: a worker's base
     temporary directory lies in the session's, where the templates are. Set up
     before any function-scoped fixture of the first test that needs it, so the
     environment it keeps for the install is the one the session began with —
-    outside any run, as every test starts."""
+    outside any run, as every test starts, and signing refused."""
     base = tmp_path_factory.getbasetemp()
     session = base.parent if os.environ.get("PYTEST_XDIST_WORKER") else base
     environment = {k: v for k, v in os.environ.items() if k not in RUN_VARIABLES}

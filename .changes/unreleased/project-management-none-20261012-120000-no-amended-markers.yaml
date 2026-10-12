@@ -1,0 +1,11 @@
+component: project-management
+kind: none
+body: >
+  DEC-028 states its verdict marker as plain fact, and names it in its
+  gate-checker's step 2, in both paths' conditions and in its index; its
+  self-approval degrade names the review-permission constraint its Rationale
+  gives for the comment sentinel; DEC-032 D3 states the per-reviewer override
+  with a refinement pointer to DEC-050; DEC-050, the capability's scripts and
+  schema, and their tests cite DEC-028's sections and DEC-032 D1 and D3 in
+  place of amendments. No decision changes, and the capability's behaviour is
+  unchanged.

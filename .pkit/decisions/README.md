@@ -12,9 +12,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-11T18:49:52Z
+      at: 2026-10-12T21:25:25Z
       outcome: unchanged
-      unchanged-because: COR-051's refinement adds how an accepted rule comes to bind on an artefact, the scope's form and declared check parts. This page's section on rule sets describes none of them. It summarises statuses, the acceptance gate, origins, where sets live, citing and validation, and each of its sentences still holds, including that a project inherits a method rule set by pinning its major.
+      unchanged-because: COR-051 point 7 and rule_sets.py admit a capability's inheritance of another's rule set only through a required dependency, and the error says so. This page names inheritance among the checks in brief and sends the reader to the schemas reference for each check, which states the required entry. Its other sentences on rule sets do not touch dependencies, so the page holds.
 ---
 
 # Decision records

@@ -22,6 +22,7 @@ from project_kit.manifest import (
     write_backbone_manifest,
 )
 from project_kit.process_journal import JOURNAL_GLOB
+from tests.adopter_repo import sign_nothing
 from tests.process_journal_support import set_journal_logging
 
 
@@ -38,6 +39,7 @@ def repo(tmp_path: Path) -> Path:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     _git(tmp_path, "config", "user.email", "t@t")
     _git(tmp_path, "config", "user.name", "t")
+    sign_nothing(tmp_path)
 
     adir = tmp_path / ".pkit" / "adapters" / "claude-code"
     adir.mkdir(parents=True)

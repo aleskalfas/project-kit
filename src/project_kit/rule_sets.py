@@ -23,7 +23,10 @@ This module:
   keys through the shared renderer; the container inside each rule — the
   rule-set file is claimed before the container rule, so this pass and not
   the friction pass applies it; the join between data and prose; ids;
-  origins; successors; inheritance (points 3, 5 and 7). Whether a pinned
+  origins; successors; inheritance (points 3, 5 and 7); the scope, which a
+  method rule set never takes (point 2), and each type it names that no owner
+  declares — a type finding artefact discovery raises and names this pass to
+  report (COR-056 point 2; ADR-057 point 2). Whether a pinned
   major is still the inherited set's is a version relation: `pin_checks`
   hands it to the wiring resolver, which reports every version relation
   under `versions` (`connections.rule_set_pin_findings`), and `pkit status`
@@ -573,6 +576,8 @@ class RuleSetFindingKind(Enum):
     DOUBLE_FILL = "double-fill"
     UNANCHORED_FILL = "unanchored-fill"  # a fill whose rule does not anchor to the rule it fills
     ORPHANED_FILL = "orphaned-fill"  # a fill of a superseded or withdrawn rule
+    METHOD_SCOPE = "method-scope"  # a scope on a method rule set, which takes none
+    UNKNOWN_SCOPE_TYPE = "scope-unknown-type"  # a scope naming a type no owner declares
 
 
 @dataclass(frozen=True)
@@ -656,9 +661,11 @@ def validate_rule_sets(target_root: Path) -> RuleSetValidation:
     from project_kit import connections  # the resolver imports this module for its pins
 
     wiring = connections.container_wiring(target_root)
+    scope_types = _scope_type_findings(target_root)
     for rule_set in discovery.rule_sets:
         findings.extend(_duplicate_key_findings(rule_set))
         findings.extend(_shape_findings(rule_set, schema))
+        findings.extend(_scope_findings(rule_set, scope_types))
         findings.extend(_set_name_findings(rule_set, discovery))
         findings.extend(_id_findings(rule_set, catalogue))
         findings.extend(_join_findings(rule_set))
@@ -770,6 +777,46 @@ def _locate(rule_set: RuleSet, path: Sequence[str]) -> tuple[str, str]:
     if len(path) >= 2 and path[0] == fd.RULES_KEY:
         return f"{rule_set.path}#{path[1]}", _pointer(path[2:])
     return rule_set.path, _pointer(path)
+
+
+# --- per file: the scope -------------------------------------------------------
+
+
+def _scope_findings(
+    rule_set: RuleSet, scope_types: Mapping[str, list[RuleSetFinding]]
+) -> Iterable[RuleSetFinding]:
+    """What a set's scope gets wrong beyond its shape (COR-051 point 2): a scope on a
+    method rule set, which takes none, and each type the scope names that no owner
+    declares (COR-056 point 2), as discovery found it."""
+    if rule_set.component is not None and fd.SCOPE_KEY in rule_set.front_matter:
+        yield _error(
+            rule_set.path,
+            f"/{fd.SCOPE_KEY}",
+            RuleSetFindingKind.METHOD_SCOPE,
+            f"{rule_set.owner} ships this rule set, and a method rule set takes no scope: its "
+            f"rules bind only through a set of the project's own that inherits it, so the "
+            f"project keeps the choice not to inherit it (COR-051 points 2 and 7). Remove "
+            f"`{fd.SCOPE_KEY}`.",
+        )
+    yield from scope_types.get(rule_set.path, [])
+
+
+def _scope_type_findings(target_root: Path) -> dict[str, list[RuleSetFinding]]:
+    """The type findings artefact discovery names this pass to report (ADR-057 point
+    2), by rule-set file: each type a scope names that no owner declares, at the
+    severity discovery's one table gives it (`friction_discovery.TYPE_FINDINGS`)."""
+    out: dict[str, list[RuleSetFinding]] = {}
+    for finding in fd.shared_types(target_root).reported_by(fd.RULE_SETS_MEMBER):
+        out.setdefault(finding.file, []).append(
+            RuleSetFinding(
+                finding.file,
+                finding.pointer,
+                Severity(finding.severity.value),
+                RuleSetFindingKind.UNKNOWN_SCOPE_TYPE,
+                finding.message,
+            )
+        )
+    return out
 
 
 # --- per file: names and ids ---------------------------------------------------
@@ -1353,8 +1400,9 @@ class _Catalogue:
             return None
         return (
             f"capability {child.component} inherits {parent.citation} but does not declare a "
-            f"dependency on capability {parent.component}: add it to `requires_capabilities` in "
-            f".pkit/capabilities/{child.component}/package.yaml (COR-030; COR-051 point 7)."
+            f"required dependency on capability {parent.component}: add it to "
+            f"`requires_capabilities` in .pkit/capabilities/{child.component}/package.yaml, "
+            f"without `optional: true` (COR-030; COR-051 point 7)."
         )
 
     def fills_along(self, rule_set: RuleSet) -> dict[str, list[_Fill]]:
@@ -1409,11 +1457,15 @@ class _Catalogue:
         return self._decisions[record]
 
     def requires(self, capability: str) -> frozenset[str]:
-        """The capabilities `capability` declares in `requires_capabilities` (COR-030)."""
+        """The capabilities `capability` declares required in `requires_capabilities`
+        (COR-030). An optional dependency may be absent, so it admits no inheritance
+        (COR-051 point 7)."""
         if capability not in self._requires:
             source = caps.find_capability_in_repo(self.target_root, capability)
             names = (
-                frozenset(dep.name for dep in source.package.requires_capabilities)
+                frozenset(
+                    dep.name for dep in source.package.requires_capabilities if not dep.optional
+                )
                 if source is not None
                 else frozenset()
             )

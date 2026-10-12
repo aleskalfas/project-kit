@@ -56,7 +56,7 @@ The design space was explored in the scratchpad note `2026-08-12-code-review-dis
 
 ## Implications
 
-- **Three agent files** under `software-engineering/agents/`, plus the **reviewer-contribution declaration** (the pm-owned schema) declaring them and their activation predicates. The declaration depends on the pm-side DEC-032 `type`-axis + diff-touch-floor amendment (sibling Task) to resolve.
+- **Three agent files** under `software-engineering/agents/`, plus the **reviewer-contribution declaration** (the pm-owned schema) declaring them and their activation predicates. The declaration depends on the `type` axis and the diff-property floor of the pm-side [project-management:DEC-032] D1 to resolve.
 - **`requires_capabilities: project-management`** ([COR-030]) — the capability declares the pm dependency for the socket + gate.
 - **Block-threshold and knowledge-split are authoring disciplines** for the agent bodies. They are currently *convention*, not a validated contract; a testable expression of the objective/advisory line is flagged as future work (the `critic`'s G1). The pre-existing-defect clause is carried verbatim in all three bodies, and a test pins the copies to each other.
 - **Verdict grammar, freshness, all-must-approve: unchanged** (DEC-028/DEC-032).
@@ -64,7 +64,7 @@ The design space was explored in the scratchpad note `2026-08-12-code-review-dis
 - **A claim no activated reviewer can check goes unchecked.** A PR-body claim about code, on a PR where only `docs-reviewer` activates, is outside every activated remit; nothing blocks on it and nothing reports it.
 - **Split-later seam for the introduced-vs-pre-existing line.** It lives here because only this panel's gating reviewers judge code the change did not write. If a gating reviewer outside the panel needs the same line, lift it to a shared principle then.
 - **Surface change** ([PRJ-002]) → `software-engineering` capability + backbone bump; ships via `pkit upgrade`. **No migration** — additive (new agents, new declaration; a project without the capability, or a PR the predicate doesn't match, behaves as today).
-- **Companion pm decisions / sibling Tasks:** DEC-032 amendment (`type` axis + diff-touch floor); per-reviewer override; `done-work` gate-summary attribution. ADR-013 gains a forward-pointer (architect-owned) noting the panel realises its predicted review consumer.
+- **Companion pm decisions / sibling Tasks:** DEC-032 D1 (`type` axis + diff-property floor); per-reviewer override; `done-work` gate-summary attribution. ADR-013 gains a forward-pointer (architect-owned) noting the panel realises its predicted review consumer.
 - **Implementation is gated with those companions (acceptance-gate honesty).** DEC-002 records the panel *decision*; the panel's activation cannot resolve without the pm resolver extension, so **no panel code ships until the companion decisions are also accepted.** They accept as one EPIC-level set under #725 — DEC-002 does not build against an unaccepted companion.
 - **Deferred (not this increment):** the remote-contributed (autonomous) path; a structured `review-rules` knowledge corpus; the generation-side sharing wiring; `testing`/`performance` reviewers; the review-to-file preview and native-GitHub-review companion Tasks.
 - **Retires** the scratchpad note `2026-08-12-code-review-discipline.md` (this DEC + EPIC #725 are what it produced).

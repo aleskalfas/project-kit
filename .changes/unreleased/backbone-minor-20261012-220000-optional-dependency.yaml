@@ -1,0 +1,19 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A capability may depend on another optionally (COR-030, #1410). An entry in
+  `requires_capabilities` may carry `optional: true`, which the package schema
+  accepts. The dependency then need not be installed: install, both upgrade
+  entry points and `pkit validate` pass it when it is absent, and refuse an
+  installed one outside its range, as for a required dependency. An optional
+  dependency never blocks uninstalling the capability it names, and it does not
+  admit rule-set inheritance (COR-051 point 7). Installing or registering a
+  capability whose version falls outside a range an installed capability
+  declares for it, required or optional, now warns, naming each such
+  dependent and its range, and refuses unless `--force` is given, as upgrading
+  a dependency already does. `pkit capabilities install` and
+  `pkit capabilities register` gain `--force` for it. The lifecycle README
+  states that the backbone-wide `pkit upgrade` moves every installed
+  kit-shipped capability to its source version through its sync.

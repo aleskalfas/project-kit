@@ -176,10 +176,13 @@ class Severity(Enum):
     are an unknown key under a schema that leaves its object open (pass 2), a
     `runtime_ignore` entry declaring the process journals the project commits
     (pass 3), and an installed capability's alias another name shadows
-    (`shadowed_alias_message`)."""
+    (`shadowed_alias_message`). Reports never do either: they are the type
+    findings on a capability's places that artefact discovery names this pass
+    to report (`_type_findings`)."""
 
     ERROR = "error"
     WARNING = "warning"
+    REPORT = "report"
 
 
 class Provenance(Enum):
@@ -1024,6 +1027,7 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
     unreachable = set(shadowed_capability_names(target_root, static))
     unbounded = _held_folder_findings(target_root)
     kinds_shared = _shared_anchor_kind_findings(target_root)
+    typed = _type_findings(target_root)
     shared = _shared_component_names(target_root)
     reports: list[PackageReport] = []
     for entry, component_dir, package in _registered_packages(target_root):
@@ -1046,6 +1050,7 @@ def validate_installed_packages(target_root: Path) -> PackagesPass:
                     *shadowed.get(entry.name, []),
                     *unbounded.get(entry.name, []),
                     *kinds_shared.get(entry.name, []),
+                    *typed.get(entry.name, []),
                 ],
             )
         elif entry.kind == "adapter":
@@ -1271,6 +1276,24 @@ def _shared_anchor_kind_findings(target_root: Path) -> dict[str, list[PackageFin
     return out
 
 
+def _type_findings(target_root: Path) -> dict[str, list[PackageFinding]]:
+    """The type findings artefact discovery names this pass to report (COR-056
+    point 3; ADR-057 point 2), keyed by the capability whose place each is about,
+    each at the severity discovery's one table gives it
+    (`friction_discovery.TYPE_FINDINGS`): a place naming a type its own registry
+    does not declare, a tie only components' places make, and one capability's
+    typed place typing another's file. All are reports: the project cannot mend
+    a component's package metadata."""
+    from project_kit import friction_discovery as fd  # discovery reads package metadata too
+
+    out: dict[str, list[PackageFinding]] = {}
+    for finding in fd.shared_types(target_root).reported_by(fd.PACKAGES_MEMBER):
+        out.setdefault(fd.capability_name(finding.source), []).append(
+            PackageFinding(finding.pointer, Severity(finding.severity.value), finding.message)
+        )
+    return out
+
+
 def shadowed_alias_message(shadow: ShadowedAlias) -> str:
     """The warning on an alias another name shadows: the alias, its capability,
     what holds the name — which capability, for another's name or alias — and
@@ -1300,6 +1323,7 @@ def shadowed_alias_message(shadow: ShadowedAlias) -> str:
 UMBRELLA_SEVERITY = {
     Severity.ERROR: validators.Severity.ERROR,
     Severity.WARNING: validators.Severity.WARNING,
+    Severity.REPORT: validators.Severity.REPORT,
 }
 
 

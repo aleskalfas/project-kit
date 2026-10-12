@@ -39,11 +39,12 @@ Rules are also layered. A component ships the rules its discipline needs, and ea
    - A schema fixes the data's shape. Validation checks the schema, and also that every rule in the body has data and every data entry has a rule in the body.
    - **Discovery:** rule sets are found where artefacts are found, in the places a component or the project declares to hold them (COR-050).
 
-   **Scope.** A set's scope selects artefacts by the paths of their files. It has two keys, each a list of paths relative to the repository root. A path names a file, a folder with everything beneath it, or a glob in which `**` matches across folders.
-   - `paths`: an artefact is selected when one of these matches its file.
-   - `exclude`: a selected artefact is left out when one of these matches its file. Without `exclude`, nothing is left out.
+   **Scope.** A set's scope selects artefacts by the paths of their files and by their types (refinement per COR-056). It has three keys, each a list. A path is relative to the repository root. It names a file, a folder with everything beneath it, or a glob in which `**` matches across folders.
+   - `paths`: an artefact is selected when one of these paths matches its file. Without `paths`, every file matches.
+   - `exclude`: a selected artefact is left out when one of these paths matches its file. Without `exclude`, nothing is left out.
+   - `types`: an artefact is selected when its type, or a type in contention for it (COR-056 point 3), is one of these. Without `types`, every artefact matches, with a type or with none.
 
-   An empty list is refused, since it could mean nothing or everything. A scope without `paths` is refused too. A scope written as a plain list of paths is its `paths`. An artefact under the excluded paths of the anchors-and-friction record (COR-050 point 7) stays in any scope that selects it. A set with no scope selects no artefact itself, and its rules bind only through the sets that inherit it (point 7). A method rule set (point 6), whether the backbone or a component ships it, takes no scope, and a scope on one is a validation error.
+   An artefact is in the scope when `paths` and `types` both select it and `exclude` does not leave it out. An empty list is refused, since it could mean nothing or everything. A scope with neither `paths` nor `types` is refused too. A type in `types` must be one its owner declares (COR-056 point 2), and any other is a validation error. A scope written as a plain list of paths is its `paths`. An artefact under the excluded paths of the anchors-and-friction record (COR-050 point 7) stays in any scope that selects it. A set with no scope selects no artefact itself, and its rules bind only through the sets that inherit it (point 7). A method rule set (point 6), whether the backbone or a component ships it, takes no scope, and a scope on one is a validation error.
 
    **Anchoring.** An artefact may anchor to an individual rule. A rule's content is its data entry together with its statement, and so includes its status. Editing a statement, or accepting, superseding or withdrawing a rule, is therefore a change that the rule's dependants see as friction. Nothing keeps silently obeying a rule that has changed.
 
@@ -80,7 +81,7 @@ Rules are also layered. A component ships the rules its discipline needs, and ea
    A project never edits a method rule set; it extends it. A method rule set is cited with its component's name; a project rule set is cited bare.
 
 7. **Inheritance, and where rules bind.**
-   - **Inheriting.** A rule set may inherit one or more rule sets, and inherits all their rules unchanged. Because rule ids carry their set's name, rules from different inherited sets cannot collide. A capability's rule set may inherit another capability's rule set only if it declares a dependency on that capability, using the mechanism by which capabilities depend on one another (COR-030). Any capability may inherit a rule set the backbone ships. A set's inheritance *chain* is the set and every set it inherits, directly or not.
+   - **Inheriting.** A rule set may inherit one or more rule sets, and inherits all their rules unchanged. Because rule ids carry their set's name, rules from different inherited sets cannot collide. A capability's rule set may inherit another capability's rule set only if it declares a required dependency on that capability, using the mechanism by which capabilities depend on one another (COR-030). Any capability may inherit a rule set the backbone ships. A set's inheritance *chain* is the set and every set it inherits, directly or not.
    - **Pins.** Inheriting a rule set **pins that set's major version**, written as the set name followed by `@` and the major version. A rule set's version is its own, not its component's. A new major version is required when:
      - an accepted rule is withdrawn, superseded or tightened
      - an offered extension point is removed
@@ -140,7 +141,7 @@ Rules are also layered. A component ships the rules its discipline needs, and ea
 - **Rules binding when written.** Rejected. It inverts the acceptance gate.
 - **Rule-set names without a family prefix.** Rejected. Collisions with other identifier families would have to be policed by a reserved list.
 - **An inherited rule binding only within its own set's scope.** Rejected. A shared set with no scope would bind nothing, and one given a scope would bind its new rules past every inheritor's pin.
-- **A consuming component narrowing a set's scope.** Rejected. Nothing in the set would name who narrows it, and a second list of places would drift from the first. Each set narrows itself with `exclude`.
+- **A consuming component narrowing a set's scope.** Rejected. Nothing in the set would name who narrows it, and a second list of places would drift from the first. Each set narrows itself with `exclude` and `types`.
 - **A method rule set also binding on the artefacts of whoever ships it, with no project set inheriting it.** Rejected. A shipped set would bind every adopting project's artefacts, and no pin would hold back its new rules.
 - **The checked part of a method rule set's rule kept as its component's own invariant, checked everywhere apart from the rule.** Rejected. One requirement would be enforced two ways: by the check everywhere, and by judgement only where the rule binds. The rule's status would no longer decide when its check applies.
 - **Rules the pinned major held keep binding while the pin is behind.** Rejected. The repository holds only the newer text, and a tightened rule keeps its id, so what bound would not be what was reviewed.

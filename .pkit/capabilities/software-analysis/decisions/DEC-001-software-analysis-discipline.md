@@ -16,6 +16,7 @@ The core layer supplies the machinery this needs:
 - where a project's technical documentation lives (COR-049);
 - anchors and friction, which detect when what an artefact rests on has changed (COR-050);
 - rule sets, which hold the rules a component ships, each binding at its status (COR-051);
+- artefact types, which name what an artefact is, so a rule set can select it (COR-056);
 - connection points, through which components exchange knowledge and signals without depending on each other: data slots (COR-052) as one kind, addressed by role (COR-053).
 
 This record decides what the capability keeps, in what shape, where, and how it stays true.
@@ -50,6 +51,12 @@ This record decides what the capability keeps, in what shape, where, and how it 
    **A kind with many files gets its own folder; a kind with one file is a file.** Folders appear only when something goes into them.
    - **Location.** The `analysis` sub-path is declared in the capability's package metadata. Its location is recorded on first use in the capability's own project configuration, as the documentation-roots record requires (COR-049). A later change of root therefore never moves an existing analysis.
    - **Places.** The capability declares the glossary, actors, use cases and journeys as places holding anchored artefacts (COR-050). Revalidation records describe an act and are not anchored artefacts, so their folder is not a place: the capability declares it as a folder of held documents (COR-050 point 1), so the records are listed as this capability's and no place reads them as artefacts.
+   - **Types.** Each place gives its artefacts a type (COR-056). So a rule set selects the analysis's artefacts by what they are, without naming where they lie.
+     - **The type registry.** The capability's type registry, in its package metadata, declares one type for each kind of anchored artefact. They are `actor`, `use-case`, `journey` and `term`, each with a description. A scope names them `software-analysis:actor` and so on.
+     - **Each place's type.** The actors' place gives `actor`, the use cases' place `use-case` and the journeys' place `journey`. The glossary gives its entries `term`.
+     - **No kind field.** No type names a kind field. The capability's check holds every file in a place to that place's kind, so no kind field needs to gate the place's type (COR-056 points 2 and 4).
+     - **No project place.** None of the four admits a project place. The capability checks only the artefacts in its own places, so a project place would give its types to files the capability never checks.
+     - **No type for a record.** A revalidation record is a held document, so it has no type (COR-056 point 1).
    - **Surface.** The capability declares no surface by default, since it cannot know a project's code. The project declares which paths its analysis ought to cover, in the friction key of its backbone configuration (COR-050).
    - **Ownership.** The artefacts live outside the capability's own subtree, so uninstalling the capability never removes them.
 
@@ -174,7 +181,7 @@ This record decides what the capability keeps, in what shape, where, and how it 
 
 ## Implications
 
-- **The capability ships** the layout for its artefacts, a declared structure per kind with the template rendered from it, its method rule set with the format rule, the declaration of its places and connections, commands to stamp artefacts and check their shape (friction itself is the core check), and an authoring skill that guides revalidation.
+- **The capability ships** the layout for its artefacts, a declared structure per kind with the template rendered from it, its method rule set with the format rule, the declaration of its places and connections, commands to stamp artefacts and check their shape (friction itself is the core check), and an authoring skill that guides revalidation. It also ships a type registry, and each place names a type from it.
 - **Projects** keep their analysis under their internal documentation root, choose each kind's parts when they adopt the capability, keep their own additions in its project tier, and wire the core friction check into their continuous integration if they want it enforced.
 - **A change to a kind's structure** carries the migration of the live artefacts with it, and settles how a part it adds is answered and what friction the migration raises on their dependants.
 - **History kept as it was written:** the way a record, or a withdrawn artefact, is checked against the structure in force when it was written or withdrawn comes with the first change to a kind's structure that needs it.

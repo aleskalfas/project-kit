@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+  pr: "1477"
+body: >
+  `pkit upgrade` takes the latest release from the release tags only (#1472).
+  It counted a pre-release or dev release tag as a release, so a pre-release
+  tagged above the latest release would be the version the tool step
+  installed and the version a pinned project's pin was raised to. It now
+  skips such a tag, testing each tag as the release step tests a release
+  version, so what it installs or pins is a release `pkit pin` accepts.

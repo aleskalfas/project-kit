@@ -311,8 +311,9 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
         "--no-native",
         action="store_true",
         help="Don't post a native GitHub review (APPROVE / REQUEST_CHANGES) — "
-        "only the comment verdict. Per DEC-028 (amended). The native review is "
-        "what shows in the PR UI and satisfies branch protection; it is skipped "
+        "only the comment verdict. Per project-management DEC-028, 'Invocation "
+        "command (local path)'. The native review is what shows in the PR UI "
+        "and satisfies branch protection; it is skipped "
         "automatically when you authored the PR (GitHub blocks self-approval).",
     )
     parser.add_argument(
@@ -557,13 +558,14 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
         print(f"  [{name}] posted {verdict}")
         run.posted[name] = (verdict, comment)
 
-        # DEC-028 (amended): also deliver a NATIVE GitHub review carrying the
-        # verdict state, so it shows in the PR UI and satisfies branch-protection
-        # "required approving reviews". The comment above is what done-work's gate
-        # reads; the native review is the GitHub-facing signal. Best-effort — a
-        # failure or a self-approval degrade never fails review-pr (the comment
-        # verdict stands). GitHub attaches a native review to the PR's current
-        # head, so it is skipped when that is not the head the reviewer saw.
+        # DEC-028, "Invocation command (local path)": also deliver a NATIVE
+        # GitHub review carrying the verdict state, so it shows in the PR UI and
+        # satisfies branch-protection "required approving reviews". The comment
+        # above is what done-work's gate reads; the native review is the
+        # GitHub-facing signal. Best-effort — a failure or a self-approval
+        # degrade never fails review-pr (the comment verdict stands). GitHub
+        # attaches a native review to the PR's current head, so it is skipped
+        # when that is not the head the reviewer saw.
         if not args.no_native:
             if head_unchanged:
                 _deliver_native_review(pr_number, verdict, comment, config)
@@ -717,7 +719,7 @@ def _review_brief(
     sha: str = "",
 ) -> str:
     """The prompt each reviewer receives: the PR, the head under review, a
-    fallback for its diff, the verdict grammar.
+    fallback for its diff, the verdict grammar, and the finding tags.
 
     The brief names the head commit the reviewer is reviewing (#1179) — the
     one its verdict will be recorded against — so the reviewer can tell when
@@ -727,6 +729,10 @@ def _review_brief(
     when the head could not be read), which diffs from their merge base. An
     unknown base is left as a placeholder the reviewer fills from the PR's
     `baseRefName`.
+
+    The brief names DEC-028's three finding tags and what each does to the
+    merge (`FINDING_TAGS`), and that they widen no remit, so every local
+    reviewer tags its findings alike (#1405).
     """
     reviewing = (
         f"You are reviewing its head commit {sha}; your verdict is recorded against that commit. "
@@ -743,8 +749,30 @@ def _review_brief(
         f"VERY FIRST LINE in one of these exact forms:\n\n"
         f"  Reviewer agent (local, {name}): APPROVED\n"
         f"  Reviewer agent (local, {name}): CHANGES_REQUESTED\n\n"
-        "Then add any commentary, findings, or rationale below."
+        "Then add any commentary, findings, or rationale below.\n\n" + FINDING_TAGS
     )
+
+
+#: What the brief says of DEC-028's finding tags (#1405): the three tags, what
+#: each does to the merge, and that they widen no reviewer's remit.
+FINDING_TAGS = (
+    "Write each finding as a top-level item of a bulleted list that begins with one of "
+    "three tags, which say what the finding does to the merge:\n\n"
+    "- `[block]` — an objective failure the change owns, one your remit settles with no "
+    "reading left to choose. It withholds your approval: request changes exactly when you "
+    "have one.\n"
+    "- `[person]` — a finding for the person who authorises the merge. It cites by id an "
+    "accepted rule that binds on an artefact the change alters, and judges a passage the "
+    "change owns where that rule needs a reading it does not settle, or a fact it does not "
+    "name. It withholds no approval.\n"
+    "- `[advisory]` — any other finding: a defect the change does not own, written "
+    "`[advisory] (pre-existing: <reason>)`, a point your remit settles as not blocking, or "
+    "a point of taste. It withholds and holds nothing. A finding with no tag counts as "
+    "one.\n\n"
+    "Write any grade of your own after the tag, as `[block] (hard-reject)`. The tags widen "
+    "no remit: judge only what your own instructions have you judge, and cite a rule in a "
+    "`[block]` or a `[person]` finding only when they have you judge that rule."
+)
 
 
 def _format_verdict_comment(
@@ -812,7 +840,7 @@ def _report_head_check(name: str, reviewed: str, now: str) -> bool:
     return False
 
 
-# ---- native GitHub review delivery (DEC-028, amended) ----------------
+# ---- native GitHub review delivery (DEC-028, "Invocation command (local path)") ----
 
 
 def _deliver_native_review(
@@ -821,7 +849,9 @@ def _deliver_native_review(
     body: str,
     config: dict,
 ) -> None:
-    """Post a native `gh pr review` carrying the verdict state (DEC-028, amended).
+    """Post a native `gh pr review` carrying the verdict state.
+
+    Per DEC-028, "Invocation command (local path)".
 
     APPROVED → `--approve`, CHANGES_REQUESTED → `--request-changes`. The verdict
     comment (already posted) carries the pkit gate marker; this native review is
