@@ -12,8 +12,9 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-12T18:12:45Z
-      outcome: updated
+      at: 2026-10-12T18:49:01Z
+      outcome: unchanged
+      unchanged-because: "COR-050's refinement lets a place name a type, which COR-056 defines and no friction check reads. This page describes the capability's four places, its held folder, the unanchored reason and who runs the friction writers, as the backbone reads them today. The capability declares no types yet, so each statement holds. Its types follow with #1409."
       deferred:
         - anchor:
             kind: record

@@ -11,6 +11,7 @@ from click.testing import CliRunner
 
 from project_kit import cli, session_guard, versioning
 from tests import sessions
+from tests.adopter_repo import sign_nothing
 
 
 @pytest.fixture
@@ -127,6 +128,7 @@ def tmp_kit_in_git(tmp_path: Path) -> Path:
     _subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
     _subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
     _subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
+    sign_nothing(repo)  # its commits and the tags `tag_version` makes
 
     source_kit = repo / ".pkit"
     source_kit.mkdir()
@@ -447,6 +449,7 @@ def tmp_kit_in_git_with_component(tmp_path: Path) -> Path:
     _subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
     _subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
     _subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
+    sign_nothing(repo)
 
     source_kit = repo / ".pkit"
     source_kit.mkdir()

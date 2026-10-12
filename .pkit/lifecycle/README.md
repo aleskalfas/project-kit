@@ -29,7 +29,7 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-12T15:28:34Z
+      at: 2026-10-12T19:37:12Z
       outcome: updated
 ---
 
@@ -622,7 +622,7 @@ A capability's connections are readable without installing it, and what an insta
 
 | Plan | Lists |
 |---|---|
-| Install (`install --plan`) | the connections it would make, and those it would break; each role conflict it would open, with the provider-selection command that resolves it, one per provider (`pkit connections providers set <role> <capability>`); what the capability needs — the errors the install would put on the capability's own package: an unmet mandatory mark, a mandatory cycle, a backbone or capability range the project does not meet; the role blocks whose meaning changes — an orphaned block the new provider adopts, a bare key a second active role would make ambiguous (COR-053 point 10, "Keys"; rewriting it is the project's, with consent) |
+| Install (`install --plan`) | the connections it would make, and those it would break; each role conflict it would open, with the provider-selection command that resolves it, one per provider (`pkit connections providers set <role> <capability>`); what the capability needs — the errors the install would put on the capability's own package: an unmet mandatory mark, a mandatory cycle, a backbone or capability range the project does not meet; each type it would bring whose name a bare project type uses, with the project places giving that type, which the project renames before the install or its validation fails (COR-056 point 2); the role blocks whose meaning changes — an orphaned block the new provider adopts, a bare key a second active role would make ambiguous (COR-053 point 10, "Keys"; rewriting it is the project's, with consent) |
 | Uninstall (`uninstall --plan`) | the fillers lost — its contributions, with whether each point stays filled, is left unfilled or is no longer defined, and the project filler files answering a point it defines that no provider would define after it, kept and inert; the processes left without a provider (`depends-on` entries it answered) and every other counterpart left without one; the artefacts whose role blocks would be orphaned — preserved and reported, never an error; the selections in the configuration left naming it |
 
 Both then list the roles, points and findings that change. A plan writes nothing and runs no filler command — the resolver resolves wiring, not data (COR-053 point 7). What it does not predict, stated: the role blocks it judges are those of the artefacts in the places declared now, so a place the operation adds or removes is not walked in advance; rule-set pins are relations between rule-set files, not connections, and are left out of the difference.
