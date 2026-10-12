@@ -272,10 +272,10 @@ def write_version_pin(root: Path, version: str | None) -> None:
     """Set `root/.pkit/version-pin` to `version`, or remove it when `version` is None.
 
     The one writer of the pin directive (ADR-049): the default pin after an
-    upgrade, the pinned raise, `pkit pin` and `pkit unpin` all come here, and
-    None means unpinned here as it does from `read_version_pin`. The router runs
-    whatever version this file names, so a write cut short must never leave a
-    torn pin for it to route to (#1211). The new pin is written to a temporary
+    upgrade (ADR-064), the pinned raise, `pkit pin` and `pkit unpin` all come
+    here, and None means unpinned here as it does from `read_version_pin`. The
+    router runs whatever version this file names, so a write cut short must never
+    leave a torn pin for it to route to (#1211). The new pin is written to a temporary
     file beside the pin, flushed to disk, and only then renamed over it: the
     file holds the previous pin, byte for byte, or the new one, never part of
     it, and a write that fails leaves no temporary file. Removing is a single
@@ -312,7 +312,7 @@ def is_route_bypassed(environ) -> bool:
 
     Set by `run_bypassed` on the child it bootstraps (ADR-049). A `pkit upgrade`
     reached this way is the target version's own reconcile run *under* a pin
-    raise, not a top-level upgrade — so it skips the redundant ADR-044 tool
+    raise, not a top-level upgrade — so it skips the redundant ADR-063 tool
     staleness probe (which would issue a second `git ls-remote` and print a
     nonsensical "tool is current" line mid-raise)."""
     return _env_true(environ, _BYPASS_ENV)

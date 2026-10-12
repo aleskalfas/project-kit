@@ -12,9 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-04T10:55:05Z
+      at: 2026-10-12T19:47:46Z
       outcome: unchanged
-      unchanged-because: This page says the core check flags a page when what it is anchored to changed and nobody revalidated it, and that any change to a captured source's file asks the pages anchored to it. COR-050's refinement only adds a case to its rationale's list of where the two checks part; when a page is flagged and what clears it are as the page says.
+      unchanged-because: DEC-001 point 1 names the backbone's friction validation as what refuses a synced tree as a place, keyed on manifest origin and on whether the repository is the methodology's source. This page already says the backbone enforces this for every declared place as its synced-place finding, and that this capability relies on that finding rather than checking a second time.
       deferred:
         - anchor:
             kind: record

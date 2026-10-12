@@ -17,9 +17,11 @@ list (COR-050 point 3). This module puts that list in the description:
 - `render(document, head, settings)` is the `## Documentation this change
   affects` section, between its markers; `lines(document, settings)` the same
   list for a terminal. Both speak to a reader who does not know the
-  methodology: each answer and flag in plain words (`LABELS`, `FLAGS`), each
-  anchor as what a change to it is a change to. The change check's own terms
-  stay in its machine-readable list (`--json`), which this module reads.
+  methodology, in the words of the change check's own list: the question once
+  (`QUESTION`), then each document, the anchors the change modified that it
+  relies on, and whether it is still true, each answer and flag in plain words
+  (`LABELS`, `FLAGS`). The change check's own terms stay in its
+  machine-readable list (`--json`), which this module reads.
 - `closing_reference` and `comment_delimiter` name a word of the list that
   must not be written: one that reads as a closing reference — the host's own
   parser would close an issue with it at merge, and nothing here can make that
@@ -521,12 +523,13 @@ def _code(text: str, *, least: int = 1) -> str:
     return f"{fence}{pad}{text}{pad}{fence}"
 
 
-#: Each answer of the change check (`--json`'s `answer`) as the list names it to
-#: a reader; an answer it does not name here is shown as the check gives it.
+#: Each answer of the change check (`--json`'s `answer`) as the list says it:
+#: whether the document is still true. An answer it does not name here is shown
+#: as the check gives it. The change check's own list says the same words.
 LABELS = {
-    "updated": "updated",
+    "updated": "updated in this change",
     "unchanged": "still accurate",
-    "deferred": "set aside for later",
+    "deferred": "out of date, fixed later",
     "unanchored": "not tied to anything",
 }
 #: A revalidation whose outcome is neither `updated` nor `unchanged` (`answer` null).
@@ -534,12 +537,15 @@ NO_OUTCOME = "no decision recorded"
 #: Each flag the change check puts on an answer, as the list names it.
 FLAGS = {
     "new": "new document",
-    "not asked": "not required by this change",
+    "not asked": "not asked for by this change",
     "bump": "re-check date changed with nothing behind it",
-    "edited": "reason changed without a new re-check",
+    "edited": "edited without a new re-check",
+    "written back": "re-check date set back to one it had before, which answers nothing",
+    "entry written back": "an entry it had before, which covers only what that one did",
+    "put back": "an entry it had before, covering the anchor as it stood then",
 }
-#: What a change to an anchor of a core kind is a change to; an anchor of another
-#: kind is named as the check names it, `kind:value`.
+#: What an anchor of a core kind is named; an anchor of another kind is named as
+#: the check names it, `kind:value`.
 _ANCHOR_NOUNS = {"path": "", "record": "decision record ", "artefact": "document "}
 
 
@@ -555,12 +561,12 @@ class _Anchor:
         """The anchor as the change check names it."""
         return f"{self.kind}:{self.value}"
 
-    def changes_to(self, *, markdown: bool) -> str:
-        """What a change to the anchor is a change to, in plain words: "for changes
-        to `src/cli/**`". The anchor's own text is set in a code span in Markdown."""
+    def said(self, *, markdown: bool) -> str:
+        """The anchor in plain words: "`src/cli/**`", "decision record `COR-050`". The
+        anchor's own text is set in a code span in Markdown."""
         noun = _ANCHOR_NOUNS.get(self.kind)
         text = self.value if noun is not None else self.named
-        return f"for changes to {noun or ''}{_code(text) if markdown else text}"
+        return f"{noun or ''}{_code(text) if markdown else text}"
 
 
 def _read_anchor(value: Any) -> _Anchor | None:
@@ -572,7 +578,9 @@ def _read_anchor(value: Any) -> _Anchor | None:
 
 @dataclass(frozen=True)
 class _Entry:
-    """One answer, every text in it shown as the list shows it."""
+    """One answer, every text in it shown as the list shows it. `changed`: the
+    anchors the change modified that the answer is about (the check's `changed`;
+    none from a backbone that predates it)."""
 
     location: str
     label: str
@@ -580,31 +588,45 @@ class _Entry:
     flags: tuple[str, ...]
     reason: str | None
     kept: tuple[tuple[_Anchor, str | None], ...]
+    changed: tuple[_Anchor, ...] = ()
 
 
-def _read_entry(entry: Mapping[str, Any]) -> _Entry:
-    answer, reason = entry.get("answer"), entry.get("reason")
+def _flags(entry: Mapping[str, Any]) -> list[str]:
+    """Every flag the change check puts on an answer, in the list's words."""
+    status = entry.get("status")
     flags: list[str] = []
     if entry.get("new"):
         flags.append(FLAGS["new"])
     if not entry.get("asked"):
         flags.append(FLAGS["not asked"])
-    if entry.get("status") == "bump":
+    if status == "bump":
         flags.append(FLAGS["bump"])
-    if entry.get("status") == "edited":
+    if status == "edited":
         flags.append(FLAGS["edited"])
+    if status == "written-back":
+        flags.append(FLAGS["written back" if entry.get("anchor") is None else "entry written back"])
+    elif entry.get("put_back"):
+        flags.append(FLAGS["put back"])
+    return flags
+
+
+def _read_entry(entry: Mapping[str, Any]) -> _Entry:
+    answer, reason = entry.get("answer"), entry.get("reason")
     kept: list[tuple[_Anchor, str | None]] = []
     for item in entry.get("kept") or []:
         words = _mapping(item).get("reason")
         held = _read_anchor(_mapping(item).get("anchor")) or _Anchor("None", "None")
         kept.append((held, shown(str(words)) if words is not None else None))
+    changed = entry.get("changed")
+    relied = [_read_anchor(item) for item in changed] if isinstance(changed, list) else []
     return _Entry(
         location=shown(str(entry.get("location") or entry.get("artefact") or "?")),
         label=LABELS.get(str(answer), shown(str(answer))) if answer else NO_OUTCOME,
         anchor=_read_anchor(entry.get("anchor")),
-        flags=tuple(flags),
+        flags=tuple(_flags(entry)),
         reason=shown(str(reason)) if reason is not None else None,
         kept=tuple(kept),
+        changed=tuple(anchor for anchor in relied if anchor is not None),
     )
 
 
@@ -619,12 +641,14 @@ def _counted(count: int, one: str, many: str) -> str:
     return f"{count} {one if count == 1 else many}"
 
 
-#: What the section says first, to a reader who does not know the methodology.
-OPENING = (
-    "This change modified things the documents below rely on. For each one it records what "
-    "was decided: updated, still accurate (with the reason), or set aside for later (with "
-    "the reason). Read these before approving the merge."
+#: The question the list answers, stated once above it, as the change check's
+#: own list states it.
+QUESTION = (
+    "These documents rely on something this change modifies, and each answer says whether "
+    "the document is still true."
 )
+#: What the section says first, to a reader who does not know the methodology.
+OPENING = f"{QUESTION} Read them before approving the merge."
 #: What it says first where the change decided nothing about any document but
 #: changes which documents are checked.
 SETTINGS_OPENING = (
@@ -635,23 +659,39 @@ SETTINGS_OPENING = (
 SETTINGS_LEAD = "It also changes which documents are checked:"
 
 
+def _and(items: Sequence[str]) -> str:
+    """`a`, `a and b`, `a, b and c`."""
+    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} and {items[-1]}"
+
+
 def _described(entry: _Entry, number: int, *, markdown: bool) -> list[str]:
-    """One answer as the list shows it, then each deferral it kept. In Markdown the
-    label is bold and every text of the artefact's is set in a code span."""
+    """One answer as the list shows it — the document, the anchors the change
+    modified that it relies on, whether it is still true, its flags and its words —
+    then each deferral it kept, as the change check's own list says them. In
+    Markdown the outcome is bold and every text of the artefact's is set in a code
+    span."""
 
     def text(words: str, least: int = 1) -> str:
         return _code(words, least=least) if markdown else words
 
-    label = f"**{entry.label}**" if markdown else entry.label
-    line = f"{number}. {text(entry.location)} — {label}"
-    if entry.anchor is not None:
-        line += f" {entry.anchor.changes_to(markdown=markdown)}"
+    def bold(words: str) -> str:
+        return f"**{words}**" if markdown else words
+
+    sentence = bold(entry.label[:1].upper() + entry.label[1:])
+    where = text(entry.location)
+    if entry.changed:
+        relied = _and([anchor.said(markdown=markdown) for anchor in entry.changed])
+        line = f"{number}. {where} relies on {relied}, which this change modifies. {sentence}"
+    elif entry.anchor is not None:
+        line = f"{number}. {where} relies on {entry.anchor.said(markdown=markdown)}. {sentence}"
+    else:
+        line = f"{number}. {where} — {bold(entry.label)}"
     line += "".join(f" ({flag})" for flag in entry.flags)
     if entry.reason is not None:
         line += f': "{text(entry.reason, least=2)}"'
     out = [line]
     for anchor, words in entry.kept:
-        kept = f"still set aside {anchor.changes_to(markdown=markdown)}"
+        kept = f"still out of date for changes to {anchor.said(markdown=markdown)}, fixed later"
         kept += f': "{text(words, least=2)}"' if words is not None else ""
         out.append(f"   - ({kept})" if markdown else f"   ({kept})")
     return out
@@ -688,10 +728,12 @@ def render(document: Mapping[str, Any], head: str, settings: Sequence[Setting] =
 
 
 def lines(document: Mapping[str, Any], settings: Sequence[Setting] = ()) -> list[str]:
-    """The list as a terminal shows it, in the section's words: one line per
-    answer, its words in full, then one per friction setting the change alters."""
-    out: list[str] = []
-    for number, entry in enumerate((_read_entry(e) for e in _entries(document)), start=1):
+    """The list as a terminal shows it, in the section's words: the question once
+    (`QUESTION`), one line per answer, its words in full, then one per friction
+    setting the change alters."""
+    entries = [_read_entry(e) for e in _entries(document)]
+    out: list[str] = [QUESTION] if entries else []
+    for number, entry in enumerate(entries, start=1):
         out += _described(entry, number, markdown=False)
     for setting in settings:
         before, after = _side(setting.before, code=False), _side(setting.after, code=False)
@@ -705,7 +747,8 @@ def _texts(document: Mapping[str, Any], settings: Sequence[Setting]) -> Iterator
     the change check names it, `kind:value`."""
     for entry in (_read_entry(e) for e in _entries(document)):
         named = entry.anchor.named if entry.anchor is not None else None
-        texts: list[str | None] = [entry.location, named, entry.reason]
+        texts: list[str | None] = [entry.location, entry.label, named, entry.reason]
+        texts += [anchor.named for anchor in entry.changed]
         for anchor, words in entry.kept:
             texts += [anchor.named, words]
         for text in texts:

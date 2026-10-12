@@ -435,6 +435,43 @@ def test_the_install_plan_lists_bare_role_keys_it_makes_ambiguous(
     )
 
 
+def test_the_install_plan_names_a_type_whose_name_a_bare_project_type_uses(
+    repo: AdopterRepo, kit_source: Path
+) -> None:
+    """COR-056 point 2: installed, the capability's `run` would take the name the
+    project's bare `run` uses, and validation would fail. The plan says so, and
+    names each project place that gives the bare type."""
+    _in_source(
+        kit_source,
+        _package(
+            "typed",
+            friction={
+                "types": {"run": {"description": "A run."}, "log": {"description": "A log."}}
+            },
+        ),
+    )
+    repo.write(
+        {
+            CONFIG: "friction:\n  places:\n    - {path: notes, type: run}\n"
+            "    - {path: logs, type: own}\n    - {path: runs, type: run}\n"
+        }
+    )
+    result = CliRunner().invoke(main, ["capabilities", "install", "typed", "--plan", "--json"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output)["type_names"] == [
+        {
+            "type": "typed:run",
+            "places": [
+                f"{CONFIG}:/friction/places/0/type",
+                f"{CONFIG}:/friction/places/2/type",
+            ],
+        }
+    ]
+    human = CliRunner().invoke(main, ["capabilities", "install", "typed", "--plan"])
+    assert "Type names the project uses (1)" in human.output
+    assert "typed:run: a bare project type takes its name" in human.output
+
+
 # --- the uninstall plan -------------------------------------------------------------
 
 

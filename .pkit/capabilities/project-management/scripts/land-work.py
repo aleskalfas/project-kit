@@ -9,15 +9,19 @@
 """Project-management capability — land-work (#1203).
 
 Lands an issue's pull request in one command: waits for the checks on the PR's
-head, has the reviewers whose verdicts are not fresh review that head, lists
-the answers the change wrote, and merges it through `done-work`. It composes
+head, has the reviewers whose verdicts are not fresh review that head, shows
+the findings they left for a person to judge, lists the answers the change
+wrote, and merges it through `done-work`. It composes
 the verbs' own functions — the CI gate's reading (`_lib.ci_checks`),
 `review-pr`'s review, `done-work`'s merge — and adds no review loop or merge
 mechanic of its own. The rules it adds are on the answers the change wrote
+and on the findings a reviewer left for a person to judge
 ([project-management:DEC-055-pr-lists-answers]): it refuses a list it cannot
 read or must not write, and where the change wrote friction answers, or alters
 the friction settings, a `--yes` run merges only a head whose list it found
-already in the description.
+already in the description; it prints each `[person]` finding whole, and a
+`--yes` run merges only on verdicts carrying them that it found when it
+started, standing for the head it merges.
 
     land-work <N> [--yes [--expect-head SHA]] [--wait-minutes M | --no-wait]
                   [--dry-run]
@@ -43,10 +47,29 @@ It stops at the first step that cannot go on, and its last line says why.
   review  In agent review mode, `review-pr`'s review on the pinned head: a
           verdict judged fresh for that head is kept, a stale or missing one
           re-run. A CHANGES_REQUESTED, kept or new, stops the run before the
-          merge with the first line of each blocking finding; a reviewer that
-          could not be run stops it too. The advisories of the approvals are
-          printed. In human mode, and with no local reviewer registered, there
-          is nothing to run: the approval is `done-work`'s gate.
+          merge with the first line of each `[block]` finding; a reviewer
+          that could not be run stops it too. The advisories of the approvals
+          are printed (DEC-028's finding tags, read by
+          `_lib.agent_verdicts.findings`). In human mode, and with no local
+          reviewer registered, there is nothing to run: the approval is
+          `done-work`'s gate.
+  findings to judge
+          Each `[person]` finding, printed whole with the verdict's reviewer,
+          from each reviewer's latest verdict as the merge gate selects it
+          (`gate_candidates`, `gate_membership`), in either review mode; a
+          verdict that no longer stands for the pinned head, by the gate's
+          freshness rule, is printed marked stale. Its line begins
+          `findings to judge:` (`FINDINGS`); a run with none prints nothing.
+          A `--yes` run merges only when it found, at its start, every such
+          verdict, and each stands for the pinned head; one posted by this
+          run, or while it ran up to this step's read, stops it at `ready:`,
+          and one that does not stand for the head stops every `--yes` run
+          there, naming the review it waits for (DEC-055 point 3). Verdicts
+          that cannot be read, or whose reviewers cannot be resolved, stop
+          the run, and so does a remote reviewer's `[person]` finding on a PR
+          whose author cannot be read, since its verdict cannot be told from
+          the author's own (#1485); this step comes before the answers', so
+          such a stop has written nothing.
   answers The change check's list of the answers the change wrote, and the
           friction settings it alters, derived at the pinned head against the
           PR's base (`_lib.friction_answers`), printed word for word, in the
@@ -68,7 +91,8 @@ It stops at the first step that cannot go on, and its last line says why.
           answers. Where there is a list, a `--yes` run merges only with
           `--expect-head` and the list found already in the description; one
           that had to write it, or named no head, stops at `ready:` — and so
-          does a run that wrote it, whatever fails after the write. Its gates,
+          does a run that wrote it, whatever fails after the write, and a
+          run the findings to judge hold. Its gates,
           refusals and queue handling are done-work's own; land-work decides
           on how its run ended (`done_work.run`), never on its exit code.
 
@@ -111,7 +135,23 @@ from _lib import (
     provenance,
     session_guard,
 )
-from _lib.agent_verdicts import APPROVED, CHANGES_REQUESTED
+from _lib.agent_verdicts import (
+    APPROVED,
+    CHANGES_REQUESTED,
+    PATH_LOCAL,
+    PATH_REMOTE,
+    TAG_ADVISORY,
+    TAG_BLOCK,
+    TAG_PERSON,
+    Finding,
+    Verdict,
+    all_verdicts,
+    gate_candidates,
+    gate_membership,
+    marked_candidates,
+    pr_author,
+    tagged,
+)
 from _lib.audit import short_sha
 from _lib.ci_checks import FAILED, NO_RUN, PASSED, CiGateResult, evaluate_ci_gate
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
@@ -121,7 +161,9 @@ from _lib.membership import (
     resolve_capability_root,
     resolve_invoker_identity,
 )
+from _lib.pr_review import REVIEW_VIEW_FIELDS, remote_baseline
 from _lib.review_mode import resolve_mode
+from _lib.verdict_freshness import Freshness, head_sha
 
 
 def _load_verb(script: str, module_name: str) -> ModuleType:
@@ -171,6 +213,11 @@ STEP = friction_answers.NAME
 _LISTED = "listed above and in the pull request's description"
 #: A section under the list's heading that no command wrote, as the step names it.
 _HAND_WRITTEN = "a list written by hand"
+#: How the line of the step that prints the `[person]` findings begins.
+FINDINGS = "findings to judge"
+#: What that step reads of the PR: the verdicts and what the freshness rule
+#: reads, and the author the gate excludes.
+_FINDINGS_VIEW = (*REVIEW_VIEW_FIELDS, "author")
 
 # The wait's sleep and clock, looked up when a wait runs.
 _sleep: Callable[[float], None] = time.sleep
@@ -182,25 +229,6 @@ def _interactive() -> bool:
     return sys.stdin.isatty()
 
 
-# How a verdict's bullet is tagged, at the head of its text: bracketed
-# (`[block]`), bold (`**[block]**`, `**block**`), backticked or followed by a
-# colon. Blocking: `[block]`, as the software-engineering panel writes it, and
-# `hard-reject` / `bypassable-with-audit`, the severities pm-reviewer
-# classifies findings by. Advisory: `[advisory]`, and pm-reviewer's `warning`.
-_BLOCKING_TAGS = ("block", "hard-reject", "bypassable-with-audit")
-_ADVISORY_TAGS = ("advisory", "warning")
-_BULLET = r"^\s*(?:[-*+]|\d+[.)])\s+"
-
-
-def _tag_pattern(tags: tuple[str, ...]) -> re.Pattern[str]:
-    tag = "(?:" + "|".join(re.escape(t) for t in tags) + ")"
-    return re.compile(
-        _BULLET + rf"(?:\[{tag}\]|\*\*\[?{tag}\]?\*\*|`{tag}`|{tag}\s*:)", re.IGNORECASE
-    )
-
-
-_BLOCKING_BULLET = _tag_pattern(_BLOCKING_TAGS)
-_ADVISORY_BULLET = _tag_pattern(_ADVISORY_TAGS)
 #: How many lines of a CHANGES_REQUESTED with no tagged finding are printed.
 _UNTAGGED_LINES = 3
 
@@ -308,6 +336,27 @@ class _AnswersEnd:
         if self.settings:
             return f"{checked} to read above"
         return ""
+
+
+@dataclass(frozen=True)
+class _FindingsEnd:
+    """How the step that prints the `[person]` findings ended, when it did not
+    stop the run."""
+
+    #: How many `[person]` findings it printed.
+    count: int = 0
+    #: Why this run's `--yes` does not cover them, or None when it does — or
+    #: when there is no `--yes`, or nothing for it to cover (DEC-055 point 3).
+    held: str | None = None
+
+    def phrase(self) -> str:
+        """What the `ready:` line asks the person to judge, with why a `--yes`
+        does not cover it — `, 1 finding to judge above (…)` — or ""."""
+        if not self.count:
+            return ""
+        noun = "finding" if self.count == 1 else "findings"
+        held = f" ({self.held})" if self.held else ""
+        return f", {self.count} {noun} to judge above{held}"
 
 
 # How the ci step ended, when it did not stop the run.
@@ -425,12 +474,19 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
     head = _pin_head(args, config)
     if head is None:
         return _merge(args, None, config)
+    # What a run authorised up front found when it started: the hold on the
+    # `[person]` findings is what it found then (DEC-055 point 3).
+    found = _found_at_start(head, config) if args.yes and not args.dry_run else None
     ci = _wait_for_checks(
         head, wait_seconds=_wait_seconds(args), dry_run=args.dry_run, config=config
     )
     if ci == _CI_PR_MERGED:
         return _merge(args, None, config)
     review = _review(args, head, config)
+    # Before the answers: a step that stops the run after the list was
+    # written must end it ready (`_AnswersEnd.wrote`), and this one stops on
+    # what it cannot read.
+    to_judge = _findings(args, head, config, capability_root, found)
     answers = _answers(args, head, config, capability_root)
     if args.dry_run and (ci != _CI_PASSED or not review.clear):
         _say(
@@ -441,11 +497,11 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
     if args.dry_run:
         return _merge(args, head, config)
     if answers.failed:
-        return _unconfirmed(head, review, answers, answers.failed)
-    if args.yes and answers.held(args) is not None:
-        return _ready(args, head, review, config, answers)
+        return _unconfirmed(head, review, answers, to_judge, answers.failed)
+    if args.yes and (answers.held(args) is not None or to_judge.held is not None):
+        return _ready(args, head, review, config, answers, to_judge)
     if not args.yes and not _interactive():
-        return _ready(args, head, review, config, answers)
+        return _ready(args, head, review, config, answers, to_judge)
     return _merge(args, head, config)
 
 
@@ -820,7 +876,7 @@ def _review(args: argparse.Namespace, head: _Head, config: dict[str, Any]) -> _R
     advisories = 0
     for name, (token, body) in verdicts.items():
         if token == APPROVED:
-            for line in _tagged_lines(body, _ADVISORY_BULLET):
+            for line in _first_lines(body, TAG_ADVISORY):
                 print(f"  [{name}] {line}")
                 advisories += 1
     if run.moved_to is not None:
@@ -866,13 +922,13 @@ def _review(args: argparse.Namespace, head: _Head, config: dict[str, Any]) -> _R
 
 
 def _blocking_lines(body: str, pr_number: int) -> list[str]:
-    """What a CHANGES_REQUESTED says blocks: the first line of each finding
-    tagged blocking, else the verdict's first lines and where to read it all."""
-    tagged = _tagged_lines(body, _BLOCKING_BULLET)
-    if tagged:
-        return tagged
+    """What a CHANGES_REQUESTED says blocks: the first line of each `[block]`
+    finding, else the verdict's first lines and where to read it all."""
+    blocking = _first_lines(body, TAG_BLOCK)
+    if blocking:
+        return blocking
     text = [
-        line.strip()
+        friction_answers.shown(line.strip())
         for line in body.splitlines()
         if line.strip() and not line.lstrip().startswith(("Reviewer agent (", "<!--"))
     ]
@@ -882,9 +938,11 @@ def _blocking_lines(body: str, pr_number: int) -> list[str]:
     return [*text[:_UNTAGGED_LINES], pointer]
 
 
-def _tagged_lines(body: str, tagged: re.Pattern[str]) -> list[str]:
-    """The first line of each bullet `tagged` matches, the bullet mark dropped."""
-    return [re.sub(_BULLET, "", line).strip() for line in body.splitlines() if tagged.match(line)]
+def _first_lines(body: str, tag: str) -> list[str]:
+    """The first line of each finding of `body` that counts as `tag` (DEC-028's
+    finding tags; an untagged finding counts as `[advisory]`), its list marker
+    dropped and every character a terminal would act on escaped."""
+    return [friction_answers.shown(finding.first_line) for finding in tagged(body, tag)]
 
 
 # ---- answers ---------------------------------------------------------------
@@ -1125,6 +1183,222 @@ def _write_body(head: _Head, body: str, config: dict[str, Any]) -> str:
             Path(path).unlink()
 
 
+# ---- findings to judge -----------------------------------------------------
+
+
+def _found_at_start(head: _Head, config: dict[str, Any]) -> frozenset[Verdict] | None:
+    """Every verdict on the PR as this run found it at its start, whoever
+    posted it, or None when the PR's comments could not be read.
+
+    A verdict is the one found only when every word of its comment, its
+    author's name and its time are the same, so one edited or posted since is
+    another. None finds nothing: each verdict carrying a `[person]` finding is
+    then new to the run, so a read that fails holds the run, never lets it
+    merge (DEC-055 point 3)."""
+    data = _view(head.pr_number, ("comments",), config)
+    if isinstance(data, str):
+        return None
+    return frozenset(all_verdicts(data.get("comments") or []))
+
+
+def _view(pr_number: int, fields: tuple[str, ...], config: dict[str, Any]) -> dict[str, Any] | str:
+    """`gh pr view <N> --json <fields>`, or why it could not be read."""
+    try:
+        proc = gh_run(
+            ["gh", "pr", "view", str(pr_number), "--json", ",".join(fields)], config, check=False
+        )
+    except OSError as exc:
+        return f"`gh` could not be run ({exc})"
+    if proc.returncode != 0:
+        return (proc.stderr or "").strip() or f"gh exited {proc.returncode}"
+    try:
+        data = json.loads(proc.stdout)
+    except ValueError:
+        return "gh's answer is not JSON"
+    if not isinstance(data, dict):
+        return "gh's answer names no pull request"
+    return data
+
+
+@dataclass(frozen=True)
+class _PersonVerdict:
+    """A verdict carrying `[person]` findings, as the step judged it."""
+
+    verdict: Verdict
+    findings: tuple[Finding, ...]
+    freshness: Freshness
+
+
+def _findings(
+    args: argparse.Namespace,
+    head: _Head,
+    config: dict[str, Any],
+    capability_root: Path,
+    found: frozenset[Verdict] | None,
+) -> _FindingsEnd:
+    """Print each `[person]` finding whole, from each reviewer's latest verdict
+    as the merge gate selects it, and say whether this run's `--yes` covers
+    them (DEC-055 point 3). A verdict that no longer stands for the pinned
+    head, by the gate's freshness rule, is printed marked stale.
+
+    `found` is what the run found at its start, None when it read nothing or
+    holds nothing. A run with no `[person]` finding prints nothing, and goes
+    on as it would without the step. Stops the run when the verdicts cannot
+    be read, the head moved, or — with a `[person]` finding to show — the
+    reviewers whose verdicts count cannot be resolved, as when a remote
+    reviewer's verdict carries one and the PR's author cannot be read."""
+    issue, number = head.issue, head.pr_number
+    data = _view(number, _FINDINGS_VIEW, config)
+    if isinstance(data, str):
+        raise _Stop(
+            EXIT_UNREADABLE,
+            f"{FINDINGS}: PR #{number}'s verdicts could not be read: {data}. Nothing was "
+            f"merged; run `land-work {issue}` again",
+        )
+    now = head_sha(data)
+    if now != head.oid:
+        raise _Stop(
+            EXIT_HEAD_MOVED,
+            f"{FINDINGS}: stopped — PR #{number}'s head is {short_sha(now) or 'unknown'}, "
+            f"not {short_sha(head.oid)}, the head whose checks passed. Nothing was merged; "
+            f"`land-work {issue}` checks and reviews the new head",
+        )
+    comments = data.get("comments") or []
+    # Only a marked verdict carrying a `[person]` finding needs the gate's
+    # selection: without one there is nothing to show, from anyone.
+    if not any(_person(verdict) for verdict in marked_candidates(comments)):
+        return _FindingsEnd()
+    # A remote verdict counts only from someone other than the PR's author:
+    # with no author read, `gate_membership` counts none, so a remote
+    # reviewer's `[person]` finding would go unshown, though its verdict may
+    # not be the author's own (#1485). A local verdict is read with no author
+    # exclusion, so its findings are shown as before.
+    author = pr_author(data)
+    remote = frozenset(remote_baseline(config))
+    if not author and any(
+        verdict.path == PATH_REMOTE and verdict.reviewer in remote and _person(verdict)
+        for verdict in marked_candidates(comments)
+    ):
+        raise _unresolved(issue, f"PR #{number}'s author could not be read")
+    review = done_work._resolve_review(number, config, capability_root.parent.parent.parent)
+    if not review.resolution.ok:
+        error = review.resolution.error
+        raise _unresolved(issue, error.message if error is not None else "the resolution failed")
+    remote_ok, local_ok = gate_membership(
+        remote_baseline=remote,
+        required_local=review.resolution.required_local,
+        author_login=author,
+    )
+    freshness = review.freshness_rule(data)
+    judged = [
+        _PersonVerdict(verdict, person, freshness.assess(verdict))
+        for verdict in gate_candidates(
+            comments, local_reviewer_ok=local_ok, remote_reviewer_ok=remote_ok
+        )
+        if (person := _person(verdict))
+    ]
+    if not judged:
+        return _FindingsEnd()
+    for one in judged:
+        _print_findings(one)
+    count = sum(len(one.findings) for one in judged)
+    stale = sum(len(one.findings) for one in judged if not one.freshness.fresh)
+    held = _held(args, head, judged, found)
+    _say(f"{FINDINGS}: {count}, above" + (f" ({stale} marked stale)" if stale else ""))
+    return _FindingsEnd(count, held)
+
+
+def _unresolved(issue: int, why: str) -> _Stop:
+    """The stop when whose verdicts count cannot be told, and so which
+    `[person]` findings to show: nothing is shown and nothing merged."""
+    return _Stop(
+        EXIT_UNREADABLE,
+        f"{FINDINGS}: whose verdicts count could not be resolved ({why}), so the "
+        f"findings a reviewer left for a person to judge cannot be shown. Nothing was "
+        f"merged; run `land-work {issue}` again",
+    )
+
+
+def _person(verdict: Verdict) -> tuple[Finding, ...]:
+    return tuple(tagged(verdict.body, TAG_PERSON))
+
+
+def _print_findings(judged: _PersonVerdict) -> None:
+    """Each `[person]` finding of one verdict, whole, under its reviewer —
+    marked stale when the verdict no longer stands for the head — with every
+    character a terminal would act on escaped."""
+    shown = friction_answers.shown
+    name = shown(judged.verdict.reviewer)
+    stale = "" if judged.freshness.fresh else f"(stale: {shown(judged.freshness.reason)}) "
+    lead = f"  [{name}] {stale}"
+    under = " " * len(f"  [{name}] ")
+    for finding in judged.findings:
+        first, *rest = finding.text.split("\n")
+        print(f"{lead}{shown(first)}")
+        for line in rest:
+            print(f"{under}{shown(line)}".rstrip())
+
+
+def _held(
+    args: argparse.Namespace,
+    head: _Head,
+    judged: list[_PersonVerdict],
+    found: frozenset[Verdict] | None,
+) -> str | None:
+    """Why this run's `--yes` does not cover the `[person]` findings, or None
+    when it does, or when there is no `--yes` to cover them (DEC-055 point 3).
+
+    It covers them only when the run found, at its start, each verdict carrying
+    them, and each stands for the head it merges. A verdict that does not
+    stand for that head holds every run until its reviewer posts again for the
+    head, and the reason names that review; one this run posted, or one
+    posted while it ran, holds only this run."""
+    if not args.yes or args.dry_run:
+        return None
+    sha = short_sha(head.oid)
+    stale = [one for one in judged if not one.freshness.fresh]
+    if stale:
+        one = len(stale) == 1
+        names = ", ".join(friction_answers.shown(o.verdict.reviewer) for o in stale)
+        again = (
+            f"; `review-pr {head.issue}` runs a local reviewer again"
+            if any(o.verdict.path == PATH_LOCAL for o in stale)
+            else ""
+        )
+        return (
+            f"{_whose(stale)} {'does' if one else 'do'} not stand for {sha}, so no --yes "
+            f"covers {_them(stale)} until {names} {'posts' if one else 'post'} one that "
+            f"does{again}"
+        )
+    if found is None:
+        return (
+            f"the verdicts could not be read when this run started, so its --yes does not "
+            f"cover {_them(judged)}"
+        )
+    new = [one for one in judged if one.verdict not in found]
+    if new:
+        return (
+            f"{_whose(new)} came after this run's --yes was given, so the --yes does not "
+            f"cover {_them(new)}"
+        )
+    return None
+
+
+def _whose(judged: list[_PersonVerdict]) -> str:
+    """`code-reviewer's verdict`, or `the verdicts of a, b`."""
+    names = [friction_answers.shown(one.verdict.reviewer) for one in judged]
+    if len(names) == 1:
+        return f"{names[0]}'s verdict"
+    return f"the verdicts of {', '.join(names)}"
+
+
+def _them(judged: list[_PersonVerdict]) -> str:
+    """How the findings of `judged` are named: `its finding`, `their findings`."""
+    count = sum(len(one.findings) for one in judged)
+    owner = "its" if len(judged) == 1 else "their"
+    return f"{owner} finding{'' if count == 1 else 's'}"
+
+
 # ---- merge -----------------------------------------------------------------
 
 
@@ -1134,10 +1408,13 @@ def _ready(
     review: _ReviewEnd,
     config: dict[str, Any],
     answers: _AnswersEnd,
+    to_judge: _FindingsEnd,
 ) -> int:
     """No authorisation to merge — none given, or a `--yes` that does not cover
-    the answers above (DEC-055 point 3): run done-work's gates as a dry run on
-    the pinned head, and say the head is ready, with the command that merges it.
+    the answers or the findings to judge above (DEC-055 point 3): run
+    done-work's gates as a dry run on the pinned head, and say the head is
+    ready, with the command that merges it — and, where a verdict carrying a
+    finding to judge does not stand for the head, the review it waits for.
     Where this run wrote the list, a dry run that fails, or cannot be read, ends
     ready too (`_unconfirmed`): the next step is to show the list, never to run
     the same command again."""
@@ -1147,12 +1424,16 @@ def _ready(
     except (Exception, SystemExit) as exc:
         failure = _described(exc)
         if answers.wrote:
-            return _unconfirmed(head, review, answers, f"done-work's dry run failed ({failure})")
+            return _unconfirmed(
+                head, review, answers, to_judge, f"done-work's dry run failed ({failure})"
+            )
         raise _Stop(*_done_work_failed(failure, head.issue, head, config, merging=False)) from exc
     if end.kind != done_work.PLANNED:
         code, line = _judged(end, head, args, config)
         if answers.wrote and code in (EXIT_RETRY, EXIT_UNREADABLE):
-            return _unconfirmed(head, review, answers, f"done-work's dry run: {end.reason}")
+            return _unconfirmed(
+                head, review, answers, to_judge, f"done-work's dry run: {end.reason}"
+            )
         _say(line)
         return code
     to_read = answers.to_read()
@@ -1160,20 +1441,29 @@ def _ready(
         held = answers.held(args) if args.yes else None
         to_read = f", {to_read}" + (f" ({held}, so it does not cover them)" if held else "")
     _say(
-        f"ready: {short_sha(head.oid)} — CI passed, {review.approval}{to_read}; merge with: "
-        f"pkit pm land-work {head.issue} --yes --expect-head {head.oid}"
+        f"ready: {short_sha(head.oid)} — CI passed, {review.approval}{to_read}"
+        f"{to_judge.phrase()}; merge "
+        f"with: pkit pm land-work {head.issue} --yes --expect-head {head.oid}"
     )
     return EXIT_READY
 
 
-def _unconfirmed(head: _Head, review: _ReviewEnd, answers: _AnswersEnd, failure: str) -> int:
+def _unconfirmed(
+    head: _Head,
+    review: _ReviewEnd,
+    answers: _AnswersEnd,
+    to_judge: _FindingsEnd,
+    failure: str,
+) -> int:
     """A run that wrote the list — or tried to — and then could not go on: it ends
-    ready, merging nothing (DEC-055 point 3). The list above is the one to show;
-    the run that merges, on the person's authorisation, runs every gate again."""
+    ready, merging nothing (DEC-055 point 3). The list above is the one to show,
+    with the findings to judge; the run that merges, on the person's
+    authorisation, runs every gate again."""
     _say(
         f"ready: {short_sha(head.oid)} unconfirmed — {failure}; nothing was merged. CI passed, "
-        f"{review.approval}, {answers.to_read()}; the run that merges checks every gate again. "
-        f"Merge with: pkit pm land-work {head.issue} --yes --expect-head {head.oid}"
+        f"{review.approval}, {answers.to_read()}{to_judge.phrase()}; the run that merges "
+        f"checks every gate again. Merge with: pkit pm land-work {head.issue} --yes "
+        f"--expect-head {head.oid}"
     )
     return EXIT_READY
 

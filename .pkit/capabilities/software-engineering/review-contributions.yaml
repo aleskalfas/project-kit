@@ -11,7 +11,7 @@
 # reviewer-agent name with a predicate — a diff-property `floor` and/or a
 # classification `match`.
 #
-# Activation (per DEC-002 D1 + the DEC-032 amendment):
+# Activation (per DEC-002 D1 + project-management DEC-032 D1):
 #   * code-reviewer + security-reviewer ride the `touches-code` diff floor —
 #     required whenever a PR's diff touches any non-documentation file,
 #     independent of the closing issue's classification. This backstops #715's

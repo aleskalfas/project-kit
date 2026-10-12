@@ -71,8 +71,8 @@
           ]
         },
         "places": {
-          "description": "The project's own anchored places: paths or globs, relative to the repository root, where the friction check looks for artefacts carrying the methodology's container (COR-050 point 1). `**` matches across folders. Default: none. Components declare their places in their own package metadata, not here.",
-          "$ref": "#/$defs/repo-relative-patterns"
+          "description": "The project's own anchored places: paths or globs, relative to the repository root, where the friction check looks for artefacts carrying the methodology's container (COR-050 point 1). `**` matches across folders. A place is a bare path, which gives no type, or `{path, type}`, which gives the artefacts in it that type (COR-056 point 2). Default: none. Components declare their places in their own package metadata, not here.",
+          "$ref": "#/$defs/friction-places"
         },
         "surface": {
           "description": "The project's declared surface: paths or globs, relative to the repository root, that artefacts are expected to anchor to; the check reports the uncovered part (COR-050 point 14). Default: none.",
@@ -158,6 +158,49 @@
     },
     "repo-relative-directory": {
       "description": "A directory path relative to the repository root. Not absolute; a trailing slash is allowed.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^/]"
+    },
+    "friction-places": {
+      "description": "The project's places: each a path or glob relative to the repository root, or `{path, type}`. Not absolute.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "if": {
+          "type": "string"
+        },
+        "then": {
+          "$ref": "#/$defs/repo-relative-pattern"
+        },
+        "else": {
+          "$ref": "#/$defs/typed-place"
+        }
+      }
+    },
+    "typed-place": {
+      "description": "A place that gives a type (COR-056 point 2): `path` as a bare place is written, and `type` the type the artefacts in it take.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "type"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/repo-relative-pattern"
+        },
+        "type": {
+          "$ref": "#/$defs/project-place-type"
+        }
+      }
+    },
+    "project-place-type": {
+      "description": "A bare type of the project's own, `<name>`, or an installed component's type whose registry admits project places, `<component>:<name>`. A name is lower-case letters and digits joined by single hyphens, so it holds no `/`. No place names one of the backbone's types (`backbone:<name>`). Validation checks a component's type against the installed components' registries, and refuses a bare type that takes the name of one of their types or the backbone's (COR-056 point 2).",
+      "type": "string",
+      "pattern": "^(?!backbone:)(?:(?:[a-z]|[a-z][a-z0-9-]*[a-z0-9]):)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "repo-relative-pattern": {
       "type": "string",
       "minLength": 1,
       "pattern": "^[^/]"

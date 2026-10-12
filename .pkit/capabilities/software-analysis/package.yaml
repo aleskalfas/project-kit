@@ -54,19 +54,38 @@ docs:
 # and are not anchored artefacts, so their folder is not a place but held — no
 # other component's place reads them as artefacts (DEC-001 point 2). No
 # surface: the project declares the code its analysis ought to cover.
+#
+# COR-056 point 2 — the type registry, one type per kind of anchored artefact,
+# and the type each place gives (DEC-001 point 2). No type names a kind field:
+# the check holds every file in a place to that place's kind. None admits a
+# project place (no `project-places`): the capability checks only the
+# artefacts in its own places. The held records take no type.
 friction:
+  types:
+    actor:
+      description: An actor — a named role that uses the system, with the needs it brings (DEC-001 point 1).
+    use-case:
+      description: A use case — one actor's goal and how the system fulfils it (DEC-001 point 1).
+    journey:
+      description: A journey — one actor's end-to-end path across several of its use cases (DEC-001 point 1).
+    term:
+      description: A glossary term — a domain word, with a stable id apart from its name, and its definition (DEC-001 point 1).
   places:
     - location: analysis
       path: glossary.md
+      type: term
       description: The glossary, one entry per term.
     - location: analysis
       path: use-case-model/actors.md
+      type: actor
       description: The actors, one entry per actor.
     - location: analysis
       path: use-case-model/use-cases
+      type: use-case
       description: The use cases, one file each, in folders by functional area when the project groups them.
     - location: analysis
       path: use-case-model/journeys
+      type: journey
       description: The journeys, one file each.
   held:
     - location: analysis

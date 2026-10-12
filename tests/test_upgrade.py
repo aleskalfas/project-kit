@@ -22,7 +22,7 @@ def installed_target(make_adopter_repo: MakeAdopterRepo) -> Path:
 
 
 class _RecordingRun:
-    """Stand-in for `subprocess.run` while the ADR-044 staleness check runs.
+    """Stand-in for `subprocess.run` while the ADR-063 staleness check runs.
 
     Intercepts only the `git ls-remote` the check issues — returning a
     configurable stdout/returncode (or raising a configured exception) to drive
@@ -30,8 +30,9 @@ class _RecordingRun:
     command (git plumbing in fixtures, the real migration scripts) is delegated
     to the genuine `subprocess.run`, since patching the shared `subprocess`
     module replaces `run` process-wide. Records every argv so a test can assert
-    what was — and was not — invoked, in particular that `pkit upgrade` never
-    shells out to `uv tool install` (it is print-only).
+    what was — and was not — invoked, in particular that `pkit upgrade` does not
+    shell out to `uv tool install` where it may only print the command (no
+    terminal, as under the suite, `--no-self-update`, or a dry run).
     """
 
     def __init__(self, real_run) -> None:
@@ -62,7 +63,7 @@ class _RecordingRun:
 
 @pytest.fixture(autouse=True)
 def stub_ls_remote(monkeypatch: pytest.MonkeyPatch) -> _RecordingRun:
-    """Intercept the ADR-044 staleness check's `git ls-remote` so it never touches
+    """Intercept the ADR-063 staleness check's `git ls-remote` so it never touches
     the network anywhere in this suite (all other subprocess calls pass through).
     Defaults to a *failed* ls-remote (the degrade path); tests exercising the
     stale/current branches configure the returned recorder."""
@@ -276,7 +277,7 @@ def test_upgrade_updates_recorded_version_when_run_for_real(
     assert post.backbone_version == source_version
 
 
-# --- pin-by-default on upgrade (ADR-049, amended) --------------------
+# --- pin-by-default on upgrade (ADR-064) ----------------------------
 
 
 def _recorded_version(target: Path) -> str:
@@ -388,7 +389,7 @@ def test_cli_upgrade_no_pin_flag_forwards(monkeypatch: pytest.MonkeyPatch) -> No
     assert captured["pin"] is True
 
 
-# --- tool self-update (ADR-044, amended) -----------------------------
+# --- tool self-update (ADR-063) --------------------------------------
 
 
 def _stale(monkeypatch: pytest.MonkeyPatch, running: str = "0.1.0", latest: str = "9.9.9") -> None:
@@ -907,7 +908,7 @@ def test_upgrade_refuses_cleanly_when_source_incomplete(
 
 
 # ============================================================================
-# ADR-044: `pkit upgrade` detects a stale tool and instructs (print-only)
+# ADR-063: `pkit upgrade` detects a stale tool; without a terminal it prints
 # ============================================================================
 
 
@@ -917,8 +918,9 @@ def test_tool_staleness_instructs_when_behind(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A running tool behind the latest release prints the exact update command
-    and installs nothing (ADR-044 D2). The project-sync axis is untouched."""
+    """Without a terminal, a running tool behind the latest release prints the
+    exact update command and installs nothing (ADR-063 point 3). The project-sync
+    axis is untouched."""
     stub_ls_remote.ls_remote_returncode = 0
     stub_ls_remote.ls_remote_stdout = _tag_output("1.0.0", "2.5.0")
     monkeypatch.setattr(upgrade, "running_version", lambda: "1.0.0")
@@ -943,7 +945,7 @@ def test_tool_staleness_reports_current_when_up_to_date(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A running tool at the latest release prints a plain "current" line instead
-    of an instruction (ADR-044 D2), and installs nothing."""
+    of an instruction (ADR-063 point 1), and installs nothing."""
     stub_ls_remote.ls_remote_returncode = 0
     stub_ls_remote.ls_remote_stdout = _tag_output("1.0.0", "1.2.3")
     monkeypatch.setattr(upgrade, "running_version", lambda: "1.2.3")
@@ -963,7 +965,7 @@ def test_tool_staleness_degrades_on_ls_remote_failure_and_sync_proceeds(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A failed lookup warns loudly and never fails the command — today's sync
-    still runs, exit code unchanged (ADR-044 D1)."""
+    still runs, exit code unchanged (ADR-063 point 1)."""
     # Force a version mismatch so the normal sync step actually runs.
     m = manifest.read_backbone_manifest(installed_target)
     assert m is not None
@@ -991,7 +993,7 @@ def test_tool_staleness_degrades_on_timeout(
     stub_ls_remote: _RecordingRun,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """A bounded-timeout expiry is caught and degrades to a warning (ADR-044 D1)."""
+    """A bounded-timeout expiry is caught and degrades to a warning (ADR-063 point 1)."""
     stub_ls_remote.raise_exc = subprocess.TimeoutExpired(cmd="git ls-remote", timeout=5.0)
 
     upgrade.run_upgrade(installed_target)  # must not raise
@@ -1004,7 +1006,7 @@ def test_tool_staleness_degrades_when_git_missing(
     stub_ls_remote: _RecordingRun,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """`git` not on PATH (OSError) is caught and degrades to a warning (ADR-044 D1)."""
+    """`git` not on PATH (OSError) is caught and degrades to a warning (ADR-063 point 1)."""
     stub_ls_remote.raise_exc = FileNotFoundError("git")
 
     upgrade.run_upgrade(installed_target)  # must not raise
@@ -1103,7 +1105,7 @@ def test_tool_staleness_not_reached_on_source_checkout_run_by_other_code(
     stub_ls_remote: _RecordingRun,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """In a source checkout the tool check never runs (ADR-044 D3). Under the
+    """In a source checkout the tool check never runs (ADR-063 point 5). Under the
     checkout's own code the self-host branch returns first (the test below);
     under any other code the refusal to propagate over the source raises first
     (ADR-059; #1070) — no lookup, no tool output.
@@ -1271,7 +1273,7 @@ def test_upgrade_skips_tool_staleness_on_bypass_hop(
     stub_ls_remote: _RecordingRun,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Inside a `run_bypassed`-bootstrapped upgrade (PKIT_NO_ROUTE set), the ADR-044
+    """Inside a `run_bypassed`-bootstrapped upgrade (PKIT_NO_ROUTE set), the ADR-063
     tool-staleness probe is suppressed — no second `git ls-remote`, no "tool is
     current" line mid-raise (ADR-049)."""
     monkeypatch.setenv(router._BYPASS_ENV, "1")
@@ -1334,9 +1336,9 @@ def test_upgrade_pinned_already_current_still_flips_lagging_pin(
 def test_upgrade_no_pin_writes_no_pin_file(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """With `--no-pin`, an un-pinned project keeps the old behaviour: plain content
-    sync, no pin directive written (ADR-049, amended — pinning is now the default,
-    so the no-pin outcome requires the opt-out)."""
+    """With `--no-pin`, an un-pinned project stays un-pinned: plain content sync,
+    no pin directive written (ADR-064 point 2 — pinning is the default, so the
+    no-pin outcome requires the opt-out)."""
     m = manifest.read_backbone_manifest(installed_target)
     assert m is not None
     m.backbone_version = "0.1.0"

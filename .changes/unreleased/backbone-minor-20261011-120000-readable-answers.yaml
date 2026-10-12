@@ -1,0 +1,19 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  `pkit friction check`'s closing list of the answers a change wrote now says
+  what each answer answers. Its heading states the question once: these
+  documents rely on something this change modifies, and each answer says
+  whether the document is still true. Each line names the document, the
+  anchors the change modified that it relies on, and the outcome in plain
+  words, with its words still quoted in full. `docs/guide.md relies on
+  src/cli/**, which this change modifies. Still accurate: "…"` replaces
+  `docs/guide.md  unchanged — "…"`. The outcomes read "updated in this
+  change", "still accurate", "out of date, fixed later", "not tied to
+  anything" and "no decision recorded". Each flag reads in plain words, in
+  its own parentheses, and each deferral a revalidation kept follows on a
+  line of its own. `--json` gains `changed` on each entry of `answers`: the
+  anchors the change modified that the answer is about, as `{kind, value}`.
+  `schema_version` stays 1.

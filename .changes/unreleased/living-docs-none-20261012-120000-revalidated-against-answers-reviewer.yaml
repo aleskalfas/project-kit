@@ -1,0 +1,6 @@
+component: living-docs
+kind: none
+body: >
+  The capability README is revalidated against COR-050 point 3's reviewer of
+  a change's answers. Its meaning and the capability's behaviour are
+  unchanged.

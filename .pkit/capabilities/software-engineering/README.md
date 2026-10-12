@@ -13,8 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
     revalidated:
-      at: 2026-10-11T18:32:02Z
-      outcome: updated
+      at: 2026-10-12T20:32:06Z
+      outcome: unchanged
+      unchanged-because: This change restates project-management DEC-028's and DEC-032's refinements as fact and corrects the constraint DEC-028's self-approval degrade names. DEC-002 and review-contributions.yaml now cite DEC-032 D1 in place of its amendment, and the panel's rules in that file are unchanged. The panel's activation, verdict grammar, verdict marker and finding tags are as this page states them, and it already cites DEC-032 D1.
 ---
 
 # software-engineering capability
@@ -56,7 +57,7 @@ The panel ([software-engineering:DEC-002-code-review-panel]) closes bug #715: be
 
 So `code-reviewer` alone is *basic* review; the specialists alongside it make *complex* review, composable per install ([project-management:DEC-032]). A project that wants the panel without one of its reviewers opts out of that reviewer alone in pm's `review.agents.contributed_opt_out:`, with a reason — the rest of the panel keeps gating (the project-management README, "Opting out of a contributed reviewer").
 
-**Block-threshold discipline.** Each agent withholds `APPROVED` **only on objective failures of the change, in its remit**; everything softer, and every defect the change merely sits beside, is an advisory comment posted under an `APPROVED` verdict ([software-engineering:DEC-002] D3). A pre-existing defect blocks only when the change asserts it away — its PR title or body claims to fix or guard against the behaviour, or text the diff adds or edits says the case is handled — and the defect survives within its remit; the remedy is to fix it or retract the claim. This keeps the binary all-must-approve gate from becoming a subjective merge-blocking veto that trains the `--bypass` reflex.
+**Block-threshold discipline.** Each agent withholds `APPROVED` **only on objective failures of the change, in its remit** ([software-engineering:DEC-002] D3). Each finding begins with one of three tags that say what it does to the merge, as the verdict decision sets them out ([project-management:DEC-028-agent-as-approver-paths]). `[block]` marks an objective failure of the change in the agent's remit, and it withholds `APPROVED`. `[person]` marks a finding that cites by id an accepted rule of the `<project-conventions>` corpus, where judging the change needs a reading the rule does not settle, or a fact it does not name. It withholds no approval, and it is shown to the person who authorises the merge. `[advisory]` marks every other finding: everything softer, and every defect the change merely sits beside. It withholds nothing. A pre-existing defect blocks only when the change asserts it away — its PR title or body claims to fix or guard against the behaviour, or text the diff adds or edits says the case is handled — and the defect survives within its remit; the remedy is to fix it or retract the claim. This keeps the binary all-must-approve gate from becoming a subjective merge-blocking veto that trains the `--bypass` reflex.
 
 **Knowledge split.** Each agent body carries only *universal* review knowledge; project-specific rules are read from the overlay-resolved `<project-conventions>` corpus — the same corpus `software-engineer` produces against ([software-engineering:DEC-002] D4). An empty or absent corpus is tolerated: the agent reviews as a careful generalist and says so.
 

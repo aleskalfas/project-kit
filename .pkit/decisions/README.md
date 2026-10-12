@@ -12,9 +12,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-11T18:49:52Z
+      at: 2026-10-12T19:27:33Z
       outcome: unchanged
-      unchanged-because: COR-051's refinement adds how an accepted rule comes to bind on an artefact, the scope's form and declared check parts. This page's section on rule sets describes none of them. It summarises statuses, the acceptance gate, origins, where sets live, citing and validation, and each of its sentences still holds, including that a project inherits a method rule set by pinning its major.
+      unchanged-because: "This change adds two rule-set errors: a scope on a method rule set, and a type a scope names that no owner declares. The page's validation sentence names the checks in brief, without the container or the cited sources either, and sends the reader to the schemas reference for every check, whose scope row now gives both. Its other sentences on rule sets do not describe a scope, so the page holds."
 ---
 
 # Decision records

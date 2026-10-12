@@ -1,13 +1,16 @@
 """A pull request's required reviewers and its freshness rule, wired once (#1195).
 
-Three verbs judge a PR's reviewer verdicts, and they must agree on who has to
+The verbs that judge a PR's reviewer verdicts must agree on who has to
 review it and on whether a verdict still stands:
 
   * `done-work`'s merge gate counts each required reviewer's fresh verdict;
   * `review-pr` invokes the required set and skips a reviewer whose verdict
     is fresh;
   * `show-pr --field review` / `review-history` mark a verdict stale exactly
-    when the gate would not count it (ADR-042 D2).
+    when the gate would not count it (ADR-042 D2);
+  * `land-work`'s hold on `[person]` findings reads the verdicts of the
+    required set, and marks and holds on a stale one (through `done-work`'s
+    wiring, DEC-055 point 3).
 
 Each used to wire the resolver by hand — the same closing-issue, label and
 changed-files fetchers, the same opt-out and not-code reads, its own reading
@@ -160,4 +163,17 @@ def _baseline_local(config: Any) -> list[str]:
     registered = (agents.get("local_registered") if isinstance(agents, dict) else None) or []
     return [
         entry.get("name") for entry in registered if isinstance(entry, dict) and entry.get("name")
+    ]
+
+
+def remote_baseline(config: Any) -> list[str]:
+    """The remote reviewers the gate requires: each `github_login` under
+    `review.agents.remote_registered:`, in order (DEC-028 step 2)."""
+    review = config.get("review") if isinstance(config, dict) else None
+    agents = review.get("agents") if isinstance(review, dict) else None
+    registered = (agents.get("remote_registered") if isinstance(agents, dict) else None) or []
+    return [
+        entry.get("github_login")
+        for entry in registered
+        if isinstance(entry, dict) and entry.get("github_login")
     ]
