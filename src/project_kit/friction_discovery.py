@@ -388,7 +388,9 @@ class FrictionSettings:
     `user_root` are the documentation roots, read from the same state.
     `types` are the installed capabilities' type registries, each by name in
     written order, and `installed` the installed capabilities' names (COR-056
-    point 2).
+    point 2). `refused_types` are the project's places whose `type` the
+    configuration's schema refuses, each with that value as written in
+    `value`: they give no type, and a reader warns (`refused_type_warnings`).
     """
 
     mode: Any
@@ -404,6 +406,7 @@ class FrictionSettings:
     exclude_unreadable: str | None = None
     types: tuple[DeclaredType, ...] = ()
     installed: tuple[str, ...] = ()
+    refused_types: tuple[SettingsPath, ...] = ()
 
     @property
     def roots(self) -> dict[str, str]:
@@ -489,7 +492,8 @@ def read_friction_settings(
             for index, text in _texts(friction.get(key))
         )
 
-    places = list(_project_places(friction.get(PLACES_KEY), config_rel))
+    refused_types: list[SettingsPath] = []
+    places = list(_project_places(friction.get(PLACES_KEY), config_rel, refused_types))
     surface = list(project_paths("surface"))
     exclude = list(project_paths("exclude"))
     held: list[SettingsPath] = []
@@ -529,14 +533,18 @@ def read_friction_settings(
         exclude_unreadable=_exclude_unreadable(config, unparsed),
         types=tuple(types),
         installed=tuple(installed),
+        refused_types=tuple(refused_types),
     )
 
 
-def _project_places(value: Any, config_rel: str) -> Iterator[SettingsPath]:
+def _project_places(
+    value: Any, config_rel: str, refused_types: list[SettingsPath]
+) -> Iterator[SettingsPath]:
     """The project's `friction.places`, each a bare path or `{path, type}` (COR-056
     point 2), read forgivingly: an entry in neither shape, or with no path, is
     passed over, and the configuration pass refuses it. A lone text counts as one
-    entry. A `type` the configuration's schema refuses gives no type (point 3).
+    entry. A `type` the configuration's schema refuses gives no type (point 3),
+    and is kept in `refused_types`, its pointer at the `type`, so a reader warns.
     """
     if isinstance(value, str):
         value = [value]
@@ -544,10 +552,21 @@ def _project_places(value: Any, config_rel: str) -> Iterator[SettingsPath]:
         return
     for index, item in enumerate(cast(Sequence[Any], value)):
         type_: str | None = None
+        pointer = f"/{FRICTION_KEY}/{PLACES_KEY}/{index}"
         if isinstance(item, Mapping):
             entry = _mapping_or_empty(item)
             path = _text_or_none(entry.get(PATH_KEY))
             type_ = project_place_type(entry.get(TYPE_KEY))
+            if path is not None and type_ is None and TYPE_KEY in entry:
+                refused_types.append(
+                    SettingsPath(
+                        value=repr(entry.get(TYPE_KEY)),
+                        resolved=path,
+                        file=config_rel,
+                        pointer=f"{pointer}/{TYPE_KEY}",
+                        source=PROJECT_SOURCE,
+                    )
+                )
         else:
             path = _text_or_none(item)
         if path is None:
@@ -556,10 +575,22 @@ def _project_places(value: Any, config_rel: str) -> Iterator[SettingsPath]:
             value=path,
             resolved=path,
             file=config_rel,
-            pointer=f"/{FRICTION_KEY}/{PLACES_KEY}/{index}",
+            pointer=pointer,
             source=PROJECT_SOURCE,
             type=type_,
         )
+
+
+def refused_type_warnings(settings: FrictionSettings) -> list[str]:
+    """A warning for each project place whose `type` the configuration's schema
+    refuses: a reader reads it as no type and says so (COR-056 point 3, COR-048
+    point 4), and `pkit validate` refuses it."""
+    return [
+        f"warning: the place {refused.resolved!r} ({refused.file}:{refused.pointer}) names "
+        f"the type {refused.value}, which is not a type a place may give, so it gives no "
+        f"type (COR-056 point 3). `pkit validate` reports it."
+        for refused in settings.refused_types
+    ]
 
 
 def project_place_type(value: Any) -> str | None:

@@ -389,6 +389,12 @@ def test_the_configuration_schema_refuses_a_backbone_type_on_a_place(repo: Adopt
     assert set(found) == {"/friction/places/0/type", "/friction/places/1/type"}
     assert all(severity is cv.Severity.ERROR for severity, _m in found.values())
     assert _type_of(repo) == {"a/x.md": None, "b/x.md": None}
+    # A reader reads each as no type, and says so (COR-056 point 3, COR-048 point 4).
+    result = CliRunner().invoke(main, ["friction", "artefacts", "--json"])
+    assert result.exit_code == 0
+    assert json.loads(result.stdout)["schema_version"] == 1
+    assert result.stderr.count("warning: the place") == 2
+    assert f"({CONFIG}:/friction/places/0/type) names the type 'backbone:rule'" in result.stderr
 
 
 def test_a_typed_places_path_is_judged_once_at_its_path(repo: AdopterRepo) -> None:
