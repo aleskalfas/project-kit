@@ -366,7 +366,8 @@ def test_init_does_not_create_a_version_pin(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """`pkit init` propagates only the kit-owned areas; the project-owned pin
-    directive is never seeded (ADR-049 — it is created only by `pkit pin`)."""
+    directive is never seeded (ADR-049 point 2; `pkit pin` or `pkit upgrade`
+    creates it, ADR-064)."""
     _install(tmp_path, monkeypatch)
     assert not router.pin_file_path(tmp_path).exists()
 
