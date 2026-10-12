@@ -13,7 +13,8 @@ body: >
   and otherwise the more specific place wins. A kind field gates a type,
   and a tie counts as each type in contention. A rule set's `scope` now
   takes `{paths, exclude, types}` beside a plain list of paths, which keeps
-  its meaning. A scope on a method rule set is an error. `pkit validate`
+  its meaning. A scope on a method rule set is now an error (COR-051 point
+  2): no shipped method rule set has one. `pkit validate`
   reports the type findings: the `configuration` member fails a type the
   project may not give, a bare type taking a declared type's name, and a tie
   the project can mend. It reports a typed project place that yields. The
@@ -21,8 +22,10 @@ body: >
   `rule-sets` member fails a type in a scope that no owner declares.
   `pkit friction artefacts --json` gives each artefact its `type`,
   `type_place`, `type_conflict` and `ranked_places`, each place its `type`,
-  and every type registry under `types`, at version 1. The install plan
-  names a capability's type whose name a bare project type uses. Nothing
-  that exists changes until a place or a scope uses a type. An older
+  and every type registry under `types`, at version 1. It prints a
+  `warning:` line for a project place whose `type` the schema refuses. The
+  install plan names a capability's type whose name a bare project type
+  uses. Apart from a scope on a method rule set, nothing that exists changes
+  until a place or a scope uses a type. An older
   backbone's readers pass over a typed place and a mapping scope, and its
   validation refuses them.
