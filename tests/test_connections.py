@@ -814,6 +814,37 @@ def test_capability_dependency_absent_and_out_of_range_split_by_direction(
     assert "`pkit capabilities install gone`" in wiring.findings[2].message
 
 
+def test_an_optional_dependency_passes_absent_and_meets_its_range_installed(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """COR-030: an optional dependency that is not installed passes validation; an
+    installed one outside its range fails it as a required one does."""
+    repo = make_adopter_repo()
+    _stage(
+        repo,
+        "dependent",
+        _package(
+            "dependent",
+            requires_capabilities=[
+                {"name": "base", "version": ">=1.0.0,<2.0.0", "optional": True},
+                {"name": "gone", "version": ">=1.0.0", "optional": True},
+            ],
+        ),
+    )
+    assert cx.resolve_wiring(repo.root).findings == ()
+
+    _stage(repo, "base", _package("base", version="2.0.0"))
+    wiring = cx.resolve_wiring(repo.root)
+    assert _located(repo, wiring.findings) == [
+        (".pkit/capabilities/base/package.yaml:/component/version", "warning"),
+        (".pkit/capabilities/dependent/package.yaml:/requires_capabilities/0", "error"),
+    ]
+    assert "but 2.0.0 is installed" in wiring.findings[1].message
+
+    _stage(repo, "base", _package("base", version="1.5.0"))
+    assert cx.resolve_wiring(repo.root).findings == ()
+
+
 def test_a_dependency_range_naming_an_adapter_is_not_an_installed_capability(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
@@ -868,8 +899,29 @@ def test_the_install_gate_and_validation_compare_a_dependency_range_alike(
             if f.relation is cx.Relation.CAPABILITY_RANGE
         ]
         gated = caps.check_capability_dependencies(
-            repo.root, (caps.CapabilityDependency(**dependency),)
+            repo.root, (caps.CapabilityDependency(dependency["name"], dependency["version"]),)
         )
+        assert bool(validated) is bool(gated) is refused, version
+
+
+def test_the_install_gate_and_validation_read_an_optional_dependency_alike(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Both read the optional mark through `is_optional_dependency`: absent passes,
+    installed is held to its range (COR-030)."""
+    repo = make_adopter_repo()
+    dependency = {"name": "evidence", "version": ">=0.2.0,<1.0.0", "optional": True}
+    _stage(repo, "notes", _package("notes", requires_capabilities=[dependency]))
+    gate = (caps.CapabilityDependency("evidence", ">=0.2.0,<1.0.0", optional=True),)
+    for version, refused in ((None, False), ("0.1.0", True), ("0.2.0", False)):
+        if version is not None:
+            _stage(repo, "evidence", _package("evidence", version=version))
+        validated = [
+            f
+            for f in cx.resolve_wiring(repo.root).errors()
+            if f.relation is cx.Relation.CAPABILITY_RANGE
+        ]
+        gated = caps.check_capability_dependencies(repo.root, gate)
         assert bool(validated) is bool(gated) is refused, version
 
 

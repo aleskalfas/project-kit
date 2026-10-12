@@ -32,7 +32,7 @@
       "$ref": "#/$defs/version-range"
     },
     "requires_capabilities": {
-      "description": "Declared dependencies on other capabilities, each a name and a version range (COR-030).",
+      "description": "Declared dependencies on other capabilities, each a name and a version range, and optionally marked `optional: true` (COR-030).",
       "type": "array",
       "items": {
         "$ref": "#/$defs/capability-dependency"
@@ -130,6 +130,10 @@
         },
         "version": {
           "$ref": "#/$defs/version-range"
+        },
+        "optional": {
+          "description": "`true` marks an optional dependency (COR-030): it need not be installed, but an installed one must satisfy the range, and it never blocks uninstalling the capability it names. Absent or `false`, the dependency is required.",
+          "type": "boolean"
         }
       }
     },

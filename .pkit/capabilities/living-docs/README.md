@@ -12,9 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-12T19:47:46Z
+      at: 2026-10-12T21:25:38Z
       outcome: unchanged
-      unchanged-because: DEC-001 point 1 names the backbone's friction validation as what refuses a synced tree as a place, keyed on manifest origin and on whether the repository is the methodology's source. This page already says the backbone enforces this for every declared place as its synced-place finding, and that this capability relies on that finding rather than checking a second time.
+      unchanged-because: "COR-051 point 7 admits a capability's inheritance of another capability's rule set only through a required dependency. This page has each space's definition, a project rule set, inherit LDOC, which a project set may do without any dependency, and says the capability depends on no other, so it holds. The COR-051 deferral to #1476 stays."
       deferred:
         - anchor:
             kind: record

@@ -12,9 +12,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-12T20:18:27Z
+      at: 2026-10-12T21:25:25Z
       outcome: unchanged
-      unchanged-because: This change builds where an accepted rule binds (COR-051 point 7), the parts of rules that checks enforce, and their validation, conflicts between routes included. The page's statuses bullet says accepted rules bind, which still holds. Its validation bullet names the checks in brief, and already left out the container inside each rule. It sends the reader to the schemas reference for every check, which now names the new ones. Its other sentences on rule sets describe none of this, so the page holds.
+      unchanged-because: COR-051 point 7 and rule_sets.py admit a capability's inheritance of another's rule set only through a required dependency, and the error says so. This page names inheritance among the checks in brief and sends the reader to the schemas reference for each check, which states the required entry. Its other sentences on rule sets do not touch dependencies, so the page holds.
 ---
 
 # Decision records

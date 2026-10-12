@@ -1581,8 +1581,9 @@ class _Catalogue:
             return None
         return (
             f"capability {child.component} inherits {parent.citation} but does not declare a "
-            f"dependency on capability {parent.component}: add it to `requires_capabilities` in "
-            f".pkit/capabilities/{child.component}/package.yaml (COR-030; COR-051 point 7)."
+            f"required dependency on capability {parent.component}: add it to "
+            f"`requires_capabilities` in .pkit/capabilities/{child.component}/package.yaml, "
+            f"without `optional: true` (COR-030; COR-051 point 7)."
         )
 
     def fills_along(self, rule_set: RuleSet) -> dict[str, list[_Fill]]:
@@ -1675,11 +1676,15 @@ class _Catalogue:
         }
 
     def requires(self, capability: str) -> frozenset[str]:
-        """The capabilities `capability` declares in `requires_capabilities` (COR-030)."""
+        """The capabilities `capability` declares required in `requires_capabilities`
+        (COR-030). An optional dependency may be absent, so it admits no inheritance
+        (COR-051 point 7)."""
         if capability not in self._requires:
             source = caps.find_capability_in_repo(self.target_root, capability)
             names = (
-                frozenset(dep.name for dep in source.package.requires_capabilities)
+                frozenset(
+                    dep.name for dep in source.package.requires_capabilities if not dep.optional
+                )
                 if source is not None
                 else frozenset()
             )
