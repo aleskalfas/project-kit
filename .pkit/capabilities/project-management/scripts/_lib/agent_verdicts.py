@@ -464,20 +464,21 @@ def gate_membership(
 
     A remote verdict counts only from a login in `remote_baseline` that is not
     `author_login`, the PR's author; a local verdict only from a name in
-    `required_local`, the PR's resolved required set. Stated once, so the gate
-    and land-work's hold on `[person]` findings agree on whose verdicts count.
+    `required_local`, the PR's resolved required set, with no author
+    exclusion — the developer attests they ran the agent (DEC-028 step 3).
+    Stated once, so the gate and land-work's hold on `[person]` findings agree
+    on whose verdicts count.
 
     An author that could not be read — `author_login` empty, as `pr_author`
-    returns it, or one `pr_author` would not return — leaves no reviewer
-    known to be someone else, so both predicates accept nobody and no verdict
-    counts on either path. Excluding an empty login would exclude nobody, and
-    every reviewer would count as independent of an author nobody read
-    (#1485): the gate fails closed instead (DEC-032 D5). The callers say why
-    to whoever runs them.
+    returns it, or one `pr_author` would not return — leaves no remote
+    reviewer known to be someone else, so the remote predicate accepts nobody.
+    Excluding an empty login would exclude nobody, and every remote reviewer
+    would count as independent of an author nobody read (#1485): the remote
+    path fails closed instead (DEC-032 D5). The local predicate never reads the
+    author, so a local verdict counts as it does with the author read. The
+    callers say why to whoever runs them.
     """
-    if not _names_an_author(author_login):
-        return _nobody, _nobody
-    remote = frozenset(remote_baseline)
+    remote = frozenset(remote_baseline) if _names_an_author(author_login) else frozenset()
     local = frozenset(required_local)
 
     def remote_reviewer_ok(login: str) -> bool:
@@ -487,11 +488,6 @@ def gate_membership(
         return name in local
 
     return remote_reviewer_ok, local_reviewer_ok
-
-
-def _nobody(_identity: str) -> bool:
-    """The membership predicate of an author that could not be read."""
-    return False
 
 
 def gate_verdicts(

@@ -735,21 +735,29 @@ def test_gate_membership_is_the_gates(av) -> None:
 
 
 @pytest.mark.parametrize("author_login", ["", "   ", "app/", None])
-def test_gate_membership_counts_no_one_when_the_author_is_unread(av, author_login) -> None:
-    """An author that could not be read excludes nobody, so every reviewer
-    would count as independent of it: the gate counts no one, on either path,
-    instead (#1485)."""
+def test_gate_membership_counts_no_remote_reviewer_when_the_author_is_unread(
+    av, author_login
+) -> None:
+    """An author that could not be read excludes nobody, so every remote
+    reviewer would count as independent of it: the remote path counts no one
+    instead. The local path never excluded the author (DEC-028 step 3), so a
+    required local reviewer counts as before, and no one else does (#1485)."""
     remote_ok, local_ok = av.gate_membership(
         remote_baseline=["review-bot"], required_local=("pm-reviewer",), author_login=author_login
     )
     assert not remote_ok("review-bot")
     assert not remote_ok("")
-    assert not local_ok("pm-reviewer")
-    comments = [_local("pm-reviewer", "APPROVED"), _remote("APPROVED", author="review-bot")]
+    assert local_ok("pm-reviewer")
+    assert not local_ok("stranger")
+    comments = [
+        _local("pm-reviewer", "APPROVED"),
+        _local("stranger", "APPROVED"),
+        _remote("APPROVED", author="review-bot"),
+    ]
     selected = av.gate_candidates(
         comments, local_reviewer_ok=local_ok, remote_reviewer_ok=remote_ok
     )
-    assert selected == []
+    assert [(v.path, v.reviewer) for v in selected] == [(av.PATH_LOCAL, "pm-reviewer")]
 
 
 @pytest.mark.parametrize(

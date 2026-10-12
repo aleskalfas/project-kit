@@ -653,21 +653,24 @@ def test_fail_closed_commit_missing_timestamp_fields_refuses(dw, rc, monkeypatch
     assert "freshness anchor is unknown" in result.refusal_message
 
 
-@pytest.mark.parametrize(
-    "pr_view",
-    [
-        {"author": {"login": ""}},
-        {"author": None},
-        {"author": {}},
-        # How `gh` writes an author GitHub returns as null.
-        {"author": {"is_bot": True, "login": "app/"}},
-    ],
-    ids=["empty-login", "null-author", "no-login", "gh-null-author"],
-)
-def test_fail_closed_unread_author_counts_no_verdict(dw, rc, monkeypatch, pr_view) -> None:
-    """With the PR's author unread, no reviewer is known to be someone else:
-    a fresh APPROVED on each path counts for nothing, and the refusal names the
-    author as why — never every reviewer counted as independent (#1485)."""
+_UNREAD_AUTHORS = [
+    {"author": {"login": ""}},
+    {"author": None},
+    {"author": {}},
+    # How `gh` writes an author GitHub returns as null.
+    {"author": {"is_bot": True, "login": "app/"}},
+]
+_UNREAD_IDS = ["empty-login", "null-author", "no-login", "gh-null-author"]
+
+
+@pytest.mark.parametrize("pr_view", _UNREAD_AUTHORS, ids=_UNREAD_IDS)
+def test_fail_closed_unread_author_refuses_a_remote_only_reviewer(
+    dw, rc, monkeypatch, pr_view
+) -> None:
+    """With the PR's author unread, no remote reviewer is known to be someone
+    else: a fresh remote APPROVED counts for nothing, so a reviewer registered
+    only on the remote path cannot be satisfied, and the refusal names the
+    author as why — never a remote reviewer counted as independent (#1485)."""
     _wire(
         dw,
         monkeypatch,
@@ -681,33 +684,123 @@ def test_fail_closed_unread_author_counts_no_verdict(dw, rc, monkeypatch, pr_vie
     config = _config(local=("reviewer",), remote=("review-bot",))
     result = dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT)
     assert result.passed is False
-    assert result.refusal_message.splitlines()[:2] == [
+    assert result.refusal_message.splitlines()[:3] == [
         "[refused] agent-mode approval gate cannot be resolved for PR #99 — the PR's author "
         "could not be read.",
         "            → `gh pr view` named no author: no login, a blank one, or `app/` alone.",
+        "            → required on the remote path only: remote agent (@review-bot)",
     ]
-    assert "counts no verdict as an approval" in result.refusal_message
+    assert "counts no remote verdict" in result.refusal_message
+    assert "A local verdict counts as before." in result.refusal_message
 
 
-def test_unread_author_is_not_satisfied_by_overriding_every_slot(dw, rc, monkeypatch) -> None:
-    """An unread author is a fact the gate cannot judge, like an unknown head:
-    a per-reviewer override waives a slot, not the read, so the gate still
-    refuses (#1485)."""
+@pytest.mark.parametrize("pr_view", _UNREAD_AUTHORS, ids=_UNREAD_IDS)
+def test_unread_author_counts_a_local_verdict_as_before(dw, rc, monkeypatch, pr_view) -> None:
+    """DEC-028 step 3 checks a local verdict with no author exclusion — the
+    developer attests they ran the agent — so with every required reviewer
+    local, an unread author changes nothing: fresh APPROVED verdicts pass the
+    gate exactly as they do with the author read (#1485)."""
+    collection = rc.ContributionCollection(rules=())
+    comments = [
+        _local_verdict_comment("reviewer", "APPROVED", author="author"),
+        _local_verdict_comment("second", "APPROVED", author="author"),
+    ]
+    config = _config(local=("reviewer", "second"))
+    _wire(dw, monkeypatch, collection=collection, comments=comments)
+    read = dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT)
+    _wire(dw, monkeypatch, collection=collection, comments=comments, pr_view=pr_view)
+    unread = dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT)
+    assert read.passed is True, read.refusal_message
+    assert unread.passed is True, unread.refusal_message
+    assert unread.passed_via == read.passed_via
+
+
+def test_unread_author_refuses_local_reviewers_as_before(dw, rc, monkeypatch) -> None:
+    """With every required reviewer local, the refusal is the one a readable
+    author gets, word for word: the unread author is no reason in it."""
+    collection = rc.ContributionCollection(rules=())
+    comments = [_local_verdict_comment("reviewer", "CHANGES_REQUESTED", author="author")]
+    _wire(dw, monkeypatch, collection=collection, comments=comments)
+    read = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    _wire(dw, monkeypatch, collection=collection, comments=comments, pr_view={"author": None})
+    unread = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert read.passed is False
+    assert unread.refusal_message == read.refusal_message
+    assert "author could not be read" not in unread.refusal_message
+
+
+def test_unread_author_lets_an_override_satisfy_a_local_reviewer(dw, rc, monkeypatch) -> None:
+    """With every required reviewer local, a per-reviewer override satisfies
+    its slot as it does with the author read."""
     _wire(
         dw,
         monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[],
-        pr_view={"author": None, "headRefOid": "a" * 40},
+        pr_view={"author": None},
     )
     result = dw._check_agent_gate(
         99, {}, _config(), "resolved", CAP_ROOT, override_reviewers=("reviewer",)
     )
+    assert result.passed is True, result.refusal_message
+    assert [audit.reviewer for audit in result.override_audits] == ["reviewer"]
+
+
+def test_unread_author_refusal_is_not_passed_by_overriding_the_remote_reviewer(
+    dw, rc, monkeypatch
+) -> None:
+    """A per-reviewer override waives a slot, not the read: its audit could not
+    tell the remote reviewer's verdict from the author's own, so the gate still
+    refuses, and only the whole-gate `--bypass` gets past it (#1485)."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[_local_verdict_comment("reviewer", "APPROVED")],
+        pr_view={"author": None, "headRefOid": "a" * 40},
+    )
+    config = _config(local=("reviewer",), remote=("review-bot",))
+    result = dw._check_agent_gate(
+        99, {}, config, "resolved", CAP_ROOT, override_reviewers=("review-bot",)
+    )
     assert result.passed is False
     assert "the PR's author could not be read" in result.refusal_message
+    assert "a per-reviewer override does not get past this refusal" in result.refusal_message
     # The refusal names the head it read, so a run pinned to another head
     # reports the move rather than this refusal.
     assert result.head_oid == "a" * 40
+
+
+def test_unread_author_counts_only_the_local_verdict_of_a_reviewer_on_both_paths(
+    dw, rc, monkeypatch
+) -> None:
+    """A reviewer registered on both paths can still be satisfied by its local
+    verdict, so the gate decides as it does with the author read — but its
+    remote approval does not count, and the refusal says why (#1485)."""
+    collection = rc.ContributionCollection(rules=())
+    comments = [_remote_verdict_comment("APPROVED", author="reviewer")]
+    config = _config(local=("reviewer",), remote=("reviewer",))
+    _wire(dw, monkeypatch, collection=collection, comments=comments)
+    assert dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT).passed is True
+    _wire(dw, monkeypatch, collection=collection, comments=comments, pr_view={"author": None})
+    result = dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT)
+    assert result.passed is False
+    lines = [line.strip() for line in result.refusal_message.splitlines()]
+    assert lines[0].startswith("[refused] agent-mode approval required")
+    assert "local agent (reviewer): none" in lines
+    assert (
+        "→ the PR's author could not be read, so no remote verdict counts (DEC-028 step 3) "
+        "for: local agent (reviewer)"
+    ) in lines
+
+    _wire(
+        dw,
+        monkeypatch,
+        collection=collection,
+        comments=[*comments, _local_verdict_comment("reviewer", "APPROVED")],
+        pr_view={"author": None},
+    )
+    assert dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT).passed is True
 
 
 def test_a_readable_author_excludes_only_its_own_verdict(dw, rc, monkeypatch) -> None:

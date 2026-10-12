@@ -384,13 +384,14 @@ class _Run:
         return rc, captured.out, captured.err
 
 
-def _stage_project(work: Path, *, mode: str) -> Path:
+def _stage_project(work: Path, *, mode: str, remote: tuple[str, ...] = ()) -> Path:
     capability = work / ".pkit" / "capabilities" / "project-management"
     project = capability / "project"
     project.mkdir(parents=True)
     shutil.copytree(CAPABILITY / "schemas", capability / "schemas")
     shutil.copytree(CAPABILITY / "templates", capability / "templates")
     reviewers = "".join(f"      - name: {name}\n" for name in PANEL)
+    remotes = "".join(f"      - github_login: {login}\n" for login in remote)
     (project / "config.yaml").write_text(
         "schema_version: 1\n"
         "default_branch: main\n"
@@ -398,7 +399,9 @@ def _stage_project(work: Path, *, mode: str) -> Path:
         "review:\n"
         f"  mode: {mode}\n"
         "  agents:\n"
-        "    local_registered:\n" + reviewers,
+        + (f"    remote_registered:\n{remotes}" if remote else "")
+        + "    local_registered:\n"
+        + reviewers,
         encoding="utf-8",
     )
     (project / "bootstrap-stamp.yaml").write_text(
@@ -453,10 +456,15 @@ def clone(tmp_path_factory: pytest.TempPathFactory) -> _Clone:
 
 @pytest.fixture
 def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
-    def build(*, mode: str = "agent", checks: list[list[dict[str, Any]]] | None = None) -> _Run:
+    def build(
+        *,
+        mode: str = "agent",
+        checks: list[list[dict[str, Any]]] | None = None,
+        remote: tuple[str, ...] = (),
+    ) -> _Run:
         shutil.copytree(clone.root, tmp_path / "clone", symlinks=True)
         work = tmp_path / "clone" / "work"
-        _stage_project(work, mode=mode)
+        _stage_project(work, mode=mode, remote=remote)
         monkeypatch.chdir(work)
         monkeypatch.setenv("PM_INVOKER_LOGIN", "octocat")
         monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
@@ -2046,6 +2054,14 @@ def _verdict(run: _Run, name: str, body: str, *, sha: str) -> dict[str, Any]:
     return _comment(run, posted)
 
 
+def _remote_verdict(run: _Run, login: str, body: str, *, sha: str) -> dict[str, Any]:
+    """A remote reviewer's approval of `sha`, posted under its own login."""
+    posted = run.land.review_pr.stamp_verdict(
+        f"Reviewer agent: APPROVED\n\n{body}", sha, run.github.base
+    )
+    return {**_comment(run, posted), "author": {"login": login}, "viewerDidAuthor": False}
+
+
 def _findings_read(run: _Run) -> Callable[[list[str]], bool]:
     fields = ",".join(run.land._FINDINGS_VIEW)
     return lambda argv: argv[:2] == ["pr", "view"] and argv[-1] == fields
@@ -2211,12 +2227,15 @@ def test_findings_that_cannot_be_read_stop_before_the_list_is_written(world, cap
     [None, {"login": ""}, {"is_bot": True, "login": "app/"}],
     ids=["null-author", "empty-login", "gh-null-author"],
 )
-def test_a_pr_whose_author_cannot_be_read_stops_before_its_findings(world, capsys, author) -> None:
-    """With no author read, whose verdicts count cannot be told, so a `[person]`
-    finding is neither shown as the gate's nor passed over: the run stops before
-    the answers' list is written, with nothing merged (#1485)."""
-    run = world()
-    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+def test_a_remote_person_finding_on_a_pr_whose_author_cannot_be_read_stops_the_run(
+    world, capsys, author
+) -> None:
+    """With no author read, no remote verdict counts, so a remote reviewer's
+    `[person]` finding would go unshown, though its verdict may not be the
+    author's own: the run stops before the answers' list is written, with
+    nothing merged (#1485)."""
+    run = world(remote=("review-bot",))
+    run.github.comments.append(_remote_verdict(run, "review-bot", _PERSON, sha=run.github.head))
     run.github.author = author
     rc, out, _err = run.run("--yes", capsys=capsys)
     assert rc == run.land.EXIT_UNREADABLE
@@ -2225,9 +2244,41 @@ def test_a_pr_whose_author_cannot_be_read_stops_before_its_findings(world, capsy
         "not be read), so the findings a reviewer left for a person to judge cannot be shown. "
         f"Nothing was merged; run `land-work {ISSUE}` again"
     )
-    assert _person_lines("code-reviewer")[0] not in out.splitlines()
+    assert _person_lines("review-bot")[0] not in out.splitlines()
     assert run.github.bodies == []
     assert run.github.merges == []
+
+
+@pytest.mark.parametrize(
+    "author",
+    [None, {"login": ""}, {"is_bot": True, "login": "app/"}],
+    ids=["null-author", "empty-login", "gh-null-author"],
+)
+def test_a_local_person_finding_on_a_pr_whose_author_cannot_be_read_holds_as_before(
+    world, capsys, author
+) -> None:
+    """A local verdict is read with no author exclusion (DEC-028 step 3), so an
+    unread author changes nothing for it: its finding is shown and holds the
+    `--yes` it came after, and the identical re-run merges (#1485)."""
+    run = world()
+    head = run.github.head
+    run.github.author = author
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    lines = out.splitlines()
+    at = lines.index(_person_lines("code-reviewer")[0])
+    assert lines[at : at + 3] == [*_person_lines("code-reviewer"), f"{_FINDINGS}: 1, above"]
+    assert lines[-1] == (
+        f"ready: {_short(head)} — CI passed, all required verdicts approved, 1 finding to judge "
+        "above (code-reviewer's verdict came after this run's --yes was given, so the --yes does "
+        f"not cover its finding); {_merge_line(run)}"
+    )
+    assert run.github.merges == []
+
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+    assert [merge[-1] for merge in run.github.merges] == [head]
 
 
 def test_a_person_finding_from_a_reviewer_the_gate_does_not_require_holds_nothing(
