@@ -26,6 +26,7 @@ import pytest
 from ruamel.yaml import YAML
 
 from project_kit import process_journal, project_config
+from tests.adopter_repo import sign_nothing
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MIGRATION = (
@@ -68,6 +69,7 @@ def _project(root: Path, *, journal: bool, tracked: bool = False) -> Path:
     _git(root, "init", "-q")
     _git(root, "config", "user.email", "t@t")
     _git(root, "config", "user.name", "t")
+    sign_nothing(root)
     (root / ".pkit").mkdir()
     (root / ".pkit" / ".gitignore").write_text(GITIGNORE_BEFORE, encoding="utf-8")
     if journal:

@@ -15,6 +15,8 @@ from typing import Any
 
 import pytest
 
+from tests.adopter_repo import sign_nothing
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "open-pr.py"
 
@@ -552,6 +554,7 @@ def test_the_pushed_head_is_the_remote_tracking_reference_not_local_head(
     git("init", "-q", "-b", "feat/42-thing", cwd=work)
     git("config", "user.email", "o@example.com", cwd=work)
     git("config", "user.name", "O", cwd=work)
+    sign_nothing(work)
     git("remote", "add", "origin", "../origin.git", cwd=work)
     git("commit", "-q", "--allow-empty", "-m", "pushed", cwd=work)
     git("push", "-q", "-u", "origin", "feat/42-thing", cwd=work)
