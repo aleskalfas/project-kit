@@ -836,8 +836,7 @@ def _resolve_compatibility(
     # is out of range. It reads the installed copies and versions of both sides,
     # as they stand before this upgrade's sync. That sync refreshes every installed
     # kit-shipped capability from source and re-stamps its version, and this check
-    # does not read the versions it installs (#1429 changes which command moves
-    # a capability's version).
+    # does not read the versions it installs (#1461 has it read them).
     _check_capability_dep_conflicts_for_upgrade(target_root, components)
 
 
