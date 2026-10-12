@@ -12,9 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-11T21:34:53Z
+      at: 2026-10-12T11:22:23Z
       outcome: unchanged
-      unchanged-because: "COR-050 and COR-051 gain a type on a place and a types key in a scope (COR-056). This page describes how the capability finds pages and spaces today, by its own claims and order of places, which nothing has changed yet. Its pages' type follows with its issue under EPIC #234. The COR-051 deferral to #1476 stays."
+      unchanged-because: This page says its agent never runs a friction writer, because the answer is a person's decision and the agent cannot ask. The agent makes no change of its own, so any answer it would write is one COR-050 point 3 leaves a person's decision. The reviewer of a change's answers concerns only the agent making the change, so the page holds.
       deferred:
         - anchor:
             kind: record
