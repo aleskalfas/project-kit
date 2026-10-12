@@ -44,9 +44,10 @@ rules stay in place, so that a reused id is a duplicate this pass reports.
 
 from __future__ import annotations
 
+import contextlib
 import io
 import re
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
 from functools import cached_property
@@ -200,6 +201,46 @@ def parse_pin(text: Any) -> Pin | None:
 
 # --- the model -----------------------------------------------------------------
 
+#: The front-matter key declaring the parts of the set's rules that checks enforce
+#: (COR-051 point 2): beside the rules, never among a rule's own fields.
+CHECKS_KEY = "checks"
+
+#: The owner a backbone check is named with (`backbone:<command>`).
+BACKBONE_OWNER = fd.BACKBONE_COMPONENT
+
+_CHECK_NAME_RE = re.compile(rf"(?:(?P<owner>{COMPONENT_PATTERN}):)?(?P<name>\S(?:.*\S)?)")
+
+
+@dataclass(frozen=True)
+class CheckPart:
+    """The part of a rule a check enforces, as the rule's owner declares it (COR-051 point 2).
+
+    `check` names the check and whose it is, as written: `backbone:<command>`
+    for the backbone's — a `pkit` command, its words separated by spaces —
+    `<component>:<command>` for a command a component registers in its
+    package metadata, and a bare name for the project's own tool. `part` says,
+    in words, which part of the rule the check settles. `index` is the
+    declaration's position in the rule's list, as written. The declaration is
+    no part of the rule's content (COR-050), so declaring a check, or changing
+    one, flags nothing anchored to the rule.
+    """
+
+    check: str
+    part: str
+    index: int
+
+    @property
+    def owner(self) -> str | None:
+        """`backbone`, a component's name, or `None` for the project's own tool."""
+        match = _CHECK_NAME_RE.fullmatch(self.check)
+        return match.group("owner") if match else None
+
+    @property
+    def name(self) -> str:
+        """The check's name without its owner: a command, or the project's tool."""
+        match = _CHECK_NAME_RE.fullmatch(self.check)
+        return match.group("name") if match else self.check
+
 
 @dataclass(frozen=True, eq=False)
 class Rule:
@@ -208,13 +249,16 @@ class Rule:
     `data` is the entry as written (`{}` when the entry is not a mapping; the
     schema reports it). Every property reads forgivingly — a value of the
     wrong shape reads as absent — because the schema pass judges the shape.
-    Compared by identity: each rule is parsed once.
+    `checks` are the parts of it that checks enforce, as the set's
+    front matter declares them beside the rule (`CHECKS_KEY`), never read
+    from the entry. Compared by identity: each rule is parsed once.
     """
 
     id: str
     path: str  # the rule-set file, relative to the root
     data: Mapping[str, Any]
     section: str  # the body section headed by the id, or ""
+    checks: tuple[CheckPart, ...] = ()
 
     @property
     def location(self) -> str:
@@ -414,16 +458,31 @@ class RuleSetDiscovery:
 
 
 def discover_rule_sets(
-    target_root: Path, settings: fd.FrictionSettings | None = None
+    target_root: Path,
+    settings: fd.FrictionSettings | None = None,
+    tree: fd.RepositoryTree | None = None,
 ) -> RuleSetDiscovery:
-    """Read every rule-set file the location rule claims, in path order."""
-    settings = settings if settings is not None else fd.read_friction_settings(target_root)
-    places = fd.rule_set_places(target_root, settings)
-    claimed = fd.rule_set_files(target_root, places)
+    """Read every rule-set file the location rule claims, in path order.
+
+    At one state, through discovery's tree (ADR-057 point 2): with a `tree` — a
+    commit — the settings, the places, the files and their text are that
+    state's; without one, the working tree's one listing, read from disk. The
+    files are claimed as the walk claims them (`friction_discovery.rule_set_files`)
+    and read as it reads them (`friction_discovery.document_texts`), so the reader
+    and discovery find the same rule-set files at one state. A link is never read.
+    """
+    settings = settings if settings is not None else fd.read_friction_settings(target_root, tree)
+    places = fd.rule_set_places(target_root, settings, tree)
+    listing = tree if tree is not None else fd.working_tree(target_root)
+    claimed = fd.rule_set_files(target_root, places, listing)
+    texts = fd.document_texts(listing, sorted(claimed))
     rule_sets: list[RuleSet] = []
     unreadable: list[UnreadableRuleSet] = []
-    for path, place in sorted(claimed.items(), key=lambda item: _rel(target_root, item[0])):
-        read = _read_rule_set(target_root, path, place)
+    for rel in sorted(claimed):
+        text = texts[rel]
+        if text is None:
+            continue  # a link: never read as a document
+        read = _read_rule_set(rel, claimed[rel], text)
         if isinstance(read, RuleSet):
             rule_sets.append(read)
         else:
@@ -432,13 +491,10 @@ def discover_rule_sets(
 
 
 def _read_rule_set(
-    target_root: Path, path: Path, place: fd.RuleSetPlace
+    rel: str, place: fd.RuleSetPlace, text: str | fd.ReadFailure
 ) -> RuleSet | UnreadableRuleSet:
-    rel = _rel(target_root, path)
-    try:
-        text = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError) as exc:
-        return UnreadableRuleSet(rel, place, f"cannot be read ({exc})")
+    if isinstance(text, fd.ReadFailure):
+        return UnreadableRuleSet(rel, place, f"cannot be read ({text.reason})")
     front_matter, body = fd.split_front_matter(text)
     if front_matter is None:
         return UnreadableRuleSet(
@@ -453,15 +509,20 @@ def _read_rule_set(
     if not isinstance(data, Mapping):
         return UnreadableRuleSet(rel, place, "has front matter that is not a mapping")
     data = bs.as_written(data)
-    raw_rules = data.get(fd.RULES_KEY)
+    raw_rules: Any = data.get(fd.RULES_KEY)
+    entries: Mapping[str, Any] = (
+        cast("Mapping[str, Any]", raw_rules) if isinstance(raw_rules, Mapping) else {}
+    )
+    checks = _check_parts(data.get(CHECKS_KEY))
     rules = tuple(
         Rule(
             id=rule_id,
             path=rel,
             data=entry if isinstance(entry, Mapping) else {},
             section=fd.entry_section(body, rule_id),
+            checks=checks.get(rule_id, ()),
         )
-        for rule_id, entry in (raw_rules.items() if isinstance(raw_rules, Mapping) else ())
+        for rule_id, entry in entries.items()
     )
     return RuleSet(
         path=rel,
@@ -472,6 +533,27 @@ def _read_rule_set(
         sections=_sections(body),
         duplicate_keys=duplicates,
     )
+
+
+def _check_parts(value: Any) -> dict[str, tuple[CheckPart, ...]]:
+    """The declared check parts by rule id (`CHECKS_KEY`), read forgivingly: an entry
+    without a text `check` and a text `part` is passed over, since the schema pass
+    reports its shape."""
+    if not isinstance(value, Mapping):
+        return {}
+    found: dict[str, tuple[CheckPart, ...]] = {}
+    for rule_id, entries in cast("Mapping[Any, Any]", value).items():
+        parts: list[CheckPart] = []
+        for index, entry in enumerate(_list(entries)):
+            declared: Mapping[str, Any] = (
+                cast("Mapping[str, Any]", entry) if isinstance(entry, Mapping) else {}
+            )
+            check, part = declared.get("check"), declared.get("part")
+            if isinstance(check, str) and isinstance(part, str):
+                parts.append(CheckPart(check=check, part=part, index=index))
+        if parts:
+            found[str(rule_id)] = tuple(parts)
+    return found
 
 
 def _load_front_matter(text: str) -> tuple[Any, tuple[DuplicateKey, ...], str | None]:
@@ -578,6 +660,10 @@ class RuleSetFindingKind(Enum):
     ORPHANED_FILL = "orphaned-fill"  # a fill of a superseded or withdrawn rule
     METHOD_SCOPE = "method-scope"  # a scope on a method rule set, which takes none
     UNKNOWN_SCOPE_TYPE = "scope-unknown-type"  # a scope naming a type no owner declares
+    CHECK_FOR_NO_RULE = "check-for-no-rule"  # a check part declared for a rule the set lacks
+    UNKNOWN_CHECK = "unknown-check"  # a backbone check or registered command that is not there
+    PIN_CONFLICT = "pin-conflict"  # routes to one artefact pinning one set at different majors
+    FILL_CONFLICT = "fill-conflict"  # the most specific sets bring different fills for a point
 
 
 @dataclass(frozen=True)
@@ -675,7 +761,9 @@ def validate_rule_sets(target_root: Path) -> RuleSetValidation:
         findings.extend(_successor_findings(rule_set, catalogue))
         findings.extend(_inheritance_findings(rule_set, catalogue))
         findings.extend(_fill_findings(rule_set, catalogue))
+        findings.extend(_check_part_findings(rule_set, catalogue))
     findings.extend(_cycle_findings(catalogue))
+    findings.extend(_conflict_findings(reach(fd.shared_discovery(target_root), discovery)))
     return RuleSetValidation(discovery=discovery, findings=tuple(findings))
 
 
@@ -1255,6 +1343,91 @@ def _double_fill_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[
             yield _error(rule_set.path, "/inherits", RuleSetFindingKind.DOUBLE_FILL, message)
 
 
+def _check_part_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[RuleSetFinding]:
+    """The parts of its rules a set declares checks enforce (COR-051 point 2).
+
+    The rule's owner declares the part beside the rule, so a declaration for
+    a rule the set does not hold is an error. A check is admitted when it is
+    the backbone's, a command a component registers in its package metadata,
+    or the project's own tool. One naming a backbone check that does not
+    exist, or a command no installed component registers, is reported
+    without failing: that part goes back to whoever judges the rest of the
+    rule. A project's own tool is trusted by its name.
+    """
+    declared = rule_set.front_matter.get(CHECKS_KEY)
+    if not isinstance(declared, Mapping):
+        return
+    for raw_id in cast("Mapping[Any, Any]", declared):
+        rule_id = str(raw_id)
+        if rule_set.rule(rule_id) is None and re.fullmatch(RULE_ID_PATTERN, rule_id):
+            yield _error(
+                rule_set.path,
+                f"/{CHECKS_KEY}/{_token(rule_id)}",
+                RuleSetFindingKind.CHECK_FOR_NO_RULE,
+                f"declares a part a check enforces for {rule_id}, which is not a rule of "
+                f"{rule_set.citation}; a rule's owner declares that part beside the rule, in "
+                f"the set that holds it (COR-051 point 2).",
+            )
+    for rule in rule_set.rules:
+        for part in rule.checks:
+            problem = catalogue.check_problem(part)
+            if problem is not None:
+                yield _report(
+                    rule_set.path,
+                    f"/{CHECKS_KEY}/{_token(rule.id)}/{part.index}/check",
+                    RuleSetFindingKind.UNKNOWN_CHECK,
+                    f"{rule.id} declares a part the check `{part.check}` enforces, but "
+                    f"{problem}; until it is there, that part goes back to whoever judges the "
+                    f"rest of the rule (COR-051 point 2).",
+                )
+
+
+def _conflict_findings(answer: Reach) -> list[RuleSetFinding]:
+    """The conflicts between the routes to one artefact, as the walk found them (COR-051
+    point 7; `reach`): one set pinned at different majors, and the most specific sets
+    bringing different fills for one extension point. Each is an error on the artefact,
+    naming both routes; the pass computes neither itself."""
+    findings: list[RuleSetFinding] = []
+    for location, found in sorted(answer.by_location.items()):
+        for conflict in found.conflicts:
+            if isinstance(conflict, PinConflict):
+                pins = ", ".join(
+                    f"{by.citation} pins {pin} ({by.path})" for by, _index, pin in conflict.pins
+                )
+                findings.append(
+                    _error(
+                        location,
+                        "",
+                        RuleSetFindingKind.PIN_CONFLICT,
+                        f"routes to this artefact pin {conflict.rule_set.citation} at different "
+                        f"majors: {pins}; review {conflict.rule_set.citation} at version "
+                        f"{conflict.rule_set.version} and update the pins together (COR-051 "
+                        f"point 7).",
+                    )
+                )
+            else:
+                brought = ", ".join(
+                    f"{by.citation} brings "
+                    + (
+                        " and ".join(held.cite(rule.id) for held, rule in rules)
+                        if rules
+                        else "none"
+                    )
+                    for by, rules in conflict.brought
+                )
+                findings.append(
+                    _error(
+                        location,
+                        "",
+                        RuleSetFindingKind.FILL_CONFLICT,
+                        f"the most specific sets whose scope selects this artefact bring "
+                        f"different fills for {conflict.point}: {brought}; no fill binds here "
+                        f"until they agree (COR-051 point 7).",
+                    )
+                )
+    return findings
+
+
 def _cycle_findings(catalogue: _Catalogue) -> list[RuleSetFinding]:
     """Rule sets inheriting each other in a cycle, each cycle reported once."""
     findings: list[RuleSetFinding] = []
@@ -1455,6 +1628,54 @@ class _Catalogue:
             self._decisions[record] = (path, status)
         return self._decisions[record]
 
+    def check_problem(self, part: CheckPart) -> str | None:
+        """Why a declared check is not there, or `None` when it is, or is trusted (COR-051
+        point 2): a backbone check is a `pkit` command, a component's a command its
+        package metadata registers, and the project's own tool is trusted by name."""
+        if part.owner is None:
+            return None
+        command = tuple(part.name.split())
+        if part.owner == BACKBONE_OWNER:
+            if command in self.backbone_commands:
+                return None
+            return f"the backbone has no check `pkit {part.name}`"
+        registered = self.component_commands.get(part.owner)
+        if registered is None:
+            return f"no installed component is named {part.owner}"
+        if command in registered:
+            return None
+        return f"{part.owner} registers no command `{part.name}` in its package metadata"
+
+    @cached_property
+    def backbone_commands(self) -> frozenset[tuple[str, ...]]:
+        """Every command of the `pkit` tool, by its words: what a backbone check is named by."""
+        from project_kit.cli import main  # the CLI imports this module
+
+        return frozenset(_command_paths(main, ()))
+
+    @cached_property
+    def component_commands(self) -> dict[str, frozenset[tuple[str, ...]]]:
+        """Each registered component's commands, by their words, as its package metadata's
+        `commands:` tree registers them. Read forgivingly: a package the packages member
+        refuses registers nothing here."""
+        from project_kit.command_runner import COMMANDS_KEY, command_leaves
+        from project_kit.package_validate import installed_package_files
+
+        found: dict[str, frozenset[tuple[str, ...]]] = {}
+        for name, _component_dir, package in installed_package_files(self.target_root):
+            raw: Any = None
+            with contextlib.suppress(OSError, UnicodeDecodeError):
+                raw, _duplicates, _problem = _load_front_matter(package.read_text(encoding="utf-8"))
+            package_data: Mapping[str, Any] = (
+                cast("Mapping[str, Any]", raw) if isinstance(raw, Mapping) else {}
+            )
+            tree: Any = package_data.get(COMMANDS_KEY)
+            leaves = (
+                command_leaves(cast("Mapping[Any, Any]", tree)) if isinstance(tree, Mapping) else {}
+            )
+            found[name] = frozenset(leaves)
+        return found
+
     def requires(self, capability: str) -> frozenset[str]:
         """The capabilities `capability` declares in `requires_capabilities` (COR-030)."""
         if capability not in self._requires:
@@ -1529,6 +1750,15 @@ class PinCheck:
         return replace(self.pin, major=major)
 
     @property
+    def behind(self) -> bool:
+        """Whether the pin is behind its set: the set has moved on to a newer major
+        (COR-051 point 7). No rule binds through a pin behind its set (`reach`). A pin
+        ahead of its set, or one whose set's version cannot be read, is not behind;
+        `problem` reports either as a pin that does not hold."""
+        major = self.inherited.major
+        return major is not None and self.pin.major < major
+
+    @property
     def fix(self) -> str | None:
         """The edit that re-pins, once the inherited set has moved on; None while the pin holds."""
         repinned = self.repinned
@@ -1563,6 +1793,350 @@ def pin_checks(discovery: RuleSetDiscovery) -> tuple[PinCheck, ...]:
             if inherited is not None:
                 checks.append(PinCheck(rule_set, index, pin, inherited))
     return tuple(checks)
+
+
+# --- where accepted rules bind: the reach walk (COR-051 point 7; ADR-057 point 2) -----
+
+
+@dataclass(frozen=True)
+class Binding:
+    """One accepted rule that binds on an artefact (COR-051 point 7).
+
+    `covering` are the sets of the project's own whose scope selects the
+    artefact, and from which a route leads to the rule's set with no pin on
+    it behind its set, in path order. `fills` are the extension points the
+    rule binds on the artefact as the fill of, each as cited
+    (`[<component>:]RS-<SET>-NNN#<point>`), and empty for a rule that fills none.
+    """
+
+    rule: Rule
+    rule_set: RuleSet
+    covering: tuple[RuleSet, ...]
+    fills: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class PinConflict:
+    """Routes to one artefact that pin one set at different majors (COR-051 point 7).
+
+    `pins` are each pin on those routes that names the set: the set that pins
+    it, the pin's index in that set's `inherits`, and the pin, in path order.
+    """
+
+    rule_set: RuleSet
+    pins: tuple[tuple[RuleSet, int, Pin], ...]
+
+
+@dataclass(frozen=True)
+class FillConflict:
+    """The most specific sets reaching one artefact bring different fills for one
+    extension point, a fill against none included (COR-051 point 7).
+
+    `point` is the extension point as cited; `brought` is each most specific
+    set, in path order, with the accepted fills its chain brings for the point,
+    each with the set holding it (none, one, or more where a chain fills it
+    twice). No fill binds while it stands.
+    """
+
+    point: str
+    brought: tuple[tuple[RuleSet, tuple[tuple[RuleSet, Rule], ...]], ...]
+
+
+Conflict = PinConflict | FillConflict
+
+
+@dataclass(frozen=True)
+class ArtefactReach:
+    """The walk's answer for one artefact: the accepted rules that bind on it, in path
+    and written order, and the conflicts between its routes."""
+
+    bindings: tuple[Binding, ...] = ()
+    conflicts: tuple[Conflict, ...] = ()
+
+
+_NO_REACH = ArtefactReach()
+
+
+@dataclass(frozen=True)
+class Reach:
+    """The walk's answer for one state (`reach`): each artefact on which a rule binds,
+    or whose routes conflict, by location. Any other artefact has no binding rule."""
+
+    by_location: Mapping[str, ArtefactReach]
+
+    def of(self, location: str) -> ArtefactReach:
+        return self.by_location.get(location, _NO_REACH)
+
+
+def reach(discovery: fd.Discovery, rule_sets: RuleSetDiscovery) -> Reach:
+    """Which accepted rules bind on each artefact of one state (COR-051 point 7).
+
+    The one home of that answer (ADR-057 point 2), over the artefacts
+    discovery found at one state and the rule sets read from the same state.
+    A route starts at a set of the project's own whose scope selects the
+    artefact — discovery's covering function says which do
+    (`friction_discovery.covering_rule_sets`) — and follows what the set
+    inherits, pin by pin. It passes only through sets whose own scope, where
+    they have one, also selects the artefact. A method rule set takes no
+    scope, so it starts no route and narrows none (COR-051 point 2).
+
+    An accepted rule binds when a route leads to its set with no pin on it
+    behind its set; whether a pin is behind is the pin check's
+    (`PinCheck.behind`). A superseded or withdrawn rule binds nothing, so a
+    successor binds where its own set is reached. A filling rule binds as
+    the fill of an extension point only where the rule it fills binds
+    through the filling set, and only while both are accepted. The most
+    specific sets the offering rule binds through decide each point: those no
+    other such set inherits. Where they bring different fills, a fill
+    against none included, the answer names the conflict and no fill binds.
+    So does one artefact reached through routes that pin one set at
+    different majors. Validation reports both conflicts from this answer
+    (`validate_rule_sets`). Runs no query: git, through discovery, is its
+    only cost.
+    """
+    covering = fd.covering_rule_sets(discovery)
+    walk = _Walk(rule_sets)
+    found: dict[str, ArtefactReach] = {}
+    for artefact in discovery.artefacts:
+        selecting = frozenset(covering.get(artefact.location, ()))
+        if not selecting:
+            continue
+        answer = walk.answer(selecting)
+        if answer.bindings or answer.conflicts:
+            found[artefact.location] = answer
+    return Reach(found)
+
+
+def reach_at(
+    target_root: Path, tree: fd.RepositoryTree | None = None
+) -> tuple[fd.Discovery, RuleSetDiscovery, Reach]:
+    """The walk at one state: the working tree, or the commit `tree` holds — its
+    settings, its artefacts and its rule sets, each read through the same tree."""
+    settings = fd.read_friction_settings(target_root, tree)
+    discovery = fd.discover_artefacts(target_root, settings, tree)
+    rule_sets = discover_rule_sets(target_root, settings, tree)
+    return discovery, rule_sets, reach(discovery, rule_sets)
+
+
+@dataclass(frozen=True)
+class _Edge:
+    """One pin a set's `inherits` holds that names an existing set."""
+
+    rule_set: RuleSet  # the inheriting set
+    index: int
+    pin: Pin
+    inherited: RuleSet
+    behind: bool
+
+
+@dataclass(frozen=True)
+class _Filler:
+    """An accepted rule that fills an extension point an inherited rule offers."""
+
+    rule_set: RuleSet
+    rule: Rule
+    offering_set: RuleSet
+    offering: Rule
+    point: str  # the point's name
+
+
+class _Walk:
+    """The routes of one state's rule sets, followed for each set of selecting scopes.
+
+    What an artefact's answer depends on is which sets' scopes select it, so
+    artefacts that share those sets share one answer, computed once.
+    """
+
+    def __init__(self, rule_sets: RuleSetDiscovery) -> None:
+        self.rule_sets = rule_sets
+        self._edges: dict[str, tuple[_Edge, ...]] = {}
+        self._ancestors: dict[str, frozenset[str]] = {}
+        self._answers: dict[frozenset[str], ArtefactReach] = {}
+
+    def edges(self, rule_set: RuleSet) -> tuple[_Edge, ...]:
+        """Each pin of the set that names a set, with whether it is behind that set."""
+        if rule_set.path not in self._edges:
+            found: list[_Edge] = []
+            for index, pin in rule_set.pins:
+                inherited, _problem = resolve_pin(self.rule_sets, pin)
+                if inherited is not None:
+                    behind = PinCheck(rule_set, index, pin, inherited).behind
+                    found.append(_Edge(rule_set, index, pin, inherited, behind))
+            self._edges[rule_set.path] = tuple(found)
+        return self._edges[rule_set.path]
+
+    def ancestors(self, rule_set: RuleSet) -> frozenset[str]:
+        """The paths of every set `rule_set` inherits, directly or not, whatever its pins."""
+        if rule_set.path not in self._ancestors:
+            seen: set[str] = set()
+            queue = [edge.inherited for edge in self.edges(rule_set)]
+            while queue:
+                current = queue.pop(0)
+                if current.path in seen or current is rule_set:
+                    continue
+                seen.add(current.path)
+                queue.extend(edge.inherited for edge in self.edges(current))
+            self._ancestors[rule_set.path] = frozenset(seen)
+        return self._ancestors[rule_set.path]
+
+    @cached_property
+    def fillers(self) -> tuple[_Filler, ...]:
+        """Every accepted rule's fill of a point a rule of a set it inherits offers."""
+        found: list[_Filler] = []
+        for rule_set in self.rule_sets.rule_sets:
+            ancestors = self.ancestors(rule_set)
+            for rule in rule_set.rules:
+                for _index, reference in rule.fills:
+                    target_set, target, problem = locate_rule(self.rule_sets, reference)
+                    if (
+                        problem is None
+                        and target_set is not None
+                        and target is not None
+                        and target_set.path in ancestors
+                        and reference.point is not None
+                    ):
+                        found.append(_Filler(rule_set, rule, target_set, target, reference.point))
+        return tuple(found)
+
+    def answer(self, selecting: frozenset[str]) -> ArtefactReach:
+        if selecting not in self._answers:
+            self._answers[selecting] = _Routes(self, selecting).answer()
+        return self._answers[selecting]
+
+
+class _Routes:
+    """The routes from one artefact, known by the sets whose scopes select it."""
+
+    def __init__(self, walk: _Walk, selecting: frozenset[str]) -> None:
+        self.walk = walk
+        self.selecting = selecting
+        self.starts = tuple(
+            s for s in walk.rule_sets.rule_sets if s.path in selecting and s.component is None
+        )
+        self._clean: dict[str, dict[str, RuleSet]] = {}
+
+    def passes(self, rule_set: RuleSet) -> bool:
+        """Whether a route may pass through the set: it has no scope of its own, or its
+        scope selects the artefact. A method rule set takes no scope (COR-051 point 2),
+        so one written on it narrows nothing; validation refuses it."""
+        own = rule_set.component is None and rule_set.front_matter.get(fd.SCOPE_KEY) is not None
+        return not own or rule_set.path in self.selecting
+
+    def clean(self, start: RuleSet) -> dict[str, RuleSet]:
+        """The sets a route from `start` reaches with no pin behind its set, `start`
+        included, by path."""
+        if start.path not in self._clean:
+            seen = {start.path: start}
+            queue = [start]
+            while queue:
+                for edge in self.walk.edges(queue.pop(0)):
+                    target = edge.inherited
+                    if edge.behind or target.path in seen or not self.passes(target):
+                        continue
+                    seen[target.path] = target
+                    queue.append(target)
+            self._clean[start.path] = seen
+        return self._clean[start.path]
+
+    def anywhere(self) -> dict[str, RuleSet]:
+        """Every set any route from the artefact reaches, through a pin behind its set
+        too, by path."""
+        seen = {s.path: s for s in self.starts}
+        queue = list(self.starts)
+        while queue:
+            for edge in self.walk.edges(queue.pop(0)):
+                target = edge.inherited
+                if target.path not in seen and self.passes(target):
+                    seen[target.path] = target
+                    queue.append(target)
+        return seen
+
+    def answer(self) -> ArtefactReach:
+        if not self.starts:
+            return _NO_REACH
+        conflicts: list[Conflict] = [*self._pin_conflicts()]
+        bound, fill_conflicts = self._fills()
+        conflicts.extend(fill_conflicts)
+        filling = {id(f.rule) for f in self.walk.fillers}
+        bindings: list[Binding] = []
+        for rule_set in self.walk.rule_sets.rule_sets:  # path order
+            covering = tuple(s for s in self.starts if rule_set.path in self.clean(s))
+            if not covering:
+                continue
+            for rule in rule_set.rules:
+                if not rule.binds:
+                    continue
+                if id(rule) in filling:
+                    points = bound.get(id(rule))
+                    if points:
+                        bindings.append(Binding(rule, rule_set, covering, tuple(points)))
+                    continue
+                bindings.append(Binding(rule, rule_set, covering))
+        return ArtefactReach(tuple(bindings), tuple(conflicts))
+
+    def _pin_conflicts(self) -> list[PinConflict]:
+        """One set pinned at different majors by the routes from the artefact."""
+        pins: dict[str, list[tuple[RuleSet, int, Pin]]] = {}
+        sets: dict[str, RuleSet] = {}
+        for rule_set in sorted(self.anywhere().values(), key=lambda s: s.path):
+            for edge in self.walk.edges(rule_set):
+                if self.passes(edge.inherited):
+                    pins.setdefault(edge.inherited.path, []).append(
+                        (rule_set, edge.index, edge.pin)
+                    )
+                    sets[edge.inherited.path] = edge.inherited
+        return [
+            PinConflict(sets[path], tuple(found))
+            for path, found in sorted(pins.items())
+            if len({pin.major for _set, _index, pin in found}) > 1
+        ]
+
+    def _fills(self) -> tuple[dict[int, list[str]], list[FillConflict]]:
+        """Which fill binds for each extension point the routes reach, by the filling
+        rule, and the points whose most specific sets disagree (COR-051 point 7)."""
+        points: dict[tuple[int, str], list[_Filler]] = {}
+        for filler in self.walk.fillers:
+            points.setdefault((id(filler.offering), filler.point), []).append(filler)
+        bound: dict[int, list[str]] = {}
+        conflicts: list[FillConflict] = []
+        for fillers in points.values():
+            offering_set, offering = fillers[0].offering_set, fillers[0].offering
+            if not offering.binds:
+                continue  # a fill binds only while the rule it fills is accepted
+            through = [s for s in self.starts if offering_set.path in self.clean(s)]
+            specific = [
+                s
+                for s in through
+                if not any(
+                    s.path in self.walk.ancestors(other) for other in through if other is not s
+                )
+            ]
+            brought = [(s, self._brought(s, fillers)) for s in specific]
+            choices = {tuple(id(rule) for _held, rule in fills) for _s, fills in brought}
+            point = f"{offering_set.cite(offering.id)}#{fillers[0].point}"
+            if len(choices) > 1 or any(len(fills) > 1 for _s, fills in brought):
+                conflicts.append(FillConflict(point, tuple(brought)))
+            elif brought and brought[0][1]:
+                _held, rule = brought[0][1][0]
+                bound.setdefault(id(rule), []).append(point)
+        conflicts.sort(key=lambda c: c.point)
+        return bound, conflicts
+
+    def _brought(
+        self, start: RuleSet, fillers: Sequence[_Filler]
+    ) -> tuple[tuple[RuleSet, Rule], ...]:
+        """The accepted fills of one point that the chain from `start` brings, each with
+        the set holding it: a set a route from `start` reaches, from which a route reaches
+        the offering set, both with no pin behind its set."""
+        reached = self.clean(start)
+        found: list[tuple[RuleSet, Rule]] = []
+        for filler in fillers:
+            if not filler.rule.binds or filler.rule_set.path not in reached:
+                continue
+            fill = (filler.rule_set, filler.rule)
+            if filler.offering_set.path in self.clean(filler.rule_set) and fill not in found:
+                found.append(fill)
+        return tuple(found)
 
 
 def locate_rule(
@@ -1777,12 +2351,18 @@ def _list(value: Any) -> list[Any]:
     return list(value) if isinstance(value, list) else []
 
 
+def _command_paths(command: click.Command, prefix: tuple[str, ...]) -> Iterator[tuple[str, ...]]:
+    """Every command beneath a click command, by its words, the command itself included
+    when it has words."""
+    if prefix:
+        yield prefix
+    if isinstance(command, click.Group):
+        for name, sub in command.commands.items():
+            yield from _command_paths(sub, (*prefix, name))
+
+
 def _names(fields: Sequence[str]) -> str:
     return ", ".join(f"`{name}`" for name in fields)
-
-
-def _rel(target_root: Path, path: Path) -> str:
-    return path.relative_to(target_root).as_posix()
 
 
 def _pointer(segments: Iterable[Any]) -> str:
