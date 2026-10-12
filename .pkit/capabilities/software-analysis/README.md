@@ -12,8 +12,9 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-05T00:52:46Z
-      outcome: updated
+      at: 2026-10-12T11:22:16Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 3 has a reviewer other than the writer check the answers a change owes, and keeps every other answer a person's decision. This page says the analysis-resolver agent, which makes no change of its own, hands its writer commands over, and that an agent making the change may run them for the answers its own change owes. Both hold under the refined point, so the page holds.
       deferred:
         - anchor:
             kind: record

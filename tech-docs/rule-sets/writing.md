@@ -222,7 +222,7 @@ A rewrite adds, drops, weakens or narrows no claim, and asks the author wherever
 - **How:**
   - Flag the passage for the author, and keep the original until the author answers. The flag is a comment on the change's pull request that lists each held spot, as on PR #1345.
   - Project terms and citations stay as written, and a citation's form includes its locator, such as "release README:22-29".
-  - Text a person decided is never rewritten for style, such as a recorded revalidation, a deferral, an `unanchored-because` reason or a revalidation record. Reworded, it would need that person's decision again (`.pkit/rules/core.md` rule 20).
+  - Text a person decided, or an answer a reviewer checked, is never rewritten for style, such as a recorded revalidation, a deferral, an `unanchored-because` reason or a revalidation record. Reworded, it would need deciding or checking again (`.pkit/rules/core.md` rule 20).
   - This rule wins wherever another rule of this set or of a set that inherits it would change what a text says.
   - The trial's rewrites changed what a text says in each of these ways:
     - **Adding:** the original "have them validated" names no validator, and the rewrite "let the system validate them" names one.
