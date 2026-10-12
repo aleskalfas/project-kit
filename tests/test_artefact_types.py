@@ -391,6 +391,24 @@ def test_the_configuration_schema_refuses_a_backbone_type_on_a_place(repo: Adopt
     assert _type_of(repo) == {"a/x.md": None, "b/x.md": None}
 
 
+def test_a_typed_places_path_is_judged_once_at_its_path(repo: AdopterRepo) -> None:
+    """One finding per mistake: a path the shape pass refuses is not judged again,
+    and a typed place's pattern findings stand at its `path`."""
+    repo.write({CONFIG: _config("{path: /abs, type: own}", "{path: nowhere, type: own}", "/bare")})
+    found = _config_findings(repo)
+    assert set(found) == {
+        "/friction/places/0/path",
+        "/friction/places/1/path",
+        "/friction/places/2",
+    }
+    assert found["/friction/places/0/path"][0] is cv.Severity.ERROR  # the schema's refusal
+    assert found["/friction/places/1/path"] == (
+        cv.Severity.WARNING,
+        "friction pattern 'nowhere' matches nothing in the repository; a dead pattern keeps "
+        "silence looking like health (COR-050 point 12).",
+    )
+
+
 def test_a_scope_naming_a_type_no_owner_declares_fails(repo: AdopterRepo) -> None:
     _declares(repo, EVIDENCE, REGISTRY + _places("{location: runs, path: none}"))
     rules = "tech-docs/rule-sets/cmn.md"

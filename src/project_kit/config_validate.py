@@ -58,7 +58,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
@@ -315,6 +315,8 @@ def _friction_findings(
 
     A key whose value is not a list was refused whole by the shape pass, and a
     pattern the shape pass refused is not judged again: one finding per mistake.
+    A place written `{path, type}` (COR-056 point 2) has its pattern at its
+    `path`, where it is judged and where the shape pass would have refused it.
     """
     if not isinstance(friction, Mapping):
         return []
@@ -322,18 +324,34 @@ def _friction_findings(
     listing = functools.cache(lambda: working_tree(target_root).files())  # on first need
     findings: list[ConfigFinding] = []
     for key in FRICTION_PATTERN_KEYS:
-        if not isinstance(friction.get(key), list):
+        written: Any = cast("Mapping[str, Any]", friction).get(key)
+        if not isinstance(written, list):
             continue  # the shape pass already reported it
         declared: tuple[SettingsPath, ...] = getattr(settings, key)
         for setting in declared:
-            if setting.is_capability or setting.pointer in flagged:
-                continue  # a capability's is the packages pass's; a refused one is reported
-            findings.extend(_pattern_findings(target_root, setting, listing))
+            if setting.is_capability:
+                continue  # a capability's is the packages pass's
+            pointer = _pattern_pointer(setting.pointer, cast("list[Any]", written))
+            if setting.pointer in flagged or pointer in flagged:
+                continue  # a refused one is reported
+            findings.extend(_pattern_findings(target_root, setting, pointer, listing))
     return findings
 
 
+def _pattern_pointer(pointer: str, written: Sequence[Any]) -> str:
+    """Where a pattern is written: at the entry, or at its `path` when the entry
+    is a typed place, `{path, type}` (COR-056 point 2)."""
+    index = _last_segment(pointer)
+    if index.isdigit() and int(index) < len(written) and isinstance(written[int(index)], Mapping):
+        return f"{pointer}/path"
+    return pointer
+
+
 def _pattern_findings(
-    target_root: Path, setting: SettingsPath, listing: Callable[[], Sequence[str]]
+    target_root: Path,
+    setting: SettingsPath,
+    pointer: str,
+    listing: Callable[[], Sequence[str]],
 ) -> list[ConfigFinding]:
     """One path or glob: stays inside the repository (error otherwise); matches
     something (warning otherwise).
@@ -347,7 +365,7 @@ def _pattern_findings(
     if not is_inside_repository(target_root, pattern):
         return [
             ConfigFinding(
-                setting.pointer,
+                pointer,
                 Severity.ERROR,
                 f"friction pattern {pattern!r} leaves the repository (absolute, climbing above "
                 f"the root, or resolving outside it through a link); every path in these "
@@ -357,7 +375,7 @@ def _pattern_findings(
     if not pattern_matches_any(pattern, listing()):
         return [
             ConfigFinding(
-                setting.pointer,
+                pointer,
                 Severity.WARNING,
                 f"friction pattern {pattern!r} matches nothing in the repository; a dead "
                 f"pattern keeps silence looking like health (COR-050 point 12).",
