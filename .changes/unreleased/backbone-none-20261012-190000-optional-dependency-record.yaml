@@ -1,0 +1,10 @@
+component: backbone
+kind: none
+body: >
+  Design-ahead: COR-030 lets an entry in `requires_capabilities` carry
+  `optional: true`. The dependency then need not be installed, but an
+  installed one must satisfy its range, and it never blocks uninstalling the
+  capability it names. COR-051 point 7 admits rule-set inheritance only
+  through a required dependency, and COR-052 tells the two kinds apart. It is
+  record text only, and nothing you run changes. The build Task (#1410)
+  carries the real changeset.
