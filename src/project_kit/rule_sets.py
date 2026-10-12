@@ -33,11 +33,20 @@ This module:
   shows each pin behind with the edit that re-pins it (`PinCheck.fix`);
 - resolves citations to rules (`resolve_citation`) and lists rule ids
   claimed more than once in the rule-set space (`rule_id_collisions`), for
-  `pkit refs` and `pkit decisions validate`.
+  `pkit refs` and `pkit decisions validate`;
+- reads the parts of its rules a set declares checks enforce (`CHECKS_KEY`,
+  `CheckPart`, COR-051 point 2), and reports a declaration for a rule the set
+  lacks and a check that is not there;
+- answers which accepted rules bind on each artefact of one state (`reach`,
+  COR-051 point 7): the one home of that answer (ADR-057 point 2), which
+  validation reads for the conflicts between routes, and the `rule-sets`
+  reading commands give (`rule_set_reading`).
 
 Deterministic: the same repository state gives the same findings in the same
 order — files by path, each file's checks in a fixed order, then the
-inheritance cycles. Nothing here touches git. Whether an id was *reused*
+inheritance cycles, then the conflicts by artefact. The reader and the walk
+read one state: the working tree, or a commit through discovery's tree.
+Validation reads the working tree, and no history. Whether an id was *reused*
 after its rule was deleted cannot be seen in one state; that is why retired
 rules stay in place, so that a reused id is a duplicate this pass reports.
 """
@@ -1753,8 +1762,9 @@ class PinCheck:
     def behind(self) -> bool:
         """Whether the pin is behind its set: the set has moved on to a newer major
         (COR-051 point 7). No rule binds through a pin behind its set (`reach`). A pin
-        ahead of its set, or one whose set's version cannot be read, is not behind;
-        `problem` reports either as a pin that does not hold."""
+        ahead of its set is not behind, and `problem` reports it as a pin that does not
+        hold. Nor is a pin whose set's version cannot be read: that is the inherited
+        set's shape finding."""
         major = self.inherited.major
         return major is not None and self.pin.major < major
 
@@ -1889,10 +1899,16 @@ def reach(discovery: fd.Discovery, rule_sets: RuleSetDiscovery) -> Reach:
     specific sets the offering rule binds through decide each point: those no
     other such set inherits. Where they bring different fills, a fill
     against none included, the answer names the conflict and no fill binds.
-    So does one artefact reached through routes that pin one set at
-    different majors. Validation reports both conflicts from this answer
-    (`validate_rule_sets`). Runs no query: git, through discovery, is its
-    only cost.
+    The answer also names routes to one artefact that pin one set at
+    different majors. That conflict holds back no binding: a rule binds
+    through a route whose pins are not behind. Validation reports both
+    conflicts from this answer (`validate_rule_sets`).
+
+    A rule that fills binds only as a fill, so one whose fills name no point
+    an inherited rule offers binds nowhere. A most specific set brings the
+    fill its chain holds, whatever its pins, where the fill binds through
+    the filling set. Both read states validation fails. Runs no query: git,
+    through discovery, is its only cost.
     """
     covering = fd.covering_rule_sets(discovery)
     walk = _Walk(rule_sets)
@@ -2038,6 +2054,11 @@ class _Routes:
             self._clean[start.path] = seen
         return self._clean[start.path]
 
+    def reached(self) -> frozenset[str]:
+        """The paths of every set a route from the artefact reaches with no pin behind
+        its set."""
+        return frozenset(path for start in self.starts for path in self.clean(start))
+
     def anywhere(self) -> dict[str, RuleSet]:
         """Every set any route from the artefact reaches, through a pin behind its set
         too, by path."""
@@ -2057,7 +2078,9 @@ class _Routes:
         conflicts: list[Conflict] = [*self._pin_conflicts()]
         bound, fill_conflicts = self._fills()
         conflicts.extend(fill_conflicts)
-        filling = {id(f.rule) for f in self.walk.fillers}
+        filling = {
+            id(rule) for s in self.walk.rule_sets.rule_sets for rule in s.rules if rule.fills
+        }
         bindings: list[Binding] = []
         for rule_set in self.walk.rule_sets.rule_sets:  # path order
             covering = tuple(s for s in self.starts if rule_set.path in self.clean(s))
@@ -2125,13 +2148,17 @@ class _Routes:
     def _brought(
         self, start: RuleSet, fillers: Sequence[_Filler]
     ) -> tuple[tuple[RuleSet, Rule], ...]:
-        """The accepted fills of one point that the chain from `start` brings, each with
-        the set holding it: a set a route from `start` reaches, from which a route reaches
-        the offering set, both with no pin behind its set."""
-        reached = self.clean(start)
+        """The accepted fills of one point that the chain of `start` holds, each with the
+        set holding it (COR-051 point 7). The chain is `start` and every set it inherits,
+        whatever its pins. A fill counts where it binds through the filling set: a route
+        with no pin behind its set reaches that set, and leads on from it to the
+        offering set."""
+        chain = self.walk.ancestors(start) | {start.path}
+        reached = self.reached()
         found: list[tuple[RuleSet, Rule]] = []
         for filler in fillers:
-            if not filler.rule.binds or filler.rule_set.path not in reached:
+            path = filler.rule_set.path
+            if not filler.rule.binds or path not in chain or path not in reached:
                 continue
             fill = (filler.rule_set, filler.rule)
             if filler.offering_set.path in self.clean(filler.rule_set) and fill not in found:

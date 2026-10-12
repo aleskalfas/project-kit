@@ -368,6 +368,54 @@ def test_two_different_fills_of_one_point_fail_validation(repo: AdopterRepo) -> 
     assert not {"RS-TECH-001", "RS-USER-001"} & set(bound(repo))
 
 
+def test_a_most_specific_set_brings_the_fill_its_chain_holds_whatever_its_pins(
+    repo: AdopterRepo,
+) -> None:
+    """T inherits S through a pin behind S, so no rule binds through that pin. T is still
+    the more specific set, and its chain holds S's fill, which binds through S's own
+    route (COR-051 point 7, "Fills through several sets")."""
+    lay_out(
+        repo,
+        {
+            "cmn": _offering(),
+            "s": rule_set(
+                "S",
+                "2.0.0",
+                inherits=["CMN@1"],
+                scope=scoped(f"{GUIDES}/**"),
+                entries=rules("RS-S-001", **_filling()),
+            ),
+            "t": rule_set("T", inherits=["S@1", "CMN@1"], scope=scoped(f"{GUIDES}/**")),
+        },
+        a=page(),
+    )
+    assert binding(repo, "RS-S-001").fills == ("RS-CMN-001#where",)
+    assert errors(repo, Kind.FILL_CONFLICT) == []
+
+
+def test_a_rule_whose_fill_names_no_offered_point_binds_nowhere(repo: AdopterRepo) -> None:
+    """A rule that fills binds only as a fill; validation fails the undeclared fill."""
+    lay_out(
+        repo,
+        {
+            "cmn": _offering(),
+            "doc": rule_set(
+                "DOC",
+                inherits=["CMN@1"],
+                scope=scoped(f"{GUIDES}/**"),
+                entries=rules(
+                    "RS-DOC-001",
+                    fills=["RS-CMN-002#nowhere"],
+                    **anchored_to("RS-CMN-002"),
+                ),
+            ),
+        },
+        a=page(),
+    )
+    assert "RS-DOC-001" not in bound(repo)
+    assert errors(repo, Kind.UNDECLARED_FILL)
+
+
 # --- the declared check parts (COR-051 point 2) ------------------------------------------
 
 
