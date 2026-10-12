@@ -483,12 +483,16 @@ def test_a_check_part_is_no_part_of_the_rule_s_content(repo: AdopterRepo) -> Non
     assert not fc.content_differs(new, old)
 
 
-def test_the_schema_refuses_a_check_part_without_its_part(repo: AdopterRepo) -> None:
-    lay_out(
-        repo,
-        {"cmn": rule_set("CMN", checks={"RS-CMN-001": [{"check": "lint"}]})},
-        a=page(),
-    )
+@pytest.mark.parametrize(
+    "declared",
+    [{"check": "lint"}, {"check": "living-docs: validate", "part": "An owner, then a space."}],
+)
+def test_the_schema_refuses_a_malformed_check_part(
+    repo: AdopterRepo, declared: dict[str, str]
+) -> None:
+    """A part is required, and an owner's name followed by a colon and a space would read
+    as a bare name, the project's own tool, so it is refused."""
+    lay_out(repo, {"cmn": rule_set("CMN", checks={"RS-CMN-001": [declared]})}, a=page())
     assert any(f.kind is Kind.SHAPE for f in rs.validate_rule_sets(repo.root).errors)
 
 

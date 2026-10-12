@@ -200,9 +200,9 @@
       ],
       "properties": {
         "check": {
-          "description": "The check: `backbone:<command>` for the backbone's (a `pkit` command, its words separated by spaces), `<component>:<command>` for a command a component registers in its package metadata, or a bare name for the project's own tool.",
+          "description": "The check: `backbone:<command>` for the backbone's (a `pkit` command, its words separated by spaces), `<component>:<command>` for a command a component registers in its package metadata, or a bare name for the project's own tool. An owner's name followed by a colon and a space is refused, since it would read as a bare name.",
           "type": "string",
-          "pattern": "^\\S(?:.*\\S)?$"
+          "pattern": "^(?![a-z](?:[a-z0-9-]*[a-z0-9])?:\\s)\\S(?:.*\\S)?$"
         },
         "part": {
           "description": "Which part of the rule the check settles, in words.",

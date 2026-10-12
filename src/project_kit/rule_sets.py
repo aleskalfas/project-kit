@@ -53,7 +53,6 @@ rules stay in place, so that a reused id is a duplicate this pass reports.
 
 from __future__ import annotations
 
-import contextlib
 import io
 import re
 from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -1664,26 +1663,16 @@ class _Catalogue:
 
     @cached_property
     def component_commands(self) -> dict[str, frozenset[tuple[str, ...]]]:
-        """Each registered component's commands, by their words, as its package metadata's
-        `commands:` tree registers them. Read forgivingly: a package the packages member
-        refuses registers nothing here."""
-        from project_kit.command_runner import COMMANDS_KEY, command_leaves
+        """Each registered component's commands, by their words, as the dispatcher reads
+        what its package metadata registers (`command_runner.registered_commands`). A
+        package that does not read registers nothing here, as it registers nothing there."""
+        from project_kit.command_runner import registered_commands
         from project_kit.package_validate import installed_package_files
 
-        found: dict[str, frozenset[tuple[str, ...]]] = {}
-        for name, _component_dir, package in installed_package_files(self.target_root):
-            raw: Any = None
-            with contextlib.suppress(OSError, UnicodeDecodeError):
-                raw, _duplicates, _problem = _load_front_matter(package.read_text(encoding="utf-8"))
-            package_data: Mapping[str, Any] = (
-                cast("Mapping[str, Any]", raw) if isinstance(raw, Mapping) else {}
-            )
-            tree: Any = package_data.get(COMMANDS_KEY)
-            leaves = (
-                command_leaves(cast("Mapping[Any, Any]", tree)) if isinstance(tree, Mapping) else {}
-            )
-            found[name] = frozenset(leaves)
-        return found
+        return {
+            name: frozenset(registered_commands(component_dir))
+            for name, component_dir, _package in installed_package_files(self.target_root)
+        }
 
     def requires(self, capability: str) -> frozenset[str]:
         """The capabilities `capability` declares in `requires_capabilities` (COR-030)."""
