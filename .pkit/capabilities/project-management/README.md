@@ -17,6 +17,11 @@ pkit:
     revalidated:
       at: 2026-10-11T18:37:49Z
       outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 has a reviewer check a change's answers and the person told what changed, and drops the landing command's hold. This page states that rule where it introduces the list, but the rest of that section and of land-work's steps describes the commands as they run: the hold, exit 8's showing of every answer word for word, What the command cannot date, and the list's opening that asks for it to be read before the merge is approved. Those follow with the commands in #1496, whose doc impact covers this README."
 ---
 
 # project-management capability
@@ -450,13 +455,13 @@ Outside `--dry-run`, a run that did not merge never exits 0, and 0 means everyth
 
 Running `land-work` again resumes: green checks on the same head are not waited for, fresh verdicts are not re-run, a list of answers already in the description is not written again, and a PR that merged meanwhile is completed through `done-work`.
 
-**What the command cannot date.** A run authorised up front that finds the list already there merges on that authorisation. When `open-pr` wrote the list and nothing moved since, a first `--yes --expect-head <sha>` run finds it current and merges, as `--yes` did before the step existed; and a run that stopped ready because it wrote the list is followed by an identical one that finds it there. That the person was shown the list before giving that authorisation is the core rules' rule on answers (rule 20) and the pm skill's landing text (`skills/pm/transition-state.md`), not something the command can hold: what it holds is that the merging run did not write the list itself.
+**What the command cannot date.** A run authorised up front that finds the list already there merges on that authorisation. When `open-pr` wrote the list and nothing moved since, a first `--yes --expect-head <sha>` run finds it current and merges, as `--yes` did before the step existed; and a run that stopped ready because it wrote the list is followed by an identical one that finds it there. That the person was shown the list before giving that authorisation is the pm skill's landing text (`skills/pm/transition-state.md`), not something the command can hold: what it holds is that the merging run did not write the list itself.
 
 **Which backbone derives the list.** The change check runs as the `pkit` first on the PATH the command runs with, with routing off (`PKIT_NO_ROUTE=1`): from the working directory, and — only when the backbone refuses to run an anchor's resolver away from the head (the CLI README, "Friction checks", `--head`) — again from a temporary checkout of the head, which is removed afterwards, on a termination signal too, and nothing else of the repository's with it. Run through `pkit pm`, that `pkit` is the backbone serving the command: a source checkout's own environment, a project's pinned version, else the installed tool. Both runs are that one program, so the directory a run starts in, or the head's own pin, never gives the same head another list.
 
 #### The answers a change wrote, in its pull request ([project-management:DEC-055-pr-lists-answers])
 
-An agent building a change may give the answers its own change owes — the revalidations and deferrals the change check (`pkit friction check`) asks of it — without asking first; they become the person's decision when the person who authorises the merge is shown every one, word for word, from the change check's own list, and then authorises it (COR-050 point 3). The pull request's description carries that list, in a section of its own:
+An agent building a change may give the answers its own change owes — the revalidations and deferrals the change check (`pkit friction check`) asks of it — without asking first. A reviewer other than that agent checks them, the pull request says what changed in each `updated` document, and the person who authorises the merge is told what changed and what is left out of date, as information, not a gate (COR-050 point 3). The pull request's description carries the change check's list of the answers, in a section of its own:
 
 ```
 ## Documentation this change affects

@@ -49,7 +49,8 @@ rules:
 These are project-kit's general writing rules. The analysis follows them directly for now, and a set for the analysis may come with #1352. The documentation spaces will inherit them later (#1350).
 
 - **What matters most:** the meaning. A rewrite keeps it (RS-WRITE-013).
-- **Where the rules apply:** everything under `tech-docs/analysis/`, since project-kit's operational rules send whoever writes the analysis here (`.pkit/rules/project.md`). This set has no scope of its own.
+- **Where the rules apply:** everything under `tech-docs/analysis/`, software-analysis's templates, and the structures its kinds declare (software-analysis DEC-001 point 1). project-kit's operational rules send whoever writes any of them here (`.pkit/rules/project.md`). This set has no scope of its own. No scope could reach a template or a structure anyway, since neither is an artefact (ADR-055 point 3).
+  - **In shipped text:** where a rule here would carry project-kit's own vocabulary or style into a template or a structure, universal applicability wins (COR-014). Examples are project-kit's glossary terms and its labels. The shipped text stays fit for any adopter.
 - **A set for the analysis:** one may come with #1352, which gives each kind of analysis document a declared structure. The rule on needs and goals and the analysis's list of labels wait for that design.
 - **The documentation spaces, next:** the spaces' definitions, `TECH` and `USER`, will inherit this set in a later change (#1350). That change first adds the exceptions that reference pages need.
 - **What an inheriting set may fill:** the list of labels for a kind of document it governs (`RS-WRITE-002#labels`).
@@ -221,7 +222,7 @@ A rewrite adds, drops, weakens or narrows no claim, and asks the author wherever
 - **How:**
   - Flag the passage for the author, and keep the original until the author answers. The flag is a comment on the change's pull request that lists each held spot, as on PR #1345.
   - Project terms and citations stay as written, and a citation's form includes its locator, such as "release README:22-29".
-  - Text a person decided is never rewritten for style, such as a recorded revalidation, a deferral, an `unanchored-because` reason or a revalidation record. Reworded, it would need that person's decision again (`.pkit/rules/core.md` rule 20).
+  - Text a person decided, or an answer a reviewer checked, is never rewritten for style, such as a recorded revalidation, a deferral, an `unanchored-because` reason or a revalidation record. Reworded, it would need deciding or checking again (`.pkit/rules/core.md` rule 20).
   - This rule wins wherever another rule of this set or of a set that inherits it would change what a text says.
   - The trial's rewrites changed what a text says in each of these ways:
     - **Adding:** the original "have them validated" names no validator, and the rewrite "let the system validate them" names one.
