@@ -649,7 +649,7 @@ The backbone manifest's `components` list is the canonical install record.
 
 ### Install pre-flight checks
 
-Before placing files, `pkit capabilities install` runs five checks in order. `--plan` runs after the first — an installed capability has no install plan — and stops there, writing nothing: what the backbone, dependency and mandatory-connection checks would refuse on is among what the plan says the capability needs ("Discovery: what a capability would connect to").
+Before placing files, `pkit capabilities install` runs five checks in order. `--plan` runs after the first — an installed capability has no install plan — and stops there, writing nothing: what the backbone, dependency and mandatory-connection checks would refuse on is among what the plan says the capability needs ("Discovery: what a capability would connect to"), and a range an installed capability declares on it is among the findings the plan adds.
 
 1. **Already installed?** Refuse with a hint to use `upgrade`.
 2. **Backbone compatibility** — the capability's `requires_backbone` range must include the current backbone version. This is the shared backbone-satisfaction gate (COR-007 pattern-extraction): the *same* check runs from both capability-entry paths — `install` (kit-source copy) and `register` (in-repo incubated) — so neither path can activate a capability the current backbone cannot support.

@@ -1964,6 +1964,19 @@ def test_cli_install_of_a_dependency_outside_a_dependents_range_needs_force(
     assert caps.get_installed_capability_version(kit_target, "evidence") == "0.5.0"
 
 
+def test_cli_install_plan_shows_a_range_an_installed_capability_declares_on_it(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """The plan runs before the gate and shows the desync among the findings it adds."""
+    _install_capability_with_manifest(
+        kit_target, kit_source, "consumer", requires_capabilities=[OPTIONAL_EVIDENCE]
+    )
+    _stage_capability_in_source(kit_source, "evidence", version="0.5.0")
+    result = _cli(kit_source, monkeypatch, "install", "evidence", "--plan")
+    assert result.exit_code == 0, result.output
+    assert "requires capability 'evidence' >=0.2.0,<0.4.0 but 0.5.0 is installed" in (result.output)
+
+
 def test_cli_install_of_a_dependency_inside_its_dependents_range_is_clean(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -1987,8 +2000,26 @@ def test_find_declared_dependents_includes_an_optional_dependent(
         kit_target, kit_source, "consumer", requires_capabilities=[OPTIONAL_EVIDENCE]
     )
     assert caps.find_declared_dependents(kit_target, "evidence") == ["consumer"]
-    entry = caps.declared_dependency(kit_target, "consumer", "evidence")
-    assert entry is not None and entry.optional
+    entries = caps.declared_dependencies(kit_target, "consumer", "evidence")
+    assert [(e.version, e.optional) for e in entries] == [(">=0.2.0,<0.4.0", True)]
+
+
+def test_cli_uninstall_reads_a_name_listed_twice_strictly(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """A dependent listing the target once optional and once without the mark
+    declares it required: the stricter reading blocks the uninstall."""
+    _install_capability_with_manifest(kit_target, kit_source, "evidence", version="0.3.0")
+    _install_capability_with_manifest(
+        kit_target,
+        kit_source,
+        "consumer",
+        requires_capabilities=[OPTIONAL_EVIDENCE, REQUIRED_EVIDENCE],
+    )
+    result = _cli(kit_source, monkeypatch, "uninstall", "evidence")
+    assert result.exit_code != 0
+    assert "- consumer" in result.output
+    assert caps.is_installed(kit_target, "evidence")
 
 
 def test_cli_uninstall_is_not_blocked_by_an_optional_dependent(

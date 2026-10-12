@@ -624,19 +624,20 @@ def find_declared_dependents(target_root: Path, dep_name: str) -> list[str]:
     return dependents
 
 
-def declared_dependency(
+def declared_dependencies(
     target_root: Path, dependent: str, dep_name: str
-) -> CapabilityDependency | None:
-    """The entry the installed capability *dependent* declares for *dep_name* in its
-    ``requires_capabilities`` (COR-030), or None when it declares none or its
-    package.yaml does not read — the one reader of a found dependent's entry."""
+) -> tuple[CapabilityDependency, ...]:
+    """The entries the installed capability *dependent* declares for *dep_name* in its
+    ``requires_capabilities`` (COR-030) — every one, should it list the name twice —
+    or none when it declares none or its package.yaml does not read. The one reader
+    of a found dependent's entries."""
     pkg_yaml_path = target_root / ".pkit" / "capabilities" / dependent / "package.yaml"
     if not pkg_yaml_path.is_file():
-        return None
+        return ()
     pkg = _read_package_yaml(pkg_yaml_path)
     if pkg is None:
-        return None
-    return next((dep for dep in pkg.requires_capabilities if dep.name == dep_name), None)
+        return ()
+    return tuple(dep for dep in pkg.requires_capabilities if dep.name == dep_name)
 
 
 @dataclass(frozen=True)

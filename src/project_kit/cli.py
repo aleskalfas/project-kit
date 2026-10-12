@@ -5812,7 +5812,8 @@ def install_capability_cmd(
 
     if plan:
         # The plan runs before the gates: what the gates refuse on — the backbone
-        # and dependency ranges — is among what the plan reports it needs.
+        # and dependency ranges — is among what the plan reports it needs, and a
+        # range an installed capability declares on it among the findings it adds.
         from project_kit import capability_plans as plans
 
         candidate = plans.candidate_of(capability_source, caps.KIT_SHIPPED, installed=False)
@@ -6465,19 +6466,28 @@ def _find_desynced_dependents(
 
     desynced: list[tuple[str, str]] = []
     for dep_cap in caps.find_declared_dependents(target_root, dep_name):
-        req = caps.declared_dependency(target_root, dep_cap, dep_name)
-        if req is not None and range_admits(req.version, new_dep_version) is False:
-            desynced.append((dep_cap, req.version))
+        excluding = next(
+            (
+                req
+                for req in caps.declared_dependencies(target_root, dep_cap, dep_name)
+                if range_admits(req.version, new_dep_version) is False
+            ),
+            None,
+        )
+        if excluding is not None:
+            desynced.append((dep_cap, excluding.version))
     return desynced
 
 
 def _declares_optional(target_root: Path, dependent: str, dep_name: str) -> bool:
-    """Whether the installed capability `dependent` declares `dep_name` an optional
-    dependency (COR-030) — one that never blocks uninstalling `dep_name`."""
+    """Whether the installed capability `dependent` declares `dep_name` only as an
+    optional dependency (COR-030) — one that never blocks uninstalling `dep_name`.
+    An entry without the mark beside one with it reads as required, the stricter
+    reading."""
     from project_kit import capabilities as caps
 
-    entry = caps.declared_dependency(target_root, dependent, dep_name)
-    return entry is not None and entry.optional
+    entries = caps.declared_dependencies(target_root, dependent, dep_name)
+    return bool(entries) and all(entry.optional for entry in entries)
 
 
 def _gate_desynced_dependents(
@@ -6522,7 +6532,7 @@ def _gate_desynced_dependents(
         return
     raise click.ClickException(
         f"refusing to {verb}: {moving} would desync installed dependents.\n"
-        "Upgrade those capabilities to versions compatible with the new range, "
+        f"Upgrade those capabilities to versions whose range admits v{version}, "
         "then retry — or pass --force to proceed anyway and fix dependents "
         "manually (the deadlock-free override per COR-030)."
     )
