@@ -3342,13 +3342,20 @@ def _scope_type_findings(discovery: Discovery) -> Iterator[TypeFinding]:
             )
 
 
-def shared_types(target_root: Path) -> Types:
-    """The working tree's types, resolved once per validate run
-    (`validators.once_per_run`): each member that reports type findings reads this
-    one answer (ADR-057 point 2)."""
+def shared_discovery(target_root: Path) -> Discovery:
+    """The working tree's discovery, walked once per validate run
+    (`validators.once_per_run`): the `friction` member and the members that report
+    type findings read this one walk (ADR-057 point 2)."""
     return validators.once_per_run(
-        ("artefact-types", target_root), lambda: discover_artefacts(target_root).types
+        ("discovery", target_root), lambda: discover_artefacts(target_root)
     )
+
+
+def shared_types(target_root: Path) -> Types:
+    """The working tree's types, resolved once per validate run over the one walk
+    (`shared_discovery`): each member that reports type findings reads this one
+    answer (ADR-057 point 2)."""
+    return shared_discovery(target_root).types
 
 
 # --- rule-set scopes ----------------------------------------------------
