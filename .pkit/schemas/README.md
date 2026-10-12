@@ -25,7 +25,7 @@ pkit:
         - anchor:
             kind: record
             value: COR-051
-          reason: "COR-051 makes a change to what a set inherits need a new major, and binds an accepted rule only where a route reaches its set. The page's rule-set section says otherwise in its version row and its statuses paragraph. Both follow with #1408, which builds where rules bind and their validation errors."
+          reason: "COR-051 makes a change to what a set inherits need a new major, binds an accepted rule only where a route reaches its set, and has a set's front matter declare the parts of its rules that checks enforce. The page's rule-set section says otherwise in its version row, its statuses paragraph and its key table, which has no checks key and refuses unknown keys. All three follow with #1408, which builds where rules bind, the declared check parts and their validation errors."
 ---
 
 # Schemas
