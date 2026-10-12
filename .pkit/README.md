@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-12T20:51:42Z
+      at: 2026-10-12T21:13:02Z
       outcome: unchanged
-      unchanged-because: This change makes the CLI reference say that the upgrade's tool update skips pre-release and dev release tags when it looks up the latest release. This map names the CLI reference by its role, the pkit command surface, and links it; neither that role nor its place changes, so the map holds.
+      unchanged-because: This map names the CLI reference, the lifecycle README and the schemas README by their roles and links them. This change adds the two rule-set reading commands to the CLI reference and to the lifecycle README's list of reading commands, and adds to the schemas README where an accepted rule binds, a set's check parts and the shape of a capability place. No area's role or place changes, so the map holds.
 ---
 
 # project-kit
