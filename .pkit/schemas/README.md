@@ -19,13 +19,8 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-12T19:27:20Z
+      at: 2026-10-12T20:18:21Z
       outcome: updated
-      deferred:
-        - anchor:
-            kind: record
-            value: COR-051
-          reason: "COR-051 makes a change to what a set inherits need a new major, binds an accepted rule only where a route reaches its set, and has a set's front matter declare the parts of its rules that checks enforce. The page's rule-set section says otherwise in its version row, its statuses paragraph and its key table, which has no checks key and refuses unknown keys. All three follow with #1408, which builds where rules bind, the declared check parts and their validation errors."
 ---
 
 # Schemas
