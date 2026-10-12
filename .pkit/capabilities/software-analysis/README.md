@@ -12,8 +12,9 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-12T20:10:50Z
-      outcome: updated
+      at: 2026-10-12T21:25:37Z
+      outcome: unchanged
+      unchanged-because: COR-052's refinement tells a required capability dependency, which forces an install, from an optional one, which names a single capability, in its Context, one rationale paragraph and one alternative; no point changes. This page relies on COR-052 point 6 for its fillers' fail-closed and fallback answers, and says the capability depends on no other, so it holds.
       deferred:
         - anchor:
             kind: record

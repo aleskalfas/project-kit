@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import click
 import pytest
@@ -760,7 +761,7 @@ def _stage_installed_capability(
     *,
     version: str = "0.1.0",
     requires_backbone: str = ">=0.1.0,<99.0.0",
-    requires_capabilities: list[dict[str, str]] | None = None,
+    requires_capabilities: list[dict[str, Any]] | None = None,
 ) -> None:
     """Directly create a capability under .pkit/capabilities/<name>/ and register it.
 
@@ -783,6 +784,8 @@ def _stage_installed_capability(
         for req in requires_capabilities:
             lines.append(f"  - name: {req['name']}")
             lines.append(f'    version: "{req["version"]}"')
+            if req.get("optional"):
+                lines.append("    optional: true")
         req_caps_block = "\n" + "\n".join(lines)
 
     (cap_dir / "package.yaml").write_text(
@@ -854,6 +857,35 @@ def test_backbone_upgrade_refuses_when_installed_cap_dep_out_of_range(
         installed_target,
         "consumer",
         requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<2.0.0"}],
+    )
+
+    with pytest.raises(click.ClickException, match="capability dependency check failed"):
+        upgrade.run_upgrade(installed_target)
+
+
+def test_backbone_upgrade_passes_an_absent_optional_dependency(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An optional dependency that is not installed passes the backbone-wide check (COR-030)."""
+    _stage_installed_capability(
+        installed_target,
+        "consumer",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.1.0,<2.0.0", "optional": True}],
+    )
+
+    upgrade.run_upgrade(installed_target)
+    assert "Already at backbone v" in capsys.readouterr().out
+
+
+def test_backbone_upgrade_refuses_an_installed_optional_dependency_out_of_range(
+    installed_target: Path,
+) -> None:
+    """An installed optional dependency must meet its range, as a required one must (COR-030)."""
+    _stage_installed_capability(installed_target, "evidence", version="0.1.0")
+    _stage_installed_capability(
+        installed_target,
+        "consumer",
+        requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<2.0.0", "optional": True}],
     )
 
     with pytest.raises(click.ClickException, match="capability dependency check failed"):

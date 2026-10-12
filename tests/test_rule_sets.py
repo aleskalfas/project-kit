@@ -892,19 +892,30 @@ def test_a_capability_inherits_another_only_with_the_dependency(
         (f.pointer, f.message) for f in result.errors if f.kind is Kind.INHERITANCE_NOT_ALLOWED
     ]
     assert [pointer for pointer, _ in refused] == ["/inherits/1", "/inherits/2"]
-    assert "does not declare a dependency on capability demo-recording" in refused[0][1]
+    assert "does not declare a required dependency on capability demo-recording" in refused[0][1]
     assert "cannot inherit the project rule set PRJ" in refused[1][1]
 
     package = adopter.pkit / "capabilities" / "evidence" / "package.yaml"
+    declared = package.read_text(encoding="utf-8")
     package.write_text(
-        package.read_text(encoding="utf-8")
-        + 'requires_capabilities:\n  - name: demo-recording\n    version: ">=0.1.0"\n',
+        declared + 'requires_capabilities:\n  - name: demo-recording\n    version: ">=0.1.0"\n',
         encoding="utf-8",
     )
     remaining = [
         f.pointer for f in validate(adopter).errors if f.kind is Kind.INHERITANCE_NOT_ALLOWED
     ]
     assert remaining == ["/inherits/2"]
+
+    # An optional dependency may be absent, so it admits no inheritance (COR-051 point 7).
+    package.write_text(
+        declared + "requires_capabilities:\n  - name: demo-recording\n"
+        '    version: ">=0.1.0"\n    optional: true\n',
+        encoding="utf-8",
+    )
+    still_refused = [
+        f.pointer for f in validate(adopter).errors if f.kind is Kind.INHERITANCE_NOT_ALLOWED
+    ]
+    assert still_refused == ["/inherits/1", "/inherits/2"]
 
 
 def test_an_inheritance_cycle_is_reported_once(adopter: AdopterRepo) -> None:

@@ -12,9 +12,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-12T19:27:33Z
+      at: 2026-10-12T21:25:25Z
       outcome: unchanged
-      unchanged-because: "This change adds two rule-set errors: a scope on a method rule set, and a type a scope names that no owner declares. The page's validation sentence names the checks in brief, without the container or the cited sources either, and sends the reader to the schemas reference for every check, whose scope row now gives both. Its other sentences on rule sets do not describe a scope, so the page holds."
+      unchanged-because: COR-051 point 7 and rule_sets.py admit a capability's inheritance of another's rule set only through a required dependency, and the error says so. This page names inheritance among the checks in brief and sends the reader to the schemas reference for each check, which states the required entry. Its other sentences on rule sets do not touch dependencies, so the page holds.
 ---
 
 # Decision records

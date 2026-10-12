@@ -29,9 +29,8 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-12T20:51:42Z
-      outcome: unchanged
-      unchanged-because: the change makes pkit upgrade skip pre-release and dev release tags when it looks up the latest release for the tool update and a pinned raise; this page specifies the upgrade flow, the refusal of an older pkit and the pinned auto-advance, and does not describe that lookup, so it holds
+      at: 2026-10-12T21:33:10Z
+      outcome: updated
 ---
 
 # Lifecycle
@@ -157,10 +156,14 @@ requires_backbone: ">=1.26.0,<2.0.0"
 
 # Optional: declared dependencies on other capabilities (COR-030).
 # Each entry is a capability name + semver range for the installed version.
+# `optional: true` marks a dependency that need not be installed.
 # Absence of this field (or an empty list) means no dependencies.
 requires_capabilities:
   - name: project-management
     version: ">=0.20.0,<1.0.0"
+  - name: living-docs
+    version: ">=0.3.0,<1.0.0"
+    optional: true
 
 # Optional: this component's git-footprint paths outside `.pkit/` (ADR-009).
 # `pkit visibility private` routes these into `.git/info/exclude`.
@@ -185,7 +188,7 @@ The table lists every key `.pkit/schemas/backbone/package.schema.json` knows, wi
 | `component` | `kind` — `capability` or `adapter`; `name` — a component name (lowercase letters, digits and hyphens, starting with a letter and not ending with a hyphen) equal to the component's directory; `version` — the component's own semver, which gates dependency edges. | COR-010, COR-017 |
 | `description` | Required: a non-empty line, the summary `pkit capabilities list` shows, which the dispatcher also uses as the command group's help. | COR-017; COR-021 |
 | `requires_backbone` | Required: a version range of compatible backbone versions; must parse. Evaluated at install and upgrade, and checked by `pkit validate` against the installed backbone ("How the wiring is resolved", below). | COR-010, COR-017 |
-| `requires_capabilities` | A list of `{name, version}`, both required: a component name and a version range, which must parse. Gated at install, upgrade and uninstall, and checked by `pkit validate` against the installed versions; absence means no dependencies. | COR-030 |
+| `requires_capabilities` | A list of `{name, version}`, both required: a component name and a version range, which must parse. An entry may add `optional: true`: the dependency need not be installed, but an installed one must satisfy its range, and it never blocks uninstalling the capability it names. An entry without it is a required dependency. Gated at install, upgrade and uninstall, and checked by `pkit validate` against the installed versions; absence means no dependencies. | COR-030 |
 | `commands` | The command tree registered under `pkit <capability>`. A key is a token. A value carrying `script` is a leaf and also needs `help` (one line); `script` is a path relative to the component root and must exist. A leaf may declare `query-contract: true` — the one constant declaration that the command is a query (bounded, deterministic, read-only, needing no network; COR-050 point 2, ADR-057 point 3), required on the command a validator names, on a command filler and on an anchor kind's resolver. A command filler's leaf may also declare `reads`, a non-empty list of distinct values among `history` and `settled`: what it reads beyond the working tree — absent, the working tree only ("How a data point resolves"); `reads` on a leaf without `query-contract: true` is the `packages` member's error. Any other value is a group of further tokens. | COR-021; ADR-057 and ADR-058 (the declaration); COR-052 point 6 (`reads`) |
 | `aliases` | A list of unique component names: other namespaces for the same command tree (`pm` for `project-management`). The dispatcher binds them in one precedence walk: a backbone command wins, then a capability's own name, then the first capability in manifest order to declare the alias. An alias that loses reaches nothing, and `pkit validate`'s `packages` member warns at the entry, naming what holds the name — the backbone command, or the capability whose name or earlier alias it is ("Validation: the package schema"). A warning, since the alias is a shorthand: `pkit <capability> …` still reaches the capability. | none — the dispatcher's, beside COR-021 |
 | `validators` | A mapping from a validator name (a word) to its entry: `command`, required — a command reference (below) naming a leaf of this component's `commands:` tree, which must exist and declare `query-contract: true`; the leaf's `help` is the validator's — plus optional `order` (an integer; the backbone's members take the orders below 1000, and 1000 is the default). `pkit validate` runs each as a member addressed `<component>:<name>`: the leaf's script from the project root with the one argument `--json`, the offline marker set ("The methodology's literals" below), under the query policy of the one command runner ("How a registered command is run" below) — in its own process group, bounded by the backbone's thirty seconds and killed as a group when it overruns — answering on stdout with one JSON document and nothing else — `{"summary": [...], "findings": [{"severity", "location", "message"}]}`, severity one of `error`, `warning`, `info`, `report`, a finding optionally carrying a `label`; diagnostics go to stderr; only `error` fails. No answer — a leaf without the declaration, an abnormal exit, a timeout, not exactly that document — is an error finding. The living-docs capability registers the first, `living-docs:spaces`. | COR-055 (a component joins validation by naming a command it registers, point 3; one severity fails, point 5; no answer fails, point 6); ADR-058 (the block's keys, the run and the findings document) |
@@ -545,7 +548,7 @@ remove:                 # optional, union / additive: removal overrides, each wi
 | Relation | Checked | Finding |
 |---|---|---|
 | Backbone range | each component's `requires_backbone` admits the installed backbone version | error on the component — `[backbone range]` |
-| Capability dependency ranges | each `requires_capabilities` entry names an installed capability whose version of record (its component manifest, else its package) the range admits — the order the install gate reads | error on the dependent, warning on the dependency naming each dependent — `[capability dependency range]` (COR-030) |
+| Capability dependency ranges | each `requires_capabilities` entry names an installed capability whose version of record (its component manifest, else its package) the range admits — the order the install gate reads. An optional entry whose capability is not installed passes | error on the dependent, warning on the dependency naming each dependent — `[capability dependency range]` (COR-030) |
 | Contributions and subscriptions against point versions | the counterpart's `schema_version` equals the point's | warning: the counterpart is inert — `[point version]` |
 | Process connections against interface versions | a `depends-on` entry's `schema_version`, where it declares one, equals the offered process point's | warning: the entry is inert — `[process interface version]` |
 | Project filler files against schema versions | the filler envelope's `schema_version` equals the point's | error at the filler — `[project filler version]`. The file sits at the path "Where a project filler file lives" gives (`connections.project_filler`); one whose envelope carries no integer `schema_version` fills nothing, and its envelope error is reported under `connections` |
@@ -646,11 +649,13 @@ The backbone manifest's `components` list is the canonical install record.
 
 ### Install pre-flight checks
 
-Before placing files, `pkit capabilities install` runs five checks in order. `--plan` runs after the first — an installed capability has no install plan — and stops there, writing nothing: what the backbone, dependency and mandatory-connection checks would refuse on is among what the plan says the capability needs ("Discovery: what a capability would connect to").
+Before placing files, `pkit capabilities install` runs five checks in order. `--plan` runs after the first — an installed capability has no install plan — and stops there, writing nothing: what the backbone, dependency and mandatory-connection checks would refuse on is among what the plan says the capability needs ("Discovery: what a capability would connect to"), and a range an installed capability declares on it is among the findings the plan adds.
 
 1. **Already installed?** Refuse with a hint to use `upgrade`.
 2. **Backbone compatibility** — the capability's `requires_backbone` range must include the current backbone version. This is the shared backbone-satisfaction gate (COR-007 pattern-extraction): the *same* check runs from both capability-entry paths — `install` (kit-source copy) and `register` (in-repo incubated) — so neither path can activate a capability the current backbone cannot support.
-3. **Capability dependencies (COR-030)** — every entry in `requires_capabilities` must be satisfied: the declared dependency is installed *and* its recorded version falls within the declared semver range. Refuse with an actionable hint naming what to install or upgrade first. Never auto-installs.
+3. **Capability dependencies (COR-030), in both directions.**
+   - *The ranges the capability declares.* Each required dependency in its `requires_capabilities` must be installed, and each installed dependency's recorded version must fall within the declared semver range. An optional dependency that is not installed passes. Refuse with an actionable hint naming what to install or upgrade first. Never auto-installs.
+   - *The ranges declared on it.* Its version must fall within each range an installed capability declares for it, whether that entry is required or optional. Outside one, warn, naming each such dependent and its range, and refuse unless `--force` is given. Under `--force` the warning is still printed and the install proceeds, as upgrading a dependency does ("Per-component upgrade", below). The check reuses the upgrade's (`capabilities.find_declared_dependents` and the one range comparison).
 4. **Mandatory process connections (COR-053 point 6)** — every `depends-on` entry the capability marks mandatory must find its upstream, at an equal interface version when it names one. Refuse, one line per unmet mark with its reason ("Mandatory process connections", below). Never auto-installs.
 5. **Naming collision detection** — skills/agents from the new capability must not collide with already-installed names. Interactive resolution available.
 
@@ -658,7 +663,7 @@ Before placing files, `pkit capabilities install` runs five checks in order. `--
 
 ### Register pre-flight checks (incubated; COR-031)
 
-`pkit capabilities register` shares the install pre-flights that still apply (backbone-satisfaction, capability-dependencies, mandatory process connections, collision detection against *other* installed content) and skips "exists in kit source" (the in-repo tree *is* the source). It adds one check the install path doesn't need:
+`pkit capabilities register` shares the install pre-flights that still apply (backbone-satisfaction, capability-dependencies in both directions with the same `--force`, mandatory process connections, collision detection against *other* installed content) and skips "exists in kit source" (the in-repo tree *is* the source). Adopting an already-registered capability in place moves no version, so it skips the check of the ranges declared on it. Register adds one check the install path doesn't need:
 
 - **Self-consistency validation (COR-031 D1)** — the adopter hand-authored this capability; nothing upstream validated it. Before activation, its own `package.yaml` (run through the same package validator `pkit validate` uses — the schema and the repository checks in "Validation" above; only its errors refuse — an unknown key among them, "Strict on unknown keys" above), required layout (`README.md`), and own schema pairs (validated by the same validator `pkit schemas validate` runs) are checked against the working tree, which is its spec. Refuse with the structural problems listed. This is *self-validation*, not source-reconciliation — origin suppresses the latter (below), never the former.
 
@@ -666,7 +671,7 @@ Before placing files, `pkit capabilities install` runs five checks in order. `--
 
 `pkit capabilities uninstall` first runs three refusal checks (all defeatable by `--force`); `--plan` runs before them and stops there, writing nothing ("Discovery: what a capability would connect to"):
 
-1. **Declared dependents (COR-030)** — if any installed capability lists this one in its `requires_capabilities`, refuse and name the dependents. The operator must uninstall or upgrade the dependents first.
+1. **Declared dependents (COR-030)** — if any installed capability lists this one as a required dependency in its `requires_capabilities`, refuse and name the dependents. The operator must uninstall or upgrade the dependents first. An optional dependency never blocks the uninstall: the dependent works without the capability it names, and its own runtime guard covers the absence.
 2. **Mandatory process connections (COR-053 point 6)** — if the removal would leave another capability's mandatory `depends-on` mark unmet, warn, naming each counterpart with its mark's reason, and refuse; under `--force` the warning is still printed and the removal proceeds ("Mandatory process connections", below).
 3. **Textual references** — if any adopter-authored file cites the capability (citation token or path reference), refuse and list the references.
 
@@ -725,7 +730,7 @@ Component migrations are tied to the component's version, not the backbone's. A 
 
 The upgrade command transitions an adopter project to a target backbone version (and optionally specific component versions). Six steps:
 
-1. **Resolve compatibility.** Read each installed component's `requires_backbone` against the target backbone version. Refuse to upgrade backbone past a component's range, unless the component is also being upgraded to a version compatible with the new backbone. Surface conflicts so the adopter can address them (upgrade specific components, pin backbone, or remove an incompatible component). Also checks **capability dependencies (COR-030)**: for each installed capability, verifies that its `requires_capabilities` entries are satisfied using *installed* versions of both sides (backbone upgrade does not change capability versions). Refuses with an actionable hint if any dependency is absent or out of range.
+1. **Resolve compatibility.** Read each installed component's `requires_backbone` against the target backbone version. Refuse to upgrade backbone past a component's range, unless the component is also being upgraded to a version compatible with the new backbone. Surface conflicts so the adopter can address them (upgrade specific components, pin backbone, or remove an incompatible component). Also checks **capability dependencies (COR-030)**: for each installed capability, verifies its `requires_capabilities` entries against the *installed* copies and versions of both sides, as they stand before step 2. Step 2's sync then refreshes every installed kit-shipped capability from source and re-stamps its version, and this check does not read the versions that sync installs. Refuses with an actionable hint if any required dependency is absent or any installed one is out of range; an optional dependency that is not installed passes.
 2. **Pull new propagated content.** Run sync (per COR-001) for the backbone. Component-side propagated content updates as part of each component's upgrade.
 3. **Run backbone migrations** in order: manifest-schema → structural → resource-scoped, across minor-version boundaries from current to target.
 4. **For each component being upgraded**, run its migrations in version order with the same scope ordering within each `<major>.<minor>.0/` directory.
@@ -769,10 +774,10 @@ In the methodology's source repository, run by its own code ([ADR-059](../../tec
 
 For capabilities, a **direction-split dependency check (COR-030)** runs before collision detection:
 
-- *Upgrading a dependent* — the new source version's `requires_capabilities` is checked against the installed dependency versions. If a dependency is absent or out of range, the upgrade **refuses with an actionable hint** (the operator controls the dependent version; no deadlock).
-- *Upgrading a dependency* — installed capabilities that declare this capability in their `requires_capabilities` are checked against the new version. If the new version falls outside a dependent's declared range, the upgrade **warns loudly and requires `--force` to proceed** — it is not a hard block. A hard block would deadlock (the operator cannot advance the dependency without cascade-upgrading the dependent, which is out of scope per COR-030). Use `--force` as the by-hand analogue of cascade-upgrade, then upgrade the now-desynced dependents to restore consistency.
+- *Upgrading a dependent* — the new source version's `requires_capabilities` is checked against the installed dependency versions. If a required dependency is absent, or any installed one is out of range, the upgrade **refuses with an actionable hint** (the operator controls the dependent version; no deadlock). An optional dependency that is not installed passes.
+- *Upgrading a dependency* — installed capabilities that declare this capability in their `requires_capabilities`, required or optional, are checked against the new version. If the new version falls outside a dependent's declared range, the upgrade **warns loudly and requires `--force` to proceed** — it is not a hard block. A hard block would deadlock (the operator cannot advance the dependency without cascade-upgrading the dependent, which is out of scope per COR-030). Use `--force` as the by-hand analogue of cascade-upgrade, then upgrade the now-desynced dependents to restore consistency.
 
-Both entry points — backbone-wide `pkit upgrade` and single-capability `pkit capabilities upgrade <name>` — share one version-range / installed-state predicate (`capabilities.check_capability_dependencies`). The backbone-wide path does not move capability versions, so only the "dependent against unsatisfied dependency" direction (refuse) applies there; the warn+force direction applies only in the single-capability path.
+Both entry points — backbone-wide `pkit upgrade` and single-capability `pkit capabilities upgrade <name>` — share one version-range / installed-state predicate (`capabilities.check_capability_dependencies`). The backbone-wide path checks the installed versions before its sync, which then moves every installed kit-shipped capability to its source version without that check reading the versions it installs. So only the "dependent against unsatisfied dependency" direction (refuse) applies there. The warn+force direction applies in the single-capability path, and at install and register ("Install pre-flight checks", above).
 
 #### Mandatory process connections (COR-053 point 6)
 

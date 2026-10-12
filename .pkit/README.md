@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-12T20:51:42Z
+      at: 2026-10-12T21:33:13Z
       outcome: unchanged
-      unchanged-because: This change makes the CLI reference say that the upgrade's tool update skips pre-release and dev release tags when it looks up the latest release. This map names the CLI reference by its role, the pkit command surface, and links it; neither that role nor its place changes, so the map holds.
+      unchanged-because: The lifecycle, CLI and schemas references gain the optional capability dependency, the install gate on the ranges installed capabilities declare and its --force. This map names each by its role and links it, and no role or place changes, so it holds.
 ---
 
 # project-kit
