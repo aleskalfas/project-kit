@@ -18,9 +18,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-12T19:11:08Z
+      at: 2026-10-12T19:31:29Z
       outcome: unchanged
-      unchanged-because: tests/README.md gains a section on turning signing off in a repository a test commits in. This guide points to it for running the suite, writing tests with the adopter-repository fixture and type checking, which the change leaves as they were.
+      unchanged-because: ADR-055 now states what living-docs DEC-001 point 1 decides. Its Context says no sync copies into project-kit's .pkit/, point 3 says project-kit may declare its .pkit/ READMEs as places and that being a place grants no write authority, point 3 no longer says the core owns the shipped templates, point 2 drops its revision wording, and its Implications keep one open question for onboarding. This guide cites ADR-055 only for point 5, on the friction gate, the merge queue, the whole-repository report and the escape hatch, which the change leaves as it was.
 ---
 
 # Contributing to project-kit
