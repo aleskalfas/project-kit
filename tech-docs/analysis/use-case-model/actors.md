@@ -50,9 +50,9 @@ ACT-ci-pipeline:
           - COR-054
           - COR-050
       revalidated:
-        at: 2026-10-12T11:22:21Z
+        at: 2026-10-12T18:49:33Z
         outcome: unchanged
-        unchanged-because: The CI pipeline's needs are what an unattended runner needs from the checks. This change moves the check of a change's answers to a reviewer and tells the merge authoriser what changed, and leaves how the checks run, compare, report and gate as they were, so the actor holds.
+        unchanged-because: COR-050's refinement lets a place name a type, which no friction check reads. The pipeline needs the checks to run unattended against a named base, report in a machine-readable form and gate the merge. This change leaves each as it was, so the actor holds.
 ACT-component-author:
   name: Component author
   status: active
@@ -103,8 +103,9 @@ ACT-merge-authoriser:
         record:
           - COR-050
       revalidated:
-        at: 2026-10-12T11:22:11Z
-        outcome: updated
+        at: 2026-10-12T18:49:35Z
+        outcome: unchanged
+        unchanged-because: COR-050's refinement lets a place name a type, which no friction check reads, and adds two writes of types on the project's places. Being told before a merge what changed and what waits, leaving the answers' check to a reviewer, and accepting a drafted record or rule are untouched, so the actor holds.
 ACT-methodology-maintainer:
   name: Methodology maintainer
   status: active
