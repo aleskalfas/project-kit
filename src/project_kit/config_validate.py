@@ -27,6 +27,13 @@ checks the owning records ask for:
   pass is the one owner of these findings and of the `friction.mode` enum
   (the schema); the friction pass reads the settings and reports only on the
   artefacts.
+- **Types on the project's places** (COR-056 points 2 and 3): the type
+  findings artefact discovery raises and names this pass to report, at the
+  severity it names (`friction_discovery.TYPE_FINDINGS`; ADR-057 point 2). A
+  project place giving a component's type that is not installed, not declared
+  or not admitted on a project's places, a bare project type taking the name of
+  a declared type, and a tie the project can mend are errors. A typed project
+  place that yields to a component's place is a report.
 - **Connections** (COR-053 point 7, COR-052 point 4): each provider or
   contributor selection names an installed capability, read from the
   backbone manifest — otherwise an error naming the fix. A provider selection
@@ -40,7 +47,7 @@ checks the owning records ask for:
 
 Findings are structured records (a JSON Pointer into the file, a severity,
 a message) in a deterministic order: shape findings by position, then the
-repository checks in a fixed order — docs, friction, connections — each entry
+repository checks in a fixed order — docs, friction, types, connections — each entry
 in written order. Only errors fail validation.
 """
 
@@ -63,10 +70,12 @@ from ruamel.yaml.error import YAMLError
 from project_kit import backbone_schemas, validators
 from project_kit import connections as wiring
 from project_kit.friction_discovery import (
+    CONFIGURATION_MEMBER,
     SettingsPath,
     is_inside_repository,
     pattern_matches_any,
     read_friction_settings,
+    shared_types,
 )
 from project_kit.manifest import read_backbone_manifest
 from project_kit.project_config import PROJECT_CONFIG_RELPATH, project_config_path
@@ -96,11 +105,13 @@ ADDRESS_FORMS = {
 
 
 class Severity(Enum):
-    """Whether a finding fails validation, is only reported, or merely informs."""
+    """Whether a finding fails validation, asks for attention, merely informs, or is
+    reported rather than judged (ADR-058 point 2)."""
 
     ERROR = "error"
     WARNING = "warning"
     INFO = "info"
+    REPORT = "report"
 
 
 @dataclass(frozen=True)
@@ -196,6 +207,7 @@ def run_configuration_pass(target_root: Path) -> ConfigReport:
     flagged = frozenset(f.path for f in findings)
     findings.extend(_docs_findings(target_root, config.get(DOCS_KEY), flagged))
     findings.extend(_friction_findings(target_root, config.get(FRICTION_KEY), flagged))
+    findings.extend(_type_findings(target_root))
     findings.extend(_connections_findings(target_root, config.get(CONNECTIONS_KEY), flagged))
     return ConfigReport(
         location=location, present=True, schema_present=True, findings=tuple(findings)
@@ -354,6 +366,23 @@ def _pattern_findings(
     return []
 
 
+# --- types on the project's places (COR-056) ----------------------------------
+
+
+def _type_findings(target_root: Path) -> list[ConfigFinding]:
+    """The type findings discovery names this pass to report (ADR-057 point 2): what
+    the project's places get wrong about types, each at its declaration and at the
+    severity discovery's one table gives it (`friction_discovery.TYPE_FINDINGS`).
+
+    A type value the shape pass refused gives no type, so discovery raises no type
+    finding on it: one finding per mistake.
+    """
+    return [
+        ConfigFinding(finding.pointer, Severity(finding.severity.value), finding.message)
+        for finding in shared_types(target_root).reported_by(CONFIGURATION_MEMBER)
+    ]
+
+
 # --- connections (COR-053, COR-052) ------------------------------------------
 
 
@@ -488,6 +517,7 @@ UMBRELLA_SEVERITY = {
     Severity.ERROR: validators.Severity.ERROR,
     Severity.WARNING: validators.Severity.WARNING,
     Severity.INFO: validators.Severity.INFO,
+    Severity.REPORT: validators.Severity.REPORT,
 }
 
 
