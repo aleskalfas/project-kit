@@ -31,9 +31,14 @@ class _RecordingRun:
     command (git plumbing in fixtures, the real migration scripts) is delegated
     to the genuine `subprocess.run`, since patching the shared `subprocess`
     module replaces `run` process-wide. Records every argv so a test can assert
-    what was — and was not — invoked, in particular that `pkit upgrade` does not
-    shell out to `uv tool install` where it may only print the command (no
-    terminal, as under the suite, `--no-self-update`, or a dry run).
+    what was — and was not — invoked, in particular whether `pkit upgrade`
+    shells out to `uv tool install`: it does not where it may only print the
+    command (no terminal, as under the suite, `--no-self-update`, a dry run, or
+    a pkit that is not the installed tool).
+
+    It also answers the tool step's two `uv` calls, so the suite never asks the
+    machine's real `uv`: `uv tool dir` (default: fails, so the running pkit is
+    not the installed tool) and `uv tool install` (default: succeeds).
     """
 
     def __init__(self, real_run) -> None:
@@ -42,9 +47,21 @@ class _RecordingRun:
         self.ls_remote_stdout = ""
         self.ls_remote_returncode = 1  # default: lookup fails → degrade path
         self.raise_exc: Exception | None = None
+        self.tool_dir_stdout = ""
+        self.tool_dir_returncode = 1  # default: `uv` cannot say → not the installed tool
+        self.tool_dir_exc: Exception | None = None
+        self.install_returncode = 0
 
     def __call__(self, argv, *args, **kwargs):
         self.calls.append(list(argv))
+        if list(argv[:3]) == ["uv", "tool", "dir"]:
+            if self.tool_dir_exc is not None:
+                raise self.tool_dir_exc
+            return subprocess.CompletedProcess(
+                argv, self.tool_dir_returncode, self.tool_dir_stdout, ""
+            )
+        if list(argv[:3]) == ["uv", "tool", "install"]:
+            return subprocess.CompletedProcess(argv, self.install_returncode, "", "")
         if list(argv[:2]) != ["git", "ls-remote"]:
             return self._real_run(argv, *args, **kwargs)
         if self.raise_exc is not None:
@@ -59,7 +76,7 @@ class _RecordingRun:
 
     @property
     def install_calls(self) -> list[list[str]]:
-        return [c for c in self.calls if c[:2] == ["uv", "tool"]]
+        return [c for c in self.calls if c[:3] == ["uv", "tool", "install"]]
 
 
 @pytest.fixture(autouse=True)
@@ -401,6 +418,7 @@ def _stale(monkeypatch: pytest.MonkeyPatch, running: str = "0.1.0", latest: str 
 def test_self_update_acts_when_stale_and_allowed(monkeypatch: pytest.MonkeyPatch) -> None:
     _stale(monkeypatch)
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
+    monkeypatch.setattr(upgrade, "_running_is_installed_tool", lambda: True)
     calls: dict = {"install": None, "reexec": 0}
     monkeypatch.setattr(
         upgrade, "_self_update_tool", lambda v: calls.__setitem__("install", v) or True
@@ -408,7 +426,7 @@ def test_self_update_acts_when_stale_and_allowed(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(
         upgrade,
         "_reexec_after_self_update",
-        lambda: calls.__setitem__("reexec", calls["reexec"] + 1),
+        lambda v: calls.__setitem__("reexec", calls["reexec"] + 1),
     )
     upgrade._maybe_self_update_tool(self_update=True, dry_run=False)
     assert calls["install"] == Version("9.9.9")
@@ -448,10 +466,11 @@ def test_self_update_install_failure_degrades(
 ) -> None:
     _stale(monkeypatch)
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
+    monkeypatch.setattr(upgrade, "_running_is_installed_tool", lambda: True)
     monkeypatch.setattr(upgrade, "_self_update_tool", lambda v: False)  # install fails
     reexec = {"n": 0}
     monkeypatch.setattr(
-        upgrade, "_reexec_after_self_update", lambda: reexec.__setitem__("n", reexec["n"] + 1)
+        upgrade, "_reexec_after_self_update", lambda v: reexec.__setitem__("n", reexec["n"] + 1)
     )
     upgrade._maybe_self_update_tool(self_update=True, dry_run=False)
     assert reexec["n"] == 0
@@ -463,6 +482,7 @@ def test_self_update_dry_run_reports_no_install(
 ) -> None:
     _stale(monkeypatch)
     monkeypatch.setattr(upgrade, "_self_update_allowed", lambda: True)
+    monkeypatch.setattr(upgrade, "_running_is_installed_tool", lambda: True)
     installed = {"v": False}
     monkeypatch.setattr(
         upgrade, "_self_update_tool", lambda v: installed.__setitem__("v", True) or True
@@ -555,6 +575,287 @@ def test_cli_upgrade_no_self_update_forwards(monkeypatch: pytest.MonkeyPatch) ->
     res = CliRunner().invoke(cli.main, ["upgrade", "--no-self-update"])
     assert res.exit_code == 0, res.output
     assert seen["self_update"] is False
+
+
+# --- the tool step runs only under the installed tool (#1473) -------------------
+
+
+class _HandedOver(Exception):
+    """Stands in for the process replacement a successful `os.execvpe` makes."""
+
+
+def _stale_at_a_terminal(
+    stub_ls_remote: _RecordingRun, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> Path:
+    """A stale running pkit (1.0.0 behind 2.5.0) at a terminal, with no guard, and
+    `uv tool dir` answering `<tmp>/tools`. Returns the installed tool's
+    environment, `<tmp>/tools/project-kit`; the test sets `sys.prefix`."""
+    stub_ls_remote.ls_remote_returncode = 0
+    stub_ls_remote.ls_remote_stdout = _tag_output("1.0.0", "2.5.0")
+    monkeypatch.setattr(upgrade, "running_version", lambda: "1.0.0")
+    monkeypatch.setattr(upgrade, "_is_tty", lambda _stream: True)
+    monkeypatch.delenv(upgrade._SELF_UPDATED_ENV, raising=False)
+    monkeypatch.setattr(upgrade.sys, "argv", ["pkit", "upgrade"])
+    tools = tmp_path / "tools"
+    environment = tools / "project-kit"
+    environment.mkdir(parents=True)
+    stub_ls_remote.tool_dir_returncode = 0
+    stub_ls_remote.tool_dir_stdout = f"{tools}\n"
+    return environment
+
+
+def _record_exec(monkeypatch: pytest.MonkeyPatch, error: OSError | None = None) -> list[tuple]:
+    """Patch `os.execvpe`: record each call, then raise `error`, or `_HandedOver`
+    in place of the process replacement."""
+    calls: list[tuple] = []
+
+    def _execvpe(file: str, args: list[str], env: dict[str, str]) -> None:
+        calls.append((file, list(args), dict(env)))
+        raise error if error is not None else _HandedOver()
+
+    monkeypatch.setattr(upgrade.os, "execvpe", _execvpe)
+    return calls
+
+
+def _content_behind(target: Path) -> None:
+    """Put the project's content behind the running pkit's, so an upgrade that went
+    on would sync and pin."""
+    m = manifest.read_backbone_manifest(target)
+    assert m is not None
+    m.backbone_version = "0.1.0"
+    manifest.write_backbone_manifest(target, m)
+
+
+@pytest.mark.parametrize(
+    "prefix",
+    [
+        pytest.param(("cache", "uv", "archive-v0", "Xq3vB1"), id="uvx"),
+        pytest.param(("project", ".venv"), id="uv-run"),
+        pytest.param(("pip-env",), id="pip"),
+    ],
+)
+def test_tool_step_not_under_the_installed_tool_reports_and_goes_on(
+    prefix: tuple[str, ...],
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A stale pkit run through `uvx`, `uv run` or a pip install, at a terminal,
+    reports the newer release and its install command, installs nothing, hands
+    over to no other pkit, and goes on under itself to the project's own steps."""
+    _stale_at_a_terminal(stub_ls_remote, monkeypatch, tmp_path)
+    running_from = tmp_path.joinpath(*prefix)
+    running_from.mkdir(parents=True)
+    monkeypatch.setattr(upgrade.sys, "prefix", str(running_from))
+    execs = _record_exec(monkeypatch)
+
+    upgrade.run_upgrade(installed_target)
+
+    out = capsys.readouterr().out
+    assert "This pkit is not the `uv`-installed tool" in out
+    assert "A newer pkit tool is available: v2.5.0 (you are running v1.0.0)." in out
+    assert f"uv tool install --force {upgrade.DISTRIBUTION_GIT_URL}@v2.5.0" in out
+    assert stub_ls_remote.install_calls == []
+    assert execs == []
+    # It went on under itself: the project's own steps ran, to the default pin.
+    assert "Already at backbone v" in out
+    assert router.read_version_pin(installed_target) == _recorded_version(installed_target)
+
+
+def test_tool_step_dry_run_not_under_the_installed_tool_would_install_nothing(
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A dry run predicts the real run: a pkit that is not the installed tool says
+    so and prints the command, not the install it would run."""
+    _stale_at_a_terminal(stub_ls_remote, monkeypatch, tmp_path)
+    monkeypatch.setattr(upgrade.sys, "prefix", str(tmp_path / "project" / ".venv"))
+
+    upgrade._maybe_self_update_tool(self_update=True, dry_run=True)
+
+    out = capsys.readouterr().out
+    assert "This pkit is not the `uv`-installed tool" in out
+    assert "would run" not in out
+    assert f"uv tool install --force {upgrade.DISTRIBUTION_GIT_URL}@v2.5.0" in out
+    assert stub_ls_remote.install_calls == []
+
+
+def test_tool_step_under_the_installed_tool_installs_and_hands_over(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The installed tool, stale at a terminal, installs the latest release and
+    hands the same command to the `pkit` on the PATH, under the guard, before
+    the project's own steps."""
+    environment = _stale_at_a_terminal(stub_ls_remote, monkeypatch, tmp_path)
+    monkeypatch.setattr(upgrade.sys, "prefix", str(environment))
+    execs = _record_exec(monkeypatch)
+
+    with pytest.raises(_HandedOver):
+        upgrade.run_upgrade(installed_target)
+
+    assert stub_ls_remote.install_calls == [
+        ["uv", "tool", "install", "--force", f"{upgrade.DISTRIBUTION_GIT_URL}@v2.5.0"]
+    ]
+    [(file, args, env)] = execs
+    assert (file, args) == ("pkit", ["pkit", "upgrade"])
+    assert env[upgrade._SELF_UPDATED_ENV] == "1"
+    assert router.read_version_pin(installed_target) is None
+
+
+def test_tool_step_hand_over_that_cannot_start_pins_nothing(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The install succeeds but `pkit` cannot be started: the upgrade stops before
+    it syncs or pins, and names the command to re-run."""
+    environment = _stale_at_a_terminal(stub_ls_remote, monkeypatch, tmp_path)
+    monkeypatch.setattr(upgrade.sys, "prefix", str(environment))
+    monkeypatch.setattr(upgrade.sys, "argv", ["pkit", "upgrade", "--no-pin"])
+    _record_exec(monkeypatch, FileNotFoundError(2, "No such file or directory"))
+    _content_behind(installed_target)
+    synced: list[Path] = []
+    monkeypatch.setattr(upgrade, "run_sync", lambda root, dry_run=False: synced.append(root))
+
+    with pytest.raises(click.ClickException) as raised:
+        upgrade.run_upgrade(installed_target)
+
+    message = raised.value.format_message()
+    assert "pkit v2.5.0 was installed, but `pkit` could not be started" in message
+    assert "No such file or directory" in message
+    assert "stopped before it synced or pinned anything" in message
+    assert message.endswith("    pkit upgrade --no-pin")
+    assert synced == []
+    assert _recorded_version(installed_target) == "0.1.0"
+    assert router.read_version_pin(installed_target) is None
+
+
+def test_tool_step_hand_over_to_a_pkit_still_behind_pins_nothing(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The run the hand-over started finds itself still behind: the PATH found an
+    older `pkit` first. It stops before it syncs or pins, installs nothing, and
+    names the command to re-run."""
+    _stale_at_a_terminal(stub_ls_remote, monkeypatch, tmp_path)
+    monkeypatch.setenv(upgrade._SELF_UPDATED_ENV, "1")
+    monkeypatch.setattr(upgrade.sys, "prefix", str(tmp_path / "pip-env"))
+    execs = _record_exec(monkeypatch)
+    _content_behind(installed_target)
+    synced: list[Path] = []
+    monkeypatch.setattr(upgrade, "run_sync", lambda root, dry_run=False: synced.append(root))
+
+    with pytest.raises(click.ClickException) as raised:
+        upgrade.run_upgrade(installed_target)
+
+    message = raised.value.format_message()
+    assert "a newer pkit tool (v2.5.0) was installed" in message
+    assert "runs first is v1.0.0" in message
+    assert "stopped before it synced or pinned anything" in message
+    assert message.endswith("    pkit upgrade")
+    assert stub_ls_remote.install_calls == []
+    assert execs == []
+    assert synced == []
+    assert _recorded_version(installed_target) == "0.1.0"
+    assert router.read_version_pin(installed_target) is None
+
+
+def test_tool_step_hand_over_to_the_installed_tool_still_behind_goes_on(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The run the hand-over started is the installed tool, yet still behind: the
+    release just installed reports a version below its tag. The PATH is not at
+    fault, so it does not stop. The guard keeps it from installing again; it
+    prints the command and goes on to the project's own steps."""
+    environment = _stale_at_a_terminal(stub_ls_remote, monkeypatch, tmp_path)
+    monkeypatch.setenv(upgrade._SELF_UPDATED_ENV, "1")
+    monkeypatch.setattr(upgrade.sys, "prefix", str(environment))
+    execs = _record_exec(monkeypatch)
+
+    upgrade.run_upgrade(installed_target)
+
+    out = capsys.readouterr().out
+    assert f"uv tool install --force {upgrade.DISTRIBUTION_GIT_URL}@v2.5.0" in out
+    assert stub_ls_remote.install_calls == []
+    assert execs == []
+    assert router.read_version_pin(installed_target) == _recorded_version(installed_target)
+
+
+def test_tool_step_guard_without_a_terminal_does_not_stop(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The guard set where no install ran — no terminal, so no hand-over could
+    have started this run — prints the command and goes on, as it always did."""
+    _stale_at_a_terminal(stub_ls_remote, monkeypatch, tmp_path)
+    monkeypatch.setattr(upgrade, "_is_tty", lambda _stream: False)
+    monkeypatch.setenv(upgrade._SELF_UPDATED_ENV, "1")
+    monkeypatch.setattr(upgrade.sys, "prefix", str(tmp_path / "pip-env"))
+
+    upgrade.run_upgrade(installed_target)
+
+    out = capsys.readouterr().out
+    assert f"uv tool install --force {upgrade.DISTRIBUTION_GIT_URL}@v2.5.0" in out
+    assert stub_ls_remote.install_calls == []
+    assert router.read_version_pin(installed_target) == _recorded_version(installed_target)
+
+
+def test_running_is_installed_tool_when_prefix_is_the_tool_environment(
+    stub_ls_remote: _RecordingRun, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    environment = _stale_at_a_terminal(stub_ls_remote, monkeypatch, tmp_path)
+    monkeypatch.setattr(upgrade.sys, "prefix", str(environment))
+    assert upgrade._running_is_installed_tool() is True
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        pytest.param({"tool_dir_exc": FileNotFoundError("uv")}, id="uv-missing"),
+        pytest.param(
+            {"tool_dir_exc": subprocess.TimeoutExpired(cmd="uv tool dir", timeout=5.0)},
+            id="uv-slow",
+        ),
+        pytest.param({"tool_dir_returncode": 2}, id="uv-fails"),
+        pytest.param({"tool_dir_stdout": "\n"}, id="no-path"),
+        pytest.param({"tool_dir_stdout": "/a\n/b\n"}, id="two-paths"),
+        pytest.param(
+            {"tool_dir_exc": UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")},
+            id="undecodable",
+        ),
+        pytest.param({"tool_dir_stdout": "/a\x00b\n"}, id="nul-in-path"),
+    ],
+)
+def test_running_is_installed_tool_answers_no_when_uv_cannot_tell(
+    answer: dict,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Any doubt answers "not the installed tool", which costs only the printed
+    command — even when the running pkit is in fact the tool's environment."""
+    environment = _stale_at_a_terminal(stub_ls_remote, monkeypatch, tmp_path)
+    monkeypatch.setattr(upgrade.sys, "prefix", str(environment))
+    for name, value in answer.items():
+        setattr(stub_ls_remote, name, value)
+    assert upgrade._running_is_installed_tool() is False
 
 
 # --- backbone + component migration execution (per COR-010) ----------

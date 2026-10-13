@@ -4056,11 +4056,14 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool) -> None:
     Bumps the project to the source kit's current backbone version. To
     upgrade a single capability, use `pkit capabilities upgrade <name>`.
 
-    **Updates the pkit tool itself** when it is behind (ADR-063): it runs
-    `uv tool install --force …@<latest>` and re-runs the upgrade under the new
-    version — degrading to just printing the command when non-interactive or if the
-    install is declined. `--no-self-update` only prints the command. Run outside
-    any project, `pkit upgrade` updates the tool only.
+    **Updates the pkit tool itself** when it is behind (ADR-063): run by the
+    `uv`-installed tool, it runs `uv tool install --force …@<latest>` and re-runs
+    the upgrade under the new version — degrading to just printing the command
+    when non-interactive, under a pkit that is not the installed tool, or if the
+    install is declined. When it detects a failed hand-over to the new version,
+    it stops before it syncs or pins and names the command to re-run.
+    `--no-self-update` only prints the command. Run outside any project,
+    `pkit upgrade` updates the tool only.
 
     **Pins the project by default** at the version it upgrades to (ADR-064), so it
     stays version-locked with no separate `pkit pin` step. Pass `--no-pin` to keep
