@@ -73,9 +73,9 @@ Each kind of thing a record, an agent or a skill cites has one written form:
 
 Every file has exactly one owner — kit or project — and they never share a path.
 
-This invariant is what makes the namespace split above operationally safe. project-kit's sync operation works on a fixed set of kit-owned paths; project-owned paths are never read or written by sync. There is no merge logic, no conflict UI, no marker comments, no include-with-substitution mechanism.
+This invariant is what makes the namespace split above operationally safe. project-kit's sync operation copies a fixed set of kit-owned paths. It writes a project-owned path only through merge delivery, which adds the kit's entries to a file of yours and never removes one you wrote (COR-002). It reads from your side only what it needs, such as the versions your project records. There is no conflict UI, no marker comments, no include-with-substitution mechanism.
 
-Sync **cannot** produce a conflict. You can run it whenever you like — it cannot break anything you wrote.
+Sync **cannot** produce a conflict, and it cannot break anything you wrote. It runs at the versions your project records, and moves none of them. When the pkit running it is not your project's version, or a version transition is unfinished, it stops, writes nothing, and names the way on (COR-059).
 
 The same `core/` / `project/` pattern (and the same invariant) governs other kit areas in your project — `.pkit/agents/`, `.pkit/rules/`, and so on. To extend kit-shipped content, add sibling files in the matching `project/` directory; never edit a kit-owned file.
 
