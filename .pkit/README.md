@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-12T21:33:13Z
+      at: 2026-10-12T23:26:20Z
       outcome: unchanged
-      unchanged-because: The lifecycle, CLI and schemas references gain the optional capability dependency, the install gate on the ranges installed capabilities declare and its --force. This map names each by its role and links it, and no role or place changes, so it holds.
+      unchanged-because: This map names the CLI reference, the lifecycle README and the schemas README by their roles and links them. This change adds the two rule-set reading commands to the CLI reference and to the lifecycle README's list of reading commands, and adds to the schemas README where an accepted rule binds, a set's check parts and the shape of a capability place. No area's role or place changes, so the map holds.
 ---
 
 # project-kit

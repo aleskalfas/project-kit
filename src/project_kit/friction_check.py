@@ -784,6 +784,10 @@ def exclusion_change(pattern: str, before: Listing, after: Listing) -> Exclusion
 
 
 # --- matching an artefact with its base -----------------------------------------
+#
+# The one pairing of a change's base and head artefacts, with its comparison of
+# content (ADR-057 point 2): the change check and `pkit rule-sets altered` both
+# call `pair_artefacts`, so what one takes for the same artefact the other does.
 
 
 def _key(artefact: Artefact, path: str | None = None) -> tuple[str, str | None]:
@@ -799,8 +803,59 @@ def _has_own_id(artefact: Artefact) -> bool:
     return isinstance(own, str) and bool(own)
 
 
-def _counterparts(head: Side, base: Side, diff: Diff) -> dict[int, Artefact]:
-    """Each head artefact's base counterpart, by the head artefact's walk index.
+def content_differs(artefact: Artefact, other: Artefact) -> bool:
+    """Whether two artefacts differ in content (COR-050 point 5): the body compared as
+    text, the own fields compared parsed, never the methodology's container — so a
+    change that only writes a revalidation changes no content."""
+    return content(artefact) != content(other)
+
+
+@dataclass(frozen=True)
+class Alteration:
+    """One artefact a change altered: added (`before` is `None`), removed (`after` is
+    `None`), or paired across the change with content that differs."""
+
+    before: Artefact | None
+    after: Artefact | None
+
+    @property
+    def kind(self) -> str:
+        """`added`, `removed` or `changed`."""
+        if self.before is None:
+            return "added"
+        return "removed" if self.after is None else "changed"
+
+
+@dataclass(frozen=True)
+class Pairing:
+    """A change's base and head artefacts, paired (`pair_artefacts`).
+
+    `counterparts` maps each head artefact's walk index to its base
+    counterpart; a head artefact that is no key is new. `altered` lists what
+    the change altered: each head artefact that is new or whose content
+    differs from its counterpart's, in the head's walk order, then each base
+    artefact no head artefact pairs with, removed, in the base's walk order.
+    So a move the pairing follows, keeping the content, alters nothing.
+    """
+
+    base: tuple[Artefact, ...]
+    head: tuple[Artefact, ...]
+    counterparts: Mapping[int, Artefact]
+
+    @cached_property
+    def altered(self) -> tuple[Alteration, ...]:
+        found: list[Alteration] = []
+        for index, artefact in enumerate(self.head):
+            before = self.counterparts.get(index)
+            if before is None or content_differs(artefact, before):
+                found.append(Alteration(before, artefact))
+        paired = {id(before) for before in self.counterparts.values()}
+        found.extend(Alteration(b, None) for b in self.base if id(b) not in paired)
+        return tuple(found)
+
+
+def pair_artefacts(base: Discovery, head: Discovery, diff: Diff) -> Pairing:
+    """Pair each head artefact with its base counterpart, by the head artefact's walk index.
 
     By location first, following the diff's renames; then, for an artefact
     with an identity of its own, by that identity among base artefacts whose
@@ -809,14 +864,15 @@ def _counterparts(head: Side, base: Side, diff: Diff) -> dict[int, Artefact]:
     two kinds — an entry that became a document of its own, or a document
     that became an entry, each with an identity of its own (COR-050 point 3).
     Each pass pairs only one candidate, so an identity two base artefacts
-    share pairs neither. What finds none is new.
+    share pairs neither. What finds none is new. The diff is the change
+    check's own (`read_diff`), whichever caller pairs.
     """
+    base_artefacts, head_artefacts = base.artefacts, head.artefacts
     base_by_key: dict[tuple[str, str | None], Artefact] = {}
-    for artefact in base.discovery.artefacts:
+    for artefact in base_artefacts:
         base_by_key.setdefault(_key(artefact), artefact)
     matched: dict[int, Artefact] = {}
     claimed: set[int] = set()
-    head_artefacts = head.discovery.artefacts
     for index, artefact in enumerate(head_artefacts):
         before = base_by_key.get(_key(artefact, diff.renamed_from.get(artefact.path)))
         if before is not None and id(before) not in claimed:
@@ -836,7 +892,7 @@ def _counterparts(head: Side, base: Side, diff: Diff) -> dict[int, Artefact]:
                 continue
             candidates = [
                 b
-                for b in base.discovery.artefacts
+                for b in base_artefacts
                 if id(b) not in claimed
                 and may_pair(artefact, b)
                 and b.id == artefact.id
@@ -845,7 +901,7 @@ def _counterparts(head: Side, base: Side, diff: Diff) -> dict[int, Artefact]:
             if len(candidates) == 1:
                 matched[index] = candidates[0]
                 claimed.add(id(candidates[0]))
-    return matched
+    return Pairing(base=base_artefacts, head=head_artefacts, counterparts=matched)
 
 
 # --- what the diff says about one artefact ------------------------------------
@@ -875,7 +931,7 @@ def _revalidation(artefact: Artefact, before: Artefact) -> _Revalidation | None:
     if at is None or at == parsed_at(before):
         return None
     outcome = revalidated_field(artefact, "outcome")
-    changed = content(artefact) != content(before)
+    changed = content_differs(artefact, before)
     if outcome == Answer.UPDATED.value:
         if changed:
             return _Revalidation(Answer.UPDATED)
@@ -922,7 +978,7 @@ def _anchor_changed(
         return entry is not None and entry.changes_content
     target = head.find(anchor.value)
     before = base.find(anchor.value)
-    return target is not None and (before is None or content(target) != content(before))
+    return target is not None and (before is None or content_differs(target, before))
 
 
 @dataclass(frozen=True)
@@ -2005,7 +2061,7 @@ def run_change_check(
                 location=_config_path(target_root),
             )
         )
-    counterparts = _counterparts(head, base, diff)
+    counterparts = pair_artefacts(base.discovery, head.discovery, diff).counterparts
     answers: list[WrittenAnswer] = []
     behind = _Behind(target_root, base_state, named, head)
     try:

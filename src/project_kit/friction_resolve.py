@@ -71,7 +71,7 @@ from project_kit.friction_check import (
     SHORT,
     FrictionCheckError,
     commit_of,
-    content,
+    content_differs,
     parsed_at,
     resolve_base,
     run_git,
@@ -742,7 +742,7 @@ def _read_back(
 def _owed(resolved: Artefact, base: Artefact) -> Owed:
     """What an artefact both sides revalidated owes, with the outcome its content bears
     out against the base side's, as the change check will compare them (COR-050 point 5)."""
-    if content(resolved) != content(base):
+    if content_differs(resolved, base):
         outcome = UPDATED
         why = (
             "its content differs from the base side's (this branch changed its body or its "

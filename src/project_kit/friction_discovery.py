@@ -1576,21 +1576,29 @@ def _folder_test(target_root: Path, tree: RepositoryTree | None) -> Callable[[st
     return holds
 
 
-def rule_set_files(target_root: Path, places: Sequence[RuleSetPlace]) -> dict[Path, RuleSetPlace]:
+def rule_set_files(
+    target_root: Path, places: Sequence[RuleSetPlace], tree: RepositoryTree | None = None
+) -> dict[str, RuleSetPlace]:
     """Every rule-set file the places claim, with the place that claimed it.
 
     A Markdown file a rule-set place matches is a rule-set file, whatever it
     holds — except the folder's signpost, `README.md`. A file two places match
     is claimed by the first, so a method folder always wins over a project
-    place that happens to reach into it. Keyed by the path the walk yields;
-    found in the working tree's one listing, like every other artefact.
+    place that happens to reach into it. Keyed by repository-relative path, in
+    a tree's listing (`listed_files_in_place`): the state `tree` holds, else the
+    working tree's one listing, like every other artefact. A link is claimed
+    as a file of the listing, and never read as a document. The one claim the
+    walk (`discover_artefacts`) and the rule-set reader both make, so they find
+    the same rule-set files at one state.
     """
-    claimed: dict[Path, RuleSetPlace] = {}
-    tree = working_tree(target_root) if places else None
+    claimed: dict[str, RuleSetPlace] = {}
+    if not places:
+        return claimed
+    files = (tree if tree is not None else working_tree(target_root)).files()
     for rule_set_place in places:
-        for path in files_in_place(target_root, rule_set_place.place, tree):
-            if path.name != RULE_SETS_SIGNPOST:
-                claimed.setdefault(path, rule_set_place)
+        for rel in listed_files_in_place(rule_set_place.place, files):
+            if PurePosixPath(rel).name != RULE_SETS_SIGNPOST:
+                claimed.setdefault(rel, rule_set_place)
     return claimed
 
 
@@ -2301,11 +2309,7 @@ def discover_artefacts(
     folders = held_folders(target_root, settings, rule_set_places_found)
     listing = tree if tree is not None else working_tree(target_root)
     files = listing.files()
-    claimed: dict[str, RuleSetPlace] = {}
-    for rule_set_place in rule_set_places_found:
-        for rel in listed_files_in_place(rule_set_place.place, files):
-            if PurePosixPath(rel).name != RULE_SETS_SIGNPOST:
-                claimed.setdefault(rel, rule_set_place)
+    claimed = rule_set_files(target_root, rule_set_places_found, listing)
     holder: dict[str, HeldFolder] = {}  # each held file: the folder holding it
     for folder in folders:
         if folder.skipped is None:
@@ -2333,7 +2337,7 @@ def discover_artefacts(
     artefacts: list[Artefact] = []
     unreadable: list[UnreadableFile] = []
     read: list[DiscoveredFile] = []
-    texts = _document_texts(listing, [rel for _place, rel in matched] + sorted(holder))
+    texts = document_texts(listing, [rel for _place, rel in matched] + sorted(holder))
     for place, rel in matched:
         rule_set = claimed.get(rel)
         text = texts[rel]
@@ -2342,7 +2346,7 @@ def discover_artefacts(
         excluded_by = settings.exclusion(rel)
         front_matter: Mapping[str, Any] | None = None
         mixed = False
-        if isinstance(text, _ReadFailure):
+        if isinstance(text, ReadFailure):
             reason: str | None = text.reason
         else:
             mixed = line_break(text) is None
@@ -2385,7 +2389,7 @@ def discover_artefacts(
 
 
 def _held_file(
-    rel: str, folder: HeldFolder, places: tuple[Place, ...], text: str | _ReadFailure
+    rel: str, folder: HeldFolder, places: tuple[Place, ...], text: str | ReadFailure
 ) -> HeldFile:
     """A held file, read for its front matter and every friction block in it.
 
@@ -2394,7 +2398,7 @@ def _held_file(
     it as an artefact is assumed, so a block is found wherever it is written —
     as a document's, an entry's, a rule's, or deeper.
     """
-    if isinstance(text, _ReadFailure):
+    if isinstance(text, ReadFailure):
         return HeldFile(rel, folder, places, front_matter=None, unreadable=text.reason, blocks=())
     front_matter, _body, reason = _parsed_front_matter(text)
     blocks = tuple(_friction_blocks(front_matter, "")) if front_matter is not None else ()
@@ -2422,41 +2426,47 @@ def _pointer_token(key: Any) -> str:
 
 
 @dataclass(frozen=True)
-class _ReadFailure:
+class ReadFailure:
+    """Why a file of a tree could not be read as text: it would not open, or is not UTF-8."""
+
     reason: str
 
 
-def _document_texts(
+def document_texts(
     tree: RepositoryTree, rels: Sequence[str]
-) -> dict[str, str | _ReadFailure | None]:
+) -> dict[str, str | ReadFailure | None]:
     """Each matched file's text, or why it could not be read; `None` for a link.
+
+    The one reading of a tree's files as text, for the walk here and for the
+    rule-set reader (`rule_sets.discover_rule_sets`) alike, whichever state the
+    tree is of (ADR-057 point 2).
 
     The working tree is read file by file, so a file that will not open is
     reported as unreadable, whichever reader asked; a commit is read in one pass.
     """
-    contents: Mapping[str, bytes | None | _ReadFailure]
+    contents: Mapping[str, bytes | None | ReadFailure]
     if isinstance(tree, WorkingTree):
         contents = {rel: _read_working_file(tree, rel) for rel in rels}
     else:
         contents = tree.read_bytes(rels)
-    texts: dict[str, str | _ReadFailure | None] = {}
+    texts: dict[str, str | ReadFailure | None] = {}
     for rel in rels:
         raw = contents.get(rel)
-        if raw is None or isinstance(raw, _ReadFailure):
+        if raw is None or isinstance(raw, ReadFailure):
             texts[rel] = raw
             continue
         try:
             texts[rel] = raw.decode("utf-8")
         except UnicodeDecodeError as exc:
-            texts[rel] = _ReadFailure(str(exc))
+            texts[rel] = ReadFailure(str(exc))
     return texts
 
 
-def _read_working_file(tree: WorkingTree, rel: str) -> bytes | None | _ReadFailure:
+def _read_working_file(tree: WorkingTree, rel: str) -> bytes | None | ReadFailure:
     try:
         return tree.read_file(rel)
     except OSError as exc:
-        return _ReadFailure(str(exc))
+        return ReadFailure(str(exc))
 
 
 def parse_artefacts(
