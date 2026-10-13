@@ -53,6 +53,11 @@ pkit:
     revalidated:
       at: 2026-10-13T04:29:12Z
       outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-058
+          reason: "ADR-058 point 3 now runs `decisions` before `friction` and `rule-sets`, and no longer says that every read follows the order. This page's `validate` table lists the members in the order the code runs them, `friction` and `rule-sets` before `decisions`, under a lead-in that still says what a later member reads, an earlier one checked. Both follow with #1419, which reorders `_BACKBONE_MEMBERS` and rewrites the table and its lead-in."
 ---
 
 # Command-line interface
