@@ -14,9 +14,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-13T12:45:37Z
+      at: 2026-10-13T14:17:16Z
       outcome: unchanged
-      unchanged-because: The rule-set module gains one judgement of whether a declared check is there, shared by validation and the reading commands, and its reach walk names the rules a pin behind its set holds back. This page's section on rule sets gives their statuses, the acceptance gate, where sets live, with a project pinning an inherited set's major, how a rule is cited and what validation checks. It says nothing of declared checks, of a pin behind its set holding a rule back, or of the reading commands. Its paragraph on what validation leaves out speaks of a synced copy of a decision record, which the module's change does not touch. So the page holds.
+      unchanged-because: "The points module gains the line a record's body opens on, and the lines of the file a point's section spans, which the artefacts document gives an anchor on one point. Its docstring names that document among its callers. This page says how records are cited, refined and checked: point headings, retired points with their stubs, and what validation and the numbering check report. It says nothing of spans or of the artefacts document, so it holds."
       deferred:
         - anchor:
             kind: record

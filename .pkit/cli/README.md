@@ -53,7 +53,7 @@ pkit:
         - src/project_kit/document_parts.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064]
     revalidated:
-      at: 2026-10-13T12:45:34Z
+      at: 2026-10-13T14:17:13Z
       outcome: updated
 ---
 
