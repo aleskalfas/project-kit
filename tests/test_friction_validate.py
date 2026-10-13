@@ -1596,6 +1596,23 @@ def test_an_anchor_naming_no_point_of_its_record_is_a_dead_anchor(adopter: Adopt
     assert "names no record" in no_record.message
 
 
+def test_a_dead_point_anchor_is_pointed_at_where_the_list_writes_it(
+    adopter: AdopterRepo,
+) -> None:
+    """Beside an entry that is not text, the pointer keeps the index as written."""
+    adopter.write(
+        {
+            CONFIG: _config(["docs"]),
+            POINTED: pointed_record(),
+            "docs/guide.md": _document("guide", anchors={"record": [5, "PRJ-900#9"]}),
+        }
+    )
+    result = fv.validate_friction(adopter.root)
+    assert _point_findings(result) == [
+        ("dead-point-anchor", "error", "/pkit/friction/anchors/record/1"),
+    ]
+
+
 def test_an_anchor_on_a_point_of_a_record_in_list_form_is_dead(adopter: AdopterRepo) -> None:
     result = _pointed(adopter, "COR-050#5")
     (finding,) = result.errors

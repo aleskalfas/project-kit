@@ -114,6 +114,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Any, cast
 
 from project_kit import backbone_schemas as bs
 from project_kit import connections, validators
@@ -762,8 +763,7 @@ class _PointAnchors:
         self._records: dict[str, RecordPoints | None] = {}
 
     def findings(self, artefact: Artefact) -> Iterable[FrictionFinding]:
-        values = artefact.anchors_of_kind("record")
-        for index, value in enumerate(values):
+        for index, value in _record_anchors(artefact):
             record, point = split_anchor(value)
             if point is None:
                 continue
@@ -835,6 +835,22 @@ class _PointAnchors:
         message: str,
     ) -> FrictionFinding:
         return FrictionFinding(artefact.location, pointer, severity, kind, message)
+
+
+def _record_anchors(artefact: Artefact) -> list[tuple[int, str]]:
+    """Each record anchor the block writes as text, with its index in the list as written,
+    so a finding points at it even beside an entry that is not text."""
+    friction = artefact.friction
+    if not isinstance(friction, Mapping):
+        return []
+    anchors = cast("Mapping[str, Any]", friction).get("anchors")
+    if not isinstance(anchors, Mapping):
+        return []
+    written = cast("Mapping[str, Any]", anchors).get("record")
+    if not isinstance(written, list):
+        return []
+    values = cast("list[Any]", written)
+    return [(index, value) for index, value in enumerate(values) if isinstance(value, str)]
 
 
 def _pointer_token(segment: str) -> str:
