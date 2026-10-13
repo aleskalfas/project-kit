@@ -221,5 +221,5 @@ This record partially supersedes COR-001, COR-004 and COR-017. Each overturned p
   - COR-002 and COR-003 describe seeding as point 8 does.
   - COR-003 says, as point 2 does, that merge creating its own missing target is not seeding. Its out-of-scope list marks only the limit of the methodology surface.
   - COR-025 says what sync writes and reads in a project-owned path as point 2 does.
-  - COR-031 says what sync writes in a project-owned path as point 2 does. It has sync keep a capability at its recorded version and a transition move it, as points 2 and 3 do. Its skip of an incubated capability applies to the propagation sync and a transition both run.
+  - COR-031 says what sync writes in a project-owned path as point 2 does. It has sync keep a capability at its recorded version and a transition move it, as points 2 and 3 do. Its skip of an incubated capability applies to the propagation that sync and a transition both run.
 - **The realisation** is the implementing project's. A realising decision records it (COR-025), among other things the commands, where the completion is recorded, how a component with no manifest is read, how each version of the CLI is tied to one content, how a release that moves only a component reaches a project, and the remedies each stop names.
