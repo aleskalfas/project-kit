@@ -211,7 +211,7 @@ def run_upgrade(
 
     # The lower bound of the backbone's migration window: the last completed
     # transition, or none, which replays every backbone migration once.
-    completed = as_recorded_version(manifest.completed_version) if manifest is not None else None
+    completed = replay_lower_bound(manifest)
     _report_transition(manifest, completed, target_version, dry_run)
 
     # The target is recorded before anything else is written (ADR-065 point 4,
@@ -304,6 +304,20 @@ def as_recorded_version(text: str | None) -> str | None:
     except InvalidVersion:
         return None
     return f"{parsed.major}.{parsed.minor}.{parsed.micro}"
+
+
+def replay_lower_bound(manifest: BackboneManifest | None) -> str | None:
+    """The lower bound of the backbone's migration window: the recorded
+    completion, or None, which replays every backbone migration once.
+
+    None when the project has no manifest, no completion or one that is no
+    version (ADR-065 point 5), and when its `backbone_version` is no version:
+    upgrade then writes the manifest at its target as first install does, and
+    replays (point 2). Read-only.
+    """
+    if manifest is None or as_recorded_version(manifest.backbone_version) is None:
+        return None
+    return as_recorded_version(manifest.completed_version)
 
 
 def _bundled_adapter_package(source_kit: Path, name: str) -> Path:
@@ -418,9 +432,15 @@ def _report_transition(
             "as first install does."
         )
     if completed is None:
+        unreadable = manifest is not None and manifest.completed_version is not None
+        why = (
+            "The recorded states cannot be read (`backbone_version` or "
+            "`completed_version` in .pkit/manifest.yaml is no version)"
+            if unreadable
+            else "No completed transition is recorded (`completed_version` in .pkit/manifest.yaml)"
+        )
         click.echo(
-            "  No completed transition is recorded (`completed_version` in "
-            ".pkit/manifest.yaml), so this project's backbone migration history is "
+            f"  {why}, so this project's backbone migration history is "
             f"unknown. Every backbone migration up to {target_version} runs once, and "
             "the completion recorded at the end keeps it from running again."
         )

@@ -233,9 +233,9 @@ def test_status_shows_no_transition_line_when_complete_and_current(installed_tar
 @pytest.mark.parametrize(
     ("completion", "shown"),
     [
-        ("", "incomplete — no completion is recorded, so `pkit upgrade` runs every"),
+        ("", "incomplete — no readable completion is recorded, so `pkit upgrade` runs"),
         # A completion that is no version reads as none, as upgrade reads it.
-        ("completed_version: garbage\n", "incomplete — no completion is recorded"),
+        ("completed_version: garbage\n", "incomplete — no readable completion is recorded"),
         ("completed_version: 0.1.0\n", "incomplete — completed_version is 0.1.0;"),
     ],
 )

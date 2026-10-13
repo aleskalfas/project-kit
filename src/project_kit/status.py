@@ -139,15 +139,16 @@ def _report_transition_state(
     Its caller leaves both out in the methodology's source repository, where no
     transition ever runs (ADR-065 point 3). Each line names `pkit upgrade`, which
     finishes an incomplete transition and moves every component listed. A
-    completion that is no version reads as none, as upgrade reads it.
+    completion that is no version, or beside a `backbone_version` that is no
+    version, reads as none, as upgrade reads it (`replay_lower_bound`).
     """
-    from project_kit.upgrade import as_recorded_version, component_moves
+    from project_kit.upgrade import component_moves, replay_lower_bound
 
     if manifest.transition_incomplete:
-        if as_recorded_version(manifest.completed_version) is None:
+        if replay_lower_bound(manifest) is None:
             state = (
-                "incomplete — no completion is recorded, so `pkit upgrade` runs every "
-                "backbone migration once"
+                "incomplete — no readable completion is recorded, so `pkit upgrade` runs "
+                "every backbone migration once"
             )
         else:
             state = (

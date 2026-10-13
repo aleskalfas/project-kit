@@ -2254,7 +2254,10 @@ def test_an_adapter_registered_after_the_copy_is_rendered_into_the_ignore_file(
     assert events[-2:] == ["register", "render"]
 
 
-@pytest.mark.parametrize("state", ["no manifest", "no version", "empty", "empty completion"])
+@pytest.mark.parametrize(
+    "state",
+    ["no manifest", "no version", "no version, completion kept", "empty", "empty completion"],
+)
 def test_upgrade_writes_a_missing_or_corrupt_manifest_at_its_target_and_replays(
     installed_target: Path, capsys: pytest.CaptureFixture[str], state: str
 ) -> None:
@@ -2268,6 +2271,8 @@ def test_upgrade_writes_a_missing_or_corrupt_manifest_at_its_target_and_replays(
         path.unlink()
     elif state == "no version":
         _drop_completion(installed_target)
+        manifest.record_backbone_target(installed_target, "not-a-version")
+    elif state == "no version, completion kept":
         manifest.record_backbone_target(installed_target, "not-a-version")
     elif state == "empty":
         path.write_text(
@@ -2289,9 +2294,13 @@ def test_upgrade_writes_a_missing_or_corrupt_manifest_at_its_target_and_replays(
     if state == "no manifest":
         assert "Upgrading backbone: no .pkit/manifest.yaml ->" in out
         assert "registered   adapter 'claude-code'" in out
-    elif state == "no version":
+    elif state.startswith("no version"):
         assert "'not-a-version', which is no version" in out
-    assert "No completed transition is recorded" in out
+    if state == "no version, completion kept":
+        assert "The recorded states cannot be read" in out
+    else:
+        assert "No completed transition is recorded" in out
+    assert "backbone migration(s), the replay" in out
     assert _states(installed_target) == (_this_pkit(), _this_pkit())
     written = manifest.read_backbone_manifest(installed_target)
     assert written is not None
