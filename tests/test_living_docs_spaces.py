@@ -342,8 +342,9 @@ def test_a_file_without_front_matter_in_nested_places_is_reported_never_failed(
 ) -> None:
     """The backbone ranks the places of artefacts only. A file with no front matter
     holds no artefact, so where its places would give it different spaces, or one
-    lies outside every root, which holds it cannot be told: it is reported and
-    unclassified, never a false failure of a place it may not belong to."""
+    lies outside every root with no assignment, which holds it cannot be told: it
+    is reported and unclassified, never a false failure of a place it may not
+    belong to."""
     declare(
         project,
         places=["README.md", "extra/", "extra/README.md"],
@@ -408,6 +409,27 @@ def test_a_file_without_front_matter_only_in_unassigned_places_needs_an_assignme
     location, message = only_error(run(project))
     assert location == "extra/sub/a.md"
     assert "whichever of them holds it, that place needs an assignment" in message
+
+
+def test_an_entry_point_without_front_matter_only_in_places_of_no_space_fails(
+    project: AdopterRepo,
+) -> None:
+    declare(
+        project,
+        places=["README.md", "extra/", "extra/sub/"],
+        spaces={
+            "user": {"entry-point": "README.md", "definition": f"{DEFINITIONS}/user.md"},
+            "technical": {
+                "entry-point": "extra/sub/README.md",
+                "definition": f"{DEFINITIONS}/technical.md",
+            },
+        },
+    )
+    project.write({"extra/sub/README.md": "# Sub\n"})
+    found = dict(errors(run(project)))
+    message = found[f"{LD_CONFIG}:/spaces/technical/entry-point"]
+    assert "'extra/sub/README.md', lies only in places of no space;" in message
+    assert "whichever of them holds it" in found["extra/sub/README.md"]
 
 
 def test_a_file_without_front_matter_in_an_assigned_place_and_a_root_of_one_space(

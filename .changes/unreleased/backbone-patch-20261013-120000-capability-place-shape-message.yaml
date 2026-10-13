@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Fixed
+  pr: "1510"
 body: >
   `pkit validate` names the right shape when it refuses a capability's place
   or folder of held documents that is not an object (#1411). A place's

@@ -904,7 +904,8 @@ def _untold_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> None:
                     f"{rel} lies only in project places outside every documentation root that "
                     f"{LIVING_DOCS_CONFIG} assigns to no space ({named}), and holds a document "
                     f"nothing else claims: whichever of them holds it, that place needs an "
-                    f"assignment — add it under `places` there (DEC-001 point 1).",
+                    f"assignment — assign every one of them to the same space under `places` "
+                    f"there, or give the file front matter (DEC-001 point 1).",
                 )
             )
             continue
@@ -1073,10 +1074,12 @@ def _entry_point_findings(
                 notes[space] = f"entry point {entry}, not yet a page (its space not told)"
                 continue
             others = sorted(repr(other) for other in told if other is not None)
+            spaces_named = f"other spaces ({', '.join(others)})" if others else ""
             problem = (
-                f"lies only in places of other spaces ({', '.join(others)})"
+                f"lies only in places of {spaces_named}"
                 if None not in told
-                else f"lies only in places of no space or of other spaces ({', '.join(others)})"
+                else "lies only in places of no space"
+                + (f" or of {spaces_named}" if others else "")
             )
         elif entry not in walk.space_of:
             problem = (
