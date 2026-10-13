@@ -14,9 +14,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-13T14:17:16Z
+      at: 2026-10-13T17:09:18Z
       outcome: unchanged
-      unchanged-because: "The points module gains the line a record's body opens on, and the lines of the file a point's section spans, which the artefacts document gives an anchor on one point. Its docstring names that document among its callers. This page says how records are cited, refined and checked: point headings, retired points with their stubs, and what validation and the numbering check report. It says nothing of spans or of the artefacts document, so it holds."
+      unchanged-because: The points module gains the line a record's body opens on, and the lines of the file a point's section spans, which the artefacts document gives an anchor on one point. The numbering check's docstring says it does not follow a taken point id to what anchors it, since it compares records only and friction reports what such an anchor finds. This page says how records are cited, refined and checked. Its numbering check runs whether or not anything is anchored, which still holds. It says nothing of spans or of the artefacts document, so it holds.
       deferred:
         - anchor:
             kind: record

@@ -19,9 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-13T14:17:20Z
+      at: 2026-10-13T17:09:29Z
       outcome: unchanged
-      unchanged-because: The discovery module lists an anchor on one point of a record among the artefacts document's part anchors, with its span, read through the home of a record's points. ADR-057 point 2 names that home's callers, and keeps its reading out of discovery's walk. This page says where the walk looks for artefacts and what it reads, and sums up what the artefacts document prints. It says a point anchor's record is read as validation's decisions member reads it. None of that changes, so the page holds.
+      unchanged-because: The discovery module lists an anchor on one point of a record among the artefacts document's part anchors, with its span, read through the home of a record's points. ADR-057 point 2 names that home's callers, says artefact discovery does not read a record's points itself, and says the home calls nothing of the friction engine. This page says where the walk looks for artefacts and what it reads, and sums up what the artefacts document prints. It says a point anchor's record is read as validation's decisions member reads it. None of that changes, so the page holds.
 ---
 
 # Schemas
