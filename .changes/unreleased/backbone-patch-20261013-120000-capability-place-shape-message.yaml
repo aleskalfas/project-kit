@@ -7,5 +7,6 @@ body: >
   or folder of held documents that is not an object (#1411). A place's
   message gave `{path, location?}`, though the package schema's place is
   `{path, location?, type?, description?}`. A held folder's message gave the
-  same place shape, though a held folder is `{location, path, description?}`.
-  Each message now gives its own shape.
+  same place shape, though a held folder is `{location, path, description?}`,
+  and its closing words gave `{location, path}`. Each message now gives its
+  own shape.

@@ -377,7 +377,8 @@ def _capability_held_findings(discovery: Discovery) -> Iterable[FrictionFinding]
             message=(
                 f"{entry.reason}, so friction discovery holds nothing under it, and a place "
                 f"matching its documents reads them as artefacts; a held folder is "
-                f"`{{location, path}}`, `path` a folder within that location (COR-050 point 1)."
+                f"`{{location, path, description?}}`, `path` a folder within that location "
+                f"(COR-050 point 1)."
             ),
         )
     for folder in discovery.held_folders:

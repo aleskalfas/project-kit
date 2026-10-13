@@ -19,9 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-13T00:42:15Z
+      at: 2026-10-13T01:06:11Z
       outcome: unchanged
-      unchanged-because: The change corrects how friction_discovery.py and friction_validate.py name a capability place's shape, in docstrings, a comment and two messages, to {path, location?, type?, description?}, and a held folder's to {location, path, description?}. This page already gives a place that shape, and which places are walked and what is reported are unchanged, so it holds.
+      unchanged-because: The change corrects how friction_discovery.py and friction_validate.py name a capability place's shape, in docstrings, a comment and the two malformed-place messages, to {path, location?, type?, description?}, and a held folder's, in the malformed-held-folder message and its tail, to {location, path, description?}. This page already gives a place that shape, and which places are walked and what is reported are unchanged, so it holds.
 ---
 
 # Schemas
