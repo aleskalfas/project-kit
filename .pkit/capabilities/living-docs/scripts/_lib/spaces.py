@@ -59,9 +59,10 @@ What is checked, each against the record's words:
   backbone's answer names no page, and the summary says why (`_unaccepted`).
   A kind that declares no structure is reported with the pages that name it
   where the rule binds, never failed. The declaration is read only when the
-  rule binds on some page, or there is no page: then one that gives no reading
-  is one error, "structures unreadable", and no body is checked. A page whose
-  body cannot be read is an error of its own. `formats` says what a section is.
+  rule binds on some page, or there is no page and the rule is accepted: then
+  one that gives no reading is one error, "structures unreadable", and no body
+  is checked. A checked page whose body cannot be read is an error of its own.
+  `formats` says what a section is.
 - **Readers** (points 3, 4 and 7). Where RS-LDOC-003 binds on a page, the page
   names its reader in `reader`, and the reader resolves against the readers
   point, `pkit::documentation:readers`, read as it resolves (`readers`) — only

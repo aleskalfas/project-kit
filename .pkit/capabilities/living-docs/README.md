@@ -190,8 +190,8 @@ A definition with no scope selects nothing itself, so nothing is held to it. The
 - a page whose `kind` does not fit `schemas/page.schema.json`; where `RS-LDOC-003` binds on a page, a `reader` it lacks or that does not fit the schema;
 - where `RS-LDOC-003` binds on a page, a `reader` the readers point does not hold — the message names the readers it does (Connections, below);
 - a page whose body lacks a section its kind's structure declares, or carries one out of order (Pages, above) — the message names the page, its kind, the section and the declared structure. It is an error where `RS-LDOC-004` binds on the page. A page no rule set of yours reaches is not checked, nor one reached only through a pin behind `LDOC`'s major, nor any page while the rule is not accepted (COR-051 points 4 and 7);
-- where `RS-LDOC-004` binds on some page, the declaration of the kinds' structures, `schemas/page-kinds.yaml`, absent, unparsable or not fitting its schema — one error, "structures unreadable", and no page's body is checked. When you have pages and the rule binds on none of them, the file is not read;
-- a page whose body cannot be read;
+- the declaration of the kinds' structures, `schemas/page-kinds.yaml`, absent, unparsable or not fitting its schema — one error, "structures unreadable", and no page's body is checked. The file is read only where `RS-LDOC-004` binds on some page, or while you have no page and the rule is accepted;
+- where `RS-LDOC-004` binds on a page whose kind declares a structure, a body that cannot be read;
 - an entry point that is not a document of its space — under its root or in a place assigned to it. An entry point without front matter whose places cannot be told apart (above) fails only when none of them gives its space;
 - a definition outside `<definitions>/rule-sets/`, or one that does not inherit `living-docs:LDOC`.
 
