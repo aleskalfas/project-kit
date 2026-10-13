@@ -64,10 +64,12 @@ def test_a_numbered_point_heading_is_a_point_found_in_the_decision_only() -> Non
 
 
 def test_a_labelled_point_heading_is_a_point() -> None:
-    """`### D1 — Title`: a label is capital letters then a number."""
-    read = rp.read_points(_record("### D1 — Declared\n\nOne.\n\n### D2 — Kept\n\nTwo.\n"))
-    assert _ids(read) == ["D1", "D2"]
-    assert [p.title for p in read.points] == ["Declared", "Kept"]
+    """`### D1 — Title`: a label is letters then a number."""
+    read = rp.read_points(
+        _record("### D1 — Declared\n\nOne.\n\n### D2 — Kept\n\nTwo.\n\n### p3 — Lower\n\n3.\n")
+    )
+    assert _ids(read) == ["D1", "D2", "p3"]
+    assert [p.title for p in read.points] == ["Declared", "Kept", "Lower"]
 
 
 @pytest.mark.parametrize(
@@ -104,6 +106,21 @@ def test_a_labelled_point_heading_is_a_point() -> None:
             {rp.ListForm.BOLD_LABEL},
             ["Surface changes are declared", "The segment is a judgment"],
         ),
+        # A bold number or label holding only the id: the point has no title yet.
+        (
+            "**1.** Intra-file ownership.\n\n**2.** The hook.\n",
+            ["1", "2"],
+            {rp.ListForm.BOLD_NUMBER},
+            [None, None],
+        ),
+        (
+            "**D1** — Declared, not applied.\n\n**D2** — A judgment.\n",
+            ["D1", "D2"],
+            {rp.ListForm.BOLD_LABEL},
+            [None, None],
+        ),
+        # Items written with a closing parenthesis.
+        ("1) **One.** a\n2) **Two.** b\n", ["1", "2"], {rp.ListForm.ITEM}, ["One", "Two"]),
         # A list at the top level, then labelled paragraphs: two id spaces, both points.
         (
             "**The router.**\n\n1. **Source checkout.** Exec it.\n2. **A pin.** Re-exec.\n\n"
@@ -115,7 +132,7 @@ def test_a_labelled_point_heading_is_a_point() -> None:
     ],
 )
 def test_each_point_form_of_a_record_in_list_form(
-    decision: str, ids: list[str], forms: set[rp.ListForm], titles: list[str]
+    decision: str, ids: list[str], forms: set[rp.ListForm], titles: list[str | None]
 ) -> None:
     """COR-058 point 2: a record not yet converted writes its points as numbered items,
     or as paragraphs that open with a bold number or a bold label."""
@@ -179,6 +196,18 @@ def test_a_numbered_list_inside_a_sub_section_holds_no_points() -> None:
         )
     )
     assert [p.id for p in read.list_points] == ["1", "2"]
+
+
+def test_a_sub_section_s_steps_never_join_the_lead_s_numbering() -> None:
+    """The steps restart, so they stay a list, though a later group continues the lead."""
+    read = rp.read_points(
+        _record(
+            "1. **One.** a\n2. **Two.** b\n\n### Steps\n\n1. Find.\n2. Take.\n\n"
+            "### More\n\n3. **Three.** c\n"
+        )
+    )
+    assert [p.id for p in read.list_points] == ["1", "2", "3"]
+    assert [p.title for p in read.list_points] == ["One", "Two", "Three"]
 
 
 def test_a_sub_section_s_list_alone_holds_no_points() -> None:
@@ -304,15 +333,21 @@ def test_retired_points_are_read_forgivingly(
 
 def test_a_heading_in_another_point_form_is_misspelt() -> None:
     """COR-058 point 1: a heading in the Decision that opens with a number or a label in
-    another form, at the points' level."""
+    another form, at the points' level. A label is letters then a number, so `v1` opens
+    with one too."""
     read = rp.read_points(
         _record(
             "### 1. First\n\nOne.\n\n### 16 - Dashed\n\n### 5.1 Sub-numbered\n\n### D2: Colon\n\n"
-            "### v1 scope: a version, not a label\n\n### Lifecycle\n\n#### 7) Deeper\n"
+            "### v1 scope: a label in another form\n\n### Lifecycle\n\n#### 7) Deeper\n"
         )
     )
     assert _ids(read) == ["1"]
-    assert [h.title for h in read.misspelt] == ["16 - Dashed", "5.1 Sub-numbered", "D2: Colon"]
+    assert [h.title for h in read.misspelt] == [
+        "16 - Dashed",
+        "5.1 Sub-numbered",
+        "D2: Colon",
+        "v1 scope: a label in another form",
+    ]
 
 
 def test_without_a_point_heading_a_misspelt_heading_is_found_at_any_level() -> None:
@@ -364,8 +399,33 @@ def test_a_point_stands_on_its_section_and_what_makes_its_record_bind() -> None:
     assert read.ground("9") is None
 
 
-def test_the_records_of_this_repository_read_without_a_misspelt_heading() -> None:
-    """Every decision record here reads, and none warns of a misspelt point."""
+def test_a_record_with_first_level_sections_stands_no_point_on_its_context() -> None:
+    """The preamble is the text before the record's first section, at the Decision's
+    level; a body opening with its Decision has none."""
+    text = "---\nid: X\n---\n\nPreamble.\n\n# Context\n\nWhy.\n\n# Decision\n\n## 1. One\n\nIt.\n"
+    read = rp.read_points(text)
+    ground = read.ground("1")
+    assert ground is not None
+    parts = [read.body.text_of(extent) for extent in ground.extents]
+    assert parts == ["## 1. One\n\nIt.\n", "Preamble.\n", "# Decision\n"]
+    opening = rp.read_points("---\nid: X\n---\n\n# Decision\n\nThe lead.\n\n## 1. One\n\nIt.\n")
+    ground = opening.ground("1")
+    assert ground is not None
+    texts = [opening.body.text_of(extent) for extent in ground.extents]
+    assert texts == ["## 1. One\n\nIt.\n", "# Decision\n\nThe lead.\n"]
+
+
+def test_a_title_heading_opening_the_body_is_part_of_the_preamble() -> None:
+    text = "---\nid: X\n---\n\n# COR-900: A record\n\nPreamble.\n\n## Decision\n\n### 1. One\n"
+    read = rp.read_points(text)
+    ground = read.ground("1")
+    assert ground is not None
+    assert read.body.text_of(ground.extents[1]) == "# COR-900: A record\n\nPreamble.\n"
+
+
+def test_the_records_of_this_repository_read_with_no_finding_that_fails() -> None:
+    """Every decision record here reads, every stub holds to its entry, and every
+    `retired-points` reads. A misspelt heading is only warned of (COR-058 point 7)."""
     paths = [
         *REPO.glob(".pkit/decisions/core/*.md"),
         *REPO.glob(".pkit/decisions/project/*.md"),
@@ -375,5 +435,6 @@ def test_the_records_of_this_repository_read_without_a_misspelt_heading() -> Non
     assert paths
     for path in paths:
         read = rp.read_points(path.read_text(encoding="utf-8"))
-        assert read.misspelt == (), path
+        assert read.front_matter_problem is None, path
+        assert read.retired_problems == (), path
         assert rp.hold_stubs(read) == (), path

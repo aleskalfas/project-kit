@@ -1,21 +1,21 @@
 """A decision record's points (COR-058; ADR-057 point 2).
 
 The one reading of a record's points, over the reading of where a part of a
-document lies (`document_parts`). Validation, the numbering check (COR-058
-point 8) and the conversion (COR-058 point 9) call it. No other module of the
-binary reads a record's points, and artefact discovery does not: a record is
-read here whether or not a place holds it.
+document lies (`document_parts`). It is the reading validation, the numbering
+check (COR-058 point 8) and the conversion (COR-058 point 9) are to call. None
+of them reads a record's points yet. No other module of the binary reads them,
+and artefact discovery does not: a record is read here whether or not a place
+holds it.
 
 - `read_points` reads one record's text:
   - **the Decision's extent:** the section of the body's first `Decision`
     heading, to the next heading of the same or a higher level.
   - **its point headings** (COR-058 point 1), found in the Decision only:
-    `### 5. Title` for a numbered point, `### D1 — Title` for a labelled one.
-    A label is capital letters then a number, as `D1` and `P7` are, so a
-    heading opening with a version such as `v1` is neither a point nor
-    misspelt. Points sit at the level of the Decision's first heading in that form,
-    one below the Decision or below the group headings that gather them. A
-    heading at another level is no point and is not warned of.
+    `### 5. Title` for a numbered point, `### D1 — Title` for a labelled one,
+    a label being letters then a number. Points sit at the level of the
+    Decision's first heading in that form, one below the Decision or below the
+    group headings that gather them. A heading at another level is no point
+    and is not warned of.
   - **its stubs** (COR-058 point 4): headings in point form at the points'
     level whose title is `Retired`.
   - **its misspelt headings:** a heading in the Decision that opens with a
@@ -28,13 +28,15 @@ read here whether or not a place holds it.
   - **its points in list form** (COR-058 point 2), while it has no point
     heading or stub: the numbered items of a list at the Decision's top
     level or of one numbering that runs across its group headings, and the
-    paragraphs that open with a bold number or a bold label. A numbered
+    paragraphs that open with a bold number or a bold label, whether the
+    bold holds the title (`**5. Title.**`) or only the id (`**5.** Title`).
+    A numbered
     list inside a point or another sub-section holds no points. Whoever
     converts the record confirms this reading.
 - `RecordPoints.ground` gives what a point stands on: its section, the
-  record's status, supersession and title fields, its preamble and Summary,
-  and the Decision's text outside every point and stub. A stub is no point,
-  and stands on nothing.
+  record's status, supersession and title fields, its preamble (the text
+  before its first section) and Summary, and the Decision's text outside
+  every point and stub. A stub is no point, and stands on nothing.
 - `hold_stubs` holds each stub to its entry in `retired-points`, both ways
   (COR-058 point 6): a retired id with no stub, a stub whose id is not
   retired, and a stub whose sentence differs from the one its entry gives
@@ -49,18 +51,13 @@ here (ADR-057 point 2).
 
 from __future__ import annotations
 
-import io
 import re
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Any, cast
 
-from ruamel.yaml import YAML
-from ruamel.yaml.error import YAMLError
-
-from project_kit.backbone_schemas import as_written
-from project_kit.document_parts import Body, Extent, Heading, Line, split_front_matter
+from project_kit.document_parts import Body, Extent, Heading, Line, parse_front_matter
 
 #: The front-matter field that lists a record's retired ids with their successors.
 RETIRED_POINTS_KEY = "retired-points"
@@ -78,31 +75,31 @@ SUMMARY_TITLE = "Summary"
 GROUND_FIELDS = ("status", "supersedes", "superseded_by", "title")
 
 # A point heading's title (COR-058 point 1): a number, a full stop and a space, or a
-# label — capital letters then a number — a space, an em dash and a space; then the
-# point's title.
+# label — letters then a number — a space, an em dash and a space; then the title.
 _NUMBERED = re.compile(r"^(\d+)\. +(\S.*)$")
-_LABELLED = re.compile(r"^([A-Z]+\d+) — +(\S.*)$")
+_LABELLED = re.compile(r"^([A-Za-z]+\d+) — +(\S.*)$")
 
 # A title that opens with a number, or with a label as a whole token.
-_OPENS_WITH_ID = re.compile(r"^(?:\d|[A-Z]+\d+(?!\w))")
+_OPENS_WITH_ID = re.compile(r"^(?:\d|[A-Za-z]+\d+(?!\w))")
 
 # A point id, as `retired-points` names one: a number, or a label.
-_POINT_ID = re.compile(r"^(?:\d+|[A-Z]+\d+)$")
+_POINT_ID = re.compile(r"^(?:\d+|[A-Za-z]+\d+)$")
 
 # List form (COR-058 point 2): a numbered item at the start of a line, and a
-# paragraph that opens with a bold number or a bold label.
-_ITEM = re.compile(r"^(\d+)\.(?:[ \t]+(.*))?$")
-_BOLD_NUMBER = re.compile(r"^\*\*(\d+)\.[ \t]+")
-_BOLD_LABEL = re.compile(r"^\*\*([A-Z]+\d+)[ \t]+—[ \t]+")
+# paragraph that opens with a bold number — `**5. Title.**` or `**5.** Title` — or a
+# bold label — `**D1 — Title.**` or `**D1** — Title`.
+_ITEM = re.compile(r"^(\d+)[.)](?:[ \t]+(.*))?$")
+_BOLD_POINT = re.compile(
+    r"^\*\*(?:(?P<number>\d+)\.(?:[ \t]+|\*\*)"
+    r"|(?P<label>[A-Za-z]+\d+)(?:[ \t]+—[ \t]+|\*\*))"
+)
 
-# A bold lead: the text between the first pair of `**`.
+# A bold lead: the text between the first pair of `**`; and the id it may open with.
 _BOLD_LEAD = re.compile(r"^\*\*(.+?)\*\*")
+_LEAD_ID = re.compile(r"^(?:\d+\.|[A-Za-z]+\d+(?:[ \t]+—)?)[ \t]*")
 
-# A line that ends a list when it opens a line: a bullet, a quote, or a bold point.
-_ENDS_A_LIST = re.compile(r"^(?:[-*+][ \t]|>|\*\*(?:\d+\.|[A-Z]+\d+[ \t]+—)[ \t])")
-
-# ruamel.yaml is untyped; the loaded value is judged where it is read.
-_yaml: Any = YAML(typ="safe")
+# A line that ends a list at once when it opens a line: a bullet or a quote.
+_ENDS_A_LIST = re.compile(r"^(?:[-*+][ \t]|>)")
 
 
 @dataclass(frozen=True)
@@ -222,13 +219,26 @@ class RecordPoints:
         if point is None or self.decision is None:
             return None
         fields = {key: self.front_matter[key] for key in GROUND_FIELDS if key in self.front_matter}
-        shared = [self.body.lead()]
+        shared = [self._preamble()]
         summary = self._summary()
         if summary is not None:
             shared.append(summary)
         shared += self._outside_points()
         shared = sorted((e for e in shared if e.end > e.start), key=lambda e: e.start)
         return PointGround(point=point, fields=fields, extents=(point.extent, *shared))
+
+    def _preamble(self) -> Extent:
+        """The text before the record's first section: before its first heading at the
+        Decision's level or a higher one, not counting a higher heading that opens the
+        body and so titles it. The line breaks around it are left out."""
+        assert self.decision is not None and self.decision.heading is not None
+        level = self.decision.heading.level
+        text, headings = self.body.text, self.body.headings
+        if headings and headings[0].level < level and not text[: headings[0].start].strip():
+            headings = headings[1:]
+        end = next((h.start for h in headings if h.level <= level), len(text))
+        start = min(len(text) - len(text.lstrip("\n")), end)
+        return Extent(start, start + len(text[start:end].rstrip("\n")))
 
     def _summary(self) -> Extent | None:
         """The first Summary section at the Decision's level, or `None`."""
@@ -263,8 +273,8 @@ def read_points(text: str) -> RecordPoints:
     a record not yet converted, its points in list form. A point is looked for
     in the Decision only, so a `### 6.` heading in Rationale is never point 6.
     """
-    front_matter_text, body_text = split_front_matter(text)
-    front_matter, problem = _front_matter(front_matter_text)
+    written, body_text, problem = parse_front_matter(text)
+    front_matter: Mapping[str, Any] = written if written is not None else {}
     body = Body.read(body_text)
     retired, retired_problems = _retired(front_matter.get(RETIRED_POINTS_KEY))
     decision = _decision(body)
@@ -351,7 +361,7 @@ def hold_stubs(points: RecordPoints) -> tuple[StubMismatch, ...]:
     retired id, in the entry's order, needs a stub whose text after its heading
     is the entry's sentence (`stub_sentence`), whitespace folded. Then each stub
     whose id the entry does not retire, in the body's order. Validation and the
-    numbering check call it, so the two hold a stub alike.
+    numbering check are to call it, so the two hold a stub alike.
     """
     mismatches: list[StubMismatch] = []
     for retired_id, successors in points.retired.items():
@@ -375,20 +385,6 @@ def hold_stubs(points: RecordPoints) -> tuple[StubMismatch, ...]:
 
 
 # --- reading -------------------------------------------------------------------
-
-
-def _front_matter(text: str | None) -> tuple[Mapping[str, Any], str | None]:
-    """The front matter as written when it is a mapping, else `{}`, and why it does
-    not parse, if it does not."""
-    if text is None:
-        return {}, None
-    try:
-        data = _yaml.load(io.StringIO(text))
-    except YAMLError as exc:
-        return {}, str(exc).splitlines()[0]
-    if not isinstance(data, Mapping):
-        return {}, None
-    return cast("Mapping[str, Any]", as_written(data)), None
 
 
 def _retired(value: Any) -> tuple[dict[str, tuple[str, ...]], tuple[str, ...]]:
@@ -522,22 +518,29 @@ def _list_points(body: Body, decision: Extent) -> tuple[ListPoint, ...]:
 def _runs(lists: Sequence[_List], lead_last: int | None) -> Iterator[_List]:
     """The lists in group regions whose numbering runs on across the groups.
 
-    Each list joins the latest run it continues — its first number one past the
-    run's last — or starts a run of its own. A run holds points when it
-    continues the lead's list, or spans two regions or more.
+    A list whose first number is one past the last of the lead's list starts the
+    run that continues the lead, and each list one past that run's last joins it.
+    That run holds points. Any other list joins the latest other run it continues,
+    its first number one past the run's last, or starts a run of its own. Such a
+    run holds points when it spans two regions or more. So a sub-section's steps
+    never join the lead's numbering, whatever comes after them.
     """
-    runs: list[tuple[list[_List], bool]] = []
+    seeded: list[_List] = []
+    runs: list[list[_List]] = []
     for found in lists:
-        joined = False
-        for members, _seeded in reversed(runs):
+        last = seeded[-1].last if seeded else lead_last
+        if last is not None and found.first == last + 1:
+            seeded.append(found)
+            continue
+        for members in reversed(runs):
             if found.first == members[-1].last + 1:
                 members.append(found)
-                joined = True
                 break
-        if not joined:
-            runs.append(([found], lead_last is not None and found.first == lead_last + 1))
-    for members, seeded in runs:
-        if seeded or len({member.region for member in members}) > 1:
+        else:
+            runs.append([found])
+    yield from seeded
+    for members in runs:
+        if len({member.region for member in members}) > 1:
             yield from members
 
 
@@ -586,7 +589,7 @@ def _constructs(lines: Sequence[Line]) -> Iterator[ListPoint | _List]:
                 )
             )
         elif text.strip() and not text[0].isspace():
-            ends_now = bool(_ENDS_A_LIST.match(text))
+            ends_now = bool(_ENDS_A_LIST.match(text) or _BOLD_POINT.match(text))
             if items and (blank_before or ends_now):
                 yield _List(region=0, items=tuple(items))
                 items = []
@@ -601,21 +604,26 @@ def _constructs(lines: Sequence[Line]) -> Iterator[ListPoint | _List]:
 
 
 def _bold_point(lines: Sequence[Line], index: int) -> ListPoint | None:
-    """The point a paragraph opening with a bold number or a bold label holds, or `None`."""
+    """The point a paragraph opening with a bold number or a bold label holds, or `None`.
+
+    Its title is its bold lead after the id, without a closing full stop, or `None`
+    when the bold holds only the id.
+    """
     line = lines[index]
-    number = _BOLD_NUMBER.match(line.text)
-    label = None if number is not None else _BOLD_LABEL.match(line.text)
-    found = number or label
+    found = _BOLD_POINT.match(line.text)
     if found is None:
         return None
+    number: str | None = found.group("number")
+    point_id: str = number or found.group("label")
     lead = _BOLD_LEAD.match(_paragraph(lines, index, line.text))
     title = None
     if lead is not None:
-        title = lead.group(1)[found.end() - 2 :].strip().removesuffix(".").strip() or None
+        title = _LEAD_ID.sub("", lead.group(1).strip(), count=1).strip()
+        title = title.removesuffix(".").strip() or None
     return ListPoint(
-        id=found.group(1),
+        id=point_id,
         form=ListForm.BOLD_NUMBER if number is not None else ListForm.BOLD_LABEL,
-        written=found.group(1),
+        written=point_id,
         title=title,
         start=line.start,
     )
