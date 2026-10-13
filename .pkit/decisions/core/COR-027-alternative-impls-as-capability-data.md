@@ -107,7 +107,7 @@ The capability's scripts and agent read the configured variant's schema at runti
 A backbone-tier migration script ships with this record's acceptance handling:
 
 - Removal of `.pkit/workflow/` from installed adopters (handled by sync; no migration action needed).
-- Removal of any adopter-side `.pkit/workflow/project/<bundle-name>/` directory (project-owned; the migration prompts for cleanup since sync doesn't touch project-owned trees).
+- Removal of any adopter-side `.pkit/workflow/project/<bundle-name>/` directory (project-owned; the migration prompts for cleanup since sync writes a project-owned path only through merge delivery, which removes nothing the project wrote, per [COR-059](COR-059-version-transition.md) point 2).
 - Manifest cleanup: any `bundles:` registry entries in `.pkit/manifests/` for the github-issues bundle.
 
 Idempotent per [COR-010](COR-010-resource-lifecycle.md)'s migration script contract.
