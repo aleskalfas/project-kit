@@ -1,0 +1,12 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The workflow schema migrations `0.15.0/001` and `0.24.0/001` no longer warn
+  wrongly on an upgrade that crosses more than one version. `pkit upgrade` now
+  runs a capability's migrations after its copy, so the shipped `workflow.yaml`
+  they read is the newest. They now read a schema at or above their own, in the
+  shipped file and in a project's override, as one their change already holds.
+  The README says that `pkit sync` never changes `project/config.yaml`, and that
+  only an upgrade's migrations do.

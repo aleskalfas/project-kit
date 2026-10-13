@@ -29,6 +29,16 @@ set -euo pipefail
 
 : "${ROOT:?ROOT must be set by the upgrade runtime}"
 
+# True iff $1 is a whole number at or above $2. A later schema already holds
+# this migration's change, so neither the copy nor an override at a later
+# schema_version is reported as one this migration still has to make.
+at_least() {
+    case "$1" in
+        ''|*[!0-9]*) return 1 ;;
+    esac
+    [ "$1" -ge "$2" ]
+}
+
 CAP_DIR="$ROOT/.pkit/capabilities/project-management"
 PROJECT_OVERRIDES_DIR="$CAP_DIR/project/schema-overrides"
 WORKFLOW_OVERRIDE="$PROJECT_OVERRIDES_DIR/workflow.yaml"
@@ -39,16 +49,18 @@ if [ ! -d "$CAP_DIR" ]; then
     exit 0
 fi
 
-# Kit-shipped workflow.yaml is updated by sync; we only need to verify
-# the bump landed.
+# The kit-shipped workflow.yaml arrives with the upgrade's copy, which runs
+# before this migration (COR-010's order). We only verify the bump landed: on
+# an upgrade that crosses more than one version the copy is newer than 2, so
+# a schema_version of 2 or later means it landed.
 if [ ! -f "$KIT_WORKFLOW" ]; then
-    echo "  [warn] kit-shipped workflow.yaml not found at $KIT_WORKFLOW; sync may not have completed"
+    echo "  [warn] kit-shipped workflow.yaml not found at $KIT_WORKFLOW; the copy may not have completed"
     exit 0
 fi
 
 current_kit_version=$(grep -E '^schema_version:' "$KIT_WORKFLOW" | head -1 | awk '{print $2}')
-if [ "$current_kit_version" != "2" ]; then
-    echo "  [warn] kit-shipped workflow.yaml schema_version is $current_kit_version (expected 2); sync may not have completed"
+if ! at_least "$current_kit_version" 2; then
+    echo "  [warn] kit-shipped workflow.yaml schema_version is $current_kit_version (expected 2 or later); the copy may not have completed"
     exit 0
 fi
 
@@ -62,8 +74,8 @@ fi
 
 # Adopter has an override. Check whether it's already at schema_version 2.
 override_version=$(grep -E '^schema_version:' "$WORKFLOW_OVERRIDE" | head -1 | awk '{print $2}')
-if [ "$override_version" = "2" ]; then
-    echo "  [ok] adopter override at $WORKFLOW_OVERRIDE already at schema_version 2"
+if at_least "$override_version" 2; then
+    echo "  [ok] adopter override at $WORKFLOW_OVERRIDE already at schema_version $override_version"
     exit 0
 fi
 
