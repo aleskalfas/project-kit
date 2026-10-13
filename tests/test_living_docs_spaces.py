@@ -398,6 +398,34 @@ def test_a_file_without_front_matter_whose_places_agree_takes_their_space(
     assert "1 unclassified document(s)" in document["summary"][3]
 
 
+def test_a_file_without_front_matter_only_in_unassigned_places_needs_an_assignment(
+    project: AdopterRepo,
+) -> None:
+    """Every place of the file lies outside every root with no assignment, so
+    whichever holds it owes one: that fails, without ranking the places."""
+    declare(project, places=["README.md", "extra/", "extra/sub/"])
+    project.write({"extra/sub/a.md": "# A\n"})
+    location, message = only_error(run(project))
+    assert location == "extra/sub/a.md"
+    assert "whichever of them holds it, that place needs an assignment" in message
+
+
+def test_a_file_without_front_matter_in_an_assigned_place_and_a_root_of_one_space(
+    project: AdopterRepo,
+) -> None:
+    """An assigned place outside every root owes no assignment, so where it and the
+    root give the file one space, the order between them is moot: no report."""
+    declare(
+        project,
+        places=["README.md", "**/CHANGES.md"],
+        assignments={"README.md": "user", "**/CHANGES.md": "user"},
+    )
+    project.write({"docs/CHANGES.md": "# Changes\n"})
+    document = run(project)
+    assert errors(document) == []
+    assert [f for f in document["findings"] if f["location"] == "docs/CHANGES.md"] == []
+
+
 def test_the_capability_s_scripts_rank_no_place_themselves() -> None:
     """The order of places is the backbone's answer, `ranked_places` (COR-056 point
     6); no script of the capability measures a place's specificity."""

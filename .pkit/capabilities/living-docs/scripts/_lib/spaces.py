@@ -377,7 +377,7 @@ def check(root: Path, read: Callable[[], Readers] = read_readers) -> Outcome:
         return _unreadable(exc)
     _assignment_findings(decl, refused, walk, outcome)
     _tie_findings(decl, walk, outcome)
-    _untold_findings(walk, outcome)
+    _untold_findings(decl, walk, outcome)
     scope_note = _scope_findings(decl, refused, walk, outcome)
     entry_notes = _entry_point_findings(root, decl, walk, outcome)
     definition_notes = _definition_findings(decl, outcome)
@@ -493,7 +493,9 @@ def _walk(decl: Declarations, places: Sequence[Reach], outcome: Outcome) -> _Wal
             if page:
                 outcome.findings.append(_record_finding(rel, record, PAGE_TYPE in document.types))
             continue
-        if document.ranked is None and len(ordered) > 1 and not page:
+        if document.ranked is None and len(ordered) > 1:
+            # Unranked places all share rank 0, so `_winner` is never asked: it
+            # would read every pair of them as a tie.
             told = _told(ordered, decl)
             if told is None:
                 walk.untold[rel] = [place for _rank, place in ordered]
@@ -566,13 +568,20 @@ def _told(ordered: Sequence[tuple[int, Place]], decl: Declarations) -> Place | N
 
     The backbone ranks the places of artefacts only, and this capability ranks
     none itself (DEC-001 point 1). The order is moot when every place gives the
-    file the same space and none lies outside every root, so none owes an
-    assignment for holding it."""
+    file the same space and none owes an assignment for holding it: none is a
+    project place outside every root that no assignment names."""
     spaces = {_space_of_place(place, decl) for _rank, place in ordered}
-    outside = any(
-        place.project is not None and not in_root(place.project, decl) for _rank, place in ordered
+    owing = any(_owes_assignment(place, decl) for _rank, place in ordered)
+    return ordered[0][1] if len(spaces) == 1 and not owing else None
+
+
+def _owes_assignment(place: Place, decl: Declarations) -> bool:
+    """Whether `place` is a project place outside every root with no assignment,
+    which owes one for any document nothing else claims (DEC-001 point 1)."""
+    project = place.project
+    return (
+        project is not None and not in_root(project, decl) and decl.assigned(project.path) is None
     )
-    return ordered[0][1] if len(spaces) == 1 and not outside else None
 
 
 def _winner(rel: str, ordered: Sequence[tuple[int, Place]], walk: _Walk) -> Place:
@@ -879,13 +888,26 @@ def _tie_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> None:
         )
 
 
-def _untold_findings(walk: _Walk, outcome: Outcome) -> None:
+def _untold_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> None:
     """A file that holds no artefact, whose places of the spaces would give it
     different spaces or owe an assignment for it: the backbone ranks no place for
     it, and this capability ranks none itself (DEC-001 point 1), so which place
-    holds it cannot be told. Reported, never failed; it is unclassified."""
+    holds it cannot be told. Reported, and it is unclassified. Where every one of
+    its places owes an assignment, whichever holds it owes one, so that fails."""
     for rel, places in sorted(walk.untold.items()):
         named = ", ".join(_place_named(place) for place in places)
+        if all(_owes_assignment(place, decl) for place in places):
+            outcome.findings.append(
+                Finding(
+                    ERROR,
+                    rel,
+                    f"{rel} lies only in project places outside every documentation root that "
+                    f"{LIVING_DOCS_CONFIG} assigns to no space ({named}), and holds a document "
+                    f"nothing else claims: whichever of them holds it, that place needs an "
+                    f"assignment — add it under `places` there (DEC-001 point 1).",
+                )
+            )
+            continue
         outcome.findings.append(
             Finding(
                 REPORT,
@@ -1044,13 +1066,18 @@ def _entry_point_findings(
         elif entry in walk.claims:
             problem = f"is {walk.claims[entry].described()}, never a page"
         elif entry in walk.untold:
-            told = sorted({str(_space_of_place(place, decl)) for place in walk.untold[entry]})
+            told = {_space_of_place(place, decl) for place in walk.untold[entry]}
             if space in told:
                 # Not yet a page, and the space it would serve cannot be told
                 # until it holds an artefact: reported under the document itself.
                 notes[space] = f"entry point {entry}, not yet a page (its space not told)"
                 continue
-            problem = f"lies only in places of other spaces ({', '.join(told)})"
+            others = sorted(repr(other) for other in told if other is not None)
+            problem = (
+                f"lies only in places of other spaces ({', '.join(others)})"
+                if None not in told
+                else f"lies only in places of no space or of other spaces ({', '.join(others)})"
+            )
         elif entry not in walk.space_of:
             problem = (
                 "lies in no place of any space — under neither documentation root, and in no "
