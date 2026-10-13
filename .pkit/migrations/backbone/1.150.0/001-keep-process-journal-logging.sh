@@ -24,10 +24,10 @@
 # the upgrade runs in; a project whose journals live only in other clones can
 # turn logging on itself (`pkit config set process.journal.enabled true --yes`).
 #
-# `.pkit/.gitignore` is rendered by the sync step that runs before migrations,
-# i.e. before this setting existed, so it ignores journals. When the journals
-# are committed, the backbone's journal ignore line is removed here so it does
-# not wait for the next render (which would drop it anyway). A component still
+# `.pkit/.gitignore` is rendered after the upgrade's copy and before its
+# migrations, i.e. before this setting existed, so it ignores journals. When
+# the journals are committed, the backbone's journal ignore line is removed
+# here so it does not wait for the next render (which would drop it anyway). A component still
 # declaring its own journal line keeps its journals ignored until that render,
 # which drops the component's line too while the journals are committed; the
 # migration says so, and `pkit validate` names the component.
@@ -36,6 +36,12 @@
 # the first branch and changes nothing; the ignore-line removal is a no-op once
 # the line is gone. A flow-style configuration is never written, so a re-run
 # only repeats the advice.
+#
+# Journals on disk with no `process` declared is the positive sign it acts on
+# (COR-010). So when a version transition runs it again over a project whose
+# migration history is unknown (COR-059 point 6), it records `enabled: true`
+# again where the project removed the `process` block while old journals stay
+# on disk. The release that ships the replay says so.
 
 set -euo pipefail
 

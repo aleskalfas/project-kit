@@ -16,7 +16,9 @@ explicit ordering matching the lifecycle README's worked example.
 
 from __future__ import annotations
 
+import datetime as _dt
 import io
+import re
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -40,6 +42,12 @@ ORIGIN_EXTERNALLY_SOURCED = "externally-sourced"
 
 # A per-component manifest's file name, in its component's `project/`.
 COMPONENT_MANIFEST_NAME = "manifest.yaml"
+
+# The backbone manifest's two recorded states (ADR-065 point 3). Both stay
+# top-level scalars in every schema version, so a pkit that reads only
+# `backbone_version` still finds the target.
+BACKBONE_VERSION_KEY = "backbone_version"
+COMPLETED_VERSION_KEY = "completed_version"
 
 
 # Singleton YAML instance: round-trip mode preserves comments and key
@@ -84,12 +92,31 @@ class ComponentRegistryEntry:
 class BackboneManifest:
     """Adopter-side `.pkit/manifest.yaml`.
 
-    Tracks recorded backbone version + components registry.
+    Tracks the backbone's two recorded states and the components registry
+    (ADR-065 points 2 and 3):
+
+    - `backbone_version`: the release whose content the project holds, or the
+      target of a transition not yet complete. A transition writes it first.
+    - `completed_version`: the last release a transition of the backbone
+      completed. A transition writes it last. `None` when the key is missing,
+      which reads as incomplete with no lower bound: the project's backbone
+      migration history is unknown.
     """
 
     backbone_version: str
     components: list[ComponentRegistryEntry] = field(default_factory=lambda: [])
     schema_version: int = 1
+    completed_version: str | None = None
+
+    @property
+    def transition_incomplete(self) -> bool:
+        """True unless the two recorded states name the same version (COR-059 point 6).
+
+        A missing `completed_version`, one behind `backbone_version` (an
+        interrupted transition) and one ahead of it (an older pkit's sync over a
+        finished transition) all read as incomplete.
+        """
+        return self.completed_version is None or self.completed_version != self.backbone_version
 
 
 def read_backbone_manifest(target_root: Path) -> BackboneManifest | None:
@@ -111,15 +138,97 @@ def read_backbone_manifest(target_root: Path) -> BackboneManifest | None:
         )
         for entry in components_raw
     ]
+    completed = raw.get(COMPLETED_VERSION_KEY)
     return BackboneManifest(
-        backbone_version=str(raw.get("backbone_version", "")),
+        backbone_version=str(raw.get(BACKBONE_VERSION_KEY, "") or ""),
         components=components,
         schema_version=int(raw.get("schema_version", 1)),
+        # An empty value is no recorded completion.
+        completed_version=str(completed) if completed not in (None, "") else None,
     )
 
 
+def _state_line(key: str) -> re.Pattern[str]:
+    """The pattern of one recorded state's line: the key at column 0, and the
+    rest of the line after its colon, the value and any comment."""
+    return re.compile(rf"(?m)^{re.escape(key)}:([^\n]*)")
+
+
+# A comment at the end of a state line: a `#` at its start or after a blank.
+_TRAILING_COMMENT = re.compile(r"(?:^|[ \t])(#.*)$")
+
+
+def set_state_line(text: str, key: str, version: str, *, after: str | None = None) -> str:
+    """*text* with the top-level *key*'s line set to *version*, every other byte kept.
+
+    An existing line is rewritten in place as `<key>: <version>`, whatever value
+    it held, an empty one or one with spaces included, and a comment at its end
+    stays on the line, a space before it. A missing line is added after the line
+    of the key *after*, or at the end of the text when *after* is None or has no
+    line. Neither the order of the other keys nor their comments move, since
+    nothing is re-serialised (ADR-065 point 3).
+    """
+    pattern = _state_line(key)
+    match = pattern.search(text)
+    if match is not None:
+        rest = match.group(1)
+        carriage = "\r" if rest.endswith("\r") else ""
+        comment = _TRAILING_COMMENT.search(rest.removesuffix("\r"))
+        line = f"{key}: {version}" + (f" {comment.group(1)}" if comment else "") + carriage
+        return text[: match.start()] + line + text[match.end() :]
+    line = f"{key}: {version}\n"
+    anchor = _state_line(after).search(text) if after is not None else None
+    if anchor is not None:
+        end = text.find("\n", anchor.end())
+        if end != -1:
+            return text[: end + 1] + line + text[end + 1 :]
+    if text and not text.endswith("\n"):
+        text += "\n"
+    return text + line
+
+
+def record_backbone_target(target_root: Path, version: str) -> Path:
+    """Record *version* as the backbone's target, `backbone_version`, by an
+    in-place edit of its own line (ADR-065 point 3).
+
+    The first write of a transition. `completed_version` keeps its value or
+    stays missing. Where the project has no manifest, it is written at
+    *version*, with no component registered and no completion recorded, as
+    first install writes it before it copies anything.
+    """
+    path = _backbone_manifest_path(target_root)
+    if not path.is_file():
+        return write_backbone_manifest(target_root, BackboneManifest(backbone_version=version))
+    text = path.read_text(encoding="utf-8")
+    updated = set_state_line(text, BACKBONE_VERSION_KEY, version, after="schema_version")
+    if updated != text:
+        path.write_text(updated, encoding="utf-8")
+    return path
+
+
+def record_completed_version(target_root: Path, version: str) -> Path:
+    """Record *version* as the backbone's completion, `completed_version`, by an
+    in-place edit of its own line (ADR-065 point 3).
+
+    The last write of a transition, and of first install. A manifest with no
+    such line gains one right after its `backbone_version` line.
+    """
+    path = _backbone_manifest_path(target_root)
+    text = path.read_text(encoding="utf-8")
+    updated = set_state_line(text, COMPLETED_VERSION_KEY, version, after=BACKBONE_VERSION_KEY)
+    if updated != text:
+        path.write_text(updated, encoding="utf-8")
+    return path
+
+
 def write_backbone_manifest(target_root: Path, manifest: BackboneManifest) -> Path:
-    """Write `.pkit/manifest.yaml`. Round-trip-preserves comments if the file already exists."""
+    """Write `.pkit/manifest.yaml`. Round-trip-preserves comments if the file already exists.
+
+    An existing file keeps every key this writer does not set, so a key a later
+    release adds survives an older writer. `completed_version` is never written
+    here: only its own in-place edit writes it (`record_completed_version`), so
+    a registry write from a manifest read earlier cannot move it.
+    """
     path = _backbone_manifest_path(target_root)
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -228,6 +337,68 @@ def set_component_manifest_path(
     backbone.components = new_components
     write_backbone_manifest(target_root, backbone)
     return True
+
+
+def adapter_manifest_rel(name: str) -> str:
+    """The repo-relative path of an adapter's manifest, under its ``project/``.
+
+    The path first install and a version transition write when they record the
+    adapter's version, and the one its registry entry names (ADR-065 point 2).
+    """
+    return f".pkit/adapters/{name}/project/{COMPONENT_MANIFEST_NAME}"
+
+
+def read_component_package(package_yaml: Path) -> tuple[str, str] | None:
+    """A component's ``package.yaml``: its version and its ``requires_backbone``
+    range, the range empty when it declares none. None when the file is missing,
+    does not parse, or names no version."""
+    if not package_yaml.is_file():
+        return None
+    try:
+        raw: Any = _yaml_load(package_yaml.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(raw, dict):
+        return None
+    data = cast(dict[str, Any], raw)
+    component = data.get("component")
+    version = (
+        cast(dict[str, Any], component).get("version") if isinstance(component, dict) else None
+    )
+    if not isinstance(version, str) or not version:
+        return None
+    requires = data.get("requires_backbone")
+    return version, str(requires) if requires is not None else ""
+
+
+def record_adapter_version(
+    target_root: Path, name: str, package_yaml: Path, *, manifest_rel: str | None = None
+) -> str | None:
+    """Record adapter *name* at the version its *package_yaml* ships (ADR-065 point 2).
+
+    Writes the adapter's manifest at *manifest_rel*, the path its registry entry
+    names, by default the one under its ``project/``, keeping any
+    ``backend_state`` one already there holds. Returns the version recorded, or
+    None when *package_yaml* names none, and then writes nothing.
+    """
+    package = read_component_package(package_yaml)
+    if package is None:
+        return None
+    version, requires_backbone = package
+    path = target_root / (manifest_rel or adapter_manifest_rel(name))
+    prior = read_component_manifest(path) if path.is_file() else None
+    write_component_manifest(
+        path,
+        ComponentManifest(
+            kind="adapter",
+            name=name,
+            version=version,
+            installed_at=_dt.datetime.now(_dt.UTC).isoformat(),
+            requires_backbone=requires_backbone,
+            backend_state=prior.backend_state if prior is not None else {},
+        ),
+    )
+    return version
 
 
 def capability_manifest_rel(name: str) -> str:

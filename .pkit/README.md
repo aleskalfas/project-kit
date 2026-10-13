@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-13T18:03:23Z
+      at: 2026-10-13T18:59:51Z
       outcome: unchanged
-      unchanged-because: "The lifecycle README now says that a capability's manifest sits under its project folder, how a manifest left at the root moves there, and which readers read which manifest. The CLI reference's sync entry says what sync does with a capability's manifest, and its validators table no longer says capabilities stamp no manifest. The map gives each area's role and link: it calls the lifecycle README the home of the manifest schema and the CLI reference the command-line surface. No role or link moves, so the map holds."
+      unchanged-because: "The lifecycle README now records the manifest's completed_version, an adapter's manifest, the two recorded states and the replay. The CLI reference's upgrade, init, pin and status entries say how upgrade records its target first and its completion last, and what status shows. The map gives each area's role and link: it calls the lifecycle README the home of the manifest schema and the upgrade procedure, and the CLI reference the command-line surface. No role or link moves, so the map holds."
 ---
 
 # project-kit

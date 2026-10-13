@@ -29,13 +29,13 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-13T18:03:19Z
+      at: 2026-10-13T19:16:25Z
       outcome: updated
       deferred:
         - anchor:
             kind: record
             value: COR-010
-          reason: "COR-010 now has a version transition record its target first and its completion last, has sync move no recorded version, and moves a shipped component alone only to the version its recorded release ships. This page states the new script contract, but its manifest records only the backbone version the project is at, its upgrade flow runs sync for the backbone and updates the recorded versions last, its section on not passing a migration over has sync record the running version, and its per-component upgrade takes any version within requires_backbone, as the code still does. It follows with #1459, which rewrites the manifest format and the upgrade flow, #1460, which makes sync move no version and rewrites that section, and #1461, which rewrites the upgrade flow and the per-component upgrade."
+          reason: "COR-010 now has a version transition record its target first and its completion last, has sync move no recorded version, and moves a shipped component alone only to the version its recorded release ships. This page states the new script contract, the two recorded states and the replay. Its upgrade flow still runs sync for the backbone and regenerates derivable state before the migrations, its section on not passing a migration over and its line on a sync between the two recorded states have sync record the running version, and its per-component upgrade takes any version within requires_backbone, as the code still does. It follows with #1460, which makes sync move no version and rewrites those passages, and #1461, which puts the upgrade flow in COR-010's order and rewrites the per-component upgrade."
         - anchor:
             kind: record
             value: COR-017
@@ -93,6 +93,7 @@ See COR-010 for the rationale.
 ```yaml
 schema_version: 1
 backbone_version: 2.1.0
+completed_version: 2.1.0
 
 # Component registry — paths to per-component manifests.
 components:
@@ -111,7 +112,13 @@ components:
 Small by design. No component data is duplicated here — that lives in each component's manifest. The backbone manifest carries:
 
 - **`schema_version`** — version of *this* manifest's own schema, independent of any component's. Bumping it triggers a backbone manifest-schema migration.
-- **`backbone_version`** — the recorded backbone version this project is at.
+- **`backbone_version`** — the release whose content the project holds. While a transition is incomplete, it names the transition's target instead: a transition writes it first, before anything else ("The upgrade flow", below).
+- **`completed_version`** — the last release a transition of the backbone completed, written last ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 3). A project is at a version only when both keys name it. The key is optional:
+  - **Missing:** the transition reads as incomplete with no lower bound. The project's backbone migration history is unknown, so its next upgrade runs every backbone migration once (the replay, below). No manifest written before the release that added the key has it.
+  - **Behind `backbone_version`:** an interrupted transition, which the next upgrade finishes.
+  - **Ahead of `backbone_version`:** an older pkit's sync over a finished transition. It reads as incomplete too.
+  - **How it is written:** each of the two keys by an edit of its own line, so neither write re-serialises the manifest. Both stay top-level scalars in every `schema_version`, and no manifest-schema migration moves them, so a pkit that reads only `backbone_version` still finds the target. The key needs no schema bump: the manifest's writer has kept a key it does not know since the first published release.
+  - **Who writes it:** first install, last, and a transition of the backbone, last. In the methodology's own source repository, where no transition runs, its release step writes it beside `backbone_version`.
 - **`components`** — the registry. Each entry is a `{kind, name, manifest}` triple pointing at a per-component manifest file, optionally carrying an **`origin`** marker (below). A capability's entry names `.pkit/capabilities/<name>/project/manifest.yaml`, whatever its origin. An entry an older release wrote may name the capability's root instead ("Where a capability's manifest lives", below).
 
 #### Capability origin (COR-031)
@@ -151,6 +158,16 @@ Sections:
   - **A restamp** changes the version, the timestamp and the range. It replaces `skipped` with the skips in force, and keeps every other key of `backend_state` (ADR-065 point 2). It reads the manifest after the capability's migrations, so a key a migration wrote stays. A manifest that does not parse, such as one left with merge-conflict markers, is replaced by a new one, and the refresh says so.
 
 Notably absent: enumerations of files, labels, symlinks, settings entries, templates. These are *derivable* state — the kit-side spec at the component's recorded version + the adopter's config tells you what should exist; the validate/upgrade reconciliation tells you whether reality matches.
+
+#### An adapter's manifest
+
+An adapter's manifest sits at `.pkit/adapters/<name>/project/manifest.yaml`, and its registry entry names that path ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 2). The adapter's files move with the backbone, so its manifest only keys the window of its migrations.
+
+- **Who writes it:** first install, for each adapter it copies, which it registers at the same time. A transition of the backbone writes it too:
+  - an adapter with no manifest is recorded at the version the target ships, and runs none of its migrations
+  - an adapter with a manifest is recorded at that version once the migrations in its window have run. A manifest that records a newer version than the target ships stays as it is: a transition never moves a recorded version down.
+  - an adapter the target adds is registered after the copy, and recorded at the version it ships
+- **A registered adapter with no manifest** reads as at the backbone. Every project's adapter is in that state until its first transition under the release that writes the manifest.
 
 #### Where a capability's manifest lives
 
@@ -756,31 +773,49 @@ Component migrations are tied to the component's version, not the backbone's. A 
 
 ## The upgrade flow
 
-The upgrade command transitions an adopter project to a target backbone version (and optionally specific component versions). Six steps:
+The upgrade command transitions an adopter project to a target backbone version (and optionally specific component versions). It runs inside the backbone's two recorded states: it records its target first and its completion last (below). Six steps:
 
 1. **Resolve compatibility.** Read each installed component's `requires_backbone` against the target backbone version. Refuse to upgrade backbone past a component's range, unless the component is also being upgraded to a version compatible with the new backbone. Surface conflicts so the adopter can address them (upgrade specific components, pin backbone, or remove an incompatible component). Also checks **capability dependencies (COR-030)**: for each installed capability, verifies its `requires_capabilities` entries against the *installed* copies and versions of both sides, as they stand before step 2. Step 2's sync then refreshes every installed kit-shipped capability from source and re-stamps its version, and this check does not read the versions that sync installs. Refuses with an actionable hint if any required dependency is absent or any installed one is out of range; an optional dependency that is not installed passes.
-2. **Pull new propagated content.** Run sync (per COR-001) for the backbone. Component-side propagated content updates as part of each component's upgrade.
-3. **Run backbone migrations** in order: manifest-schema → structural → resource-scoped, across minor-version boundaries from current to target.
-4. **For each component being upgraded**, run its migrations in version order with the same scope ordering within each `<major>.<minor>.0/` directory.
+2. **Pull new propagated content.** First the target is recorded: `backbone_version` becomes the target, by an edit of its own line, before anything else is written, and `completed_version` keeps its value or stays missing. Then run sync (per COR-001) for the backbone. Component-side propagated content updates as part of each component's upgrade. An adapter the copy placed that the registry lacks is registered, and recorded at the version it ships.
+3. **Run backbone migrations** in order: manifest-schema → structural → resource-scoped, across minor-version boundaries from the recorded completion, `completed_version`, to the target. With no completion recorded, every backbone migration up to the target runs (the replay, below).
+4. **For each component being upgraded**, run its migrations in version order with the same scope ordering within each `<major>.<minor>.0/` directory. Each registered adapter is then recorded at the version the target ships; one with no manifest runs no migration ("An adapter's manifest", above).
 5. **Reconcile derivable state.** Each component's setup primitive re-applies the kit-side spec at its current version + adopter's config (idempotent — labels, files, symlinks, merged settings).
-6. **Update recorded versions.** Backbone version in the backbone manifest; component versions in their respective manifests.
+6. **Update recorded versions.** Component versions in their respective manifests. Last, after merge, deploy, the workspace and provisioning, and before the pin, the completion: `completed_version` becomes the target, by an edit of its own line.
 
-Idempotent: running upgrade on a current adopter is a no-op.
+**Already current:** upgrade returns early, writing or raising only its pin, when `backbone_version` and `completed_version` both name the target and every registered adapter and shipped capability records the version the target ships. Otherwise it runs, to finish what is not, even at the same backbone version.
+
+### Two recorded states, and an interrupted upgrade
+
+A transition is complete when its two recorded states are equal (COR-059 point 6). The target is written first, so an interrupted transition never reads as finished. An older pkit that applies #1212's refusal reads only `backbone_version`, finds a version newer than its own, and refuses.
+
+- **An interrupted upgrade is finished by the next one.** A migration that exits non-zero stops the upgrade: the completion is not recorded, and no pin is written. The next upgrade finds the two keys apart, propagates again, and runs the backbone migrations from `completed_version`, the stopped one included. So a migration may fail loudly.
+- **A migration that fails every time** is fixed at its cause and the upgrade run again, or the project is rolled back with `git checkout <ref> -- .pkit/`, which restores both keys.
+- **A sync between the two** moves `backbone_version` and leaves `completed_version`, so the next upgrade finds them apart and finishes the migrations.
+- **First install records the same two states:** the target before it copies anything, each adapter registered and recorded after the copy, the completion last. The next upgrade finishes an interrupted install.
+
+### The replay: a missing completion
+
+With no `completed_version`, the project's backbone migration history is unknown (COR-059 point 6). Its next upgrade runs every backbone migration up to its target, once. Each component's migrations still run from the version its manifest records.
+
+- **When:** a manifest written before the release that added the key, a missing manifest, which upgrade writes at its target as first install does, or a `backbone_version` that is no version.
+- **Why it is safe:** every backbone migration acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone ("Script contract", above).
+- **What it may restore:** a migration that adds a missing default can add one the project removed after the migration first ran. The release's notes say so.
+- **What the operator sees:** the report says that no completion is recorded, so every backbone migration runs once, and lists them. `--dry-run` says the same before anything runs, listing the scripts of the running pkit's bundle.
 
 ### No path down: an older pkit refuses (#1212)
 
-The target of a backbone upgrade, and the content a sync writes, is the running pkit's own version: a release's content is tied to its code (ADR-033). That version can be *older* than the project. A pin raise leaves the installed tool where it was, and when the entry-point router cannot fetch a project's pin it runs the installed tool instead (ADR-039). So before either writes anything, `upgrade` and `sync` compare the running version with the project's recorded content version (`backbone_version` in the backbone manifest) and with its pin (`.pkit/version-pin`), if there is one:
+The target of a backbone upgrade, and the content a sync writes, is the running pkit's own version: a release's content is tied to its code (ADR-033). That version can be *older* than the project. A pin raise leaves the installed tool where it was, and when the entry-point router cannot fetch a project's pin it runs the installed tool instead (ADR-039). So before either writes anything, `upgrade` and `sync` compare the running version with the project's recorded content version (the newer of `backbone_version` and `completed_version` in the backbone manifest) and with its pin (`.pkit/version-pin`), if there is one:
 
 - **The content or the pin is newer than the running pkit:** refuse. Exit non-zero, name the versions and how to get the right pkit, and write nothing: no content, no manifest, no pin. Without the refusal, sync would write the older content over the newer and upgrade would also move the pin down. Migrations are forward-only (COR-010) and a pin is never moved down (ADR-049), so there is no path down to take; a project is rolled back with git (`git checkout <ref> -- .pkit/`), which restores kit-owned and project-owned state together. No flag overrides the refusal, `sync --force` included, and a dry run refuses too.
 - **Both are at or behind the running pkit:** proceed as the steps above describe.
 
-Only an unambiguous order refuses, as with the capability guard below: a recorded version that is absent or not valid semver is not compared, so a corrupt `backbone_version` is one sync repairs and a pin that is not a version blocks nothing. Read-only commands are unaffected. In a pinned project's `upgrade`, the check comes after the branch that runs as the pin's own code and auto-advances the pin, because that branch is how content left ahead of its pin by an interrupted raise is recovered.
+Only an unambiguous order refuses, as with the capability guard below: a recorded version that is absent or not valid semver is not compared, so a corrupt `backbone_version` is one `pkit upgrade` records its target over, and a pin that is not a version blocks nothing. Read-only commands are unaffected. In a pinned project's `upgrade`, the check comes after the branch that runs as the pin's own code and auto-advances the pin, because that branch is how content left ahead of its pin by an interrupted raise is recovered.
 
 The CLI README's `sync` entry carries the operator-facing detail: the refusal's remedies and the router's notice when it runs a pkit older than the pin.
 
 ### No migration passed over: a sync refuses to strand one (#1452)
 
-Sync, run on its own, records the running pkit's version as the project's `backbone_version`, but runs no backbone migration (step 3). A sync across a version that ships backbone migrations would strand them. A later upgrade would find the project at its target and run none. So the sync command refuses such a sync, the mirror of the refusal above.
+Sync, run on its own, records the running pkit's version as the project's `backbone_version`, but runs no backbone migration (step 3). A sync across a version that ships backbone migrations would strand them for an upgrade that reads only `backbone_version`, as every release before `completed_version` does: it would find the project at its target and run none. So the sync command refuses such a sync, the mirror of the refusal above.
 
 - **When it refuses:** a version directory under the methodology's `migrations/backbone/` holds a script. Its version is above the recorded one, and at or below the running pkit's. The window is step 3's own.
 - **What it does:** exit non-zero, name both versions and each such directory, and write nothing. It names `pkit upgrade` as the remedy.

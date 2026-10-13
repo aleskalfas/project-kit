@@ -113,6 +113,18 @@ def test_stamp_migration_capability_resolves_component_version(kit_target: Path)
     assert result.script == expected
     text = result.script.read_text(encoding="utf-8")
     assert "evidence 0.2.0" in text
+    # The safe-over-any-state contract binds a backbone migration only (COR-010).
+    assert "positive sign" not in text
+
+
+def test_a_backbone_migration_is_stamped_with_its_contract(kit_target: Path) -> None:
+    """A version transition may replay every backbone migration, so the stamped
+    script states the contract it must meet (COR-010)."""
+    result = stamp_migration(kit_target, tier="backbone", version=None, slug="contract")
+    text = result.script.read_text(encoding="utf-8")
+    assert "Safe over any state (COR-010)" in text
+    assert "Act only on a positive sign that" in text
+    assert "never delete by a path's name or position alone" in text
 
 
 def test_stamp_migration_capability_requires_component(kit_target: Path) -> None:

@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-13T11:48:57Z
+      at: 2026-10-13T18:59:45Z
       outcome: unchanged
-      unchanged-because: This change leaves a synced copy of a record out of the front-matter and id checks of pkit decisions validate and pkit validate (COR-055 point 1), so a project's checks no longer fail on records it cannot edit. The page names decision-id uniqueness (pkit decisions validate) among the checks a project's CI can run on day one. That check still holds across the project's own records, and still reports a project's record that takes a synced copy's id, so the sentence holds.
+      unchanged-because: This change has pkit upgrade record its target before anything else and its completion last, finish an interrupted upgrade, replay every backbone migration once where no completion is recorded, write a missing manifest and record each adapter's version, and has init record the same two states. The page says upgrade pulls new versions, runs any migrations and pins the project, that a migration may change a file of the project's where a record allows, such as adding a category its overlay lacks, and that the manifest records what is installed at what version. Each still holds, the replay included, so the page holds.
 ---
 
 # project-kit
