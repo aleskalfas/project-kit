@@ -5478,8 +5478,9 @@ def decisions_validate() -> None:
 
     Then checks each record's points, retired points and stubs (COR-058 point
     7), over the same records. Exits non-zero on a malformed `retired-points`,
-    a stub that disagrees with its entry, a live point on a retired id, or a
-    successor the record neither holds nor retires. Warns, without failing, of
+    a stub that disagrees with its entry, a live point on a retired id, a
+    successor the record neither holds nor retires, or a retired id named as its
+    own successor. Warns, without failing, of
     a duplicate id, a gap in the ids and a misspelt point heading.
     """
     from project_kit import decisions_validate as decisions_mod

@@ -415,7 +415,7 @@ def check_points(rel: str, text: str) -> list[Finding]:
     The record is read once, by `record_points.read_points`, and each stub is held
     to its entry by `record_points.hold_stubs`. Every finding names the file and
     the id: `<rel>#<id>`, or `<rel>:/retired-points` for the field's shape, its
-    message naming the id. Errors come first:
+    message naming the entry's id when it is on one entry. Errors come first:
 
     - a malformed `retired-points`: a field that cannot be read, or is not a
       mapping, is one error, and nothing that rests on the retired ids is
@@ -526,11 +526,17 @@ def _stub_mismatches(
                 f'{record_points.stub_sentence(successors)}" (COR-058 point 4).'
             )
         elif mismatch.kind is kind.NOT_RETIRED:
+            mend = (
+                "Mend the malformed entry of `retired-points` that should retire it, or add "
+                "the entry"
+                if points.retired_problems
+                else "Add the entry"
+            )
             message = (
                 f"the stub of `{mismatch.id}`{where} retires no id: `retired-points` has no "
-                f"entry for `{mismatch.id}`. Add the entry, with the points that took its "
-                f"text, or give a live point a title other than "
-                f"`{record_points.STUB_TITLE}` (COR-058 points 1 and 4)."
+                f"entry for `{mismatch.id}`. {mend}, with the points that took its text, or "
+                f"give a live point a title other than `{record_points.STUB_TITLE}` (COR-058 "
+                f"points 1 and 4)."
             )
         else:
             found = f'reads "{mismatch.found}"' if mismatch.found else "holds no sentence"
@@ -601,7 +607,8 @@ def _gaps(rel: str, points: record_points.RecordPoints) -> Iterator[Finding]:
 
     Only a record whose points are headings is read: a record in list form keeps
     renumbering until it is converted (COR-058 point 9). One warning per run of
-    missing ids, at the first of them.
+    missing ids, at the first of them. The runs are found between neighbours of
+    the held ids, so a very high id costs no more than a low one.
     """
     if points.level is None:
         return
@@ -612,8 +619,7 @@ def _gaps(rel: str, points: record_points.RecordPoints) -> Iterator[Finding]:
         if series is not None:
             by_series.setdefault(series.group(1), set()).add(int(series.group(2)))
     for prefix, numbers in sorted(by_series.items()):
-        missing = [n for n in range(1, max(numbers)) if n not in numbers]
-        for first, last in _runs(missing):
+        for first, last in _missing_runs(numbers):
             if first == last:
                 skipped, them = f"`{prefix}{first}`", "it"
             else:
@@ -675,18 +681,14 @@ def _next_unused(points: record_points.RecordPoints, point_id: str) -> str:
     return f"{prefix}{max(numbers) + 1}"
 
 
-def _runs(numbers: list[int]) -> Iterator[tuple[int, int]]:
-    """Ascending numbers as runs of consecutive ones: `(first, last)` each."""
-    start = previous = None
-    for number in numbers:
-        if previous is not None and number == previous + 1:
-            previous = number
-            continue
-        if start is not None and previous is not None:
-            yield start, previous
-        start = previous = number
-    if start is not None and previous is not None:
-        yield start, previous
+def _missing_runs(numbers: set[int]) -> Iterator[tuple[int, int]]:
+    """The runs of numbers from 1 to the highest of `numbers` that `numbers` lacks,
+    as `(first, last)` each, found between neighbours."""
+    previous = 0
+    for number in sorted(numbers):
+        if number > previous + 1:
+            yield previous + 1, number - 1
+        previous = max(previous, number)
 
 
 def _and(items: Iterable[str]) -> str:

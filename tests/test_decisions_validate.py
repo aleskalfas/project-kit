@@ -539,6 +539,18 @@ def test_a_stub_whose_id_is_not_retired_fails() -> None:
     assert "the stub of `6` at line 34 retires no id" in errors[0].message
 
 
+def test_a_stub_beside_a_malformed_entry_says_to_mend_the_entry() -> None:
+    """One typo in an entry's id fails the entry, and its stub, which then retires
+    no id, points back at the entry rather than asking for a new one."""
+    text = _points_record(
+        _numbered("1", "2", "3", "4") + _POINTS_WITH_STUB,
+        extra='retired-points:\n  "six": ["7"]\n',
+    )
+    errors = _errors(text)
+    assert [f.location for f in errors] == [f"{_REL}:/retired-points", f"{_REL}#6"]
+    assert "Mend the malformed entry of `retired-points`" in errors[1].message
+
+
 def test_a_stub_whose_sentence_differs_from_its_entry_fails() -> None:
     text = _points_record(
         _numbered("1", "2", "3", "4") + _POINTS_WITH_STUB, extra='retired-points:\n  "6": []\n'
@@ -617,6 +629,14 @@ def test_a_gap_in_the_ids_warns_once_per_run() -> None:
     ]
     assert "the ids skip `3` to `4`: no point holds them" in found[0].message
     assert "the ids skip `7`: no point holds it" in found[1].message
+
+
+def test_a_gap_below_a_very_high_id_is_one_run_found_between_neighbours() -> None:
+    """The runs are found between the held ids, so a mistyped id far above the rest
+    costs one warning, and no walk up to it."""
+    found = decisions_validate.check_points(_REL, _points_record(_numbered("1", "1000000000")))
+    assert [f.location for f in found] == [f"{_REL}#2"]
+    assert "the ids skip `2` to `999999999`" in found[0].message
 
 
 def test_a_gap_counts_retired_ids() -> None:
