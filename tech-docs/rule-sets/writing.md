@@ -46,7 +46,7 @@ rules:
 
 # WRITE — project-kit's general writing rules
 
-These are project-kit's general writing rules. The analysis follows them through `ANA`, its own set, which inherits this one. The documentation spaces will inherit them later (#1350).
+These are project-kit's general writing rules. `ANA`, the analysis's own set, inherits them. The documentation spaces will inherit them later (#1350).
 
 - **What matters most:** the meaning. A rewrite keeps it (RS-WRITE-013).
 - **Where the rules apply:** everything under `tech-docs/analysis/`, software-analysis's templates, and the structures its kinds declare (software-analysis DEC-001 point 1). project-kit's operational rules send whoever writes any of them here (`.pkit/rules/project.md`). This set has no scope of its own. No scope could reach a template or a structure anyway, since neither is an artefact (ADR-055 point 3).
