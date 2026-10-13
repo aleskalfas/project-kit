@@ -23,7 +23,7 @@ This record fixes the rules. The architecture (manifest schema, upgrade procedur
 
 ## Decision
 
-Core content is organized in two tiers — a **backbone** that ships together, and **components** that depend on backbone versions but evolve independently. Project-side state is tracked through a backbone manifest (registry of installed components) plus per-component manifests (each component's state). Lifecycle operations apply uniformly across resources; whole-methodology upgrade orchestrates per-tier and per-component updates under explicit compatibility resolution.
+Core content is organized in two tiers — a **backbone** that ships together, and **components** that depend on backbone versions but evolve independently. Project-side state is tracked through a backbone manifest (registry of installed components) plus per-component manifests (each component's state). Lifecycle operations apply uniformly across resources; whole-methodology upgrade, a version transition (COR-059), orchestrates per-tier and per-component updates under explicit compatibility resolution.
 
 ### Two tiers: backbone + components
 
@@ -68,13 +68,18 @@ Migrations come in three categories by scope. Each tier (backbone, component) ha
 - **Structural** — affect the directory shape of the tier (a backbone-wide rename; a bundle's internal restructure within the bundle). They run *before* resource-scoped migrations of the same target version.
 - **Resource-scoped** — affect a single resource type (a label is renamed, a setting key changes shape, a primitive moves).
 
-Migrations are versioned (tied to a specific tier-and-version transition), idempotent, and update the affected resource. For manifest-tracked resources, the migration also updates the relevant manifest entry. For derivable resources, no manifest update is needed — the upgrade flow's reconciliation step regenerates the state from the new spec.
+Migrations are versioned (tied to a specific tier-and-version transition), idempotent, and update the affected resource. For manifest-tracked resources, the migration also updates the relevant manifest entry. For derivable resources, no manifest update is needed — the transition regenerates the state from the new spec.
 
 ### Cross-tier upgrade requires explicit compatibility resolution
 
-A whole-methodology upgrade cannot proceed past a component's `requires_backbone` range. Before applying any migrations, the upgrade command resolves compatibility across all installed components and either succeeds (every component is compatible with the target backbone, possibly after upgrading some components) or refuses with a surfaced conflict for the adopter to address.
+A whole-methodology upgrade is a version transition (COR-059). It cannot proceed past a component's `requires_backbone` range. Before applying any migrations, the upgrade command resolves compatibility across all installed components and either succeeds (every component is compatible with the target backbone, possibly after upgrading some components) or refuses with a surfaced conflict for the adopter to address.
 
-The reconciliation order — compatibility resolution → propagation → backbone migrations → component migrations → derivable-state reconciliation → recorded-version updates — is set by the lifecycle spec and applies symmetrically to per-component upgrades (which gate on the same compatibility check).
+A transition's order — compatibility resolution → the target recorded → propagation → backbone migrations → component migrations → derivable state regenerated → the completion recorded — is set by the lifecycle spec.
+
+- **Derivable state that a migration reads,** such as a rendered ignore file, is also regenerated right after propagation, so the migration reads the target's.
+- **Each component's recorded version** moves when that component's migrations finish.
+- **A project is at a version only when its recorded target and its recorded completion both name it.** A transition that stops before its completion never reads as finished, and the next transition finishes it (COR-059 point 6).
+- **A transition of one component** follows the same order for that component, gates on the same compatibility check, and records its version when its migrations finish.
 
 ### Migrations are mandatory on adopter-breaking surface changes
 
@@ -90,7 +95,7 @@ Pure additions don't trigger migration: a new skill, a new schema, a new decisio
 
 The rule applies symmetrically across tiers: backbone surface changes ship backbone migrations; bundle surface changes ship bundle migrations; adapter and capability surface changes ship their tier's migrations. The migration is idempotent (already-applied state is a no-op) so adopters can re-run safely.
 
-This couples surface changes to migration coverage: the version bump (per the project's version-bump policy) and the migration land together, not in separate PRs. The lifecycle's reconciliation order assumes every adopter-breaking change has a migration to run; merging surface changes without one leaves adopters with state the upgrade flow can't bridge.
+This couples surface changes to migration coverage: the version bump (per the project's version-bump policy) and the migration land together, not in separate PRs. A transition's order assumes every adopter-breaking change has a migration to run; merging surface changes without one leaves adopters with state the upgrade flow can't bridge.
 
 ## Rationale
 
@@ -102,7 +107,7 @@ This couples surface changes to migration coverage: the version bump (per the pr
 
 **Why the manifest is intentionally small at each tier.** Listing every core-managed resource (every file, every label, every symlink) bloats the manifest with state already determined by the core spec at the recorded version + adopter's config. Adopter manifests would churn on every core content release — high-noise diffs in version control with no information gain. Keeping each manifest scoped to recorded-version + opaque IDs (and the registry, for the backbone) makes its diffs meaningful (a bundle was installed; a board UUID was recorded) without duplicating derivable state.
 
-**Why migrations don't always update the manifest.** If a migration affects a derivable resource, the new state is implied by the new core spec + adopter's config; reconciliation regenerates it. If a migration affects a non-derivable resource, the migration updates the relevant manifest entry directly. The migration only writes manifest entries when the entry is the source of truth.
+**Why migrations don't always update the manifest.** If a migration affects a derivable resource, the new state is implied by the new core spec + adopter's config; the transition regenerates it. If a migration affects a non-derivable resource, the migration updates the relevant manifest entry directly. The migration only writes manifest entries when the entry is the source of truth.
 
 **Why three migration scopes per tier.** Resource-scoped migrations have clear locality. Structural migrations don't fit any single resource's locality but still need a place to live and an ordering relative to resource-scoped ones (structural first, so the tree is in the new shape). Manifest-schema migrations bootstrap the very mechanism the runtime uses to track progress; they have to run first.
 
