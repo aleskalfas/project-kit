@@ -19,9 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-13T04:27:23Z
+      at: 2026-10-13T05:56:59Z
       outcome: unchanged
-      unchanged-because: The page cites COR-048 for the configuration file's fixed path, its strict validation and its schema living in the tree. COR-048 now says sync never writes the file and a version transition writes it only through the migrations point 5 names, which the page does not speak of, so it holds.
+      unchanged-because: ADR-057 point 2 now has artefact discovery cut a collection entry's section, and the rule-set reader list a rule-set file's sections, by one reading of the headings outside fenced code. This page already says an entry's content is its data plus the body section headed by its id, and that headings inside fenced code are not a rule set's sections. The home of a record's points and the rewording of point 3 touch nothing the page says, so it holds.
 ---
 
 # Schemas

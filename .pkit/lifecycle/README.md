@@ -29,9 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-13T00:42:13Z
+      at: 2026-10-13T05:56:56Z
       outcome: unchanged
-      unchanged-because: The change corrects friction_discovery.py's docstrings, a comment and the message a malformed capability place or held folder gets, so they give a place's shape as {path, location?, type?, description?} and a held folder's as {location, path, description?}. This page's table already gives those shapes, and the walk and its findings are as it describes, so it holds.
+      unchanged-because: ADR-057 point 2 adds two homes inside the binary, where a part of a document lies and a record's points, and gives a script no new reading command, so the table of reading commands stands. Point 3 still has a resolver answer files whose history the engine reads, each file whole, as "How a registered anchor kind is resolved" says. That section's "what it does for a record anchor" holds while a record anchor stands on its whole file, as it does today, so the page holds.
       deferred:
         - anchor:
             kind: record
