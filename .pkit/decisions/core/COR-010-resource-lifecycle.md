@@ -14,7 +14,7 @@ Existing records cover parts of this:
 
 - COR-001 covers in-tree content lifecycle (propagation, extension, suspension, install-time seeding).
 - COR-002 covers fixed-path config-file updates (merge delivery operation).
-- COR-004 names the upgrade command with "version-aware migrations" but doesn't specify what migrations are or how they're authored.
+- COR-004 sets the rules for commands, and its list of operations names the version transition, the operation that runs migrations (COR-059). Neither specifies what migrations are or how they're authored.
 - COR-005 establishes bundles and adapters as pluggable components with their own contracts.
 
 What's missing is a unified principle: **what does it mean for a resource to be installed by the core layer**, what lifecycle operations apply across all such resources, how does the methodology version itself, and how do component versions relate to the methodology's version? Without this, each new resource type and each component re-derives tracking, update, and removal semantics from scratch, and version transitions remain ad hoc.
