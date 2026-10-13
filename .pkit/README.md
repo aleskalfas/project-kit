@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-13T04:29:23Z
+      at: 2026-10-13T06:40:34Z
       outcome: unchanged
-      unchanged-because: The map names the decisions README as home of the no-shared-files invariant, the lifecycle README as the upgrade procedure and migration layout, the CLI reference as the command surface, and capabilities as opt-in per COR-017. This change rewords the invariant, adds the backbone migration contract to the lifecycle README, says in the CLI reference that sync runs merge and who writes the configuration file, and has a version transition move capabilities. None of these changes a role or a link the map gives.
+      unchanged-because: The CLI reference now gives, in the friction artefacts document, the span each part anchor resolves to. This map calls it the pkit command-line surface and the place to look for a command, and both still hold.
 ---
 
 # project-kit

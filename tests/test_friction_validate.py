@@ -1479,28 +1479,7 @@ def test_validate_command_is_dormant_and_passes_on_a_fresh_install(adopter: Adop
     assert "All checks passed." in result.output
 
 
-# --- Markdown helpers --------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    ("text", "expected"),
-    [
-        ("---\na: 1\n---\nbody\n", ("a: 1\n", "body\n")),
-        ("---\na: 1\n---\n\n\nbody\n", ("a: 1\n", "body\n")),
-        ("---\na: 1\n", (None, "---\na: 1\n")),  # never closed
-        ("--- \na: 1\n---\n", ("a: 1\n", "")),  # trailing space on the opening fence
-        ("----\na: 1\n---\n", (None, "----\na: 1\n---\n")),  # not a fence
-        ("no front matter\n", (None, "no front matter\n")),
-        # Line endings are read universally: both parts come back with `\n`.
-        ("---\r\na: 1\r\n---\r\nbody\r\n", ("a: 1\n", "body\n")),
-        ("---\r\nb: |\r\n  two\r\n  lines\r\n---\r\n", ("b: |\n  two\n  lines\n", "")),
-        ("--- \r\na: 1\r\n---\t\r\n\r\n\r\nbody\r\n", ("a: 1\n", "body\n")),
-        ("---\ra: 1\r---\rbody\r", ("a: 1\n", "body\n")),  # a lone `\r`
-        ("no front matter\r\n", (None, "no front matter\n")),
-    ],
-)
-def test_split_front_matter(text: str, expected: tuple[str | None, str]) -> None:
-    assert fd.split_front_matter(text) == expected
+# --- helpers -----------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -1518,55 +1497,6 @@ def test_split_front_matter(text: str, expected: tuple[str | None, str]) -> None
 )
 def test_line_break_names_the_one_a_text_is_written_with(text: str, expected: str | None) -> None:
     assert fd.line_break(text) == expected
-
-
-def test_entry_section_runs_to_the_next_heading_of_equal_or_higher_level() -> None:
-    body = "# Set\n\n## RS-1: One\n\ntext\n\n### RS-1 detail\n\nmore\n\n## RS-10 — Ten\n\nten\n"
-    assert fd.entry_section(body, "RS-1") == "## RS-1: One\n\ntext\n\n### RS-1 detail\n\nmore\n"
-    assert fd.entry_section(body, "RS-10") == "## RS-10 — Ten\n\nten\n"
-    assert fd.entry_section(body, "RS-2") == ""
-
-
-def test_entry_section_takes_the_id_as_a_whole_token() -> None:
-    """Two hyphenated ids sharing a prefix: the shorter one's section is never the longer's,
-    whichever comes first."""
-    body = (
-        "## uc-login-sso — Sign in with SSO\n\nsso\n\n"
-        "## uc-login.v2 — Sign in, again\n\nagain\n\n"
-        "## uc-login — Sign in\n\nlogin\n\n"
-        "## uc-login: the details\n\ndetails\n"
-    )
-    assert fd.entry_section(body, "uc-login") == "## uc-login — Sign in\n\nlogin\n"
-    assert fd.entry_section(body, "uc-login-sso") == "## uc-login-sso — Sign in with SSO\n\nsso\n"
-    assert fd.entry_section(body, "uc-login.v2") == "## uc-login.v2 — Sign in, again\n\nagain\n"
-    assert fd.entry_section(body, "uc-log") == ""
-    # Punctuation that continues no id ends it, as the end of the heading does.
-    assert fd.entry_section("## uc-login: Sign in\n\ntext\n", "uc-login") == (
-        "## uc-login: Sign in\n\ntext\n"
-    )
-    assert fd.entry_section("## uc-login.\n\ntext\n", "uc-login") == "## uc-login.\n\ntext\n"
-
-
-def test_entry_section_skips_headings_in_fenced_code() -> None:
-    """A heading inside fenced code opens no section and ends none (#1372)."""
-    login = (
-        "## uc-login — Sign in\n\n"
-        "```sh\n# install the client\nmake client\n```\n\n"
-        "~~~markdown\n## uc-logout — an example, not an entry\n~~~\n\n"
-        "still signing in\n"
-    )
-    body = f"{login}\n## uc-signup — Sign up\n\nsignup\n"
-    assert fd.entry_section(body, "uc-login") == login
-    assert fd.entry_section(body, "uc-logout") == ""
-
-
-def test_body_headings_skip_fenced_code_to_its_own_closing_marker() -> None:
-    """Tildes do not close a backtick fence, and a fence never closed runs to the end."""
-    body = "# One\n```\n~~~\n# not a heading\n```\n## Two ##\n   ~~~\n# not a heading either\n"
-    assert fd.body_headings(body) == (
-        fd.Heading(level=1, title="One", start=0),
-        fd.Heading(level=2, title="Two", start=body.index("## Two")),
-    )
 
 
 def test_is_inside_repository(tmp_path: Path) -> None:

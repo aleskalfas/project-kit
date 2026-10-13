@@ -25,7 +25,7 @@ from project_kit import friction_check as fc
 from project_kit import friction_resolve as fres
 from project_kit import friction_write as fw
 from project_kit.cli import main
-from project_kit.friction_discovery import split_front_matter
+from project_kit.document_parts import split_front_matter
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, friction_config, guide
 

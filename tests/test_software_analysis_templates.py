@@ -24,7 +24,7 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
 from project_kit import backbone_schemas as bs
-from project_kit import friction_discovery as fd
+from project_kit import document_parts
 from tests.analysis_repo import CAPABILITY, REPO, load
 
 SCHEMAS = CAPABILITY / "schemas"
@@ -69,7 +69,7 @@ def _container_findings(carrier: Any) -> tuple[Any, ...]:
 
 def _template(name: str) -> dict[str, Any]:
     text = (CAPABILITY / "templates" / f"{name}.md").read_text(encoding="utf-8")
-    front_matter, _body = fd.split_front_matter(text)
+    front_matter, _body = document_parts.split_front_matter(text)
     assert front_matter is not None
     return load(front_matter)
 
@@ -292,7 +292,7 @@ def test_the_revalidation_record_template_shows_an_evidence_copy() -> None:
     """The optional `evidence` the template shows, commented out, is an entry of the
     evidence point copied whole: uncommented, the record still fits its schema."""
     text = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
-    front_matter, _body = fd.split_front_matter(text)
+    front_matter, _body = document_parts.split_front_matter(text)
     assert front_matter is not None
     lines = front_matter.splitlines()
     start = lines.index(next(line for line in lines if line.startswith("# evidence:")))
@@ -348,7 +348,7 @@ def test_every_placeholder_shipped_is_in_the_append_only_lists() -> None:
     shipped: set[str] = set()
     for name in ("actors", "glossary", "use-case", "journey"):
         text = (CAPABILITY / "templates" / f"{name}.md").read_text(encoding="utf-8")
-        _front, body = fd.split_front_matter(text)
+        _front, body = document_parts.split_front_matter(text)
         for value in [*_texts(_template(name)), body]:
             shipped |= set(_BRACKETED.findall(value))
     assert "<Title>" in shipped and "<Display name>" in shipped and "<Term>" in shipped

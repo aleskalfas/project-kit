@@ -67,7 +67,7 @@ src/project_kit/environment.py reportOptionalOperand 1
 src/project_kit/environment.py reportUnknownArgumentType 1
 src/project_kit/friction_check.py reportUnusedImport 1
 src/project_kit/friction_discovery.py reportUnknownArgumentType 11
-src/project_kit/friction_discovery.py reportUnknownMemberType 12
+src/project_kit/friction_discovery.py reportUnknownMemberType 11
 src/project_kit/friction_discovery.py reportUnknownVariableType 24
 src/project_kit/friction_validate.py reportArgumentType 1
 src/project_kit/friction_validate.py reportMissingTypeArgument 3

@@ -58,7 +58,7 @@ from ruamel.yaml.error import YAMLError
 from ruamel.yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
 from project_kit import rule_set_reading, validators
-from project_kit.friction_discovery import split_front_matter
+from project_kit.document_parts import split_front_matter
 from project_kit.friction_git import CommitTree
 from project_kit.line_breaks import universal_newlines
 from project_kit.working_tree import WorkingTree
