@@ -22,8 +22,7 @@ body: >
   `friction` member fails a dead or ambiguous point anchor
   (`dead-point-anchor`, `ambiguous-point-anchor`) in either mode. It warns of
   an anchor on a retired point, naming the successors (`retired-point-anchor`).
-  The container schema checks what follows `#` in a record anchor: a value
-  with a `#` and no point id after it fails as a malformed block, where it was
-  a dead anchor before. A whole-record anchor works as before. `pkit validate`
-  runs its `decisions` member before `friction` and `rule-sets`, as ADR-058
-  point 3 orders them.
+  The container schema checks what follows `#` in a record anchor (COR-051
+  point 3): a value with a `#` and no point id after it fails as a malformed
+  block, where it was a dead anchor before. A whole-record anchor works as
+  before.
