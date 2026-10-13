@@ -14,9 +14,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-13T00:44:45Z
+          at: 2026-10-13T11:37:05Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001 now tells a page by the page type, ranks places by the backbone's order, holds assigned places to the definitions' scopes, and names the parts of LDOC that validation enforces. It says nothing of the links between pages, so the paths the user space's readers take through its pages stay unbroken.
+          unchanged-because: living-docs DEC-001 points 2 and 3 say LDOC binds on a page through a scoped set of the project's own, such as this definition, whose scope selects the user space's pages. Nothing in them touches the links between pages, so the paths the user space's readers take through its pages stay unbroken.
 ---
 
 # The user space's definition
