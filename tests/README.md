@@ -10,7 +10,8 @@ other gates (see [CONTRIBUTING.md](../CONTRIBUTING.md) "Running checks").
 project's rules, `.pkit/rules/project.md`): run the test modules for the files
 you changed, `uv run pytest -q tests/test_<module>.py ...`, and the fast gates,
 `uv run pkit validate`, `uv run pkit friction check`,
-`uv run pkit migrations check-diff` and `uv run pkit release check`.
+`uv run pkit migrations check-diff`, `uv run pkit decisions check-diff` and
+`uv run pkit release check`.
 
 **The full suite runs in parallel.** `scripts/check.sh` — the one command the
 pre-push hook and CI run, with no arguments in both — runs it in
