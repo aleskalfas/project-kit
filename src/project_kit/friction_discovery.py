@@ -678,8 +678,8 @@ def installed_packages_at(
     holds — read forgivingly, as `installed_capability_names` reads the manifest. A
     component whose package file the state lacks is left out, as
     `package_validate.installed_package_files` leaves it out of the working tree."""
-    load = _mapping_loader(target_root, tree)
-    components: Any = load(BACKBONE_MANIFEST.as_posix()).get("components")
+    manifest = _mapping_loader(target_root, tree)(BACKBONE_MANIFEST.as_posix())
+    components: Any = manifest.get("components")
     if not isinstance(components, list):
         return []
     areas = {"capability": "capabilities", "adapter": "adapters"}
@@ -690,9 +690,14 @@ def installed_packages_at(
             continue
         component = Path(".pkit") / area / name
         package_file = (component / command_runner.PACKAGE_FILE).as_posix()
-        if not tree.read_bytes([package_file]).get(package_file):
+        raw = tree.read_bytes([package_file]).get(package_file)
+        if raw is None:
             continue
-        found.append((name, target_root / component, load(package_file)))
+        try:
+            package, _problem = _parse_mapping(raw.decode("utf-8"))
+        except UnicodeDecodeError:
+            package = {}
+        found.append((name, target_root / component, package))
     return found
 
 

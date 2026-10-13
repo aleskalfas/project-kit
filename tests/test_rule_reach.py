@@ -343,6 +343,28 @@ def test_a_rule_that_fills_is_never_held_back_as_a_rule(repo: AdopterRepo) -> No
     ]
 
 
+def test_a_held_rule_names_only_the_pins_on_the_artefact_s_routes(repo: AdopterRepo) -> None:
+    """A pin leads towards a held rule only along routes that pass each set's own scope:
+    TTT is reached through WWW alone, since the route through YYY stops at ZZZ, whose
+    scope does not select the artefact."""
+    lay_out(
+        repo,
+        {
+            "doc": rule_set("DOC", inherits=["YYY@1", "WWW@1"], scope=scoped(f"{GUIDES}/**")),
+            "yyy": rule_set("YYY", "2.0.0", inherits=["ZZZ@1"]),
+            "zzz": rule_set("ZZZ", inherits=["TTT@1"], scope=scoped("docs/other/**")),
+            "www": rule_set("WWW", "2.0.0", inherits=["TTT@1"]),
+            "ttt": rule_set("TTT"),
+        },
+        a=page(),
+    )
+    assert held(repo) == [
+        ("RS-TTT-001", ["DOC pins WWW@1"]),
+        ("RS-WWW-001", ["DOC pins WWW@1"]),
+        ("RS-YYY-001", ["DOC pins YYY@1"]),
+    ]
+
+
 def test_an_artefact_whose_rules_are_all_held_back_is_listed(repo: AdopterRepo) -> None:
     lay_out(
         repo,

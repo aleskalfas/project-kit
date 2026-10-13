@@ -2155,6 +2155,7 @@ class _Routes:
             for edge in self.walk.edges(anywhere[path])
             if edge.behind and self.passes(edge.inherited)
         ]
+        beyond = {id(edge): self._passing_from(edge.inherited) for edge in behind}
         found: list[HeldRule] = []
         for rule_set in self.walk.rule_sets.rule_sets:  # path order
             if rule_set.path not in anywhere or rule_set.path in reached:
@@ -2162,8 +2163,7 @@ class _Routes:
             pins = tuple(
                 (edge.rule_set, edge.index, edge.pin)
                 for edge in behind
-                if edge.inherited is rule_set
-                or rule_set.path in self.walk.ancestors(edge.inherited)
+                if rule_set.path in beyond[id(edge)]
             )
             found.extend(
                 HeldRule(rule, rule_set, pins)
@@ -2171,6 +2171,19 @@ class _Routes:
                 if rule.binds and not rule.fills  # a fill binds only as a fill
             )
         return tuple(found)
+
+    def _passing_from(self, start: RuleSet) -> frozenset[str]:
+        """The paths of `start` and every set a route from it reaches, whatever its pins,
+        through sets whose own scope, where they have one, selects the artefact."""
+        seen = {start.path}
+        queue = [start]
+        while queue:
+            for edge in self.walk.edges(queue.pop(0)):
+                target = edge.inherited
+                if target.path not in seen and self.passes(target):
+                    seen.add(target.path)
+                    queue.append(target)
+        return frozenset(seen)
 
     def _pin_conflicts(self) -> list[PinConflict]:
         """One set pinned at different majors by the routes from the artefact."""
