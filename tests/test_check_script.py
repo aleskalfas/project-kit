@@ -1,10 +1,13 @@
-"""`scripts/check.sh`'s type and test steps.
+"""`scripts/check.sh`'s type, prose-lint and test steps.
 
 The type step (PRJ-010):
 
 - runs `scripts/pyright_ratchet.py` after the lint and the format check and
   before the tests;
 - fails the run when the ratchet fails, and the checks after it still run.
+
+The prose lint (#1415) runs `scripts/prose_lint.py` among the diff-scoped
+checks, after the friction change check; a finding fails the run.
 
 The test step (#1182):
 
@@ -21,8 +24,8 @@ The test step (#1182):
 runs the suite or pyright: the stub records every command it is handed; its
 `pytest` records its arguments and, on the parallel pass, holds until the test
 lets it go; its `python` is this interpreter, so a slot is taken with a real
-lock, except for the ratchet, which exits as the test says; every other command
-passes.
+lock, except for the ratchet and the prose lint, which exit as the test says;
+every other command passes.
 """
 
 from __future__ import annotations
@@ -43,8 +46,9 @@ CHECK = REPO / "scripts" / "check.sh"
 
 # The stand-in for `uv run [--flag ...] <command> [arg ...]`: it logs each
 # command; `python` is this interpreter, but for the ratchet, which exits with
-# $STUB_TYPES_STATUS; `pytest` logs its arguments and, on the parallel pass,
-# holds until the release file exists; anything else passes.
+# $STUB_TYPES_STATUS, and the prose lint, which exits with $STUB_PROSE_STATUS;
+# `pytest` logs its arguments and, on the parallel pass, holds until the
+# release file exists; anything else passes.
 STUB_UV = """#!/bin/sh
 shift
 while [ "${{1#-}}" != "$1" ]; do shift; done
@@ -54,6 +58,7 @@ case "$1" in
     shift
     case "$1" in
       scripts/pyright_ratchet.py) exit "${{STUB_TYPES_STATUS:-0}}" ;;
+      scripts/prose_lint.py) exit "${{STUB_PROSE_STATUS:-0}}" ;;
     esac
     exec "{python}" "$@" ;;
   pytest)
@@ -181,6 +186,17 @@ def test_a_failing_type_check_fails_the_run_and_the_checks_after_it_still_run(
     assert "-- types: FAILED" in done.stdout
     assert "-- tests: ok" in done.stdout
     assert "-- changelog lint: ok" in done.stdout
+
+
+def test_the_prose_lint_runs_after_the_friction_check_and_a_finding_fails_the_run(
+    checkout: Checkout,
+) -> None:
+    done = checkout.check(STUB_PROSE_STATUS="1")
+
+    assert done.returncode == 1
+    assert "-- prose lint: FAILED" in done.stdout
+    steps = checkout.steps.read_text().splitlines()
+    assert steps.index("python scripts/prose_lint.py") == steps.index("pkit friction check") + 1
 
 
 @pytest.mark.parametrize(("workers", "expected"), [(None, "-n auto"), ("3", "-n 3"), ("0", "-n 0")])
