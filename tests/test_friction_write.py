@@ -29,7 +29,8 @@ from project_kit import friction_check as fc
 from project_kit import friction_repository as fr
 from project_kit import friction_write as fw
 from project_kit.cli import main
-from project_kit.friction_discovery import Anchor, discover_artefacts, split_front_matter
+from project_kit.document_parts import split_front_matter
+from project_kit.friction_discovery import Anchor, discover_artefacts
 from project_kit.friction_validate import validate_friction
 from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, friction_config

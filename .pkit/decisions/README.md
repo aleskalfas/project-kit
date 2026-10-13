@@ -8,13 +8,14 @@ pkit:
       path:
         - src/project_kit/decisions.py
         - src/project_kit/decisions_validate.py
+        - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-13T05:56:29Z
+      at: 2026-10-13T07:10:32Z
       outcome: unchanged
-      unchanged-because: "COR-025's change rewrites the first step of its argument that ADRs never reach an adopter: sync propagates only the surface under .pkit/, writes a project-owned path only through merge delivery's auto-add tier, which never removes or rewrites an entry the project wrote, and reads the project's own declarations. The page's invariant section already says sync reads what it needs from your side and writes into your files through that tier, and states COR-059's rule that it writes a project-owned path only through merge delivery. The page cites COR-025 for where ADRs live and for the ADR schema's superseded_by, neither of which changed, so it holds."
+      unchanged-because: "The rule-set reader now takes a rule-set file's front matter, its body and its sections from document_parts, the one reading of where a part lies, and finds the same rules and sections as before, so what this page says of rule sets and their ids holds. The new anchor, record_points.py, reads a record's points both in list form, as this page's schema still writes them, and as point headings. The page does not yet describe point headings or retired points, which its deferral on COR-051 leaves to #1422."
       deferred:
         - anchor:
             kind: record
