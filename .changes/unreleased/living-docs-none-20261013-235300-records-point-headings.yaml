@@ -1,0 +1,7 @@
+component: living-docs
+kind: none
+body: >
+  Placeholder segment, for the maintainer to judge (#1421). DEC-001 writes
+  each of its points as a heading carrying its number, word for word. No
+  point's text, number or citation changes, so a rule's origin and the
+  README still name the same points.

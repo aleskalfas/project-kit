@@ -1,0 +1,11 @@
+component: backbone
+kind: none
+body: >
+  Placeholder segment, for the maintainer to judge (#1421). The core
+  records whose points were a numbered list, or paragraphs opening with a
+  bold number or label, write each point as a heading carrying its number or
+  label, word for word: COR-029, COR-033, COR-043, COR-046, COR-048 to
+  COR-057. No point's text, number or citation changes, so every citation of
+  a point still names it. A point of these records can now be named by an
+  anchor, such as `COR-050#11`. COR-028, COR-031 and COR-039 stay in list
+  form until the text after their last point is placed.

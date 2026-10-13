@@ -1,0 +1,7 @@
+component: software-engineering
+kind: none
+body: >
+  Placeholder segment, for the maintainer to judge (#1421). DEC-001 writes
+  each of its points as a heading carrying its number, word for word. No
+  point's text, number or citation changes. DEC-002 stays in list form until
+  the text after its last point is placed.
