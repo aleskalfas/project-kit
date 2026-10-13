@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-13T10:43:43Z
+      at: 2026-10-13T11:48:59Z
       outcome: unchanged
-      unchanged-because: The CLI reference gains friction's point anchors and validation's member order, the schemas README the container's point id on the record kind, and the lifecycle README rewords how the engine reads a resolver's files. The map gives each README's role and link. Neither role nor link moves, so the map holds.
+      unchanged-because: The decisions README gains a paragraph on what validation leaves out in an adopter's project, and the CLI reference says the same of decisions validate and of the decisions member. The map gives each README's role and link. Neither role nor link moves, so the map holds.
 ---
 
 # project-kit
