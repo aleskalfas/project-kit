@@ -42,7 +42,7 @@ pkit:
 ---
 ```
 
-`reader` and `kind` are each a word (`[a-z][a-z0-9-]*`); their shape is `schemas/page.schema.json`, which the validator below applies. The friction block is the core's, and `pkit validate` checks it under `friction`. A document in a space's places that is no page, no decision record and no rule-set file, and that no other owner claims, is an *unclassified document*: counted for onboarding to classify, never failed. A document that names a reader but declares no kind is one.
+`reader` and `kind` are each a word (`[a-z][a-z0-9-]*`); their shape is `schemas/page.schema.json`, which the validator below applies: to `kind` on every page, and to `reader` where `RS-LDOC-003` binds. The friction block is the core's, and `pkit validate` checks it under `friction`. A document in a space's places that is no page, no decision record and no rule-set file, and that no other owner claims, is an *unclassified document*: counted for onboarding to classify, never failed. A document that names a reader but declares no kind is one.
 
 **A kind's structure.** Pages of a kind follow one format (`RS-LDOC-004`). A kind's template is the starting shape you fill in; the part of the format the validator checks is the kind's *structure*: the sections every page of the kind carries, in order where order matters. Each kind this capability ships declares its structure once, in `schemas/page-kinds.yaml`, and that file is where to read what a kind's pages must carry: each section is a heading level and, where the kind fixes the wording, its text, in the order listed unless the kind sets `ordered: false`. A structure names only what every page of the kind must carry, so a template may show more, and a page may carry other sections.
 

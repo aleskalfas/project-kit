@@ -971,11 +971,69 @@ def test_a_definition_copied_with_the_template_s_placeholder_is_reported(
             f"the scope of space 'user''s definition, {DEFINITIONS}/user.md, still holds the "
             "template's placeholder `<root>/**`, which names no file: write the space's root "
             "and the places assigned to it in its place — `paths: [docs/**, README.md]` "
-            "(DEC-001 point 2)."
+            "(DEC-001 point 2). Until then the join with the assignment fails each place "
+            "assigned to the space that the scope misses (DEC-001 point 1)."
         ),
     }
     assert placeholder in document["findings"]
     assert left_out("docs/guide.md") in document["findings"]
+
+
+def test_the_scope_named_for_nested_roots_leaves_the_inner_one_out(project: AdopterRepo) -> None:
+    """With the internal root inside the user root, the user space's scope leaves the
+    inner root out, and names back a place in it assigned to the user space; the
+    technical space's scope leaves that place out (DEC-001 points 1 and 2)."""
+    tech = "docs/tech/living-docs/rule-sets"
+    declare(
+        project,
+        roots={"user": "docs/", "internal": "docs/tech/"},
+        places=["README.md", "docs/tech/guide/"],
+        assignments={"README.md": "user", "docs/tech/guide/": "user"},
+        spaces={
+            "user": {"entry-point": "README.md", "definition": f"{tech}/user.md"},
+            "technical": {
+                "entry-point": "docs/tech/README.md",
+                "definition": f"{tech}/technical.md",
+            },
+        },
+    )
+    project.write(
+        {
+            "docs/tech/README.md": "---\nreader: maintainer\nkind: signpost\n---\n\n# Tech\n",
+            f"{tech}/user.md": _definition("USER", scope=UNSCOPED),
+            f"{tech}/technical.md": _definition("TECH", scope=UNSCOPED),
+        }
+    )
+    reports = {
+        f["location"]: f["message"]
+        for f in run(project)["findings"]
+        if f["severity"] == "report" and f["location"].startswith(tech)
+    }
+    assert (
+        "`scope: {paths: [docs/**, README.md, docs/tech/guide/], exclude: [docs/tech/**], "
+        "types: [living-docs:page]}`" in reports[f"{tech}/user.md"]
+    )
+    assert (
+        "`scope: {paths: [docs/tech/**], exclude: [docs/tech/guide/], types: [living-docs:page]}`"
+        in reports[f"{tech}/technical.md"]
+    )
+
+
+def test_a_reader_is_not_checked_while_rs_ldoc_003_is_not_accepted(project: AdopterRepo) -> None:
+    """A rule of any status but accepted binds nothing (COR-051 point 4): no page's
+    reader is read, and the summary says why."""
+    ldoc = project.root / LD / "rule-sets" / "ldoc.md"
+    accepted = "  RS-LDOC-003:\n    status: accepted\n"
+    text = ldoc.read_text(encoding="utf-8")
+    assert accepted in text
+    ldoc.write_text(text.replace(accepted, "  RS-LDOC-003:\n    status: proposed\n"), "utf-8")
+    project.write({"docs/guide.md": "---\nkind: signpost\n---\n\n# Guide\n"})
+    document = run(project)
+    assert document["findings"] == []
+    (line,) = [line for line in document["summary"] if line.startswith("readers")]
+    assert line == (
+        "readers: not checked — RS-LDOC-003 is proposed, so it binds nothing (COR-051 point 4)."
+    )
 
 
 def test_a_space_definition_from_the_template_carries_a_scope_selecting_pages() -> None:

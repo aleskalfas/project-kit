@@ -761,6 +761,9 @@ def _reader_findings(
         return f"readers: not checked — where {READER_RULE} binds cannot be read."
     unbound = len(walk.pages) - len(walk.reader_bound)
     if walk.pages and not walk.reader_bound:
+        why = _unaccepted(READER_RULE, decl)
+        if why is not None:
+            return f"readers: not checked — {why}."
         return (
             f"readers: not checked — {READER_RULE} binds on none of the {unbound} page(s), so "
             f"{READERS_POINT} is not read (COR-051 point 7)."
@@ -1367,7 +1370,9 @@ def _placeholder_message(
     return (
         f"the scope of space {space!r}'s definition, {definition}, still holds the template's "
         f"placeholder {named}, which names no file: write the space's root and the places "
-        f"assigned to it in its place{fix} (DEC-001 point 2)."
+        f"assigned to it in its place{fix} (DEC-001 point 2). Until then the join with the "
+        f"assignment fails each place assigned to the space that the scope misses (DEC-001 "
+        f"point 1)."
     )
 
 
@@ -1411,8 +1416,9 @@ def _no_scope_message(space: str, definition: str, decl: Declarations) -> str:
 def _space_paths(space: str, decl: Declarations) -> tuple[list[str], list[str]]:
     """The paths that select a space's pages, as a scope writes them, and those it
     leaves out: the space's root, everything beneath it, unless the two roots are
-    one folder, then each place assigned to the space outside that root. Left out
-    are a root nested in it and each place in it assigned to another space."""
+    one folder, then each place assigned to the space outside that root, a root
+    nested in it counting as outside. Left out are a root nested in it and each
+    place in it assigned to another space."""
     root = next(
         (
             path
@@ -1422,13 +1428,19 @@ def _space_paths(space: str, decl: Declarations) -> tuple[list[str], list[str]]:
         None,
     )
     paths = [f"{root}/**"] if root is not None else []
-    exclude = [
-        f"{other}/**"
+    nested = [
+        other
         for other in decl.roots().values()
         if root is not None and other != root and is_within(other, root)
     ]
+    exclude = [f"{other}/**" for other in nested]
     for assignment in decl.assignments:
-        inside = root is not None and is_within(literal_prefix(assignment.path), root)
+        prefix = literal_prefix(assignment.path)
+        inside = (
+            root is not None
+            and is_within(prefix, root)
+            and not any(is_within(prefix, other) for other in nested)
+        )
         if assignment.space == space and not inside:
             paths.append(assignment.written)
         elif assignment.space != space and inside:
