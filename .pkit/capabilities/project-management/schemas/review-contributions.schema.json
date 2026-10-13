@@ -53,9 +53,11 @@
             }
           },
           "floor": {
-            "description": "Diff-property floor (DEC-032 D1): require the reviewer whenever the PR's diff matches the property, independent of classification. `touches-code` fires when the diff touches any non-documentation file — backstopping the classification gate-escape for a code-review reviewer. A changed path the adopting project lists under `review.floors.not_code` in its pm config (`.changes/**` when unset) satisfies no floor. Optional; a rule must declare a `match`, a `floor`, or both.",
+            "description": "Diff-property floor (DEC-032 D1): require the reviewer whenever the PR's diff matches the property, independent of classification. `touches-code` fires when the diff touches any non-documentation file — backstopping the classification gate-escape for a code-review reviewer; a changed path the adopting project lists under `review.floors.not_code` in its pm config (`.changes/**` when unset) satisfies no `touches-code` floor. `touches-ruled-artefact` fires when the change alters an artefact on which an accepted rule binds, at the base or at the head (COR-051 point 7): adds it, removes it, or changes its content. A change to the declared places alone alters the artefacts it brings in or takes out. A change that only writes a revalidation, a move the pairing follows that keeps the content, or a change to the rules alone alters nothing, and the not-code list does not narrow it. pm reads it from the backbone's `pkit rule-sets altered` for every pull request while a contribution in force names the floor. This release of pm defines these two kinds. Any other non-empty name is accepted, so a contributor's newer floor meets an older pm without failing validation: pm requires its reviewer on every change, and `pre-check` names it, so a misspelt floor is seen. Optional; a rule must declare a `match`, a `floor`, or both.",
             "type": "string",
-            "enum": ["touches-code"]
+            "minLength": 1,
+            "pattern": "\\S",
+            "examples": ["touches-code", "touches-ruled-artefact"]
           },
           "reviewer": {
             "description": "Required reviewer-agent name. Must correspond to a deployed agent file at `.claude/agents/<name>.md` (or wherever the harness deploys agents). Local-path only at v1 (per DEC-032 D2).",

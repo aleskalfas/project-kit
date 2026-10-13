@@ -180,7 +180,7 @@
           "properties": {
             "not_code": {
               "type": "array",
-              "description": "Paths that never count as code (#1178): gitignore-style patterns, relative to the repository root, the matching `code_path_to_doc_mapping` uses. A changed path one matches satisfies no floor, so it never draws a `touches-code` reviewer; every other path is read as before. The list replaces the default rather than adding to it. Absent: `.changes/**`, the changesets a surface-changing pull request carries. An empty list excludes nothing.",
+              "description": "Paths that never count as code (#1178): gitignore-style patterns, relative to the repository root, the matching `code_path_to_doc_mapping` uses. A changed path one matches satisfies no `touches-code` floor, so it never draws a `touches-code` reviewer; every other path is read as before. It narrows no other floor. The list replaces the default rather than adding to it. Absent: `.changes/**`, the changesets a surface-changing pull request carries. An empty list excludes nothing.",
               "items": {
                 "type": "string",
                 "minLength": 1,

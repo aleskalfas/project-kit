@@ -68,6 +68,7 @@ from _lib.membership import (
 from _lib.pr_review import REVIEW_VIEW_FIELDS, PrReview, resolve_pr_review
 from _lib.required_reviewers import Resolution
 from _lib.review_contributions import collect_contributions
+from _lib.ruled_artefacts import ruled_altered
 from _lib.verdict_freshness import FreshnessRule
 
 CLOSING_KEYWORD_RE = re.compile(r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE)
@@ -172,7 +173,10 @@ def _summarise(pr: dict, freshness: FreshnessRule | None = None) -> dict:
     verdict is held to any change since the head it reviewed."""
     if freshness is None:
         freshness = PrReview(
-            Resolution(), author_delta=author_delta, base_kept=base_kept
+            Resolution(),
+            author_delta=author_delta,
+            base_kept=base_kept,
+            ruled_altered=ruled_altered,
         ).freshness_rule(pr)
     title = str(pr.get("title", ""))
     body = str(pr.get("body") or "")
@@ -584,6 +588,7 @@ def _resolve_review(
         collect_contributions=collect_contributions,
         author_delta=author_delta,
         base_kept=base_kept,
+        ruled_altered=ruled_altered,
     )
 
 

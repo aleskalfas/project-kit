@@ -34,3 +34,16 @@ def agent_deploy_path(repo_root: Path, name: str) -> Path:
 def agent_is_deployed(repo_root: Path, name: str) -> bool:
     """True when agent `name`'s deployed file exists under `repo_root`."""
     return agent_deploy_path(repo_root, name).is_file()
+
+
+# Where core ships its agents under the repo root, which a sync refreshes and
+# the adapter deploys from: `<name>.md`, or `<name>/<name>.md`.
+CORE_AGENTS_SUBDIR = (".pkit", "agents", "core")
+
+
+def agent_is_core(repo_root: Path, name: str) -> bool:
+    """True when core ships agent `name`: its canonical file is under
+    `.pkit/agents/core/`. An undeployed core agent is deployed by a sync, not
+    by redeploying a capability."""
+    core = repo_root.joinpath(*CORE_AGENTS_SUBDIR)
+    return (core / f"{name}.md").is_file() or (core / name / f"{name}.md").is_file()

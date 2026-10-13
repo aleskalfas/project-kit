@@ -22,12 +22,19 @@ so a superseded verdict never counts however fresh it would be. Per verdict:
     reviewer whose whole remit is its diff-property floors
     (`Resolution.floors_by_reviewer`: a floor requires it on this PR and
     every rule it has is a floor and nothing else) stays fresh while those
-    changes satisfy none of its floors, read through the same not-code list
-    the resolver applies. Any other verdict goes stale on any change: one
-    from the baseline or from a reviewer with any classification rule —
-    matched on this PR or not, it declares a remit wider than the floors —
-    and every CHANGES_REQUESTED — the author is answering it, so floor
-    scoping protects approvals only. When the changes cannot be computed
+    changes reach none of its floors, each read as the resolver reads it
+    (`_lib.required_reviewers.reached_floors`): `touches-code` through the
+    same not-code list, `touches-ruled-artefact` by asking the backbone which
+    artefacts the author's changes since the reviewed head altered, a run of
+    the author's own commits between merges of the base at a time — a merge
+    of the base only when the author changed something inside it — and
+    counting one an accepted rule binds on at the start or the end of its
+    run, and a floor this pm does not know by any change. Any
+    other verdict goes stale on any change: one from the baseline or from a
+    reviewer with any classification rule — matched on this PR or not, it
+    declares a remit wider than the floors — and every CHANGES_REQUESTED —
+    the author is answering it, so floor scoping protects approvals only.
+    When the changes, or the ruled artefacts they altered, cannot be read,
     the verdict is stale.
   * **A verdict naming the base it was reviewed against** (`base=<oid>` in
     the same marker) is stale, whatever the author changed, once that base
@@ -58,8 +65,11 @@ try:
         DEFAULT_NOT_CODE,
         NotCode,
         Resolution,
-        satisfied_floors,
+        _Unresolvable,
+        reached_floors,
     )
+    from _lib.review_contributions import FLOOR_TOUCHES_RULED_ARTEFACT
+    from _lib.ruled_artefacts import RuledAlteration
 except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
     from agent_verdicts import (  # type: ignore[no-redef]
         APPROVED,
@@ -73,8 +83,11 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
         DEFAULT_NOT_CODE,
         NotCode,
         Resolution,
-        satisfied_floors,
+        _Unresolvable,
+        reached_floors,
     )
+    from review_contributions import FLOOR_TOUCHES_RULED_ARTEFACT  # type: ignore[no-redef]
+    from ruled_artefacts import RuledAlteration  # type: ignore[no-redef]
 
 
 # The `gh pr view --json` fields `rule_for_pr` reads; the consumers fetch them
@@ -103,12 +116,21 @@ DeltaFn = Callable[[str], AuthorDelta]
 BaseFn = Callable[[str], BaseCheck]
 
 
+# `(start, end) -> RuledAlteration`: the artefacts the change from `start` to
+# `end`, one stretch of the author's change, altered (`_lib.ruled_artefacts`).
+RuledFn = Callable[[str, str], RuledAlteration]
+
+
 def _no_delta(_since: str) -> AuthorDelta:
     return AuthorDelta(error="the pull request's head is unknown")
 
 
 def _no_base(_reviewed_base: str) -> BaseCheck:
     return BaseCheck(error="the base branch's head is unknown")
+
+
+def _no_ruled(_start: str, _end: str) -> RuledAlteration:
+    return RuledAlteration(error="no reader of the ruled artefacts a change altered was given")
 
 
 class FreshnessRule:
@@ -129,6 +151,7 @@ class FreshnessRule:
         not_code: NotCode = DEFAULT_NOT_CODE,
         delta_since: DeltaFn = _no_delta,
         base_kept: BaseFn = _no_base,
+        ruled_since: RuledFn = _no_ruled,
     ) -> None:
         self._head_sha = head_sha
         self._head_timestamp = head_timestamp
@@ -137,7 +160,10 @@ class FreshnessRule:
         self._not_code = not_code
         self._delta_since = delta_since
         self._base_kept = base_kept
+        self._ruled_since = ruled_since
         self._deltas: dict[str, AuthorDelta] = {}
+        self._rulings: dict[str, tuple[str, ...] | _Unresolvable] = {}
+        self._stretches: dict[tuple[str, str], RuledAlteration] = {}
         self._bases: dict[str, BaseCheck] = {}
 
     def is_fresh(self, verdict: Verdict) -> bool:
@@ -165,8 +191,25 @@ class FreshnessRule:
         floors = self._floors_of(verdict)
         if floors is None:
             return Freshness(False, changed)
-        reached = sorted(floors & satisfied_floors(delta.paths, self._not_code))
+        found = reached_floors(
+            floors,
+            delta.paths,
+            not_code=self._not_code,
+            ruled_artefacts=lambda: self._ruled(verdict.sha, delta),
+        )
+        if isinstance(found, _Unresolvable):
+            return Freshness(
+                False,
+                f"{changed} — whether it alters a ruled artefact cannot be read: {found.reason}",
+            )
+        reached = sorted(found)
         if reached:
+            ruled = self._rulings.get(verdict.sha)
+            if FLOOR_TOUCHES_RULED_ARTEFACT in found and isinstance(ruled, tuple) and ruled:
+                # What cost the approval may lie outside the changed paths: a
+                # page a change to the places brought in, or one the base's
+                # side of a merge the author changed something inside altered.
+                changed += f"; ruled artefacts altered: {_name_paths(ruled)}"
             return Freshness(False, f"{changed} — reaches its {', '.join(reached)} floor")
         return Freshness(
             True, f"{changed} — reaches none of its floors ({', '.join(sorted(floors))})"
@@ -226,6 +269,41 @@ class FreshnessRule:
             return None
         return self._floors_by_reviewer.get(verdict.reviewer)
 
+    def _ruled(self, sha: str, delta: AuthorDelta) -> tuple[str, ...] | _Unresolvable:
+        """The artefacts the author's changes since `sha` altered that the
+        floor counts, or why they cannot be read (DEC-028). Read once per
+        reviewed head: `delta` is that head's."""
+        if sha not in self._rulings:
+            self._rulings[sha] = self._read_ruled(delta)
+        return self._rulings[sha]
+
+    def _read_ruled(self, delta: AuthorDelta) -> tuple[str, ...] | _Unresolvable:
+        """Of what each stretch of the author's change altered — a run of
+        the author's own commits between merges of the base, or a merge of
+        the base the author changed something inside — each artefact an
+        accepted rule binds on at the stretch's start or end. A clean merge
+        of the base is no stretch, so what it brings never counts, whatever
+        it is: an edit, a rule or a place. The first stretch that alters one
+        settles it, so no later stretch is asked about. Changed paths with no
+        stretch to ask about cannot be read, never read as nothing."""
+        if delta.paths and not delta.stretches:
+            return _Unresolvable(
+                "the author's changes since the review name no stretch to ask the backbone about"
+            )
+        for stretch in delta.stretches:
+            found = self._altered_in(stretch.start, stretch.end)
+            if not found.ok:
+                return _Unresolvable(found.error)
+            if found.locations:
+                return found.locations
+        return ()
+
+    def _altered_in(self, start: str, end: str) -> RuledAlteration:
+        """What the change from `start` to `end` altered, asked once."""
+        if (start, end) not in self._stretches:
+            self._stretches[(start, end)] = self._ruled_since(start, end)
+        return self._stretches[(start, end)]
+
     def _delta(self, sha: str) -> AuthorDelta:
         if sha not in self._deltas:
             self._deltas[sha] = self._delta_since(sha)
@@ -248,6 +326,7 @@ def rule_for_pr(
     *,
     author_delta: Callable[..., AuthorDelta],
     base_kept: Callable[..., BaseCheck],
+    ruled_altered: Callable[..., RuledAlteration] | None = None,
 ) -> FreshnessRule:
     """The freshness rule for a PR, from its `gh pr view` payload.
 
@@ -255,8 +334,10 @@ def rule_for_pr(
     resolved required set: its floor-scoped reviewers and its not-code list
     decide what reaches a floor. A failed resolution names no floor-scoped
     reviewer, so every verdict goes stale on any change. `author_delta` and
-    `base_kept` are `_lib.author_delta`'s, passed by the consumer so its
-    tests can stand them in.
+    `base_kept` are `_lib.author_delta`'s, and `ruled_altered` is
+    `_lib.ruled_artefacts`', passed by the consumer so its tests can stand
+    them in. Without `ruled_altered`, an approval scoped to
+    `touches-ruled-artefact` goes stale on any change.
     """
     head = head_sha(pr_view)
     base_tip = str(pr_view.get("baseRefOid") or "")
@@ -268,6 +349,9 @@ def rule_for_pr(
         not_code=resolution.not_code,
         delta_since=lambda since: author_delta(since, head, base_tip=base_tip),
         base_kept=lambda reviewed_base: base_kept(reviewed_base, base_tip),
+        ruled_since=_no_ruled
+        if ruled_altered is None
+        else lambda start, end: ruled_altered(start, end),
     )
 
 

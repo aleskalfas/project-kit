@@ -1,0 +1,29 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  A reviewer contribution can require its reviewer when a change alters a
+  document an accepted rule binds on (#1386, DEC-032): the new floor
+  `floor: touches-ruled-artefact` in a capability's
+  `review-contributions.yaml`, beside `touches-code`. An artefact is altered
+  when the change adds it, removes it, or changes its content, so a change
+  that only writes a revalidation, or a move that keeps the content, alters
+  nothing. A change to the declared places alone fires it too: a page a new
+  or wider place brings in counts as added. The resolver reads the
+  backbone's `pkit rule-sets altered` for every pull request while a
+  contribution names the floor, so a project without one pays nothing. An
+  artefact counts as ruled only through the rules that bind on it, never
+  through rules a pin holds back. Your `review.floors.not_code` list narrows
+  `touches-code` alone, and a page it lists still fires the new floor. Such
+  a reviewer's approval stays fresh after later commits that alter no ruled
+  artefact, read a run of your commits at a time between merges of the
+  base, and after a clean merge of the base (DEC-028). Reading the change
+  needs the base and head commits locally: a missing one is fetched by its
+  object name, and a shallow checkout, a failing command or a backbone
+  without it fails the resolution with its reason. A contribution naming a
+  floor this release does not know now requires its reviewer on every
+  change instead of refusing every pull request, and `pre-check` warns of
+  each such floor. An undeployed reviewer that core ships is named with
+  `pkit sync` as its fix.

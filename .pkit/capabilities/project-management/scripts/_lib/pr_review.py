@@ -48,16 +48,19 @@ try:
         GhGetIssueFn,
         GhRunFn,
         issue_labels,
+        pr_base_and_head,
         pr_changed_files,
         pr_closing_issue_numbers,
     )
     from _lib.required_reviewers import (
         Resolution,
+        _Unresolvable,
         read_not_code,
         resolve_required_local_reviewers,
     )
     from _lib.review_contributions import ContributionCollection
     from _lib.review_opt_outs import read_opt_outs
+    from _lib.ruled_artefacts import RuledAlteration, ruled_altered
     from _lib.verdict_freshness import PR_VIEW_FIELDS, FreshnessRule, rule_for_pr
 except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
     from author_delta import AuthorDelta, BaseCheck  # type: ignore[no-redef]
@@ -65,16 +68,19 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
         GhGetIssueFn,
         GhRunFn,
         issue_labels,
+        pr_base_and_head,
         pr_changed_files,
         pr_closing_issue_numbers,
     )
     from required_reviewers import (  # type: ignore[no-redef]
         Resolution,
+        _Unresolvable,
         read_not_code,
         resolve_required_local_reviewers,
     )
     from review_contributions import ContributionCollection  # type: ignore[no-redef]
     from review_opt_outs import read_opt_outs  # type: ignore[no-redef]
+    from ruled_artefacts import RuledAlteration, ruled_altered  # type: ignore[no-redef]
     from verdict_freshness import (  # type: ignore[no-redef]
         PR_VIEW_FIELDS,
         FreshnessRule,
@@ -95,12 +101,13 @@ class PrReview:
     `resolution` is the required set, or the fail-closed reason it could not
     be resolved (DEC-032 D5) — a verb checks `resolution.ok` before acting on
     the set. `author_delta` and `base_kept` are `_lib.author_delta`'s, as the
-    verb passed them in.
+    verb passed them in, and `ruled_altered` is `_lib.ruled_artefacts`'.
     """
 
     resolution: Resolution
     author_delta: Callable[..., AuthorDelta]
     base_kept: Callable[..., BaseCheck]
+    ruled_altered: Callable[..., RuledAlteration] = ruled_altered
 
     def freshness_rule(self, pr_view: Mapping) -> FreshnessRule:
         """The freshness rule for the PR at the head `pr_view` reports.
@@ -114,6 +121,7 @@ class PrReview:
             self.resolution,
             author_delta=self.author_delta,
             base_kept=self.base_kept,
+            ruled_altered=self.ruled_altered,
         )
 
 
@@ -127,6 +135,7 @@ def resolve_pr_review(
     collect_contributions: Callable[[Path], ContributionCollection],
     author_delta: Callable[..., AuthorDelta],
     base_kept: Callable[..., BaseCheck],
+    ruled_altered: Callable[..., RuledAlteration] = ruled_altered,
 ) -> PrReview:
     """Resolve PR `pr_number`'s required reviewers, with their freshness rule.
 
@@ -137,9 +146,14 @@ def resolve_pr_review(
     config. `repo_root` is the directory holding `.pkit/`, where
     `collect_contributions` finds the installed contributions.
 
-    `gh_run` and `gh_get_issue` (`_lib.gh`'s) feed the closing-issue, label
-    and changed-files fetchers; `author_delta` and `base_kept` are what the
-    freshness rule reads the author's changes and the base's history through.
+    `gh_run` and `gh_get_issue` (`_lib.gh`'s) feed the closing-issue, label,
+    changed-files and base-and-head fetchers; `author_delta` and `base_kept`
+    are what the freshness rule reads the author's changes and the base's
+    history through. `ruled_altered` (`_lib.ruled_artefacts`') reads which
+    ruled artefacts a change altered, for the `touches-ruled-artefact` floor:
+    the resolver asks it about the PR's base and head, and the freshness rule
+    about each stretch of the author's own change since a reviewed head
+    (#1386).
     """
     resolution = resolve_required_local_reviewers(
         pr_number,
@@ -151,8 +165,30 @@ def resolve_pr_review(
         opt_outs=read_opt_outs(config),
         not_code=read_not_code(config),
         collect_contributions=collect_contributions,
+        ruled_artefacts=lambda n: _ruled_artefacts(
+            n, config, gh_run=gh_run, ruled_altered=ruled_altered
+        ),
     )
-    return PrReview(resolution, author_delta=author_delta, base_kept=base_kept)
+    return PrReview(
+        resolution, author_delta=author_delta, base_kept=base_kept, ruled_altered=ruled_altered
+    )
+
+
+def _ruled_artefacts(
+    pr_number: int,
+    config: dict,
+    *,
+    gh_run: GhRunFn,
+    ruled_altered: Callable[..., RuledAlteration],
+) -> tuple[str, ...] | _Unresolvable:
+    """The artefacts PR `pr_number`'s change altered that an accepted rule
+    binds on — from where it left the base branch's head to its head — or why
+    they cannot be read (DEC-032 D1)."""
+    commits = pr_base_and_head(pr_number, config, gh_run=gh_run)
+    if isinstance(commits, _Unresolvable):
+        return commits
+    found = ruled_altered(*commits)
+    return found.locations if found.ok else _Unresolvable(found.error)
 
 
 def _baseline_local(config: Any) -> list[str]:

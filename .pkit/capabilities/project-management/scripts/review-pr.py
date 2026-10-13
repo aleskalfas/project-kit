@@ -128,6 +128,7 @@ from _lib.required_reviewers import (
     ERROR_COLLECTION,
     ERROR_NOT_CODE,
     ERROR_OPT_OUT,
+    ERROR_RULED_ARTEFACTS,
     ERROR_TOO_MANY_CHANGED_FILES,
     NOT_CODE_PATH,
     RequiredReviewersError,
@@ -135,6 +136,7 @@ from _lib.required_reviewers import (
 )
 from _lib.review_contributions import collect_contributions
 from _lib.review_opt_outs import OPT_OUT_PATH
+from _lib.ruled_artefacts import ruled_altered
 from _lib.verdict_freshness import FreshnessRule, head_sha
 
 # ---- per-agent reviewer timeout (issue #766) -------------------------
@@ -940,6 +942,7 @@ def _resolve_review(pr_number: int | None, config: dict, repo_root: Path) -> PrR
             ),
             author_delta=author_delta,
             base_kept=base_kept,
+            ruled_altered=ruled_altered,
         )
     return resolve_pr_review(
         pr_number,
@@ -950,6 +953,7 @@ def _resolve_review(pr_number: int | None, config: dict, repo_root: Path) -> PrR
         collect_contributions=collect_contributions,
         author_delta=author_delta,
         base_kept=base_kept,
+        ruled_altered=ruled_altered,
     )
 
 
@@ -1097,6 +1101,12 @@ def _resolution_error_message(resolution: Resolution) -> str:
     elif error.kind == ERROR_CHANGED_FILES:
         lines.append(f"  → {error.message}")
         lines.append("  Remediation: transient gh failure reading the PR's changed files — retry.")
+    elif error.kind == ERROR_RULED_ARTEFACTS:
+        lines.append(f"  → which ruled artefacts the PR alters cannot be read: {error.message}")
+        lines.append(
+            "  Remediation: fix what the reason names — fetch the full history, "
+            "upgrade pkit — and retry."
+        )
     else:
         lines.append(f"  → {error.message}")
         lines.append(

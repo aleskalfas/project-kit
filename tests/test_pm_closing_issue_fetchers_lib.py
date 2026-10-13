@@ -215,3 +215,32 @@ def test_changed_files_below_the_listing_ceiling_is_complete(cf) -> None:
     out = cf.pr_changed_files(7, CONFIG, gh_run=lambda *a, **k: proc)
     assert isinstance(out, list)
     assert len(out) == 2 * 2999
+
+
+# ---- pr_base_and_head (#1386) ------------------------------------------
+
+
+def test_base_and_head_are_read_from_the_pr(cf) -> None:
+    seen: list[list[str]] = []
+
+    def run(argv, _config, **_):
+        seen.append(argv)
+        return _proc(stdout=json.dumps({"baseRefOid": "b" * 40, "headRefOid": "c" * 40}))
+
+    assert cf.pr_base_and_head(7, CONFIG, gh_run=run) == ("b" * 40, "c" * 40)
+    assert seen == [["gh", "pr", "view", "7", "--json", "baseRefOid,headRefOid"]]
+
+
+@pytest.mark.parametrize(
+    ("proc", "why"),
+    [
+        (_proc(returncode=1, stderr="boom"), "failed: boom"),
+        (_proc(stdout="not json"), "malformed JSON"),
+        (_proc(stdout=json.dumps({"baseRefOid": "b" * 40})), "names no base or head"),
+        (_proc(stdout=json.dumps({"baseRefOid": "", "headRefOid": "c"})), "names no base or head"),
+        (_proc(stdout=json.dumps([])), "names no base or head"),
+    ],
+)
+def test_base_and_head_that_cannot_be_read_fail_closed(cf, proc, why) -> None:
+    out = cf.pr_base_and_head(7, CONFIG, gh_run=lambda *a, **k: proc)
+    assert _is_unresolvable(cf, out) and why in out.reason

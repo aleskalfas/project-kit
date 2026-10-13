@@ -8,8 +8,12 @@ about a PR:
   * each closing issue's labels (for the `workstream:*` / `type:*`
     classification), and
   * the PR's changed files (every page of GitHub's pull-request files API,
-    the complete path set), consulted only when a floor-carrying contribution
-    is installed (the DEC-032 diff-property floor).
+    the complete path set), consulted only when a contribution names the
+    `touches-code` floor (the DEC-032 diff-property floor read from the
+    paths), and
+  * the base branch's head and the PR's head as commits, consulted only when
+    the `touches-ruled-artefact` floor asks the backbone what the change
+    altered (#1386).
 
 The closing-issue and label fetchers were duplicated byte-for-byte in both
 consumers. The
@@ -145,8 +149,8 @@ def pr_changed_files(
       (an `_Unresolvable`): files past the ceiling are never listed, so the set
       may be incomplete, and a retry reads the same cut-short list.
 
-    The resolver only calls this when a floor-carrying contribution is
-    installed, so a floor-free project never issues this `gh` round-trip.
+    The resolver only calls this when a contribution names `touches-code`,
+    so a project without one never issues this `gh` round-trip.
     `gh_run` is injected (the consumer's `_lib.gh.gh_run`) so this module
     carries no substrate of its own; both consumers share this one definition.
     """
@@ -193,6 +197,38 @@ def pr_changed_files(
             "set cannot be read"
         )
     return paths
+
+
+def pr_base_and_head(
+    pr_number: int,
+    config: dict,
+    *,
+    gh_run: GhRunFn,
+) -> tuple[str, str] | _Unresolvable:
+    """The base branch's head and the PR's head, as commit ids (DEC-032 D1).
+
+    Feeds the `touches-ruled-artefact` floor, which asks the backbone which
+    artefacts the change from where the PR left its base to its head altered.
+    Read for every PR while a contribution names that floor. Fail-closed as
+    the other fetchers: a failed `gh` call, malformed JSON, or either commit
+    missing from the payload is `_Unresolvable`, never a guess.
+    """
+    proc = gh_run(
+        ["gh", "pr", "view", str(pr_number), "--json", "baseRefOid,headRefOid"],
+        config,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return _Unresolvable(f"gh pr view baseRefOid,headRefOid failed: {proc.stderr.strip()}")
+    try:
+        data = json.loads(proc.stdout)
+    except (ValueError, json.JSONDecodeError):
+        return _Unresolvable("gh pr view baseRefOid,headRefOid returned malformed JSON")
+    base = data.get("baseRefOid") if isinstance(data, dict) else None
+    head = data.get("headRefOid") if isinstance(data, dict) else None
+    if not (isinstance(base, str) and base and isinstance(head, str) and head):
+        return _Unresolvable("gh pr view payload names no base or head commit")
+    return base, head
 
 
 def issue_labels(
