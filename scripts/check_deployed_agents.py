@@ -18,6 +18,10 @@ A finding names the agent and one of four things:
 - the deploy removes a tracked copy, as its agent no longer ships;
 - the deploy skips the agent, for the reason it prints.
 
+The first three are fixed by running the deploy and committing its copies. A
+skipped agent is not: the finding carries the remediation the deploy prints
+under its `skipped` line.
+
 From the repository root:
 
     uv run python scripts/check_deployed_agents.py
@@ -48,8 +52,10 @@ DEPLOY = ".pkit/adapters/claude-code/deploy-agents.sh"
 #: The tracked trees the deploy reads and writes.
 TRACKED = (".pkit", AGENTS)
 
-#: A status line in which the deploy says it skipped an agent.
-SKIPPED = re.compile(r"^\s*skipped\s+(?P<what>\S.*)$")
+#: A status line in which the deploy says it skipped an agent. The deploy
+#: indents a status line by two spaces, and the remediation under it by more.
+SKIPPED = re.compile(r"^  skipped\s+(?P<what>\S.*)$")
+REMEDIATION = "   "
 
 #: The most lines of a copy's diff a finding shows.
 DIFF_LINES = 40
@@ -61,11 +67,16 @@ class CheckError(Exception):
 
 @dataclass(frozen=True)
 class Finding:
-    """One agent whose tracked copy is not what the deploy writes."""
+    """One agent whose tracked copy is not what the deploy writes.
+
+    `detail` is the copy's diff, or the remediation the deploy prints for an
+    agent it skips. A skipped agent is the one finding the deploy cannot fix.
+    """
 
     agent: str
     problem: str
-    diff: tuple[str, ...] = ()
+    detail: tuple[str, ...] = ()
+    skipped: bool = False
 
 
 def _run(args: Sequence[str], cwd: Path, stdin: bytes | None = None) -> bytes:
@@ -135,10 +146,17 @@ def compare(tracked: dict[str, bytes], deployed: dict[str, bytes], output: str) 
         elif tracked[agent] != deployed[agent]:
             problem = f"{path} is not what the deploy writes from its source"
             findings.append(Finding(agent, problem, _diff(agent, tracked[agent], deployed[agent])))
-    for line in output.splitlines():
+    lines = output.splitlines()
+    for index, line in enumerate(lines):
         if match := SKIPPED.match(line):
             what = match["what"]
-            findings.append(Finding(_skipped_agent(what), f"the deploy skips it: {what}"))
+            remedy: list[str] = []
+            for after in lines[index + 1 :]:
+                if not after.startswith(REMEDIATION):
+                    break
+                remedy.append(after.strip())
+            problem = f"the deploy skips it: {what}"
+            findings.append(Finding(_skipped_agent(what), problem, tuple(remedy), skipped=True))
     return findings
 
 
@@ -158,8 +176,14 @@ def render(count: int, findings: Sequence[Finding]) -> str:
     lines = [f"deployed agents: {len(findings)} finding(s) in the tracked copies"]
     for finding in findings:
         lines.append(f"- {finding.agent}: {finding.problem}")
-        lines.extend(f"    {line}" for line in finding.diff)
-    lines.append(f"To fix: run {DEPLOY}, then commit what it changes in {AGENTS}/.")
+        lines.extend(f"    {line}" for line in finding.detail)
+    if any(not finding.skipped for finding in findings):
+        lines.append(f"To fix a copy: run {DEPLOY}, then commit what it changes in {AGENTS}/.")
+    if any(finding.skipped for finding in findings):
+        lines.append(
+            "To fix a skipped agent: follow the deploy's remediation under it,"
+            f" then run {DEPLOY} and commit what it changes in {AGENTS}/."
+        )
     return "\n".join(lines) + "\n"
 
 

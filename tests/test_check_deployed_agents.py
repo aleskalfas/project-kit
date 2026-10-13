@@ -91,7 +91,9 @@ def test_a_copy_left_behind_its_source_fails_naming_the_agent_and_the_fix(
     assert code == 1, out
     assert f"- {AGENT}: {COPY} is not what the deploy writes from its source" in out
     assert "-Says one thing." in out and "+Says another thing." in out
-    assert f"To fix: run {cda.DEPLOY}, then commit what it changes in .claude/agents/." in out
+    fix = f"To fix a copy: run {cda.DEPLOY}, then commit what it changes in .claude/agents/."
+    assert fix in out
+    assert "To fix a skipped agent" not in out
 
 
 def test_a_copy_redeployed_only_in_the_working_tree_still_fails(
@@ -143,8 +145,13 @@ def test_a_tracked_copy_whose_agent_no_longer_ships_fails(
     assert f"- {AGENT}: the deploy removes {COPY}, as its agent no longer ships" in out
 
 
-def test_an_agent_the_deploy_skips_fails(repo: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """An agent with an overlay category the project does not define deploys nothing."""
+def test_an_agent_the_deploy_skips_fails_with_the_deploys_remediation(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An agent with an overlay category the project does not define deploys nothing.
+
+    Running the deploy again skips it again, so the finding carries the
+    remediation the deploy prints, not only the command that fixes a copy."""
     source = repo / ".pkit" / "agents" / "core" / "gapped" / "gapped.md"
     source.parent.mkdir(parents=True)
     source.write_text(
@@ -156,6 +163,9 @@ def test_an_agent_the_deploy_skips_fails(repo: Path, capsys: pytest.CaptureFixtu
     code, out = _run(repo, capsys)
     assert code == 1, out
     assert "- gapped: the deploy skips it: gapped — " in out
+    assert "    Deploy it:  pkit agents adopt gapped\n" in out
+    assert "To fix a skipped agent: follow the deploy's remediation under it" in out
+    assert "To fix a copy" not in out
 
 
 def test_a_repository_that_tracks_no_kit_cannot_be_checked(
