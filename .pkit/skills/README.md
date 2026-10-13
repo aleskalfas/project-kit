@@ -32,7 +32,7 @@ Per COR-015, a skill takes one of two forms:
 │   └── <skill-name>/                     # folder form: skill with sibling helpers
 │       ├── <skill-name>.md               #   canonical file (name matches the folder)
 │       └── (supporting files)            #   templates, scripts, reference fragments
-└── project/                              # adopter-authored skills (extension; never touched by sync)
+└── project/                              # adopter-authored skills (extension; sync reads them, never writes them)
     ├── <skill-name>.md
     └── <skill-name>/
         ├── <skill-name>.md
