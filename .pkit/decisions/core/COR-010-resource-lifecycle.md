@@ -77,9 +77,9 @@ A whole-methodology upgrade is a version transition (COR-059). It cannot proceed
 A transition's order — compatibility and collision resolution → the target recorded → propagation → backbone migrations → component migrations → derivable state regenerated → the completion recorded — is set by the lifecycle spec.
 
 - **Derivable state that a migration reads,** such as a rendered ignore file, is also regenerated right after propagation, so the migration reads the target's.
-- **Each component's recorded version** moves when that component's migrations finish.
-- **A project is at a version only when its recorded target and its recorded completion both name it.** A transition that stops before its completion never reads as finished, and the next transition finishes it (COR-059 point 6).
-- **A transition of one component** follows the same order for that component, without the backbone's two recorded states. It gates on the same compatibility check, and records its version when its migrations finish.
+- **Each shipped component's recorded version** moves to the version the target ships when that component's migrations finish.
+- **A project is at a version only when its recorded target and its recorded completion both name it.** A transition that stops before its completion never reads as finished, and the next transition of the backbone finishes it (COR-059 point 6).
+- **A transition of one shipped component** follows the same order for that component, without the backbone's two recorded states. It gates on the same compatibility check, and records its version when its migrations finish.
 
 ### Migrations are mandatory on adopter-breaking surface changes
 
@@ -95,9 +95,9 @@ Pure additions don't trigger migration: a new skill, a new schema, a new decisio
 
 The rule applies symmetrically across tiers: backbone surface changes ship backbone migrations; bundle surface changes ship bundle migrations; adapter and capability surface changes ship their tier's migrations. The migration is idempotent (already-applied state is a no-op) so adopters can re-run safely.
 
-A backbone migration is also safe over any state. It acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown (COR-059 point 6). A missing default the migration adds counts as such a sign. So running it again may restore a default the project removed after it first ran, and the release's notes say so.
+A backbone migration is also safe over any state. It acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown (COR-059 point 6). A missing default the migration adds counts as a positive sign. So running it again may restore a default the project removed after it first ran, and the release's notes say so.
 
-This couples surface changes to migration coverage: the version bump (per the project's version-bump policy) and the migration land together, not in separate PRs. A transition's order assumes every adopter-breaking change has a migration to run; merging surface changes without one leaves adopters with state the upgrade flow can't bridge.
+This couples surface changes to migration coverage: the version bump (per the project's version-bump policy) and the migration land together, not in separate PRs. A transition's order assumes every adopter-breaking change has a migration to run; merging surface changes without one leaves adopters with state a transition can't bridge.
 
 ## Rationale
 

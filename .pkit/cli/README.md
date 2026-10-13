@@ -238,7 +238,7 @@ If you arrive at a partial or broken state, run `validate` to see what is and is
 
 ### `sync`
 
-Re-runs propagation. Pulls current canonical core content into your project's `.pkit/` tree, and runs the adapter's merge delivery without its prompt-once tier (COR-002 and COR-004). For Claude Code that merges `.claude/settings.json` and `CLAUDE.md`, adding the kit's entries and asking nothing. Idempotent: re-running with no changes pending reports "current" and exits cleanly.
+Re-runs propagation. Pulls current canonical core content into your project's `.pkit/` tree, and runs the adapter's merge delivery without its prompt-once tier (COR-002 and COR-059 point 2). For Claude Code that merges `.claude/settings.json` and `CLAUDE.md`, adding the kit's entries and asking nothing. Idempotent: re-running with no changes pending reports "current" and exits cleanly.
 
 **Agent workspace.** Sync runs the same workspace step as `init` (step 4 above) — self-host included — so a project installed before the workspace existed, or one whose folder or exclude entry has gone missing, gets them back. It creates only what is missing and reports each part `unchanged` otherwise.
 

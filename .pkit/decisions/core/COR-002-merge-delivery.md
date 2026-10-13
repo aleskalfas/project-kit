@@ -53,7 +53,7 @@ And performs:
   - First install, as part of the install flow alongside seeding and propagation.
   - Manually on demand, via a CLI gesture (name TBD with the rest of the CLI surface).
   - During upgrade flows, when the baseline source has grown. An upgrade is a version transition (COR-059).
-  - On every sync, without its prompt-once tier. It adds each missing entry the core layer contributes and restores the safety entries. It reads the baseline at the version the project records and the project's own declarations (COR-059 point 2).
+  - On every sync, without its prompt-once tier. It adds each missing auto-add entry the core layer contributes and restores the safety entries. It reads content at the versions the project records, components' contributions included, and the project's own declarations (COR-059 point 2).
 - The prompt-once tier runs only where a person can answer: at first install, on demand and in an upgrade flow. With nobody to answer, it writes nothing.
 
 ### Per-format adapters

@@ -92,7 +92,7 @@ Open the stamped script and replace the TODO body with the actual change. Three 
   # ... apply ...
   ```
 
-- **Safe over any state, for a backbone migration** — it acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown. So the script must be safe over any state: one that never needed it, and one the project changed after it first ran. A missing default it adds counts as such a sign. If it adds a missing default, say in the release's notes that running it again may restore a default the project removed after it first ran.
+- **Safe over any state, for a backbone migration** — it acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown. A missing default the migration adds counts as a positive sign. So running it again may restore a default the project removed after it first ran. If the script adds a missing default, say so in the release's notes.
 
 - **Updates the affected resource.** For derivable resources (files in the core content directory, labels on a tracker), the migration mutates the resource directly — no manifest update. For non-derivable resources (opaque backend IDs in `backend_state`), the migration updates the manifest entry.
 
