@@ -53,7 +53,7 @@ pkit:
         - src/project_kit/document_parts.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064]
     revalidated:
-      at: 2026-10-13T11:59:31Z
+      at: 2026-10-13T12:05:58Z
       outcome: updated
 ---
 
@@ -1291,7 +1291,7 @@ Which accepted rules bind on an artefact ([COR-051](../decisions/core/COR-051-ru
 
 **The rules that bind on each artefact, at one state.** The working tree by default, the files git sees. With `--at <rev>`, one commit, read from git objects as `friction artefacts --at` reads it: its configuration, its rule sets and its artefacts. Nothing is checked out.
 
-- Without `--json`, each artefact on which a rule binds, then each rule as cited, its set, the extension points it fills, the sets whose scope it binds through, and the parts of it checks enforce, each marked when its check is not there. A conflict between routes, and each rule a pin behind its set holds back, are listed under its artefact.
+- Without `--json`, each artefact on which a rule binds, whose routes conflict, or from which a pin behind its set holds a rule back, then each rule as cited, its set, the extension points it fills, the sets whose scope it binds through, and the parts of it checks enforce, each marked when its check is not there. A conflict between routes, and each rule a pin behind its set holds back, are listed under its artefact.
 - With `--json`, one stable document, keys sorted:
   - `schema_version` — `1`, under the rule every reading document follows (above).
   - `commit` — the commit read, or `null` for the working tree.
