@@ -13,9 +13,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-13T04:27:19Z
+      at: 2026-10-13T05:50:52Z
       outcome: unchanged
-      unchanged-because: The page says pkit init, pkit sync and pkit merge run merge-settings.sh and merge-claude-md.sh, which only add entries and put back the safety denies, and it describes no prompting tier. COR-002 now lists every sync among the points where merge runs, without its prompt-once tier, which is what the page says.
+      unchanged-because: "COR-002's change rewrites only its seeding sentences: a seed is written at first install, a transition of the backbone creates a missing seed path, sync creates no seed path, and seeding never revisits a seed that exists. The page describes merge-settings.sh and merge-claude-md.sh as merge delivery under COR-002, the second creating CLAUDE.md where it is missing, and describes no seed, so it holds."
 ---
 
 # Claude Code adapter
