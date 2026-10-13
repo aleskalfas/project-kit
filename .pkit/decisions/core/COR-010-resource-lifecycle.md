@@ -31,7 +31,7 @@ The backbone is the cohesive core: decisions, rules, the workflow-framework cont
 
 Both tiers use semantic versioning (`major.minor.patch`). Components express compatibility via `requires_backbone: ">=X.Y.Z, <W.0.0"` recorded in their per-component manifest. Patch-level releases (the third segment) are backward-compatible bug fixes by semver convention and do not have migrations — migration directories are named with the full three-segment target version, with patch always `0` (e.g., `2.1.0/`), and cover all patches within that minor line.
 
-A backbone change affects every adopter (the methodology itself moved); a component change might only affect adopters who installed that component. Independent versioning lets bundle / adapter authors release without bumping the whole methodology, and lets adopters upgrade selectively, with the semver range catching incompatibilities at upgrade time.
+A backbone change affects every adopter (the methodology itself moved); a component change might only affect adopters who installed that component. Independent versioning lets bundle / adapter authors release without bumping the whole methodology, with the semver range catching incompatibilities at upgrade time. A project moves a component the methodology ships together with the release that ships it, or alone to the version its recorded release ships. Selective movement remains for an externally-sourced component, which moves by its pin (COR-041, COR-059).
 
 **The dependency direction cannot invert.** A component declares its dependency *on* the backbone; the reverse must never hold. A component — and especially an opt-in one such as a capability — must not govern a process the backbone depends on for its own existence. Any process the backbone needs in order to exist, evolve, or ship — cutting the backbone's own releases is the archetype — belongs to the backbone tier. Locating it in a component would make the always-present core depend on an optional, independently-versioned piece, inverting the two-tier direction and breaking for any adopter who never installed that component. This is the discriminator when a responsibility is ambiguous ("is this the backbone's, or a component's?"): if the backbone's own existence depends on it, it is backbone.
 
@@ -72,7 +72,7 @@ Migrations are versioned (tied to a specific tier-and-version transition), idemp
 
 ### Cross-tier upgrade requires explicit compatibility resolution
 
-A whole-methodology upgrade is a version transition (COR-059). It cannot proceed past a component's `requires_backbone` range. Before applying any migrations, the upgrade command resolves compatibility across all installed components and either succeeds (every component is compatible with the target backbone, possibly after upgrading some components) or refuses with a surfaced conflict for the adopter to address.
+A whole-methodology upgrade is a version transition (COR-059). It cannot proceed past a component's `requires_backbone` range. Before applying any migrations, the upgrade command resolves compatibility across all installed components and either succeeds (every component, at the version the transition leaves it, is compatible with the target backbone) or refuses with a surfaced conflict for the adopter to address.
 
 A transition's order — compatibility resolution → the target recorded → propagation → backbone migrations → component migrations → derivable state regenerated → the completion recorded — is set by the lifecycle spec.
 
