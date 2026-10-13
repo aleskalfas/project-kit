@@ -81,6 +81,10 @@ PROJECT_MANAGEMENT = REPO / ".pkit" / "capabilities" / "project-management"
 EVIDENCE_FILLER = "tech-docs/pkit/fillers/pkit/analysis/revalidation-evidence.yaml"
 RECORD = "tech-docs/analysis/revalidations/2026-10-01-first-run.md"
 
+#: The user space's definition, in living-docs' definitions location under the internal
+#: root `tech-docs/`.
+DEFINITION = "tech-docs/living-docs/rule-sets/user.md"
+
 #: Commits by their full names, as the evidence point writes them.
 SHA = "78981922613b2afb6025042ff6bd878ac1994e85"
 OTHER = "d670460b4b4aece5915caf5c68d12f560a9fe3e4"
@@ -105,11 +109,26 @@ def seeded(
 @pytest.fixture
 def documented(project: AdopterRepo) -> AdopterRepo:
     """The adopter with living-docs installed beside it, its validator under this
-    interpreter: a provider of the documentation role."""
+    interpreter: a provider of the documentation role. The user space's definition
+    inherits LDOC and is scoped to the user root's pages, so RS-LDOC-003 binds on them
+    and their readers are checked (living-docs DEC-001 points 2 and 3)."""
     project.install_capabilities("living-docs")
     path = project.root / LD / "scripts" / "validate.py"
     body = path.read_text(encoding="utf-8").split("\n", 1)[1]
     path.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
+    project.write(
+        {
+            f"{LD.as_posix()}/project/config.yaml": (
+                "pkit_schema: living-docs:config\nschema_version: 1\n"
+                f"spaces:\n  user:\n    definition: {DEFINITION}\n"
+            ),
+            DEFINITION: (
+                "---\nrule-set: USER\nversion: 1.0.0\ninherits: [living-docs:LDOC@1]\n"
+                "scope: {paths: [docs/**], types: [living-docs:page]}\nrules: {}\n---\n\n"
+                "# The user space's definition\n"
+            ),
+        }
+    )
     return project
 
 
