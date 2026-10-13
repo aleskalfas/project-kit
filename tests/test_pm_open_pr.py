@@ -541,6 +541,68 @@ def test_open_pr_never_refuses_over_the_list(op, monkeypatch, capsys, how, warni
     assert f"{PLAN} not listed (the warning above says why)" in out.out
 
 
+#: The supplied body's own section where the author says what changed in each
+#: document the change revalidated as `updated` (DEC-055 point 1).
+SAID = (
+    "Closes #42\n\n## Summary\nx\n\n## What changed in each updated document\n\n"
+    "- `docs/guide.md`: The guide now names the renamed flag.\n\n## Doc impact\n- none\n"
+)
+UPDATED = (
+    _answer("docs/guide.md", None, answer="updated"),
+    _answer("docs/api.md", None, answer="updated"),
+    _answer("docs/cli.md", "Holds."),
+)
+
+
+def test_the_list_gives_each_updated_document_its_author_s_sentence(
+    op, monkeypatch, tmp_path, capsys
+) -> None:
+    """The sentences are read from the body's own section and given beside each
+    updated document; one with none is listed as having none, with a warning."""
+    body_file = tmp_path / "body.md"
+    body_file.write_text(SAID, encoding="utf-8")
+    captured = _open(op, monkeypatch, derived=_derived(op, *UPDATED), body_file=body_file)
+    assert op.main() == 3
+    body = captured["body"]
+    sentences = {"docs/guide.md": "The guide now names the renamed flag."}
+    section = op.friction_answers.render(_derived(op, *UPDATED).document, PUSHED, (), sentences)
+    assert section is not None and f"\n\n{section}\n\n{FOOTER_START}" in body
+    assert body.startswith(SAID.rstrip("\n"))  # the author's section stays where it was
+    assert (
+        "   - (what changed, in the words of the pull request's author: \"``The guide now names "
+        'the renamed flag.``")'
+    ) in body
+    assert "   - (what changed: the pull request's author has not said)" in body
+    err = capsys.readouterr().err
+    assert (
+        "warn: 1 updated document(s) with no sentence on what changed under `## What changed in "
+        "each updated document`: docs/api.md — the list says so"
+    ) in err
+
+
+@pytest.mark.parametrize(
+    ("sentence", "warning"),
+    [
+        ("This fixes #7.", "reads as a closing reference (fixes #7)"),
+        ("Ends -->", "holds an HTML comment's delimiter (-->)"),
+    ],
+)
+def test_a_sentence_the_list_must_not_hold_leaves_the_list_out(
+    op, monkeypatch, tmp_path, capsys, sentence, warning
+) -> None:
+    body_file = tmp_path / "body.md"
+    body_file.write_text(SAID.replace("The guide now names the renamed flag.", sentence))
+    captured = _open(op, monkeypatch, derived=_derived(op, *UPDATED), body_file=body_file)
+    assert op.main() == 3  # opened all the same
+    assert HEADING not in captured["body"]
+    (line,) = [
+        ln
+        for ln in capsys.readouterr().err.splitlines()
+        if ln.startswith("warn: documents this change affects not listed — ")
+    ]
+    assert f"the sentence on what changed in docs/guide.md {warning}" in line
+
+
 def test_the_pushed_head_is_the_remote_tracking_reference_not_local_head(
     op, monkeypatch, tmp_path
 ) -> None:

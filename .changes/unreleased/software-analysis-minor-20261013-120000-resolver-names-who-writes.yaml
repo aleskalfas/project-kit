@@ -1,0 +1,15 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Changed
+body: >
+  The `analysis-resolver` agent no longer says that every answer an artefact
+  carries is a person's decision. It makes no change of its own, so no answer
+  it proposes is one its own change owes: the agent making a change may
+  write an answer that change owes, checked by a reviewer where the project
+  chose one, and a person decides every other, and every reason for having
+  no anchors (COR-050 point 3). It still runs no writer and hands
+  the commands over. For an artefact whose outcome is recorded as `updated`,
+  its proposal now drafts the one sentence on what changed in it, which
+  whoever records it gives with the change. Its storyboard and the capability
+  README say the same.

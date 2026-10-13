@@ -51,8 +51,9 @@ pkit:
         - src/project_kit/rule_set_reading.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, COR-055, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064]
     revalidated:
-      at: 2026-10-13T00:07:46Z
-      outcome: updated
+      at: 2026-10-13T01:02:55Z
+      outcome: unchanged
+      unchanged-because: The writers' refusal now says, as this page already does, that an answer on an artefact may be a person's decision (COR-050 point 3), where it said an answer is written on a person's decision. It still names the dry run and prints no ready-made --yes command, so the page's account of the consent rule holds.
 ---
 
 # Command-line interface

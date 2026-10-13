@@ -33,13 +33,17 @@ Inputs:
     alters, in plain words, derived at the pushed head (the commit the
     branch's remote-tracking reference names, not local HEAD) against the
     PR's base, named to the check, and placed last before the provenance
-    footer. A section the supplied body carries — written by a command or
-    typed by hand, under that heading or the one an earlier run wrote — is
-    dropped, with a warning. open-pr never refuses to open over it: a list
-    it cannot derive, a branch not pushed, a word that reads as a closing
-    reference or holds an HTML comment's delimiter, or a body it would make
-    too long leaves the section out with one warning line, and land-work
-    writes it or says why it cannot.
+    footer. Each `updated` document carries the sentence on what changed in
+    it that the change's author wrote under the body's own `## What changed
+    in each updated document` section — one list item per document, the
+    document in a code span as the list names it — or says there is none,
+    with a warning naming it. A section the supplied body carries — written
+    by a command or typed by hand, under that heading or the one an earlier
+    run wrote — is dropped, with a warning. open-pr never refuses to open
+    over it: a list it cannot derive, a branch not pushed, a word or a
+    sentence that reads as a closing reference or holds an HTML comment's
+    delimiter, or a body it would make too long leaves the section out with
+    one warning line, and land-work writes it or says why it cannot.
   * `--doc-impact-from-friction` (opt-in) — fill an unwritten `## Doc
     impact` (the template's placeholder, empty, or absent) with one line
     counting the documents listed under `## Documentation this change
@@ -353,7 +357,8 @@ def main() -> int:
         )
     body = friction_answers.strip(body)
     versions = provenance.read_versions(capability_root)
-    answers = _fitting(body, _friction_answers(branch, base), versions)
+    sentences = friction_answers.sentences(body)
+    answers = _fitting(body, _friction_answers(branch, base, sentences), versions)
     doc_impact_note = None
     if args.doc_impact_from_friction:
         body, doc_impact_note = _prefill_doc_impact(body, answers)
@@ -572,10 +577,11 @@ class _Answers:
     count: int = 0
 
 
-def _friction_answers(branch: str, base: str) -> _Answers:
+def _friction_answers(branch: str, base: str, sentences: Mapping[str, str]) -> _Answers:
     """The change check's list of the answers the change wrote, and the friction
     settings it alters, derived at the pushed head against the PR's base — named
-    always, so `$PKIT_CHECK_BASE` never changes it. Never refuses: a list that
+    always, so `$PKIT_CHECK_BASE` never changes it — each `updated` document
+    with its author's sentence from `sentences`. Never refuses: a list that
     cannot be written is left out with one warning line, and land-work writes it
     or says why it cannot (DEC-055)."""
     head, why = _pushed_head(branch)
@@ -604,7 +610,34 @@ def _friction_answers(branch: str, base: str) -> _Answers:
                 f"the words on {location} {why.format(words=words)} — reword them there"
             )
             return _Answers(None, left.note, derived.document, count)
-    section = friction_answers.render(derived.document, head, settings)
+    given = friction_answers.given(derived.document, sentences)
+    for found, why in (
+        (
+            friction_answers.sentence_closing_reference(given),
+            "reads as a closing reference ({words}), which would close an issue at merge",
+        ),
+        (
+            friction_answers.sentence_comment_delimiter(given),
+            "holds an HTML comment's delimiter ({words}), which could hide the list",
+        ),
+    ):
+        if found is not None:
+            location, words = found
+            left = _left_out(
+                f"the sentence on what changed in {location} {why.format(words=words)} — "
+                f"reword it under `{friction_answers.SENTENCES_HEADING}`"
+            )
+            return _Answers(None, left.note, derived.document, count)
+    unsaid = friction_answers.unsaid(derived.document, given)
+    if unsaid:
+        print(
+            f"warn: {len(unsaid)} updated document(s) with no sentence on what changed under "
+            f"`{friction_answers.SENTENCES_HEADING}`: {', '.join(unsaid)} — the list says so; "
+            "add a list item there for each, naming the document in a code span, then the "
+            "sentence",
+            file=sys.stderr,
+        )
+    section = friction_answers.render(derived.document, head, settings, given)
     listed = friction_answers.affected(count, settings=bool(settings))
     return _Answers(
         section,

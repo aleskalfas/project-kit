@@ -12,9 +12,8 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-12T21:25:37Z
-      outcome: unchanged
-      unchanged-because: COR-052's refinement tells a required capability dependency, which forces an install, from an optional one, which names a single capability, in its Context, one rationale paragraph and one alternative; no point changes. This page relies on COR-052 point 6 for its fillers' fail-closed and fallback answers, and says the capability depends on no other, so it holds.
+      at: 2026-10-13T01:02:49Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
@@ -345,7 +344,7 @@ The checks say *that* an artefact may no longer be true. Deciding what the chang
 
 For each flagged artefact, upstream first, it reads `pkit friction explain`, the commits behind the changed anchor and the change's context — the commit messages, the pull request or work item — and proposes an outcome with its evidence, each quote it read beside its source and whether it was found there.
 
-- **It runs none of the commands.** The proposal lists, per artefact, what you do first — an edit, a defect to report — and the writer commands word for word: `pkit friction revalidate` for the outcome, `pkit friction defer` for what you would rather postpone, and `pkit analysis new revalidation` for a record when there is something to say. None carries `--yes`: the friction writers each ask you once, and the record stamp has no prompt and writes what its command line says. Where the words are yours alone — the defect's reference, your name — a placeholder stands, and the writers refuse it until you fill it. Whether an agent may run a friction writer is set out in the agents README, "Friction writers" (COR-050 point 3): this agent is given no tool for asking you, so it hands the commands over in every session. An agent making the change may run them for the answers its own change owes; the record stamp and the defect's reference stay yours.
+- **It runs none of the commands.** The proposal lists, per artefact, what you do first — an edit, a defect to report — and the writer commands word for word: `pkit friction revalidate` for the outcome, `pkit friction defer` for what you would rather postpone, and `pkit analysis new revalidation` for a record when there is something to say. None carries `--yes`: the friction writers each ask you once, and the record stamp has no prompt and writes what its command line says. Where the words are yours alone — the defect's reference, your name — a placeholder stands, and the writers refuse it until you fill it. Whether an agent may run a friction writer is set out in the agents README, "Friction writers" (COR-050 point 3): this agent is given no tool for asking you, so it hands the commands over in every session. An agent making the change may run them for the answers its own change owes; the record stamp and the defect's reference stay yours. For an artefact recorded as `updated`, the proposal drafts the one sentence on what changed in it, which whoever records it gives with the change.
 - **It never rewrites an artefact.** It has no edit tool and writes only in the agent workspace: an artefact's edit is a diff there, which you apply.
 - **It asks where it can't tell stale from regressed.** That artefact, the artefacts downstream of it through the cascade and the record carry the question instead of commands — what disagrees, the commit, and the two readings; every other artefact gets its commands. Your answer is the quote it proposes from next.
 - **Not for** another component's artefacts, writing new analysis (the skill's), reviewing a change, planned revalidations or onboarding, or running the software.

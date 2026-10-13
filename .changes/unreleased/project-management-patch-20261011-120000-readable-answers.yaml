@@ -14,4 +14,4 @@ body: >
   `at` written back and a deferral put back included. A backbone whose check
   names no changed anchors still gives a list, without them. A list written
   before this release differs from the one `land-work` derives, so
-  `land-work` writes it again and stops at `ready:` once.
+  `land-work` writes it again.
