@@ -282,7 +282,7 @@ It exits non-zero, writes nothing, and **nothing overrides it**. Its message nam
 5. **Pinned, the content behind the pin, the pin's own code running:** `pkit upgrade`, which brings the content up to the pin.
 6. **Not pinned, the running pkit newer than the content:** to move, `pkit upgrade`, which pins the project by default (`--no-pin` keeps it unpinned) and at a terminal may first update the pkit tool (`--no-self-update` declines). To stay, `pkit pin`, which pins the project at its content's version, so the router runs that version. In a pipeline, see below.
 
-A pinned project whose content the running pkit is newer than, where the run is not the pin's code — routing bypassed with `PKIT_NO_ROUTE=1`, say — is told to run it at the pin, through the router or `uvx`, or to move with `pkit upgrade`.
+A pinned project whose content the running pkit is newer than, where the run is not the pin's code — routing bypassed with `PKIT_NO_ROUTE=1`, say — is told to run it at the pin, through the router or `uvx`, or to move with `pkit upgrade`. Where that pin is no version, it is told to stay with `pkit pin`, which pins the project at its content's version, or to move with `pkit upgrade`.
 
 An older or another pkit is a normal state, not a defect: a pin raise leaves the installed tool where it was, and when the router cannot fetch a project's pin it runs the installed tool instead, saying so on stderr once per command. The router's fallback only chooses the message: sync stops under it only where the guard finds a mismatch. Read-only commands run normally under any pkit. Only an unambiguous order is compared: a pin that is not a version stops nothing.
 
