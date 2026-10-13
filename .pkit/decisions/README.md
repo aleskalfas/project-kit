@@ -217,7 +217,7 @@ A renumbered point misleads every citation of it, and a record's state alone can
   - in a record the change converts, a point whose id differs from the bold number or label that opened it
   - a point added to a record in list form, or a new record in list form. You may keep the list under the refining rule above, or convert the record to point headings by hand first, so every number stays.
 - **Each finding names the record and the id,** as `<file>#<id>`, or `<file>` for a record id. The command exits 1 on an error and 0 on warnings alone.
-- **Two changes that take one number:** the first to land keeps it. The other moves its point, or its record, to the next unused number, which the finding names. A point the default branch holds under that id with the change's title or text, or a record it holds at the change's own path, is the change's own work landed, such as a parent branch's, and is no clash.
+- **Two changes that take one number:** the first to land keeps it. The other moves its point, or its record, to the next unused number, which the finding names. A point the default branch holds under that id with the change's very text, or a record it holds at the change's own path, is the change's own work landed, such as a parent branch's, and is no clash. A parent's point edited since fails, and merging the default branch in clears it.
 
 ## Adding a record
 

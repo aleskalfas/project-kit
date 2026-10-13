@@ -473,14 +473,26 @@ def test_a_parents_point_landed_on_the_default_branch_is_no_clash(repo: GitRepo)
     assert _found(repo) == []
 
 
-def test_a_parents_point_edited_since_it_landed_is_no_clash(repo: GitRepo) -> None:
-    """The tip holds the parent's point under its title, with text edited since on
-    either side: still this change's own work, landed."""
+def test_a_parents_point_edited_since_it_landed_fails_saying_to_merge_the_base_in(
+    repo: GitRepo,
+) -> None:
+    """Only the very text marks a landed point as this change's own work: a title alone
+    could be another change's point. Merging the default branch in clears it."""
     _branch(repo, {RECORD: _record(_points("1", "2"))})
     _land(repo, {RECORD: _record(_points("1", "2") + _point("3", text="Edited on main"))})
     repo.write({RECORD: _record(_points("1", "2") + _point("3", text="Edited here"))})
 
-    assert _found(repo) == []
+    assert _found(repo) == [("error", f"{RECORD}#3")]
+    assert "merge main in instead" in _messages(repo)[0]
+
+
+def test_another_changes_point_under_the_same_id_and_title_fails(repo: GitRepo) -> None:
+    _branch(repo, {RECORD: _record(_points("1", "2"))})
+    _land(repo, {RECORD: _record(_points("1", "2") + _point("3", title="Scope", text="Theirs"))})
+    ours = _point("1") + _point("3", title="Scope", text="Ours") + _point("2")
+    repo.write({RECORD: _record(ours)})
+
+    assert _found(repo) == [("error", f"{RECORD}#3")]
 
 
 def test_a_record_id_the_default_branch_took_meanwhile_fails(repo: GitRepo) -> None:

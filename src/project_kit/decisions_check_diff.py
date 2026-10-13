@@ -54,8 +54,8 @@ in a refused form that the change adds.
   its numbered item showed at the branch point
 - a point id another change took on the default branch since the branch point,
   in the same record, that the change takes too. A point the tip holds under
-  that id with the head's title or its very text is this change's own work
-  landed, as a stacked branch's parent is, and is no clash.
+  that id with the head's very text is this change's own work landed, as a
+  stacked branch's parent is, and is no clash.
 - a record id another change took on the default branch since the branch
   point, for a record the change adds at another path
 
@@ -596,9 +596,10 @@ def _taken_points(
     this record, that the change takes too. A record in list form at the head meets only
     the warning on list form, so it is not read here.
 
-    A point the tip holds under that id with the head's title or its very text is this
-    change's own work, landed: a parent branch's point, squash-merged while this branch
-    was stacked on it, and perhaps edited since on either side. It is no clash."""
+    A point the tip holds under that id with the head's very text is this change's own
+    work, landed: a parent branch's point, squash-merged while this branch was stacked
+    on it. It is no clash. A parent's point edited since on either side fails, and the
+    finding says to merge the default branch in, which moves the branch point past it."""
     head = record.points
     if tip is None or not _headed(head):
         return
@@ -610,9 +611,7 @@ def _taken_points(
         if (
             ours is not None
             and theirs is not None
-            and (
-                ours.title == theirs.title or head.point_text(ours) == tip.points.point_text(theirs)
-            )
+            and head.point_text(ours) == tip.points.point_text(theirs)
         ):
             continue  # this change's own work, landed
         unused = decisions_validate.next_unused(_held(tip.points) | _held(head), point_id)
