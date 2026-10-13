@@ -1,5 +1,5 @@
 component: software-analysis
-kind: patch
+kind: minor
 custom:
   category: Changed
 body: >
