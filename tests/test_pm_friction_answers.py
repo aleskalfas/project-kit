@@ -1077,6 +1077,45 @@ def test_the_sentences_are_read_from_the_author_s_section(fa: ModuleType) -> Non
     assert fa.sentences(BODY) == {}
 
 
+@pytest.mark.parametrize(
+    ("lines", "read"),
+    [
+        # A numbered item is a list item too.
+        (["1. `docs/a.md`: Numbered."], {"docs/a.md": "Numbered."}),
+        # A line that starts with `#` but is no heading runs the item on.
+        (
+            ["- `docs/a.md`: Rewrote the intro, as", "#123 asked."],
+            {"docs/a.md": "Rewrote the intro, as #123 asked."},
+        ),
+        # A nested item is no sentence, and ends the one above it.
+        (
+            ["- `docs/a.md`: The intro.", "  - `docs/b.md` is linked from it", "- `docs/b.md`: B."],
+            {"docs/a.md": "The intro.", "docs/b.md": "B."},
+        ),
+        # An HTML comment and a thematic break end an item; nothing after them joins it.
+        (
+            ["- `docs/a.md`: The intro.", "<!-- one item per document -->"],
+            {"docs/a.md": "The intro."},
+        ),
+        (["- `docs/a.md`: The intro.", "---", "A paragraph."], {"docs/a.md": "The intro."}),
+    ],
+)
+def test_an_item_is_a_top_level_list_item_and_ends_where_markdown_ends_it(
+    fa: ModuleType, lines: list[str], read: dict[str, str]
+) -> None:
+    body = "## What changed in each updated document\n\n" + "\n".join(lines) + "\n"
+    assert fa.sentences(body) == read
+
+
+def test_a_reason_quoting_the_updated_label_marks_no_entry_updated(fa: ModuleType) -> None:
+    """The label counts only outside the code spans an artefact's words sit in."""
+    document = _document(_entry("docs/a.md", "unchanged", "Was **updated in this change**."))
+    block = fa.find(fa.render(document, HEAD) or "")
+    assert block is not None
+    assert fa.given_in(block, {"docs/a.md": "No."}) == {}
+    assert fa.with_sentences(block, {"docs/a.md": "No."}) == block
+
+
 def test_a_sentence_inside_the_list_or_the_footer_is_not_read(fa: ModuleType) -> None:
     """The list a command wrote is stripped first: a sentence it gives is never read
     back as the author's."""

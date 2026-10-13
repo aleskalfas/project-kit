@@ -841,19 +841,29 @@ def counted_told(document: Mapping[str, Any]) -> tuple[int, int]:
 #: `sentences_heading`.
 SENTENCES_HEADING = "## What changed in each updated document"
 _SENTENCES_LINE = _heading_line(SENTENCES_HEADING)
-#: A sentence: a top-level list item that names the document in a code span, as
-#: the list names it, then a colon or a dash, then the sentence.
-_SENTENCE_ITEM = re.compile(r"^ {0,3}[-*+][ \t]+(`+)(.+?)\1(?!`)[ \t]*(?:[:—–-][ \t]*)?(.*)$")
-#: A line that starts a list item of its own, which ends the one before.
-_ITEM_START = re.compile(r"^ {0,3}(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)")
+#: A sentence: a top-level list item, bulleted or numbered and starting in the
+#: line's first column, that names the document in a code span, as the list names
+#: it, then a colon or a dash, then the sentence.
+_SENTENCE_ITEM = re.compile(
+    r"^(?:[-*+]|\d{1,9}[.)])[ \t]+(`+)(.+?)\1(?!`)[ \t]*(?:[:—–-][ \t]*)?(.*)$"
+)
+#: A line that ends the item above it: a list item of its own, at any depth, a
+#: heading, an HTML comment's opening, or a thematic break.
+_ITEM_END = re.compile(
+    r"^[ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)"
+    r"| {0,3}#{1,6}(?:[ \t]|$)"
+    r"|[ \t]*<!--"
+    r"| {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$"
+)
 
 
 def sentences(body: str) -> dict[str, str]:
     """The sentences the change's author wrote under `SENTENCES_HEADING`, by the
     document each names — its location, as the list names it. Read from `body`
     without the list, its provenance footer, and fenced code blocks. An item runs
-    on over the lines under it up to a blank line, a list item, a heading or a
-    fence, its whitespace folded. Of two items for one document, the first."""
+    on over the lines under it up to a blank line, another list item, a heading,
+    an HTML comment, a thematic break or a fence, its whitespace folded. Of two
+    items for one document, the first."""
     lines_ = _split(strip(provenance.strip_footer(body)))
     found: dict[str, str] = {}
     inside = False
@@ -890,7 +900,7 @@ def sentences(body: str) -> dict[str, str]:
         if item is not None:
             close()
             key, current = item.group(2).strip(), [item.group(3)]
-        elif _ITEM_START.match(line) or not line.strip() or line.lstrip().startswith("#"):
+        elif not line.strip() or _ITEM_END.match(line):
             close()
             current = None
         elif current is not None:
@@ -928,6 +938,16 @@ def sentence_comment_delimiter(sentences_: Mapping[str, str]) -> tuple[str, str]
 _ENTRY_LINE = re.compile(r"^\d+\. (`+)(.+?)\1(?!`)")
 #: How an `updated` entry's outcome reads in the Markdown list, in either case.
 _UPDATED_MARK = f"**{LABELS[UPDATED]}**".lower()
+#: A code span, as `_code` writes every text of an artefact's.
+_CODE_SPAN = re.compile(r"(`+).+?\1(?!`)")
+
+
+def _marked_updated(line: str) -> bool:
+    """Whether an entry's line gives the outcome `updated`: the bold label outside
+    every code span, so an artefact's words that quote it mark nothing."""
+    return _UPDATED_MARK in _CODE_SPAN.sub("", line).lower()
+
+
 #: How a line giving an author's sentence, or saying there is none, begins.
 _SAID_LINE = re.compile(rf"^   - \((?:{re.escape(SAID)}|{re.escape(UNSAID)})")
 
@@ -937,7 +957,7 @@ def _region_updated(block: str) -> list[str]:
     out: list[str] = []
     for line in _split(block):
         entry = _ENTRY_LINE.match(line)
-        if entry is not None and _UPDATED_MARK in line.lower():
+        if entry is not None and _marked_updated(line):
             out.append(_unpadded(entry.group(2)))
     return out
 
@@ -967,7 +987,7 @@ def with_sentences(block: str, sentences_: Mapping[str, str]) -> str:
             continue
         out.append(line)
         entry = _ENTRY_LINE.match(line)
-        if entry is None or _UPDATED_MARK not in line.lower():
+        if entry is None or not _marked_updated(line):
             continue
         sentence = sentences_.get(_unpadded(entry.group(2)))
         said = UNSAID if sentence is None else f'{SAID}: "{_code(shown(sentence), least=2)}"'
