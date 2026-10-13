@@ -11,8 +11,11 @@ answer through the backbone's read command, `pkit friction artefacts --json`
 (the lifecycle README, "How a registered command is run"), and never re-reads
 the declarations or walks the places itself.
 
-What living-docs decides over it is its own: which of several places matching
-a file wins, and which space a place serves (`spaces`).
+The same answer gives each artefact its type, the place that gave it, and the
+places matching its file in the order COR-056 point 3 sets, with each one's
+rank (COR-056 point 6). living-docs reads them and ranks no place itself.
+What it decides over the answer is its own: which space a place serves, and
+what a document is to its spaces (`spaces`).
 """
 
 from __future__ import annotations
@@ -29,6 +32,10 @@ from typing import Any
 SCHEMA_VERSION = 1
 
 ARGV = ("pkit", "friction", "artefacts", "--json")
+
+#: The key of an artefact's type in the document, added within its version 1
+#: (COR-056 point 6): a backbone that answers without it predates types.
+TYPE_KEY = "type"
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
@@ -55,6 +62,7 @@ class DeclaredPlace:
     location: str | None
     location_path: str | None
     encloses: frozenset[str]
+    type: str | None = None  # the type it gives, in full, or `None` (COR-056 point 3)
 
     @property
     def is_project(self) -> bool:
@@ -79,7 +87,16 @@ class Document:
     none — the reason a person accepted it with none (COR-050 point 1); both as
     the backbone reads them. `anchored` is `None` when the file is no one
     document artefact — a collection file, or a held document — or the backbone
-    answered without its anchors."""
+    answered without its anchors.
+
+    `types` holds every type the file's artefacts take, or count as while a
+    tie stands, as the backbone resolves them (COR-056 points 3 and 6): one at
+    most for a document, each entry's for a collection file, none for a file
+    no typed place types. `ranked` is the places matching the file in the
+    order COR-056 point 3 sets, each `(place, rank)`, places that rank equal
+    sharing a rank; `None` for a file that holds no artefact, whose places the
+    backbone does not rank. `in_scope_of` is the rule-set files whose scope
+    covers the file's one document artefact (COR-051 point 2)."""
 
     path: str
     places: tuple[int, ...]
@@ -89,6 +106,9 @@ class Document:
     held_by: str | None = None
     anchored: bool | None = None
     unanchored_because: str | None = None
+    types: tuple[str, ...] = ()
+    ranked: tuple[tuple[int, int], ...] | None = None
+    in_scope_of: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -99,7 +119,12 @@ class Artefact:
     kind, the values that are text, in written order; `None` when the backbone
     answered without them, added within the document's version — the reason it
     gives for listing none, `unanchored_because` (COR-050 point 1), and its own
-    fields, the container left out (a rule's carry its cited origin)."""
+    fields, the container left out (a rule's carry its cited origin).
+
+    Its type, as the backbone resolves it (COR-056 point 6): `type`, or every
+    type it counts as while a tie stands (`conflict`), the places matching its
+    file in the core's order with each one's rank (`ranked`), and the paths of
+    the rule-set files whose scope covers it (`in_scope_of`)."""
 
     path: str
     id: str
@@ -108,6 +133,15 @@ class Artefact:
     anchors: Mapping[str, tuple[str, ...]] | None
     unanchored_because: str | None
     fields: Mapping[str, Any] | None
+    type: str | None = None
+    conflict: tuple[str, ...] = ()
+    ranked: tuple[tuple[int, int], ...] = ()
+    in_scope_of: tuple[str, ...] = ()
+
+    @property
+    def types(self) -> tuple[str, ...]:
+        """The type it takes, or each it counts as while a tie stands."""
+        return (self.type,) if self.type is not None else self.conflict
 
     @property
     def anchored(self) -> bool | None:
@@ -163,14 +197,25 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
     places = tuple(
         _place(index, entry) for index, entry in enumerate(_mappings(document.get("places")))
     )
-    artefacts = tuple(_artefact(entry) for entry in _mappings(document.get("artefacts")))
+    listed = _mappings(document.get("artefacts"))
+    if any(TYPE_KEY not in entry for entry in listed):
+        raise Unreadable(
+            f"`{' '.join(ARGV)}` answered without each artefact's type and ranked places; "
+            f"this capability reads them (COR-056 point 6), so the backbone needs upgrading"
+        )
+    artefacts = tuple(_artefact(entry) for entry in listed)
     # A file is one document artefact unless it is a collection file, whose
-    # entries are artefacts of their own.
+    # entries are artefacts of their own. Every artefact of one file shares its
+    # matching places, ranked by the file's path.
     whole = {artefact.path: artefact for artefact in artefacts if not artefact.entry}
+    of_file: dict[str, list[Artefact]] = {}
+    for artefact in artefacts:
+        of_file.setdefault(artefact.path, []).append(artefact)
     documents = {}
     for entry in _mappings(document.get("files")):
         path = str(entry.get("path"))
         artefact = whole.get(path)
+        found = of_file.get(path, [])
         documents[path] = Document(
             path=path,
             places=_indices(entry.get("places")),
@@ -179,6 +224,9 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
             fields=_fields(entry.get("fields")),
             anchored=artefact.anchored if artefact is not None else None,
             unanchored_because=artefact.unanchored_because if artefact is not None else None,
+            types=tuple(sorted({named for each in found for named in each.types})),
+            ranked=found[0].ranked if found else None,
+            in_scope_of=artefact.in_scope_of if artefact is not None else (),
         )
     # A held document is walked by no place, so it is never among the files; it
     # carries the places matching it and the held folder holding it, whose
@@ -218,6 +266,18 @@ def _artefact(entry: Mapping[str, Any]) -> Artefact:
         anchors=anchors,
         unanchored_because=_text(entry.get("unanchored_because")),
         fields=_fields(entry.get("fields")),
+        type=_text(entry.get(TYPE_KEY)),
+        conflict=tuple(
+            named
+            for tied in _mappings(entry.get("type_conflict"))
+            if (named := _text(tied.get("type"))) is not None
+        ),
+        ranked=tuple(
+            (ranked["place"], ranked["rank"])
+            for ranked in _mappings(entry.get("ranked_places"))
+            if isinstance(ranked.get("place"), int) and isinstance(ranked.get("rank"), int)
+        ),
+        in_scope_of=tuple(path for path in entry.get("in_scope_of") or [] if isinstance(path, str)),
     )
 
 
@@ -248,6 +308,7 @@ def _place(index: int, entry: Mapping[str, Any]) -> DeclaredPlace:
         location=_text(location.get("name")),
         location_path=_text(location.get("path")),
         encloses=frozenset(str(a) for a in entry.get("encloses") or []),
+        type=_text(entry.get("type")),
     )
 
 

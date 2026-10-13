@@ -1,0 +1,39 @@
+component: living-docs
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  The capability declares its types, and its validator reads each document's
+  type (DEC-001 points 1, 2, 4 and 6, COR-056, #1411). Its type registry,
+  `friction.types`, holds `page`, with `kind` as its kind field and project
+  places admitted, and `template`, which admits none. Both documentation roots
+  give `living-docs:page`, and the definitions location is a new place that
+  gives `living-docs:template`. So a document under a root is a page only
+  where it declares its page kind in `kind`. One that names a reader but no
+  kind is an unclassified document, no longer a page that fails. A page
+  template copied into the definitions location is a template, never a page.
+  A project place outside every root that names no type still holds the
+  pages that declare their kind there. Where places nest, `pkit living-docs
+  validate` takes each document's places in the backbone's order (COR-056
+  point 3) rather than its own: a longer literal part wins, and at equal
+  length an exact file beats a glob, which beats a folder. So a glob can now
+  win over a folder, where every folder used to rank ahead of every glob. Two
+  project places tie when they rank equal there. A document of another
+  component's type, of a type of the project's own, or held by another
+  component is its owner's: the validator no longer reads a `reader` or
+  `kind` on it, so carrying one fails nothing. A place another component
+  declares without a type no longer keeps a document from the root around
+  it: one there that declares a page kind is a page, and `pkit validate`
+  reports that the root typed the component's file. A decision record that
+  would otherwise be a page fails. Where a space's definition carries a
+  scope, a place assigned to that space must lie in that scope and in no
+  other space definition's scope, checked on each page it gives the space.
+  Where the definition selects by type, an assigned place outside every root
+  that does not give `living-docs:page` fails. A definition with no scope is
+  held to nothing. `LDOC` declares the parts its checks enforce: RS-LDOC-004's
+  structure and RS-LDOC-003's field, each by `living-docs:validate`. The
+  validator reads the types and the ranked places from `pkit friction
+  artefacts --json`, which the backbone this release ships gives, so the
+  capability requires it. An older backbone's document is one error, and no
+  space is checked.

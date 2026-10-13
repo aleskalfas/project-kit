@@ -9,21 +9,35 @@ What is checked, each against the record's words:
   this capability's project configuration — its absence is an error, and so is
   an assignment naming a place the backbone configuration's `friction.places`
   does not declare, or a space nobody declares. A project place **equal to or
-  enclosing a root** is refused. Where places nest the most specific wins; a
-  file two project places claim with equal specificity is an error.
-- **What is never a page** (points 1 and 4). A decision record and a rule-set
-  file are anchor targets; a document in another component's place, or in a
-  folder of held documents another component declares (COR-050 point 1), is
-  that component's; a document in this capability's definitions location is
-  its own artefact. None is a page, and one that carries a page's fields says
-  it is one, which is an error — except in the definitions location, where the
-  templates carry them by design.
-- **Pages** (point 4). A document is a page when it carries the `reader` and
-  `kind` fields; they are validated by this capability's companion schema,
+  enclosing a root** is refused. Where places nest, the backbone's order
+  decides (COR-056 point 3): a document's matching places come ranked in its
+  answer, the first root or project place among them gives its space, and a
+  file two project places claim at equal rank, ahead of every other, is an
+  error. Nothing here ranks a place.
+- **The definitions' scopes** (point 1). Where a space's definition carries a
+  scope, each page an assigned place gives that space lies in that scope and
+  in no other space definition's scope — read from the scopes covering the page
+  in the backbone's answer (COR-051 point 2) — and where the definition selects
+  by type, an assigned place outside every root gives the page type. A
+  definition with no scope selects nothing itself, so nothing joins it.
+- **Whose a document is** (points 1 and 4). Each document takes the type the
+  backbone gives it (COR-056). A document of another component's type, or one
+  another component holds in a folder it declares (COR-050 point 1), or of no
+  type in another component's place, is that component's; one of a type the
+  project gives is the project's; one of this capability's template type is
+  its own; a rule-set file holds rules, and a document whose id reads as a
+  decision record's is a decision record. None is a page, and their own fields
+  are their owners'. A decision record that would otherwise be a page — of the
+  page type, or a page of no type below — is an error.
+- **Pages** (point 4). A document is a page when it is of the page type: the
+  place that wins for it gives that type and it declares its page kind in
+  `kind`. In a project place outside every root that gives no type, a document
+  of no type that declares its page kind is a page too. A page's `reader` and
+  `kind` are validated by this capability's companion schema,
   `schemas/page.schema.json`. The friction block in the container is the
-  core's, and the backbone's `friction` pass validates it. A document that
-  nothing claims and that carries neither field is an **unclassified
-  document**, counted for onboarding (point 8) and never failed.
+  core's, and the backbone's `friction` pass validates it. Any other document
+  in the spaces' places is an **unclassified document**, counted for
+  onboarding (point 8) and never failed.
 - **Pages left unanchored** (point 8). Onboarding is complete when no page is
   left unanchored without an accepted reason: a page whose friction block
   lists no anchor is counted, and listed, unless the block gives the reason a
@@ -62,11 +76,12 @@ What is checked, each against the record's words:
   reported. `sources` states those checks.
 
 **Where the documents are is read, never computed here.** The roots, every
-place the project and each capability declares, the files each one matches and
-each file's front matter are the backbone's artefact discovery, read once
+place the project and each capability declares, the files each one matches,
+each file's front matter, each artefact's type, its places in the core's order
+and the scopes covering it are the backbone's artefact discovery, read once
 through `pkit friction artefacts --json` (`artefacts`). What this module
-decides over that answer is DEC-001's: which of several matching places wins,
-the space a place serves, and what a document is.
+decides over that answer is DEC-001's: the space a place serves, and what a
+document is to the spaces.
 
 A page's body is read from the working tree, at the path the backbone names.
 
@@ -104,11 +119,9 @@ from _lib.declarations import (
     USER_ROOT,
     Declarations,
     ProjectPlace,
-    has_wildcard,
     is_markdown_file,
     is_within,
     literal_prefix,
-    literal_text_prefix,
     normalise,
     pointer_token,
     read_declarations,
@@ -120,8 +133,14 @@ USER_SPACE = "user"
 TECHNICAL_SPACE = "technical"
 SPACE_OF_ROOT = {USER_ROOT: USER_SPACE, INTERNAL_ROOT: TECHNICAL_SPACE}
 
-#: A page's own fields (DEC-001 point 4): what makes a document a page.
-PAGE_FIELDS = ("reader", "kind")
+#: The capability's types (DEC-001 points 2 and 4; COR-056), in full, and the
+#: page type's kind field, the field in which a page declares its page kind.
+PAGE_TYPE = f"{CAPABILITY}:page"
+TEMPLATE_TYPE = f"{CAPABILITY}:template"
+KIND_FIELD = "kind"
+
+#: The backbone's own types are written with this owner (COR-056 point 1).
+BACKBONE = "backbone"
 
 #: This capability's companion schema for a page's own fields.
 PAGE_SCHEMA = Path(__file__).resolve().parents[2] / "schemas" / "page.schema.json"
@@ -188,24 +207,14 @@ class Place:
     """A place a space's pages are found in: a root, or a project place.
 
     `audience` names the root a root place is — `None` when the two roots are
-    one folder, so its space is undetermined until they are separated.
+    one folder, so its space is undetermined until they are separated. Where
+    places nest, the backbone ranks them (COR-056 point 3); a Place carries no
+    order of its own.
     """
 
     pattern: str
     project: ProjectPlace | None = None
     audience: str | None = None
-
-    def specificity(self, path: str) -> tuple[int, int]:
-        """Most specific wins (DEC-001 point 1): an exact file beats a directory, a
-        directory a glob; the longer directory prefix, the longer literal prefix of a
-        glob; any project place beats a root, and the nested root the outer one."""
-        if self.project is None:
-            return (0, len(_parts(self.pattern)))
-        if has_wildcard(self.pattern):
-            return (1, len(literal_text_prefix(self.pattern)))
-        if self.pattern == path:
-            return (3, 0)
-        return (2, len(_parts(self.pattern)))
 
 
 #: A place of the spaces with the indices of the backbone's places it stands
@@ -254,46 +263,86 @@ def in_root(place: ProjectPlace, decl: Declarations) -> bool:
 
 @dataclass(frozen=True)
 class Claim:
-    """Why a document is not a page of any space: whose artefact it is.
+    """Why a document is not a page of any space: whose it is.
 
     `held` marks another component's claim through a folder of held documents
     rather than a place: the document is that component's, but not an artefact.
+    `type` is the type that says whose it is, where one does (COR-056).
     """
 
-    kind: str  # "definition", "component", "rule-set", "record"
+    kind: str  # "definition", "component", "project", "rule-set", "record"
     by: str  # the claimant, for a message
     held: bool = False
+    type: str | None = None
 
     def described(self) -> str:
         if self.held:
             return f"a document {self.by} holds in a folder it declares (COR-050 point 1)"
+        if self.kind == "component" and self.type is not None:
+            return f"of type {self.type}, an artefact of {self.by}"
         return {
             "definition": f"an artefact of {CAPABILITY}'s definitions location ({self.by})",
             "component": f"an artefact of {self.by}, which declares the place it is in",
+            "project": f"of type {self.by!r}, which the project gives one of its places",
             "rule-set": "a rule-set file, an anchor target (COR-051)",
             "record": f"a decision record ({self.by}), an anchor target (COR-050)",
         }[self.kind]
 
 
 def claim_of(rel: str, document: Document, decl: Declarations) -> Claim | None:
-    """Who claims `rel`, if it is not a page; `None` when nothing does (DEC-001 points 1
-    and 4). Another component claims it when a place or a folder of held documents
-    it declares holds it (COR-050 point 1); it is a rule-set file when the
-    backbone's location rule claims it (COR-051 point 2)."""
-    if decl.definitions is not None and is_within(rel, decl.definitions):
-        return Claim("definition", decl.definitions)
+    """Whose `rel` is, when the type the backbone gives it, or its holder, says it
+    is another owner's (DEC-001 points 1 and 2; COR-056); `None` for a document of
+    the page type, or of no type that no other component's place holds.
+
+    A held document is its holder's (COR-050 point 1). A rule-set file holds
+    rules (COR-051 point 2): in the definitions location, the spaces'
+    definitions. A document of the template type is this capability's own, one
+    of another component's type that component's, and one of a bare type the
+    project's. Whether a document of no type is a decision record, a page or
+    unclassified is the walk's."""
     if document.held_by is not None:
         return Claim("component", document.held_by, held=True)
+    if document.rule_set:
+        if decl.definitions is not None and is_within(rel, decl.definitions):
+            return Claim("definition", decl.definitions)
+        return Claim("rule-set", rel)
+    types = document.types
+    if PAGE_TYPE in types:
+        return None
+    if TEMPLATE_TYPE in types:
+        return Claim("definition", decl.definitions or rel, type=TEMPLATE_TYPE)
+    for named in types:
+        owner, sep, _name = named.partition(":")
+        if not sep:
+            return Claim("project", named, type=named)
+        if owner == BACKBONE:
+            return Claim("rule-set", rel, type=named)
+        return Claim("component", owner, type=named)
     for index in document.places:
         component = decl.component_places.get(index)
         if component is not None:
             return Claim("component", component)
-    if document.rule_set:
-        return Claim("rule-set", rel)
-    record = document.fields.get("id") if document.fields is not None else None
-    if isinstance(record, str) and RECORD_ID.match(record):
-        return Claim("record", record)
     return None
+
+
+def record_of(document: Document) -> str | None:
+    """The decision record `document` is, by its own id (DEC-001 point 4), or `None`."""
+    record = document.fields.get("id") if document.fields is not None else None
+    return record if isinstance(record, str) and RECORD_ID.match(record) else None
+
+
+def declares_kind(fields: Mapping[str, Any] | None) -> bool:
+    """Whether a document declares its page kind in `kind`, read as the backbone reads
+    a kind field (COR-056 point 4): present and not empty. Which kind it names is
+    the page schema's to judge."""
+    value = fields.get(KIND_FIELD) if fields is not None else None
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, Mapping | list):
+        return bool(value)
+    return True
 
 
 # --- the check ----------------------------------------------------------------
@@ -306,6 +355,7 @@ class _Walk:
     space_of: dict[str, str | None] = field(default_factory=dict)  # unclaimed document -> space
     claims: dict[str, Claim] = field(default_factory=dict)
     pages: dict[str, str | None] = field(default_factory=dict)  # page -> space
+    giver: dict[str, ProjectPlace] = field(default_factory=dict)  # page -> its project place
     readers: dict[str, str] = field(default_factory=dict)  # page -> its well-formed reader
     kinds: dict[str, str] = field(default_factory=dict)  # page -> its well-formed kind
     holds: dict[int, str] = field(
@@ -324,6 +374,7 @@ def check(root: Path, read: Callable[[], Readers] = read_readers) -> Outcome:
         return _unreadable(exc)
     _assignment_findings(decl, refused, walk, outcome)
     _tie_findings(decl, walk, outcome)
+    scope_note = _scope_findings(decl, refused, walk, outcome)
     entry_notes = _entry_point_findings(root, decl, walk, outcome)
     definition_notes = _definition_findings(decl, outcome)
     _separation_findings(decl, outcome)
@@ -339,7 +390,7 @@ def check(root: Path, read: Callable[[], Readers] = read_readers) -> Outcome:
         walk,
         entry_notes,
         definition_notes,
-        (reader_note, format_note, captured.summary),
+        (reader_note, format_note, captured.summary, scope_note),
         outcome,
     )
     return outcome
@@ -421,34 +472,32 @@ def _walk(decl: Declarations, places: Sequence[Reach], outcome: Outcome) -> _Wal
     """Classify every document the spaces' places reach, and validate the pages."""
     walk = _Walk()
     schema = Draft202012Validator(json.loads(PAGE_SCHEMA.read_text(encoding="utf-8")))
+    reach = {index: place for indices, place in places for index in indices}
     for rel, document in sorted(decl.documents.items()):
-        matching = frozenset(document.places)
-        matched = [place for indices, place in places if indices & matching]
-        if not matched:
+        ordered = _ordered(document, reach)
+        if not ordered:
             continue
-        front = document.fields
-        declared = [name for name in PAGE_FIELDS if front is not None and name in front]
         claim = claim_of(rel, document, decl)
         if claim is not None:
             walk.claims[rel] = claim
-            if declared and claim.kind != "definition":
-                outcome.findings.append(
-                    Finding(
-                        ERROR,
-                        f"{rel}:/{declared[0]}",
-                        f"{rel} carries a page's {_fields(declared)} but is {claim.described()}; "
-                        f"what another component or schema claims is never a page — remove "
-                        f"{_fields(declared)} (DEC-001 points 1 and 4).",
-                    )
-                )
             continue
-        winner = _most_specific(rel, matched, walk)
+        front = document.fields
+        page = PAGE_TYPE in document.types or _untyped_page(document, ordered[0][1], decl)
+        record = record_of(document)
+        if record is not None:
+            walk.claims[rel] = Claim("record", record)
+            if page:
+                outcome.findings.append(_record_finding(rel, record, PAGE_TYPE in document.types))
+            continue
+        winner = _winner(rel, ordered, walk)
         space = _space_of_place(winner, decl)
         if winner.project is not None:
             walk.holds.setdefault(winner.project.index, rel)
         walk.space_of[rel] = space
-        if declared:
+        if page:
             walk.pages[rel] = space
+            if winner.project is not None:
+                walk.giver[rel] = winner.project
             _anchoring(rel, document, outcome)
             findings, invalid = _page_findings(rel, front or {}, schema)
             outcome.findings.extend(findings)
@@ -478,16 +527,68 @@ def _anchoring(rel: str, document: Document, outcome: Outcome) -> None:
         outcome.accepted_unanchored.append((rel, document.unanchored_because))
 
 
-def _most_specific(rel: str, matched: Sequence[Place], walk: _Walk) -> Place:
-    ranked = sorted(matched, key=lambda place: place.specificity(rel), reverse=True)
-    best = ranked[0]
-    for other in ranked[1:]:
-        if other.specificity(rel) != best.specificity(rel):
+def _ordered(document: Document, reach: Mapping[int, Place]) -> list[tuple[int, Place]]:
+    """The spaces' places matching `document`, each with its rank, in the order the
+    backbone gives (COR-056 points 3 and 6): ranked by it, never here. Two root
+    places that are one folder stand for one Place, listed once. A file that
+    holds no artefact has no ranked places: its places come as the backbone lists
+    them, the one it was read under first, each ranked apart."""
+    listed = (
+        document.ranked
+        if document.ranked is not None
+        else tuple((index, position) for position, index in enumerate(document.places))
+    )
+    ordered: list[tuple[int, Place]] = []
+    for index, rank in listed:
+        place = reach.get(index)
+        if place is not None and all(place is not seen for _rank, seen in ordered):
+            ordered.append((rank, place))
+    return ordered
+
+
+def _winner(rel: str, ordered: Sequence[tuple[int, Place]], walk: _Walk) -> Place:
+    """The first of the spaces' places in the backbone's order: it gives `rel` its
+    space (DEC-001 point 1). Project places that share its rank are a tie."""
+    rank, best = ordered[0]
+    for other_rank, other in ordered[1:]:
+        if other_rank != rank:
             break
         if best.project is not None and other.project is not None:
             low, high = sorted((best.project.index, other.project.index))
             walk.ties.setdefault((low, high), []).append(rel)
     return best
+
+
+def _untyped_page(document: Document, winner: Place, decl: Declarations) -> bool:
+    """A page of no type (DEC-001 point 4): a document no place types, whose space a
+    project place outside every root that gives no type gives, and that declares
+    its page kind in `kind`, as the page type would ask."""
+    project = winner.project
+    return (
+        not document.types
+        and project is not None
+        and project.type is None
+        and not in_root(project, decl)
+        and declares_kind(document.fields)
+    )
+
+
+def _record_finding(rel: str, record: str, typed: bool) -> Finding:
+    """A decision record that would otherwise be a page (DEC-001 point 4): `typed`
+    when it takes the page type, else a page of no type in a project place that
+    gives none."""
+    would = (
+        f"so it takes the type {PAGE_TYPE} (COR-056 point 4)"
+        if typed
+        else "in a project place outside every root that gives no type, so it would be a page"
+    )
+    return Finding(
+        ERROR,
+        f"{rel}:/{KIND_FIELD}",
+        f"{rel} is a decision record ({record}), an anchor target (COR-050), and declares a "
+        f"page kind in `{KIND_FIELD}`, {would}: a decision record is never a page — remove "
+        f"`{KIND_FIELD}` (DEC-001 point 4).",
+    )
 
 
 def _space_of_place(place: Place, decl: Declarations) -> str | None:
@@ -732,7 +833,8 @@ def _assignment_findings(
 
 
 def _tie_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> None:
-    """A file claimed by two project places of equal specificity (DEC-001 point 1)."""
+    """A file two project places claim at equal rank, ahead of every other place of
+    the spaces, in the backbone's order (DEC-001 point 1; COR-056 point 3)."""
     by_index = {place.index: place for place in decl.project_places}
     for (first, second), files in sorted(walk.ties.items()):
         a, b = by_index[first], by_index[second]
@@ -741,11 +843,134 @@ def _tie_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> None:
             Finding(
                 ERROR,
                 f"{BACKBONE_CONFIG}:{b.pointer}",
-                f"project places {a.written!r} and {b.written!r} both claim {files[0]}{more} with "
-                f"equal specificity, so no one place wins; narrow one of the declarations "
-                f"(DEC-001 point 1).",
+                f"project places {a.written!r} and {b.written!r} both claim {files[0]}{more} at "
+                f"equal rank in the backbone's order of places (COR-056 point 3), so no one "
+                f"place gives it a space; narrow one of the declarations (DEC-001 point 1).",
             )
         )
+
+
+@dataclass(frozen=True)
+class _Scope:
+    """A space definition's scope, as its front matter writes it (COR-051 point 2):
+    the definition, and whether the scope selects by type. Which artefacts it
+    covers is the backbone's answer, each page's `in_scope_of`, never read here."""
+
+    definition: str
+    by_type: bool
+
+
+def _scopes(decl: Declarations) -> dict[str, _Scope]:
+    """The scope of each space's definition that carries one, by space. A definition
+    with no scope selects nothing itself (COR-051 point 2), so it is left out:
+    nothing joins it (DEC-001 point 1)."""
+    scopes: dict[str, _Scope] = {}
+    for space in known_spaces(decl):
+        config = decl.spaces.get(space)
+        if config is None or config.definition is None:
+            continue
+        definition = normalise(config.definition)
+        document = decl.documents.get(definition)
+        if document is None or not document.rule_set:
+            continue
+        scope = (document.fields or {}).get("scope")
+        if isinstance(scope, list) and scope:
+            scopes[space] = _Scope(definition, by_type=False)
+        elif isinstance(scope, Mapping) and (scope.get("paths") or scope.get("types")):
+            types = scope.get("types")
+            scopes[space] = _Scope(definition, by_type=isinstance(types, list) and bool(types))
+    return scopes
+
+
+def _scope_findings(decl: Declarations, refused: set[int], walk: _Walk, outcome: Outcome) -> str:
+    """The assignment joined with the definitions' scopes (DEC-001 point 1).
+
+    Where a space's definition selects by type, a place outside every root that is
+    assigned to the space gives the page type, or the scope misses its pages.
+    Each page an assigned place gives a space lies in that space definition's
+    scope and in no other's, read from the scopes covering the page in the
+    backbone's answer (COR-051 point 2). A definition with no scope joins
+    nothing. Returns the summary's line about it."""
+    scopes = _scopes(decl)
+    untyped: set[int] = set()
+    for place in decl.project_places:
+        if place.index in refused or in_root(place, decl):
+            continue
+        space = decl.assigned(place.path)
+        scope = scopes.get(space) if space is not None else None
+        if scope is None or not scope.by_type or place.type == PAGE_TYPE:
+            continue
+        untyped.add(place.index)
+        gives = f"gives the type {place.type}" if place.type is not None else "names no type"
+        outcome.findings.append(
+            Finding(
+                ERROR,
+                f"{BACKBONE_CONFIG}:{place.pointer}",
+                f"project place {place.written!r} lies outside every documentation root and is "
+                f"assigned to space {space!r}, whose definition, {scope.definition}, selects by "
+                f"type, but it {gives}, so that scope misses its pages; give it the page type, "
+                f"written `{{path: {place.written}, type: {PAGE_TYPE}}}` in `friction.places` "
+                f"(DEC-001 point 1; COR-056 point 2).",
+            )
+        )
+    outside: dict[tuple[str, str], list[str]] = {}
+    inside: dict[tuple[str, str], list[str]] = {}
+    for rel, place in sorted(walk.giver.items()):
+        space = decl.assigned(place.path)
+        if space is None:
+            continue
+        covering = {normalise(path) for path in decl.documents[rel].in_scope_of}
+        own = scopes.get(space)
+        if own is not None and own.definition not in covering and place.index not in untyped:
+            outside.setdefault((place.path, space), []).append(rel)
+        for other, scope in scopes.items():
+            if other != space and scope.definition in covering:
+                inside.setdefault((place.path, other), []).append(rel)
+    written = {}
+    for assignment in decl.assignments:
+        written.setdefault(assignment.path, assignment.written)
+    for (path, space), files in sorted(outside.items()):
+        definition = scopes[space].definition
+        outcome.findings.append(
+            Finding(
+                ERROR,
+                f"{LIVING_DOCS_CONFIG}:/places/{pointer_token(written[path])}",
+                f"place {written[path]!r} is assigned to space {space!r} and gives it "
+                f"{_files_named(files)}, which the scope of that space's definition, "
+                f"{definition}, does not cover: a place assigned to a space lies in that space "
+                f"definition's scope — widen the scope to the place, or assign the place to the "
+                f"space whose definition covers it (DEC-001 point 1).",
+            )
+        )
+    for (path, other), files in sorted(inside.items()):
+        space = decl.assigned(path)
+        definition = scopes[other].definition
+        outcome.findings.append(
+            Finding(
+                ERROR,
+                f"{LIVING_DOCS_CONFIG}:/places/{pointer_token(written[path])}",
+                f"place {written[path]!r} is assigned to space {space!r} and gives it "
+                f"{_files_named(files)}, which the scope of space {other!r}'s definition, "
+                f"{definition}, also covers: a place assigned to a space lies in no other "
+                f"space definition's scope — leave the place out of that scope with its "
+                f"`exclude`, or assign the place to that space (DEC-001 point 1).",
+            )
+        )
+    if not scopes:
+        return (
+            "scopes: no space's definition carries one, so no assigned place is joined with a "
+            "scope (DEC-001 point 1)."
+        )
+    joined = sum(1 for place in walk.giver.values() if decl.assigned(place.path) is not None)
+    return (
+        f"scopes: {', '.join(sorted(scopes))} — {joined} page(s) of assigned places joined with "
+        f"the definitions' scopes; a definition with no scope joins nothing (DEC-001 point 1)."
+    )
+
+
+def _files_named(files: Sequence[str]) -> str:
+    more = f" and {len(files) - 1} other page(s)" if len(files) > 1 else ""
+    return f"{files[0]}{more}"
 
 
 def _entry_point_findings(
@@ -904,13 +1129,13 @@ def _summary(
         lines.append(f"{space}: {count} page(s); " + "; ".join(notes or ["no entry point"]) + ".")
     by_kind = {
         kind: sum(1 for c in walk.claims.values() if c.kind == kind)
-        for kind in ("record", "rule-set", "component", "definition")
+        for kind in ("record", "rule-set", "component", "project", "definition")
     }
     lines.append(
         f"not pages: {by_kind['record']} decision record(s), {by_kind['rule-set']} rule-set "
-        f"file(s), {by_kind['component']} of another component, {by_kind['definition']} in the "
-        f"definitions location; {len(outcome.unclassified)} unclassified document(s) for "
-        f"onboarding (DEC-001 point 4)."
+        f"file(s), {by_kind['component']} of another component, {by_kind['project']} of a type "
+        f"the project gives, {by_kind['definition']} in the definitions location; "
+        f"{len(outcome.unclassified)} unclassified document(s) for onboarding (DEC-001 point 4)."
     )
     lines.extend(page_notes)
     lines.append(
@@ -921,7 +1146,3 @@ def _summary(
     errors = len(outcome.errors)
     lines.append(f"{errors} error(s), {len(outcome.findings) - errors} report(s).")
     return lines
-
-
-def _fields(names: Sequence[str]) -> str:
-    return " and ".join(f"`{name}`" for name in names)
