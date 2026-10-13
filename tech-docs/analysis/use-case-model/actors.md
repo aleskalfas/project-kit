@@ -75,6 +75,10 @@ ACT-component-author:
           - COR-031
           - COR-041
           - COR-047
+      revalidated:
+        at: 2026-10-13T05:51:11Z
+        outcome: unchanged
+        unchanged-because: "COR-031's change rewrites only its reason for skipping an incubated capability: sync writes a project-owned path only through merge delivery. The actor's need to keep a capability in its own repository, where sync never overwrites it, still holds, since merge never removes or rewrites what the project wrote."
 ACT-developer:
   name: Developer
   status: active

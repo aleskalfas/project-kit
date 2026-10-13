@@ -29,9 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-13T00:42:13Z
+      at: 2026-10-13T05:51:09Z
       outcome: unchanged
-      unchanged-because: The change corrects friction_discovery.py's docstrings, a comment and the message a malformed capability place or held folder gets, so they give a place's shape as {path, location?, type?, description?} and a held folder's as {location, path, description?}. This page's table already gives those shapes, and the walk and its findings are as it describes, so it holds.
+      unchanged-because: "COR-031's change rewrites only its reason for skipping an incubated capability: under the no-shared-files invariant sync writes a project-owned path only through merge delivery. The page's skip-branch section has sync skip source-reconciliation for an incubated capability and leave its files exactly as authored, which that reason still supports, so it holds."
       deferred:
         - anchor:
             kind: record

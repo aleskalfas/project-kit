@@ -12,8 +12,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-13T04:27:15Z
-      outcome: updated
+      at: 2026-10-13T05:50:58Z
+      outcome: unchanged
+      unchanged-because: "COR-025's change rewrites the first step of its argument that ADRs never reach an adopter: sync propagates only the surface under .pkit/, writes a project-owned path only through merge delivery's auto-add tier, which never removes or rewrites an entry the project wrote, and reads the project's own declarations. The page's invariant section already says sync reads what it needs from your side and writes into your files only through that tier, and it cites COR-025 only for where ADRs live, which did not change, so it holds."
       deferred:
         - anchor:
             kind: record

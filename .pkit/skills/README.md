@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-10-13T04:27:24Z
+      at: 2026-10-13T05:51:06Z
       outcome: unchanged
-      unchanged-because: The page sums up migration-author as tier, scope, version and slug selection, scaffold, idempotent-body drafting, self-checks and commit. The skill now also asks a backbone migration to be safe over any state, one more requirement on the body and one more self-check, which that summary still covers.
+      unchanged-because: "COR-003's change rewrites its seed and merge sentences: seeding writes at first install, and in a transition of the backbone where the file is missing, it never revisits a seed that exists, and merge creating its own missing target is merge. The page cites COR-003 only for the core/ and project/ split, which the change leaves as it was, and it names no seed or merge target, so it holds."
 ---
 
 # Skills
