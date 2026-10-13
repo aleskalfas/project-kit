@@ -46,12 +46,12 @@ rules:
 
 # WRITE — project-kit's general writing rules
 
-These are project-kit's general writing rules. The analysis follows them directly for now, and a set for the analysis may come with #1352. The documentation spaces will inherit them later (#1350).
+These are project-kit's general writing rules. The analysis follows them through `ANA`, its own set, which inherits this one. The documentation spaces will inherit them later (#1350).
 
 - **What matters most:** the meaning. A rewrite keeps it (RS-WRITE-013).
 - **Where the rules apply:** everything under `tech-docs/analysis/`, software-analysis's templates, and the structures its kinds declare (software-analysis DEC-001 point 1). project-kit's operational rules send whoever writes any of them here (`.pkit/rules/project.md`). This set has no scope of its own. No scope could reach a template or a structure anyway, since neither is an artefact (ADR-055 point 3).
   - **In shipped text:** where a rule here would carry project-kit's own vocabulary or style into a template or a structure, universal applicability wins (COR-014). Examples are project-kit's glossary terms and its labels. The shipped text stays fit for any adopter.
-- **A set for the analysis:** one may come with #1352, which gives each kind of analysis document a declared structure. The rule on needs and goals and the analysis's list of labels wait for that design.
+- **The set for the analysis:** `ANA` (`tech-docs/rule-sets/analysis.md`) inherits this set, and its scope selects the analysis by type. The rule on needs and goals and the analysis's list of labels come to `ANA` with #1368.
 - **The documentation spaces, next:** the spaces' definitions, `TECH` and `USER`, will inherit this set in a later change (#1350). That change first adds the exceptions that reference pages need.
 - **What an inheriting set may fill:** the list of labels for a kind of document it governs (`RS-WRITE-002#labels`).
 - **Where the rules come from:** a style trial in October 2026. It rewrote the core actors document by ASD-STE100 and by ISO 24495-1, and kept what helped. The rules were then tried on two reference pages. The trial, the try-out and what they left out are in `.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`.
