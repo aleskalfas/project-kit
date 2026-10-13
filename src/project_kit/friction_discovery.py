@@ -3456,7 +3456,9 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
       the `type_conflict` while a tie stands (each tied type it counts as,
       `{type, place}`), and its `ranked_places`, every place that matches its
       file in COR-056 point 3's order (`{place, rank}`, places that rank
-      equal sharing a rank).
+      equal sharing a rank). Its `part_anchors`, added within version 1 too:
+      each anchor that names a part of a file, with the span that part
+      resolves to (`part_anchors`).
     - `types`: every declared type by its full name — the backbone's own and
       each installed component's type registry — with its `component`,
       `name`, `description`, `kind_field` and `project_places`. Added within
@@ -3566,6 +3568,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
                 "unanchored_because": artefact.unanchored_because,
                 "fields": _own_fields(artefact.carrier),
                 "span": _span_entry(artefact.span),
+                "part_anchors": part_anchors(discovery, artefact),
                 "in_scope_of": list(in_scope_of.get(artefact.location, ())),
                 **_type_entry(types.of(artefact), index),
             }
@@ -3694,8 +3697,41 @@ def _malformed_held_entry(declaration: MalformedDeclaration) -> dict[str, Any]:
     }
 
 
+def part_anchors(discovery: Discovery, artefact: Artefact) -> list[dict[str, Any]]:
+    """Each anchor of `artefact` that names a part of a file, with the span that part
+    resolves to, in the order the artefact lists its anchors.
+
+    An `artefact` anchor names a part when the artefact it resolves to is a
+    collection entry, whose content is its data and the body section headed by
+    its id (COR-050 point 1); a rule is one (COR-051 point 2). It resolves as
+    the friction checks resolve it (`Discovery.find`). Each is `{kind, value,
+    path, span}`: `path` the file the part lies in, and `span` its section's
+    lines as the entry's own `span` gives them, `None` for an entry with no
+    section. An anchor on a whole document or a whole file, a dead anchor and
+    an anchor of another kind name no part, so none is listed. No record's
+    points are listed: a record is not an artefact.
+    """
+    found: list[dict[str, Any]] = []
+    for kind, values in artefact.anchors.items():
+        if kind != "artefact":
+            continue
+        for value in values:
+            target = discovery.find(value)
+            if target is None or target.kind is not ArtefactKind.ENTRY:
+                continue
+            found.append(
+                {
+                    "kind": kind,
+                    "value": value,
+                    "path": target.path,
+                    "span": _span_entry(target.span),
+                }
+            )
+    return found
+
+
 def _span_entry(span: SectionSpan | None) -> dict[str, int] | None:
-    """An entry's section span as the document gives it, or `None`."""
+    """A part's span as the document gives it, or `None`."""
     if span is None:
         return None
     return {"first_line": span.first_line, "last_line": span.last_line}
