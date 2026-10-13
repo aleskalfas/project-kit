@@ -180,7 +180,7 @@ Two in-body markers are *not* narration of a revision and are correct to keep: t
 A record's points keep their ids for good ([COR-058](core/COR-058-record-points.md)). A point is a heading in the Decision that opens with its id, `### 5. Title` or `### D1 — Title`. A retired point keeps its id in the record's `retired-points`, with the points that took its text, and a one-line stub stays where it was. `pkit validate` and `pkit decisions validate` check each record's points, as COR-058 point 7 sets out. They read the records the narration warnings read, so a superseded record and a synced copy are left out.
 
 - **They fail on:**
-  - a malformed `retired-points`: one that is not a mapping of retired ids to lists of ids
+  - a malformed `retired-points`: one that is not a mapping of retired ids to lists of ids, or that sits in front matter that does not parse
   - a retired id with no stub, or a stub whose id is not retired
   - a stub whose sentence differs from the one its entry gives, such as "Its content is in points 7 and 16."
   - a live point whose heading uses a retired id
@@ -189,7 +189,7 @@ A record's points keep their ids for good ([COR-058](core/COR-058-record-points.
   - a duplicate id
   - a gap in the ids, counting retired ones
   - a heading in the Decision that opens with a number or a label in another form, such as `### 16 - Title` or `### 5.1 Title`
-- **Each finding names the file and the id,** as `<file>#<id>`. A finding on the shape of `retired-points` is at `<file>:/retired-points`, and its message names the id.
+- **Each finding names the file and the id,** as `<file>#<id>`. A finding on the shape of `retired-points` is at `<file>:/retired-points`, and its message names the entry's id when the finding is on one entry.
 - **Only the field's shape is read** of the front matter, so a project's own fields pass.
 - **A record in list form fails nothing,** unless it writes `retired-points`. Its points are a numbered list, or paragraphs that open with a bold number or label, not yet converted to headings. Its numbers move when a point is inserted, so no duplicate or gap in them is read (COR-058 point 9).
 

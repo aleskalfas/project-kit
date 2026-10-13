@@ -14,7 +14,8 @@ body: >
   They warn of a duplicate id, a gap in the ids counting retired ones, and a
   heading in the Decision that opens with a number or a label in a refused
   form, such as `### 16 - Title`. Each finding names the file and the id, as
-  `<file>#<id>`. A synced copy and a superseded record are not checked. Only
+  `<file>#<id>`, or sits at `<file>:/retired-points` when it is on the field's
+  shape. A synced copy and a superseded record are not checked. Only
   the new field's shape is read of the front matter, so a project's own fields
   pass. A record whose points are still a list fails nothing unless it writes
   `retired-points`.
