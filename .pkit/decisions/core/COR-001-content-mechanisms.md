@@ -6,6 +6,8 @@ date: 2026-05-01
 author: Ales Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [COR-059](COR-059-version-transition.md).** Overturned: seeding as one write at first install. A version transition of the backbone also creates each declared seed path that is missing, from its target's seed, and never writes over one that exists. Among what stands: the three mechanisms, seeding as a delivery operation and no fourth mechanism, the seeded path's ownership by the project, and that sync never seeds. COR-059's "What this overturns, and what stands" lists each passage.
+
 ## Context
 
 The no-shared-files invariant (in `.pkit/decisions/README.md`) settles ownership: every file in a project has exactly one owner — core or project — and they never share a path. The invariant tells us *who* owns each file; it does not describe the operational mechanisms by which canonical core content reaches projects, by which projects add their own content alongside, or by which projects override core content where it is allowed.
