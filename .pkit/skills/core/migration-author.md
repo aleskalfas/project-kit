@@ -92,7 +92,7 @@ Open the stamped script and replace the TODO body with the actual change. Three 
   # ... apply ...
   ```
 
-- **Safe over any state, for a backbone migration** — it acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown. So the script must be safe over any state: one that never needed it, and one the project changed after it first ran. A missing default it adds counts as such a sign. Say in the release's notes that running it again may restore a default the project removed after it first ran.
+- **Safe over any state, for a backbone migration** — it acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown. So the script must be safe over any state: one that never needed it, and one the project changed after it first ran. A missing default it adds counts as such a sign. If it adds a missing default, say in the release's notes that running it again may restore a default the project removed after it first ran.
 
 - **Updates the affected resource.** For derivable resources (files in the core content directory, labels on a tracker), the migration mutates the resource directly — no manifest update. For non-derivable resources (opaque backend IDs in `backend_state`), the migration updates the manifest entry.
 
@@ -126,5 +126,5 @@ The migration is part of the version-bump commit's surface change (per PRJ-002 f
 
 ## Variations
 
-- **A migration that fully reconciles is unnecessary** — if the upgrade flow's reconciliation step regenerates the resource from the new spec, no migration is needed. Migrations only exist for state the reconciliation cannot derive (renames, removals, opaque backend IDs).
+- **A migration that fully reconciles is unnecessary** — if the transition regenerates the resource from the new spec, no migration is needed. Migrations only exist for state the transition cannot derive (renames, removals, opaque backend IDs).
 - **Multiple migrations at one version** — the next-index numbering supports this. Place manifest-schema migrations first (lowest NNN), then structural, then resource-scoped. The runtime walks them in that order.

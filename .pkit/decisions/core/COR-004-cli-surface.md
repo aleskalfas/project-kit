@@ -44,13 +44,13 @@ Any operation a project might want to preview before committing should be previe
 
 ### Failure mode is forward-only
 
-A failed run leaves the project at a known partial state, with `validate` as the recovery entry point. A version transition that stops before it records its completion is finished by the next transition (COR-059 point 6). A command that would propagate content over the incomplete transition stops and names that remedy (point 9). There is no transactional rollback across the manifest. At this scale, transactional semantics would require a journal or filesystem snapshots — heavy infrastructure for a small set of file mutations. Forward-only with a reliable diagnostic is sufficient.
+A failed run leaves the project at a known partial state, with `validate` as the recovery entry point. A version transition that stops before it records its completion is finished by the next transition (COR-059 point 6). A command that would propagate content over the incomplete transition stops and names that remedy (COR-059 point 9). There is no transactional rollback across the manifest. At this scale, transactional semantics would require a journal or filesystem snapshots — heavy infrastructure for a small set of file mutations. Forward-only with a reliable diagnostic is sufficient.
 
 ## Rationale
 
 **Why principles, not the command list.** The list of commands evolves as bundles surface new verbs and new areas earn their own gestures. Pinning the list inside a decision record forces an amendment per change and conflates "what we decided about CLI design" with "what the CLI currently exposes." The principles are durable; the spec changes; they belong in different places. (Same separation as COR-003 vs the per-area manifest.)
 
-**Why anchor each command to one operation.** The mechanism vocabulary of COR-001 / COR-002 already names the operations a project cares about. A CLI that mirrors them gives the project a shape it can reason about — sync is propagation, merge is merge, etc. Sync's propagation includes the derivable state it regenerates, merge delivery's auto-add entries among it (COR-010 and COR-059 point 2). Compound verbs would create a parallel vocabulary that drifts from the mechanism vocabulary and re-encodes consent contracts in opaque names.
+**Why anchor each command to one operation.** The vocabulary of COR-001, COR-002 and COR-059 already names the operations a project cares about. A CLI that mirrors them gives the project a shape it can reason about — sync is propagation, merge is merge, etc. Sync's propagation includes the derivable state it regenerates, merge delivery's auto-add entries among it (COR-010 and COR-059 point 2). Compound verbs would create a parallel vocabulary that drifts from the mechanism vocabulary and re-encodes consent contracts in opaque names.
 
 **Why the sync/merge separation matters more than "they're different operations."** The deeper reason is consent. The no-shared-files invariant (in `.pkit/decisions/README.md`), COR-001, and COR-002 between them encode different consent contracts for different file ownership classes. A CLI verb represents an *adopter-visible* contract; conflating verbs across consent classes is the same shape of error as conflating the underlying mechanisms.
 
@@ -66,7 +66,7 @@ A failed run leaves the project at a known partial state, with `validate` as the
 ## Implications
 
 - The current command list lives in `.pkit/cli/README.md` (propagation; synced). Each command's documentation references back to whichever principle here justifies its shape, where the link is non-obvious.
-- Adding a new command means identifying the operation it represents (anchored to one mechanism / delivery / read-only gesture), naming it accordingly, and documenting it in `.pkit/cli/README.md`. No COR amendment unless a principle itself changes.
-- New mechanisms or delivery operations introduced by future CORs may surface as new top-level commands; the principles here govern that surfacing.
+- Adding a new command means identifying the operation it represents (anchored to one operation on the list above), naming it accordingly, and documenting it in `.pkit/cli/README.md`. No COR amendment unless a principle itself changes.
+- New mechanisms or operations introduced by future CORs may surface as new top-level commands; the principles here govern that surfacing.
 - Subcommand groupings are a spec-doc concern unless a grouping touches a principle (e.g., a sub-verb that combined sync + merge would hit the anchoring rule).
 - The CLI's binary name is the natural follow-on PRJ decision in the implementing project's corpus.

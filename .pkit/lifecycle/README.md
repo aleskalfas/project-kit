@@ -724,7 +724,7 @@ Each migration script:
 - **Is safe over any state, if it is a backbone migration.** It acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown (COR-059). So the script must be safe over any state: one that never needed it, and one the project changed after it first ran. A missing default it adds counts as such a sign. Running it again may then restore a default the project removed after it first ran, and the release's notes say so.
 - Receives `ROOT` (project root) in the environment.
 - Uses `set -euo pipefail` (or the equivalent for whatever shell/language the runtime supports — settled by the build roadmap).
-- **Updates the affected resource.** For resources whose state lives in a manifest (component registry entries, opaque backend IDs), the migration updates the manifest entry. For derivable resources (files, labels, symlinks), no manifest update is needed — the upgrade flow's reconciliation step regenerates them from the new kit-side spec at the new version.
+- **Updates the affected resource.** For resources whose state lives in a manifest (component registry entries, opaque backend IDs), the migration updates the manifest entry. For derivable resources (files, labels, symlinks), no manifest update is needed — the transition regenerates them from the new kit-side spec at the new version.
 
 ### Tier independence
 

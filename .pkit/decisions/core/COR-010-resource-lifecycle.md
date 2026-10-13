@@ -23,7 +23,7 @@ This record fixes the rules. The architecture (manifest schema, upgrade procedur
 
 ## Decision
 
-Core content is organized in two tiers — a **backbone** that ships together, and **components** that depend on backbone versions but evolve independently. Project-side state is tracked through a backbone manifest (registry of installed components) plus per-component manifests (each component's state). Lifecycle operations apply uniformly across resources; whole-methodology upgrade, a version transition (COR-059), orchestrates per-tier and per-component updates under explicit compatibility resolution.
+Core content is organized in two tiers — a **backbone** that ships together, and **components** that depend on backbone versions but evolve independently. Project-side state is tracked through a backbone manifest (registry of installed components) plus per-component manifests (each component's state). Lifecycle operations apply uniformly across resources; whole-methodology upgrade, a version transition (COR-059), orchestrates per-tier and per-component moves under explicit compatibility resolution.
 
 ### Two tiers: backbone + components
 
