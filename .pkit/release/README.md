@@ -14,7 +14,7 @@ pkit:
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
       source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-13T18:59:32Z
+      at: 2026-10-13T19:16:24Z
       outcome: updated
 ---
 

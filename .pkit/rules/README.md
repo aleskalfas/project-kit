@@ -11,9 +11,9 @@ pkit:
         - src/project_kit/install.py
       record: [COR-001, COR-014]
     revalidated:
-      at: 2026-10-13T18:59:48Z
+      at: 2026-10-13T19:16:13Z
       outcome: unchanged
-      unchanged-because: This change has init record the manifest's target before it copies anything and its completion last, and register each adapter at the version it ships. The page says core.md is refreshed on every sync, that sync never touches project.md, and that a migration is idempotent and a backbone migration safe over any state. Init's copy of the rules area is unchanged, so the page holds.
+      unchanged-because: This change has init record the manifest's target before it copies anything and its completion last, and register each adapter at the version it ships. The page says core.md is refreshed on every sync and that sync never touches project.md, and it lists migrations idempotency among the hard rules. Init's copy of the rules area is unchanged, so the page holds.
 ---
 
 # Rules

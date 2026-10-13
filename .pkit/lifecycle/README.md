@@ -29,13 +29,13 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-13T18:59:35Z
+      at: 2026-10-13T19:16:25Z
       outcome: updated
       deferred:
         - anchor:
             kind: record
             value: COR-010
-          reason: "COR-010 now has a version transition record its target first and its completion last, has sync move no recorded version, and moves a shipped component alone only to the version its recorded release ships. This page states the new script contract, the two recorded states and the replay. Its upgrade flow still runs sync for the backbone and regenerates derivable state before the migrations, its section on not passing a migration over has sync record the running version, and its per-component upgrade takes any version within requires_backbone, as the code still does. It follows with #1460, which makes sync move no version and rewrites that section, and #1461, which puts the upgrade flow in COR-010's order and rewrites the per-component upgrade."
+          reason: "COR-010 now has a version transition record its target first and its completion last, has sync move no recorded version, and moves a shipped component alone only to the version its recorded release ships. This page states the new script contract, the two recorded states and the replay. Its upgrade flow still runs sync for the backbone and regenerates derivable state before the migrations, its section on not passing a migration over and its line on a sync between the two recorded states have sync record the running version, and its per-component upgrade takes any version within requires_backbone, as the code still does. It follows with #1460, which makes sync move no version and rewrites those passages, and #1461, which puts the upgrade flow in COR-010's order and rewrites the per-component upgrade."
         - anchor:
             kind: record
             value: COR-017
