@@ -36,7 +36,7 @@ Both are mutating operations a project may want to invoke independently. They ha
 
 ### `init` is one-shot, not idempotent
 
-The first-install command runs propagation, then seed, then merge, in that order. Once a project is initialised, that command refuses to run again. Recovery from partial or broken state flows through `validate` plus targeted `sync` / `merge` instead. Re-running first-install would either resurface seeded content (violating COR-001's seed contract) or silently skip already-seeded paths (confusing). Keeping the contract sharp is worth the small upfront refusal.
+The first-install command runs propagation, then seed, then merge, in that order. Once a project is initialised, that command refuses to run again. Recovery from partial or broken state flows through `validate` plus targeted `sync` / `merge` instead. A first install that stops before it records its completion is finished by the next version transition (COR-059 point 6). Re-running first-install would either resurface seeded content (violating COR-001's seed contract) or silently skip already-seeded paths (confusing). Keeping the contract sharp is worth the small upfront refusal.
 
 ### `--dry-run` is universal on every mutating command
 
@@ -44,7 +44,7 @@ Any operation a project might want to preview before committing should be previe
 
 ### Failure mode is forward-only
 
-A failed run leaves the project at a known partial state, with `validate` as the recovery entry point. There is no transactional rollback across the manifest. At this scale, transactional semantics would require a journal or filesystem snapshots — heavy infrastructure for a small set of file mutations. Forward-only with a reliable diagnostic is sufficient.
+A failed run leaves the project at a known partial state, with `validate` as the recovery entry point. A version transition that stops before it records its completion is finished by the next transition, and a command that would propagate content over the incomplete transition stops and names that remedy (COR-059 points 6 and 9). There is no transactional rollback across the manifest. At this scale, transactional semantics would require a journal or filesystem snapshots — heavy infrastructure for a small set of file mutations. Forward-only with a reliable diagnostic is sufficient.
 
 ## Rationale
 
