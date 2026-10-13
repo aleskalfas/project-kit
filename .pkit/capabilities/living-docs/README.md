@@ -12,9 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-13T07:23:49Z
+      at: 2026-10-13T10:43:49Z
       outcome: unchanged
-      unchanged-because: "COR-051's change narrows point 6: sync never reads or writes a project rule set, and uninstall never writes one. The page keeps each space's definition, a project rule set, in the definitions location under the internal root, and has uninstalling living-docs remove its project tier with the captured sources, which holds no definition. So it holds."
+      unchanged-because: "COR-050's refinement lets a record anchor name one point of a record and says what the point stands on, and COR-051 point 3 gives # that use in a record anchor's value. The page says a page's anchors, decisions among them, ground what it says, and that the friction check flags a page when one changed. Both still hold, so the page holds."
       deferred:
         - anchor:
             kind: record

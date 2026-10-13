@@ -407,6 +407,72 @@ def test_a_point_stands_on_its_section_and_what_makes_its_record_bind() -> None:
     assert read.ground("9") is None
 
 
+def test_what_a_point_stands_on_holds_through_a_move_and_changes_with_its_ground() -> None:
+    """`standing` is what the checks compare (COR-050 point 5): a point moved within its
+    record stands on the same; its text, a ground field or the lead changes it; another
+    point, `retired-points` and the record's own other fields do not."""
+    points = "### 1. First\n\nOne.\n\n### 2. Second\n\nTwo.\n\n### 3. Third\n\nThree.\n"
+    standing = rp.read_points(_record("The lead.\n\n" + points)).standing("2")
+    assert standing is not None
+    assert standing.fields == (
+        ("status", '"accepted"'),
+        ("title", '"A record"'),
+    )
+    moved = "### 2. Second\n\nTwo.\n\n### 1. First\n\nOne.\n\n### 3. Third\n\nThree.\n"
+    elsewhere = points.replace("Three.", "Three, edited.")
+    own_fields = 'author: Someone\nretired-points:\n  "9": []\n'
+    for same in (
+        _record("The lead.\n\n" + moved),
+        _record("The lead.\n\n" + elsewhere),
+        _record("The lead.\n\n" + points, extra=own_fields),
+    ):
+        assert rp.read_points(same).standing("2") == standing
+    for differs in (
+        _record("The lead.\n\n" + points.replace("Two.", "Two, edited.")),
+        _record("The lead, edited.\n\n" + points),
+        _record("The lead.\n\n" + points).replace("status: accepted", "status: superseded"),
+    ):
+        assert rp.read_points(differs).standing("2") != standing
+    assert standing.lines()[:3] == ["### 2. Second", "", "Two."]
+
+
+def test_what_an_anchor_on_a_point_finds_in_its_record() -> None:
+    """`anchored` (COR-050 point 7): a live point, an id two points share, a retired id with
+    its successors, a record in list form, or nothing."""
+    read = rp.read_points(_with_stubs())
+    live = read.anchored("4")
+    assert (live.state, live.dead, live.sharing) == (rp.PointState.LIVE, False, 1)
+    assert live.standing == read.standing("4")
+    retired = read.anchored("3")
+    assert (retired.state, retired.standing, retired.successors, retired.dead) == (
+        rp.PointState.RETIRED,
+        None,
+        ("4", "16"),
+        False,
+    )
+    missing = read.anchored("9")
+    assert (missing.state, missing.dead) == (rp.PointState.MISSING, True)
+    twice = rp.read_points(_record("### 1. One\n\nA.\n\n### 1. Again\n\nB.\n")).anchored("1")
+    assert (twice.state, twice.sharing, twice.dead) == (rp.PointState.AMBIGUOUS, 2, False)
+    listed = rp.read_points(_record("1. **One.** A.\n2. **Two.** B.\n")).anchored("1")
+    assert (listed.state, listed.dead) == (rp.PointState.LIST_FORM, True)
+
+
+@pytest.mark.parametrize(
+    ("value", "split"),
+    [
+        ("COR-050", ("COR-050", None)),
+        ("COR-050#11", ("COR-050", "11")),
+        ("PRJ-002#D1", ("PRJ-002", "D1")),
+        ("living-docs:DEC-001#3", ("living-docs:DEC-001", "3")),
+    ],
+)
+def test_a_record_anchor_s_value_splits_at_its_last_mark(
+    value: str, split: tuple[str, str | None]
+) -> None:
+    assert rp.split_anchor(value) == split
+
+
 def test_a_record_with_first_level_sections_stands_no_point_on_its_context() -> None:
     """The preamble is the text before the record's first section, at the Decision's
     level; a body opening with its Decision has none."""

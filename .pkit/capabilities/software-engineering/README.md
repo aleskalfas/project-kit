@@ -13,8 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-13T02:12:27Z
-      outcome: updated
+      at: 2026-10-13T10:43:21Z
+      outcome: unchanged
+      unchanged-because: COR-050's refinement lets a record anchor name one point of a record, and says what the point stands on. This page's reviewer of a change's answers rests on COR-050 point 3, who decides an answer and who checks it, which did not change, so the page holds.
 ---
 
 # software-engineering capability

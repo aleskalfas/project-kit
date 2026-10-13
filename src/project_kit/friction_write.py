@@ -81,7 +81,7 @@ from project_kit.friction_discovery import (
     line_break,
     parse_artefacts,
 )
-from project_kit.friction_validate import block_findings
+from project_kit.friction_validate import Severity, block_findings
 from project_kit.line_breaks import universal_newlines
 from project_kit.project_config import stdin_is_tty
 
@@ -1077,7 +1077,7 @@ def _read_back(
         f
         for a in written
         for f in block_findings(a, schema, target_root)
-        if f.severity is bs.Severity.ERROR
+        if f.severity is Severity.ERROR
     ]
     if len(written) != 1 or errors:
         detail = "; ".join(f"{f.pointer or '(block)'}: {f.message}" for f in errors)
