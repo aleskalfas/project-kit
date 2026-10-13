@@ -812,7 +812,7 @@ def outcome(target_root: Path) -> Outcome:
     (`validate.decision_frontmatter_issues`), the id spaces (`validate_decision_ids`) and
     the errors on records' points (`point_findings`), then revision narration
     (`revision_narration`) and the warnings on records' points. Each leaves a synced
-    copy out (`synced_record_test`), so the member reports nothing on one."""
+    copy of a record out (`synced_record_test`), so the member reports nothing on one."""
     from project_kit.validate import decision_frontmatter_issues
 
     front_matter = decision_frontmatter_issues(target_root)
@@ -841,7 +841,7 @@ def print_report(report: DecisionValidationReport) -> None:
     rules = f" and {report.rules_checked} rule(s)" if report.rules_checked else ""
     if report.is_clean:
         if report.records_checked == 0 and report.rules_checked == 0:
-            click.echo("  No decision records found to validate.")
+            click.echo("  No decision record of the project's own found to validate.")
         else:
             click.echo(
                 "  "

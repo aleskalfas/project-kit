@@ -971,3 +971,15 @@ def test_the_next_unused_id_is_one_past_the_highest_of_its_series(
     held: list[str], point_id: str, unused: str
 ) -> None:
     assert decisions_validate.next_unused(held, point_id) == unused
+
+
+def test_cli_in_an_adopter_with_no_record_of_its_own_says_so(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The synced core copies are not the project's to validate, so a project with no
+    record of its own is told it has none, not that no record was found."""
+    make_adopter_repo()
+    result = CliRunner().invoke(main, ["decisions", "validate"])
+    assert result.exit_code == 0, result.output
+    assert "Validated 0 decision record(s)" not in result.output
+    assert "No decision record of the project's own found to validate." in result.output
