@@ -245,7 +245,7 @@ A command of its own checks a change's records against its base, since validatio
 - **Validation's check of decision records** gains the findings of point 7.
 - **The numbering check** is a new command. The CLI reference names it, and a project runs it beside its other checks of a change.
 - **Records that the backbone or a component ships** convert once, word for word, where they are authored. Every point keeps its number, so no citation changes.
-- **Nothing that needs a permanent id** can rely on a list-form record's numbers (point 9). An anchor on one point, should the anchors-and-friction record allow one, would be such a thing.
+- **Nothing that needs a permanent id** can rely on a list-form record's numbers (point 9). An anchor on one point, which the anchors-and-friction record allows (COR-050 point 2), is such a thing. A record in list form holds no point such an anchor can name (COR-050 point 7).
 - **The rule-set record's rejected "markers in the prose, parsed by pattern"** names this record's point headings as an exception.
 - **Nothing migrates.** The one finding a record written before this one can meet is a point titled `Retired`, which a new title clears.
 - **A project's own records** keep their list form, and keep working, until the project converts them.

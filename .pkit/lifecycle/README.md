@@ -29,8 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-13T11:59:32Z
-      outcome: updated
+      at: 2026-10-13T17:09:28Z
+      outcome: unchanged
+      unchanged-because: The discovery module lists an anchor on one point of a record among the artefacts document's part anchors, with its span, read through the home of a record's points. ADR-057 point 2 names that home's callers, says artefact discovery does not read a record's points itself, and says the home calls nothing of the friction engine. This page's table of reading commands sums up what the artefacts document gives, and points to the CLI reference for its keys. It cites ADR-057 for the engines, the reading commands and the query contract, never for where a record's points are read, so it holds.
       deferred:
         - anchor:
             kind: record
