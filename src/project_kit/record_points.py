@@ -2,8 +2,9 @@
 
 The one reading of a record's points, over the reading of where a part of a
 document lies (`document_parts`). Validation's decisions member calls it
-(`decisions_validate.check_points`, COR-058 point 7). The numbering check
-(COR-058 point 8) and the conversion (COR-058 point 9) are to call it. No
+(`decisions_validate.check_points`, COR-058 point 7), and so does the
+numbering check (`decisions_check_diff`, COR-058 point 8). The conversion
+(COR-058 point 9) is to call it. No
 other module of the binary reads a record's points, and artefact discovery
 does not: a record is read here whether or not a place holds it.
 
@@ -40,6 +41,10 @@ does not: a record is read here whether or not a place holds it.
   (COR-058 point 6): a retired id with no stub, a stub whose id is not
   retired, and a stub whose sentence differs from the one its entry gives
   (`stub_sentence`).
+- `RecordPoints.point_text` gives a point's text read without its id, by which
+  the numbering check finds a point under another id (COR-058 point 8).
+  `id_series` splits an id into its series and its number, which count apart
+  (COR-058 point 3).
 
 Whether an anchor may name one point, and what such a point stands on, are the
 anchors-and-friction record's to decide (COR-050, as COR-058 point 10 says).
@@ -83,6 +88,10 @@ _OPENS_WITH_ID = re.compile(r"^(?:\d|[A-Za-z]+\d+(?!\w))")
 
 # A point id, as `retired-points` names one: a number, or a label.
 _POINT_ID = re.compile(r"^(?:\d+|[A-Za-z]+\d+)$")
+
+# A point id's series and number. Numbers and each series of labels count apart
+# (COR-058 point 3); a number's series is the empty prefix.
+_SERIES = re.compile(r"^([A-Za-z]*)(\d+)$")
 
 # List form (COR-058 point 2): a numbered item at the start of a line, and a
 # paragraph that opens with a bold number — `**5. Title.**` or `**5.** Title` — or a
@@ -212,6 +221,14 @@ class RecordPoints:
         """The stub of the retired id `point_id`, the first when two share it, or `None`."""
         return next((stub for stub in self.stubs if stub.id == point_id), None)
 
+    def point_text(self, point: PointHeading) -> str:
+        """A point's text read without its id (COR-058 point 8): its title, then its
+        section after its heading's line, whitespace folded. A point keeps this text
+        when only its id changes, so the numbering check finds a renumbered point by it."""
+        section = self.body.text[point.extent.start : point.extent.end]
+        _heading, _break, rest = section.partition("\n")
+        return " ".join(f"{point.title}\n{rest}".split())
+
     def ground(self, point_id: str) -> PointGround | None:
         """What the live point `point_id` stands on, or `None` when no live point has
         that id: a retired id stands on nothing, whatever its stub says."""
@@ -319,6 +336,14 @@ def read_points(text: str) -> RecordPoints:
     )
 
 
+def id_series(point_id: str) -> tuple[str, int] | None:
+    """A point id's series and number (COR-058 point 3): `("", 5)` for `5`, `("D", 1)`
+    for `D1`, or `None` for what is no point id. Numbers and each series of labels
+    count apart, so a new id is judged against the ids of its own series."""
+    found = _SERIES.match(point_id)
+    return (found.group(1), int(found.group(2))) if found else None
+
+
 def stub_sentence(successors: Sequence[str]) -> str:
     """The one sentence a stub holds, written from its entry's successors (COR-058
     point 4): "Its content is in point 7.", "… in points 7 and 16.", "… in points 7,
@@ -360,8 +385,8 @@ def hold_stubs(points: RecordPoints) -> tuple[StubMismatch, ...]:
     The entry is the source: the stub's heading and sentence follow it. Each
     retired id, in the entry's order, needs a stub whose text after its heading
     is the entry's sentence (`stub_sentence`), whitespace folded. Then each stub
-    whose id the entry does not retire, in the body's order. Validation calls it,
-    and the numbering check is to, so the two hold a stub alike.
+    whose id the entry does not retire, in the body's order. Validation and the
+    numbering check call it, so the two hold a stub alike.
     """
     mismatches: list[StubMismatch] = []
     for retired_id, successors in points.retired.items():

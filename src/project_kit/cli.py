@@ -5502,6 +5502,52 @@ def decisions_validate() -> None:
         raise click.ClickException(" and ".join(failed) + " found.")
 
 
+@decisions.command("check-diff")
+@click.option(
+    "--base",
+    "base_ref",
+    metavar="REF",
+    default=None,
+    help="Base ref to compare with. Default: $PKIT_CHECK_BASE, else the default branch "
+    "(`pkit repository base` shows it).",
+)
+def decisions_check_diff(base_ref: str | None) -> None:
+    """Check a change's numbering of points and records against its base (COR-058 point 8).
+
+    Compares each decision record the change touches, in the working tree, with
+    its state where this branch left the base, and the ids it takes with what
+    the base took since. The base is REF, else $PKIT_CHECK_BASE, else the
+    default branch (COR-054); a base that resolves nowhere refuses the run with
+    its fix. A record the project receives by sync is skipped.
+
+    Exits non-zero on a point dropped without being retired, a new id not past
+    every id the branch point holds or retires, a point's text found only under
+    another id, a duplicate id or a refused heading form the change added, a
+    retired id without its stub or a stub without its entry, a new entry whose
+    successor is no live point, a converted point whose id differs from its
+    numbered item's, and a point id or a record id the base took since this
+    branch left it. Warns, without failing, of a point's title found under
+    another id with its text changed, a converted point whose id differs from
+    its bold number or label, and a point added to a record in list form or a
+    new record in list form.
+    """
+    from project_kit import decisions_check_diff as check_mod
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    head = check_mod.head_records(target_root)
+    if not head:
+        click.echo("  No decision record here to check; no base read.")
+        return
+    found = _settled_base(target_root, base_ref)
+    assert found.fork is not None and found.tip is not None  # `_settled_base` refuses without
+    report = check_mod.check(target_root, head, base=found.ref, fork=found.fork, tip=found.tip)
+    check_mod.print_report(report)
+    if report.errors:
+        raise click.ClickException(f"{report.errors} error(s) in the change's numbering found.")
+
+
 @main.group()
 def schemas() -> None:
     """Validate capability YAML schemas against their JSON Schema companions (per COR-018 + the
