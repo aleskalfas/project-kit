@@ -2,6 +2,7 @@ component: backbone
 kind: minor
 custom:
   category: Added
+  pr: "1545"
 body: >
   `pkit decisions check-diff` checks a change's numbering against its base
   (COR-058 point 8). For each decision record the change touches, it fails on a
