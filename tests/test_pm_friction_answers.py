@@ -160,7 +160,7 @@ def test_each_answer_is_listed_with_its_words_and_marks(fa: ModuleType) -> None:
             "",
             f"<!-- pkit-friction-answers:start head={HEAD} base={MERGE_BASE} -->",
             "These documents rely on something this change modifies, and each answer says "
-            "whether the document is still true. Read them before approving the merge.",
+            "whether the document is still true.",
             "",
             "As of commit `1a2b3c4`.",
             "",
@@ -171,6 +171,7 @@ def test_each_answer_is_listed_with_its_words_and_marks(fa: ModuleType) -> None:
             'by this change): "``Rewritten with the redesign.``"',
             "3. `docs/api.md` relies on `src/api/**`, which this change modifies. **Updated in "
             "this change** (re-check date changed with nothing behind it)",
+            "   - (what changed: the pull request's author has not said)",
             "4. `docs/faq.md` — **no decision recorded** (not asked for by this change) (edited "
             'without a new re-check): "``Reworded.``"',
             "5. `docs/new.md` — **not tied to anything** (new document) (not asked for by this "
@@ -284,7 +285,12 @@ def test_the_list_reads_as_the_change_check_s_own(fa: ModuleType) -> None:
     checks = [line.strip() for answer in answers for line in fc._answer_lines(answer)]
     listed = fa.lines(_document(*(answer.as_json() for answer in answers)))
     assert listed[0] == fa.QUESTION
-    assert [re.sub(r"^\d+\. ", "", line.strip()) for line in listed[1:]] == checks
+    # An `updated` document's sentence is the author's, the one part of the list the
+    # change check does not supply (DEC-055 point 1): every other line is the check's.
+    said = f"({fa.UNSAID})"
+    assert [line.strip() for line in listed].count(said) == 1
+    checked = [line for line in listed[1:] if line.strip() != said]
+    assert [re.sub(r"^\d+\. ", "", line.strip()) for line in checked] == checks
 
 
 def test_the_check_s_terms_stay_out_of_the_section(fa: ModuleType) -> None:
@@ -966,7 +972,7 @@ def test_a_change_that_sets_friction_dormant_lists_the_setting(
     assert section is not None
     assert section.splitlines()[3:] == [
         "This change decided nothing about any document, but it changes which documents are "
-        "checked. Read this before approving the merge.",
+        "checked.",
         "",
         f"As of commit `{head[:7]}`, no document is checked.",
         "",
@@ -1014,8 +1020,9 @@ def test_settings_follow_the_documents_one_line_each(fa: ModuleType) -> None:
     ]
     section = fa.render(_document(_entry("a.md", "updated")), HEAD, settings)
     assert section is not None
-    assert section.splitlines()[-7:] == [
+    assert section.splitlines()[-8:] == [
         "1. `a.md` — **updated in this change**",
+        "   - (what changed: the pull request's author has not said)",
         "",
         "It also changes which documents are checked:",
         "",
@@ -1034,3 +1041,148 @@ def test_a_setting_is_read_for_closing_references_and_delimiters(fa: ModuleType)
     assert fa.closing_reference(_document(), settings) == (fa.SETTINGS_WHERE, "fixes #5")
     settings = [fa.Setting(fa.PLACES, ("<!--/**",), ())]
     assert fa.comment_delimiter(_document(), settings) == (fa.SETTINGS_WHERE, "<!--")
+
+
+# ---- the author's sentences (DEC-055 points 1 and 3) ----------------------------
+
+#: A description whose author says what changed in each updated document.
+SAID_BODY = (
+    "Closes #42\n\n## Summary\n\nDone.\n\n"
+    "## What changed in each updated document\n\n"
+    "- `docs/a.md`: The install steps now name the renamed flag\n"
+    "  and its old spelling.\n"
+    "* `tech-docs/actors.md#ACT-one` — The actor is told what changed.\n"
+    "- `docs/b.md` - Second item for b.\n"
+    "- not a document\n"
+    "- `docs/a.md`: A second sentence for a, not read.\n\n"
+    "```\n- `docs/fenced.md`: inside a fence, not read\n```\n\n"
+    "## Doc impact\n\n- `docs/elsewhere.md`: under another heading, not read\n"
+)
+
+
+def test_the_sentences_schema_heading_is_the_module_s(fa: ModuleType) -> None:
+    schema = YAML(typ="safe").load((CAP_ROOT / "schemas" / "body-format.yaml").read_text("utf-8"))
+    assert schema["friction_answers_marker"]["sentences_heading"] == fa.SENTENCES_HEADING
+
+
+def test_the_sentences_are_read_from_the_author_s_section(fa: ModuleType) -> None:
+    """One list item per document, the document in a code span, then the sentence;
+    an item runs on over the lines under it; the first for a document wins; a
+    fence, another section and an item naming no document are not read."""
+    assert fa.sentences(SAID_BODY) == {
+        "docs/a.md": "The install steps now name the renamed flag and its old spelling.",
+        "tech-docs/actors.md#ACT-one": "The actor is told what changed.",
+        "docs/b.md": "Second item for b.",
+    }
+    assert fa.sentences(BODY) == {}
+
+
+def test_a_sentence_inside_the_list_or_the_footer_is_not_read(fa: ModuleType) -> None:
+    """The list a command wrote is stripped first: a sentence it gives is never read
+    back as the author's."""
+    document = _document(_entry("docs/a.md", "updated"))
+    listed = fa.stamp(SAID_BODY, fa.render(document, HEAD, (), {"docs/a.md": "Old."}))
+    assert fa.sentences(listed)["docs/a.md"].startswith("The install steps")
+    alone = fa.stamp(BODY, fa.render(document, HEAD, (), {"docs/a.md": "Old."}))
+    assert fa.sentences(f"{alone}\n{FOOTER}\n") == {}
+
+
+def test_each_updated_document_gives_its_sentence_or_says_there_is_none(fa: ModuleType) -> None:
+    document = _document(
+        _entry("docs/a.md", "updated", changed=[("path", "src/cli/**")]),
+        _entry("docs/c.md", "updated", status="bump"),
+        _entry("docs/b.md", "unchanged", "Holds."),
+    )
+    sentences = fa.given(document, fa.sentences(SAID_BODY))
+    # Only the sentences of documents the list marks updated are given.
+    assert sentences == {
+        "docs/a.md": "The install steps now name the renamed flag and its old spelling."
+    }
+    assert fa.unsaid(document, sentences) == ["docs/c.md"]
+    section = fa.render(document, HEAD, (), sentences)
+    assert section is not None
+    assert section.splitlines()[7:12] == [
+        "1. `docs/a.md` relies on `src/cli/**`, which this change modifies. **Updated in this "
+        "change**",
+        "   - (what changed, in the words of the pull request's author: \"``The install steps "
+        'now name the renamed flag and its old spelling.``")',
+        "2. `docs/c.md` — **updated in this change** (re-check date changed with nothing behind "
+        "it)",
+        "   - (what changed: the pull request's author has not said)",
+        '3. `docs/b.md` — **still accurate**: "``Holds.``"',
+    ]
+    assert fa.lines(document, (), sentences)[1:5] == [
+        "1. docs/a.md relies on src/cli/**, which this change modifies. Updated in this change",
+        "   (what changed, in the words of the pull request's author: \"The install steps now "
+        'name the renamed flag and its old spelling.")',
+        "2. docs/c.md — updated in this change (re-check date changed with nothing behind it)",
+        "   (what changed: the pull request's author has not said)",
+    ]
+
+
+def test_what_the_person_is_told_is_the_sentences_and_what_is_left_out_of_date(
+    fa: ModuleType,
+) -> None:
+    """As information, not a gate (DEC-055 point 3): what changed in each updated
+    document, each document left out of date with the deferral's words — one the
+    change wrote, or one a revalidation kept — and each setting changed. An answer
+    that holds is the reviewer's to check, and is not told."""
+    document = _document(
+        _entry("docs/a.md", "updated"),
+        _entry("docs/c.md", "updated"),
+        _entry("docs/b.md", "unchanged", "Holds.", kept=[(("path", "x/**"), "Later, #12.")]),
+        _entry("docs/d.md", "deferred", "With the redesign, #13.", anchor=("record", "COR-1")),
+        _entry("docs/e.md", "unchanged", "Holds."),
+    )
+    settings = [fa.Setting(fa.PLACES, ("docs",), ("docs", "guides"))]
+    told = fa.told(document, settings, {"docs/a.md": "Now says X."})
+    assert told == [
+        'What changed in docs/a.md: "Now says X."',
+        "What changed in docs/c.md: the pull request's author has not said",
+        'Left out of date: docs/b.md, for changes to x/**: "Later, #12."',
+        'Left out of date: docs/d.md, for changes to decision record COR-1: "With the '
+        'redesign, #13."',
+        "Checked locations: docs → docs, guides",
+    ]
+    assert fa.counted_told(document) == (2, 2)
+    assert fa.told(_document(_entry("docs/e.md", "unchanged", "Holds."))) == []
+
+
+def test_a_list_already_written_takes_the_sentences_as_they_now_stand(fa: ModuleType) -> None:
+    """For an edit that derives nothing: each updated document's sentence as the
+    author's section now has it, every other line — the check's words, the
+    markers — as it was; the same list `render` gives with those sentences."""
+    document = _document(
+        _entry("docs/a.md", "updated"),
+        _entry("docs/`tick`.md", "updated", changed=[("path", "src/**")]),
+        _entry("docs/b.md", "unchanged", "Holds.", kept=[(("path", "x/**"), "Later.")]),
+    )
+    before = fa.find(fa.render(document, HEAD, (), {"docs/a.md": "Old words."}) or "")
+    assert before is not None and "Old words." in before
+    now = {"docs/`tick`.md": "Ticks are listed.", "docs/b.md": "Not updated, not given."}
+    assert fa.given_in(before, now) == {"docs/`tick`.md": "Ticks are listed."}
+    after = fa.with_sentences(before, fa.given_in(before, now))
+    assert after == fa.find(fa.render(document, HEAD, (), now) or "")
+    assert "Old words." not in after and "Not updated" not in after
+    # A list written before sentences were given gains them in place.
+    bare = "\n".join(line for line in before.splitlines() if "(what changed" not in line)
+    assert fa.with_sentences(bare, fa.given_in(bare, now)) == after
+
+
+@pytest.mark.parametrize(
+    ("words", "closing", "delimiter"),
+    [
+        ("This fixes #12 for good.", ("docs/a.md", "fixes #12"), None),
+        ("The footer: <!-- pkit-provenance:start -->", None, ("docs/a.md", "<!--")),
+        ("Names #12 as the follow-up.", None, None),
+    ],
+)
+def test_a_sentence_the_list_must_not_hold_is_named(
+    fa: ModuleType,
+    words: str,
+    closing: tuple[str, str] | None,
+    delimiter: tuple[str, str] | None,
+) -> None:
+    sentences = {"docs/a.md": words}
+    assert fa.sentence_closing_reference(sentences) == closing
+    assert fa.sentence_comment_delimiter(sentences) == delimiter

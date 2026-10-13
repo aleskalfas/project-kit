@@ -254,3 +254,49 @@ def test_a_list_an_earlier_run_left_under_the_former_heading_is_carried_under_th
     assert FORMER_HEADING not in written and _sections(written) == 1
     assert f"A note.\n\n{section}\n\n<!-- pkit-provenance:start -->" in written
     assert "edit-pr keeps only the latest list" not in capsys.readouterr().err
+
+
+# ---- the author's sentences (DEC-055 points 1 and 2) ---------------------------------
+
+SENTENCES = "## What changed in each updated document"
+
+
+def _updated_section(ep, sentences: dict[str, str] | None = None) -> str:
+    """The list for a change that updated `docs/guide.md` and holds `docs/api.md`."""
+    entries = [
+        {"location": "docs/guide.md", "answer": "updated", "changed": []},
+        {"location": "docs/api.md", "answer": "unchanged", "reason": "Holds."},
+    ]
+    document = {"base": {"commit": "b" * 40}, "answers": entries, "unreadable": []}
+    section = ep.friction_answers.render(document, "a" * 40, (), sentences or {})
+    assert section is not None
+    return section
+
+
+def test_an_edit_gives_each_updated_document_its_sentence_as_it_now_stands(ep, monkeypatch) -> None:
+    """edit-pr derives nothing: the check's words are carried as they were, and each
+    updated document's sentence is the one the edited body's own section now has."""
+    before = _updated_section(ep)
+    body = f"{PR_BODY}\n{before}\n\n{FOOTER}"
+    said = f"{SENTENCES}\n\n- `docs/guide.md`: The guide names the new flag.\n"
+    rec = _run(ep, monkeypatch, ["7", "--append", said, "--yes"], body=body)
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    after = _updated_section(ep, {"docs/guide.md": "The guide names the new flag."})
+    assert f"{said}\n{after}\n\n<!-- pkit-provenance:start -->" in written
+    assert "has not said" not in written and _sections(written) == 1
+
+
+def test_a_sentence_the_list_must_not_hold_leaves_its_sentences_as_they_were(
+    ep, monkeypatch, capsys
+) -> None:
+    before = _updated_section(ep, {"docs/guide.md": "Old words."})
+    body = f"{PR_BODY}\n{before}\n\n{FOOTER}"
+    said = f"{SENTENCES}\n\n- `docs/guide.md`: This fixes #12.\n"
+    rec = _run(ep, monkeypatch, ["7", "--append", said, "--yes"], body=body)
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    assert f"{said}\n{before}\n\n<!-- pkit-provenance:start -->" in written
+    err = capsys.readouterr().err
+    assert "the sentence on what changed in docs/guide.md reads as a closing reference" in err
+    assert "land-work refuses the list until then" in err

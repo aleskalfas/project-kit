@@ -1499,11 +1499,20 @@ def _answers_world(world: Callable[..., _Run], *, listed: bool = False) -> _Run:
     return run
 
 
-def _ready_line(run: _Run, why: str = "") -> str:
+#: What the `ready:` line tells, above it, of `_answers_world`'s answers, as
+#: information: the one document left out of date, with the deferral's words.
+TOLD = [
+    '  Left out of date: docs/cli.md, for changes to src/cli/**: "Rewritten with the redesign."'
+]
+
+
+def _ready_line(
+    run: _Run, told: str = ", 1 document left out of date above, for information"
+) -> str:
     head = run.github.head
     return (
-        f"ready: {_short(head)} — CI passed, all required verdicts approved, 2 documents to "
-        f"read above{why}; merge with: pkit pm land-work {ISSUE} --yes --expect-head {head}"
+        f"ready: {_short(head)} — CI passed, all required verdicts approved{told}; merge with: "
+        f"pkit pm land-work {ISSUE} --yes --expect-head {head}"
     )
 
 
@@ -1519,8 +1528,9 @@ def test_the_answers_are_printed_above_ready_and_written_into_the_description(
         *LISTED,
         f"{_STEP}: 2, {_IN_THE_DESCRIPTION} (written now)",
     ]
-    # done-work's gates, run dry, print their detail; the `ready:` line is last.
-    assert lines[-1] == _ready_line(run)
+    # done-work's gates, run dry, print their detail; what the person is told, as
+    # information, sits directly above the `ready:` line, which is last.
+    assert lines[-2:] == [*TOLD, _ready_line(run)]
     # Written once, last before the provenance footer the write stamps.
     (written,) = run.github.bodies
     assert written.startswith(_PR_BODY)
@@ -1647,19 +1657,10 @@ def test_a_list_the_description_cannot_hold_is_refused(world, capsys) -> None:
     assert run.github.bodies == [] and run.github.merges == []
 
 
-def _unconfirmed_line(run: _Run, failure: str) -> str:
-    head = run.github.head
-    return (
-        f"ready: {_short(head)} unconfirmed — {failure}; nothing was merged. CI passed, all "
-        "required verdicts approved, 2 documents to read above; the run that merges checks every "
-        f"gate again. Merge with: pkit pm land-work {ISSUE} --yes --expect-head {head}"
-    )
-
-
-def test_a_write_that_fails_ends_ready_and_merges_nothing(world, capsys) -> None:
-    """The host may keep a write it answered with an error: a run that tried to
-    write the list ends ready (8), never with a code whose next step is the same
-    `--yes` again, which would merge on a list nobody was shown."""
+def test_a_write_that_fails_merges_nothing_and_is_a_retry(world, capsys) -> None:
+    """The host may keep a write it answered with an error: the run merges nothing,
+    since the description may not carry the list for the head it would merge, and
+    running again writes it and goes on."""
     run = _answers_world(world)
 
     def kept_then_502(argv: list[str]) -> bool:
@@ -1671,52 +1672,26 @@ def test_a_write_that_fails_ends_ready_and_merges_nothing(world, capsys) -> None
     run.github.fails.append(kept_then_502)
     head = run.github.head
     rc, out, _err = run.run("--yes", "--expect-head", head, capsys=capsys)
-    assert rc == run.land.EXIT_READY == 8
-    failure = (
-        f"the list could not be written to PR #{PR}'s description (HTTP 502: Bad Gateway), and "
-        "the host may have kept it all the same"
+    assert rc == run.land.EXIT_RETRY == 7
+    assert out.splitlines()[-1] == (
+        f"{_STEP}: 2, listed above, but the list could not be written to PR #{PR}'s description "
+        "(HTTP 502: Bad Gateway), and the host may have kept it all the same. Nothing was "
+        f"merged; run `land-work {ISSUE}` again"
     )
-    assert out.splitlines()[-1] == _unconfirmed_line(run, failure)
     assert run.github.merges == []
-    # Shown the list above, the person authorises the head: the run finds it there.
+    # The host kept it: the identical run finds it there and merges.
     rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
     assert rc == 0, out + err
     assert run.github.merges[-1][-1] == head
 
 
-def test_a_dry_run_that_fails_after_the_list_was_written_ends_ready(
-    world, capsys, monkeypatch
+@pytest.mark.parametrize("listed", [False, True])
+def test_a_dry_run_that_fails_is_a_retry_whether_or_not_the_run_wrote_the_list(
+    world, capsys, monkeypatch, listed
 ) -> None:
-    run = _answers_world(world)
-    real = run.land.done_work.run
-    failed: list[bool] = []
-
-    def flaky(argv: list[str], **kwargs: Any) -> Any:
-        if "--dry-run" in argv and not failed:
-            failed.append(True)
-            raise RuntimeError("gh timed out")
-        return real(argv, **kwargs)
-
-    monkeypatch.setattr(run.land.done_work, "run", flaky)
-    head = run.github.head
-    rc, out, _err = run.run("--yes", "--expect-head", head, capsys=capsys)
-    assert rc == run.land.EXIT_READY
-    assert "(written now)" in out
-    failure = "done-work's dry run failed (RuntimeError: gh timed out)"
-    assert out.splitlines()[-1] == _unconfirmed_line(run, failure)
-    assert len(run.github.bodies) == 1 and run.github.merges == []
-    # The same `--yes`, run again only once the person was shown the list, merges.
-    rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
-    assert rc == 0, out + err
-    assert run.github.merges[-1][-1] == head and len(run.github.bodies) == 1
-
-
-def test_a_dry_run_that_fails_with_the_list_already_there_is_a_retry(
-    world, capsys, monkeypatch
-) -> None:
-    """Only a run that wrote the list ends ready on a later failure: with the list
-    already there, nothing new was put before the person."""
-    run = _answers_world(world, listed=True)
+    """A change with answers stops on a failure as any other does: what the run
+    wrote is information, and holds no next step."""
+    run = _answers_world(world, listed=listed)
 
     def failing(argv: list[str], **kwargs: Any) -> Any:
         raise RuntimeError("gh timed out")
@@ -1724,36 +1699,39 @@ def test_a_dry_run_that_fails_with_the_list_already_there_is_a_retry(
     monkeypatch.setattr(run.land.done_work, "run", failing)
     rc, out, _err = run.run(capsys=capsys)
     assert rc == run.land.EXIT_RETRY
+    assert ("(written now)" in out) is not listed
     assert out.splitlines()[-1].startswith("merge: not merged — done-work failed")
 
 
 # -- the authorisation, where the change wrote answers (DEC-055 point 3) --
 
 
-def test_yes_alone_stops_ready(world, capsys) -> None:
-    run = _answers_world(world, listed=True)
-    rc, out, _err = run.run("--yes", capsys=capsys)
-    assert rc == run.land.EXIT_READY
-    why = " (this run's --yes names no head, so it does not cover them)"
-    assert out.splitlines()[-1] == _ready_line(run, why)
-    assert run.github.merges == []
+@pytest.mark.parametrize("listed", [False, True])
+def test_yes_merges_a_change_with_answers_as_any_other(world, capsys, listed) -> None:
+    """A change with answers merges under the same authorisation as any other: a
+    `--yes` run — naming the head or not — writes the list where it must, prints
+    it, and merges in the same run."""
+    run = _answers_world(world, listed=listed)
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+    lines = out.splitlines()
+    assert lines.index(LISTED[0]) < lines.index(f"merge: merged as {'c' * 7}")
+    assert len(run.github.bodies) == (0 if listed else 1)
+    assert run.github.merges[-1][-1] == run.github.head
+    assert run.after_merge == [f"move-issue #{ISSUE}", f"close-issue #{ISSUE}"]
 
 
-def test_yes_naming_the_head_that_wrote_the_list_stops_and_the_rerun_merges(world, capsys) -> None:
+def test_yes_naming_the_head_that_writes_the_list_merges_in_the_same_run(world, capsys) -> None:
+    """The run that has to write the list no longer stops for a second run: the
+    description carries the list for the head it merges, written before the merge."""
     run = _answers_world(world)
     head = run.github.head
-    rc, out, _err = run.run("--yes", "--expect-head", head, capsys=capsys)
-    assert rc == run.land.EXIT_READY
-    why = (
-        " (this run wrote them to the description, after the --yes was given, so it does not "
-        "cover them)"
-    )
-    assert out.splitlines()[-1] == _ready_line(run, why)
-    assert len(run.github.bodies) == 1 and run.github.merges == []
-
     rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
     assert rc == 0, out + err
-    assert run.github.merges[-1][-1] == head and len(run.github.bodies) == 1
+    assert f"{_STEP}: 2, {_IN_THE_DESCRIPTION} (written now)" in out.splitlines()
+    (written,) = run.github.bodies
+    assert f"\n{run.section()}\n" in written
+    assert [merge[-1] for merge in run.github.merges] == [head]
     assert run.after_merge == [f"move-issue #{ISSUE}", f"close-issue #{ISSUE}"]
 
 
@@ -1965,15 +1943,15 @@ def test_an_earlier_list_that_cannot_be_removed_is_a_retry(world, capsys) -> Non
     assert run.github.merges == []
 
 
-def test_a_change_that_sets_friction_dormant_is_held_like_an_answer(world, capsys) -> None:
+def test_a_change_that_sets_friction_dormant_is_shown_like_an_answer(world, capsys) -> None:
     """A change that empties the friction places leaves the check dormant at its
-    head, listing no answer: the settings it altered are shown instead, and a
-    `--yes` given before they reached the description merges nothing."""
+    head, listing no answer: the settings it altered are shown instead, and told
+    above the `ready:` line, as information."""
     run = world()
     answers = run.land.friction_answers
     run.settings = [answers.Setting(answers.PLACES, ("docs",), ())]
     head = run.github.head
-    rc, out, _err = run.run("--yes", "--expect-head", head, capsys=capsys)
+    rc, out, _err = run.run(capsys=capsys)
     assert rc == run.land.EXIT_READY
     lines = out.splitlines()
     assert f"  {answers.PLACES}: docs → none" in lines
@@ -1981,20 +1959,121 @@ def test_a_change_that_sets_friction_dormant_is_held_like_an_answer(world, capsy
         f"{_STEP}: none, but a change to which documents are checked, {_IN_THE_DESCRIPTION} "
         "(written now)"
     ) in lines
-    assert lines[-1] == (
+    assert lines[-2:] == [
+        f"  {answers.PLACES}: docs → none",
         f"ready: {_short(head)} — CI passed, all required verdicts approved, a change to "
-        "which documents are checked to read above (this run wrote them to the description, "
-        "after the --yes was given, so it does not cover them); merge with: pkit pm land-work "
-        f"{ISSUE} --yes --expect-head {head}"
-    )
+        "which documents are checked above, for information; merge with: pkit pm land-work "
+        f"{ISSUE} --yes --expect-head {head}",
+    ]
     (written,) = run.github.bodies
     assert f"- {answers.PLACES}: `docs` → none" in written
     assert run.github.merges == []
-    # `--yes` alone does not cover them either; naming the head, once shown, does.
-    assert run.run("--yes", capsys=capsys)[0] == run.land.EXIT_READY
+    # The authorisation merges it as it merges any other change.
     rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
     assert rc == 0, out + err
     assert run.github.merges[-1][-1] == head and len(run.github.bodies) == 1
+
+
+# -- the author's sentences, and what the person is told (DEC-055 points 1 and 3) --
+
+#: The description of a change that updated two documents and says what changed
+#: in one of them.
+_SAID = (
+    f"{_PR_BODY}\n## What changed in each updated document\n\n"
+    "- `docs/install.md`: The install steps name the renamed flag.\n"
+)
+UPDATED_INSTALL = _answer(
+    "docs/install.md",
+    None,
+    answer="updated",
+    changed=[{"kind": "path", "value": "src/cli/flags.py"}],
+)
+UPDATED_GUIDE = _answer("docs/guide.md", None, answer="updated")
+
+
+def test_the_list_gives_each_updated_document_its_author_s_sentence(world, capsys) -> None:
+    """Each sentence is read from the description's own section and given beside its
+    document — in the printed list, in the list written, and in what the `ready:`
+    line tells — and a document with none is said to have none."""
+    run = world()
+    run.written = [UPDATED_INSTALL, UPDATED_GUIDE, DEFERRED]
+    run.github.body = _SAID
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    lines = out.splitlines()
+    said = (
+        "   (what changed, in the words of the pull request's author: \"The install steps "
+        'name the renamed flag.")'
+    )
+    assert f"  {said}" in lines
+    assert "     (what changed: the pull request's author has not said)" in lines
+    head = run.github.head
+    assert lines[-4:] == [
+        '  What changed in docs/install.md: "The install steps name the renamed flag."',
+        "  What changed in docs/guide.md: the pull request's author has not said",
+        *TOLD,
+        f"ready: {_short(head)} — CI passed, all required verdicts approved, what changed in 2 "
+        "updated documents and 1 document left out of date above, for information; merge "
+        f"with: pkit pm land-work {ISSUE} --yes --expect-head {head}",
+    ]
+    (written,) = run.github.bodies
+    assert written.startswith(_SAID)  # the author's own section stays where it was
+    assert (
+        "   - (what changed, in the words of the pull request's author: \"``The install steps "
+        'name the renamed flag.``")'
+    ) in written
+    # The list with the sentence is current: the identical run writes nothing again.
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY and len(run.github.bodies) == 1
+    assert f"{_STEP}: 3, {_IN_THE_DESCRIPTION}" in out.splitlines()
+
+
+def test_a_sentence_edited_in_the_description_is_written_again(world, capsys) -> None:
+    run = world()
+    run.written = [UPDATED_INSTALL]
+    run.github.body = _SAID
+    assert run.run(capsys=capsys)[0] == run.land.EXIT_READY
+    # The author edits the sentence in their own section on the host, by hand: the list
+    # written before still gives the old one.
+    author, listed = run.github.body.split(_HEADING, 1)
+    author = author.replace("name the renamed flag", "keep the old flag")
+    run.github.body = f"{author}{_HEADING}{listed}"
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert "(written now)" in out
+    assert "keep the old flag.``" in run.github.bodies[-1]
+    assert "name the renamed flag.``" not in run.github.bodies[-1]
+
+
+@pytest.mark.parametrize(
+    ("sentence", "why"),
+    [
+        (
+            "It fixes #77 too.",
+            "reads as a closing reference (fixes #77): in the list it would close an issue at "
+            "merge",
+        ),
+        (
+            "Quotes <!-- a comment.",
+            "holds an HTML comment's delimiter (<!--): in the list it could hide the list or the "
+            "markers that delimit it",
+        ),
+    ],
+)
+def test_a_sentence_the_list_must_not_hold_is_refused_and_never_written(
+    world, capsys, sentence, why
+) -> None:
+    run = world()
+    run.written = [UPDATED_INSTALL]
+    run.github.body = _SAID.replace("The install steps name the renamed flag.", sentence)
+    rc, out, _err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert out.splitlines()[-1] == (
+        f"{_STEP}: refused — the sentence on what changed in docs/install.md, under `## What "
+        f"changed in each updated document` in PR #{PR}'s description, {why}. Reword it there "
+        f"(`edit-pr {PR}`), and run `land-work {ISSUE}` again. Nothing was written"
+    )
+    assert run.github.bodies == [] and run.github.merges == []
 
 
 def test_a_base_that_changed_the_listed_settings_is_refused(world, capsys, monkeypatch) -> None:

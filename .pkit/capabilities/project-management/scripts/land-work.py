@@ -17,11 +17,12 @@ the verbs' own functions — the CI gate's reading (`_lib.ci_checks`),
 mechanic of its own. The rules it adds are on the answers the change wrote
 and on the findings a reviewer left for a person to judge
 ([project-management:DEC-055-pr-lists-answers]): it refuses a list it cannot
-read or must not write, and where the change wrote friction answers, or alters
-the friction settings, a `--yes` run merges only a head whose list it found
-already in the description; it prints each `[person]` finding whole, and a
-`--yes` run merges only on verdicts carrying them that it found when it
-started, standing for the head it merges.
+read or must not write, and writes the list for the head it merges, each
+updated document's sentence from its author beside it; a change with answers
+merges under the same authorisation as any other, and a `ready:` line tells
+what changed and what is left out of date, as information. It prints each
+`[person]` finding whole, and a `--yes` run merges only on verdicts carrying
+them that it found when it started, standing for the head it merges.
 
     land-work <N> [--yes [--expect-head SHA]] [--wait-minutes M | --no-wait]
                   [--dry-run]
@@ -72,27 +73,28 @@ It stops at the first step that cannot go on, and its last line says why.
           such a stop has written nothing.
   answers The change check's list of the answers the change wrote, and the
           friction settings it alters, derived at the pinned head against the
-          PR's base (`_lib.friction_answers`), printed word for word, in the
-          plain words of the description's `## Documentation this change
-          affects` section, and written into the PR's description, last before
-          its footer, where it is not there already; its lines begin
-          `documents this change affects:` (`STEP`). A section under that
-          heading no command wrote is removed. Refused: a derivation that
-          cannot be read (nothing is merged on a guess), a file the change
-          touches whose front matter does not parse, a word that reads as a
-          closing reference or holds an HTML comment's delimiter, a list the
+          PR's base (`_lib.friction_answers`), each `updated` document with the
+          sentence its author wrote under the description's `## What changed
+          in each updated document`, printed in full, in the plain words of
+          the description's `## Documentation this change affects` section,
+          and written into the PR's description, last before its footer, where
+          it is not there already; its lines begin `documents this change
+          affects:` (`STEP`). A section under that heading no command wrote is
+          removed. Refused: a derivation that cannot be read (nothing is merged
+          on a guess), a file the change touches whose front matter does not
+          parse, a word or an author's sentence that reads as a closing
+          reference or holds an HTML comment's delimiter, a list the
           description cannot hold, and — where there is a list — a base whose
           commits since the head left it changed a file the list's words are
-          on.
+          on. A write the host answers with an error merges nothing.
   merge   `done-work` with the pinned head. Without `--yes`, off a terminal,
           land-work merges nothing: it runs `done-work`'s gates as a dry run
           and stops with a `ready:` line naming the head and the command that
-          merges it. At a terminal, `done-work`'s prompt asks, after the
-          answers. Where there is a list, a `--yes` run merges only with
-          `--expect-head` and the list found already in the description; one
-          that had to write it, or named no head, stops at `ready:` — and so
-          does a run that wrote it, whatever fails after the write, and a
-          run the findings to judge hold. Its gates,
+          merges it; the lines above it tell what changed in each updated
+          document and which are left out of date, as information. At a
+          terminal, `done-work`'s prompt asks, after the answers. A change
+          with answers merges under the same authorisation as any other; a
+          run the findings to judge hold stops at `ready:`. Its gates,
           refusals and queue handling are done-work's own; land-work decides
           on how its run ended (`done_work.run`), never on its exit code.
 
@@ -289,53 +291,39 @@ class _ReviewEnd:
 
 @dataclass(frozen=True)
 class _AnswersEnd:
-    """How the answers step ended, when it did not stop the run."""
+    """How the answers step ended, when it did not stop the run: what the person
+    who authorises the merge is told, as information, not a gate (DEC-055
+    point 3). A change with answers merges under the same authorisation as any
+    other."""
 
-    #: How many documents the change's answers are on (`friction_answers.documents`).
-    count: int
-    #: How many of the project's friction settings the change alters: shown with
-    #: the answers and held as they are (DEC-055 points 1 and 3).
-    settings: int
-    #: The description carried the list for the pinned head before this run.
-    found: bool
-    #: Why the list could not be written, when this run tried and failed: the run
-    #: merges nothing and ends ready (`_unconfirmed`).
-    failed: str = ""
+    #: How many documents the change updated, as `friction_answers.counted_told`
+    #: counts them.
+    updated: int = 0
+    #: How many documents it leaves out of date: a deferral it wrote or a
+    #: revalidation kept.
+    left: int = 0
+    #: How many of the project's friction settings the change alters.
+    settings: int = 0
+    #: What the `ready:` line tells, a line each (`friction_answers.told`).
+    told: tuple[str, ...] = ()
 
-    @property
-    def listed(self) -> bool:
-        """Whether there is a list for the authorisation to cover."""
-        return bool(self.count or self.settings)
-
-    @property
-    def wrote(self) -> bool:
-        """Whether this run wrote the list — or tried to: whatever fails after that,
-        the run ends ready (exit 8), never with a code whose next step is to run
-        the same command again, which, given `--yes`, would merge on it."""
-        return self.listed and not self.found
-
-    def held(self, args: argparse.Namespace) -> str | None:
-        """Why this run's `--yes` does not cover the answers, or None when it
-        does — or when there is nothing for it to cover (DEC-055 point 3)."""
-        if not self.listed:
-            return None
-        if not args.expect_head:
-            return "this run's --yes names no head"
-        if not self.found:
-            return "this run wrote them to the description, after the --yes was given"
-        return None
-
-    def to_read(self) -> str:
-        """What the `ready:` line asks the person to read, or "" when nothing."""
-        noun = "document" if self.count == 1 else "documents"
-        checked = friction_answers.CHECKED
-        if self.count and self.settings:
-            return f"{self.count} {noun} and {checked} to read above"
-        if self.count:
-            return f"{self.count} {noun} to read above"
+    def phrase(self) -> str:
+        """What the `ready:` line says of the lines above it —
+        `, what changed in 1 updated document and 1 document left out of date
+        above, for information` — or "" when there is nothing to tell."""
+        parts: list[str] = []
+        if self.updated:
+            noun = "document" if self.updated == 1 else "documents"
+            parts.append(f"what changed in {self.updated} updated {noun}")
+        if self.left:
+            noun = "document" if self.left == 1 else "documents"
+            parts.append(f"{self.left} {noun} left out of date")
         if self.settings:
-            return f"{checked} to read above"
-        return ""
+            parts.append(friction_answers.CHECKED)
+        if not parts:
+            return ""
+        said = parts[0] if len(parts) == 1 else f"{', '.join(parts[:-1])} and {parts[-1]}"
+        return f", {said} above, for information"
 
 
 @dataclass(frozen=True)
@@ -437,9 +425,9 @@ def _parser() -> argparse.ArgumentParser:
         help=(
             "The authorisation to merge. Without it, off a terminal, land-work checks, "
             "reviews and runs done-work's gates, then stops with a `ready:` line (exit "
-            "8); at a terminal, done-work asks. Where the change wrote friction answers or "
-            "alters the friction settings, it covers them only with --expect-head and the "
-            "list already in the PR's description; otherwise the run stops at `ready:` too."
+            "8); at a terminal, done-work asks. A change with friction answers merges "
+            "under it as any other does. A finding to judge stops the run at `ready:` "
+            "unless the run found its verdict when it started, standing for the head."
         ),
     )
     parser.add_argument(
@@ -483,9 +471,8 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
     if ci == _CI_PR_MERGED:
         return _merge(args, None, config)
     review = _review(args, head, config)
-    # Before the answers: a step that stops the run after the list was
-    # written must end it ready (`_AnswersEnd.wrote`), and this one stops on
-    # what it cannot read.
+    # Before the answers: this step stops on what it cannot read, and a stop
+    # here has written nothing.
     to_judge = _findings(args, head, config, capability_root, found)
     answers = _answers(args, head, config, capability_root)
     if args.dry_run and (ci != _CI_PASSED or not review.clear):
@@ -496,9 +483,7 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
         return EXIT_MERGED
     if args.dry_run:
         return _merge(args, head, config)
-    if answers.failed:
-        return _unconfirmed(head, review, answers, to_judge, answers.failed)
-    if args.yes and (answers.held(args) is not None or to_judge.held is not None):
+    if args.yes and to_judge.held is not None:
         return _ready(args, head, review, config, answers, to_judge)
     if not args.yes and not _interactive():
         return _ready(args, head, review, config, answers, to_judge)
@@ -952,11 +937,12 @@ def _answers(
     args: argparse.Namespace, head: _Head, config: dict[str, Any], capability_root: Path
 ) -> _AnswersEnd:
     """The change check's list of the answers the change wrote, and the friction
-    settings it alters, derived at the pinned head against the PR's base, printed
-    word for word, and written into the PR's description where it is not there
-    already (DEC-055). Stops the run on a list it cannot read or must not write;
-    a dry run writes nothing. A write that fails is not a stop: the run ends
-    ready, merging nothing (`_AnswersEnd.failed`)."""
+    settings it alters, derived at the pinned head against the PR's base, each
+    `updated` document with its author's sentence from the description, printed
+    in full, and written into the PR's description where it is not there already
+    (DEC-055). Stops the run on a list it cannot read or must not write, and on a
+    write the host answered with an error, which merges nothing; a dry run writes
+    nothing."""
     issue, number, sha = head.issue, head.pr_number, short_sha(head.oid)
     if not head.base_branch:
         raise _Stop(
@@ -1006,15 +992,42 @@ def _answers(
                 f"{STEP}: refused — the words on {location} {why.format(words=words)}. Reword "
                 f"them there, push, and run `land-work {issue}` again. Nothing was written",
             )
-    section = friction_answers.render(document, head.oid, settings)
-    for line in friction_answers.lines(document, settings):
+    sentences = friction_answers.given(document, friction_answers.sentences(body))
+    for found, why in (
+        (
+            friction_answers.sentence_closing_reference(sentences),
+            "reads as a closing reference ({words}): in the list it would close an issue at merge",
+        ),
+        (
+            friction_answers.sentence_comment_delimiter(sentences),
+            "holds an HTML comment's delimiter ({words}): in the list it could hide the list or "
+            "the markers that delimit it",
+        ),
+    ):
+        if found is not None:
+            location, words = found
+            raise _Stop(
+                EXIT_NEEDS_CHANGE,
+                f"{STEP}: refused — the sentence on what changed in {location}, under "
+                f"`{friction_answers.SENTENCES_HEADING}` in PR #{number}'s description, "
+                f"{why.format(words=words)}. Reword it there (`edit-pr {number}`), and run "
+                f"`land-work {issue}` again. Nothing was written",
+            )
+    section = friction_answers.render(document, head.oid, settings, sentences)
+    for line in friction_answers.lines(document, settings, sentences):
         print(f"  {line}")
     count = friction_answers.documents(derived.answers)
     written = friction_answers.affected(count, settings=bool(settings))
-    end = _AnswersEnd(count, settings=len(settings), found=False)
+    updated, left = friction_answers.counted_told(document)
+    end = _AnswersEnd(
+        updated,
+        left,
+        settings=len(settings),
+        told=tuple(friction_answers.told(document, settings, sentences)),
+    )
     if friction_answers.current(body, section):
         _say(f"{STEP}: {written}, {_LISTED}")
-        return _AnswersEnd(count, settings=len(settings), found=True)
+        return end
     new_body = _stamped(body, section, capability_root)
     if not friction_answers.fits(new_body):
         raise _Stop(
@@ -1023,7 +1036,7 @@ def _answers(
             f"characters, past the {friction_answers.BODY_LIMIT} the host keeps. Shorten the "
             "description's own text, split the change, or narrow the anchor, push, and run "
             f"`land-work {issue}` again. Nothing was written. The only way past it is "
-            "`done-work`, which lands the PR without the list: its merge is not held",
+            "`done-work`, which lands the PR without the list",
         )
     removed = f"; removed {_HAND_WRITTEN}" if friction_answers.hand_written(body) else ""
     if args.dry_run:
@@ -1031,17 +1044,11 @@ def _answers(
         return end
     problem = _write_body(head, new_body, config)
     if problem:
-        _say(
-            f"{STEP}: {written}, listed above; the pull request's description could not be written"
-        )
-        return _AnswersEnd(
-            count,
-            settings=len(settings),
-            found=False,
-            failed=(
-                f"the list could not be written to PR #{number}'s description ({problem}), and "
-                "the host may have kept it all the same"
-            ),
+        raise _Stop(
+            EXIT_RETRY,
+            f"{STEP}: {written}, listed above, but the list could not be written to PR "
+            f"#{number}'s description ({problem}), and the host may have kept it all the same. "
+            f"Nothing was merged; run `land-work {issue}` again",
         )
     _say(f"{STEP}: {written}, {_LISTED} (written now){removed}")
     return end
@@ -1059,7 +1066,7 @@ def _no_answers(
     description — or a section under its heading no command wrote — is removed."""
     if friction_answers.current(body, None):
         _say(f"{STEP}: none")
-        return _AnswersEnd(0, settings=0, found=True)
+        return _AnswersEnd()
     left = [
         *(["the list an earlier head left"] if friction_answers.has_list(body) else []),
         *([_HAND_WRITTEN] if friction_answers.hand_written(body) else []),
@@ -1076,7 +1083,7 @@ def _no_answers(
                 f"description: {problem}. Nothing was merged; run `land-work {head.issue}` again",
             )
         _say(f"{STEP}: none — removed {what} from the pull request's description")
-    return _AnswersEnd(0, settings=0, found=True)
+    return _AnswersEnd()
 
 
 def _refuse_moved_base(derived: friction_answers.Derivation, head: _Head) -> None:
@@ -1410,60 +1417,30 @@ def _ready(
     answers: _AnswersEnd,
     to_judge: _FindingsEnd,
 ) -> int:
-    """No authorisation to merge — none given, or a `--yes` that does not cover
-    the answers or the findings to judge above (DEC-055 point 3): run
-    done-work's gates as a dry run on the pinned head, and say the head is
-    ready, with the command that merges it — and, where a verdict carrying a
-    finding to judge does not stand for the head, the review it waits for.
-    Where this run wrote the list, a dry run that fails, or cannot be read, ends
-    ready too (`_unconfirmed`): the next step is to show the list, never to run
-    the same command again."""
+    """No authorisation to merge — none given, or a `--yes` the findings to judge
+    above hold (DEC-055 point 3): run done-work's gates as a dry run on the
+    pinned head, and say the head is ready, with the command that merges it —
+    and, where a verdict carrying a finding to judge does not stand for the head,
+    the review it waits for. Above the `ready:` line, what the person who
+    authorises the merge is told, as information, not a gate: what changed in
+    each updated document, in its author's sentence, which documents are left
+    out of date, with each deferral's words, and the friction settings changed."""
     argv = [str(head.issue), *_passed_through(args, review=False), "--dry-run"]
     try:
         end = done_work.run(argv, pinned_head=head.oid)
     except (Exception, SystemExit) as exc:
         failure = _described(exc)
-        if answers.wrote:
-            return _unconfirmed(
-                head, review, answers, to_judge, f"done-work's dry run failed ({failure})"
-            )
         raise _Stop(*_done_work_failed(failure, head.issue, head, config, merging=False)) from exc
     if end.kind != done_work.PLANNED:
         code, line = _judged(end, head, args, config)
-        if answers.wrote and code in (EXIT_RETRY, EXIT_UNREADABLE):
-            return _unconfirmed(
-                head, review, answers, to_judge, f"done-work's dry run: {end.reason}"
-            )
         _say(line)
         return code
-    to_read = answers.to_read()
-    if to_read:
-        held = answers.held(args) if args.yes else None
-        to_read = f", {to_read}" + (f" ({held}, so it does not cover them)" if held else "")
+    for line in answers.told:
+        print(f"  {line}")
     _say(
-        f"ready: {short_sha(head.oid)} — CI passed, {review.approval}{to_read}"
+        f"ready: {short_sha(head.oid)} — CI passed, {review.approval}{answers.phrase()}"
         f"{to_judge.phrase()}; merge "
         f"with: pkit pm land-work {head.issue} --yes --expect-head {head.oid}"
-    )
-    return EXIT_READY
-
-
-def _unconfirmed(
-    head: _Head,
-    review: _ReviewEnd,
-    answers: _AnswersEnd,
-    to_judge: _FindingsEnd,
-    failure: str,
-) -> int:
-    """A run that wrote the list — or tried to — and then could not go on: it ends
-    ready, merging nothing (DEC-055 point 3). The list above is the one to show,
-    with the findings to judge; the run that merges, on the person's
-    authorisation, runs every gate again."""
-    _say(
-        f"ready: {short_sha(head.oid)} unconfirmed — {failure}; nothing was merged. CI passed, "
-        f"{review.approval}, {answers.to_read()}{to_judge.phrase()}; the run that merges "
-        f"checks every gate again. Merge with: pkit pm land-work {head.issue} --yes "
-        f"--expect-head {head.oid}"
     )
     return EXIT_READY
 
