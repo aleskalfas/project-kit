@@ -14,8 +14,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-13T09:18:15Z
-      outcome: updated
+      at: 2026-10-13T11:43:50Z
+      outcome: unchanged
+      unchanged-because: The rule-set module gains one judgement of whether a declared check is there, shared by validation and the reading commands, and its reach walk names the rules a pin behind its set holds back. This page's section on rule sets gives their statuses, the acceptance gate, where sets live, how a rule is cited and what validation checks. It says nothing of declared checks, pins or the reading commands, so it holds.
       deferred:
         - anchor:
             kind: record

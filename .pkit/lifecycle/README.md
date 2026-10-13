@@ -29,9 +29,8 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-13T07:39:33Z
-      outcome: unchanged
-      unchanged-because: COR-010's change names the propagation that sync and a version transition both run as what skips a capability authored in the project's own repository. COR-027's change says that sync removes nothing the project wrote, so its migration removes a retired bundle's project-side folder, prompting first. The page has sync, and the capability refresh in it, skip source-reconciliation for an incubated capability, and its upgrade flow runs that sync. It cites COR-027 only for the bundle pattern's retirement. The change merged from main, which has artefact discovery cut an entry's section through document_parts, leaves what the page says of friction_discovery and of friction artefacts as it was. So it holds.
+      at: 2026-10-13T11:43:40Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
