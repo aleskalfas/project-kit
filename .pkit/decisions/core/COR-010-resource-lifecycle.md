@@ -57,7 +57,7 @@ Four operations apply to every resource the core layer installs, regardless of r
 
 1. **Install** — the relevant tier's setup primitive creates the resource and (for non-derivable state) records it in the appropriate manifest.
 2. **Inspect** — `status` walks the registry, reads each component manifest, surfaces aggregated state. `validate` computes expected state for derivable resources from the spec at the recorded version + adopter's config and compares to reality; manifest-tracked resources are compared directly.
-3. **Update** — re-running the setup primitive reconciles installed state with the current version's spec. Derivable resources are regenerated; non-derivable resources are updated via their recorded opaque ID. Idempotent.
+3. **Update** — re-running the setup primitive reconciles installed state with the spec at the versions the project records. It moves no recorded version and runs no migration: a version transition moves them (COR-059). Derivable resources are regenerated; non-derivable resources are updated via their recorded opaque ID. Idempotent.
 4. **Remove** — the bundle / adapter remove command tears down the component's resources, deletes its per-component manifest, and removes its registry entry. Adopter content is never touched (per COR-005 + the no-shared-files invariant).
 
 ### Three migration scopes per tier
