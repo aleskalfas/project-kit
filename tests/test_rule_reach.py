@@ -664,6 +664,27 @@ def test_a_component_s_check_is_judged_at_the_state_read_a_backbone_check_by_the
     assert presence(altered["base"]) == there and presence(altered["head"]) == gone
 
 
+def test_a_commit_s_installed_packages_are_read_from_that_commit(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The packages a commit installs are its manifest's components whose package file it
+    holds: an empty one is installed and registers nothing, an absent one is left out, as
+    the working tree's reader keeps and leaves them."""
+    repo = make_adopter_repo(capabilities=("living-docs",))
+    package = ".pkit/capabilities/living-docs/package.yaml"
+
+    def at(commit: str) -> dict[str, dict[str, Any]]:
+        tree = fc.CommitTree(repo.root, commit)
+        return {name: found for name, _dir, found in fd.installed_packages_at(repo.root, tree)}
+
+    installed = at(repo.commit("installed"))
+    assert "commands" in installed["living-docs"]
+    repo.write({package: ""})
+    assert at(repo.commit("an empty package file"))["living-docs"] == {}
+    repo.write({package: None})
+    assert "living-docs" not in at(repo.commit("no package file"))
+
+
 def test_a_check_part_is_no_part_of_the_rule_s_content(repo: AdopterRepo) -> None:
     """Declared beside the rule, outside its entry: declaring one leaves its content alone."""
     lay_out(repo, {"cmn": rule_set("CMN")}, a=page())
