@@ -236,9 +236,9 @@ def test_a_bare_url_ends_before_the_punctuation_after_it() -> None:
     fourteen = " ".join(["word"] * 14)
     assert counted(f"Read {fourteen} at https://example.org. {fourteen} here.\n") == [17, 15]
     assert counted(f"{' '.join(['word'] * 25)} https://example.org/a;b\n") == [26]
-    assert found("See https://example.org; then go.\n\nWe fund R&D; it pays.\n") == [
+    assert found("See https://example.org; then go.\n\nWe fund R&D; and caf&eacute;s.\n") == [
         '1 RS-WRITE-008: a semicolon: "See https://example.org; then go."',
-        '3 RS-WRITE-008: a semicolon: "We fund R&D; it pays."',
+        '3 RS-WRITE-008: a semicolon: "We fund R&D; and caf&eacute;s."',
     ]
 
 
@@ -248,6 +248,26 @@ def test_a_block_quote_starts_a_block_and_its_fence_holds_code() -> None:
     assert found(f"Plain; one.\n> Quoted; two.\n\n> ```\n> {LONG}\n> ```\n") == [
         '1 RS-WRITE-008: a semicolon: "Plain; one."'
     ]
+
+
+def test_a_fence_remembers_whether_a_block_quote_opened_it() -> None:
+    """A quoted fence line inside a fence is code, and the end of a block quote closes a
+    fence opened in it."""
+    inside = "```text\n> ```\n```\n\nAfter; this.\n"
+    ended = "> ```\n> code; here\n\nAfter; this.\n"
+    assert found(inside) == ['5 RS-WRITE-008: a semicolon: "After; this."']
+    assert found(ended) == ['4 RS-WRITE-008: a semicolon: "After; this."']
+
+
+def test_a_count_reads_a_url_as_a_word_through_its_entry() -> None:
+    """25 words and a URL are 26 for RS-WRITE-005, and a quoted paragraph under an unquoted
+    rule keeps its words."""
+    twenty_five = " ".join(["word"] * 25)
+    assert found(f"{twenty_five} https://example.org.\n") == [
+        '1 RS-WRITE-005: a sentence of 26 words, over 25: "word word word word word word word '
+        'word …"'
+    ]
+    assert counted("> One; two.\n---\n") == [2]
 
 
 def test_only_a_link_definition_is_read_as_one() -> None:

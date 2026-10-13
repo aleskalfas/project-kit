@@ -26,9 +26,9 @@ How it reads text follows RS-WRITE-005's *How* (`tech-docs/rule-sets/writing.md`
   a space or a line end. Each block ends one too: a paragraph, a list item, a
   table cell and a front-matter value.
 - Headings, bold labels, code blocks and the quoted example of an item labelled
-  "Breaks the rule" are not read, and nor is an HTML comment. A link's
-  target, a bare URL and an HTML entity count as words, and no pattern
-  searches them.
+  "Breaks the rule" are not read, and nor is an HTML comment. For a count, a
+  bare URL and an HTML entity are tokens like any other, and a link's target
+  is part of its link's last token. No pattern searches them.
 
 `lint_text` reads a given text whole, as a test of stamped template text calls
 it. From the repository root:
@@ -49,6 +49,7 @@ from bisect import bisect_right
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
+from html.entities import html5
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import unquote
@@ -259,7 +260,9 @@ def markdown_blocks(text: str) -> list[Block]:
 
     - **No prose:** fenced code, headings (a setext heading's text included),
       thematic breaks, HTML comments and lines that are one HTML tag. A fence
-      closes on a bare fence of its own character, at least as long as it.
+      closes on a bare fence of its own character, at least as long as it, in
+      the same block quote or outside any. The end of a block quote closes a
+      fence opened in it.
     - **Blocks:** a blank line ends a block, and so does the start of a block
       quote. A list marker starts one. Each table cell is a block of its own,
       and so is each link definition.
@@ -278,6 +281,7 @@ def markdown_blocks(text: str) -> list[Block]:
             current.clear()
 
     fence: str | None = None
+    fence_quoted = False  # the fence opened inside a block quote, which closes it too
     in_comment = False
     offset = 0
     for line in text.split("\n"):
@@ -289,15 +293,17 @@ def markdown_blocks(text: str) -> list[Block]:
         quote = _QUOTE_PREFIX.match(line)
         column = quote.end() if quote is not None else 0
         rest = line[column:]
+        if fence is not None and fence_quoted and quote is None:
+            fence = None  # the block quote ended, and its fence with it: read this line
         if fence is not None:
-            close = _FENCE_CLOSE.match(rest)
+            close = _FENCE_CLOSE.match(rest if fence_quoted else line)
             if close is not None and close.group(1).startswith(fence):
                 fence = None
             continue
         opened = _FENCE_OPEN.match(rest)
         if opened is not None:
             flush()
-            fence = opened.group(1)
+            fence, fence_quoted = opened.group(1), quote is not None
             continue
         if rest.lstrip().startswith("<!--"):
             flush()
@@ -364,12 +370,11 @@ _LINK_TARGET = re.compile(r"\]\([^)\s]+(?:\s+\"[^\"]*\")?\)")
 # A bare URL, ending before trailing punctuation as an autolink does, so a sentence's own
 # full stop or semicolon after it is prose.
 _BARE_URL = re.compile(r"<?[A-Za-z][A-Za-z0-9+.-]*://[^\s<>)\]]*[^\s<>)\].,;:!?'\"*_~]>?")
-# An HTML entity: a number, or a name of the few that prose writes.
-_ENTITY = re.compile(
-    r"&(?:#[0-9]+|#[xX][0-9a-fA-F]+"
-    r"|nbsp|amp|lt|gt|quot|apos|mdash|ndash|hellip|lsquo|rsquo|ldquo|rdquo|laquo|raquo"
-    r"|copy|reg|trade|times|minus|rarr|larr|middot|shy|zwj|zwnj);"
+# An HTML entity: a number, or a name HTML defines (`html.entities.html5`).
+_ENTITY_NAMES = "|".join(
+    sorted((name[:-1] for name in html5 if name.endswith(";")), key=len, reverse=True)
 )
+_ENTITY = re.compile(rf"&(?:#[0-9]+|#[xX][0-9a-fA-F]+|(?:{_ENTITY_NAMES}));")
 _HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 
 

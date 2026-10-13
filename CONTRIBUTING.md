@@ -104,9 +104,9 @@ Answer what it reports in a pull request like any friction (the friction gate, a
   - A bold label is bold text that opens a block and ends in a colon. A block that is only a label holds no sentence.
   - A quoted example of a broken rule runs from the first quotation mark to the last, in a block labelled "Breaks the rule".
   - Every text value of the front matter is read, except inside the methodology's `pkit` container. Its answers are never rewritten for style (RS-WRITE-013).
-  - Only fenced code is a code block. A fence closes on a bare fence of its own character, at least as long as the one that opened it.
+  - Only fenced code is a code block. A fence closes on a bare fence of its own character, at least as long as the one that opened it. A fence opened in a block quote closes there, or where the quote ends.
   - A block quote's words count, and its text is quoted, so RS-WRITE-008 exempts its semicolons.
-  - An HTML comment is not read, and a setext heading is a heading. A link's target, a bare URL and an HTML entity count as words, but no pattern searches them, so a URL holds no semicolon.
+  - An HTML comment is not read, and a setext heading is a heading. For a count, a bare URL and an HTML entity are tokens like any other. A link's target is part of its link's last token. No pattern searches them, so a URL holds no semicolon.
 - **On a given text:** `lint_text` reads a text whole, so a test of stamped template text calls it rather than counting again.
 
 Each mechanical part of a rule is an entry in `scripts/prose-lint.yaml`, of one of four types: `count`, `forbid`, `substitute` and `link-resolves`. The file's header gives each type's fields. A part gets an entry only when three things hold. It is deterministic with near-zero false alarms, an AI reviewer is unreliable at it, and its findings recur (COR-007). A part that fails any of the three stays with the reviewer. To add an entry for a rule:
