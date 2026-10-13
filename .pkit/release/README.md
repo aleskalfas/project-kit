@@ -14,9 +14,9 @@ pkit:
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
       source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-11T20:51:31Z
+      at: 2026-10-13T04:27:18Z
       outcome: unchanged
-      unchanged-because: PRJ-004 changed only its citation of the tool update, which now runs or prints a uv command under ADR-063 where it printed one under ADR-044; this page cites PRJ-004 for the git-URL install, the release tags and the notes-only releases, none of which changed
+      unchanged-because: The page cites COR-010 for semver, for the separate version lines of the backbone and of each component, for requires_backbone ranges, and for migrations shipped in the change-set of their surface change. COR-010 now says that a version transition moves a project's recorded versions, in what order, and what a backbone migration must meet, which this page on cutting releases does not describe. Its advice to upgrade a component together with the backbone fits the change.
 ---
 
 # Release flow — changesets + the release step

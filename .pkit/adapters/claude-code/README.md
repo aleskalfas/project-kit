@@ -13,8 +13,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-11T18:03:36Z
-      outcome: updated
+      at: 2026-10-13T04:27:19Z
+      outcome: unchanged
+      unchanged-because: The page says pkit init, pkit sync and pkit merge run merge-settings.sh and merge-claude-md.sh, which only add entries and put back the safety denies, and it describes no prompting tier. COR-002 now lists every sync among the points where merge runs, without its prompt-once tier, which is what the page says.
 ---
 
 # Claude Code adapter

@@ -11,9 +11,9 @@ pkit:
         - .pkit/capabilities/evidence/decisions/**
       record: [COR-007, COR-017, COR-020, COR-021]
     revalidated:
-      at: 2026-09-30T23:02:01Z
+      at: 2026-10-13T04:27:20Z
       outcome: unchanged
-      unchanged-because: "#840's lint and format pass reshapes the anchored code without changing what it does, so this page still describes it as it is"
+      unchanged-because: The page cites COR-017 for installing the capability, its citation form and its variants, and says only that its install, sync and upgrade mechanics depend on COR-017. COR-017 changes only in what moves a capability to a newer version, a version transition rather than sync, so those statements hold.
 ---
 
 # evidence capability

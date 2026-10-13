@@ -18,9 +18,8 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-12T20:31:25Z
-      outcome: unchanged
-      unchanged-because: router.py changed only in two docstrings, which now cite ADR-063 for the tool staleness probe and ADR-064 for the default pin; this page describes the routes, the degrade when a pin cannot be fetched and the escape hatches, none of which changed
+      at: 2026-10-13T04:27:17Z
+      outcome: updated
 ---
 
 # Contributing to project-kit

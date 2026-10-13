@@ -19,9 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-13T01:06:11Z
+      at: 2026-10-13T04:27:23Z
       outcome: unchanged
-      unchanged-because: The change corrects how friction_discovery.py and friction_validate.py name a capability place's shape, in docstrings, a comment and the two malformed-place messages, to {path, location?, type?, description?}, and a held folder's, in the malformed-held-folder message and its tail, to {location, path, description?}. This page already gives a place that shape, and which places are walked and what is reported are unchanged, so it holds.
+      unchanged-because: The page cites COR-048 for the configuration file's fixed path, its strict validation and its schema living in the tree. COR-048 now says sync never writes the file and a version transition writes it only through the migrations point 5 names, which the page does not speak of, so it holds.
 ---
 
 # Schemas

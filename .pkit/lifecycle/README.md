@@ -32,6 +32,15 @@ pkit:
       at: 2026-10-13T00:42:13Z
       outcome: unchanged
       unchanged-because: The change corrects friction_discovery.py's docstrings, a comment and the message a malformed capability place or held folder gets, so they give a place's shape as {path, location?, type?, description?} and a held folder's as {location, path, description?}. This page's table already gives those shapes, and the walk and its findings are as it describes, so it holds.
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-010
+          reason: "COR-010 now has a version transition record its target first and its completion last, and move a shipped component alone only to the version its recorded release ships. This page states the new script contract, but its manifest records only the backbone version the project is at, its upgrade flow runs sync for the backbone and updates the recorded versions last, and its per-component upgrade takes any version within requires_backbone, as the code still does. It follows with #1459, which rewrites the manifest format and the upgrade flow, and #1461, which rewrites the upgrade flow and the per-component upgrade."
+        - anchor:
+            kind: record
+            value: COR-017
+          reason: "COR-017 no longer has sync upgrade the installed capabilities: a version transition moves them and resolves a new collision, and sync keeps each at its recorded version. This page still has sync refresh every installed capability from source, run its migrations and guard a downgrade, as the code does today. It follows with #1460, where sync copies a capability only at its recorded version and runs no migration, and #1461, where the transition runs each capability migration and resolves a new collision."
 ---
 
 # Lifecycle
