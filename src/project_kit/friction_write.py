@@ -40,7 +40,7 @@ neither refuses, writes nothing, and names the command to run — the consent
 rule of the configuration writer (COR-048 point 5), applied to the project's
 own artefacts. `record-status` names it with `--dry-run` and with `--yes`;
 `revalidate` and `defer` name only the dry run and print no ready-made `--yes`
-command: an answer is written on a person's decision (point 3).
+command: an answer on an artefact may be a person's decision (point 3).
 """
 
 from __future__ import annotations
@@ -1171,9 +1171,10 @@ def apply(
     `rerun` is the command as run, without `--yes` or `--dry-run`, for the
     refusal to name. A plan with nothing to write writes nothing and succeeds.
     A writer whose plan is an answer on an artefact (`writes_answer`: revalidate,
-    defer) is refused without a ready-made `--yes` command to run: an answer is
-    written on a person's decision (COR-050 point 3), so the refusal names the
-    dry run and says what `--yes` does.
+    defer) is refused without a ready-made `--yes` command to run: an answer may
+    be a person's decision (COR-050 point 3) — every answer but the ones a change
+    owes, which the agent making it may write and a reviewer checks — so the
+    refusal names the dry run and says what `--yes` does.
     """
     click.echo(render_plan(plan), nl=False)
     if not plan.changes:
@@ -1187,8 +1188,8 @@ def apply(
     if not yes:
         if not can_ask:
             consent = (
-                "`--yes` writes without asking. An answer on an artefact is written on a "
-                "person's decision (COR-050 point 3)."
+                "`--yes` writes without asking. An answer on an artefact may be a person's "
+                "decision (COR-050 point 3)."
                 if writes_answer
                 else f"To consent non-interactively, run:\n  {command_line(*rerun, '--yes')}"
             )

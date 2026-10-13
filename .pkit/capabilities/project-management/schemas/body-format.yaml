@@ -245,6 +245,24 @@ friction_answers_marker:
     is read as the heading in each of these rules, so a section it left
     is stripped and replaced whole. No text the section lists holds
     `<!--` or `-->`: the commands that write it never write such a list.
+  # The author's own section, outside the list: the sentences live here
+  # between writes, and every write of the list gives each beside its
+  # `updated` document.
+  sentences_heading: "## What changed in each updated document"
+  sentences_rule: |
+    One top-level list item per document the change revalidated as
+    `updated`, bulleted or numbered and starting in the line's first
+    column: the document in a code span, named as the list names it
+    (its path, or `path#id` for an entry of a collection), then a colon
+    or a dash, then one sentence on what changed in it. An item runs on
+    over the lines under it up to a blank line, another list item, a
+    heading, an HTML comment or a thematic break. Of two items for one document, the first is read. The
+    section ends at the next heading of level one or two. open-pr and
+    land-work give each sentence beside its document in the list, and
+    edit-pr gives each as the edited body has it; an `updated` document
+    with no sentence is listed as having none. A sentence that reads as
+    a closing reference or holds `<!--` or `-->` is never written into
+    the list.
 
 checkbox_rules:
   validation_timing: |

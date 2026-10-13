@@ -51,7 +51,7 @@
     },
     "friction_answers_marker": {
       "$ref": "#/$defs/friction_answers_marker_block",
-      "description": "Shape and semantics of a pull request's `## Documentation this change affects` section (DEC-055): the change check's list of the answers the change wrote, in plain words, a sentinel-delimited region the capability's scripts write and every reader of the body strips before it reads."
+      "description": "Shape and semantics of a pull request's `## Documentation this change affects` section (DEC-055): the change check's list of the answers the change wrote, in plain words, each updated document with its author's sentence on what changed, a sentinel-delimited region the capability's scripts write and every reader of the body strips before it reads."
     },
     "checkbox_rules": {
       "$ref": "#/$defs/checkbox_rules_block",
@@ -194,6 +194,16 @@
           "type": "string",
           "minLength": 1,
           "description": "How the section is stripped."
+        },
+        "sentences_heading": {
+          "type": "string",
+          "pattern": "^## .+$",
+          "description": "The heading of the body's own section where the change's author says what changed in each document the change revalidated as `updated`, one sentence each. The author's text, kept in the body between writes; the scripts read it and give each sentence beside its document in the list (DEC-055 point 1)."
+        },
+        "sentences_rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "How a sentence is written under `sentences_heading`, and how the scripts read it."
         }
       }
     },

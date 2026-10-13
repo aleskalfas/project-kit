@@ -1,0 +1,26 @@
+component: software-engineering
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  `docs-reviewer` checks the answers a change wrote on its documents, as a
+  reviewer other than their writer, the role COR-050 point 3 describes and
+  software-engineering DEC-002 gives it wherever it reviews: its
+  docs-match-behaviour lens applied to the change's own claims about its
+  documents. It reads them from the change check's own list (`pkit friction
+  check --base <base> --head <head>`, "Answers written in this change"),
+  never from the author's account, and raises a `[block]` finding in its
+  verdict on each that does not hold: an `unchanged` reason the change does
+  not bear out; a deferral the change writes or rewords whose reason does not
+  hold, or that names no open follow-up issue; and a document revalidated as
+  `updated` with no sentence on what changed under the pull request's `##
+  What changed in each updated document`, or with one that does not match the
+  diff. A deferral the change keeps as it was is not judged again. An answer
+  on an artefact the change check asked nothing about, and a reason for having
+  no anchors, are a person's decision that no reviewer can confirm, so it
+  names each in an `[advisory]` finding, and still checks the sentence of
+  such an answer revalidated as `updated`. A project with friction dormant has
+  nothing to check. The check reads the change check's list of answers, which
+  the backbone this release ships gives, so the capability requires that
+  backbone.

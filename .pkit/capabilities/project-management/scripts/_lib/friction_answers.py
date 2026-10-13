@@ -2,9 +2,11 @@
 
 An agent building a change may give the answers its own change owes — the
 revalidations and deferrals the change check asks of it — without asking
-first; they become a person's decision when the person who authorises the
-merge is shown every one of them, word for word, from the change check's own
-list (COR-050 point 3). This module puts that list in the description:
+first. A reviewer other than that agent checks them, from the change check's
+own list, and the person who authorises the merge is told what changed in
+each updated document and which are left out of date, as information
+(COR-050 point 3). This module puts that list in the description, with each
+updated document's sentence from the change's author:
 
 - `derive(head, base)` runs the change check at the pull request's head
   (`pkit friction check --json --base <base> --head <oid>`) against the pull
@@ -21,12 +23,24 @@ list (COR-050 point 3). This module puts that list in the description:
   (`QUESTION`), then each document, the anchors the change modified that it
   relies on, and whether it is still true, each answer and flag in plain words
   (`LABELS`, `FLAGS`). The change check's own terms stay in its
-  machine-readable list (`--json`), which this module reads.
+  machine-readable list (`--json`), which this module reads. Each `updated`
+  document also gives its sentence on what changed, or says its author gave
+  none.
+- `sentences(body)` reads those sentences where the change's author keeps
+  them: the description's own `## What changed in each updated document`
+  section (`SENTENCES_HEADING`), one list item per document, the document in
+  a code span as the list names it. `given` is the ones the list shows, and
+  `with_sentences` puts them into a list already written, for an edit that
+  derives nothing. `told` is what the person who authorises the merge is
+  told, as information: those sentences, the documents left out of date, and
+  the friction settings changed.
 - `closing_reference` and `comment_delimiter` name a word of the list that
   must not be written: one that reads as a closing reference — the host's own
   parser would close an issue with it at merge, and nothing here can make that
   parser skip a section — and one holding an HTML comment's delimiter, which
   could open or close a comment around the section's markers.
+  `sentence_closing_reference` and `sentence_comment_delimiter` name the same
+  in an author's sentence.
 - `stamp`, `strip`, `find` and `current` place, remove, find and compare the
   section — strip-then-place-exactly-one, as `provenance.stamp` keeps the
   footer. The section sits last, before the provenance footer. A section
@@ -532,6 +546,13 @@ LABELS = {
     "deferred": "out of date, fixed later",
     "unanchored": "not tied to anything",
 }
+#: The answers whose words the list tells the person who authorises the merge
+#: (DEC-055 point 3): an update's sentence, and a deferral's reason.
+UPDATED, DEFERRED = "updated", "deferred"
+#: How the list gives an `updated` document's sentence: the author's words.
+SAID = "what changed, in the words of the pull request's author"
+#: What it says where the author wrote no sentence for that document.
+UNSAID = "what changed: the pull request's author has not said"
 #: A revalidation whose outcome is neither `updated` nor `unchanged` (`answer` null).
 NO_OUTCOME = "no decision recorded"
 #: Each flag the change check puts on an answer, as the list names it.
@@ -580,7 +601,9 @@ def _read_anchor(value: Any) -> _Anchor | None:
 class _Entry:
     """One answer, every text in it shown as the list shows it. `changed`: the
     anchors the change modified that the answer is about (the check's `changed`;
-    none from a backbone that predates it)."""
+    none from a backbone that predates it). `updated`: the answer is `updated`,
+    so the list gives the author's `sentence` on what changed, or says there is
+    none."""
 
     location: str
     label: str
@@ -589,6 +612,8 @@ class _Entry:
     reason: str | None
     kept: tuple[tuple[_Anchor, str | None], ...]
     changed: tuple[_Anchor, ...] = ()
+    updated: bool = False
+    sentence: str | None = None
 
 
 def _flags(entry: Mapping[str, Any]) -> list[str]:
@@ -610,7 +635,7 @@ def _flags(entry: Mapping[str, Any]) -> list[str]:
     return flags
 
 
-def _read_entry(entry: Mapping[str, Any]) -> _Entry:
+def _read_entry(entry: Mapping[str, Any], sentences: Mapping[str, str] | None = None) -> _Entry:
     answer, reason = entry.get("answer"), entry.get("reason")
     kept: list[tuple[_Anchor, str | None]] = []
     for item in entry.get("kept") or []:
@@ -619,14 +644,19 @@ def _read_entry(entry: Mapping[str, Any]) -> _Entry:
         kept.append((held, shown(str(words)) if words is not None else None))
     changed = entry.get("changed")
     relied = [_read_anchor(item) for item in changed] if isinstance(changed, list) else []
+    location = shown(str(entry.get("location") or entry.get("artefact") or "?"))
+    updated = answer == UPDATED
+    sentence = (sentences or {}).get(location) if updated else None
     return _Entry(
-        location=shown(str(entry.get("location") or entry.get("artefact") or "?")),
+        location=location,
         label=LABELS.get(str(answer), shown(str(answer))) if answer else NO_OUTCOME,
         anchor=_read_anchor(entry.get("anchor")),
         flags=tuple(_flags(entry)),
         reason=shown(str(reason)) if reason is not None else None,
         kept=tuple(kept),
         changed=tuple(anchor for anchor in relied if anchor is not None),
+        updated=updated,
+        sentence=shown(sentence) if sentence is not None else None,
     )
 
 
@@ -648,12 +678,11 @@ QUESTION = (
     "the document is still true."
 )
 #: What the section says first, to a reader who does not know the methodology.
-OPENING = f"{QUESTION} Read them before approving the merge."
+OPENING = QUESTION
 #: What it says first where the change decided nothing about any document but
 #: changes which documents are checked.
 SETTINGS_OPENING = (
-    "This change decided nothing about any document, but it changes which documents are "
-    "checked. Read this before approving the merge."
+    "This change decided nothing about any document, but it changes which documents are checked."
 )
 #: What the list says above those changes, after the documents.
 SETTINGS_LEAD = "It also changes which documents are checked:"
@@ -667,9 +696,10 @@ def _and(items: Sequence[str]) -> str:
 def _described(entry: _Entry, number: int, *, markdown: bool) -> list[str]:
     """One answer as the list shows it — the document, the anchors the change
     modified that it relies on, whether it is still true, its flags and its words —
-    then each deferral it kept, as the change check's own list says them. In
-    Markdown the outcome is bold and every text of the artefact's is set in a code
-    span."""
+    then, for an `updated` document, the author's sentence on what changed (`SAID`)
+    or that there is none (`UNSAID`), then each deferral it kept, as the change
+    check's own list says them. In Markdown the outcome is bold and every text of
+    the artefact's, and the author's sentence, is set in a code span."""
 
     def text(words: str, least: int = 1) -> str:
         return _code(words, least=least) if markdown else words
@@ -690,6 +720,9 @@ def _described(entry: _Entry, number: int, *, markdown: bool) -> list[str]:
     if entry.reason is not None:
         line += f': "{text(entry.reason, least=2)}"'
     out = [line]
+    if entry.updated:
+        said = UNSAID if entry.sentence is None else f'{SAID}: "{text(entry.sentence, least=2)}"'
+        out.append(f"   - ({said})" if markdown else f"   ({said})")
     for anchor, words in entry.kept:
         kept = f"still out of date for changes to {anchor.said(markdown=markdown)}, fixed later"
         kept += f': "{text(words, least=2)}"' if words is not None else ""
@@ -697,15 +730,21 @@ def _described(entry: _Entry, number: int, *, markdown: bool) -> list[str]:
     return out
 
 
-def render(document: Mapping[str, Any], head: str, settings: Sequence[Setting] = ()) -> str | None:
+def render(
+    document: Mapping[str, Any],
+    head: str,
+    settings: Sequence[Setting] = (),
+    sentences: Mapping[str, str] | None = None,
+) -> str | None:
     """The `## Documentation this change affects` section for `document`, derived
-    at commit `head`, with the friction `settings` the change alters; None when
-    the change wrote no answers and alters no setting. It opens in plain words
-    for a reader who does not know the methodology (`OPENING`); every text of
-    the check's or the backbone discovery's is shown with any non-printable
-    character escaped and set in a code span, so no word of an artefact is read
-    as Markdown."""
-    entries = [_read_entry(entry) for entry in _entries(document)]
+    at commit `head`, with the friction `settings` the change alters and, beside
+    each `updated` document, its author's sentence from `sentences` (`sentences`
+    reads them); None when the change wrote no answers and alters no setting. It
+    opens in plain words for a reader who does not know the methodology
+    (`OPENING`); every text of the check's or the backbone discovery's, and every
+    sentence, is shown with any non-printable character escaped and set in a code
+    span, so no word of an artefact is read as Markdown."""
+    entries = [_read_entry(entry, sentences) for entry in _entries(document)]
     if not entries and not settings:
         return None
     merge_base = str(_mapping(document.get("base")).get("commit") or "")
@@ -727,11 +766,16 @@ def render(document: Mapping[str, Any], head: str, settings: Sequence[Setting] =
     return "\n".join(out)
 
 
-def lines(document: Mapping[str, Any], settings: Sequence[Setting] = ()) -> list[str]:
+def lines(
+    document: Mapping[str, Any],
+    settings: Sequence[Setting] = (),
+    sentences: Mapping[str, str] | None = None,
+) -> list[str]:
     """The list as a terminal shows it, in the section's words: the question once
-    (`QUESTION`), one line per answer, its words in full, then one per friction
-    setting the change alters."""
-    entries = [_read_entry(e) for e in _entries(document)]
+    (`QUESTION`), one line per answer, its words in full, with each `updated`
+    document's sentence on a line of its own, then one per friction setting the
+    change alters."""
+    entries = [_read_entry(e, sentences) for e in _entries(document)]
     out: list[str] = [QUESTION] if entries else []
     for number, entry in enumerate(entries, start=1):
         out += _described(entry, number, markdown=False)
@@ -739,6 +783,216 @@ def lines(document: Mapping[str, Any], settings: Sequence[Setting] = ()) -> list
         before, after = _side(setting.before, code=False), _side(setting.after, code=False)
         out.append(f"{setting.key}: {before} → {after}")
     return out
+
+
+def told(
+    document: Mapping[str, Any],
+    settings: Sequence[Setting] = (),
+    sentences: Mapping[str, str] | None = None,
+) -> list[str]:
+    """What the person who authorises the merge is told, as information, not a
+    gate (DEC-055 point 3), as a terminal shows it: what changed in each `updated`
+    document, in its author's sentence or that there is none; each document left
+    out of date, with the anchor and the words of each deferral the change wrote
+    or a revalidation kept, which name its follow-up; then each friction setting
+    the change alters."""
+    out: list[str] = []
+    entries = [_read_entry(e, sentences) for e in _entries(document)]
+    for entry in entries:
+        if entry.updated:
+            said = "the pull request's author has not said"
+            if entry.sentence is not None:
+                said = f'"{entry.sentence}"'
+            out.append(f"What changed in {entry.location}: {said}")
+    for entry in entries:
+        late = [(entry.anchor, entry.reason)] if entry.label == LABELS[DEFERRED] else []
+        for anchor, words in [*late, *entry.kept]:
+            where = f", for changes to {anchor.said(markdown=False)}" if anchor else ""
+            out.append(
+                f"Left out of date: {entry.location}{where}"
+                + (f': "{words}"' if words is not None else "")
+            )
+    for setting in settings:
+        before, after = _side(setting.before, code=False), _side(setting.after, code=False)
+        out.append(f"{setting.key}: {before} → {after}")
+    return out
+
+
+def counted_told(document: Mapping[str, Any]) -> tuple[int, int]:
+    """How many documents the change updated, and how many it leaves out of date
+    — a deferral it wrote or a revalidation kept — each document counted once."""
+    entries = _entries(document)
+    updated = {str(e.get("location") or "") for e in entries if e.get("answer") == UPDATED}
+    late = {
+        str(e.get("location") or "")
+        for e in entries
+        if e.get("answer") == DEFERRED or e.get("kept")
+    }
+    return len(updated), len(late)
+
+
+# --- the author's sentences ---------------------------------------------------
+
+#: The heading of the description's section where the change's author says what
+#: changed in each document the change revalidated as `updated`, one sentence
+#: each (DEC-055 point 1). It is the author's own text, kept in the description
+#: between writes; the commands read it and give each sentence beside its
+#: document in the list. MUST match body-format.yaml `friction_answers_marker`'s
+#: `sentences_heading`.
+SENTENCES_HEADING = "## What changed in each updated document"
+_SENTENCES_LINE = _heading_line(SENTENCES_HEADING)
+#: A sentence: a top-level list item, bulleted or numbered and starting in the
+#: line's first column, that names the document in a code span, as the list names
+#: it, then a colon or a dash, then the sentence.
+_SENTENCE_ITEM = re.compile(
+    r"^(?:[-*+]|\d{1,9}[.)])[ \t]+(`+)(.+?)\1(?!`)[ \t]*(?:[:—–-][ \t]*)?(.*)$"
+)
+#: A line that ends the item above it: a list item of its own, at any depth, a
+#: heading, an HTML comment's opening, or a thematic break.
+_ITEM_END = re.compile(
+    r"^[ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)"
+    r"| {0,3}#{1,6}(?:[ \t]|$)"
+    r"|[ \t]*<!--"
+    r"| {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$"
+)
+
+
+def sentences(body: str) -> dict[str, str]:
+    """The sentences the change's author wrote under `SENTENCES_HEADING`, by the
+    document each names — its location, as the list names it. Read from `body`
+    without the list, its provenance footer, and fenced code blocks. An item runs
+    on over the lines under it up to a blank line, another list item, a heading,
+    an HTML comment, a thematic break or a fence, its whitespace folded. Of two
+    items for one document, the first."""
+    lines_ = _split(strip(provenance.strip_footer(body)))
+    found: dict[str, str] = {}
+    inside = False
+    fence: str | None = None
+    current: list[str] | None = None
+    key = ""
+
+    def close() -> None:
+        if current is not None and key and key not in found:
+            words = " ".join(" ".join(current).split())
+            if words:
+                found[key] = words
+
+    for line in lines_:
+        if fence is not None:
+            fence = None if _closes(line, fence) else fence
+            continue
+        opened = _FENCE.match(line)
+        if opened is not None:
+            close()
+            current, fence = None, opened.group(1)
+            continue
+        if _SENTENCES_LINE.match(line):
+            close()
+            current, inside = None, True
+            continue
+        if _SECTION_END.match(line):
+            close()
+            current, inside = None, False
+            continue
+        if not inside:
+            continue
+        item = _SENTENCE_ITEM.match(line)
+        if item is not None:
+            close()
+            key, current = item.group(2).strip(), [item.group(3)]
+        elif not line.strip() or _ITEM_END.match(line):
+            close()
+            current = None
+        elif current is not None:
+            current.append(line.strip())
+    close()
+    return found
+
+
+def given(document: Mapping[str, Any], sentences_: Mapping[str, str]) -> dict[str, str]:
+    """The sentences the list gives: each `updated` document's, by its location."""
+    updated = {_read_entry(e).location for e in _entries(document) if e.get("answer") == UPDATED}
+    return {key: words for key, words in sentences_.items() if key in updated}
+
+
+def unsaid(document: Mapping[str, Any], sentences_: Mapping[str, str]) -> list[str]:
+    """Each `updated` document the author wrote no sentence for, in the list's order."""
+    entries = [_read_entry(e, sentences_) for e in _entries(document)]
+    return list(dict.fromkeys(e.location for e in entries if e.updated and e.sentence is None))
+
+
+def sentence_closing_reference(sentences_: Mapping[str, str]) -> tuple[str, str] | None:
+    """The first of `sentences_` that reads as a closing reference, as (the
+    document it is for, the words that read so); None when none does."""
+    return _first(CLOSING_REFERENCE, ((key, shown(words)) for key, words in sentences_.items()))
+
+
+def sentence_comment_delimiter(sentences_: Mapping[str, str]) -> tuple[str, str] | None:
+    """The first of `sentences_` holding an HTML comment's delimiter, as (the
+    document it is for, the delimiter); None when none does."""
+    return _first(COMMENT_DELIMITER, ((key, shown(words)) for key, words in sentences_.items()))
+
+
+#: An entry's line in a list a command wrote: its number, then the document in a
+#: code span.
+_ENTRY_LINE = re.compile(r"^\d+\. (`+)(.+?)\1(?!`)")
+#: How an `updated` entry's outcome reads in the Markdown list, in either case.
+_UPDATED_MARK = f"**{LABELS[UPDATED]}**".lower()
+#: A code span, as `_code` writes every text of an artefact's.
+_CODE_SPAN = re.compile(r"(`+).+?\1(?!`)")
+
+
+def _marked_updated(line: str) -> bool:
+    """Whether an entry's line gives the outcome `updated`: the bold label outside
+    every code span, so an artefact's words that quote it mark nothing."""
+    return _UPDATED_MARK in _CODE_SPAN.sub("", line).lower()
+
+
+#: How a line giving an author's sentence, or saying there is none, begins.
+_SAID_LINE = re.compile(rf"^   - \((?:{re.escape(SAID)}|{re.escape(UNSAID)})")
+
+
+def _region_updated(block: str) -> list[str]:
+    """The documents a list a command wrote marks `updated`, as it names them."""
+    out: list[str] = []
+    for line in _split(block):
+        entry = _ENTRY_LINE.match(line)
+        if entry is not None and _marked_updated(line):
+            out.append(_unpadded(entry.group(2)))
+    return out
+
+
+def given_in(block: str, sentences_: Mapping[str, str]) -> dict[str, str]:
+    """The sentences a list a command wrote gives: each `updated` document's."""
+    updated = set(_region_updated(block))
+    return {key: words for key, words in sentences_.items() if key in updated}
+
+
+def _unpadded(text: str) -> str:
+    """A code span's text as `_code` wrote it: one space each side dropped when
+    both are there."""
+    return text[1:-1] if len(text) > 1 and text.startswith(" ") and text.endswith(" ") else text
+
+
+def with_sentences(block: str, sentences_: Mapping[str, str]) -> str:
+    """A list a command wrote — a region `find` gave — with each `updated`
+    document's sentence from `sentences_`, or the line saying there is none, in
+    place of the one it had; every other line as it was, the check's words and
+    the markers included. For an edit that derives nothing: the list stays the
+    check's for the head it names, and gives the author's sentences as they now
+    stand."""
+    out: list[str] = []
+    for line in _split(block):
+        if _SAID_LINE.match(line):
+            continue
+        out.append(line)
+        entry = _ENTRY_LINE.match(line)
+        if entry is None or not _marked_updated(line):
+            continue
+        sentence = sentences_.get(_unpadded(entry.group(2)))
+        said = UNSAID if sentence is None else f'{SAID}: "{_code(shown(sentence), least=2)}"'
+        out.append(f"   - ({said})")
+    return "\n".join(out)
 
 
 def _texts(document: Mapping[str, Any], settings: Sequence[Setting]) -> Iterator[tuple[str, str]]:

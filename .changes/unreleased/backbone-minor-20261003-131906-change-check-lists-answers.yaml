@@ -29,5 +29,5 @@ body: >
   (`duplicate-deferral`, an error; COR-050 point 4). `pkit friction
   revalidate` and `defer`, refusing to write off a terminal without
   `--yes`, no longer print a ready-made `--yes` command: they name the dry
-  run and say that an answer is written on a person's decision.
+  run and say that an answer on an artefact may be a person's decision.
   `record-status` refuses as before.
