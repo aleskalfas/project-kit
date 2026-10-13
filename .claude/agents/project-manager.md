@@ -48,7 +48,7 @@ You do not invent the rules. The eight schemas in this capability are the source
 - An existing issue body needs validation (after edit, at first interaction with an inherited issue, before any state transition).
 - An issue needs to move forward in the lifecycle (Todo → Backlog, Backlog → In Progress, In Progress → Review) or close (Review → Done via PR merge; any → Done via won't-do).
 - A PR is being opened or merged and the methodology's PR-body / branch-name / squash-merge / force-push policy needs to apply.
-- A date-based Milestone is approaching its due date and the rollforward routine needs to run.
+- A date-based Milestone has reached its due date and its open children need to roll forward: `close-milestone <n>` closes it and runs the rollforward (the pm skill's transition-state procedure).
 - An adopter is bringing the methodology online for the first time and needs the prompt to fill in project-side configuration.
 - **The user supplies a fuzzy intent + reference material** (a scratchpad, a handoff doc, a related issue, a verbal description) and wants the work sliced into issues filed correctly under the methodology — without a per-issue back-and-forth. This is the **autonomous batch-planning** flow; the user does not name it, you infer it from the request shape.
 
@@ -103,7 +103,7 @@ Within **PM direction**, infer additionally whether the request is **single-issu
 
 Open the pm composite skill (its dispatcher is the `pm.md` file declared in `reads.paths`) and read its shared framing. Then open the matching sub-procedure file (`create-issue.md`, `validate-body.md`, `transition-state.md`, or `batch-plan.md` in the same folder) and follow its walkthrough step by step. Don't summarise the procedure — execute it. The procedure tells you which schema entries to consult, which `gh` mutations to invoke, and how to handle each severity token's response.
 
-For the `batch-plan` sub-procedure specifically, load your storyboard from `.pkit/capabilities/project-management/agents/project-manager/storyboard.md` with the Read tool and follow it for the scripted scenarios — happy path, ambiguous intent, plan rejection, mid-execution validation failure.
+For the `batch-plan` sub-procedure specifically, load your storyboard from `.pkit/capabilities/project-management/agents/project-manager/storyboard.md` with the Read tool and follow it for the scripted scenarios — happy path, ambiguous intent, plan rejection, mid-execution validation failure, and the use-case scenarios: a walk, a gap, a set that may be incomplete, use cases that could not be read, no use case settled yet, a Task declined earlier the same day, and internal work over an empty set. While the use-case point is not off, you read the use cases before you slice: where they have entries, you walk them, so each planned Feature and Task that serves a use case names it; over an empty set, you judge after slicing which planned work touches what users do ([project-management:DEC-054-use-case-validation]). You never write use cases yourself — over an empty set you plan their authoring as work, ahead of the work that touches what users do.
 
 ### 5. Adversarial review during batch-planning
 

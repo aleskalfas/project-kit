@@ -9,6 +9,7 @@ pkit:
         - scripts/pyright_ratchet.py
         - scripts/prose_lint.py
         - scripts/prose-lint.yaml
+        - scripts/check_deployed_agents.py
         - .githooks/pre-push
         - .github/workflows/checks.yml
         - .github/workflows/friction-report.yml
@@ -20,9 +21,8 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-13T13:55:11Z
-      outcome: unchanged
-      unchanged-because: The tests README's list of the fast gates a builder runs gains pkit decisions check-diff. The page does not list those gates. It sends a builder to the project's rules and to that README's "Running the suite" for them, which stays true. Its own account of the aggregator's lines already names the numbering check.
+      at: 2026-10-13T16:43:13Z
+      outcome: updated
 ---
 
 # Contributing to project-kit
@@ -35,7 +35,7 @@ If you have a project that has *adopted* project-kit and you want to record deci
 
 ## Running checks
 
-There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the numbering check of decision records (`pkit decisions check-diff` — a point renumbered, reused or dropped without being retired, or a point or record id the base took first), the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Run it any time:
+There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the numbering check of decision records (`pkit decisions check-diff` — a point renumbered, reused or dropped without being retired, or a point or record id the base took first), the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Between `pkit validate` and the diff-scoped checks, it runs the deployed agents' check (`uv run python scripts/check_deployed_agents.py`, "The deployed agents' check" below). Run it any time:
 
 ```
 ./scripts/check.sh
@@ -115,6 +115,15 @@ Each mechanical part of a rule is an entry in `scripts/prose-lint.yaml`, of one 
 1. Add the entry to `scripts/prose-lint.yaml`, naming the rule by its id.
 2. Declare the part beside the rule, under its set's `checks`, naming the check `prose-lint` (COR-051 point 2). A declaration changes no rule, so it flags nothing. Give the set the version COR-051 asks, and run `uv run pkit validate`.
 3. Test the entry on a text in `tests/test_prose_lint.py`. A test there fails while an entry and a declaration do not pair.
+
+**The deployed agents' check** (#1559). project-kit tracks the harness copy of each agent, `.claude/agents/<name>.md`. The Claude Code adapter's `deploy-agents.sh` writes each copy from its agent's source. A change that edits a source without running the deploy leaves the tracked copy stale, and the reviewers a landing dispatches run the old body. The aggregator's `deployed agents` line, `uv run python scripts/check_deployed_agents.py`, fails that change. It runs the deploy over git's index of `.pkit/` and `.claude/agents/` in a temporary directory, and writes nothing in the checkout. It reads the index, not the working tree, because CI's `pkit sync` redeploys the working tree's copies before the aggregator runs. A finding names the agent and what is wrong:
+
+- the tracked copy is not what the deploy writes from the source,
+- the deploy writes a copy that git does not track,
+- the deploy removes a tracked copy, as its agent no longer ships, or
+- the deploy skips the agent, for the reason it prints.
+
+To fix a copy, run `.pkit/adapters/claude-code/deploy-agents.sh` and commit what it changes in `.claude/agents/`. A rerun skips a skipped agent again, so its finding carries the remediation the deploy prints. Follow it, then run the deploy and commit what it changes. The check exits 0 when it finds nothing, 1 on a finding, and 2 when it cannot run.
 
 **Optional task runner.** A [`mise.toml`](mise.toml) provides convenience aliases over the underlying `uv run ...` commands — `mise tasks` lists them, `mise run check` runs the lint/format/typecheck/test bundle. After cloning, run `mise trust` once to enable the task runner: mise gates untrusted config by design, so a fresh clone prints a "not trusted" error on every shell until you do. Not using mise? Run the `uv run ...` commands (or `./scripts/check.sh`) directly — mise is sugar, not a requirement.
 
