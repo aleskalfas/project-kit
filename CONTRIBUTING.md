@@ -21,8 +21,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-13T16:43:13Z
-      outcome: updated
+      at: 2026-10-13T20:06:15Z
+      outcome: unchanged
+      unchanged-because: COR-050, PRJ-010, ADR-019, ADR-055 and project-management DEC-053 now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed, so ADR-055 point 5 and DEC-053 point 3, which this guide cites, name the same text. The decisions README now writes points as headings, and this guide only sends an author there for the schema, so it holds.
 ---
 
 # Contributing to project-kit

@@ -12,9 +12,9 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-13T11:47:49Z
+      at: 2026-10-13T20:06:12Z
       outcome: unchanged
-      unchanged-because: "The templates lose their semicolons: the actors and glossary files' opening lines, the use case's line under Variants, and the record template's outcome placeholder. The page quotes none of that text. What it says the stamp writes, leaves as placeholders and refuses still holds, so the page holds."
+      unchanged-because: DEC-001, COR-049, COR-050, COR-052 and COR-053 now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed. Every point this page cites names the same text. DEC-001's deferral is kept as it was, since the page still describes what the capability ships ahead of the record's refinements. It holds.
       deferred:
         - anchor:
             kind: record

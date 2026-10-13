@@ -15,8 +15,9 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-13T19:09:50Z
-      outcome: updated
+      at: 2026-10-13T20:06:11Z
+      outcome: unchanged
+      unchanged-because: The capability's records DEC-033, DEC-036, DEC-038, DEC-041, DEC-043 to DEC-048 and DEC-053 to DEC-055, with COR-053, ADR-016, ADR-019, ADR-037, ADR-038, ADR-042 and ADR-050, now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed. Every point this page cites names the same text, so it holds.
 ---
 
 # project-management capability

@@ -14,9 +14,9 @@ pkit:
         - src/project_kit/workspace.py
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060]
     revalidated:
-      at: 2026-10-01T01:25:08Z
+      at: 2026-10-13T20:06:17Z
       outcome: unchanged
-      unchanged-because: "on this branch the anchored code changed only in layout: ruff format and the lint fixes; behaviour and the documented commands are unchanged"
+      unchanged-because: ADR-009, ADR-014, ADR-016, ADR-021, ADR-025 and ADR-060 now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed. ADR-004, which this page cites by line, and ADR-002 stay as they were. So the permission model it describes holds.
 ---
 
 # Permissions — decision core

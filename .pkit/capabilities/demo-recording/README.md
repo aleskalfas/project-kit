@@ -11,9 +11,9 @@ pkit:
         - .pkit/capabilities/demo-recording/decisions/**
       record: [COR-007, COR-016, COR-017, COR-020, COR-021, COR-023]
     revalidated:
-      at: 2026-10-13T04:27:19Z
+      at: 2026-10-13T20:06:10Z
       outcome: unchanged
-      unchanged-because: "The page cites COR-017 for installing the capability and for citing its decisions, and says nothing of how sync or an upgrade moves a capability. COR-017 changes only there: a version transition, not sync, moves installed capabilities and resolves a new collision."
+      unchanged-because: DEC-004's points are now headings carrying the same numbers, word for word, and DEC-002 stays as it was. No point's text, number or citation changed, so the page's account of the capability holds.
 ---
 
 # demo-recording capability

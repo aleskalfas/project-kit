@@ -54,9 +54,9 @@ ACT-ci-pipeline:
           - COR-054
           - COR-050
       revalidated:
-        at: 2026-10-13T10:43:56Z
+        at: 2026-10-13T20:06:22Z
         outcome: unchanged
-        unchanged-because: COR-050's refinement lets a record anchor name one point, and lets validation fail a dead or ambiguous point anchor. The pipeline needs the checks to run unattended against a named base, report in a machine-readable form, report the whole repository without failing, and gate the merge. This change leaves each as it was, so the actor holds.
+        unchanged-because: COR-054 and COR-050 now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed. The pipeline's needs, the checks run unattended against a named base, machine-readable findings and a whole-repository report that does not fail, rest on the same text, so the actor holds.
 ACT-component-author:
   name: Component author
   status: active
@@ -109,11 +109,11 @@ ACT-merge-authoriser:
     friction:
       anchors:
         record:
-          - COR-050
+          - COR-050#3
       revalidated:
-        at: 2026-10-13T10:43:57Z
+        at: 2026-10-13T20:06:23Z
         outcome: unchanged
-        unchanged-because: COR-050's refinement lets a record anchor name one point and says what the point stands on. Being told before a merge what changed and what waits, leaving the answers' check to a reviewer, and accepting a drafted record or rule rest on point 3 and the acceptance gate, which are untouched, so the actor holds.
+        unchanged-because: COR-050's points are now headings, so the anchor names point 3, which the entry's Core line cites for being told what a change updated before its merge. Point 3's text is unchanged, so the actor holds.
 ACT-methodology-maintainer:
   name: Methodology maintainer
   status: active
@@ -130,9 +130,9 @@ ACT-methodology-maintainer:
           - ADR-059
           - PRJ-002
       revalidated:
-        at: 2026-10-12T09:23:19Z
+        at: 2026-10-13T20:06:24Z
         outcome: unchanged
-        unchanged-because: ADR-059's Context names the backbone's friction validation, not living-docs, as what refuses a synced copy as a place. The record's definition of the source repository is as it was. So the maintainer's need to develop the methodology where no sync copies over their work stands.
+        unchanged-because: ADR-059's points are now headings carrying the same numbers, word for word. Its definition of the source repository reads as before, so the maintainer's need to develop the methodology where no sync copies over their work stands.
 ACT-operator:
   name: Operator
   status: active

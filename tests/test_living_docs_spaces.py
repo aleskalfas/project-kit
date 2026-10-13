@@ -1380,10 +1380,16 @@ def test_ldoc_validates_as_a_method_rule_set_with_its_origins(project: AdopterRe
         ".pkit/capabilities/living-docs/rule-sets/ldoc.md",
     )
     assert [rule.id for rule in ldoc.rules] == [f"RS-LDOC-00{n}" for n in range(1, 7)]
+    # Each rule anchors the point of DEC-001 that states it (point 3), and the two whose
+    # field the page's front matter carries also the point that gives the field (point 4).
+    with_field = {"RS-LDOC-003", "RS-LDOC-004"}
     for rule in ldoc.rules:
         assert rule.status == "accepted"
         assert rule.origin == {"decision": "living-docs:DEC-001"}
-        assert rule.anchors("record") == ("living-docs:DEC-001",)
+        expected = ("living-docs:DEC-001#3",)
+        if rule.id in with_field:
+            expected += ("living-docs:DEC-001#4",)
+        assert rule.anchors("record") == expected
 
 
 def test_ldoc_declares_the_parts_its_validation_enforces(project: AdopterRepo) -> None:

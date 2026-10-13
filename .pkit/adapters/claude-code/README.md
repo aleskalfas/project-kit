@@ -13,9 +13,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-13T08:09:46Z
+      at: 2026-10-13T20:06:09Z
       outcome: unchanged
-      unchanged-because: "DEC-030's change renames a heading in its Decision from 'v1 scope: no in-place customisation' to 'Scope: no in-place customisation in v1', with the sentence that names it, so the points reader does not read that heading as a misspelt point (COR-058 point 1). What the record decides stays as it was. The page cites DEC-030 for the overlay walker, the opt-in toggle, the strip on disable and the reserved permissions key. It names no heading of DEC-030 and says nothing of customising the live overlay, so it holds."
+      unchanged-because: ADR-009, ADR-014, ADR-052 and ADR-060 now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed. ADR-014's Context list, which this page cites as §6, is untouched. ADR-002 and ADR-004 stay as they were. So the adapter's account of the permission realizer, the sandbox and the workspace grant holds.
 ---
 
 # Claude Code adapter

@@ -29,8 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-13T18:03:19Z
-      outcome: updated
+      at: 2026-10-13T20:06:16Z
+      outcome: unchanged
+      unchanged-because: COR-052, COR-053, COR-055, ADR-056, ADR-057 and ADR-059 now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed. The slot, connection and validation rules this page restates read as before, so it holds.
       deferred:
         - anchor:
             kind: record

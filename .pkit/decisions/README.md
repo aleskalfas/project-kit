@@ -12,16 +12,10 @@ pkit:
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
-      record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
+      record: [COR-001, COR-019, COR-025, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058]
     revalidated:
-      at: 2026-10-13T17:09:18Z
-      outcome: unchanged
-      unchanged-because: The points module gains the line a record's body opens on, and the lines of the file a point's section spans, which the artefacts document gives an anchor on one point. The numbering check's docstring says it does not follow a taken point id to what anchors it, since it compares records only and friction reports what such an anchor finds. This page says how records are cited, refined and checked. Its numbering check runs whether or not anything is anchored, which still holds. It says nothing of spans or of the artefacts document, so it holds.
-      deferred:
-        - anchor:
-            kind: record
-            value: COR-051
-          reason: "COR-051's rejected prose markers name decision records' point headings as an exception, citing COR-058. COR-058 decides that a record's points are headings that keep their ids, and that a retired point is kept in retired-points with a stub. This page's schema section still has a complex decision use a numbered list. Its refining section says where a new point goes, but not that it takes the next unused number, or how a dropped point is kept. Its section on rule sets still holds. It follows with #1422, which writes points as headings in the refining, schema and citing sections."
+      at: 2026-10-13T20:06:15Z
+      outcome: updated
 ---
 
 # Decision records

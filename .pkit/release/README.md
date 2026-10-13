@@ -14,9 +14,9 @@ pkit:
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
       source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-13T07:23:26Z
+      at: 2026-10-13T20:06:07Z
       outcome: unchanged
-      unchanged-because: COR-010's change names the propagation that sync and a version transition both run as what skips a capability authored in the project's own repository. ADR-040's change has its gate run at fetch time wherever the content is fetched, and has match-the-pin overwrite a capability's subtree outside its project/ tier and never the recorded pin. The page cites COR-010 for semver, the separate version lines and requires_backbone ranges, and ADR-040 for the consumer's gate on the fetched range, which the author owns. Both changes leave those as they were, so the page holds.
+      unchanged-because: ADR-040's points are now headings carrying the same numbers, word for word. No point's text, number or citation changed, so what this guide takes from it reads as before, and it holds.
 ---
 
 # Release flow — changesets + the release step
