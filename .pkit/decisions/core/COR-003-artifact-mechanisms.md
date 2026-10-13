@@ -48,7 +48,7 @@ Some project-side paths host content **regenerated** at sync/install time from s
 The core layer ships, syncs, and seeds the methodology surface only — decisions, hard rules, agents, workflow bundles, and the project-side config baselines those bundles plug into. The following lie outside that surface:
 
 - **Project content** — architecture docs, domain methodology, use-cases, project-specific scripts, project-specific tooling.
-- **Per-machine state files** — e.g., personal-overrides files, runtime worktree directories. The core layer may ensure these are listed in the project's `.gitignore`; nothing more.
+- **Per-machine state files** — e.g., personal-overrides files, runtime worktree directories. The core layer may ensure these are listed in the project's `.gitignore`.
 - **Environment-tooling setups** the project chooses — direnv configuration, language toolchains, IDE-specific configuration.
 
 These principles cover everything observed during inventory. New artifact types are assigned by working through them in order; no COR amendment is required unless a principle itself changes.
