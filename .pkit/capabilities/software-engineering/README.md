@@ -11,11 +11,10 @@ pkit:
         - .pkit/capabilities/software-engineering/scripts/**
         - .pkit/capabilities/software-engineering/schemas/**
         - .pkit/capabilities/software-engineering/skills/**
-      record: [COR-013, COR-024, COR-026, COR-030, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032"]
+      record: [COR-013, COR-024, COR-026, COR-030, COR-050, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-12T21:25:26Z
-      outcome: unchanged
-      unchanged-because: COR-030's refinement adds an optional dependency, which need not be installed and never blocks an uninstall, and gates installing a dependency outside a range an installed dependent declares. This page names software-engineering's dependency on project-management, which carries no optional mark. So it stays required, and the lifecycle gates install, upgrade and uninstall on it as the page says.
+      at: 2026-10-13T01:02:48Z
+      outcome: updated
 ---
 
 # software-engineering capability
@@ -44,7 +43,16 @@ The panel ([software-engineering:DEC-002-code-review-panel]) closes bug #715: be
 |---|---|---|---|
 | `code-reviewer` | Generalist headline: correctness/logic (core), general code quality, API-surface / interface design. The "review this PR" an operator reaches for. | Objective correctness bugs; a break to an existing caller; a violation of an explicit `<project-conventions>` rule. | Style, naming nits, subjective structure, optional refactors. |
 | `security-reviewer` | Auth, **secrets-in-argv**, **`shell=True` / command injection**, crypto misuse, dependency hygiene. (The first two are #715's demonstrated harm.) | Real, exploitable vulnerabilities the change owns — the #715 classes are blocks whenever the change introduces, exposes, moves, copies or widens them, or asserts them away. | Hardening suggestions, defense-in-depth, theoretical risk with no reachable path. |
-| `docs-reviewer` | Documentation completeness (new public surface documented), docs-match-behaviour, understandability. Leans on [project-management:DEC-015]'s doc obligations. | Missing docs for new public surface (absent a `## Doc impact` justification); a doc the diff makes contradict the code. | Clarity, wording, suggested examples, thin-but-not-wrong docs. |
+| `docs-reviewer` | Documentation completeness (new public surface documented), docs-match-behaviour, understandability, and the answers the change wrote on its documents. Leans on [project-management:DEC-015]'s doc obligations. | Missing docs for new public surface (absent a `## Doc impact` justification); a doc the diff makes contradict the code; an answer that does not hold (below). | Clarity, wording, suggested examples, thin-but-not-wrong docs. |
+
+**The reviewer of a change's answers.** A change may carry answers on the documents its edits affect: a revalidation, which says a document was updated or still holds, and a deferral, which leaves it out of date until a follow-up. The agent making the change writes them without asking first, and a reviewer other than that agent checks them (COR-050 point 3, [project-management:DEC-055] point 3). Which reviewer is the project's choice. With this capability installed, `docs-reviewer` is that reviewer. It reads the answers from the change check's own list (`pkit friction check`, "Answers written in this change"), never from an account the author wrote. Each of these is a `[block]` finding in its verdict:
+
+- An `unchanged` reason that does not hold against the change.
+- A deferral the change writes or rewords whose reason does not hold, or that names no open follow-up issue.
+- A document revalidated as `updated` with no sentence on what changed under the description's `## What changed in each updated document`, or with one that does not match the diff.
+- An answer the change check did not ask for, or a reason for having no anchors, which is a person's decision.
+
+A deferral the change keeps as it was is not judged again. A project that opts out of `docs-reviewer` and chooses no other reviewer of the answers leaves them checked by their writer alone, a limit COR-050 point 3 accepts. So does a pull request that pulls in no doc reviewer (the accepted gap below). A sentence edited in the description after the verdict is not checked again, since a description edit does not make a verdict stale ([project-management:DEC-055] point 5).
 
 **Activation** (declared in `review-contributions.yaml`, resolved by pm per [project-management:DEC-032]):
 

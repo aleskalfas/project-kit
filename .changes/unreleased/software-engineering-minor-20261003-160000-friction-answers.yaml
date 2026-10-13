@@ -9,10 +9,13 @@ body: >
   revalidate` or `pkit friction defer`, without asking first, and only for
   what its own change owes — the answers the change check asks of it, and the
   revalidation of a combined state after a conflict it resolved. It passes
-  `--yes` under that rule alone, writes a justification it can defend from the
-  diff, and says in its hand-off that the change wrote answers, which the
-  person who authorises the merge is shown from the change check's own list;
-  it never composes that list. Any other answer, and any reason for having no
+  `--yes` under that rule alone, and writes a justification it can defend from
+  the diff. A reviewer other than it checks every `unchanged` and `deferred`
+  reason against the change. Each deferral it writes names an open follow-up
+  issue, and for each artefact it revalidates as `updated` it says what changed
+  in it, in one sentence, under the pull request's `## What changed in each
+  updated document`. It says in its hand-off that the change wrote answers,
+  and never composes the list of them. Any other answer, and any reason for having no
   anchors, it names in its hand-off for the person. The rule is the backbone's
   this release ships (COR-050 point 3; the agents README, "Friction writers"),
   so the capability requires that backbone.
