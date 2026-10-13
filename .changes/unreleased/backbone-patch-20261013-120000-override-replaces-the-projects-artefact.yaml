@@ -1,0 +1,18 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+  pr: "1550"
+body: >
+  Choosing `override` on a naming collision at `pkit capabilities install`
+  now replaces the project's artefact with the capability's, as COR-017 says
+  (#1528). Before, the install copied the capability's skill or agent beside
+  the project's, and the project's still deployed. Now the project's own
+  artefact of that name is removed from `.pkit/skills/project/` or
+  `.pkit/agents/project/`, so it no longer comes first at deploy. Git keeps
+  the removed artefact. While git does not hold it as it stands, `override`
+  is refused and asked again. An artefact that core or another capability
+  ships is left in place, and the deploy's name precedence picks among them.
+  Before it asks, the prompt names each artefact `override` would remove and
+  each it would leave. `pkit capabilities upgrade --interactive` overrides
+  the same way. `skip` and `inspect` are unchanged.
