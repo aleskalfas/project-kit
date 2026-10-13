@@ -29,9 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-13T05:56:56Z
+      at: 2026-10-13T06:30:59Z
       outcome: unchanged
-      unchanged-because: ADR-057 point 2 adds two homes inside the binary, where a part of a document lies and a record's points, and gives a script no new reading command, so the table of reading commands stands. Point 3 still has a resolver answer files whose history the engine reads, each file whole, as "How a registered anchor kind is resolved" says. That section's "what it does for a record anchor" holds while a record anchor stands on its whole file, as it does today, so the page holds.
+      unchanged-because: COR-031's change rewrites three passages. Its reason for skipping an incubated capability says sync writes a project-owned path only through merge delivery. Its Context says that in COR-017's lifecycle sync copies a capability at the version the project records, and only a version transition moves that version. Its note on COR-010 puts the skip in the propagation that sync and a transition both run. The page has sync skip source-reconciliation for an incubated capability and leave its files as authored, and has upgrading one resolve no kit source, which these support. Where the page has sync refresh a capability to a newer version, its kept deferral for COR-017 already says so, so it holds.
       deferred:
         - anchor:
             kind: record

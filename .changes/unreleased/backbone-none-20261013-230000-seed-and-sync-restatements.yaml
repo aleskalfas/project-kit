@@ -1,0 +1,12 @@
+component: backbone
+kind: none
+body: >
+  COR-002, COR-003, COR-025 and COR-031 are refined in place to say
+  seeding and sync as COR-059 does. A seed is written at first install, a
+  version transition of the backbone creates a declared seed path that is
+  missing, sync creates no seed path, and seeding never revisits a seed
+  that exists. Sync writes a project-owned path only through merge
+  delivery's auto-add tier, and reads the project's own declarations. The
+  friction blocks of the decisions, lifecycle and skills READMEs are
+  revalidated, unchanged. It is record text only, and nothing you run
+  changes.
