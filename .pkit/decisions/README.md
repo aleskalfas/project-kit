@@ -273,7 +273,7 @@ The same command stamps the other id-spaces by passing a different namespace: `c
 If you prefer to author by hand, the procedure is:
 
 1. Pick the next available number in `project/`.
-2. Create `PRJ-NNN-slug.md` with the frontmatter and the four sections above, leaving out the example's `retired-points` and its stub.
+2. Create `PRJ-NNN-slug.md` with the frontmatter and the four sections above. Leave out the example's `retired-points` and its stub, and number your points from 1 with no gap.
 3. Open it as `proposed` if it is still under discussion, `accepted` once agreed.
 
 The directory listing in `project/` serves as the index — file names carry their slugs, and most projects' corpora are small enough that no separate index is needed. If yours grows numerous, a `README.md` index can be added inside `project/` as a convenience.

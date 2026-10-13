@@ -1,12 +1,12 @@
 """Decision-record authoring (the deterministic part of `pkit new decision`).
 
-Python port of the bash dispatcher's `cmd_new_decision`. Behaviour
-preserved exactly for the `core` and `project` namespaces: same
-namespace/slug validation, same next-number computation per namespace,
-same frontmatter shape, same four section headers, same
-git-config-derived author resolution, same "Stamped: ..." output line.
-The Decision gains a first point, written as a point heading (COR-058
-point 1), so a new record starts with its points in the heading form.
+First a Python port of the bash dispatcher's `cmd_new_decision`, which
+it replaced for the `core` and `project` namespaces: the same
+namespace/slug validation, next-number computation per namespace,
+frontmatter shape, four section headers, git-config-derived author
+resolution and "Stamped: ..." output line. The stamp also writes a first
+point under the Decision, as a point heading (COR-058 point 1), so a new
+record starts with its points in the heading form.
 The conversational layer (drafting the body, discipline self-checks) is
 the `decision-author` skill's job per COR-005's "Skill / command pairing".
 
