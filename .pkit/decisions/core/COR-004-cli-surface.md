@@ -26,7 +26,9 @@ The CLI's shape is governed by the principles below. They constrain how the comm
 
 ### Each command anchors to one mechanism or operation
 
-A command performs one of: propagation, seed, merge, suspension management, validation, or read-only introspection. It does not compound two of these into one verb. Compound verbs (e.g., an "update" that does sync + merge + migrations) hide which contract is being invoked, conflate consent profiles, and resist the manifest-level reasoning the install/sync runtime needs. New commands earn inclusion by representing one operation cleanly.
+A command performs one of: propagation, seed, merge, version transition, suspension management, validation, or read-only introspection. It does not compound two of these into one verb. Compound verbs (e.g., an "update" that does sync + merge + migrations) hide which contract is being invoked, conflate consent profiles, and resist the manifest-level reasoning the install/sync runtime needs. New commands earn inclusion by representing one operation cleanly.
+
+A version transition moves a project's recorded versions to a target, and every part of it follows from the target the person chose (COR-059). The rule governs what a command does to a project, so a command may first update the CLI that runs it, which acts on no project (COR-059 point 5).
 
 ### `sync` and `merge` stay separate
 
@@ -48,7 +50,7 @@ A failed run leaves the project at a known partial state, with `validate` as the
 
 **Why principles, not the command list.** The list of commands evolves as bundles surface new verbs and new areas earn their own gestures. Pinning the list inside a decision record forces an amendment per change and conflates "what we decided about CLI design" with "what the CLI currently exposes." The principles are durable; the spec changes; they belong in different places. (Same separation as COR-003 vs the per-area manifest.)
 
-**Why anchor each command to one operation.** The mechanism vocabulary of COR-001 / COR-002 already names the operations a project cares about. A CLI that mirrors them gives the project a shape it can reason about — sync is propagation, merge is merge, etc. Compound verbs would create a parallel vocabulary that drifts from the mechanism vocabulary and re-encodes consent contracts in opaque names.
+**Why anchor each command to one operation.** The mechanism vocabulary of COR-001 / COR-002 already names the operations a project cares about. A CLI that mirrors them gives the project a shape it can reason about — sync is propagation, merge is merge, etc. Sync's propagation includes the derivable state it regenerates, merge delivery's auto-add entries among it (COR-010, COR-059 point 2). Compound verbs would create a parallel vocabulary that drifts from the mechanism vocabulary and re-encodes consent contracts in opaque names.
 
 **Why the sync/merge separation matters more than "they're different operations."** The deeper reason is consent. The no-shared-files invariant (in `.pkit/decisions/README.md`), COR-001, and COR-002 between them encode different consent contracts for different file ownership classes. A CLI verb represents an *adopter-visible* contract; conflating verbs across consent classes is the same shape of error as conflating the underlying mechanisms.
 
