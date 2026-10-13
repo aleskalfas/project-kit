@@ -15,9 +15,9 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-13T08:09:47Z
+      at: 2026-10-13T17:10:41Z
       outcome: unchanged
-      unchanged-because: "Of the capability's decisions only DEC-030 changes. It renames a heading in its Decision from 'v1 scope: no in-place customisation' to 'Scope: no in-place customisation in v1', with the sentence that names it, so the points reader does not read that heading as a misspelt point (COR-058 point 1). What the record decides stays as it was. The page cites DEC-030 only in its default-agent section, which names no heading of it and says nothing of customising the live overlay, so the page holds."
+      unchanged-because: Under the capability's scripts only the module comment of scripts/_lib/bootstrap_gate.py changes. It now says that the capability's manifest sits under its project folder and that a restamp keeps its backend_state, and no script behaves differently. The page names the bootstrap gate only as the gate that fill-doc-check is exempt from, and says nothing of where the capability's manifest sits, so it holds.
 ---
 
 # project-management capability
