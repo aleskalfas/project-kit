@@ -1,0 +1,6 @@
+component: software-engineering
+kind: none
+body: >
+  Internal. The README's reviewer stack names the core `rule-set-reviewer`
+  beside the other core reviewers (COR-057), and anchors to COR-057. Nothing
+  the capability ships, and nothing you run, changes (#1385).
