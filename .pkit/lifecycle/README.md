@@ -29,9 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-13T06:40:32Z
+      at: 2026-10-13T06:30:59Z
       outcome: unchanged
-      unchanged-because: Artefact discovery now cuts a collection entry's section through document_parts, the one reading of where a part lies, and gives the same entries, bodies and spans as before. Its document gains each part anchor's span, which the CLI README describes. This page names friction_discovery as the one anchor-kind registry, sums up friction artefacts in its table of reading commands and leaves its keys to the CLI README. None of that changed, so the page holds.
+      unchanged-because: COR-031's change rewrites three passages. Its reason for skipping an incubated capability says sync writes a project-owned path only through merge delivery. Its Context says that in COR-017's lifecycle sync copies a capability at the version the project records, and only a version transition moves that version. Its note on COR-010 puts the skip in the propagation that sync and a transition both run. The page has sync skip source-reconciliation for an incubated capability and leave its files as authored, and has upgrading one resolve no kit source, which these support. Where the page has sync refresh a capability to a newer version, its kept deferral for COR-017 already says so, so it holds.
       deferred:
         - anchor:
             kind: record

@@ -75,6 +75,10 @@ ACT-component-author:
           - COR-031
           - COR-041
           - COR-047
+      revalidated:
+        at: 2026-10-13T06:31:01Z
+        outcome: unchanged
+        unchanged-because: COR-031's change rewrites three passages. Sync writes a project-owned path only through merge delivery. In COR-017's lifecycle, sync copies a capability at its recorded version and only a transition moves that version. The skip of an incubated capability applies to the propagation that sync and a transition both run. The actor's need to keep a capability in its own repository, where sync never overwrites it, holds, since that propagation skips it and merge never removes or rewrites what the project wrote.
 ACT-developer:
   name: Developer
   status: active

@@ -17,8 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-13T04:27:16Z
-      outcome: updated
+      at: 2026-10-13T05:50:47Z
+      outcome: unchanged
+      unchanged-because: "COR-002's change rewrites its seeding sentences: a seed is written at first install, a version transition of the backbone creates a declared seed path that is missing, sync creates no seed path, and seeding never revisits a seed that exists. The page already says pkit upgrade puts back a starter file you deleted, and that init, sync and upgrade merge into CLAUDE.md and the settings file without overwriting them, so it holds."
 ---
 
 # project-kit

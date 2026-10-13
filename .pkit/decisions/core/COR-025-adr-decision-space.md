@@ -100,7 +100,7 @@ The location choice (outside `.pkit/`) automatically secures a critical property
 
 The mechanism:
 
-1. `pkit sync` operates only on the kit-shipped surface under `.pkit/`. Files outside that tree are never read or written by sync (per [`.pkit/decisions/README.md`](../README.md) "The no-shared-files invariant").
+1. `pkit sync` propagates only the kit-shipped surface under `.pkit/`. It writes a project-owned path only through merge delivery's auto-add tier, which never removes or rewrites an entry the project wrote. It reads the project's own declarations where it needs them (COR-059 point 2, and [`.pkit/decisions/README.md`](../README.md) "The no-shared-files invariant").
 2. ADR records live at the adopter's `docs/architecture/decisions/` (or wherever the overlay resolves), which is **outside `.pkit/`** by design.
 3. Therefore: project-kit-the-project's own ADRs (if it authors any, under its own internal documentation root) are project-kit-the-project's state — never in the sync propagation surface; never copied to an adopter; never overwritten when an adopter re-syncs.
 
