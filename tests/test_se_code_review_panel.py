@@ -465,7 +465,8 @@ def test_an_answer_that_is_a_person_s_decision_is_named_not_blocked():
     """Whether a person accepted an answer on an artefact the change was not asked
     about, or a reason for having no anchors, is a fact no reviewer can read (COR-050
     point 3): the reviewer names it, as an advisory, and judges a reworded deferral on
-    an artefact it was asked about by the other rules."""
+    an artefact it was asked about by the other rules. The sentence on such an
+    `updated` answer is still checked, since COR-050 point 3 asks it of every one."""
     lead = "- **Some answers are a person's decision, not yours to judge.**"
     (item,) = [line for line in _answers_check() if line.startswith(lead)]
     for words in (
@@ -474,6 +475,7 @@ def test_an_answer_that_is_a_person_s_decision_is_named_not_blocked():
         "so do not block on it",
         "in an `[advisory]` finding",
         "such as a deferral the change rewords, is judged by the bullets above",
+        "Where such an answer is `updated`, its sentence is still checked",
     ):
         assert words in item, words
 

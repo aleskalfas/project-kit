@@ -13,7 +13,7 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-13T01:02:48Z
+      at: 2026-10-13T02:12:27Z
       outcome: updated
 ---
 
@@ -29,7 +29,7 @@ When an adopter runs `pkit capabilities install software-engineering`:
 - `agents/code-reviewer.md`, `agents/security-reviewer.md`, `agents/docs-reviewer.md` — the **code-review panel** (see below).
 - `review-contributions.yaml` — registers the panel into the project-management merge gate through the reviewer-contribution socket ([project-management:DEC-032]).
 - `decisions/DEC-001-producer-agent-and-conventions-seam.md` — the producer discipline's invariant: the conventions-thin producer, the overlay-resolved seam, the producer/checker boundary, empty-tolerance.
-- `decisions/DEC-002-code-review-panel.md` — the panel decision: its three agents, its home, and the per-agent block-threshold and knowledge-split disciplines.
+- `decisions/DEC-002-code-review-panel.md` — the panel decision: its three agents, its home, the per-agent block-threshold and knowledge-split disciplines, and `docs-reviewer`'s check of a change's answers.
 
 It deliberately ships **no conventions content** — the conventions corpus is adopter-owned and accretes over time (see Adopter setup).
 
@@ -45,15 +45,15 @@ The panel ([software-engineering:DEC-002-code-review-panel]) closes bug #715: be
 | `security-reviewer` | Auth, **secrets-in-argv**, **`shell=True` / command injection**, crypto misuse, dependency hygiene. (The first two are #715's demonstrated harm.) | Real, exploitable vulnerabilities the change owns — the #715 classes are blocks whenever the change introduces, exposes, moves, copies or widens them, or asserts them away. | Hardening suggestions, defense-in-depth, theoretical risk with no reachable path. |
 | `docs-reviewer` | Documentation completeness (new public surface documented), docs-match-behaviour, understandability, and the answers the change wrote on its documents. Leans on [project-management:DEC-015]'s doc obligations. | Missing docs for new public surface (absent a `## Doc impact` justification); a doc the diff makes contradict the code; an answer that does not hold (below). | Clarity, wording, suggested examples, thin-but-not-wrong docs. |
 
-**The reviewer of a change's answers.** A change may carry answers on the documents its edits affect: a revalidation, which says a document was updated or still holds, and a deferral, which leaves it out of date until a follow-up. The agent making the change writes them without asking first, and a reviewer other than that agent checks them (COR-050 point 3, [project-management:DEC-055] point 3). Which reviewer is the project's choice. `docs-reviewer` checks them wherever it reviews a pull request, as its docs-match-behaviour lens applied to the change's own claims about its documents. It reads the answers from the change check's own list (`pkit friction check`, "Answers written in this change"), never from an account the author wrote. Each of these is a `[block]` finding in its verdict:
+**The reviewer of a change's answers.** A change may carry answers on the documents its edits affect: a revalidation, which says a document was updated or still holds, and a deferral, which leaves it out of date until a follow-up. The agent making the change writes them without asking first, and a reviewer other than that agent checks them (COR-050 point 3, [project-management:DEC-055] point 3). Which reviewer is the project's choice. `docs-reviewer` checks them wherever it reviews a pull request, as its docs-match-behaviour lens applied to the change's own claims about its documents ([software-engineering:DEC-002] D1). It reads the answers from the change check's own list (`pkit friction check`, "Answers written in this change"), never from an account the author wrote. Each of these is a `[block]` finding in its verdict:
 
 - An `unchanged` reason that does not hold against the change.
 - A deferral the change writes or rewords whose reason does not hold, or that names no open follow-up issue.
 - A document revalidated as `updated` with no sentence on what changed under the description's `## What changed in each updated document`, or with one that does not match the diff.
 
-A deferral the change keeps as it was is not judged again. An answer on an artefact the change check asked nothing about, and a reason for having no anchors, are a person's decision (COR-050 point 3). Whether the person accepted one is not something a reviewer can read, so `docs-reviewer` names each in an `[advisory]` finding rather than blocking on it.
+A deferral the change keeps as it was is not judged again. An answer on an artefact the change check asked nothing about, and a reason for having no anchors, are a person's decision (COR-050 point 3). Whether the person accepted one is not something a reviewer can read, so `docs-reviewer` names each in an `[advisory]` finding rather than blocking on it. Where such an answer is `updated`, its sentence is checked like any other.
 
-Where `docs-reviewer` does not review a pull request, nothing checks its answers but their writer. That is so in a project that opts out of `docs-reviewer` and chooses no other reviewer of the answers, a limit COR-050 point 3 accepts. It is also so for an unclassified docs-only pull request, which pulls in no doc reviewer (the accepted gap below): COR-050 point 3 names no such case, so give such a pull request's closing issue a `type` label when the change wrote answers. A sentence edited in the description after the verdict is not checked again, since a description edit does not make a verdict stale ([project-management:DEC-055] point 5).
+Where `docs-reviewer` does not review a pull request, nothing checks its answers but their writer, unless another reviewer does. That is so in a project that opts out of `docs-reviewer` and chooses no other reviewer of the answers, a limit COR-050 point 3 accepts. It is also so for an unclassified docs-only pull request, which pulls in no doc reviewer (the accepted gap below): COR-050 point 3 names no such case, so give such a pull request's closing issue a `type` label when the change wrote answers. A sentence edited in the description after the verdict is not checked again, since a description edit does not make a verdict stale ([project-management:DEC-055] point 5).
 
 **Activation** (declared in `review-contributions.yaml`, resolved by pm per [project-management:DEC-032]):
 
