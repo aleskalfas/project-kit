@@ -59,9 +59,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-13T11:37:04Z
+          at: 2026-10-13T11:52:00Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 2 has a space's definition written with its scope, so no scope is written ahead of the definition that needs it, and points 3, 4 and 7 say where LDOC's checks run. None of it creates anything ahead of its need, so nothing is created ahead of the need for it.
+          unchanged-because: DEC-001 point 2 has a space's definition written with its scope, so no scope is written ahead of the definition that needs it, and points 3 and 7 say where LDOC's checks run. None of it creates anything ahead of its need, so nothing is created ahead of the need for it.
 # The parts of these rules that this capability's validation enforces (COR-051
 # point 2; DEC-001 point 6), each only where its rule binds: a reader-review
 # leaves them to it and judges the rest.

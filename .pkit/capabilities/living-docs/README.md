@@ -12,9 +12,8 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-13T10:43:49Z
-      outcome: unchanged
-      unchanged-because: "COR-050's refinement lets a record anchor name one point of a record and says what the point stands on, and COR-051 point 3 gives # that use in a record anchor's value. The page says a page's anchors, decisions among them, ground what it says, and that the friction check flags a page when one changed. Both still hold, so the page holds."
+      at: 2026-10-13T11:51:45Z
+      outcome: updated
 ---
 
 # living-docs capability
