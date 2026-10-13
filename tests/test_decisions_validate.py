@@ -4,11 +4,12 @@ and the revision-narration warning (#862)."""
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from click.testing import CliRunner
 
-from project_kit import decisions_validate
+from project_kit import decisions_validate, lifecycle_ownership
 from project_kit.cli import main
 from project_kit.validators import Finding, Severity
 from tests.adopter_repo import MakeAdopterRepo
@@ -178,6 +179,118 @@ def test_missing_overlay_does_not_error(project: Path) -> None:
     _write_record(project / ".pkit" / "decisions" / "core" / "COR-001-a.md", "COR-001")
     report = decisions_validate.validate_decision_ids(project)
     assert report.is_clean
+
+
+# --- synced copies (COR-055 point 1) -----------------------------------
+
+
+def test_a_synced_copy_is_not_checked_for_its_id_and_the_projects_own_record_is(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """In an adopter, a core record and a kit-shipped capability's arrive as synced
+    copies. The project cannot mend them, so no id issue is reported on one."""
+    repo = make_adopter_repo(capabilities=("living-docs",))
+    decisions = repo.root / ".pkit" / "decisions"
+    capability = repo.root / ".pkit" / "capabilities" / "living-docs" / "decisions"
+    for folder, prefix in ((decisions / "core", "COR"), (capability, "DEC")):
+        _write_record(folder / f"{prefix}-900-a.md", f"{prefix}-900")
+        _write_record(folder / f"{prefix}-900-b.md", f"{prefix}-900")
+        _write_record(folder / f"{prefix}-901-c.md", f"{prefix}-902")
+        (folder / f"{prefix}-903-d.md").write_text("no front matter\n", encoding="utf-8")
+    own = decisions / "project"
+    _write_record(own / "PRJ-900-a.md", "PRJ-900")
+    _write_record(own / "PRJ-900-b.md", "PRJ-900")
+    _write_record(own / "PRJ-901-c.md", "PRJ-902")
+
+    report = decisions_validate.validate_decision_ids(repo.root)
+
+    assert [issue.location for issue in report.issues] == [
+        ".pkit/decisions/project/PRJ-901-c.md",
+        "project :: PRJ-900",
+    ]
+    assert report.records_checked == len(list(own.glob("*-*.md")))
+
+
+def test_the_methodology_source_checks_its_own_core_records_for_ids(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Where the methodology is authored nothing is a copy, so a core record's id is
+    checked."""
+    repo = make_adopter_repo()
+    package = repo.root / "src" / "project_kit" / "__init__.py"
+    package.parent.mkdir(parents=True)
+    package.write_text("", encoding="utf-8")
+    core = repo.root / ".pkit" / "decisions" / "core"
+    _write_record(core / "COR-900-a.md", "COR-900")
+    _write_record(core / "COR-900-b.md", "COR-900")
+
+    report = decisions_validate.validate_decision_ids(repo.root)
+
+    assert "core :: COR-900" in [issue.location for issue in report.issues]
+
+
+@pytest.mark.parametrize(
+    ("synced", "own"),
+    [
+        (["a"], ["b"]),
+        (["a", "b"], ["c"]),
+        (["a"], ["b", "c"]),
+    ],
+)
+def test_a_projects_record_that_takes_a_synced_copys_id_is_reported_on_the_projects_record(
+    project: Path, monkeypatch: pytest.MonkeyPatch, synced: list[str], own: list[str]
+) -> None:
+    """A synced copy keeps its id, so the project's record that shares it is the one
+    reported. No tree's id-space mixes the two today, since a space's folder is synced
+    whole or not at all, so the tree's predicate is stood in for here."""
+    core = project / ".pkit" / "decisions" / "core"
+    for name in [*synced, *own]:
+        _write_record(core / f"COR-001-{name}.md", "COR-001")
+    copies = {f".pkit/decisions/core/COR-001-{name}.md" for name in synced}
+    ownership = SimpleNamespace(is_synced_copy=lambda _root, rel: rel in copies)
+    monkeypatch.setattr(lifecycle_ownership, "load_ownership", lambda _root: ownership)
+
+    report = decisions_validate.validate_decision_ids(project)
+
+    assert [issue.location for issue in report.issues] == [
+        f".pkit/decisions/core/COR-001-{name}.md" for name in own
+    ]
+    kept = (
+        "arrives as a synced copy, which keeps its id"
+        if len(synced) == 1
+        else "arrive as synced copies, which keep their ids"
+    )
+    for issue in report.issues:
+        assert issue.message.startswith(f"id 'COR-001' is claimed by {len(synced) + len(own)}")
+        assert f"{kept}, since the next sync overwrites an edit here." in issue.message
+        assert issue.message.endswith("This record takes another id.")
+        assert all(f"COR-001-{name}.md" in issue.message for name in [*synced, *own])
+    assert report.records_checked == len(own)
+
+
+def test_the_validate_member_reports_nothing_on_a_synced_copy(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The member answers for the project's own records: a synced copy with a bad
+    front matter, a duplicate id and an id its filename disagrees with yields no
+    finding, while the project's record with a bad front matter does."""
+    repo = make_adopter_repo(capabilities=("living-docs",))
+    decisions = repo.root / ".pkit" / "decisions"
+    core = decisions / "core"
+    (core / "COR-900-a.md").write_text("no front matter\n", encoding="utf-8")
+    _write_record(core / "COR-901-b.md", "COR-901", status="unknown")
+    _write_record(core / "COR-902-c.md", "COR-901")
+    capability = repo.root / ".pkit" / "capabilities" / "living-docs" / "decisions"
+    (capability / "DEC-900-a.md").write_text("no front matter\n", encoding="utf-8")
+    assert decisions_validate.outcome(repo.root).findings == ()
+
+    (decisions / "project" / "PRJ-900-a.md").write_text("no front matter\n", encoding="utf-8")
+    outcome = decisions_validate.outcome(repo.root)
+
+    assert {finding.location for finding in outcome.findings} == {
+        ".pkit/decisions/project/PRJ-900-a.md"
+    }
+    assert outcome.errors == outcome.findings
 
 
 # --- CLI ---------------------------------------------------------------

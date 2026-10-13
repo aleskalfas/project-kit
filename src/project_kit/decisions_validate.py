@@ -37,6 +37,16 @@ place to enforce overlay setup — `pkit new decision adr` already does, and
 an adopter may legitimately have no ADRs). Collision detection over the
 spaces that *do* resolve is unaffected.
 
+**A synced copy is not checked** (COR-055 point 1). In a project that is not
+the methodology's source, a core record and a kit-shipped capability's arrive
+as synced copies (`synced_record_test`). The project cannot mend them, since
+the next sync overwrites an edit, so they are checked where they are authored.
+Here no issue is reported on one: neither its id against its filename, nor an
+id that only synced copies share. A synced copy is still read for its id. So a
+project's own record that takes a synced copy's id is reported, on the
+project's record, which is the one the project can change. The count of
+records checked is the project's own.
+
 **Revision narration is a warning, never an error** (`revision_narration`).
 A record states what is true and is refined in place; git history is its
 change log (`.pkit/decisions/README.md`, "Refining an accepted record").
@@ -54,10 +64,10 @@ markers — a superseded-by line and a forward refinement pointer
 inline code are quoted material and are not read. A superseded record is
 preserved as it stood, so it is not read either. Nor is a record that arrives
 here as a synced copy — a core record, or a kit-shipped capability's, in a
-project that is not the methodology's source (`is_synced_copy` of the tree's
-`.pkit/lifecycle/ownership.py`): it is refined where it is authored, and an
-edit here would be overwritten by the next sync. A tree without that module
-has every record read.
+project that is not the methodology's source (`synced_record_test`, which asks
+`is_synced_copy` of the tree's `.pkit/lifecycle/ownership.py`): it is refined
+where it is authored, and an edit here would be overwritten by the next sync.
+A tree without that module has every record read.
 
 **A record's points are checked too** (`point_findings`, COR-058 point 7),
 over the same records as narration: a synced copy and a superseded record
@@ -79,8 +89,9 @@ token (`opening_token`) as validation does.
 
 from __future__ import annotations
 
+import functools
 import re
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 
@@ -182,7 +193,8 @@ class DecisionRecord:
 class DecisionIssue:
     """One finding — a duplicate id, an id/filename mismatch, or a line of revision narration."""
 
-    # path relative to target; "<id-space> :: <id>" for a duplicate; "<path>:<line>" for narration
+    # path relative to target; "<id-space> :: <id>" for a duplicate, or the project's record
+    # when it shares the id with a synced copy; "<path>:<line>" for narration
     location: str
     message: str
 
@@ -191,7 +203,7 @@ class DecisionIssue:
 class DecisionValidationReport:
     """Outcome of a decision-id validation run."""
 
-    records_checked: int = 0
+    records_checked: int = 0  # the project's own records; a synced copy is not checked
     issues: tuple[DecisionIssue, ...] = field(default_factory=tuple)
     rules_checked: int = 0  # rules across the rule sets, checked as their own id-space
 
@@ -209,15 +221,22 @@ def validate_decision_ids(target_root: Path) -> DecisionValidationReport:
     `COR-001` alongside a `PRJ-001` — are not collisions). Also flags any
     record whose frontmatter id disagrees with its filename number, and any
     rule id claimed more than once across the rule sets.
+
+    A synced copy is not checked (COR-055 point 1). It is read for its id
+    alone, so that a project's record which takes its id is reported, on the
+    project's record (`_duplicate_issues`).
     """
+    is_synced = synced_record_test(target_root)
     records = discover_decision_records(target_root)
+    copies = {record.path for record in records if is_synced(_rel(record.path, target_root))}
+    own = [record for record in records if record.path not in copies]
     issues: list[DecisionIssue] = []
 
-    # 1. id/filename mismatch + unparseable-id sanity checks.
-    for record in records:
+    # 1. id/filename mismatch + unparseable-id sanity checks, on the project's records.
+    for record in own:
         issues.extend(_filename_consistency_issues(record, target_root))
 
-    # 2. Duplicate-id detection, scoped per id-space.
+    # 2. Duplicate-id detection, scoped per id-space, over every record.
     by_space_id: dict[tuple[str, str], list[Path]] = {}
     for record in records:
         if record.record_id is None:
@@ -227,26 +246,69 @@ def validate_decision_ids(target_root: Path) -> DecisionValidationReport:
     for (id_space, record_id), paths in sorted(by_space_id.items()):
         if len(paths) < 2:
             continue
-        rels = sorted(_rel(p, target_root) for p in paths)
-        issues.append(
-            DecisionIssue(
-                location=f"{id_space} :: {record_id}",
-                message=(
-                    f"id {record_id!r} is claimed by {len(paths)} records in the "
-                    f"{id_space!r} id-space: " + ", ".join(rels)
-                ),
-            )
-        )
+        issues.extend(_duplicate_issues(id_space, record_id, paths, copies, target_root))
 
     # 3. Rule ids, unique across every rule set (COR-051 point 3).
     discovery = rule_sets.discover_rule_sets(target_root)
     issues.extend(_rule_id_issues(discovery))
 
     return DecisionValidationReport(
-        records_checked=len(records),
+        records_checked=len(own),
         issues=tuple(issues),
         rules_checked=len(discovery.rules),
     )
+
+
+def synced_record_test(target_root: Path) -> Callable[[str], bool]:
+    """Whether a record, at its path relative to the root, arrives here as a synced copy.
+
+    The tree's own predicate, `is_synced_copy` of `.pkit/lifecycle/ownership.py`,
+    loaded once through the backbone's one loader of it: a core record, or a
+    kit-shipped capability's, in a project that is not the methodology's source.
+    Every check of the `decisions` member leaves such a record out, the
+    front-matter check in `validate` included (COR-055 point 1). A tree without
+    that module has no synced copy, so every record is read.
+    """
+    ownership = lifecycle_ownership.load_ownership(target_root)
+    if ownership is None:
+        return lambda _rel: False
+    return functools.partial(ownership.is_synced_copy, target_root)
+
+
+def _duplicate_issues(
+    id_space: str, record_id: str, paths: list[Path], copies: set[Path], target_root: Path
+) -> list[DecisionIssue]:
+    """The issues on one id that several records of one id-space claim.
+
+    Claimed by the project's records alone, it is one issue on the id-space.
+    Claimed by synced copies alone, it is none: the project cannot change them.
+    Claimed by both, it is one issue on each of the project's records, since a
+    synced copy keeps its id and the project's record takes another.
+    """
+    own = sorted(_rel(p, target_root) for p in paths if p not in copies)
+    synced = sorted(_rel(p, target_root) for p in paths if p in copies)
+    if not own:
+        return []
+    claimed = (
+        f"id {record_id!r} is claimed by {len(paths)} records in the {id_space!r} id-space: "
+        + ", ".join(sorted([*own, *synced]))
+    )
+    if not synced:
+        return [DecisionIssue(location=f"{id_space} :: {record_id}", message=claimed)]
+    if len(synced) == 1:
+        kept = "arrives as a synced copy, which keeps its id"
+    else:
+        kept = "arrive as synced copies, which keep their ids"
+    return [
+        DecisionIssue(
+            location=rel,
+            message=(
+                f"{claimed}. {_and(synced)} {kept}, since the next sync overwrites an edit "
+                "here. This record takes another id."
+            ),
+        )
+        for rel in own
+    ]
 
 
 def _rule_id_issues(discovery: rule_sets.RuleSetDiscovery) -> list[DecisionIssue]:
@@ -368,10 +430,10 @@ def _refined_records(target_root: Path) -> Iterator[tuple[str, str]]:
     body stays as it stood. An unreadable record is left to the id pass, which
     reports it.
     """
-    ownership = lifecycle_ownership.load_ownership(target_root)
+    is_synced = synced_record_test(target_root)
     for record in discover_decision_records(target_root):
         rel = _rel(record.path, target_root)
-        if ownership is not None and ownership.is_synced_copy(target_root, rel):
+        if is_synced(rel):
             continue
         try:
             text = record.path.read_text(encoding="utf-8")
@@ -749,7 +811,8 @@ def outcome(target_root: Path) -> Outcome:
     """The `decisions` member of `pkit validate`: every record's front matter
     (`validate.decision_frontmatter_issues`), the id spaces (`validate_decision_ids`) and
     the errors on records' points (`point_findings`), then revision narration
-    (`revision_narration`) and the warnings on records' points."""
+    (`revision_narration`) and the warnings on records' points. Each leaves a synced
+    copy out (`synced_record_test`), so the member reports nothing on one."""
     from project_kit.validate import decision_frontmatter_issues
 
     front_matter = decision_frontmatter_issues(target_root)

@@ -52,6 +52,8 @@ A capability's **DEC** records are numbered **per capability** — each capabili
 
 `pkit decisions validate` enforces uniqueness within each id-space (core, project, ADR, and per-capability DEC), and of rule ids across the rule sets (below), and is wired into the project's check gate — it catches two records hand-authored with the same id before they land.
 
+Validation checks your own records only. A record that arrives as a synced copy is a core record, or a kit-shipped capability's, in your project. It is checked where it is authored, since the next sync overwrites an edit here. Validation fails a project only for what it can correct in its own files ([COR-055](core/COR-055-validation.md) point 1). So `pkit validate` and `pkit decisions validate` report nothing on a synced copy: not its front matter, not its id against its filename, and not an id only synced copies share. A record of yours that takes a synced copy's id is still reported, on your record, because the copy keeps its id.
+
 ### Rule sets — a separate family with the same guarantees
 
 Rules are not decision records, but they share their guarantees ([COR-051](core/COR-051-rule-sets.md)). A **rule set** is one file holding many one-paragraph rules: the data sits in front matter, and each rule's statement sits in the body, in a section headed by the rule's id. Rules form their own identifier family, **`RS-<SET>-NNN`** — the family prefix, the rule set's name, a number — so a rule id can never collide with a record id. Ids are permanent: a rule is never renumbered, and a retired id is never reused.

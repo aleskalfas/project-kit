@@ -93,3 +93,44 @@ def test_validate_passes_for_well_formed_records(installed_target: Path) -> None
     issues = validate.run_validate(installed_target)
     record_issues = [i for i in issues if "PRJ-997-clean.md" in i.location]
     assert record_issues == []
+
+
+# --- synced copies (COR-055 point 1) -----------------------------------
+
+
+def test_validate_leaves_out_a_synced_copy_with_a_bad_front_matter(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """In an adopter a core record arrives as a synced copy, which the project cannot
+    mend: its front matter is not checked, and the project's own record's is."""
+    root = make_adopter_repo().root
+    decisions = root / ".pkit" / "decisions"
+    (decisions / "core" / "COR-900-broken.md").write_text("# No front matter\n", encoding="utf-8")
+    (decisions / "core" / "COR-901-bad-status.md").write_text(
+        "---\nid: COR-901\ntitle: x\nstatus: unknown-status\ndate: 2026-10-13\nauthor: t\n---\n",
+        encoding="utf-8",
+    )
+    (decisions / "project" / "PRJ-900-broken.md").write_text(
+        "# No front matter\n", encoding="utf-8"
+    )
+
+    issues = validate.decision_frontmatter_issues(root)
+
+    assert [issue.location for issue in issues] == [".pkit/decisions/project/PRJ-900-broken.md"]
+
+
+def test_validate_checks_core_front_matter_in_the_methodology_source(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Where the methodology is authored nothing is a copy, so a core record's front
+    matter is checked."""
+    root = make_adopter_repo().root
+    package = root / "src" / "project_kit" / "__init__.py"
+    package.parent.mkdir(parents=True)
+    package.write_text("", encoding="utf-8")
+    core = root / ".pkit" / "decisions" / "core"
+    (core / "COR-900-broken.md").write_text("# No front matter\n", encoding="utf-8")
+
+    issues = validate.decision_frontmatter_issues(root)
+
+    assert [issue.location for issue in issues] == [".pkit/decisions/core/COR-900-broken.md"]
