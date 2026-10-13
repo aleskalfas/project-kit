@@ -10,7 +10,7 @@ from click.testing import CliRunner
 
 from project_kit import decisions_validate
 from project_kit.cli import main
-from project_kit.validators import Severity
+from project_kit.validators import Finding, Severity
 from tests.adopter_repo import MakeAdopterRepo
 
 
@@ -426,3 +426,362 @@ def test_cli_says_nothing_of_narration_on_a_clean_corpus(
     result = CliRunner().invoke(main, ["decisions", "validate"])
     assert result.exit_code == 0, result.output
     assert "narration" not in result.output
+
+
+# --- a record's points (COR-058 point 7; #1416) -------------------------------
+#
+# The decisions member reads each record's points through `record_points` and
+# holds each stub to its entry there. A malformed `retired-points`, a stub that
+# disagrees with its entry, a live point on a retired id and a successor the
+# record neither holds nor retires fail. A duplicate id, a gap and a misspelt
+# point heading warn. Each finding names the file and the id.
+
+_REL = ".pkit/decisions/project/PRJ-900-a.md"
+
+
+def _points_record(decision: str, *, extra: str = "", status: str = "accepted") -> str:
+    """A record whose Decision is `decision`, with `extra` lines in its front matter.
+
+    Without `extra` the front matter is six lines, fences included, and a blank
+    line follows it, so the Decision's heading is line 12 and its text opens on
+    line 14.
+    """
+    return (
+        f"---\nid: PRJ-900\ntitle: A record\nstatus: {status}\ndate: 2026-10-13\n{extra}---\n\n"
+        f"## Context\n\nWhy.\n\n## Decision\n\n{decision}\n## Rationale\n\nBecause.\n"
+    )
+
+
+_RETIRED_SIX = 'retired-points:\n  "6": ["7"]\n'
+
+_POINTS_WITH_STUB = (
+    "### 5. Fifth\n\nFive.\n\n### 6. Retired\n\nIts content is in point 7.\n\n"
+    "### 7. Seventh\n\nSeven.\n"
+)
+
+
+def _numbered(*ids: str) -> str:
+    """A point heading `### <id>. Point <id>` and one line of text for each id; four
+    lines each."""
+    return "".join(f"### {point_id}. Point {point_id}\n\nText.\n\n" for point_id in ids)
+
+
+def _found(text: str) -> list[tuple[str, Severity]]:
+    return [(f.location, f.severity) for f in decisions_validate.check_points(_REL, text)]
+
+
+def _errors(text: str) -> list[Finding]:
+    return [f for f in decisions_validate.check_points(_REL, text) if f.severity.fails]
+
+
+def test_points_with_a_retired_point_and_its_stub_pass() -> None:
+    text = _points_record(_numbered("1", "2", "3", "4") + _POINTS_WITH_STUB, extra=_RETIRED_SIX)
+    assert decisions_validate.check_points(_REL, text) == []
+
+
+def test_a_labelled_retired_point_with_its_stub_passes() -> None:
+    decision = (
+        "### D1 — First\n\nOne.\n\n### D2 — Retired\n\nIts content is in points D1 and D3.\n\n"
+        "### D3 — Third\n\nThree.\n"
+    )
+    text = _points_record(decision, extra="retired-points:\n  D2: [D1, D3]\n")
+    assert decisions_validate.check_points(_REL, text) == []
+
+
+# --- what fails ----------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("extra", "names"),
+    [
+        ("retired-points: [6]\n", "is not a mapping"),
+        ('retired-points: "6"\n', "is not a mapping"),
+        ('retired-points:\n  "6": ["7"]\n  "6": []\n', "the front matter does not parse"),
+    ],
+)
+def test_a_retired_points_field_that_cannot_be_read_fails_once(extra: str, names: str) -> None:
+    """Nothing that rests on the retired ids is checked then, so the stub of 6 raises
+    no second error."""
+    text = _points_record(_numbered("1", "2", "3", "4") + _POINTS_WITH_STUB, extra=extra)
+    errors = _errors(text)
+    assert [f.location for f in errors] == [f"{_REL}:/retired-points"]
+    assert names in errors[0].message
+
+
+@pytest.mark.parametrize(
+    ("entry", "names"),
+    [
+        ('  "six": ["2"]\n', "`six` in `retired-points` is no point id"),
+        ('  "3": "2"\n', "the successors of `3`"),
+        ('  "3": [{"a": 1}]\n', "the successors of `3`"),
+    ],
+)
+def test_a_malformed_entry_fails_naming_its_id(entry: str, names: str) -> None:
+    text = _points_record(_numbered("1", "2"), extra=f"retired-points:\n{entry}")
+    malformed = [f for f in _errors(text) if f.location == f"{_REL}:/retired-points"]
+    assert len(malformed) == 1
+    assert names in malformed[0].message
+
+
+def test_a_retired_id_with_no_stub_fails() -> None:
+    text = _points_record(_numbered("1", "2", "3", "4", "5", "7"), extra=_RETIRED_SIX)
+    errors = _errors(text)
+    assert [f.location for f in errors] == [f"{_REL}#6"]
+    assert "retired point `6` has no stub" in errors[0].message
+    assert "`### 6. Retired`" in errors[0].message
+    assert '"Its content is in point 7."' in errors[0].message
+
+
+def test_a_stub_whose_id_is_not_retired_fails() -> None:
+    text = _points_record(_numbered("1", "2", "3", "4") + _POINTS_WITH_STUB)
+    errors = _errors(text)
+    assert [f.location for f in errors] == [f"{_REL}#6"]
+    assert "the stub of `6` at line 34 retires no id" in errors[0].message
+
+
+def test_a_stub_whose_sentence_differs_from_its_entry_fails() -> None:
+    text = _points_record(
+        _numbered("1", "2", "3", "4") + _POINTS_WITH_STUB, extra='retired-points:\n  "6": []\n'
+    )
+    errors = _errors(text)
+    assert [f.location for f in errors] == [f"{_REL}#6"]
+    assert 'reads "Its content is in point 7."' in errors[0].message
+    assert 'Its entry gives "Its content is in no other point."' in errors[0].message
+
+
+def test_a_live_point_on_a_retired_id_fails_and_names_the_next_unused_number() -> None:
+    decision = _numbered("1", "2", "3", "4") + _POINTS_WITH_STUB + "\n### 6. Sixth again\n\nNew.\n"
+    errors = _errors(_points_record(decision, extra=_RETIRED_SIX))
+    assert [f.location for f in errors] == [f"{_REL}#6"]
+    assert "uses a retired id" in errors[0].message
+    assert "the next unused number, `8`" in errors[0].message
+
+
+def test_a_successor_the_record_neither_holds_nor_retires_fails() -> None:
+    text = _points_record(
+        _numbered("1", "2", "3", "4")
+        + _POINTS_WITH_STUB.replace("in point 7.", "in points 7 and 12."),
+        extra='retired-points:\n  "6": ["7", "12"]\n',
+    )
+    errors = _errors(text)
+    assert [f.location for f in errors] == [f"{_REL}#6"]
+    assert "`12`, a successor of retired point `6`, is neither a point" in errors[0].message
+
+
+def test_a_retired_id_named_as_its_own_successor_fails() -> None:
+    text = _points_record(
+        _numbered("1", "2", "3", "4") + _POINTS_WITH_STUB.replace("point 7.", "point 6."),
+        extra='retired-points:\n  "6": ["6"]\n',
+    )
+    errors = _errors(text)
+    assert [f.location for f in errors] == [f"{_REL}#6"]
+    assert "names itself as its successor" in errors[0].message
+
+
+def test_a_successor_retired_later_passes() -> None:
+    """A successor is live when its entry is written. Its own retirement later
+    leaves the earlier entry as it stood (COR-058 point 5)."""
+    decision = (
+        _numbered("1", "2", "3", "4", "5")
+        + "### 6. Retired\n\nIts content is in point 7.\n\n"
+        + "### 7. Retired\n\nIts content is in point 8.\n\n"
+        + _numbered("8")
+    )
+    text = _points_record(decision, extra='retired-points:\n  "6": ["7"]\n  "7": ["8"]\n')
+    assert decisions_validate.check_points(_REL, text) == []
+
+
+# --- what warns ----------------------------------------------------------------
+
+
+def test_a_duplicate_id_warns_and_fails_nothing() -> None:
+    text = _points_record(_numbered("1", "2", "2", "3"))
+    found = decisions_validate.check_points(_REL, text)
+    assert [(f.location, f.severity) for f in found] == [(f"{_REL}#2", Severity.WARNING)]
+    assert "2 points take the id `2`, at lines 18 and 22" in found[0].message
+
+
+def test_a_duplicate_stub_warns() -> None:
+    stub = "\n### 6. Retired\n\nIts content is in point 7.\n"
+    decision = _numbered("1", "2", "3", "4") + _POINTS_WITH_STUB + stub
+    assert _found(_points_record(decision, extra=_RETIRED_SIX)) == [(f"{_REL}#6", Severity.WARNING)]
+
+
+def test_a_gap_in_the_ids_warns_once_per_run() -> None:
+    found = decisions_validate.check_points(
+        _REL, _points_record(_numbered("1", "2", "5", "6", "8"))
+    )
+    assert [(f.location, f.severity) for f in found] == [
+        (f"{_REL}#3", Severity.WARNING),
+        (f"{_REL}#7", Severity.WARNING),
+    ]
+    assert "the ids skip `3` to `4`: no point holds them" in found[0].message
+    assert "the ids skip `7`: no point holds it" in found[1].message
+
+
+def test_a_gap_counts_retired_ids() -> None:
+    """Retired 6, with its stub, fills the ids between 5 and 7."""
+    text = _points_record(_numbered("1", "2", "3", "4") + _POINTS_WITH_STUB, extra=_RETIRED_SIX)
+    assert _found(text) == []
+
+
+def test_a_gap_in_a_series_of_labels_warns_and_numbers_count_apart() -> None:
+    decision = "### D1 — First\n\nOne.\n\n### D3 — Third\n\nThree.\n\n" + _numbered("1")
+    assert _found(_points_record(decision)) == [(f"{_REL}#D2", Severity.WARNING)]
+
+
+@pytest.mark.parametrize(
+    ("heading", "token"),
+    [("### 16 - Title", "16"), ("### 5.1 Title", "5.1"), ("### v1 scope: the first", "v1")],
+)
+def test_a_misspelt_point_heading_warns(heading: str, token: str) -> None:
+    text = _points_record(_numbered("1", "2") + f"{heading}\n\nText.\n")
+    found = decisions_validate.check_points(_REL, text)
+    assert [(f.location, f.severity) for f in found] == [(f"{_REL}#{token}", Severity.WARNING)]
+    assert f"the heading `{heading}` at line 22 opens with `{token}`" in found[0].message
+
+
+# --- what is not read ------------------------------------------------------------
+
+
+def test_a_projects_own_front_matter_fields_pass() -> None:
+    """Only the new field's shape is read, so a field the methodology never names, of
+    any shape, raises nothing (COR-058 point 7)."""
+    extra = "owner: team-a\ntags: [x, y]\nreview:\n  every: 90d\n  by: [alice]\n" + _RETIRED_SIX
+    text = _points_record(_numbered("1", "2", "3", "4") + _POINTS_WITH_STUB, extra=extra)
+    assert decisions_validate.check_points(_REL, text) == []
+
+
+@pytest.mark.parametrize("extra", ["retired-points:\n", "retired-points: {}\n"])
+def test_an_empty_retired_points_retires_nothing_and_passes(extra: str) -> None:
+    text = _points_record(_numbered("1", "2"), extra=extra)
+    assert decisions_validate.check_points(_REL, text) == []
+
+
+def test_front_matter_that_does_not_parse_without_the_field_raises_nothing() -> None:
+    text = _points_record(_numbered("1", "2"), extra="owner: [unclosed\n")
+    assert decisions_validate.check_points(_REL, text) == []
+
+
+@pytest.mark.parametrize(
+    "decision",
+    [
+        "1. **First.** One.\n2. **Second.** Two.\n4. **Fourth.** Four.\n",
+        "**1. First.** One.\n\n**3. Third.** Three.\n\n**3. Third again.** Three.\n",
+        "**D1 — First.** One.\n\n**D3 — Third.** Three.\n",
+        "### Group\n\n1. **First.** One.\n\n### Another\n\n2. **Second.** Two.\n",
+    ],
+)
+def test_a_record_in_list_form_raises_nothing(decision: str) -> None:
+    """A project's record not yet converted keeps working: its list numbers are not
+    permanent, so nothing fails on them and no gap is read (COR-058 point 9)."""
+    assert decisions_validate.check_points(_REL, _points_record(decision)) == []
+
+
+def test_the_member_reads_points_and_holds_stubs_through_record_points(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No second reading of points: the record is read by `read_points`, and each stub
+    is held to its entry by `hold_stubs` (#1414)."""
+    from project_kit import record_points
+
+    calls: list[str] = []
+    read, hold = record_points.read_points, record_points.hold_stubs
+
+    def reading(text: str) -> record_points.RecordPoints:
+        calls.append("read_points")
+        return read(text)
+
+    def holding(points: record_points.RecordPoints) -> tuple[record_points.StubMismatch, ...]:
+        calls.append("hold_stubs")
+        return hold(points)
+
+    monkeypatch.setattr(record_points, "read_points", reading)
+    monkeypatch.setattr(record_points, "hold_stubs", holding)
+    text = _points_record(_numbered("1", "2", "3", "4") + _POINTS_WITH_STUB, extra=_RETIRED_SIX)
+    decisions_validate.check_points(_REL, text)
+    assert calls == ["read_points", "hold_stubs"]
+
+
+# --- the walk, the member and the command ----------------------------------------
+
+_STUB_NOT_RETIRED = "## Decision\n\n" + _numbered("1", "2", "3", "4") + _POINTS_WITH_STUB
+
+
+def test_point_findings_name_the_file_and_the_id_in_every_id_space(project: Path) -> None:
+    core = project / ".pkit" / "decisions" / "core"
+    _write_record(core / "COR-001-a.md", "COR-001", _STUB_NOT_RETIRED)
+    capability = _make_capability(project, "alpha")
+    _write_record(capability / "DEC-001-a.md", "DEC-001", _STUB_NOT_RETIRED)
+    assert [f.location for f in decisions_validate.point_findings(project)] == [
+        ".pkit/decisions/core/COR-001-a.md#6",
+        ".pkit/capabilities/alpha/decisions/DEC-001-a.md#6",
+    ]
+
+
+def test_a_superseded_record_is_not_checked_for_points(project: Path) -> None:
+    core = project / ".pkit" / "decisions" / "core"
+    body = f"*Superseded by [COR-002].*\n\n{_STUB_NOT_RETIRED}"
+    _write_record(core / "COR-001-a.md", "COR-001", body, status="superseded")
+    assert decisions_validate.point_findings(project) == ()
+
+
+def test_a_synced_copy_is_not_checked_for_points_and_the_projects_own_record_is(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The project cannot mend a record it receives by sync, which is checked where it
+    is authored (COR-058 point 7)."""
+    repo = make_adopter_repo(capabilities=("living-docs",))
+    decisions = repo.root / ".pkit" / "decisions"
+    _write_record(decisions / "core" / "COR-900-a.md", "COR-900", _STUB_NOT_RETIRED)
+    capability = repo.root / ".pkit" / "capabilities" / "living-docs" / "decisions"
+    _write_record(capability / "DEC-900-a.md", "DEC-900", _STUB_NOT_RETIRED)
+    _write_record(decisions / "project" / "PRJ-900-a.md", "PRJ-900", _STUB_NOT_RETIRED)
+
+    found = decisions_validate.point_findings(repo.root)
+
+    assert [f.location for f in found] == [".pkit/decisions/project/PRJ-900-a.md#6"]
+
+
+def test_the_validate_member_fails_on_a_point_error_and_not_on_a_warning(project: Path) -> None:
+    core = project / ".pkit" / "decisions" / "core"
+    _write_record(core / "COR-001-a.md", "COR-001", _STUB_NOT_RETIRED)
+    _write_record(core / "COR-002-b.md", "COR-002", "## Decision\n\n" + _numbered("1", "3"))
+
+    outcome = decisions_validate.outcome(project)
+
+    assert [(f.location, f.severity) for f in outcome.findings] == [
+        (".pkit/decisions/core/COR-001-a.md#6", Severity.ERROR),
+        (".pkit/decisions/core/COR-002-b.md#2", Severity.WARNING),
+    ]
+    assert "1 error(s), 1 warning(s)." in outcome.summary[0]
+
+
+def test_cli_fails_on_a_point_error(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import subprocess
+
+    subprocess.run(["git", "init", "-q"], cwd=project, check=True)
+    _write_record(
+        project / ".pkit" / "decisions" / "core" / "COR-001-a.md", "COR-001", _STUB_NOT_RETIRED
+    )
+    monkeypatch.chdir(project)
+    result = CliRunner().invoke(main, ["decisions", "validate"])
+    assert result.exit_code != 0
+    assert "1 error(s) and 0 warning(s) on records' points" in result.output
+    assert ".pkit/decisions/core/COR-001-a.md#6" in result.output
+    assert "1 error(s) on records' points found." in result.output
+
+
+def test_cli_warns_of_a_point_and_exits_zero(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import subprocess
+
+    subprocess.run(["git", "init", "-q"], cwd=project, check=True)
+    body = "## Decision\n\n### 16 - Title\n\nText.\n"
+    _write_record(project / ".pkit" / "decisions" / "core" / "COR-001-a.md", "COR-001", body)
+    monkeypatch.chdir(project)
+    result = CliRunner().invoke(main, ["decisions", "validate"])
+    assert result.exit_code == 0, result.output
+    assert "0 error(s) and 1 warning(s) on records' points" in result.output
+    assert ".pkit/decisions/core/COR-001-a.md#16" in result.output

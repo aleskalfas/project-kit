@@ -317,7 +317,7 @@ _BACKBONE_MEMBERS: tuple[tuple[str, Callable[[Path], Outcome], str], ...] = (
     ("versions", _versions, "every version relation"),
     ("friction", _friction, "artefacts in the declared places: the container, deferrals, cycles"),
     ("rule-sets", _rule_sets, "every rule-set file: shape, ids, origins, inheritance"),
-    ("decisions", _decisions, "decision-record front matter and id spaces"),
+    ("decisions", _decisions, "decision-record front matter, id spaces and points"),
     ("refs", _refs, "the reference graph across agents, skills and hooks"),
     ("process", _process, "every process definition resolves, its states in one detection mode"),
     ("data", _data, "adopter data files bound to a capability schema"),

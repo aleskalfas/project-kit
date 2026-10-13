@@ -175,6 +175,24 @@ Two in-body markers are *not* narration of a revision and are correct to keep: t
 
 `pkit decisions validate` warns of each line of a record that narrates its own revision — an amendment heading or marker (`## Amendment (…)`, `**Amendment 1**`, `**Amended by …**`), a revision stamped with an issue number or a date (`**Update (#252)**`, `(clarified, #813)`), or change-log phrasing ("this record originally…", "previously we believed…") — naming the file and line. It does not read fenced blocks or inline code spans, a superseded record, or a record that arrives as a synced copy — a core record, or a kit-shipped capability's, in your project — since that record is refined where it is authored and an edit here is overwritten by the next sync. The two markers above match none of these shapes. The warnings do not fail the command, because the shapes are read from prose and a gate that fails on a heuristic reading of prose fails for the wrong reasons — the reason [COR-055](core/COR-055-validation.md) gives for letting one severity alone fail validation ("Why exactly one fails").
 
+## Checking a record's points
+
+A record's points keep their ids for good ([COR-058](core/COR-058-record-points.md)). A point is a heading in the Decision that opens with its id, `### 5. Title` or `### D1 — Title`. A retired point keeps its id in the record's `retired-points`, with the points that took its text, and a one-line stub stays where it was. `pkit validate` and `pkit decisions validate` check each record's points, as COR-058 point 7 sets out. They read the records the narration warnings read, so a superseded record and a synced copy are left out.
+
+- **They fail on:**
+  - a malformed `retired-points`: one that is not a mapping of retired ids to lists of ids
+  - a retired id with no stub, or a stub whose id is not retired
+  - a stub whose sentence differs from the one its entry gives, such as "Its content is in points 7 and 16."
+  - a live point whose heading uses a retired id
+  - a successor that the record neither holds nor retires, or a retired id named as its own successor
+- **They warn of, and never fail on:**
+  - a duplicate id
+  - a gap in the ids, counting retired ones
+  - a heading in the Decision that opens with a number or a label in another form, such as `### 16 - Title` or `### 5.1 Title`
+- **Each finding names the file and the id,** as `<file>#<id>`. A finding on the shape of `retired-points` is at `<file>:/retired-points`, and its message names the id.
+- **Only the field's shape is read** of the front matter, so a project's own fields pass.
+- **A record in list form fails nothing,** unless it writes `retired-points`. Its points are a numbered list, or paragraphs that open with a bold number or label, not yet converted to headings. Its numbers move when a point is inserted, so no duplicate or gap in them is read (COR-058 point 9).
+
 ## Adding a record
 
 You add records to `project/` — your own architectural decisions, in your own namespace.

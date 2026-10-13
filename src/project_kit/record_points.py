@@ -1,11 +1,11 @@
 """A decision record's points (COR-058; ADR-057 point 2).
 
 The one reading of a record's points, over the reading of where a part of a
-document lies (`document_parts`). It is the reading validation, the numbering
-check (COR-058 point 8) and the conversion (COR-058 point 9) are to call. None
-of them reads a record's points yet. No other module of the binary reads them,
-and artefact discovery does not: a record is read here whether or not a place
-holds it.
+document lies (`document_parts`). Validation's decisions member calls it
+(`decisions_validate.check_points`, COR-058 point 7). The numbering check
+(COR-058 point 8) and the conversion (COR-058 point 9) are to call it. No
+other module of the binary reads a record's points, and artefact discovery
+does not: a record is read here whether or not a place holds it.
 
 - `read_points` reads one record's text:
   - **the Decision's extent:** the section of the body's first `Decision`
@@ -360,8 +360,8 @@ def hold_stubs(points: RecordPoints) -> tuple[StubMismatch, ...]:
     The entry is the source: the stub's heading and sentence follow it. Each
     retired id, in the entry's order, needs a stub whose text after its heading
     is the entry's sentence (`stub_sentence`), whitespace folded. Then each stub
-    whose id the entry does not retire, in the body's order. Validation and the
-    numbering check are to call it, so the two hold a stub alike.
+    whose id the entry does not retire, in the body's order. Validation calls it,
+    and the numbering check is to, so the two hold a stub alike.
     """
     mismatches: list[StubMismatch] = []
     for retired_id, successors in points.retired.items():

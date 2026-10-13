@@ -5475,6 +5475,12 @@ def decisions_validate() -> None:
     issue number or a date, change-log phrasing — since a record is refined in
     place and git history is its change log. Superseded records and records
     that arrive as synced copies are not read.
+
+    Then checks each record's points, retired points and stubs (COR-058 point
+    7), over the same records. Exits non-zero on a malformed `retired-points`,
+    a stub that disagrees with its entry, a live point on a retired id, or a
+    successor the record neither holds nor retires. Warns, without failing, of
+    a duplicate id, a gap in the ids and a misspelt point heading.
     """
     from project_kit import decisions_validate as decisions_mod
 
@@ -5484,8 +5490,15 @@ def decisions_validate() -> None:
     report = decisions_mod.validate_decision_ids(target_root)
     decisions_mod.print_report(report)
     decisions_mod.print_narration(decisions_mod.revision_narration(target_root))
-    if not report.is_clean:
-        raise click.ClickException(f"{len(report.issues)} decision-id issue(s) found.")
+    points = decisions_mod.point_findings(target_root)
+    decisions_mod.print_points(points)
+    point_errors = sum(1 for finding in points if finding.severity.fails)
+    if not report.is_clean or point_errors:
+        failed = [
+            *([f"{len(report.issues)} decision-id issue(s)"] if not report.is_clean else []),
+            *([f"{point_errors} error(s) on records' points"] if point_errors else []),
+        ]
+        raise click.ClickException(" and ".join(failed) + " found.")
 
 
 @main.group()

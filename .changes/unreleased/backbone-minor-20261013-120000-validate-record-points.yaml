@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  Validation checks a decision record's points, as COR-058 point 7 sets them
+  out (#1416). The decisions member of `pkit validate`, and `pkit decisions
+  validate`, read each record through `project_kit.record_points` and hold each
+  stub to its entry in `retired-points`. They fail on a malformed
+  `retired-points`, a retired id with no stub, a stub whose id is not retired
+  or whose sentence differs from its entry's, a live point on a retired id, a
+  successor the record neither holds nor retires, and a retired id named as
+  its own successor.
+  They warn of a duplicate id, a gap in the ids counting retired ones, and a
+  heading in the Decision that opens with a number or a label in a refused
+  form, such as `### 16 - Title`. Each finding names the file and the id, as
+  `<file>#<id>`. A synced copy and a superseded record are not checked. Only
+  the new field's shape is read of the front matter, so a project's own fields
+  pass. A record whose points are still a list fails nothing unless it writes
+  `retired-points`.
