@@ -20,9 +20,8 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-13T08:34:38Z
-      outcome: unchanged
-      unchanged-because: "The decisions README gains a section on what validation checks of a record's points: the failures and warnings COR-058 point 7 names, where each finding points, and that a project's own fields and a record in list form pass. This file points at that README for the record schema, the statuses, the namespaces and the no-shared-files invariant, and says nothing of what validation checks of points. Its section on the prose lint, which main added, asks to run pkit validate after declaring a lint check on a rule, and does not say what the command checks of a record, so the file holds."
+      at: 2026-10-13T09:18:17Z
+      outcome: updated
 ---
 
 # Contributing to project-kit
@@ -35,7 +34,7 @@ If you have a project that has *adopted* project-kit and you want to record deci
 
 ## Running checks
 
-There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Run it any time:
+There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the numbering check of decision records (`pkit decisions check-diff` — a point renumbered, reused or dropped without being retired, or a point or record id the base took first), the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Run it any time:
 
 ```
 ./scripts/check.sh
