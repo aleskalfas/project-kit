@@ -38,6 +38,9 @@ ORIGIN_INCUBATED_IN_REPO = "incubated-in-repo"
 # wire value is named so a reader can tell an entry carrying it apart.
 ORIGIN_EXTERNALLY_SOURCED = "externally-sourced"
 
+# A per-component manifest's file name, in its component's `project/`.
+COMPONENT_MANIFEST_NAME = "manifest.yaml"
+
 
 # Singleton YAML instance: round-trip mode preserves comments and key
 # ordering when re-serialising. `default_flow_style = False` forces
@@ -200,6 +203,77 @@ def set_capability_origin(target_root: Path, name: str, origin: str) -> bool:
     return True
 
 
+def set_component_manifest_path(
+    target_root: Path, kind: ComponentKind, name: str, manifest: str
+) -> bool:
+    """Point a registered component's registry entry at *manifest*, a repo-relative path.
+
+    Rewrites only the entry's ``manifest`` field. Returns ``True`` when the entry
+    was found and its path changed, ``False`` when no such entry is registered or
+    it already names *manifest* (nothing to write).
+    """
+    backbone = read_backbone_manifest(target_root)
+    if backbone is None:
+        return False
+    changed = False
+    new_components: list[ComponentRegistryEntry] = []
+    for entry in backbone.components:
+        if entry.kind == kind and entry.name == name and entry.manifest != manifest:
+            new_components.append(replace(entry, manifest=manifest))
+            changed = True
+        else:
+            new_components.append(entry)
+    if not changed:
+        return False
+    backbone.components = new_components
+    write_backbone_manifest(target_root, backbone)
+    return True
+
+
+def capability_manifest_rel(name: str) -> str:
+    """The repo-relative path of a capability's manifest, under its ``project/``.
+
+    The path a capability's install and a version transition write, and the one
+    its registry entry names (ADR-065 point 2).
+    """
+    return f".pkit/capabilities/{name}/project/{COMPONENT_MANIFEST_NAME}"
+
+
+def capability_manifest_path(target_root: Path, name: str) -> Path:
+    """A capability's manifest under its ``project/``, where no copy touches it."""
+    return target_root / capability_manifest_rel(name)
+
+
+def capability_root_manifest_path(target_root: Path, name: str) -> Path:
+    """Where a capability's manifest was written before it moved under ``project/``.
+
+    The capability's root, a position every copy of its tree manages: a refresh
+    deletes or overwrites a file there. A manifest found there moves under
+    ``project/`` the next time the record is written
+    (``capabilities.move_capability_manifest``).
+    """
+    return target_root / ".pkit" / "capabilities" / name / COMPONENT_MANIFEST_NAME
+
+
+def recorded_capability_manifest(target_root: Path, name: str) -> Path | None:
+    """The capability manifest a reader of its record reads, or None (ADR-065 point 2).
+
+    The manifest at the capability's root where one exists, else the one under
+    its ``project/``. Both exist only after an interrupted move, or after a write
+    that does not know the move, such as an older pkit's restamp or a rollback of
+    ``.pkit/``. Either way the root one names the content the project holds, so
+    it wins. A reader that finds neither falls back to the capability's installed
+    ``package.yaml``.
+    """
+    for path in (
+        capability_root_manifest_path(target_root, name),
+        capability_manifest_path(target_root, name),
+    ):
+        if path.is_file():
+            return path
+    return None
+
+
 def _backbone_manifest_path(target_root: Path) -> Path:
     return target_root / ".pkit" / "manifest.yaml"
 
@@ -233,6 +307,11 @@ class ComponentManifest:
     `.pkit/capabilities/<name>/project/manifest.yaml`). Records what was
     installed: version, install timestamp, recorded `requires_backbone`,
     and any opaque backend identifiers the kit cannot rederive.
+
+    A capability's manifest written before it moved there sits at the
+    capability's root, `.pkit/capabilities/<name>/manifest.yaml`, until its
+    record is next written (`recorded_capability_manifest`,
+    `capabilities.move_capability_manifest`).
     """
 
     kind: ComponentKind

@@ -1,0 +1,16 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  A capability's manifest now sits under its project folder,
+  `.pkit/capabilities/<name>/project/manifest.yaml`. No sync or upgrade
+  deletes or overwrites it there, and the capability's entry in
+  `.pkit/manifest.yaml` names that path. A manifest an older release left at
+  the capability's root moves there the next time pkit writes it, on the next
+  `pkit sync`, `pkit upgrade` or `pkit capabilities upgrade`. No migration
+  runs for it. The skills and agents you chose to skip on a naming collision
+  now stay skipped across `pkit sync` and `pkit upgrade`. Until now they were
+  read from a file nothing wrote, so every refresh copied them back. A restamp
+  now keeps the rest of the manifest's `backend_state`. The bundle no longer
+  ships project-kit's own manifest of project-management (ADR-065 point 2).

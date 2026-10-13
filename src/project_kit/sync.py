@@ -15,6 +15,7 @@ infrastructure being in place.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -24,7 +25,7 @@ from packaging.version import InvalidVersion, Version
 from project_kit import install
 
 if TYPE_CHECKING:
-    from project_kit.capabilities import CapabilitySource
+    from project_kit.capabilities import CapabilityRecord, CapabilitySource
 from project_kit.manifest import (
     ORIGIN_INCUBATED_IN_REPO,
     BackboneManifest,
@@ -120,6 +121,13 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
         click.echo("  (dry-run — no changes will be written)")
     click.echo()
 
+    # Every capability's record is read before anything is copied (ADR-065
+    # point 2): its version falls back to the installed `package.yaml`, which the
+    # capability's copy replaces, and its restamp keeps the `backend_state` read here.
+    from project_kit import capabilities as caps
+
+    records = caps.read_capability_records(target_root)
+
     for area in install.PROPAGATED_AREAS:
         src = source_kit / area
         if src.is_dir():
@@ -132,7 +140,7 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
     # the capability is no longer in source, warn but leave its tree in
     # place — adopters chose to install it and the kit shouldn't yank
     # content out from under them on sync.
-    _sync_installed_capabilities(target_root, source_kit, ctx, force=force)
+    _sync_installed_capabilities(target_root, source_kit, ctx, records, force=force)
 
     # Re-run each installed adapter's primitives so the harness side
     # picks up renamed / removed / newly-resolved content (skills moved
@@ -381,15 +389,20 @@ def _sync_installed_capabilities(
     target_root: Path,
     source_kit: Path,
     ctx: install.InstallContext,
+    records: Mapping[str, CapabilityRecord],
     *,
     force: bool = False,
 ) -> None:
     """Refresh installed capabilities from source per COR-017 / COR-031.
 
+    *records* holds each capability's record, read before propagation
+    (`capabilities.read_capability_records`). Its version, its skips and the
+    state its restamp keeps are taken from there.
+
     For each capability listed in the adopter's backbone manifest:
     - `kit-shipped` origin:
         - In source: re-copy the subtree (preserves the capability's
-          registered-state and any prior skip overrides). Emits a refreshed
+          registered-state and the skips its record holds). Emits a refreshed
           / unchanged status line per capability.
         - **Downgrade guard (issue #524):** if the source version is *older*
           than the installed version, refuse the refresh loudly rather than
@@ -438,48 +451,52 @@ def _sync_installed_capabilities(
             )
             continue
 
+        record = records.get(entry.name) or caps.read_capability_record(target_root, entry.name)
         # Downgrade guard (issue #524): never let a stale source silently
         # overwrite a newer installed capability. Compare the source version
-        # against the *installed* version of record (the per-component
+        # against the *installed* version of record (the capability's
         # manifest, falling back to the installed package.yaml — what a
         # refresh would actually clobber). A refusal is reported (and, in
         # dry-run, previewed) instead of a refresh; `--force` overrides.
-        if _is_downgrade(target_root, source):
-            installed = caps.get_installed_capability_version(target_root, entry.name)
+        if _is_downgrade(record.version, source):
             if not force:
                 click.echo(
                     f"    {'refused':<12} {entry.name!r} — source v{source.package.version} "
-                    f"is older than installed v{installed}; refusing to downgrade "
+                    f"is older than installed v{record.version}; refusing to downgrade "
                     f"(re-run `pkit sync --force` to overwrite)."
                 )
                 continue
             click.echo(
                 f"    {'downgrade':<12} {entry.name!r} — forced: overwriting installed "
-                f"v{installed} with older source v{source.package.version}."
+                f"v{record.version} with older source v{source.package.version}."
             )
 
         if ctx.dry_run:
-            click.echo(f"    {'would refresh':<12} {entry.name!r} -> v{source.package.version}")
+            moves = " (its manifest moves under project/)" if record.at_root else ""
+            click.echo(
+                f"    {'would refresh':<12} {entry.name!r} -> v{source.package.version}{moves}"
+            )
             continue
         # Refresh in place via the capabilities module's auto-upgrade
-        # primitive; preserves any skip state from the original install.
-        prior_skipped = caps.read_prior_skipped_artifacts(target_root, entry.name)
+        # primitive; keeps the skips the record holds, which leave those
+        # artefacts out of the copy, and the rest of its state.
         caps.refresh_capability(
             target_root,
             source,
-            skipped_artifacts=prior_skipped,
+            skipped_artifacts=record.skipped,
             dry_run=False,
+            record=record,
         )
         click.echo(f"    {'refreshed':<12} {entry.name!r} -> v{source.package.version}")
 
 
-def _is_downgrade(target_root: Path, source: CapabilitySource) -> bool:
+def _is_downgrade(installed: str | None, source: CapabilitySource) -> bool:
     """True if refreshing *source* would replace a newer installed capability (issue #524).
 
-    Reads the installed version of record via
-    ``capabilities.get_installed_capability_version`` (the per-component
-    manifest, falling back to the installed ``package.yaml`` — what a
-    refresh would actually overwrite) and compares it to the source version
+    *installed* is the installed version of record, read before propagation
+    (``capabilities.read_capability_record``: the capability's manifest,
+    falling back to the installed ``package.yaml`` — what a refresh would
+    actually overwrite). It is compared to the source version
     with ``packaging.version.Version`` (the same parser the capabilities and
     versioning layers use). A downgrade is a source version *strictly
     older* than the installed one; equal versions are not a downgrade and
@@ -491,10 +508,7 @@ def _is_downgrade(target_root: Path, source: CapabilitySource) -> bool:
     the refresh proceeds (the pre-#524 behaviour) rather than blocking on an
     unreadable manifest.
     """
-    from project_kit import capabilities as caps
-
-    installed_str = caps.get_installed_capability_version(target_root, source.name)
-    return _is_older(source.package.version, installed_str)
+    return _is_older(source.package.version, installed)
 
 
 def _report_incubated_capability(source_kit: Path, name: str) -> None:

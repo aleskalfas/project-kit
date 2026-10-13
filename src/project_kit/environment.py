@@ -28,6 +28,7 @@ from project_kit.manifest import (
     ORIGIN_KIT_SHIPPED,
     read_backbone_manifest,
     read_component_manifest,
+    recorded_capability_manifest,
 )
 
 #: Placeholder for every project-derived field when no project root resolved
@@ -88,7 +89,7 @@ def collect_environment(target_root: Path | None, *, include_private: bool = Fal
     # closed for the no-root case: a maintainer reads it as a fact about the
     # reporter's project rather than as "not collected".
     manifest = read_backbone_manifest(target_root) if target_root is not None else None
-    if manifest is None:
+    if manifest is None or target_root is None:
         backbone_version = adapter = UNRESOLVED
     else:
         backbone_version = manifest.backbone_version
@@ -100,7 +101,9 @@ def collect_environment(target_root: Path | None, *, include_private: bool = Fal
                 # Incubated / in-repo capability — name withheld by default.
                 private += 1
                 continue
-            cm = read_component_manifest(target_root / entry.manifest)
+            # Read as every reader of a capability's record reads it (ADR-065 point 2).
+            recorded = recorded_capability_manifest(target_root, entry.name)
+            cm = read_component_manifest(recorded) if recorded is not None else None
             caps.append((entry.name, cm.version if cm is not None else "unknown"))
 
     return Environment(

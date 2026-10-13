@@ -15,9 +15,12 @@ from project_kit.cli import main
 from project_kit.manifest import (
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
+    ComponentManifest,
     read_backbone_manifest,
     read_capability_origin,
     read_component_manifest,
+    set_component_manifest_path,
+    write_component_manifest,
 )
 from tests.adopter_repo import GitRepo, MakeAdopterRepo
 
@@ -356,7 +359,8 @@ def test_install_capability_copies_subtree_and_registers(
     assert (expected / "skills" / "add-evidence.md").is_file()
     assert (expected / "skills" / "validate-evidence.md").is_file()
     assert (expected / "decisions" / "DEC-001-citation-discipline.md").is_file()
-    assert (expected / "manifest.yaml").is_file()
+    assert (expected / "project" / "manifest.yaml").is_file()
+    assert not (expected / "manifest.yaml").exists()
     assert caps.is_installed(kit_target, "evidence")
 
 
@@ -961,7 +965,7 @@ def test_cli_install_override_replaces_the_projects_skill(
     assert kept == _PROJECTS_SKILL
     # An override records no skip.
     manifest = read_component_manifest(
-        kit_target / ".pkit" / "capabilities" / "evidence" / "manifest.yaml"
+        kit_target / ".pkit" / "capabilities" / "evidence" / "project" / "manifest.yaml"
     )
     assert manifest is not None
     assert "skipped" not in manifest.backend_state
@@ -1049,7 +1053,7 @@ def test_cli_install_skip_keeps_the_projects_skill_and_records_it(
     assert not (installed / "skills" / "shared.md").exists()
     assert (installed / "skills" / "other.md").is_file()
     assert _deployed_skill(kit_target, "shared") == ".pkit/skills/project/shared.md"
-    manifest = read_component_manifest(installed / "manifest.yaml")
+    manifest = read_component_manifest(installed / "project" / "manifest.yaml")
     assert manifest is not None
     assert manifest.backend_state["skipped"] == [{"kind": "skill", "name": "shared"}]
 
@@ -1080,7 +1084,7 @@ def test_cli_install_override_leaves_a_recorded_skip_of_another_capability(
     assert _deployed_skill(kit_target, "shared") == ".pkit/capabilities/audit/skills/shared.md"
     evidence = kit_target / ".pkit" / "capabilities" / "evidence"
     assert not (evidence / "skills" / "shared.md").exists()
-    manifest = read_component_manifest(evidence / "manifest.yaml")
+    manifest = read_component_manifest(evidence / "project" / "manifest.yaml")
     assert manifest is not None
     assert manifest.backend_state["skipped"] == [{"kind": "skill", "name": "shared"}]
 
@@ -1179,7 +1183,7 @@ def test_cli_upgrade_interactive_override_replaces_the_projects_skill(
     assert not project_skill.exists()
     installed = kit_target / ".pkit" / "capabilities" / "evidence"
     assert (installed / "skills" / "conflict.md").is_file()
-    manifest = read_component_manifest(installed / "manifest.yaml")
+    manifest = read_component_manifest(installed / "project" / "manifest.yaml")
     assert manifest is not None
     assert "skipped" not in manifest.backend_state
 
@@ -1509,6 +1513,346 @@ def test_detect_upgrade_collisions_surfaces_genuinely_new_collisions(
 
 def test_read_prior_skipped_artifacts_returns_empty_when_no_manifest(kit_target: Path) -> None:
     assert caps.read_prior_skipped_artifacts(kit_target, "nope") == ()
+
+
+# --- the capability's record, under its project/ (ADR-065 point 2) --------------
+
+_BOARD = {"project_board": {"uuid": "PVT_kwDOAA12345"}}
+
+
+def _record_path(target: Path, name: str, *, at_root: bool = False) -> Path:
+    cap = target / ".pkit" / "capabilities" / name
+    return cap / "manifest.yaml" if at_root else cap / "project" / "manifest.yaml"
+
+
+def _write_record(
+    target: Path,
+    name: str,
+    *,
+    version: str = "0.1.0",
+    backend_state: dict[str, Any] | None = None,
+    at_root: bool = False,
+) -> Path:
+    """Write a capability record by hand, at its root as an older release left it, or
+    under its project/."""
+    path = _record_path(target, name, at_root=at_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_component_manifest(
+        path,
+        ComponentManifest(
+            kind="capability",
+            name=name,
+            version=version,
+            installed_at="2026-01-01T00:00:00+00:00",
+            requires_backbone=">=0.1.0,<99.0.0",
+            backend_state=backend_state or {},
+        ),
+    )
+    return path
+
+
+def _registry_path(target: Path, name: str) -> str:
+    backbone = read_backbone_manifest(target)
+    assert backbone is not None
+    return next(c.manifest for c in backbone.components if c.name == name)
+
+
+def _install_at(kit_target: Path, kit_source: Path, version: str, **stage: Any) -> None:
+    _stage_capability_in_source(kit_source, "evidence", version=version, **stage)
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+    caps.install_capability(kit_target, source)
+
+
+def _as_an_older_release_left_it(kit_target: Path, backend_state: dict[str, Any]) -> None:
+    """Put evidence's record back at its root, as releases before the move wrote it, with
+    the registry naming that path."""
+    _record_path(kit_target, "evidence").unlink()
+    _write_record(kit_target, "evidence", backend_state=backend_state, at_root=True)
+    set_component_manifest_path(
+        kit_target, "capability", "evidence", ".pkit/capabilities/evidence/manifest.yaml"
+    )
+
+
+def _refresh_to(kit_source: Path, kit_target: Path, version: str, **stage: Any) -> None:
+    _stage_capability_in_source(kit_source, "evidence", version=version, **stage)
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+    caps.refresh_capability(
+        kit_target,
+        source,
+        skipped_artifacts=caps.read_prior_skipped_artifacts(kit_target, "evidence"),
+    )
+
+
+def test_install_writes_the_record_under_project_and_the_registry_names_it(
+    kit_target: Path, kit_source: Path
+) -> None:
+    _install_at(kit_target, kit_source, "0.1.0")
+
+    assert _record_path(kit_target, "evidence").is_file()
+    assert not _record_path(kit_target, "evidence", at_root=True).exists()
+    assert _registry_path(kit_target, "evidence") == (
+        ".pkit/capabilities/evidence/project/manifest.yaml"
+    )
+
+
+def test_a_refresh_moves_a_root_record_under_project_and_the_registry_follows(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """The record an older release left at the root moves when the code next writes it,
+    with its state and its skips."""
+    _install_at(kit_target, kit_source, "0.1.0", with_skills=("add-evidence", "shared"))
+    skipped = {"skipped": [{"kind": "skill", "name": "shared"}]}
+    _as_an_older_release_left_it(kit_target, _BOARD | skipped)
+
+    _refresh_to(kit_source, kit_target, "0.2.0", with_skills=("add-evidence", "shared"))
+
+    assert not _record_path(kit_target, "evidence", at_root=True).exists()
+    record = read_component_manifest(_record_path(kit_target, "evidence"))
+    assert record is not None
+    assert record.version == "0.2.0"
+    assert record.backend_state == _BOARD | skipped
+    assert _registry_path(kit_target, "evidence") == (
+        ".pkit/capabilities/evidence/project/manifest.yaml"
+    )
+    installed = kit_target / ".pkit" / "capabilities" / "evidence" / "skills"
+    assert not (installed / "shared.md").exists()
+    assert (installed / "add-evidence.md").is_file()
+
+
+def test_the_record_moves_before_the_copy_so_an_interrupted_refresh_keeps_it(
+    kit_target: Path, kit_source: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The copy prunes the capability's root, so the record is under project/ before
+    the copy runs: a refresh stopped after its copy leaves it there, unchanged."""
+    _install_at(kit_target, kit_source, "0.1.0")
+    _as_an_older_release_left_it(kit_target, _BOARD)
+    content = _record_path(kit_target, "evidence", at_root=True).read_bytes()
+
+    def _stopped(*_args: Any, **_kwargs: Any) -> None:
+        raise RuntimeError("stopped after the copy")
+
+    monkeypatch.setattr(caps, "_stamp_component_manifest", _stopped)
+    with pytest.raises(RuntimeError, match="stopped after the copy"):
+        _refresh_to(kit_source, kit_target, "0.2.0")
+
+    assert not _record_path(kit_target, "evidence", at_root=True).exists()
+    assert _record_path(kit_target, "evidence").read_bytes() == content
+    assert _registry_path(kit_target, "evidence") == (
+        ".pkit/capabilities/evidence/project/manifest.yaml"
+    )
+
+
+def test_a_restamp_keeps_backend_state_and_replaces_its_skips(
+    kit_target: Path, kit_source: Path
+) -> None:
+    _install_at(kit_target, kit_source, "0.1.0", with_skills=("one", "two"))
+    _write_record(
+        kit_target,
+        "evidence",
+        backend_state=_BOARD | {"skipped": [{"kind": "skill", "name": "one"}]},
+    )
+    _stage_capability_in_source(kit_source, "evidence", version="0.2.0", with_skills=("one", "two"))
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+
+    caps.refresh_capability(kit_target, source, skipped_artifacts=(("skill", "two"),))
+
+    record = read_component_manifest(_record_path(kit_target, "evidence"))
+    assert record is not None
+    assert record.version == "0.2.0"
+    assert record.installed_at != "2026-01-01T00:00:00+00:00"
+    assert record.backend_state == _BOARD | {"skipped": [{"kind": "skill", "name": "two"}]}
+
+
+def test_a_restamp_with_no_skips_left_drops_them_and_keeps_the_rest(
+    kit_target: Path, kit_source: Path
+) -> None:
+    _install_at(kit_target, kit_source, "0.1.0", with_skills=("one",))
+    _write_record(
+        kit_target,
+        "evidence",
+        backend_state=_BOARD | {"skipped": [{"kind": "skill", "name": "one"}]},
+    )
+
+    _stage_capability_in_source(kit_source, "evidence", version="0.2.0", with_skills=("one",))
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+    caps.refresh_capability(kit_target, source)
+
+    record = read_component_manifest(_record_path(kit_target, "evidence"))
+    assert record is not None
+    assert record.backend_state == _BOARD
+
+
+def test_a_refresh_neither_deletes_nor_overwrites_the_record(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """The copy leaves the record under project/ as it is, even where the source holds a
+    record of its own there, as the methodology's source does."""
+    _install_at(kit_target, kit_source, "0.1.0")
+    record_path = _write_record(kit_target, "evidence", backend_state=_BOARD)
+    before = record_path.read_bytes()
+    _stage_capability_in_source(
+        kit_source,
+        "evidence",
+        version="0.1.0",
+        with_project_files={"manifest.yaml": "backend_state:\n  foreign: true\n"},
+    )
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+
+    caps._copy_capability_tree(source.path, kit_target / ".pkit" / "capabilities" / "evidence", ())
+    assert record_path.read_bytes() == before
+
+    caps.refresh_capability(kit_target, source)
+    record = read_component_manifest(record_path)
+    assert record is not None
+    assert record.backend_state == _BOARD
+
+
+def test_the_root_record_wins_when_both_exist(kit_target: Path, kit_source: Path) -> None:
+    """Every reader reads the root record first: it names the content the project holds."""
+    _install_at(kit_target, kit_source, "0.1.0")
+    _write_record(
+        kit_target,
+        "evidence",
+        version="0.2.0",
+        backend_state={"skipped": [{"kind": "skill", "name": "under-project"}]},
+    )
+    _write_record(
+        kit_target,
+        "evidence",
+        version="0.3.0",
+        backend_state={"skipped": [{"kind": "agent", "name": "at-root"}]},
+        at_root=True,
+    )
+
+    record = caps.read_capability_record(kit_target, "evidence")
+    assert (record.version, record.skipped, record.at_root) == (
+        "0.3.0",
+        (("agent", "at-root"),),
+        True,
+    )
+    assert caps.get_installed_capability_version(kit_target, "evidence") == "0.3.0"
+    assert caps.read_prior_skipped_artifacts(kit_target, "evidence") == (("agent", "at-root"),)
+
+
+def test_the_record_under_project_is_read_where_no_root_one_is(
+    kit_target: Path, kit_source: Path
+) -> None:
+    _install_at(kit_target, kit_source, "0.1.0")
+    _write_record(
+        kit_target,
+        "evidence",
+        version="0.2.0",
+        backend_state={"skipped": [{"kind": "skill", "name": "shared"}]},
+    )
+
+    record = caps.read_capability_record(kit_target, "evidence")
+    assert (record.version, record.skipped, record.at_root) == (
+        "0.2.0",
+        (("skill", "shared"),),
+        False,
+    )
+
+
+@pytest.mark.parametrize("record", ["none", "malformed-at-root"])
+def test_with_no_record_that_reads_the_version_falls_back_to_the_installed_package(
+    kit_target: Path, kit_source: Path, record: str
+) -> None:
+    """A malformed root record is still the one read: it records nothing, so the version
+    falls back to the installed package.yaml, never to a record under project/."""
+    _install_at(kit_target, kit_source, "0.1.0")
+    if record == "none":
+        _record_path(kit_target, "evidence").unlink()
+    else:
+        _write_record(kit_target, "evidence", version="0.2.0")
+        _record_path(kit_target, "evidence", at_root=True).write_text(
+            "component: [oh: {no", encoding="utf-8"
+        )
+
+    assert caps.read_capability_record(kit_target, "evidence").version == "0.1.0"
+
+
+def test_the_move_replaces_a_record_under_project_with_the_root_one(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """An interrupted move left two copies, the root one rewritten since by an older pkit:
+    the move finishes with the root one."""
+    _install_at(kit_target, kit_source, "0.1.0")
+    root = _write_record(kit_target, "evidence", version="0.3.0", at_root=True)
+    content = root.read_bytes()
+
+    assert caps.move_capability_manifest(kit_target, "evidence") is True
+
+    assert not root.exists()
+    assert _record_path(kit_target, "evidence").read_bytes() == content
+    assert _registry_path(kit_target, "evidence") == (
+        ".pkit/capabilities/evidence/project/manifest.yaml"
+    )
+
+
+def test_the_move_does_nothing_without_a_root_record(kit_target: Path, kit_source: Path) -> None:
+    _install_at(kit_target, kit_source, "0.1.0")
+    before = _record_path(kit_target, "evidence").read_bytes()
+
+    assert caps.move_capability_manifest(kit_target, "evidence") is False
+    assert _record_path(kit_target, "evidence").read_bytes() == before
+
+
+def test_a_dry_run_refresh_names_the_move_and_writes_nothing(
+    kit_target: Path, kit_source: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _install_at(kit_target, kit_source, "0.1.0")
+    _as_an_older_release_left_it(kit_target, _BOARD)
+    root = _record_path(kit_target, "evidence", at_root=True)
+    before = root.read_bytes()
+    _stage_capability_in_source(kit_source, "evidence", version="0.2.0")
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+
+    caps.refresh_capability(kit_target, source, dry_run=True)
+
+    assert (
+        "would move the manifest of capability 'evidence': "
+        ".pkit/capabilities/evidence/manifest.yaml -> "
+        ".pkit/capabilities/evidence/project/manifest.yaml"
+    ) in capsys.readouterr().out
+    assert root.read_bytes() == before
+    assert not _record_path(kit_target, "evidence").exists()
+    assert _registry_path(kit_target, "evidence") == ".pkit/capabilities/evidence/manifest.yaml"
+
+
+def test_cli_upgrade_keeps_a_skip_the_install_recorded(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """The skip chosen at install is read back: the upgrade leaves the artefact out again.
+
+    The project's own skill is gone by then, so no collision asks again: only the
+    recorded skip keeps the capability's skill out.
+    """
+    project_skill = _project_skill(kit_target)
+    _commit_all(kit_target)
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("shared", "other"))
+    installed = _install(kit_source, monkeypatch, "evidence", "skip\n")
+    assert installed.exit_code == 0, installed.output
+    project_skill.unlink()
+    _stage_capability_in_source(
+        kit_source, "evidence", version="0.2.0", with_skills=("shared", "other")
+    )
+
+    result = CliRunner().invoke(main, ["capabilities", "upgrade", "evidence"])
+
+    assert result.exit_code == 0, result.output
+    assert "(1 artifact(s) skipped)" in result.output
+    evidence = kit_target / ".pkit" / "capabilities" / "evidence"
+    assert not (evidence / "skills" / "shared.md").exists()
+    record = read_component_manifest(evidence / "project" / "manifest.yaml")
+    assert record is not None
+    assert record.version == "0.2.0"
+    assert record.backend_state["skipped"] == [{"kind": "skill", "name": "shared"}]
 
 
 def test_cli_upgrade_capability_refreshes_in_place(
@@ -2573,7 +2917,9 @@ def test_cli_register_records_origin_and_does_not_copy(
     assert caps.is_installed(kit_target, "homegrown")
     assert read_capability_origin(kit_target, "homegrown") == ORIGIN_INCUBATED_IN_REPO
     assert skill_path.read_text(encoding="utf-8") == original
-    assert not (kit_target / ".pkit" / "capabilities" / "homegrown" / "manifest.yaml").is_file()
+    homegrown = kit_target / ".pkit" / "capabilities" / "homegrown"
+    assert not (homegrown / "manifest.yaml").is_file()
+    assert not (homegrown / "project" / "manifest.yaml").is_file()
 
 
 def test_cli_register_runs_deploy_primitives(

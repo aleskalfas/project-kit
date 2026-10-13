@@ -53,8 +53,13 @@ from project_kit.manifest import (
     ComponentKind,
     ComponentManifest,
     ComponentRegistryEntry,
+    capability_manifest_path,
+    capability_manifest_rel,
+    capability_root_manifest_path,
     read_backbone_manifest,
     read_capability_origin,
+    recorded_capability_manifest,
+    set_component_manifest_path,
     write_backbone_manifest,
     write_component_manifest,
 )
@@ -495,14 +500,120 @@ def is_installed(target_root: Path, name: str) -> bool:
 def get_installed_capability_version(target_root: Path, name: str) -> str | None:
     """Return the installed version of a capability, or None if not installed / unreadable.
 
-    Reads the per-component manifest at
-    ``.pkit/capabilities/<name>/manifest.yaml``. This is the public
-    counterpart of the private ``_read_installed_capability_version``
-    used internally by ``refresh_capability``; exposing it lets the
+    Reads the capability's manifest as every reader of its record does
+    (``read_capability_record``), falling back to its installed
+    ``package.yaml``. This is the public counterpart of the private
+    ``_read_installed_capability_version``; exposing it lets the
     upgrade layer query installed versions without importing private
     internals.
     """
     return _read_installed_capability_version(target_root, name)
+
+
+# The key of a capability manifest's `backend_state` that lists the artefacts
+# the project chose to skip on a naming collision (COR-017).
+SKIPPED_KEY = "skipped"
+
+
+@dataclass(frozen=True)
+class CapabilityRecord:
+    """What a project records for one installed capability (ADR-065 point 2).
+
+    Read from the capability's manifest: at its root where one is still there,
+    else under its ``project/`` (``manifest.recorded_capability_manifest``).
+    With no manifest that reads, its version falls back to the installed
+    ``package.yaml``, which a copy replaces, so a record is read before
+    propagation.
+    """
+
+    name: str
+    # The manifest's version, else the installed package.yaml's; None when neither reads.
+    version: str | None
+    # The skips the project chose, from `backend_state.skipped`.
+    skipped: tuple[tuple[str, str], ...] = ()
+    # The manifest's whole `backend_state`, which a restamp keeps but for its skips.
+    backend_state: Mapping[str, Any] = field(default_factory=lambda: {})
+    # The manifest still sits at the capability's root, where a copy prunes it.
+    at_root: bool = False
+
+
+def read_capability_record(target_root: Path, name: str) -> CapabilityRecord:
+    """Read what the project records for capability *name* (ADR-065 point 2).
+
+    The one reader behind the version, the skips and the state a restamp keeps:
+    the capability downgrade check, the dependency gates and a refresh read
+    through it. The manifest read is the root one where it exists, then the one
+    under ``project/``. A manifest that does not parse reads as recording
+    nothing, and the version then falls back to the installed ``package.yaml``,
+    the version of record for an incubated capability, which has no manifest
+    (COR-031 D2).
+    """
+    manifest = recorded_capability_manifest(target_root, name)
+    raw = _load_mapping(manifest) if manifest is not None else None
+    version: str | None = None
+    skipped: tuple[tuple[str, str], ...] = ()
+    backend_state: dict[str, Any] = {}
+    if raw is not None:
+        component = raw.get("component")
+        if isinstance(component, dict):
+            recorded = cast("dict[str, Any]", component).get("version")
+            if isinstance(recorded, str):
+                version = recorded
+        state = raw.get("backend_state")
+        if isinstance(state, dict):
+            backend_state = dict(cast("dict[str, Any]", state))
+            skipped = _parse_skipped(backend_state.get(SKIPPED_KEY))
+    if version is None:
+        package_path = target_root / ".pkit" / "capabilities" / name / "package.yaml"
+        package = _read_package_yaml(package_path) if package_path.is_file() else None
+        if package is not None:
+            version = package.version
+    return CapabilityRecord(
+        name=name,
+        version=version,
+        skipped=skipped,
+        backend_state=backend_state,
+        at_root=manifest is not None
+        and manifest == capability_root_manifest_path(target_root, name),
+    )
+
+
+def read_capability_records(target_root: Path) -> dict[str, CapabilityRecord]:
+    """The record of every registered capability, by name (``read_capability_record``)."""
+    backbone = read_backbone_manifest(target_root)
+    if backbone is None:
+        return {}
+    return {
+        entry.name: read_capability_record(target_root, entry.name)
+        for entry in backbone.components
+        if entry.kind == "capability"
+    }
+
+
+def move_capability_manifest(target_root: Path, name: str) -> bool:
+    """Move a capability's manifest from its root under its ``project/`` (ADR-065 point 2).
+
+    Under ``project/`` no copy of the capability's tree deletes or overwrites
+    it. The root manifest wins: it replaces one already under ``project/``.
+    The registry entry is pointed at the new path before the root file goes,
+    so an interrupted move leaves two equal copies, which the next move
+    finishes. Returns True when a root manifest was moved, False when none was
+    there.
+
+    The code that writes the record calls it: a refresh, before its
+    migrations and its copy (``refresh_capability``), and every write of the
+    record (``_stamp_component_manifest``). The version transition calls it
+    in its step 2, before its copy, once #1461 builds that transition.
+    """
+    root = capability_root_manifest_path(target_root, name)
+    if not root.is_file():
+        return False
+    dest = capability_manifest_path(target_root, name)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(root, dest)
+    set_component_manifest_path(target_root, "capability", name, capability_manifest_rel(name))
+    root.unlink()
+    return True
 
 
 @dataclass(frozen=True)
@@ -1076,35 +1187,39 @@ def register_capability_in_source(
 def read_prior_skipped_artifacts(
     target_root: Path, capability_name: str
 ) -> tuple[tuple[str, str], ...]:
-    """Re-read the capability's per-component manifest to recover skip state.
+    """The skips the project chose for a capability, from its manifest's `backend_state.skipped`.
 
-    Returns an empty tuple when no manifest exists or it's malformed —
-    the worst case is the next refresh copies the previously-skipped
-    file, which the adopter can re-skip on the next install with the
-    interactive resolver if needed.
+    Read where they are written (``_stamp_component_manifest``), by
+    ``read_capability_record``. Returns an empty tuple when no manifest exists
+    or it's malformed — the worst case is the next refresh copies the
+    previously-skipped file, which the adopter can re-skip on the next install
+    with the interactive resolver if needed.
     """
-    manifest_path = (
-        target_root / ".pkit" / "capabilities" / capability_name / "component-manifest.yaml"
-    )
-    if not manifest_path.is_file():
-        return ()
-    try:
-        raw = _yaml.load(manifest_path.read_text(encoding="utf-8"))
-    except Exception:
-        return ()
-    if not isinstance(raw, dict):
-        return ()
-    skipped = raw.get("skipped_artifacts")
-    if not isinstance(skipped, list):
+    return read_capability_record(target_root, capability_name).skipped
+
+
+def _parse_skipped(raw: object) -> tuple[tuple[str, str], ...]:
+    """`backend_state.skipped` as `(kind, name)` pairs; a malformed item is left out."""
+    if not isinstance(raw, list):
         return ()
     out: list[tuple[str, str]] = []
-    for item in skipped:
+    for item in cast("list[object]", raw):
         if isinstance(item, dict):
-            kind = item.get("kind")
-            name = item.get("name")
+            entry = cast("dict[str, object]", item)
+            kind = entry.get("kind")
+            name = entry.get("name")
             if isinstance(kind, str) and isinstance(name, str):
                 out.append((kind, name))
     return tuple(out)
+
+
+def _load_mapping(path: Path) -> dict[str, Any] | None:
+    """A YAML file's top-level mapping, or None when it cannot be read or is not one."""
+    try:
+        raw = _yaml.load(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return cast("dict[str, Any]", raw) if isinstance(raw, dict) else None
 
 
 def validate_capability_self_consistency(
@@ -1267,6 +1382,7 @@ def refresh_capability(
     *,
     skipped_artifacts: tuple[tuple[str, str], ...] = (),
     dry_run: bool = False,
+    record: CapabilityRecord | None = None,
 ) -> Path:
     """Refresh an already-installed capability in place from source (per COR-017).
 
@@ -1275,8 +1391,15 @@ def refresh_capability(
     - Re-copies the source subtree wholesale: new files appear, removed
       files disappear, modified files update.
     - Preserves `skipped_artifacts` semantics: caller should pass the
-      skip state recovered from the prior install's component-manifest
-      so previously-skipped files stay absent.
+      skip state recovered from the capability's manifest
+      (`read_prior_skipped_artifacts`) so previously-skipped files stay
+      absent.
+
+    The capability's record is read before anything is written: *record*
+    when the caller read it before its own propagation, else here
+    (`read_capability_record`). A manifest still at the capability's root
+    then moves under its ``project/`` (`move_capability_manifest`), before the
+    copy, which would prune it there.
 
     Migrations are run BEFORE the file refresh (per COR-010's resource-
     lifecycle pattern). For each minor version in the interval
@@ -1285,81 +1408,78 @@ def refresh_capability(
     `ROOT=<target_root>` in its environment and runs from `target_root`
     as cwd. A non-zero exit halts the refresh.
 
+    The restamp that follows the copy keeps the record's `backend_state`,
+    replacing only its skips with `skipped_artifacts`.
+
     Returns the refreshed path. Does NOT do collision detection — sync's
     auto-upgrade is opt-out at install time, not opt-in at refresh time.
     A separate `pkit capabilities upgrade X --interactive` command is the
     interactive surface (per COR-017's "new collision during upgrade"
     semantics); that command can call detect_collisions() before this.
     """
-    if not is_installed(target_root, capability_source.name):
+    name = capability_source.name
+    if not is_installed(target_root, name):
         raise click.ClickException(
-            f"capability {capability_source.name!r} is not installed; "
-            f"use 'pkit capabilities install {capability_source.name}' first."
+            f"capability {name!r} is not installed; use 'pkit capabilities install {name}' first."
         )
-    dest = target_root / ".pkit" / "capabilities" / capability_source.name
-    # Before the migrations, which would otherwise run against the source first.
+    dest = target_root / ".pkit" / "capabilities" / name
+    # Before the move and the migrations, which would otherwise write into the source.
     _refuse_copy_onto_itself(capability_source.path, dest)
 
-    installed_version = _read_installed_capability_version(target_root, capability_source.name)
+    if record is None:
+        record = read_capability_record(target_root, name)
+    move = (
+        f"the manifest of capability {name!r}: "
+        f"{capability_root_manifest_path(target_root, name).relative_to(target_root)} -> "
+        f"{capability_manifest_rel(name)}"
+    )
 
     if dry_run:
         # Report what would happen without writing.
-        _report_pending_migrations(capability_source, installed_version, dry_run=True)
+        if record.at_root:
+            click.echo(f"  would move {move}")
+        _report_pending_migrations(capability_source, record.version, dry_run=True)
         return dest
+
+    if move_capability_manifest(target_root, name):
+        click.echo(f"  moved {move}")
 
     # Run migrations first so adopter state migrates before the new
     # capability files arrive. If a script fails, halt — the file
     # refresh is skipped to keep state consistent.
-    _run_capability_migrations(target_root, capability_source, installed_version)
+    _run_capability_migrations(target_root, capability_source, record.version)
 
     _copy_capability_tree(capability_source.path, dest, skipped_artifacts)
     # Re-stamp the per-component manifest with the new version + install
-    # timestamp. Backbone manifest registration stays as-is (the
-    # capability was already registered at the original install).
-    _stamp_component_manifest(target_root, capability_source, skipped_artifacts)
+    # timestamp, keeping the rest of its state. Backbone manifest registration
+    # stays as-is (the capability was already registered at the original install).
+    _stamp_component_manifest(
+        target_root, capability_source, skipped_artifacts, prior_state=record.backend_state
+    )
     return dest
 
 
 def _read_installed_capability_version(target_root: Path, name: str) -> str | None:
     """Read the installed version of a capability.
 
-    A kit-shipped capability records its installed version in the
-    per-component manifest (`.pkit/capabilities/<name>/manifest.yaml`),
-    written at install time. An incubated (in-repo) capability has no such
+    A kit-shipped capability records its installed version in its manifest,
+    written at install time (`read_capability_record` says which manifest is
+    read). An incubated (in-repo) capability has no such
     kit-written manifest — its subtree is entirely adopter-owned (COR-031
     D2), so no lifecycle state is stamped into it — and its version of
     record is its own authored ``package.yaml``. This reads the
-    per-component manifest first, then falls back to the authored
+    manifest first, then falls back to the authored
     ``package.yaml`` so an incubated capability still reports a version
     for dependency-gating (COR-031 D1: an incubated capability participates
-    in dependency resolution identically to a kit-shipped one).
+    in dependency resolution identically to a kit-shipped one). The same
+    fallback is a safe last resort for a kit-shipped capability whose
+    manifest is missing or malformed.
 
     Returns None when neither source yields a version — the caller treats
     that as "no migrations to run" / "version unreadable" rather than
     failing.
     """
-    manifest_path = target_root / ".pkit" / "capabilities" / name / "manifest.yaml"
-    if manifest_path.is_file():
-        try:
-            raw = _yaml.load(manifest_path.read_text(encoding="utf-8"))
-        except Exception:
-            raw = None
-        if isinstance(raw, dict):
-            component = raw.get("component")
-            if isinstance(component, dict):
-                version = component.get("version")
-                if isinstance(version, str):
-                    return version
-
-    # Fallback: the capability's own authored package.yaml. This is the
-    # version of record for an incubated capability (no kit-written
-    # manifest) and a safe last resort for a kit-shipped one whose
-    # per-component manifest is missing or malformed.
-    package_path = target_root / ".pkit" / "capabilities" / name / "package.yaml"
-    package = _read_package_yaml(package_path) if package_path.is_file() else None
-    if package is not None:
-        return package.version
-    return None
+    return read_capability_record(target_root, name).version
 
 
 def _pending_migration_scripts(
@@ -1847,13 +1967,16 @@ def _register_in_backbone_manifest(
     ``origin`` records where the capability came from (COR-031 D2) in
     lifecycle-owned install-state. Defaults to ``kit-shipped``; the
     incubated-in-repo register path passes ``INCUBATED_IN_REPO``.
+
+    The entry names the capability's manifest under its ``project/``
+    (``manifest.capability_manifest_rel``), whatever the origin. Only a
+    kit-shipped install writes a manifest there.
     """
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
         raise click.ClickException(".pkit/manifest.yaml is missing. Run 'pkit init' first.")
-    manifest_rel = f".pkit/capabilities/{name}/manifest.yaml"
     entry = ComponentRegistryEntry(
-        kind="capability", name=name, manifest=manifest_rel, origin=origin
+        kind="capability", name=name, manifest=capability_manifest_rel(name), origin=origin
     )
     # Don't duplicate (caller should check, but defensive).
     backbone.components = [
@@ -1890,23 +2013,36 @@ def _stamp_component_manifest(
     target_root: Path,
     capability_source: CapabilitySource,
     skipped_artifacts: tuple[tuple[str, str], ...],
+    *,
+    prior_state: Mapping[str, Any] | None = None,
 ) -> None:
-    """Write the per-component manifest at `.pkit/capabilities/<name>/manifest.yaml`.
+    """Write the capability's manifest under its ``project/`` (ADR-065 point 2).
 
-    Includes skipped-artifacts state for sync to consult later.
+    Records the version, the install timestamp and the range of
+    *capability_source*, and the skips in force in ``backend_state.skipped``,
+    for the next refresh to read back (`read_prior_skipped_artifacts`). A
+    restamp passes the ``backend_state`` it read before propagation as
+    *prior_state*: every key of it is kept but the skips, which
+    *skipped_artifacts* replaces. An install passes none.
+
+    A manifest still at the capability's root moves first
+    (`move_capability_manifest`), and the registry entry is pointed at the
+    path written, so no stale copy is left where readers look first.
     """
-    manifest_path = (
-        target_root / ".pkit" / "capabilities" / capability_source.name / "manifest.yaml"
-    )
-    backend_state: dict[str, Any] = {}
+    name = capability_source.name
+    move_capability_manifest(target_root, name)
+    backend_state: dict[str, Any] = {
+        key: value for key, value in (prior_state or {}).items() if key != SKIPPED_KEY
+    }
     if skipped_artifacts:
-        backend_state["skipped"] = [{"kind": k, "name": n} for (k, n) in skipped_artifacts]
+        backend_state[SKIPPED_KEY] = [{"kind": k, "name": n} for (k, n) in skipped_artifacts]
     manifest = ComponentManifest(
         kind="capability",
-        name=capability_source.name,
+        name=name,
         version=capability_source.package.version,
         installed_at=_dt.datetime.now(_dt.UTC).isoformat(),
         requires_backbone=capability_source.package.requires_backbone,
         backend_state=backend_state,
     )
-    write_component_manifest(manifest_path, manifest)
+    write_component_manifest(capability_manifest_path(target_root, name), manifest)
+    set_component_manifest_path(target_root, "capability", name, capability_manifest_rel(name))

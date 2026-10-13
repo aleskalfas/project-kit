@@ -941,6 +941,24 @@ def test_installed_version_of_record_comes_from_the_component_manifest(
     assert any(f.path == "/requires_capabilities/0" for f in wiring.findings)
 
 
+def test_a_capabilitys_version_of_record_reads_its_root_manifest_first(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Read as the dependency gate reads it (ADR-065 point 2): the manifest under
+    `project/`, and a root one, where an older pkit left it, before it."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    recorded = caps.get_installed_capability_version(repo.root, "evidence")
+    evidence = cx.resolve_wiring(repo.root).declarations.by_name("evidence")
+    assert evidence is not None and evidence.version == recorded
+
+    root = repo.pkit / "capabilities" / "evidence" / "manifest.yaml"
+    root.write_text("component:\n  kind: capability\n  version: 9.9.9\n", encoding="utf-8")
+
+    evidence = cx.resolve_wiring(repo.root).declarations.by_name("evidence")
+    assert evidence is not None and evidence.version == "9.9.9"
+    assert caps.get_installed_capability_version(repo.root, "evidence") == "9.9.9"
+
+
 def test_no_filler_file_is_no_project_filler_and_resolve_judges_what_the_hook_reports() -> None:
     """Without a file at the filler path there is no project filler; `resolve`
     compares whatever version the hook reports, located at the filler (the
