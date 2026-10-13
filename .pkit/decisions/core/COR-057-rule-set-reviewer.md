@@ -18,49 +18,65 @@ The reviewers that check a project's work form a stack, each at its own stage an
 
 **A core agent, the rule-set reviewer, judges a change against the accepted rules that bind on each artefact the change alters. It takes those rules only from the rule sets, through the backbone's one answer. It judges only what the change owns, and only the parts of a rule that no check is declared to enforce. It is advisory unless a gate requires it, and this record requires no one to run it.**
 
-1. **What it judges.** The agent is named `rule-set-reviewer`. It reviews one change at a time.
-   - **The artefacts.** It judges each artefact the change *alters*: one the change adds or removes, or one whose content it changes (COR-050).
-   - **Moves.** An artefact moved within the declared places is the same artefact, since its history follows the move (COR-050 point 3). So a move that keeps the content alters nothing. Moving an artefact out of the declared places removes it (COR-050 point 6).
-   - **The container.** The methodology's container is no part of the content. A change only inside it, to an answer or to the anchors, alters nothing, and the reviewer judges nothing there.
-   - **The rules.** Its remit is every accepted rule that binds on an altered artefact, as the backbone answers (COR-051 point 7). The rules that bind at the change's head judge what the head holds. The rules that bound at the base judge an artefact the change removes.
-   - **Rules that bind nothing.** A proposed, superseded or withdrawn rule binds nothing, and the reviewer judges nothing under it. A rule reached only through a pin behind its set binds nothing either (COR-051 point 7). The reviewer may still report a break of it as a finding that informs.
-   - **A conflict in the answer.** Where the backbone's answer names a conflict for an artefact, the conflict is validation's finding, and validation fails on it (COR-051 point 7). The reviewer judges nothing that the conflict leaves unsettled. That alone does not keep it from approving.
-   - **Only the altered artefacts.** It judges no artefact the change leaves unaltered, even where the change breaks a rule that binds there.
-   - **No rules of its own.** Its instructions say how to judge, never what to require. They hold no rule.
-   - **What it reads.** It reads the change, and each altered artefact at the base and at the head. It also reads what each rule names as what it needs, such as the artefact's anchors or the artefacts it must agree with. A fact a rule needs but does not name, it does not guess (point 3).
-   - **A check's part.** A part of a rule that the rule's owner declares a check enforces is that check's while the check is there (COR-051 point 2). The reviewer does not judge that part, and runs no check. A part whose declared check is not there is the reviewer's. So is every other part, even one that a script could check.
-   - **Never an answer.** An answer on an artefact, such as a revalidation, a deferral or a reason for having no anchors, is written by the agent making the change, where its change owes it, or decided by a person, and the answers a change owes are checked by a reviewer the project chooses (COR-050 point 3). This reviewer writes none, and judges none.
-   - **Read-only.** It changes nothing it reviews.
+### 1. What it judges
 
-2. **What the change owns.** The reviewer judges only a break the change owns.
-   - **Its own text.** The change owns what it adds, and a passage it moves or copies from elsewhere. It also owns a break that its edit introduces or widens. Moving a whole artefact moves none of its passages, so the change owns none of them by the move.
-   - **What it removes.** Removing an artefact can break a rule that bound on it at the base. Removing a passage can leave the artefact breaking a rule at the head. The change owns both breaks.
-   - **A break it says it fixes.** A break that was there before becomes the change's own when the change says it fixes it, and the break survives.
-   - **Everything else** that was there before is not the change's own, even where the change edits beside it.
+The agent is named `rule-set-reviewer`. It reviews one change at a time.
+- **The artefacts.** It judges each artefact the change *alters*: one the change adds or removes, or one whose content it changes (COR-050).
+- **Moves.** An artefact moved within the declared places is the same artefact, since its history follows the move (COR-050 point 3). So a move that keeps the content alters nothing. Moving an artefact out of the declared places removes it (COR-050 point 6).
+- **The container.** The methodology's container is no part of the content. A change only inside it, to an answer or to the anchors, alters nothing, and the reviewer judges nothing there.
+- **The rules.** Its remit is every accepted rule that binds on an altered artefact, as the backbone answers (COR-051 point 7). The rules that bind at the change's head judge what the head holds. The rules that bound at the base judge an artefact the change removes.
+- **Rules that bind nothing.** A proposed, superseded or withdrawn rule binds nothing, and the reviewer judges nothing under it. A rule reached only through a pin behind its set binds nothing either (COR-051 point 7). The reviewer may still report a break of it as a finding that informs.
+- **A conflict in the answer.** Where the backbone's answer names a conflict for an artefact, the conflict is validation's finding, and validation fails on it (COR-051 point 7). The reviewer judges nothing that the conflict leaves unsettled. That alone does not keep it from approving.
+- **Only the altered artefacts.** It judges no artefact the change leaves unaltered, even where the change breaks a rule that binds there.
+- **No rules of its own.** Its instructions say how to judge, never what to require. They hold no rule.
+- **What it reads.** It reads the change, and each altered artefact at the base and at the head. It also reads what each rule names as what it needs, such as the artefact's anchors or the artefacts it must agree with. A fact a rule needs but does not name, it does not guess (point 3).
+- **A check's part.** A part of a rule that the rule's owner declares a check enforces is that check's while the check is there (COR-051 point 2). The reviewer does not judge that part, and runs no check. A part whose declared check is not there is the reviewer's. So is every other part, even one that a script could check.
+- **Never an answer.** An answer on an artefact, such as a revalidation, a deferral or a reason for having no anchors, is written by the agent making the change, where its change owes it, or decided by a person, and the answers a change owes are checked by a reviewer the project chooses (COR-050 point 3). This reviewer writes none, and judges none.
+- **Read-only.** It changes nothing it reviews.
 
-3. **Its findings, and what binds.** A judgement under an accepted rule binds where the change owns the passage. Taste binds nothing. The reviewer has no rules of its own, so it makes no finding of taste. Each finding cites its rule by id (COR-051 point 3). It names the artefact, quotes the passage, and says what in the passage breaks the rule. A finding is one of three kinds:
-   - **A settled break.** The change owns the break, and the rule's text settles it with no reading left to choose. It withholds the reviewer's approval.
-   - **A passage for a person.** The rule binds and the change owns the passage. But judging it needs a reading the rule does not settle, or a fact the rule does not name. It withholds no approval, and waits for a person's judgement.
-   - **A finding that informs.** It is a break the change does not own, with the reason it is not the change's. It may also be a break of a rule that a pin behind its set holds back. It withholds nothing and holds nothing.
+### 2. What the change owns
 
-   **A rule the change itself moves.** The change may make a rule bind or stop binding on an artefact it alters, through the rule's status, a scope or a pin. Whether that rule should then judge the passages the change owns there is a reading the rule's text does not settle. So a finding under that rule, on such a passage, is a passage for a person. Whoever reviews that change of the rules judges the text the rule now reaches.
+The reviewer judges only a break the change owns.
+- **Its own text.** The change owns what it adds, and a passage it moves or copies from elsewhere. It also owns a break that its edit introduces or widens. Moving a whole artefact moves none of its passages, so the change owns none of them by the move.
+- **What it removes.** Removing an artefact can break a rule that bound on it at the base. Removing a passage can leave the artefact breaking a rule at the head. The change owns both breaks.
+- **A break it says it fixes.** A break that was there before becomes the change's own when the change says it fixes it, and the break survives.
+- **Everything else** that was there before is not the change's own, even where the change edits beside it.
 
-   **Its verdict.** The reviewer approves only when it judged the change and found no settled break. A reviewer that cannot judge the change does not approve, and says why. It cannot judge the change while a rule that binds on it cannot be judged. A fact the rule names that cannot be found is such a case.
+### 3. Its findings, and what binds
 
-   **Its form comes from whoever invokes it.** Whoever invokes the reviewer, such as a gate, names the form of its verdict. The same invoker names the mark of each kind of finding. Where nobody names them, the reviewer states its verdict and each finding's kind in words. How a passage for a person reaches a person is the gate's to say.
+A judgement under an accepted rule binds where the change owns the passage. Taste binds nothing. The reviewer has no rules of its own, so it makes no finding of taste. Each finding cites its rule by id (COR-051 point 3). It names the artefact, quotes the passage, and says what in the passage breaks the rule. A finding is one of three kinds:
+- **A settled break.** The change owns the break, and the rule's text settles it with no reading left to choose. It withholds the reviewer's approval.
+- **A passage for a person.** The rule binds and the change owns the passage. But judging it needs a reading the rule does not settle, or a fact the rule does not name. It withholds no approval, and waits for a person's judgement.
+- **A finding that informs.** It is a break the change does not own, with the reason it is not the change's. It may also be a break of a rule that a pin behind its set holds back. It withholds nothing and holds nothing.
 
-4. **Placement: core.** It passes the test for a core agent (COR-026). A project that installs no capability still finds it useful, since rule sets are core and a project may keep its own. Its instructions name only what core defines: rule sets, the backbone's one answer, artefacts and their content. They name no capability, no gate's form and no rule.
+**A rule the change itself moves.** The change may make a rule bind or stop binding on an artefact it alters, through the rule's status, a scope or a pin. Whether that rule should then judge the passages the change owns there is a reading the rule's text does not settle. So a finding under that rule, on such a passage, is a passage for a person. Whoever reviews that change of the rules judges the text the rule now reaches.
 
-5. **Stage and posture.** It reviews a diff, beside the convention-compliance reviewer in the reviewer stack (COR-024). The two judge the same diff on different questions.
-   - **Advisory.** A person or an agent may run it on any change by hand. A *gate* is a step a change must pass before it lands. The reviewer's verdict holds a change only where a gate requires it, and only as that gate says.
-   - **A contribution.** A component *contributes* the reviewer to a gate when the component makes that gate require it. A project may also add the reviewer to a gate of its own.
-   - **No review is required.** This record requires no one to run the reviewer, and no project needs a gate to use it.
+**Its verdict.** The reviewer approves only when it judged the change and found no settled break. A reviewer that cannot judge the change does not approve, and says why. It cannot judge the change while a rule that binds on it cannot be judged. A fact the rule names that cannot be found is such a case.
 
-6. **What a contribution covers.** A component may contribute the reviewer. It then contributes it for every artefact a change alters on which an accepted rule binds, at the base or at the head. It does so for the artefacts of every owner, not only its own. So one contributor installed is enough for every such artefact to be judged at the gate.
+**Its form comes from whoever invokes it.** Whoever invokes the reviewer, such as a gate, names the form of its verdict. The same invoker names the mark of each kind of finding. Where nobody names them, the reviewer states its verdict and each finding's kind in words. How a passage for a person reaches a person is the gate's to say.
 
-7. **Rule sets and a project's prose conventions.** The reviewer reads rule sets only. A project may also keep conventions in prose, with no ids and no statuses. They guide the agents that produce its work, and the reviewers that read them. The rule-set reviewer cites none. A convention about an artefact that should bind through this reviewer moves into a rule set. There it gains an id, an origin and a status that only a reviewed change accepts (COR-051 point 4).
+### 4. Placement: core
 
-8. **Evidence before a gate.** The reviewer stack kept the critic and the architect advisory first (COR-024), and this reviewer starts the same way. A component contributes it to a gate only on evidence that it judges well when run by hand. This record names no bar for that evidence.
+It passes the test for a core agent (COR-026). A project that installs no capability still finds it useful, since rule sets are core and a project may keep its own. Its instructions name only what core defines: rule sets, the backbone's one answer, artefacts and their content. They name no capability, no gate's form and no rule.
+
+### 5. Stage and posture
+
+It reviews a diff, beside the convention-compliance reviewer in the reviewer stack (COR-024). The two judge the same diff on different questions.
+- **Advisory.** A person or an agent may run it on any change by hand. A *gate* is a step a change must pass before it lands. The reviewer's verdict holds a change only where a gate requires it, and only as that gate says.
+- **A contribution.** A component *contributes* the reviewer to a gate when the component makes that gate require it. A project may also add the reviewer to a gate of its own.
+- **No review is required.** This record requires no one to run the reviewer, and no project needs a gate to use it.
+
+### 6. What a contribution covers
+
+A component may contribute the reviewer. It then contributes it for every artefact a change alters on which an accepted rule binds, at the base or at the head. It does so for the artefacts of every owner, not only its own. So one contributor installed is enough for every such artefact to be judged at the gate.
+
+### 7. Rule sets and a project's prose conventions
+
+The reviewer reads rule sets only. A project may also keep conventions in prose, with no ids and no statuses. They guide the agents that produce its work, and the reviewers that read them. The rule-set reviewer cites none. A convention about an artefact that should bind through this reviewer moves into a rule set. There it gains an id, an origin and a status that only a reviewed change accepts (COR-051 point 4).
+
+### 8. Evidence before a gate
+
+The reviewer stack kept the critic and the architect advisory first (COR-024), and this reviewer starts the same way. A component contributes it to a gate only on evidence that it judges well when run by hand. This record names no bar for that evidence.
 
 ## Rationale
 

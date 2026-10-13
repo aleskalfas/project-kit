@@ -42,52 +42,67 @@ reported during dogfooding.
 [project-management:DEC-020-scripts-as-methodology-surface]); the agent has
 authority to post a freeform comment through them.**
 
-1. **Two verbs, one per subject** — `comment-issue <n> --body …` and
-   `comment-pr <n> --body …`, matching the per-subject pairing
-   the rest of the surface uses (`edit-issue`/`edit-pr`, `show-issue`/`show-pr`).
-   A shared implementation backs both.
-2. **Guarded like every mutating verb; body validated only against sentinel
-   collision.** The verb runs the membership gate
-   ([project-management:DEC-021-team-membership]) and the foreign-repo session
-   interlock ([COR-039](../../../decisions/core/COR-039-session-repo-mutation-boundary.md)),
-   prints the context header, and honours `--dry-run` / `--yes`. A freeform
-   comment mutates no *issue* state — no title, no body-schema, no transition, no
-   containment — so it takes **no [project-management:DEC-014-validation-severity-model]
-   severity finding on its authored content**: prose has no required structure to
-   validate. The one thing its content *can* move is a gate the engine drives off
-   comment text, so the body is validated against exactly that — a reserved-sentinel
-   refusal (point 5). Emptiness and sentinel-collision are the only failures.
-3. **Freeform is distinct from structured.** This verb posts an *author-supplied*
-   note. The structured comments other verbs emit (audit, verdict, provenance)
-   remain side-effects of those verbs and keep their templates; the freeform verb
-   does not replace or wrap them.
-4. **A genuine new agent capability, delivered through the validated-script
-   pattern — not a permission-model change.** Be honest about the delta: the
-   capability's permission fragment *denies* the agent direct `gh issue comment` /
-   `gh pr comment`, so today the agent cannot post any freeform comment at all.
-   This verb gives it that ability. No permission-config line changes — the agent
-   still reaches `gh` only through a validated script, the same routing as
-   `open-pr` / `merge-pr` — but unlike those (which enforce methodology gates on
-   their *effect*), this verb's payload is author-supplied, so its validation is
-   the sentinel refusal (point 5) plus a positive freeform marker (point 6). That
-   guard is what earns the expansion.
-5. **The freeform comment may not impersonate a structured one.** The one thing a
-   comment *can* affect is a gate the engine drives off comment text — so the verb
-   refuses a body whose first line would be parsed as a DEC-028 reviewer verdict
-   (`Reviewer agent[ (local, …)]: APPROVED|CHANGES_REQUESTED`, which `done-work`'s
-   agent-mode gate-checker reads), a human-mode `Approved`-prefix approval (which
-   `done-work` counts from a non-author), or an audit-trail template (DEC-014's
-   `Bypassed by …` / the `Approved by bypass:` line). This is what keeps "a
-   comment mutates no state" *true*: a freeform note that could be counted as an
-   approval or a verdict would, in effect, mutate the merge gate. Refusal is a
-   plain usage error (reword the first line), not a DEC-014 severity finding.
-6. **A positive freeform marker.** Every posted freeform comment carries a
-   trailing `<!-- pkit-freeform -->` marker — the write-side counterpart to point
-   5's read-side refusal, reusing the established marker convention
-   (`pkit-provenance` per [project-management:DEC-041-version-provenance-stamp],
-   `pkit-hook` per [project-management:DEC-024-lifecycle-hooks]). It makes a
-   freeform note positively distinguishable from a structured comment for any
-   human or future parser, so the two can never be conflated from either side.
+### 1. Two verbs, one per subject
+
+**Two verbs, one per subject** — `comment-issue <n> --body …` and
+`comment-pr <n> --body …`, matching the per-subject pairing
+the rest of the surface uses (`edit-issue`/`edit-pr`, `show-issue`/`show-pr`).
+A shared implementation backs both.
+
+### 2. Guarded like every mutating verb; body validated only against sentinel collision
+
+The verb runs the membership gate
+([project-management:DEC-021-team-membership]) and the foreign-repo session
+interlock ([COR-039](../../../decisions/core/COR-039-session-repo-mutation-boundary.md)),
+prints the context header, and honours `--dry-run` / `--yes`. A freeform
+comment mutates no *issue* state — no title, no body-schema, no transition, no
+containment — so it takes **no [project-management:DEC-014-validation-severity-model]
+severity finding on its authored content**: prose has no required structure to
+validate. The one thing its content *can* move is a gate the engine drives off
+comment text, so the body is validated against exactly that — a reserved-sentinel
+refusal (point 5). Emptiness and sentinel-collision are the only failures.
+
+### 3. Freeform is distinct from structured
+
+This verb posts an *author-supplied*
+note. The structured comments other verbs emit (audit, verdict, provenance)
+remain side-effects of those verbs and keep their templates; the freeform verb
+does not replace or wrap them.
+
+### 4. A genuine new agent capability, delivered through the validated-script pattern — not a permission-model change
+
+Be honest about the delta: the
+capability's permission fragment *denies* the agent direct `gh issue comment` /
+`gh pr comment`, so today the agent cannot post any freeform comment at all.
+This verb gives it that ability. No permission-config line changes — the agent
+still reaches `gh` only through a validated script, the same routing as
+`open-pr` / `merge-pr` — but unlike those (which enforce methodology gates on
+their *effect*), this verb's payload is author-supplied, so its validation is
+the sentinel refusal (point 5) plus a positive freeform marker (point 6). That
+guard is what earns the expansion.
+
+### 5. The freeform comment may not impersonate a structured one
+
+The one thing a
+comment *can* affect is a gate the engine drives off comment text — so the verb
+refuses a body whose first line would be parsed as a DEC-028 reviewer verdict
+(`Reviewer agent[ (local, …)]: APPROVED|CHANGES_REQUESTED`, which `done-work`'s
+agent-mode gate-checker reads), a human-mode `Approved`-prefix approval (which
+`done-work` counts from a non-author), or an audit-trail template (DEC-014's
+`Bypassed by …` / the `Approved by bypass:` line). This is what keeps "a
+comment mutates no state" *true*: a freeform note that could be counted as an
+approval or a verdict would, in effect, mutate the merge gate. Refusal is a
+plain usage error (reword the first line), not a DEC-014 severity finding.
+
+### 6. A positive freeform marker
+
+Every posted freeform comment carries a
+trailing `<!-- pkit-freeform -->` marker — the write-side counterpart to point
+5's read-side refusal, reusing the established marker convention
+(`pkit-provenance` per [project-management:DEC-041-version-provenance-stamp],
+`pkit-hook` per [project-management:DEC-024-lifecycle-hooks]). It makes a
+freeform note positively distinguishable from a structured comment for any
+human or future parser, so the two can never be conflated from either side.
 
 ## Rationale
 

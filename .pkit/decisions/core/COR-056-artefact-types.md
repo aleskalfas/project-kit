@@ -18,43 +18,56 @@ The places declared to hold anchored artefacts (COR-050 point 1) already say mos
 
 **An artefact may have one *type*: a declared name for what it is. Each component declares its types in a type registry, and whoever declares a place may name a type on it. The backbone resolves every artefact's type from the places that match its file, and gives every rule the backbone's type for rules. It gives one answer that every reader shares. Friction never reads a type.**
 
-1. **What a type is.** A type is one declared name for what an artefact is. An artefact has one type, or none.
-   - **Its name.** A component's type is written `<component>:<name>`, and the backbone's are written `backbone:<name>`. A project's own are bare, as a project rule set is cited bare (COR-051 point 6). A bare type holds no `:`. No type's name holds `/`, which stays free for sub-types (Alternatives considered).
-   - **An entry takes the type its file's place gives.** A place matches files, not entries. So the type a place gives reaches every entry of a collection file it matches, each entry subject to point 4. Rules are the one exception: every rule takes the backbone's type for rules (point 3).
-   - **No type.** An artefact that is no rule, and that no typed place gives a type, has none. A file outside every place holds no artefact, and neither does a held document (COR-050 point 1), so neither has a type.
+### 1. What a type is
 
-2. **Who declares it.** Each owner declares its own types, and whoever declares a place may name a type on it.
-   - **A component's type registry.** A component declares its types in a *type registry*, under `types` in the `friction` block of its package metadata. Each entry has a description. It also says whether a project may give the type to its own places, and an entry that does not say admits no project place.
-   - **A kind field.** A registry entry may also name the type's *kind field*. That is one of the artefact's own fields, in which an artefact of the type declares its kind. Here a *kind* is the type's owner's word for one variety of the type, never an anchor kind (COR-050 point 2). Point 4 says how a kind field gates the type.
-   - **The backbone's types.** The backbone declares its own types, and the one answer lists them beside the type registries (point 6). The backbone gives them without any place, and no place may name one.
-   - **A component's places.** A component names a type of its own type registry on a place it declares in its package metadata, under the key `type`. A place that names a type its registry does not declare gives no type. The project cannot mend a component's package metadata, so that is reported and does not fail (COR-055 point 1).
-   - **The project's places.** In the backbone configuration, a place written as a bare path gives no type, and one written `{path, type}` gives that type. The type is a bare type of the project's own, or a component's type whose registry admits project places. A project declares its own type by giving it on one of its places. A project's own type has no registry entry, so it names no kind field.
-   - **Names that would collide.** A bare project type equal to the name of a type the backbone or an installed component declares is refused (Rationale).
-   - **A component named in the configuration.** A project place that gives a component's type names an installed component (COR-048 point 2). It fails validation unless that component is installed, declares the type and admits project places. Uninstalling a component offers, with consent, to take its types off the project's places, as COR-048 point 2 asks. The places stay, untyped. The uninstall plan also reports each rule set whose scope names one of its types. Such a scope fails validation until the project mends the set (COR-051 point 2).
+A type is one declared name for what an artefact is. An artefact has one type, or none.
+- **Its name.** A component's type is written `<component>:<name>`, and the backbone's are written `backbone:<name>`. A project's own are bare, as a project rule set is cited bare (COR-051 point 6). A bare type holds no `:`. No type's name holds `/`, which stays free for sub-types (Alternatives considered).
+- **An entry takes the type its file's place gives.** A place matches files, not entries. So the type a place gives reaches every entry of a collection file it matches, each entry subject to point 4. Rules are the one exception: every rule takes the backbone's type for rules (point 3).
+- **No type.** An artefact that is no rule, and that no typed place gives a type, has none. A file outside every place holds no artefact, and neither does a held document (COR-050 point 1), so neither has a type.
 
-3. **How the backbone resolves it.** The backbone takes an artefact's type from the places that match its file. It finds those places as COR-050 point 1 does. It takes types only from package metadata and the backbone configuration, never from a component's own configuration. Of the artefact itself, it reads only a kind field (point 4).
-   - **A rule is `backbone:rule`.** Every rule, an entry of a rule-set file (COR-051 point 2), takes the backbone's type for rules, whatever place matches its file.
-   - **A project place yields to a component's place.** A place is *root-wide* when it equals or encloses a documentation root (COR-050 point 1). It then reaches every document the root could hold. Where a component's own place that is not root-wide matches a file, no project place gives that file a type. This holds whether the component's place is typed or not. A typed project place that yields so is reported, and does not fail.
-   - **A root-wide place comes last.** A typed root-wide place yields to every typed place that is not root-wide.
-   - **Otherwise the most specific place wins,** whoever declares it, and the same order ranks root-wide places among themselves. A place's *literal part* is its path up to its first wildcard. A folder's literal part is its path followed by `/`. A glob that is a folder followed by `/**` alone is read as that folder. The longer literal part, counted in characters, wins. At equal length, an exact file beats a glob, and a glob beats a folder.
-   - **A tie fails validation, where the project can mend it.** Two typed places that match one file, rank equal and give it different types are a *tie*. A tie between places that only components declare is reported and does not fail. The project cannot mend it in its own files (COR-055 point 1).
-   - **One component's place over another's.** One component's typed place may outrank another component's own place that is not root-wide, and give a file of it a type. That is reported, and the type stands. Within one component, nothing is reported.
-   - **An untyped place gives no type.** Apart from keeping project places off a component's files, it takes no part: it shadows no other place.
-   - **A tie counts as each type in contention.** While a tie stands, the artefact counts as each of the tied types. A type with a kind field counts only where the artefact declares its kind (point 4). So every rule set whose scope selects one of them still reaches it.
-   - **What a type that fails validation gives.** A value the configuration's schema refuses gives no type, and readers warn, as COR-048 point 4 says. A component's type that a project place or a scope names, and that no installed component's type registry declares, gives no type either. Its kind field is unknown, and validation fails. Any other type that fails validation still counts until the declaration is mended. So nothing a scope selects drops out of it without a word.
+### 2. Who declares it
 
-4. **How a kind field gates the type.** A kind field (point 2) is one of the artefact's own fields, outside the methodology's container (COR-050 point 1).
-   - **The declaration decides.** Where the winning place (point 3) gives a type with a kind field, an artefact takes the type only when it declares its kind there. Otherwise it has no type. A less specific place does not type it instead.
-   - **Documents and entries alike.** A document declares its kind in its front matter, and an entry among its own fields.
-   - **The kinds are the owner's.** The backbone reads only whether the field is present and not empty, never which kind it names.
+Each owner declares its own types, and whoever declares a place may name a type on it.
+- **A component's type registry.** A component declares its types in a *type registry*, under `types` in the `friction` block of its package metadata. Each entry has a description. It also says whether a project may give the type to its own places, and an entry that does not say admits no project place.
+- **A kind field.** A registry entry may also name the type's *kind field*. That is one of the artefact's own fields, in which an artefact of the type declares its kind. Here a *kind* is the type's owner's word for one variety of the type, never an anchor kind (COR-050 point 2). Point 4 says how a kind field gates the type.
+- **The backbone's types.** The backbone declares its own types, and the one answer lists them beside the type registries (point 6). The backbone gives them without any place, and no place may name one.
+- **A component's places.** A component names a type of its own type registry on a place it declares in its package metadata, under the key `type`. A place that names a type its registry does not declare gives no type. The project cannot mend a component's package metadata, so that is reported and does not fail (COR-055 point 1).
+- **The project's places.** In the backbone configuration, a place written as a bare path gives no type, and one written `{path, type}` gives that type. The type is a bare type of the project's own, or a component's type whose registry admits project places. A project declares its own type by giving it on one of its places. A project's own type has no registry entry, so it names no kind field.
+- **Names that would collide.** A bare project type equal to the name of a type the backbone or an installed component declares is refused (Rationale).
+- **A component named in the configuration.** A project place that gives a component's type names an installed component (COR-048 point 2). It fails validation unless that component is installed, declares the type and admits project places. Uninstalling a component offers, with consent, to take its types off the project's places, as COR-048 point 2 asks. The places stay, untyped. The uninstall plan also reports each rule set whose scope names one of its types. Such a scope fails validation until the project mends the set (COR-051 point 2).
 
-5. **Limits.**
-   - **Friction never reads a type.** No friction check (COR-050) reads one. A type changes no anchor, no revalidation and no answer.
-   - **A type changes neither what counts as an artefact nor its content.** The places alone decide which files hold artefacts (COR-050 point 1). A type is declared on a place, outside every artefact. So giving a place a type, or changing it, changes no artefact's content and flags nothing anchored to it. A kind field is one of the artefact's own fields, so declaring a kind there changes its content, like any other edit of its fields.
+### 3. How the backbone resolves it
 
-6. **One answer.** For each artefact, the backbone answers with its type and the place that gave it, or the backbone for a rule. In a tie, it gives every type in contention, each with its place. It lists the type registries and the backbone's own types beside that answer. A component's checks and every other reader take the type from that answer, and the backbone applies a rule set's scope with it. None resolves a type itself.
+The backbone takes an artefact's type from the places that match its file. It finds those places as COR-050 point 1 does. It takes types only from package metadata and the backbone configuration, never from a component's own configuration. Of the artefact itself, it reads only a kind field (point 4).
+- **A rule is `backbone:rule`.** Every rule, an entry of a rule-set file (COR-051 point 2), takes the backbone's type for rules, whatever place matches its file.
+- **A project place yields to a component's place.** A place is *root-wide* when it equals or encloses a documentation root (COR-050 point 1). It then reaches every document the root could hold. Where a component's own place that is not root-wide matches a file, no project place gives that file a type. This holds whether the component's place is typed or not. A typed project place that yields so is reported, and does not fail.
+- **A root-wide place comes last.** A typed root-wide place yields to every typed place that is not root-wide.
+- **Otherwise the most specific place wins,** whoever declares it, and the same order ranks root-wide places among themselves. A place's *literal part* is its path up to its first wildcard. A folder's literal part is its path followed by `/`. A glob that is a folder followed by `/**` alone is read as that folder. The longer literal part, counted in characters, wins. At equal length, an exact file beats a glob, and a glob beats a folder.
+- **A tie fails validation, where the project can mend it.** Two typed places that match one file, rank equal and give it different types are a *tie*. A tie between places that only components declare is reported and does not fail. The project cannot mend it in its own files (COR-055 point 1).
+- **One component's place over another's.** One component's typed place may outrank another component's own place that is not root-wide, and give a file of it a type. That is reported, and the type stands. Within one component, nothing is reported.
+- **An untyped place gives no type.** Apart from keeping project places off a component's files, it takes no part: it shadows no other place.
+- **A tie counts as each type in contention.** While a tie stands, the artefact counts as each of the tied types. A type with a kind field counts only where the artefact declares its kind (point 4). So every rule set whose scope selects one of them still reaches it.
+- **What a type that fails validation gives.** A value the configuration's schema refuses gives no type, and readers warn, as COR-048 point 4 says. A component's type that a project place or a scope names, and that no installed component's type registry declares, gives no type either. Its kind field is unknown, and validation fails. Any other type that fails validation still counts until the declaration is mended. So nothing a scope selects drops out of it without a word.
 
-7. **Where types live, and when that changes.** Types sit on the places that components and the project declare under the anchors-and-friction record (COR-050 point 1). The type registry sits beside those places, in the same block. Friction reads neither. A place is the one declaration of where artefacts are, and a second list of places would drift from it. A core record may come to define one more concept on places, beside friction's own and types. Then places and the type registry move into a functionality of their own.
+### 4. How a kind field gates the type
+
+A kind field (point 2) is one of the artefact's own fields, outside the methodology's container (COR-050 point 1).
+- **The declaration decides.** Where the winning place (point 3) gives a type with a kind field, an artefact takes the type only when it declares its kind there. Otherwise it has no type. A less specific place does not type it instead.
+- **Documents and entries alike.** A document declares its kind in its front matter, and an entry among its own fields.
+- **The kinds are the owner's.** The backbone reads only whether the field is present and not empty, never which kind it names.
+
+### 5. Limits
+
+- **Friction never reads a type.** No friction check (COR-050) reads one. A type changes no anchor, no revalidation and no answer.
+- **A type changes neither what counts as an artefact nor its content.** The places alone decide which files hold artefacts (COR-050 point 1). A type is declared on a place, outside every artefact. So giving a place a type, or changing it, changes no artefact's content and flags nothing anchored to it. A kind field is one of the artefact's own fields, so declaring a kind there changes its content, like any other edit of its fields.
+
+### 6. One answer
+
+For each artefact, the backbone answers with its type and the place that gave it, or the backbone for a rule. In a tie, it gives every type in contention, each with its place. It lists the type registries and the backbone's own types beside that answer. A component's checks and every other reader take the type from that answer, and the backbone applies a rule set's scope with it. None resolves a type itself.
+
+### 7. Where types live, and when that changes
+
+Types sit on the places that components and the project declare under the anchors-and-friction record (COR-050 point 1). The type registry sits beside those places, in the same block. Friction reads neither. A place is the one declaration of where artefacts are, and a second list of places would drift from it. A core record may come to define one more concept on places, beside friction's own and types. Then places and the type registry move into a functionality of their own.
 
 ## Rationale
 

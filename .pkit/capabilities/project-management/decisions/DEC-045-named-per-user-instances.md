@@ -57,14 +57,18 @@ substrate-selectable; it does not change how ownership is *marked*, only how the
 that references workstreams to route work — on top of DEC-035, changing none of its
 marking or clash mechanics.**
 
-**1. Instances gain a human-readable name.** `set-instance`
+### 1. Instances gain a human-readable name
+
+`set-instance`
 ([project-management:DEC-035-instance-ownership] point 1) is extended so a clone's
 git-ignored, clone-local runtime identity carries a **display name** (e.g. `data`,
 `map`, `main`) alongside the numeric id. The name is a self-awareness affordance and a
 routing key; the numeric id and the `(assignee, instance:N)` owner from DEC-035 are
 unchanged underneath.
 
-**2. A per-user, machine-local topology file — not committed, not team-shared.** The
+### 2. A per-user, machine-local topology file — not committed, not team-shared
+
+The
 person declares their instances in a **user-local file** (resolved from a per-user
 location, not the repo tree, and never committed). For each named instance it lists the
 **workstream slugs that instance handles** and, optionally, path hints. Because the
@@ -75,20 +79,25 @@ authority. A different team member runs their own clones with their own local to
 the two never share this file. This keeps DEC-035's "each person's instances are their
 own, coordinated with no committed registry" property intact.
 
-**3. Instances reference workstreams (1:many); they never rebind the taxonomy.** An
+### 3. Instances reference workstreams (1:many); they never rebind the taxonomy
+
+An
 instance handles a *set* of workstreams, and the reference lives only in the user-local
 topology file — **nothing writes instance identity onto a workstream label, and
 workstream is not made an instance attribute** (DEC-018's taxonomy and DEC-012's axis
 model are untouched). The reference is a routing hint, not a fourth classification axis.
 
-**4. The partition is soft — full coverage is the default, sharing and gaps are allowed
-but discouraged.** The guided assignment (point 6) drives toward every workstream
+### 4. The partition is soft — full coverage is the default, sharing and gaps are allowed but discouraged
+
+The guided assignment (point 6) drives toward every workstream
 handled by exactly one instance. A workstream handled by **two or more** instances
 (shared) or by **none** (unassigned) is **permitted but surfaced at
 `[validation-severity:warning]`** per [project-management:DEC-014-validation-severity-model]
 — flagged, never hard-blocked.
 
-**5. Ownership derivation feeds the pm-layer guard only, and degrades gracefully.** For
+### 5. Ownership derivation feeds the pm-layer guard only, and degrades gracefully
+
+For
 an issue in workstream *W*, the *expected* owner is the instance(s) whose topology
 references *W*:
 - **exactly one** → the DEC-035 clash guard warns if a *different* instance claims it;
@@ -105,7 +114,9 @@ not make ownership engine state. The named layer thus *refines* DEC-035 where th
 reference is unambiguous and *falls back* to it otherwise — the numeric model stays the
 floor.
 
-**6. A guided assignment script — local, idempotent, drift-reconciling.** A script walks
+### 6. A guided assignment script — local, idempotent, drift-reconciling
+
+A script walks
 the person through distributing their workstreams across their instances and writes the
 user-local topology file. It runs against the person's own local config (no membership
 gate, no privileged clone — it is local configuration). It is **re-runnable**: on each
@@ -114,7 +125,9 @@ split / remove) — surfacing newly-unassigned workstreams and references to
 now-removed workstreams or deleted instances (all at `warning`) and walking the person
 through fixing them, rather than assuming a clean slate.
 
-**7. A `create-instance` provisioning script.** A script clones the repo into a sibling
+### 7. A `create-instance` provisioning script
+
+A script clones the repo into a sibling
 folder with a name-derived suffix and scaffolds the new clone's config (its
 `set-instance` name + topology entry). It **confirms before any filesystem mutation**
 (creating or removing a clone directory is destructive-adjacent per `.pkit/rules/core.md`
@@ -122,7 +135,9 @@ rule 8) and wires the new clone up with the project's pkit setup so it behaves l
 other clone. It provisions clones for the person running it, on their own machine — it
 does not mutate any other repository's context (the cross-repository rule, `.pkit/rules/core.md` rule 19).
 
-**8. Deferred, named-not-built (per [pkit:COR-007]).** The *automatic* "decompose this
+### 8. Deferred, named-not-built (per [pkit:COR-007])
+
+The *automatic* "decompose this
 project into instances for me" step — proposing which instances should exist and where
 the boundaries fall — is **not** built here. That decision blends pm routing with
 *architectural* component-boundary judgment (the `architect`'s discipline per

@@ -18,11 +18,17 @@ Getting these wrong is expensive in opposite directions: a premature cross-platf
 
 ## Decision
 
-1. **v1 assumes macOS (darwin).** No cross-platform abstraction is built.
+### 1. v1 assumes macOS (darwin)
 
-2. **A single platform gate sits at the recording-plugin boundary (Layer 3 of [demo-recording:DEC-002-three-layer-plugin-architecture]), not at the capability or format entry.** The recording plugin's executable entry points refuse to run off darwin with a clear message; the parser, plugin interface, runner, and validator (Layers 1 + 2) stay platform-neutral and run anywhere.
+No cross-platform abstraction is built.
 
-3. **Platform is NOT modelled as a harness-settings adapter overlay** — the mechanism by which a capability contributes settings into a specific AI harness's configuration ([project-management:DEC-030-capability-contributed-adapter-overlays]). That mechanism addresses harness configuration, which is a different axis from operating-system portability. OS portability, when it is eventually needed, is a matter of a second recording backend, not a settings overlay.
+### 2. A single platform gate sits at the recording-plugin boundary (Layer 3 of [demo-recording:DEC-002-three-layer-plugin-architecture]), not at the capability or format entry
+
+The recording plugin's executable entry points refuse to run off darwin with a clear message; the parser, plugin interface, runner, and validator (Layers 1 + 2) stay platform-neutral and run anywhere.
+
+### 3. Platform is NOT modelled as a harness-settings adapter overlay
+
+**Platform is NOT modelled as a harness-settings adapter overlay** — the mechanism by which a capability contributes settings into a specific AI harness's configuration ([project-management:DEC-030-capability-contributed-adapter-overlays]). That mechanism addresses harness configuration, which is a different axis from operating-system portability. OS portability, when it is eventually needed, is a matter of a second recording backend, not a settings overlay.
 
 ## Rationale
 
