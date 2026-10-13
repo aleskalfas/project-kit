@@ -72,9 +72,15 @@ Each kind of thing a record, an agent or a skill cites has one written form:
 
 Every file has exactly one owner — kit or project — and they never share a path.
 
-This invariant is what makes the namespace split above operationally safe. project-kit's sync operation copies a fixed set of kit-owned paths. It writes a project-owned path only through merge delivery, which adds the kit's entries to a file of yours and never removes one you wrote (COR-002). It reads from your side only what it needs, such as the versions your project records. There is no conflict UI, no marker comments, no include-with-substitution mechanism.
+This invariant is what makes the namespace split above operationally safe. project-kit's sync operation copies a fixed set of kit-owned paths. There is no conflict UI, no marker comments, no include-with-substitution mechanism.
 
-Sync **cannot** produce a conflict, and it cannot break anything you wrote. It runs at the versions your project records, and moves none of them. When the pkit running it is not your project's version, or a version transition is unfinished, it stops, writes nothing, and names the way on (COR-059).
+Sync reads from your side what it needs, such as the versions your project records. It writes into a file of yours through merge delivery's tier that asks nothing. That tier adds the kit's entries and never removes one you wrote (COR-002). Sync **cannot** produce a conflict, and it cannot break anything you wrote.
+
+COR-059 has sync run at the versions your project records, move none of them, and write a project-owned path only through merge delivery. Under a pkit at another version, or over an unfinished version transition, COR-059 has sync stop. Until that is built, sync also does three things COR-059 rules out:
+
+- **It moves your recorded backbone version** to the running pkit's version. It refuses under an older pkit. `pkit sync` also refuses to move past backbone migrations, and names `pkit upgrade`, which runs them.
+- **It refreshes each installed capability the kit ships** to the version the running pkit ships, and runs that capability's migrations.
+- **It creates what is missing on your side:** the agents overlay, `.pkit/agents/project/overlay.yaml`, and an area's `project/` folder.
 
 The same `core/` / `project/` pattern (and the same invariant) governs other kit areas in your project — `.pkit/agents/`, `.pkit/rules/`, and so on. To extend kit-shipped content, add sibling files in the matching `project/` directory; never edit a kit-owned file.
 
