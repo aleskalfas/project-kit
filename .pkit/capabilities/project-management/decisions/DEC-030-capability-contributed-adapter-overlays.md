@@ -37,7 +37,7 @@ Capabilities that contribute settings to a harness ship two file roles, in two l
 ```
 
 - **`overlay.template.json`** is core-owned, the capability's source of truth. Sync restores it at the version the project records, and a version transition replaces it with the target's ([COR-059](../../../decisions/core/COR-059-version-transition.md) points 2 and 3). It is a JSON object whose top-level keys are the settings the capability would contribute when active. The shape constraint: top-level keys outside `permissions` (see "Reserved keys" below).
-- **`<harness>.json`** is adopter-owned (under `project/`; sync reads it in its merge, and never writes it). Its **presence is the activation signal**. The file's content is always a copy of the current template at the time of last `enable` — adopters do not hand-edit this file in v1 (see "v1 scope: no in-place customisation" below).
+- **`<harness>.json`** is adopter-owned, under `project/`. Sync reads it in its merge, and never writes it. Its **presence is the activation signal**. The file's content is always a copy of the current template at the time of last `enable` — adopters do not hand-edit this file in v1 (see "v1 scope: no in-place customisation" below).
 
 The `<cap>/adapters/<harness>/` subtree extends [COR-017](../../../decisions/core/COR-017-capability-pattern.md)'s capability layout convention. Both new subtrees are *optional*: capabilities that don't contribute settings (the common case today) carry neither. When a second capability adopts the pattern, the addition stabilises into a convention worth formalising in COR-017's body; until then, this DEC is the reference.
 
@@ -102,7 +102,7 @@ After uninstall, the previously-contributed keys remain in `.claude/settings.jso
 
 **Opt-in default semantics preserved.** Installing the project-management capability creates the template (`adapters/claude-code/overlay.template.json`) but no activation file. `.claude/settings.json` is unchanged on install. The adopter runs `enable-default-agent` to activate; `disable-default-agent` reverses; uninstall removes the whole tree.
 
-**No-shared-files preserved in the sync path.** The template is core-owned: sync restores it at the version the project records, and a version transition replaces it with the target's. The live overlay is adopter-owned (under `project/`; sync reads it in its merge, and never writes it). The CLI subcommands write only the adopter-owned location.
+**No-shared-files preserved in the sync path.** The template is core-owned: sync restores it at the version the project records, and a version transition replaces it with the target's. The live overlay is adopter-owned, under `project/`. Sync reads it in its merge, and never writes it. The CLI subcommands write only the adopter-owned location.
 
 **Manifest-scoped walker prevents orphan contributions.** Stash, rebase, or botched-uninstall states that leave a capability directory present but unregistered in the manifest no longer silently activate that capability's contribution. The walker honours the manifest as the source of truth for installed-ness.
 
