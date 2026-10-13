@@ -1,0 +1,14 @@
+component: backbone
+kind: none
+body: >
+  Design-ahead: COR-059 makes a version transition the one operation that
+  moves a project's recorded versions, and every migration of the backbone
+  and of each shipped component runs inside it, under the one consent of
+  choosing its target. Sync runs at the recorded versions, moves none, runs
+  no migration, and writes project-owned files only through merge delivery's
+  auto-add tier. A transition records its target first and its completion
+  last, moves every shipped component together, and creates a missing seed
+  path. A command that copies content under another version than the
+  project records stops and names the remedy. It is record text only, and
+  nothing you run changes. The build Tasks (#1458 to #1465) carry the real
+  changesets.
