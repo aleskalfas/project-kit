@@ -1,7 +1,7 @@
 ---
 id: ADR-065
 title: pkit upgrade runs the version transition, and pkit sync stays at the project's version
-status: proposed
+status: accepted
 date: 2026-10-13
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
