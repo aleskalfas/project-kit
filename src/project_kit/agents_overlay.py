@@ -268,6 +268,11 @@ def agent_category_roles(source: Path) -> tuple[set[str], set[str]]:
 OVERLAY_PATH = Path(".pkit") / "agents" / "project" / "overlay.yaml"
 
 
+# What a command that needs a missing overlay names: the one command that creates it
+# outside the lifecycle (ADR-065 point 11). `pkit init` refuses a project that has one.
+_OVERLAY_REPAIR = "run `pkit agents reconcile --write`, which creates it from the seed."
+
+
 def _overlay_path(target_root: Path) -> Path:
     return target_root / OVERLAY_PATH
 
@@ -591,27 +596,30 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
     (commented) categories written to the file in this run.
 
     **A missing overlay** is repaired here, the command that needs it: with
-    ``write`` it is created from the seed first install writes, and the six
-    states above are then read against it. It is the one writer outside the
-    lifecycle that creates a seed path (ADR-065 point 11): sync creates none,
-    and a version transition creates it only where it is missing. The dry run
-    says it would.
+    ``write`` it is created from the seed first install writes, and nothing
+    else is written in that run. The next dry run reads the six states above
+    against it, so ``write`` records no category the person has not been shown
+    (COR-049 point 5). It is the one writer outside the lifecycle that creates
+    a seed path (ADR-065 point 11): sync creates none, and a version transition
+    creates it only where it is missing. The dry run says it would.
     """
     path = _overlay_path(target_root)
     if not path.is_file():
         if not write:
             return [], (
                 f"the agents overlay is missing ({OVERLAY_PATH.as_posix()}). Re-run with "
-                "`--write` to create it from the seed first install writes, then fill or stub "
-                "each category the seed does not define.\n"
+                "`--write` to create it from the seed first install writes. Then run "
+                "`pkit agents reconcile` again to see each category the seed does not define.\n"
             )
         from project_kit.install import AGENTS_OVERLAY_SEED
 
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(AGENTS_OVERLAY_SEED, encoding="utf-8")
-        created = f"created {OVERLAY_PATH.as_posix()} from the seed (it was missing)."
-        added, report = reconcile_overlay(target_root, write=True)
-        return added, f"{created}\n{report}"
+        return [], (
+            f"created {OVERLAY_PATH.as_posix()} from the seed (it was missing). Run "
+            "`pkit agents reconcile` to see each category the seed does not define, then "
+            "`--write` to record them.\n"
+        )
     missing = missing_categories(target_root)
     existing = path.read_text(encoding="utf-8")
 
@@ -678,7 +686,7 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
             lines.append(f"  {cat}: []")
         if write:
             if not path.is_file():
-                raise FileNotFoundError(f"overlay not found at {path}; run `pkit init` first.")
+                raise FileNotFoundError(f"overlay not found at {path}; {_OVERLAY_REPAIR}")
             block_lines = [
                 "",
                 "# --- added by `pkit agents reconcile` (write-carrying; ships empty) ---",
@@ -713,7 +721,7 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
             lines.append(category_location_line(cat, conv_path, reaching.get(cat, ())))
         if write:
             if not path.is_file():
-                raise FileNotFoundError(f"overlay not found at {path}; run `pkit init` first.")
+                raise FileNotFoundError(f"overlay not found at {path}; {_OVERLAY_REPAIR}")
             # Choosing the location is what records it (COR-049 point 5); `--write`,
             # given after the dry run showed these entries, is the confirmation.
             lines.append("")
@@ -745,7 +753,7 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
         lines += [f"  # {c}" for c in to_stub]
         if write:
             if not path.is_file():
-                raise FileNotFoundError(f"overlay not found at {path}; run `pkit init` first.")
+                raise FileNotFoundError(f"overlay not found at {path}; {_OVERLAY_REPAIR}")
             block_lines = [
                 "",
                 "# --- added by `pkit agents reconcile` — uncomment and set real paths ---",
@@ -779,7 +787,7 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
         lines += [f"  # {c}" for c in optional_stub]
         if write:
             if not path.is_file():
-                raise FileNotFoundError(f"overlay not found at {path}; run `pkit init` first.")
+                raise FileNotFoundError(f"overlay not found at {path}; {_OVERLAY_REPAIR}")
             block_lines = [
                 "",
                 "# --- added by `pkit agents reconcile` (optional read; the agent already deploys) "
@@ -1017,8 +1025,7 @@ def adopt_agent(
     path = _overlay_path(target_root)
     if not path.is_file():
         raise click.ClickException(
-            f"overlay not found at {path}; run `pkit agents reconcile --write`, which "
-            "creates it from the seed, then adopt again."
+            f"overlay not found at {path}; {_OVERLAY_REPAIR} Then adopt again."
         )
     existing = path.read_text(encoding="utf-8")
 

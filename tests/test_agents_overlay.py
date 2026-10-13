@@ -347,8 +347,10 @@ def test_reconcile_write_appends_commented_stubs_idempotently(tmp_path):
 
 def test_reconcile_write_creates_a_missing_overlay_from_the_seed(tmp_path):
     """A deleted overlay is repaired by the command that needs it: `--write` creates
-    it from the seed first install writes, then reads each category against it.
-    Sync creates no seed path, so this is the one way back short of a transition."""
+    it from the seed first install writes, and nothing else, so `--write` records
+    no category the dry run has not shown (COR-049 point 5). The next dry run reads
+    the categories against it. Sync creates no seed path, so this is the one way
+    back short of a transition."""
     from project_kit.install import AGENTS_OVERLAY_SEED
 
     proj = _project(tmp_path)
@@ -357,11 +359,14 @@ def test_reconcile_write_creates_a_missing_overlay_from_the_seed(tmp_path):
 
     added, report = ao.reconcile_overlay(proj, write=True)
 
-    assert overlay.read_text(encoding="utf-8").startswith(AGENTS_OVERLAY_SEED)
+    assert overlay.read_text(encoding="utf-8") == AGENTS_OVERLAY_SEED
     assert report.startswith("created .pkit/agents/project/overlay.yaml from the seed")
-    # The seed defines `architecture-docs`; the category it lacks is stubbed.
+    assert added == []
+
+    # The seed defines `architecture-docs`; the next dry run shows the one it lacks.
+    added, report = ao.reconcile_overlay(proj, write=False)
     assert added == ["custom"]
-    assert "# custom:" in overlay.read_text(encoding="utf-8")
+    assert overlay.read_text(encoding="utf-8") == AGENTS_OVERLAY_SEED
 
 
 def test_reconcile_dry_run_names_a_missing_overlay_and_writes_nothing(tmp_path):
