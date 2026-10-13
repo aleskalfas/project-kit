@@ -210,11 +210,13 @@ class ContributionRule:
     `floor`. `capability` records which capability contributed the rule, for
     provenance in error messages and diagnostics.
 
-    `floor` is the optional diff-property floor kind (one of `SUPPORTED_FLOORS`,
-    or `None`). A floor-carrying rule requires its reviewer whenever the PR's
-    *diff* satisfies the floor — independent of classification — matched via
-    `reviewers_for_floors`, not `reviewers_for`. A rule may carry a classification
-    predicate, a floor, or both.
+    `floor` is the optional diff-property floor kind (a non-empty name, or
+    `None`): one of `SUPPORTED_FLOORS`, or a floor this pm does not know,
+    which every change satisfies (`is_known_floor`). A floor-carrying rule
+    requires its reviewer whenever the PR's *diff* satisfies the floor —
+    independent of classification — matched via `reviewers_for_floors`, not
+    `reviewers_for`. A rule may carry a classification predicate, a floor, or
+    both.
 
     `deployed` records whether the contributed `reviewer` resolved to a
     deployed agent file. A rule with `deployed=False` is an *unsatisfiable
@@ -398,7 +400,8 @@ def parse_contributions(
     Each `match.<axis>` value may be a scalar string, the `"*"` wildcard
     (axis-present — matches every value of that axis), OR a list of strings
     (OR within the axis). A rule may carry a classification `match`, a
-    diff-property `floor` (one of `SUPPORTED_FLOORS`), or both — but at least
+    diff-property `floor` (a non-empty name: one of `SUPPORTED_FLOORS`, or one
+    this pm does not know, kept), or both — but at least
     one of the two. `None` (absent/empty file) yields no rules and no errors —
     a capability that ships no declaration contributes nothing, which is not
     an error.

@@ -8,8 +8,9 @@ about a PR:
   * each closing issue's labels (for the `workstream:*` / `type:*`
     classification), and
   * the PR's changed files (every page of GitHub's pull-request files API,
-    the complete path set), consulted only when a floor-carrying contribution
-    is installed (the DEC-032 diff-property floor), and
+    the complete path set), consulted only when a contribution names the
+    `touches-code` floor (the DEC-032 diff-property floor read from the
+    paths), and
   * the base branch's head and the PR's head as commits, consulted only when
     the `touches-ruled-artefact` floor asks the backbone what the change
     altered (#1386).
@@ -148,8 +149,8 @@ def pr_changed_files(
       (an `_Unresolvable`): files past the ceiling are never listed, so the set
       may be incomplete, and a retry reads the same cut-short list.
 
-    The resolver only calls this when a floor-carrying contribution is
-    installed, so a floor-free project never issues this `gh` round-trip.
+    The resolver only calls this when a contribution names `touches-code`,
+    so a project without one never issues this `gh` round-trip.
     `gh_run` is injected (the consumer's `_lib.gh.gh_run`) so this module
     carries no substrate of its own; both consumers share this one definition.
     """

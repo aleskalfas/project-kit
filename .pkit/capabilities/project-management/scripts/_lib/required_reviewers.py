@@ -25,9 +25,8 @@ seam (`reviewers_for_floors`). This module adds the layer above it the two
 consumers share:
 
   * fetching the PR's closing-issue classifications — keyed on the
-    `workstream` and `type` axes (DEC-032 D1) — and, when a
-    floor-carrying contribution is installed, the PR's changed files (the
-    `gh` round-trips),
+    `workstream` and `type` axes (DEC-032 D1) — and, when a contribution
+    names `touches-code`, the PR's changed files (the `gh` round-trips),
   * the fail-closed distinction between "PR closes no classified issue"
     (legitimate baseline-only) and "could not determine what the PR closes"
     (UNKNOWN → fail closed) — the `Unresolvable` sentinel,
@@ -76,9 +75,9 @@ makes a consumer handle each before reading the set:
     mutually-exclusive axis. Ground truth for *what the PR closes* is
     unknown, so a contributed reviewer it might require cannot be dropped.
   * **changed-files resolution unresolvable** — a transient `gh` failure
-    determining the PR's diff *while a floor-carrying contribution is
-    installed*. Ground truth for *what the diff touches* is unknown, so a
-    floor reviewer it might require cannot be dropped. A floor-free collection
+    determining the PR's diff *while a contribution names `touches-code`*.
+    Ground truth for *what the diff touches* is unknown, so a floor reviewer
+    it might require cannot be dropped. A collection without `touches-code`
     never fetches the diff, so this failure is unreachable there. A PR with
     more changed files than GitHub will list is the same unknown, reported as
     its own kind because retrying cannot resolve it.
@@ -167,10 +166,10 @@ ERROR_COLLECTION = "collection-error"
 # label data. The required set is UNKNOWN, so the consumer fails closed.
 ERROR_CLOSING_ISSUES = "closing-issues-unresolvable"
 # The PR's changed files could not be established (a transient gh failure /
-# malformed JSON) while a floor-carrying contribution is installed. A floor
+# malformed JSON) while a contribution names `touches-code`. A floor
 # reviewer it might require cannot be dropped, so the consumer fails closed.
-# Only reached when a floor-carrying rule exists — floor-free collections
-# never fetch the diff (DEC-032 D1).
+# Only reached when such a rule exists — other collections never fetch the
+# diff (DEC-032 D1).
 ERROR_CHANGED_FILES = "changed-files-unresolvable"
 # The PR changes more files than GitHub will list, so its changed-file set
 # cannot be read in full. The same unknown as ERROR_CHANGED_FILES, kept apart
