@@ -6,6 +6,8 @@ date: 2026-05-05
 author: Ales Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [COR-059](COR-059-version-transition.md).** Overturned: the compound-verb sentence and the rejected "smart `update`" alternative, since a version transition is one operation. Also overturned: keeping merge out of sync, since sync carries merge delivery's auto-add tier, which asks nothing, and the reason that re-running first install would resurface seeded content, since a transition creates a missing seed path. Among what stands: one operation for each command, the case against compound verbs, merge as a command of its own, a routine refresh that never asks, and first install as one-shot. COR-059's "What this overturns, and what stands" lists each passage.
+
 ## Context
 
 COR-001 settled the three steady-state mechanisms (propagation, extension, suspension) and the seed delivery operation. COR-002 added merge as a second delivery operation. COR-003 captured the principles by which a new artifact is assigned a mechanism + delivery.
