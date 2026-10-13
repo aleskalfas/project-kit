@@ -1,7 +1,9 @@
 component: demo-recording
 kind: none
 body: >
-  Placeholder segment, for the maintainer to judge (#1421). DEC-004 writes
-  each of its points as a heading carrying its number, word for word. No
-  point's text, number or citation changes. DEC-002 stays in list form until
-  the text after its last point is placed.
+  Placeholder segment, for the maintainer to judge (#1421). DEC-002 and
+  DEC-004 write each of their points as a heading carrying its number, word
+  for word. No point's text, number or citation changes. DEC-002 gains point
+  4, "One-directional knowledge flow": the sentence after its point 3, that
+  Layer 1 knows nothing of Layers 2 and 3 and Layer 3 depends on both, is now
+  a point of its own, with the same words.

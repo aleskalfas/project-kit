@@ -18,11 +18,19 @@ The methodology does **not** add a partial-increment / multi-PR-per-Task path. A
 
 When work feels too big for one PR, choose among the three mechanisms the methodology already ships:
 
-1. **Sub-task checkboxes inside one Task** — when the increments are small steps of a single PR-sized unit that share one acceptance criterion. The Task still lands in one PR; the checkboxes track the steps within it. (Per [project-management:DEC-011-title-formats]' `sub_task_promotion` guidance and `body-format`'s sub-task block.)
+### 1. Sub-task checkboxes inside one Task
 
-2. **Decompose into a Feature whose child Tasks each close their own PR** — when the work is genuinely several PR-sized units. This is the primary answer to "this needs multiple PRs": promote the would-be sub-tasks to sibling Tasks under an owning container (Feature / Umbrella / EPIC), and each Task closes its own PR via `Closes #N`.
+**Sub-task checkboxes inside one Task** — when the increments are small steps of a single PR-sized unit that share one acceptance criterion. The Task still lands in one PR; the checkboxes track the steps within it. (Per [project-management:DEC-011-title-formats]' `sub_task_promotion` guidance and `body-format`'s sub-task block.)
 
-3. **Integration branch** — when several Tasks must assemble off-`main` before promotion. The opt-in `integration_branches` construct (per [project-management:DEC-013-branch-and-pr-conventions]) roots a shared branch at one owning issue; each marked Task still gets exactly one PR that closes it into the integration branch, and a final PR promotes the assembled branch to `main`.
+### 2. Decompose into a Feature whose child Tasks each close their own PR
+
+**Decompose into a Feature whose child Tasks each close their own PR** — when the work is genuinely several PR-sized units. This is the primary answer to "this needs multiple PRs": promote the would-be sub-tasks to sibling Tasks under an owning container (Feature / Umbrella / EPIC), and each Task closes its own PR via `Closes #N`.
+
+### 3. Integration branch
+
+**Integration branch** — when several Tasks must assemble off-`main` before promotion. The opt-in `integration_branches` construct (per [project-management:DEC-013-branch-and-pr-conventions]) roots a shared branch at one owning issue; each marked Task still gets exactly one PR that closes it into the integration branch, and a final PR promotes the assembled branch to `main`.
+
+### Choosing among the three
 
 The discriminator is the size and coupling of the increments: small steps of one unit → path 1; several real units → path 2; several units that must land together off-`main` → path 3.
 

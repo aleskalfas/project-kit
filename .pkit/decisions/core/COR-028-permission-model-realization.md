@@ -20,15 +20,23 @@ Harnesses also differ in what they can enforce: some scope rules per agent, othe
 
 Permissions are a **harness-neutral model owned by the methodology**, and each harness adapter is the **realizer** that enforces it.
 
-1. **The model is the source of truth.** It declares, in domain terms, what each *subject* — an agent, a shared baseline applying to all, or the operator (the human driving the session) — is permitted to do: a named *privilege*, optionally constrained to a *scope* (where or when it applies), with an *effect* of allow or deny. Each agent's effective permissions are the union of the shared baseline and the agent's own grants; where an allow and a deny conflict, deny prevails. The set of privileges and how each is recognized is methodology data (a catalog), extensible by the layers that own the relevant tools.
-
-2. **The adapter realizes the model.** Each harness adapter translates the model into that harness's native enforcement mechanisms, preferring the most-native faithful mechanism available and reserving heavier mechanisms (such as runtime interception) for intent the native configuration cannot express. Because some enforcement mechanisms fail open — a fault in the mechanism lets the call proceed — a deny that must never be bypassed is realized on a fail-closed mechanism rather than entrusted to a fail-open one. The adapter also reads realized state back, so the model and reality can be reconciled.
-
-3. **Unenforceable intent is reported, not dropped.** A realizer declares which dimensions of the model its harness can natively enforce. When the model expresses intent the harness cannot faithfully enforce, the realizer renders the closest achievable enforcement and **reports the residual gap** rather than silently discarding it — so the adopter can close the gap outside the harness (for example at the operating-system, container, or network layer).
-
-4. **Ownership of adopter config is a per-project mode.** How much of the adopter's harness-owned configuration a realizer may own is chosen per project. The default is **additive**: the realizer only adds, never removes, leaving the adopter's configuration under the adopter's control. An opt-in **managed** mode lets the realizer own and regenerate its region of that configuration, healing drift so the model is the whole truth.
-
 The model is authoritative; realized harness state is a generated projection of it.
+
+### 1. The model is the source of truth
+
+It declares, in domain terms, what each *subject* — an agent, a shared baseline applying to all, or the operator (the human driving the session) — is permitted to do: a named *privilege*, optionally constrained to a *scope* (where or when it applies), with an *effect* of allow or deny. Each agent's effective permissions are the union of the shared baseline and the agent's own grants; where an allow and a deny conflict, deny prevails. The set of privileges and how each is recognized is methodology data (a catalog), extensible by the layers that own the relevant tools.
+
+### 2. The adapter realizes the model
+
+Each harness adapter translates the model into that harness's native enforcement mechanisms, preferring the most-native faithful mechanism available and reserving heavier mechanisms (such as runtime interception) for intent the native configuration cannot express. Because some enforcement mechanisms fail open — a fault in the mechanism lets the call proceed — a deny that must never be bypassed is realized on a fail-closed mechanism rather than entrusted to a fail-open one. The adapter also reads realized state back, so the model and reality can be reconciled.
+
+### 3. Unenforceable intent is reported, not dropped
+
+A realizer declares which dimensions of the model its harness can natively enforce. When the model expresses intent the harness cannot faithfully enforce, the realizer renders the closest achievable enforcement and **reports the residual gap** rather than silently discarding it — so the adopter can close the gap outside the harness (for example at the operating-system, container, or network layer).
+
+### 4. Ownership of adopter config is a per-project mode
+
+How much of the adopter's harness-owned configuration a realizer may own is chosen per project. The default is **additive**: the realizer only adds, never removes, leaving the adopter's configuration under the adopter's control. An opt-in **managed** mode lets the realizer own and regenerate its region of that configuration, healing drift so the model is the whole truth.
 
 ## Rationale
 
