@@ -19,9 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-13T00:07:32Z
+      at: 2026-10-13T01:06:11Z
       outcome: unchanged
-      unchanged-because: "COR-051's rejected prose markers name decision records' point headings as an exception: a live point's id is read from its heading (COR-058). This page's rule-set section keeps a rule's data in the front matter and its statement in a section headed by its id, which still holds. Its citations of COR-051's points name the same points, since the change moves none. It describes no decision record's points or front matter, and no backbone file schema covers a record, so the page holds."
+      unchanged-because: The change corrects how friction_discovery.py and friction_validate.py name a capability place's shape, in docstrings, a comment and the two malformed-place messages, to {path, location?, type?, description?}, and a held folder's, in the malformed-held-folder message and its tail, to {location, path, description?}. This page already gives a place that shape, and which places are walked and what is reported are unchanged, so it holds.
 ---
 
 # Schemas

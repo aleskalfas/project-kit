@@ -29,9 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-13T00:07:47Z
+      at: 2026-10-13T00:42:13Z
       outcome: unchanged
-      unchanged-because: This change decides when pkit upgrade's tool step installs a newer tool, and that a failed hand-over the upgrade detects stops it before it syncs or pins. This page specifies the upgrade flow's six steps and the refusal of a pkit older than the project's content or pin, which come after the tool step and do not change, and it does not describe the tool step.
+      unchanged-because: The change corrects friction_discovery.py's docstrings, a comment and the message a malformed capability place or held folder gets, so they give a place's shape as {path, location?, type?, description?} and a held folder's as {location, path, description?}. This page's table already gives those shapes, and the walk and its findings are as it describes, so it holds.
 ---
 
 # Lifecycle
