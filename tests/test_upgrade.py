@@ -109,12 +109,6 @@ def test_upgrade_refuses_when_pkit_dir_missing(tmp_path: Path) -> None:
         upgrade.run_upgrade(tmp_path)
 
 
-def test_upgrade_refuses_when_backbone_manifest_missing(tmp_path: Path) -> None:
-    (tmp_path / ".pkit").mkdir()
-    with pytest.raises(click.ClickException, match=r"manifest\.yaml is missing"):
-        upgrade.run_upgrade(tmp_path)
-
-
 def test_upgrade_self_host_delegates_to_sync(monkeypatch: pytest.MonkeyPatch) -> None:
     """On self-host (source == target), upgrade short-circuits to sync's deploy.
 
@@ -899,11 +893,8 @@ def test_upgrade_runs_backbone_migrations_in_version_order(
     installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Backbone migration scripts run in semver-then-NNN order against the target root."""
-    # Move recorded backbone backwards so upgrade has work to do.
-    m = manifest.read_backbone_manifest(installed_target)
-    assert m is not None
-    m.backbone_version = "0.1.0"
-    manifest.write_backbone_manifest(installed_target, m)
+    # Move both recorded states backwards so upgrade has work to do.
+    _record_finished_at(installed_target, "0.1.0")
 
     source = _real_source_copy(tmp_path)
     # Patch on both modules: upgrade bound the name at import; sync resolves
@@ -975,10 +966,7 @@ def test_upgrade_backbone_migration_failure_halts_run(
     installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A non-zero exit halts the upgrade, surfaced as ClickException."""
-    m = manifest.read_backbone_manifest(installed_target)
-    assert m is not None
-    m.backbone_version = "0.1.0"
-    manifest.write_backbone_manifest(installed_target, m)
+    _record_finished_at(installed_target, "0.1.0")
 
     source = _real_source_copy(tmp_path)
     # Patch on both modules: upgrade bound the name at import; sync resolves
@@ -1046,7 +1034,9 @@ def test_upgrade_skips_capability_migrations_in_component_runner(
     # not invoke the script (verified by skipping the entry kind).
     from project_kit.upgrade import _run_component_migrations
 
-    _run_component_migrations(installed_target, backbone_manifest.components, dry_run=False)
+    _run_component_migrations(
+        installed_target, install.find_source_kit(), backbone_manifest.components, dry_run=False
+    )
     # No file written by the component runner — it skipped the capability.
     assert not component_runner_trace.exists()
 
@@ -1197,7 +1187,13 @@ def test_backbone_upgrade_succeeds_when_cap_deps_satisfied(
     installed_target: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Backbone upgrade proceeds when all capability dependency requirements are satisfied."""
-    _stage_installed_capability(installed_target, "evidence", version="0.3.0")
+    # At the version the bundle ships, so the capability is current too.
+    bundled = (install.find_source_kit() / "capabilities" / "evidence" / "package.yaml").read_text(
+        encoding="utf-8"
+    )
+    evidence_version = re.search(r"(?m)^  version: (\S+)", bundled)
+    assert evidence_version is not None
+    _stage_installed_capability(installed_target, "evidence", version=evidence_version.group(1))
     _stage_installed_capability(
         installed_target,
         "consumer",
@@ -1737,6 +1733,13 @@ def test_upgrade_pin_raise_writes_through_the_one_pin_writer(
 _NEWER = "999.0.0"
 
 
+def _record_finished_at(target: Path, version: str) -> None:
+    """Record *version* as both of the backbone's states: a project a finished
+    transition left at *version*."""
+    manifest.record_backbone_target(target, version)
+    manifest.record_completed_version(target, version)
+
+
 def _record_content_version(target: Path, version: str) -> None:
     """Record *version* as the project's content version, as a newer pkit's sync would."""
     m = manifest.read_backbone_manifest(target)
@@ -1898,3 +1901,428 @@ def test_self_update_not_allowed_without_a_usable_stdin(monkeypatch, stdin) -> N
     else:
         monkeypatch.setattr(upgrade.sys, "stdin", None)
     assert upgrade._self_update_allowed() is False
+
+
+# --- the target recorded first, the completion last (#1459, ADR-065) -------------
+
+
+def _states(target: Path) -> tuple[str, str | None]:
+    """The backbone's two recorded states: the target and the completion."""
+    m = manifest.read_backbone_manifest(target)
+    assert m is not None
+    return m.backbone_version, m.completed_version
+
+
+def _drop_completion(target: Path) -> None:
+    """Take the `completed_version` line out, as every manifest before #1459 is."""
+    path = target / ".pkit" / "manifest.yaml"
+    text = path.read_text(encoding="utf-8")
+    path.write_text(re.sub(r"(?m)^completed_version:.*\n", "", text), encoding="utf-8")
+
+
+def _use_source(monkeypatch: pytest.MonkeyPatch, source: Path) -> None:
+    monkeypatch.setattr(upgrade, "find_source_kit", lambda: source)
+    monkeypatch.setattr(install, "find_source_kit", lambda: source)
+
+
+def _tracing(trace: Path, label: str, *, unless_missing: Path | None = None) -> str:
+    """A migration script that appends *label* to *trace*, and fails with status 3
+    while *unless_missing* does not exist."""
+    body = f'#!/usr/bin/env bash\necho "{label}" >> "{trace}"\n'
+    if unless_missing is not None:
+        body += f'[ -e "{unless_missing}" ] || exit 3\n'
+    return body
+
+
+def test_init_records_both_states_equal(installed_target: Path) -> None:
+    assert _states(installed_target) == (_this_pkit(), _this_pkit())
+
+
+def test_an_upgrade_interrupted_in_its_migrations_is_finished_by_the_next(
+    installed_target: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The first upgrade records its target, then stops on a failing migration: the
+    completion stays behind and no pin is written. The next upgrade runs the
+    backbone window again from the completion, and records it last (ADR-065 points
+    3 and 4)."""
+    _record_finished_at(installed_target, "0.1.0")
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    trace, fixed = tmp_path / "trace.txt", tmp_path / "fixed"
+    _stage_backbone_migration(source, "0.2.0", "001-first.sh", _tracing(trace, "0.2.0"))
+    _stage_backbone_migration(
+        source, "0.3.0", "001-flaky.sh", _tracing(trace, "0.3.0", unless_missing=fixed)
+    )
+
+    with pytest.raises(click.ClickException, match="exited with status 3"):
+        upgrade.run_upgrade(installed_target)
+
+    target = _this_pkit()
+    assert _states(installed_target) == (target, "0.1.0")
+    assert router.read_version_pin(installed_target) is None
+    capsys.readouterr()
+
+    fixed.touch()
+    upgrade.run_upgrade(installed_target)
+
+    out = capsys.readouterr().out
+    assert "The last transition is incomplete: completed_version is 0.1.0" in out
+    assert _states(installed_target) == (target, target)
+    assert trace.read_text(encoding="utf-8").split() == ["0.2.0", "0.3.0", "0.2.0", "0.3.0"]
+    assert router.read_version_pin(installed_target) == target
+
+
+def test_the_target_is_recorded_before_propagation_and_the_completion_before_the_pin(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Merge and deploy, the workspace and provisioning all run while the target is
+    recorded and the completion is not; the completion comes after them, and the
+    pin after it (ADR-065 point 4)."""
+    _record_finished_at(installed_target, "0.1.0")
+    events: list[tuple[str, tuple[str, str | None]]] = []
+
+    def spy(name: str, real: Any, root_of: Any) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            events.append((name, _states(root_of(*args))))
+            return real(*args, **kwargs)
+
+        return wrapper
+
+    first = lambda root, *_a, **_k: root  # noqa: E731
+    of_ctx = lambda ctx, *_a, **_k: ctx.target_root  # noqa: E731
+    monkeypatch.setattr(
+        upgrade, "record_backbone_target", spy("target", upgrade.record_backbone_target, first)
+    )
+    monkeypatch.setattr(upgrade, "run_sync", spy("sync", upgrade.run_sync, first))
+    monkeypatch.setattr(
+        install,
+        "run_installed_adapter_primitives",
+        spy("merge and deploy", install.run_installed_adapter_primitives, of_ctx),
+    )
+    monkeypatch.setattr(
+        install, "ensure_agent_workspace", spy("workspace", install.ensure_agent_workspace, of_ctx)
+    )
+    monkeypatch.setattr(
+        install,
+        "provision_query_commands",
+        spy("provisioning", install.provision_query_commands, of_ctx),
+    )
+    monkeypatch.setattr(
+        upgrade,
+        "record_completed_version",
+        spy("completion", upgrade.record_completed_version, first),
+    )
+    monkeypatch.setattr(upgrade, "freeze_pin", spy("pin", upgrade.freeze_pin, first))
+
+    upgrade.run_upgrade(installed_target)
+
+    target = _this_pkit()
+    assert events == [
+        ("target", ("0.1.0", "0.1.0")),
+        ("sync", (target, "0.1.0")),
+        ("merge and deploy", (target, "0.1.0")),
+        ("workspace", (target, "0.1.0")),
+        ("provisioning", (target, "0.1.0")),
+        ("completion", (target, "0.1.0")),
+        ("pin", (target, target)),
+    ]
+
+
+def test_a_missing_completion_replays_every_backbone_migration_once(
+    installed_target: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The project is at its target, but no completion is recorded: its history is
+    unknown, so every backbone migration up to the target runs, and the report
+    names the replay. Once the completion is recorded, the next upgrade has
+    nothing to do (ADR-065 point 5)."""
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    trace = tmp_path / "trace.txt"
+    _stage_backbone_migration(source, "0.2.0", "001-old.sh", _tracing(trace, "0.2.0"))
+    _drop_completion(installed_target)
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    out = capsys.readouterr().out
+    assert "No completed transition is recorded" in out
+    assert "backbone migration(s), the replay (no completed transition -> v" in out
+    assert "0.2.0/001-old.sh" in out
+    assert "1.31.0/001-retire-pm-core-agents.sh" in out
+    assert trace.read_text(encoding="utf-8").split() == ["0.2.0"]
+    assert _states(installed_target) == (_this_pkit(), _this_pkit())
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert "Already at backbone v" in capsys.readouterr().out
+    assert trace.read_text(encoding="utf-8").split() == ["0.2.0"]
+
+
+def test_the_dry_run_lists_the_replay_and_writes_nothing(
+    installed_target: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A dry run copies nothing, so it lists the scripts of the running pkit's
+    bundle, which the propagation would bring (ADR-065 point 5)."""
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    trace = tmp_path / "trace.txt"
+    _stage_backbone_migration(source, "0.2.0", "001-old.sh", _tracing(trace, "0.2.0"))
+    _drop_completion(installed_target)
+    before = _tree_bytes(installed_target)
+
+    upgrade.run_upgrade(installed_target, dry_run=True)
+
+    out = capsys.readouterr().out
+    assert "No completed transition is recorded" in out
+    assert "would run" in out and "migration(s) for backbone, the replay" in out
+    assert "0.2.0/001-old.sh" in out
+    assert "would record .pkit/manifest.yaml completed_version" in out
+    assert not trace.exists()
+    assert _tree_bytes(installed_target) == before
+
+
+def test_a_completion_ahead_of_the_target_reads_as_incomplete(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An older pkit synced over a finished transition: the completion is ahead of
+    `backbone_version`. The next upgrade propagates again, runs the window from the
+    completion, and records both states (ADR-065 point 3)."""
+    target = _this_pkit()
+    _record_content_version(installed_target, "0.1.0")
+    assert _states(installed_target) == ("0.1.0", target)
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    out = capsys.readouterr().out
+    assert "Already at backbone" not in out
+    assert f"no backbone migrations to run between {target} and {target}" in out
+    assert _states(installed_target) == (target, target)
+
+
+def test_a_registered_adapter_with_no_record_is_recorded_and_runs_no_migration(
+    installed_target: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Every project's adapter has no manifest before #1459: it reads as at the
+    backbone, so the first transition records it at its bundled version and runs
+    none of its migrations (ADR-065 point 2)."""
+    adapter = installed_target / ".pkit" / "adapters" / "claude-code"
+    (adapter / "project" / "manifest.yaml").unlink()
+    trace = tmp_path / "adapter-trace.txt"
+    scripts = adapter / "migrations" / "0.1.0"
+    scripts.mkdir(parents=True)
+    (scripts / "001-trace.sh").write_text(_tracing(trace, "adapter"), encoding="utf-8")
+    bundled = manifest.read_component_package(
+        install.find_source_kit() / "adapters" / "claude-code" / "package.yaml"
+    )
+    assert bundled is not None
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert "no record before: it reads as at the backbone" in capsys.readouterr().out
+    assert not trace.exists()
+    recorded = manifest.read_component_manifest(adapter / "project" / "manifest.yaml")
+    assert recorded is not None and recorded.version == bundled[0]
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert "Already at backbone v" in capsys.readouterr().out
+
+
+def test_the_early_return_needs_both_states_and_every_component_at_the_target(
+    installed_target: Path,
+) -> None:
+    """Upgrade returns early only when both keys name the target and every registered
+    adapter and shipped capability records its bundled version (ADR-065 point 2)."""
+    source = install.find_source_kit()
+    target = _this_pkit()
+
+    def current() -> bool:
+        state = manifest.read_backbone_manifest(installed_target)
+        assert state is not None
+        return upgrade.is_current(installed_target, source, state, target)
+
+    assert current()
+
+    _drop_completion(installed_target)
+    assert not current()
+    manifest.record_completed_version(installed_target, target)
+    assert current()
+
+    record = installed_target / ".pkit" / "adapters" / "claude-code" / "project" / "manifest.yaml"
+    kept = record.read_bytes()
+    record.unlink()
+    assert not current()
+    record.write_bytes(kept)
+    assert current()
+
+    # A shipped capability recorded at another version than its bundle's moves.
+    _stage_installed_capability(installed_target, "evidence", version="0.1.0")
+    state = manifest.read_backbone_manifest(installed_target)
+    assert state is not None
+    assert [
+        (m.kind, m.name, m.recorded)
+        for m in upgrade.component_moves(installed_target, source, state)
+    ] == [("capability", "evidence", "0.1.0")]
+    assert not current()
+    # One the bundle does not ship keeps its own course, and moves nothing.
+    _stage_installed_capability(installed_target, "evidence", version="0.1.0")
+    _stage_installed_capability(installed_target, "homegrown", version="0.1.0")
+    state = manifest.read_backbone_manifest(installed_target)
+    assert state is not None
+    assert "homegrown" not in [
+        m.name for m in upgrade.component_moves(installed_target, source, state)
+    ]
+
+
+def test_a_record_newer_than_the_bundle_is_never_moved_down(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A transition never moves a recorded state down (ADR-065 point 7): an adapter
+    recorded ahead of the bundle stays where it is. It is not at its bundled
+    version, so the early return does not apply (point 2), and the move is listed
+    as ahead."""
+    record = installed_target / ".pkit" / "adapters" / "claude-code" / "project" / "manifest.yaml"
+    record.write_text(
+        re.sub(r"(?m)^  version: .*$", "  version: 99.0.0", record.read_text(encoding="utf-8")),
+        encoding="utf-8",
+    )
+    _drop_completion(installed_target)
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert "kept         adapter 'claude-code' at 99.0.0" in capsys.readouterr().out
+    recorded = manifest.read_component_manifest(record)
+    assert recorded is not None and recorded.version == "99.0.0"
+    state = manifest.read_backbone_manifest(installed_target)
+    assert state is not None
+    source = install.find_source_kit()
+    moves = upgrade.component_moves(installed_target, source, state)
+    assert [(m.name, m.recorded, m.ahead) for m in moves] == [("claude-code", "99.0.0", True)]
+    assert not upgrade.is_current(installed_target, source, state, _this_pkit())
+
+
+def test_a_record_of_the_bundled_version_written_another_way_is_current(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`v0.6.0` names the version `0.6.0` does: the adapter is at its bundled version,
+    so the early return applies and nothing is moved or kept."""
+    record = installed_target / ".pkit" / "adapters" / "claude-code" / "project" / "manifest.yaml"
+    text = record.read_text(encoding="utf-8")
+    record.write_text(re.sub(r"(?m)^  version: (.*)$", r"  version: v\1", text), encoding="utf-8")
+    state = manifest.read_backbone_manifest(installed_target)
+    assert state is not None
+    source = install.find_source_kit()
+    assert upgrade.component_moves(installed_target, source, state) == []
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert "Already at backbone v" in capsys.readouterr().out
+
+
+def test_an_adapter_registered_after_the_copy_is_rendered_into_the_ignore_file(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The render after propagation reads the registry, so an adapter the transition
+    registers there is rendered again (ADR-065 point 4, step 3)."""
+    from project_kit import visibility
+
+    events: list[str] = []
+    real_render = visibility.render_runtime_ignore
+
+    def render(*args: Any, **kwargs: Any) -> str:
+        events.append("render")
+        return real_render(*args, **kwargs)
+
+    def register(_root: Path) -> list[str]:
+        events.append("register")
+        return ["harness"]
+
+    monkeypatch.setattr(visibility, "render_runtime_ignore", render)
+    monkeypatch.setattr(upgrade, "register_adapters", register)
+    _drop_completion(installed_target)
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert events[-2:] == ["register", "render"]
+
+
+@pytest.mark.parametrize(
+    "state",
+    ["no manifest", "no version", "no version, completion kept", "empty", "empty completion"],
+)
+def test_upgrade_writes_a_missing_or_corrupt_manifest_at_its_target_and_replays(
+    installed_target: Path, capsys: pytest.CaptureFixture[str], state: str
+) -> None:
+    """No manifest, a `backbone_version` that is no version or empty, or an empty
+    completion: upgrade writes the manifest at its target, as first install does,
+    registers the adapters, and replays every backbone migration once (ADR-065
+    points 2 and 5). Each line it writes keeps the manifest YAML."""
+    path = installed_target / ".pkit" / "manifest.yaml"
+    text = path.read_text(encoding="utf-8")
+    if state == "no manifest":
+        path.unlink()
+    elif state == "no version":
+        _drop_completion(installed_target)
+        manifest.record_backbone_target(installed_target, "not-a-version")
+    elif state == "no version, completion kept":
+        manifest.record_backbone_target(installed_target, "not-a-version")
+    elif state == "empty":
+        path.write_text(
+            re.sub(
+                r"(?m)^completed_version:.*\n",
+                "",
+                re.sub(r"(?m)^backbone_version:.*$", "backbone_version:", text),
+            ),
+            encoding="utf-8",
+        )
+    else:
+        path.write_text(
+            re.sub(r"(?m)^completed_version:.*$", "completed_version:", text), encoding="utf-8"
+        )
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    out = capsys.readouterr().out
+    if state == "no manifest":
+        assert "Upgrading backbone: no .pkit/manifest.yaml ->" in out
+        assert "registered   adapter 'claude-code'" in out
+    elif state.startswith("no version"):
+        assert "'not-a-version', which is no version" in out
+    if state == "no version, completion kept":
+        assert "The recorded states cannot be read" in out
+    else:
+        assert "No completed transition is recorded" in out
+    assert "backbone migration(s), the replay" in out
+    assert _states(installed_target) == (_this_pkit(), _this_pkit())
+    written = manifest.read_backbone_manifest(installed_target)
+    assert written is not None
+    assert [(c.kind, c.name) for c in written.components] == [("adapter", "claude-code")]
+
+
+def test_the_older_direction_check_reads_the_completion_too(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Upgrade compares the running pkit with the newest of both states and the pin
+    (ADR-065 point 7): a completion ahead of this pkit refuses, writing nothing."""
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)
+    manifest.record_completed_version(installed_target, _NEWER)
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target)
+
+    assert f"content ({_NEWER}, in .pkit/manifest.yaml)" in excinfo.value.message
+    assert _tree_bytes(installed_target) == before
+
+
+def test_a_corrupt_recorded_version_names_upgrade_for_pin() -> None:
+    with pytest.raises(click.ClickException, match="Run 'pkit upgrade'"):
+        upgrade._pin_order("1.0.0", "not-a-version")

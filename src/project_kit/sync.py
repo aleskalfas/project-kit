@@ -179,7 +179,8 @@ def refuse_content_downgrade(target_root: Path, source_kit: Path, *, command: st
 
     The content this pkit writes is its own version's (ADR-033 ties a release's
     content to its code), so a pkit older than the project's recorded content
-    (`.pkit/manifest.yaml`'s `backbone_version`) or than its pin
+    (the newer of `.pkit/manifest.yaml`'s `backbone_version` and
+    `completed_version`, ADR-065 point 7) or than its pin
     (`.pkit/version-pin`) would take the project back: older content over newer,
     and, in `upgrade`, the pin moved down to it. pkit does neither: migrations
     are forward-only (COR-010) and a pin is never moved down (ADR-049). An older
@@ -192,14 +193,18 @@ def refuse_content_downgrade(target_root: Path, source_kit: Path, *, command: st
     path down.
 
     Only an unambiguous downgrade refuses. A recorded version that is absent or
-    not valid semver (a corrupt manifest, which `pkit sync` repairs; a pin that
-    is not a version) is not ordered, as the capability guard below treats an
-    unreadable version. *command* names the refusing command as the operator
-    would re-run it.
+    not valid semver (a corrupt manifest, over which `pkit upgrade` records its
+    target; a pin that is not a version) is not ordered, as the capability guard
+    below treats an unreadable version. *command* names the refusing command as
+    the operator would re-run it.
     """
     tool = read_kit_version(source_kit)
     manifest = read_backbone_manifest(target_root)
-    content = manifest.backbone_version if manifest is not None else None
+    content = (
+        _newest(manifest.backbone_version, manifest.completed_version)
+        if manifest is not None
+        else None
+    )
     pin = read_version_pin(target_root)
     content_ahead = _is_older(tool, content)
     pin_ahead = _is_older(tool, pin)
@@ -266,6 +271,15 @@ def _is_older(version: str | None, than: str | None) -> bool:
     return parsed < parsed_than
 
 
+def _newest(*versions: str | None) -> str | None:
+    """The newest of *versions* that is a version, else the first one given, so a
+    recorded state that is no version is shown but never ordered."""
+    parsed = [(v, p) for v in versions if (p := _parse_version(v)) is not None]
+    if parsed:
+        return max(parsed, key=lambda pair: pair[1])[0]
+    return versions[0] if versions else None
+
+
 def _parse_version(text: str | None) -> Version | None:
     """*text* as a version, or None when it is absent or not valid semver."""
     if not text:
@@ -281,8 +295,9 @@ def refuse_stranding_backbone_migrations(target_root: Path) -> None:
 
     Sync runs no backbone migration, yet its last step records the running pkit's
     version as the project's `backbone_version`. A sync across a version that
-    ships backbone migrations would strand them: a later `pkit upgrade` finds the
-    project at its target and runs none. So the sync command refuses, before
+    ships backbone migrations would strand them for an upgrade that reads only
+    `backbone_version`, as every release before `completed_version` does: it
+    finds the project at its target and runs none. So the sync command refuses, before
     anything is written, when a version directory under the source's
     `migrations/backbone/` holds a script, above the recorded version and at or
     below the version sync would record. It names `pkit upgrade`, which syncs and
@@ -328,8 +343,9 @@ def refuse_stranding_backbone_migrations(target_root: Path) -> None:
             + ")"
             for version_dir, scripts in stranded.items()
         ),
-        f"Sync would record {target} and run none of them, so a later `pkit upgrade` "
-        "would find the project at its target and run none either. Nothing was written, "
+        f"Sync would record {target} and run none of them, so an upgrade that reads only "
+        "`backbone_version` would find the project at its target and run none either. "
+        "Nothing was written, "
         "and no flag overrides this refusal.",
         "Run `pkit upgrade` instead: it syncs the same content, then runs these migrations.",
     ]

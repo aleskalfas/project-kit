@@ -1,0 +1,21 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+  pr: "1568"
+body: >
+  `pkit upgrade` now records where it is going before it changes anything and
+  that it arrived only after its last migration, so an upgrade that stops on the
+  way is finished by the next one instead of being skipped. Every project's
+  first upgrade under this release runs each backbone migration once, because no
+  project has recorded which of them already ran: the report and `--dry-run` say
+  so and list them, and it does not happen again. Each migration checks for
+  itself whether its change is needed, but three restore a default the project
+  removed after they first ran: the architect's overlay categories in
+  `.pkit/agents/project/overlay.yaml`, process journal logging in
+  `.pkit/project/config.yaml` where old journals are still on disk, and the
+  untracking of a runtime-local file declared ignored that the project put back
+  into git. `pkit init` records the same two states, `pkit status` shows an
+  upgrade left unfinished and each component an upgrade would move, and
+  `pkit upgrade` writes a missing or corrupt `.pkit/manifest.yaml` at its
+  version, which `pkit pin`, `pkit validate` and `pkit status` now name for it.

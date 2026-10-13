@@ -62,10 +62,12 @@ def pending_migration_scripts(
     `migrations_root` is the directory containing `<X.Y.0>/<NNN>-*.sh`
     subdirectories. Missing or non-versioned subdirectories are ignored.
 
-    `installed_version=None` means "no prior install recorded" — treat
-    every shipped migration as pending (the conservative default; the
-    runner may still refuse to apply if the missing record is
-    suspicious).
+    `installed_version` is the window's lower bound: for the backbone, the
+    last completed transition (`completed_version`, ADR-065 point 3); for a
+    component, the version its manifest records. `None` means no lower
+    bound, and every shipped migration up to the target is pending. For the
+    backbone that is the replay a missing completion runs once (point 5),
+    which a backbone migration's contract makes safe over any state (COR-010).
 
     Returns scripts in execution order: version-dir ascending semver,
     then `NNN-*.sh` filename within each version-dir.

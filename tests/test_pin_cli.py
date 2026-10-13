@@ -68,7 +68,9 @@ def test_pin_no_arg_refuses_when_manifest_absent(
 
     assert result.exit_code != 0
     assert not router.pin_file_path(tmp_path).exists()
-    assert "pkit sync" in result.output
+    # Upgrade writes the manifest at its version (ADR-065 point 8), not sync.
+    assert "pkit upgrade" in result.output
+    assert "pkit sync" not in result.output
 
 
 def test_pin_strips_leading_v_and_routes_bare(
@@ -139,7 +141,9 @@ def test_pin_version_refuses_when_manifest_absent(
 
     assert result.exit_code != 0
     assert not router.pin_file_path(tmp_path).exists()
-    assert "pkit sync" in result.output
+    # Upgrade writes the manifest at its version (ADR-065 point 8), not sync.
+    assert "pkit upgrade" in result.output
+    assert "pkit sync" not in result.output
 
 
 def test_pin_overwrites_an_existing_pin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

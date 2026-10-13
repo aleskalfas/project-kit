@@ -223,6 +223,107 @@ def test_status_reports_backbone_version_when_behind(installed_target: Path) -> 
     assert "pkit upgrade --dry-run" in result.output
 
 
+def test_status_shows_no_transition_line_when_complete_and_current(installed_target: Path) -> None:
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    assert "Transition:" not in result.output
+    assert "A transition moves:" not in result.output
+
+
+@pytest.mark.parametrize(
+    ("completion", "shown"),
+    [
+        ("", "incomplete — no readable completion is recorded, so `pkit upgrade` runs"),
+        # A completion that is no version reads as none, as upgrade reads it.
+        ("completed_version: garbage\n", "incomplete — no readable completion is recorded"),
+        ("completed_version: 0.1.0\n", "incomplete — completed_version is 0.1.0;"),
+    ],
+)
+def test_status_shows_an_incomplete_transition_beside_the_backbone_line(
+    installed_target: Path, completion: str, shown: str
+) -> None:
+    """A missing completion, or one behind the target, reads as incomplete, and the
+    line names `pkit upgrade`, which finishes it (ADR-065 point 8). The backbone
+    line then calls its version the target, not up to date."""
+    import re
+
+    manifest = installed_target / ".pkit" / "manifest.yaml"
+    manifest.write_text(
+        re.sub(r"(?m)^completed_version:.*\n", completion, manifest.read_text()),
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    assert f"Transition:            {shown}" in result.output
+    assert "(the target of an incomplete transition)" in result.output
+    assert "up to date" not in result.output
+
+
+def test_status_says_a_record_newer_than_the_bundle_is_never_moved_down(
+    installed_target: Path,
+) -> None:
+    import re
+
+    record = installed_target / ".pkit" / "adapters" / "claude-code" / "project" / "manifest.yaml"
+    record.write_text(
+        re.sub(r"(?m)^  version: .*$", "  version: 99.0.0", record.read_text(encoding="utf-8")),
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    assert "adapter claude-code: 99.0.0, newer than " in result.output
+    assert "never moved down" in result.output
+    # Nothing listed moves up, so status points at no command that would do nothing.
+    assert "a transition never moves a record down)" in result.output
+    assert "`pkit upgrade` moves each one up" not in result.output
+
+
+def test_status_names_upgrade_for_an_empty_backbone_version(installed_target: Path) -> None:
+    import re
+
+    manifest = installed_target / ".pkit" / "manifest.yaml"
+    manifest.write_text(
+        re.sub(r"(?m)^backbone_version:.*$", "backbone_version:", manifest.read_text()),
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    assert "unknown (`backbone_version` is empty — `pkit upgrade` records its version)" in (
+        result.output
+    )
+
+
+def test_status_lists_each_component_a_transition_would_move(installed_target: Path) -> None:
+    """An adapter with no record, and a shipped capability recorded at another version
+    than its bundle's, are each listed with both versions (ADR-065 point 8)."""
+    (installed_target / ".pkit" / "adapters" / "claude-code" / "project" / "manifest.yaml").unlink()
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    assert "A transition moves:    adapter claude-code: no record -> " in result.output
+    assert "`pkit upgrade` moves each one up)" in result.output
+
+
+def test_status_shows_no_transition_line_in_the_methodology_source(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No transition runs in the methodology's source, so neither line applies there
+    (ADR-065 point 3)."""
+    from project_kit import install
+
+    manifest = installed_target / ".pkit" / "manifest.yaml"
+    manifest.write_text(
+        "\n".join(
+            line for line in manifest.read_text().splitlines() if "completed_version" not in line
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(install, "is_self_host", lambda *_args: True)
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    assert "Transition:" not in result.output
+
+
 # --- rule sets (COR-051 point 7) ---------------------------------------------------
 
 PROJECT_SETS = "docs/rule-sets"

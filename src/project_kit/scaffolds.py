@@ -165,7 +165,7 @@ what the adopter has to do once vs. what happens at install/sync>
 _MIGRATION_TEMPLATE = """\
 #!/usr/bin/env bash
 # {scope_comment}
-# Idempotent — re-running on already-migrated state is a no-op.
+# Idempotent — re-running on already-migrated state is a no-op.{contract_comment}
 
 set -euo pipefail
 
@@ -183,6 +183,18 @@ set -euo pipefail
 
 echo "  TODO  {slug} migration not yet implemented"
 """
+
+# The backbone migration contract (COR-010), stamped into a backbone script: a
+# version transition may run every backbone migration again over a project whose
+# migration history is unknown (COR-059 point 6).
+_BACKBONE_MIGRATION_CONTRACT = """
+#
+# Safe over any state (COR-010): a version transition may run this again over a
+# project whose migration history is unknown. Act only on a positive sign that
+# the change is needed, and never delete by a path's name or position alone. A
+# missing default it adds counts as a sign, so running it again may restore one
+# the project removed after it first ran: if it adds one, say so in the
+# release's notes."""
 
 
 _AREA_README_BY_VARIANT: dict[AreaVariant, str] = {
@@ -459,7 +471,8 @@ def stamp_migration(
 
     The component name is required for `adapter` / `capability` tiers. The
     script is stamped with the COR-010 contract boilerplate (`set -euo
-    pipefail`, `ROOT` consumption, idempotence-pattern comment) and made
+    pipefail`, `ROOT` consumption, idempotence-pattern comment, and for the
+    backbone tier the contract that it be safe over any state) and made
     executable.
 
     For component tiers, the version defaults to the component's recorded
@@ -499,7 +512,11 @@ def stamp_migration(
 
     scope_comment = _migration_scope_comment(tier, component, resolved_version, scope, slug)
     script_path.write_text(
-        _MIGRATION_TEMPLATE.format(scope_comment=scope_comment, slug=slug),
+        _MIGRATION_TEMPLATE.format(
+            scope_comment=scope_comment,
+            contract_comment=_BACKBONE_MIGRATION_CONTRACT if tier == "backbone" else "",
+            slug=slug,
+        ),
         encoding="utf-8",
     )
     _make_executable(script_path)

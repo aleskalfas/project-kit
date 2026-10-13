@@ -32,6 +32,9 @@ def test_validate_reports_missing_backbone_manifest(installed_target: Path) -> N
     issues = validate.run_validate(installed_target)
     assert any(".pkit/manifest.yaml" in i.location for i in issues)
     assert any("missing" in i.diagnosis for i in issues)
+    # Upgrade writes a missing manifest at its version, not sync (ADR-065 point 8).
+    diagnosis = next(i.diagnosis for i in issues if i.location == ".pkit/manifest.yaml")
+    assert "pkit upgrade" in diagnosis and "pkit sync" not in diagnosis
 
 
 def test_validate_reports_unknown_schema_version(installed_target: Path) -> None:
