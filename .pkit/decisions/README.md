@@ -81,7 +81,7 @@ COR-059 has sync run at the versions your project records, move none of them, an
 
 - **It moves your recorded backbone version** to the running pkit's version. It refuses under an older pkit. `pkit sync` also refuses to move past backbone migrations, and names `pkit upgrade`, which runs them.
 - **It refreshes each installed capability the kit ships** to the version the running pkit ships, and runs that capability's migrations.
-- **It creates what is missing on your side:** the agents overlay, `.pkit/agents/project/overlay.yaml`, and an area's `project/` folder.
+- **It creates what is missing on your side:** the agents overlay, `.pkit/agents/project/overlay.yaml`, and the `project/` folder of an area, or of a capability it refreshes.
 
 The same `core/` / `project/` pattern (and the same invariant) governs other kit areas in your project — `.pkit/agents/`, `.pkit/rules/`, and so on. To extend kit-shipped content, add sibling files in the matching `project/` directory; never edit a kit-owned file.
 

@@ -488,7 +488,7 @@ A rule set ([COR-051](../decisions/core/COR-051-rule-sets.md)) is one Markdown f
 | `rule-sets/` under the internal documentation root (`docs/rule-sets/` by default, COR-049) | the project's rule sets | bare, `<SET>` |
 | any declared place — a `friction.places` entry of the project or of a capability — whose path has a `rule-sets` segment | more project rule sets, wherever the project keeps them | bare |
 
-Every Markdown file in or beneath such a folder is a rule-set file, except its `README.md`, which is the folder's signpost. A file two of them reach belongs to the first in the table's order. A file there with no front matter, or front matter that does not parse, is a finding, never skipped. Method rule sets are refreshed by sync with their component; project rule sets are the project's. Sync never reads or writes them, and uninstall never writes them (COR-051 point 6). A project never edits a method rule set: it inherits it.
+Every Markdown file in or beneath such a folder is a rule-set file, except its `README.md`, which is the folder's signpost. A file two of them reach belongs to the first in the table's order. A file there with no front matter, or front matter that does not parse, is a finding, never skipped. Method rule sets are refreshed by sync with their component. Project rule sets are the project's: sync never reads or writes one, and uninstall never writes one (COR-051 point 6). A project never edits a method rule set: it inherits it.
 
 **The front matter.**
 
