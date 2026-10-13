@@ -18,9 +18,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-13T07:23:40Z
+      at: 2026-10-13T08:11:26Z
       outcome: unchanged
-      unchanged-because: The decisions README's change adds the missing project/ folder of a capability sync refreshes to its list of what sync does today that COR-059 rules out. This file points at that README for the record schema, the statuses, the namespaces and the no-shared-files invariant, and says nothing of what sync creates, so it holds.
+      unchanged-because: "The decisions README gains a section on what validation checks of a record's points: the failures and warnings COR-058 point 7 names, where each finding points, and that a project's own fields and a record in list form pass. This file points at that README for the record schema, the statuses, the namespaces and the no-shared-files invariant, and says nothing of what validation checks of points, so it holds."
 ---
 
 # Contributing to project-kit

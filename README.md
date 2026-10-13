@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-13T05:50:47Z
+      at: 2026-10-13T08:11:23Z
       outcome: unchanged
-      unchanged-because: "COR-002's change rewrites its seeding sentences: a seed is written at first install, a version transition of the backbone creates a declared seed path that is missing, sync creates no seed path, and seeding never revisits a seed that exists. The page already says pkit upgrade puts back a starter file you deleted, and that init, sync and upgrade merge into CLAUDE.md and the settings file without overwriting them, so it holds."
+      unchanged-because: This change adds the check of a record's points, retired points and stubs to pkit decisions validate and to the decisions member of pkit validate. The page names pkit decisions validate by its decision-id uniqueness check, among the structural checks a project's CI can run on day one. The command keeps that check, and the one it gains is structural too, so the sentence holds.
 ---
 
 # project-kit

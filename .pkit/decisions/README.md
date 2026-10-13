@@ -13,7 +13,7 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-13T07:39:27Z
+      at: 2026-10-13T08:11:00Z
       outcome: updated
       deferred:
         - anchor:
