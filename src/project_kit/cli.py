@@ -6778,8 +6778,16 @@ def _resolve_collision_interactive(
             f"  - {kind} '{name}' collides with existing "
             f"{finding.target_path.relative_to(target_root)}"
         )
+        unheld = caps.paths_git_cannot_restore(target_root, replaced)
         for path in replaced:
-            click.echo(f"    override removes {path.relative_to(target_root)}, which git keeps")
+            click.echo(
+                f"    override removes {path.relative_to(target_root)}, "
+                + (
+                    "which git does not hold as it stands, so override is refused"
+                    if path in unheld
+                    else "which git keeps"
+                )
+            )
         for path in left:
             click.echo(
                 f"    override leaves {path.relative_to(target_root)}: it is not the "

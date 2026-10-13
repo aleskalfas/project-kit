@@ -1016,6 +1016,11 @@ def test_cli_install_override_is_refused_while_git_cannot_give_it_back(
 
     assert result.exit_code == 0, result.output
     assert (
+        "override removes .pkit/skills/project/shared.md, which git does not hold as it "
+        "stands, so override is refused" in result.output
+    )
+    assert "which git keeps" not in result.output
+    assert (
         "override refused: .pkit/skills/project/shared.md is not committed as it stands"
         in result.output
     )
