@@ -4468,7 +4468,7 @@ def validate(include_refs: bool, only: tuple[str, ...], skip: tuple[str, ...]) -
     grouped by functionality. Exit 1 on errors only.
 
     The backbone's members run first — manifests, schemas, configuration,
-    packages, connections, versions, friction, rule-sets, decisions, refs,
+    packages, connections, versions, decisions, friction, rule-sets, refs,
     process, data — then each installed capability's, registered in its
     package metadata (`validators:`, each naming a `commands:` leaf that
     declares the query contract). One renderer prints every section;

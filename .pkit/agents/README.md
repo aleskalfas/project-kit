@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, ADR-051, ADR-052]
     revalidated:
-      at: 2026-10-12T18:49:03Z
+      at: 2026-10-13T10:43:21Z
       outcome: unchanged
-      unchanged-because: COR-050's refinement lets a place name a type, which COR-056 defines and no friction check reads. Its two new writes, by the uninstall and by a component's migration, touch only the types on the project's places and are no friction answer. This page rests on COR-050 for who writes a friction answer, who checks it and what the person authorising a merge is told. None of that changes, so the page holds.
+      unchanged-because: COR-050's refinement lets a record anchor name one point of a record, and says what the point stands on, which the checks compare. This page's friction writers rest on COR-050 point 3, who decides an answer, which did not change, so the page holds.
 ---
 
 # Agents

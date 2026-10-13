@@ -1,0 +1,28 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A record anchor can name one point of a record, and friction compares only
+  that point (COR-050 points 2, 5 to 7, 9, 12 and 13; #1419). The value is the
+  record's id, `#` and the id the point's heading opens with: `COR-058#4`,
+  `PRJ-002#D1` or `living-docs:DEC-001#3`. The anchor stands on the point's
+  section and on what makes the record bind: its `status`, `supersedes`,
+  `superseded_by` and `title` fields, its preamble, its Summary and the
+  Decision's text outside every point and stub. `pkit friction check`, `check
+  --all` and `debt` read it through one reading of a record's points, so they
+  agree. A changed point flags its dependants, and a change elsewhere in the
+  record flags none. A moved point holds, and so does a renamed record. A point
+  dropped is a dead anchor. An anchor on a point the record retires stands on
+  nothing, so it is flagged once, and its question names where the point's
+  content went. An id two points share makes the anchor ambiguous, reported
+  under `dead-anchor`. A record whose points are still a list holds no point an
+  anchor can name. `pkit friction explain` shows a stale point anchor's diff
+  alone, under its finding and as `diff` in its JSON. `pkit validate`'s
+  `friction` member fails a dead or ambiguous point anchor
+  (`dead-point-anchor`, `ambiguous-point-anchor`) in either mode. It warns of
+  an anchor on a retired point, naming the successors (`retired-point-anchor`).
+  The container schema checks what follows `#` in a record anchor (COR-051
+  point 3): a value with a `#` and no point id after it fails as a malformed
+  block, where it was a dead anchor before. A whole-record anchor works as
+  before.

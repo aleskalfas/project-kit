@@ -65,7 +65,12 @@ cut is named (`history.cut`).
 so an edit undone within the change is none: a *path* anchor when a changed
 path matches it that both sides leave in — each side read under its own
 `friction.exclude` (point 7) — the artefact's own file ignored; a *record*
-anchor when the record's file changed (a pure rename keeps its content); an
+anchor when the record's file changed (a pure rename keeps its content), and
+one on a record's point (`COR-058#4`) only when what the point stands on
+differs between the two sides — its section, the record's status,
+supersession and title fields, its preamble and Summary, and the Decision's
+text outside every point and stub, read through `record_points`; a point
+missing at a side, or retired there, stands on nothing (`point_changed`); an
 *artefact* anchor when the target's **content** changed — its body compared
 textually and its own fields compared parsed, never the methodology's
 container. The cascade follows: a dependant sees a change only where its
@@ -88,9 +93,12 @@ and reported.
 nothing behind it (`at` changed, but no answer stands); dead anchors *of the
 pull request* (resolving to nothing at head, and either added in the diff or
 with a target the diff removed, moved or excluded — dead anchors that were
-already dead are the whole-repository check's); an anchor kind no installed
-component resolves, separately, where the diff added the anchor or took the
-kind's resolver away; an anchor whose resolver gave no answer; a widening
+already dead are the whole-repository check's), an anchor on a record's point
+among them when the record holds no point with its id or writes its points as
+a list, and an ambiguous one, whose id two points share (COR-050 point 7); an
+anchor kind no installed component resolves, separately, where the diff added
+the anchor or took the kind's resolver away; an anchor whose resolver gave no
+answer; a widening
 that asks nothing; an outdated base; front matter that does not parse.
 Findings run upstream first along artefact anchors (truth-chain order).
 
@@ -199,6 +207,15 @@ from project_kit.friction_history import (
     shallow_commits,
 )
 from project_kit.project_config import project_config_path
+from project_kit.record_points import (
+    AnchoredPoint,
+    PointState,
+    RecordPoints,
+    Standing,
+    read_points_bytes,
+    split_anchor,
+    successors_phrase,
+)
 from project_kit.working_tree import (
     WorkingTree,  # re-exported: the head side's tree, now the one listing's home
     nul_separated,
@@ -625,17 +642,29 @@ class Side(Listing):
     def __init__(self, root: Path, tree: RepositoryTree, discovery: Discovery) -> None:
         super().__init__(tree.files(), discovery.settings)
         self.root = root
+        self.tree = tree
         self.discovery = discovery
+        self._records: dict[str, RecordPoints | None] = {}
 
     def find(self, reference: str) -> Artefact | None:
         return self.discovery.find(reference)
 
     def resolves(self, anchor: Anchor) -> bool:
-        """Whether an anchor of a core kind resolves to something here (COR-050 point 7)."""
+        """Whether an anchor of a core kind resolves to something here (COR-050 point 7).
+
+        An anchor on a record's point resolves when the record holds one live
+        point with the id, or retires the id: an anchor on a retired point
+        stands on nothing, and is no dead anchor. One whose id two live points
+        share is ambiguous, an error reported where a dead anchor is.
+        """
         if anchor.kind == "path":
             return any(map(self.stands_on(anchor.value), self.files))
         if anchor.kind == "record":
-            return self.record_path(anchor.value) is not None
+            rel = self.record_path(anchor.value)
+            if rel is None:
+                return False
+            found = self.point_of(anchor, rel)
+            return found is None or found.state in (PointState.LIVE, PointState.RETIRED)
         return self.find(anchor.value) is not None
 
     def why_dead(self, anchor: Anchor) -> str:
@@ -643,36 +672,97 @@ class Side(Listing):
 
         A path anchor says which way it is dead (COR-050 point 7): it matches
         no file, or only files `friction.exclude` leaves out — a typo and a
-        glob over excluded code read apart.
+        glob over excluded code read apart. An anchor on a record's point says
+        whether the record holds no such point, writes its points as a list,
+        or holds two with its id.
         """
         if anchor.kind == "path":
             excluded = len(self.left_out(anchor.value))
             return f"matches only excluded files ({excluded})" if excluded else "matches no file"
+        if anchor.kind == "record":
+            rel = self.record_path(anchor.value)
+            found = None if rel is None else self.point_of(anchor, rel)
+            if found is not None:
+                return point_problem(split_anchor(anchor.value)[0], found)
         return _RESOLVES_NOTHING[anchor.kind]
 
     def record_path(self, value: str) -> str | None:
-        """The file a record anchor names here, through the record resolver, or None."""
-        if refs.RECORD_RE.match(value):
-            found = refs.resolve_record(self.root, value, files=self.files)
-            return None if found is None else found.relative_to(self.root).as_posix()
-        match = _CAPABILITY_RECORD.match(value)
-        if match is None:
+        """The file a record anchor names here, through the record resolver, or None.
+
+        An anchor on one of the record's points names the record's file too:
+        the point is read from it (`point_of`).
+        """
+        return record_file(self.root, self.files, split_anchor(value)[0])
+
+    def record_points(self, rel: str) -> RecordPoints | None:
+        """The record at `rel` here, its points read once (`record_points.read_points`),
+        or `None` when this state holds no such file or it is no text."""
+        if rel not in self._records:
+            raw = self.tree.read_bytes([rel]).get(rel) if rel in self.files else None
+            self._records[rel] = None if raw is None else read_points_bytes(raw)
+        return self._records[rel]
+
+    def point_of(self, anchor: Anchor, rel: str) -> AnchoredPoint | None:
+        """What an anchor on a point of the record at `rel` finds there (COR-050 point 7),
+        or `None` for an anchor on the whole record. A record that does not read holds no
+        point."""
+        point = split_anchor(anchor.value)[1]
+        if point is None:
             return None
-        capability, number, slug = match.groups()
-        directory = f".pkit/capabilities/{capability}/decisions"
-        if slug:
-            rel = f"{directory}/{number}{slug}.md"
-            return rel if rel in self.files else None
-        candidates = sorted(
-            rel
-            for rel in self.files
-            if PurePosixPath(rel).parent.as_posix() == directory
-            and (
-                PurePosixPath(rel).name == f"{number}.md"
-                or fnmatchcase(PurePosixPath(rel).name, f"{number}-*.md")
-            )
+        points = self.record_points(rel)
+        if points is None:
+            return AnchoredPoint(point, PointState.MISSING)
+        return points.anchored(point)
+
+    def standing(self, anchor: Anchor, rel: str | None) -> Standing | None:
+        """What an anchor on a record's point stands on here, the record at `rel`
+        (COR-050 point 5): `None` where it stands on nothing — no such file, a retired
+        id, or no point with the id."""
+        found = None if rel is None else self.point_of(anchor, rel)
+        return None if found is None else found.standing
+
+
+def record_file(root: Path, files: Collection[str], record: str) -> str | None:
+    """The file a record id names among `files`, through the record resolver, or None.
+
+    A core, project or architectural record by its id (`refs.resolve_record`);
+    a capability's decision as `<capability>:DEC-NNN`, with or without its slug.
+    """
+    if refs.RECORD_RE.match(record):
+        found = refs.resolve_record(root, record, files=files)
+        return None if found is None else found.relative_to(root).as_posix()
+    match = _CAPABILITY_RECORD.match(record)
+    if match is None:
+        return None
+    capability, number, slug = match.groups()
+    directory = f".pkit/capabilities/{capability}/decisions"
+    if slug:
+        rel = f"{directory}/{number}{slug}.md"
+        return rel if rel in files else None
+    candidates = sorted(
+        rel
+        for rel in files
+        if PurePosixPath(rel).parent.as_posix() == directory
+        and (
+            PurePosixPath(rel).name == f"{number}.md"
+            or fnmatchcase(PurePosixPath(rel).name, f"{number}-*.md")
         )
-        return candidates[0] if candidates else None
+    )
+    return candidates[0] if candidates else None
+
+
+def point_problem(record: str, found: AnchoredPoint) -> str:
+    """How an anchor on a point of `record` that is dead or ambiguous fails (COR-050
+    point 7), as both checks and validation say it."""
+    if found.state is PointState.AMBIGUOUS:
+        return f"is ambiguous: {found.sharing} points of {record} have the id {found.id}"
+    if found.state is PointState.LIST_FORM:
+        return (
+            f"{record} writes its points as a list, whose numbers are not permanent, so no "
+            f"anchor names one until the record is converted to point headings (COR-058 "
+            f"point 9)"
+        )
+    return f"{record} holds no point {found.id}"
 
 
 # How many of an exclusion change's files a message names before counting the rest.
@@ -801,6 +891,42 @@ def _has_own_id(artefact: Artefact) -> bool:
         return True
     own = artefact.carrier.get("id")
     return isinstance(own, str) and bool(own)
+
+
+def point_standings(
+    anchor: Anchor, head: Side, base: Side, entry: DiffEntry
+) -> tuple[Standing | None, Standing | None]:
+    """What an anchor on a record's point stood on at the base and stands on at head
+    (COR-050 point 5), the record's file being `entry` of the diff: read at the base under
+    its name there, and as nothing where the diff added the file."""
+    before = None if entry.status == "A" else (entry.old_path or entry.path)
+    return base.standing(anchor, before), head.standing(anchor, entry.path)
+
+
+def point_changed(anchor: Anchor, head: Side, base: Side, entry: DiffEntry) -> bool:
+    """Whether what an anchor on a record's point stands on differs between the base and
+    head (COR-050 points 5 and 6): its section, the record's status, supersession and title
+    fields, its preamble and Summary, or the Decision's text outside every point and stub.
+    A point that is not there, or a retired one, stands on nothing."""
+    before, after = point_standings(anchor, head, base, entry)
+    return before != after
+
+
+def retired_note(anchor: Anchor, side: Side) -> str | None:
+    """For an anchor on a point its record retires at `side`, where the point's content
+    went: `PRJ-002 retires point 6, its content in points 7 and 16: re-point the anchor`
+    (COR-050 point 7); `None` for any other anchor."""
+    if anchor.kind != "record":
+        return None
+    rel = side.record_path(anchor.value)
+    found = None if rel is None else side.point_of(anchor, rel)
+    if found is None or found.state is not PointState.RETIRED:
+        return None
+    record = split_anchor(anchor.value)[0]
+    return (
+        f"{record} retires point {found.id}, its content in "
+        f"{successors_phrase(found.successors)}: re-point the anchor"
+    )
 
 
 def content_differs(artefact: Artefact, other: Artefact) -> bool:
@@ -968,14 +1094,19 @@ def _anchor_changed(
     """Whether a live anchor of a core kind changed in the diff (COR-050 point 5).
 
     A path anchor, when a changed path it stands on at both sides — each read
-    under its own exclusions — is not its own file (`_path_reading`).
+    under its own exclusions — is not its own file (`_path_reading`). A record
+    anchor, when the diff changed the record's file, followed across a rename;
+    one on a record's point, then only when what the point stands on differs
+    between the two sides (`point_changed`).
     """
     if anchor.kind == "path":
         return bool(_path_reading(anchor, own, head, base, diff).changed)
     if anchor.kind == "record":
         rel = head.record_path(anchor.value)
         entry = diff.by_path.get(rel) if rel is not None else None
-        return entry is not None and entry.changes_content
+        if entry is None or not entry.changes_content:
+            return False
+        return split_anchor(anchor.value)[1] is None or point_changed(anchor, head, base, entry)
     target = head.find(anchor.value)
     before = base.find(anchor.value)
     return target is not None and (before is None or content_differs(target, before))
@@ -1085,8 +1216,10 @@ def _anchor_question(
             return None, None
         return _Question(f"changed {where} ({_listed(changed)})", anchor), None
     if anchor.kind != "path":
-        changed = _anchor_changed(anchor, own, head, base, diff)
-        return (_Question(f"changed {where}", anchor) if changed else None), None
+        if not _anchor_changed(anchor, own, head, base, diff):
+            return None, None
+        note = retired_note(anchor, head)
+        return _Question(f"changed {where}" + (f" ({note})" if note else ""), anchor), None
     reading = _path_reading(anchor, own, head, base, diff)
     moved = reading.moved
     if not reading.asks:
@@ -1659,6 +1792,11 @@ def _anchor_problem(
             FindingKind.DEAD_ANCHOR,
             f"{head.why_dead(anchor)}; the anchor was added in this diff",
         )
+    if _made_ambiguous(anchor, head, base):
+        return (
+            FindingKind.DEAD_ANCHOR,
+            f"{head.why_dead(anchor)}; the diff gave another point its id",
+        )
     if base.resolves(anchor):
         if anchor.kind == "path" and exclusion_change(anchor.value, base, head).left_out:
             return FindingKind.DEAD_ANCHOR, f"{head.why_dead(anchor)}, excluded since this diff"
@@ -1667,6 +1805,21 @@ def _anchor_problem(
             f"{head.why_dead(anchor)}; the diff removed or moved its target",
         )
     return FindingKind.DEAD_ANCHOR, None
+
+
+def _made_ambiguous(anchor: Anchor, head: Side, base: Side) -> bool:
+    """Whether the diff made an anchor on a record's point ambiguous (COR-050 point 12):
+    two points share its id at head and did not at the base, whether the anchor resolved
+    there or was dead already."""
+    if anchor.kind != "record":
+        return False
+    rel = head.record_path(anchor.value)
+    found = None if rel is None else head.point_of(anchor, rel)
+    if found is None or found.state is not PointState.AMBIGUOUS:
+        return False
+    before_rel = base.record_path(anchor.value)
+    before = None if before_rel is None else base.point_of(anchor, before_rel)
+    return before is None or before.state is not PointState.AMBIGUOUS
 
 
 def _friction_message(
