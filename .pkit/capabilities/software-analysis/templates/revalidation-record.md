@@ -33,7 +33,7 @@ outcomes:                         # each artefact covered, by id, withdrawn ones
 
 ## Outcomes
 
-- **UC-000 — holds.** <why the description still stands against this version of the system; the evidence it drew on, if any, by its id>
+- **UC-000 — holds.** <why the description still stands against this version of the system, and the evidence it drew on, if any, by its id>
 
 ## Gaps
 

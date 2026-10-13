@@ -29,7 +29,7 @@ pkit:
 1. <what the actor or the system does>
 2. <…>
 
-**Variants:** each lettered after the step it branches from; steps and variants are only ever added, never renumbered.
+**Variants:** each variant is lettered after the step it branches from. Steps and variants are only ever added, never renumbered.
 
 - **1a.** <the condition at step 1, what happens instead, and where the path rejoins or ends>
 

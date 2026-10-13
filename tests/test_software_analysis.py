@@ -34,6 +34,7 @@ from typing import Any
 
 import pytest
 from click.testing import CliRunner
+from scripts import prose_lint as pl
 
 from project_kit import docs_roots as dr
 from project_kit import friction_discovery as fd
@@ -309,6 +310,62 @@ def test_every_stamped_artefact_passes_the_core_s_friction_pass(seeded: AdopterR
     discovery = fd.discover_artefacts(seeded.root)
     ids = [a.id for a in discovery.artefacts]
     assert ids == ["TERM-sandbox", "ACT-tester", "UC-001", "UC-002", "JRN-001"]
+
+
+def test_what_the_stamp_writes_holds_no_semicolon_and_no_long_sentence(
+    seeded: AdopterRepo,
+) -> None:
+    """The text the stamp writes for every kind, the revalidation record's included, is
+    plain enough for any project's writing rules (#1351). It holds no semicolon and no
+    sentence over 25 words, read as the prose lint reads them (`scripts/prose_lint.py`).
+    The collection files are new from their templates here, or gain an entry."""
+    stamped(seeded, "term", "sandbox")
+    stamped(seeded, "actor", "admin")
+    stamped(seeded, "use-case", "export", "--actor", "ACT-admin")
+    stamped(
+        seeded,
+        "journey",
+        "export-run",
+        "--actor",
+        "ACT-tester",
+        "--step",
+        "UC-001",
+        "--step",
+        "UC-003",
+    )
+    record = run_script(
+        seeded,
+        NEW,
+        "revalidation",
+        "plain-text",
+        "--change",
+        "#45",
+        "--trigger",
+        "planned",
+        "--outcome",
+        "UC-001=holds",
+        "--because",
+        "UC-001=The suite still runs from the CLI.",
+        "--by",
+        "Sam",
+    )
+    assert record.returncode == 0, record.stderr
+    (written,) = (seeded.root / RECORDS).glob("*-plain-text.md")
+    files = [
+        GLOSSARY,
+        ACTORS,
+        f"{USE_CASES}/UC-003-export.md",
+        f"{JOURNEYS}/JRN-002-export-run.md",
+        written.relative_to(seeded.root).as_posix(),
+    ]
+    found = {
+        rel: [
+            f"{f.line} {f.rule}: {f.message}"
+            for f in pl.lint_text((seeded.root / rel).read_text(encoding="utf-8"), path=rel)
+        ]
+        for rel in files
+    }
+    assert found == {rel: [] for rel in files}
 
 
 def _placeholder_line() -> str:
