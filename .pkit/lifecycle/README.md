@@ -29,9 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-13T05:51:09Z
+      at: 2026-10-13T06:30:59Z
       outcome: unchanged
-      unchanged-because: "COR-031's change rewrites only its reason for skipping an incubated capability: under the no-shared-files invariant sync writes a project-owned path only through merge delivery. The page's skip-branch section has sync skip source-reconciliation for an incubated capability and leave its files exactly as authored, which that reason still supports, so it holds."
+      unchanged-because: COR-031's change rewrites three passages. Its reason for skipping an incubated capability says sync writes a project-owned path only through merge delivery. Its Context says that in COR-017's lifecycle sync copies a capability at the version the project records, and only a version transition moves that version. Its note on COR-010 puts the skip in the propagation that sync and a transition both run. The page has sync skip source-reconciliation for an incubated capability and leave its files as authored, and has upgrading one resolve no kit source, which these support. Where the page has sync refresh a capability to a newer version, its kept deferral for COR-017 already says so, so it holds.
       deferred:
         - anchor:
             kind: record
