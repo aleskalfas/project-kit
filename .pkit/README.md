@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-13T18:59:51Z
+      at: 2026-10-13T21:19:51Z
       outcome: unchanged
-      unchanged-because: "The lifecycle README now records the manifest's completed_version, an adapter's manifest, the two recorded states and the replay. The CLI reference's upgrade, init, pin and status entries say how upgrade records its target first and its completion last, and what status shows. The map gives each area's role and link: it calls the lifecycle README the home of the manifest schema and the upgrade procedure, and the CLI reference the command-line surface. No role or link moves, so the map holds."
+      unchanged-because: The CLI reference, the lifecycle README, the agents README and the decisions README now say that sync works at the recorded version behind one guard, that upgrade creates each missing seed path and runs each capability's migrations after its copy, and that reconcile repairs a missing overlay. The map gives each area's role and link, and no role or link moves, so the map holds.
 ---
 
 # project-kit

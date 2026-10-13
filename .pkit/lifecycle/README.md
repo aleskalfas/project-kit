@@ -29,17 +29,17 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-13T19:16:25Z
+      at: 2026-10-13T21:19:56Z
       outcome: updated
       deferred:
         - anchor:
             kind: record
             value: COR-010
-          reason: "COR-010 now has a version transition record its target first and its completion last, has sync move no recorded version, and moves a shipped component alone only to the version its recorded release ships. This page states the new script contract, the two recorded states and the replay. Its upgrade flow still runs sync for the backbone and regenerates derivable state before the migrations, its section on not passing a migration over and its line on a sync between the two recorded states have sync record the running version, and its per-component upgrade takes any version within requires_backbone, as the code still does. It follows with #1460, which makes sync move no version and rewrites those passages, and #1461, which puts the upgrade flow in COR-010's order and rewrites the per-component upgrade."
+          reason: "COR-010 has a version transition record its target first and its completion last, run every migration inside it in its order, and move a shipped component alone only to the version its recorded release ships. This page states the script contract, the two recorded states, the replay, and sync moving no version behind one guard. Its upgrade flow still runs the capabilities' migrations, the seed paths and the derivable state before the backbone's migrations, and its per-component upgrade takes any version within requires_backbone, as the code still does. It follows with #1461, which puts the upgrade flow in COR-010's order and rewrites the per-component upgrade."
         - anchor:
             kind: record
             value: COR-017
-          reason: "COR-017 no longer has sync upgrade the installed capabilities: a version transition moves them and resolves a new collision, and sync keeps each at its recorded version. This page still has sync refresh every installed capability from source, run its migrations and guard a downgrade, as the code does today. It follows with #1460, where sync copies a capability only at its recorded version and runs no migration, and #1461, where the transition runs each capability migration and resolves a new collision."
+          reason: "COR-017 no longer has sync upgrade the installed capabilities: a version transition moves them and resolves a new collision, and sync keeps each at its recorded version. This page now has sync copy a capability only at its recorded version, and the transition copy and migrate each one. It does not yet say how a transition resolves a new collision, and has pkit capabilities upgrade run a capability's migrations before its copy, as the code still does. It follows with #1461, where the transition resolves a new collision and the single-capability upgrade becomes a transition of one component."
 ---
 
 # Lifecycle

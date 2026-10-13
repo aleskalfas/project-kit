@@ -11,9 +11,9 @@ pkit:
         - src/project_kit/install.py
       record: [COR-001, COR-014]
     revalidated:
-      at: 2026-10-13T19:16:13Z
+      at: 2026-10-13T21:19:51Z
       outcome: unchanged
-      unchanged-because: This change has init record the manifest's target before it copies anything and its completion last, and register each adapter at the version it ships. The page says core.md is refreshed on every sync and that sync never touches project.md, and it lists migrations idempotency among the hard rules. Init's copy of the rules area is unchanged, so the page holds.
+      unchanged-because: This change moves seeding out of the area copy into one seeding step that init and upgrade run, so sync no longer creates a missing project folder. The page says core.md is refreshed on every sync and that sync never touches project.md, which is no seed path. Both still hold, so the page holds.
 ---
 
 # Rules

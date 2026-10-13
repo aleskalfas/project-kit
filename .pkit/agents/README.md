@@ -18,7 +18,7 @@ pkit:
         - .pkit/agents/core/rule-set-reviewer.md
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052]
     revalidated:
-      at: 2026-10-13T11:45:21Z
+      at: 2026-10-13T21:19:37Z
       outcome: updated
 ---
 

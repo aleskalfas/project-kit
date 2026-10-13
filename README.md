@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-13T18:59:45Z
+      at: 2026-10-13T21:19:47Z
       outcome: unchanged
-      unchanged-because: This change has pkit upgrade record its target before anything else and its completion last, finish an interrupted upgrade, replay every backbone migration once where no completion is recorded, write a missing manifest and record each adapter's version, and has init record the same two states. The page says upgrade pulls new versions, runs any migrations and pins the project, that a migration may change a file of the project's where a record allows, such as adding a category its overlay lacks, and that the manifest records what is installed at what version. Each still holds, the replay included, so the page holds.
+      unchanged-because: This change has pkit sync work at the version the project records and stop under another pkit, has upgrade run each capability's migrations after its copy and create each missing seed path, and gives the router an HTTPS address and a reader of its fallback mark. The page says pkit never touches the project's files but the two it merges on init, sync and upgrade, that a migration may change one where a record allows, and that pkit upgrade puts back a deleted starter file such as the overlay. Each still holds, so the page holds.
 ---
 
 # project-kit
