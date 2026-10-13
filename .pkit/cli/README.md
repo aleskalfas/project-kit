@@ -53,7 +53,7 @@ pkit:
         - src/project_kit/document_parts.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064]
     revalidated:
-      at: 2026-10-13T18:03:15Z
+      at: 2026-10-13T18:59:34Z
       outcome: updated
 ---
 
@@ -848,7 +848,7 @@ Drops a numbered, executable script into the right `<major>.<minor>.0/` director
 - **`--scope <scope>`** is one of `manifest-schema`, `structural`, `resource` (default). Scope determines the script's boilerplate header and the ordering convention within its directory.
 - **`--slug <kebab>`** is a kebab-case description used for the file name.
 
-The output filename is `<NNN>-<slug>.sh`, where `NNN` is the next zero-padded index in the directory. The stamped script includes the contract boilerplate from `.pkit/lifecycle/README.md` ("Migration framework" → "Script contract"): `set -euo pipefail`, `ROOT` env consumption, and an idempotence-pattern comment.
+The output filename is `<NNN>-<slug>.sh`, where `NNN` is the next zero-padded index in the directory. The stamped script includes the contract boilerplate from `.pkit/lifecycle/README.md` ("Migration framework" → "Script contract"): `set -euo pipefail`, `ROOT` env consumption, and an idempotence-pattern comment. A backbone script also states that it must be safe over any state: it acts only on a positive sign that its change is needed, never deletes by a path's name or position alone, and, when it adds a missing default, the release's notes say a replay may restore it (COR-010).
 
 ### `new decision <namespace> <slug> [--yes]`
 
