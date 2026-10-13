@@ -354,7 +354,7 @@ class RecordPoints:
             return None
         section, *shared = (self.body.text_of(extent) for extent in ground.extents)
         fields = tuple(
-            (key, json.dumps(value, sort_keys=True, default=str))
+            (key, json.dumps(value, sort_keys=True, default=str, ensure_ascii=False))
             for key, value in sorted(ground.fields.items())
         )
         return Standing(fields, section, "\n".join(shared))
