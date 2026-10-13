@@ -231,6 +231,16 @@ def test_an_anchor_made_ambiguous_is_the_change_s(timeline: Timeline) -> None:
     assert (kind, value) == ("dead-anchor", "PRJ-900#2")
 
 
+def test_an_anchor_already_dead_and_made_ambiguous_is_the_change_s(timeline: Timeline) -> None:
+    """COR-050 point 12: the change made it so by adding the points that share its id."""
+    _start(timeline, anchors={"record": ["PRJ-900#9"]})
+    nines = (("9", "Nine", "One nine."), ("9", "Again", "Another nine."))
+    _change(timeline, points=(*POINTS, *nines))
+    (ambiguous,) = fc.run_change_check(timeline.adopter.root, "main").findings
+    assert ambiguous.kind is fc.FindingKind.DEAD_ANCHOR
+    assert ambiguous.message.endswith("; the diff gave another point its id")
+
+
 def test_a_point_anchor_on_a_record_in_list_form_is_dead(timeline: Timeline) -> None:
     _start(timeline)
     timeline.commit(

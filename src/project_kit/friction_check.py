@@ -1792,21 +1792,34 @@ def _anchor_problem(
             FindingKind.DEAD_ANCHOR,
             f"{head.why_dead(anchor)}; the anchor was added in this diff",
         )
+    if _made_ambiguous(anchor, head, base):
+        return (
+            FindingKind.DEAD_ANCHOR,
+            f"{head.why_dead(anchor)}; the diff gave another point its id",
+        )
     if base.resolves(anchor):
         if anchor.kind == "path" and exclusion_change(anchor.value, base, head).left_out:
             return FindingKind.DEAD_ANCHOR, f"{head.why_dead(anchor)}, excluded since this diff"
-        rel = head.record_path(anchor.value) if anchor.kind == "record" else None
-        found = None if rel is None else head.point_of(anchor, rel)
-        if found is not None and found.state is PointState.AMBIGUOUS:
-            return (
-                FindingKind.DEAD_ANCHOR,
-                f"{head.why_dead(anchor)}; the diff gave another point its id",
-            )
         return (
             FindingKind.DEAD_ANCHOR,
             f"{head.why_dead(anchor)}; the diff removed or moved its target",
         )
     return FindingKind.DEAD_ANCHOR, None
+
+
+def _made_ambiguous(anchor: Anchor, head: Side, base: Side) -> bool:
+    """Whether the diff made an anchor on a record's point ambiguous (COR-050 point 12):
+    two points share its id at head and did not at the base, whether the anchor resolved
+    there or was dead already."""
+    if anchor.kind != "record":
+        return False
+    rel = head.record_path(anchor.value)
+    found = None if rel is None else head.point_of(anchor, rel)
+    if found is None or found.state is not PointState.AMBIGUOUS:
+        return False
+    before_rel = base.record_path(anchor.value)
+    before = None if before_rel is None else base.point_of(anchor, before_rel)
+    return before is None or before.state is not PointState.AMBIGUOUS
 
 
 def _friction_message(
