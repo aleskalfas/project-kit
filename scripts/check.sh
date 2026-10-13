@@ -36,12 +36,11 @@
 #     8), the friction change check, the prose lint (the mechanical parts of
 #     the writing rules, in the text the change adds: `scripts/prose_lint.py`,
 #     #1415), software-analysis' number check (a use case or journey number the
-#     base took first), the
-#     documentation check (project-management's `check-doc-mapping`, the
-#     obligations of the doc-check point against the diff) and the changelog
-#     lint read a base ref and answer about the CHANGE, not the tree. They are
-#     not validators and stay their own lines; a capability's line is here
-#     because that capability is installed here.
+#     base took first), the documentation check (project-management's
+#     `check-doc-mapping`, the obligations of the doc-check point against the
+#     diff) and the changelog lint read a base ref and answer about the CHANGE,
+#     not the tree. They are not validators and stay their own lines; a
+#     capability's line is here because that capability is installed here.
 #
 # Runs every check (does not stop at the first failure) and reports a summary,
 # so one run surfaces all problems. Exits non-zero if any check failed.
@@ -49,12 +48,12 @@
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-# The diff-scoped checks (migration coverage, record numbering, friction, the prose
-# lint, analysis numbers, doc check) and the type check's guard on its baseline each read their base
-# themselves, one way (COR-054): $PKIT_CHECK_BASE when it is set — CI sets it to
-# the pull request's target — else the project's default branch, as
-# `pkit repository base` shows it. So no line here passes --base: every line
-# exercises the rule a contributor's own run does.
+# The diff-scoped checks (migration coverage, record numbering, friction, the
+# prose lint, analysis numbers, doc check) and the type check's guard on its
+# baseline each read their base themselves, one way (COR-054): $PKIT_CHECK_BASE
+# when it is set — CI sets it to the pull request's target — else the project's
+# default branch, as `pkit repository base` shows it. So no line here passes
+# --base: every line exercises the rule a contributor's own run does.
 
 fail=0
 run() {
