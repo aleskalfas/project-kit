@@ -207,7 +207,7 @@ A renumbered point misleads every citation of it, and a record's state alone can
   - an id the branch point holds or retires that the head neither holds nor retires: a point dropped without being retired
   - a new id that is not past every id of its series that the branch point holds or retires
   - a point whose text, read without its id, sits at the head only under another id: a renumbering, or a retirement whose successor kept the claim
-  - a duplicate id, or a heading in a refused form, that the change added
+  - a duplicate id, or a heading in a refused form, that the change added, also in a record with neither point headings nor a list
   - a retired id without its stub, or a stub without its entry
   - a new entry in `retired-points` whose successor is not a live point
   - in a record the change converts from list form, a point whose id differs from the number its numbered item showed
@@ -217,7 +217,7 @@ A renumbered point misleads every citation of it, and a record's state alone can
   - in a record the change converts, a point whose id differs from the bold number or label that opened it
   - a point added to a record in list form, or a new record in list form. You may keep the list under the refining rule above, or convert the record to point headings by hand first, so every number stays.
 - **Each finding names the record and the id,** as `<file>#<id>`, or `<file>` for a record id. The command exits 1 on an error and 0 on warnings alone.
-- **Two changes that take one number:** the first to land keeps it. The other moves its point, or its record, to the next unused number, which the finding names. A point or record that the default branch holds just as the change does is the change's own work landed, such as a parent branch's, and is no clash.
+- **Two changes that take one number:** the first to land keeps it. The other moves its point, or its record, to the next unused number, which the finding names. A point the default branch holds under that id with the change's title or text, or a record it holds at the change's own path, is the change's own work landed, such as a parent branch's, and is no clash.
 
 ## Adding a record
 
