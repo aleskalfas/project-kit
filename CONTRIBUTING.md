@@ -20,8 +20,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-13T08:03:16Z
-      outcome: updated
+      at: 2026-10-13T08:34:38Z
+      outcome: unchanged
+      unchanged-because: "The decisions README gains a section on what validation checks of a record's points: the failures and warnings COR-058 point 7 names, where each finding points, and that a project's own fields and a record in list form pass. This file points at that README for the record schema, the statuses, the namespaces and the no-shared-files invariant, and says nothing of what validation checks of points. Its section on the prose lint, which main added, asks to run pkit validate after declaring a lint check on a rule, and does not say what the command checks of a record, so the file holds."
 ---
 
 # Contributing to project-kit

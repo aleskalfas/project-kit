@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-13T07:39:35Z
+      at: 2026-10-13T08:11:29Z
       outcome: unchanged
-      unchanged-because: "The decisions, skills, agents and schemas READMEs change what they say sync reads and writes: sync reads project skills and agents and never writes them, never reads or writes a project rule set, and today creates the missing project/ folder of a capability it refreshes. The map gives each README's role and link, and calls the decisions README home of the no-shared-files invariant. None of the changes moves a role or a link. The CLI reference, merged from main, now gives each part anchor's span in the friction artefacts document, and the map still calls it the command-line surface and the place to look for a command. So the map holds."
+      unchanged-because: "The decisions README gains a section on what validation checks of a record's points, and the CLI reference's decisions validate entry and validate table say the command and the member check them. The map gives each README's role and link: it calls the decisions README the record system and home of the no-shared-files invariant, and the CLI reference the command-line surface. Neither role nor link moves, so the map holds."
 ---
 
 # project-kit
