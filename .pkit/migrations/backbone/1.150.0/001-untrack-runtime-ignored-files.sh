@@ -21,16 +21,17 @@
 #     cannot widen or hide the set. A tracked file no component declares, such
 #     as a capability's shared `config.yaml`, is never touched. No path is
 #     named here; the backbone owns the aggregation, each component its paths.
-#   - The upgrade runs sync, which re-renders `.pkit/.gitignore` from the
-#     current declarations, before backbone migrations, so the file read here is
-#     current.
+#   - The upgrade renders `.pkit/.gitignore` from the target's declarations
+#     after its copy and before the backbone migrations, so the file read here
+#     is the target's.
 #   - BOUNDED like `pkit visibility untrack` (ADR-009 rule 5): skipped while a
 #     merge, rebase, cherry-pick or revert is in progress, and a path git
 #     refuses to untrack (staged content matching neither HEAD nor the working
 #     copy, which forcing would drop; or a locked index) is left tracked. Both
-#     are reported with the command to finish by hand, and never fail the
-#     upgrade: sync has already recorded the new version, so a halted migration
-#     would not run again. Unlike that verb it asks no confirmation: a declared
+#     are reported with the command to finish by hand, and do not fail the
+#     upgrade: neither is a fault of the migration, and the operator finishes
+#     both once the repository is ready. Unlike that verb it asks no
+#     confirmation: a declared
 #     file is one its component says must not be tracked, and the removal is
 #     only staged, so the operator's commit is the point of decision.
 #
@@ -41,6 +42,12 @@
 #
 # Idempotent: once nothing declared is tracked, a re-run reports that and
 # changes nothing.
+#
+# A declared file that is tracked is the positive sign it acts on (COR-010).
+# So when a version transition runs it again over a project whose migration
+# history is unknown (COR-059 point 6), it stages again the untracking of a
+# declared file the project forced back into the index. The release that
+# ships the replay says so.
 
 set -euo pipefail
 

@@ -14,6 +14,11 @@
 # Idempotent — re-running on already-migrated state is a no-op (each category
 # is appended only when absent). Adopter customisations are never touched: we
 # only ever ADD a missing top-level category, never rewrite an existing one.
+#
+# A missing category is the positive sign it acts on (COR-010). So when a
+# version transition runs it again over a project whose migration history is
+# unknown (COR-059 point 6), it restores a category the project deleted after
+# it first ran. The release that ships the replay says so.
 
 set -euo pipefail
 
@@ -23,9 +28,9 @@ set -euo pipefail
 OVERLAY="$ROOT/.pkit/agents/project/overlay.yaml"
 
 if [ ! -f "$OVERLAY" ]; then
-    # No overlay at all → install/sync seeds a complete one (with these
-    # categories) on its own; nothing to migrate.
-    echo "  [skip] no .pkit/agents/project/overlay.yaml; install seeds a complete one"
+    # No overlay at all: nothing to add to. A missing overlay is created whole,
+    # these categories included, from the install seed, never by this script.
+    echo "  [skip] no .pkit/agents/project/overlay.yaml; a missing overlay is created whole from the install seed"
     exit 0
 fi
 
