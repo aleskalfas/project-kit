@@ -19,9 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-13T05:56:59Z
+      at: 2026-10-13T06:40:33Z
       outcome: unchanged
-      unchanged-because: ADR-057 point 2 now has artefact discovery cut a collection entry's section, and the rule-set reader list a rule-set file's sections, by one reading of the headings outside fenced code. This page already says an entry's content is its data plus the body section headed by its id, and that headings inside fenced code are not a rule set's sections. The home of a record's points and the rewording of point 3 touch nothing the page says, so it holds.
+      unchanged-because: Artefact discovery now cuts a collection entry's section, and the rule-set reader lists a rule-set file's sections, through document_parts, the one reading of where a part lies, with the same result as before. This page says an entry's content is its data plus the body section headed by its id, and that headings inside fenced code are not a rule set's sections. Both still hold. The page does not describe the artefacts document's keys, so its new list of part anchors changes nothing here.
 ---
 
 # Schemas
