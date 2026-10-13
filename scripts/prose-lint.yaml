@@ -1,0 +1,34 @@
+# The prose lint's entries (#1415). `scripts/prose_lint.py` reads them.
+#
+# Each entry checks the mechanical part of one writing rule, and names that rule
+# by its id. The rule's set declares the part under its `checks`, naming the
+# check `prose-lint` (COR-051 point 2). The lint applies an entry to an artefact
+# only where its rule binds and declares that part.
+#
+# Each entry has one of four types, and a new mechanical rule is an entry here,
+# not code:
+#
+#   count          at most `max` of a unit in a scope: `count` is `words` or
+#                  `sentences`, `in` is `sentence` or `paragraph`
+#   forbid         a pattern that may not appear: `pattern` is a regular
+#                  expression, `name` says what a finding found
+#   substitute     a word to replace with another: `replace` maps each word to
+#                  the word that replaces it
+#   link-resolves  a Markdown link's target exists in the repository
+#
+# Any entry may add `except`, the parts of the prose it does not read: `code`
+# (code spans), `quotes` (text in quotation marks) and `cells` (table cells).
+#
+# CONTRIBUTING.md, "Running checks", says how the lint reads a sentence and a
+# paragraph, and how to add an entry.
+entries:
+  - rule: RS-WRITE-005
+    type: count
+    count: words
+    in: sentence
+    max: 25
+  - rule: RS-WRITE-008
+    type: forbid
+    pattern: ";"
+    name: a semicolon
+    except: [code, quotes]
