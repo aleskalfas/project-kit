@@ -1,7 +1,7 @@
 ---
 id: COR-059
 title: A project stays at its version until a version transition moves it
-status: proposed
+status: accepted
 date: 2026-10-13
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
