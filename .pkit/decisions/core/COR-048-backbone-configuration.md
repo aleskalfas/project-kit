@@ -18,7 +18,7 @@ The backbone already reads the project's name from a project-owned file. No core
 
 ## Decision
 
-**A project keeps its declarations to the backbone in one project-owned configuration file. The backbone reads it, sync never touches it, and it is validated as a whole against a schema.**
+**A project keeps its declarations to the backbone in one project-owned configuration file. The backbone reads it, sync never writes it, and it is validated as a whole against a schema.**
 
 1. **One file, owned by the project.** It holds project-level declarations the backbone reads. It sits in the project-owned part of the tree. It survives upgrade, sync, and uninstalling any capability or the tool itself, because none of them removes it. Sync never writes it. An upgrade, a version transition (COR-059), writes it only through the migrations point 5 names. Its location is documented in the CLI reference.
 

@@ -14,7 +14,7 @@ Existing records cover parts of this:
 
 - COR-001 covers in-tree content lifecycle (propagation, extension, suspension, install-time seeding).
 - COR-002 covers fixed-path config-file updates (merge delivery operation).
-- COR-004 sets the rules for commands, and its list of operations names the version transition, the operation that runs migrations (COR-059). Neither specifies what migrations are or how they're authored.
+- COR-004 sets the rules for commands, and its list of operations names the version transition, the operation that runs migrations (COR-059). COR-004 does not specify what migrations are or how they're authored.
 - COR-005 establishes bundles and adapters as pluggable components with their own contracts.
 
 What's missing is a unified principle: **what does it mean for a resource to be installed by the core layer**, what lifecycle operations apply across all such resources, how does the methodology version itself, and how do component versions relate to the methodology's version? Without this, each new resource type and each component re-derives tracking, update, and removal semantics from scratch, and version transitions remain ad hoc.
@@ -31,7 +31,7 @@ The backbone is the cohesive core: decisions, rules, the workflow-framework cont
 
 Both tiers use semantic versioning (`major.minor.patch`). Components express compatibility via `requires_backbone: ">=X.Y.Z, <W.0.0"` recorded in their per-component manifest. Patch-level releases (the third segment) are backward-compatible bug fixes by semver convention and do not have migrations — migration directories are named with the full three-segment target version, with patch always `0` (e.g., `2.1.0/`), and cover all patches within that minor line.
 
-A backbone change affects every adopter (the methodology itself moved); a component change might only affect adopters who installed that component. Independent versioning lets bundle / adapter authors release without bumping the whole methodology, with the semver range catching incompatibilities at upgrade time. A project moves a component the methodology ships together with the release that ships it, or alone to the version its recorded release ships. Selective movement remains for an externally-sourced component, which moves by its pin (COR-041, COR-059).
+A backbone change affects every adopter (the methodology itself moved); a component change might only affect adopters who installed that component. Independent versioning lets bundle / adapter authors release without bumping the whole methodology, with the semver range catching incompatibilities at upgrade time. A component the methodology ships moves with the release that ships it, or alone to the version the project's recorded release ships. An externally-sourced component moves on its own, by its pin (COR-041 and COR-059).
 
 **The dependency direction cannot invert.** A component declares its dependency *on* the backbone; the reverse must never hold. A component — and especially an opt-in one such as a capability — must not govern a process the backbone depends on for its own existence. Any process the backbone needs in order to exist, evolve, or ship — cutting the backbone's own releases is the archetype — belongs to the backbone tier. Locating it in a component would make the always-present core depend on an optional, independently-versioned piece, inverting the two-tier direction and breaking for any adopter who never installed that component. This is the discriminator when a responsibility is ambiguous ("is this the backbone's, or a component's?"): if the backbone's own existence depends on it, it is backbone.
 
@@ -74,12 +74,12 @@ Migrations are versioned (tied to a specific tier-and-version transition), idemp
 
 A whole-methodology upgrade is a version transition (COR-059). It cannot proceed past a component's `requires_backbone` range. Before applying any migrations, the upgrade command resolves compatibility across all installed components and either succeeds (every component, at the version the transition leaves it, is compatible with the target backbone) or refuses with a surfaced conflict for the adopter to address.
 
-A transition's order — compatibility resolution → the target recorded → propagation → backbone migrations → component migrations → derivable state regenerated → the completion recorded — is set by the lifecycle spec.
+A transition's order — compatibility and collision resolution → the target recorded → propagation → backbone migrations → component migrations → derivable state regenerated → the completion recorded — is set by the lifecycle spec.
 
 - **Derivable state that a migration reads,** such as a rendered ignore file, is also regenerated right after propagation, so the migration reads the target's.
 - **Each component's recorded version** moves when that component's migrations finish.
 - **A project is at a version only when its recorded target and its recorded completion both name it.** A transition that stops before its completion never reads as finished, and the next transition finishes it (COR-059 point 6).
-- **A transition of one component** follows the same order for that component, gates on the same compatibility check, and records its version when its migrations finish.
+- **A transition of one component** follows the same order for that component, without the backbone's two recorded states. It gates on the same compatibility check, and records its version when its migrations finish.
 
 ### Migrations are mandatory on adopter-breaking surface changes
 
@@ -91,9 +91,11 @@ A change that **alters an installed adopter's state observably and breaks agains
 - Breaking signature changes in `pkit` CLI commands (a flag's meaning inverts; a subcommand renames).
 - **Capability subtree restructures** (a capability's `skills/`, `agents/`, `decisions/` layout changes).
 
-Pure additions don't trigger migration: a new skill, a new schema, a new decision, a new bundle are observed only by adopters who sync to receive them, and their absence doesn't break against existing installed state. Documentation refinements, internal source refactors, and behavior-preserving fixes also don't trigger.
+Pure additions don't trigger migration: a new skill, a new schema, a new decision, a new bundle are observed only by adopters who move to a release that ships them, and their absence doesn't break against existing installed state. Documentation refinements, internal source refactors, and behavior-preserving fixes also don't trigger.
 
-The rule applies symmetrically across tiers: backbone surface changes ship backbone migrations; bundle surface changes ship bundle migrations; adapter and capability surface changes ship their tier's migrations. The migration is idempotent (already-applied state is a no-op) so adopters can re-run safely. A backbone migration is also safe over any state: it acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown (COR-059 point 6). A missing default the migration adds counts as such a sign, so running it again may restore a default the project removed after it first ran, and the release's notes say so.
+The rule applies symmetrically across tiers: backbone surface changes ship backbone migrations; bundle surface changes ship bundle migrations; adapter and capability surface changes ship their tier's migrations. The migration is idempotent (already-applied state is a no-op) so adopters can re-run safely.
+
+A backbone migration is also safe over any state. It acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown (COR-059 point 6). A missing default the migration adds counts as such a sign. So running it again may restore a default the project removed after it first ran, and the release's notes say so.
 
 This couples surface changes to migration coverage: the version bump (per the project's version-bump policy) and the migration land together, not in separate PRs. A transition's order assumes every adopter-breaking change has a migration to run; merging surface changes without one leaves adopters with state the upgrade flow can't bridge.
 

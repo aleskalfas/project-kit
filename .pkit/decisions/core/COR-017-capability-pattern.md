@@ -6,7 +6,7 @@ date: 2026-05-18
 author: Ales Kalfas <kalfas.ales@gmail.com>
 ---
 
-> **Partially superseded by [COR-059](COR-059-version-transition.md).** Overturned: that sync upgrades installed capabilities, its refusal of an upgrade that would bring a new collision, and the "Sync extension" implication. A version transition moves every capability the methodology ships with its release, and resolves a new collision inside it with the install-time flow, or refuses before it writes. Sync keeps each capability at the version the project records. Among what stands: install and its collision flow, the warning for a capability the methodology no longer ships, the skipped-artifact records, the single-capability upgrade command, and uninstall. COR-059's "What this overturns, and what stands" lists each passage.
+> **Partially superseded by [COR-059](COR-059-version-transition.md).** Overturned: that sync upgrades installed capabilities, its refusal of an upgrade that would bring a new collision, and the refresh and refusal in the "Sync extension" implication. A version transition moves every installed capability the methodology ships with its release. It resolves a new collision inside it with the install-time flow, or refuses before it writes. Sync keeps each capability at the version the project records. Among what stands: install and its collision flow, the warning for a capability the methodology no longer ships, the skipped-artifact records, the single-capability upgrade command, and uninstall. COR-059's "What this overturns, and what stands" lists each passage.
 
 ## Context
 

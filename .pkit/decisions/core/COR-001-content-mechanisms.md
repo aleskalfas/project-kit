@@ -24,10 +24,10 @@ In addition to the three mechanisms, the core layer performs an **install-time s
 
 ### Propagation (synced core content)
 
-A canonical file lives at a core-owned path (e.g. inside `core/`). The project receives a verbatim copy at the same relative path. Every subsequent sync overwrites the project's copy with the current canonical version. The project must not edit synced files; if it does, the edits are lost on the next sync.
+A canonical file lives at a core-owned path (e.g. inside `core/`). The project receives a verbatim copy at the same relative path. Every subsequent sync overwrites the project's copy with the canonical version at the release the project records. A version transition overwrites it with its target's (COR-059). The project must not edit synced files; if it does, the edits are lost on the next sync.
 
 - **Ownership:** core, forever.
-- **Cadence:** written on first install, rewritten on every sync.
+- **Cadence:** written on first install, rewritten on every sync and every version transition.
 - **Contract:** the path will only contain the canonical version of the content; the project guarantees not to edit it.
 
 ### Extension (project-side content)
@@ -35,8 +35,8 @@ A canonical file lives at a core-owned path (e.g. inside `core/`). The project r
 The project owns content in project-owned paths (e.g. inside `project/`). The names do not collide with anything in core. The core layer writes these paths only through an operation that a record names as that content's writer, with the consent that record sets. Sync writes them only through merge delivery (COR-002), and seeds nothing. The core layer reads them where an operation needs them, as merge and validation do.
 
 - **Ownership:** project, forever.
-- **Cadence:** written and updated entirely by the project, on the project's schedule.
-- **Contract:** the core layer writes project-owned paths only through the writers records name, and sync writes them only through merge delivery. The project may add, edit, or remove its own content freely.
+- **Cadence:** written and updated by the project, on its own schedule, and by the core layer only through the writers that records name.
+- **Contract:** the core layer writes project-owned paths only through the writers that records name, and sync writes them only through merge delivery. The project may add, edit, or remove its own content freely.
 
 Extension content can be **seeded at first install** by the core layer (see *Install-time seeding* below). Once seeded, the file is just regular project-owned content under the contract above, and the project owns it.
 
@@ -67,7 +67,7 @@ Some files must live at fixed paths the project will want to extend — root `CL
 - A short **extension** at the fixed path. Project-owned. Seeded at first install with a delegation reference to the core canonical content using the platform's include mechanism (e.g. Claude Code's `@`-include syntax for `CLAUDE.md`). After install, the project owns it and may add project-specific content freely.
 - A **propagation** target at a separate core-owned path holding the canonical content. Updated on every sync.
 
-The fixed-path file is small (a delegation header plus any project-specific content) and is owned by the project. The canonical content evolves through sync, and its changes never need an edit to the fixed-path file. This is not a separate mechanism — it is a way to combine propagation and extension (with install-time seeding) to handle a specific class of file.
+The fixed-path file is small (a delegation header plus any project-specific content) and is owned by the project. The canonical content evolves through propagation. Sync writes the fixed-path file only through merge delivery, which may create it where it is missing (COR-059 point 2). This is not a separate mechanism — it is a way to combine propagation and extension (with install-time seeding) to handle a specific class of file.
 
 ## Rationale
 

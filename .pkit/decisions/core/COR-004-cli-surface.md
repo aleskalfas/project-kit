@@ -6,7 +6,7 @@ date: 2026-05-05
 author: Ales Kalfas <kalfas.ales@gmail.com>
 ---
 
-> **Partially superseded by [COR-059](COR-059-version-transition.md).** Overturned: the compound-verb sentence and the rejected "smart `update`" alternative, since a version transition is one operation. Also overturned: keeping merge out of sync, since sync carries merge delivery's auto-add tier, which asks nothing, and the reason that re-running first install would resurface seeded content, since a transition creates a missing seed path. Among what stands: one operation for each command, the case against compound verbs, merge as a command of its own, a routine refresh that never asks, and first install as one-shot. COR-059's "What this overturns, and what stands" lists each passage.
+> **Partially superseded by [COR-059](COR-059-version-transition.md).** Overturned: the compound-verb sentence and the rejected "smart `update`" alternative, since a version transition is one operation. Also overturned: keeping merge out of sync, since sync carries merge delivery's auto-add tier, which asks nothing. And overturned: the reason that re-running first install would resurface seeded content, since a transition creates a missing seed path. Among what stands: one operation for each command, the case against compound verbs, merge as a command of its own, a routine refresh that never asks, and first install as one-shot. COR-059's "What this overturns, and what stands" lists each passage.
 
 ## Context
 
@@ -28,7 +28,7 @@ The CLI's shape is governed by the principles below. They constrain how the comm
 
 A command performs one of: propagation, seed, merge, version transition, suspension management, validation, or read-only introspection. It does not compound two of these into one verb. Compound verbs (e.g., an "update" that does sync + merge + migrations) hide which contract is being invoked, conflate consent profiles, and resist the manifest-level reasoning the install/sync runtime needs. New commands earn inclusion by representing one operation cleanly.
 
-A version transition moves a project's recorded versions to a target, and every part of it follows from the target the person chose (COR-059). The rule governs what a command does to a project, so a command may first update the CLI that runs it, which acts on no project (COR-059 point 5).
+A version transition moves a project's recorded versions to a target, and every part of it follows from the target the person chose (COR-059). Its propagation, migrations, seeding and merge are parts of that one operation. The rule governs what a command does to a project. Updating the CLI acts on no project, so a command may first update the CLI that runs it (COR-059 point 5).
 
 ### `sync` and `merge` stay separate
 
@@ -36,7 +36,7 @@ Both are mutating operations a project may want to invoke independently. They ha
 
 ### `init` is one-shot, not idempotent
 
-The first-install command runs propagation, then seed, then merge, in that order. Once a project is initialised, that command refuses to run again. Recovery from partial or broken state flows through `validate` plus targeted `sync` / `merge` instead. A first install that stops before it records its completion is finished by the next version transition (COR-059 point 6). Re-running first-install would either resurface seeded content (violating COR-001's seed contract) or silently skip already-seeded paths (confusing). Keeping the contract sharp is worth the small upfront refusal.
+The first-install command runs propagation, then seed, then merge, in that order. Once a project is initialised, that command refuses to run again. Recovery from a broken state flows through `validate` plus targeted `sync` / `merge` instead. A first install that stops before it records its completion is finished by the next version transition (COR-059 point 6). Re-running first-install would either resurface seeded content (violating COR-001's seed contract) or silently skip already-seeded paths (confusing). Keeping the contract sharp is worth the small upfront refusal.
 
 ### `--dry-run` is universal on every mutating command
 
@@ -44,13 +44,13 @@ Any operation a project might want to preview before committing should be previe
 
 ### Failure mode is forward-only
 
-A failed run leaves the project at a known partial state, with `validate` as the recovery entry point. A version transition that stops before it records its completion is finished by the next transition, and a command that would propagate content over the incomplete transition stops and names that remedy (COR-059 points 6 and 9). There is no transactional rollback across the manifest. At this scale, transactional semantics would require a journal or filesystem snapshots — heavy infrastructure for a small set of file mutations. Forward-only with a reliable diagnostic is sufficient.
+A failed run leaves the project at a known partial state, with `validate` as the recovery entry point. A version transition that stops before it records its completion is finished by the next transition (COR-059 point 6). A command that would propagate content over the incomplete transition stops and names that remedy (point 9). There is no transactional rollback across the manifest. At this scale, transactional semantics would require a journal or filesystem snapshots — heavy infrastructure for a small set of file mutations. Forward-only with a reliable diagnostic is sufficient.
 
 ## Rationale
 
 **Why principles, not the command list.** The list of commands evolves as bundles surface new verbs and new areas earn their own gestures. Pinning the list inside a decision record forces an amendment per change and conflates "what we decided about CLI design" with "what the CLI currently exposes." The principles are durable; the spec changes; they belong in different places. (Same separation as COR-003 vs the per-area manifest.)
 
-**Why anchor each command to one operation.** The mechanism vocabulary of COR-001 / COR-002 already names the operations a project cares about. A CLI that mirrors them gives the project a shape it can reason about — sync is propagation, merge is merge, etc. Sync's propagation includes the derivable state it regenerates, merge delivery's auto-add entries among it (COR-010, COR-059 point 2). Compound verbs would create a parallel vocabulary that drifts from the mechanism vocabulary and re-encodes consent contracts in opaque names.
+**Why anchor each command to one operation.** The mechanism vocabulary of COR-001 / COR-002 already names the operations a project cares about. A CLI that mirrors them gives the project a shape it can reason about — sync is propagation, merge is merge, etc. Sync's propagation includes the derivable state it regenerates, merge delivery's auto-add entries among it (COR-010 and COR-059 point 2). Compound verbs would create a parallel vocabulary that drifts from the mechanism vocabulary and re-encodes consent contracts in opaque names.
 
 **Why the sync/merge separation matters more than "they're different operations."** The deeper reason is consent. The no-shared-files invariant (in `.pkit/decisions/README.md`), COR-001, and COR-002 between them encode different consent contracts for different file ownership classes. A CLI verb represents an *adopter-visible* contract; conflating verbs across consent classes is the same shape of error as conflating the underlying mechanisms.
 

@@ -53,7 +53,7 @@ And performs:
   - First install, as part of the install flow alongside seeding and propagation.
   - Manually on demand, via a CLI gesture (name TBD with the rest of the CLI surface).
   - During upgrade flows, when the baseline source has grown. An upgrade is a version transition (COR-059).
-  - On every sync, in the auto-add tier only. It regenerates the entries the core layer contributes, from the baseline at the version the project records and the project's own declarations (COR-059 point 2).
+  - On every sync, without its prompt-once tier. It adds each missing entry the core layer contributes and restores the safety entries. It reads the baseline at the version the project records and the project's own declarations (COR-059 point 2).
 - The prompt-once tier runs only where a person can answer: at first install, on demand and in an upgrade flow. With nobody to answer, it writes nothing.
 
 ### Per-format adapters
@@ -74,7 +74,7 @@ Each merge target declares its file type and per-tier classification in the core
 | **Seeding** (delivery operation) | Once at install | Yes (core never re-touches) | No |
 | **Merge** (delivery operation) | Install + repeatable | Yes (append-only / baseline-enforce) | Yes |
 | **Authoritative region** (delivery operation) | Install + repeatable | Yes outside the region; the region itself is realizer-owned and replaced | Yes |
-| **Extension** (mechanism) | Adopter-driven only | N/A — file is project-owned, never core-touched | No |
+| **Extension** (mechanism) | Adopter-driven | N/A — file is project-owned, written by the core layer only through a writer a record names (COR-001) | No |
 | **Suspension** (mechanism) | Adopter-driven only | N/A — file is project-owned override | No |
 
 Merge fills the gap between propagation (no adopter customisation possible) and seeding (no later updates).
