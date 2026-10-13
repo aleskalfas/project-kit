@@ -36,7 +36,7 @@ pkit:
         - anchor:
             kind: record
             value: COR-010
-          reason: "COR-010 now has a version transition record its target first and its completion last, and move a shipped component alone only to the version its recorded release ships. This page states the new script contract, but its manifest records only the backbone version the project is at, its upgrade flow runs sync for the backbone and updates the recorded versions last, and its per-component upgrade takes any version within requires_backbone, as the code still does. It follows with #1459, which rewrites the manifest format and the upgrade flow, and #1461, which rewrites the upgrade flow and the per-component upgrade."
+          reason: "COR-010 now has a version transition record its target first and its completion last, has sync move no recorded version, and moves a shipped component alone only to the version its recorded release ships. This page states the new script contract, but its manifest records only the backbone version the project is at, its upgrade flow runs sync for the backbone and updates the recorded versions last, its section on not passing a migration over has sync record the running version, and its per-component upgrade takes any version within requires_backbone, as the code still does. It follows with #1459, which rewrites the manifest format and the upgrade flow, #1460, which makes sync move no version and rewrites that section, and #1461, which rewrites the upgrade flow and the per-component upgrade."
         - anchor:
             kind: record
             value: COR-017
