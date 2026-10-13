@@ -80,7 +80,7 @@ The command stamps `<NNN>-<slug>.sh` in the right `<X.Y.0>/` directory, where `N
 
 ### 6. Implement the migration
 
-Open the stamped script and replace the TODO body with the actual change. Two requirements (per COR-010 / lifecycle spec's "Script contract"):
+Open the stamped script and replace the TODO body with the actual change. Three requirements (per COR-010 / lifecycle spec's "Script contract"):
 
 - **Idempotent** — detect already-applied state and exit cleanly. The stamped boilerplate shows the pattern:
 
@@ -91,6 +91,8 @@ Open the stamped script and replace the TODO body with the actual change. Two re
   fi
   # ... apply ...
   ```
+
+- **Acts only on a positive sign, for a backbone migration** — it changes a path only when the path shows that the change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown, so the script must be safe over any state: one that never needed it, and one the project changed after it first ran. A missing default it adds counts as such a sign. Say in the release's notes that running it again may restore a default the project removed.
 
 - **Updates the affected resource.** For derivable resources (files in the core content directory, labels on a tracker), the migration mutates the resource directly — no manifest update. For non-derivable resources (opaque backend IDs in `backend_state`), the migration updates the manifest entry.
 
@@ -103,6 +105,7 @@ Walk the script against the contract:
 - *Does it `set -euo pipefail`?*
 - *Does it consume `ROOT` from the environment, not hardcode paths?*
 - *Is it idempotent — would re-running on already-migrated state be a no-op?*
+- *For a backbone migration: does it act only on a positive sign that its change is needed, and never delete by a path's name or position alone?*
 - *Does it update the affected resource (or the relevant manifest entry, for non-derivable state)?*
 - *Did you place it in the right tier × version × scope ordering?*
 

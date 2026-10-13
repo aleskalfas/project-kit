@@ -12,7 +12,7 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 4. **PRJ records live in `.pkit/decisions/project/`; never edit `.pkit/decisions/core/`.** Core records are managed by the methodology source and refreshed on every sync. Numbering is independent across the two namespaces. See `.pkit/decisions/README.md`.
 
-5. **Migrations are idempotent.** If you author a migration script, it must be safe to re-run on already-migrated state — detect already-applied state and exit cleanly. See COR-010 and `.pkit/lifecycle/README.md`'s "Migration framework → Script contract".
+5. **Migrations are idempotent.** If you author a migration script, it must be safe to re-run on already-migrated state — detect already-applied state and exit cleanly. A backbone migration must be safe over any state: it acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone, since a version transition may run it again over a project whose migration history is unknown. See COR-010 and `.pkit/lifecycle/README.md`'s "Migration framework → Script contract".
 
 6. **Settings-file changes go through the merge primitive.** Do not edit fixed-path config files (`.claude/settings.json`, `.gitignore`, etc.) directly to add core-shipped content; the adapter merges baseline + project additions. Edit only the project-additions side. See COR-002.
 

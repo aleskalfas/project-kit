@@ -93,7 +93,7 @@ A change that **alters an installed adopter's state observably and breaks agains
 
 Pure additions don't trigger migration: a new skill, a new schema, a new decision, a new bundle are observed only by adopters who sync to receive them, and their absence doesn't break against existing installed state. Documentation refinements, internal source refactors, and behavior-preserving fixes also don't trigger.
 
-The rule applies symmetrically across tiers: backbone surface changes ship backbone migrations; bundle surface changes ship bundle migrations; adapter and capability surface changes ship their tier's migrations. The migration is idempotent (already-applied state is a no-op) so adopters can re-run safely.
+The rule applies symmetrically across tiers: backbone surface changes ship backbone migrations; bundle surface changes ship bundle migrations; adapter and capability surface changes ship their tier's migrations. The migration is idempotent (already-applied state is a no-op) so adopters can re-run safely. A backbone migration is also safe over any state: it acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown (COR-059 point 6). A missing default the migration adds counts as such a sign, so running it again may restore a default the project removed after it first ran, and the release's notes say so.
 
 This couples surface changes to migration coverage: the version bump (per the project's version-bump policy) and the migration land together, not in separate PRs. A transition's order assumes every adopter-breaking change has a migration to run; merging surface changes without one leaves adopters with state the upgrade flow can't bridge.
 
@@ -124,7 +124,7 @@ This couples surface changes to migration coverage: the version bump (per the pr
 - **No project-side manifests at all (everything implicit by convention).** Rejected — opaque identifiers (project boards, webhook IDs) and recorded versions need persistent storage.
 - **No formal lifecycle; each resource type re-derives semantics.** Rejected — fractures the methodology. New resource types invent inconsistent behaviour and adopters can't reason uniformly.
 - **All migrations in one global directory.** Rejected for component migrations — divorces them from the bundle or area that gives them context. Backbone-wide and manifest-schema migrations (which have no single component context) appropriately live in a backbone-wide location.
-- **Migrations as one-shot scripts that don't track version state.** Rejected — re-running a migration on an already-migrated adopter would do harm. Recording the version plus idempotent re-runs prevents this.
+- **Migrations as one-shot scripts that don't track version state.** Rejected — re-running a migration on an already-migrated adopter would do harm. Recording the version plus idempotent re-runs prevents this, and a backbone migration that acts only on a positive sign is safe even where the recorded history is lost.
 - **Compatibility checked migration-by-migration instead of resolved up front.** Rejected — failures surface mid-upgrade after partial state changes. Resolver-then-applier (the package-manager pattern) is the safer order.
 
 ## Implications
