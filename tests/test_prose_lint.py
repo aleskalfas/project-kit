@@ -7,6 +7,8 @@
 - **The change:** the lint reports a break in the text a change adds or moves,
   in an artefact a rule declaring the lint reaches. It leaves alone a break the
   change only sits beside. It reads reach and base from `pkit rule-sets altered`.
+- **The data file and `WRITE` agree:** every entry names a rule whose set
+  declares the lint, and every declaration has an entry.
 
 The change tests run on the shared adopter-repository fixture. A rule set named
 `WRITE`, scoped to `docs/guides/`, declares the lint for RS-WRITE-005 and
@@ -22,6 +24,7 @@ from typing import Any
 import pytest
 from scripts import prose_lint as pl
 
+from project_kit import rule_sets as rs
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import CONFIG, friction_config
 from tests.test_rule_sets import rule_set_text, rules
@@ -402,3 +405,14 @@ def test_the_command_exits_on_what_it_finds(
     assert f"{A}:7  RS-WRITE-005" in capsys.readouterr().out
     assert pl.main(["--base", "no-such-ref"]) == 2
     assert "prose lint:" in capsys.readouterr().err
+
+
+# --- the data file and WRITE agree ------------------------------------------------------
+
+
+def test_every_entry_names_a_rule_whose_set_declares_the_lint_and_back() -> None:
+    """An entry whose rule declares no part would never apply, and a declared part with no
+    entry would go unchecked."""
+    _discovery, sets, _answer = rs.reach_at(REPO)
+    declared = {rule.id for rule in sets.rules for part in rule.checks if part.check == pl.CHECK}
+    assert {e.rule for e in pl.load_entries()} == declared == {"RS-WRITE-005", "RS-WRITE-008"}
