@@ -1,0 +1,7 @@
+component: living-docs
+kind: none
+body: >
+  Internal. The README is revalidated unchanged against COR-051, whose
+  rejected prose markers name decision records' point headings as an
+  exception (COR-058). Only the README's friction block changes, and
+  nothing you run or read changes.
