@@ -29,10 +29,9 @@ holds it.
     heading or stub: the numbered items of a list at the Decision's top
     level or of one numbering that runs across its group headings, and the
     paragraphs that open with a bold number or a bold label, whether the
-    bold holds the title (`**5. Title.**`) or only the id (`**5.** Title`).
-    A numbered
-    list inside a point or another sub-section holds no points. Whoever
-    converts the record confirms this reading.
+    bold holds the title (`**5. Title.**`) or only the id (`**5.** Title`,
+    `**D1** — Title`). A numbered list inside a point or another sub-section
+    holds no points. Whoever converts the record confirms this reading.
 - `RecordPoints.ground` gives what a point stands on: its section, the
   record's status, supersession and title fields, its preamble (the text
   before its first section) and Summary, and the Decision's text outside
@@ -87,11 +86,12 @@ _POINT_ID = re.compile(r"^(?:\d+|[A-Za-z]+\d+)$")
 
 # List form (COR-058 point 2): a numbered item at the start of a line, and a
 # paragraph that opens with a bold number — `**5. Title.**` or `**5.** Title` — or a
-# bold label — `**D1 — Title.**` or `**D1** — Title`.
+# bold label — `**D1 — Title.**` or `**D1** — Title`. A bold label alone is no point
+# without the em dash after it, so a paragraph opening `**IPv6**` holds none.
 _ITEM = re.compile(r"^(\d+)[.)](?:[ \t]+(.*))?$")
 _BOLD_POINT = re.compile(
     r"^\*\*(?:(?P<number>\d+)\.(?:[ \t]+|\*\*)"
-    r"|(?P<label>[A-Za-z]+\d+)(?:[ \t]+—[ \t]+|\*\*))"
+    r"|(?P<label>[A-Za-z]+\d+)(?:[ \t]+—[ \t]+|\*\*[ \t]+—[ \t]+))"
 )
 
 # A bold lead: the text between the first pair of `**`; and the id it may open with.

@@ -217,6 +217,14 @@ def test_a_sub_section_s_list_alone_holds_no_points() -> None:
     assert read.list_points == () and not read.in_list_form
 
 
+@pytest.mark.parametrize("word", ["S3", "IPv6", "OAuth2", "v2"])
+def test_a_bold_word_ending_in_a_digit_is_no_point(word: str) -> None:
+    """A bold label holds a point only with its em dash, so the list after a bold word
+    that ends in a digit still holds the record's points."""
+    read = rp.read_points(_record(f"**{word}** holds the blobs.\n\n1. **One.** a\n2. **Two.** b\n"))
+    assert [p.id for p in read.list_points] == ["1", "2"]
+
+
 def test_a_numbered_list_inside_a_bold_point_holds_no_points() -> None:
     read = rp.read_points(
         _record("**1. First.** It runs:\n\n1. a step\n2. another\n\n**2. Second.** More.\n")
