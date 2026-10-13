@@ -18,8 +18,9 @@ pkit:
         - .pkit/agents/core/rule-set-reviewer.md
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052]
     revalidated:
-      at: 2026-10-13T11:43:37Z
-      outcome: updated
+      at: 2026-10-13T10:43:21Z
+      outcome: unchanged
+      unchanged-because: COR-050's refinement lets a record anchor name one point of a record, and says what the point stands on, which the checks compare. This page's friction writers rest on COR-050 point 3, who decides an answer, which did not change, so the page holds.
 ---
 
 # Agents

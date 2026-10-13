@@ -75,8 +75,8 @@
           "$ref": "#/$defs/anchor-values"
         },
         "record": {
-          "description": "Identified records, such as decisions.",
-          "$ref": "#/$defs/anchor-values"
+          "description": "Identified records, such as decisions: a record's id names the whole record, and `<record id>#<point id>` one point of it (COR-050 point 2), such as `COR-058#4`, `PRJ-002#D1` or `living-docs:DEC-001#3`. What follows the `#` is a point id: a number, or letters then a number (COR-058 point 1).",
+          "$ref": "#/$defs/record-anchor-values"
         },
         "artefact": {
           "description": "Other artefacts, by id.",
@@ -90,6 +90,16 @@
       "uniqueItems": true,
       "items": {
         "$ref": "#/$defs/non-empty-string"
+      }
+    },
+    "record-anchor-values": {
+      "title": "Record anchors: a record, or one point of it",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[^#]+(?:#(?:[0-9]+|[A-Za-z]+[0-9]+))?$"
       }
     },
     "revalidated": {

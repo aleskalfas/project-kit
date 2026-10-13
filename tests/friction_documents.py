@@ -80,6 +80,51 @@ def guide(**overrides: Any) -> str:
     return document("guide", **values)
 
 
+#: A project record whose points are headings, for anchors on one point (COR-050 point 2).
+POINTED = ".pkit/decisions/project/PRJ-900-pointed.md"
+
+#: Its points, in written order: id, title and text.
+POINTS: tuple[tuple[str, str, str], ...] = (
+    ("1", "First", "The first point."),
+    ("2", "Second", "The second point."),
+    ("3", "Third", "The third point."),
+)
+
+
+def pointed_record(
+    points: tuple[tuple[str, str, str], ...] = POINTS,
+    *,
+    status: str = "accepted",
+    title: str = "A pointed record",
+    lead: str = "The record decides three things.",
+    retired: Mapping[str, list[str]] | None = None,
+    context: str = "Why it came up.",
+    rationale: str = "Why this way.",
+    preamble: str = "",
+) -> str:
+    """`PRJ-900`, its points written as headings in the order given (COR-058 point 1).
+
+    A point whose title is `Retired` is a stub: give its text as the sentence
+    its entry in `retired` gives (COR-058 point 4).
+    """
+    front: dict[str, Any] = {
+        "id": "PRJ-900",
+        "title": title,
+        "status": status,
+        "date": "2026-10-13",
+        "author": "A. Author <a@example.com>",
+    }
+    if retired:
+        front["retired-points"] = dict(retired)
+    sections = "".join(f"### {pid}. {name}\n\n{text}\n\n" for pid, name, text in points)
+    opening = f"{preamble}\n\n" if preamble else ""
+    return (
+        f"---\n{json.dumps(front, indent=2)}\n---\n\n{opening}## Context\n\n{context}\n\n"
+        f"## Decision\n\n{lead}\n\n{sections}## Rationale\n\n{rationale}\n\n"
+        f"## Implications\n\nNone.\n"
+    )
+
+
 class Timeline:
     """Commits on an adopter repository, each a day after the last, so origins have known dates."""
 

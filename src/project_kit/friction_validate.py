@@ -70,7 +70,13 @@ settings that declare them, this pass reports:
   at the registration, in the packages pass. This pass runs no resolver;
 - **a cycle between artefacts** through `anchors.artefact`, with the cycle's
   path — a cycle has no order in which its members could be revalidated
-  (COR-050 point 5).
+  (COR-050 point 5);
+- **a dead or ambiguous anchor on a record's point** (`_PointAnchors`), an
+  error: its record does not resolve, holds no point with the id, writes its
+  points as a list, or holds two with the id (COR-050 points 7 and 12) — and
+  **an anchor on a retired point**, a warning naming the point's successors,
+  until it is re-pointed. Each record is read from the working tree through
+  `record_points`, the one reading of a record's points (ADR-057 point 2).
 
 These fail validation in either mode, because the project can fix them. A
 rule-set file is claimed before the container rule (ADR-056 point 2): its
@@ -87,8 +93,9 @@ matches a synced copy, which only the walk can tell. This pass never walks a
 place that leaves the repository, nor a synced copy a declared place matches.
 Without the tree's ownership module no match can be told a synced copy; that
 is a report, not an error. What it does not do either: compute friction, resolve
-path anchors against git, run a registered kind's resolver, or report dead
-anchors — those are the two checks' findings (COR-050 points 6 and 7). What the
+path anchors against git, run a registered kind's resolver, or report a dead
+path, whole-record or artefact anchor — those are the two checks' findings
+(COR-050 points 6 and 7). What the
 container validator reports rather than judges — a role block whose role has no
 active provider, a point block the active provider's point does not match — is
 carried through as reports (never errors) so `pkit validate` can show them.
@@ -107,9 +114,11 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Any, cast
 
 from project_kit import backbone_schemas as bs
 from project_kit import connections, validators
+from project_kit.friction_check import point_problem, record_file
 from project_kit.friction_discovery import (
     CORE_ANCHOR_KINDS,
     FRICTION_KEY,
@@ -129,8 +138,26 @@ from project_kit.friction_discovery import (
     unresolved_kind_reason,
 )
 from project_kit.lifecycle_ownership import OWNERSHIP_MODULE
+from project_kit.record_points import (
+    AnchoredPoint,
+    PointState,
+    RecordPoints,
+    read_points_bytes,
+    split_anchor,
+    successors_phrase,
+)
+from project_kit.working_tree import WorkingTree
 
-Severity = bs.Severity
+
+class Severity(Enum):
+    """Whether a finding fails validation (`error`), asks for attention without failing
+    (`warning`, an anchor on a retired point), or is only reported (`report`) — COR-050
+    points 7 and 12. A container finding keeps the severity the container validator gives
+    it (`bs.Severity`), read by its value."""
+
+    ERROR = "error"
+    WARNING = "warning"
+    REPORT = "report"
 
 
 class FrictionFindingKind(Enum):
@@ -151,6 +178,9 @@ class FrictionFindingKind(Enum):
     DUPLICATE_DEFERRAL = "duplicate-deferral"  # an anchor an earlier entry already defers
     UNRESOLVED_KIND = "unresolved-kind"  # an anchor kind nothing installed resolves: a report
     CYCLE = "cycle"
+    DEAD_POINT_ANCHOR = "dead-point-anchor"  # an anchor on a record's point that names none
+    AMBIGUOUS_POINT_ANCHOR = "ambiguous-point-anchor"  # an id two live points of a record share
+    RETIRED_POINT_ANCHOR = "retired-point-anchor"  # an anchor on a point its record retires
     CONTAINER_REPORT = "container-report"  # an orphaned role block, an inert point block
     SCHEMA_UNAVAILABLE = "schema-unavailable"  # the tree ships no readable container schema
 
@@ -180,6 +210,10 @@ class FrictionValidation:
     @property
     def errors(self) -> tuple[FrictionFinding, ...]:
         return tuple(f for f in self.findings if f.severity is Severity.ERROR)
+
+    @property
+    def warnings(self) -> tuple[FrictionFinding, ...]:
+        return tuple(f for f in self.findings if f.severity is Severity.WARNING)
 
     @property
     def reports(self) -> tuple[FrictionFinding, ...]:
@@ -493,6 +527,7 @@ def _artefact_findings(target_root: Path, discovery: Discovery) -> list[Friction
         findings.append(schema_finding)
     wiring = connections.container_wiring(target_root)
     registry = registered_anchor_kinds(target_root)  # read once for the pass
+    points = _PointAnchors(target_root)
 
     for artefact in discovery.with_container:
         if schema is not None and artefact.rule_set is None:  # a rule's: the rule-set pass's
@@ -501,6 +536,7 @@ def _artefact_findings(target_root: Path, discovery: Discovery) -> list[Friction
         findings.extend(_dangling_deferrals(artefact))
         findings.extend(_duplicate_deferrals(artefact))
         findings.extend(_unresolved_kinds(artefact, registry))
+        findings.extend(points.findings(artefact))
 
     findings.extend(_cycles(discovery))
     return findings
@@ -567,11 +603,11 @@ def _container_findings(
     active wiring; surface each finding."""
     report = bs.validate_container(artefact.carrier, schema, wiring=wiring)
     for finding in report.findings:
-        is_error = finding.severity is Severity.ERROR
+        is_error = finding.severity is bs.Severity.ERROR
         yield FrictionFinding(
             location=artefact.location,
             pointer=finding.location,
-            severity=finding.severity,
+            severity=Severity(finding.severity.value),
             kind=(
                 FrictionFindingKind.MALFORMED_BLOCK
                 if is_error
@@ -702,6 +738,121 @@ def _unresolved_kinds(
         )
 
 
+class _PointAnchors:
+    """The findings on each anchor that names one point of a record (COR-050 point 7),
+    each record read once from the working tree, its points through `record_points`.
+
+    - **A dead anchor**, an error: the record does not resolve, it holds no
+      point with the id and retires none, or it writes its points as a list,
+      whose numbers no anchor can rely on (COR-058 point 9).
+    - **An ambiguous anchor**, an error: two live points of the record share
+      the id.
+    - **An anchor on a retired point**, a warning naming the point's
+      successors: it stands on nothing, and is no dead anchor, since the
+      record says where the point went. It stays until the anchor is
+      re-pointed.
+
+    A whole-record anchor is the checks' to judge, as before. Validation reads
+    the working tree alone (COR-055 point 2), the one listing discovery reads.
+    """
+
+    def __init__(self, target_root: Path) -> None:
+        self.root = target_root
+        self.tree = WorkingTree(target_root)
+        self._files: frozenset[str] | None = None
+        self._records: dict[str, RecordPoints | None] = {}
+
+    def findings(self, artefact: Artefact) -> Iterable[FrictionFinding]:
+        for index, value in _record_anchors(artefact):
+            record, point = split_anchor(value)
+            if point is None:
+                continue
+            pointer = f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/anchors/record/{index}"
+            rel = record_file(self.root, self.files, record)
+            if rel is None:
+                yield self._finding(
+                    artefact,
+                    pointer,
+                    Severity.ERROR,
+                    FrictionFindingKind.DEAD_POINT_ANCHOR,
+                    f"record anchor {value!r} is dead: it names no record (COR-050 point 7).",
+                )
+                continue
+            points = self._read(rel)
+            found = (
+                AnchoredPoint(point, PointState.MISSING)
+                if points is None
+                else points.anchored(point)
+            )
+            if found.state is PointState.RETIRED:
+                yield self._finding(
+                    artefact,
+                    pointer,
+                    Severity.WARNING,
+                    FrictionFindingKind.RETIRED_POINT_ANCHOR,
+                    f"record anchor {value!r} names a retired point: {record} retires point "
+                    f"{point}, and its content is in {successors_phrase(found.successors)}. The "
+                    f"anchor stands on nothing until it is re-pointed, which a revalidation "
+                    f"records (COR-050 points 6 and 7).",
+                )
+            elif found.state is PointState.AMBIGUOUS:
+                yield self._finding(
+                    artefact,
+                    pointer,
+                    Severity.ERROR,
+                    FrictionFindingKind.AMBIGUOUS_POINT_ANCHOR,
+                    f"record anchor {value!r} {point_problem(record, found)}: give one of them "
+                    f"the next unused number (COR-050 point 7, COR-058 point 3).",
+                )
+            elif found.dead:
+                yield self._finding(
+                    artefact,
+                    pointer,
+                    Severity.ERROR,
+                    FrictionFindingKind.DEAD_POINT_ANCHOR,
+                    f"record anchor {value!r} is dead: {point_problem(record, found)} "
+                    f"(COR-050 point 7).",
+                )
+
+    @property
+    def files(self) -> frozenset[str]:
+        if self._files is None:
+            self._files = frozenset(self.tree.files())
+        return self._files
+
+    def _read(self, rel: str) -> RecordPoints | None:
+        if rel not in self._records:
+            raw = self.tree.read_bytes([rel]).get(rel)
+            self._records[rel] = None if raw is None else read_points_bytes(raw)
+        return self._records[rel]
+
+    @staticmethod
+    def _finding(
+        artefact: Artefact,
+        pointer: str,
+        severity: Severity,
+        kind: FrictionFindingKind,
+        message: str,
+    ) -> FrictionFinding:
+        return FrictionFinding(artefact.location, pointer, severity, kind, message)
+
+
+def _record_anchors(artefact: Artefact) -> list[tuple[int, str]]:
+    """Each record anchor the block writes as text, with its index in the list as written,
+    so a finding points at it even beside an entry that is not text."""
+    friction = artefact.friction
+    if not isinstance(friction, Mapping):
+        return []
+    anchors = cast("Mapping[str, Any]", friction).get("anchors")
+    if not isinstance(anchors, Mapping):
+        return []
+    written = cast("Mapping[str, Any]", anchors).get("record")
+    if not isinstance(written, list):
+        return []
+    values = cast("list[Any]", written)
+    return [(index, value) for index, value in enumerate(values) if isinstance(value, str)]
+
+
 def _pointer_token(segment: str) -> str:
     """One JSON Pointer reference token (RFC 6901 escaping)."""
     return segment.replace("~", "~0").replace("/", "~1")
@@ -822,13 +973,21 @@ def summary_lines(result: FrictionValidation) -> list[str]:
         counts = (
             f"{places} place(s), {artefacts} artefact(s), {carrying} carrying the "
             f"`{bs.CONTAINER_KEY}` container{unreadable}; mode {d.settings.mode_or_default}; "
-            f"{len(result.errors)} error(s), {len(result.reports)} report(s){not_walked}."
+            f"{len(result.errors)} error(s), {_warnings(result)}{len(result.reports)} "
+            f"report(s){not_walked}."
         )
     return [counts]
 
 
+def _warnings(result: FrictionValidation) -> str:
+    """The warnings in the count line, `n warning(s), `, or nothing when there are none,
+    so the line reads as it did where nothing warns."""
+    return f"{len(result.warnings)} warning(s), " if result.warnings else ""
+
+
 UMBRELLA_SEVERITY = {
     Severity.ERROR: validators.Severity.ERROR,
+    Severity.WARNING: validators.Severity.WARNING,
     Severity.REPORT: validators.Severity.REPORT,
 }
 

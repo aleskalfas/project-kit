@@ -12,8 +12,9 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-13T01:02:49Z
-      outcome: updated
+      at: 2026-10-13T10:43:33Z
+      outcome: unchanged
+      unchanged-because: COR-050's refinement lets a record anchor name one point of a record, and says what the point stands on. The page says an artefact declares its anchors in the core friction block, that the check flags it when one changes, and that --record writes a record anchor. Each still holds, so the page holds.
       deferred:
         - anchor:
             kind: record

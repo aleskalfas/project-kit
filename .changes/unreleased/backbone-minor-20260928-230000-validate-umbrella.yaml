@@ -9,8 +9,8 @@ body: >
   functionality registers a name, an order and a callable answering summary lines and
   findings, each finding with a severity — `error` fails the command, `warning`, `info` and
   `report` print. The backbone's twelve members run in dependence order — `manifests`,
-  `schemas`, `configuration`, `packages`, `connections`, `versions`, `friction`, `rule-sets`,
-  `decisions`, `refs`, `process`, `data` — and the five focused commands (`schemas validate`,
+  `schemas`, `configuration`, `packages`, `connections`, `versions`, `decisions`, `friction`,
+  `rule-sets`, `refs`, `process`, `data` — and the five focused commands (`schemas validate`,
   `decisions validate`, `refs validate`, `data validate <path>`, `process validate <address>`)
   stay, `schemas validate` and `data validate` now phrasing an unknown key through the shared
   renderer (one line per key, with the nearest known key). A capability registers its own
