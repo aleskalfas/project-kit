@@ -1,8 +1,8 @@
-"""project-management's `0.15.0/001` and `0.24.0/001` run after the copy (#1460).
+"""project-management's workflow schema migrations run after the copy (#1460).
 
 A version transition runs a capability's migrations after its copy (COR-010's
 order, ADR-065 point 4). On an upgrade that crosses more than one version, the
-kit-shipped `workflow.yaml` the copy brings is then newer than either script's
+kit-shipped `workflow.yaml` the copy brings can be newer than each script's
 schema, and an override may be too. Neither is a change the script still has to
 make, so neither may warn. A schema below the script's still warns.
 """
@@ -21,9 +21,11 @@ MIGRATIONS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "migr
 SCRIPTS = {
     2: MIGRATIONS / "0.15.0" / "001-workflow-yaml-schema-v2.sh",
     3: MIGRATIONS / "0.24.0" / "001-workflow-yaml-schema-v3.sh",
+    4: MIGRATIONS / "0.26.0" / "001-workflow-yaml-schema-v4.sh",
 }
-# The schema the newest release ships, as a copy on a long jump brings it.
-_LATEST = "4"
+# A schema past every script's, as a copy on a long jump brings it once a later
+# release bumps the schema again.
+_LATEST = "5"
 
 
 def _adopter(tmp_path: Path, *, kit: str, override: str | None) -> Path:
