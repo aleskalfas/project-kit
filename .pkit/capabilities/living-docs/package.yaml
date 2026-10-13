@@ -44,17 +44,37 @@ docs:
       description: Where the spaces' definitions live, in the technical space (DEC-001 point 2); recorded when the first one is placed (COR-049 point 5).
 
 # COR-050 point 1 — where the spaces' pages and this capability's artefacts are found.
+#
+# COR-056 point 2 — the type registry, and the type each place gives (DEC-001
+# points 1, 2 and 4). `page` names `kind` as its kind field, so a document in a
+# root is a page only where it declares its page kind, and admits project
+# places, which the validator checks. `template` admits none: the definitions
+# location is the capability's own. The rule-sets place names no type: every
+# rule is `backbone:rule`.
 friction:
+  types:
+    page:
+      description: A page of a documentation space, written for one declared reader and following one page kind (DEC-001 point 4).
+      kind-field: kind
+      project-places: true
+    template:
+      description: A writer's tool in the definitions location, such as a page template copied there, never a page (DEC-001 point 2).
   places:
     - location: user-root
       path: "**"
+      type: page
       description: The user space's pages, under the user root.
     - location: internal-root
       path: "**"
+      type: page
       description: The technical space's pages, under the internal root.
     - location: definitions
       path: rule-sets
       description: The spaces' definitions, project rule sets that inherit LDOC (COR-051 point 2).
+    - location: definitions
+      path: "**"
+      type: template
+      description: The writers' tools beside the definitions, each a template, never a page (DEC-001 point 2).
   # COR-050 point 2 — a source outside the repository, anchored by its name and
   # captured as one file of the project tier (DEC-001 point 4).
   kinds:

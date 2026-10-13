@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-12T09:23:25Z
+          at: 2026-10-13T00:44:29Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 names the backbone's friction validation as what refuses a synced tree as a place. It says nothing of what grounds a page's statements, so a page's anchors still ground every statement it makes.
+          unchanged-because: DEC-001 now tells a page by the page type, ranks places by the backbone's order, holds assigned places to the definitions' scopes, and names the parts of LDOC that validation enforces. None of it touches what grounds a page's statements, so a page's anchors ground every statement it makes.
   RS-LDOC-002:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -19,9 +19,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-12T09:23:27Z
+          at: 2026-10-13T00:44:30Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 names the backbone's friction validation as what refuses a synced tree as a place. It says nothing about stating a fact in more than one page, so each fact is still stated once and other pages link to it.
+          unchanged-because: DEC-001 now tells a page by the page type, ranks places by the backbone's order, holds assigned places to the definitions' scopes, and names the parts of LDOC that validation enforces. It says nothing about stating a fact on more than one page, so each fact is stated once and other pages link to it.
   RS-LDOC-003:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -29,9 +29,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-12T09:23:29Z
+          at: 2026-10-13T00:44:41Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 names the backbone's friction validation as what refuses a synced tree as a place. It touches neither the reader field nor the readers point, so a page still names its reader and says only what that reader needs.
+          unchanged-because: "DEC-001 point 6 names a page naming its reader in its reader field, one the readers point holds, as the part of this rule that validation enforces, and reader-review judges the rest. Point 4 tells a page by the page type. Neither changes what the rule asks: each page names its reader in its reader field and says only what that reader needs."
   RS-LDOC-004:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -39,9 +39,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-12T09:23:31Z
+          at: 2026-10-13T00:44:42Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 names the backbone's friction validation as what refuses a synced tree as a place. It says nothing of a page's kind, its template or its format, so pages of a kind still follow one format.
+          unchanged-because: "DEC-001 point 6 names a page's sections against its kind's structure as the part of this rule that validation enforces, and point 4 makes the kind field the page type's kind field. Neither changes what the rule asks: pages of a kind follow one format, with a template per kind, and a page names its kind in its kind field."
   RS-LDOC-005:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -49,9 +49,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-12T09:23:33Z
+          at: 2026-10-13T00:44:43Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 names the backbone's friction validation as what refuses a synced tree as a place. It says nothing of what an index-like file tells its reader, so such a file is still a signpost to what a folder holds, never a summary of its contents.
+          unchanged-because: DEC-001 now tells a page by the page type, ranks places by the backbone's order, holds assigned places to the definitions' scopes, and names the parts of LDOC that validation enforces. It says nothing of what an index-like file tells its reader, so such a file is a signpost to what a folder holds, never a summary of its contents.
   RS-LDOC-006:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -59,9 +59,18 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-12T09:23:35Z
+          at: 2026-10-13T00:44:44Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 names the backbone's friction validation as what refuses a synced tree as a place. It asks for nothing to be created, so nothing is created ahead of the need for it.
+          unchanged-because: DEC-001 now tells a page by the page type, ranks places by the backbone's order, holds assigned places to the definitions' scopes, and names the parts of LDOC that validation enforces. It asks for nothing to be created ahead of its need, so nothing is created ahead of the need for it.
+# The parts of these rules that this capability's validation enforces (COR-051
+# point 2; DEC-001 point 6): a reader-review leaves them to it and judges the rest.
+checks:
+  RS-LDOC-003:
+    - check: "living-docs:validate"
+      part: The page names its reader in its `reader` field, a word that names a reader the readers point holds.
+  RS-LDOC-004:
+    - check: "living-docs:validate"
+      part: The page's body carries the sections its kind's declared structure names, in order where order matters (`schemas/page-kinds.yaml`).
 ---
 
 # LDOC — the shared documentation method

@@ -10,8 +10,8 @@ enclosing the analysis — one committed record is:
   unanchored — while it does list the seeded use case that has no anchors —
   nor anywhere else, and the debt listing never names it;
 - **claimed by its owner** in living-docs' summary — "of another component",
-  never an unclassified document — and by the held claim, which a page's field
-  written into it names (living-docs DEC-001 point 1);
+  never an unclassified document — whose fields living-docs never reads, so a
+  page's field written into it fails nothing (living-docs DEC-001 point 1);
 - **found by software-analysis' check** from the declaration of its held
   folder in the artefacts document, never by listing the folder.
 """
@@ -141,10 +141,12 @@ def test_living_docs_counts_a_record_as_another_component_s(project: AdopterRepo
     assert "5 of another component" in not_pages
     assert "0 unclassified document(s)" in not_pages
 
-    # Which claim it is: the held one, named when a page's field is written into it.
+    # Its fields are its holder's: a page's fields written into it are never read.
     record = project.root / _record(project)
     record.write_text(
-        record.read_text(encoding="utf-8").replace("---\n", "---\nreader: user\n", 1),
+        record.read_text(encoding="utf-8").replace(
+            "---\n", "---\nreader: user\nkind: signpost\n", 1
+        ),
         encoding="utf-8",
     )
     completed = subprocess.run(
@@ -154,12 +156,10 @@ def test_living_docs_counts_a_record_as_another_component_s(project: AdopterRepo
         text=True,
         check=False,
     )
-    (finding,) = [f for f in json.loads(completed.stdout)["findings"] if f["severity"] == "error"]
-    assert finding["location"] == f"{_record(project)}:/reader"
-    assert (
-        "is a document software-analysis holds in a folder it declares (COR-050 point 1)"
-        in (finding["message"])
-    )
+    document = json.loads(completed.stdout)
+    assert [f for f in document["findings"] if f["severity"] == "error"] == []
+    (not_pages,) = [line for line in document["summary"] if line.startswith("not pages:")]
+    assert "5 of another component" in not_pages
 
 
 def test_software_analysis_finds_its_records_from_the_artefacts_document(

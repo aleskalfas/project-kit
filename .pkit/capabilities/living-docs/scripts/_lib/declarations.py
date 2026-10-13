@@ -4,19 +4,21 @@ Two sources, each read once:
 
 - **where the documents are** — the documentation roots, the places the
   project and every installed capability declare, which Markdown files each
-  place matches, each file's front matter, and the documents a capability
-  holds that are not artefacts, with their owner — is the backbone's artefact
+  place matches, each file's front matter, each artefact's type and its
+  matching places in the core's order, and the documents a capability holds
+  that are not artefacts, with their owner — is the backbone's artefact
   discovery, read through its read command (`artefacts`, `pkit friction
   artefacts --json`). A capability script never imports the backbone, and
-  never re-reads the declarations or walks the places itself: one home per
-  computation (ADR-057 point 2).
+  never re-reads the declarations, walks the places or ranks them itself: one
+  home per computation (ADR-057 point 2).
 - living-docs' own **project configuration**, which only this capability
   reads: each space's entry point and definition, and the space each place is
   assigned to (DEC-001 point 1).
 
-The path helpers below read a place's *text* for DEC-001's precedence — its
-wildcards and the literal prefix before the first — and never match a path
-against it: which files a place matches is the backbone's answer.
+The path helpers below read a place's *text* — the literal prefix before its
+first wildcard, to tell whether it lies inside a root — and never match a path
+against it nor rank it: which files a place matches, and in which order places
+rank, is the backbone's answer (COR-056 point 3).
 
 Reading is forgiving (COR-048 point 4): a missing or malformed value reads as
 absent. Judging the shape of these files is the backbone's configuration,
@@ -96,16 +98,6 @@ def literal_prefix(pattern: str) -> str:
     return normalise("/".join(kept))
 
 
-def literal_text_prefix(pattern: str) -> str:
-    """The text of `pattern` before its first wildcard — what "the longer literal
-    prefix before the first wildcard" measures (DEC-001 point 1)."""
-    text = normalise(pattern)
-    for index, char in enumerate(text):
-        if char in WILDCARDS:
-            return text[:index]
-    return text
-
-
 def pointer_token(segment: Any) -> str:
     """One JSON Pointer reference token (RFC 6901 escaping)."""
     return str(segment).replace("~", "~0").replace("/", "~1")
@@ -149,6 +141,7 @@ class ProjectPlace:
     path: str  # normalised
     pointer: str  # into the backbone configuration
     encloses: frozenset[str]  # the audiences of the roots it reaches whole
+    type: str | None = None  # the type it gives, in full, or `None` (COR-056 point 3)
 
 
 @dataclass(frozen=True)
@@ -267,6 +260,7 @@ def _project_place(place: DeclaredPlace) -> ProjectPlace:
         path=normalise(written),
         pointer=place.pointer,
         encloses=place.encloses,
+        type=place.type,
     )
 
 

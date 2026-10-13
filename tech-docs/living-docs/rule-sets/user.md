@@ -10,9 +10,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001"]}
         revalidated:
-          at: 2026-10-12T09:23:21Z
+          at: 2026-10-13T00:44:45Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 1 names the backbone's friction validation as what refuses a synced tree as a place. It says nothing of the links between pages, so the paths the user space's readers take through its pages stay unbroken.
+          unchanged-because: living-docs DEC-001 now tells a page by the page type, ranks places by the backbone's order, holds assigned places to the definitions' scopes, and names the parts of LDOC that validation enforces. It says nothing of the links between pages, so the paths the user space's readers take through its pages stay unbroken.
 ---
 
 # The user space's definition

@@ -4,12 +4,12 @@ Over the artefacts `friction_discovery` finds in the declared places, and the
 settings that declare them, this pass reports:
 
 - **a capability place the walk does not follow** — one discovery could not
-  read in the package schema's shape `{path, location?}` (plain text, no
-  `path`, a location `docs.locations` does not declare, or declares in
-  another shape with nothing recorded), or one that leaves the repository,
-  through a link included; reported whenever it is declared, dormant or not,
-  because a place nothing is found under must never look like a place with
-  nothing in it (COR-050 point 7);
+  read in the package schema's shape `{path, location?, type?, description?}`
+  (plain text, no `path`, a location `docs.locations` does not declare, or
+  declares in another shape with nothing recorded), or one that leaves the
+  repository, through a link included; reported whenever it is declared,
+  dormant or not, because a place nothing is found under must never look like
+  a place with nothing in it (COR-050 point 7);
 - **a place matching a synced copy** — a declared place, the project's or a
   capability's, whose path or glob matches a file the methodology's sync
   writes into the repository, as the tree's ownership predicate judges it
@@ -245,8 +245,8 @@ def _capability_place_findings(
             kind=FrictionFindingKind.MALFORMED_PLACE,
             message=(
                 f"{place.reason}, so friction discovery walks nothing under it; a capability "
-                f"place is `{{path, location?}}`, its `location` naming a `docs.locations` "
-                f"entry written `{{path, root?}}` (COR-050 point 7)."
+                f"place is `{{path, location?, type?, description?}}`, its `location` naming a "
+                f"`docs.locations` entry written `{{path, root?}}` (COR-050 point 7)."
             ),
         )
     for declared in settings.places:
@@ -377,7 +377,8 @@ def _capability_held_findings(discovery: Discovery) -> Iterable[FrictionFinding]
             message=(
                 f"{entry.reason}, so friction discovery holds nothing under it, and a place "
                 f"matching its documents reads them as artefacts; a held folder is "
-                f"`{{location, path}}`, `path` a folder within that location (COR-050 point 1)."
+                f"`{{location, path, description?}}`, `path` a folder within that location "
+                f"(COR-050 point 1)."
             ),
         )
     for folder in discovery.held_folders:
