@@ -428,7 +428,11 @@ def _answers_check() -> list[str]:
     [
         (
             "Read the answers from the change check, never from the author.",
-            ["`pkit friction check --base <base> --head <head>`", "Answers written in this change"],
+            [
+                "`pkit friction check --base <base> --head <head>`",
+                "Answers written in this change",
+                "reports friction dormant",
+            ],
         ),
         (
             "An `unchanged` reason must hold against the change.",
@@ -446,11 +450,6 @@ def _answers_check() -> list[str]:
                 "with no sentence, or with one that does not match what changed",
             ],
         ),
-        (
-            "An answer the check did not ask for, and a reason for having no anchors, are a "
-            "person's decision.",
-            ["it is a `[block]`", "the person's to decide"],
-        ),
     ],
 )
 def test_the_docs_reviewer_blocks_on_each_answer_that_does_not_hold(lead, says):
@@ -460,6 +459,23 @@ def test_the_docs_reviewer_blocks_on_each_answer_that_does_not_hold(lead, says):
     (item,) = [line for line in _answers_check() if line.startswith(f"- **{lead}**")]
     for words in says:
         assert words in item, (lead, words)
+
+
+def test_an_answer_that_is_a_person_s_decision_is_named_not_blocked():
+    """Whether a person accepted an answer on an artefact the change was not asked
+    about, or a reason for having no anchors, is a fact no reviewer can read (COR-050
+    point 3): the reviewer names it, as an advisory, and judges a reworded deferral on
+    an artefact it was asked about by the other rules."""
+    lead = "- **Some answers are a person's decision, not yours to judge.**"
+    (item,) = [line for line in _answers_check() if line.startswith(lead)]
+    for words in (
+        "An answer on an artefact the change check asked nothing about",
+        "every reason for having no anchors",
+        "so do not block on it",
+        "in an `[advisory]` finding",
+        "such as a deferral the change rewords, is judged by the bullets above",
+    ):
+        assert words in item, words
 
 
 def test_the_docs_reviewer_s_answers_check_raises_findings_not_a_verdict_line():
