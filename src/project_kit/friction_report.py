@@ -40,8 +40,10 @@ never the working tree, as the check does; neither writes anything.
   and at HEAD, matched as the check decides a dead anchor, `friction.exclude`
   applied, and the files it leaves out; each commit's paths behind its
   finding, what the check read as the change (`fr.CommitBehind`); where a
-  dead path anchor's files went; and the artefact's body as discovery reads
-  it — for a collection entry, the section headed by its id.
+  dead path anchor's files went; for a stale anchor on a record's point, the
+  point's diff alone — what it stands on, from the revalidation point to HEAD
+  (COR-050 point 13); and the artefact's body as discovery reads it — for a
+  collection entry, the section headed by its id.
 """
 
 from __future__ import annotations
@@ -462,7 +464,10 @@ class ExplainedAnchor:
     `files`, for a path anchor, are the files it stands on at the revalidation
     point and at HEAD, as the check decides a dead anchor, and those its glob
     covers at HEAD that `friction.exclude` leaves out (`fr.AnchorFiles`);
-    `None` for another kind.
+    `None` for another kind. `diff`, for a stale anchor on a record's point, is
+    what changed in what the point stands on from the revalidation point to
+    HEAD, a unified diff's lines, and nothing else of the record (COR-050
+    point 13); `None` for any other anchor.
     """
 
     anchor: Anchor
@@ -473,6 +478,7 @@ class ExplainedAnchor:
     changes: int
     over_broad: bool
     files: fr.AnchorFiles | None = None
+    diff: tuple[str, ...] | None = None
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -482,6 +488,7 @@ class ExplainedAnchor:
             "changes": self.changes,
             "over_broad": self.over_broad,
             "files": None if self.files is None else self.files.as_json(),
+            "diff": None if self.diff is None else list(self.diff),
         }
 
 
@@ -537,7 +544,8 @@ def run_explain(
     elif check.report is not None and check.report.state is fr.ArtefactState.UNREACHABLE:
         unjudged = fr.ArtefactState.UNREACHABLE.value
     anchors = tuple(
-        _anchor_state(anchor, findings, unjudged, check.files.get(anchor)) for anchor in declared
+        _anchor_state(anchor, findings, unjudged, check.files.get(anchor), check.diffs.get(anchor))
+        for anchor in declared
     )
     return Explanation(
         head=check.head,
@@ -687,6 +695,7 @@ def _anchor_state(
     findings: Sequence[ExplainedFinding],
     unjudged: str | None,
     files: fr.AnchorFiles | None,
+    diff: tuple[str, ...] | None = None,
 ) -> ExplainedAnchor:
     """An anchor's state: its first finding's kind, else `unjudged` — why the artefact
     was not judged — else `current`."""
@@ -696,7 +705,7 @@ def _anchor_state(
     if state is None:
         state = unjudged or "current"
     changes = sum(len(f.commits) for f in about if f.finding.kind is _Kind.STALE)
-    return ExplainedAnchor(anchor, state, changes, _Kind.OVER_BROAD in kinds, files)
+    return ExplainedAnchor(anchor, state, changes, _Kind.OVER_BROAD in kinds, files, diff)
 
 
 #: The version of the document `render_explain_json` returns. A change a reader could
@@ -882,6 +891,7 @@ def _finding_lines(explanation: Explanation, now: datetime) -> list[str]:
         lines.append("  nothing to answer")
         return lines
     kind_width = max(len(f.finding.kind.value) for f in explanation.findings)
+    diffs: dict[Anchor, tuple[str, ...]] = {a.anchor: a.diff for a in explanation.anchors if a.diff}
     for explained in explanation.findings:
         finding = explained.finding
         message = finding.message
@@ -895,6 +905,11 @@ def _finding_lines(explanation: Explanation, now: datetime) -> list[str]:
             author_width = max(len(c.commit.author) for c in explained.commits)
             lines.append(f"    {label}:")
             lines.extend(f"      {_commit_row(c.commit, author_width)}" for c in explained.commits)
+        anchor = finding.anchor
+        diff = diffs.get(anchor, ()) if finding.kind is _Kind.STALE and anchor is not None else ()
+        if diff:
+            lines.append("    what the point stands on, from its revalidation point to HEAD:")
+            lines.extend(f"      {line}" for line in diff)
         if explained.answers:
             lines.append(f"    clears it — {explained.clears}:")
             width = max(len(a.answer) for a in explained.answers)
