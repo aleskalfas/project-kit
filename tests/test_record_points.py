@@ -9,6 +9,8 @@ each stub to its entry in `retired-points`.
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -435,6 +437,24 @@ def test_what_a_point_stands_on_holds_through_a_move_and_changes_with_its_ground
     ):
         assert rp.read_points(differs).standing("2") != standing
     assert standing.lines()[:3] == ["### 2. Second", "", "Two."]
+
+
+def test_the_home_calls_nothing_of_the_friction_engine() -> None:
+    """ADR-057 point 2: this home calls nothing of the friction engine, artefact discovery
+    included. So validation, the numbering check and the conversion read a record without
+    it, and discovery and the checks call this home from above."""
+    loaded = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys, project_kit.record_points; print('\\n'.join(sorted(sys.modules)))",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    assert "project_kit.record_points" in loaded
+    assert [m for m in loaded if m.startswith("project_kit.friction")] == []
 
 
 def test_a_point_s_span_is_the_lines_of_its_file_its_section_spans() -> None:
