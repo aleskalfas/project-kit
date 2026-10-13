@@ -23,6 +23,7 @@ from __future__ import annotations
 import importlib
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -895,7 +896,12 @@ def _altered(location, change="changed", *, paths=None, ruled=True):
     )
 
 
-def _ruled_rule(vf, ad, repo, answer, asked, *, floors=None):
+# What the stand-in backbone answers: the altered artefacts, a reason it cannot
+# answer, or a function of the stretch (start, end) giving either.
+Answer = list | str | Callable[[str, str], "list | str"]
+
+
+def _ruled_rule(vf, ad, repo, answer: Answer, asked, *, floors=None):
     """The rule at the repository's current head, its author's changes read from
     real git, the backbone stood in by `answer` (the artefacts it lists as
     altered, a reason it cannot answer, or a function of the stretch giving
