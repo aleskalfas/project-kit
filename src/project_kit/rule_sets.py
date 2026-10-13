@@ -74,8 +74,8 @@ from ruamel.yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
 from project_kit import backbone_schemas as bs
 from project_kit import capabilities as caps
+from project_kit import document_parts, validators
 from project_kit import friction_discovery as fd
-from project_kit import validators
 from project_kit.decisions import resolve_adr_records_dir
 
 Severity = bs.Severity
@@ -503,7 +503,7 @@ def _read_rule_set(
 ) -> RuleSet | UnreadableRuleSet:
     if isinstance(text, fd.ReadFailure):
         return UnreadableRuleSet(rel, place, f"cannot be read ({text.reason})")
-    front_matter, body = fd.split_front_matter(text)
+    front_matter, body = document_parts.split_front_matter(text)
     if front_matter is None:
         return UnreadableRuleSet(
             rel,
@@ -527,7 +527,7 @@ def _read_rule_set(
             id=rule_id,
             path=rel,
             data=entry if isinstance(entry, Mapping) else {},
-            section=fd.entry_section(body, rule_id),
+            section=document_parts.entry_section(body, rule_id),
             checks=checks.get(rule_id, ()),
         )
         for rule_id, entry in entries.items()
@@ -613,17 +613,18 @@ def _duplicate_keys(text: str) -> tuple[DuplicateKey, ...]:
 def _sections(body: str) -> tuple[Section, ...]:
     """The body headings that open with `RS-`, in order.
 
-    Read as the friction pass reads a rule's section (`fd.body_headings`,
-    `fd.heading_opens_with`), so the two find the same sections. A heading
-    opens with a rule id only when it opens with the id as a whole token.
+    Read by the one reading of where a part lies (`document_parts.body_headings`,
+    `document_parts.heading_opens_with`), as the friction pass reads a rule's
+    section, so the two find the same sections. A heading opens with a rule id
+    only when it opens with the id as a whole token.
     """
     sections: list[Section] = []
-    for heading in fd.body_headings(body):
+    for heading in document_parts.body_headings(body):
         if not heading.title.startswith("RS-"):
             continue
         match = _HEADING_ID.match(heading.title)
         rule_id = match.group(1) if match else None
-        if rule_id is not None and not fd.heading_opens_with(heading.title, rule_id):
+        if rule_id is not None and not document_parts.heading_opens_with(heading.title, rule_id):
             rule_id = None
         sections.append(Section(rule_id=rule_id, heading=heading.title))
     return tuple(sections)
@@ -2315,7 +2316,7 @@ def _record_folder(target_root: Path, family: str) -> Path | None:
 
 def _front_matter_status(path: Path) -> str | None:
     try:
-        front_matter, _body = fd.split_front_matter(path.read_text(encoding="utf-8"))
+        front_matter, _body = document_parts.split_front_matter(path.read_text(encoding="utf-8"))
         data = _yaml.load(io.StringIO(front_matter)) if front_matter is not None else None
     except (OSError, UnicodeDecodeError, YAMLError):
         return None

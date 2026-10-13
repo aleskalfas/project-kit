@@ -28,7 +28,7 @@ from typing import Any
 import pytest
 from ruamel.yaml import YAML
 
-from project_kit import friction_discovery as fd
+from project_kit import document_parts
 from project_kit.friction_check import BASE_ENV
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo, Prepare
 
@@ -115,7 +115,7 @@ def stamped(repo: AdopterRepo, *args: str) -> str:
 def front(repo: AdopterRepo, rel: str) -> dict[str, Any]:
     """A stamped file's front matter."""
     text = (repo.root / rel).read_text(encoding="utf-8")
-    front_matter, _body = fd.split_front_matter(text)
+    front_matter, _body = document_parts.split_front_matter(text)
     assert front_matter is not None
     return load(front_matter)
 

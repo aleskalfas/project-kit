@@ -65,6 +65,7 @@ from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
 from project_kit import backbone_schemas as bs
+from project_kit import document_parts
 from project_kit import friction_discovery as fd
 from project_kit import rule_sets as rs
 from project_kit.cli import main
@@ -1166,7 +1167,7 @@ def _page_schema() -> Draft202012Validator:
 
 def _template_front_matter(name: str) -> dict[str, Any]:
     text = (CAPABILITY / "templates" / f"{name}.md").read_text(encoding="utf-8")
-    front, _body = fd.split_front_matter(text)
+    front, _body = document_parts.split_front_matter(text)
     assert front is not None
     return YAML(typ="safe").load(front)
 
@@ -1383,7 +1384,7 @@ def test_a_kind_that_declares_no_structure_is_reported_with_its_pages_and_never_
 def test_the_rule_the_check_names_is_an_accepted_rule_of_the_shipped_method() -> None:
     """The check applies one rule by its id (`FORMAT_RULE`): were the shipped LDOC to
     supersede or withdraw it, the check would stop while its successor binds."""
-    front, _body = fd.split_front_matter(LDOC.read_text(encoding="utf-8"))
+    front, _body = document_parts.split_front_matter(LDOC.read_text(encoding="utf-8"))
     assert front is not None
     rules = YAML(typ="safe").load(front)["rules"]
     assert rules[formats.FORMAT_RULE]["status"] == "accepted"
@@ -1734,7 +1735,7 @@ def test_a_line_inside_an_html_comment_is_no_heading() -> None:
 def test_the_body_starts_where_the_backbone_s_front_matter_split_puts_it(text: str) -> None:
     """The capability's scripts import nothing of the backbone, so the reader finds
     the body itself; it finds the one the backbone's split gives."""
-    _front, body = fd.split_front_matter(text)
+    _front, body = document_parts.split_front_matter(text)
     assert [(h.level, h.text) for h in formats.headings(text)] == [
         (h.level, h.text) for h in formats.headings(body)
     ]

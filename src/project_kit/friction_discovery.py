@@ -50,15 +50,16 @@ is the one reader of those declarations and the one walker of the places:
   collection file (a Markdown file whose front matter maps ids to entries;
   an entry's content is its data plus the body section headed by its id).
   A rule-set file is the collection whose entries are the values of its
-  `rules` map, one artefact per rule. `entry_section` cuts an entry's section
-  from the headings `body_headings` reads, with fenced code skipped. The
-  rule-set pass lists a file's sections from the same headings, so the two
-  find the same sections. A plain YAML file in a place is not a
+  `rules` map, one artefact per rule. An entry's section is cut by the one
+  reading of where a part of a document lies (`document_parts`), from the
+  headings outside fenced code. The rule-set pass lists a file's sections by
+  the same reading, so the two find the same sections. A plain YAML file in a
+  place is not a
   document (ADR-056 point 2). `parse_artefacts` is the reading of one file's
   text this walk applies; the whole-repository check applies it to a file's
   earlier versions too, so history is read by the same rule as the present.
   A text is read whatever its line endings (`universal_newlines`, in
-  `split_front_matter`), so a clone that checks files out with `\\r\\n` finds
+  `document_parts.split_front_matter`), so a clone that checks files out with `\\r\\n` finds
   the blocks and the content one with `\\n` finds; a file mixing them is
   recorded (`DiscoveredFile.mixed_line_endings`) for the validation pass.
   A file a declared place matches that is a synced copy is not walked — a
@@ -95,10 +96,11 @@ is the one reader of those declarations and the one walker of the places:
   `pkit friction artefacts --json` prints it, and a capability's script reads
   where artefacts are through it, at head or at another state, never by
   walking the places or listing a commit itself (ADR-057 points 1 and 2).
-- `entry_section` and `Artefact.span` — a collection entry's section, the
+- `Artefact.body` and `Artefact.span` — a collection entry's section, the
   text both checks compare as its body, and the lines of its file that text
-  spans: one reading of where the section lies gives both (`_entry_body`), so
-  a reader of the span reads exactly what friction compares (COR-050 point 1).
+  spans: one reading of where the section lies gives both (`_entry_body`,
+  over `document_parts.Body`), so a reader of the span reads exactly what
+  friction compares (COR-050 point 1).
 - `Discovery.types` (`resolve_types`) — every artefact's type (COR-056): the
   backbone's own types and the installed components' type registries
   (`FrictionSettings.type_registry`), the type each place names, and the order
@@ -144,7 +146,8 @@ from ruamel.yaml.error import YAMLError
 
 from project_kit import command_runner, docs_roots, lifecycle_ownership, validators
 from project_kit.backbone_schemas import CONTAINER_KEY, as_written
-from project_kit.line_breaks import line_break, universal_newlines
+from project_kit.document_parts import Body, SectionSpan, body_first_line, split_front_matter
+from project_kit.line_breaks import line_break
 from project_kit.manifest import read_backbone_manifest
 from project_kit.report_context import project_config_path
 from project_kit.working_tree import WorkingTree, working_tree
@@ -241,14 +244,6 @@ RULE_SETS_SIGNPOST = "README.md"
 _SKIPPED_TOP_LEVEL = frozenset({".git"})
 
 _GLOB_CHARS = frozenset("*?[")
-
-_FRONT_MATTER_FENCE = re.compile(r"^---[ \t]*$", re.MULTILINE)
-# A line opening or closing fenced code: three backticks or tildes, indented at most three spaces.
-_CODE_FENCE = re.compile(r"^[ \t]{0,3}(```|~~~)")
-_HEADING = re.compile(r"^(#{1,6})[ \t]+(.*?)[ \t]*#*[ \t]*$")
-# What continues an id past a heading's opening characters: a word character, or a hyphen or
-# a dot joined to one — so `uc-login` is not the id opening `uc-login-sso` or `uc-login.v2`.
-_ID_CONTINUES = re.compile(r"\w|[-.]\w")
 
 _yaml = YAML(typ="safe")
 
@@ -2001,20 +1996,6 @@ class Deferral:
 
 
 @dataclass(frozen=True)
-class SectionSpan:
-    """The lines of a file an entry's section spans, counted from 1, both included.
-
-    Lines are the file's text read with every line break as `\\n`
-    (`split_front_matter`), so a file written with `\\r\\n` has the lines one
-    written with `\\n` has. Joined with `\\n`, with one `\\n` after the last,
-    they are the section's text (`entry_section`).
-    """
-
-    first_line: int
-    last_line: int
-
-
-@dataclass(frozen=True)
 class Artefact:
     """One artefact found in a declared place, with its container parsed.
 
@@ -2507,19 +2488,9 @@ def _read_artefacts(
     written, body, reason = _parsed_front_matter(text)
     if written is None:
         return None, [], reason
-    body_line = _body_first_line(text, body)
+    body_line = body_first_line(text, body)
     found = _artefacts_of_file(rel, place, written, body, body_line, rule_set=rule_set)
     return written, found, None
-
-
-def _body_first_line(text: str, body: str) -> int:
-    """The line of `text` its body opens on, counted from 1.
-
-    The body is a suffix of the text read with `\\n` line breaks, opening at a
-    line's start (`split_front_matter`), so the line breaks before it are the
-    text's less the body's own.
-    """
-    return universal_newlines(text).count("\n") - body.count("\n") + 1
 
 
 def _parsed_front_matter(text: str) -> tuple[Mapping[str, Any] | None, str, str | None]:
@@ -2580,8 +2551,9 @@ def _artefacts_of_file(
             )
         ]
     found: list[Artefact] = []
+    read = Body.read(body)
     for entry_id, entry in entries.items():
-        section, span = _entry_body(body, entry_id, body_line)
+        section, span = _entry_body(read, entry_id, body_line)
         found.append(
             _artefact(
                 artefact_id=entry_id,
@@ -2614,10 +2586,11 @@ def _rules_of_file(
     if not isinstance(rules, Mapping):
         return []
     found: list[Artefact] = []
+    read = Body.read(body)
     for rule_id, entry in rules.items():
         if not isinstance(entry, Mapping):
             continue
-        section, span = _entry_body(body, rule_id, body_line)
+        section, span = _entry_body(read, rule_id, body_line)
         found.append(
             _artefact(
                 artefact_id=rule_id,
@@ -2673,122 +2646,21 @@ def _artefact(
     )
 
 
-# --- Markdown -----------------------------------------------------------
+# --- an entry's section -----------------------------------------------------
 
 
-def split_front_matter(text: str) -> tuple[str | None, str]:
-    """(front-matter YAML, body) for a Markdown text; `(None, text)` when it has none.
+def _entry_body(read: Body, entry_id: str, body_line: int) -> tuple[str, SectionSpan | None]:
+    """An entry's section (COR-050 point 1), and the lines of its file it spans.
 
-    Front matter is a leading `---` line closed by the next `---` line. Line
-    endings are read universally first (`universal_newlines`), so a text
-    written with `\\r\\n` has the front matter the same text written with `\\n`
-    has, and both parts — `text` too, when there is none — come back with `\\n`
-    line breaks: the one reading of a file's front matter and body. The YAML
-    is returned as text so the caller can report a parse failure against the
-    file.
+    The section is the one the reading of where a part lies finds by the
+    entry's id (`document_parts.Body.section_by_id`), so the span covers exactly
+    the text friction compares as the entry's body. `body_line` is the line of
+    the file the body opens on. Without a section, `("", None)`.
     """
-    text = universal_newlines(text)
-    if not text.startswith("---"):
-        return None, text
-    first_line_end = text.find("\n")
-    if first_line_end == -1 or text[:first_line_end].rstrip() != "---":
-        return None, text
-    closing = _FRONT_MATTER_FENCE.search(text, first_line_end + 1)
-    if closing is None:
-        return None, text
-    return text[first_line_end + 1 : closing.start()], text[closing.end() :].lstrip("\n")
-
-
-@dataclass(frozen=True)
-class Heading:
-    """One heading of a Markdown body, outside fenced code."""
-
-    level: int  # how many `#` open it
-    title: str  # the text after them, stripped
-    start: int  # where its line starts in the body
-
-
-def body_headings(body: str) -> tuple[Heading, ...]:
-    """The headings of a Markdown body, in order, fenced code skipped.
-
-    The one reading of a body's sections. `entry_section` cuts an entry's
-    section from these headings, and the rule-set pass lists a rule-set
-    file's sections from them (`rule_sets`). So a heading inside fenced code
-    opens no section and ends none, for either. A line opening with three
-    backticks or three tildes, indented at most three spaces, opens a fence.
-    The next line opening with the same marker closes it, and a fence never
-    closed runs to the end of the body.
-    """
-    found: list[Heading] = []
-    fence: str | None = None
-    start = 0
-    for line in body.split("\n"):
-        marker = _CODE_FENCE.match(line)
-        if marker is not None:
-            fence = None if fence == marker.group(1) else (fence or marker.group(1))
-        elif fence is None:
-            heading = _HEADING.match(line)
-            if heading is not None:
-                found.append(Heading(len(heading.group(1)), heading.group(2).strip(), start))
-        start += len(line) + 1
-    return tuple(found)
-
-
-def heading_opens_with(title: str, entry_id: str) -> bool:
-    """Whether a heading's title opens with `entry_id` as a whole token.
-
-    The id must be followed by the end of the title, whitespace, or
-    punctuation that does not continue an id (`_ID_CONTINUES`).
-    """
-    return title.startswith(entry_id) and not _ID_CONTINUES.match(title, len(entry_id))
-
-
-def entry_section(body: str, entry_id: str) -> str:
-    """The body section headed by `entry_id` (COR-050 point 1), or `""`.
-
-    The first heading that opens with the id (`heading_opens_with`) opens the
-    section. It runs to the next heading of the same or a higher level. Both
-    are read by `body_headings`, so a heading inside fenced code is neither.
-    The line breaks that end it are read as one.
-    """
-    section, _span = _entry_body(body, entry_id, 1)
-    return section
-
-
-def _entry_body(body: str, entry_id: str, body_line: int) -> tuple[str, SectionSpan | None]:
-    """An entry's section (`entry_section`), and the lines of its file it spans.
-
-    One reading of where the section lies gives both, so the span covers
-    exactly the text friction compares as the entry's body. `body_line` is the
-    line of the file `body` opens on. Without a section, `("", None)`.
-    """
-    extent = _section_extent(body, entry_id)
+    extent = read.section_by_id(entry_id)
     if extent is None:
         return "", None
-    start, end = extent
-    first_line = body_line + body.count("\n", 0, start)
-    span = SectionSpan(first_line=first_line, last_line=first_line + body.count("\n", start, end))
-    return body[start:end] + "\n", span
-
-
-def _section_extent(body: str, entry_id: str) -> tuple[int, int] | None:
-    """Where the section headed by `entry_id` lies in `body`, or `None`.
-
-    `(start, end)`: the offset its heading opens at, which starts a line, and
-    the end of its text, before the line breaks that end it. The headings are
-    `body_headings`, so a heading inside fenced code neither opens the
-    section nor ends it.
-    """
-    headings = body_headings(body)
-    for index, heading in enumerate(headings):
-        if heading_opens_with(heading.title, entry_id):
-            end = next(
-                (later.start for later in headings[index + 1 :] if later.level <= heading.level),
-                len(body),
-            )
-            start = heading.start
-            return start, start + len(body[start:end].rstrip("\n"))
-    return None
+    return read.text_of(extent), read.span_of(extent, body_line)
 
 
 def _yaml_reason(exc: YAMLError) -> str:

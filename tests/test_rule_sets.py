@@ -23,7 +23,7 @@ from ruamel.yaml import YAML
 
 from project_kit import backbone_schemas as bs
 from project_kit import connections as cx
-from project_kit import decisions_validate, refs
+from project_kit import decisions_validate, document_parts, refs
 from project_kit import friction_discovery as fd
 from project_kit import friction_validate as fv
 from project_kit import rule_sets as rs
@@ -318,7 +318,9 @@ def test_both_readers_find_the_same_sections(adopter: AdopterRepo) -> None:
 
     written = set(re.findall(rs.RULE_ID_PATTERN, rule_set.body))
     by_rule_set_pass = {s.rule_id for s in rule_set.sections if s.rule_id is not None}
-    by_friction_pass = {rule_id for rule_id in written if fd.entry_section(rule_set.body, rule_id)}
+    by_friction_pass = {
+        rule_id for rule_id in written if document_parts.entry_section(rule_set.body, rule_id)
+    }
     assert by_rule_set_pass == by_friction_pass == set(cmn()["rules"])
     # The fenced heading does not end RS-CMN-001's section, for the rule or for its artefact.
     rule = rule_set.rule("RS-CMN-001")
@@ -1271,7 +1273,7 @@ def test_the_reference_example_has_the_shipped_shape() -> None:
     readme = (REPO / ".pkit/schemas/README.md").read_text(encoding="utf-8")
     section = readme.split("### Rule-set files", 1)[1]
     example = section.split("```yaml\n", 1)[1].split("```", 1)[0]
-    front_matter, body = fd.split_front_matter(example)
+    front_matter, body = document_parts.split_front_matter(example)
     assert front_matter is not None and body.startswith("## RS-DOC-001")
     data = bs.as_written(YAML(typ="safe").load(front_matter))
     schema = json.loads((REPO / ".pkit/schemas/backbone/rule-set.schema.json").read_text())
