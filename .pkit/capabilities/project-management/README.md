@@ -18,6 +18,11 @@ pkit:
       at: 2026-10-13T08:09:47Z
       outcome: unchanged
       unchanged-because: "Of the capability's decisions only DEC-030 changes. It renames a heading in its Decision from 'v1 scope: no in-place customisation' to 'Scope: no in-place customisation in v1', with the sentence that names it, so the points reader does not read that heading as a misspelt point (COR-058 point 1). What the record decides stays as it was. The page cites DEC-030 only in its default-agent section, which names no heading of it and says nothing of customising the live overlay, so the page holds."
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-032 and DEC-028 are refined for the touches-ruled-artefact floor of #1386, proposed and awaiting the maintainer's decision; the page documents the floor with the code of #1386."
 ---
 
 # project-management capability

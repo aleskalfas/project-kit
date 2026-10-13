@@ -1,0 +1,5 @@
+component: software-engineering
+kind: none
+body: >
+  The capability README is revalidated unchanged against the refined
+  project-management DEC-028 and DEC-032; only its friction block changes.

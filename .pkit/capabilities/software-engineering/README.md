@@ -13,8 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-13T02:12:27Z
-      outcome: updated
+      at: 2026-10-13T11:27:21Z
+      outcome: unchanged
+      unchanged-because: DEC-032 gains a second floor kind, touches-ruled-artefact, and narrows the not-code list to touches-code alone. DEC-028 reads freshness per floor kind. The page describes only the code-review panel's touches-code floor, the not-code list's effect on that floor, the accepted docs gap and a floor approval's freshness, and each holds as stated.
 ---
 
 # software-engineering capability
