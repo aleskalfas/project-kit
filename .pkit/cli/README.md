@@ -49,8 +49,9 @@ pkit:
         - src/project_kit/pull_request_landing.py
         - src/project_kit/session_guard.py
         - src/project_kit/rule_set_reading.py
+        - src/project_kit/rule_sets.py
         - src/project_kit/document_parts.py
-      record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, COR-055, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064]
+      record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064]
     revalidated:
       at: 2026-10-13T11:45:23Z
       outcome: updated
@@ -1288,7 +1289,7 @@ Which accepted rules bind on an artefact ([COR-051](../decisions/core/COR-051-ru
 
 ### `rule-sets reach [--at <rev>] [--json]`
 
-**The rules that bind on each artefact, at one state.** The working tree by default, the files git sees. With `--at <rev>`, one commit, read from git objects as `friction artefacts --at` reads it: its configuration, its rule sets and its artefacts. Nothing is checked out. A component's check is judged there by the registrations of the state read, and a backbone check by the `pkit` that runs, whatever the state.
+**The rules that bind on each artefact, at one state.** The working tree by default, the files git sees. With `--at <rev>`, one commit, read from git objects as `friction artefacts --at` reads it: its configuration, its rule sets and its artefacts. Nothing is checked out.
 
 - Without `--json`, each artefact on which a rule binds, then each rule as cited, its set, the extension points it fills, the sets whose scope it binds through, and the parts of it checks enforce, each marked when its check is not there. A conflict between routes, and each rule a pin behind its set holds back, are listed under its artefact.
 - With `--json`, one stable document, keys sorted:
@@ -1302,7 +1303,7 @@ Which accepted rules bind on an artefact ([COR-051](../decisions/core/COR-051-ru
       - `rule_set` — its set as cited; `rule_set_path` — the set's file.
       - `covering` — the files of the sets of the project's own whose scope selects the artefact, and from which a route reaches the rule's set with no pin behind its set.
       - `fills` — the extension points it binds on the artefact as the fill of, each `[<component>:]RS-<SET>-NNN#<point>`. `[]` for a rule that fills none.
-      - `checks` — the parts of it that checks enforce, as its set declares them under `checks`, each `{check, part, there, problem}` (COR-051 point 2). `there` says whether the check is there, as validation's `rule-sets` member judges it: a backbone check is a command of the `pkit` that runs, and a component's is a command that a component installed at the state read registers in its package metadata. The project's own tool is trusted by its name. `problem` says why a check is not there, else `null`. A part whose check is not there goes back to whoever judges the rest of the rule.
+      - `checks` — the parts of it that checks enforce, as its set declares them under `checks`, each `{check, part, there, problem}` (COR-051 point 2). `there` says whether the check is there, as validation's `rule-sets` member judges it. A backbone check is a command of the `pkit` that runs, whatever the state. A component's is a command that a component installed at the state read registers in its package metadata: the working tree's, the commit's with `--at`, and for `rule-sets altered` the base's at the base and the head's at the head. The project's own tool is trusted by its name. `problem` says why a check is not there, else `null`. A part whose check is not there goes back to whoever judges the rest of the rule.
       - `text` — its section, headed by its id, at this state: the statement.
     - `conflicts` — each conflict between its routes, which validation fails (COR-051 point 7):
       - `{kind: "pin", rule_set, rule_set_path, version, pins}` — one set pinned at different majors. `pins` lists each pin on the routes, `{by, by_rule_set, pin}`.
@@ -1315,7 +1316,7 @@ Which accepted rules bind on an artefact ([COR-051](../decisions/core/COR-051-ru
 **What a change altered, with the rules that bind on each artefact at the base and at the head.** The head is the working tree, uncommitted changes included, or commit `<rev>` with `--head`. The base is the merge-base of `<ref>` with the head: `<ref>`, else `$PKIT_CHECK_BASE`, else the default branch ([COR-054](../decisions/core/COR-054-default-branch.md)), as `friction check` takes it.
 
 - **Altered** means added, removed, or with content that differs ([COR-050](../decisions/core/COR-050-anchors-and-friction.md) point 5). The change check's pairing decides which base artefact a head artefact is. It pairs by location, following the diff's renames, then by an identity the artefact has of its own. So a move the pairing follows, keeping the content, alters nothing. A change that only writes a revalidation alters nothing either, since the container is no part of the content.
-- **The rules** at each state are `rule-sets reach`'s answer at that state. A component's check is judged there by the base's registrations at the base, and by the head's at the head. A backbone check is judged by the `pkit` that runs.
+- **The rules** at each state are `rule-sets reach`'s answer at that state, with each declared check judged at that state as its `checks` say.
 - Without `--json`, each altered artefact with how it was altered, then the rules that bind on it at the base and at the head.
 - With `--json`, one stable document, keys sorted:
   - `schema_version` — `1`, under the rule every reading document follows (above).

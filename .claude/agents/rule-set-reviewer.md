@@ -61,7 +61,7 @@ Read the change once, judge it, give one verdict, and stop.
 
 ### 2. Read which artefacts the change altered, and the rules on each
 
-Run `pkit rule-sets altered --base <base> --head <head> --json`, or leave out `--head` for the working tree. Its answer is the only place you take two things from: which artefacts the change altered, and which accepted rules bind on each. Judge under no rule from anywhere else. If the command fails, you cannot judge the change (step 7).
+Run `pkit rule-sets altered --base <base> --head <head> --json`. Leave out `--head` for the working tree, and `--base` for the backbone's default base. Its answer is the only place you take two things from: which artefacts the change altered, and which accepted rules bind on each. Judge under no rule from anywhere else. If the command fails, you cannot judge the change (step 7).
 
 - **Which state judges.** Each altered artefact is listed with how it was altered: `added`, `changed` or `removed`.
   - For an added or a changed artefact, the rules that bind at the head judge what the head holds. A passage the change removed shows there as what the artefact now lacks. Do not judge it under the base's rules as well, since that would draw two findings for one break.
