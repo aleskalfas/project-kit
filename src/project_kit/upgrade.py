@@ -80,14 +80,11 @@ from project_kit.router import (
     write_version_pin,
 )
 from project_kit.sync import (
-    AT_ROOT,
-    COPY,
+    COPIES,
     EXTERNAL,
     INCUBATED,
-    NEWER,
     OLDER,
     ORPHAN,
-    UNRECORDED,
     CapabilityPlan,
     plan_capabilities,
     propagate,
@@ -97,12 +94,6 @@ from project_kit.sync import (
     run_self_host,
 )
 from project_kit.versioning import is_release_version
-
-# The capabilities a transition copies and migrates: every shipped one the
-# bundle ships, but one it ships older than the record, which a transition
-# never moves down (ADR-065 point 7). A capability with no recorded version is
-# copied and recorded, and runs none of its migrations (point 2).
-_TRANSITION_COPIES = frozenset({COPY, NEWER, AT_ROOT, UNRECORDED})
 
 # Capability-dependency check (COR-030) — imported lazily below to avoid
 # any circular-import issues at module load time. The functions used are:
@@ -239,7 +230,9 @@ def run_upgrade(
     from project_kit import capabilities as caps
 
     plans = plan_capabilities(target_root, source_kit, caps.read_capability_records(target_root))
-    moving = [plan for plan in plans if plan.disposition in _TRANSITION_COPIES]
+    # Every shipped capability the bundle ships, but one it ships older than its
+    # record, which a transition never moves down (ADR-065 point 7).
+    moving = [plan for plan in plans if plan.disposition in COPIES]
     ctx = InstallContext(target_root=target_root, source_kit=source_kit, dry_run=dry_run)
 
     # The target is recorded before anything else is written (ADR-065 point 4,
@@ -1269,7 +1262,7 @@ def _resolve_compatibility(
     """Check every component's post-upgrade `requires_backbone` accepts the target.
 
     For each installed component, reads the `requires_backbone` range from the
-    **source** `package.yaml` (the version it becomes after the upgrade's sync),
+    **source** `package.yaml` (the version it becomes after the upgrade's copy),
     falling back to the installed copy for components the source no longer ships
     (see `_resolve_package_yaml`). The file is read as the wiring resolver reads
     a package (`connections.read_package`), so the range is found however it is
@@ -1281,9 +1274,9 @@ def _resolve_compatibility(
     capability that declares ``requires_capabilities``, verifies that each
     required dependency is installed and each installed one satisfies its
     range. Uses the *installed* copies and versions of both sides, as they stand
-    before this upgrade's sync — which refreshes every installed kit-shipped
-    capability from source and re-stamps its version. Conflicts are refused with
-    an actionable hint.
+    before this upgrade's copy — which moves every installed kit-shipped
+    capability its bundle ships, but one it ships older, and restamps its
+    version. Conflicts are refused with an actionable hint.
     """
     from project_kit.connections import REQUIRES_BACKBONE_KEY, range_admits, read_package
 
@@ -1318,9 +1311,9 @@ def _resolve_compatibility(
     # Capability-dependency check (COR-030): refuse backbone upgrade when an
     # installed capability's required dependency is absent, or an installed one
     # is out of range. It reads the installed copies and versions of both sides,
-    # as they stand before this upgrade's sync. That sync refreshes every installed
-    # kit-shipped capability from source and re-stamps its version, and this check
-    # does not read the versions it installs (#1461 has it read them).
+    # as they stand before this upgrade's copy. The copy moves every installed
+    # kit-shipped capability its bundle ships, but one it ships older, and this
+    # check does not read the versions it installs (#1461 has it read them).
     _check_capability_dep_conflicts_for_upgrade(target_root, components)
 
 
@@ -1330,12 +1323,12 @@ def _resolve_package_yaml(
     """Locate a component's kit-owned `package.yaml` for the compatibility check.
 
     Prefers the **source** copy — the version the component *becomes* after the
-    upgrade's own sync step refreshes kit-shipped content (COR-001 / COR-017).
+    upgrade's propagation step copies kit-shipped content (COR-001 / COR-017).
     Reading the *installed* copy would consult the stale, about-to-be-replaced
     `requires_backbone` ceiling and wrongly refuse every adopter that is a minor
     behind (the source ceiling auto-broadens on each backbone bump, so the
     installed copy always lags the target). Falls back to the installed copy for
-    a component the source no longer ships — it won't be refreshed by sync, so
+    a component the source no longer ships — the copy does not reach it, so
     its declared range still governs.
     """
     if entry.kind == "adapter":
@@ -1527,16 +1520,16 @@ def _check_capability_dep_conflicts_for_upgrade(
     installed ``package.yaml`` (not the source copy), and calls
     ``capabilities.check_capability_dependencies`` to evaluate each declared
     ``requires_capabilities`` entry against the installed state, as it stands
-    before this upgrade's sync. That sync refreshes every installed kit-shipped
-    capability from source and re-stamps its version; this check does not read
-    the versions it installs. An optional dependency that is not installed
-    passes.
+    before this upgrade's copy. The copy moves every installed kit-shipped
+    capability its bundle ships, but one it ships older, and restamps its
+    version; this check does not read the versions it installs. An optional
+    dependency that is not installed passes.
 
     This is the backbone-wide half of the capability-dependency gate
     (COR-030). The single-capability-upgrade half lives in
     ``upgrade_capability_cmd`` in ``cli.py``.
 
-    Direction: the check reads the state before the sync moves any capability
+    Direction: the check reads the state before the copy moves any capability
     version, so any desync found here is pre-existing. We apply the "dependent
     against out-of-range dependency" disposition (refuse with hint) rather than
     the "dependency past dependent's range" disposition (warn + force), because

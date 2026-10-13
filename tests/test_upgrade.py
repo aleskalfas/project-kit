@@ -2493,6 +2493,34 @@ def test_upgrade_records_a_capability_with_no_readable_version_and_runs_none_of_
     assert "no recorded version before, so none of its migrations runs" in capsys.readouterr().out
 
 
+def test_upgrade_moves_the_root_record_of_a_capability_no_longer_shipped(
+    installed_target: Path,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The transition moves every root manifest (ADR-065 point 2), that of a
+    capability its bundle no longer ships included, so the next upgrade reads the
+    project as current. The capability itself stays installed (COR-017)."""
+    installed = _install_trial(installed_target, tmp_path, "0.1.0")
+    root = installed / "manifest.yaml"
+    (installed / "project" / "manifest.yaml").rename(root)
+    manifest.set_component_manifest_path(
+        installed_target, "capability", "trial", ".pkit/capabilities/trial/manifest.yaml"
+    )
+
+    upgrade.run_upgrade(installed_target, pin=False)
+    first = capsys.readouterr().out
+    upgrade.run_upgrade(installed_target, pin=False)
+    second = capsys.readouterr().out
+
+    assert "Already at backbone" not in first
+    assert "orphan       'trial'" in first
+    assert not root.exists()
+    record = _trial_record(installed_target)
+    assert record is not None and record.version == "0.1.0"
+    assert "Already at backbone" in second
+
+
 def test_upgrade_keeps_a_capability_its_bundle_ships_older(
     installed_target: Path,
     tmp_path: Path,

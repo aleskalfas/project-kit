@@ -6478,7 +6478,7 @@ def _upgrade_incubated_capability(
     D1/D4): there is nothing to refresh from kit source, so "upgrade" simply
     re-runs the harness deploy primitives so any newly-authored skills/agents
     in the in-repo tree land in the harness. This mirrors the sync skip-branch
-    (`sync._report_incubated_capability`): source-reconciliation stays
+    (`sync.report_incubated_capability`): source-reconciliation stays
     suppressed; only self-owned deploy re-runs.
 
     The capability subtree must still be readable. If it has gone missing the

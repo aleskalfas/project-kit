@@ -1585,6 +1585,21 @@ def test_sync_under_a_deliberate_bypass_of_a_pin_names_running_the_pin(
     assert "To move the project on: run `pkit upgrade`." in message
 
 
+def test_sync_under_a_pin_that_is_no_version_names_no_release_to_run(
+    installed_target: Path,
+) -> None:
+    """A pin that is no version stops nothing by itself, and where the content is
+    behind this pkit the message names pinning or moving, never `uvx …@v<pin>`."""
+    _record_states(installed_target, _OLDER, _OLDER)
+    _write_pin(installed_target, "main")
+
+    message = _refusal(installed_target)
+
+    assert "the project's pin, 'main', is no version" in message
+    assert f"To stay at {_OLDER}: run `pkit pin`" in message
+    assert "@vmain" not in message
+
+
 def test_sync_refuses_a_pin_ahead_of_this_pkit_before_naming_upgrade(
     installed_target: Path,
 ) -> None:

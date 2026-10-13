@@ -173,7 +173,9 @@ def propagate(ctx: install.InstallContext, capabilities: Sequence[CapabilityPlan
     its bundled source, leaving out the artefacts its record skips. The step
     checks no version, runs no migration, writes no manifest and creates no
     seed path (ADR-065 point 1). Project-owned content is never overwritten.
-    Under `--dry-run` it writes nothing.
+    Under `--dry-run` it writes nothing. A capability is copied only where its
+    disposition is one a copy may take (`COPIES`): never an incubated, an
+    externally sourced, a no-longer-shipped one, or one bundled older.
     """
     from project_kit import capabilities as caps
 
@@ -184,7 +186,7 @@ def propagate(ctx: install.InstallContext, capabilities: Sequence[CapabilityPlan
     if ctx.dry_run:
         return
     for plan in capabilities:
-        if plan.source is None:
+        if plan.source is None or plan.disposition not in COPIES:
             continue
         skipped = plan.record.skipped if plan.record is not None else ()
         caps.copy_shipped_capability(ctx.target_root, plan.source, skipped)
@@ -202,6 +204,12 @@ UNVERSIONED = "unversioned"  # the bundle's package names no version
 ORPHAN = "orphan"  # not in the bundle
 INCUBATED = "incubated"  # authored in the project (COR-031)
 EXTERNAL = "external"  # externally sourced (COR-041)
+
+# The dispositions a copy may take: a transition copies all of them, and sync
+# only COPY. A capability bundled older is never copied, since a recorded version
+# never moves down (ADR-065 point 7); one with no recorded version is copied by a
+# transition and recorded at the bundled version (point 2).
+COPIES = frozenset({COPY, NEWER, AT_ROOT, UNRECORDED})
 
 
 @dataclass(frozen=True)
@@ -263,11 +271,12 @@ def plan_capabilities(
         if entry.origin != ORIGIN_KIT_SHIPPED:
             plans.append(CapabilityPlan(entry.name, EXTERNAL))
             continue
+        record = records.get(entry.name) or caps.read_capability_record(target_root, entry.name)
         source = caps.find_capability_in_source(source_kit, entry.name)
         if source is None:
-            plans.append(CapabilityPlan(entry.name, ORPHAN))
+            # Its record too: a transition moves its manifest from the root.
+            plans.append(CapabilityPlan(entry.name, ORPHAN, record=record))
             continue
-        record = records.get(entry.name) or caps.read_capability_record(target_root, entry.name)
         bundled, recorded = _parse_version(source.package.version), _parse_version(record.version)
         if bundled is None:
             disposition = UNVERSIONED
@@ -518,6 +527,15 @@ def _mismatch_lines(
             "router then runs that version here.",
             f"In a pipeline: commit a pin, or install pkit {recorded} there: "
             f"`uv tool install --force {DISTRIBUTION_GIT_URL}@v{recorded}`.",
+        ]
+    if _parse_version(pin) is None:
+        # A pin that is no version names no release to run.
+        return [
+            f"refusing to run `pkit {command}`: {state}, and the project's pin, {pin!r}, is "
+            "no version.",
+            rule,
+            f"To stay at {recorded}: run `pkit pin`, which pins the project at {recorded}.",
+            "To move the project on: run `pkit upgrade`.",
         ]
     return [
         f"refusing to run `pkit {command}`: {state}, and the project pins {pin}.",
