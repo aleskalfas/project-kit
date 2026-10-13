@@ -1,0 +1,8 @@
+component: project-management
+kind: none
+body: >
+  The capability README's opt-out section no longer says that sync and
+  upgrades never touch your project/config.yaml. It says they change that
+  file only through the migration scripts a new release ships, and that
+  these scripts keep your opt-outs. Only the README's wording changes.
+  Nothing you run changes.
