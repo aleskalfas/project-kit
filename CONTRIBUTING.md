@@ -18,9 +18,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-13T06:30:54Z
+      at: 2026-10-13T07:23:40Z
       outcome: unchanged
-      unchanged-because: "COR-003's change rewrites its seed and merge sentences: seeding writes at first install, and in a transition of the backbone where the file is missing, it never revisits a seed that exists, and merge creating its own missing target is merge. Its out-of-scope list says only that those paths lie outside the methodology surface, without saying the core layer never touches them. The page cites COR-003 as the example of principles kept apart from the map of paths, and the change adds no path to it, so it holds."
+      unchanged-because: The decisions README's change adds the missing project/ folder of a capability sync refreshes to its list of what sync does today that COR-059 rules out. This file points at that README for the record schema, the statuses, the namespaces and the no-shared-files invariant, and says nothing of what sync creates, so it holds.
 ---
 
 # Contributing to project-kit

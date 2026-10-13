@@ -1,0 +1,7 @@
+component: living-docs
+kind: none
+body: >
+  Only the friction block of the README changes: it is revalidated,
+  unchanged, against COR-051's refinement that sync never reads or writes
+  a project rule set and uninstall never writes one. Its COR-051 deferral
+  is kept as it was. Nothing you run or read changes.

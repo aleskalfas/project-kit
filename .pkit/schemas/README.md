@@ -19,9 +19,8 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-13T06:40:33Z
-      outcome: unchanged
-      unchanged-because: Artefact discovery now cuts a collection entry's section, and the rule-set reader lists a rule-set file's sections, through document_parts, the one reading of where a part lies, with the same result as before. This page says an entry's content is its data plus the body section headed by its id, and that headings inside fenced code are not a rule set's sections. Both still hold. The page does not describe the artefacts document's keys, so its new list of part anchors changes nothing here.
+      at: 2026-10-13T07:39:27Z
+      outcome: updated
 ---
 
 # Schemas
@@ -488,7 +487,7 @@ A rule set ([COR-051](../decisions/core/COR-051-rule-sets.md)) is one Markdown f
 | `rule-sets/` under the internal documentation root (`docs/rule-sets/` by default, COR-049) | the project's rule sets | bare, `<SET>` |
 | any declared place — a `friction.places` entry of the project or of a capability — whose path has a `rule-sets` segment | more project rule sets, wherever the project keeps them | bare |
 
-Every Markdown file in or beneath such a folder is a rule-set file, except its `README.md`, which is the folder's signpost. A file two of them reach belongs to the first in the table's order. A file there with no front matter, or front matter that does not parse, is a finding, never skipped. Method rule sets are refreshed by sync with their component; project rule sets are the project's, and sync and uninstall never touch them (COR-051 point 6). A project never edits a method rule set: it inherits it.
+Every Markdown file in or beneath such a folder is a rule-set file, except its `README.md`, which is the folder's signpost. A file two of them reach belongs to the first in the table's order. A file there with no front matter, or front matter that does not parse, is a finding, never skipped. Method rule sets are refreshed by sync with their component. Project rule sets are the project's: sync never reads or writes one, and uninstall never writes one (COR-051 point 6). A project never edits a method rule set: it inherits it.
 
 **The front matter.**
 

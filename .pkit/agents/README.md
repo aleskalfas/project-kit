@@ -354,7 +354,7 @@ Future adapters for other harnesses ship their own deploy primitives.
 Per COR-014, the universal-applicability test governs what ships where:
 
 - **Core agents** (in `core/`) — universal roles useful to any adopter. Methodology disciplines (record-review, citation-audit), convention-compliance review, coordinator templates that adopters specialise via overlay. Ships with the methodology; refreshed on every sync.
-- **Project agents** (in `project/`) — domain-specific roles tied to the adopter's stack. Implementer agents (`ui-ux-designer`, `qa-engineer`), domain reviewers, customised coordinators. Authored per project; never touched by sync. (The code-authoring `software-engineer` is **not** here — it ships, opt-in, via the `software-engineering` capability per [COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md); capabilities are the home for a discipline-implying agent that isn't universal.)
+- **Project agents** (in `project/`) — domain-specific roles tied to the adopter's stack. Implementer agents (`ui-ux-designer`, `qa-engineer`), domain reviewers, customised coordinators. Authored per project. Sync reads them to deploy them, and never writes them. (The code-authoring `software-engineer` is **not** here — it ships, opt-in, via the `software-engineering` capability per [COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md); capabilities are the home for a discipline-implying agent that isn't universal.)
 
 ## Authoring an agent
 

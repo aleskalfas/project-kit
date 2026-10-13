@@ -13,9 +13,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-13T05:50:52Z
+      at: 2026-10-13T07:23:31Z
       outcome: unchanged
-      unchanged-because: "COR-002's change rewrites only its seeding sentences: a seed is written at first install, a transition of the backbone creates a missing seed path, sync creates no seed path, and seeding never revisits a seed that exists. The page describes merge-settings.sh and merge-claude-md.sh as merge delivery under COR-002, the second creating CLAUDE.md where it is missing, and describes no seed, so it holds."
+      unchanged-because: DEC-030's change says that sync reads the live overlay in its merge and never writes it, that sync restores the template at the recorded version and a version transition replaces it, and which records let uninstall remove the overlay. The page has merge-settings.sh take a present overlay as a merge source between project/settings.json and the target, the overlay adopter-owned and the template core-owned, and the enable and disable subcommands toggle it. The change leaves those as they were, so the page holds.
 ---
 
 # Claude Code adapter
