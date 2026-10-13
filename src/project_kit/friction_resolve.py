@@ -67,6 +67,7 @@ import click
 
 from project_kit import cli_render
 from project_kit.backbone_schemas import CONTAINER_KEY
+from project_kit.document_parts import split_front_matter
 from project_kit.friction_check import (
     SHORT,
     FrictionCheckError,
@@ -87,8 +88,6 @@ from project_kit.friction_discovery import (
     held_message,
     line_break,
     parse_artefacts,
-    split_front_matter,
-    universal_newlines,
 )
 from project_kit.friction_report import BECAUSE
 from project_kit.friction_write import (
@@ -103,6 +102,7 @@ from project_kit.friction_write import (
     replace_file,
     written_key,
 )
+from project_kit.line_breaks import universal_newlines
 from project_kit.working_tree import nul_separated
 
 UPDATED = OUTCOMES[0]

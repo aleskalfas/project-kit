@@ -37,6 +37,16 @@ place to enforce overlay setup — `pkit new decision adr` already does, and
 an adopter may legitimately have no ADRs). Collision detection over the
 spaces that *do* resolve is unaffected.
 
+**A synced copy is not checked** (COR-055 point 1). In a project that is not
+the methodology's source, a core record and a kit-shipped capability's arrive
+as synced copies (`synced_record_test`). The project cannot mend them, since
+the next sync overwrites an edit, so they are checked where they are authored.
+Here no issue is reported on one: neither its id against its filename, nor an
+id that only synced copies share. A synced copy is still read for its id. So a
+project's own record that takes a synced copy's id is reported, on the
+project's record, which is the one the project can change. The count of
+records checked is the project's own.
+
 **Revision narration is a warning, never an error** (`revision_narration`).
 A record states what is true and is refined in place; git history is its
 change log (`.pkit/decisions/README.md`, "Refining an accepted record").
@@ -54,21 +64,40 @@ markers — a superseded-by line and a forward refinement pointer
 inline code are quoted material and are not read. A superseded record is
 preserved as it stood, so it is not read either. Nor is a record that arrives
 here as a synced copy — a core record, or a kit-shipped capability's, in a
-project that is not the methodology's source (`is_synced_copy` of the tree's
-`.pkit/lifecycle/ownership.py`): it is refined where it is authored, and an
-edit here would be overwritten by the next sync. A tree without that module
-has every record read.
+project that is not the methodology's source (`synced_record_test`, which asks
+`is_synced_copy` of the tree's `.pkit/lifecycle/ownership.py`): it is refined
+where it is authored, and an edit here would be overwritten by the next sync.
+A tree without that module has every record read.
+
+**A record's points are checked too** (`point_findings`, COR-058 point 7),
+over the same records as narration: a synced copy and a superseded record
+are left out. Each record is read once by `record_points.read_points`, and
+each stub is held to its entry by `record_points.hold_stubs`, so no second
+reading of points lives here. A malformed `retired-points`, a stub that
+disagrees with its entry, a live point on a retired id and a successor the
+record neither holds nor retires are errors. A duplicate id, a gap in the
+ids and a misspelt point heading are warnings. Of the front matter, only the
+field's shape is read, so a project's own fields pass.
+
+**The numbering check reads records as this module finds them.** It compares a
+change with its base (COR-058 point 8), so it reads records at a commit too,
+where no folder is on disk: `record_space` says which file is a record, of
+which id-space, and `record_id_of` reads its id. It names the next unused id
+(`next_unused`), a stub's heading (`stub_heading`) and a misspelt heading's
+token (`opening_token`) as validation does.
 """
 
 from __future__ import annotations
 
+import functools
 import re
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import click
 
-from project_kit import cli_render, lifecycle_ownership, rule_sets
+from project_kit import cli_render, document_parts, lifecycle_ownership, record_points, rule_sets
 from project_kit.decisions import resolve_adr_records_dir
 from project_kit.validators import Finding, Outcome, Severity
 
@@ -164,7 +193,8 @@ class DecisionRecord:
 class DecisionIssue:
     """One finding — a duplicate id, an id/filename mismatch, or a line of revision narration."""
 
-    # path relative to target; "<id-space> :: <id>" for a duplicate; "<path>:<line>" for narration
+    # path relative to target; "<id-space> :: <id>" for a duplicate, or the project's record
+    # when it shares the id with a synced copy; "<path>:<line>" for narration
     location: str
     message: str
 
@@ -173,7 +203,7 @@ class DecisionIssue:
 class DecisionValidationReport:
     """Outcome of a decision-id validation run."""
 
-    records_checked: int = 0
+    records_checked: int = 0  # the project's own records; a synced copy is not checked
     issues: tuple[DecisionIssue, ...] = field(default_factory=tuple)
     rules_checked: int = 0  # rules across the rule sets, checked as their own id-space
 
@@ -191,15 +221,22 @@ def validate_decision_ids(target_root: Path) -> DecisionValidationReport:
     `COR-001` alongside a `PRJ-001` — are not collisions). Also flags any
     record whose frontmatter id disagrees with its filename number, and any
     rule id claimed more than once across the rule sets.
+
+    A synced copy is not checked (COR-055 point 1). It is read for its id
+    alone, so that a project's record which takes its id is reported, on the
+    project's record (`_duplicate_issues`).
     """
+    is_synced = synced_record_test(target_root)
     records = discover_decision_records(target_root)
+    copies = {record.path for record in records if is_synced(_rel(record.path, target_root))}
+    own = [record for record in records if record.path not in copies]
     issues: list[DecisionIssue] = []
 
-    # 1. id/filename mismatch + unparseable-id sanity checks.
-    for record in records:
+    # 1. id/filename mismatch + unparseable-id sanity checks, on the project's records.
+    for record in own:
         issues.extend(_filename_consistency_issues(record, target_root))
 
-    # 2. Duplicate-id detection, scoped per id-space.
+    # 2. Duplicate-id detection, scoped per id-space, over every record.
     by_space_id: dict[tuple[str, str], list[Path]] = {}
     for record in records:
         if record.record_id is None:
@@ -209,26 +246,69 @@ def validate_decision_ids(target_root: Path) -> DecisionValidationReport:
     for (id_space, record_id), paths in sorted(by_space_id.items()):
         if len(paths) < 2:
             continue
-        rels = sorted(_rel(p, target_root) for p in paths)
-        issues.append(
-            DecisionIssue(
-                location=f"{id_space} :: {record_id}",
-                message=(
-                    f"id {record_id!r} is claimed by {len(paths)} records in the "
-                    f"{id_space!r} id-space: " + ", ".join(rels)
-                ),
-            )
-        )
+        issues.extend(_duplicate_issues(id_space, record_id, paths, copies, target_root))
 
     # 3. Rule ids, unique across every rule set (COR-051 point 3).
     discovery = rule_sets.discover_rule_sets(target_root)
     issues.extend(_rule_id_issues(discovery))
 
     return DecisionValidationReport(
-        records_checked=len(records),
+        records_checked=len(own),
         issues=tuple(issues),
         rules_checked=len(discovery.rules),
     )
+
+
+def synced_record_test(target_root: Path) -> Callable[[str], bool]:
+    """Whether a record, at its path relative to the root, arrives here as a synced copy.
+
+    The tree's own predicate, `is_synced_copy` of `.pkit/lifecycle/ownership.py`,
+    loaded once through the backbone's one loader of it: a core record, or a
+    kit-shipped capability's, in a project that is not the methodology's source.
+    Every check of the `decisions` member leaves such a record out, the
+    front-matter check in `validate` included (COR-055 point 1). A tree without
+    that module has no synced copy, so every record is read.
+    """
+    ownership = lifecycle_ownership.load_ownership(target_root)
+    if ownership is None:
+        return lambda _rel: False
+    return functools.partial(ownership.is_synced_copy, target_root)
+
+
+def _duplicate_issues(
+    id_space: str, record_id: str, paths: list[Path], copies: set[Path], target_root: Path
+) -> list[DecisionIssue]:
+    """The issues on one id that several records of one id-space claim.
+
+    Claimed by the project's records alone, it is one issue on the id-space.
+    Claimed by synced copies alone, it is none: the project cannot change them.
+    Claimed by both, it is one issue on each of the project's records, since a
+    synced copy keeps its id and the project's record takes another.
+    """
+    own = sorted(_rel(p, target_root) for p in paths if p not in copies)
+    synced = sorted(_rel(p, target_root) for p in paths if p in copies)
+    if not own:
+        return []
+    claimed = (
+        f"id {record_id!r} is claimed by {len(paths)} records in the {id_space!r} id-space: "
+        + ", ".join(sorted([*own, *synced]))
+    )
+    if not synced:
+        return [DecisionIssue(location=f"{id_space} :: {record_id}", message=claimed)]
+    if len(synced) == 1:
+        kept = "arrives as a synced copy, which keeps its id"
+    else:
+        kept = "arrive as synced copies, which keep their ids"
+    return [
+        DecisionIssue(
+            location=rel,
+            message=(
+                f"{claimed}. {_and(synced)} {kept}, since the next sync overwrites an edit "
+                "here. This record takes another id."
+            ),
+        )
+        for rel in own
+    ]
 
 
 def _rule_id_issues(discovery: rule_sets.RuleSetDiscovery) -> list[DecisionIssue]:
@@ -252,6 +332,39 @@ def _rule_id_issues(discovery: rule_sets.RuleSetDiscovery) -> list[DecisionIssue
             )
         )
     return issues
+
+
+def adr_folder(target_root: Path) -> str | None:
+    """The folder of the ADR id-space, relative to the root, or `None` while the
+    overlay names none (`_resolve_adr_dir_best_effort`)."""
+    found = _resolve_adr_dir_best_effort(target_root)
+    if found is None:
+        return None
+    return PurePosixPath(_rel(found, target_root)).as_posix()
+
+
+def record_space(rel: str, adr: str | None) -> str | None:
+    """The id-space of the record a file at `rel` is, or `None` when it is none.
+
+    `rel` is relative to the root, and `adr` is `adr_folder`'s answer. A record
+    is a Markdown file directly in a record folder, its README left out: the
+    files `discover_decision_records` finds on disk. The numbering check reads
+    records at a commit, where no folder is on disk, so it asks here.
+    """
+    path = PurePosixPath(rel)
+    if path.suffix != ".md" or path.name == "README.md":
+        return None
+    folder = path.parent
+    if folder == PurePosixPath(".pkit/decisions/core"):
+        return "core"
+    if folder == PurePosixPath(".pkit/decisions/project"):
+        return "project"
+    if adr is not None and folder == PurePosixPath(adr):
+        return "adr"
+    parts = folder.parts
+    if len(parts) == 4 and parts[:2] == (".pkit", "capabilities") and parts[3] == "decisions":
+        return f"capability:{parts[2]}"
+    return None
 
 
 def discover_decision_records(target_root: Path) -> list[DecisionRecord]:
@@ -294,20 +407,8 @@ def revision_narration(target_root: Path) -> tuple[DecisionIssue, ...]:
     errors (ADR-058 point 6): the shapes are read from prose, so a finding asks
     a person to look rather than blocking a change.
     """
-    ownership = lifecycle_ownership.load_ownership(target_root)
     found: list[DecisionIssue] = []
-    for record in discover_decision_records(target_root):
-        rel = _rel(record.path, target_root)
-        if ownership is not None and ownership.is_synced_copy(target_root, rel):
-            continue  # refined where it is authored; an edit here is overwritten by sync
-        try:
-            text = record.path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            continue  # the id pass reports an unreadable record
-        frontmatter = _extract_frontmatter(text)
-        status = _FRONTMATTER_STATUS_RE.search(frontmatter or "")
-        if status is not None and status.group(1) == "superseded":
-            continue
+    for rel, text in _refined_records(target_root):
         found.extend(
             DecisionIssue(
                 location=f"{rel}:{line}",
@@ -319,6 +420,29 @@ def revision_narration(target_root: Path) -> tuple[DecisionIssue, ...]:
             for line, shape, excerpt in find_revision_narration(text)
         )
     return tuple(found)
+
+
+def _refined_records(target_root: Path) -> Iterator[tuple[str, str]]:
+    """Each record the project refines, as `(path relative to the root, text)`.
+
+    A synced copy is left out, since it is refined where it is authored and an
+    edit here is overwritten by the next sync. So is a superseded record, whose
+    body stays as it stood. An unreadable record is left to the id pass, which
+    reports it.
+    """
+    is_synced = synced_record_test(target_root)
+    for record in discover_decision_records(target_root):
+        rel = _rel(record.path, target_root)
+        if is_synced(rel):
+            continue
+        try:
+            text = record.path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        status = _FRONTMATTER_STATUS_RE.search(_extract_frontmatter(text) or "")
+        if status is not None and status.group(1) == "superseded":
+            continue
+        yield rel, text
 
 
 def find_revision_narration(text: str) -> list[tuple[int, str, str]]:
@@ -370,21 +494,339 @@ def _excerpt(line: str, start: int) -> str:
     return f'"{tail}"'
 
 
+# --- a record's points (COR-058 point 7) -------------------------------------
+
+
+def point_findings(target_root: Path) -> tuple[Finding, ...]:
+    """Every record's points, retired points and stubs, held to COR-058 point 7.
+
+    The records read are those `revision_narration` reads: a synced copy and a
+    superseded record are left out, as the point says. Each record's findings
+    come from `check_points`, its errors then its warnings, records in the
+    order the id pass finds them.
+    """
+    found: list[Finding] = []
+    for rel, text in _refined_records(target_root):
+        found.extend(check_points(rel, text))
+    return tuple(found)
+
+
+def check_points(rel: str, text: str) -> list[Finding]:
+    """One record's points, retired points and stubs (COR-058 point 7), at `rel`.
+
+    The record is read once, by `record_points.read_points`, and each stub is held
+    to its entry by `record_points.hold_stubs`. Every finding names the file and
+    the id: `<rel>#<id>`, or `<rel>:/retired-points` for the field's shape, its
+    message naming the entry's id when it is on one entry. Errors come first:
+
+    - a malformed `retired-points`: a field that cannot be read, or is not a
+      mapping, is one error, and nothing that rests on the retired ids is
+      checked then
+    - a retired id with no stub, a stub whose id is not retired, and a stub
+      whose sentence differs from the one its entry gives
+    - a live point whose heading uses a retired id
+    - a successor the record neither holds nor retires, and a retired id named
+      as its own successor
+
+    Then the warnings, which never fail: a duplicate id, a gap in the ids
+    counting retired ones, and a heading in the Decision that opens with a
+    number or a label in a form a point's heading refuses. Only the field's
+    shape is read of the front matter, so a project's own fields pass. A record
+    in list form has no point heading and no stub, so it fails nothing unless it
+    writes `retired-points`.
+    """
+    points = record_points.read_points(text)
+    at = _LineOf(document_parts.body_first_line(text, points.body.text), points.body.text)
+    unreadable = _unreadable_retired_points(rel, text, points)
+    errors: list[Finding] = []
+    warnings = [*_duplicate_ids(rel, points, at), *_misspelt_headings(rel, points, at)]
+    if unreadable is not None:
+        errors.append(unreadable)
+    else:
+        errors += _malformed_entries(rel, points)
+        errors += _stub_mismatches(rel, points, at)
+        errors += _live_points_on_retired_ids(rel, points, at)
+        errors += _foreign_successors(rel, points)
+        warnings += _gaps(rel, points)
+    return [*errors, *warnings]
+
+
+@dataclass(frozen=True)
+class _LineOf:
+    """The line of the file a place in the body sits on, counted from 1."""
+
+    first_line: int  # the line the body opens on
+    body: str
+
+    def __call__(self, start: int) -> int:
+        return self.first_line + self.body.count("\n", 0, start)
+
+
+# `retired-points` written as a key of the front matter, quoted or not. It is read
+# from the front matter's text when that does not parse, so a field nothing can
+# read still fails.
+_RETIRED_KEY_LINE = re.compile(r"""^["']?retired-points["']?[ \t]*:""", re.MULTILINE)
+
+# What a misspelt heading opens with: a number, dotted or not, or a label.
+_OPENING = re.compile(r"^(?:\d+(?:\.\d+)*|[A-Za-z]+\d+)")
+
+# Where a finding on the field's shape points.
+_RETIRED_POINTER = f":/{record_points.RETIRED_POINTS_KEY}"
+
+
+def _unreadable_retired_points(
+    rel: str, text: str, points: record_points.RecordPoints
+) -> Finding | None:
+    """One error when the record writes `retired-points` and it cannot be read as a
+    mapping: the front matter does not parse, or the field is not a mapping. A
+    field left empty retires nothing, as `record_points.read_points` reads it."""
+    front_matter, _body = document_parts.split_front_matter(text)
+    if front_matter is None or not _RETIRED_KEY_LINE.search(front_matter):
+        return None
+    value = points.front_matter.get(record_points.RETIRED_POINTS_KEY)
+    if points.front_matter_problem is not None:
+        why = f"the front matter does not parse ({points.front_matter_problem})"
+    elif value is not None and not isinstance(value, Mapping):
+        why = "it is not a mapping of retired ids to their successors"
+    else:
+        return None
+    return Finding(
+        rel + _RETIRED_POINTER,
+        f"`{record_points.RETIRED_POINTS_KEY}` cannot be read: {why}. Nothing that rests on "
+        f"the retired ids is checked until it can (COR-058 point 4).",
+    )
+
+
+def _malformed_entries(rel: str, points: record_points.RecordPoints) -> Iterator[Finding]:
+    """An entry whose id is no point id, or whose successors are not a list of ids."""
+    for problem in points.retired_problems:
+        yield Finding(
+            rel + _RETIRED_POINTER,
+            f'{problem}: each entry maps a retired id to a list of ids, such as `"6": ["7", '
+            f'"16"]` (COR-058 point 4).',
+        )
+
+
+def _stub_mismatches(
+    rel: str, points: record_points.RecordPoints, at: _LineOf
+) -> Iterator[Finding]:
+    """Each stub held to its entry, both ways, by `record_points.hold_stubs`."""
+    kind = record_points.StubMismatchKind
+    for mismatch in record_points.hold_stubs(points):
+        stub = mismatch.stub
+        where = "" if stub is None else f" at line {at(stub.extent.start)}"
+        if mismatch.kind is kind.NO_STUB:
+            successors = points.retired.get(mismatch.id, ())
+            heading = f"{'#' * _points_level(points)} {stub_heading(mismatch.id)}"
+            message = (
+                f"retired point `{mismatch.id}` has no stub. Where the point was, write the "
+                f'heading `{heading}` and the sentence "'
+                f'{record_points.stub_sentence(successors)}" (COR-058 point 4).'
+            )
+        elif mismatch.kind is kind.NOT_RETIRED:
+            mend = (
+                "Mend the malformed entry of `retired-points` that should retire it, or add "
+                "the entry"
+                if points.retired_problems
+                else "Add the entry"
+            )
+            message = (
+                f"the stub of `{mismatch.id}`{where} retires no id: `retired-points` has no "
+                f"entry for `{mismatch.id}`. {mend}, with the points that took its text, or "
+                f"give a live point a title other than `{record_points.STUB_TITLE}` (COR-058 "
+                f"points 1 and 4)."
+            )
+        else:
+            found = f'reads "{mismatch.found}"' if mismatch.found else "holds no sentence"
+            message = (
+                f"the stub of retired point `{mismatch.id}`{where} {found}. Its entry gives "
+                f'"{mismatch.expected}" (COR-058 point 4).'
+            )
+        yield Finding(f"{rel}#{mismatch.id}", message)
+
+
+def _live_points_on_retired_ids(
+    rel: str, points: record_points.RecordPoints, at: _LineOf
+) -> Iterator[Finding]:
+    """A live point whose heading uses an id `retired-points` retires."""
+    for point in points.points:
+        if point.id in points.retired:
+            unused = next_unused(_held_ids(points), point.id)
+            yield Finding(
+                f"{rel}#{point.id}",
+                f"point `{point.id}` at line {at(point.extent.start)} uses a retired id: "
+                f"`retired-points` retires `{point.id}`, and no id is reused. A new point "
+                f"takes the next unused number, `{unused}` (COR-058 point 3).",
+            )
+
+
+def _held_ids(points: record_points.RecordPoints) -> tuple[str, ...]:
+    """The ids a record holds or retires: its points', its stubs' and its retired ids."""
+    return (*(p.id for p in points.points), *(s.id for s in points.stubs), *points.retired)
+
+
+def _foreign_successors(rel: str, points: record_points.RecordPoints) -> Iterator[Finding]:
+    """A successor the record neither holds nor retires, and a retired id named as
+    its own successor. A record in list form holds the points of its list."""
+    held = {p.id for p in points.points} | {p.id for p in points.list_points}
+    for retired_id, successors in points.retired.items():
+        for successor in successors:
+            if successor == retired_id:
+                message = f"retired point `{retired_id}` names itself as its successor"
+            elif successor not in held and successor not in points.retired:
+                message = (
+                    f"`{successor}`, a successor of retired point `{retired_id}`, is neither a "
+                    f"point of this record nor a retired id"
+                )
+            else:
+                continue
+            yield Finding(
+                f"{rel}#{retired_id}",
+                f"{message}. Every successor is a point of the same record (COR-058 point 5).",
+            )
+
+
+def _duplicate_ids(rel: str, points: record_points.RecordPoints, at: _LineOf) -> Iterator[Finding]:
+    """An id two live points take, or two stubs. A point that takes a retired id
+    fails on its own (`_live_points_on_retired_ids`), and a stub whose id is not
+    retired fails as a stub."""
+    for kind, headings in (("points", points.points), ("stubs", points.stubs)):
+        by_id: dict[str, list[int]] = {}
+        for heading in headings:
+            by_id.setdefault(heading.id, []).append(at(heading.extent.start))
+        for point_id, lines in by_id.items():
+            if len(lines) > 1:
+                yield Finding(
+                    f"{rel}#{point_id}",
+                    f"{len(lines)} {kind} take the id `{point_id}`, at lines "
+                    f"{_and(str(line) for line in lines)}. A record's ids are unique across "
+                    f"all its groups (COR-058 point 1).",
+                    severity=Severity.WARNING,
+                )
+
+
+def _gaps(rel: str, points: record_points.RecordPoints) -> Iterator[Finding]:
+    """An id below the highest of its series that no point, retired id or stub holds.
+
+    Only a record whose points are headings is read: a record in list form keeps
+    renumbering until it is converted (COR-058 point 9). One warning per run of
+    missing ids, at the first of them. The runs are found between neighbours of
+    the held ids, so a very high id costs no more than a low one.
+    """
+    if points.level is None:
+        return
+    held = [p.id for p in (*points.points, *points.stubs)] + list(points.retired)
+    by_series: dict[str, set[int]] = {}
+    for point_id in held:
+        series = record_points.id_series(point_id)
+        if series is not None:
+            by_series.setdefault(series[0], set()).add(series[1])
+    for prefix, numbers in sorted(by_series.items()):
+        for first, last in _missing_runs(numbers):
+            if first == last:
+                skipped, them = f"`{prefix}{first}`", "it"
+            else:
+                skipped, them = f"`{prefix}{first}` to `{prefix}{last}`", "them"
+            yield Finding(
+                f"{rel}#{prefix}{first}",
+                f"the ids skip {skipped}: no point holds {them}, and `retired-points` does not "
+                f"retire {them}. A dropped point keeps its id in `retired-points`, with a stub "
+                f"where it was (COR-058 points 3 and 4).",
+                severity=Severity.WARNING,
+            )
+
+
+def _misspelt_headings(
+    rel: str, points: record_points.RecordPoints, at: _LineOf
+) -> Iterator[Finding]:
+    """A heading in the Decision that opens with a number or a label in a form a
+    point's heading refuses, as `record_points.read_points` finds it."""
+    for heading in points.misspelt:
+        token = opening_token(heading.title)
+        yield Finding(
+            f"{rel}#{token}",
+            f"the heading `{'#' * heading.level} {heading.title}` at line {at(heading.start)} "
+            f"opens with `{token}` in a form a point's heading refuses, so it is no point. A "
+            f"point's heading is `5. Title` or `D1 — Title`, and a sub-section's opens with "
+            f"no number or label (COR-058 point 1).",
+            severity=Severity.WARNING,
+        )
+
+
+def _points_level(points: record_points.RecordPoints) -> int:
+    """The points' level, or one below the Decision's while it has no point heading."""
+    if points.level is not None:
+        return points.level
+    decision = points.decision.heading if points.decision is not None else None
+    return decision.level + 1 if decision is not None else 3
+
+
+def opening_token(title: str) -> str:
+    """What a misspelt point heading's title opens with: a number, dotted or not, or a
+    label; else its first word. A finding on the heading names it as the id."""
+    opening = _OPENING.match(title)
+    return opening.group(0) if opening is not None else title.split()[0]
+
+
+def stub_heading(point_id: str) -> str:
+    """A stub's heading after its `#`s: `6. Retired`, or `D6 — Retired` for a label."""
+    if point_id.isdigit():
+        return f"{point_id}. {record_points.STUB_TITLE}"
+    return f"{point_id} — {record_points.STUB_TITLE}"
+
+
+def next_unused(held: Iterable[str], point_id: str) -> str:
+    """The next unused id of `point_id`'s series: one past the highest of that series
+    in `held`, the ids a record holds or retires (COR-058 point 3), or the series'
+    first when `held` has none of it."""
+    series = record_points.id_series(point_id)
+    if series is None:
+        return point_id
+    prefix = series[0]
+    numbers = [
+        found[1]
+        for held_id in held
+        if (found := record_points.id_series(held_id)) is not None and found[0] == prefix
+    ]
+    return f"{prefix}{max(numbers, default=0) + 1}"
+
+
+def _missing_runs(numbers: set[int]) -> Iterator[tuple[int, int]]:
+    """The runs of numbers from 1 to the highest of `numbers` that `numbers` lacks,
+    as `(first, last)` each, found between neighbours."""
+    previous = 0
+    for number in sorted(numbers):
+        if number > previous + 1:
+            yield previous + 1, number - 1
+        previous = max(previous, number)
+
+
+def _and(items: Iterable[str]) -> str:
+    """`a`, `a and b`, `a, b and c`."""
+    listed = list(items)
+    return listed[0] if len(listed) == 1 else f"{', '.join(listed[:-1])} and {listed[-1]}"
+
+
 def outcome(target_root: Path) -> Outcome:
     """The `decisions` member of `pkit validate`: every record's front matter
-    (`validate.decision_frontmatter_issues`) and the id spaces (`validate_decision_ids`),
-    which are errors, then revision narration (`revision_narration`), which is a warning."""
+    (`validate.decision_frontmatter_issues`), the id spaces (`validate_decision_ids`) and
+    the errors on records' points (`point_findings`), then revision narration
+    (`revision_narration`) and the warnings on records' points. Each leaves a synced
+    copy of a record out (`synced_record_test`), so the member reports nothing on one."""
     from project_kit.validate import decision_frontmatter_issues
 
     front_matter = decision_frontmatter_issues(target_root)
     report = validate_decision_ids(target_root)
     narration = revision_narration(target_root)
+    points = point_findings(target_root)
     errors = (
         *(Finding(issue.location, issue.diagnosis) for issue in front_matter),
         *(Finding(issue.location, issue.message) for issue in report.issues),
+        *(finding for finding in points if finding.severity.fails),
     )
-    warnings = tuple(
-        Finding(issue.location, issue.message, severity=Severity.WARNING) for issue in narration
+    warnings = (
+        *(Finding(issue.location, issue.message, severity=Severity.WARNING) for issue in narration),
+        *(finding for finding in points if not finding.severity.fails),
     )
     rules = f" and {report.rules_checked} rule(s)" if report.rules_checked else ""
     summary = (
@@ -399,7 +841,7 @@ def print_report(report: DecisionValidationReport) -> None:
     rules = f" and {report.rules_checked} rule(s)" if report.rules_checked else ""
     if report.is_clean:
         if report.records_checked == 0 and report.rules_checked == 0:
-            click.echo("  No decision records found to validate.")
+            click.echo("  No decision record of the project's own found to validate.")
         else:
             click.echo(
                 "  "
@@ -441,6 +883,25 @@ def print_narration(narration: tuple[DecisionIssue, ...]) -> None:
         click.echo(f"      → {issue.message}")
 
 
+def print_points(findings: tuple[Finding, ...]) -> None:
+    """Render the findings on records' points, after the narration; nothing when there
+    are none. Errors fail the command, and warnings do not (COR-058 point 7)."""
+    if not findings:
+        return
+    errors = sum(1 for finding in findings if finding.severity.fails)
+    click.echo(
+        "  "
+        + cli_render.style(
+            "strong",
+            f"{errors} error(s) and {len(findings) - errors} warning(s) on records' points "
+            "(COR-058 point 7):",
+        )
+    )
+    for finding in findings:
+        click.echo(f"    {finding.severity.value:<9}{finding.location}")
+        click.echo(f"      → {finding.message}")
+
+
 def _scan_dir(decisions_dir: Path, id_space: str) -> list[DecisionRecord]:
     """Parse every `*.md` record in one directory into a `DecisionRecord`."""
     if not decisions_dir.is_dir():
@@ -472,6 +933,11 @@ def _parse_frontmatter_id(path: Path) -> str | None:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return None
+    return record_id_of(text)
+
+
+def record_id_of(text: str) -> str | None:
+    """A record's frontmatter `id:` (e.g. `COR-001`), read from its text, or None."""
     frontmatter = _extract_frontmatter(text)
     if frontmatter is None:
         return None

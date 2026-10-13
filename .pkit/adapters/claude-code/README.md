@@ -13,9 +13,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-13T05:50:52Z
+      at: 2026-10-13T08:09:46Z
       outcome: unchanged
-      unchanged-because: "COR-002's change rewrites only its seeding sentences: a seed is written at first install, a transition of the backbone creates a missing seed path, sync creates no seed path, and seeding never revisits a seed that exists. The page describes merge-settings.sh and merge-claude-md.sh as merge delivery under COR-002, the second creating CLAUDE.md where it is missing, and describes no seed, so it holds."
+      unchanged-because: "DEC-030's change renames a heading in its Decision from 'v1 scope: no in-place customisation' to 'Scope: no in-place customisation in v1', with the sentence that names it, so the points reader does not read that heading as a misspelt point (COR-058 point 1). What the record decides stays as it was. The page cites DEC-030 for the overlay walker, the opt-in toggle, the strip on disable and the reserved permissions key. It names no heading of DEC-030 and says nothing of customising the live overlay, so it holds."
 ---
 
 # Claude Code adapter

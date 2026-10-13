@@ -23,13 +23,13 @@ src/project_kit/changesets.py reportUnknownArgumentType 3
 src/project_kit/changesets.py reportUnknownMemberType 6
 src/project_kit/changesets.py reportUnknownVariableType 3
 src/project_kit/cli.py reportArgumentType 1
-src/project_kit/cli.py reportMissingParameterType 11
+src/project_kit/cli.py reportMissingParameterType 9
 src/project_kit/cli.py reportMissingTypeArgument 2
 src/project_kit/cli.py reportPossiblyUnboundVariable 1
 src/project_kit/cli.py reportPrivateUsage 1
-src/project_kit/cli.py reportUnknownArgumentType 20
-src/project_kit/cli.py reportUnknownMemberType 47
-src/project_kit/cli.py reportUnknownParameterType 13
+src/project_kit/cli.py reportUnknownArgumentType 18
+src/project_kit/cli.py reportUnknownMemberType 41
+src/project_kit/cli.py reportUnknownParameterType 11
 src/project_kit/cli.py reportUnknownVariableType 17
 src/project_kit/cli_render.py reportMissingTypeArgument 13
 src/project_kit/cli_render.py reportUnknownArgumentType 16
@@ -67,7 +67,7 @@ src/project_kit/environment.py reportOptionalOperand 1
 src/project_kit/environment.py reportUnknownArgumentType 1
 src/project_kit/friction_check.py reportUnusedImport 1
 src/project_kit/friction_discovery.py reportUnknownArgumentType 11
-src/project_kit/friction_discovery.py reportUnknownMemberType 12
+src/project_kit/friction_discovery.py reportUnknownMemberType 11
 src/project_kit/friction_discovery.py reportUnknownVariableType 24
 src/project_kit/friction_validate.py reportArgumentType 1
 src/project_kit/friction_validate.py reportMissingTypeArgument 3

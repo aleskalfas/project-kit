@@ -11,9 +11,9 @@ pkit:
         - .pkit/capabilities/software-engineering/scripts/**
         - .pkit/capabilities/software-engineering/schemas/**
         - .pkit/capabilities/software-engineering/skills/**
-      record: [COR-013, COR-024, COR-026, COR-030, COR-050, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
+      record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-13T02:12:27Z
+      at: 2026-10-13T11:45:22Z
       outcome: updated
 ---
 
@@ -91,6 +91,6 @@ Inside this capability's own content, cite decisions by their filename stem: `[s
 ## Dependencies
 
 - The kit's **agents area + overlay mechanism** ([COR-013](../../decisions/core/COR-013-agent-architecture.md)) — every agent (the producer and the panel) is deployed and its `<project-conventions>` placeholder resolved by `deploy-agents.sh`.
-- The **reviewer stack** ([COR-024](../../decisions/core/COR-024-critic-and-architect-agents.md)) — `critic` / `architect` / `convention-compliance-reviewer` are how the producer's work gets checked. They ship in core; no separate install.
+- The **reviewer stack** ([COR-024](../../decisions/core/COR-024-critic-and-architect-agents.md)) — `critic` / `architect` / `convention-compliance-reviewer` are how the producer's work gets checked, and `rule-set-reviewer` stands in the stack too (the agents README, ["The rule-set reviewer"](../../agents/README.md#the-rule-set-reviewer)). All four ship in core; no separate install.
 - **project-management** ([COR-030](../../decisions/core/COR-030-capability-dependencies.md)) — a declared `requires_capabilities` dependency. The code-review panel registers through pm's reviewer-contribution socket and folds through its merge gate ([project-management:DEC-028] / [project-management:DEC-032], including the `type` axis and the `touches-code` floor of DEC-032 D1 that the panel's activation relies on). The lifecycle gates install/upgrade/uninstall on it.
 - Convention *content* is out of scope here — the corpus is adopter-owned (see DEC-001's Implications).

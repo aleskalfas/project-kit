@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-13T04:29:23Z
+      at: 2026-10-13T12:45:40Z
       outcome: unchanged
-      unchanged-because: The map names the decisions README as home of the no-shared-files invariant, the lifecycle README as the upgrade procedure and migration layout, the CLI reference as the command surface, and capabilities as opt-in per COR-017. This change rewords the invariant, adds the backbone migration contract to the lifecycle README, says in the CLI reference that sync runs merge and who writes the configuration file, and has a version transition move capabilities. None of these changes a role or a link the map gives.
+      unchanged-because: "The agents README gains a section on the core rule-set reviewer. The CLI reference, the lifecycle README and the schemas README say the rule-set reading commands give whether each declared check is there and the rules a pin holds back. The map gives each area's role and link: it says core ships universal reviewers, naming critic and architect, and calls the CLI reference the command-line surface, naming some of its commands. No role or link moves, so the map holds."
 ---
 
 # project-kit

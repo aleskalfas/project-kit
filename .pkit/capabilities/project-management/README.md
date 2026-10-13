@@ -15,9 +15,9 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-13T04:27:21Z
+      at: 2026-10-13T08:09:47Z
       outcome: unchanged
-      unchanged-because: The page names pkit upgrade and pkit capabilities upgrade as what brings a new version of the capability, and says nothing of sync upgrading it or refusing a collision. COR-017 now has a version transition, not sync, move a capability to a newer version, and both commands are version transitions, so the page holds.
+      unchanged-because: "Of the capability's decisions only DEC-030 changes. It renames a heading in its Decision from 'v1 scope: no in-place customisation' to 'Scope: no in-place customisation in v1', with the sentence that names it, so the points reader does not read that heading as a misspelt point (COR-058 point 1). What the record decides stays as it was. The page cites DEC-030 only in its default-agent section, which names no heading of it and says nothing of customising the live overlay, so the page holds."
 ---
 
 # project-management capability
@@ -828,7 +828,7 @@ review:
 - **What it never withdraws.** A reviewer you register yourself in `local_registered`, and the same reviewer contributed by another capability. The opt-out removes one capability's contribution, not the reviewer.
 - **Where it shows.** `pkit project-management pre-check` lists each opt-out as a `[skip]` line naming the reviewer, the capability and your reason. `review-pr` prints ``opted out: <reviewer> (capability `<capability>`) — <reason>`` under the reviewers it invokes, and a `done-work` refusal names it after the required set.
 - **Validation.** Each entry carries exactly `capability`, `reviewer` and a non-empty `reason`, and names a pair once; the config schema checks this at `pkit validate`. An entry naming a capability that is not installed, or a reviewer that capability does not contribute — a typo, or an entry left behind when you uninstall the capability — is an error: `pre-check` fails on it, and `review-pr` and `done-work` refuse until you fix or remove it, so an opt-out you meant never silently fails to apply.
-- **Yours to keep.** The opt-out lives in your `project/config.yaml`, which `pkit sync` and capability upgrades never touch.
+- **Yours to keep.** The opt-out lives in your `project/config.yaml`. `pkit sync` and upgrades change that file only through the migration scripts a new release ships, which run without `pkit project-management migrate`. These scripts keep your opt-outs.
 
 #### Paths that are never code — `review.floors.not_code` (per [project-management:DEC-032-conditional-reviewer-requirements])
 

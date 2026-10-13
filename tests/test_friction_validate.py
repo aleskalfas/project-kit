@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 from click.testing import CliRunner
@@ -25,6 +26,7 @@ from project_kit.manifest import (
     write_backbone_manifest,
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.friction_documents import POINTED, POINTS, pointed_record
 
 CONFIG = ".pkit/project/config.yaml"
 
@@ -1479,28 +1481,7 @@ def test_validate_command_is_dormant_and_passes_on_a_fresh_install(adopter: Adop
     assert "All checks passed." in result.output
 
 
-# --- Markdown helpers --------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    ("text", "expected"),
-    [
-        ("---\na: 1\n---\nbody\n", ("a: 1\n", "body\n")),
-        ("---\na: 1\n---\n\n\nbody\n", ("a: 1\n", "body\n")),
-        ("---\na: 1\n", (None, "---\na: 1\n")),  # never closed
-        ("--- \na: 1\n---\n", ("a: 1\n", "")),  # trailing space on the opening fence
-        ("----\na: 1\n---\n", (None, "----\na: 1\n---\n")),  # not a fence
-        ("no front matter\n", (None, "no front matter\n")),
-        # Line endings are read universally: both parts come back with `\n`.
-        ("---\r\na: 1\r\n---\r\nbody\r\n", ("a: 1\n", "body\n")),
-        ("---\r\nb: |\r\n  two\r\n  lines\r\n---\r\n", ("b: |\n  two\n  lines\n", "")),
-        ("--- \r\na: 1\r\n---\t\r\n\r\n\r\nbody\r\n", ("a: 1\n", "body\n")),
-        ("---\ra: 1\r---\rbody\r", ("a: 1\n", "body\n")),  # a lone `\r`
-        ("no front matter\r\n", (None, "no front matter\n")),
-    ],
-)
-def test_split_front_matter(text: str, expected: tuple[str | None, str]) -> None:
-    assert fd.split_front_matter(text) == expected
+# --- helpers -----------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -1518,55 +1499,6 @@ def test_split_front_matter(text: str, expected: tuple[str | None, str]) -> None
 )
 def test_line_break_names_the_one_a_text_is_written_with(text: str, expected: str | None) -> None:
     assert fd.line_break(text) == expected
-
-
-def test_entry_section_runs_to_the_next_heading_of_equal_or_higher_level() -> None:
-    body = "# Set\n\n## RS-1: One\n\ntext\n\n### RS-1 detail\n\nmore\n\n## RS-10 — Ten\n\nten\n"
-    assert fd.entry_section(body, "RS-1") == "## RS-1: One\n\ntext\n\n### RS-1 detail\n\nmore\n"
-    assert fd.entry_section(body, "RS-10") == "## RS-10 — Ten\n\nten\n"
-    assert fd.entry_section(body, "RS-2") == ""
-
-
-def test_entry_section_takes_the_id_as_a_whole_token() -> None:
-    """Two hyphenated ids sharing a prefix: the shorter one's section is never the longer's,
-    whichever comes first."""
-    body = (
-        "## uc-login-sso — Sign in with SSO\n\nsso\n\n"
-        "## uc-login.v2 — Sign in, again\n\nagain\n\n"
-        "## uc-login — Sign in\n\nlogin\n\n"
-        "## uc-login: the details\n\ndetails\n"
-    )
-    assert fd.entry_section(body, "uc-login") == "## uc-login — Sign in\n\nlogin\n"
-    assert fd.entry_section(body, "uc-login-sso") == "## uc-login-sso — Sign in with SSO\n\nsso\n"
-    assert fd.entry_section(body, "uc-login.v2") == "## uc-login.v2 — Sign in, again\n\nagain\n"
-    assert fd.entry_section(body, "uc-log") == ""
-    # Punctuation that continues no id ends it, as the end of the heading does.
-    assert fd.entry_section("## uc-login: Sign in\n\ntext\n", "uc-login") == (
-        "## uc-login: Sign in\n\ntext\n"
-    )
-    assert fd.entry_section("## uc-login.\n\ntext\n", "uc-login") == "## uc-login.\n\ntext\n"
-
-
-def test_entry_section_skips_headings_in_fenced_code() -> None:
-    """A heading inside fenced code opens no section and ends none (#1372)."""
-    login = (
-        "## uc-login — Sign in\n\n"
-        "```sh\n# install the client\nmake client\n```\n\n"
-        "~~~markdown\n## uc-logout — an example, not an entry\n~~~\n\n"
-        "still signing in\n"
-    )
-    body = f"{login}\n## uc-signup — Sign up\n\nsignup\n"
-    assert fd.entry_section(body, "uc-login") == login
-    assert fd.entry_section(body, "uc-logout") == ""
-
-
-def test_body_headings_skip_fenced_code_to_its_own_closing_marker() -> None:
-    """Tildes do not close a backtick fence, and a fence never closed runs to the end."""
-    body = "# One\n```\n~~~\n# not a heading\n```\n## Two ##\n   ~~~\n# not a heading either\n"
-    assert fd.body_headings(body) == (
-        fd.Heading(level=1, title="One", start=0),
-        fd.Heading(level=2, title="Two", start=body.index("## Two")),
-    )
 
 
 def test_is_inside_repository(tmp_path: Path) -> None:
@@ -1617,3 +1549,107 @@ def test_a_glob_with_star_star_inside_a_segment_reads_as_on_python_3_13_and_neve
     )
     files = friction_discovery.files_in_place(root, place)
     assert files == [root / "docs" / "page.md"]
+
+
+# --- anchors on one point of a record (COR-050 point 7) ------------------------------
+
+
+def _pointed(adopter: AdopterRepo, *anchors: str, **record: Any) -> fv.FrictionValidation:
+    adopter.write(
+        {
+            CONFIG: _config(["docs"]),
+            POINTED: pointed_record(**record),
+            "docs/guide.md": _document("guide", anchors={"record": list(anchors)}),
+        }
+    )
+    return fv.validate_friction(adopter.root)
+
+
+_POINT_KINDS = {
+    fv.FrictionFindingKind.DEAD_POINT_ANCHOR,
+    fv.FrictionFindingKind.AMBIGUOUS_POINT_ANCHOR,
+    fv.FrictionFindingKind.RETIRED_POINT_ANCHOR,
+}
+
+
+def _point_findings(result: fv.FrictionValidation) -> list[tuple[str, str, str]]:
+    return [
+        (f.kind.value, f.severity.value, f.pointer)
+        for f in result.findings
+        if f.kind in _POINT_KINDS
+    ]
+
+
+def test_an_anchor_on_a_live_point_and_a_whole_record_anchor_pass(adopter: AdopterRepo) -> None:
+    result = _pointed(adopter, "PRJ-900", "PRJ-900#2", "COR-999")
+    assert _point_findings(result) == []  # a dead whole-record anchor is the checks', as before
+
+
+def test_an_anchor_naming_no_point_of_its_record_is_a_dead_anchor(adopter: AdopterRepo) -> None:
+    result = _pointed(adopter, "PRJ-900#1", "PRJ-900#9", "PRJ-999#1")
+    assert _point_findings(result) == [
+        ("dead-point-anchor", "error", "/pkit/friction/anchors/record/1"),
+        ("dead-point-anchor", "error", "/pkit/friction/anchors/record/2"),
+    ]
+    missing, no_record = (f for f in result.errors if f.kind in _POINT_KINDS)
+    assert "PRJ-900 holds no point 9" in missing.message
+    assert "names no record" in no_record.message
+
+
+def test_a_dead_point_anchor_is_pointed_at_where_the_list_writes_it(
+    adopter: AdopterRepo,
+) -> None:
+    """Beside an entry that is not text, the pointer keeps the index as written."""
+    adopter.write(
+        {
+            CONFIG: _config(["docs"]),
+            POINTED: pointed_record(),
+            "docs/guide.md": _document("guide", anchors={"record": [5, "PRJ-900#9"]}),
+        }
+    )
+    result = fv.validate_friction(adopter.root)
+    assert _point_findings(result) == [
+        ("dead-point-anchor", "error", "/pkit/friction/anchors/record/1"),
+    ]
+
+
+def test_an_anchor_on_a_point_of_a_record_in_list_form_is_dead(adopter: AdopterRepo) -> None:
+    result = _pointed(adopter, "COR-050#5")
+    (finding,) = result.errors
+    assert finding.kind is fv.FrictionFindingKind.DEAD_POINT_ANCHOR
+    assert "COR-050 writes its points as a list" in finding.message
+
+
+def test_an_anchor_on_an_id_two_points_share_is_ambiguous(adopter: AdopterRepo) -> None:
+    result = _pointed(adopter, "PRJ-900#2", points=(*POINTS, ("2", "Again", "Twice.")))
+    (finding,) = result.errors
+    assert finding.kind is fv.FrictionFindingKind.AMBIGUOUS_POINT_ANCHOR
+    assert "is ambiguous: 2 points of PRJ-900 have the id 2" in finding.message
+
+
+def test_an_anchor_on_a_retired_point_is_warned_of_naming_its_successors(
+    adopter: AdopterRepo,
+) -> None:
+    retiring = (
+        POINTS[0],
+        ("2", "Retired", "Its content is in points 4 and 5."),
+        ("4", "Fourth", "Part one."),
+        ("5", "Fifth", "Part two."),
+        POINTS[2],
+    )
+    result = _pointed(adopter, "PRJ-900#2", points=retiring, retired={"2": ["4", "5"]})
+    assert result.errors == ()
+    (warning,) = result.warnings
+    assert warning.kind is fv.FrictionFindingKind.RETIRED_POINT_ANCHOR
+    assert "PRJ-900 retires point 2, and its content is in points 4 and 5" in warning.message
+    outcome = fv.outcome(adopter.root)
+    assert [f.severity.value for f in outcome.findings] == ["warning"]
+    assert "0 error(s), 1 warning(s)" in outcome.summary[0]
+
+
+def test_a_malformed_point_in_a_record_anchor_fails_the_container_schema(
+    adopter: AdopterRepo,
+) -> None:
+    result = _pointed(adopter, "PRJ-900#second")
+    malformed = [f for f in result.errors if f.kind is fv.FrictionFindingKind.MALFORMED_BLOCK]
+    assert len(malformed) == 1

@@ -788,6 +788,7 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
             "changes": 1,
             "over_broad": False,
             "files": {"point": ["src/cli/main.py"], "head": ["src/cli/main.py"], "excluded": []},
+            "diff": None,
         }
     ]
     (finding,) = doc["findings"]

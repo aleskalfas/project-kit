@@ -14,7 +14,7 @@ import math
 import os
 import shlex
 import sys
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -23,7 +23,7 @@ import click
 if TYPE_CHECKING:
     from ruamel.yaml.comments import CommentedMap
 
-    from project_kit.capabilities import CapabilitySource, MandatoryUpstream
+    from project_kit.capabilities import CapabilitySource, CollisionFinding, MandatoryUpstream
 
 from project_kit import (
     __version__,
@@ -1858,11 +1858,13 @@ def rule_sets_reach_command(at: str | None, as_json: bool) -> None:
     """Which accepted rules bind on each artefact, at one state (COR-051 point 7).
 
     The working tree by default, or commit REV with --at. Each artefact on
-    which an accepted rule binds, or whose routes conflict: each rule with
-    its status, the sets whose scope it binds through, the extension points
-    it fills, the parts of it checks enforce, and its text; each conflict
-    between routes — one set pinned at different majors, or the most
-    specific sets bringing different fills for one extension point. Exit 0
+    which an accepted rule binds, whose routes conflict, or from which a pin
+    behind its set holds a rule back: each rule with its status, the sets
+    whose scope it binds through, the extension points it fills, the parts
+    of it checks enforce with whether each check is there, and its text;
+    each conflict between routes — one set pinned at different majors, or
+    the most specific sets bringing different fills for one extension point;
+    each rule held back, binding nothing, with the pins that hold it. Exit 0
     when answered; 1 when the configuration cannot be read or REV names no
     commit; 2 on a usage error.
     """
@@ -4400,6 +4402,10 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         )
 
     new_skipped: list[tuple[str, str]] = []
+    # An override replaces the project's artefact (COR-017), and takes the name
+    # out of the skip state, so the capability's artefact is copied in.
+    overrides: list[tuple[str, str]] = []
+    overridden: list[Path] = []
     if new_collisions and interactive:
         click.echo(
             "\n  "
@@ -4409,12 +4415,21 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
             + "\n"
         )
         for finding in new_collisions:
-            choice = _resolve_collision_interactive(target_root, finding, dry_run=dry_run)
+            choice = _resolve_collision_interactive(
+                target_root, finding, capability=name, dry_run=dry_run
+            )
             if choice == "skip":
                 new_skipped.append((finding.artifact_kind, finding.artifact_name))
+            else:
+                overrides.append((finding.artifact_kind, finding.artifact_name))
+                overridden.extend(
+                    caps.project_artefact_paths(
+                        target_root, finding.artifact_kind, finding.artifact_name
+                    )
+                )
 
     # Merge prior + new skip state. De-dup by (kind, name).
-    merged_skipped = tuple(sorted(set(prior_skipped).union(new_skipped)))
+    merged_skipped = tuple(sorted(set(prior_skipped).union(new_skipped).difference(overrides)))
 
     refreshed_path = caps.refresh_capability(
         target_root,
@@ -4422,6 +4437,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         skipped_artifacts=merged_skipped,
         dry_run=dry_run,
     )
+    _remove_overridden(target_root, overridden, dry_run=dry_run)
 
     verb = "Would refresh" if dry_run else "Refreshed"
     skip_note = f" ({len(merged_skipped)} artifact(s) skipped)" if merged_skipped else ""
@@ -4468,7 +4484,7 @@ def validate(include_refs: bool, only: tuple[str, ...], skip: tuple[str, ...]) -
     grouped by functionality. Exit 1 on errors only.
 
     The backbone's members run first — manifests, schemas, configuration,
-    packages, connections, versions, friction, rule-sets, decisions, refs,
+    packages, connections, versions, decisions, friction, rule-sets, refs,
     process, data — then each installed capability's, registered in its
     package metadata (`validators:`, each naming a `commands:` leaf that
     declares the query contract). One renderer prints every section;
@@ -5470,11 +5486,24 @@ def decisions_validate() -> None:
     claimed twice across the rule sets. Exits non-zero on any duplicate or
     mismatch.
 
+    A record that arrives as a synced copy (a core record, or a kit-shipped
+    capability's, in a project that is not the methodology's source) is not
+    checked, since the project cannot mend it (COR-055 point 1). It is read
+    for its id alone, so a project's record that takes a synced copy's id is
+    reported, on the project's record.
+
     Then warns, without failing, of every line where a record narrates its
     own revision — an amendment heading or marker, a revision stamped with an
     issue number or a date, change-log phrasing — since a record is refined in
     place and git history is its change log. Superseded records and records
     that arrive as synced copies are not read.
+
+    Then checks each record's points, retired points and stubs (COR-058 point
+    7), over the same records. Exits non-zero on a malformed `retired-points`,
+    a stub that disagrees with its entry, a live point on a retired id, a
+    successor the record neither holds nor retires, or a retired id named as its
+    own successor. Warns, without failing, of
+    a duplicate id, a gap in the ids and a misspelt point heading.
     """
     from project_kit import decisions_validate as decisions_mod
 
@@ -5484,8 +5513,61 @@ def decisions_validate() -> None:
     report = decisions_mod.validate_decision_ids(target_root)
     decisions_mod.print_report(report)
     decisions_mod.print_narration(decisions_mod.revision_narration(target_root))
-    if not report.is_clean:
-        raise click.ClickException(f"{len(report.issues)} decision-id issue(s) found.")
+    points = decisions_mod.point_findings(target_root)
+    decisions_mod.print_points(points)
+    point_errors = sum(1 for finding in points if finding.severity.fails)
+    if not report.is_clean or point_errors:
+        failed = [
+            *([f"{len(report.issues)} decision-id issue(s)"] if not report.is_clean else []),
+            *([f"{point_errors} error(s) on records' points"] if point_errors else []),
+        ]
+        raise click.ClickException(" and ".join(failed) + " found.")
+
+
+@decisions.command("check-diff")
+@click.option(
+    "--base",
+    "base_ref",
+    metavar="REF",
+    default=None,
+    help="Base ref to compare with. Default: $PKIT_CHECK_BASE, else the default branch "
+    "(`pkit repository base` shows it).",
+)
+def decisions_check_diff(base_ref: str | None) -> None:
+    """Check a change's numbering of points and records against its base (COR-058 point 8).
+
+    Compares each decision record the change touches, in the working tree, with
+    its state where this branch left the base, and the ids it takes with what
+    the base took since. The base is REF, else $PKIT_CHECK_BASE, else the
+    default branch (COR-054); a base that resolves nowhere refuses the run with
+    its fix. A record the project receives by sync is skipped.
+
+    Exits non-zero on a point dropped without being retired, a new id not past
+    every id the branch point holds or retires, a point's text found only under
+    another id, a duplicate id or a refused heading form the change added, a
+    retired id without its stub or a stub without its entry, a new entry whose
+    successor is no live point, a converted point whose id differs from its
+    numbered item's, and a point id or a record id the base took since this
+    branch left it. Warns, without failing, of a point's title found under
+    another id with its text changed, a converted point whose id differs from
+    its bold number or label, and a point added to a record in list form or a
+    new record in list form.
+    """
+    from project_kit import decisions_check_diff as check_mod
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    head = check_mod.head_records(target_root)
+    if not head:
+        click.echo("  No decision record here to check; no base read.")
+        return
+    found = _settled_base(target_root, base_ref)
+    assert found.fork is not None and found.tip is not None  # `_settled_base` refuses without
+    report = check_mod.check(target_root, head, base=found.ref, fork=found.fork, tip=found.tip)
+    check_mod.print_report(report)
+    if report.errors:
+        raise click.ClickException(f"{report.errors} error(s) in the change's numbering found.")
 
 
 @main.group()
@@ -6014,6 +6096,9 @@ def install_capability_cmd(
     # Pre-flight: collision detection.
     collisions = caps.detect_collisions(target_root, capability_source)
     skipped: list[tuple[str, str]] = []
+    # The project's artefacts an override replaces (COR-017), removed once the
+    # capability's are in place.
+    overridden: list[Path] = []
 
     if collisions:
         click.echo(
@@ -6022,9 +6107,17 @@ def install_capability_cmd(
             + "\n"
         )
         for finding in collisions:
-            choice = _resolve_collision_interactive(target_root, finding, dry_run=dry_run)
+            choice = _resolve_collision_interactive(
+                target_root, finding, capability=name, dry_run=dry_run
+            )
             if choice == "skip":
                 skipped.append((finding.artifact_kind, finding.artifact_name))
+            else:
+                overridden.extend(
+                    caps.project_artefact_paths(
+                        target_root, finding.artifact_kind, finding.artifact_name
+                    )
+                )
 
     # Install.
     installed_path = caps.install_capability(
@@ -6033,6 +6126,7 @@ def install_capability_cmd(
         skipped_artifacts=tuple(skipped),
         dry_run=dry_run,
     )
+    _remove_overridden(target_root, overridden, dry_run=dry_run)
 
     verb = "Would install" if dry_run else "Installed"
     skip_note = f" ({len(skipped)} artifact(s) skipped)" if skipped else ""
@@ -6668,18 +6762,45 @@ def _gate_desynced_dependents(
     )
 
 
-def _resolve_collision_interactive(target_root, finding, *, dry_run: bool) -> str:
+def _resolve_collision_interactive(
+    target_root: Path, finding: CollisionFinding, *, capability: str, dry_run: bool
+) -> str:
     """Prompt the adopter for override/skip/inspect on a single collision.
 
     Loops on `inspect` (re-prompts after showing diff) until adopter
     picks override or skip. Returns the final choice as a string.
-    """
 
+    Before each prompt it names what `override` would do (COR-017): each path of
+    the project's own artefact of that name it removes, which the caller removes
+    once the capability is in place, and each artefact core or another capability
+    ships, which it leaves. `override` is refused, and the prompt asked again,
+    while git could not give the project's artefact back as it stands.
+    """
+    from project_kit import capabilities as caps
+
+    kind, name = finding.artifact_kind, finding.artifact_name
+    replaced = caps.project_artefact_paths(target_root, kind, name)
+    left = caps.shipped_artefact_paths(target_root, kind, name, capability=capability)
     while True:
         click.echo(
-            f"  - {finding.artifact_kind} '{finding.artifact_name}' "
-            f"collides with existing {finding.target_path.relative_to(target_root)}"
+            f"  - {kind} '{name}' collides with existing "
+            f"{finding.target_path.relative_to(target_root)}"
         )
+        unheld = caps.paths_git_cannot_restore(target_root, replaced)
+        for path in replaced:
+            click.echo(
+                f"    override removes {path.relative_to(target_root)}, "
+                + (
+                    "which git does not hold as it stands, so override is refused"
+                    if path in unheld
+                    else "which git keeps"
+                )
+            )
+        for path in left:
+            click.echo(
+                f"    override leaves {path.relative_to(target_root)}: it is not the "
+                "project's, and the deploy's name precedence picks which one deploys"
+            )
         choice = click.prompt(
             "    [override / skip / inspect]",
             type=click.Choice(["override", "skip", "inspect"]),
@@ -6689,7 +6810,33 @@ def _resolve_collision_interactive(target_root, finding, *, dry_run: bool) -> st
         if choice == "inspect":
             _show_unified_diff(finding.target_path, finding.source_path)
             continue
+        if choice == "override":
+            lost = caps.paths_git_cannot_restore(target_root, replaced)
+            if lost:
+                for path in lost:
+                    click.echo(
+                        f"    override refused: {path.relative_to(target_root)} is not "
+                        "committed as it stands, so git could not give it back. "
+                        "Choose skip, or commit it and choose override."
+                    )
+                continue
         return choice
+
+
+def _remove_overridden(target_root: Path, paths: Sequence[Path], *, dry_run: bool) -> None:
+    """Remove the project's artefacts an override chose to replace, naming each (COR-017).
+
+    Runs after the capability is copied in and before deploy, so the project's
+    artefact no longer comes first under the name. Git keeps what is removed: the
+    prompt refused an override git could not give back.
+    """
+    from project_kit import capabilities as caps
+
+    if not dry_run:
+        caps.remove_overridden(paths)
+    verb = "would remove" if dry_run else "removed"
+    for path in paths:
+        click.echo(f"  {verb:<12} {path.relative_to(target_root)} (override; git keeps it)")
 
 
 def _show_unified_diff(existing: Path, incoming: Path) -> None:

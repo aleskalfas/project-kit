@@ -7,14 +7,16 @@ pkit:
     anchors:
       path:
         - src/project_kit/decisions.py
+        - src/project_kit/decisions_check_diff.py
         - src/project_kit/decisions_validate.py
+        - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-13T05:56:29Z
+      at: 2026-10-13T12:45:37Z
       outcome: unchanged
-      unchanged-because: "COR-025's change rewrites the first step of its argument that ADRs never reach an adopter: sync propagates only the surface under .pkit/, writes a project-owned path only through merge delivery's auto-add tier, which never removes or rewrites an entry the project wrote, and reads the project's own declarations. The page's invariant section already says sync reads what it needs from your side and writes into your files through that tier, and states COR-059's rule that it writes a project-owned path only through merge delivery. The page cites COR-025 for where ADRs live and for the ADR schema's superseded_by, neither of which changed, so it holds."
+      unchanged-because: The rule-set module gains one judgement of whether a declared check is there, shared by validation and the reading commands, and its reach walk names the rules a pin behind its set holds back. This page's section on rule sets gives their statuses, the acceptance gate, where sets live, with a project pinning an inherited set's major, how a rule is cited and what validation checks. It says nothing of declared checks, of a pin behind its set holding a rule back, or of the reading commands. Its paragraph on what validation leaves out speaks of a synced copy of a decision record, which the module's change does not touch. So the page holds.
       deferred:
         - anchor:
             kind: record
@@ -50,6 +52,8 @@ A capability's **DEC** records are numbered **per capability** — each capabili
 
 `pkit decisions validate` enforces uniqueness within each id-space (core, project, ADR, and per-capability DEC), and of rule ids across the rule sets (below), and is wired into the project's check gate — it catches two records hand-authored with the same id before they land.
 
+Validation checks your own records only. A record that arrives as a synced copy is a core record, or a kit-shipped capability's, in your project. It is checked where it is authored, since the next sync overwrites an edit here. Validation fails a project only for what it can correct in its own files ([COR-055](core/COR-055-validation.md) point 1). So `pkit validate` and `pkit decisions validate` report nothing on a synced copy: not its front matter, not its id against its filename, and not an id only synced copies share. A record of yours that takes a synced copy's id is still reported, on your record, because the copy keeps its id.
+
 ### Rule sets — a separate family with the same guarantees
 
 Rules are not decision records, but they share their guarantees ([COR-051](core/COR-051-rule-sets.md)). A **rule set** is one file holding many one-paragraph rules: the data sits in front matter, and each rule's statement sits in the body, in a section headed by the rule's id. Rules form their own identifier family, **`RS-<SET>-NNN`** — the family prefix, the rule set's name, a number — so a rule id can never collide with a record id. Ids are permanent: a rule is never renumbered, and a retired id is never reused.
@@ -81,7 +85,7 @@ COR-059 has sync run at the versions your project records, move none of them, an
 
 - **It moves your recorded backbone version** to the running pkit's version. It refuses under an older pkit. `pkit sync` also refuses to move past backbone migrations, and names `pkit upgrade`, which runs them.
 - **It refreshes each installed capability the kit ships** to the version the running pkit ships, and runs that capability's migrations.
-- **It creates what is missing on your side:** the agents overlay, `.pkit/agents/project/overlay.yaml`, and an area's `project/` folder.
+- **It creates what is missing on your side:** the agents overlay, `.pkit/agents/project/overlay.yaml`, and the `project/` folder of an area, or of a capability it refreshes.
 
 The same `core/` / `project/` pattern (and the same invariant) governs other kit areas in your project — `.pkit/agents/`, `.pkit/rules/`, and so on. To extend kit-shipped content, add sibling files in the matching `project/` directory; never edit a kit-owned file.
 
@@ -174,6 +178,49 @@ The commit message says what changed and why.
 Two in-body markers are *not* narration of a revision and are correct to keep: the **superseded-by** line, whole or partial, and a **forward refinement pointer** naming a later record that extends this one — `(refinement per <record>)` on the sub-section heading, decision point or sentence it extends. Both point at another record rather than at a discarded belief.
 
 `pkit decisions validate` warns of each line of a record that narrates its own revision — an amendment heading or marker (`## Amendment (…)`, `**Amendment 1**`, `**Amended by …**`), a revision stamped with an issue number or a date (`**Update (#252)**`, `(clarified, #813)`), or change-log phrasing ("this record originally…", "previously we believed…") — naming the file and line. It does not read fenced blocks or inline code spans, a superseded record, or a record that arrives as a synced copy — a core record, or a kit-shipped capability's, in your project — since that record is refined where it is authored and an edit here is overwritten by the next sync. The two markers above match none of these shapes. The warnings do not fail the command, because the shapes are read from prose and a gate that fails on a heuristic reading of prose fails for the wrong reasons — the reason [COR-055](core/COR-055-validation.md) gives for letting one severity alone fail validation ("Why exactly one fails").
+
+## Checking a record's points
+
+A record's points keep their ids for good ([COR-058](core/COR-058-record-points.md)). A point is a heading in the Decision that opens with its id, `### 5. Title` or `### D1 — Title`. A retired point keeps its id in the record's `retired-points`, with the points that took its text, and a one-line stub stays where it was. `pkit validate` and `pkit decisions validate` check each record's points, as COR-058 point 7 sets out. They read the records the narration warnings read, so a superseded record and a synced copy are left out.
+
+- **They fail on:**
+  - a malformed `retired-points`: one that is not a mapping of retired ids to lists of ids, or that sits in front matter that does not parse
+  - a retired id with no stub, or a stub whose id is not retired
+  - a stub whose sentence differs from the one its entry gives, such as "Its content is in points 7 and 16."
+  - a live point whose heading uses a retired id
+  - a successor that the record neither holds nor retires, or a retired id named as its own successor
+- **They warn of, and never fail on:**
+  - a duplicate id
+  - a gap in the ids, counting retired ones
+  - a heading in the Decision that opens with a number or a label in another form, such as `### 16 - Title` or `### 5.1 Title`
+- **Each finding names the file and the id,** as `<file>#<id>`. A finding on the shape of `retired-points` is at `<file>:/retired-points`, and its message names the entry's id when the finding is on one entry.
+- **Only the field's shape is read** of the front matter, so a project's own fields pass.
+- **A record in list form fails nothing,** unless it writes `retired-points`. Its points are a numbered list, or paragraphs that open with a bold number or label, not yet converted to headings. Its numbers move when a point is inserted, so no duplicate or gap in them is read (COR-058 point 9).
+
+## Checking a change's numbering
+
+A renumbered point misleads every citation of it, and a record's state alone cannot show that a number moved. `pkit decisions check-diff` compares each record a change touches with its state where the change's branch left the default branch, as COR-058 point 8 sets out. Validation takes no base, so this check is a command of its own.
+
+- **Wire it in** as a line of its own in your project's check gate, beside your other checks of a change, such as `pkit migrations check-diff`. It binds only where your project runs it. It runs whether or not anything is anchored, since citations in prose rest on the numbers too.
+  - **Its base** is `--base`, else `$PKIT_CHECK_BASE`, else the default branch your configuration declares. `pkit repository base` shows it. A pipeline that sets `PKIT_CHECK_BASE` to a pull request's target points this check there too.
+  - **Its history:** it reads where the branch left the base, so a pipeline fetches enough history to find that point, such as a full clone.
+  - **What it skips:** a record your project receives by sync, which is checked where it is authored, and a record the change removes.
+  - **A record in list form** meets only the warning below, unless the change converts it to point headings. Then each point's id is held to the number or label it showed.
+- **It fails on,** for each record the change touches:
+  - an id the branch point holds or retires that the head neither holds nor retires: a point dropped without being retired
+  - a new id that is not past every id of its series that the branch point holds or retires
+  - a point whose text, read without its id, sits at the head only under another id: a renumbering, or a retirement whose successor kept the claim
+  - a duplicate id, or a heading in a refused form, that the change added, also in a record with neither point headings nor a list
+  - a retired id without its stub, or a stub without its entry
+  - a new entry in `retired-points` whose successor is not a live point
+  - in a record the change converts from list form, a point whose id differs from the number its numbered item showed
+  - a point id the change takes that another change took on the default branch since the branch left it, and a record id the same way
+- **It warns of, and never fails on:**
+  - a point's title found under another id, with its text changed: likely a renumbering with an edit
+  - in a record the change converts, a point whose id differs from the bold number or label that opened it
+  - a point added to a record in list form, or a new record in list form. You may keep the list under the refining rule above, or convert the record to point headings by hand first, so every number stays.
+- **Each finding names the record and the id,** as `<file>#<id>`, or `<file>` for a record id. The command exits 1 on an error and 0 on warnings alone.
+- **Two changes that take one number:** the first to land keeps it. The other moves its point, or its record, to the next unused number, which the finding names. A point the default branch holds under that id with the change's very text, or a record it holds at the change's own path, is the change's own work landed, such as a parent branch's, and is no clash. A parent's point edited since fails, and merging the default branch in clears it.
 
 ## Adding a record
 

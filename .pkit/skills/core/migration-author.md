@@ -8,8 +8,6 @@ gates:
   - COR-008
   - COR-010
 reads:
-  records:
-    - PRJ-002
   paths:
     - .pkit/cli/README.md
     - .pkit/lifecycle/README.md
@@ -53,10 +51,12 @@ Each tier has three scopes that determine the script's role and execution order 
 
 ### 3. Pick the target version
 
-The target version is the `<major>.<minor>.0` the migration applies *up to*. Per COR-010, patches have no migrations — the patch segment is always `.0`, and one minor-version directory covers all patches within that line.
+The target version is the `<major>.<minor>.0` the migration applies *up to*. It is the version that the migration's backbone or component takes in the release that ships the change. Per COR-010, patches have no migrations — the patch segment is always `.0`, and one minor-version directory covers all patches within that line. So that release raises that version by at least a minor.
 
-- For a backbone migration: read `.pkit/VERSION` for the current backbone version (after the bump that the migration is for).
-- For a component migration: read the component's `package.yaml`'s `version` field (after the bump).
+How that version is known depends on the project's version-bump policy, which COR-010 defers to. Read the project's own record of it first. Two common shapes:
+
+- **Where the change's own branch bumps the version,** the target is the bumped version. For a backbone migration, read `.pkit/VERSION` after the bump. For a component migration, read the component's `package.yaml` `version` field after the bump.
+- **Where a release step bumps the version after the change merges,** the branch carries a version already shipped. The target is the backbone's or component's version in the next release. Predict it from its latest shipped version and the highest bump among the changes that release will ship. Check it again just before the change merges.
 
 ### 4. Pick the slug
 
@@ -72,7 +72,7 @@ pkit new migration --tier <tier> [--component <name>] [--version <X.Y.0>] --name
 
 - `--tier` is required.
 - `--component` is required when `--tier` is `bundle` or `adapter`.
-- `--version` defaults to the tier's current recorded version (read from `.pkit/VERSION` for backbone; from `package.yaml` for components). Pass explicitly to override.
+- `--version` defaults to the tier's current version: `.pkit/VERSION` for the backbone, a component's `package.yaml` `version` field for a component. Pass step 3's target explicitly when it differs. Where a release step bumps the version, the target always differs from the default.
 - `--name` is the slug, required.
 - `--scope` defaults to `resource`. Set to `manifest-schema` or `structural` per step 2.
 
@@ -122,7 +122,7 @@ feat(<scope>): add migration <X.Y.0>/<slug>
 the new version expects, and any caveats for adopters>
 ```
 
-The migration is part of the version-bump commit's surface change (per PRJ-002 for backbone, or the component's analogue bump rule).
+The migration lands in the same change-set as the surface change it bridges, per COR-010. So does the version bump, in the form the project's version-bump policy gives it.
 
 ## Variations
 

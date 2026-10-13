@@ -9,7 +9,7 @@ requires_backbone: ">=1.149.0,<2.0.0"
 commands:
   validate:
     script: scripts/validate.py
-    help: "Validate the documentation spaces (DEC-001): places and their assignment, what is never a page, pages' reader and kind, each reader against the readers point, each page's body against the structure its kind declares (RS-LDOC-004), entry points and definitions, and counts the pages left unanchored without an accepted reason apart from those accepted with one (DEC-001 point 8), and the captured sources' layout (point 4); --json prints the findings document `pkit validate` reads. A query: read-only, offline; `pkit sync` provisions its dependencies."
+    help: "Validate the documentation spaces (DEC-001): places and their assignment, what is never a page, pages' kind, each page's reader against the readers point where RS-LDOC-003 binds on it and its body against the structure its kind declares where RS-LDOC-004 binds (read from `pkit rule-sets reach`), entry points and definitions with their scopes, and counts the pages left unanchored without an accepted reason apart from those accepted with one (DEC-001 point 8), and the captured sources' layout (point 4); --json prints the findings document `pkit validate` reads. A query: read-only, offline; `pkit sync` provisions its dependencies."
     query-contract: true
   fill-doc-check:
     script: scripts/fill-doc-check.py
@@ -96,10 +96,11 @@ connections:
           its id, which a page names as its reader, and a description of what
           that reader needs. A user and a maintainer are always included; a
           project filler adds or overrides readers, and a capability that keeps
-          knowledge about the software's users may add its own. Validation
-          fails a page whose reader does not resolve, so a filler that cannot
-          answer leaves the point unresolved rather than check pages against
-          whichever readers survived.
+          knowledge about the software's users may add its own. Where
+          RS-LDOC-003 binds on a page, validation fails the page when its
+          reader does not resolve, so a filler that cannot answer leaves the
+          point unresolved rather than check pages against whichever readers
+          survived.
         combination: union
         default:
           participation: always

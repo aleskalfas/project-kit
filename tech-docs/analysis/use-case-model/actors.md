@@ -19,9 +19,9 @@ ACT-adopter:
           - COR-001
           - COR-010
       revalidated:
-        at: 2026-10-13T04:39:27Z
+        at: 2026-10-13T07:23:47Z
         outcome: unchanged
-        unchanged-because: The adopter needs to upgrade like a dependency, with the migrations run and their own files left alone, and the core line names the owner split and the install and upgrade lifecycle. COR-001 now names a transition's migrations among the writers of project-owned paths, limited to the writes the owning records allow, and its creation of a missing seed path, which brings back a deleted starter file and never writes over one that exists. COR-010 makes the upgrade a version transition that runs every migration. So the need and the core line hold.
+        unchanged-because: COR-010's change names the propagation that sync and a version transition both run as what skips a capability authored in the project's own repository, which leaves that capability's files as written. The adopter's need to upgrade with the migrations run and its own files left alone agrees with it, and no other need names the skip, so the entry holds.
 ACT-ai-agent:
   name: AI agent
   status: active
@@ -54,9 +54,9 @@ ACT-ci-pipeline:
           - COR-054
           - COR-050
       revalidated:
-        at: 2026-10-12T18:49:33Z
+        at: 2026-10-13T10:43:56Z
         outcome: unchanged
-        unchanged-because: COR-050's refinement lets a place name a type, which no friction check reads. The pipeline needs the checks to run unattended against a named base, report in a machine-readable form and gate the merge. This change leaves each as it was, so the actor holds.
+        unchanged-because: COR-050's refinement lets a record anchor name one point, and lets validation fail a dead or ambiguous point anchor. The pipeline needs the checks to run unattended against a named base, report in a machine-readable form, report the whole repository without failing, and gate the merge. This change leaves each as it was, so the actor holds.
 ACT-component-author:
   name: Component author
   status: active
@@ -111,9 +111,9 @@ ACT-merge-authoriser:
         record:
           - COR-050
       revalidated:
-        at: 2026-10-12T18:49:35Z
+        at: 2026-10-13T10:43:57Z
         outcome: unchanged
-        unchanged-because: COR-050's refinement lets a place name a type, which no friction check reads, and adds two writes of types on the project's places. Being told before a merge what changed and what waits, leaving the answers' check to a reviewer, and accepting a drafted record or rule are untouched, so the actor holds.
+        unchanged-because: COR-050's refinement lets a record anchor name one point and says what the point stands on. Being told before a merge what changed and what waits, leaving the answers' check to a reviewer, and accepting a drafted record or rule rest on point 3 and the acceptance gate, which are untouched, so the actor holds.
 ACT-methodology-maintainer:
   name: Methodology maintainer
   status: active
@@ -174,7 +174,7 @@ The person who adopts the methodology for a project and keeps its setup.
 
 An AI agent working under the methodology, acting on the system from outside.
 
-- **Can be:** the main session acting for a person, or an agent that session dispatches for one role (in the core: critic, architect, methodology-reviewer, convention-compliance-reviewer, process-author).
+- **Can be:** the main session acting for a person, or an agent that session dispatches for one role (in the core: critic, architect, methodology-reviewer, convention-compliance-reviewer, rule-set-reviewer, process-author).
 - **Comes:** whenever work is done. It keeps no memory between sessions beyond what the repository holds.
 - **In the model:** when it does a role's work, it appears as a step in that role's use cases.
 - **Core:** the agent architecture, the rules loaded into every session and the adapter's deployment make this actor exist. The core's reviewer agents advise, and no core gate counts their verdict.

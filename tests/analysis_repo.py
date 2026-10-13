@@ -27,8 +27,9 @@ from typing import Any
 
 import pytest
 from ruamel.yaml import YAML
+from scripts import prose_lint as pl
 
-from project_kit import friction_discovery as fd
+from project_kit import document_parts
 from project_kit.friction_check import BASE_ENV
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo, Prepare
 
@@ -115,13 +116,29 @@ def stamped(repo: AdopterRepo, *args: str) -> str:
 def front(repo: AdopterRepo, rel: str) -> dict[str, Any]:
     """A stamped file's front matter."""
     text = (repo.root / rel).read_text(encoding="utf-8")
-    front_matter, _body = fd.split_front_matter(text)
+    front_matter, _body = document_parts.split_front_matter(text)
     assert front_matter is not None
     return load(front_matter)
 
 
 #: A text in angle brackets, as a template writes a placeholder.
 _PLACEHOLDER = re.compile(r"<([^<>\n]+)>")
+
+#: The writing rules whose mechanical parts the text the capability ships keeps to
+#: (#1351): no sentence over 25 words, and no semicolon. They are a floor any project's
+#: rules accept, and carry none of one project's style.
+FLOOR = ("RS-WRITE-005", "RS-WRITE-008")
+
+
+def below_floor(text: str) -> list[str]:
+    """`<line> <rule>: <message>` for each break of the floor in a given text, its
+    front matter's values and its body, read as the prose lint reads them
+    (`scripts/prose_lint.py`). Each placeholder's brackets are taken off first, as
+    `fill` does: the lint reads a line that is only `<…>` as an HTML tag, and skips it."""
+    entries = [entry for entry in pl.load_entries() if entry.rule in FLOOR]
+    assert sorted(entry.rule for entry in entries) == sorted(FLOOR)
+    found = pl.lint_text(_PLACEHOLDER.sub(r"\1", text), entries)
+    return [f"{f.line} {f.rule}: {f.message}" for f in found]
 
 
 def fill(repo: AdopterRepo) -> None:

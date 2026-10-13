@@ -74,8 +74,8 @@ from ruamel.yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
 from project_kit import backbone_schemas as bs
 from project_kit import capabilities as caps
+from project_kit import document_parts, validators
 from project_kit import friction_discovery as fd
-from project_kit import validators
 from project_kit.decisions import resolve_adr_records_dir
 
 Severity = bs.Severity
@@ -503,7 +503,7 @@ def _read_rule_set(
 ) -> RuleSet | UnreadableRuleSet:
     if isinstance(text, fd.ReadFailure):
         return UnreadableRuleSet(rel, place, f"cannot be read ({text.reason})")
-    front_matter, body = fd.split_front_matter(text)
+    front_matter, body = document_parts.split_front_matter(text)
     if front_matter is None:
         return UnreadableRuleSet(
             rel,
@@ -527,7 +527,7 @@ def _read_rule_set(
             id=rule_id,
             path=rel,
             data=entry if isinstance(entry, Mapping) else {},
-            section=fd.entry_section(body, rule_id),
+            section=document_parts.entry_section(body, rule_id),
             checks=checks.get(rule_id, ()),
         )
         for rule_id, entry in entries.items()
@@ -613,17 +613,18 @@ def _duplicate_keys(text: str) -> tuple[DuplicateKey, ...]:
 def _sections(body: str) -> tuple[Section, ...]:
     """The body headings that open with `RS-`, in order.
 
-    Read as the friction pass reads a rule's section (`fd.body_headings`,
-    `fd.heading_opens_with`), so the two find the same sections. A heading
-    opens with a rule id only when it opens with the id as a whole token.
+    Read by the one reading of where a part lies (`document_parts.body_headings`,
+    `document_parts.heading_opens_with`), as the friction pass reads a rule's
+    section, so the two find the same sections. A heading opens with a rule id
+    only when it opens with the id as a whole token.
     """
     sections: list[Section] = []
-    for heading in fd.body_headings(body):
+    for heading in document_parts.body_headings(body):
         if not heading.title.startswith("RS-"):
             continue
         match = _HEADING_ID.match(heading.title)
         rule_id = match.group(1) if match else None
-        if rule_id is not None and not fd.heading_opens_with(heading.title, rule_id):
+        if rule_id is not None and not document_parts.heading_opens_with(heading.title, rule_id):
             rule_id = None
         sections.append(Section(rule_id=rule_id, heading=heading.title))
     return tuple(sections)
@@ -1638,9 +1639,46 @@ class _Catalogue:
         return self._decisions[record]
 
     def check_problem(self, part: CheckPart) -> str | None:
-        """Why a declared check is not there, or `None` when it is, or is trusted (COR-051
-        point 2): a backbone check is a `pkit` command, a component's a command its
-        package metadata registers, and the project's own tool is trusted by name."""
+        """Why a declared check is not there, or `None` (`CheckPresence.problem`)."""
+        return self.presence.problem(part)
+
+    @cached_property
+    def presence(self) -> CheckPresence:
+        return CheckPresence(self.target_root)
+
+    def requires(self, capability: str) -> frozenset[str]:
+        """The capabilities `capability` declares required in `requires_capabilities`
+        (COR-030). An optional dependency may be absent, so it admits no inheritance
+        (COR-051 point 7)."""
+        if capability not in self._requires:
+            source = caps.find_capability_in_repo(self.target_root, capability)
+            names = (
+                frozenset(
+                    dep.name for dep in source.package.requires_capabilities if not dep.optional
+                )
+                if source is not None
+                else frozenset()
+            )
+            self._requires[capability] = names
+        return self._requires[capability]
+
+
+class CheckPresence:
+    """Whether each declared check is there (COR-051 point 2; ADR-057 point 2), at one
+    state. A component's check is there when a component installed at that state
+    registers the command in its package metadata: the working tree's, or with `tree` the
+    commit's. A backbone check is there when the `pkit` tool that runs has the command,
+    whatever the state, since the tool ships in the binary and no commit holds it. The
+    project's own tool is trusted by its name. Validation reports a check that is not
+    there, and the reading commands give the same answer on each declared part
+    (`rule_set_reading`). Every answer is read once and kept."""
+
+    def __init__(self, target_root: Path, tree: fd.RepositoryTree | None = None) -> None:
+        self.target_root = target_root
+        self.tree = tree
+
+    def problem(self, part: CheckPart) -> str | None:
+        """Why a declared check is not there, or `None` when it is, or is trusted."""
         if part.owner is None:
             return None
         command = tuple(part.name.split())
@@ -1664,32 +1702,23 @@ class _Catalogue:
 
     @cached_property
     def component_commands(self) -> dict[str, frozenset[tuple[str, ...]]]:
-        """Each registered component's commands, by their words, as the dispatcher reads
-        what its package metadata registers (`command_runner.registered_commands`). A
-        package that does not read registers nothing here, as it registers nothing there."""
-        from project_kit.command_runner import registered_commands
+        """Each registered component's commands at this state, by their words, as the
+        dispatcher reads what its package metadata registers (`command_runner`). A package
+        that does not read registers nothing here, as it registers nothing there."""
+        from project_kit.command_runner import COMMANDS_KEY, commands_of, registered_commands
         from project_kit.package_validate import installed_package_files
 
+        if self.tree is not None:
+            return {
+                name: frozenset(commands_of(component_dir, package.get(COMMANDS_KEY)))
+                for name, component_dir, package in fd.installed_packages_at(
+                    self.target_root, self.tree
+                )
+            }
         return {
             name: frozenset(registered_commands(component_dir))
             for name, component_dir, _package in installed_package_files(self.target_root)
         }
-
-    def requires(self, capability: str) -> frozenset[str]:
-        """The capabilities `capability` declares required in `requires_capabilities`
-        (COR-030). An optional dependency may be absent, so it admits no inheritance
-        (COR-051 point 7)."""
-        if capability not in self._requires:
-            source = caps.find_capability_in_repo(self.target_root, capability)
-            names = (
-                frozenset(
-                    dep.name for dep in source.package.requires_capabilities if not dep.optional
-                )
-                if source is not None
-                else frozenset()
-            )
-            self._requires[capability] = names
-        return self._requires[capability]
 
 
 def resolve_pin(discovery: RuleSetDiscovery, pin: Pin) -> tuple[RuleSet | None, str | None]:
@@ -1850,12 +1879,31 @@ Conflict = PinConflict | FillConflict
 
 
 @dataclass(frozen=True)
+class HeldRule:
+    """An accepted rule that a pin behind its set holds back from an artefact (COR-051
+    point 7).
+
+    Every route from the artefact to the rule's set passes a pin behind its set, so the
+    rule binds nothing there until the pin is updated. A reviewer may still report a
+    break of it, as a finding that informs (COR-057 point 1). `pins` are the pins
+    behind their sets that lead towards the rule's set from the artefact's routes: the
+    set that pins, the pin's index in that set's `inherits`, and the pin, in path order.
+    """
+
+    rule: Rule
+    rule_set: RuleSet
+    pins: tuple[tuple[RuleSet, int, Pin], ...]
+
+
+@dataclass(frozen=True)
 class ArtefactReach:
     """The walk's answer for one artefact: the accepted rules that bind on it, in path
-    and written order, and the conflicts between its routes."""
+    and written order, the conflicts between its routes, and the accepted rules that
+    pins behind their sets hold back from it, in path and written order."""
 
     bindings: tuple[Binding, ...] = ()
     conflicts: tuple[Conflict, ...] = ()
+    held: tuple[HeldRule, ...] = ()
 
 
 _NO_REACH = ArtefactReach()
@@ -1864,7 +1912,8 @@ _NO_REACH = ArtefactReach()
 @dataclass(frozen=True)
 class Reach:
     """The walk's answer for one state (`reach`): each artefact on which a rule binds,
-    or whose routes conflict, by location. Any other artefact has no binding rule."""
+    whose routes conflict, or from which a pin behind its set holds a rule back, by
+    location. Any other artefact has no binding rule."""
 
     by_location: Mapping[str, ArtefactReach]
 
@@ -1896,7 +1945,9 @@ def reach(discovery: fd.Discovery, rule_sets: RuleSetDiscovery) -> Reach:
     The answer also names routes to one artefact that pin one set at
     different majors. That conflict holds back no binding: a rule binds
     through a route whose pins are not behind. Validation reports both
-    conflicts from this answer (`validate_rule_sets`).
+    conflicts from this answer (`validate_rule_sets`). The answer also names
+    each accepted rule that only routes through a pin behind its set reach,
+    which binds nothing (`HeldRule`).
 
     A rule that fills binds only as a fill, so one whose fills name no point
     an inherited rule offers binds nowhere. A most specific set brings the
@@ -1912,7 +1963,7 @@ def reach(discovery: fd.Discovery, rule_sets: RuleSetDiscovery) -> Reach:
         if not selecting:
             continue
         answer = walk.answer(selecting)
-        if answer.bindings or answer.conflicts:
+        if answer.bindings or answer.conflicts or answer.held:
             found[artefact.location] = answer
     return Reach(found)
 
@@ -2089,7 +2140,50 @@ class _Routes:
                         bindings.append(Binding(rule, rule_set, covering, tuple(points)))
                     continue
                 bindings.append(Binding(rule, rule_set, covering))
-        return ArtefactReach(tuple(bindings), tuple(conflicts))
+        return ArtefactReach(tuple(bindings), tuple(conflicts), self._held())
+
+    def _held(self) -> tuple[HeldRule, ...]:
+        """The accepted rules of each set that the routes reach only through a pin behind
+        its set, in path and written order, each with the pins behind their sets that lead
+        towards it (COR-051 point 7). A rule that fills binds only as a fill, so none is
+        held back as a rule."""
+        anywhere = self.anywhere()
+        reached = self.reached()
+        behind = [
+            edge
+            for path in sorted(anywhere)
+            for edge in self.walk.edges(anywhere[path])
+            if edge.behind and self.passes(edge.inherited)
+        ]
+        beyond = {id(edge): self._passing_from(edge.inherited) for edge in behind}
+        found: list[HeldRule] = []
+        for rule_set in self.walk.rule_sets.rule_sets:  # path order
+            if rule_set.path not in anywhere or rule_set.path in reached:
+                continue
+            pins = tuple(
+                (edge.rule_set, edge.index, edge.pin)
+                for edge in behind
+                if rule_set.path in beyond[id(edge)]
+            )
+            found.extend(
+                HeldRule(rule, rule_set, pins)
+                for rule in rule_set.rules
+                if rule.binds and not rule.fills  # a fill binds only as a fill
+            )
+        return tuple(found)
+
+    def _passing_from(self, start: RuleSet) -> frozenset[str]:
+        """The paths of `start` and every set a route from it reaches, whatever its pins,
+        through sets whose own scope, where they have one, selects the artefact."""
+        seen = {start.path}
+        queue = [start]
+        while queue:
+            for edge in self.walk.edges(queue.pop(0)):
+                target = edge.inherited
+                if target.path not in seen and self.passes(target):
+                    seen.add(target.path)
+                    queue.append(target)
+        return frozenset(seen)
 
     def _pin_conflicts(self) -> list[PinConflict]:
         """One set pinned at different majors by the routes from the artefact."""
@@ -2315,7 +2409,7 @@ def _record_folder(target_root: Path, family: str) -> Path | None:
 
 def _front_matter_status(path: Path) -> str | None:
     try:
-        front_matter, _body = fd.split_front_matter(path.read_text(encoding="utf-8"))
+        front_matter, _body = document_parts.split_front_matter(path.read_text(encoding="utf-8"))
         data = _yaml.load(io.StringIO(front_matter)) if front_matter is not None else None
     except (OSError, UnicodeDecodeError, YAMLError):
         return None

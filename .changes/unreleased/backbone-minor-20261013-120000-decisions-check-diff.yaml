@@ -1,0 +1,21 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+  pr: "1545"
+body: >
+  `pkit decisions check-diff` checks a change's numbering against its base
+  (COR-058 point 8). For each decision record the change touches, it fails on a
+  point dropped without being retired, a new id not past every id the branch
+  point holds or retires, a point's text found only under another id, a
+  duplicate id or a refused heading form the change added, a retired id
+  without its stub or a stub without its entry, a new `retired-points` entry
+  whose successor is no live point, and, in a record the change converts from
+  list form, a point whose id differs from its numbered item's. It also fails
+  on a point id or a record id the default branch took since the branch left
+  it. It warns of a point's title under another id with its text changed, a
+  converted point whose id differs from its bold number or label, and a point
+  added to a record in list form or a new record in list form. It reads its
+  base as every comparison does (`--base`, `$PKIT_CHECK_BASE`, the default
+  branch), skips a record the project receives by sync, and is a line of its
+  own in a project's check gate (#1417).

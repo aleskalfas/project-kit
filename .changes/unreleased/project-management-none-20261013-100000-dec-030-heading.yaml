@@ -1,0 +1,8 @@
+component: project-management
+kind: none
+body: >
+  A heading in DEC-030's Decision, "v1 scope: no in-place customisation",
+  reads "Scope: no in-place customisation in v1", and the sentence that
+  names it follows, so the points reader does not read that heading as a
+  misspelt point. What the record decides does not change. The README's
+  friction block is revalidated, unchanged. Nothing you run changes.

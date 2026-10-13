@@ -233,7 +233,12 @@ class Result:
 #
 # Each member's `run` imports its module when called, so listing the registry
 # costs nothing and a member's module loads only when it runs. The order is
-# the order of dependence: what a later member reads, an earlier one checked.
+# the order of dependence: a member comes after those that check what it reads
+# (ADR-058 point 3). Members share inputs, so not every read follows it: some
+# inputs are read before the member that checks them, such as package
+# declarations, artefact discovery's walk, the wiring, rule-set files and
+# process definitions. `decisions` runs before `friction`, which reads the
+# points of the records an anchor names, and before `rule-sets`.
 
 
 def _manifests(root: Path) -> Outcome:
@@ -315,9 +320,9 @@ _BACKBONE_MEMBERS: tuple[tuple[str, Callable[[Path], Outcome], str], ...] = (
     ("packages", _packages, "every registered component's package metadata"),
     ("connections", _connections, "the wiring the packages and selections resolve to"),
     ("versions", _versions, "every version relation"),
+    ("decisions", _decisions, "decision-record front matter, id spaces and points"),
     ("friction", _friction, "artefacts in the declared places: the container, deferrals, cycles"),
     ("rule-sets", _rule_sets, "every rule-set file: shape, ids, origins, inheritance"),
-    ("decisions", _decisions, "decision-record front matter and id spaces"),
     ("refs", _refs, "the reference graph across agents, skills and hooks"),
     ("process", _process, "every process definition resolves, its states in one detection mode"),
     ("data", _data, "adopter data files bound to a capability schema"),
