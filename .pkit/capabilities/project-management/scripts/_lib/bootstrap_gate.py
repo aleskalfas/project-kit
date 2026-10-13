@@ -43,11 +43,14 @@ The stamp is adopter state, so it lives in the capability's adopter-owned
 while every kit-owned path refreshes wholesale and root-level orphans are
 pruned; since #812 the capability path also never *seeds* it from source). It deliberately does
 **not** live in the capability's
-``manifest.yaml``: that file is re-stamped from scratch by
+``manifest.yaml``. When this gate was built, that file sat at the
+capability's root and was re-stamped from scratch by
 ``_stamp_component_manifest`` on every install / refresh, so a stamp written
 there would be erased by the next ``pkit sync``, and — because the kit source
-tree carries its own ``manifest.yaml`` — an adopter would inherit the *kit's*
-stamp on install. Either failure re-opens the hole this gate closes.
+tree carried its own ``manifest.yaml`` there — an adopter would inherit the
+*kit's* stamp on install. Either failure re-opens the hole this gate closes.
+The manifest now sits under ``project/`` too, and a restamp keeps its
+``backend_state`` (#1458). The stamp stays in a file of its own.
 
 ``project/`` has the mirror-image hazard: a stamp committed in one repo can
 still arrive in another and be read as "already bootstrapped" there. Install no

@@ -62,6 +62,8 @@ def ownership():
         ("capabilities/project-management/project/config.yaml", True),
         ("capabilities/project-management/project/process/1.journal.jsonl", True),
         ("capabilities/project-management/project/adapter-overlays/claude-code.json", True),
+        # A capability's manifest, the project's record of it (ADR-065 point 2).
+        ("capabilities/project-management/project/manifest.yaml", True),
         # Kit-owned content inside the same capability still ships.
         ("capabilities/project-management/schemas/issue-types.yaml", False),
         ("capabilities/project-management/scripts/create-issue.py", False),
@@ -172,6 +174,25 @@ def test_no_adopter_owned_content_ships(ownership, built_wheel: Path) -> None:
     assert not offenders, (
         f"{len(offenders)} adopter-owned path(s) in the distribution: {offenders[:10]}"
     )
+
+
+_CAPABILITY_RECORD = re.compile(r"capabilities/[^/]+/(project/)?manifest\.yaml")
+
+
+def test_no_capability_carries_a_record_at_its_root_in_the_source() -> None:
+    """A capability's record sits under its `project/`, which the bundle withholds
+    (ADR-065 point 2). One at a capability's root would ship, and a refresh would copy
+    it over an adopter's record."""
+    at_root = sorted(
+        str(path.relative_to(KIT)) for path in (KIT / "capabilities").glob("*/manifest.yaml")
+    )
+    assert not at_root, f"capability record(s) at a capability's root: {at_root}"
+
+
+def test_no_capability_record_ships(built_wheel: Path) -> None:
+    """The bundle ships no capability's record, project-management's included."""
+    records = sorted(rel for rel in _kit_entries(built_wheel) if _CAPABILITY_RECORD.fullmatch(rel))
+    assert not records, f"capability record(s) in the distribution: {records}"
 
 
 def test_no_build_cache_ships(built_wheel: Path) -> None:

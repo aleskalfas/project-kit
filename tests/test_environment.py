@@ -59,6 +59,25 @@ def test_collect_environment_basic(tmp_path: Path) -> None:
     assert env.python
 
 
+def test_collect_environment_reads_a_capabilitys_manifest_as_its_record_is_read(
+    tmp_path: Path,
+) -> None:
+    """A root manifest an older pkit left wins over the one under project/, which the
+    registry names (ADR-065 point 2)."""
+    _stage(tmp_path)
+    write_component_manifest(
+        tmp_path / ".pkit" / "capabilities" / "project-management" / "manifest.yaml",
+        ComponentManifest(
+            kind="capability",
+            name="project-management",
+            version="0.53.0",
+            installed_at="2026-08-08",
+            requires_backbone=">=1.0.0",
+        ),
+    )
+    assert ("project-management", "0.53.0") in collect_environment(tmp_path).capabilities
+
+
 def test_collect_environment_include_private(tmp_path: Path) -> None:
     _stage(tmp_path)
     env = collect_environment(tmp_path, include_private=True)

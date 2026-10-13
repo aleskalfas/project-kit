@@ -106,7 +106,12 @@ from ruamel.yaml import YAML
 from project_kit import backbone_schemas as bs
 from project_kit import docs_roots, rule_sets, validators
 from project_kit.capabilities import is_optional_dependency
-from project_kit.manifest import read_backbone_manifest, read_component_manifest
+from project_kit.manifest import (
+    ComponentRegistryEntry,
+    read_backbone_manifest,
+    read_component_manifest,
+    recorded_capability_manifest,
+)
 from project_kit.package_validate import (
     POINT_SEPARATOR,
     ROLE_QUALIFIER,
@@ -531,9 +536,7 @@ def _installed_components(target_root: Path) -> list[Installed]:
             Installed(
                 name=name,
                 kind=entry.kind if entry is not None else CAPABILITY,
-                version=_version_of_record(
-                    target_root, entry.manifest if entry is not None else None, package
-                ),
+                version=_version_of_record(_manifest_of_record(target_root, entry), package),
                 file=file,
                 component_dir=component_dir,
                 package=package,
@@ -1553,15 +1556,28 @@ def _definition_file_exists(declarations: Declarations, capability: str, process
     return (component.component_dir / SCHEMAS_DIR / f"{process_id}.yaml").is_file()
 
 
-def _version_of_record(
-    target_root: Path, manifest: str | None, package: Mapping[str, Any]
-) -> str | None:
+def _manifest_of_record(target_root: Path, entry: ComponentRegistryEntry | None) -> Path | None:
+    """The manifest a registered component's version of record is read from.
+
+    A capability's is read as every reader of its record reads it: at its root
+    where one is still there, else under its `project/`
+    (`manifest.recorded_capability_manifest`, ADR-065 point 2). Another
+    component's is the one its registry entry names.
+    """
+    if entry is None:
+        return None
+    if entry.kind == CAPABILITY:
+        return recorded_capability_manifest(target_root, entry.name)
+    return target_root / entry.manifest
+
+
+def _version_of_record(manifest: Path | None, package: Mapping[str, Any]) -> str | None:
     """The installed version: the component manifest's, else the authored package's —
     an incubated capability has no kit-written manifest (COR-031) — in the order the
     dependency gate reads it (`capabilities.get_installed_capability_version`)."""
     if manifest is not None:
         try:
-            component = read_component_manifest(target_root / manifest)
+            component = read_component_manifest(manifest)
         except Exception:
             component = None  # `pkit validate`'s manifest checks report it
         if component is not None and component.version:
