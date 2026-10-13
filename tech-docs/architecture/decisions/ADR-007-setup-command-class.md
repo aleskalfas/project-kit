@@ -16,13 +16,35 @@ A `critic` + `architect` consult on a one-off composing verb (`engage`) establis
 
 **pkit gains a setup-command class: goal-oriented orchestrators (`pkit <domain> setup <goal>`) that stand up a named composite goal by composing existing accepted verbs — stepwise, resumable, and honest about boundaries — declaring the goal reached only when its verification passes.** Placement: a goal lives in the domain that owns its vocabulary (`pkit permissions setup autonomy`); bare `pkit <domain> setup` lists that domain's goals with one-line glosses. The top-level `pkit setup` spelling is **reserved** for a future genuinely cross-domain composer — "stand up the whole environment" — which, if it lands, composes the domain setups under this same contract (the class recurses; the top level is not squatted by the first domain that needed a goal). The class contract, binding on every instance:
 
-1. **Composition is the named purpose.** A setup command's documented meaning *is* "stand up this whole goal." Typing it is the operator's explicit opt-in to every step (the ADR-002 point 2 argument). Silent fusion stays forbidden everywhere else: `profile activate` keeps its nudge-only behaviour; no existing primitive gains side-effects.
-2. **Owns nothing.** A setup command composes accepted primitives and introduces no new mutation engine, no new ownership tier, no second writer for any surface (the ADR-005 god-object stays dead). Every effect is some primitive's effect; every switch remains individually inspectable and reversible by its own verb.
-3. **Stepwise, resumable, idempotent.** Each run inspects live state, performs the steps that can proceed, reports per-step status (already done / done now / blocked), and converges on re-run. There is no state file; the live system is the checkpoint.
-4. **Honest boundaries.** When a step cannot complete in-process (e.g. the session restart for `sandbox.enabled`), the command stops, names the exact manual action, and instructs the operator to re-run after it. The non-hot-reload fact is communicated, never papered over.
-5. **Verification is part of the goal.** A goal is *reached* only when its proof passes (for autonomy: `permissions probe --live` showing guardrails REJECTED and the confinement floor holding). The command never declares completion on configuration writes alone; the final resumed run executes the verification and only then reports the goal reached.
-6. **Dangerous flags never ride the orchestrator.** Escape hatches (`--dangerously-allow-unconfined`, `--bypass`, …) stay on the primitive that owns them; a setup command is fail-closed-only and refuses to forward them.
-7. **Teardown reports residual state loudly.** A goal's down-form (`pkit <domain> setup <goal> down` — a subcommand, not a flag: tearing down is the *opposite* mutation set, and a flag that inverts a command's direction is the mode-flag smell; the subcommand spelling parallels the project's existing `enable`/`disable` pairs) reverses the live switches the goal stood up and enumerates what it deliberately leaves (e.g. "profile 'autonomous' still active in the model but unenforced") — never a bare success that lets the operator believe more was torn down than was (the ADR-004 §49 trap in reverse).
+### 1. Composition is the named purpose
+
+A setup command's documented meaning *is* "stand up this whole goal." Typing it is the operator's explicit opt-in to every step (the ADR-002 point 2 argument). Silent fusion stays forbidden everywhere else: `profile activate` keeps its nudge-only behaviour; no existing primitive gains side-effects.
+
+### 2. Owns nothing
+
+A setup command composes accepted primitives and introduces no new mutation engine, no new ownership tier, no second writer for any surface (the ADR-005 god-object stays dead). Every effect is some primitive's effect; every switch remains individually inspectable and reversible by its own verb.
+
+### 3. Stepwise, resumable, idempotent
+
+Each run inspects live state, performs the steps that can proceed, reports per-step status (already done / done now / blocked), and converges on re-run. There is no state file; the live system is the checkpoint.
+
+### 4. Honest boundaries
+
+When a step cannot complete in-process (e.g. the session restart for `sandbox.enabled`), the command stops, names the exact manual action, and instructs the operator to re-run after it. The non-hot-reload fact is communicated, never papered over.
+
+### 5. Verification is part of the goal
+
+A goal is *reached* only when its proof passes (for autonomy: `permissions probe --live` showing guardrails REJECTED and the confinement floor holding). The command never declares completion on configuration writes alone; the final resumed run executes the verification and only then reports the goal reached.
+
+### 6. Dangerous flags never ride the orchestrator
+
+Escape hatches (`--dangerously-allow-unconfined`, `--bypass`, …) stay on the primitive that owns them; a setup command is fail-closed-only and refuses to forward them.
+
+### 7. Teardown reports residual state loudly
+
+A goal's down-form (`pkit <domain> setup <goal> down` — a subcommand, not a flag: tearing down is the *opposite* mutation set, and a flag that inverts a command's direction is the mode-flag smell; the subcommand spelling parallels the project's existing `enable`/`disable` pairs) reverses the live switches the goal stood up and enumerates what it deliberately leaves (e.g. "profile 'autonomous' still active in the model but unenforced") — never a bare success that lets the operator believe more was torn down than was (the ADR-004 §49 trap in reverse).
+
+### First instance: `pkit permissions setup autonomy [--profile <name>]`
 
 **First instance: `pkit permissions setup autonomy [--profile <name>]`** — composes `profile activate` (default `autonomous`), `enable`, `sandbox enable`, pauses at the restart boundary, and on the post-restart re-run executes `probe --live` and declares the goal. `pkit permissions setup autonomy down` runs `disable` + `sandbox disable` and reports the still-active model per rule 7.
 
