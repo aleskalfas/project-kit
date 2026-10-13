@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-13T09:18:24Z
+      at: 2026-10-13T10:43:43Z
       outcome: unchanged
-      unchanged-because: "The decisions README gains a section on checking a change's numbering with pkit decisions check-diff, and the CLI reference gains that command's entry and names it among the checks of a change. The map gives each README's role and link: it calls the decisions README the record system and home of the no-shared-files invariant, and the CLI reference the command-line surface, naming some of its commands. Neither role nor link moves, so the map holds."
+      unchanged-because: The CLI reference gains friction's point anchors and validation's member order, the schemas README the container's point id on the record kind, and the lifecycle README rewords how the engine reads a resolver's files. The map gives each README's role and link. Neither role nor link moves, so the map holds.
 ---
 
 # project-kit
