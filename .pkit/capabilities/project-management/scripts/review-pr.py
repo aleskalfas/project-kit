@@ -136,6 +136,7 @@ from _lib.required_reviewers import (
 )
 from _lib.review_contributions import collect_contributions
 from _lib.review_opt_outs import OPT_OUT_PATH
+from _lib.ruled_artefacts import ruled_altered
 from _lib.verdict_freshness import FreshnessRule, head_sha
 
 # ---- per-agent reviewer timeout (issue #766) -------------------------
@@ -941,6 +942,7 @@ def _resolve_review(pr_number: int | None, config: dict, repo_root: Path) -> PrR
             ),
             author_delta=author_delta,
             base_kept=base_kept,
+            ruled_altered=ruled_altered,
         )
     return resolve_pr_review(
         pr_number,
@@ -951,6 +953,7 @@ def _resolve_review(pr_number: int | None, config: dict, repo_root: Path) -> PrR
         collect_contributions=collect_contributions,
         author_delta=author_delta,
         base_kept=base_kept,
+        ruled_altered=ruled_altered,
     )
 
 

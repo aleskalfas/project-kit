@@ -296,6 +296,7 @@ from _lib.required_reviewers import (
 from _lib.review_contributions import collect_contributions
 from _lib.review_mode import resolve_mode
 from _lib.review_opt_outs import OPT_OUT_PATH
+from _lib.ruled_artefacts import ruled_altered
 from _lib.structural_type import infer_structural_type
 from _lib.verdict_freshness import FreshnessRule, head_sha
 
@@ -2206,7 +2207,7 @@ def _resolve_review(pr_number: int, config: dict, repo_root: Path) -> PrReview:
 
     Through `_lib.pr_review.resolve_pr_review` — the ONE wiring `review-pr`
     and `show-pr` call too — handing it this module's `gh` helpers,
-    `collect_contributions` and author-change readers. They are module
+    `collect_contributions`, author-change readers and the ruled-artefact reader. They are module
     globals, looked up at call time, so the agent-gate tests' monkeypatches
     of them on this module stay effective. The caller maps a non-ok
     resolution to a `_GateResult` refusal (fail-closed, DEC-032 D5).
@@ -2220,6 +2221,7 @@ def _resolve_review(pr_number: int, config: dict, repo_root: Path) -> PrReview:
         collect_contributions=collect_contributions,
         author_delta=author_delta,
         base_kept=base_kept,
+        ruled_altered=ruled_altered,
     )
 
 
