@@ -32,10 +32,12 @@ Already established in `.pkit/decisions/README.md`. Where an area carries both c
 
 Files that tooling expects at fixed paths (root `CLAUDE.md`, `.claude/settings.json`, `.mise.toml`, `.gitignore`, `CONTRIBUTING.md`) cannot be core-owned without violating the no-shared-files invariant. They are **extension** — project-owned — with a delivery operation handling the core layer's contribution:
 
-- **Seed** (one-shot at install) when core's contribution is initial scaffolding the project takes over. Once stamped, the file is project-owned and the core layer never revisits.
+- **Seed** (at first install, and in a version transition of the backbone where the file is missing) when core's contribution is initial scaffolding the project takes over. The file is project-owned, and the core layer never revisits a seed that exists (COR-059 point 8).
 - **Merge** (re-runnable) when core's contribution is a baseline that evolves with the methodology and must keep landing in the project's file across upgrades, append-only with respect to project additions.
 
-The choice between seed and merge is determined by whether core's contribution ever needs to grow after install. One-shot fits seed; an evolving baseline needs merge.
+The choice between seed and merge is determined by whether core's contribution ever needs to grow after install. A contribution that never grows fits seed, since the core layer never revisits a seed that exists. An evolving baseline needs merge, which re-runs.
+
+Merge delivery may create its own target where that file is missing. That creation is merge, not seeding, and the file stays a merge target (COR-059 point 2).
 
 ### Runtime-deployment paths are not mechanism rows
 
@@ -57,7 +59,7 @@ These principles cover everything observed during inventory. New artifact types 
 
 **Why the normativity-suspendability principle.** Suspension is structurally identical to extension — a project file at a colliding name. The contractual difference is whether the override is *permitted*. Decisions, rules, and methodology are the system's terms of practice; allowing override would let a project keep the label "uses the methodology" while having silently swapped out the methodology. Agents and scripts, by contrast, are how an automated participant *applies* the methodology; projects have legitimate reasons to vary them. The principle names the line that separates the two.
 
-**Why seed and merge are distinguished.** Both are delivery operations on extension files. The difference is whether the core layer ever revisits the file after install. Seed is one-shot; merge is re-runnable. Picking the wrong one is recoverable but wasteful — a merge target whose baseline never evolves is just a complicated seed; a seed target whose baseline grows leaves projects without later updates.
+**Why seed and merge are distinguished.** Both are delivery operations on extension files. The difference is whether the core layer ever revisits the file while it exists. A seed is never revisited. Merge is re-runnable. Picking the wrong one is recoverable but wasteful — a merge target whose baseline never evolves is just a complicated seed; a seed target whose baseline grows leaves projects without later updates.
 
 **Why runtime deployment is kept off the mechanism list.** Deployment paths conflate "where the consumer reads" with "where ownership lives." Treating them as mechanism-bearing rows would force a fourth mechanism class (regenerated content) that adds nothing — the source-path mechanism already governs ownership; deployment is just where the runtime puts the result.
 
