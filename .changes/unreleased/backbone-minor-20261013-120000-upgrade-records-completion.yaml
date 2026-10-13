@@ -2,6 +2,7 @@ component: backbone
 kind: minor
 custom:
   category: Changed
+  pr: "1568"
 body: >
   `pkit upgrade` now records where it is going before it changes anything and
   that it arrived only after its last migration, so an upgrade that stops on the
