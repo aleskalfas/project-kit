@@ -23,7 +23,9 @@ from __future__ import annotations
 
 import os
 import pty
+import select
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -253,15 +255,24 @@ def _run_at_a_terminal(script: Path, root: Path, answer: str) -> tuple[int, str]
     os.close(terminal)  # the child holds the terminal now
     os.write(controller, f"{answer}\n".encode())
     chunks: list[bytes] = []
-    while True:
-        try:
-            data = os.read(controller, 4096)
-        except OSError:  # the child closed the terminal
-            break
-        if not data:
-            break
-        chunks.append(data)
-    os.close(controller)
+    deadline = time.monotonic() + 30
+    try:
+        while True:
+            # A migration that waits on its terminal forever fails the test in time.
+            remaining = deadline - time.monotonic()
+            ready, _, _ = select.select([controller], [], [], max(remaining, 0))
+            if not ready:
+                proc.kill()
+                pytest.fail(f"{script.name} did not finish at a terminal within 30s")
+            try:
+                data = os.read(controller, 4096)
+            except OSError:  # the child closed the terminal
+                break
+            if not data:
+                break
+            chunks.append(data)
+    finally:
+        os.close(controller)
     return proc.wait(timeout=30), b"".join(chunks).decode("utf-8", "replace")
 
 
