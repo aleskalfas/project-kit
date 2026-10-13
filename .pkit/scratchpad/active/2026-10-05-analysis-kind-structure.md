@@ -12,6 +12,7 @@ A design for #1352, which the maintainer decided on 5 and 6 October. It folds in
 - **Read from main:** the writing rules `WRITE` at 1.0.0 (`tech-docs/rule-sets/writing.md`), and the core actors (`tech-docs/analysis/use-case-model/actors.md`).
 - **Citations:** records and rules by permanent id, files by name, never by line number (RS-WRITE-014, proposed).
 - **Reviewed:** by the critic and the architect. Their findings and the answers are in "Review", at the end.
+- **Names:** the maintainer named project-kit's analysis set `ANA` on 9 October (`2026-10-08-rules-reviewer.md`, "Decided"). The note was drafted under the name `ANALYSIS`, and now says `ANA`. "Review" keeps the names the reviewers read.
 - **Next:** the issues in "Slicing", which the project manager files on the maintainer's go.
 
 ## Decided
@@ -38,7 +39,7 @@ The maintainer's hierarchy is *meta rules > rules > templates > content*. pkit h
 | Level | The methodology or the capability owns | The project owns |
 |---|---|---|
 | Meta rules: decisions | software-analysis DEC-001, and the core records such as COR-051 | its PRJ and ADR records |
-| Rules: rule sets (COR-051) | a method rule set, `SAN`: artefacts of a kind follow one format | its own sets: project-kit's `WRITE` for style, and `ANALYSIS` for its analysis |
+| Rules: rule sets (COR-051) | a method rule set, `SAN`: artefacts of a kind follow one format | its own sets: project-kit's `WRITE` for style, and `ANA` for its analysis |
 | Templates: templates and declared structures | the shipped structure per kind, and the templates rendered from it | its additions to a kind's structure (part 4) |
 | Content: artefacts | none | the analysis, under the internal root's `analysis/` (DEC-001 point 2) |
 
@@ -50,7 +51,7 @@ The maintainer's hierarchy is *meta rules > rules > templates > content*. pkit h
   - **A style rule** says how to write. A hint says what data goes in a part, and never repeats a style rule.
 - **Each structure binds at the status of the rule in its own column.** The shipped structure binds at the method rule's status. A project's addition binds at its project rule's status (part 4).
 - **A structure change is no rule-content change,** so it flags none of the rule's dependants. A tightened structure shows up as validation findings after an upgrade.
-- **Today:** software-analysis has no method rule set, and declares a structure for front matter only (`SA/schemas/*.schema.json`). `WRITE` is at 1.0.0, with RS-WRITE-002 on labels still proposed. It has no scope, and project-kit's operational rules send whoever writes the analysis to it.
+- **Today:** software-analysis has no method rule set, and declares a structure for front matter only (`SA/schemas/*.schema.json`). `WRITE` is at 1.0.0, with RS-WRITE-002 on labels still proposed. It has no scope. `ANA` inherits it, selects the analysis by type and holds no rules yet. project-kit's operational rules send whoever writes the analysis to `ANA` and `WRITE`.
 
 ## Today
 
@@ -199,7 +200,7 @@ The analysis does not fit that reader as it stands. Its bodies use bold labels, 
   - No rule set in this repository takes it, shipped or project-kit's own.
   - A shipped name is reserved in every adopter that installs the capability, since names are unique among a project's rule sets (COR-051 point 3).
   - A clash cannot be undone for that adopter, since its set's name is in every rule id. `SAN` is a common acronym, such as a storage area network, so a longer name such as `SOFTAN` is less likely to clash.
-  - It leaves `ANALYSIS` free for project-kit's own set. A reader may take `RS-ANALYSIS-*` for the capability's, since `analysis` is the capability's alias (part 9).
+  - It leaves `ANA` free for project-kit's own set. A reader may take `RS-ANA-*` for the capability's, since `analysis` is the capability's alias (part 9).
   - DEC-001 names it, and the maintainer picks both names there, since a name is permanent once on main.
 - **Inheriting it is optional.** A project's set inherits it only to fill a point it offers. Then every newly accepted rule is a new major for that project to re-pin (COR-051 point 7). `SAN` offers no point at first.
 - **The decision:** DEC-001 gains a paragraph like living-docs' *A kind's structure* (living-docs DEC-001 point 3). It says each kind's structure is data, its template is rendered from it, and it binds at its rule's status. DEC-001 cites no project's rule set.
@@ -263,17 +264,17 @@ How a tightening binds:
 - **And at the method rule's.** An addition extends the shipped structure, so it binds only once RS-SAN-001 is accepted too. Should RS-SAN-001 be superseded, the shipped structure binds at its successor's status.
 - **A fill binds only with the rule it fills.** A rule that fills an inherited point binds once both are accepted.
 - **The preview** treats every rule in that chain as accepted.
-- **Only where that rule's scope reaches.** An addition applies to an artefact only when the named rule's scope covers the artefact's path (COR-051 point 2).
+- **Only where that rule's scope reaches.** An addition applies to an artefact only when the named rule's scope covers the artefact, by its path or its type (COR-051 point 2).
   - The artefacts document says which sets cover each artefact (Slicing, issue 6), so the matching keeps one home (ADR-057 point 2).
   - A named rule whose scope covers no artefact of the kind is reported.
   - DEC-001 states the reading behind it: a rule reaches as far as the scope of the set that names it.
 - **Later edits bind without a new acceptance.** Once the named rule is accepted, a later edit to the file binds as it lands.
   - That is the trade of data over rule content, as in living-docs, and each edit is reviewed in its pull request.
-  - So a rule names the tightenings it authorises, as RS-ANALYSIS-002 names optional labels and a closed list. Making a part required names a rule that says so.
+  - So a rule names the tightenings it authorises, as RS-ANA-002 names optional labels and a closed list. Making a part required names a rule that says so.
 - **Orphaned when the rule is superseded or withdrawn:** reported and not applied, as an orphaned fill is (`src/project_kit/rule_sets.py`).
 - **No core record changes.** Rules are artefacts with their fields in `pkit friction artefacts --json`, so the check reads a rule's status there.
 
-**project-kit's own entries** are its actors' labels, under the kind `actor`, named by RS-ANALYSIS-002 (part 9).
+**project-kit's own entries** are its actors' labels, under the kind `actor`, named by RS-ANA-002 (part 9).
 
 | Alternative, not chosen | Against |
 |---|---|
@@ -296,7 +297,7 @@ The resolution:
 - **#1351's opening sentence, read per kind:**
   - A collection file's opening is the one sentence the stamp writes, once, when the file is created (`SA/templates/glossary.md`). After that it is the project's to reword.
   - A use case, a journey or an actor opens with its first part: *Goal*, *Starts* or its opening. That sentence is the author's, not the stamp's.
-- **Shipped hints and examples meet a neutral floor:** short sentences and no semicolons. They carry none of project-kit's style, such as RS-WRITE-002's labels or RS-ANALYSIS-001's voice (COR-014).
+- **Shipped hints and examples meet a neutral floor:** short sentences and no semicolons. They carry none of project-kit's style, such as RS-WRITE-002's labels or RS-ANA-001's voice (COR-014).
 - **project-kit holds its own templates to `WRITE`.** In its source repository the shipped trees are authored source (ADR-055 point 3).
   - This reverses the usual ownership, a project rule over shipped content. It is recorded as a refinement of ADR-055 point 3, not left implicit.
   - A rule set's scope names artefacts (`.pkit/schemas/backbone/rule-set.schema.json`), and the templates and the declaration are none. So project-kit's operational rules send whoever writes them to `WRITE`, as they already do for the analysis (`.pkit/rules/project.md`).
@@ -352,7 +353,7 @@ A script can check part of eight of `WRITE`'s rules, and judgment keeps the rest
 | RS-WRITE-001, the opening | A section that opens with a sentence, not a list | What matters most |
 | RS-WRITE-014, permanent ids | A line number after a file name | Whether a citation needs an anchor instead |
 | RS-WRITE-011, one term | A name that a term `replaces`, still in use, reported and never failed | Two words for one thing, and a common word that is no term |
-| RS-ANALYSIS-001, the actor's voice | Nothing beyond the method's `sentence` form (part 9) | An imperative in the actor's voice |
+| RS-ANA-001, the actor's voice | Nothing beyond the method's `sentence` form (part 9) | An imperative in the actor's voice |
 | None | Control characters and list depth | Nothing |
 
 RS-WRITE-003, 006, 009, 010 and 013 stay judgment.
@@ -418,39 +419,41 @@ The analysis set drafted beside `WRITE` waited for this design, and its parts go
 | Part of the draft | Goes to | Why |
 |---|---|---|
 | A need or a goal is one sentence | software-analysis: the `sentence` form under RS-SAN-001 | DEC-001 point 1 says it, so every adopter gets it. |
-| A need or a goal speaks in its actor's voice | project-kit's `ANALYSIS`, as RS-ANALYSIS-001 | A voice is a project's style (COR-014). |
+| A need or a goal speaks in its actor's voice | project-kit's `ANA`, as RS-ANA-001 | A voice is a project's style (COR-014). |
 | A need's 25-word limit | `WRITE`, inherited | RS-WRITE-005 already counts each need. |
 | The actors' nine labels, in order | project-kit's `structures.yaml`, under the kind `actor` | The check reads a structure as data (part 4). |
-| The fill of `RS-WRITE-002#labels` | project-kit's `ANALYSIS`, as RS-ANALYSIS-002 | The rule gives the list an id, a status and a scope. |
-| The name `ANALYSIS` | project-kit's set | It names what the set governs, as `TECH` and `USER` do. |
+| The fill of `RS-WRITE-002#labels` | project-kit's `ANA`, as RS-ANA-002 | The rule gives the list an id, a status and a scope. |
+| The name `ANA` | project-kit's set | It names what the set governs, as `TECH` and `USER` do. |
 
 **software-analysis's part.** RS-SAN-001's structure gives *Goal* and each of an actor's `needs` the `sentence` form (part 3).
 
 - So one sentence binds every adopter once RS-SAN-001 is accepted.
 - The draft grounded its rule in DEC-001 point 1. That was the sign that the rule is the method's.
 
-**project-kit's set, `ANALYSIS`,** at `tech-docs/rule-sets/analysis.md`:
+**project-kit's set, `ANA`,** at `tech-docs/rule-sets/analysis.md`. The set comes before its rules. #1413 creates it with its scope, inheriting `WRITE@1` and holding no rules yet, and issue 11 adds the rules.
 
-- **Scope:** `tech-docs/analysis/**`.
+- **Scope:** the four analysis types, `software-analysis:actor`, `software-analysis:term`, `software-analysis:use-case` and `software-analysis:journey` (software-analysis DEC-001 point 2).
+  - It names no paths, so it reaches the analysis wherever software-analysis places it.
+  - It reaches no revalidation record. A record is a held document, never an artefact, so no scope reaches it.
 - **Inherits:** `WRITE@1`, since `WRITE` is now at 1.0.0. It does not inherit `software-analysis:SAN`, which offers no point to fill (part 3).
-- **RS-ANALYSIS-001, the actor's voice:** each need and each goal is an imperative that starts with its verb. It uses *I*, *me*, *my* and *myself* wherever the actor refers to itself.
+- **RS-ANA-001, the actor's voice:** each need and each goal is an imperative that starts with its verb. It uses *I*, *me*, *my* and *myself* wherever the actor refers to itself.
   - It is retitled to the voice, and its statement drops "one sentence", which the method now checks.
   - Its *How* keeps "*Never* may come before the verb", and drops the line against splitting.
   - Of its examples, only the pair on "Find my role definition" stays. Its `why` is rewritten to give the voice's reason alone.
-- **RS-ANALYSIS-002, the labels:** it fills `RS-WRITE-002#labels`. Its statement takes a kind's labels from its declared structure with the project's additions, in that order. It holds no copy of the list.
+- **RS-ANA-002, the labels:** it fills `RS-WRITE-002#labels`. Its statement takes a kind's labels from its declared structure with the project's additions, in that order. It holds no copy of the list.
   - It names the tightenings it authorises: optional labels, and a closed list (part 4).
-- **Anchors:** RS-ANALYSIS-002 anchors to RS-WRITE-002, as a fill must (COR-051 point 7).
+- **Anchors:** RS-ANA-002 anchors to RS-WRITE-002, as a fill must (COR-051 point 7).
   - It does not anchor to `structures.yaml`. A structure change is no rule-content change (the chain), and a revalidation could only answer that the rule still points at the list.
   - So a later uninstall leaves the rule no dead anchor.
-- **The name:** `ANALYSIS`, for the maintainer to confirm beside the method set's name (part 3). It differs from `SAN` and from every set in this repository.
+- **The name:** `ANA`, which the maintainer gave it on 9 October, beside the method set's name (part 3). It differs from `SAN` and from every set in this repository.
 - **Status:** both rules ship proposed. The maintainer accepts them with RS-WRITE-002.
-- **The pin, after that acceptance.** Accepting RS-WRITE-002 adds an accepted rule, so `WRITE` goes to 2.0.0 (COR-051 point 7). The same change re-pins `ANALYSIS` to `WRITE@2`, as each later acceptance in `WRITE` does.
+- **The pin, after that acceptance.** Accepting RS-WRITE-002 adds an accepted rule, so `WRITE` goes to 2.0.0 (COR-051 point 7). The same change re-pins `ANA` to `WRITE@2`, as each later acceptance in `WRITE` does.
 
 **The label list as data, keyed by kind.** A sketch of project-kit's `structures.yaml`, with hints and examples left out:
 
 ```yaml
 actor:
-  rule: RS-ANALYSIS-002
+  rule: RS-ANA-002
   closed: true
   add:
     - {id: setup, label: The setup, after: opening}
@@ -467,10 +470,10 @@ actor:
 - **The order holds.** `setup` names the opening, so it comes before the shipped *Comes*, which follows the opening too (part 4).
 - **Keyed by kind, not by path.** The draft named the actors file, which part 6 retires. The kind `actor` names every actor's file wherever it sits.
 - **The check reads it** with the shipped structure. With `closed: true`, a label outside the list is reported.
-- **Gated three times.** It binds once RS-ANALYSIS-002, RS-WRITE-002 and RS-SAN-001 are all accepted (part 4). Until then only `--preview` reports it.
-- **In scope.** `ANALYSIS` covers the whole analysis, so the additions reach every actor (part 4). `WRITE` has no scope, so an entry naming RS-WRITE-002 itself would reach none, and be reported.
+- **Gated three times.** It binds once RS-ANA-002, RS-WRITE-002 and RS-SAN-001 are all accepted (part 4). Until then only `--preview` reports it.
+- **In scope.** `ANA` selects every actor by its type, so the additions reach every actor (part 4). `WRITE` has no scope, so an entry naming RS-WRITE-002 itself would reach none, and be reported.
 
-**RS-WRITE-002 stays proposed until this lands** (Slicing, issue 11). Then the maintainer can accept it with RS-ANALYSIS-001 and RS-ANALYSIS-002.
+**RS-WRITE-002 stays proposed until this lands** (Slicing, issue 11). Then the maintainer can accept it with RS-ANA-001 and RS-ANA-002.
 
 **A stale example on main.** RS-WRITE-002's *Keeps the rule* quotes the core actors as "**Comes:** for every unit of work, …". The actors now say "for every change". Issue 11 touches RS-WRITE-002, and fixes the quote there.
 
@@ -559,9 +562,10 @@ Fifteen issues build the design. Issues 1 to 13 are listed in their order, and i
     - **Depends on:** 9, and 6 for scope.
 11. **project-kit's analysis has a rule set of its own, and its actors' labels as data**
     - **Type:** Task, parent EPIC #234.
-    - **Delivers:** `ANALYSIS`, `tech-docs/rule-sets/analysis.md`, with RS-ANALYSIS-001 and RS-ANALYSIS-002 proposed, and the actors' labels in `structures.yaml` (part 9). It fixes RS-WRITE-002's stale example, and `WRITE`'s opening on #1352. project-kit's operational rule on writing the analysis names `ANALYSIS`.
-    - **Records:** none. `WRITE` and project-kit's operational rules change. It needs no changeset, since it is project-kit's alone.
-    - **Depends on:** 10.
+    - **Delivers:** RS-ANA-001 and RS-ANA-002, proposed, in `ANA`, and the actors' labels in `structures.yaml` (part 9). It fixes RS-WRITE-002's stale example.
+    - **Brought forward:** #1413 creates `ANA`, `tech-docs/rule-sets/analysis.md`, with its scope by types and no rules. It also names `ANA` in `WRITE`'s opening and in project-kit's operational rule on writing the analysis.
+    - **Records:** none. `WRITE` changes. It needs no changeset, since it is project-kit's alone.
+    - **Depends on:** 10, and #1413 for the set.
 12. **The analysis-author skill and the README teach writing to hints**
     - **Type:** Task, parent EPIC #234.
     - **Delivers:** the skill's *Fill it* lists give way to "fill each part as its hint says", and its walkthrough runs the preview. The README shows each kind as its rendered template, and documents `structures.yaml`.
@@ -601,9 +605,9 @@ Found on the way, two more to file:
 
 Not filed now:
 
-- **The acceptance of project-kit's analysis rules.** The maintainer accepts RS-WRITE-002, RS-ANALYSIS-001 and RS-ANALYSIS-002 together, after issue 11.
-  - `WRITE` goes to 2.0.0, and `ANALYSIS` re-pins to `WRITE@2` (part 9).
-  - RS-WRITE-002's status is part of its content, so RS-ANALYSIS-002 owes a revalidation in the same change (COR-051 point 2 and COR-050 point 6).
+- **The acceptance of project-kit's analysis rules.** The maintainer accepts RS-WRITE-002, RS-ANA-001 and RS-ANA-002 together, after issue 11.
+  - `WRITE` goes to 2.0.0, and `ANA` re-pins to `WRITE@2` (part 9).
+  - RS-WRITE-002's status is part of its content, so RS-ANA-002 owes a revalidation in the same change (COR-051 point 2 and COR-050 point 6).
 - **living-docs' `--preview`,** proposed in part 3. It waits for the maintainer's word, and refines living-docs DEC-001 point 3 when it comes.
 - **A core refinement** stating once what part 3 lists. It waits for a second capability to need it.
 - **project-kit's writing lint** (part 7), and **the reader's extraction** once its trigger fires (part 1).
