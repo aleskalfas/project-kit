@@ -15,9 +15,9 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-13T17:10:41Z
+      at: 2026-10-13T17:26:37Z
       outcome: unchanged
-      unchanged-because: Under the capability's scripts only the module comment of scripts/_lib/bootstrap_gate.py changes. It now says that the capability's manifest sits under its project folder and that a restamp keeps its backend_state, and no script behaves differently. The page names the bootstrap gate only as the gate that fill-doc-check is exempt from, and says nothing of where the capability's manifest sits, so it holds.
+      unchanged-because: "Under the capability's scripts only the module comment of scripts/_lib/bootstrap_gate.py changes. It now says that the capability's manifest sits under its project folder and that a restamp keeps its backend_state, and no script behaves differently. The page describes the gate only by what it does: the prerequisite gate an un-bootstrapped project meets, and the gate fill-doc-check is exempt from. It says nothing of where the capability's manifest sits, so it holds."
 ---
 
 # project-management capability
