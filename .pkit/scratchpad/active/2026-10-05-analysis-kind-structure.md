@@ -200,7 +200,7 @@ The analysis does not fit that reader as it stands. Its bodies use bold labels, 
   - No rule set in this repository takes it, shipped or project-kit's own.
   - A shipped name is reserved in every adopter that installs the capability, since names are unique among a project's rule sets (COR-051 point 3).
   - A clash cannot be undone for that adopter, since its set's name is in every rule id. `SAN` is a common acronym, such as a storage area network, so a longer name such as `SOFTAN` is less likely to clash.
-  - It leaves `ANA` free for project-kit's own set. A reader may take `RS-ANA-*` for the capability's, since `analysis` is the capability's alias (part 9).
+  - It leaves `ANA` free for project-kit's own set. A reader may take `RS-ANA-*` for the capability's, since `ANA` abbreviates `analysis`, the capability's alias (part 9).
   - DEC-001 names it, and the maintainer picks both names there, since a name is permanent once on main.
 - **Inheriting it is optional.** A project's set inherits it only to fill a point it offers. Then every newly accepted rule is a new major for that project to re-pin (COR-051 point 7). `SAN` offers no point at first.
 - **The decision:** DEC-001 gains a paragraph like living-docs' *A kind's structure* (living-docs DEC-001 point 3). It says each kind's structure is data, its template is rendered from it, and it binds at its rule's status. DEC-001 cites no project's rule set.
@@ -264,7 +264,7 @@ How a tightening binds:
 - **And at the method rule's.** An addition extends the shipped structure, so it binds only once RS-SAN-001 is accepted too. Should RS-SAN-001 be superseded, the shipped structure binds at its successor's status.
 - **A fill binds only with the rule it fills.** A rule that fills an inherited point binds once both are accepted.
 - **The preview** treats every rule in that chain as accepted.
-- **Only where that rule's scope reaches.** An addition applies to an artefact only when the named rule's scope covers the artefact, by its path or its type (COR-051 point 2).
+- **Only where that rule's scope reaches.** An addition applies to an artefact only when the named rule's scope covers the artefact (COR-051 point 2).
   - The artefacts document says which sets cover each artefact (Slicing, issue 6), so the matching keeps one home (ADR-057 point 2).
   - A named rule whose scope covers no artefact of the kind is reported.
   - DEC-001 states the reading behind it: a rule reaches as far as the scope of the set that names it.
@@ -433,8 +433,8 @@ The analysis set drafted beside `WRITE` waited for this design, and its parts go
 **project-kit's set, `ANA`,** at `tech-docs/rule-sets/analysis.md`. The set comes before its rules. #1413 creates it with its scope, inheriting `WRITE@1` and holding no rules yet, and issue 11 adds the rules.
 
 - **Scope:** the four analysis types, `software-analysis:actor`, `software-analysis:term`, `software-analysis:use-case` and `software-analysis:journey` (software-analysis DEC-001 point 2).
-  - It names no paths, so it reaches the analysis wherever software-analysis places it.
-  - It reaches no revalidation record. A record is a held document, never an artefact, so no scope reaches it.
+  - It names no paths, so it selects the analysis wherever software-analysis places it.
+  - It selects no revalidation record. A record is a held document, never an artefact, so no scope selects it.
 - **Inherits:** `WRITE@1`, since `WRITE` is now at 1.0.0. It does not inherit `software-analysis:SAN`, which offers no point to fill (part 3).
 - **RS-ANA-001, the actor's voice:** each need and each goal is an imperative that starts with its verb. It uses *I*, *me*, *my* and *myself* wherever the actor refers to itself.
   - It is retitled to the voice, and its statement drops "one sentence", which the method now checks.
