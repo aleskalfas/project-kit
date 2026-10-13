@@ -826,7 +826,7 @@ Only an unambiguous order is compared: a pin that is not a version blocks nothin
 
 ### Per-component upgrade
 
-Upgrading just one component (e.g., the project-management capability) skips backbone-side steps as long as the component's new version remains within `requires_backbone` of the current backbone. The same compatibility check from step 1 gates entry. Steps 4 (component migrations), 5 (component-scoped reconciliation), and 6 (component manifest version bump) run; step 2 pulls only the component's source.
+Upgrading just one component (e.g., the project-management capability) skips backbone-side steps as long as the component's new version remains within `requires_backbone` of the current backbone. The same compatibility check from step 1 gates entry. Its migrations, component-scoped reconciliation and the bump of its manifest's version run, and only the component's source is pulled. Today `pkit capabilities upgrade` runs a capability's migrations before its copy, and #1461 makes it a transition of one capability, which runs them after.
 
 #### Upgrading an incubated capability (COR-031 D1/D4)
 
