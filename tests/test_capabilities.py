@@ -17,8 +17,9 @@ from project_kit.manifest import (
     ORIGIN_KIT_SHIPPED,
     read_backbone_manifest,
     read_capability_origin,
+    read_component_manifest,
 )
-from tests.adopter_repo import MakeAdopterRepo
+from tests.adopter_repo import GitRepo, MakeAdopterRepo
 
 # --- fixtures --------------------------------------------------------
 
@@ -892,6 +893,293 @@ def test_detect_no_collisions_when_clean(kit_target: Path, kit_source: Path) -> 
     assert source is not None
     findings = caps.detect_collisions(kit_target, source)
     assert findings == []
+
+
+# --- override and skip on a collision (COR-017, #1528) --------------
+
+_PROJECTS_SKILL = "---\nname: shared\n---\n# The project's\n"
+
+
+def _project_skill(root: Path, name: str = "shared", content: str = _PROJECTS_SKILL) -> Path:
+    """Write the project's own flat skill `name`; returns its path."""
+    path = root / ".pkit" / "skills" / "project" / f"{name}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def _commit_all(root: Path) -> None:
+    GitRepo(root).commit("adopter: the project's artefacts")
+
+
+def _deploy_skills_for_real(monkeypatch) -> None:
+    """Run the claude-code adapter's real `deploy-skills.sh` where the lifecycle deploys.
+
+    The adopter-repo fixture stubs every adapter script out. The other scripts
+    stay stubbed: only which skill deploys under a name is read here.
+    """
+
+    def _run(script: Path, ctx: install_mod.InstallContext, *args: str) -> None:
+        if script.name == "deploy-skills.sh":
+            _RUN_ADAPTER_PRIMITIVE(script, ctx, *args)
+
+    monkeypatch.setattr(install_mod, "_run_adapter_primitive", _run)
+
+
+def _deployed_skill(root: Path, name: str) -> str:
+    """Where the deployed skill `name` links to, relative to the project root."""
+    link = root / ".claude" / "skills" / name / "SKILL.md"
+    return (link.parent / link.readlink()).resolve().relative_to(root.resolve()).as_posix()
+
+
+def _install(kit_source: Path, monkeypatch, name: str, answers: str, *extra: str):
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    return CliRunner().invoke(main, ["capabilities", "install", name, *extra], input=answers)
+
+
+def test_cli_install_override_replaces_the_projects_skill(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Override removes the project's skill and the capability's deploys; git keeps it."""
+    project_skill = _project_skill(kit_target)
+    _commit_all(kit_target)
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("shared",))
+    _deploy_skills_for_real(monkeypatch)
+
+    result = _install(kit_source, monkeypatch, "evidence", "override\n")
+
+    assert result.exit_code == 0, result.output
+    assert "removed      .pkit/skills/project/shared.md" in result.output
+    assert not project_skill.exists()
+    assert _deployed_skill(kit_target, "shared") == ".pkit/capabilities/evidence/skills/shared.md"
+    # Git keeps the project's skill: the last commit still holds it.
+    kept = GitRepo(kit_target).git("show", "HEAD:.pkit/skills/project/shared.md").stdout
+    assert kept == _PROJECTS_SKILL
+    # An override records no skip.
+    manifest = read_component_manifest(
+        kit_target / ".pkit" / "capabilities" / "evidence" / "manifest.yaml"
+    )
+    assert manifest is not None
+    assert "skipped" not in manifest.backend_state
+
+
+def test_cli_install_override_replaces_the_projects_agent_in_both_forms(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """A project agent held as a file and as a folder is removed in both forms."""
+    from project_kit.agents import agent_locations, find_agent_file
+
+    agents = kit_target / ".pkit" / "agents" / "project"
+    (agents / "coordinator").mkdir(parents=True)
+    (agents / "coordinator" / "coordinator.md").write_text("# Mine\n", encoding="utf-8")
+    (agents / "coordinator" / "storyboard.md").write_text("# Mine\n", encoding="utf-8")
+    (agents / "coordinator.md").write_text("# Mine too\n", encoding="utf-8")
+    _commit_all(kit_target)
+    _stage_capability_in_source(kit_source, "pm", with_agents=("coordinator",))
+
+    result = _install(kit_source, monkeypatch, "pm", "override\n")
+
+    assert result.exit_code == 0, result.output
+    assert not (agents / "coordinator.md").exists()
+    assert not (agents / "coordinator").exists()
+    deploys = next(
+        found
+        for _, folder in agent_locations(kit_target)
+        if (found := find_agent_file(folder, "coordinator")) is not None
+    )
+    assert deploys == kit_target / ".pkit" / "capabilities" / "pm" / "agents" / "coordinator.md"
+
+
+@pytest.mark.parametrize("state", ["untracked", "changed", "staged"])
+def test_cli_install_override_is_refused_while_git_cannot_give_it_back(
+    kit_target: Path, kit_source: Path, monkeypatch, state: str
+) -> None:
+    """An override of a project skill git does not hold as it stands is refused and
+    asked again; the skip chosen then keeps the project's skill."""
+    if state == "untracked":
+        _commit_all(kit_target)
+        project_skill = _project_skill(kit_target)
+    else:
+        project_skill = _project_skill(kit_target)
+        _commit_all(kit_target)
+        project_skill.write_text("# Edited since\n", encoding="utf-8")
+        if state == "staged":
+            GitRepo(kit_target).git("add", "--", str(project_skill))
+    before = project_skill.read_text(encoding="utf-8")
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("shared",))
+
+    result = _install(kit_source, monkeypatch, "evidence", "override\nskip\n")
+
+    assert result.exit_code == 0, result.output
+    assert (
+        "override refused: .pkit/skills/project/shared.md is not committed as it stands"
+        in result.output
+    )
+    assert "removed" not in result.output
+    assert project_skill.read_text(encoding="utf-8") == before
+    assert not (
+        kit_target / ".pkit" / "capabilities" / "evidence" / "skills" / "shared.md"
+    ).exists()
+
+
+def test_cli_install_skip_keeps_the_projects_skill_and_records_it(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Skip leaves the capability's skill out, keeps the project's deployed, and is recorded."""
+    project_skill = _project_skill(kit_target)
+    _commit_all(kit_target)
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("shared", "other"))
+    _deploy_skills_for_real(monkeypatch)
+
+    result = _install(kit_source, monkeypatch, "evidence", "skip\n")
+
+    assert result.exit_code == 0, result.output
+    assert "(1 artifact(s) skipped)" in result.output
+    assert project_skill.read_text(encoding="utf-8") == _PROJECTS_SKILL
+    installed = kit_target / ".pkit" / "capabilities" / "evidence"
+    assert not (installed / "skills" / "shared.md").exists()
+    assert (installed / "skills" / "other.md").is_file()
+    assert _deployed_skill(kit_target, "shared") == ".pkit/skills/project/shared.md"
+    manifest = read_component_manifest(installed / "manifest.yaml")
+    assert manifest is not None
+    assert manifest.backend_state["skipped"] == [{"kind": "skill", "name": "shared"}]
+
+
+def test_cli_install_override_leaves_a_recorded_skip_of_another_capability(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """A skip recorded when one capability was installed stands on a later install.
+
+    `evidence` was installed skipping `shared`, which the project holds. A later
+    install of `audit`, shipping `shared` too, meets the project's skill and
+    overrides it: `audit`'s skill deploys, and `evidence`'s skip stays recorded
+    with its skill still left out.
+    """
+    _project_skill(kit_target)
+    _commit_all(kit_target)
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("shared",))
+    _stage_capability_in_source(kit_source, "audit", with_skills=("shared",))
+    _deploy_skills_for_real(monkeypatch)
+    first = _install(kit_source, monkeypatch, "evidence", "skip\n")
+    assert first.exit_code == 0, first.output
+
+    later = _install(kit_source, monkeypatch, "audit", "override\n")
+
+    assert later.exit_code == 0, later.output
+    assert "collides with existing .pkit/skills/project/shared.md" in later.output
+    assert "removed      .pkit/skills/project/shared.md" in later.output
+    assert _deployed_skill(kit_target, "shared") == ".pkit/capabilities/audit/skills/shared.md"
+    evidence = kit_target / ".pkit" / "capabilities" / "evidence"
+    assert not (evidence / "skills" / "shared.md").exists()
+    manifest = read_component_manifest(evidence / "manifest.yaml")
+    assert manifest is not None
+    assert manifest.backend_state["skipped"] == [{"kind": "skill", "name": "shared"}]
+
+
+def test_cli_install_override_leaves_an_artefact_that_is_not_the_projects(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Another capability's skill is not the project's to remove: override says so and leaves it."""
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("shared",))
+    _stage_capability_in_source(kit_source, "audit", with_skills=("shared",))
+    first = _install(kit_source, monkeypatch, "evidence", "")
+    assert first.exit_code == 0, first.output
+
+    later = _install(kit_source, monkeypatch, "audit", "override\n")
+
+    assert later.exit_code == 0, later.output
+    assert (
+        ".pkit/capabilities/evidence/skills/shared.md is not the project's, "
+        "so override leaves it in place" in later.output
+    )
+    assert "removed" not in later.output
+    assert (kit_target / ".pkit" / "capabilities" / "evidence" / "skills" / "shared.md").is_file()
+    assert (kit_target / ".pkit" / "capabilities" / "audit" / "skills" / "shared.md").is_file()
+
+
+def test_cli_install_override_dry_run_removes_nothing(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    project_skill = _project_skill(kit_target)
+    _commit_all(kit_target)
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("shared",))
+
+    result = _install(kit_source, monkeypatch, "evidence", "override\n", "--dry-run")
+
+    assert result.exit_code == 0, result.output
+    assert "would remove .pkit/skills/project/shared.md" in result.output
+    assert project_skill.is_file()
+    assert not caps.is_installed(kit_target, "evidence")
+
+
+def test_cli_upgrade_interactive_override_replaces_the_projects_skill(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """The upgrade's collision flow overrides as install's does, and records no skip."""
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("add-evidence",))
+    source_v1 = caps.find_capability_in_source(kit_source, "evidence")
+    assert source_v1 is not None
+    caps.install_capability(kit_target, source_v1)
+    project_skill = _project_skill(kit_target, "conflict")
+    _commit_all(kit_target)
+    (kit_source / "capabilities" / "evidence" / "skills" / "conflict.md").write_text(
+        "---\nname: conflict\n---\n# From evidence\n", encoding="utf-8"
+    )
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    result = CliRunner().invoke(
+        main, ["capabilities", "upgrade", "evidence", "--interactive"], input="override\n"
+    )
+
+    assert result.exit_code == 0, result.output
+    assert not project_skill.exists()
+    installed = kit_target / ".pkit" / "capabilities" / "evidence"
+    assert (installed / "skills" / "conflict.md").is_file()
+    manifest = read_component_manifest(installed / "manifest.yaml")
+    assert manifest is not None
+    assert "skipped" not in manifest.backend_state
+
+
+def test_project_artefact_paths_finds_each_form(kit_target: Path) -> None:
+    skills = kit_target / ".pkit" / "skills" / "project"
+    assert caps.project_artefact_paths(kit_target, "skill", "shared") == ()
+    flat = _project_skill(kit_target)
+    (skills / "shared").mkdir()
+    # A folder without its `<name>.md` deploys nothing under the name.
+    assert caps.project_artefact_paths(kit_target, "skill", "shared") == (flat,)
+    (skills / "shared" / "shared.md").write_text("# composite\n", encoding="utf-8")
+    assert caps.project_artefact_paths(kit_target, "skill", "shared") == (flat, skills / "shared")
+
+
+def test_paths_git_cannot_restore(kit_target: Path) -> None:
+    committed = _project_skill(kit_target, "committed")
+    with (kit_target / ".gitignore").open("a", encoding="utf-8") as gitignore:
+        gitignore.write("\n.pkit/skills/project/ignored.md\n")
+    _commit_all(kit_target)
+    folder = kit_target / ".pkit" / "skills" / "project" / "composite"
+    folder.mkdir()
+    (folder / "composite.md").write_text("# composite\n", encoding="utf-8")
+    ignored = _project_skill(kit_target, "ignored")
+
+    assert caps.paths_git_cannot_restore(kit_target, [committed]) == ()
+    assert caps.paths_git_cannot_restore(kit_target, [committed, ignored, folder]) == (
+        ignored,
+        folder,
+    )
+    # A folder with one untracked file beneath a committed one is not held as it stands.
+    _commit_all(kit_target)
+    assert caps.paths_git_cannot_restore(kit_target, [folder]) == ()
+    (folder / "notes.md").write_text("# new\n", encoding="utf-8")
+    assert caps.paths_git_cannot_restore(kit_target, [folder]) == (folder,)
+
+
+def test_paths_git_cannot_restore_outside_git(tmp_path: Path) -> None:
+    path = tmp_path / "skill.md"
+    path.write_text("# x\n", encoding="utf-8")
+    assert caps.paths_git_cannot_restore(tmp_path, [path]) == (path,)
 
 
 # --- reference detection --------------------------------------------

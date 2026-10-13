@@ -36,7 +36,8 @@ from __future__ import annotations
 import datetime as _dt
 import re
 import shutil
-from collections.abc import Mapping
+import subprocess
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path, PurePath
 from typing import TYPE_CHECKING, Any, cast
@@ -821,6 +822,85 @@ def detect_collisions(
                         )
                     )
     return findings
+
+
+# Where the project keeps its own artefacts of each kind a collision names,
+# relative to the project root: the folders an override removes from (COR-017).
+_PROJECT_ARTEFACT_DIRS: dict[str, str] = {
+    "skill": ".pkit/skills/project",
+    "agent": ".pkit/agents/project",
+}
+
+
+def is_project_artefact(target_root: Path, finding: CollisionFinding) -> bool:
+    """Whether the artefact a collision meets is the project's own.
+
+    The project's own skills and agents live in their area's `project/` folder.
+    Core's, and another capability's, are not the project's to remove.
+    """
+    project_dir = target_root / _PROJECT_ARTEFACT_DIRS[finding.artifact_kind]
+    return finding.target_path.is_relative_to(project_dir)
+
+
+def project_artefact_paths(target_root: Path, kind: str, name: str) -> tuple[Path, ...]:
+    """The project's own artefact of `kind` and `name`, in each form it has.
+
+    A skill or an agent is a file `<name>.md`, or a folder `<name>/` holding
+    `<name>.md` (COR-015). A project may hold both forms, and either deploys
+    under the name, so an override removes both. Empty when the project has none.
+    """
+    project_dir = target_root / _PROJECT_ARTEFACT_DIRS[kind]
+    flat = project_dir / f"{name}.md"
+    folder = project_dir / name
+    paths: list[Path] = []
+    if flat.is_file():
+        paths.append(flat)
+    if (folder / f"{name}.md").is_file():
+        paths.append(folder)
+    return tuple(paths)
+
+
+def paths_git_cannot_restore(target_root: Path, paths: Sequence[Path]) -> tuple[Path, ...]:
+    """The paths among `paths` that git could not give back as they stand.
+
+    Git gives a path back when it is tracked, and nothing at it or beneath it
+    differs from the last commit, is untracked or is ignored. Outside a git work
+    tree, or without git, no path can be given back. An override removes the
+    project's artefact only when git keeps it (COR-017: "the prior content
+    recovers via git").
+    """
+
+    def _git(*args: str) -> bytes:
+        return subprocess.run(
+            ["git", *args], cwd=target_root, capture_output=True, check=True
+        ).stdout
+
+    lost: list[Path] = []
+    for path in paths:
+        rel = path.relative_to(target_root).as_posix()
+        try:
+            tracked = _git("ls-files", "-z", "--", rel)
+            changed = _git(
+                "status", "--porcelain", "-z", "--ignored", "--untracked-files=all", "--", rel
+            )
+        except (OSError, subprocess.CalledProcessError):
+            lost.append(path)
+            continue
+        if not tracked or changed:
+            lost.append(path)
+    return tuple(lost)
+
+
+def remove_overridden(paths: Sequence[Path]) -> None:
+    """Remove the project's artefacts an override replaces: each file or folder in `paths`.
+
+    The caller checks first that git keeps them (`paths_git_cannot_restore`).
+    """
+    for path in paths:
+        if path.is_dir() and not path.is_symlink():
+            shutil.rmtree(path)
+        else:
+            path.unlink(missing_ok=True)
 
 
 def install_capability(
