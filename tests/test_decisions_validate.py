@@ -805,3 +805,56 @@ def test_cli_warns_of_a_point_and_exits_zero(
     assert result.exit_code == 0, result.output
     assert "0 error(s) and 1 warning(s) on records' points" in result.output
     assert ".pkit/decisions/core/COR-001-a.md#16" in result.output
+
+
+# --- what the numbering check shares ------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("rel", "space"),
+    [
+        (".pkit/decisions/core/COR-001-a.md", "core"),
+        (".pkit/decisions/project/PRJ-001-a.md", "project"),
+        ("docs/adr/ADR-001-a.md", "adr"),
+        (".pkit/capabilities/alpha/decisions/DEC-001-a.md", "capability:alpha"),
+        (".pkit/decisions/core/README.md", None),
+        (".pkit/decisions/core/sub/COR-001-a.md", None),
+        (".pkit/decisions/core/COR-001-a.txt", None),
+        ("docs/COR-001-a.md", None),
+    ],
+)
+def test_a_records_id_space_is_read_from_its_path(rel: str, space: str | None) -> None:
+    """The numbering check reads records at a commit, where no folder is on disk, so it
+    asks which file is a record by its path alone."""
+    assert decisions_validate.record_space(rel, "docs/adr") == space
+
+
+def test_the_records_found_on_disk_are_those_their_paths_name(project: Path) -> None:
+    core = project / ".pkit" / "decisions" / "core"
+    _write_record(core / "COR-001-a.md", "COR-001")
+    capability = _make_capability(project, "alpha")
+    _write_record(capability / "DEC-001-a.md", "DEC-001")
+    found = decisions_validate.discover_decision_records(project)
+    adr = decisions_validate.adr_folder(project)
+    assert [
+        decisions_validate.record_space(record.path.relative_to(project).as_posix(), adr)
+        for record in found
+    ] == [record.id_space for record in found]
+    assert [decisions_validate.record_id_of(r.path.read_text()) for r in found] == [
+        "COR-001",
+        "DEC-001",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("held", "point_id", "unused"),
+    [
+        (["1", "2", "6"], "3", "7"),
+        (["1", "D1", "D4"], "D2", "D5"),
+        (["1", "2"], "D1", "D1"),
+    ],
+)
+def test_the_next_unused_id_is_one_past_the_highest_of_its_series(
+    held: list[str], point_id: str, unused: str
+) -> None:
+    assert decisions_validate.next_unused(held, point_id) == unused

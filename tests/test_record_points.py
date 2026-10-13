@@ -446,3 +446,45 @@ def test_the_records_of_this_repository_read_with_no_finding_that_fails() -> Non
         assert read.front_matter_problem is None, path
         assert read.retired_problems == (), path
         assert rp.hold_stubs(read) == (), path
+
+
+# --- what the numbering check reads -------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("point_id", "series"),
+    [("5", ("", 5)), ("16", ("", 16)), ("D1", ("D", 1)), ("AB12", ("AB", 12)), ("5.1", None)],
+)
+def test_an_id_splits_into_its_series_and_its_number(
+    point_id: str, series: tuple[str, int] | None
+) -> None:
+    """Numbers and each series of labels count apart (COR-058 point 3)."""
+    assert rp.id_series(point_id) == series
+
+
+def test_a_points_text_is_read_without_its_id() -> None:
+    """A renumbered point keeps its text, title included, so the numbering check finds it
+    under its new id (COR-058 point 8)."""
+    before = rp.read_points(_record("### 5. Scope\n\nIt reaches\nevery record.\n\n### 6. Next\n"))
+    after = rp.read_points(_record("### 9. Scope\n\nIt reaches every   record.\n"))
+    point, moved = before.point("5"), after.point("9")
+    assert point is not None and moved is not None
+    assert before.point_text(point) == "Scope It reaches every record."
+    assert before.point_text(point) == after.point_text(moved)
+
+
+def test_a_list_points_words_are_those_of_the_heading_it_becomes() -> None:
+    """Converting keeps every point's words and makes its bold lead its title (COR-058
+    point 9), so the numbering check pairs a list point with its heading by them."""
+    listed = rp.read_points(
+        _record(
+            "1. **First.** One\n   continued.\n2. Two.\n\nAfter the list.\n\n"
+            "### Group\n\n**D1 — Lead.** Labelled.\n\nMore.\n\n**D2 — Next.** Last.\n"
+        )
+    )
+    words = [listed.list_point_words(point) for point in listed.list_points]
+    assert words == ["One continued.", "Two.", "Labelled. More.", "Last."]
+    headed = rp.read_points(_record("### 1. First\n\nOne\ncontinued.\n"))
+    point = headed.point("1")
+    assert point is not None
+    assert headed.point_words(point) == words[0]

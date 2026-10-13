@@ -7,13 +7,14 @@ pkit:
     anchors:
       path:
         - src/project_kit/decisions.py
+        - src/project_kit/decisions_check_diff.py
         - src/project_kit/decisions_validate.py
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-13T08:11:00Z
+      at: 2026-10-13T09:18:15Z
       outcome: updated
       deferred:
         - anchor:
@@ -192,6 +193,31 @@ A record's points keep their ids for good ([COR-058](core/COR-058-record-points.
 - **Each finding names the file and the id,** as `<file>#<id>`. A finding on the shape of `retired-points` is at `<file>:/retired-points`, and its message names the entry's id when the finding is on one entry.
 - **Only the field's shape is read** of the front matter, so a project's own fields pass.
 - **A record in list form fails nothing,** unless it writes `retired-points`. Its points are a numbered list, or paragraphs that open with a bold number or label, not yet converted to headings. Its numbers move when a point is inserted, so no duplicate or gap in them is read (COR-058 point 9).
+
+## Checking a change's numbering
+
+A renumbered point misleads every citation of it, and a record's state alone cannot show that a number moved. `pkit decisions check-diff` compares each record a change touches with its state where the change's branch left the default branch, as COR-058 point 8 sets out. Validation takes no base, so this check is a command of its own.
+
+- **Wire it in** as a line of its own in your project's check gate, beside your other checks of a change, such as `pkit migrations check-diff`. It binds only where your project runs it. It runs whether or not anything is anchored, since citations in prose rest on the numbers too.
+  - **Its base** is `--base`, else `$PKIT_CHECK_BASE`, else the default branch your configuration declares. `pkit repository base` shows it. A pipeline that sets `PKIT_CHECK_BASE` to a pull request's target points this check there too.
+  - **Its history:** it reads where the branch left the base, so a pipeline fetches enough history to find that point, such as a full clone.
+  - **What it skips:** a record your project receives by sync, which is checked where it is authored, and a record the change removes.
+  - **A record in list form** meets only the warning below, unless the change converts it to point headings. Then each point's id is held to the number or label it showed.
+- **It fails on,** for each record the change touches:
+  - an id the branch point holds or retires that the head neither holds nor retires: a point dropped without being retired
+  - a new id that is not past every id of its series that the branch point holds or retires
+  - a point whose text, read without its id, sits at the head only under another id: a renumbering, or a retirement whose successor kept the claim
+  - a duplicate id, or a heading in a refused form, that the change added, also in a record with neither point headings nor a list
+  - a retired id without its stub, or a stub without its entry
+  - a new entry in `retired-points` whose successor is not a live point
+  - in a record the change converts from list form, a point whose id differs from the number its numbered item showed
+  - a point id the change takes that another change took on the default branch since the branch left it, and a record id the same way
+- **It warns of, and never fails on:**
+  - a point's title found under another id, with its text changed: likely a renumbering with an edit
+  - in a record the change converts, a point whose id differs from the bold number or label that opened it
+  - a point added to a record in list form, or a new record in list form. You may keep the list under the refining rule above, or convert the record to point headings by hand first, so every number stays.
+- **Each finding names the record and the id,** as `<file>#<id>`, or `<file>` for a record id. The command exits 1 on an error and 0 on warnings alone.
+- **Two changes that take one number:** the first to land keeps it. The other moves its point, or its record, to the next unused number, which the finding names. A point the default branch holds under that id with the change's very text, or a record it holds at the change's own path, is the change's own work landed, such as a parent branch's, and is no clash. A parent's point edited since fails, and merging the default branch in clears it.
 
 ## Adding a record
 

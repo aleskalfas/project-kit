@@ -68,6 +68,13 @@ disagrees with its entry, a live point on a retired id and a successor the
 record neither holds nor retires are errors. A duplicate id, a gap in the
 ids and a misspelt point heading are warnings. Of the front matter, only the
 field's shape is read, so a project's own fields pass.
+
+**The numbering check reads records as this module finds them.** It compares a
+change with its base (COR-058 point 8), so it reads records at a commit too,
+where no folder is on disk: `record_space` says which file is a record, of
+which id-space, and `record_id_of` reads its id. It names the next unused id
+(`next_unused`), a stub's heading (`stub_heading`) and a misspelt heading's
+token (`opening_token`) as validation does.
 """
 
 from __future__ import annotations
@@ -75,7 +82,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import click
 
@@ -263,6 +270,39 @@ def _rule_id_issues(discovery: rule_sets.RuleSetDiscovery) -> list[DecisionIssue
             )
         )
     return issues
+
+
+def adr_folder(target_root: Path) -> str | None:
+    """The folder of the ADR id-space, relative to the root, or `None` while the
+    overlay names none (`_resolve_adr_dir_best_effort`)."""
+    found = _resolve_adr_dir_best_effort(target_root)
+    if found is None:
+        return None
+    return PurePosixPath(_rel(found, target_root)).as_posix()
+
+
+def record_space(rel: str, adr: str | None) -> str | None:
+    """The id-space of the record a file at `rel` is, or `None` when it is none.
+
+    `rel` is relative to the root, and `adr` is `adr_folder`'s answer. A record
+    is a Markdown file directly in a record folder, its README left out: the
+    files `discover_decision_records` finds on disk. The numbering check reads
+    records at a commit, where no folder is on disk, so it asks here.
+    """
+    path = PurePosixPath(rel)
+    if path.suffix != ".md" or path.name == "README.md":
+        return None
+    folder = path.parent
+    if folder == PurePosixPath(".pkit/decisions/core"):
+        return "core"
+    if folder == PurePosixPath(".pkit/decisions/project"):
+        return "project"
+    if adr is not None and folder == PurePosixPath(adr):
+        return "adr"
+    parts = folder.parts
+    if len(parts) == 4 and parts[:2] == (".pkit", "capabilities") and parts[3] == "decisions":
+        return f"capability:{parts[2]}"
+    return None
 
 
 def discover_decision_records(target_root: Path) -> list[DecisionRecord]:
@@ -468,10 +508,6 @@ _RETIRED_KEY_LINE = re.compile(r"""^["']?retired-points["']?[ \t]*:""", re.MULTI
 # What a misspelt heading opens with: a number, dotted or not, or a label.
 _OPENING = re.compile(r"^(?:\d+(?:\.\d+)*|[A-Za-z]+\d+)")
 
-# A point id's series and number. Numbers and each series of labels count apart
-# (COR-058 point 3); a number's series is the empty prefix.
-_SERIES = re.compile(r"^([A-Za-z]*)(\d+)$")
-
 # Where a finding on the field's shape points.
 _RETIRED_POINTER = f":/{record_points.RETIRED_POINTS_KEY}"
 
@@ -519,7 +555,7 @@ def _stub_mismatches(
         where = "" if stub is None else f" at line {at(stub.extent.start)}"
         if mismatch.kind is kind.NO_STUB:
             successors = points.retired.get(mismatch.id, ())
-            heading = f"{'#' * _points_level(points)} {_heading_form(mismatch.id)}"
+            heading = f"{'#' * _points_level(points)} {stub_heading(mismatch.id)}"
             message = (
                 f"retired point `{mismatch.id}` has no stub. Where the point was, write the "
                 f'heading `{heading}` and the sentence "'
@@ -553,13 +589,18 @@ def _live_points_on_retired_ids(
     """A live point whose heading uses an id `retired-points` retires."""
     for point in points.points:
         if point.id in points.retired:
+            unused = next_unused(_held_ids(points), point.id)
             yield Finding(
                 f"{rel}#{point.id}",
                 f"point `{point.id}` at line {at(point.extent.start)} uses a retired id: "
                 f"`retired-points` retires `{point.id}`, and no id is reused. A new point "
-                f"takes the next unused number, `{_next_unused(points, point.id)}` (COR-058 "
-                f"point 3).",
+                f"takes the next unused number, `{unused}` (COR-058 point 3).",
             )
+
+
+def _held_ids(points: record_points.RecordPoints) -> tuple[str, ...]:
+    """The ids a record holds or retires: its points', its stubs' and its retired ids."""
+    return (*(p.id for p in points.points), *(s.id for s in points.stubs), *points.retired)
 
 
 def _foreign_successors(rel: str, points: record_points.RecordPoints) -> Iterator[Finding]:
@@ -615,9 +656,9 @@ def _gaps(rel: str, points: record_points.RecordPoints) -> Iterator[Finding]:
     held = [p.id for p in (*points.points, *points.stubs)] + list(points.retired)
     by_series: dict[str, set[int]] = {}
     for point_id in held:
-        series = _SERIES.match(point_id)
+        series = record_points.id_series(point_id)
         if series is not None:
-            by_series.setdefault(series.group(1), set()).add(int(series.group(2)))
+            by_series.setdefault(series[0], set()).add(series[1])
     for prefix, numbers in sorted(by_series.items()):
         for first, last in _missing_runs(numbers):
             if first == last:
@@ -639,8 +680,7 @@ def _misspelt_headings(
     """A heading in the Decision that opens with a number or a label in a form a
     point's heading refuses, as `record_points.read_points` finds it."""
     for heading in points.misspelt:
-        opening = _OPENING.match(heading.title)
-        token = opening.group(0) if opening is not None else heading.title.split()[0]
+        token = opening_token(heading.title)
         yield Finding(
             f"{rel}#{token}",
             f"the heading `{'#' * heading.level} {heading.title}` at line {at(heading.start)} "
@@ -659,26 +699,34 @@ def _points_level(points: record_points.RecordPoints) -> int:
     return decision.level + 1 if decision is not None else 3
 
 
-def _heading_form(point_id: str) -> str:
+def opening_token(title: str) -> str:
+    """What a misspelt point heading's title opens with: a number, dotted or not, or a
+    label; else its first word. A finding on the heading names it as the id."""
+    opening = _OPENING.match(title)
+    return opening.group(0) if opening is not None else title.split()[0]
+
+
+def stub_heading(point_id: str) -> str:
     """A stub's heading after its `#`s: `6. Retired`, or `D6 — Retired` for a label."""
     if point_id.isdigit():
         return f"{point_id}. {record_points.STUB_TITLE}"
     return f"{point_id} — {record_points.STUB_TITLE}"
 
 
-def _next_unused(points: record_points.RecordPoints, point_id: str) -> str:
-    """The next unused id of `point_id`'s series: one past the highest the record
-    holds or retires (COR-058 point 3)."""
-    series = _SERIES.match(point_id)
+def next_unused(held: Iterable[str], point_id: str) -> str:
+    """The next unused id of `point_id`'s series: one past the highest of that series
+    in `held`, the ids a record holds or retires (COR-058 point 3), or the series'
+    first when `held` has none of it."""
+    series = record_points.id_series(point_id)
     if series is None:
         return point_id
-    prefix = series.group(1)
+    prefix = series[0]
     numbers = [
-        int(found.group(2))
-        for held in (*(p.id for p in points.points), *(s.id for s in points.stubs), *points.retired)
-        if (found := _SERIES.match(held)) is not None and found.group(1) == prefix
+        found[1]
+        for held_id in held
+        if (found := record_points.id_series(held_id)) is not None and found[0] == prefix
     ]
-    return f"{prefix}{max(numbers) + 1}"
+    return f"{prefix}{max(numbers, default=0) + 1}"
 
 
 def _missing_runs(numbers: set[int]) -> Iterator[tuple[int, int]]:
@@ -822,6 +870,11 @@ def _parse_frontmatter_id(path: Path) -> str | None:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return None
+    return record_id_of(text)
+
+
+def record_id_of(text: str) -> str | None:
+    """A record's frontmatter `id:` (e.g. `COR-001`), read from its text, or None."""
     frontmatter = _extract_frontmatter(text)
     if frontmatter is None:
         return None

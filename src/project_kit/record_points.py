@@ -2,8 +2,9 @@
 
 The one reading of a record's points, over the reading of where a part of a
 document lies (`document_parts`). Validation's decisions member calls it
-(`decisions_validate.check_points`, COR-058 point 7). The numbering check
-(COR-058 point 8) and the conversion (COR-058 point 9) are to call it. No
+(`decisions_validate.check_points`, COR-058 point 7), and so does the
+numbering check (`decisions_check_diff`, COR-058 point 8). The conversion
+(COR-058 point 9) is to call it. No
 other module of the binary reads a record's points, and artefact discovery
 does not: a record is read here whether or not a place holds it.
 
@@ -40,6 +41,10 @@ does not: a record is read here whether or not a place holds it.
   (COR-058 point 6): a retired id with no stub, a stub whose id is not
   retired, and a stub whose sentence differs from the one its entry gives
   (`stub_sentence`).
+- `RecordPoints.point_text` gives a point's text read without its id, by which
+  the numbering check finds a point under another id (COR-058 point 8).
+  `id_series` splits an id into its series and its number, which count apart
+  (COR-058 point 3).
 
 Whether an anchor may name one point, and what such a point stands on, are the
 anchors-and-friction record's to decide (COR-050, as COR-058 point 10 says).
@@ -84,6 +89,10 @@ _OPENS_WITH_ID = re.compile(r"^(?:\d|[A-Za-z]+\d+(?!\w))")
 # A point id, as `retired-points` names one: a number, or a label.
 _POINT_ID = re.compile(r"^(?:\d+|[A-Za-z]+\d+)$")
 
+# A point id's series and number. Numbers and each series of labels count apart
+# (COR-058 point 3); a number's series is the empty prefix.
+_SERIES = re.compile(r"^([A-Za-z]*)(\d+)$")
+
 # List form (COR-058 point 2): a numbered item at the start of a line, and a
 # paragraph that opens with a bold number — `**5. Title.**` or `**5.** Title` — or a
 # bold label — `**D1 — Title.**` or `**D1** — Title`. A bold label alone is no point
@@ -96,6 +105,9 @@ _BOLD_POINT = re.compile(
 
 # A bold lead: the text between the first pair of `**`; and the id it may open with.
 _BOLD_LEAD = re.compile(r"^\*\*(.+?)\*\*")
+
+# A numbered item's number, as its line opens with it.
+_ITEM_NUMBER = re.compile(r"^\d+[.)][ \t]*")
 _LEAD_ID = re.compile(r"^(?:\d+\.|[A-Za-z]+\d+(?:[ \t]+—)?)[ \t]*")
 
 # A line that ends a list at once when it opens a line: a bullet or a quote.
@@ -141,6 +153,10 @@ class ListPoint:
     - `title`: its bold lead, without a closing full stop, or `None` when it
       opens with none.
     - `start`: where its line starts in the body.
+    - `end`: where its text ends in the body. A numbered item's text runs to
+      the next item, and the last item's to the line that ends the list or to
+      its region's end. A bold paragraph's runs to the next bold point of its
+      region, or to the region's end. `RecordPoints.list_point_words` reads it.
     """
 
     id: str
@@ -148,6 +164,7 @@ class ListPoint:
     written: str
     title: str | None
     start: int
+    end: int
 
 
 @dataclass(frozen=True)
@@ -211,6 +228,28 @@ class RecordPoints:
     def stub(self, point_id: str) -> PointHeading | None:
         """The stub of the retired id `point_id`, the first when two share it, or `None`."""
         return next((stub for stub in self.stubs if stub.id == point_id), None)
+
+    def point_text(self, point: PointHeading) -> str:
+        """A point's text read without its id (COR-058 point 8): its title, then its
+        section after its heading's line, whitespace folded. A point keeps this text
+        when only its id changes, so the numbering check finds a renumbered point by it."""
+        return " ".join(f"{point.title} {self.point_words(point)}".split())
+
+    def point_words(self, point: PointHeading) -> str:
+        """A point's words: its section after its heading's line, whitespace folded."""
+        section = self.body.text[point.extent.start : point.extent.end]
+        _heading, _break, rest = section.partition("\n")
+        return " ".join(rest.split())
+
+    def list_point_words(self, point: ListPoint) -> str:
+        """A list point's words: its text without its number and its bold lead,
+        whitespace folded. Converting keeps every point's words and makes its bold lead
+        its title (COR-058 point 9), so these are the words of the point heading it
+        becomes (`point_words`), and the numbering check pairs the two by them."""
+        text = self.body.text[point.start : point.end]
+        if point.form is ListForm.ITEM:
+            text = _ITEM_NUMBER.sub("", text, count=1)
+        return " ".join(_BOLD_LEAD.sub("", text.lstrip(), count=1).split())
 
     def ground(self, point_id: str) -> PointGround | None:
         """What the live point `point_id` stands on, or `None` when no live point has
@@ -319,6 +358,14 @@ def read_points(text: str) -> RecordPoints:
     )
 
 
+def id_series(point_id: str) -> tuple[str, int] | None:
+    """A point id's series and number (COR-058 point 3): `("", 5)` for `5`, `("D", 1)`
+    for `D1`, or `None` for what is no point id. Numbers and each series of labels
+    count apart, so a new id is judged against the ids of its own series."""
+    found = _SERIES.match(point_id)
+    return (found.group(1), int(found.group(2))) if found else None
+
+
 def stub_sentence(successors: Sequence[str]) -> str:
     """The one sentence a stub holds, written from its entry's successors (COR-058
     point 4): "Its content is in point 7.", "… in points 7 and 16.", "… in points 7,
@@ -360,8 +407,8 @@ def hold_stubs(points: RecordPoints) -> tuple[StubMismatch, ...]:
     The entry is the source: the stub's heading and sentence follow it. Each
     retired id, in the entry's order, needs a stub whose text after its heading
     is the entry's sentence (`stub_sentence`), whitespace folded. Then each stub
-    whose id the entry does not retire, in the body's order. Validation calls it,
-    and the numbering check is to, so the two hold a stub alike.
+    whose id the entry does not retire, in the body's order. Validation and the
+    numbering check call it, so the two hold a stub alike.
     """
     mismatches: list[StubMismatch] = []
     for retired_id, successors in points.retired.items():
@@ -498,11 +545,12 @@ def _list_points(body: Body, decision: Extent) -> tuple[ListPoint, ...]:
     found: list[ListPoint] = []
     in_groups: list[_List] = []
     lead_last: int | None = None
-    for number, (heading, lines) in enumerate(regions):
+    for number, (heading, lines, end) in enumerate(regions):
         bold_seen = False
-        for construct in _constructs(lines):
+        bolds: list[ListPoint] = []
+        for construct in _constructs(lines, end):
             if isinstance(construct, ListPoint):
-                found.append(construct)
+                bolds.append(construct)
                 bold_seen = True
             elif bold_seen:
                 continue  # a list inside a bold point
@@ -511,6 +559,9 @@ def _list_points(body: Body, decision: Extent) -> tuple[ListPoint, ...]:
                 lead_last = construct.last
             elif heading.level == group_level:
                 in_groups.append(replace(construct, region=number))
+        for index, bold in enumerate(bolds):  # each runs to the next, the last to the end
+            stop = bolds[index + 1].start if index + 1 < len(bolds) else end
+            found.append(replace(bold, end=stop))
     found.extend(item for run in _runs(in_groups, lead_last) for item in run.items)
     return tuple(sorted(found, key=lambda point: point.start))
 
@@ -544,13 +595,14 @@ def _runs(lists: Sequence[_List], lead_last: int | None) -> Iterator[_List]:
             yield from members
 
 
-def _regions(body: Body, decision: Extent) -> list[tuple[Heading | None, list[Line]]]:
+def _regions(body: Body, decision: Extent) -> list[tuple[Heading | None, list[Line], int]]:
     """The Decision's lead, then the text under each heading within it, each with
-    its lines outside fenced code. The Decision's heading line is no region's."""
+    its lines outside fenced code and where it ends: at the next heading within the
+    Decision, or at the Decision's end. The Decision's heading line is no region's."""
     inside = [heading for _index, heading in _headings_inside(body, decision)]
     bounds = [heading.start for heading in inside] + [decision.end]
-    regions: list[tuple[Heading | None, list[Line]]] = [(None, [])]
-    regions += [(heading, []) for heading in inside]
+    regions: list[tuple[Heading | None, list[Line], int]] = [(None, [], bounds[0])]
+    regions += [(heading, [], end) for heading, end in zip(inside, bounds[1:], strict=True)]
     for line in body.lines():
         if not decision.start < line.start < decision.end:
             continue
@@ -561,14 +613,16 @@ def _regions(body: Body, decision: Extent) -> list[tuple[Heading | None, list[Li
     return regions
 
 
-def _constructs(lines: Sequence[Line]) -> Iterator[ListPoint | _List]:
-    """A region's bold points and numbered lists, in order.
+def _constructs(lines: Sequence[Line], end: int) -> Iterator[ListPoint | _List]:
+    """A region's bold points and numbered lists, in order; the region ends at `end`.
 
     A list runs while its items follow one another, across blank lines and
     indented lines. A line at its start that is not an item ends it after a
     blank line, and at once when it opens a bullet, a quote or a bold point.
-    A bold point is a paragraph's first line, so it follows a blank line or
-    opens the region.
+    An item's text runs to the next item, and the last one's to the line that
+    ends the list, or to the region's end. A bold point is a paragraph's first
+    line, so it follows a blank line or opens the region. Its text's end is set
+    by the caller, which knows the next bold point.
     """
     items: list[ListPoint] = []
     blank_before = True
@@ -586,12 +640,13 @@ def _constructs(lines: Sequence[Line]) -> Iterator[ListPoint | _List]:
                     written=item.group(1),
                     title=_title(_paragraph(lines, index, (item.group(2) or ""))),
                     start=line.start,
+                    end=end,
                 )
             )
         elif text.strip() and not text[0].isspace():
             ends_now = bool(_ENDS_A_LIST.match(text) or _BOLD_POINT.match(text))
             if items and (blank_before or ends_now):
-                yield _List(region=0, items=tuple(items))
+                yield _ended(items, line.start)
                 items = []
             if blank_before:
                 bold = _bold_point(lines, index)
@@ -600,7 +655,16 @@ def _constructs(lines: Sequence[Line]) -> Iterator[ListPoint | _List]:
         blank_before = not text.strip()
         index += 1
     if items:
-        yield _List(region=0, items=tuple(items))
+        yield _ended(items, end)
+
+
+def _ended(items: Sequence[ListPoint], end: int) -> _List:
+    """A numbered list whose items' text each runs to the next item, the last to `end`."""
+    ends = [item.start for item in items[1:]] + [end]
+    return _List(
+        region=0,
+        items=tuple(replace(item, end=stop) for item, stop in zip(items, ends, strict=True)),
+    )
 
 
 def _bold_point(lines: Sequence[Line], index: int) -> ListPoint | None:
@@ -626,6 +690,7 @@ def _bold_point(lines: Sequence[Line], index: int) -> ListPoint | None:
         written=point_id,
         title=title,
         start=line.start,
+        end=line.start + len(line.text),
     )
 
 

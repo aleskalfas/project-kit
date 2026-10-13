@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-13T08:11:23Z
+      at: 2026-10-13T09:18:23Z
       outcome: unchanged
-      unchanged-because: This change adds the check of a record's points, retired points and stubs to pkit decisions validate and to the decisions member of pkit validate. The page names pkit decisions validate by its decision-id uniqueness check, among the structural checks a project's CI can run on day one. The command keeps that check, and the one it gains is structural too, so the sentence holds.
+      unchanged-because: "This change gives decisions_validate public helpers that the new numbering check shares: which file is a record and of which id-space, a record's id, the next unused id, a stub's heading and a misspelt heading's token. pkit decisions validate checks what it checked before and reports the same findings. The page names that command by its decision-id uniqueness check, among the structural checks a project's CI can run on day one, so the sentence holds."
 ---
 
 # project-kit
