@@ -444,6 +444,9 @@ def test_the_completion_rewrites_its_line_or_adds_it_after_the_target(tmp_path: 
         ("completed_version: # note\n", "completed_version: 2.0.0 # note\n"),
         ("completed_version: 1.0.0 # note\n", "completed_version: 2.0.0 # note\n"),
         ('completed_version: "1.0.0"\n', "completed_version: 2.0.0\n"),
+        # A value with a space, which a hand edit can leave, is rewritten whole.
+        ("completed_version: 'a b'\n", "completed_version: 2.0.0\n"),
+        ("completed_version: 1.0.0\r\n", "completed_version: 2.0.0\r\n"),
     ],
 )
 def test_a_state_line_is_rewritten_whole_whatever_value_it_held(

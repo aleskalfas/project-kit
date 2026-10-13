@@ -149,28 +149,33 @@ def read_backbone_manifest(target_root: Path) -> BackboneManifest | None:
 
 
 def _state_line(key: str) -> re.Pattern[str]:
-    """The pattern of one recorded state's line: the key at column 0, the space
-    after its colon, and its value up to the end of the line or a comment. The
-    value may be empty."""
-    return re.compile(rf"(?m)^{re.escape(key)}:[ \t]*([^\s#]*)")
+    """The pattern of one recorded state's line: the key at column 0, and the
+    rest of the line after its colon, the value and any comment."""
+    return re.compile(rf"(?m)^{re.escape(key)}:([^\n]*)")
+
+
+# A comment at the end of a state line: a `#` at its start or after a blank.
+_TRAILING_COMMENT = re.compile(r"(?:^|[ \t])(#.*)$")
 
 
 def set_state_line(text: str, key: str, version: str, *, after: str | None = None) -> str:
     """*text* with the top-level *key*'s line set to *version*, every other byte kept.
 
     An existing line is rewritten in place as `<key>: <version>`, whatever value
-    it held, an empty one included, and a comment after the value stays on the
-    line, a space before it. A missing line is added after the line of the key
-    *after*, or at the end of the text when *after* is None or has no line.
-    Neither the order of the other keys nor their comments move, since nothing
-    is re-serialised (ADR-065 point 3).
+    it held, an empty one or one with spaces included, and a comment at its end
+    stays on the line, a space before it. A missing line is added after the line
+    of the key *after*, or at the end of the text when *after* is None or has no
+    line. Neither the order of the other keys nor their comments move, since
+    nothing is re-serialised (ADR-065 point 3).
     """
     pattern = _state_line(key)
     match = pattern.search(text)
     if match is not None:
-        rest = text[match.end() :]
-        line = f"{key}: {version}" + (" " if rest.startswith("#") else "")
-        return text[: match.start()] + line + rest
+        rest = match.group(1)
+        carriage = "\r" if rest.endswith("\r") else ""
+        comment = _TRAILING_COMMENT.search(rest.removesuffix("\r"))
+        line = f"{key}: {version}" + (f" {comment.group(1)}" if comment else "") + carriage
+        return text[: match.start()] + line + text[match.end() :]
     line = f"{key}: {version}\n"
     anchor = _state_line(after).search(text) if after is not None else None
     if anchor is not None:
