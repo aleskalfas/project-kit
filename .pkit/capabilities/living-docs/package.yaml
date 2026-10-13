@@ -96,10 +96,11 @@ connections:
           its id, which a page names as its reader, and a description of what
           that reader needs. A user and a maintainer are always included; a
           project filler adds or overrides readers, and a capability that keeps
-          knowledge about the software's users may add its own. Validation
-          fails a page whose reader does not resolve, so a filler that cannot
-          answer leaves the point unresolved rather than check pages against
-          whichever readers survived.
+          knowledge about the software's users may add its own. Where
+          RS-LDOC-003 binds on a page, validation fails the page when its
+          reader does not resolve, so a filler that cannot answer leaves the
+          point unresolved rather than check pages against whichever readers
+          survived.
         combination: union
         default:
           participation: always
