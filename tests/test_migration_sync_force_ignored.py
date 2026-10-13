@@ -62,12 +62,14 @@ def test_names_each_project_file_that_runs_sync_with_force_and_edits_nothing(
 
 @pytest.mark.parametrize("git", [True, False], ids=["git", "no-git"])
 def test_is_clean_where_no_project_file_runs_the_flag(tmp_path: Path, git: bool) -> None:
-    """The methodology's own tree names the flag in its documentation, and is left out."""
+    """The methodology's own tree names the flag in its documentation, and is left out,
+    as is a `--force` another command on the line takes, or a comment."""
     root = _project(
         tmp_path,
         git=git,
         files={
-            _WORKFLOW: "steps:\n  - run: pkit sync\n",
+            _WORKFLOW: "steps:\n  - run: pkit sync && pkit upgrade --force\n",
+            "Makefile": "sync:\n\tpkit sync | tee log  # --force\n",
             ".pkit/cli/README.md": "`pkit sync --force` is ignored.\n",
         },
     )

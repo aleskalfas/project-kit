@@ -28,8 +28,9 @@ set -euo pipefail
 # ROOT is the adopter's project root, provided by the runtime.
 : "${ROOT:?ROOT must be set by the upgrade runtime}"
 
-# `pkit sync`, then anything but a comment, then `--force`, on one line.
-pattern='pkit[[:space:]]+sync[^#]*--force'
+# `pkit sync`, then `--force` within the same command: nothing between them
+# starts a comment or another command (`#`, `;`, `&`, `|`).
+pattern='pkit[[:space:]]+sync[^#;&|]*--force'
 
 if git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     found=$(git -C "$ROOT" grep -I -l -E "$pattern" -- . ':!.pkit' ':!.agent-workspace' || true)
