@@ -6,7 +6,8 @@ walk routes or judge pins itself (ADR-057 point 1):
 
 - `pkit rule-sets reach` (`reach_document`): the walk at one state — the
   working tree, or a commit named with `--at`. It lists each artefact on
-  which an accepted rule binds, or whose routes conflict.
+  which an accepted rule binds, whose routes conflict, or from which a pin
+  behind its set holds a rule back.
 - `pkit rule-sets altered` (`altered_document`): the artefacts a change
   altered between a base and a head, with the walk's answer at each state
   that holds the artefact. The base is the change check's: the merge-base of
@@ -19,9 +20,13 @@ walk routes or judge pins itself (ADR-057 point 1):
   a revalidation.
 
 Each artefact carries its span and each rule its text, read at that state,
-so a reader whose checkout is elsewhere has what it needs. Neither command
-runs a query — no resolver, no filler — so git is their only cost. Neither
-writes anything.
+so a reader whose checkout is elsewhere has what it needs. Each part of a rule
+a check is declared to enforce says whether that check is there
+(`rule_sets.CheckPresence`, which validation reads too): a component's check
+by the registrations of the state read, a backbone check by the `pkit` that
+runs. Neither command
+runs a query — no resolver, no filler — so git and the running tool's own
+commands are all they read. Neither writes anything.
 """
 
 from __future__ import annotations
@@ -57,23 +62,27 @@ def reach_document(target_root: Path, commit: str | None = None) -> dict[str, An
 
     - `commit`: the commit read, or `null` for the working tree.
     - `artefacts`: in discovery's walk order, each artefact on which an accepted
-      rule binds, or whose routes conflict (`artefact_entry`). Any other
-      artefact has no binding rule at this state.
+      rule binds, whose routes conflict, or from which a pin behind its set holds
+      a rule back (`artefact_entry`). Any other artefact has no binding rule at
+      this state.
     """
     tree = None if commit is None else CommitTree(target_root, commit)
     discovery, _rule_sets, answer = rs.reach_at(target_root, tree)
+    presence = rs.CheckPresence(target_root, tree)
     return {
         "schema_version": REACH_SCHEMA_VERSION,
         "commit": commit,
         "artefacts": [
-            artefact_entry(artefact, answer.of(artefact.location))
+            artefact_entry(artefact, answer.of(artefact.location), presence)
             for artefact in discovery.artefacts
             if artefact.location in answer.by_location
         ],
     }
 
 
-def artefact_entry(artefact: fd.Artefact, found: rs.ArtefactReach) -> dict[str, Any]:
+def artefact_entry(
+    artefact: fd.Artefact, found: rs.ArtefactReach, presence: rs.CheckPresence
+) -> dict[str, Any]:
     """One artefact and the walk's answer for it, at one state.
 
     - `location`, `path`, `id`, `kind` (`document` or `entry`): as the artefacts
@@ -83,6 +92,8 @@ def artefact_entry(artefact: fd.Artefact, found: rs.ArtefactReach) -> dict[str, 
     - `rules`: each accepted rule that binds on it (`rule_entry`), in path and
       written order.
     - `conflicts`: each conflict between its routes (`conflict_entry`).
+    - `held`: each accepted rule a pin behind its set holds back from it
+      (`held_entry`), in path and written order. It binds nothing.
     """
     span = artefact.span
     return {
@@ -93,12 +104,13 @@ def artefact_entry(artefact: fd.Artefact, found: rs.ArtefactReach) -> dict[str, 
         "span": None
         if span is None
         else {"first_line": span.first_line, "last_line": span.last_line},
-        "rules": [rule_entry(binding) for binding in found.bindings],
+        "rules": [rule_entry(binding, presence) for binding in found.bindings],
         "conflicts": [conflict_entry(conflict) for conflict in found.conflicts],
+        "held": [held_entry(held) for held in found.held],
     }
 
 
-def rule_entry(binding: rs.Binding) -> dict[str, Any]:
+def rule_entry(binding: rs.Binding, presence: rs.CheckPresence) -> dict[str, Any]:
     """One binding rule.
 
     - `rule`: its id as cited, the component in front for a method rule set;
@@ -108,7 +120,7 @@ def rule_entry(binding: rs.Binding) -> dict[str, Any]:
       artefact and from which a route reaches the rule's set.
     - `fills`: the extension points it binds as the fill of, as cited.
     - `checks`: the parts of it checks enforce, as its owner declares them,
-      each `{check, part}` (COR-051 point 2).
+      each `{check, part, there, problem}` (`check_entry`).
     - `text`: its section, headed by its id: the statement.
     """
     rule, rule_set = binding.rule, binding.rule_set
@@ -120,7 +132,39 @@ def rule_entry(binding: rs.Binding) -> dict[str, Any]:
         "rule_set_path": rule_set.path,
         "covering": [covering.path for covering in binding.covering],
         "fills": list(binding.fills),
-        "checks": [{"check": part.check, "part": part.part} for part in rule.checks],
+        "checks": [check_entry(part, presence) for part in rule.checks],
+        "text": rule.section,
+    }
+
+
+def check_entry(part: rs.CheckPart, presence: rs.CheckPresence) -> dict[str, Any]:
+    """One part of a rule a check is declared to enforce (COR-051 point 2): `check` and
+    `part` as declared, `there` whether the check is there, and `problem` why it is not,
+    else `null`. A part whose check is not there goes back to whoever judges the rest of
+    the rule."""
+    problem = presence.problem(part)
+    return {"check": part.check, "part": part.part, "there": problem is None, "problem": problem}
+
+
+def held_entry(held: rs.HeldRule) -> dict[str, Any]:
+    """One accepted rule a pin behind its set holds back (COR-051 point 7).
+
+    - `rule`, `id`, `status`, `rule_set`, `rule_set_path`: as a binding rule's.
+    - `pins`: each pin behind its set that leads towards the rule's set,
+      `{by, by_rule_set, pin}`.
+    - `text`: its section, headed by its id: the statement.
+    """
+    rule, rule_set = held.rule, held.rule_set
+    return {
+        "rule": rule_set.cite(rule.id),
+        "id": rule.id,
+        "status": rule.status,
+        "rule_set": rule_set.citation,
+        "rule_set_path": rule_set.path,
+        "pins": [
+            {"by": by.path, "by_rule_set": by.citation, "pin": str(pin)}
+            for by, _index, pin in held.pins
+        ],
         "text": rule.section,
     }
 
@@ -199,6 +243,8 @@ def altered_document(
     base_tree = CommitTree(target_root, base_state.commit)
     head_discovery, _head_sets, head_reach = rs.reach_at(target_root, head_tree)
     base_discovery, _base_sets, base_reach = rs.reach_at(target_root, base_tree)
+    base_presence = rs.CheckPresence(target_root, base_tree)
+    head_presence = rs.CheckPresence(target_root, None if named is None else head_tree)
     pairing = fc.pair_artefacts(base_discovery, head_discovery, diff)
     head = fc.HeadState(fc.head_commit(target_root), diff.uncommitted) if named is None else named
     return {
@@ -219,10 +265,14 @@ def altered_document(
                 "change": alteration.kind,
                 "base": None
                 if alteration.before is None
-                else artefact_entry(alteration.before, base_reach.of(alteration.before.location)),
+                else artefact_entry(
+                    alteration.before, base_reach.of(alteration.before.location), base_presence
+                ),
                 "head": None
                 if alteration.after is None
-                else artefact_entry(alteration.after, head_reach.of(alteration.after.location)),
+                else artefact_entry(
+                    alteration.after, head_reach.of(alteration.after.location), head_presence
+                ),
             }
             for alteration in pairing.altered
         ],
@@ -287,8 +337,8 @@ def render_altered_human(document: Mapping[str, Any]) -> str:
                 continue
             if not entry[side]["rules"] and not entry[side]["conflicts"]:
                 lines.append(f"    at the {side}: no rule binds")
-                continue
-            lines.append(f"    at the {side}:")
+            else:
+                lines.append(f"    at the {side}:")
             lines.extend(_answer_lines(entry[side], "      "))
     ruled = sum(
         1
@@ -306,7 +356,8 @@ def _answer_lines(artefact: Mapping[str, Any], indent: str) -> list[str]:
         fills = f", fills {', '.join(rule['fills'])}" if rule["fills"] else ""
         lines.append(f"{indent}{rule['rule']}  ({rule['rule_set']}{fills})  through {through}")
         for part in rule["checks"]:
-            lines.append(f"{indent}  checked by {part['check']}: {part['part']}")
+            missing = "" if part["there"] else f"  (not there: {part['problem']})"
+            lines.append(f"{indent}  checked by {part['check']}: {part['part']}{missing}")
     for conflict in artefact["conflicts"]:
         if conflict["kind"] == "pin":
             pins = ", ".join(f"{pin['by_rule_set']} pins {pin['pin']}" for pin in conflict["pins"])
@@ -322,4 +373,9 @@ def _answer_lines(artefact: Mapping[str, Any], indent: str) -> list[str]:
                 f"{indent}conflict: different fills for {conflict['point']} ({brought}); "
                 f"no fill binds"
             )
+    for held in artefact["held"]:
+        pins = ", ".join(f"{pin['by_rule_set']} pins {pin['pin']}" for pin in held["pins"])
+        lines.append(
+            f"{indent}{held['rule']}  ({held['rule_set']})  held back, binding nothing: {pins}"
+        )
     return lines

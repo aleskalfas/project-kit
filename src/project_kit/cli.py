@@ -1858,11 +1858,13 @@ def rule_sets_reach_command(at: str | None, as_json: bool) -> None:
     """Which accepted rules bind on each artefact, at one state (COR-051 point 7).
 
     The working tree by default, or commit REV with --at. Each artefact on
-    which an accepted rule binds, or whose routes conflict: each rule with
-    its status, the sets whose scope it binds through, the extension points
-    it fills, the parts of it checks enforce, and its text; each conflict
-    between routes — one set pinned at different majors, or the most
-    specific sets bringing different fills for one extension point. Exit 0
+    which an accepted rule binds, whose routes conflict, or from which a pin
+    behind its set holds a rule back: each rule with its status, the sets
+    whose scope it binds through, the extension points it fills, the parts
+    of it checks enforce with whether each check is there, and its text;
+    each conflict between routes — one set pinned at different majors, or
+    the most specific sets bringing different fills for one extension point;
+    each rule held back, binding nothing, with the pins that hold it. Exit 0
     when answered; 1 when the configuration cannot be read or REV names no
     commit; 2 on a usage error.
     """

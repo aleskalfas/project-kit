@@ -670,6 +670,32 @@ def _exclude_unreadable(config: Mapping[str, Any], unparsed: str | None) -> str 
     return None
 
 
+def installed_packages_at(
+    target_root: Path, tree: RepositoryTree
+) -> list[tuple[str, Path, dict[str, Any]]]:
+    """`(name, component_dir, package)` for each capability and adapter the manifest of the
+    state `tree` holds installs, in manifest order, with the package metadata that state
+    holds — read forgivingly, as `installed_capability_names` reads the manifest. A
+    component whose package file the state lacks is left out, as
+    `package_validate.installed_package_files` leaves it out of the working tree."""
+    load = _mapping_loader(target_root, tree)
+    components: Any = load(BACKBONE_MANIFEST.as_posix()).get("components")
+    if not isinstance(components, list):
+        return []
+    areas = {"capability": "capabilities", "adapter": "adapters"}
+    found: list[tuple[str, Path, dict[str, Any]]] = []
+    for entry in _mappings(components):
+        name, area = entry.get("name"), areas.get(str(entry.get("kind")))
+        if not isinstance(name, str) or area is None:
+            continue
+        component = Path(".pkit") / area / name
+        package_file = (component / command_runner.PACKAGE_FILE).as_posix()
+        if not tree.read_bytes([package_file]).get(package_file):
+            continue
+        found.append((name, target_root / component, load(package_file)))
+    return found
+
+
 def installed_capability_names(target_root: Path, tree: RepositoryTree | None = None) -> list[str]:
     """Installed capabilities by name, sorted, from the backbone manifest.
 
