@@ -71,7 +71,8 @@ in a refused form that the change adds.
 Each finding names the record and the id: `<file>#<id>`, or `<file>` for a
 record id. The findings on a record's points are errors, and the rest
 warnings (COR-058 point 8). A point id another change took is not followed to
-what anchors it: no anchor names one point yet (COR-058 point 10).
+what anchors it: the command compares records only, and what an anchor on a
+point finds is the friction checks' to report (COR-050 point 7).
 """
 
 from __future__ import annotations
