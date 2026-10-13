@@ -13,9 +13,8 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-13T07:10:32Z
-      outcome: unchanged
-      unchanged-because: "The rule-set reader now takes a rule-set file's front matter, its body and its sections from document_parts, the one reading of where a part lies, and finds the same rules and sections as before, so what this page says of rule sets and their ids holds. The new anchor, record_points.py, reads a record's points both in list form, as this page's schema still writes them, and as point headings. The page does not yet describe point headings or retired points, which its deferral on COR-051 leaves to #1422."
+      at: 2026-10-13T07:39:27Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
@@ -82,7 +81,7 @@ COR-059 has sync run at the versions your project records, move none of them, an
 
 - **It moves your recorded backbone version** to the running pkit's version. It refuses under an older pkit. `pkit sync` also refuses to move past backbone migrations, and names `pkit upgrade`, which runs them.
 - **It refreshes each installed capability the kit ships** to the version the running pkit ships, and runs that capability's migrations.
-- **It creates what is missing on your side:** the agents overlay, `.pkit/agents/project/overlay.yaml`, and an area's `project/` folder.
+- **It creates what is missing on your side:** the agents overlay, `.pkit/agents/project/overlay.yaml`, and the `project/` folder of an area, or of a capability it refreshes.
 
 The same `core/` / `project/` pattern (and the same invariant) governs other kit areas in your project — `.pkit/agents/`, `.pkit/rules/`, and so on. To extend kit-shipped content, add sibling files in the matching `project/` directory; never edit a kit-owned file.
 

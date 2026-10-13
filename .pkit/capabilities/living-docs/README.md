@@ -12,8 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-13T00:44:57Z
-      outcome: updated
+      at: 2026-10-13T07:23:49Z
+      outcome: unchanged
+      unchanged-because: "COR-051's change narrows point 6: sync never reads or writes a project rule set, and uninstall never writes one. The page keeps each space's definition, a project rule set, in the definitions location under the internal root, and has uninstalling living-docs remove its project tier with the captured sources, which holds no definition. So it holds."
       deferred:
         - anchor:
             kind: record
