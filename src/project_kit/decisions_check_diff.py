@@ -32,8 +32,11 @@ of a record's points, and each stub is held to its entry by
 `record_points.hold_stubs` (ADR-057 point 2). The check reads point headings
 only, except in a record the change converts: one in list form at the branch
 point, with point headings at the head (COR-058 point 2). There it pairs each
-head point with the list point it came from, by title, then by id, then in
-order. Any other record in list form meets only the warning below.
+head point with the list point whose words it holds, else whose bold lead is its
+title, since converting keeps both (COR-058 point 9). It never pairs by id,
+which is what it checks. Any other record in list form meets only the warning
+below. A record with neither point headings nor a list is read for the headings
+in a refused form that the change adds.
 
 **It fails on**, for each record compared:
 
@@ -51,8 +54,8 @@ order. Any other record in list form meets only the warning below.
   its numbered item showed at the branch point
 - a point id another change took on the default branch since the branch point,
   in the same record, that the change takes too. A point the tip holds under
-  that id with the head's very text is this change's own work landed, as a
-  stacked branch's parent is, and is no clash.
+  that id with the head's title or its very text is this change's own work
+  landed, as a stacked branch's parent is, and is no clash.
 - a record id another change took on the default branch since the branch
   point, for a record the change adds at another path
 
@@ -74,7 +77,7 @@ what anchors it: no anchor names one point yet (COR-058 point 10).
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
@@ -269,15 +272,17 @@ def _points(record: Record, before: Record | None) -> list[Finding]:
     base = before.points if before is not None else None
     if not _headed(head):
         if base is not None and _headed(base):
-            return [*_dropped(record, base, set(head.retired))]
-        return [*_list_form(record, base)]
+            return [*_dropped(record, base, set(head.retired)), *_added_refused(record, base)]
+        if head.in_list_form:
+            return [*_list_form(record, base)]
+        return [*_added_refused(record, base)]  # neither headings nor a list: no point is read
     if base is not None and not _headed(base) and base.list_points:
         return _converted(record, base)
     found: list[Finding] = []
     if base is not None:
         held = {p.id for p in (*head.points, *head.stubs)} | set(head.retired)
         found += _dropped(record, base, held)
-        found += _not_past(record, _held(base), held - _held(base))
+        found += _not_past(record, _held(base), held - _held(base), held)
         found += _moved(record, base)
     found += _added_duplicates(record, base)
     found += _added_refused(record, base)
@@ -298,8 +303,11 @@ def _dropped(record: Record, base: RecordPoints, held: set[str]) -> Iterator[Fin
         )
 
 
-def _not_past(record: Record, base_ids: set[str], new_ids: Iterable[str]) -> Iterator[Finding]:
-    """A new id that is not past every id of its series the branch point holds or retires."""
+def _not_past(
+    record: Record, base_ids: set[str], new_ids: Iterable[str], held: set[str]
+) -> Iterator[Finding]:
+    """A new id that is not past every id of its series the branch point holds or retires.
+    The next unused id it names is past the head's ids too (`held`)."""
     for point_id in _sorted(new_ids):
         series = record_points.id_series(point_id)
         if series is None:
@@ -314,7 +322,7 @@ def _not_past(record: Record, base_ids: set[str], new_ids: Iterable[str]) -> Ite
         )
         if series[1] > highest:
             continue
-        unused = decisions_validate.next_unused(base_ids, point_id)
+        unused = decisions_validate.next_unused(base_ids | held, point_id)
         yield Finding(
             f"{record.rel}#{point_id}",
             f"{record.name}: the new id `{point_id}` is not past every id of its series the "
@@ -491,13 +499,14 @@ def _list_form(record: Record, base: RecordPoints | None) -> Iterator[Finding]:
 def _converted(record: Record, base: RecordPoints) -> list[Finding]:
     """A record in list form at the branch point whose points are headings at the head.
 
-    Each head point is paired with the list point it came from, and its id is held to the
-    number or label a reader saw there. A list point paired with none, and not retired,
-    is dropped. A head point paired with none is new, and must be past every id of the
-    list.
+    Each head point is paired with the list point it came from (`_conversion_pairs`),
+    and its id is held to the number or label a reader saw there. A list point paired
+    with none whose id the head neither holds nor retires is dropped. A head point
+    paired with none whose id the list did not hold is new, and must be past every id
+    of the list.
     """
     head = record.points
-    pairs, unpaired_list, unpaired_head = _conversion_pairs(base.list_points, head.points)
+    pairs, unpaired_list, unpaired_head = _conversion_pairs(base, head)
     found: list[Finding] = []
     for listed, point in pairs:
         if listed.id == point.id:
@@ -533,8 +542,8 @@ def _converted(record: Record, base: RecordPoints) -> list[Finding]:
             )
         )
     base_ids = {listed.id for listed in base.list_points} | set(base.retired)
-    new_ids = {point.id for point in unpaired_head} | (set(head.retired) - base_ids)
-    found += _not_past(record, base_ids, new_ids - base_ids)
+    new_ids = {point.id for point in unpaired_head} | set(head.retired)
+    found += _not_past(record, base_ids, new_ids - base_ids, held)
     found += _added_duplicates(record, base)
     found += _added_refused(record, base)
     found += _stubs(record)
@@ -543,31 +552,38 @@ def _converted(record: Record, base: RecordPoints) -> list[Finding]:
 
 
 def _conversion_pairs(
-    listed: Sequence[ListPoint], headed: Sequence[PointHeading]
+    base: RecordPoints, head: RecordPoints
 ) -> tuple[list[tuple[ListPoint, PointHeading]], list[ListPoint], list[PointHeading]]:
-    """Each head point with the list point it came from: by title, where one list point
-    and one head point have it (a bold lead becomes the title, COR-058 point 9); then by
-    id; then the rest in order. Also the list points and head points left unpaired."""
-    left_list, left_head = list(listed), list(headed)
+    """Each head point with the list point it came from, and the list points and head
+    points left unpaired.
+
+    Converting keeps every point's words and makes its bold lead its title (COR-058
+    point 9). So a head point is paired with the list point whose words it holds
+    (`RecordPoints.list_point_words`, `RecordPoints.point_words`), then with the one
+    whose bold lead is its title. Each pass pairs only what one list point and one head
+    point share. Nothing is paired by id, which is what the pairing is to check: a list
+    point whose words and title both changed stays unpaired, and its id is read as held
+    or dropped.
+    """
+    left_list, left_head = list(base.list_points), list(head.points)
     pairs: list[tuple[ListPoint, PointHeading]] = []
-    list_titles = Counter(item.title for item in left_list if item.title)
-    head_titles = Counter(point.title for point in left_head)
-    for item in list(left_list):
-        if item.title and list_titles[item.title] == 1 and head_titles[item.title] == 1:
-            point = next(point for point in left_head if point.title == item.title)
+    keys: tuple[tuple[Callable[[ListPoint], str | None], Callable[[PointHeading], str]], ...] = (
+        (base.list_point_words, head.point_words),
+        (lambda item: item.title, lambda point: point.title),
+    )
+    for list_key, head_key in keys:
+        listed = Counter(key for item in left_list if (key := list_key(item)))
+        headed = Counter(head_key(point) for point in left_head)
+        for item in list(left_list):
+            key = list_key(item)
+            if not key or listed[key] != 1 or headed[key] != 1:
+                continue
+            point = next(point for point in left_head if head_key(point) == key)
             pairs.append((item, point))
             left_list.remove(item)
             left_head.remove(point)
-    for item in list(left_list):
-        point = next((point for point in left_head if point.id == item.id), None)
-        if point is not None:
-            pairs.append((item, point))
-            left_list.remove(item)
-            left_head.remove(point)
-    paired = min(len(left_list), len(left_head))
-    pairs += zip(left_list[:paired], left_head[:paired], strict=True)
     pairs.sort(key=lambda pair: pair[1].extent.start)
-    return pairs, left_list[paired:], left_head[paired:]
+    return pairs, left_list, left_head
 
 
 # --- what the default branch took meanwhile --------------------------------------------
@@ -578,7 +594,11 @@ def _taken_points(
 ) -> Iterator[Finding]:
     """A point id another change took on the default branch since the branch point, in
     this record, that the change takes too. A record in list form at the head meets only
-    the warning on list form, so it is not read here."""
+    the warning on list form, so it is not read here.
+
+    A point the tip holds under that id with the head's title or its very text is this
+    change's own work, landed: a parent branch's point, squash-merged while this branch
+    was stacked on it, and perhaps edited since on either side. It is no clash."""
     head = record.points
     if tip is None or not _headed(head):
         return
@@ -590,7 +610,9 @@ def _taken_points(
         if (
             ours is not None
             and theirs is not None
-            and head.point_text(ours) == tip.points.point_text(theirs)
+            and (
+                ours.title == theirs.title or head.point_text(ours) == tip.points.point_text(theirs)
+            )
         ):
             continue  # this change's own work, landed
         unused = decisions_validate.next_unused(_held(tip.points) | _held(head), point_id)
@@ -598,7 +620,8 @@ def _taken_points(
             f"{record.rel}#{point_id}",
             f"{record.name}: another change took `{point_id}` on {base} since this branch left "
             f"it, and this change takes it too. The first to land keeps the number, so move "
-            f"this change's point to the next unused, `{unused}`, and its citations with it "
+            f"this change's point to the next unused, `{unused}`, and its citations with it. "
+            f"If the point is a parent branch's that landed, merge {base} in instead "
             f"({_cite()}).",
         )
 

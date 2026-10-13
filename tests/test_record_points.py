@@ -471,3 +471,20 @@ def test_a_points_text_is_read_without_its_id() -> None:
     assert point is not None and moved is not None
     assert before.point_text(point) == "Scope It reaches every record."
     assert before.point_text(point) == after.point_text(moved)
+
+
+def test_a_list_points_words_are_those_of_the_heading_it_becomes() -> None:
+    """Converting keeps every point's words and makes its bold lead its title (COR-058
+    point 9), so the numbering check pairs a list point with its heading by them."""
+    listed = rp.read_points(
+        _record(
+            "1. **First.** One\n   continued.\n2. Two.\n\nAfter the list.\n\n"
+            "### Group\n\n**D1 — Lead.** Labelled.\n\nMore.\n\n**D2 — Next.** Last.\n"
+        )
+    )
+    words = [listed.list_point_words(point) for point in listed.list_points]
+    assert words == ["One continued.", "Two.", "Labelled. More.", "Last."]
+    headed = rp.read_points(_record("### 1. First\n\nOne\ncontinued.\n"))
+    point = headed.point("1")
+    assert point is not None
+    assert headed.point_words(point) == words[0]

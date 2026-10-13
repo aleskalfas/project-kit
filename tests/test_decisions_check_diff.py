@@ -149,6 +149,22 @@ def test_a_new_id_not_past_every_id_fails_naming_the_next_unused(repo: GitRepo) 
     assert _found(repo) == []
 
 
+def test_a_new_label_not_past_its_series_fails(repo: GitRepo) -> None:
+    _branch(repo, {RECORD: _record(_points("1", "D1", "D3"))})
+    repo.write({RECORD: _record(_points("1", "D1", "D2", "D3"))})
+
+    assert _found(repo) == [("error", f"{RECORD}#D2")]
+    assert "`D4`" in _messages(repo)[0]
+
+
+def test_the_next_unused_id_named_is_past_the_heads_ids_too(repo: GitRepo) -> None:
+    _branch(repo, {RECORD: _record(_points("1", "2", "5"))})
+    repo.write({RECORD: _record(_points("1", "2", "3", "5", "6"))})
+
+    assert _found(repo) == [("error", f"{RECORD}#3")]
+    assert "the next unused number, `7`" in _messages(repo)[0]
+
+
 def test_a_label_counts_in_its_own_series(repo: GitRepo) -> None:
     _branch(repo, {RECORD: _record(_points("1", "2") + _points("D1", "D2"))})
     repo.write({RECORD: _record(_points("1", "2", "3") + _points("D1", "D2", "D1"))})
@@ -163,15 +179,15 @@ def test_a_renumbered_point_fails_where_its_text_sits_only_under_another_id(
     repo: GitRepo,
 ) -> None:
     _branch(repo, {RECORD: _record(_points("1", "2", "3"))})
-    renumbered = _point("1") + _point("2", title="Point 3", text="Text of") + "\n"
-    repo.write({RECORD: _record(renumbered.replace("Text of 2.", "Text of 3."))})
+    renumbered = "### 4. Point 3\n\nText of 3.\n\n"
+    repo.write({RECORD: _record(_points("1", "2") + renumbered)})
 
-    found = _found(repo)
-
-    assert ("error", f"{RECORD}#3") in found
-    assert any(
-        "the text of point `3` at the branch point sits at the head only under `2`" in message
-        for message in _messages(repo)
+    # Two errors on one id: `3` is dropped, and its text sits under `4` alone.
+    assert _found(repo) == [("error", f"{RECORD}#3"), ("error", f"{RECORD}#3")]
+    messages = _messages(repo)
+    assert "the branch point holds `3`, and the head neither holds nor retires it" in messages[0]
+    assert (
+        "the text of point `3` at the branch point sits at the head only under `4`" in (messages[1])
     )
 
 
@@ -221,6 +237,34 @@ def test_a_refused_heading_form_the_change_adds_fails_and_one_the_base_held_does
     repo.write({RECORD: _record(_points("1") + "### 2 - Old\n\nOld.\n\n### 5.1 New\n\nNew.\n\n")})
     assert _found(repo) == [("error", f"{RECORD}#5.1")]
     assert "the change adds the heading `### 5.1 New`" in _messages(repo)[0]
+
+
+def test_a_new_record_whose_every_point_heading_is_refused_fails(repo: GitRepo) -> None:
+    """A record with no point heading and no list is still read for refused headings."""
+    _branch(repo, {RECORD: _record(_points("1"))})
+    other = f"{PROJECT}/PRJ-002-b.md"
+    repo.write({other: _record("### 1 — A\n\nA.\n\n### 2 — B\n\nB.\n\n", record_id="PRJ-002")})
+
+    assert _found(repo) == [("error", f"{other}#1"), ("error", f"{other}#2")]
+
+
+def test_a_prose_decision_that_gains_a_refused_heading_fails(repo: GitRepo) -> None:
+    _branch(repo, {RECORD: _record("")})
+    repo.write({RECORD: _record("### 1 — A\n\nA.\n\n")})
+    assert _found(repo) == [("error", f"{RECORD}#1")]
+
+
+def test_a_refused_heading_the_base_held_without_point_headings_passes(repo: GitRepo) -> None:
+    _branch(repo, {RECORD: _record("### 1 — A\n\nA.\n\n")})
+    repo.write({RECORD: _record("### 1 — A\n\nA, edited.\n\n")})
+    assert _found(repo) == []
+
+
+def test_a_headed_record_turned_back_into_a_list_drops_every_id(repo: GitRepo) -> None:
+    _branch(repo, {RECORD: _record(_points("1", "2"))})
+    repo.write({RECORD: _record("1. **Point 1.** Text of 1.\n2. **Point 2.** Text of 2.\n\n")})
+
+    assert _found(repo) == [("error", f"{RECORD}#1"), ("error", f"{RECORD}#2")]
 
 
 def test_a_retired_id_without_its_stub_and_a_stub_without_its_entry_fail(
@@ -347,6 +391,46 @@ def test_a_converted_point_whose_id_differs_from_its_bold_number_warns(repo: Git
     assert "opened with the bold `2`" in _messages(repo)[0]
 
 
+def test_an_untitled_list_converted_with_its_numbers_passes(repo: GitRepo) -> None:
+    _branch(repo, {RECORD: _record("1. First text.\n2. Second text.\n\n")})
+    converted = "### 1. First\n\nFirst text.\n\n### 2. Second\n\nSecond text.\n\n"
+    repo.write({RECORD: _record(converted)})
+    assert _found(repo) == []
+
+
+def test_an_untitled_items_words_under_another_id_fail_the_conversion(repo: GitRepo) -> None:
+    """The item a point came from is the one whose words it holds, never the one with
+    its id: a point inserted under `3` moves the third item's words to `4`."""
+    _branch(repo, {RECORD: _record("1. First text.\n2. Second text.\n3. Third text.\n\n")})
+    converted = (
+        "### 1. First\n\nFirst text.\n\n### 2. Second\n\nSecond text.\n\n"
+        "### 3. Inserted\n\nNew text.\n\n### 4. Third\n\nThird text.\n\n"
+    )
+    repo.write({RECORD: _record(converted)})
+
+    assert _found(repo) == [("error", f"{RECORD}#4")]
+    assert "point `4` comes from the numbered item that showed `3`" in _messages(repo)[0]
+
+
+def test_a_retitled_items_words_under_another_id_fail_the_conversion(repo: GitRepo) -> None:
+    _branch(repo, {RECORD: _record("1. **A.** One.\n2. **B.** Two.\n\n")})
+    converted = "### 1. A\n\nOne.\n\n### 2. Inserted\n\nNew.\n\n### 3. B renamed\n\nTwo.\n\n"
+    repo.write({RECORD: _record(converted)})
+
+    assert ("error", f"{RECORD}#3") in _found(repo)
+    assert any(
+        "point `3` comes from the numbered item that showed `2`" in m for m in _messages(repo)
+    )
+
+
+def test_a_bold_number_conversion_keeping_its_ids_passes(repo: GitRepo) -> None:
+    bold = "**1. First.** One.\n\nMore of one.\n\n**2. Second.** Two.\n\n"
+    _branch(repo, {RECORD: _record(bold)})
+    converted = "### 1. First\n\nOne.\n\nMore of one.\n\n### 2. Second\n\nTwo.\n\n"
+    repo.write({RECORD: _record(converted)})
+    assert _found(repo) == []
+
+
 def test_a_conversion_that_drops_a_list_point_fails(repo: GitRepo) -> None:
     _branch(repo, {RECORD: _record(_LIST)})
     repo.write({RECORD: _record("### 1. First\n\nOne.\n\n### 2. Second\n\nTwo.\n\n")})
@@ -360,13 +444,15 @@ def test_a_conversion_that_drops_a_list_point_fails(repo: GitRepo) -> None:
 
 def test_a_point_id_the_default_branch_took_meanwhile_fails(repo: GitRepo) -> None:
     _branch(repo, {RECORD: _record(_points("1", "2"))})
-    _land(repo, {RECORD: _record(_points("1", "2") + _point("3", text="Theirs"))})
-    repo.write({RECORD: _record(_points("1", "2") + _point("3", text="Ours"))})
+    theirs = _point("3", title="Theirs", text="Theirs")
+    _land(repo, {RECORD: _record(_points("1", "2") + theirs)})
+    repo.write({RECORD: _record(_points("1", "2") + _point("3", title="Ours", text="Ours"))})
 
     assert _found(repo) == [("error", f"{RECORD}#3")]
     message = _messages(repo)[0]
     assert "another change took `3` on main since this branch left it" in message
     assert "the next unused, `4`" in message
+    assert "If the point is a parent branch's that landed, merge main in instead" in message
 
 
 def test_the_ids_the_default_branch_took_pass_when_the_change_takes_none(repo: GitRepo) -> None:
@@ -383,6 +469,16 @@ def test_a_parents_point_landed_on_the_default_branch_is_no_clash(repo: GitRepo)
     _branch(repo, {RECORD: _record(_points("1", "2"))})
     _land(repo, {RECORD: _record(_points("1", "2") + _point("3", text="Parent's"))})
     repo.write({RECORD: _record(_points("1", "2") + _point("3", text="Parent's") + _points("4"))})
+
+    assert _found(repo) == []
+
+
+def test_a_parents_point_edited_since_it_landed_is_no_clash(repo: GitRepo) -> None:
+    """The tip holds the parent's point under its title, with text edited since on
+    either side: still this change's own work, landed."""
+    _branch(repo, {RECORD: _record(_points("1", "2"))})
+    _land(repo, {RECORD: _record(_points("1", "2") + _point("3", text="Edited on main"))})
+    repo.write({RECORD: _record(_points("1", "2") + _point("3", text="Edited here"))})
 
     assert _found(repo) == []
 
