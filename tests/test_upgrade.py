@@ -2209,6 +2209,24 @@ def test_a_record_newer_than_the_bundle_is_never_moved_down(
     assert not upgrade.is_current(installed_target, source, state, _this_pkit())
 
 
+def test_a_record_of_the_bundled_version_written_another_way_is_current(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`v0.6.0` names the version `0.6.0` does: the adapter is at its bundled version,
+    so the early return applies and nothing is moved or kept."""
+    record = installed_target / ".pkit" / "adapters" / "claude-code" / "project" / "manifest.yaml"
+    text = record.read_text(encoding="utf-8")
+    record.write_text(re.sub(r"(?m)^  version: (.*)$", r"  version: v\1", text), encoding="utf-8")
+    state = manifest.read_backbone_manifest(installed_target)
+    assert state is not None
+    source = install.find_source_kit()
+    assert upgrade.component_moves(installed_target, source, state) == []
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert "Already at backbone v" in capsys.readouterr().out
+
+
 def test_an_adapter_registered_after_the_copy_is_rendered_into_the_ignore_file(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

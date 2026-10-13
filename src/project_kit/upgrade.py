@@ -334,18 +334,25 @@ def component_moves(
                 continue
             recorded_manifest = _read_adapter_manifest(target_root, entry)
             recorded = recorded_manifest.version if recorded_manifest is not None else None
-            if recorded != package[0]:
+            if not _same_version(recorded, package[0]):
                 moves.append(ComponentMove("adapter", entry.name, recorded, package[0]))
         elif entry.kind == "capability" and entry.origin == ORIGIN_KIT_SHIPPED:
             source = caps.find_capability_in_source(source_kit, entry.name)
             if source is None or as_recorded_version(source.package.version) is None:
                 continue
             recorded = caps.read_capability_record(target_root, entry.name).version
-            if recorded != source.package.version:
+            if not _same_version(recorded, source.package.version):
                 moves.append(
                     ComponentMove("capability", entry.name, recorded, source.package.version)
                 )
     return moves
+
+
+def _same_version(recorded: str | None, bundled: str) -> bool:
+    """Whether *recorded* names the version *bundled* does, however each is
+    written (`v0.6.0` and `0.6.0` alike)."""
+    normalised = as_recorded_version(recorded)
+    return normalised is not None and normalised == as_recorded_version(bundled)
 
 
 def _moves_up(recorded: str | None, bundled: str) -> bool:
@@ -1298,6 +1305,8 @@ def _run_component_migrations(
             ran += 1
             continue
 
+        if _same_version(installed_manifest.version, bundled):
+            continue
         if not _moves_up(installed_manifest.version, bundled):
             if installed_manifest.version != bundled:
                 # Never moved down (ADR-065 point 7); #1461 refuses the transition.
