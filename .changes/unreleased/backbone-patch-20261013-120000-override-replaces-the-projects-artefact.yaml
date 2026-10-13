@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Fixed
+  pr: "1550"
 body: >
   Choosing `override` on a naming collision at `pkit capabilities install`
   now replaces the project's artefact with the capability's, as COR-017 says
