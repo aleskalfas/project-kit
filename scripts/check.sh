@@ -31,12 +31,14 @@
 #     capability's. One line, so nothing registered can be forgotten here; it
 #     fails on errors only.
 #   - the diff-scoped checks — migration coverage, the friction change check,
-#     software-analysis' number check (a use case or journey number the base
-#     took first), the documentation check (project-management's
-#     `check-doc-mapping`, the obligations of the doc-check point against the
-#     diff) and the changelog lint read a base ref and answer about the CHANGE,
-#     not the tree. They are not validators and stay their own lines; a
-#     capability's line is here because that capability is installed here.
+#     the prose lint (the mechanical parts of the writing rules, in the text the
+#     change adds: `scripts/prose_lint.py`, #1415), software-analysis' number
+#     check (a use case or journey number the base took first), the
+#     documentation check (project-management's `check-doc-mapping`, the
+#     obligations of the doc-check point against the diff) and the changelog
+#     lint read a base ref and answer about the CHANGE, not the tree. They are
+#     not validators and stay their own lines; a capability's line is here
+#     because that capability is installed here.
 #
 # Runs every check (does not stop at the first failure) and reports a summary,
 # so one run surfaces all problems. Exits non-zero if any check failed.
@@ -44,8 +46,8 @@
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-# The diff-scoped checks (migration coverage, friction, analysis numbers, doc
-# check) and the type check's guard on its baseline each read their base
+# The diff-scoped checks (migration coverage, friction, the prose lint, analysis
+# numbers, doc check) and the type check's guard on its baseline each read their base
 # themselves, one way (COR-054): $PKIT_CHECK_BASE when it is set — CI sets it to
 # the pull request's target — else the project's default branch, as
 # `pkit repository base` shows it. So no line here passes --base: every line
@@ -159,6 +161,7 @@ run "tests"              run_tests
 run "validate"           uv run pkit validate
 run "migrations check"   uv run pkit migrations check-diff
 run "friction check"     uv run pkit friction check
+run "prose lint"         uv run python scripts/prose_lint.py
 run "analysis numbers"   uv run pkit analysis check-numbers
 run "doc check"          uv run pkit pm check-doc-mapping
 run "changelog lint"     uv run pkit release lint

@@ -15,9 +15,9 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-13T07:23:33Z
+      at: 2026-10-13T08:09:47Z
       outcome: unchanged
-      unchanged-because: Of the capability's decisions only DEC-030 changes. It says that sync reads the live overlay in its merge and never writes it, that sync restores the template at the recorded version and a version transition replaces it, and that COR-001, COR-017 and DEC-030 let uninstall remove the capability's whole folder. The page's default-agent section has enable copy the template to the activation file and re-run the merge, and disable strip the agent key and remove the file. The change leaves those as they were, so the page holds against it.
+      unchanged-because: "Of the capability's decisions only DEC-030 changes. It renames a heading in its Decision from 'v1 scope: no in-place customisation' to 'Scope: no in-place customisation in v1', with the sentence that names it, so the points reader does not read that heading as a misspelt point (COR-058 point 1). What the record decides stays as it was. The page cites DEC-030 only in its default-agent section, which names no heading of it and says nothing of customising the live overlay, so the page holds."
 ---
 
 # project-management capability

@@ -13,9 +13,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-13T07:23:31Z
+      at: 2026-10-13T08:09:46Z
       outcome: unchanged
-      unchanged-because: DEC-030's change says that sync reads the live overlay in its merge and never writes it, that sync restores the template at the recorded version and a version transition replaces it, and which records let uninstall remove the overlay. The page has merge-settings.sh take a present overlay as a merge source between project/settings.json and the target, the overlay adopter-owned and the template core-owned, and the enable and disable subcommands toggle it. The change leaves those as they were, so the page holds.
+      unchanged-because: "DEC-030's change renames a heading in its Decision from 'v1 scope: no in-place customisation' to 'Scope: no in-place customisation in v1', with the sentence that names it, so the points reader does not read that heading as a misspelt point (COR-058 point 1). What the record decides stays as it was. The page cites DEC-030 for the overlay walker, the opt-in toggle, the strip on disable and the reserved permissions key. It names no heading of DEC-030 and says nothing of customising the live overlay, so it holds."
 ---
 
 # Claude Code adapter
