@@ -22,7 +22,7 @@ ACT-actor:
 
 # Actors
 
-Who uses the system, and what each needs from it. Each actor's id is stable; its name may change.
+Who uses the system, and what each needs from it. Each actor's id is stable. Its name may change.
 
 ## ACT-actor — <Display name>
 
