@@ -589,10 +589,31 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
     (COR-049 point 5). Returns (categories_added, report).
     ``categories_added`` covers **both** auto-filled (uncommented) and stubbed
     (commented) categories written to the file in this run.
+
+    **A missing overlay** is repaired here, the command that needs it: with
+    ``write`` it is created from the seed first install writes, and the six
+    states above are then read against it. It is the one writer outside the
+    lifecycle that creates a seed path (ADR-065 point 11): sync creates none,
+    and a version transition creates it only where it is missing. The dry run
+    says it would.
     """
-    missing = missing_categories(target_root)
     path = _overlay_path(target_root)
-    existing = path.read_text(encoding="utf-8") if path.is_file() else ""
+    if not path.is_file():
+        if not write:
+            return [], (
+                f"the agents overlay is missing ({OVERLAY_PATH.as_posix()}). Re-run with "
+                "`--write` to create it from the seed first install writes, then fill or stub "
+                "each category the seed does not define.\n"
+            )
+        from project_kit.install import AGENTS_OVERLAY_SEED
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(AGENTS_OVERLAY_SEED, encoding="utf-8")
+        created = f"created {OVERLAY_PATH.as_posix()} from the seed (it was missing)."
+        added, report = reconcile_overlay(target_root, write=True)
+        return added, f"{created}\n{report}"
+    missing = missing_categories(target_root)
+    existing = path.read_text(encoding="utf-8")
 
     def _is_defined(cat: str) -> bool:
         """Uncommented ``cat:`` line — sync/deploy considers this defined."""
@@ -995,7 +1016,10 @@ def adopt_agent(
     # --- Load overlay ---
     path = _overlay_path(target_root)
     if not path.is_file():
-        raise click.ClickException(f"overlay not found at {path}; run `pkit init` first.")
+        raise click.ClickException(
+            f"overlay not found at {path}; run `pkit agents reconcile --write`, which "
+            "creates it from the seed, then adopt again."
+        )
     existing = path.read_text(encoding="utf-8")
 
     def _is_defined(cat: str) -> bool:

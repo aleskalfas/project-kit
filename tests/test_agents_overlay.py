@@ -342,6 +342,50 @@ def test_reconcile_write_appends_commented_stubs_idempotently(tmp_path):
     assert "overlay is complete" not in report2
 
 
+# --- reconcile repairs a missing overlay (ADR-065 point 11) -------------------
+
+
+def test_reconcile_write_creates_a_missing_overlay_from_the_seed(tmp_path):
+    """A deleted overlay is repaired by the command that needs it: `--write` creates
+    it from the seed first install writes, then reads each category against it.
+    Sync creates no seed path, so this is the one way back short of a transition."""
+    from project_kit.install import AGENTS_OVERLAY_SEED
+
+    proj = _project(tmp_path)
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>", "<custom>"])
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+
+    added, report = ao.reconcile_overlay(proj, write=True)
+
+    assert overlay.read_text(encoding="utf-8").startswith(AGENTS_OVERLAY_SEED)
+    assert report.startswith("created .pkit/agents/project/overlay.yaml from the seed")
+    # The seed defines `architecture-docs`; the category it lacks is stubbed.
+    assert added == ["custom"]
+    assert "# custom:" in overlay.read_text(encoding="utf-8")
+
+
+def test_reconcile_dry_run_names_a_missing_overlay_and_writes_nothing(tmp_path):
+    proj = _project(tmp_path)
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+    before = _tree(proj)
+
+    added, report = ao.reconcile_overlay(proj, write=False)
+
+    assert added == []
+    assert "the agents overlay is missing" in report
+    assert "`--write`" in report
+    assert _tree(proj) == before
+
+
+def test_adopt_names_reconcile_where_the_overlay_is_missing(tmp_path):
+    """`pkit init` refuses a project that has one, so adopt names the repair."""
+    proj = _project(tmp_path)
+    _agent(proj / ".pkit" / "agents" / "core", "a", owns=["<architecture-docs>"])
+
+    with pytest.raises(click.ClickException, match=r"pkit agents reconcile --write"):
+        ao.adopt_agent(proj, "a", deploy_fn=_deploy_ok)
+
+
 # --- reconcile: three-state regression (issue #40) ---------------------------
 
 

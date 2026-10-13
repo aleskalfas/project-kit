@@ -194,6 +194,9 @@ def agents_reconcile(write: bool) -> None:
     consent (COR-049 point 5): `--write`, given after the dry run, is that
     consent, and nothing is asked. Each recording says which root its path was
     derived from and where to change it.
+
+    A missing overlay is created from the seed first install writes, under
+    `--write`, before any category is read (ADR-065 point 11).
     """
     from project_kit import agents_overlay as ao
 
