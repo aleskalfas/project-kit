@@ -2,6 +2,7 @@ component: backbone
 kind: minor
 custom:
   category: Changed
+  pr: "1566"
 body: >
   A capability's manifest now sits under its project folder,
   `.pkit/capabilities/<name>/project/manifest.yaml`. No sync or upgrade
