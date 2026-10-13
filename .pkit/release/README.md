@@ -14,8 +14,9 @@ pkit:
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
       source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-13T19:16:24Z
-      outcome: updated
+      at: 2026-10-13T21:44:43Z
+      outcome: unchanged
+      unchanged-because: ADR-040 and PRJ-002 now write their points as headings carrying the same numbers and labels, word for word. PRJ-002's paragraph that leaves the changeset format and the release mechanics to this guide sits under a heading of its own, with the same words. So D1 to D4, which this guide cites, name the same text, and it holds.
 ---
 
 # Release flow — changesets + the release step

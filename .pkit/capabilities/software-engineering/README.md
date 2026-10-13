@@ -13,9 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-13T20:06:13Z
+      at: 2026-10-13T21:44:50Z
       outcome: unchanged
-      unchanged-because: The capability's DEC-001, with COR-050, COR-057, ADR-013, ADR-052 and project-management DEC-055, now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed. DEC-002 stays as it was. Every point this page cites names the same text, so it holds.
+      unchanged-because: The capability's DEC-001 and DEC-002, with COR-050, COR-057, ADR-013, ADR-052 and project-management DEC-055, now write their points as headings carrying the same numbers, word for word. DEC-002's paragraph on the pm-side companion decisions, after its point 7, sits under a heading of its own, with the same words. DEC-002's points 3 and 4, which this page cites as D3 and D4, name the same text, so it holds.
 ---
 
 # software-engineering capability

@@ -13,9 +13,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-13T20:06:09Z
+      at: 2026-10-13T21:44:47Z
       outcome: unchanged
-      unchanged-because: ADR-009, ADR-014, ADR-052 and ADR-060 now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed. ADR-014's Context list, which this page cites as §6, is untouched. ADR-002 and ADR-004 stay as they were. So the adapter's account of the permission realizer, the sandbox and the workspace grant holds.
+      unchanged-because: COR-028, ADR-009, ADR-014, ADR-052 and ADR-060 now write their points as headings carrying the same numbers, word for word. COR-028's closing sentence, that the model is authoritative, moves into its opening, unchanged. ADR-014's Context list, which this page cites as §6, is untouched. ADR-002 and ADR-004 stay as they were. So the adapter's account of the permission realizer, the sandbox and the workspace grant holds.
 ---
 
 # Claude Code adapter

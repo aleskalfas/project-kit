@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-13T18:59:45Z
+      at: 2026-10-13T21:44:44Z
       outcome: unchanged
-      unchanged-because: This change has pkit upgrade record its target before anything else and its completion last, finish an interrupted upgrade, replay every backbone migration once where no completion is recorded, write a missing manifest and record each adapter's version, and has init record the same two states. The page says upgrade pulls new versions, runs any migrations and pins the project, that a migration may change a file of the project's where a record allows, such as adding a category its overlay lacks, and that the manifest records what is installed at what version. Each still holds, the replay included, so the page holds.
+      unchanged-because: ADR-049 and ADR-064 now write their points as headings carrying the same numbers, word for word. ADR-049's sentence that it does not reopen ADR-039 moves into its opening, unchanged, and its citation of ADR-039 names a section instead of lines, with the same meaning. So what this page says of upgrading and pinning still holds.
 ---
 
 # project-kit

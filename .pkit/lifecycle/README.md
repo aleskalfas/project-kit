@@ -29,8 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-13T19:16:25Z
-      outcome: updated
+      at: 2026-10-13T21:44:45Z
+      outcome: unchanged
+      unchanged-because: COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057 and ADR-059 now write their points as headings carrying the same numbers and labels, word for word. COR-031's paragraph on the two deferred origins moves into its opening, unchanged, so D2, which this page cites, names the same text. The slot, connection, origin and validation rules this page restates read as before, so it holds.
       deferred:
         - anchor:
             kind: record

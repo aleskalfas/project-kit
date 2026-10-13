@@ -76,9 +76,9 @@ ACT-component-author:
           - COR-041
           - COR-047
       revalidated:
-        at: 2026-10-13T06:31:01Z
+        at: 2026-10-13T21:44:54Z
         outcome: unchanged
-        unchanged-because: COR-031's change rewrites three passages. Sync writes a project-owned path only through merge delivery. In COR-017's lifecycle, sync copies a capability at its recorded version and only a transition moves that version. The skip of an incubated capability applies to the propagation that sync and a transition both run. The actor's need to keep a capability in its own repository, where sync never overwrites it, holds, since that propagation skips it and merge never removes or rewrites what the project wrote.
+        unchanged-because: COR-031's points D1 to D4 are now headings carrying the same labels, word for word, and its paragraph on the two deferred origins moves into its opening, unchanged. The actor's need to keep a capability in its own repository, where sync never overwrites it and uninstall never deletes it, rests on D1 and D4, which read as before, so it holds.
 ACT-developer:
   name: Developer
   status: active
@@ -130,9 +130,9 @@ ACT-methodology-maintainer:
           - ADR-059
           - PRJ-002
       revalidated:
-        at: 2026-10-13T20:06:24Z
+        at: 2026-10-13T21:44:53Z
         outcome: unchanged
-        unchanged-because: ADR-059's points are now headings carrying the same numbers, word for word. Its definition of the source repository reads as before, so the maintainer's need to develop the methodology where no sync copies over their work stands.
+        unchanged-because: ADR-059 and PRJ-002 now write their points as headings carrying the same numbers, word for word. PRJ-002's paragraph on what it leaves to the release-flow spec sits under a heading of its own, unchanged. The source repository and the release policy read as before, so the maintainer's needs to develop the methodology where no sync copies over their work, and to release the backbone, stand.
 ACT-operator:
   name: Operator
   status: active
@@ -149,6 +149,10 @@ ACT-operator:
         record:
           - COR-028
           - COR-039
+      revalidated:
+        at: 2026-10-13T21:44:55Z
+        outcome: unchanged
+        unchanged-because: COR-028 and COR-039 now write their points as headings carrying the same numbers, word for word. COR-028's closing sentence, that the model is authoritative, and COR-039's paragraph on where its realization is recorded move into each record's opening, unchanged. The operator's needs, to know where confinement does not hold and to be asked before an agent changes another repository, rest on the same text, so the actor holds.
 ---
 
 # Actors
