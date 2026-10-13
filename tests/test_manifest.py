@@ -436,6 +436,29 @@ def test_the_completion_rewrites_its_line_or_adds_it_after_the_target(tmp_path: 
     )
 
 
+@pytest.mark.parametrize(
+    ("line", "written"),
+    [
+        ("completed_version:\n", "completed_version: 2.0.0\n"),
+        ("completed_version:   \n", "completed_version: 2.0.0\n"),
+        ("completed_version: # note\n", "completed_version: 2.0.0 # note\n"),
+        ("completed_version: 1.0.0 # note\n", "completed_version: 2.0.0 # note\n"),
+        ('completed_version: "1.0.0"\n', "completed_version: 2.0.0\n"),
+    ],
+)
+def test_a_state_line_is_rewritten_whole_whatever_value_it_held(
+    tmp_path: Path, line: str, written: str
+) -> None:
+    """An empty value, or a comment where the value was, still yields `key: value`,
+    so the manifest stays YAML and the value reads back as the version written."""
+    text = f"schema_version: 1\nbackbone_version: 2.0.0\n{line}components: []\n"
+    assert set_state_line(text, "completed_version", "2.0.0") == text.replace(line, written)
+    _write_raw(tmp_path, text)
+    record_completed_version(tmp_path, "2.0.0")
+    loaded = read_backbone_manifest(tmp_path)
+    assert loaded is not None and loaded.completed_version == "2.0.0"
+
+
 def test_set_state_line_appends_where_no_anchor_line_exists() -> None:
     assert set_state_line("a: 1", "completed_version", "1.0.0", after="backbone_version") == (
         "a: 1\ncompleted_version: 1.0.0\n"

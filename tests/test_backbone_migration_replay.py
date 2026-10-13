@@ -241,23 +241,28 @@ def test_the_bundle_entry_is_dropped_whole_and_the_entry_after_it_stays(
 def _run_at_a_terminal(script: Path, root: Path, answer: str) -> tuple[int, str]:
     """Run *script* with a terminal on its standard input and output, answering its
     question with *answer*."""
-    pid, fd = pty.fork()
-    if pid == 0:  # the child: become the migration
-        os.chdir(root)
-        os.execvpe("bash", ["bash", str(script)], {**os.environ, "ROOT": str(root)})
-    os.write(fd, f"{answer}\n".encode())
+    controller, terminal = pty.openpty()
+    proc = subprocess.Popen(
+        ["bash", str(script)],
+        env={**os.environ, "ROOT": str(root)},
+        cwd=root,
+        stdin=terminal,
+        stdout=terminal,
+        stderr=terminal,
+    )
+    os.close(terminal)  # the child holds the terminal now
+    os.write(controller, f"{answer}\n".encode())
     chunks: list[bytes] = []
     while True:
         try:
-            data = os.read(fd, 4096)
+            data = os.read(controller, 4096)
         except OSError:  # the child closed the terminal
             break
         if not data:
             break
         chunks.append(data)
-    _, status = os.waitpid(pid, 0)
-    os.close(fd)
-    return os.waitstatus_to_exitcode(status), b"".join(chunks).decode("utf-8", "replace")
+    os.close(controller)
+    return proc.wait(timeout=30), b"".join(chunks).decode("utf-8", "replace")
 
 
 @pytest.mark.parametrize(("answer", "removed"), [("y", True), ("n", False)])

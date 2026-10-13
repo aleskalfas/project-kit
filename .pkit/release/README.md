@@ -363,8 +363,9 @@ A version transition may run every backbone migration again, over a project
 whose migration history is unknown (COR-010; the lifecycle README, "The
 replay"). A backbone migration that adds a missing default then restores one
 the project removed after the migration first ran. COR-010 has the release's
-notes say so. Before `apply`, the release step checks that a pending changeset
-says it, naming the default, in each of two cases:
+notes say so. No command checks it: before `apply`, whoever runs the release
+checks that a pending changeset says it, naming the default, in each of two
+cases:
 
 - the release ships a backbone migration that adds a missing default
 - the release ships a change that replays the backbone migrations, as the

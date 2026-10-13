@@ -165,7 +165,7 @@ An adapter's manifest sits at `.pkit/adapters/<name>/project/manifest.yaml`, and
 
 - **Who writes it:** first install, for each adapter it copies, which it registers at the same time. A transition of the backbone writes it too:
   - an adapter with no manifest is recorded at the version the target ships, and runs none of its migrations
-  - an adapter with a manifest is recorded at that version once the migrations in its window have run
+  - an adapter with a manifest is recorded at that version once the migrations in its window have run. A manifest that records a newer version than the target ships stays as it is: a transition never moves a recorded version down.
   - an adapter the target adds is registered after the copy, and recorded at the version it ships
 - **A registered adapter with no manifest** reads as at the backbone. Every project's adapter is in that state until its first transition under the release that writes the manifest.
 

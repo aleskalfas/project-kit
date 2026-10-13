@@ -211,7 +211,7 @@ def run_upgrade(
 
     # The lower bound of the backbone's migration window: the last completed
     # transition, or none, which replays every backbone migration once.
-    completed = _as_version(manifest.completed_version) if manifest is not None else None
+    completed = as_recorded_version(manifest.completed_version) if manifest is not None else None
     _report_transition(manifest, completed, target_version, dry_run)
 
     # The target is recorded before anything else is written (ADR-065 point 4,
@@ -231,7 +231,12 @@ def run_upgrade(
             "(the target)"
         )
         run_sync(target_root, dry_run=False)
-        register_adapters(target_root)
+        if register_adapters(target_root):
+            # The render after propagation reads the registry, so it is rendered
+            # again with the adapters just registered (ADR-065 point 4, step 3).
+            from project_kit import visibility
+
+            click.echo(visibility.render_runtime_ignore(target_root))
         reread = read_backbone_manifest(target_root)
         components = reread.components if reread is not None else []
 
@@ -271,18 +276,27 @@ def run_upgrade(
 
 @dataclass(frozen=True)
 class ComponentMove:
-    """One component a version transition would move: its recorded version, None
-    when it records none, and the version the running pkit's bundle ships."""
+    """One component whose record is not the version the running pkit's bundle ships.
+
+    *recorded* is None when it records no version. Most are moves a transition
+    makes. One *ahead* of the bundle is not: a transition never moves a recorded
+    state down (ADR-065 point 7), and refuses it once #1461 builds that refusal.
+    """
 
     kind: str
     name: str
     recorded: str | None
     bundled: str
 
+    @property
+    def ahead(self) -> bool:
+        """The record is newer than the version the bundle ships."""
+        return self.recorded is not None and not _moves_up(self.recorded, self.bundled)
 
-def _as_version(text: str | None) -> str | None:
+
+def as_recorded_version(text: str | None) -> str | None:
     """A recorded version as the `X.Y.Z` the migration window reads, or None when
-    it is missing or no version (ADR-065 point 2)."""
+    it is missing or no version, which reads as no record (ADR-065 point 2)."""
     if not text:
         return None
     try:
@@ -300,14 +314,15 @@ def _bundled_adapter_package(source_kit: Path, name: str) -> Path:
 def component_moves(
     target_root: Path, source_kit: Path, manifest: BackboneManifest
 ) -> list[ComponentMove]:
-    """Each component a transition to the running pkit's release would move (ADR-065 point 2).
+    """Each component whose record is not the version the running pkit's bundle
+    ships (ADR-065 point 2).
 
-    A registered adapter the bundle ships, whose manifest does not record the
-    version the bundle ships, a missing manifest included. A registered
-    `kit-shipped` capability the bundle ships, whose record (its manifest, else
-    its installed `package.yaml`) is not the version the bundle ships. An
-    incubated, externally-sourced or no-longer-shipped component moves by its own
-    course, and is not listed. Read-only.
+    A registered adapter the bundle ships, whose manifest records another
+    version, or none, a missing manifest included. A registered `kit-shipped`
+    capability the bundle ships, whose record (its manifest, else its installed
+    `package.yaml`) is another version, or none. An incubated, externally-sourced
+    or no-longer-shipped component moves by its own course, and is not listed.
+    A bundled version that is no version moves nothing. Read-only.
     """
     from project_kit import capabilities as caps
 
@@ -315,7 +330,7 @@ def component_moves(
     for entry in manifest.components:
         if entry.kind == "adapter":
             package = read_component_package(_bundled_adapter_package(source_kit, entry.name))
-            if package is None:
+            if package is None or as_recorded_version(package[0]) is None:
                 continue
             recorded_manifest = _read_adapter_manifest(target_root, entry)
             recorded = recorded_manifest.version if recorded_manifest is not None else None
@@ -323,7 +338,7 @@ def component_moves(
                 moves.append(ComponentMove("adapter", entry.name, recorded, package[0]))
         elif entry.kind == "capability" and entry.origin == ORIGIN_KIT_SHIPPED:
             source = caps.find_capability_in_source(source_kit, entry.name)
-            if source is None:
+            if source is None or as_recorded_version(source.package.version) is None:
                 continue
             recorded = caps.read_capability_record(target_root, entry.name).version
             if recorded != source.package.version:
@@ -331,6 +346,16 @@ def component_moves(
                     ComponentMove("capability", entry.name, recorded, source.package.version)
                 )
     return moves
+
+
+def _moves_up(recorded: str | None, bundled: str) -> bool:
+    """Whether a component recorded at *recorded* moves to *bundled*: it records no
+    version, or an older one. A bundled version that is no version moves nothing."""
+    if as_recorded_version(bundled) is None:
+        return False
+    if as_recorded_version(recorded) is None:
+        return True
+    return Version(recorded or "") < Version(bundled)
 
 
 def is_current(
@@ -355,7 +380,7 @@ def _read_adapter_manifest(
     version records nothing, as a missing one (ADR-065 point 2).
     """
     recorded = read_component_manifest(target_root / entry.manifest)
-    if recorded is None or _as_version(recorded.version) is None:
+    if recorded is None or as_recorded_version(recorded.version) is None:
         return None
     return recorded
 
@@ -370,7 +395,7 @@ def _report_transition(
     backbone migrations run from, the replay named (ADR-065 point 5)."""
     if manifest is None:
         origin = "no .pkit/manifest.yaml"
-    elif _as_version(manifest.backbone_version) is None:
+    elif as_recorded_version(manifest.backbone_version) is None:
         origin = f"{manifest.backbone_version!r}, which is no version"
     else:
         origin = manifest.backbone_version
@@ -1249,8 +1274,8 @@ def _run_component_migrations(
     ran = 0
     for entry in eligible:
         package = read_component_package(_bundled_adapter_package(source_kit, entry.name))
-        if package is None:
-            # The bundle no longer ships it: no version to move it to.
+        if package is None or as_recorded_version(package[0]) is None:
+            # The bundle no longer ships it, or names no version: nothing to move it to.
             continue
         bundled = package[0]
         installed_manifest_path = target_root / entry.manifest
@@ -1264,6 +1289,7 @@ def _run_component_migrations(
                     target_root,
                     entry.name,
                     target_root / ".pkit" / "adapters" / entry.name / "package.yaml",
+                    manifest_rel=entry.manifest,
                 )
             click.echo(
                 f"  {verb:<12} {label} at {bundled} (no record before: it reads as at "
@@ -1272,6 +1298,14 @@ def _run_component_migrations(
             ran += 1
             continue
 
+        if not _moves_up(installed_manifest.version, bundled):
+            if installed_manifest.version != bundled:
+                # Never moved down (ADR-065 point 7); #1461 refuses the transition.
+                click.echo(
+                    f"  {'kept':<12} {label} at {installed_manifest.version}: the bundle "
+                    f"ships {bundled}, older, and a recorded version never moves down"
+                )
+            continue
         source_dir = target_root / ".pkit" / "adapters" / entry.name
         scripts = pending_migration_scripts(
             source_dir / "migrations", installed_manifest.version, bundled
@@ -1286,12 +1320,10 @@ def _run_component_migrations(
                     dry_run=True,
                     label_rel_to=source_dir,
                 )
-            if installed_manifest.version != bundled:
-                click.echo(
-                    f"  {'would record':<12} {label} at {bundled} "
-                    f"(from {installed_manifest.version})"
-                )
-                ran += 1
+            click.echo(
+                f"  {'would record':<12} {label} at {bundled} (from {installed_manifest.version})"
+            )
+            ran += 1
             continue
 
         if scripts:
@@ -1300,13 +1332,10 @@ def _run_component_migrations(
                 f"({installed_manifest.version} -> v{bundled})"
             )
             execute_migration_scripts(scripts, target_root, label=label, label_rel_to=source_dir)
-        if installed_manifest.version != bundled:
-            prior = installed_manifest.version
-            _restamp_component_manifest_version(
-                installed_manifest_path, installed_manifest, bundled
-            )
-            click.echo(f"  {'recorded':<12} {label} at {bundled} (from {prior})")
-            ran += 1
+        prior = installed_manifest.version
+        _restamp_component_manifest_version(installed_manifest_path, installed_manifest, bundled)
+        click.echo(f"  {'recorded':<12} {label} at {bundled} (from {prior})")
+        ran += 1
 
     if ran == 0:
         click.echo(f"  no component migrations to run (0 of {len(eligible)} adapter component(s))")

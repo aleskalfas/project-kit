@@ -15,6 +15,6 @@ body: >
   `.pkit/project/config.yaml` where old journals are still on disk, and the
   untracking of a runtime-local file declared ignored that the project put back
   into git. `pkit init` records the same two states, `pkit status` shows an
-  upgrade left unfinished and each component an upgrade would move, and a
-  missing or corrupt `.pkit/manifest.yaml` is now written by `pkit upgrade`
-  rather than `pkit sync`.
+  upgrade left unfinished and each component an upgrade would move, and
+  `pkit upgrade` writes a missing or corrupt `.pkit/manifest.yaml` at its
+  version, which `pkit pin`, `pkit validate` and `pkit status` now name for it.

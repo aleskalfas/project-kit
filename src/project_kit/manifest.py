@@ -149,26 +149,28 @@ def read_backbone_manifest(target_root: Path) -> BackboneManifest | None:
 
 
 def _state_line(key: str) -> re.Pattern[str]:
-    """The pattern of one recorded state's line: the key at column 0, its value."""
-    return re.compile(rf"(?m)^({re.escape(key)}:[ \t]*)(\S*)")
-
-
-BACKBONE_VERSION_LINE_RE = _state_line(BACKBONE_VERSION_KEY)
-COMPLETED_VERSION_LINE_RE = _state_line(COMPLETED_VERSION_KEY)
+    """The pattern of one recorded state's line: the key at column 0, the space
+    after its colon, and its value up to the end of the line or a comment. The
+    value may be empty."""
+    return re.compile(rf"(?m)^{re.escape(key)}:[ \t]*([^\s#]*)")
 
 
 def set_state_line(text: str, key: str, version: str, *, after: str | None = None) -> str:
     """*text* with the top-level *key*'s line set to *version*, every other byte kept.
 
-    The value of an existing line is replaced in place. A missing line is added
-    after the line of the key *after*, or at the end of the text when *after* is
-    None or has no line. Neither a comment nor the order of the other keys
-    moves, since nothing is re-serialised (ADR-065 point 3).
+    An existing line is rewritten in place as `<key>: <version>`, whatever value
+    it held, an empty one included, and a comment after the value stays on the
+    line, a space before it. A missing line is added after the line of the key
+    *after*, or at the end of the text when *after* is None or has no line.
+    Neither the order of the other keys nor their comments move, since nothing
+    is re-serialised (ADR-065 point 3).
     """
     pattern = _state_line(key)
     match = pattern.search(text)
     if match is not None:
-        return f"{text[: match.start(2)]}{version}{text[match.end(2) :]}"
+        rest = text[match.end() :]
+        line = f"{key}: {version}" + (" " if rest.startswith("#") else "")
+        return text[: match.start()] + line + rest
     line = f"{key}: {version}\n"
     anchor = _state_line(after).search(text) if after is not None else None
     if anchor is not None:
@@ -364,10 +366,13 @@ def read_component_package(package_yaml: Path) -> tuple[str, str] | None:
     return version, str(requires) if requires is not None else ""
 
 
-def record_adapter_version(target_root: Path, name: str, package_yaml: Path) -> str | None:
+def record_adapter_version(
+    target_root: Path, name: str, package_yaml: Path, *, manifest_rel: str | None = None
+) -> str | None:
     """Record adapter *name* at the version its *package_yaml* ships (ADR-065 point 2).
 
-    Writes the adapter's manifest under its ``project/``, keeping any
+    Writes the adapter's manifest at *manifest_rel*, the path its registry entry
+    names, by default the one under its ``project/``, keeping any
     ``backend_state`` one already there holds. Returns the version recorded, or
     None when *package_yaml* names none, and then writes nothing.
     """
@@ -375,7 +380,7 @@ def record_adapter_version(target_root: Path, name: str, package_yaml: Path) -> 
     if package is None:
         return None
     version, requires_backbone = package
-    path = target_root / adapter_manifest_rel(name)
+    path = target_root / (manifest_rel or adapter_manifest_rel(name))
     prior = read_component_manifest(path) if path.is_file() else None
     write_component_manifest(
         path,

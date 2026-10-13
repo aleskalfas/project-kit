@@ -4090,7 +4090,7 @@ def pin(version: str | None) -> None:
     (a single leading `v` is stripped). Branch, commit-sha, and pre-release /
     build-metadata pins are refused: the router can only route a bare `v<semver>`
     tag, so those are deferred. Both forms require `.pkit/manifest.yaml` (the
-    project's recorded content version); run `pkit sync` first if it is absent.
+    project's recorded content version); if it is absent, `pkit upgrade` writes it.
 
     With no argument, freezes the project at its current CONTENT version
     (`.pkit/manifest.yaml`'s `backbone_version`) — the common case: lock this

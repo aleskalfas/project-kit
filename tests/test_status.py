@@ -234,6 +234,8 @@ def test_status_shows_no_transition_line_when_complete_and_current(installed_tar
     ("completion", "shown"),
     [
         ("", "incomplete — no completion is recorded, so `pkit upgrade` runs every"),
+        # A completion that is no version reads as none, as upgrade reads it.
+        ("completed_version: garbage\n", "incomplete — no completion is recorded"),
         ("completed_version: 0.1.0\n", "incomplete — completed_version is 0.1.0;"),
     ],
 )
@@ -241,7 +243,8 @@ def test_status_shows_an_incomplete_transition_beside_the_backbone_line(
     installed_target: Path, completion: str, shown: str
 ) -> None:
     """A missing completion, or one behind the target, reads as incomplete, and the
-    line names `pkit upgrade`, which finishes it (ADR-065 point 8)."""
+    line names `pkit upgrade`, which finishes it (ADR-065 point 8). The backbone
+    line then calls its version the target, not up to date."""
     import re
 
     manifest = installed_target / ".pkit" / "manifest.yaml"
@@ -252,6 +255,39 @@ def test_status_shows_an_incomplete_transition_beside_the_backbone_line(
     result = CliRunner().invoke(status, [])
     assert result.exit_code == 0, result.output
     assert f"Transition:            {shown}" in result.output
+    assert "(the target of an incomplete transition)" in result.output
+    assert "up to date" not in result.output
+
+
+def test_status_says_a_record_newer_than_the_bundle_is_never_moved_down(
+    installed_target: Path,
+) -> None:
+    import re
+
+    record = installed_target / ".pkit" / "adapters" / "claude-code" / "project" / "manifest.yaml"
+    record.write_text(
+        re.sub(r"(?m)^  version: .*$", "  version: 99.0.0", record.read_text(encoding="utf-8")),
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    assert "adapter claude-code: 99.0.0, newer than " in result.output
+    assert "never moved down" in result.output
+
+
+def test_status_names_upgrade_for_an_empty_backbone_version(installed_target: Path) -> None:
+    import re
+
+    manifest = installed_target / ".pkit" / "manifest.yaml"
+    manifest.write_text(
+        re.sub(r"(?m)^backbone_version:.*$", "backbone_version:", manifest.read_text()),
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    assert "unknown (`backbone_version` is empty — `pkit upgrade` records its version)" in (
+        result.output
+    )
 
 
 def test_status_lists_each_component_a_transition_would_move(installed_target: Path) -> None:
@@ -261,7 +297,7 @@ def test_status_lists_each_component_a_transition_would_move(installed_target: P
     result = CliRunner().invoke(status, [])
     assert result.exit_code == 0, result.output
     assert "A transition moves:    adapter claude-code: no record -> " in result.output
-    assert "`pkit upgrade` moves them)" in result.output
+    assert "`pkit upgrade` moves each one up)" in result.output
 
 
 def test_status_shows_no_transition_line_in_the_methodology_source(

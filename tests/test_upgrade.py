@@ -2182,19 +2182,88 @@ def test_the_early_return_needs_both_states_and_every_component_at_the_target(
     ]
 
 
-@pytest.mark.parametrize("state", ["no manifest", "no version"])
+def test_a_record_newer_than_the_bundle_is_never_moved_down(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A transition never moves a recorded state down (ADR-065 point 7): an adapter
+    recorded ahead of the bundle stays where it is. It is not at its bundled
+    version, so the early return does not apply (point 2), and the move is listed
+    as ahead."""
+    record = installed_target / ".pkit" / "adapters" / "claude-code" / "project" / "manifest.yaml"
+    record.write_text(
+        re.sub(r"(?m)^  version: .*$", "  version: 99.0.0", record.read_text(encoding="utf-8")),
+        encoding="utf-8",
+    )
+    _drop_completion(installed_target)
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert "kept         adapter 'claude-code' at 99.0.0" in capsys.readouterr().out
+    recorded = manifest.read_component_manifest(record)
+    assert recorded is not None and recorded.version == "99.0.0"
+    state = manifest.read_backbone_manifest(installed_target)
+    assert state is not None
+    source = install.find_source_kit()
+    moves = upgrade.component_moves(installed_target, source, state)
+    assert [(m.name, m.recorded, m.ahead) for m in moves] == [("claude-code", "99.0.0", True)]
+    assert not upgrade.is_current(installed_target, source, state, _this_pkit())
+
+
+def test_an_adapter_registered_after_the_copy_is_rendered_into_the_ignore_file(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The render after propagation reads the registry, so an adapter the transition
+    registers there is rendered again (ADR-065 point 4, step 3)."""
+    from project_kit import visibility
+
+    events: list[str] = []
+    real_render = visibility.render_runtime_ignore
+
+    def render(*args: Any, **kwargs: Any) -> str:
+        events.append("render")
+        return real_render(*args, **kwargs)
+
+    def register(_root: Path) -> list[str]:
+        events.append("register")
+        return ["harness"]
+
+    monkeypatch.setattr(visibility, "render_runtime_ignore", render)
+    monkeypatch.setattr(upgrade, "register_adapters", register)
+    _drop_completion(installed_target)
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert events[-2:] == ["register", "render"]
+
+
+@pytest.mark.parametrize("state", ["no manifest", "no version", "empty", "empty completion"])
 def test_upgrade_writes_a_missing_or_corrupt_manifest_at_its_target_and_replays(
     installed_target: Path, capsys: pytest.CaptureFixture[str], state: str
 ) -> None:
-    """No manifest, or a `backbone_version` that is no version: upgrade writes the
-    manifest at its target, as first install does, registers the adapters, and
-    replays every backbone migration once (ADR-065 points 2 and 5)."""
+    """No manifest, a `backbone_version` that is no version or empty, or an empty
+    completion: upgrade writes the manifest at its target, as first install does,
+    registers the adapters, and replays every backbone migration once (ADR-065
+    points 2 and 5). Each line it writes keeps the manifest YAML."""
     path = installed_target / ".pkit" / "manifest.yaml"
+    text = path.read_text(encoding="utf-8")
     if state == "no manifest":
         path.unlink()
-    else:
+    elif state == "no version":
         _drop_completion(installed_target)
         manifest.record_backbone_target(installed_target, "not-a-version")
+    elif state == "empty":
+        path.write_text(
+            re.sub(
+                r"(?m)^completed_version:.*\n",
+                "",
+                re.sub(r"(?m)^backbone_version:.*$", "backbone_version:", text),
+            ),
+            encoding="utf-8",
+        )
+    else:
+        path.write_text(
+            re.sub(r"(?m)^completed_version:.*$", "completed_version:", text), encoding="utf-8"
+        )
 
     upgrade.run_upgrade(installed_target, pin=False)
 
@@ -2202,7 +2271,7 @@ def test_upgrade_writes_a_missing_or_corrupt_manifest_at_its_target_and_replays(
     if state == "no manifest":
         assert "Upgrading backbone: no .pkit/manifest.yaml ->" in out
         assert "registered   adapter 'claude-code'" in out
-    else:
+    elif state == "no version":
         assert "'not-a-version', which is no version" in out
     assert "No completed transition is recorded" in out
     assert _states(installed_target) == (_this_pkit(), _this_pkit())
