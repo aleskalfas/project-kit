@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import click
 import pytest
@@ -748,6 +749,171 @@ def test_sync_dry_run_previews_downgrade_refusal_and_writes_nothing(
     assert "refused" in out
     assert "would refresh" not in out
     assert skill.read_text(encoding="utf-8") == before
+
+
+# --- the capability's record, under its project/ (ADR-065 point 2) ---
+
+
+def _record(target: Path, name: str, *, at_root: bool = False) -> Path:
+    cap = target / ".pkit" / "capabilities" / name
+    return cap / "manifest.yaml" if at_root else cap / "project" / "manifest.yaml"
+
+
+def _installed_with_skip(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, name: str
+) -> Path:
+    """Install `name` at 0.1.0 with its skill skipped, then point sync at a 0.2.0 source
+    that still ships the skill. Returns the skill's path in the project."""
+    from project_kit import capabilities as caps
+
+    install_source = tmp_path / "install-source" / ".pkit"
+    install_source.mkdir(parents=True)
+    _stage_capability_in_source(install_source, name, version="0.1.0")
+    source = caps.find_capability_in_source(install_source, name)
+    assert source is not None
+    caps.install_capability(
+        installed_target, source, skipped_artifacts=(("skill", f"{name}-skill"),)
+    )
+
+    sync_source = tmp_path / "sync-source" / ".pkit"
+    sync_source.mkdir(parents=True)
+    _stage_capability_in_source(sync_source, name, version="0.2.0")
+    monkeypatch.setattr(install, "find_source_kit", lambda: sync_source)
+    monkeypatch.setattr(sync.install, "find_source_kit", lambda: sync_source)
+    return installed_target / ".pkit" / "capabilities" / name / "skills" / f"{name}-skill.md"
+
+
+def test_sync_keeps_an_artefact_the_project_skipped(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The skip is read back from the record, so the refresh leaves the skill out again."""
+    from project_kit.manifest import read_component_manifest
+
+    skill = _installed_with_skip(installed_target, monkeypatch, tmp_path, "evidence")
+    assert not skill.exists()
+
+    sync.run_sync(installed_target)
+    sync.run_sync(installed_target)
+
+    assert not skill.exists()
+    record = read_component_manifest(_record(installed_target, "evidence"))
+    assert record is not None
+    assert record.version == "0.2.0"
+    assert record.backend_state["skipped"] == [{"kind": "skill", "name": "evidence-skill"}]
+
+
+def test_sync_moves_a_root_record_under_project_with_its_state(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A record an older release left at the root survives the refresh, moved under
+    project/, with the registry pointing at it and its state and skips kept."""
+    from project_kit.manifest import read_component_manifest, set_component_manifest_path
+
+    skill = _installed_with_skip(installed_target, monkeypatch, tmp_path, "evidence")
+    root = _record(installed_target, "evidence", at_root=True)
+    _record(installed_target, "evidence").rename(root)
+    with root.open("a", encoding="utf-8") as f:
+        f.write("  project_board:\n    uuid: PVT_kwDOAA12345\n")
+    set_component_manifest_path(
+        installed_target, "capability", "evidence", ".pkit/capabilities/evidence/manifest.yaml"
+    )
+
+    sync.run_sync(installed_target)
+
+    assert not root.exists()
+    record = read_component_manifest(_record(installed_target, "evidence"))
+    assert record is not None
+    assert record.version == "0.2.0"
+    assert record.backend_state == {
+        "skipped": [{"kind": "skill", "name": "evidence-skill"}],
+        "project_board": {"uuid": "PVT_kwDOAA12345"},
+    }
+    assert not skill.exists()
+    backbone = read_backbone_manifest(installed_target)
+    assert backbone is not None
+    assert {c.name: c.manifest for c in backbone.components}["evidence"] == (
+        ".pkit/capabilities/evidence/project/manifest.yaml"
+    )
+
+
+def test_sync_reads_every_record_before_it_copies_anything(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from project_kit import capabilities as caps
+
+    install_source = tmp_path / "install-source" / ".pkit"
+    install_source.mkdir(parents=True)
+    for name in ("audit", "evidence"):
+        _stage_capability_in_source(install_source, name, version="0.1.0")
+        source = caps.find_capability_in_source(install_source, name)
+        assert source is not None
+        caps.install_capability(installed_target, source)
+    sync_source = tmp_path / "sync-source" / ".pkit"
+    sync_source.mkdir(parents=True)
+    for name in ("audit", "evidence"):
+        _stage_capability_in_source(sync_source, name, version="0.2.0")
+    monkeypatch.setattr(install, "find_source_kit", lambda: sync_source)
+    monkeypatch.setattr(sync.install, "find_source_kit", lambda: sync_source)
+
+    events: list[str] = []
+    read, copy_area, copy_capability = (
+        caps.read_capability_record,
+        install._install_area,
+        caps._copy_capability_tree,
+    )
+
+    def _read(target_root: Path, name: str) -> caps.CapabilityRecord:
+        events.append(f"read {name}")
+        return read(target_root, name)
+
+    def _copy_area(*args: Any, **kwargs: Any) -> None:
+        events.append("copy")
+        copy_area(*args, **kwargs)
+
+    def _copy_capability(*args: Any) -> None:
+        events.append("copy")
+        copy_capability(*args)
+
+    monkeypatch.setattr(caps, "read_capability_record", _read)
+    monkeypatch.setattr(install, "_install_area", _copy_area)
+    monkeypatch.setattr(caps, "_copy_capability_tree", _copy_capability)
+
+    sync.run_sync(installed_target)
+
+    assert {"read audit", "read evidence"} <= set(events)
+    first_copy = events.index("copy")
+    assert all(event == "copy" for event in events[first_copy:]), events
+
+
+def test_sync_reads_the_installed_package_before_the_copy_replaces_it(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """With no record, the version falls back to the installed package.yaml, read before
+    the copy: the migrations between it and the source's version run."""
+    from project_kit import capabilities as caps
+
+    install_source = tmp_path / "install-source" / ".pkit"
+    install_source.mkdir(parents=True)
+    _stage_capability_in_source(install_source, "evidence", version="0.1.0")
+    source = caps.find_capability_in_source(install_source, "evidence")
+    assert source is not None
+    caps.install_capability(installed_target, source)
+    _record(installed_target, "evidence").unlink()
+
+    sync_source = tmp_path / "sync-source" / ".pkit"
+    sync_source.mkdir(parents=True)
+    cap_dir = _stage_capability_in_source(sync_source, "evidence", version="0.2.0")
+    script = cap_dir / "migrations" / "0.2.0" / "001-mark.sh"
+    script.parent.mkdir(parents=True)
+    script.write_text('#!/usr/bin/env bash\nset -euo pipefail\ntouch "$ROOT/migrated"\n')
+    script.chmod(0o755)
+    monkeypatch.setattr(install, "find_source_kit", lambda: sync_source)
+    monkeypatch.setattr(sync.install, "find_source_kit", lambda: sync_source)
+
+    sync.run_sync(installed_target)
+
+    assert (installed_target / "migrated").is_file()
+    assert caps.get_installed_capability_version(installed_target, "evidence") == "0.2.0"
 
 
 # --- incubated (in-repo) capabilities skip source-reconciliation (COR-031) ---

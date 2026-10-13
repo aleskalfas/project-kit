@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-13T12:45:40Z
+      at: 2026-10-13T18:03:23Z
       outcome: unchanged
-      unchanged-because: "The agents README gains a section on the core rule-set reviewer. The CLI reference, the lifecycle README and the schemas README say the rule-set reading commands give whether each declared check is there and the rules a pin holds back. The map gives each area's role and link: it says core ships universal reviewers, naming critic and architect, and calls the CLI reference the command-line surface, naming some of its commands. No role or link moves, so the map holds."
+      unchanged-because: "The lifecycle README now says that a capability's manifest sits under its project folder, how a manifest left at the root moves there, and which readers read which manifest. The CLI reference's sync entry says what sync does with a capability's manifest, and its validators table no longer says capabilities stamp no manifest. The map gives each area's role and link: it calls the lifecycle README the home of the manifest schema and the CLI reference the command-line surface. No role or link moves, so the map holds."
 ---
 
 # project-kit

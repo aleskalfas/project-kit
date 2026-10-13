@@ -9,9 +9,12 @@ from project_kit.manifest import (
     ORIGIN_KIT_SHIPPED,
     BackboneManifest,
     ComponentRegistryEntry,
+    capability_manifest_rel,
     read_backbone_manifest,
     read_capability_origin,
+    recorded_capability_manifest,
     set_capability_origin,
+    set_component_manifest_path,
     write_backbone_manifest,
 )
 
@@ -260,3 +263,59 @@ def test_write_uses_block_style_not_flow_style(tmp_path: Path) -> None:
     # Block style: sequences use `- ` prefix on their own lines, not `[...]`.
     assert "  - kind: capability" in contents
     assert "[" not in contents.splitlines()[3]  # the components line itself isn't flow-style
+
+
+# --- a capability's manifest, under its project/ (ADR-065 point 2) -------------
+
+
+def test_a_capabilitys_manifest_is_registered_under_its_project() -> None:
+    assert capability_manifest_rel("evidence") == (
+        ".pkit/capabilities/evidence/project/manifest.yaml"
+    )
+
+
+def test_set_component_manifest_path_rewrites_only_that_entrys_path(tmp_path: Path) -> None:
+    (tmp_path / ".pkit").mkdir()
+    write_backbone_manifest(
+        tmp_path,
+        BackboneManifest(
+            backbone_version="0.9.0",
+            components=[
+                ComponentRegistryEntry(
+                    kind="capability",
+                    name="evidence",
+                    manifest=".pkit/capabilities/evidence/manifest.yaml",
+                    origin=ORIGIN_INCUBATED_IN_REPO,
+                ),
+                ComponentRegistryEntry(
+                    kind="capability",
+                    name="other",
+                    manifest=".pkit/capabilities/other/manifest.yaml",
+                ),
+            ],
+        ),
+    )
+    moved = capability_manifest_rel("evidence")
+
+    assert set_component_manifest_path(tmp_path, "capability", "evidence", moved) is True
+    assert set_component_manifest_path(tmp_path, "capability", "evidence", moved) is False
+    assert set_component_manifest_path(tmp_path, "capability", "nope", moved) is False
+
+    loaded = read_backbone_manifest(tmp_path)
+    assert loaded is not None
+    assert [(c.name, c.manifest, c.origin) for c in loaded.components] == [
+        ("evidence", moved, ORIGIN_INCUBATED_IN_REPO),
+        ("other", ".pkit/capabilities/other/manifest.yaml", ORIGIN_KIT_SHIPPED),
+    ]
+
+
+def test_the_root_manifest_is_read_first_then_the_one_under_project(tmp_path: Path) -> None:
+    cap = tmp_path / ".pkit" / "capabilities" / "evidence"
+    (cap / "project").mkdir(parents=True)
+    assert recorded_capability_manifest(tmp_path, "evidence") is None
+
+    (cap / "project" / "manifest.yaml").write_text("schema_version: 1\n", encoding="utf-8")
+    assert recorded_capability_manifest(tmp_path, "evidence") == cap / "project" / "manifest.yaml"
+
+    (cap / "manifest.yaml").write_text("schema_version: 1\n", encoding="utf-8")
+    assert recorded_capability_manifest(tmp_path, "evidence") == cap / "manifest.yaml"
