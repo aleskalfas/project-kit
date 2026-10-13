@@ -498,9 +498,39 @@ def _page(reader: str) -> str:
     return f"---\nreader: {reader}\nkind: signpost\n---\n\n# A page\n"
 
 
+#: Where the spaces' definitions live with the internal root at `tech-docs/`.
+DEFINITIONS = "tech-docs/living-docs/rule-sets"
+
+
+def _definition(name: str, root: str) -> str:
+    """A space's definition: LDOC inherited, scoped to the pages under `root`, so
+    RS-LDOC-003 binds on them and their readers are checked (DEC-001 points 2
+    and 3)."""
+    return (
+        f"---\nrule-set: {name}\nversion: 1.0.0\ninherits: [living-docs:LDOC@1]\n"
+        f"scope: {{paths: [{root}/**], types: [living-docs:page]}}\nrules: {{}}\n---\n\n"
+        f"# The {name.lower()} space's definition\n"
+    )
+
+
+#: Each space's entry point and definition, in living-docs' project configuration.
+SPACES = {
+    "pkit_schema": "living-docs:config",
+    "schema_version": 1,
+    "spaces": {
+        "user": {"entry-point": "docs/guide.md", "definition": f"{DEFINITIONS}/user.md"},
+        "technical": {
+            "entry-point": "tech-docs/README.md",
+            "definition": f"{DEFINITIONS}/technical.md",
+        },
+    },
+}
+
+
 @pytest.fixture
 def docs_project(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRepo:
-    """An adopter with living-docs installed, two separate roots, a page in each."""
+    """An adopter with living-docs installed, two separate roots, a page in each, and
+    each space's definition scoped to its root's pages."""
     repo = make_adopter_repo(capabilities=("living-docs",))
     for script in ("validate.py", "fill-doc-check.py"):
         _to_this_interpreter(repo, LD / "scripts" / script)
@@ -514,6 +544,9 @@ def docs_project(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> Adop
             CONFIG: json.dumps(config, indent=2) + "\n",
             "docs/guide.md": _page("user"),
             "tech-docs/README.md": _page("maintainer"),
+            f"{LD.as_posix()}/project/config.yaml": json.dumps(SPACES, indent=2) + "\n",
+            f"{DEFINITIONS}/user.md": _definition("USER", "docs"),
+            f"{DEFINITIONS}/technical.md": _definition("TECH", "tech-docs"),
         }
     )
     return repo
