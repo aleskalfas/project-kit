@@ -26,7 +26,8 @@ How it reads text follows RS-WRITE-005's *How* (`tech-docs/rule-sets/writing.md`
   a space or a line end. Each block ends one too: a paragraph, a list item, a
   table cell and a front-matter value.
 - Headings, bold labels, code blocks and the quoted example of an item labelled
-  "Breaks the rule" are not read.
+  "Breaks the rule" are not read. Nor is markup: a link's target, a bare URL,
+  an HTML entity and an HTML comment.
 
 `lint_text` reads a given text whole, as a test of stamped template text calls
 it. From the repository root:
@@ -42,6 +43,8 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+import traceback
+from bisect import bisect_right
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
@@ -120,7 +123,7 @@ def entry(data: Mapping[str, Any]) -> Entry:
     if kind not in TYPES:
         raise LintError(f"{where}: `type` is not one of {', '.join(TYPES)}")
     own = {k: v for k, v in data.items() if k not in ("rule", "type", "except")}
-    unknown = sorted(set(own) - _FIELDS[kind])
+    unknown = sorted(str(k) for k in set(own) - _FIELDS[kind])
     if unknown:
         raise LintError(f"{where}: a {kind} entry takes no {', '.join(unknown)}")
     exceptions = data.get("except", [])
@@ -157,7 +160,10 @@ def _check_fields(where: str, kind: str, own: Mapping[str, Any]) -> None:
         if (
             not isinstance(pairs, Mapping)
             or not pairs
-            or not all(isinstance(k, str) and isinstance(v, str) for k, v in pairs.items())
+            or not all(
+                isinstance(k, str) and k.strip() and isinstance(v, str) and v.strip()
+                for k, v in pairs.items()
+            )
         ):
             raise LintError(f"{where}: `replace` maps each word to the word that replaces it")
 
@@ -185,22 +191,33 @@ def load_entries(path: Path = ENTRIES) -> list[Entry]:
 class Block:
     """One block of prose: a paragraph, a list item, a table cell or a front-matter value.
 
-    `text` is the block once its list marker, its bold label, its bold marks and
-    its backticks are removed. Each of its characters carries its offset in the
-    source, and whether it lies in a code span or in quotation marks.
+    `text` is the block once its list marker, its bold label, its bold marks,
+    its backticks and its HTML comments are removed. Each of its characters
+    carries its offset in the source, and whether it lies in a code span, in
+    quotation marks or in markup: a link's target, a bare URL or an HTML
+    entity. A link definition is a block of markup alone, which only a link's
+    check reads.
     """
 
     text: str
     offsets: tuple[int, ...]
     code: tuple[bool, ...]
     quoted: tuple[bool, ...]
+    markup: tuple[bool, ...]
     cell: bool = False
 
-    def view(self, exceptions: frozenset[str]) -> str:
-        """The text with the parts an entry does not read blanked out."""
+    def view(self, exceptions: frozenset[str], *, markup: bool = False) -> str:
+        """The text with markup, and the parts an entry does not read, blanked out.
+
+        With `markup`, the markup is kept, for a link's check to read.
+        """
         hide_code, hide_quotes = "code" in exceptions, "quotes" in exceptions
         return "".join(
-            " " if (hide_code and self.code[i]) or (hide_quotes and self.quoted[i]) else char
+            " "
+            if (not markup and self.markup[i])
+            or (hide_code and self.code[i])
+            or (hide_quotes and self.quoted[i])
+            else char
             for i, char in enumerate(self.text)
         )
 
@@ -214,33 +231,41 @@ class Unit:
     words: int
 
 
-_FENCE = re.compile(r"^\s*(```|~~~)")
+_LIST_MARKER = r"(?:[-*+]|\d{1,9}[.)])"
+_FENCE_OPEN = re.compile(rf"^\s*(?:{_LIST_MARKER}\s+)?(`{{3,}}|~{{3,}})")
+_FENCE_CLOSE = re.compile(r"^\s*(`{3,}|~{3,})\s*$")
 _HEADING = re.compile(r"^\s{0,3}#{1,6}(\s|$)")
-_ITEM = re.compile(r"^(\s*)([-*+]|\d{1,9}[.)])(\s+|$)")
+_SETEXT_UNDERLINE = re.compile(r"^\s{0,3}(=+|-{2,})\s*$")
+_ITEM = re.compile(rf"^(\s*){_LIST_MARKER}(\s+|$)")
 _THEMATIC_BREAK = re.compile(r"^\s{0,3}([-*_])(\s*\1){2,}\s*$")
 _QUOTE_PREFIX = re.compile(r"^\s{0,3}(>\s?)+")
 _TABLE_ROW = re.compile(r"^\s*\|")
-_LINK_DEFINITION = re.compile(r"^\s{0,3}\[[^\]]+\]:\s")
+_LINK_DEFINITION = re.compile(r"^\s{0,3}\[[^\]]+\]:\s*(\S+)")
 _HTML_LINE = re.compile(r"^\s*<[^>]*>\s*$")
 _DELIMITER_CELL = re.compile(r"^\s*:?-+:?\s*$")
-_NO_PROSE = (_HEADING, _THEMATIC_BREAK, _LINK_DEFINITION, _HTML_LINE)
+_NO_PROSE = (_HEADING, _THEMATIC_BREAK, _HTML_LINE)
 _ENDS = ".?!"
 
 
 def markdown_blocks(text: str) -> list[Block]:
     """The blocks of prose of a Markdown text, in order.
 
-    Fenced code, headings, thematic breaks, link definitions, HTML comments and
-    lines that are one HTML tag hold no prose. A blank line ends a block, and a
-    list marker starts one. Each table cell is a block of its own. A line of a
-    block quote is read without its `>` marks.
+    - **No prose:** fenced code, headings (a setext heading's text included),
+      thematic breaks, HTML comments and lines that are one HTML tag. A fence
+      closes on a bare fence of its own character, at least as long as it.
+    - **Blocks:** a blank line ends a block, and a list marker starts one. Each
+      table cell is a block of its own, and so is each link definition.
+    - **Block quotes:** a line is read without its `>` marks, and the text of a
+      block quote is quoted.
     """
     blocks: list[Block] = []
     current: list[tuple[int, int]] = []
+    paragraph = False  # the current block opened as a paragraph, not as a list item
+    quoted = False
 
     def flush() -> None:
         if current:
-            blocks.append(block_of(text, current))
+            blocks.append(block_of(text, current, quoted=quoted))
             current.clear()
 
     fence: str | None = None
@@ -253,14 +278,14 @@ def markdown_blocks(text: str) -> list[Block]:
             in_comment = "-->" not in line
             continue
         if fence is not None:
-            marker = _FENCE.match(line)
-            if marker is not None and marker.group(1) == fence:
+            close = _FENCE_CLOSE.match(line)
+            if close is not None and close.group(1).startswith(fence):
                 fence = None
             continue
-        marker = _FENCE.match(line)
-        if marker is not None:
+        opened = _FENCE_OPEN.match(line)
+        if opened is not None:
             flush()
-            fence = marker.group(1)
+            fence = opened.group(1)
             continue
         if line.lstrip().startswith("<!--"):
             flush()
@@ -269,16 +294,25 @@ def markdown_blocks(text: str) -> list[Block]:
         quote = _QUOTE_PREFIX.match(line)
         column = quote.end() if quote is not None else 0
         rest = line[column:]
+        if current and paragraph and _SETEXT_UNDERLINE.match(rest):
+            current.clear()  # the paragraph was a setext heading's text
+            continue
         if not rest.strip() or any(p.match(rest) for p in _NO_PROSE):
             flush()
         elif _TABLE_ROW.match(rest):
             flush()
             for cell in _table_cells(text, start + column, end):
-                blocks.append(block_of(text, [cell], cell=True))
+                blocks.append(block_of(text, [cell], quoted=quote is not None, cell=True))
+        elif _LINK_DEFINITION.match(rest):
+            flush()
+            blocks.append(block_of(text, [(start + column, end)], definition=True))
         elif (item := _ITEM.match(rest)) is not None:
             flush()
             current.append((start + column + item.end(), end))
+            paragraph, quoted = False, quote is not None
         else:
+            if not current:
+                paragraph, quoted = True, quote is not None
             current.append((start + column + len(rest) - len(rest.lstrip()), end))
     flush()
     return blocks
@@ -313,18 +347,35 @@ def _table_cells(text: str, start: int, end: int) -> list[tuple[int, int]]:
     return cells
 
 
-def block_of(text: str, ranges: Sequence[tuple[int, int]], *, cell: bool = False) -> Block:
+# A link's target with its optional title, from the `(` after the text to the `)`.
+_LINK_TARGET = re.compile(r"\]\([^)\s]+(?:\s+\"[^\"]*\")?\)")
+_BARE_URL = re.compile(r"<?[A-Za-z][A-Za-z0-9+.-]*://[^\s)>\]]+>?")
+_ENTITY = re.compile(r"&(?:#[0-9]+|#[xX][0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);")
+_HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+
+
+def block_of(
+    text: str,
+    ranges: Sequence[tuple[int, int]],
+    *,
+    quoted: bool = False,
+    cell: bool = False,
+    definition: bool = False,
+) -> Block:
     """The block whose lines are `ranges` of `text`, read inline as the How reads it.
 
     - Backticks are removed, and the characters between a pair of equal runs
       are a code span.
+    - An HTML comment is removed. A link's target, a bare URL and an HTML
+      entity outside code are markup, and so is the whole of a link definition.
     - A bold label opening the block is removed: bold text that ends in a
       colon, inside its marks or right after them.
     - Under a label that opens "Breaks the rule", the quoted example is removed:
       from the first quotation mark after the label to the last.
-    - Bold marks outside code are removed.
-    - Text between paired quotation marks outside code is quoted: straight
-      marks paired in turn, and curly marks open and close.
+    - Bold marks outside code and markup are removed.
+    - Text between paired quotation marks outside code and markup is quoted:
+      straight marks paired in turn, and curly marks open and close. With
+      `quoted`, a block quote's, the whole block is.
     """
     chars: list[str] = []
     offsets: list[int] = []
@@ -339,17 +390,29 @@ def block_of(text: str, ranges: Sequence[tuple[int, int]], *, cell: bool = False
     removed = [False] * size
     code = [False] * size
     _mark_code(raw, removed, code)
+    markup = [definition] * size
+    _mark(_HTML_COMMENT, raw, removed, code)
+    for pattern in (_LINK_TARGET, _BARE_URL, _ENTITY):
+        _mark(pattern, raw, markup, code)
     label_end = _mark_label(raw, removed, code)
-    _mark_bold(raw, removed, code)
-    quoted = _quoted(raw, code)
+    _mark_bold(raw, removed, code, markup)
+    marks = [True] * size if quoted else _quoted(raw, code, markup)
     kept = [i for i in range(label_end, size) if not removed[i]]
     return Block(
         text="".join(raw[i] for i in kept),
         offsets=tuple(offsets[i] for i in kept),
         code=tuple(code[i] for i in kept),
-        quoted=tuple(quoted[i] for i in kept),
+        quoted=tuple(marks[i] for i in kept),
+        markup=tuple(markup[i] for i in kept),
         cell=cell,
     )
+
+
+def _mark(pattern: re.Pattern[str], raw: str, flags: list[bool], code: list[bool]) -> None:
+    """Flag each match of `pattern` that opens outside code and outside what is flagged."""
+    for match in pattern.finditer(raw):
+        if not code[match.start()] and not flags[match.start()]:
+            flags[match.start() : match.end()] = [True] * (match.end() - match.start())
 
 
 def _run_length(raw: str, at: int, char: str) -> int:
@@ -410,22 +473,22 @@ def _mark_label(raw: str, removed: list[bool], code: list[bool]) -> int:
     return end
 
 
-def _mark_bold(raw: str, removed: list[bool], code: list[bool]) -> None:
+def _mark_bold(raw: str, removed: list[bool], code: list[bool], markup: list[bool]) -> None:
     i = 0
     while i < len(raw) - 1:
-        if not code[i] and raw[i : i + 2] in ("**", "__"):
+        if not code[i] and not markup[i] and raw[i : i + 2] in ("**", "__"):
             removed[i] = removed[i + 1] = True
             i += 2
         else:
             i += 1
 
 
-def _quoted(raw: str, code: list[bool]) -> list[bool]:
+def _quoted(raw: str, code: list[bool], markup: list[bool]) -> list[bool]:
     quoted = [False] * len(raw)
     straight: int | None = None
     curly: int | None = None
     for i, char in enumerate(raw):
-        if code[i]:
+        if code[i] or markup[i]:
             continue
         if char == '"':
             if straight is None:
@@ -471,24 +534,27 @@ def sentences(block: Block, view: str) -> list[Unit]:
 
 @dataclass(frozen=True)
 class Source:
-    """Text read from one file, and the file line each of its lines is on.
+    """Text read from one file, and the file line each part of it is on.
 
-    - `text`: Markdown, read in blocks; or, with `values`, one front-matter
-      value a line, each a block of its own.
-    - `first_line`: the file line the text opens on.
-    - `values`: for front-matter values, the file line each value opens on.
+    - `text`: Markdown, read in blocks; or, with `marks`, the front-matter
+      values, one a line, each a block of its own.
+    - `first_line`: for Markdown, the file line the text opens on.
+    - `marks`: for front-matter values, `(offset, line)` pairs in order: the
+      text from each offset on lies on that file line.
     """
 
     text: str
     first_line: int = 1
-    values: tuple[int, ...] | None = None
+    marks: tuple[tuple[int, int], ...] | None = None
 
     def line(self, offset: int) -> int:
-        index = self.text.count("\n", 0, offset)
-        return self.values[index] if self.values is not None else self.first_line + index
+        if self.marks is None:
+            return self.first_line + self.text.count("\n", 0, offset)
+        index = bisect_right([at for at, _line in self.marks], offset) - 1
+        return self.marks[max(index, 0)][1]
 
     def blocks(self) -> list[Block]:
-        if self.values is None:
+        if self.marks is None:
             return markdown_blocks(self.text)
         found: list[Block] = []
         offset = 0
@@ -499,7 +565,7 @@ class Source:
 
 
 def front_matter_values(front_matter: str, key: str | None = None, first_line: int = 2) -> Source:
-    """The string values of a front matter, or of its entry `key`, outside the container.
+    """The text values of a front matter, or of its entry `key`, outside the container.
 
     The methodology's container (`pkit`) holds answers a person decided or a
     reviewer checked, which RS-WRITE-013 keeps from rewriting for style. Keys,
@@ -512,11 +578,23 @@ def front_matter_values(front_matter: str, key: str | None = None, first_line: i
         raise LintError(f"the front matter does not parse: {exc}") from exc
     if key is not None:
         node = _entry_node(node, key)
-    found: list[tuple[str, int]] = []
-    _walk_values(node, first_line, found)
-    return Source(
-        "\n".join(value for value, _line in found), values=tuple(line for _value, line in found)
-    )
+    values: list[list[tuple[str, int]]] = []
+    _walk_values(node, first_line, values)
+    text: list[str] = []
+    marks: list[tuple[int, int]] = []
+    offset = 0
+    for pieces in values:
+        if text:
+            offset += 1  # the line break between two values
+        for index, (piece, line) in enumerate(pieces):
+            if index:
+                text.append(" ")
+                offset += 1
+            marks.append((offset, line))
+            text.append(piece)
+            offset += len(piece)
+        text.append("\n")
+    return Source("".join(text).removesuffix("\n"), marks=tuple(marks))
 
 
 def _value_of(node: Node | None, key: str) -> Node | None:
@@ -533,7 +611,13 @@ def _entry_node(node: Node | None, key: str) -> Node | None:
     return _value_of(node, key)
 
 
-def _walk_values(node: Node | None, first_line: int, found: list[tuple[str, int]]) -> None:
+def _walk_values(node: Node | None, first_line: int, found: list[list[tuple[str, int]]]) -> None:
+    """Each text value, as its pieces and the file line each piece is on.
+
+    A literal block (`|`) keeps a piece for each of its lines. Any other value
+    is one piece, on the line its text opens on: the line after the marker for
+    a folded block (`>`).
+    """
     if isinstance(node, MappingNode):
         for name, value in node.value:
             if not (isinstance(name, ScalarNode) and name.value == CONTAINER):
@@ -541,10 +625,14 @@ def _walk_values(node: Node | None, first_line: int, found: list[tuple[str, int]
     elif isinstance(node, SequenceNode):
         for item in node.value:
             _walk_values(item, first_line, found)
-    elif isinstance(node, ScalarNode) and node.tag.endswith(":str"):
-        value = " ".join(str(node.value).split("\n")).strip()
-        if value:
-            found.append((value, first_line + node.start_mark.line))
+    elif isinstance(node, ScalarNode) and node.tag.endswith(":str") and str(node.value).strip():
+        value = str(node.value)
+        line = first_line + node.start_mark.line
+        if node.style == "|":
+            lines = value.rstrip("\n").split("\n")
+            found.append([(piece, line + 1 + index) for index, piece in enumerate(lines)])
+        else:
+            found.append([(" ".join(value.split("\n")).strip(), line + (node.style == ">"))])
 
 
 @dataclass(frozen=True)
@@ -555,7 +643,7 @@ class Sources:
     body: Source
 
 
-EMPTY = Source("", values=())
+EMPTY = Source("", marks=())
 
 
 def document_sources(text: str) -> Sources:
@@ -705,11 +793,12 @@ def _breaks(item: Entry, block: Block, path: str, exists: Exists) -> Iterable[tu
             for match in re.finditer(pattern, view, re.IGNORECASE):
                 yield match.start(), match.end(), f'"{match.group()}": write "{replacement}"'
     else:
-        linkable = block.view(item.exceptions | {"code"})
-        for match in _LINK.finditer(linkable):
-            target = match.group(1)
-            if not _resolves(target, path, exists):
-                yield match.start(), match.end(), f'the link target "{target}" does not exist'
+        linkable = block.view(item.exceptions | {"code"}, markup=True)
+        for pattern in (_LINK, _LINK_DEFINITION):
+            for match in pattern.finditer(linkable):
+                target = match.group(1)
+                if not _resolves(target, path, exists):
+                    yield match.start(), match.end(), f'the link target "{target}" does not exist'
 
 
 def _count(item: Entry, block: Block, view: str) -> Iterable[tuple[int, int, str]]:
@@ -742,10 +831,10 @@ def _resolves(target: str, path: str, exists: Exists) -> bool:
     """Whether a link's target exists: a URL, a fragment and a placeholder are not checked.
 
     A relative target is read from the linking file's folder, and one opening
-    with `/` from the repository's root. A target outside the repository does
-    not resolve.
+    with `/` from the repository's root. The root itself resolves, and a target
+    above it does not.
     """
-    if _SCHEME.match(target) or any(char in target for char in "<>{}"):
+    if _SCHEME.match(target) or target.startswith("//") or any(c in target for c in "<>{}"):
         return True
     target = unquote(target.split("#", 1)[0].split("?", 1)[0])
     if not target:
@@ -759,7 +848,7 @@ def _resolves(target: str, path: str, exists: Exists) -> bool:
             parts.pop()
         elif part != ".":
             parts.append(part)
-    return bool(parts) and exists("/".join(parts))
+    return not parts or exists("/".join(parts))
 
 
 def file_exists(root: Path = ROOT) -> Exists:
@@ -821,7 +910,17 @@ def applied_entries(rules: Iterable[Mapping[str, Any]], entries: Sequence[Entry]
 
 def _read(tree: CommitTree | WorkingTree, path: str) -> str | None:
     data = tree.read_bytes([path]).get(path)
-    return None if data is None else data.decode("utf-8")
+    try:
+        return None if data is None else data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise LintError(f"{path}: not UTF-8 text: {exc}") from exc
+
+
+def _read_sources(text: str, side: Mapping[str, Any]) -> Sources:
+    try:
+        return _sources(text, side)
+    except LintError as exc:
+        raise LintError(f"{side['location']}: {exc}") from exc
 
 
 def _sources(text: str, side: Mapping[str, Any]) -> Sources:
@@ -867,11 +966,8 @@ def lint_change(
         if before is not None:
             base_tree = base_tree or CommitTree(root, document["base"]["commit"])
             base_text = _read(base_tree, before["path"])
-            base_sources = None if base_text is None else _sources(base_text, before)
-        try:
-            head_sources = _sources(head_text, head)
-        except LintError as exc:
-            raise LintError(f"{head['location']}: {exc}") from exc
+            base_sources = None if base_text is None else _read_sources(base_text, before)
+        head_sources = _read_sources(head_text, head)
         exists = exists or tree_exists(head_tree.files())
         checked.append(head["location"])
         for kind in ("values", "body"):
@@ -922,6 +1018,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (LintError, click.ClickException) as exc:
         message = exc.format_message() if isinstance(exc, click.ClickException) else str(exc)
         print(f"prose lint: {message}", file=sys.stderr)
+        return 2
+    except Exception:  # a defect of the lint: exit 2, never 1, which means a finding
+        traceback.print_exc()
+        print("prose lint: failed with the error above", file=sys.stderr)
         return 2
     print(render(lint), end="")
     return 1 if lint.findings else 0

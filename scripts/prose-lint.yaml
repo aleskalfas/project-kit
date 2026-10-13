@@ -17,7 +17,8 @@
 #   link-resolves  a Markdown link's target exists in the repository
 #
 # Any entry may add `except`, the parts of the prose it does not read: `code`
-# (code spans), `quotes` (text in quotation marks) and `cells` (table cells).
+# (code spans), `quotes` (text in quotation marks or a block quote) and `cells`
+# (table cells).
 #
 # CONTRIBUTING.md, "Running checks", says how the lint reads a sentence and a
 # paragraph, and how to add an entry.

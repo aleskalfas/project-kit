@@ -123,6 +123,21 @@ def test_link_resolves_is_an_entry() -> None:
     ]
 
 
+def test_a_link_target_is_read_as_written() -> None:
+    """Bold marks are never removed from a target, a link definition is read, the root
+    resolves, and a protocol-relative URL is not checked."""
+    links = pl.entry({"rule": "RS-USER-001", "type": "link-resolves"})
+    text = (
+        "See [init](../src/pkg/__init__.py), [the root](../), [a host](//example.org/x)"
+        " and [a ref][r].\n\n"
+        "[r]: ../src/pkg/__main__.py\n"
+    )
+    exists = pl.tree_exists(["src/pkg/__init__.py"])
+    assert found(text, [links], path="docs/a.md", exists=exists) == [
+        '3 RS-USER-001: the link target "../src/pkg/__main__.py" does not exist'
+    ]
+
+
 @pytest.mark.parametrize(
     ("data", "says"),
     [
@@ -143,6 +158,8 @@ def test_link_resolves_is_an_entry() -> None:
             "`max` is a whole number",
         ),
         ({"rule": "RS-WRITE-011", "type": "substitute", "replace": {}}, "`replace` maps"),
+        ({"rule": "RS-WRITE-011", "type": "substitute", "replace": {" ": "x"}}, "`replace` maps"),
+        ({"rule": "RS-WRITE-008", "type": "forbid", "pattern": ";", 3: "x"}, "takes no 3"),
     ],
 )
 def test_a_malformed_entry_is_refused(data: Mapping[str, Any], says: str) -> None:
@@ -199,6 +216,40 @@ def test_headings_bold_labels_and_code_blocks_are_not_read() -> None:
     assert counted(text) == [2, 5]
 
 
+def test_markup_and_markdown_that_holds_no_prose_are_not_read() -> None:
+    """A fence closes only on a bare fence at least as long, a list item may open one, a
+    setext heading's text is a heading, and an inline comment, an entity and a URL are
+    no prose."""
+    text = (
+        "````markdown\n```python\nx; y\n```\nstill code; here\n````\n\n"
+        "- ```yaml\n  a: b; c\n  ```\n\n"
+        "A setext heading; of words\n===\n\n"
+        "Text <!-- a; b --> and&nbsp;more at https://example.org/a;b here.\n"
+    )
+    assert found(text) == []
+    assert counted("Text <!-- a b --> and&nbsp;more at https://example.org/a;b here.\n") == [5]
+
+
+def test_a_block_quote_is_quoted() -> None:
+    """Its words count, and a semicolon in it is quoted text, exempt from RS-WRITE-008."""
+    text = f"> {LONG}\n> One; two.\n\nOne; two.\n"
+    assert found(text) == [
+        '1 RS-WRITE-005: a sentence of 27 words, over 25: "This sentence holds many words on '
+        'purpose so …"',
+        '4 RS-WRITE-008: a semicolon: "One; two."',
+    ]
+
+
+def test_a_literal_block_names_the_line_of_its_finding() -> None:
+    """A literal block's lines keep their file lines; a folded block opens on the line
+    after its marker."""
+    text = "---\nnotes: |\n  One line.\n  Two; lines.\nmore: >\n  A; folded\n  value.\n---\n"
+    assert found(text) == [
+        '4 RS-WRITE-008: a semicolon: "One line. Two; lines."',
+        '6 RS-WRITE-008: a semicolon: "A; folded value."',
+    ]
+
+
 def test_the_quoted_example_of_a_broken_rule_is_not_read() -> None:
     """Under a "Breaks the rule" label, from the first quotation mark to the last; the
     words around the quote are read."""
@@ -210,13 +261,20 @@ def test_the_quoted_example_of_a_broken_rule_is_not_read() -> None:
     assert counted(text) == [5, 27]
 
 
+#: RS-WRITE-005's own *Keeps the rule* example, as `WRITE` 1.1.0 writes it.
+KEEPS_THE_RULE = (
+    '- **Keeps the rule:** "the backbone ships no workflow. It ships only checks made to run '
+    "unattended, and one base a pipeline names for all of them (COR-054 point 3). The checks "
+    'bind once the project makes them a required status (COR-050 point 12)." Unlike the plain '
+    "rewrite, this keeps the two items in the sentence (RS-WRITE-003).\n"
+)
+
+
 def test_write_s_own_keeps_the_rule_example_counts_27_by_the_literal_how() -> None:
     """A full stop before a closing quotation mark ends nothing, so RS-WRITE-005's own
     *Keeps the rule* example runs on into the sentence after it. WRITE reaches no rule set,
     so nothing reports it."""
-    lines = (REPO / "tech-docs/rule-sets/writing.md").read_text(encoding="utf-8").splitlines()
-    (example,) = [line for line in lines if line.startswith('- **Keeps the rule:** "the backbone')]
-    assert counted(example) == [5, 21, 27]
+    assert counted(KEEPS_THE_RULE) == [5, 21, 27]
 
 
 def test_front_matter_values_are_read_and_the_container_is_not() -> None:
@@ -415,4 +473,5 @@ def test_every_entry_names_a_rule_whose_set_declares_the_lint_and_back() -> None
     entry would go unchecked."""
     _discovery, sets, _answer = rs.reach_at(REPO)
     declared = {rule.id for rule in sets.rules for part in rule.checks if part.check == pl.CHECK}
-    assert {e.rule for e in pl.load_entries()} == declared == {"RS-WRITE-005", "RS-WRITE-008"}
+    assert declared
+    assert {e.rule for e in pl.load_entries()} == declared

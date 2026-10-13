@@ -95,6 +95,7 @@ Answer what it reports in a pull request like any friction (the friction gate, a
   - **Moved text:** text the diff deletes in one place and inserts in another is the change's where it is inserted. Where two blocks of a file swap places, the diff keeps one in place, and only the other is the change's.
   - **A moved file:** a file moved with its content alters nothing in `pkit rule-sets altered`, so the lint does not read it. A file moved with edits is compared with its old self, so only the edits are the change's.
   - **An entry:** the span `pkit rule-sets altered` gives holds the entry's section only. The lint also reads the entry's values from its file's front matter.
+  - **Joined paragraphs:** a change that only deletes the blank line between two paragraphs adds no text, so the lint does not report the paragraph it joins.
 - **How it reads:** words and sentences as RS-WRITE-005's *How* says (`tech-docs/rule-sets/writing.md`). Where the *How* is silent, it reads as follows:
   - A full stop before a space ends a sentence after an abbreviation or an initial too, as in "e.g.".
   - A full stop before a closing quotation mark or bracket ends nothing.
@@ -103,7 +104,9 @@ Answer what it reports in a pull request like any friction (the friction gate, a
   - A bold label is bold text that opens a block and ends in a colon. A block that is only a label holds no sentence.
   - A quoted example of a broken rule runs from the first quotation mark to the last, in a block labelled "Breaks the rule".
   - Every text value of the front matter is read, except inside the methodology's `pkit` container. Its answers are never rewritten for style (RS-WRITE-013).
-  - Only fenced code is a code block.
+  - Only fenced code is a code block. A fence closes on a bare fence of its own character, at least as long as the one that opened it.
+  - A block quote's words count, and its text is quoted, so RS-WRITE-008 exempts its semicolons.
+  - A link's target, a bare URL, an HTML entity and an HTML comment are markup, not prose. A setext heading is a heading.
 - **On a given text:** `lint_text` reads a text whole, so a test of stamped template text calls it rather than counting again.
 
 Each mechanical part of a rule is an entry in `scripts/prose-lint.yaml`, of one of four types: `count`, `forbid`, `substitute` and `link-resolves`. The file's header gives each type's fields. A part gets an entry only when three things hold. It is deterministic with near-zero false alarms, an AI reviewer is unreliable at it, and its findings recur (COR-007). A part that fails any of the three stays with the reviewer. To add an entry for a rule:
