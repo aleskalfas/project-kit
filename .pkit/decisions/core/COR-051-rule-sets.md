@@ -76,7 +76,7 @@ Rules are also layered. A component ships the rules its discipline needs, and ea
 
 6. **Two kinds, two owners.**
    - **Method rule sets** ship with the backbone or with a component. They are owned and versioned with it and refreshed by sync.
-   - **Project rule sets** are owned by the project. They live in places the project declares, by default under its internal documentation root (COR-049), and sync and uninstall never touch them.
+   - **Project rule sets** are owned by the project. They live in places the project declares, by default under its internal documentation root (COR-049). Sync never reads or writes them, and uninstall never writes them.
 
    A project never edits a method rule set; it extends it. A method rule set is cited with its component's name; a project rule set is cited bare.
 
