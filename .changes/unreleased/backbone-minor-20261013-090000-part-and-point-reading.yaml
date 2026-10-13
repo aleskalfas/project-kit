@@ -1,0 +1,19 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The backbone reads where a part of a document lies and a record's points,
+  each in one home (ADR-057 point 2, #1414). `project_kit.document_parts` gives
+  a body's headings outside fenced code, a section by its id or its slug, and
+  the lead; artefact discovery cuts a collection entry's section with it, and
+  the rule-set reader lists a rule-set file's sections with it, so an entry's
+  body and span are unchanged. `project_kit.record_points` reads a decision
+  record's points as COR-058 sets them out: the Decision's extent, its point
+  headings and stubs, its misspelt headings, its retired ids with their
+  successors, its points in list form and what each point stands on, and it
+  holds each stub to its entry in `retired-points`. `pkit friction artefacts
+  --json` gives each artefact a `part_anchors` list, added within version 1:
+  each anchor that names a part of a file, today an `artefact` anchor on a
+  collection entry such as a rule, with the file and the span that part
+  resolves to.

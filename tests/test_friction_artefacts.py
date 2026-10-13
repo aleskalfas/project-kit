@@ -364,6 +364,81 @@ def test_at_a_commit_the_span_is_that_state_s(adopter: AdopterRepo) -> None:
     assert _spans(at_head, TERMS)[f"{TERMS}#term-a"] == {"first_line": 18, "last_line": 24}
 
 
+# --- each part anchor's span (#1414) ---------------------------------------------------------
+
+# A page anchoring two entries, a whole document, a missing artefact and a path.
+PAGE = """---
+id: page
+pkit:
+  friction:
+    anchors:
+      path: [src/**]
+      artefact: [term-a, guide, term-c, notes/guide.md, no-such-entry]
+---
+
+# Page
+"""
+
+DOC_RULES = (
+    "---\nrule-set: DOC\nversion: 1.0.0\nrules:\n  RS-DOC-001: {status: proposed}\n---\n\n"
+    "# Documentation rules\n\n## RS-DOC-001 — Say who reads it\n\nName the reader.\n"
+)
+
+
+def _part_anchors(document: dict[str, Any]) -> dict[str, Any]:
+    """Each artefact listing a part anchor, by location."""
+    return {a["location"]: a["part_anchors"] for a in document["artefacts"] if a["part_anchors"]}
+
+
+def test_an_anchor_on_an_entry_gives_the_span_its_part_resolves_to(adopter: AdopterRepo) -> None:
+    """Beside each anchor that names a part, the span it resolves to: the entry's own,
+    so a script reads what the anchor stands on without resolving it (ADR-057 point 2).
+    A whole document, a dead anchor and a path name no part."""
+    adopter.write({TERMS: SECTIONED, "notes/page.md": PAGE})
+    document = _document()
+    assert document["schema_version"] == 1  # a key added within the document's version
+    spans = _spans(document, TERMS)
+    assert _part_anchors(document) == {
+        "notes/page.md": [
+            {
+                "kind": "artefact",
+                "value": "term-a",
+                "path": TERMS,
+                "span": spans[f"{TERMS}#term-a"],
+            },
+            {"kind": "artefact", "value": "term-c", "path": TERMS, "span": None},  # no section
+        ]
+    }
+    assert spans[f"{TERMS}#term-a"] == {"first_line": 18, "last_line": 24}
+    assert all(isinstance(a["part_anchors"], list) for a in document["artefacts"])
+
+
+def test_an_anchor_on_a_rule_gives_the_rule_s_span(adopter: AdopterRepo) -> None:
+    page = PAGE.replace("[term-a, guide, term-c, notes/guide.md, no-such-entry]", "[RS-DOC-001]")
+    adopter.write({"tech-docs/rule-sets/doc.md": DOC_RULES, "notes/page.md": page})
+    found = _part_anchors(_document())["notes/page.md"]
+    assert found == [
+        {
+            "kind": "artefact",
+            "value": "RS-DOC-001",
+            "path": "tech-docs/rule-sets/doc.md",
+            "span": {"first_line": 10, "last_line": 12},
+        }
+    ]
+    span = found[0]["span"]
+    assert _lines(DOC_RULES, span) == "## RS-DOC-001 — Say who reads it\n\nName the reader.\n"
+
+
+def test_at_a_commit_a_part_anchor_s_span_is_that_state_s(adopter: AdopterRepo) -> None:
+    adopter.write({TERMS: SECTIONED, "notes/page.md": PAGE})
+    adopter.commit("terms")
+    adopter.write({TERMS: SECTIONED.replace("# Terms\n", "# Terms\n\nTwo more lines.\n")})
+    now = _part_anchors(_document())["notes/page.md"][0]["span"]
+    at_head = _part_anchors(json.loads(_run("--at", "HEAD", "--json").output))
+    assert now == {"first_line": 20, "last_line": 26}
+    assert at_head["notes/page.md"][0]["span"] == {"first_line": 18, "last_line": 24}
+
+
 # --- the rule sets whose scope covers an artefact (#1361) -----------------------------------
 
 

@@ -42,11 +42,8 @@ from project_kit import config_validate as cv
 from project_kit import docs_roots as dr
 from project_kit import rule_sets as rs
 from project_kit.cli import main
-from project_kit.friction_discovery import (
-    pattern_matcher,
-    read_friction_settings,
-    split_front_matter,
-)
+from project_kit.document_parts import split_front_matter
+from project_kit.friction_discovery import pattern_matcher, read_friction_settings
 from project_kit.friction_validate import FrictionFindingKind, validate_friction
 from project_kit.working_tree import working_tree
 

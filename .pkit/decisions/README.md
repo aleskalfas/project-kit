@@ -8,12 +8,14 @@ pkit:
       path:
         - src/project_kit/decisions.py
         - src/project_kit/decisions_validate.py
+        - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-13T07:23:34Z
-      outcome: updated
+      at: 2026-10-13T07:10:32Z
+      outcome: unchanged
+      unchanged-because: "The rule-set reader now takes a rule-set file's front matter, its body and its sections from document_parts, the one reading of where a part lies, and finds the same rules and sections as before, so what this page says of rule sets and their ids holds. The new anchor, record_points.py, reads a record's points both in list form, as this page's schema still writes them, and as point headings. The page does not yet describe point headings or retired points, which its deferral on COR-051 leaves to #1422."
       deferred:
         - anchor:
             kind: record
