@@ -362,6 +362,9 @@ class _Walk:
         default_factory=dict
     )  # project place index -> a document it holds
     ties: dict[tuple[int, int], list[str]] = field(default_factory=dict)
+    # A document that holds no artefact, which the backbone ranks no place for,
+    # whose places of the spaces would tell it apart -> those places.
+    untold: dict[str, list[Place]] = field(default_factory=dict)
 
 
 def check(root: Path, read: Callable[[], Readers] = read_readers) -> Outcome:
@@ -374,6 +377,7 @@ def check(root: Path, read: Callable[[], Readers] = read_readers) -> Outcome:
         return _unreadable(exc)
     _assignment_findings(decl, refused, walk, outcome)
     _tie_findings(decl, walk, outcome)
+    _untold_findings(walk, outcome)
     scope_note = _scope_findings(decl, refused, walk, outcome)
     entry_notes = _entry_point_findings(root, decl, walk, outcome)
     definition_notes = _definition_findings(decl, outcome)
@@ -489,7 +493,16 @@ def _walk(decl: Declarations, places: Sequence[Reach], outcome: Outcome) -> _Wal
             if page:
                 outcome.findings.append(_record_finding(rel, record, PAGE_TYPE in document.types))
             continue
-        winner = _winner(rel, ordered, walk)
+        if document.ranked is None and len(ordered) > 1 and not page:
+            told = _told(ordered, decl)
+            if told is None:
+                walk.untold[rel] = [place for _rank, place in ordered]
+                if not document.excluded:
+                    outcome.unclassified.append(rel)
+                continue
+            winner = told
+        else:
+            winner = _winner(rel, ordered, walk)
         space = _space_of_place(winner, decl)
         if winner.project is not None:
             walk.holds.setdefault(winner.project.index, rel)
@@ -531,12 +544,12 @@ def _ordered(document: Document, reach: Mapping[int, Place]) -> list[tuple[int, 
     """The spaces' places matching `document`, each with its rank, in the order the
     backbone gives (COR-056 points 3 and 6): ranked by it, never here. Two root
     places that are one folder stand for one Place, listed once. A file that
-    holds no artefact has no ranked places: its places come as the backbone lists
-    them, the one it was read under first, each ranked apart."""
+    holds no artefact — no front matter the backbone reads — has no ranked places:
+    its places come unranked, as the backbone lists them (`_told`)."""
     listed = (
         document.ranked
         if document.ranked is not None
-        else tuple((index, position) for position, index in enumerate(document.places))
+        else tuple((index, 0) for index in document.places)
     )
     ordered: list[tuple[int, Place]] = []
     for index, rank in listed:
@@ -544,6 +557,22 @@ def _ordered(document: Document, reach: Mapping[int, Place]) -> list[tuple[int, 
         if place is not None and all(place is not seen for _rank, seen in ordered):
             ordered.append((rank, place))
     return ordered
+
+
+def _told(ordered: Sequence[tuple[int, Place]], decl: Declarations) -> Place | None:
+    """The place to read a file that holds no artefact under, when its several
+    places of the spaces make the order between them moot; `None` when they do
+    not, and its space cannot be told.
+
+    The backbone ranks the places of artefacts only, and this capability ranks
+    none itself (DEC-001 point 1). The order is moot when every place gives the
+    file the same space and none lies outside every root, so none owes an
+    assignment for holding it."""
+    spaces = {_space_of_place(place, decl) for _rank, place in ordered}
+    outside = any(
+        place.project is not None and not in_root(place.project, decl) for _rank, place in ordered
+    )
+    return ordered[0][1] if len(spaces) == 1 and not outside else None
 
 
 def _winner(rel: str, ordered: Sequence[tuple[int, Place]], walk: _Walk) -> Place:
@@ -578,7 +607,7 @@ def _record_finding(rel: str, record: str, typed: bool) -> Finding:
     when it takes the page type, else a page of no type in a project place that
     gives none."""
     would = (
-        f"so it takes the type {PAGE_TYPE} (COR-056 point 4)"
+        f"so it takes the type {PAGE_TYPE}, or counts as it in a tie (COR-056 points 3 and 4)"
         if typed
         else "in a project place outside every root that gives no type, so it would be a page"
     )
@@ -850,6 +879,31 @@ def _tie_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> None:
         )
 
 
+def _untold_findings(walk: _Walk, outcome: Outcome) -> None:
+    """A file that holds no artefact, whose places of the spaces would give it
+    different spaces or owe an assignment for it: the backbone ranks no place for
+    it, and this capability ranks none itself (DEC-001 point 1), so which place
+    holds it cannot be told. Reported, never failed; it is unclassified."""
+    for rel, places in sorted(walk.untold.items()):
+        named = ", ".join(_place_named(place) for place in places)
+        outcome.findings.append(
+            Finding(
+                REPORT,
+                rel,
+                f"{rel} holds no artefact — no front matter the backbone reads — so the "
+                f"backbone's answer ranks none of its places ({named}), and which of them "
+                f"gives it a space cannot be told: no place holds it and no space counts it "
+                f"until it carries front matter (DEC-001 point 1; COR-056 point 6).",
+            )
+        )
+
+
+def _place_named(place: Place) -> str:
+    if place.project is not None:
+        return f"project place {place.project.written!r}"
+    return f"the {place.audience} root" if place.audience is not None else "the shared root"
+
+
 @dataclass(frozen=True)
 class _Scope:
     """A space definition's scope, as its front matter writes it (COR-051 point 2):
@@ -989,6 +1043,14 @@ def _entry_point_findings(
             problem = "is not a Markdown document of the working tree"
         elif entry in walk.claims:
             problem = f"is {walk.claims[entry].described()}, never a page"
+        elif entry in walk.untold:
+            told = sorted({str(_space_of_place(place, decl)) for place in walk.untold[entry]})
+            if space in told:
+                # Not yet a page, and the space it would serve cannot be told
+                # until it holds an artefact: reported under the document itself.
+                notes[space] = f"entry point {entry}, not yet a page (its space not told)"
+                continue
+            problem = f"lies only in places of other spaces ({', '.join(told)})"
         elif entry not in walk.space_of:
             problem = (
                 "lies in no place of any space — under neither documentation root, and in no "

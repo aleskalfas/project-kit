@@ -37,6 +37,10 @@ ARGV = ("pkit", "friction", "artefacts", "--json")
 #: (COR-056 point 6): a backbone that answers without it predates types.
 TYPE_KEY = "type"
 
+#: The key of every declared type in the document, added with an artefact's
+#: type: present even where the places hold no artefact.
+TYPES_KEY = "types"
+
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
 
@@ -198,7 +202,7 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
         _place(index, entry) for index, entry in enumerate(_mappings(document.get("places")))
     )
     listed = _mappings(document.get("artefacts"))
-    if any(TYPE_KEY not in entry for entry in listed):
+    if TYPES_KEY not in document or any(TYPE_KEY not in entry for entry in listed):
         raise Unreadable(
             f"`{' '.join(ARGV)}` answered without each artefact's type and ranked places; "
             f"this capability reads them (COR-056 point 6), so the backbone needs upgrading"

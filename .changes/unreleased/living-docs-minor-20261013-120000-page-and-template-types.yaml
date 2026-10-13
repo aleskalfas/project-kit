@@ -19,7 +19,10 @@ body: >
   point 3) rather than its own: a longer literal part wins, and at equal
   length an exact file beats a glob, which beats a folder. So a glob can now
   win over a folder, where every folder used to rank ahead of every glob. Two
-  project places tie when they rank equal there. A document of another
+  project places tie when they rank equal there. The backbone ranks the
+  places of artefacts only, so a file without front matter whose places would
+  give it different spaces, or one of which lies outside every root, is
+  reported and counted unclassified. A document of another
   component's type, of a type of the project's own, or held by another
   component is its owner's: the validator no longer reads a `reader` or
   `kind` on it, so carrying one fails nothing. A place another component

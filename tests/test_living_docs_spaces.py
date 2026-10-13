@@ -337,6 +337,67 @@ def test_the_backbone_s_order_of_places_gives_a_page_its_space(project: AdopterR
     assert document["summary"][2].startswith("technical: 2 page(s)")
 
 
+def test_a_file_without_front_matter_in_nested_places_is_reported_never_failed(
+    project: AdopterRepo,
+) -> None:
+    """The backbone ranks the places of artefacts only. A file with no front matter
+    holds no artefact, so where its places would give it different spaces, or one
+    lies outside every root, which holds it cannot be told: it is reported and
+    unclassified, never a false failure of a place it may not belong to."""
+    declare(
+        project,
+        places=["README.md", "extra/", "extra/README.md"],
+        assignments={"README.md": "user", "extra/README.md": "technical"},
+    )
+    project.write({"extra/README.md": "# Extra\n"})
+    document = run(project)
+    assert errors(document) == []
+    (report,) = [f for f in document["findings"] if f["location"] == "extra/README.md"]
+    assert report["severity"] == "report"
+    assert "holds no artefact — no front matter the backbone reads" in report["message"]
+    assert "project place 'extra/', project place 'extra/README.md'" in report["message"]
+    assert "1 unclassified document(s)" in document["summary"][3]
+
+
+def test_an_entry_point_without_front_matter_in_nested_places_is_not_failed(
+    project: AdopterRepo,
+) -> None:
+    """An entry point not yet a page, in places that would give it different spaces:
+    one of them gives its space, so it is no failure (DEC-001 point 1)."""
+    declare(
+        project,
+        places=["README.md", "guides/", "guides/api/"],
+        assignments={"README.md": "user", "guides/": "user", "guides/api/": "technical"},
+        spaces={
+            "user": {"entry-point": "README.md", "definition": f"{DEFINITIONS}/user.md"},
+            "technical": {
+                "entry-point": "guides/api/README.md",
+                "definition": f"{DEFINITIONS}/technical.md",
+            },
+        },
+    )
+    project.write({"guides/api/README.md": "# API\n"})
+    document = run(project)
+    assert errors(document) == []
+    assert (
+        "entry point guides/api/README.md, not yet a page (its space not told)"
+        in document["summary"][2]
+    )
+
+
+def test_a_file_without_front_matter_whose_places_agree_takes_their_space(
+    project: AdopterRepo,
+) -> None:
+    """Where every place of a file without front matter gives the same space and none
+    lies outside every root, the order between them is moot."""
+    declare(project, places=["README.md", "docs/guides/"], assignments={"README.md": "user"})
+    project.write({"docs/guides/old.md": "# Old\n"})
+    document = run(project)
+    assert errors(document) == []
+    assert [f for f in document["findings"] if f["location"] == "docs/guides/old.md"] == []
+    assert "1 unclassified document(s)" in document["summary"][3]
+
+
 def test_the_capability_s_scripts_rank_no_place_themselves() -> None:
     """The order of places is the backbone's answer, `ranked_places` (COR-056 point
     6); no script of the capability measures a place's specificity."""
@@ -368,7 +429,7 @@ def test_a_decision_record_that_declares_a_page_kind_is_an_error(project: Adopte
         "is a decision record (ADR-001), an anchor target (COR-050), and declares a page kind"
         in (message)
     )
-    assert "so it takes the type living-docs:page (COR-056 point 4)" in message
+    assert "so it takes the type living-docs:page, or counts as it in a tie" in message
     assert "remove `kind`" in message
     assert "1 decision record(s)" in document["summary"][3]
 
@@ -863,6 +924,7 @@ def test_a_backbone_that_gives_no_types_is_one_error_and_nothing_checked(
     strip.write_text(
         "import json, sys\n"
         "document = json.load(sys.stdin)\n"
+        "document.pop('types', None)\n"
         "for artefact in document.get('artefacts', []):\n"
         "    for key in ('type', 'type_place', 'type_conflict', 'ranked_places'):\n"
         "        artefact.pop(key, None)\n"
