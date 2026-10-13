@@ -37,7 +37,7 @@ Capabilities that contribute settings to a harness ship two file roles, in two l
 ```
 
 - **`overlay.template.json`** is core-owned (capability source-of-truth; sync overwrites on capability update). It is a JSON object whose top-level keys are the settings the capability would contribute when active. The shape constraint: top-level keys outside `permissions` (see "Reserved keys" below).
-- **`<harness>.json`** is adopter-owned (under `project/`; sync does not touch). Its **presence is the activation signal**. The file's content is always a copy of the current template at the time of last `enable` — adopters do not hand-edit this file in v1 (see "v1 scope: no in-place customisation" below).
+- **`<harness>.json`** is adopter-owned (under `project/`; sync's merge reads it and never writes it). Its **presence is the activation signal**. The file's content is always a copy of the current template at the time of last `enable` — adopters do not hand-edit this file in v1 (see "v1 scope: no in-place customisation" below).
 
 The `<cap>/adapters/<harness>/` subtree extends [COR-017](../../../decisions/core/COR-017-capability-pattern.md)'s capability layout convention. Both new subtrees are *optional*: capabilities that don't contribute settings (the common case today) carry neither. When a second capability adopts the pattern, the addition stabilises into a convention worth formalising in COR-017's body; until then, this DEC is the reference.
 
@@ -92,9 +92,9 @@ This boundary is what makes `enable always overwrites` viable: there is no hand-
 
 ### Uninstall: capability uninstall removes the overlay activation
 
-Uninstalling a capability removes the entire `.pkit/capabilities/<cap>/` directory, including the `project/adapter-overlays/<harness>.json` file if present. This is **not** a violation of the no-shared-files invariant or the "sync doesn't touch project/" rule: those rules govern *sync* and *content-update* operations, not uninstall.
+Uninstalling a capability removes the entire `.pkit/capabilities/<cap>/` directory, including the `project/adapter-overlays/<harness>.json` file if present. This is **not** a violation of the no-shared-files invariant or of the rule that sync writes a project-owned path only through merge delivery: those rules govern *sync* and *content-update* operations, not uninstall.
 
-`sync` is the operation that must not touch adopter content (because sync runs implicitly on update). Uninstall is the operation an adopter invokes explicitly to remove the whole capability; sweeping the capability's directory entirely (including the live overlay) is the documented semantics, the only honest behaviour, and the only one that does not leave orphan settings keys persistently referenced in `.claude/settings.json`.
+`sync` is the operation that must never take adopter content away, because sync runs implicitly on update. It writes adopter content only through merge delivery, which never removes or rewrites an entry the project wrote ([COR-059](../../../decisions/core/COR-059-version-transition.md) point 2). Uninstall is the operation an adopter invokes explicitly to remove the whole capability; sweeping the capability's directory entirely (including the live overlay) is the documented semantics, the only honest behaviour, and the only one that does not leave orphan settings keys persistently referenced in `.claude/settings.json`.
 
 After uninstall, the previously-contributed keys remain in `.claude/settings.json` because the merge primitive carries existing target entries forward (per [#190](https://github.com/aleskalfas/project-kit/issues/190)). Adopters who uninstall a capability with an active overlay should run `disable-<name>` *before* uninstalling so the keys are stripped cleanly; uninstall does not currently invoke the capability's own disable subcommand on the way out (a recognised follow-up — a capability-tier uninstall hook would address this). The walker stops including the overlay source on the next merge regardless, so the contribution can never be reactivated by accident; only the prior values linger.
 
@@ -102,7 +102,7 @@ After uninstall, the previously-contributed keys remain in `.claude/settings.jso
 
 **Opt-in default semantics preserved.** Installing the project-management capability creates the template (`adapters/claude-code/overlay.template.json`) but no activation file. `.claude/settings.json` is unchanged on install. The adopter runs `enable-default-agent` to activate; `disable-default-agent` reverses; uninstall removes the whole tree.
 
-**No-shared-files preserved in the sync path.** The template is core-owned (sync overwrites on capability update). The live overlay is adopter-owned (under `project/`; sync does not touch). The CLI subcommands write only the adopter-owned location.
+**No-shared-files preserved in the sync path.** The template is core-owned (sync overwrites on capability update). The live overlay is adopter-owned (under `project/`; sync's merge reads it and never writes it). The CLI subcommands write only the adopter-owned location.
 
 **Manifest-scoped walker prevents orphan contributions.** Stash, rebase, or botched-uninstall states that leave a capability directory present but unregistered in the manifest no longer silently activate that capability's contribution. The walker honours the manifest as the source of truth for installed-ness.
 
