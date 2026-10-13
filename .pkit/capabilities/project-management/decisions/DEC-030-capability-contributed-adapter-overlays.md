@@ -37,7 +37,7 @@ Capabilities that contribute settings to a harness ship two file roles, in two l
 ```
 
 - **`overlay.template.json`** is core-owned, the capability's source of truth. Sync restores it at the version the project records, and a version transition replaces it with the target's ([COR-059](../../../decisions/core/COR-059-version-transition.md) points 2 and 3). It is a JSON object whose top-level keys are the settings the capability would contribute when active. The shape constraint: top-level keys outside `permissions` (see "Reserved keys" below).
-- **`<harness>.json`** is adopter-owned, under `project/`. Sync reads it in its merge, and never writes it. Its **presence is the activation signal**. The file's content is always a copy of the current template at the time of last `enable` — adopters do not hand-edit this file in v1 (see "v1 scope: no in-place customisation" below).
+- **`<harness>.json`** is adopter-owned, under `project/`. Sync reads it in its merge, and never writes it. Its **presence is the activation signal**. The file's content is always a copy of the current template at the time of last `enable` — adopters do not hand-edit this file in v1 (see "Scope: no in-place customisation in v1" below).
 
 The `<cap>/adapters/<harness>/` subtree extends [COR-017](../../../decisions/core/COR-017-capability-pattern.md)'s capability layout convention. Both new subtrees are *optional*: capabilities that don't contribute settings (the common case today) carry neither. When a second capability adopts the pattern, the addition stabilises into a convention worth formalising in COR-017's body; until then, this DEC is the reference.
 
@@ -81,7 +81,7 @@ No-op semantics: re-running `disable` when the live overlay is already absent sk
 
 The `enable` semantics is deliberately *always overwrite* — not "copy iff absent". The intent: after a capability update changes the template (e.g. a new key, a renamed value), re-running `enable` brings the adopter's live overlay back in sync with the capability's current intent. The cost: no in-place customisation in v1.
 
-### v1 scope: no in-place customisation
+### Scope: no in-place customisation in v1
 
 The live overlay file is not an adopter customisation surface in this DEC's scope. Adopters who want to override what the capability would contribute have two options today:
 

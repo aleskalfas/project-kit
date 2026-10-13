@@ -1,0 +1,6 @@
+component: claude-code
+kind: none
+body: >
+  Only the friction block of the adapter README changes: it is revalidated,
+  unchanged, against the renamed heading in project-management DEC-030's
+  Decision. Its text does not change, and nothing you run changes.
