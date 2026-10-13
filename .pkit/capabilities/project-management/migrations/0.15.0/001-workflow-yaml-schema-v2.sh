@@ -9,9 +9,10 @@
 # `back-to-draft`).
 #
 # The kit-shipped `workflow.yaml` under `.pkit/capabilities/project-
-# management/schemas/` is propagated by sync (it lives in the kit-owned
-# tree). Adopters who haven't customised the file will get the new
-# version directly from sync — no migration action needed on their part.
+# management/schemas/` is copied by the upgrade that brings it (it lives in
+# the kit-owned tree), before this migration runs. Adopters who haven't
+# customised the file get the new version from that copy — no migration
+# action needed on their part.
 #
 # The migration's job: detect the case where an adopter has overridden
 # the kit-shipped `workflow.yaml` (e.g., to extend `applies_to` on a

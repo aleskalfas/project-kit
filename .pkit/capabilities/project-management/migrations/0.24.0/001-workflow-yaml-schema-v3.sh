@@ -13,19 +13,20 @@
 # stay.
 #
 # The kit-shipped `workflow.yaml` under `.pkit/capabilities/project-
-# management/schemas/` is delivered by sync (it lives in the kit-owned
-# tree). Adopters who haven't customised the file get the v3 version
-# directly from sync — no migration action needed on their part.
+# management/schemas/` is copied by the upgrade that brings it (it lives in
+# the kit-owned tree), before this migration runs. Adopters who haven't
+# customised the file get the v3 version from that copy — no migration
+# action needed on their part.
 #
 # WARN-ON-OVERRIDE ONLY (DEC-033 D6): this migration's only job is to
 # detect the case where an adopter has overridden the kit-shipped
 # `workflow.yaml` (a `project/schema-overrides/workflow.yaml`) still at
 # schema_version 2 and surface a warning so they can hand-update it. It
-# NEVER rewrites the kit-shipped file (sync owns it) and NEVER auto-edits
+# NEVER rewrites the kit-shipped file (the copy owns it) and NEVER auto-edits
 # a project-owned override (that would silently clobber adopter intent —
 # the no-shared-files invariant + the COR-010 discipline).
 #
-# Idempotent: no override, or an override already at schema_version 3 →
+# Idempotent: no override, or an override at schema_version 3 or later →
 # exit clean. Re-runs are no-ops.
 #
 # Run via the upgrade runtime with ROOT=<adopter root>.
