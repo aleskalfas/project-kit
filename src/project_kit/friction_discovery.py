@@ -684,7 +684,7 @@ def installed_packages_at(
         return []
     areas = {"capability": "capabilities", "adapter": "adapters"}
     found: list[tuple[str, Path, dict[str, Any]]] = []
-    for entry in _mappings(components):
+    for entry in _mappings(cast(list[Any], components)):
         name, area = entry.get("name"), areas.get(str(entry.get("kind")))
         if not isinstance(name, str) or area is None:
             continue
