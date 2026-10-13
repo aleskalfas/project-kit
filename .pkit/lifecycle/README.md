@@ -29,8 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-12T21:33:10Z
-      outcome: updated
+      at: 2026-10-13T00:01:21Z
+      outcome: unchanged
+      unchanged-because: This change decides when pkit upgrade's tool step installs a newer tool, and that a failed hand-over the upgrade detects stops it before it syncs or pins. This page specifies the upgrade flow's six steps and the refusal of a pkit older than the project's content or pin, which come after the tool step and do not change, and it does not describe the tool step.
 ---
 
 # Lifecycle

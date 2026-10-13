@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-12T21:33:12Z
+      at: 2026-10-13T00:01:13Z
       outcome: unchanged
-      unchanged-because: "upgrade.py changed only in comments and docstrings: the backbone-wide upgrade's dependency check passes an absent optional dependency, and reads capability versions from before the sync that moves them. This page says pkit upgrade pulls new versions, runs the migrations and pins the project, none of which changed, so it holds."
+      unchanged-because: This change makes pkit upgrade install a newer tool only when the running pkit is the uv-installed tool, and stop with an error before it syncs or pins when it detects a failed hand-over to the new tool. This page says pkit upgrade pulls new versions, runs the migrations and pins the project at the version it reached, and gives the uv tool install and uv tool update-shell commands, none of which changes, so it holds.
 ---
 
 # project-kit
