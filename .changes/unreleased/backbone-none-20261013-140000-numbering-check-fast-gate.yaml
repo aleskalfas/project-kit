@@ -1,0 +1,10 @@
+component: backbone
+kind: none
+body: >
+  project-kit's own operational rules (.pkit/rules/project.md) list the
+  numbering check of decision records, pkit decisions check-diff, among the
+  fast gates a builder runs. The file is project-owned and sync never
+  touches it, so nothing reaches an adopter. The changeset guard counts any
+  change under .pkit/rules/ as the backbone's. The CLI reference is
+  revalidated, unchanged, against ADR-058 point 7, which names the same
+  check. Only its friction front matter changed. No command changed.

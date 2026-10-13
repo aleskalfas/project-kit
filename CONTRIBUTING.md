@@ -21,8 +21,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-13T13:56:27Z
-      outcome: updated
+      at: 2026-10-13T13:55:11Z
+      outcome: unchanged
+      unchanged-because: The tests README's list of the fast gates a builder runs gains pkit decisions check-diff. The page does not list those gates. It sends a builder to the project's rules and to that README's "Running the suite" for them, which stays true. Its own account of the aggregator's lines already names the numbering check.
 ---
 
 # Contributing to project-kit
