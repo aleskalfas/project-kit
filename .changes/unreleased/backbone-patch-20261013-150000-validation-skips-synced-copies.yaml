@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Fixed
+  pr: "1556"
 body: >
   Validation's decisions member reports nothing on a synced copy of a record in
   an adopter's project, as COR-055 point 1 asks (#1542). The front-matter check
