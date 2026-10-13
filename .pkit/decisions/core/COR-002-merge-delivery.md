@@ -8,7 +8,7 @@ author: Ales Kalfas <kalfas.ales@gmail.com>
 
 ## Context
 
-COR-001 established three steady-state content mechanisms (propagation, extension, suspension) plus install-time seeding as a delivery operation. Seeding is one-shot: a file is written once at install and then belongs to the project; the core layer never revisits it.
+COR-001 established three steady-state content mechanisms (propagation, extension, suspension) plus install-time seeding as a delivery operation. A seed is written at first install. A version transition of the backbone creates a declared seed path that is missing, and sync creates no seed path (COR-059 point 8). The file belongs to the project, and the core layer never revisits a seed that exists.
 
 Several adopter-side fixed-path config files need a more structured delivery than seeding alone. These files share a profile:
 
@@ -21,11 +21,11 @@ Several adopter-side fixed-path config files need a more structured delivery tha
 
 Examples in this profile include agent-tooling permissions, dev-task definitions, pre-commit hook configs, and gitignore patterns. Each shares the structural pattern even if file format and per-entry semantics differ.
 
-The three steady-state mechanisms cover ownership; seeding covers the simple one-shot delivery case. The structured-delivery case needs its own contract.
+The three steady-state mechanisms cover ownership. Seeding covers the simple delivery case, a file of initial content that the core layer never revisits while it exists. The structured-delivery case needs its own contract.
 
 ## Decision
 
-Establish a second delivery operation alongside seeding: **merge**. Like seeding, it is not a steady-state mechanism — it is an operation the core layer performs against a project-owned file. Unlike seeding, merge is **repeatable**: it runs at first install AND can be re-run later (manually, on every sync, or as part of an upgrade flow) to deliver new core-baseline content without losing adopter additions.
+Establish a second delivery operation alongside seeding: **merge**. Like seeding, it is not a steady-state mechanism — it is an operation the core layer performs against a project-owned file. Unlike seeding, which never revisits a file that exists, merge is **repeatable**: it runs at first install AND can be re-run later (manually, on every sync, or as part of an upgrade flow) to deliver new core-baseline content without losing adopter additions.
 
 ### The merge operation
 
@@ -62,7 +62,7 @@ A merge operation reads and writes structured files. The file format determines 
 
 - **Structured config** (JSON, YAML, TOML) — parse, diff at the structured-key level, re-serialize. Comments preserved where the format allows.
 - **Line-based text** (gitignore patterns and similar) — append missing lines; never reorder; never remove adopter lines.
-- **Document templates** (Markdown templates with adopter content embedded) — typically closer to seeding (one-shot stamp); merge applies only when explicitly opted in.
+- **Document templates** (Markdown templates with adopter content embedded) — typically closer to seeding, a stamp the core layer never revisits while it exists. Merge applies only when explicitly opted in.
 
 Each merge target declares its file type and per-tier classification in the core layer's manifest.
 
@@ -71,7 +71,7 @@ Each merge target declares its file type and per-tier classification in the core
 | Operation | Cadence | Adopter content preserved | Source revisited? |
 |---|---|---|---|
 | **Propagation** (mechanism) | Every sync overwrites | N/A — file is core-owned | Yes |
-| **Seeding** (delivery operation) | Once at install | Yes (core never re-touches) | No |
+| **Seeding** (delivery operation) | First install, and a version transition of the backbone where the file is missing | Yes (core never revisits a file that exists) | No |
 | **Merge** (delivery operation) | Install + repeatable | Yes (append-only / baseline-enforce) | Yes |
 | **Authoritative region** (delivery operation) | Install + repeatable | Yes outside the region; the region itself is realizer-owned and replaced | Yes |
 | **Extension** (mechanism) | Adopter-driven | N/A — file is project-owned, written by the core layer only through a writer a record names (COR-001) | No |
@@ -89,7 +89,7 @@ This narrows ownership from whole-file to within-file: exactly one owner per reg
 The file's ownership does not change between merges — it is project-owned the whole time. What changes is its content. That is an operation, not an ownership class. Treating merge as a sixth steady-state mechanism would conflate "what owns this file" with "how content gets into it" — the same conflation seeding avoided in COR-001.
 
 **Why repeatable, unlike seeding.**
-Some core baseline content evolves over time: new safe-add patterns are identified; new entries from newly-shipped methodology surface; safety-critical entries are added. Seeding is one-shot — once stamped, the core layer never revisits. Merge re-runs let baseline updates land later, with user confirmation for non-trivial changes.
+Some core baseline content evolves over time: new safe-add patterns are identified; new entries from newly-shipped methodology surface; safety-critical entries are added. The core layer never revisits a seed that exists. Merge re-runs let baseline updates land later, with user confirmation for non-trivial changes.
 
 **Why two-tier (auto-add vs prompt-once).**
 Narrowly-scoped, low-risk entries should not interrupt the user; broader entries that grant significant capability should be confirmed once. The two-tier split balances "useful out of the box" against "explicit consent for things that matter."
@@ -109,7 +109,7 @@ Some core-shipped content is safety-critical, not preference. An explicit deny f
 
 ## Implications
 
-- The core layer's manifest now distinguishes three categories of paths: **synced** (propagation), **seed** (one-shot delivery), and **merge** (structured-delivery, repeatable). The three are disjoint.
+- The core layer's manifest distinguishes three categories of paths: **synced** (propagation), **seed** (delivery never revisited while the file exists), and **merge** (structured-delivery, repeatable). The three are disjoint.
 - Each merge target is declared with: a baseline source path (core-owned, propagated), a fixed-path adopter target, file-type metadata, per-tier classification of entries (auto-add vs prompt-once), and an explicit safety-enforce list.
 - A merge command is added to the CLI. The same gesture runs at first install (across all declared merge targets) and as a re-run for individual files. Both single-file and full-tree forms are useful; naming TBD with the rest of the CLI surface.
 - Future content that introduces new core-shipped baselines for adopter-owned config files declares its own merge targets, following this contract.
