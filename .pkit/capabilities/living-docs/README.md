@@ -12,9 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-12T21:25:38Z
+      at: 2026-10-13T00:07:33Z
       outcome: unchanged
-      unchanged-because: "COR-051 point 7 admits a capability's inheritance of another capability's rule set only through a required dependency. This page has each space's definition, a project rule set, inherit LDOC, which a project set may do without any dependency, and says the capability depends on no other, so it holds. The COR-051 deferral to #1476 stays."
+      unchanged-because: "COR-051's rejected prose markers name decision records' point headings as an exception: a live point's id is read from its heading (COR-058). This page says a decision record is never a page, and describes no record's points. Its citations of COR-051's points name the same points, since the change moves none. Its account of pages, spaces and LDOC is untouched, so it holds. The COR-051 deferral to #1476 stays."
       deferred:
         - anchor:
             kind: record

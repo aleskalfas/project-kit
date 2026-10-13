@@ -15,6 +15,11 @@ pkit:
       at: 2026-10-12T23:26:19Z
       outcome: unchanged
       unchanged-because: This change builds where an accepted rule binds (COR-051 point 7), the parts of rules that checks enforce, and their validation, conflicts between routes included. The page's statuses bullet says accepted rules bind, which still holds. Its validation bullet names the checks in brief, and already left out the container inside each rule. It sends the reader to the schemas reference for every check, which now names the new ones. Its other sentences on rule sets describe none of this, so the page holds.
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "COR-051's rejected prose markers name decision records' point headings as an exception, citing COR-058. COR-058 decides that a record's points are headings that keep their ids, and that a retired point is kept in retired-points with a stub. This page's schema section still has a complex decision use a numbered list. Its refining section says where a new point goes, but not that it takes the next unused number, or how a dropped point is kept. Its section on rule sets still holds. It follows with #1422, which writes points as headings in the refining, schema and citing sections."
 ---
 
 # Decision records

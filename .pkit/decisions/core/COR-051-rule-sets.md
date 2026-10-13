@@ -137,7 +137,7 @@ Rules are also layered. A component ships the rules its discipline needs, and ea
 - **Every rule as a full decision record.** Rejected. A standard of a dozen one-line rules becomes a dozen documents, which is exactly the weight that makes people skip writing rules down.
 - **Rules as loose prose.** Rejected. It loses names, origins, statuses and the gate.
 - **Rules entirely as data, with the statement included, and a generated view for reading.** Rejected. It needs a generation step and generated files that can drift, and long statements and quotes are awkward to write and review as data.
-- **Markers in the prose, parsed by pattern.** Rejected. It is fragile in exactly the fields that checks depend on.
+- **Markers in the prose, parsed by pattern.** Rejected. It is fragile in exactly the fields that checks depend on. A decision record's points are an exception: a live point's id is read from its heading (refinement per COR-058).
 - **Rules binding when written.** Rejected. It inverts the acceptance gate.
 - **Rule-set names without a family prefix.** Rejected. Collisions with other identifier families would have to be policed by a reserved list.
 - **An inherited rule binding only within its own set's scope.** Rejected. A shared set with no scope would bind nothing, and one given a scope would bind its new rules past every inheritor's pin.

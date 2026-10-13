@@ -19,8 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-12T23:26:18Z
-      outcome: updated
+      at: 2026-10-13T00:07:32Z
+      outcome: unchanged
+      unchanged-because: "COR-051's rejected prose markers name decision records' point headings as an exception: a live point's id is read from its heading (COR-058). This page's rule-set section keeps a rule's data in the front matter and its statement in a section headed by its id, which still holds. Its citations of COR-051's points name the same points, since the change moves none. It describes no decision record's points or front matter, and no backbone file schema covers a record, so the page holds."
 ---
 
 # Schemas
