@@ -14,8 +14,8 @@ src/project_kit/backbone_schemas.py reportUnknownMemberType 12
 src/project_kit/backbone_schemas.py reportUnknownParameterType 2
 src/project_kit/backbone_schemas.py reportUnknownVariableType 16
 src/project_kit/capabilities.py reportUnknownArgumentType 4
-src/project_kit/capabilities.py reportUnknownMemberType 18
-src/project_kit/capabilities.py reportUnknownVariableType 14
+src/project_kit/capabilities.py reportUnknownMemberType 12
+src/project_kit/capabilities.py reportUnknownVariableType 8
 src/project_kit/capability_plans.py reportUnknownArgumentType 2
 src/project_kit/capability_plans.py reportUnknownMemberType 1
 src/project_kit/capability_plans.py reportUnknownVariableType 1
@@ -62,9 +62,6 @@ src/project_kit/docs_roots.py reportIndexIssue 1
 src/project_kit/docs_roots.py reportUnknownArgumentType 3
 src/project_kit/docs_roots.py reportUnknownMemberType 14
 src/project_kit/docs_roots.py reportUnknownVariableType 11
-src/project_kit/environment.py reportArgumentType 1
-src/project_kit/environment.py reportOptionalOperand 1
-src/project_kit/environment.py reportUnknownArgumentType 1
 src/project_kit/friction_check.py reportUnusedImport 1
 src/project_kit/friction_discovery.py reportUnknownArgumentType 11
 src/project_kit/friction_discovery.py reportUnknownMemberType 11
