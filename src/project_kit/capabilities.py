@@ -2032,8 +2032,14 @@ def _stamp_component_manifest(
     capability_root_manifest_path(target_root, name).unlink(missing_ok=True)
     path = capability_manifest_path(target_root, name)
     prior = _load_mapping(path) if restamp and path.is_file() else None
-    if prior is None:
-        path.unlink(missing_ok=True)
+    if prior is None and path.is_file():
+        if restamp:
+            # Say so: what it held, such as both sides of a merge conflict, is git's to recover.
+            click.echo(
+                f"  replaced the manifest of capability {name!r}: "
+                f"{capability_manifest_rel(name)} did not parse"
+            )
+        path.unlink()
     state = prior.get("backend_state") if prior is not None else None
     backend_state: dict[str, Any] = {
         key: value

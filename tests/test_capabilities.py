@@ -1762,10 +1762,11 @@ def test_the_restamp_keeps_what_a_migration_wrote_into_backend_state(
 
 @pytest.mark.parametrize("at_root", [False, True], ids=["under-project", "at-root"])
 def test_a_refresh_over_a_record_that_does_not_parse_writes_a_new_one(
-    kit_target: Path, kit_source: Path, at_root: bool
+    kit_target: Path, kit_source: Path, at_root: bool, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """A record left with merge-conflict markers no longer stops every refresh: the
-    restamp writes a new one, as the copy's pruning did at the root before the move."""
+    restamp writes a new one, as the copy's pruning did at the root before the move, and
+    says so."""
     _install_at(kit_target, kit_source, "0.1.0", with_skills=("one",))
     _record_path(kit_target, "evidence").unlink()
     broken = _record_path(kit_target, "evidence", at_root=at_root)
@@ -1773,6 +1774,7 @@ def test_a_refresh_over_a_record_that_does_not_parse_writes_a_new_one(
         "<<<<<<< HEAD\ncomponent:\n  version: 0.1.0\n=======\n>>>>>>> theirs\n",
         encoding="utf-8",
     )
+    capsys.readouterr()
 
     for version in ("0.2.0", "0.3.0"):
         _refresh_to(kit_source, kit_target, version, with_skills=("one",))
@@ -1780,6 +1782,11 @@ def test_a_refresh_over_a_record_that_does_not_parse_writes_a_new_one(
         assert record is not None
         assert (record.version, record.backend_state) == (version, {})
     assert not _record_path(kit_target, "evidence", at_root=True).exists()
+    replaced = (
+        "replaced the manifest of capability 'evidence': "
+        ".pkit/capabilities/evidence/project/manifest.yaml did not parse"
+    )
+    assert capsys.readouterr().out.count(replaced) == 1
 
 
 def test_the_root_record_wins_when_both_exist(kit_target: Path, kit_source: Path) -> None:
