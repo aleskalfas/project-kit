@@ -57,7 +57,7 @@ Reconciliation is the sync operation (COR-001), COR-010's Update. It is one oper
 - **It creates no seed path** (point 8). Merge delivery may create its own target file where that file is missing, as merge, not as seeding.
 - **A component the running CLI ships at another version than the project records** is not copied, and reconciliation reports it.
 - **An authoritative region** that a realizer manages in a project-owned file (COR-002, COR-028) is outside this record.
-- **Other uses of the word:** the order COR-010 calls its reconciliation order, and its upgrade flow's reconciliation step, are a transition's (point 6). Where a record speaks of reconciling installed content against its source by sync or by upgrade (COR-031, COR-041), it means the propagation both operations run.
+- **Other uses of the word:** where a record speaks of COR-010's reconciliation order, it means a transition's order (point 6). Where a record speaks of reconciling installed content against its source by sync or by upgrade (COR-031, COR-041), it means the propagation both operations run.
 
 ### 3. A version transition is the only operation of the core layer that moves a recorded version
 
@@ -218,7 +218,8 @@ This record partially supersedes COR-001, COR-004 and COR-017. Each overturned p
 - **The operational rule for migrations, the lifecycle reference's script contract and the migration-authoring skill** state the same migration contract as COR-010.
 - **The decisions specification's no-shared-files invariant** says that sync writes a project-owned path only through merge delivery, that it reads what it needs from the project's side, and that it stops under a CLI at another version than the project's.
 - **COR-002, COR-003, COR-025 and COR-031** are refined in place:
-  - COR-002 and COR-003 say seeding as point 8 does. COR-003's test between seed and merge holds: seeding never revisits a seed that exists, and merge re-runs.
-  - COR-025 and COR-031 say what sync writes in a project-owned path as point 2 does. COR-003's out-of-scope list says how the core layer writes one as COR-001's extension contract does.
-  - COR-031 has sync keep a capability at its recorded version and a transition move it, as COR-017 does. Its skip of an incubated capability applies to the propagation both run.
+  - COR-002 and COR-003 describe seeding as point 8 does.
+  - COR-003's out-of-scope list leaves who writes a project-owned path to COR-001's extension contract.
+  - COR-025 says what sync writes in a project-owned path as point 2 does.
+  - COR-031 says the same. It has sync keep a capability at its recorded version and a transition move it, as points 2 and 3 do. Its skip of an incubated capability applies to the propagation both run.
 - **The realisation** is the implementing project's. A realising decision records it (COR-025), among other things the commands, where the completion is recorded, how a component with no manifest is read, how each version of the CLI is tied to one content, how a release that moves only a component reaches a project, and the remedies each stop names.
