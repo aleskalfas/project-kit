@@ -75,6 +75,7 @@ from project_kit.router import (
     write_version_pin,
 )
 from project_kit.sync import refuse_content_downgrade, run_sync
+from project_kit.versioning import is_release_version
 
 # Capability-dependency check (COR-030) — imported lazily below to avoid
 # any circular-import issues at module load time. The functions used are:
@@ -89,11 +90,11 @@ def run_upgrade(
 ) -> None:
     """Transition the project to the source kit's current backbone version.
 
-    **Pins by default** (ADR-049, amended 2026-08-09): an **un-pinned** project is
-    pinned at the version its content just synced to, so pinning is the norm and a
-    project stays code/content-coherent without a remembered gesture. `pin=False`
-    (the `--no-pin` opt-out) keeps the old un-pinned "follow the installed global
-    tool" behaviour. The pin uses the local synced version (offline-safe — no
+    **Pins by default** (ADR-064): an **un-pinned** project is pinned at the
+    version its content just synced to, so pinning is the norm and a project
+    stays code/content-coherent without a remembered gesture. `pin=False` (the
+    `--no-pin` opt-out) keeps the project un-pinned, following the installed
+    global tool. The pin uses the local synced version (offline-safe — no
     `git ls-remote` lookup), is written LAST (after content + migrations, so a
     failed sync never leaves a pin ahead of content), and is a no-op on a project
     that is already pinned (the existing pin-raise already maintains it). Self-host
@@ -144,20 +145,20 @@ def run_upgrade(
         _auto_advance_pinned(target_root, dry_run)
         return
 
-    # ADR-044: detect a newer *released tool* and instruct (print-only). This is
-    # about the `uv`-installed binary, not this project's `.pkit/` content — so it
-    # runs before the backbone-version comparison below and its early return, or
-    # the stale-tool adopter would still see only "nothing to upgrade" and never
-    # learn the fix lives in `uv`. Best-effort: it never fails the command, and it
-    # is never reached in a source checkout (D3) — the self-host branch returns
-    # and the source refusal raises above it.
+    # ADR-063: detect a newer *released tool* and install it, or print the command
+    # where it cannot or may not. This is about the `uv`-installed binary, not this
+    # project's `.pkit/` content — so it runs before the backbone-version comparison
+    # below and its early return (point 4), or the stale-tool adopter would still
+    # see only "nothing to upgrade". Best-effort: it never fails the command, and it
+    # is never reached in a source checkout (point 5) — the self-host branch
+    # returns and the source refusal raises above it.
     #
     # ADR-049: suppress it on the bootstrap hop. Inside a `run_bypassed`-launched
     # reconcile (PKIT_NO_ROUTE set), this upgrade is running *under* a pin raise;
     # a second `git ls-remote` here would print a nonsensical "tool is current"
     # line mid-raise. The outer, non-bypassed upgrade already ran the probe.
     if not is_route_bypassed(os.environ):
-        # Tool axis (ADR-044, amended): self-update the global tool when stale
+        # Tool axis (ADR-063): self-update the global tool when stale
         # and re-exec to finish under the new version (never returns on a
         # successful self-update); otherwise instruct or report current.
         _maybe_self_update_tool(self_update=self_update, dry_run=dry_run)
@@ -220,7 +221,7 @@ def run_upgrade(
     # migrations — so a failed upgrade never advances the pin past content that
     # isn't in place. The write itself is atomic. On an un-pinned project the same
     # last-position write freezes the pin at the just-synced version by default
-    # (pin-by-default; `--no-pin` sets pin=False to skip it).
+    # (pin-by-default, ADR-064; `--no-pin` sets pin=False to skip it).
     if pinned:
         _raise_pin_to(target_root, target_version, dry_run)
     elif pin:
@@ -256,7 +257,7 @@ def _raise_pin_to(target_root: Path, target_version: str, dry_run: bool) -> None
 
 def _pin_after_upgrade(target_root: Path, version: str, dry_run: bool) -> None:
     """Pin-by-default on an un-pinned project: freeze the pin at the just-synced
-    version (ADR-049, amended 2026-08-09).
+    version (ADR-064).
 
     Called when the project was un-pinned, the upgrade succeeded, and `--no-pin`
     was not passed — at the same LAST position as the pinned pin-raise, so a failed
@@ -493,11 +494,14 @@ def _advance_pin_to(target_root: Path, target: str) -> None:
     `.pkit/version-pin` to `target` — so the pin never advances past content that
     failed to land.
 
-    The explicit `_raise_pin_to` here is the load-bearing write when the project
-    had no pin yet (first-time `pkit pin <newer>`): the bootstrapped upgrade sees
-    no pin and does not flip one. When the project *was* already pinned (the
-    `pkit upgrade` raise), the bootstrapped upgrade flips the pin from inside its
-    own OUTER path, so this flip is a benign idempotent no-op.
+    The explicit `_raise_pin_to` here makes the flip whatever the target's code
+    does. When the project had no pin yet (first-time `pkit pin <newer>`), the
+    bootstrapped upgrade sees no pin: a target that pins by default (ADR-064)
+    pins the project at the target itself, so this flip is an idempotent no-op,
+    and an older target writes no pin, so this flip is the load-bearing write.
+    When the project *was* already pinned (the `pkit upgrade` raise), the
+    bootstrapped upgrade flips the pin from inside its own OUTER path, so this
+    flip is a benign idempotent no-op.
     """
     reconcile_forward_via_target(target_root, target)
     _raise_pin_to(target_root, target, dry_run=False)
@@ -508,8 +512,8 @@ def _auto_advance_pinned(target_root: Path, dry_run: bool) -> None:
 
     The router re-exec'd us INTO the pinned version (PKIT_ROUTED set), so we run
     the pinned code and cannot mutate the global tool. Resolve the latest released
-    version (ADR-044's `git ls-remote` check) and dispatch on how it orders against
-    the current pin:
+    version (ADR-063 point 1's `git ls-remote` check) and dispatch on how it orders
+    against the current pin:
 
     - **latest > pin** → reconcile content forward to latest under the target's own
       code (via the router bypass) and flip the pin last — no global `uv tool
@@ -577,7 +581,7 @@ def _auto_advance_pinned(target_root: Path, dry_run: bool) -> None:
     _advance_pin_to(target_root, target)
 
 
-# --- Tool-staleness detection (ADR-044) ----------------------------------------
+# --- Tool-staleness detection (ADR-063) ----------------------------------------
 
 # Bounded so an unreachable release source (offline, DNS black-hole) can't hang
 # `pkit upgrade`. The check is best-effort; a timeout degrades to a warning.
@@ -593,7 +597,7 @@ _SELF_UPDATED_ENV = "PKIT_SELF_UPDATED"
 def run_tool_update(dry_run: bool = False, self_update: bool = True) -> None:
     """`pkit upgrade` run **outside any project**: update the global tool only.
 
-    The "just update my tool" case (ADR-044, amended) — there is no project
+    The "just update my tool" case (ADR-063 point 5) — there is no project
     content to sync, so this handles the tool axis alone and reports the result,
     instead of erroring on a missing project/manifest.
     """
@@ -603,26 +607,27 @@ def run_tool_update(dry_run: bool = False, self_update: bool = True) -> None:
 
 
 def _maybe_self_update_tool(*, self_update: bool, dry_run: bool) -> None:
-    """Detect a newer released pkit tool and **act** on it (ADR-044, amended):
+    """Detect a newer released pkit tool and **act** on it (ADR-063):
     self-update the global binary and re-exec, or degrade to instruct.
 
-    - **D3 suppression.** Reinstalling a released tag over a source checkout's
-      working-tree code is nonsensical, and this step is never reached there:
-      `run_upgrade`'s self-host branch returns under the checkout's own code, and
-      its refusal to propagate over the source raises under any other code
-      (ADR-059; #1070) — both before this step. Run outside a project
-      (`run_tool_update`), there is no checkout.
-    - **D1 degrade.** Any lookup failure (offline, no credentials, `git` absent,
-      timeout) warns and returns; the caller proceeds unchanged.
-    - **Act (amended).** When the tool is behind and self-update is allowed
+    - **Never in a source checkout (point 5).** Reinstalling a released tag over
+      a source checkout's working-tree code is nonsensical, and this step is
+      never reached there: `run_upgrade`'s self-host branch returns under the
+      checkout's own code, and its refusal to propagate over the source raises
+      under any other code (ADR-059; #1070) — both before this step. Run outside
+      a project (`run_tool_update`), there is no checkout.
+    - **Best-effort detection (point 1).** Any lookup failure (offline, no
+      credentials, `git` absent, timeout) warns and returns; the caller proceeds
+      unchanged.
+    - **Act (point 2).** When the tool is behind and self-update is allowed
       (`self_update`, an interactive TTY, not a dry-run, not the guarded re-exec
       child), run `uv tool install --force …@v<latest>` and **re-exec** the same
       command under the new version (never returns on success). Pin-by-default
-      (v1.145.0) insulates projects from the global tool, so this no longer has
-      cross-project blast radius.
-    - **Instruct (degrade).** Otherwise (non-interactive, `--no-self-update`, a
+      (ADR-064) keeps a pinned project at its pin while the router can fetch it;
+      the install still moves every un-pinned project on the machine.
+    - **Instruct (point 3).** Otherwise (non-interactive, `--no-self-update`, a
       failed/declined install, or a dry-run) fall back to printing the exact
-      command — today's behaviour. Never fails `pkit upgrade`.
+      command. Never fails `pkit upgrade`.
     """
     latest = _latest_released_version()
     if latest is None:
@@ -715,7 +720,7 @@ def _reexec_after_self_update() -> None:
 
 
 def _instruct_tool_update(latest: Version, running: Version) -> None:
-    """Print the exact manual update command (ADR-044 D2 instruct — the degrade)."""
+    """Print the exact manual update command (ADR-063 point 3 — the fallback)."""
     click.echo()
     click.echo(f"A newer pkit tool is available: v{latest} (you are running v{running}).")
     click.echo("Update the tool, then re-run this command:")
@@ -725,11 +730,11 @@ def _instruct_tool_update(latest: Version, running: Version) -> None:
 
 
 def _latest_released_version() -> Version | None:
-    """Query the distribution source for the highest released `v<semver>` tag.
+    """Query the distribution source for the highest release tag, pre-releases skipped.
 
-    Best-effort per ADR-044 D1: returns None on *any* failure — `git` missing
+    Best-effort per ADR-063 point 1: returns None on *any* failure — `git` missing
     (`OSError`), the source unreachable (non-zero exit), a bounded-timeout expiry,
-    or output with no parseable `v<semver>` tag. The caller degrades loudly. Uses
+    or output with no release tag (`_max_released_tag`). The caller degrades loudly. Uses
     the same compiled distribution URL the router pins against (`router`), so tool
     detection and route-2 pinning share one source of truth.
     """
@@ -749,24 +754,25 @@ def _latest_released_version() -> Version | None:
 
 
 def _max_released_tag(ls_remote_output: str) -> Version | None:
-    """Pick the highest `v<semver>` tag from `git ls-remote --tags` output.
+    """Pick the highest release tag from `git ls-remote --tags` output.
 
     Each line is `<sha>\trefs/tags/<tag>`. Annotated tags also emit a
     dereferenced `<tag>^{}` peel line; the `^{}` suffix is stripped so both
-    resolve to the same version. Only `v`-prefixed valid semver tags count;
-    anything else (a non-release tag, a malformed ref) is skipped. Returns None
-    when no release tag is present.
+    resolve to the same version. Only a `v` followed by a release version
+    counts, tested as the release step tests a floor
+    (`versioning.is_release_version`): `major.minor.patch`, no part padded by
+    a leading zero. Every pre-release and dev release is skipped (`v2.0.0rc1`,
+    `v2.0.0.dev1`), even one above the latest release, as is any other tag (a
+    non-release tag, a malformed ref). So what the tool step installs and a
+    pinned raise writes is a release `pkit pin` accepts. Returns None when no
+    release tag is present.
     """
     versions: list[Version] = []
     for line in ls_remote_output.splitlines():
         ref = line.rpartition("refs/tags/")[2].strip()
         ref = ref.removesuffix("^{}")
-        if not ref.startswith("v"):
-            continue
-        try:
+        if ref.startswith("v") and is_release_version(ref[1:]):
             versions.append(Version(ref[1:]))
-        except InvalidVersion:
-            continue
     return max(versions) if versions else None
 
 
@@ -789,9 +795,11 @@ def _resolve_compatibility(
 
     Also checks capability dependency requirements (COR-030): for each installed
     capability that declares ``requires_capabilities``, verifies that each
-    declared dependency is installed and its installed version satisfies the
-    range. Uses *installed* versions for both sides (backbone upgrade does not
-    change capability versions). Conflicts are refused with an actionable hint.
+    required dependency is installed and each installed one satisfies its
+    range. Uses the *installed* copies and versions of both sides, as they stand
+    before this upgrade's sync — which refreshes every installed kit-shipped
+    capability from source and re-stamps its version. Conflicts are refused with
+    an actionable hint.
     """
     from project_kit.connections import REQUIRES_BACKBONE_KEY, range_admits, read_package
 
@@ -824,10 +832,11 @@ def _resolve_compatibility(
         )
 
     # Capability-dependency check (COR-030): refuse backbone upgrade when an
-    # installed capability's declared dependency is absent or out of range.
-    # Backbone upgrade uses installed versions for both sides — it does not
-    # change capability versions (sync propagates kit-owned content but does
-    # not bump capability versions; `pkit capabilities upgrade` does that).
+    # installed capability's required dependency is absent, or an installed one
+    # is out of range. It reads the installed copies and versions of both sides,
+    # as they stand before this upgrade's sync. That sync refreshes every installed
+    # kit-shipped capability from source and re-stamps its version, and this check
+    # does not read the versions it installs (#1461 has it read them).
     _check_capability_dep_conflicts_for_upgrade(target_root, components)
 
 
@@ -1042,19 +1051,22 @@ def _check_capability_dep_conflicts_for_upgrade(
     """Refuse backbone upgrade when any installed capability has an unsatisfied dependency.
 
     Iterates over every installed capability in the registry, reads its
-    installed ``package.yaml`` (not the source copy — backbone upgrade does
-    not change capability versions, so the installed copy is authoritative),
-    and calls ``capabilities.check_capability_dependencies`` to evaluate each
-    declared ``requires_capabilities`` entry against the installed state.
+    installed ``package.yaml`` (not the source copy), and calls
+    ``capabilities.check_capability_dependencies`` to evaluate each declared
+    ``requires_capabilities`` entry against the installed state, as it stands
+    before this upgrade's sync. That sync refreshes every installed kit-shipped
+    capability from source and re-stamps its version; this check does not read
+    the versions it installs. An optional dependency that is not installed
+    passes.
 
     This is the backbone-wide half of the capability-dependency gate
     (COR-030). The single-capability-upgrade half lives in
     ``upgrade_capability_cmd`` in ``cli.py``.
 
-    Direction: backbone upgrade is not moving any capability version, so
-    any desync found here is pre-existing. We apply the "dependent against
-    out-of-range dependency" disposition (refuse with hint) rather than the
-    "dependency past dependent's range" disposition (warn + force), because
+    Direction: the check reads the state before the sync moves any capability
+    version, so any desync found here is pre-existing. We apply the "dependent
+    against out-of-range dependency" disposition (refuse with hint) rather than
+    the "dependency past dependent's range" disposition (warn + force), because
     the operator can resolve by first upgrading the dependency capability.
     """
     from project_kit import capabilities as caps

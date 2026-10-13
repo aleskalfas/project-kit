@@ -10,7 +10,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 Components often need knowledge that another component, or the project itself, is better placed to provide. A documentation discipline needs to know who the readers are. A merge gate needs to know what documentation a change owes. Some other component may know the answer, but the consumer must also work when that component is absent, and the provider must not need the consumer installed either.
 
-Capability dependencies (COR-030) make one capability require another, which is right when it cannot work without it. It is wrong when the second capability merely makes the first *better*: users who want only one of them would be forced to install both. Meanwhile the same "consumer defines an interface, providers contribute to it" pattern has been built several times for single purposes, each with its own rules for precedence, collisions and failure.
+A required capability dependency (COR-030) makes one capability require another, which is right when it cannot work without it. It is wrong when the second capability merely makes the first *better*: users who want only one of them would be forced to install both. An optional dependency forces nothing, but it names one specific capability, while the inputs here may come from any component or from the project itself. Meanwhile the same "consumer defines an interface, providers contribute to it" pattern has been built several times for single purposes, each with its own rules for precedence, collisions and failure.
 
 ## Decision
 
@@ -70,7 +70,7 @@ Capability dependencies (COR-030) make one capability require another, which is 
 
 **Why the consumer owns the slot.** The consumer knows what it needs and what the data means. If providers defined the interface, each consumer would have to understand every provider's model. With the consumer defining it, each provider maps its own model once.
 
-**Why no dependency in either direction.** A capability that merely improves another should not force its installation, and a consumer should keep working with project files alone. Inert fillers and consumer defaults make every combination of installed components valid.
+**Why no dependency in either direction.** A capability that merely improves another should not force its installation. A consumer should not name the one that answers it either, as even an optional dependency does, since any component or the project may answer. And a consumer should keep working with project files alone. Inert fillers and consumer defaults make every combination of installed components valid.
 
 **Why three policies.** Some inputs are answers, where one source should decide. Some are data merged from several sources. Some are requirements that no source may quietly remove. A single policy would get one of these wrong. The requirement case is the one where letting the project win silently would defeat the point.
 
@@ -86,7 +86,7 @@ Capability dependencies (COR-030) make one capability require another, which is 
 
 ### Alternatives considered
 
-- **Capability dependencies for every exchange.** Rejected. It forces installing components that are optional improvements.
+- **Capability dependencies for every exchange.** Rejected. A required dependency forces installing components that are optional improvements. An optional one names a single provider, where any component or the project may answer.
 - **Consumers reading providers' data directly, through shared data references.** Rejected. It forces every provider to store its data in the consumer's format, which couples their models.
 - **A bespoke mechanism per pair of components.** Rejected. It adds a new copy of the same rules each time.
 - **Silently falling back to the default everywhere.** Rejected. Gates would fail open while looking as if they passed.

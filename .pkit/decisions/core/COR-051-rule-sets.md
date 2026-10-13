@@ -81,7 +81,7 @@ Rules are also layered. A component ships the rules its discipline needs, and ea
    A project never edits a method rule set; it extends it. A method rule set is cited with its component's name; a project rule set is cited bare.
 
 7. **Inheritance, and where rules bind.**
-   - **Inheriting.** A rule set may inherit one or more rule sets, and inherits all their rules unchanged. Because rule ids carry their set's name, rules from different inherited sets cannot collide. A capability's rule set may inherit another capability's rule set only if it declares a dependency on that capability, using the mechanism by which capabilities depend on one another (COR-030). Any capability may inherit a rule set the backbone ships. A set's inheritance *chain* is the set and every set it inherits, directly or not.
+   - **Inheriting.** A rule set may inherit one or more rule sets, and inherits all their rules unchanged. Because rule ids carry their set's name, rules from different inherited sets cannot collide. A capability's rule set may inherit another capability's rule set only if it declares a required dependency on that capability, using the mechanism by which capabilities depend on one another (COR-030). Any capability may inherit a rule set the backbone ships. A set's inheritance *chain* is the set and every set it inherits, directly or not.
    - **Pins.** Inheriting a rule set **pins that set's major version**, written as the set name followed by `@` and the major version. A rule set's version is its own, not its component's. A new major version is required when:
      - an accepted rule is withdrawn, superseded or tightened
      - an offered extension point is removed

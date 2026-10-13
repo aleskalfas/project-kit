@@ -1811,10 +1811,140 @@ def friction_artefacts_command(at: str | None, as_json: bool) -> None:
     document = validators.as_one_run(
         lambda: friction_discovery.artefacts_document(target_root, tree)
     )
+    settings = friction_discovery.read_friction_settings(target_root, tree)
+    for warning in friction_discovery.refused_type_warnings(settings):
+        click.echo(warning, err=True)
     if as_json:
         click.echo(friction_discovery.render_artefacts_json(document), nl=False)
     else:
         click.echo(friction_discovery.render_artefacts_human(document), nl=False)
+
+
+@main.group("rule-sets")
+def rule_sets_group() -> None:
+    """Rule sets (COR-051): which accepted rules bind on each artefact, and on what a
+    change altered.
+
+    The reach walk's answer (COR-051 point 7), for a capability's script or a
+    migration to read rather than walk routes or judge pins itself (ADR-057
+    points 1 and 2). Read-only; runs no query. Validation of rule-set files is
+    `pkit validate`'s `rule-sets` member.
+    """
+
+
+def _readable_configuration(target_root: Path, tree: friction_check.CommitTree | None) -> None:
+    """Refuse a configuration that does not read: a script could not tell nothing declared
+    from nothing readable (`friction_discovery.unreadable_configuration`)."""
+    from project_kit import friction_discovery
+
+    problem = friction_discovery.unreadable_configuration(target_root, tree)
+    if problem is not None:
+        raise click.ClickException(f"{problem}; `pkit validate` reports it.")
+
+
+@rule_sets_group.command("reach")
+@click.option(
+    "--at",
+    "at",
+    metavar="REV",
+    default=None,
+    help="Read the state of commit REV — its configuration, its rule sets and its artefacts — "
+    "from git objects instead of the working tree. Nothing is checked out.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def rule_sets_reach_command(at: str | None, as_json: bool) -> None:
+    """Which accepted rules bind on each artefact, at one state (COR-051 point 7).
+
+    The working tree by default, or commit REV with --at. Each artefact on
+    which an accepted rule binds, or whose routes conflict: each rule with
+    its status, the sets whose scope it binds through, the extension points
+    it fills, the parts of it checks enforce, and its text; each conflict
+    between routes — one set pinned at different majors, or the most
+    specific sets bringing different fills for one extension point. Exit 0
+    when answered; 1 when the configuration cannot be read or REV names no
+    commit; 2 on a usage error.
+    """
+    from project_kit import rule_set_reading, validators
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    commit = None
+    tree = None
+    if at is not None:
+        commit = None if not at or at.startswith("-") else friction_check.commit_of(target_root, at)
+        if commit is None:
+            raise click.ClickException(f"--at {at!r} names no commit of this repository.")
+        tree = friction_check.CommitTree(target_root, commit)
+    _readable_configuration(target_root, tree)
+    document = validators.as_one_run(lambda: rule_set_reading.reach_document(target_root, commit))
+    if as_json:
+        click.echo(rule_set_reading.render_json(document), nl=False)
+    else:
+        click.echo(rule_set_reading.render_reach_human(document), nl=False)
+
+
+@rule_sets_group.command("altered")
+@click.option(
+    "--base",
+    "base_ref",
+    metavar="REF",
+    default=None,
+    help=f"Compare against the merge-base of REF and the head. Default: "
+    f"${friction_check.BASE_ENV}, else the default branch (`pkit repository base` shows it).",
+)
+@click.option(
+    "--head",
+    "head_rev",
+    metavar="REV",
+    default=None,
+    help="Read commit REV as the head instead of the working tree: its files read from git "
+    "objects, nothing checked out, the merge-base taken against REV.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def rule_sets_altered_command(base_ref: str | None, head_rev: str | None, as_json: bool) -> None:
+    """Which artefacts a change altered, with the accepted rules that bind on each at the
+    base and at the head (COR-051 point 7).
+
+    The head is the working tree (uncommitted changes included) or, with
+    --head, commit REV; the base is the merge-base of REF with it, as the
+    change check takes it (COR-054). An artefact is altered when it is added
+    or removed, or its content differs: the change check's pairing decides
+    which base artefact a head artefact is, so a move it follows that keeps
+    the content alters nothing, and so does a change that only writes a
+    revalidation. Each altered artefact is listed with the walk's answer at
+    each state that holds it, as `pkit rule-sets reach` gives it. Exit 0
+    when answered; 1 when a configuration cannot be read, the base cannot be
+    compared or REV names no commit; 2 on a usage error.
+    """
+    from project_kit import rule_set_reading, validators
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    named = None if head_rev is None else friction_check.named_head(target_root, head_rev)
+    settled = default_branch.settled(
+        target_root, base_ref, head_rev="HEAD" if named is None else named.commit
+    )
+    _warn_settled(settled)
+    base = friction_check.resolve_base(target_root, base_ref, resolved=settled.base, head=named)
+    _readable_configuration(
+        target_root, None if named is None else friction_check.CommitTree(target_root, named.commit)
+    )
+    _readable_configuration(target_root, friction_check.CommitTree(target_root, base.commit))
+    document = validators.as_one_run(
+        lambda: rule_set_reading.altered_document(
+            target_root, base_ref, resolved=settled.base, named=named
+        )
+    )
+    if as_json:
+        click.echo(rule_set_reading.render_json(document), nl=False)
+    else:
+        click.echo(rule_set_reading.render_altered_human(document), nl=False)
 
 
 @main.group(invoke_without_command=True)
@@ -3911,15 +4041,14 @@ def merge(targets: tuple[str, ...], dry_run: bool) -> None:
     is_flag=True,
     default=False,
     help="Keep this project un-pinned (opt out of pin-by-default): it keeps "
-    "following the installed global tool. Per ADR-049.",
+    "following the installed global tool. Per ADR-064.",
 )
 @click.option(
     "--no-self-update",
     "no_self_update",
     is_flag=True,
     default=False,
-    help="Don't update the pkit tool itself when it's stale — just print the "
-    "command (the old detect-and-instruct behaviour). Per ADR-044.",
+    help="Don't update the pkit tool itself when it's stale — just print the command. Per ADR-063.",
 )
 def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool) -> None:
     """Transition the project to a newer backbone (per COR-010).
@@ -3927,16 +4056,17 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool) -> None:
     Bumps the project to the source kit's current backbone version. To
     upgrade a single capability, use `pkit capabilities upgrade <name>`.
 
-    **Updates the pkit tool itself** when it is behind (ADR-044): it runs
+    **Updates the pkit tool itself** when it is behind (ADR-063): it runs
     `uv tool install --force …@<latest>` and re-runs the upgrade under the new
     version — degrading to just printing the command when non-interactive or if the
-    install is declined. `--no-self-update` keeps the print-only behaviour. Run
-    outside any project, `pkit upgrade` updates the tool only.
+    install is declined. `--no-self-update` only prints the command. Run outside
+    any project, `pkit upgrade` updates the tool only.
 
-    **Pins the project by default** at the version it upgrades to (ADR-049), so it
+    **Pins the project by default** at the version it upgrades to (ADR-064), so it
     stays version-locked with no separate `pkit pin` step. Pass `--no-pin` to keep
-    it un-pinned. A project that is already pinned advances its pin either way;
-    self-host is never pinned.
+    it un-pinned. In a project that is already pinned, `--no-pin` changes nothing:
+    the upgrade keeps the pin, and raises it when it reaches a newer version.
+    Self-host is never pinned.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -4219,46 +4349,15 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     # dependents. Warn loudly + require --force (not a hard block — a hard block
     # would deadlock since cascade-upgrade is out of scope per COR-030).
     new_version = capability_source.package.version
-    desynced_dependents = _find_desynced_dependents(
-        target_root, dep_name=name, new_dep_version=new_version
+    _gate_desynced_dependents(
+        target_root,
+        name,
+        new_version,
+        action=f"upgrading {name!r} to v{new_version}",
+        verb="upgrade",
+        moving="the new version",
+        force=force,
     )
-    if desynced_dependents and not force:
-        click.echo(
-            "\n  "
-            + cli_render.style(
-                "strong",
-                f"Warning: upgrading {name!r} to v{new_version} would desync "
-                f"{len(desynced_dependents)} installed dependent(s):",
-            )
-        )
-        for dep_cap, declared_range in desynced_dependents:
-            click.echo(
-                f"    - '{dep_cap}' declares {name!r} {declared_range} "
-                f"(v{new_version} is outside this range)"
-            )
-        raise click.ClickException(
-            "refusing to upgrade: the new version would desync installed dependents.\n"
-            "Upgrade those capabilities to versions compatible with the new range, "
-            "then retry — or pass --force to proceed anyway and fix dependents "
-            "manually (the deadlock-free override per COR-030)."
-        )
-    if desynced_dependents and force:
-        click.echo(
-            "\n  "
-            + cli_render.style(
-                "strong",
-                f"Warning (--force): upgrading {name!r} to v{new_version} "
-                f"desyncs {len(desynced_dependents)} dependent(s):",
-            )
-        )
-        for dep_cap, declared_range in desynced_dependents:
-            click.echo(
-                f"    - '{dep_cap}' declares {name!r} {declared_range} "
-                f"(v{new_version} is outside this range)"
-            )
-        click.echo(
-            "  Proceeding under --force; upgrade dependent capabilities to restore consistency."
-        )
     # The same direction for mandatory process connections aimed at this
     # capability (COR-053 point 6): warn, naming each, and proceed under --force.
     _warn_mandatory_counterparts(
@@ -5778,8 +5877,23 @@ def _plan_flags(plan: bool, as_json: bool) -> None:
 @click.option(
     "--json", "as_json", is_flag=True, default=False, help="With --plan: the machine form."
 )
-def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) -> None:
-    """Install a capability: copy subtree into adopter, register in manifest, re-deploy."""
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Install even when the capability's version falls outside a range an installed "
+    "capability declares for it in requires_capabilities; the warning naming each such "
+    "dependent is still printed (COR-030).",
+)
+def install_capability_cmd(
+    name: str, dry_run: bool, plan: bool, as_json: bool, force: bool
+) -> None:
+    """Install a capability: copy subtree into adopter, register in manifest, re-deploy.
+
+    Installing a capability whose version falls outside a range an installed
+    capability declares for it — required or optional — warns, naming each such
+    dependent and its range, and refuses unless --force (COR-030).
+    """
     from project_kit import capabilities as caps
 
     _plan_flags(plan, as_json)
@@ -5825,7 +5939,8 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
 
     if plan:
         # The plan runs before the gates: what the gates refuse on — the backbone
-        # and dependency ranges — is among what the plan reports it needs.
+        # and dependency ranges — is among what the plan reports it needs, and a
+        # range an installed capability declares on it among the findings it adds.
         from project_kit import capability_plans as plans
 
         candidate = plans.candidate_of(capability_source, caps.KIT_SHIPPED, installed=False)
@@ -5846,8 +5961,8 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
     _check_backbone_satisfied(target_root, capability_source)
 
     # Pre-flight: capability dependency check (COR-030).
-    # Refuse if any declared dependency is absent or its installed version
-    # is outside the required range. Never auto-installs.
+    # Refuse if a required dependency is absent, or any installed dependency's
+    # version is outside the declared range. Never auto-installs.
     dep_conflicts = caps.check_capability_dependencies(
         target_root, capability_source.package.requires_capabilities
     )
@@ -5868,6 +5983,19 @@ def install_capability_cmd(name: str, dry_run: bool, plan: bool, as_json: bool) 
             f"unsatisfied dependencies:\n" + "\n".join(lines) + "\n"
             "Install or upgrade the required capabilities first."
         )
+
+    # The other direction: the ranges installed capabilities declare for this one
+    # (COR-030's dependency side). Warn, naming each dependent its version would
+    # desync, and refuse unless --force — as upgrading a dependency does.
+    _gate_desynced_dependents(
+        target_root,
+        name,
+        capability_source.package.version,
+        action=f"installing {name!r} v{capability_source.package.version}",
+        verb="install",
+        moving=f"v{capability_source.package.version}",
+        force=force,
+    )
 
     # Pre-flight: mandatory process connections (COR-053 point 6). Refuse when an
     # upstream the capability marks mandatory is missing or incompatible.
@@ -6005,7 +6133,15 @@ def _refuse_collisions_in_place(target_root: Path, capability_source: Capability
     default=False,
     help="Show what would be registered without writing files.",
 )
-def register_capability_cmd(name: str, dry_run: bool) -> None:
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Register even when the capability's version falls outside a range an installed "
+    "capability declares for it in requires_capabilities; the warning naming each such "
+    "dependent is still printed (COR-030).",
+)
+def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
     """Register + activate a capability authored in this repo (per COR-031).
 
     The capstone of capability incubation: a capability the adopter wrote
@@ -6160,6 +6296,20 @@ def register_capability_cmd(name: str, dry_run: bool) -> None:
             f"capability {name!r} v{capability_source.package.version} has "
             f"unsatisfied dependencies:\n" + "\n".join(lines) + "\n"
             "Install or upgrade the required capabilities first."
+        )
+
+    # The other direction: the ranges installed capabilities declare for this one
+    # (COR-030), as install. Adopting in place moves no version, so only a new
+    # registration is gated.
+    if not adopt_in_place:
+        _gate_desynced_dependents(
+            target_root,
+            name,
+            capability_source.package.version,
+            action=f"registering {name!r} v{capability_source.package.version}",
+            verb="register",
+            moving=f"v{capability_source.package.version}",
+            force=force,
         )
 
     # Pre-flight: mandatory process connections (COR-053 point 6), as install.
@@ -6426,9 +6576,10 @@ def _find_desynced_dependents(
 ) -> list[tuple[str, str]]:
     """Find installed capabilities whose declared range for *dep_name* excludes *new_dep_version*.
 
-    Used by the single-capability upgrade direction-2 check (COR-030): when
-    upgrading a dependency capability, detect installed dependents that would
-    become desynced by the new version.
+    Used by the dependency side of COR-030's direction split, for install,
+    register and the single-capability upgrade: installing or upgrading a
+    dependency capability, detect installed dependents that its version would
+    desync. Every declared range counts, required or optional.
 
     Returns a list of (dependent_name, declared_range_string) pairs.
     Uses installed versions of the dependent side — only the dependency's
@@ -6440,25 +6591,78 @@ def _find_desynced_dependents(
     from project_kit import capabilities as caps
     from project_kit.connections import range_admits
 
-    declared_dependents = caps.find_declared_dependents(target_root, dep_name)
     desynced: list[tuple[str, str]] = []
-    for dep_cap in declared_dependents:
-        pkg_yaml_path = target_root / ".pkit" / "capabilities" / dep_cap / "package.yaml"
-        if not pkg_yaml_path.is_file():
-            continue
-        pkg = caps._read_package_yaml(pkg_yaml_path)
-        if pkg is None:
-            continue
-        for req in pkg.requires_capabilities:
-            if req.name != dep_name:
-                continue
-            admitted = range_admits(req.version, new_dep_version)
-            if admitted is None:
-                continue
-            if not admitted:
-                desynced.append((dep_cap, req.version))
-            break
+    for dep_cap in caps.find_declared_dependents(target_root, dep_name):
+        excluding = next(
+            (
+                req
+                for req in caps.declared_dependencies(target_root, dep_cap, dep_name)
+                if range_admits(req.version, new_dep_version) is False
+            ),
+            None,
+        )
+        if excluding is not None:
+            desynced.append((dep_cap, excluding.version))
     return desynced
+
+
+def _declares_optional(target_root: Path, dependent: str, dep_name: str) -> bool:
+    """Whether the installed capability `dependent` declares `dep_name` only as an
+    optional dependency (COR-030) — one that never blocks uninstalling `dep_name`.
+    An entry without the mark beside one with it reads as required, the stricter
+    reading."""
+    from project_kit import capabilities as caps
+
+    entries = caps.declared_dependencies(target_root, dependent, dep_name)
+    return bool(entries) and all(entry.optional for entry in entries)
+
+
+def _gate_desynced_dependents(
+    target_root: Path,
+    name: str,
+    version: str,
+    *,
+    action: str,
+    verb: str,
+    moving: str,
+    force: bool,
+) -> None:
+    """The dependency side of COR-030's direction split, shared by install, register
+    and the single-capability upgrade: installed capabilities whose declared range
+    for `name` — required or optional — excludes `version`.
+
+    Warns, naming each such dependent and its range, and refuses unless `force`.
+    Under `force` the warning is still printed and the operation proceeds — never a
+    hard block, which would deadlock since cascade-upgrade is out of scope.
+    `action` names the operation in the warning ("upgrading 'x' to v1.2.0"), `verb`
+    in the refusal, and `moving` what would desync the dependents ("the new
+    version").
+    """
+    desynced = _find_desynced_dependents(target_root, dep_name=name, new_dep_version=version)
+    if not desynced:
+        return
+    heading = (
+        f"Warning (--force): {action} desyncs {len(desynced)} dependent(s):"
+        if force
+        else f"Warning: {action} would desync {len(desynced)} installed dependent(s):"
+    )
+    click.echo("\n  " + cli_render.style("strong", heading))
+    for dependent, declared_range in desynced:
+        click.echo(
+            f"    - '{dependent}' declares {name!r} {declared_range} "
+            f"(v{version} is outside this range)"
+        )
+    if force:
+        click.echo(
+            "  Proceeding under --force; upgrade dependent capabilities to restore consistency."
+        )
+        return
+    raise click.ClickException(
+        f"refusing to {verb}: {moving} would desync installed dependents.\n"
+        f"Upgrade those capabilities to versions whose range admits v{version}, "
+        "then retry — or pass --force to proceed anyway and fix dependents "
+        "manually (the deadlock-free override per COR-030)."
+    )
 
 
 def _resolve_collision_interactive(target_root, finding, *, dry_run: bool) -> str:
@@ -6519,7 +6723,7 @@ def _show_unified_diff(existing: Path, incoming: Path) -> None:
     is_flag=True,
     default=False,
     help="Override the safety checks; remove even if references exist, other "
-    "installed capabilities declare a dependency on this one (COR-030), or a "
+    "installed capabilities declare a required dependency on this one (COR-030), or a "
     "mandatory process connection would be left unmet (COR-053 point 6).",
 )
 @click.option(
@@ -6629,11 +6833,18 @@ def uninstall_capability_cmd(
         )
 
     # Declared-dependent safety check (COR-030): refuse when another installed
-    # capability declares this one in its requires_capabilities. This catches
-    # behavioural dependencies that leave no textual citation (complementing
-    # the find_references check below). Both checks are gated by --force.
+    # capability declares this one a required dependency in its
+    # requires_capabilities. This catches behavioural dependencies that leave no
+    # textual citation (complementing the find_references check below). Both
+    # checks are gated by --force. An optional dependency never blocks uninstalling
+    # its target, so it is filtered out here, not in `find_declared_dependents`,
+    # whose whole list the install and upgrade gates read.
     if not force:
-        declared_dependents = caps.find_declared_dependents(target_root, name)
+        declared_dependents = [
+            dependent
+            for dependent in caps.find_declared_dependents(target_root, name)
+            if not _declares_optional(target_root, dependent, name)
+        ]
         if declared_dependents:
             click.echo(
                 "\n  "
@@ -6641,7 +6852,7 @@ def uninstall_capability_cmd(
                     "strong",
                     f"Refusing to uninstall {name!r}: "
                     f"{len(declared_dependents)} installed capability(ies) "
-                    f"declare a dependency on it:",
+                    f"declare a required dependency on it:",
                 )
                 + "\n"
             )

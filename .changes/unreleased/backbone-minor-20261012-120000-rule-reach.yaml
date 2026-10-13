@@ -1,0 +1,23 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The backbone answers which accepted rules bind on an artefact (COR-051
+  point 7, #1408). `pkit rule-sets reach` gives the answer at the working
+  tree, or at a commit with `--at`. Each artefact on which a rule binds is
+  listed with each rule's status, the sets whose scope it binds through, the
+  extension points it fills, the parts of it checks enforce, and its text.
+  `pkit rule-sets altered` lists each artefact a change altered, with the
+  rules that bind on it at the base and at the head. It pairs artefacts as
+  the change check does, so a move that keeps the content, or a change that
+  only writes a revalidation, alters nothing. Neither command runs a query.
+  A route starts at a scoped set of the project's own and follows its pins,
+  and no rule binds through a pin behind its set. A rule set may declare,
+  under `checks`, the part of a rule a check enforces. `pkit validate`'s
+  `rule-sets` member now fails an artefact reached through routes that pin
+  one set at different majors, or whose most specific sets bring different
+  fills for one extension point. It also fails a check part declared for a
+  rule the set lacks, and reports a declared check that is not there. A
+  project whose scoped sets disagree in this way sees new errors. The
+  rule-set reader reads a commit through discovery's tree.

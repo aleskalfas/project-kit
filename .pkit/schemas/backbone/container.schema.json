@@ -94,7 +94,7 @@
     },
     "revalidated": {
       "title": "The last revalidation (COR-050 points 3 and 4)",
-      "description": "Written on a person's decision. `at` is the marker of a revalidation and comes with its `outcome`; `unchanged` requires `unchanged-because`. An artefact never yet revalidated may carry `deferred` alone; an empty block is refused.",
+      "description": "Written on a person's decision, or by an agent making a change and checked by a reviewer. `at` is the marker of a revalidation and comes with its `outcome`; `unchanged` requires `unchanged-because`. An artefact never yet revalidated may carry `deferred` alone; an empty block is refused.",
       "type": "object",
       "additionalProperties": false,
       "minProperties": 1,

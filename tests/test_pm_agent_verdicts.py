@@ -537,3 +537,253 @@ def test_latest_commit_timestamp_prefers_committed_then_authored(av) -> None:
 def test_latest_commit_timestamp_is_empty_without_a_readable_head(av) -> None:
     assert av.latest_commit_timestamp([{"oid": "abc123"}]) == ""
     assert av.latest_commit_timestamp(["not-a-commit"]) == ""
+
+
+# ---- finding tags (DEC-028 "Finding tags", #1405) ------------------------------
+
+
+_TAGGED = (
+    "Reviewer agent (local, code-reviewer): CHANGES_REQUESTED\n"
+    "\n"
+    "The change is unsafe.\n"
+    "\n"
+    "- [block] `land.py:10` merges a head nobody reviewed.\n"
+    "  It must pin the head.\n"
+    "  - and say so\n"
+    "- [advisory] (pre-existing: older code) A loop is slow.\n"
+    "1. [person] RS-GUIDE-003, `docs/install.md` line 12 — whether it says only what the "
+    "reader needs.\n"
+    "   ```\n"
+    "   - [block] quoted, not a finding of its own\n"
+    "   ```\n"
+    "- An untagged note.\n"
+    "\n"
+    "```\n"
+    "- [block] fenced outside every item: no finding\n"
+    "```\n"
+    "\n"
+    "<!-- pkit-verdict -->\n"
+)
+
+
+def test_findings_reads_each_tag_and_keeps_each_finding_whole(av) -> None:
+    found = av.findings(_TAGGED)
+    assert [(f.tag, f.tagged) for f in found] == [
+        (av.TAG_BLOCK, True),
+        (av.TAG_ADVISORY, True),
+        (av.TAG_PERSON, True),
+        (av.TAG_ADVISORY, False),
+    ]
+    assert found[0].text == (
+        "[block] `land.py:10` merges a head nobody reviewed.\nIt must pin the head.\n- and say so"
+    )
+    # A fence inside a finding belongs to it, and its text carries no tag.
+    assert found[2].text.splitlines()[1:] == [
+        "```",
+        "- [block] quoted, not a finding of its own",
+        "```",
+    ]
+    assert found[2].first_line.startswith("[person] RS-GUIDE-003")
+
+
+def test_an_untagged_finding_counts_as_advisory(av) -> None:
+    (finding,) = av.findings("Reviewer agent: APPROVED\n\n- Rename `x`, it reads oddly.\n")
+    assert finding.tag == av.TAG_ADVISORY
+    assert not finding.tagged
+    assert av.tagged("Reviewer agent: APPROVED\n\n- Rename `x`.\n", av.TAG_PERSON) == []
+
+
+@pytest.mark.parametrize(
+    "head",
+    [
+        "[person]",
+        "**[person]**",
+        "**person**",
+        "`person`",
+        "`[person]`",
+        "person:",
+        "**person**:",
+        "**person:**",
+        "[Person]",
+        "PERSON:",
+        "*[person]*",
+    ],
+)
+def test_a_tag_is_read_leniently(av, head) -> None:
+    (finding,) = av.findings(f"Reviewer agent: APPROVED\n\n- {head} RS-1 — a reading.\n")
+    assert (finding.tag, finding.tagged) == (av.TAG_PERSON, True)
+
+
+@pytest.mark.parametrize(
+    "text", ["[person]— RS-1", "[person], RS-1", "[person](RS-1)", "[person]."]
+)
+def test_punctuation_right_after_a_tag_still_ends_it(av, text) -> None:
+    """A `[person]` finding read as untagged would never hold a run."""
+    (finding,) = av.findings(f"Reviewer agent: APPROVED\n\n- {text} a reading\n")
+    assert finding.tag == av.TAG_PERSON
+
+
+def test_a_fence_a_finding_leaves_open_ends_with_it(av) -> None:
+    """GitHub closes an item's fence where the item ends: a finding after one
+    left open is still a finding, and still holds."""
+    body = (
+        "Reviewer agent: APPROVED\n\n"
+        "- [advisory] quoting the change:\n"
+        "  ```\n"
+        "  - [block] inside the open fence\n"
+        "- [person] RS-1 — a reading.\n"
+    )
+    assert [(f.tag, f.first_line) for f in av.findings(body)] == [
+        (av.TAG_ADVISORY, "[advisory] quoting the change:"),
+        (av.TAG_PERSON, "[person] RS-1 — a reading."),
+    ]
+
+
+@pytest.mark.parametrize(
+    "head",
+    ["person said so", "[nit]", "[x]", "personal note:", "`person`al", "[ ] a box", "[person]s"],
+)
+def test_what_is_not_a_tag(av, head) -> None:
+    (finding,) = av.findings(f"Reviewer agent: APPROVED\n\n- {head} and more\n")
+    assert (finding.tag, finding.tagged) == (av.TAG_ADVISORY, False)
+
+
+@pytest.mark.parametrize(
+    ("verdict", "head", "tag"),
+    [
+        ("CHANGES_REQUESTED", "**hard-reject**:", "block"),
+        ("CHANGES_REQUESTED", "`bypassable-with-audit` —", "block"),
+        # That copy approved with it only when its audit comment was there.
+        ("APPROVED", "`bypassable-with-audit` —", "advisory"),
+        ("APPROVED", "warning:", "advisory"),
+        ("CHANGES_REQUESTED", "[block] (hard-reject)", "block"),
+        ("APPROVED", "[advisory] (bypassable-with-audit)", "advisory"),
+        ("APPROVED", "[advisory] (warning)", "advisory"),
+    ],
+)
+def test_pm_reviewers_former_severities_are_aliases(av, verdict, head, tag) -> None:
+    """An adopter's copy of `pm-reviewer` may still write a severity alone; one
+    that writes the tag first carries its severity after it."""
+    body = f"Reviewer agent (local, pm-reviewer): {verdict}\n\n- {head} x\n"
+    (finding,) = av.findings(body)
+    assert (finding.tag, finding.tagged) == (tag, True)
+
+
+def test_a_severity_whose_verdict_is_unknown_reads_as_block(av) -> None:
+    (finding,) = av.findings("- `bypassable-with-audit` — the changeset has no audit\n")
+    assert finding.tag == av.TAG_BLOCK
+
+
+def test_the_verdict_line_and_marker_are_not_findings(av) -> None:
+    body = (
+        "- [block] a body that opens with a finding\n\n<!-- pkit-verdict sha=" + "a" * 40 + " -->"
+    )
+    assert [f.tag for f in av.findings(body)] == [av.TAG_BLOCK]
+    assert av.findings("Reviewer agent: APPROVED\n\n<!-- pkit-verdict -->\n") == []
+
+
+def test_a_paragraph_after_a_blank_line_ends_a_finding(av) -> None:
+    (finding,) = av.findings(
+        "Reviewer agent: APPROVED\n\n- [person] RS-1 — a reading.\nlazy continuation\n\n"
+        "A closing paragraph.\n"
+    )
+    assert finding.text == "[person] RS-1 — a reading.\nlazy continuation"
+
+
+def test_the_gates_selection_is_within_the_marked_candidates(av) -> None:
+    """land-work asks the marked candidates whether any carries a `[person]`
+    finding before it resolves the required set: what the gate selects must
+    always be among them, or the check would skip a verdict the hold reads."""
+    comments = [
+        _local("pm-reviewer", "APPROVED", ts="2026-06-02T00:00:01Z"),
+        # A newer unmarked verdict never hides an older marked one.
+        _local("pm-reviewer", "APPROVED", ts="2026-06-02T00:00:02Z", marked=False),
+        _local("stranger", "APPROVED"),
+        _remote("APPROVED", author="review-bot"),
+        _remote("APPROVED", author="author"),
+    ]
+    remote_ok, local_ok = av.gate_membership(
+        remote_baseline=["review-bot", "author"],
+        required_local=("pm-reviewer",),
+        author_login="author",
+    )
+    selected = av.gate_candidates(
+        comments, local_reviewer_ok=local_ok, remote_reviewer_ok=remote_ok
+    )
+    pool = av.marked_candidates(comments)
+    assert {(v.path, v.reviewer) for v in selected} == {
+        (av.PATH_LOCAL, "pm-reviewer"),
+        (av.PATH_REMOTE, "review-bot"),
+    }
+    assert all(verdict in pool for verdict in selected)
+    assert {v.reviewer for v in pool} == {"pm-reviewer", "stranger", "review-bot", "author"}
+
+
+def test_gate_membership_is_the_gates(av) -> None:
+    remote_ok, local_ok = av.gate_membership(
+        remote_baseline=["review-bot"], required_local=("pm-reviewer",), author_login="author"
+    )
+    assert remote_ok("review-bot")
+    assert not remote_ok("someone-else")
+    assert local_ok("pm-reviewer")
+    assert not local_ok("stranger")
+    # The PR's author never counts on the remote path, even when registered.
+    remote_ok, _ = av.gate_membership(
+        remote_baseline=["author"], required_local=(), author_login="author"
+    )
+    assert not remote_ok("author")
+
+
+@pytest.mark.parametrize("author_login", ["", "   ", "app/", None])
+def test_gate_membership_counts_no_remote_reviewer_when_the_author_is_unread(
+    av, author_login
+) -> None:
+    """An author that could not be read excludes nobody, so every remote
+    reviewer would count as independent of it: the remote path counts no one
+    instead. The local path never excluded the author (DEC-028 step 3), so a
+    required local reviewer counts as before, and no one else does (#1485)."""
+    remote_ok, local_ok = av.gate_membership(
+        remote_baseline=["review-bot"], required_local=("pm-reviewer",), author_login=author_login
+    )
+    assert not remote_ok("review-bot")
+    assert not remote_ok("")
+    assert local_ok("pm-reviewer")
+    assert not local_ok("stranger")
+    comments = [
+        _local("pm-reviewer", "APPROVED"),
+        _local("stranger", "APPROVED"),
+        _remote("APPROVED", author="review-bot"),
+    ]
+    selected = av.gate_candidates(
+        comments, local_reviewer_ok=local_ok, remote_reviewer_ok=remote_ok
+    )
+    assert [(v.path, v.reviewer) for v in selected] == [(av.PATH_LOCAL, "pm-reviewer")]
+
+
+@pytest.mark.parametrize(
+    "pr_view",
+    [
+        {},
+        {"author": None},
+        {"author": "octocat"},
+        {"author": {}},
+        {"author": {"login": None}},
+        {"author": {"login": 42}},
+        {"author": {"login": ""}},
+        {"author": {"login": "  "}},
+        # How `gh` writes an author GitHub returns as null: an app with no login.
+        {"author": {"is_bot": True, "login": "app/"}},
+        {"author": {"is_bot": True, "login": "app/ "}},
+        None,
+        [],
+    ],
+)
+def test_pr_author_is_empty_when_it_cannot_be_read(av, pr_view) -> None:
+    assert av.pr_author(pr_view) == ""
+
+
+def test_pr_author_reads_the_login_as_given(av) -> None:
+    assert av.pr_author({"author": {"login": "octocat", "name": "Octo Cat"}}) == "octocat"
+    # An app's login is read as `gh` writes it, prefix and all, as before.
+    app = {"author": {"is_bot": True, "login": "app/dependabot"}}
+    assert av.pr_author(app) == "app/dependabot"

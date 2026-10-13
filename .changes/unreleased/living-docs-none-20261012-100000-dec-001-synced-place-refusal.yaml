@@ -1,0 +1,8 @@
+component: living-docs
+kind: none
+body: >
+  Internal. DEC-001 point 1 says that the backbone's friction validation
+  refuses a synced tree declared as a place, which is where that check
+  runs; the capability's own validation relies on its finding. The README
+  and LDOC's six rules are revalidated unchanged against it. Nothing you
+  run or read changes.
