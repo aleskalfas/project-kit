@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-13T11:38:51Z
+      at: 2026-10-13T11:59:33Z
       outcome: unchanged
-      unchanged-because: The CLI reference's entry for capabilities install gains what override, skip and inspect do on a naming collision. The map gives the CLI reference's role as the command-line surface and names some of its commands. Neither the role nor the link moves, so the map holds.
+      unchanged-because: "The agents README gains a section on the core rule-set reviewer. The CLI reference, the lifecycle README and the schemas README say the rule-set reading commands give whether each declared check is there and the rules a pin holds back. The map gives each area's role and link: it says core ships universal reviewers, naming critic and architect, and calls the CLI reference the command-line surface, naming some of its commands. No role or link moves, so the map holds."
 ---
 
 # project-kit
