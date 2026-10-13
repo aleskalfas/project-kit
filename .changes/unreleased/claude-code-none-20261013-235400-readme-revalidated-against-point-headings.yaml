@@ -1,0 +1,7 @@
+component: claude-code
+kind: none
+body: >
+  Internal. The adapter's README is revalidated unchanged against the ADRs it
+  relies on, which now write their points as headings with the same numbers
+  (#1421). Only the README's friction block changes, and nothing you run or
+  read changes.
