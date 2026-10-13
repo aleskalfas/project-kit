@@ -12,9 +12,9 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-13T10:43:33Z
+      at: 2026-10-13T11:47:49Z
       outcome: unchanged
-      unchanged-because: COR-050's refinement lets a record anchor name one point of a record, and says what the point stands on. The page says an artefact declares its anchors in the core friction block, that the check flags it when one changes, and that --record writes a record anchor. Each still holds, so the page holds.
+      unchanged-because: "The templates lose their semicolons: the actors and glossary files' opening lines, the use case's line under Variants, and the record template's outcome placeholder. The page quotes none of that text. What it says the stamp writes, leaves as placeholders and refuses still holds, so the page holds."
       deferred:
         - anchor:
             kind: record

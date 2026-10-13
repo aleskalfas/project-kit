@@ -1,0 +1,12 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Changed
+body: >
+  The text `pkit analysis new` writes from software-analysis's templates holds
+  no semicolon and no sentence over 25 words. The actors and glossary files
+  open with one sentence that says what they hold, followed by short
+  sentences on ids and names. A use case's line under *Variants* is two
+  sentences, and the revalidation record template's outcome placeholder reads
+  without a semicolon. Every placeholder a template ever shipped is still
+  caught while it is left unfilled.

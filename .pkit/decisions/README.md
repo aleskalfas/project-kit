@@ -14,9 +14,8 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-13T12:05:57Z
-      outcome: unchanged
-      unchanged-because: The rule-set module gains one judgement of whether a declared check is there, shared by validation and the reading commands, and its reach walk names the rules a pin behind its set holds back. This page's section on rule sets gives their statuses, the acceptance gate, where sets live, with a project pinning an inherited set's major, how a rule is cited and what validation checks. It says nothing of declared checks, of a pin behind its set holding a rule back, or of the reading commands, so it holds.
+      at: 2026-10-13T11:48:49Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
@@ -51,6 +50,8 @@ Beyond the two top-level namespaces, decision records also appear in two other p
 A capability's **DEC** records are numbered **per capability** — each capability is its own DEC id-space, so two different capabilities may both hold a `DEC-001` without conflict. Only two records sharing a `DEC-NNN` *within the same capability* collide.
 
 `pkit decisions validate` enforces uniqueness within each id-space (core, project, ADR, and per-capability DEC), and of rule ids across the rule sets (below), and is wired into the project's check gate — it catches two records hand-authored with the same id before they land.
+
+Validation checks your own records only. A record that arrives as a synced copy is a core record, or a kit-shipped capability's, in your project. It is checked where it is authored, since the next sync overwrites an edit here. Validation fails a project only for what it can correct in its own files ([COR-055](core/COR-055-validation.md) point 1). So `pkit validate` and `pkit decisions validate` report nothing on a synced copy: not its front matter, not its id against its filename, and not an id only synced copies share. A record of yours that takes a synced copy's id is still reported, on your record, because the copy keeps its id.
 
 ### Rule sets — a separate family with the same guarantees
 

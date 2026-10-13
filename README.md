@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-13T09:18:23Z
+      at: 2026-10-13T11:48:57Z
       outcome: unchanged
-      unchanged-because: "This change gives decisions_validate public helpers that the new numbering check shares: which file is a record and of which id-space, a record's id, the next unused id, a stub's heading and a misspelt heading's token. pkit decisions validate checks what it checked before and reports the same findings. The page names that command by its decision-id uniqueness check, among the structural checks a project's CI can run on day one, so the sentence holds."
+      unchanged-because: This change leaves a synced copy of a record out of the front-matter and id checks of pkit decisions validate and pkit validate (COR-055 point 1), so a project's checks no longer fail on records it cannot edit. The page names decision-id uniqueness (pkit decisions validate) among the checks a project's CI can run on day one. That check still holds across the project's own records, and still reports a project's record that takes a synced copy's id, so the sentence holds.
 ---
 
 # project-kit
