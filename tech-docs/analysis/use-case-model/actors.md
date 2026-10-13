@@ -174,7 +174,7 @@ The person who adopts the methodology for a project and keeps its setup.
 
 An AI agent working under the methodology, acting on the system from outside.
 
-- **Can be:** the main session acting for a person, or an agent that session dispatches for one role (in the core: critic, architect, methodology-reviewer, convention-compliance-reviewer, process-author).
+- **Can be:** the main session acting for a person, or an agent that session dispatches for one role (in the core: critic, architect, methodology-reviewer, convention-compliance-reviewer, rule-set-reviewer, process-author).
 - **Comes:** whenever work is done. It keeps no memory between sessions beyond what the repository holds.
 - **In the model:** when it does a role's work, it appears as a step in that role's use cases.
 - **Core:** the agent architecture, the rules loaded into every session and the adapter's deployment make this actor exist. The core's reviewer agents advise, and no core gate counts their verdict.

@@ -15,7 +15,8 @@ pkit:
         - .pkit/lifecycle/ownership.py
         - .pkit/adapters/claude-code/deploy-agents.sh
         - .pkit/adapters/claude-code/_resolve_agent.py
-      record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, ADR-051, ADR-052]
+        - .pkit/agents/core/rule-set-reviewer.md
+      record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052]
     revalidated:
       at: 2026-10-12T18:49:03Z
       outcome: unchanged
@@ -355,6 +356,19 @@ Per COR-014, the universal-applicability test governs what ships where:
 
 - **Core agents** (in `core/`) — universal roles useful to any adopter. Methodology disciplines (record-review, citation-audit), convention-compliance review, coordinator templates that adopters specialise via overlay. Ships with the methodology; refreshed on every sync.
 - **Project agents** (in `project/`) — domain-specific roles tied to the adopter's stack. Implementer agents (`ui-ux-designer`, `qa-engineer`), domain reviewers, customised coordinators. Authored per project. Sync reads them to deploy them, and never writes them. (The code-authoring `software-engineer` is **not** here — it ships, opt-in, via the `software-engineering` capability per [COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md); capabilities are the home for a discipline-implying agent that isn't universal.)
+
+## The rule-set reviewer
+
+The core agent `rule-set-reviewer` judges one change against the accepted rules that bind on each artefact the change alters. It reviews the diff, beside `convention-compliance-reviewer` in the reviewer stack (COR-024). Its contract, including the kinds of finding it gives, is [COR-057](../decisions/core/COR-057-rule-set-reviewer.md).
+
+- **What it judges.** It reads the rules only from the rule sets, through `pkit rule-sets altered` (the CLI reference, "Rule-set commands"). It judges only the text the change owns, and only the parts of a rule that no check is there to enforce. Its body holds no rule.
+- **Its form** comes from whoever invokes it: the verdict line, and the mark of each kind of finding. With none named, it states its verdict and each finding's kind in words.
+- **It is advisory.** Its verdict holds a change only where a gate requires it.
+
+To run it by hand on a change from a base to a head:
+
+1. Run `pkit rule-sets altered --base <base> --head <head>` to see what it will judge: each artefact the change alters, with the rules that bind on it. An artefact no rule binds on leaves it nothing to judge.
+2. Dispatch `rule-set-reviewer` through the harness, naming the same base and head, such as "review the change from the default branch to `HEAD`". Name the verdict line and the finding marks you want, or let it state them in words.
 
 ## Authoring an agent
 
