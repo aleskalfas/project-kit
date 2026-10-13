@@ -350,6 +350,25 @@ def test_a_floor_that_is_not_a_name_is_malformed(rc, floor) -> None:
     assert any("floor must be a non-empty floor kind" in e.message for e in errors)
 
 
+@pytest.mark.parametrize(
+    ("floor", "accepted"),
+    [("touches-code", True), ("touches-secrets", True), ("", False), ("   ", False)],
+)
+def test_the_schema_reads_a_floor_as_the_parser_does(rc, floor, accepted) -> None:
+    """The schema accepts a floor this pm does not know and refuses one that is
+    not a name, blank included, as `parse_contributions` does."""
+    import json
+
+    from jsonschema import Draft202012Validator
+
+    schema_path = SCRIPTS_DIR.parent / "schemas" / "review-contributions.schema.json"
+    validator = Draft202012Validator(json.loads(schema_path.read_text(encoding="utf-8")))
+    data = {"schema_version": 1, "contributions": [{"floor": floor, "reviewer": "r"}]}
+    assert validator.is_valid(data) is accepted
+    _rules, errors = rc.parse_contributions(data, "cap")
+    assert (errors == ()) is accepted
+
+
 def test_parse_mixed_good_and_bad_rules(rc) -> None:
     data = {
         "contributions": [
