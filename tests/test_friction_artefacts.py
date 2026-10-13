@@ -25,6 +25,7 @@ calls instead of re-reading the declarations or walking the places itself:
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +35,10 @@ from click.testing import CliRunner
 from project_kit import friction_discovery as fd
 from project_kit import record_points as rp
 from project_kit.cli import main
+from project_kit.friction_check import Side
+from project_kit.friction_git import CommitTree
+from project_kit.line_breaks import universal_newlines
+from project_kit.working_tree import WorkingTree
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import POINTED, POINTS, pointed_record
 
@@ -564,6 +569,68 @@ def test_at_a_commit_a_point_anchor_s_span_is_that_state_s(adopter: AdopterRepo)
     assert _part_anchors(_document()) == {}  # gone from the working tree: a dead anchor
     at_head = _part_anchors(json.loads(_run("--at", "HEAD", "--json").output))
     assert at_head["notes/page.md"][0]["path"] == POINTED
+
+
+def _record_bytes(transform: Callable[[str], bytes]) -> Callable[[AdopterRepo], None]:
+    """Write `PRJ-900` as the bytes `transform` makes of its text."""
+
+    def write(repo: AdopterRepo) -> None:
+        path = repo.root / POINTED
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(transform(pointed_record()))
+
+    return write
+
+
+def _record_link(repo: AdopterRepo) -> None:
+    """Write `PRJ-900` as a link to a file holding its text: a link is never read as a
+    document (ADR-057 point 2)."""
+    repo.write({".pkit/decisions/project/real.txt": pointed_record()})
+    (repo.root / POINTED).symlink_to("real.txt")
+
+
+@pytest.mark.parametrize(
+    ("write", "listed"),
+    [
+        pytest.param(_record_bytes(lambda t: t.replace("\n", "\r\n").encode()), True, id="crlf"),
+        pytest.param(_record_bytes(lambda t: t.replace("\n", "\r").encode()), True, id="lone-cr"),
+        pytest.param(_record_bytes(lambda t: b"\xef\xbb\xbf" + t.encode()), True, id="bom"),
+        pytest.param(
+            _record_bytes(lambda t: t.replace("third", "thi\xe9rd").encode("latin-1")),
+            False,
+            id="not-utf-8",
+        ),
+        pytest.param(_record_link, False, id="link"),
+    ],
+)
+def test_a_point_anchor_is_listed_exactly_where_the_friction_checks_resolve_it(
+    adopter: AdopterRepo, write: Callable[[AdopterRepo], None], listed: bool
+) -> None:
+    """The listing agrees with the friction checks' own reading of each state
+    (`friction_check.Side`), at the working tree and at a commit. An anchor is listed where
+    it resolves there, and its span's lines are the section the checks compare."""
+    values = ["PRJ-900#1", "PRJ-900#3", "PRJ-900#9"]
+    write(adopter)
+    adopter.write({"notes/page.md": _page(record=values)})
+    adopter.commit("a pointed record")
+    head = adopter.head()
+    states = [
+        (_document(), WorkingTree(adopter.root)),
+        (json.loads(_run("--at", head, "--json").output), CommitTree(adopter.root, head)),
+    ]
+    for document, tree in states:
+        side = Side(adopter.root, tree, fd.discover_artefacts(adopter.root, tree=tree))
+        found = {a["value"]: a for a in _part_anchors(document).get("notes/page.md", [])}
+        assert sorted(found) == (["PRJ-900#1", "PRJ-900#3"] if listed else [])
+        for value in values:
+            anchor = fd.Anchor("record", value)
+            assert (value in found) == side.resolves(anchor), value
+            if value in found:
+                standing = side.standing(anchor, side.record_path(value))
+                raw = tree.read_bytes([POINTED])[POINTED]
+                text = universal_newlines(raw.decode("utf-8"))
+                assert standing is not None
+                assert _lines(text, found[value]["span"]) == standing.section
 
 
 # --- the rule sets whose scope covers an artefact (#1361) -----------------------------------
