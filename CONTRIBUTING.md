@@ -7,6 +7,8 @@ pkit:
       path:
         - scripts/check.sh
         - scripts/pyright_ratchet.py
+        - scripts/prose_lint.py
+        - scripts/prose-lint.yaml
         - .githooks/pre-push
         - .github/workflows/checks.yml
         - .github/workflows/friction-report.yml
@@ -18,9 +20,8 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-13T06:30:54Z
-      outcome: unchanged
-      unchanged-because: "COR-003's change rewrites its seed and merge sentences: seeding writes at first install, and in a transition of the backbone where the file is missing, it never revisits a seed that exists, and merge creating its own missing target is merge. Its out-of-scope list says only that those paths lie outside the methodology surface, without saying the core layer never touches them. The page cites COR-003 as the example of principles kept apart from the map of paths, and the change adds no path to it, so it holds."
+      at: 2026-10-13T07:22:43Z
+      outcome: updated
 ---
 
 # Contributing to project-kit
@@ -33,7 +34,7 @@ If you have a project that has *adopted* project-kit and you want to record deci
 
 ## Running checks
 
-There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the friction change check (`pkit friction check`), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Run it any time:
+There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Run it any time:
 
 ```
 ./scripts/check.sh
@@ -86,6 +87,30 @@ Answer what it reports in a pull request like any friction (the friction gate, a
 - **`<path> → no page anchors it (code-undocumented)`** — new code in the declared surface that no page describes. Anchor it from the page that describes it: add the path to the page's `pkit.friction.anchors.path`, describe it there, and revalidate the page (`--outcome updated`). If no page should ever describe it, narrow the declared surface instead — `friction.surface` in `.pkit/project/config.yaml` — and give the reason in that file's comment and in `NOT_SURFACE` of `tests/test_self_host_documentation.py`, which fails on a file under the surface's trees that is neither.
 
 **The escape hatch.** Enforcing mode must never fail on a defect of the tool (ADR-055 point 5). When the check fails for any other reason than those findings — it crashes, or anchor resolution or the configuration is wrong — the hatch is one line: `uv run pkit config set friction.mode warning --yes`, which changes `mode: enforcing` to `mode: warning` under `friction` in `.pkit/project/config.yaml` and no other line of the file. Make the flip in the pull request it unblocks, file the defect, and disclose the flip in the pull request description among its judgment calls — what failed, the defect filed, and that the flip goes back with the fix; then revert it in the pull request that fixes the defect. Never flip it silently: the anchors-and-friction record sees to it that enforcement is never switched off silently (COR-050 point 12), and the disclosure is how a deliberate flip keeps to that. Friction a pull request cannot answer in time is no defect and no reason for the hatch: defer the anchor with its reason (`uv run pkit friction defer`) — a deferral answers the check, and the debt listing keeps it in sight (COR-050 point 4). The documentation check takes the same hatch, disclosed and reverted the same way: set `doc_check.sources.friction: advisory` in project-management's project configuration. Validation findings — a malformed block, a dangling deferral, a cycle between artefacts — are outside the hatch: they fail `pkit validate` in either mode and are fixed, not waived.
+
+**The prose lint** (#1415). The aggregator's `prose lint` line, `uv run python scripts/prose_lint.py`, checks the mechanical parts of the writing rules in the text a change adds or moves. It exits 0 when it finds nothing, 1 on a finding, and 2 when it cannot run. A finding names the file, the line, the rule's id and, for a collection entry, the entry.
+
+- **Where it looks:** in each artefact the change altered, where an accepted rule binds that declares the lint. It reads those artefacts, their rules and the base from `pkit rule-sets altered` (the CLI reference, "Rule-set commands"), and keeps no list of paths. Its base is the friction check's, and `--base REF` compares with another.
+- **What is the change's:** for a count, a sentence or a paragraph that holds text the change adds or moves. For the other types, the match itself. A break the change only sits beside is left alone, so a page not yet rewritten does not fail the gate.
+  - **Moved text:** text the diff deletes in one place and inserts in another is the change's where it is inserted. Where two blocks of a file swap places, the diff keeps one in place, and only the other is the change's.
+  - **A moved file:** a file moved with its content alters nothing in `pkit rule-sets altered`, so the lint does not read it. A file moved with edits is compared with its old self, so only the edits are the change's.
+  - **An entry:** the span `pkit rule-sets altered` gives holds the entry's section only. The lint also reads the entry's values from its file's front matter.
+- **How it reads:** words and sentences as RS-WRITE-005's *How* says (`tech-docs/rule-sets/writing.md`). Where the *How* is silent, it reads as follows:
+  - A full stop before a space ends a sentence after an abbreviation or an initial too, as in "e.g.".
+  - A full stop before a closing quotation mark or bracket ends nothing.
+  - A full stop inside a code span ends nothing, and a code span's tokens count as words.
+  - Each block ends a sentence: a paragraph, a list item, a table cell and a front-matter value.
+  - A bold label is bold text that opens a block and ends in a colon. A block that is only a label holds no sentence.
+  - A quoted example of a broken rule runs from the first quotation mark to the last, in a block labelled "Breaks the rule".
+  - Every text value of the front matter is read, except inside the methodology's `pkit` container. Its answers are never rewritten for style (RS-WRITE-013).
+  - Only fenced code is a code block.
+- **On a given text:** `lint_text` reads a text whole, so a test of stamped template text calls it rather than counting again.
+
+Each mechanical part of a rule is an entry in `scripts/prose-lint.yaml`, of one of four types: `count`, `forbid`, `substitute` and `link-resolves`. The file's header gives each type's fields. A part gets an entry only when three things hold. It is deterministic with near-zero false alarms, an AI reviewer is unreliable at it, and its findings recur (COR-007). A part that fails any of the three stays with the reviewer. To add an entry for a rule:
+
+1. Add the entry to `scripts/prose-lint.yaml`, naming the rule by its id.
+2. Declare the part beside the rule, under its set's `checks`, naming the check `prose-lint` (COR-051 point 2). A declaration changes no rule, so it flags nothing. Give the set the version COR-051 asks, and run `uv run pkit validate`.
+3. Test the entry on a text in `tests/test_prose_lint.py`. A test there fails while an entry and a declaration do not pair.
 
 **Optional task runner.** A [`mise.toml`](mise.toml) provides convenience aliases over the underlying `uv run ...` commands — `mise tasks` lists them, `mise run check` runs the lint/format/typecheck/test bundle. After cloning, run `mise trust` once to enable the task runner: mise gates untrusted config by design, so a fresh clone prints a "not trusted" error on every shell until you do. Not using mise? Run the `uv run ...` commands (or `./scripts/check.sh`) directly — mise is sugar, not a requirement.
 
