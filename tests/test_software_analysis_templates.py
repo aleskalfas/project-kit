@@ -26,7 +26,7 @@ from scripts import prose_lint as pl
 
 from project_kit import backbone_schemas as bs
 from project_kit import document_parts
-from tests.analysis_repo import CAPABILITY, REPO, load
+from tests.analysis_repo import CAPABILITY, REPO, below_floor, load
 
 SCHEMAS = CAPABILITY / "schemas"
 
@@ -366,12 +366,21 @@ def test_every_placeholder_shipped_is_in_the_append_only_lists() -> None:
 
 
 #: Every template the capability ships.
-TEMPLATES = ("actors", "glossary", "use-case", "journey", "revalidation-record")
+TEMPLATES = tuple(sorted(p.stem for p in (CAPABILITY / "templates").glob("*.md")))
 
+#: A collection template's opening sentence, which the stamp writes once (#1351).
+COLLECTION_OPENINGS = {
+    "actors": "Who uses the system, and what each needs from it.",
+    "glossary": "The words of the domain and what each means.",
+}
 
-def _lint(text: str) -> list[str]:
-    """`<line> <rule>: <message>` for each finding of the prose lint in a given text."""
-    return [f"{f.line} {f.rule}: {f.message}" for f in pl.lint_text(text)]
+#: What a document template opens with after its heading: its first part, whose sentence
+#: its author writes, or a revalidation record's outcomes (#1351).
+DOCUMENT_OPENINGS = {
+    "use-case": "**Goal:** <",
+    "journey": "**Starts:** <",
+    "revalidation-record": "## Outcomes",
+}
 
 
 def _body(name: str) -> str:
@@ -380,14 +389,20 @@ def _body(name: str) -> str:
     return body.lstrip("\n")
 
 
+def test_every_template_has_its_opening_checked() -> None:
+    """Each template the capability ships is linted below, and one of the two tests of
+    openings checks it, so a new template is left out of neither."""
+    assert set(TEMPLATES) == set(COLLECTION_OPENINGS) | set(DOCUMENT_OPENINGS)
+
+
 @pytest.mark.parametrize("name", TEMPLATES)
 def test_a_template_s_text_holds_no_semicolon_and_no_long_sentence(name: str) -> None:
     """A template's text, its front matter's values and its body, is plain enough for any
     project's writing rules (#1351). It holds no semicolon and no sentence over 25 words,
-    read as the prose lint reads them (`scripts/prose_lint.py`). The front matter's
-    comments are notes on the template, which the stamp never writes."""
+    read as the prose lint reads them (`below_floor`). The front matter's comments are
+    notes on the template, which the stamp never writes."""
     text = (CAPABILITY / "templates" / f"{name}.md").read_text(encoding="utf-8")
-    assert _lint(text) == []
+    assert below_floor(text) == []
 
 
 @pytest.mark.parametrize(
@@ -409,25 +424,25 @@ def test_a_template_s_text_holds_no_semicolon_and_no_long_sentence(name: str) ->
             "cite them.",
             "RS-WRITE-005",
         ),
+        ("<Who this is; when they come to the system.>", "RS-WRITE-008"),
     ],
-    ids=["semicolon-in-an-opening", "semicolon-in-a-part", "sentence-over-25-words"],
+    ids=[
+        "semicolon-in-an-opening",
+        "semicolon-in-a-part",
+        "sentence-over-25-words",
+        "semicolon-in-a-placeholder-line",
+    ],
 )
 def test_a_template_s_text_with_a_semicolon_or_a_long_sentence_is_caught(
     text: str, rule: str
 ) -> None:
-    """Two texts the templates shipped before #1351, and a sentence of 27 words, each
-    fail the test above."""
-    (finding,) = _lint(f"# Heading\n\n{text}\n")
+    """Two texts the templates shipped before #1351, a sentence of 27 words, and a
+    placeholder on a line of its own each fail the test above."""
+    (finding,) = below_floor(f"# Heading\n\n{text}\n")
     assert finding.startswith(f"3 {rule}: ")
 
 
-@pytest.mark.parametrize(
-    ("name", "opening"),
-    [
-        ("actors", "Who uses the system, and what each needs from it."),
-        ("glossary", "The words of the domain and what each means."),
-    ],
-)
+@pytest.mark.parametrize(("name", "opening"), sorted(COLLECTION_OPENINGS.items()))
 def test_a_collection_template_opens_with_one_sentence_on_what_it_holds(
     name: str, opening: str
 ) -> None:
@@ -440,10 +455,7 @@ def test_a_collection_template_opens_with_one_sentence_on_what_it_holds(
     assert block.text[sentence.start : sentence.end].strip() == opening
 
 
-@pytest.mark.parametrize(
-    ("name", "opening"),
-    [("use-case", "**Goal:** <"), ("journey", "**Starts:** <"), ("revalidation-record", "## ")],
-)
+@pytest.mark.parametrize(("name", "opening"), sorted(DOCUMENT_OPENINGS.items()))
 def test_a_document_template_opens_with_its_first_part(name: str, opening: str) -> None:
     """A use case or a journey opens with its first part, the goal or where the actor
     starts, whose sentence its author writes in place of the placeholder. A revalidation

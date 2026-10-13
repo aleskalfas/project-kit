@@ -34,7 +34,6 @@ from typing import Any
 
 import pytest
 from click.testing import CliRunner
-from scripts import prose_lint as pl
 
 from project_kit import docs_roots as dr
 from project_kit import friction_discovery as fd
@@ -53,6 +52,7 @@ from tests.analysis_repo import (
     RECORDS,
     USE_CASES,
     VALIDATE,
+    below_floor,
     front,
     installed,
     load,
@@ -317,8 +317,8 @@ def test_what_the_stamp_writes_holds_no_semicolon_and_no_long_sentence(
 ) -> None:
     """The text the stamp writes for every kind, the revalidation record's included, is
     plain enough for any project's writing rules (#1351). It holds no semicolon and no
-    sentence over 25 words, read as the prose lint reads them (`scripts/prose_lint.py`).
-    The collection files are new from their templates here, or gain an entry."""
+    sentence over 25 words, read as the prose lint reads them (`below_floor`). The
+    collection files are new from their templates here, or gain an entry."""
     stamped(seeded, "term", "sandbox")
     stamped(seeded, "actor", "admin")
     stamped(seeded, "use-case", "export", "--actor", "ACT-admin")
@@ -358,13 +358,7 @@ def test_what_the_stamp_writes_holds_no_semicolon_and_no_long_sentence(
         f"{JOURNEYS}/JRN-002-export-run.md",
         written.relative_to(seeded.root).as_posix(),
     ]
-    found = {
-        rel: [
-            f"{f.line} {f.rule}: {f.message}"
-            for f in pl.lint_text((seeded.root / rel).read_text(encoding="utf-8"), path=rel)
-        ]
-        for rel in files
-    }
+    found = {rel: below_floor((seeded.root / rel).read_text(encoding="utf-8")) for rel in files}
     assert found == {rel: [] for rel in files}
 
 
