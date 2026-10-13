@@ -1820,6 +1820,133 @@ def friction_artefacts_command(at: str | None, as_json: bool) -> None:
         click.echo(friction_discovery.render_artefacts_human(document), nl=False)
 
 
+@main.group("rule-sets")
+def rule_sets_group() -> None:
+    """Rule sets (COR-051): which accepted rules bind on each artefact, and on what a
+    change altered.
+
+    The reach walk's answer (COR-051 point 7), for a capability's script or a
+    migration to read rather than walk routes or judge pins itself (ADR-057
+    points 1 and 2). Read-only; runs no query. Validation of rule-set files is
+    `pkit validate`'s `rule-sets` member.
+    """
+
+
+def _readable_configuration(target_root: Path, tree: friction_check.CommitTree | None) -> None:
+    """Refuse a configuration that does not read: a script could not tell nothing declared
+    from nothing readable (`friction_discovery.unreadable_configuration`)."""
+    from project_kit import friction_discovery
+
+    problem = friction_discovery.unreadable_configuration(target_root, tree)
+    if problem is not None:
+        raise click.ClickException(f"{problem}; `pkit validate` reports it.")
+
+
+@rule_sets_group.command("reach")
+@click.option(
+    "--at",
+    "at",
+    metavar="REV",
+    default=None,
+    help="Read the state of commit REV — its configuration, its rule sets and its artefacts — "
+    "from git objects instead of the working tree. Nothing is checked out.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def rule_sets_reach_command(at: str | None, as_json: bool) -> None:
+    """Which accepted rules bind on each artefact, at one state (COR-051 point 7).
+
+    The working tree by default, or commit REV with --at. Each artefact on
+    which an accepted rule binds, or whose routes conflict: each rule with
+    its status, the sets whose scope it binds through, the extension points
+    it fills, the parts of it checks enforce, and its text; each conflict
+    between routes — one set pinned at different majors, or the most
+    specific sets bringing different fills for one extension point. Exit 0
+    when answered; 1 when the configuration cannot be read or REV names no
+    commit; 2 on a usage error.
+    """
+    from project_kit import rule_set_reading, validators
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    commit = None
+    tree = None
+    if at is not None:
+        commit = None if not at or at.startswith("-") else friction_check.commit_of(target_root, at)
+        if commit is None:
+            raise click.ClickException(f"--at {at!r} names no commit of this repository.")
+        tree = friction_check.CommitTree(target_root, commit)
+    _readable_configuration(target_root, tree)
+    document = validators.as_one_run(lambda: rule_set_reading.reach_document(target_root, commit))
+    if as_json:
+        click.echo(rule_set_reading.render_json(document), nl=False)
+    else:
+        click.echo(rule_set_reading.render_reach_human(document), nl=False)
+
+
+@rule_sets_group.command("altered")
+@click.option(
+    "--base",
+    "base_ref",
+    metavar="REF",
+    default=None,
+    help=f"Compare against the merge-base of REF and the head. Default: "
+    f"${friction_check.BASE_ENV}, else the default branch (`pkit repository base` shows it).",
+)
+@click.option(
+    "--head",
+    "head_rev",
+    metavar="REV",
+    default=None,
+    help="Read commit REV as the head instead of the working tree: its files read from git "
+    "objects, nothing checked out, the merge-base taken against REV.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def rule_sets_altered_command(base_ref: str | None, head_rev: str | None, as_json: bool) -> None:
+    """Which artefacts a change altered, with the accepted rules that bind on each at the
+    base and at the head (COR-051 point 7).
+
+    The head is the working tree (uncommitted changes included) or, with
+    --head, commit REV; the base is the merge-base of REF with it, as the
+    change check takes it (COR-054). An artefact is altered when it is added
+    or removed, or its content differs: the change check's pairing decides
+    which base artefact a head artefact is, so a move it follows that keeps
+    the content alters nothing, and so does a change that only writes a
+    revalidation. Each altered artefact is listed with the walk's answer at
+    each state that holds it, as `pkit rule-sets reach` gives it. Exit 0
+    when answered; 1 when a configuration cannot be read, the base cannot be
+    compared or REV names no commit; 2 on a usage error.
+    """
+    from project_kit import rule_set_reading, validators
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    named = None if head_rev is None else friction_check.named_head(target_root, head_rev)
+    settled = default_branch.settled(
+        target_root, base_ref, head_rev="HEAD" if named is None else named.commit
+    )
+    _warn_settled(settled)
+    base = friction_check.resolve_base(target_root, base_ref, resolved=settled.base, head=named)
+    _readable_configuration(
+        target_root, None if named is None else friction_check.CommitTree(target_root, named.commit)
+    )
+    _readable_configuration(target_root, friction_check.CommitTree(target_root, base.commit))
+    document = validators.as_one_run(
+        lambda: rule_set_reading.altered_document(
+            target_root, base_ref, resolved=settled.base, named=named
+        )
+    )
+    if as_json:
+        click.echo(rule_set_reading.render_json(document), nl=False)
+    else:
+        click.echo(rule_set_reading.render_altered_human(document), nl=False)
+
+
 @main.group(invoke_without_command=True)
 @click.pass_context
 def version(ctx: click.Context) -> None:

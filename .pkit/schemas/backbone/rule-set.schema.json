@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rule-set.schema.json",
   "title": "A rule-set file's front matter",
-  "description": "A backbone file schema (ADR-056): the data of one rule set (COR-051 point 2) — its name, its own version, what it inherits, its scope, and one entry per rule carrying the rule's machine fields. The statements are the file's body, one section per rule headed by its id. The join between data and prose, the id rules, origins, successors and inheritance are checked by `project_kit.rule_sets` on top of this shape; inside each rule entry the methodology's container (`pkit`) is read by the container schema and rule (`container.schema.json`, COR-053 point 10). Bound by location — a Markdown file in a place declared to hold rule sets — never by a field. The shape is backbone-owned: it carries no version of its own and is migrated when it changes (COR-010). The `version` key is the rule set's own version, the one inheritors pin.",
+  "description": "A backbone file schema (ADR-056): the data of one rule set (COR-051 point 2) — its name, its own version, what it inherits, its scope, one entry per rule carrying the rule's machine fields, and the parts of its rules that checks enforce. The statements are the file's body, one section per rule headed by its id. The join between data and prose, the id rules, origins, successors and inheritance are checked by `project_kit.rule_sets` on top of this shape; inside each rule entry the methodology's container (`pkit`) is read by the container schema and rule (`container.schema.json`, COR-053 point 10). Bound by location — a Markdown file in a place declared to hold rule sets — never by a field. The shape is backbone-owned: it carries no version of its own and is migrated when it changes (COR-010). The `version` key is the rule set's own version, the one inheritors pin.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -48,6 +48,20 @@
       },
       "additionalProperties": {
         "$ref": "#/$defs/rule"
+      }
+    },
+    "checks": {
+      "description": "The parts of the set's rules that checks enforce, as the rules' owner declares them beside the rules (COR-051 point 2): by rule id, a list of declarations. They are none of a rule's own fields and no part of its content, so declaring a check, or changing one, flags nothing anchored to the rule. A declaration for a rule the set does not hold, and a check that is not there, are checked in Python.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/rule-id"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/check-part"
+        }
       }
     }
   },
@@ -171,6 +185,27 @@
         },
         "value": {
           "description": "What the resolver resolves.",
+          "$ref": "#/$defs/non-empty-string"
+        }
+      }
+    },
+    "check-part": {
+      "title": "The part of a rule a check enforces (COR-051 point 2)",
+      "description": "The check, named with whose it is, and the part of the rule it settles. Whoever judges the rest of the rule leaves that part to it, wherever the rule binds.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check",
+        "part"
+      ],
+      "properties": {
+        "check": {
+          "description": "The check: `backbone:<command>` for the backbone's (a `pkit` command, its words separated by spaces), `<component>:<command>` for a command a component registers in its package metadata, or a bare name for the project's own tool. An owner's name followed by a colon and a space is refused, since it would read as a bare name.",
+          "type": "string",
+          "pattern": "^(?![a-z](?:[a-z0-9-]*[a-z0-9])?:\\s)\\S(?:.*\\S)?$"
+        },
+        "part": {
+          "description": "Which part of the rule the check settles, in words.",
           "$ref": "#/$defs/non-empty-string"
         }
       }
