@@ -828,7 +828,7 @@ review:
 - **What it never withdraws.** A reviewer you register yourself in `local_registered`, and the same reviewer contributed by another capability. The opt-out removes one capability's contribution, not the reviewer.
 - **Where it shows.** `pkit project-management pre-check` lists each opt-out as a `[skip]` line naming the reviewer, the capability and your reason. `review-pr` prints ``opted out: <reviewer> (capability `<capability>`) — <reason>`` under the reviewers it invokes, and a `done-work` refusal names it after the required set.
 - **Validation.** Each entry carries exactly `capability`, `reviewer` and a non-empty `reason`, and names a pair once; the config schema checks this at `pkit validate`. An entry naming a capability that is not installed, or a reviewer that capability does not contribute — a typo, or an entry left behind when you uninstall the capability — is an error: `pre-check` fails on it, and `review-pr` and `done-work` refuse until you fix or remove it, so an opt-out you meant never silently fails to apply.
-- **Yours to keep.** The opt-out lives in your `project/config.yaml`, which `pkit sync` and capability upgrades never touch.
+- **Yours to keep.** The opt-out lives in your `project/config.yaml`. `pkit sync` and upgrades change that file only through the migration scripts a new release ships, which run without `pkit project-management migrate`. These scripts keep your opt-outs.
 
 #### Paths that are never code — `review.floors.not_code` (per [project-management:DEC-032-conditional-reviewer-requirements])
 
