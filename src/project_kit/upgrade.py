@@ -151,9 +151,10 @@ def run_upgrade(
     # where it cannot or may not. This is about the `uv`-installed binary, not this
     # project's `.pkit/` content — so it runs before the backbone-version comparison
     # below and its early return (point 4), or the stale-tool adopter would still
-    # see only "nothing to upgrade". Best-effort: it never fails the command, and it
-    # is never reached in a source checkout (point 5) — the self-host branch
-    # returns and the source refusal raises above it.
+    # see only "nothing to upgrade". Best-effort: a failed lookup or install never
+    # fails the command, though a failed hand-over stops it before the sync and
+    # the pin (point 3). It is never reached in a source checkout (point 5) — the
+    # self-host branch returns and the source refusal raises above it.
     #
     # ADR-049: suppress it on the bootstrap hop. Inside a `run_bypassed`-launched
     # reconcile (PKIT_NO_ROUTE set), this upgrade is running *under* a pin raise;
