@@ -20,9 +20,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-13T10:43:42Z
+      at: 2026-10-13T11:48:58Z
       outcome: unchanged
-      unchanged-because: COR-050's refinement lets a record anchor name one point, and reports an ambiguous one as a dead anchor. scripts/check.sh changes only a comment, listing validation's members in ADR-058's order. The page's friction gate still fails on friction and on a dead anchor a change introduces, and it sends the reader to the CLI reference for the members, so it holds.
+      unchanged-because: The decisions README gains a paragraph saying validation reports nothing on a synced copy, and reports a project's record that takes a synced copy's id on that record. The page cites that README as the adopter-facing spec of records, its schema, statuses, namespaces and numbering, and as where a PRJ record's process is described. None of that moves, so the page holds.
 ---
 
 # Contributing to project-kit
