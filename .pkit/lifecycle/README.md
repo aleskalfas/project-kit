@@ -29,9 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-13T10:58:12Z
+      at: 2026-10-13T11:09:40Z
       outcome: unchanged
-      unchanged-because: The change has override at a capability's install remove the project's own skill or agent of that name, so the capability's deploys, and adds the helpers capabilities.py gives it. This page lists naming collision detection among the install pre-flight checks and says resolution is interactive. It says nothing of what override or skip does, and the checks and their order stay as they were. So it holds.
+      unchanged-because: The change has override at a capability's install remove the project's own skill or agent of that name, so it no longer comes first at deploy, and adds the helpers capabilities.py gives it. This page lists naming collision detection among the install pre-flight checks and says resolution is interactive. It says nothing of what override or skip does, and the checks and their order stay as they were. So it holds.
       deferred:
         - anchor:
             kind: record

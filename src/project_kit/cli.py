@@ -4413,7 +4413,9 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
             + "\n"
         )
         for finding in new_collisions:
-            choice = _resolve_collision_interactive(target_root, finding, dry_run=dry_run)
+            choice = _resolve_collision_interactive(
+                target_root, finding, capability=name, dry_run=dry_run
+            )
             if choice == "skip":
                 new_skipped.append((finding.artifact_kind, finding.artifact_name))
             else:
@@ -6097,7 +6099,9 @@ def install_capability_cmd(
             + "\n"
         )
         for finding in collisions:
-            choice = _resolve_collision_interactive(target_root, finding, dry_run=dry_run)
+            choice = _resolve_collision_interactive(
+                target_root, finding, capability=name, dry_run=dry_run
+            )
             if choice == "skip":
                 skipped.append((finding.artifact_kind, finding.artifact_name))
             else:
@@ -6751,26 +6755,36 @@ def _gate_desynced_dependents(
 
 
 def _resolve_collision_interactive(
-    target_root: Path, finding: CollisionFinding, *, dry_run: bool
+    target_root: Path, finding: CollisionFinding, *, capability: str, dry_run: bool
 ) -> str:
     """Prompt the adopter for override/skip/inspect on a single collision.
 
     Loops on `inspect` (re-prompts after showing diff) until adopter
     picks override or skip. Returns the final choice as a string.
 
-    `override` replaces the project's own artefact of that name, which the
-    caller removes once the capability is in place (COR-017). It is refused,
-    and the prompt asked again, while git could not give that artefact back as
-    it stands. An artefact that is not the project's — core's, or another
-    capability's — stays, and the line after the choice says so.
+    Before each prompt it names what `override` would do (COR-017): each path of
+    the project's own artefact of that name it removes, which the caller removes
+    once the capability is in place, and each artefact core or another capability
+    ships, which it leaves. `override` is refused, and the prompt asked again,
+    while git could not give the project's artefact back as it stands.
     """
     from project_kit import capabilities as caps
 
+    kind, name = finding.artifact_kind, finding.artifact_name
+    replaced = caps.project_artefact_paths(target_root, kind, name)
+    left = caps.shipped_artefact_paths(target_root, kind, name, capability=capability)
     while True:
         click.echo(
-            f"  - {finding.artifact_kind} '{finding.artifact_name}' "
-            f"collides with existing {finding.target_path.relative_to(target_root)}"
+            f"  - {kind} '{name}' collides with existing "
+            f"{finding.target_path.relative_to(target_root)}"
         )
+        for path in replaced:
+            click.echo(f"    override removes {path.relative_to(target_root)}, which git keeps")
+        for path in left:
+            click.echo(
+                f"    override leaves {path.relative_to(target_root)}: it is not the "
+                "project's, and the deploy's name precedence picks which one deploys"
+            )
         choice = click.prompt(
             "    [override / skip / inspect]",
             type=click.Choice(["override", "skip", "inspect"]),
@@ -6781,32 +6795,23 @@ def _resolve_collision_interactive(
             _show_unified_diff(finding.target_path, finding.source_path)
             continue
         if choice == "override":
-            replaced = caps.project_artefact_paths(
-                target_root, finding.artifact_kind, finding.artifact_name
-            )
             lost = caps.paths_git_cannot_restore(target_root, replaced)
             if lost:
                 for path in lost:
                     click.echo(
                         f"    override refused: {path.relative_to(target_root)} is not "
                         "committed as it stands, so git could not give it back. "
-                        "Commit it and choose override, or choose skip."
+                        "Choose skip, or commit it and choose override."
                     )
                 continue
-            if not caps.is_project_artefact(target_root, finding):
-                click.echo(
-                    f"    {finding.target_path.relative_to(target_root)} is not the "
-                    "project's, so override leaves it in place. The deploy's name "
-                    "precedence picks which one deploys."
-                )
         return choice
 
 
 def _remove_overridden(target_root: Path, paths: Sequence[Path], *, dry_run: bool) -> None:
     """Remove the project's artefacts an override chose to replace, naming each (COR-017).
 
-    Runs after the capability is copied in and before deploy, so the deploy finds
-    the capability's artefact under the name. Git keeps what is removed: the
+    Runs after the capability is copied in and before deploy, so the project's
+    artefact no longer comes first under the name. Git keeps what is removed: the
     prompt refused an override git could not give back.
     """
     from project_kit import capabilities as caps
@@ -6815,10 +6820,7 @@ def _remove_overridden(target_root: Path, paths: Sequence[Path], *, dry_run: boo
         caps.remove_overridden(paths)
     verb = "would remove" if dry_run else "removed"
     for path in paths:
-        click.echo(
-            f"  {verb:<12} {path.relative_to(target_root)} "
-            "(overridden by the capability's; git keeps it)"
-        )
+        click.echo(f"  {verb:<12} {path.relative_to(target_root)} (override; git keeps it)")
 
 
 def _show_unified_diff(existing: Path, incoming: Path) -> None:

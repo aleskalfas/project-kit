@@ -951,7 +951,9 @@ def test_cli_install_override_replaces_the_projects_skill(
     result = _install(kit_source, monkeypatch, "evidence", "override\n")
 
     assert result.exit_code == 0, result.output
-    assert "removed      .pkit/skills/project/shared.md" in result.output
+    assert "override removes .pkit/skills/project/shared.md, which git keeps" in result.output
+    assert "override leaves" not in result.output
+    assert "removed      .pkit/skills/project/shared.md (override; git keeps it)" in result.output
     assert not project_skill.exists()
     assert _deployed_skill(kit_target, "shared") == ".pkit/capabilities/evidence/skills/shared.md"
     # Git keeps the project's skill: the last commit still holds it.
@@ -1091,12 +1093,46 @@ def test_cli_install_override_leaves_an_artefact_that_is_not_the_projects(
 
     assert later.exit_code == 0, later.output
     assert (
-        ".pkit/capabilities/evidence/skills/shared.md is not the project's, "
-        "so override leaves it in place" in later.output
+        "override leaves .pkit/capabilities/evidence/skills/shared.md: it is not the "
+        "project's" in later.output
     )
+    assert "override removes" not in later.output
     assert "removed" not in later.output
     assert (kit_target / ".pkit" / "capabilities" / "evidence" / "skills" / "shared.md").is_file()
     assert (kit_target / ".pkit" / "capabilities" / "audit" / "skills" / "shared.md").is_file()
+
+
+def test_cli_install_override_names_each_artefact_that_shares_the_name(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Before it asks, the prompt names what override removes and each artefact it leaves.
+
+    The project holds `shared`, core ships `shared` and so does the installed
+    `audit`. The collision names one of them, so the prompt names the rest. After
+    override the project's is gone and core's deploys, by the skills' name
+    precedence (project, core, then capabilities).
+    """
+    _stage_capability_in_source(kit_source, "audit", with_skills=("shared",))
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("shared",))
+    first = _install(kit_source, monkeypatch, "audit", "")
+    assert first.exit_code == 0, first.output
+    core_skill = kit_target / ".pkit" / "skills" / "core" / "shared.md"
+    core_skill.write_text("---\nname: shared\n---\n# Core's\n", encoding="utf-8")
+    _project_skill(kit_target)
+    _commit_all(kit_target)
+    _deploy_skills_for_real(monkeypatch)
+
+    result = _install(kit_source, monkeypatch, "evidence", "override\n")
+
+    assert result.exit_code == 0, result.output
+    assert "collides with existing .pkit/capabilities/audit/skills/shared.md" in result.output
+    assert "override removes .pkit/skills/project/shared.md, which git keeps" in result.output
+    for left in (".pkit/skills/core/shared.md", ".pkit/capabilities/audit/skills/shared.md"):
+        assert f"override leaves {left}: it is not the project's" in result.output
+    assert "override leaves .pkit/capabilities/evidence" not in result.output
+    assert not (kit_target / ".pkit" / "skills" / "project" / "shared.md").exists()
+    assert core_skill.is_file()
+    assert _deployed_skill(kit_target, "shared") == ".pkit/skills/core/shared.md"
 
 
 def test_cli_install_override_dry_run_removes_nothing(
@@ -1141,6 +1177,55 @@ def test_cli_upgrade_interactive_override_replaces_the_projects_skill(
     manifest = read_component_manifest(installed / "manifest.yaml")
     assert manifest is not None
     assert "skipped" not in manifest.backend_state
+
+
+def test_cli_upgrade_interactive_override_dry_run_removes_nothing(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("add-evidence",))
+    source_v1 = caps.find_capability_in_source(kit_source, "evidence")
+    assert source_v1 is not None
+    caps.install_capability(kit_target, source_v1)
+    project_skill = _project_skill(kit_target, "conflict")
+    _commit_all(kit_target)
+    (kit_source / "capabilities" / "evidence" / "skills" / "conflict.md").write_text(
+        "---\nname: conflict\n---\n# From evidence\n", encoding="utf-8"
+    )
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    result = CliRunner().invoke(
+        main,
+        ["capabilities", "upgrade", "evidence", "--interactive", "--dry-run"],
+        input="override\n",
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "would remove .pkit/skills/project/conflict.md" in result.output
+    assert project_skill.is_file()
+    assert not (
+        kit_target / ".pkit" / "capabilities" / "evidence" / "skills" / "conflict.md"
+    ).exists()
+
+
+def test_shipped_artefact_paths_lists_core_and_other_capabilities(kit_target: Path) -> None:
+    """What an override leaves: core's and each other capability's, not the project's or its own."""
+    pkit = kit_target / ".pkit"
+    core = pkit / "agents" / "core" / "coordinator"
+    core.mkdir(parents=True)
+    (core / "coordinator.md").write_text("# core\n", encoding="utf-8")
+    for cap in ("audit", "evidence"):
+        agents = pkit / "capabilities" / cap / "agents"
+        agents.mkdir(parents=True)
+        (agents / "coordinator.md").write_text(f"# {cap}\n", encoding="utf-8")
+    project = pkit / "agents" / "project"
+    project.mkdir(parents=True, exist_ok=True)
+    (project / "coordinator.md").write_text("# mine\n", encoding="utf-8")
+
+    assert caps.shipped_artefact_paths(
+        kit_target, "agent", "coordinator", capability="evidence"
+    ) == (core / "coordinator.md", pkit / "capabilities" / "audit" / "agents" / "coordinator.md")
+    assert caps.shipped_artefact_paths(kit_target, "skill", "coordinator", capability="x") == ()
 
 
 def test_project_artefact_paths_finds_each_form(kit_target: Path) -> None:

@@ -824,32 +824,21 @@ def detect_collisions(
     return findings
 
 
-# Where the project keeps its own artefacts of each kind a collision names,
-# relative to the project root: the folders an override removes from (COR-017).
-_PROJECT_ARTEFACT_DIRS: dict[str, str] = {
-    "skill": ".pkit/skills/project",
-    "agent": ".pkit/agents/project",
-}
-
-
-def is_project_artefact(target_root: Path, finding: CollisionFinding) -> bool:
-    """Whether the artefact a collision meets is the project's own.
-
-    The project's own skills and agents live in their area's `project/` folder.
-    Core's, and another capability's, are not the project's to remove.
-    """
-    project_dir = target_root / _PROJECT_ARTEFACT_DIRS[finding.artifact_kind]
-    return finding.target_path.is_relative_to(project_dir)
+# The area folder under `.pkit/` that holds artefacts of each kind a collision
+# names: the project's own in its `project/`, core's in its `core/`, and each
+# capability's in `.pkit/capabilities/<name>/<area>/`.
+_ARTEFACT_AREAS: dict[str, str] = {"skill": "skills", "agent": "agents"}
 
 
 def project_artefact_paths(target_root: Path, kind: str, name: str) -> tuple[Path, ...]:
     """The project's own artefact of `kind` and `name`, in each form it has.
 
-    A skill or an agent is a file `<name>.md`, or a folder `<name>/` holding
-    `<name>.md` (COR-015). A project may hold both forms, and either deploys
-    under the name, so an override removes both. Empty when the project has none.
+    These are what an override removes (COR-017). A skill or an agent is a file
+    `<name>.md`, or a folder `<name>/` holding `<name>.md` (COR-015). A project
+    may hold both forms, and either deploys under the name, so an override
+    removes both. Empty when the project has none.
     """
-    project_dir = target_root / _PROJECT_ARTEFACT_DIRS[kind]
+    project_dir = target_root / ".pkit" / _ARTEFACT_AREAS[kind] / "project"
     flat = project_dir / f"{name}.md"
     folder = project_dir / name
     paths: list[Path] = []
@@ -858,6 +847,34 @@ def project_artefact_paths(target_root: Path, kind: str, name: str) -> tuple[Pat
     if (folder / f"{name}.md").is_file():
         paths.append(folder)
     return tuple(paths)
+
+
+def shipped_artefact_paths(
+    target_root: Path, kind: str, name: str, *, capability: str
+) -> tuple[Path, ...]:
+    """Core's artefact of `kind` and `name`, and each other capability's: what an override leaves.
+
+    They are not the project's to remove (the no-shared-files invariant, COR-001),
+    so an override leaves them, and the deploy's name precedence picks among them
+    and the capability's. `capability` names the capability the collision is
+    resolved for: its own installed copy is not listed. Each is the artefact's
+    file, `<name>.md` or `<name>/<name>.md` (COR-015).
+    """
+    area = _ARTEFACT_AREAS[kind]
+    folders = [target_root / ".pkit" / area / "core"]
+    caps_dir = target_root / ".pkit" / "capabilities"
+    if caps_dir.is_dir():
+        folders.extend(
+            cap / area
+            for cap in sorted(caps_dir.iterdir())
+            if cap.is_dir() and cap.name != capability
+        )
+    return tuple(
+        candidate
+        for folder in folders
+        for candidate in (folder / f"{name}.md", folder / name / f"{name}.md")
+        if candidate.is_file()
+    )
 
 
 def paths_git_cannot_restore(target_root: Path, paths: Sequence[Path]) -> tuple[Path, ...]:
