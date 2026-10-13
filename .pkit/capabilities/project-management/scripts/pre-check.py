@@ -51,8 +51,10 @@ from _lib.classification_rules import title_prefix_by_value
 from _lib.gh import gh_project_run
 from _lib.label_contributions import collect_label_contributions
 from _lib.review_contributions import (
+    SUPPORTED_FLOORS,
     ContributionCollection,
     collect_contributions,
+    is_known_floor,
 )
 from _lib.review_opt_outs import (
     NO_OPT_OUTS,
@@ -2743,6 +2745,25 @@ def _check_resolvable_reviewer_set(
         )
 
     results.extend(_opt_out_results(opt_outs, installed))
+
+    # A floor this pm does not know requires its reviewer on every change
+    # (DEC-032 D1) — a floor a later pm defines, or a misspelt one. Name each,
+    # so a typo that requires a reviewer everywhere is seen.
+    for rule in collection.rules:
+        if rule.floor is not None and not is_known_floor(rule.floor):
+            results.append(
+                CheckResult(
+                    f"review contribution (capability `{rule.capability}`)",
+                    "warn",
+                    f"floor `{rule.floor}` for reviewer `{rule.reviewer}` is not one this "
+                    f"project-management knows ({', '.join(SUPPORTED_FLOORS)}), so the "
+                    "reviewer is required on every pull request",
+                    remediation=(
+                        "Upgrade project-management if the capability needs a newer floor; "
+                        "otherwise the capability's declaration misspells it. See DEC-032."
+                    ),
+                )
+            )
 
     # Build the resolvable set: baseline ∪ contributed reviewer names. A
     # contributed rule the collector already flagged undeployed

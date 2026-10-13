@@ -128,6 +128,7 @@ from _lib.required_reviewers import (
     ERROR_COLLECTION,
     ERROR_NOT_CODE,
     ERROR_OPT_OUT,
+    ERROR_RULED_ARTEFACTS,
     ERROR_TOO_MANY_CHANGED_FILES,
     NOT_CODE_PATH,
     RequiredReviewersError,
@@ -1097,6 +1098,12 @@ def _resolution_error_message(resolution: Resolution) -> str:
     elif error.kind == ERROR_CHANGED_FILES:
         lines.append(f"  → {error.message}")
         lines.append("  Remediation: transient gh failure reading the PR's changed files — retry.")
+    elif error.kind == ERROR_RULED_ARTEFACTS:
+        lines.append(f"  → which ruled artefacts the PR alters cannot be read: {error.message}")
+        lines.append(
+            "  Remediation: fix what the reason names — fetch the full history, "
+            "upgrade pkit — and retry."
+        )
     else:
         lines.append(f"  → {error.message}")
         lines.append(

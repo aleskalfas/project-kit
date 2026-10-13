@@ -454,3 +454,37 @@ def test_malformed_opt_out_fails(pc, rc, monkeypatch, tmp_path) -> None:
     fails = _fails(results)
     assert len(fails) == 1
     assert "contributed_opt_out[0].reason" in fails[0].detail
+
+
+# ----- a floor pm does not know (#1386, DEC-032 D1) -------------------
+
+
+def _floor_collection(rc, floor):
+    rule = rc.ContributionRule(capability="living-docs", predicate={}, reviewer="r", floor=floor)
+    return rc.ContributionCollection(rules=(rule,), capabilities_walked=("living-docs",))
+
+
+def test_an_unknown_floor_is_named_as_a_warning(pc, rc, monkeypatch, tmp_path) -> None:
+    """A floor pm does not know requires its reviewer on every pull request; the
+    pre-check names it, so a misspelt floor is seen, and fails nothing."""
+    repo_root = _repo_with_agents(tmp_path, "reviewer", "r")
+    _stub_collection(pc, rc, monkeypatch, _floor_collection(rc, "touches-cod"))
+    results = pc._check_review_block(
+        _config(local=["reviewer"]),
+        repo_root / ".pkit" / "capabilities" / "project-management",
+    )
+    assert _fails(results) == []
+    (warned,) = _by_status(results, "warn")
+    assert "floor `touches-cod` for reviewer `r`" in warned.detail
+    assert "required on every pull request" in warned.detail
+
+
+@pytest.mark.parametrize("floor", ["touches-code", "touches-ruled-artefact"])
+def test_a_known_floor_draws_no_warning(pc, rc, monkeypatch, tmp_path, floor) -> None:
+    repo_root = _repo_with_agents(tmp_path, "reviewer", "r")
+    _stub_collection(pc, rc, monkeypatch, _floor_collection(rc, floor))
+    results = pc._check_review_block(
+        _config(local=["reviewer"]),
+        repo_root / ".pkit" / "capabilities" / "project-management",
+    )
+    assert _by_status(results, "warn") == [] and _fails(results) == []

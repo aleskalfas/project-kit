@@ -316,11 +316,38 @@ def test_parse_rule_without_match_or_floor_is_malformed(rc) -> None:
     assert any("`match` predicate, a `floor`, or both" in e.message for e in errors)
 
 
-def test_parse_unknown_floor_kind_is_malformed(rc) -> None:
-    data = {"contributions": [{"floor": "touches-secrets", "reviewer": "r"}]}
+def test_parse_ruled_artefact_floor_rule(rc) -> None:
+    data = {"contributions": [{"floor": "touches-ruled-artefact", "reviewer": "rule-set-reviewer"}]}
+    rules, errors = rc.parse_contributions(data, "living-docs")
+    assert errors == ()
+    assert rules[0].floor == rc.FLOOR_TOUCHES_RULED_ARTEFACT
+    assert rc.is_known_floor(rules[0].floor)
+
+
+def test_an_unknown_floor_kind_is_kept_not_refused(rc) -> None:
+    """A floor a later pm defines keeps the declaration: the rule stays, naming
+    the floor as written, and requires its reviewer on every change (DEC-032)."""
+    data = {
+        "contributions": [
+            {"floor": "touches-secrets", "reviewer": "r"},
+            {"match": {"workstream": "design"}, "reviewer": "design-reviewer"},
+        ]
+    }
+    rules, errors = rc.parse_contributions(data, "cap")
+    assert errors == ()
+    assert [(rule.floor, rule.reviewer) for rule in rules] == [
+        ("touches-secrets", "r"),
+        (None, "design-reviewer"),
+    ]
+    assert not rc.is_known_floor("touches-secrets")
+
+
+@pytest.mark.parametrize("floor", ["", "   ", 7, ["touches-code"]])
+def test_a_floor_that_is_not_a_name_is_malformed(rc, floor) -> None:
+    data = {"contributions": [{"floor": floor, "reviewer": "r"}]}
     rules, errors = rc.parse_contributions(data, "cap")
     assert rules == ()
-    assert any("floor must be one of" in e.message for e in errors)
+    assert any("floor must be a non-empty floor kind" in e.message for e in errors)
 
 
 def test_parse_mixed_good_and_bad_rules(rc) -> None:
@@ -475,6 +502,46 @@ def test_collect_undeployed_reviewer_stays_visible_and_fails_closed(rc, tmp_path
     assert len(matched) == 1
     assert matched[0].deployed is False
     assert any(not r.deployed for r in matched)
+
+
+def test_an_undeployed_capability_agent_names_its_redeploy(rc, tmp_path) -> None:
+    _write_manifest(tmp_path, ["ux-ui-design"])
+    _write_contribution(
+        tmp_path,
+        "ux-ui-design",
+        "schema_version: 1\n"
+        "contributions:\n"
+        "  - floor: touches-code\n"
+        "    reviewer: design-reviewer\n",
+    )
+    result = rc.collect_contributions(tmp_path)
+    (error,) = result.errors
+    assert "redeploy the capability's agents" in error.message
+    assert "pkit sync" not in error.message
+    assert result.rules[0].floor == rc.FLOOR_TOUCHES_CODE  # the broken rule keeps its floor
+
+
+@pytest.mark.parametrize("layout", ["{name}.md", "{name}/{name}.md"])
+def test_an_undeployed_core_agent_names_a_sync(rc, tmp_path, layout) -> None:
+    """A capability may contribute a reviewer core ships: a sync deploys it."""
+    _write_manifest(tmp_path, ["living-docs"])
+    _write_contribution(
+        tmp_path,
+        "living-docs",
+        "schema_version: 1\n"
+        "contributions:\n"
+        "  - floor: touches-ruled-artefact\n"
+        "    reviewer: rule-set-reviewer\n",
+    )
+    core = tmp_path / ".pkit" / "agents" / "core" / layout.format(name="rule-set-reviewer")
+    core.parent.mkdir(parents=True, exist_ok=True)
+    core.write_text("---\nname: rule-set-reviewer\n---\n", encoding="utf-8")
+    result = rc.collect_contributions(tmp_path)
+    assert result.ok is False
+    (error,) = result.errors
+    assert error.kind == rc.ERROR_UNDEPLOYED_AGENT
+    assert "it is a core agent, so `pkit sync` deploys it" in error.message
+    assert "redeploy the capability's agents" not in error.message
 
 
 def test_collect_missing_manifest_returns_empty(rc, tmp_path) -> None:

@@ -39,10 +39,16 @@ consumers share:
     before any predicate is matched, so an opted-out contribution is neither
     invoked nor gated — by both consumers alike.
   * applying the adopter's not-code list (`review.floors.not_code`, `NotCode`,
-    #1178) to the diff before any floor reads it, so a changed path the list
-    matches satisfies no floor — by both consumers alike. The freshness rule
+    #1178) to the diff before the `touches-code` floor reads it, so a changed
+    path the list matches satisfies no `touches-code` floor — by both
+    consumers alike. The list narrows no other floor. The freshness rule
     reads the author's changes through the same list, so the list decides
     both who is required and whose approval survives a change.
+  * reading the floors one way for every consumer (`reached_floors`):
+    `touches-code` from the paths, `touches-ruled-artefact` from the
+    backbone's answer on which ruled artefacts the change altered (#1386),
+    read for every change while a contribution names it, and a floor this pm
+    does not know as reached by every change.
   * naming which required reviewers' whole remit is their diff floors, and
     those floors (`Resolution.floors_by_reviewer`, #1179) — what the verdict
     freshness rule (`_lib.verdict_freshness`) keys on.
@@ -50,7 +56,7 @@ consumers share:
 Fail-closed posture (DEC-032 D5)
 --------------------------------
 
-Resolution can fail in five structurally distinct ways, and the result type
+Resolution can fail in six structurally distinct ways, and the result type
 makes a consumer handle each before reading the set:
 
   * **opt-out invalid** — the adopter's opt-out list is malformed, or names a
@@ -76,6 +82,12 @@ makes a consumer handle each before reading the set:
     never fetches the diff, so this failure is unreachable there. A PR with
     more changed files than GitHub will list is the same unknown, reported as
     its own kind because retrying cannot resolve it.
+  * **ruled artefacts unresolvable** — while a contribution names
+    `touches-ruled-artefact`, the PR's commits could not be read or
+    fetched, the checkout is shallow, or the backbone's command failed,
+    answered what cannot be read, or is missing (#1386). A reviewer of that
+    floor might be required, so it cannot be dropped; the message names the
+    cause.
 
 All collapse to `Resolution.ok is False` with a structured `error` the
 consumer turns into its own refusal / error message. An *empty* contributed
@@ -103,8 +115,10 @@ from _lib import axis_labels
 try:
     from _lib.review_contributions import (
         FLOOR_TOUCHES_CODE,
+        FLOOR_TOUCHES_RULED_ARTEFACT,
         ContributionCollection,
         ContributionRule,
+        is_known_floor,
     )
     from _lib.review_contributions import (
         collect_contributions as _default_collect_contributions,
@@ -112,8 +126,10 @@ try:
 except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
     from review_contributions import (  # type: ignore[no-redef]
         FLOOR_TOUCHES_CODE,
+        FLOOR_TOUCHES_RULED_ARTEFACT,
         ContributionCollection,
         ContributionRule,
+        is_known_floor,
     )
     from review_contributions import (
         collect_contributions as _default_collect_contributions,
@@ -161,6 +177,13 @@ ERROR_CHANGED_FILES = "changed-files-unresolvable"
 # because it is not transient: a retry reads the same truncated list, so the
 # consumer's remediation is to split the PR or bypass, not to retry.
 ERROR_TOO_MANY_CHANGED_FILES = "too-many-changed-files"
+# Which artefacts the change altered that an accepted rule binds on could not
+# be read, while a contribution names `touches-ruled-artefact` (#1386): the
+# PR's commits could not be read or fetched, the checkout is shallow, or the
+# backbone's command failed, answered what cannot be read, or is missing. A
+# reviewer of that floor might be required, so the consumer fails closed;
+# `message` names the cause.
+ERROR_RULED_ARTEFACTS = "ruled-artefacts-unresolvable"
 # The adopter's `review.agents.contributed_opt_out` list is malformed, or an
 # entry names a capability / reviewer no installed capability contributes
 # (#148). `details` carries one message per problem.
@@ -263,6 +286,16 @@ class _TooManyChangedFiles(_Unresolvable):
     """
 
 
+class _RuledArtefactsUnresolvable(_Unresolvable):
+    """Sentinel: which ruled artefacts the change altered could not be read.
+
+    Still an `_Unresolvable`, so every check that fails closed on one fails
+    closed on this. The resolver reports it as `ERROR_RULED_ARTEFACTS`, since
+    its causes — local commits, a shallow checkout, the backbone — have their
+    own remedies.
+    """
+
+
 class _MultiValueAxisError(Exception):
     """An issue carries multiple values on a `mutually_exclusive` axis (DEC-012).
 
@@ -301,8 +334,8 @@ class NotCode:
     `patterns` are gitignore-style path patterns — the matching
     `code_path_to_doc_mapping` uses in the same config — read against each
     changed path, relative to the repository root. A changed path any pattern
-    matches satisfies no floor; every other path is read exactly as before, so
-    the list narrows the floors and nothing else. A consumer gates on `ok`
+    matches satisfies no `touches-code` floor; every other path is read exactly
+    as before, so the list narrows that floor and nothing else. A consumer gates on `ok`
     first: when the list is malformed nothing is excluded and the caller
     refuses (see the module docstring).
     """
@@ -372,8 +405,23 @@ ClosingIssueNumbersFn = Callable[[int], "list[int] | _Unresolvable"]
 IssueLabelsFn = Callable[[int], "list | None"]
 # Type of the injected changed-files resolver. Returns the PR's changed-file
 # paths, or an `_Unresolvable` when the diff could not be determined. Only
-# called when a floor-carrying contribution is installed (DEC-032 D1).
+# called when a contribution names `touches-code`, the floor read from the
+# paths (DEC-032 D1).
 ChangedFilesFn = Callable[[int], "list[str] | _Unresolvable"]
+# Type of the injected ruled-artefacts reader, given the PR number. Returns
+# the locations of the artefacts the PR's change altered that an accepted rule
+# binds on at the base or at the head — the backbone's answer
+# (`_lib.ruled_artefacts`) — or an `_Unresolvable` naming why it could not be
+# read. Called for every PR while a contribution in force names
+# `touches-ruled-artefact` (DEC-032 D1): a change to the declared places alone
+# alters artefacts whose files it does not touch, so no changed path says the
+# question may be skipped.
+RuledArtefactsFn = Callable[[int], "tuple[str, ...] | _Unresolvable"]
+
+
+def _no_ruled_artefacts(_pr_number: int) -> tuple[str, ...] | _Unresolvable:
+    """The default reader: none was given, so the answer is unknown."""
+    return _Unresolvable("no reader of the ruled artefacts a change altered was given")
 
 
 def resolve_required_local_reviewers(
@@ -389,6 +437,7 @@ def resolve_required_local_reviewers(
     collect_contributions: Callable[
         [Path], ContributionCollection
     ] = _default_collect_contributions,
+    ruled_artefacts: RuledArtefactsFn = _no_ruled_artefacts,
 ) -> Resolution:
     """Resolve a PR's required-local-reviewer set (DEC-032 D1), fail-closed.
 
@@ -410,18 +459,25 @@ def resolve_required_local_reviewers(
     on an undeployed agent; the baseline term is untouched. Default: none.
 
     `not_code` is the adopter's not-code list (`read_not_code(config)`,
-    #1178): the changed paths it matches are dropped before any floor reads
-    the diff. Default: the shipped list, as when the config sets none.
+    #1178): the changed paths it matches are dropped before the
+    `touches-code` floor reads the diff, and no other floor's. Default: the
+    shipped list, as when the config sets none.
+
+    `ruled_artefacts` reads which artefacts the PR's change altered that an
+    accepted rule binds on (`_lib.ruled_artefacts`, through `_lib.pr_review`,
+    #1386). It is called for every PR while a contribution in force names
+    `touches-ruled-artefact`. Default: no reader, so such a PR fails closed.
 
     The contributed set is the UNION of two match paths (DEC-032 D1):
 
       * **classification** — rules whose match-predicate holds for the
         classification (`workstream` / `type` axes) of any closing issue.
       * **diff-property floor** — floor-carrying rules whose floor the PR's
-        diff satisfies (e.g. `touches-code`), independent of classification.
-        This backstops D1's classification gate-escape for floor-carrying
-        reviewers: a diff that touches code pulls in the floor reviewer even
-        for a `type:docs` / unclassified PR.
+        diff satisfies (`touches-code`, `touches-ruled-artefact`, or a floor
+        this pm does not know, which every change satisfies), independent of
+        classification. This backstops D1's classification gate-escape for
+        floor-carrying reviewers: a diff that touches code pulls in the floor
+        reviewer even for a `type:docs` / unclassified PR.
 
     Returns a `Resolution`. On `ok`, `required_local` is the de-duplicated
     baseline-∪-contributed set; on failure (`ok is False`), `error` carries
@@ -434,11 +490,13 @@ def resolve_required_local_reviewers(
     regardless of what the PR closes), then that every opt-out names an
     installed contribution (after the collection, so a broken declaration is
     reported as itself rather than as an opt-out naming nothing), then
-    closing-issue resolution, then — only when a floor-carrying contribution
-    remains — changed-files resolution. Any failing yields a non-ok
-    `Resolution`. A collection with no floor-carrying rule never fetches the
-    diff, so a floor-free project pays no extra `gh` round-trip and cannot
-    fail on a diff it does not consult.
+    closing-issue resolution, then — only when a contribution names
+    `touches-code` — changed-files resolution, then — only when one names
+    `touches-ruled-artefact` — the ruled artefacts the change altered. Any
+    failing yields a non-ok `Resolution`. A collection with no `touches-code`
+    rule never fetches the diff, so it pays no extra `gh` round-trip and
+    cannot fail on a diff it does not consult, and one with no
+    `touches-ruled-artefact` rule never reads a commit for it.
     """
     if not opt_outs.ok:
         return _opt_out_error(opt_outs.errors)
@@ -482,16 +540,20 @@ def resolve_required_local_reviewers(
     classification_rules = collection.reviewers_for_issues(classifications)
 
     floor_rules = _floor_rules(
-        collection, pr_number, changed_files=changed_files, not_code=not_code
+        collection,
+        pr_number,
+        changed_files=changed_files,
+        not_code=not_code,
+        ruled_artefacts=ruled_artefacts,
     )
     if isinstance(floor_rules, _Unresolvable):
-        too_many = isinstance(floor_rules, _TooManyChangedFiles)
-        return Resolution(
-            error=RequiredReviewersError(
-                kind=ERROR_TOO_MANY_CHANGED_FILES if too_many else ERROR_CHANGED_FILES,
-                message=floor_rules.reason,
-            )
-        )
+        if isinstance(floor_rules, _RuledArtefactsUnresolvable):
+            kind = ERROR_RULED_ARTEFACTS
+        elif isinstance(floor_rules, _TooManyChangedFiles):
+            kind = ERROR_TOO_MANY_CHANGED_FILES
+        else:
+            kind = ERROR_CHANGED_FILES
+        return Resolution(error=RequiredReviewersError(kind=kind, message=floor_rules.reason))
 
     contributed_rules = _dedup_rules_by_reviewer(list(classification_rules) + list(floor_rules))
     required_local = _dedup_preserve_order(
@@ -563,43 +625,90 @@ def _floor_rules(
     *,
     changed_files: ChangedFilesFn,
     not_code: NotCode = DEFAULT_NOT_CODE,
+    ruled_artefacts: RuledArtefactsFn = _no_ruled_artefacts,
 ) -> tuple[ContributionRule, ...] | _Unresolvable:
     """Floor-carrying rules the PR's diff satisfies (DEC-032 D1).
 
     Short-circuits when no installed contribution carries a floor — a
     floor-free project never fetches the diff (no extra `gh` round-trip, and no
-    way to fail on a diff it does not consult). Otherwise it resolves the PR's
-    changed files and maps them to the set of satisfied floor kinds, then asks
-    the collection which floor-carrying rules that set matches.
+    way to fail on a diff it does not consult). Only `touches-code` reads the
+    changed files: `touches-ruled-artefact` reads the backbone's answer, and a
+    floor this pm does not know needs nothing, as every change satisfies it.
+    It asks `reached_floors` which of the collection's floors the change
+    reaches, and asks the collection which floor-carrying rules that set
+    matches.
 
-    Returns `_Unresolvable` when the diff could not be determined while a floor
-    rule is installed — a floor reviewer it might require cannot be dropped, so
-    the caller fails closed (mirroring the closing-issue posture, DEC-032 D5).
+    Returns `_Unresolvable` when the diff could not be determined while
+    `touches-code` is installed — a floor reviewer it might require
+    cannot be dropped, so the caller fails closed (mirroring the closing-issue
+    posture, DEC-032 D5) — and `_RuledArtefactsUnresolvable` when the ruled
+    artefacts the change altered could not be read.
     """
-    if not any(rule.floor is not None for rule in collection.rules):
+    floors = frozenset(rule.floor for rule in collection.rules if rule.floor is not None)
+    if not floors:
         return ()
-    files = changed_files(pr_number)
-    if isinstance(files, _Unresolvable):
-        return files
-    return collection.reviewers_for_floors(satisfied_floors(files, not_code))
+    files: tuple[str, ...] = ()
+    if FLOOR_TOUCHES_CODE in floors:
+        found = changed_files(pr_number)
+        if isinstance(found, _Unresolvable):
+            return found
+        files = tuple(found)
+    reached = reached_floors(
+        floors, files, not_code=not_code, ruled_artefacts=lambda: ruled_artefacts(pr_number)
+    )
+    if isinstance(reached, _Unresolvable):
+        return reached
+    return collection.reviewers_for_floors(reached)
+
+
+def reached_floors(
+    floors: frozenset[str] | set[str],
+    changed_paths: list[str] | tuple[str, ...],
+    *,
+    not_code: NotCode = DEFAULT_NOT_CODE,
+    ruled_artefacts: Callable[[], tuple[str, ...] | _Unresolvable],
+) -> set[str] | _Unresolvable:
+    """Which of `floors` a change with `changed_paths` reaches (DEC-032 D1).
+
+    The one reading of the floors, so the resolver — on the PR's whole diff —
+    and the freshness rule — on the author's changes since a verdict
+    (`_lib.verdict_freshness`, DEC-028) — judge a change alike:
+
+      * `touches-code`: the paths the not-code list leaves touch code
+        (`satisfied_floors`).
+      * `touches-ruled-artefact`: `ruled_artefacts()` names an altered
+        artefact the floor counts. It is asked whatever the paths, since a
+        change to the declared places alone alters artefacts whose files it
+        does not touch. The not-code list does not narrow it.
+      * a floor this pm does not know: every change reaches it.
+
+    Returns `_RuledArtefactsUnresolvable`, with the reason, when
+    `ruled_artefacts()` could not answer.
+    """
+    reached = {floor for floor in floors if not is_known_floor(floor)}
+    if FLOOR_TOUCHES_CODE in floors:
+        reached |= satisfied_floors(changed_paths, not_code)
+    if FLOOR_TOUCHES_RULED_ARTEFACT in floors:
+        found = ruled_artefacts()
+        if isinstance(found, _Unresolvable):
+            return _RuledArtefactsUnresolvable(found.reason)
+        if found:
+            reached.add(FLOOR_TOUCHES_RULED_ARTEFACT)
+    return reached
 
 
 def satisfied_floors(
     changed_paths: list[str] | tuple[str, ...],
     not_code: NotCode = DEFAULT_NOT_CODE,
 ) -> set[str]:
-    """The set of floor kinds a set of changed paths satisfies (DEC-032 D1).
+    """The floor kinds a set of changed paths satisfies by the paths alone
+    (DEC-032 D1): `touches-code`, when the paths the adopter's not-code list
+    (#1178) leaves touch code per `diff_touches_code`.
 
-    Maps the raw diff to the abstract floor-kind vocabulary the collection
-    matches on, keeping the collection ignorant of *how* a diff property is
-    computed. The adopter's not-code list (#1178) is applied first, for every
-    floor kind alike: a changed path it matches satisfies no floor, and every
-    other path is read unchanged. Currently one floor kind: `touches-code`,
-    satisfied when the remaining paths touch code per `diff_touches_code`.
-
-    The resolver reads the PR's whole diff through it; the freshness rule
-    (`_lib.verdict_freshness`, #1179) reads the author's changes since a
-    verdict through it, so both judge a path the same way.
+    The not-code list narrows `touches-code` and no other floor: a changed
+    path it matches satisfies no `touches-code` floor, and every other path is
+    read unchanged. `touches-ruled-artefact` needs the backbone's answer, and
+    a floor this pm does not know needs nothing; `reached_floors` adds them.
     """
     floor_paths = not_code.floor_paths(list(changed_paths))
     satisfied: set[str] = set()

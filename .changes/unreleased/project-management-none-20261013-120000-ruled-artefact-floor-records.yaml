@@ -1,7 +1,0 @@
-component: project-management
-kind: none
-body: >
-  DEC-032 and DEC-028 state the touches-ruled-artefact floor of #1386, its
-  local state, its unknown-floor rule and its freshness, ahead of the code;
-  the README defers its decisions anchor until that code documents the floor.
-  No behaviour of the capability changes yet.

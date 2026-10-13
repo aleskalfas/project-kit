@@ -1689,3 +1689,18 @@ def test_invoke_agent_passes_no_effort_when_unset(rpr, monkeypatch) -> None:
     rpr._invoke_agent("reviewer", 99, {}, 720)
     assert "--effort" not in captured["args"]
     assert captured["args"][-2:] == ["--agent", "reviewer"]
+
+
+def test_resolution_error_ruled_artefacts_names_the_cause(rpr) -> None:
+    """Ruled artefacts that cannot be read abort with their cause and a fix
+    that is not a bare retry (#1386)."""
+    resolution = rpr.Resolution(
+        error=rpr.RequiredReviewersError(
+            kind=rpr.ERROR_RULED_ARTEFACTS,
+            message="this checkout is shallow, so the history between the commits may not be here",
+        )
+    )
+    msg = rpr._resolution_error_message(resolution)
+    assert "fail-closed" in msg
+    assert "which ruled artefacts the PR alters cannot be read: this checkout is shallow" in msg
+    assert "fetch the full history" in msg.split("Remediation:")[1]

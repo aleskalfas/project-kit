@@ -288,6 +288,7 @@ from _lib.required_reviewers import (
     ERROR_COLLECTION,
     ERROR_NOT_CODE,
     ERROR_OPT_OUT,
+    ERROR_RULED_ARTEFACTS,
     ERROR_TOO_MANY_CHANGED_FILES,
     NOT_CODE_PATH,
     Resolution,
@@ -2246,6 +2247,8 @@ def _resolution_refusal(resolution: Resolution, *, override_requested: bool = Fa
             error.message,
             too_many=error.kind == ERROR_TOO_MANY_CHANGED_FILES,
         )
+    elif error.kind == ERROR_RULED_ARTEFACTS:
+        message = _ruled_artefacts_unresolvable_refusal(error.message)
     elif error.kind == ERROR_OPT_OUT:
         message = _opt_out_invalid_refusal(error.details)
     elif error.kind == ERROR_NOT_CODE:
@@ -2559,6 +2562,32 @@ def _closing_issue_unresolvable_refusal(reason: str) -> str:
             "            Remediation:",
             "              a) Transient gh failure resolving closing issues — retry `done-work`.",
             '              b) If persistent, merge with `done-work --bypass "<reason>"`.',
+        ]
+    )
+
+
+def _ruled_artefacts_unresolvable_refusal(reason: str) -> str:
+    """Refusal text when the ruled artefacts the PR altered cannot be read
+    (DEC-032 D1, #1386).
+
+    Reached only while a contribution names `touches-ruled-artefact`: without
+    the backbone's answer the gate cannot
+    tell whether that floor's reviewer is required, so it refuses. The reason
+    names the cause — a commit origin could not provide, a shallow checkout,
+    the backbone's command failing or missing — each with its own fix.
+    """
+    return "\n".join(
+        [
+            "[refused] agent-mode approval gate cannot be resolved — which ruled "
+            "artefacts the PR alters cannot be read.",
+            f"            → {reason}",
+            "            A reviewer of the touches-ruled-artefact floor may be required, so "
+            "the gate refuses rather than merge on a possibly-incomplete set "
+            "(fail-closed, DEC-032).",
+            "            Remediation:",
+            "              a) Fix what the reason names — fetch the full history, upgrade "
+            "pkit — and retry `done-work`, or",
+            '              b) Merge with `done-work --bypass "<reason>"`.',
         ]
     )
 

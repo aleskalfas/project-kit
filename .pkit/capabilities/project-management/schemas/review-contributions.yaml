@@ -41,12 +41,26 @@ schema_version: 1
 #     closing issue's classification.
 #   * `floor` — keyed on the PR's DIFF, not the closing issue. The rule's
 #     reviewer is required whenever the diff matches the property, even for
-#     an unclassified / `type:docs` PR. One floor kind: `touches-code`
-#     (the diff touches any non-documentation file). The floor backstops
-#     the classification gate-escape for a code-review reviewer. A changed
-#     path the adopting project lists as not code — `review.floors.not_code`
-#     in its pm `project/config.yaml`, `.changes/**` (changesets) when unset
-#     — is excluded: it satisfies no floor.
+#     an unclassified / `type:docs` PR. Two floor kinds:
+#       - `touches-code` fires when the diff touches any non-documentation
+#         file. It backstops the classification gate-escape for a
+#         code-review reviewer. A changed path the adopting project lists as
+#         not code — `review.floors.not_code` in its pm `project/config.yaml`,
+#         `.changes/**` (changesets) when unset — is excluded: it satisfies
+#         no `touches-code` floor.
+#       - `touches-ruled-artefact` fires when the change alters an artefact
+#         on which an accepted rule binds, at the base or at the head
+#         (COR-051 point 7): adds it, removes it, or changes its content.
+#         A change to the declared places alone alters the artefacts it
+#         brings in or takes out. A change that only writes a revalidation,
+#         a move the pairing follows that keeps the content, or a change to
+#         the rules alone alters nothing. pm reads it from the backbone's
+#         `pkit rule-sets altered` for every pull request while a
+#         contribution in force names the floor. The not-code list does not
+#         narrow it.
+#     Any other non-empty floor name is accepted: a floor a later pm
+#     defines, or a misspelt one, requires its reviewer on every change
+#     rather than refusing the declaration, and `pre-check` names it.
 #
 # A `match.<axis>` value may be a single string, the `"*"` wildcard, OR a
 # list of strings:
@@ -110,3 +124,9 @@ contributions:
   # a `floor`, a `match`, or both.
   - floor: touches-code
     reviewer: code-reviewer
+
+  # Diff-property FLOOR on ruled artefacts: require `rule-set-reviewer`
+  # whenever the change alters a document an accepted rule binds on — a
+  # page, an analysis artefact — however the closing issue is classified.
+  - floor: touches-ruled-artefact
+    reviewer: rule-set-reviewer

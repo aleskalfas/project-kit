@@ -79,6 +79,8 @@ Exports (the types #145/#146/#147 import):
                               `reviewers_for` / `reviewers_for_issues` /
                               `reviewers_for_floors`
     CONTRIBUTIONS_FILENAME  — the per-capability declaration filename
+    SUPPORTED_FLOORS        — the floor kinds this pm knows; `is_known_floor`
+                              tells one apart from a floor a later pm defines
     parse_contributions(data, capability) -> tuple[rules, errors]
     list_registered_capabilities(manifest_data) -> tuple[str, ...]
     collect_contributions(repo_root, *, load_yaml=...) -> ContributionCollection
@@ -87,7 +89,7 @@ Exports (the types #145/#146/#147 import):
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any
@@ -104,8 +106,10 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
 # dir); the package-relative import keeps this module importable both as
 # `_lib.review_contributions` and standalone via spec loading in tests.
 try:
+    from _lib.agents import agent_is_core as _default_agent_is_core
     from _lib.agents import agent_is_deployed as _default_agent_is_deployed
 except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
+    from agents import agent_is_core as _default_agent_is_core  # type: ignore[no-redef]
     from agents import agent_is_deployed as _default_agent_is_deployed  # type: ignore[no-redef]
 
 
@@ -126,13 +130,24 @@ SUPPORTED_MATCH_AXES = ("workstream", "type")
 # parses to the `MATCH_ANY` sentinel; `"*"` inside a list is a literal value.
 WILDCARD_TOKEN = "*"
 
-# Diff-property floor kinds a rule may carry (DEC-032 D1). A floor keys on
-# the PR's *diff*, not a closing issue's classification, so it backstops D1's
-# classification gate-escape for a floor-carrying reviewer. Only one kind exists
-# now — `touches-code` (the diff touches non-documentation source). The tuple is
-# the single place to widen; the collector validates a rule's floor against it.
+# Diff-property floor kinds this pm knows (DEC-032 D1). A floor keys on the
+# PR's *diff*, not a closing issue's classification, so it backstops D1's
+# classification gate-escape for a floor-carrying reviewer. Two kinds:
+# `touches-code` (the diff touches non-documentation source) and
+# `touches-ruled-artefact` (the change alters an artefact an accepted rule
+# binds on, read from the backbone). The tuple is the single place to widen.
+# A rule naming a floor outside it — one a later pm defines — is kept, and
+# requires its reviewer on every change (`is_known_floor`), so a contributor's
+# newer floor never refuses the whole declaration.
 FLOOR_TOUCHES_CODE = "touches-code"
-SUPPORTED_FLOORS = (FLOOR_TOUCHES_CODE,)
+FLOOR_TOUCHES_RULED_ARTEFACT = "touches-ruled-artefact"
+SUPPORTED_FLOORS = (FLOOR_TOUCHES_CODE, FLOOR_TOUCHES_RULED_ARTEFACT)
+
+
+def is_known_floor(floor: str) -> bool:
+    """Whether this pm knows `floor`. One it does not know is satisfied by
+    every change (DEC-032 D1)."""
+    return floor in SUPPORTED_FLOORS
 
 
 class _MatchAny:
@@ -511,17 +526,25 @@ def _parse_floor(
     errors: list[ContributionError],
     malformed: Callable[[str], ContributionError],
 ) -> str | None:
-    """Validate a rule's optional `floor` against `SUPPORTED_FLOORS`.
+    """Validate a rule's optional `floor`.
 
     `None` (no floor declared) is valid — the rule keys on classification only.
-    A non-string or unknown floor kind appends an error and yields `None`.
+    A floor kind this pm does not know is kept as written: it requires its
+    reviewer on every change (DEC-032 D1), so a floor a later pm defines meets
+    this one with a required reviewer rather than a refused declaration. A
+    floor that is not a non-empty string appends an error and yields `None`.
     """
     if floor is None:
         return None
-    if not isinstance(floor, str) or floor not in SUPPORTED_FLOORS:
-        errors.append(malformed(f"{where}.floor must be one of: {', '.join(SUPPORTED_FLOORS)}"))
+    if not isinstance(floor, str) or not floor.strip():
+        errors.append(
+            malformed(
+                f"{where}.floor must be a non-empty floor kind "
+                f"(known: {', '.join(SUPPORTED_FLOORS)})"
+            )
+        )
         return None
-    return floor
+    return floor.strip()
 
 
 def _parse_match_values(
@@ -570,6 +593,7 @@ def collect_contributions(
     *,
     load_yaml: Callable[[Path], Any] = _cc.default_load_yaml,
     agent_is_deployed: Callable[[Path, str], bool] = _default_agent_is_deployed,
+    agent_is_core: Callable[[Path, str], bool] = _default_agent_is_core,
 ) -> ContributionCollection:
     """Walk manifest-registered capabilities and collect reviewer rules.
 
@@ -588,10 +612,12 @@ def collect_contributions(
          structured `resolution_error`, AND a matching error is surfaced, so the
          requirement stays visible and the gate fails closed.
 
-    `load_yaml` and `agent_is_deployed` are injectable so tests (and future
-    harnesses) can substitute filesystem access without monkeypatching;
-    `agent_is_deployed` defaults to the shared `_lib.agents` resolver that
-    `pre-check.py` also uses (one deploy-path definition, per COR-007).
+    `load_yaml`, `agent_is_deployed` and `agent_is_core` are injectable so
+    tests (and future harnesses) can substitute filesystem access without
+    monkeypatching; the two agent readers default to the shared `_lib.agents`
+    resolvers that `pre-check.py` also uses (one deploy-path definition, per
+    COR-007). `agent_is_core` only words an undeployed reviewer's remedy: a
+    core agent is deployed by a sync, a capability's by redeploying it.
 
     Returns a `ContributionCollection`. A non-empty `errors` (equivalently
     `not collection.ok`) means a fail-and-surface condition for the caller
@@ -608,22 +634,20 @@ def collect_contributions(
         if agent_is_deployed(root, rule.reviewer):
             return rule, ()
         # Undeployed reviewer: keep the requirement VISIBLE and unsatisfiable
-        # rather than dropping it (fail-closed seam, DEC-032 D5).
+        # rather than dropping it (fail-closed seam, DEC-032 D5). Where the
+        # named agent is one core ships, the remedy is a sync, not a redeploy.
+        if agent_is_core(root, rule.reviewer):
+            fix = "it is a core agent, so `pkit sync` deploys it; or uninstall the capability."
+        else:
+            fix = "redeploy the capability's agents or uninstall the capability."
         resolution_error = ContributionError(
             ERROR_UNDEPLOYED_AGENT,
             capability,
             f"capability `{capability}` contributes reviewer "
             f"`{rule.reviewer}` but no deployed agent file exists at "
-            f".claude/agents/{rule.reviewer}.md — redeploy the "
-            f"capability's agents or uninstall the capability.",
+            f".claude/agents/{rule.reviewer}.md — {fix}",
         )
-        broken = ContributionRule(
-            capability=rule.capability,
-            predicate=rule.predicate,
-            reviewer=rule.reviewer,
-            deployed=False,
-            resolution_error=resolution_error,
-        )
+        broken = replace(rule, deployed=False, resolution_error=resolution_error)
         return broken, (resolution_error,)
 
     collection = _cc.collect(

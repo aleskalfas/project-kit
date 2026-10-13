@@ -1476,3 +1476,22 @@ def test_a_verdict_naming_no_head_is_judged_by_the_commit_time(
     assert (
         "(stale APPROVED — no reviewed head recorded; posted before the latest commit)"
     ) in result.refusal_message
+
+
+def test_unreadable_ruled_artefacts_refuse_with_the_reason(dw) -> None:
+    """The gate refuses, naming the cause, when the ruled artefacts a PR alters
+    cannot be read (#1386, DEC-032 D1)."""
+    import sys
+
+    lib = sys.modules[dw.Resolution.__module__]
+    resolution = dw.Resolution(
+        error=lib.RequiredReviewersError(
+            kind=dw.ERROR_RULED_ARTEFACTS,
+            message="the backbone's `pkit` has no `pkit rule-sets altered` command",
+        )
+    )
+    result = dw._resolution_refusal(resolution)
+    assert result.passed is False
+    assert "which ruled artefacts the PR alters cannot be read" in result.refusal_message
+    assert "has no `pkit rule-sets altered` command" in result.refusal_message
+    assert 'done-work --bypass "<reason>"' in result.refusal_message

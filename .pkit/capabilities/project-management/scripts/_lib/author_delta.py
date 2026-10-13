@@ -22,6 +22,14 @@ parents) from the PR head back to it.
     a merge of anything other than the base branch included, since what it
     brings in has been reviewed nowhere on this PR.
 
+It also names the same change as `stretches`, for a reader that asks what a
+change altered of something other than paths (the `touches-ruled-artefact`
+floor asks the backbone which artefacts, #1386): each of the author's own
+commits that changed something, and each merge of the base the author
+changed something inside, whole — no path tells what the author's change
+inside a merge brought in. A clean merge is no stretch. Each stretch runs
+from a commit's first parent to the commit.
+
 `base_kept` answers whether the base a verdict was reviewed against is an
 ancestor of the base branch's head now. A base that moved forward is; one a
 retarget replaced — a stacked PR moved onto another branch after its base
@@ -55,7 +63,7 @@ from __future__ import annotations
 
 import os
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -66,15 +74,26 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
 
 
 @dataclass(frozen=True)
-class AuthorDelta:
-    """The paths the author changed since a reviewed head, or why they cannot
-    be read.
+class Stretch:
+    """One stretch of the author's change: the commit `end`, from its first
+    parent `start`. One of the author's own commits, or a merge of the base
+    the author changed something inside."""
 
-    `ok` is False when `error` is set; `paths` is then empty and means
-    nothing — a consumer reads `error` first.
+    start: str
+    end: str
+
+
+@dataclass(frozen=True)
+class AuthorDelta:
+    """The paths the author changed since a reviewed head, and the stretches
+    of the branch that hold those changes, or why they cannot be read.
+
+    `ok` is False when `error` is set; `paths` and `stretches` are then empty
+    and mean nothing — a consumer reads `error` first.
     """
 
     paths: tuple[str, ...] = ()
+    stretches: tuple[Stretch, ...] = ()
     error: str = ""
 
     @property
@@ -139,15 +158,19 @@ def author_delta(
             )
         base = _BaseBranch(git, base_tip)
         paths: set[str] = set()
-        for commit, parents in git.first_parent_line(since, head):
+        stretches: list[Stretch] = []
+        for commit, parents in reversed(git.first_parent_line(since, head)):
             if len(parents) == 2 and base.contains(parents[1]):
                 merged = git.clean_merge(parents[0], parents[1])
-                paths |= git.changed_paths(merged, commit)
+                own = git.changed_paths(merged, commit)
             else:
-                paths |= git.changed_paths(parents[0], commit)
+                own = git.changed_paths(parents[0], commit)
+            if own:
+                stretches.append(Stretch(parents[0], commit))
+            paths |= own
     except _GitFailed as exc:
         return AuthorDelta(error=str(exc))
-    return AuthorDelta(paths=tuple(sorted(paths)))
+    return AuthorDelta(paths=tuple(sorted(paths)), stretches=tuple(stretches))
 
 
 def base_kept(
@@ -178,9 +201,36 @@ def base_kept(
         return BaseCheck(error=str(exc))
 
 
+def local_commits(
+    named: Sequence[tuple[str, str]],
+    *,
+    cwd: str | Path | None = None,
+    run: RunFn = subprocess.run,
+) -> str:
+    """Why the commits `named` — each `(oid, what it is)` — and the history
+    between them cannot be read in this checkout, or '' when they can.
+
+    A commit the checkout lacks is fetched from origin by its object name
+    first, as `author_delta` does. A shallow checkout fails too: the history
+    between the commits, which a reader that finds where one left the other
+    needs, may not be here (#1386)."""
+    git = _Git(cwd, run)
+    try:
+        for oid, what in named:
+            git.require_commit(oid, what)
+        if git.is_shallow():
+            raise _GitFailed(
+                "this checkout is shallow, so the history between the commits may not be "
+                "here — fetch the full history (`git fetch --unshallow origin`)"
+            )
+    except _GitFailed as exc:
+        return str(exc)
+    return ""
+
+
 class _Git:
-    """The git steps `author_delta` and `base_kept` take, each failing as
-    `_GitFailed`."""
+    """The git steps `author_delta`, `base_kept` and `local_commits` take, each
+    failing as `_GitFailed`."""
 
     def __init__(self, cwd: str | Path | None, run: RunFn) -> None:
         self._cwd = cwd
@@ -229,14 +279,18 @@ class _Git:
             f"fetched from origin: {why}"
         )
 
+    def is_shallow(self) -> bool:
+        """Whether this checkout's history is cut short."""
+        proc = self("rev-parse", "--is-shallow-repository")
+        if proc.returncode != 0:
+            raise _GitFailed(f"git rev-parse failed: {proc.stderr.strip()}")
+        return proc.stdout.strip() == "true"
+
     def require_full_history(self, question: str) -> None:
         """Fail when this checkout is shallow: an ancestry test that came out
         false may only mean the history between the two commits is not here,
         so whether `question` holds cannot be told."""
-        proc = self("rev-parse", "--is-shallow-repository")
-        if proc.returncode != 0:
-            raise _GitFailed(f"git rev-parse failed: {proc.stderr.strip()}")
-        if proc.stdout.strip() == "true":
+        if self.is_shallow():
             raise _GitFailed(
                 f"this checkout is shallow, so whether {question} cannot be "
                 "told — fetch the full history (`git fetch --unshallow origin`)"

@@ -99,7 +99,7 @@ has_projects_v2_board: false
 #         reviewer: docs-reviewer
 #         reason: "Docs are reviewed by the tech-writing team."
 #   floors:                           # per DEC-032 — the diff-property floors (#1178)
-#     not_code:                       #   paths that satisfy no floor; absent = [".changes/**"]
+#     not_code:                       #   paths that satisfy no touches-code floor; absent = [".changes/**"]
 #       - ".changes/**"
 #
 # mesh_peers:                         # per DEC-022

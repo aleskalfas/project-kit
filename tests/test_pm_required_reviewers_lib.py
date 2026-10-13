@@ -112,6 +112,9 @@ def _resolve(
     files_unresolvable=None,
     opt_outs=None,
     not_code=_UNSET,
+    ruled=(),
+    ruled_reads=None,
+    files_read=None,
 ):
     """Drive resolve_required_local_reviewers with injected fetchers.
 
@@ -131,6 +134,11 @@ def _resolve(
 
     `not_code` is the configured `review.floors.not_code` value (raw); left
     unset, the config carries no `floors` block, as most adopters' do.
+
+    `ruled` is what the ruled-artefacts reader answers: the locations of the
+    altered ruled artefacts, or a string — the reason it cannot answer. Each
+    read appends the PR number to `ruled_reads`, and each changed-files fetch
+    the PR number to `files_read`, when given.
     """
     labels = labels or {}
     changed = changed or []
@@ -150,9 +158,18 @@ def _resolve(
         return [{"name": n} for n in val]
 
     def changed_fn(pr):
+        if files_read is not None:
+            files_read.append(pr)
         if files_unresolvable is not None:
             return rr._Unresolvable(files_unresolvable)
         return list(changed)
+
+    def ruled_fn(pr):
+        if ruled_reads is not None:
+            ruled_reads.append(pr)
+        if isinstance(ruled, str):
+            return rr._Unresolvable(ruled)
+        return tuple(ruled)
 
     return rr.resolve_required_local_reviewers(
         99,
@@ -164,6 +181,7 @@ def _resolve(
         opt_outs=_OO.read_opt_outs(config),
         not_code=rr.read_not_code(config),
         collect_contributions=lambda repo_root: collection,
+        ruled_artefacts=ruled_fn,
     )
 
 
@@ -1205,3 +1223,239 @@ def test_read_not_code(rr) -> None:
     assert rr.read_not_code(
         {"review": {"floors": {"not_code": [" a/** ", "b/*.yaml"]}}}
     ).patterns == ("a/**", "b/*.yaml")
+
+
+# ---- the touches-ruled-artefact floor (#1386) ----------------------------
+#
+# A contribution can require its reviewer when the change alters an artefact
+# an accepted rule binds on. The backbone answers which, through the injected
+# reader; the resolver asks it for every change while a contribution names the
+# floor, whatever the changed paths, and the not-code list does not narrow it.
+
+_RULES = "rule-set-reviewer"
+_RULED_PAGE = "docs/guides/a.md"
+
+
+def _ruled_collection(rc, *, floor=None, capability="living-docs"):
+    rule = rc.ContributionRule(
+        capability=capability,
+        predicate={},
+        reviewer=_RULES,
+        floor=floor or rc.FLOOR_TOUCHES_RULED_ARTEFACT,
+    )
+    return rc.ContributionCollection(rules=(rule,), capabilities_walked=(capability,))
+
+
+def test_a_change_altering_a_ruled_artefact_requires_the_reviewer(rr, rc) -> None:
+    reads: list[int] = []
+    res = _resolve(
+        rr,
+        baseline=["reviewer"],
+        collection=_ruled_collection(rc),
+        closing=[],
+        changed=[_RULED_PAGE, "src/app.py"],
+        ruled=(_RULED_PAGE,),
+        ruled_reads=reads,
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer", _RULES)
+    assert res.contributed_by == {_RULES: "living-docs"}
+    assert res.floors_by_reviewer == {_RULES: frozenset({"touches-ruled-artefact"})}
+    assert reads == [99]
+
+
+def test_a_change_altering_no_ruled_artefact_requires_nothing_more(rr, rc) -> None:
+    """Markdown changed, but nothing the backbone names: outside every scope,
+    under rules that are all proposed, or only a revalidation written."""
+    res = _resolve(
+        rr,
+        baseline=["reviewer"],
+        collection=_ruled_collection(rc),
+        closing=[42],
+        labels={42: ["type:docs"]},
+        changed=["docs/notes/n.md"],
+        ruled=(),
+    )
+    assert res.ok and res.required_local == ("reviewer",)
+
+
+def test_a_change_to_the_declared_places_alone_requires_the_reviewer(rr, rc) -> None:
+    """A change only to the configuration that brings a ruled page into the
+    declared places touches no file of it. The backbone lists the page as
+    added, so the floor fires: no changed path says the question may be
+    skipped (DEC-032 D1)."""
+    reads: list[int] = []
+    files_read: list[int] = []
+    res = _resolve(
+        rr,
+        baseline=["reviewer"],
+        collection=_ruled_collection(rc),
+        closing=[],
+        changed=[".pkit/project/config.yaml"],
+        ruled=(_RULED_PAGE,),
+        ruled_reads=reads,
+        files_read=files_read,
+    )
+    assert res.ok and res.required_local == ("reviewer", _RULES)
+    assert reads == [99]
+    # The floor reads the backbone's answer, never the PR's changed files.
+    assert files_read == []
+
+
+def test_no_contribution_naming_the_floor_reads_no_commit(rr, rc) -> None:
+    reads: list[int] = []
+    res = _resolve(
+        rr,
+        baseline=["reviewer"],
+        collection=_floor_collection(rc),
+        closing=[],
+        changed=[_RULED_PAGE],
+        ruled="the reader must not be asked",
+        ruled_reads=reads,
+    )
+    assert res.ok and res.required_local == ("reviewer",)
+    assert reads == []
+
+
+def test_the_not_code_list_does_not_narrow_the_ruled_floor(rr, rc) -> None:
+    """An adopter listing its pages as not code keeps them under rules review."""
+    res = _resolve(
+        rr,
+        baseline=["reviewer"],
+        collection=_ruled_collection(rc),
+        closing=[],
+        changed=[_RULED_PAGE],
+        not_code=["docs/**"],
+        ruled=(_RULED_PAGE,),
+    )
+    assert res.ok and res.required_local == ("reviewer", _RULES)
+
+
+def test_a_ruled_reader_that_cannot_answer_fails_closed_with_its_reason(rr, rc) -> None:
+    res = _resolve(
+        rr,
+        baseline=["reviewer"],
+        collection=_ruled_collection(rc),
+        closing=[],
+        changed=[_RULED_PAGE],
+        ruled="this checkout is shallow, so the history between the commits may not be here",
+    )
+    assert not res.ok
+    assert res.error.kind == rr.ERROR_RULED_ARTEFACTS
+    assert "this checkout is shallow" in res.error.message
+    assert res.required_local == ()
+
+
+def test_the_ruled_floor_alone_reads_no_list_of_changed_files(rr, rc) -> None:
+    """The floor asks the backbone, never GitHub's list of changed files, so a
+    list that cannot be read does not touch it."""
+    files_read: list[int] = []
+    res = _resolve(
+        rr,
+        baseline=["reviewer"],
+        collection=_ruled_collection(rc),
+        closing=[],
+        files_unresolvable="gh api pulls/99/files failed: boom",
+        ruled=(_RULED_PAGE,),
+        files_read=files_read,
+    )
+    assert res.ok and res.required_local == ("reviewer", _RULES)
+    assert files_read == []
+
+
+def test_an_unreadable_diff_still_fails_the_code_floor_beside_it(rr, rc) -> None:
+    collection = rc.ContributionCollection(
+        rules=_se_collection(rc).rules + _ruled_collection(rc).rules,
+        capabilities_walked=(_SE, "living-docs"),
+    )
+    res = _resolve(
+        rr,
+        baseline=["reviewer"],
+        collection=collection,
+        closing=[],
+        files_unresolvable="gh api pulls/99/files failed: boom",
+        ruled=(_RULED_PAGE,),
+    )
+    assert not res.ok and res.error.kind == rr.ERROR_CHANGED_FILES
+
+
+def test_no_reader_given_fails_closed(rr, rc) -> None:
+    res = rr.resolve_required_local_reviewers(
+        99,
+        baseline_local=["reviewer"],
+        repo_root=REPO,
+        closing_issue_numbers=lambda pr: [],
+        issue_labels=lambda n: [],
+        changed_files=lambda pr: [_RULED_PAGE],
+        collect_contributions=lambda repo_root: _ruled_collection(rc),
+    )
+    assert not res.ok and res.error.kind == rr.ERROR_RULED_ARTEFACTS
+
+
+def test_both_floors_read_their_own_way_on_one_change(rr, rc) -> None:
+    """A page and a `.py` draw both floors, each read its own way."""
+    collection = rc.ContributionCollection(
+        rules=_se_collection(rc).rules + _ruled_collection(rc).rules,
+        capabilities_walked=(_SE, "living-docs"),
+    )
+    res = _resolve(
+        rr,
+        baseline=["reviewer"],
+        collection=collection,
+        closing=[],
+        changed=[_RULED_PAGE, "src/app.py"],
+        ruled=(_RULED_PAGE,),
+    )
+    assert res.ok
+    assert _RULES in res.required_local and "code-reviewer" in res.required_local
+
+
+# ---- an unknown floor (#1386) ------------------------------------------------
+
+
+def test_an_unknown_floor_requires_its_reviewer_on_every_change(rr, rc) -> None:
+    """A floor a later pm defines requires its reviewer here, whatever the diff,
+    and reads no diff for it."""
+    files_read: list[int] = []
+    res = _resolve(
+        rr,
+        baseline=["reviewer"],
+        collection=_ruled_collection(rc, floor="touches-secrets"),
+        closing=[],
+        changed=["README.md"],
+        files_read=files_read,
+    )
+    assert res.ok
+    assert res.required_local == ("reviewer", _RULES)
+    assert res.floors_by_reviewer == {_RULES: frozenset({"touches-secrets"})}
+    assert files_read == []
+
+
+def test_reached_floors_reads_each_floor_its_own_way(rr) -> None:
+    asked: list[str] = []
+
+    def ruled():
+        asked.append("ruled")
+        return (_RULED_PAGE,)
+
+    floors = frozenset({"touches-code", "touches-ruled-artefact", "touches-secrets"})
+    not_code = rr.parse_not_code(["docs/**"])
+    assert rr.reached_floors(
+        floors, ["src/app.py"], not_code=not_code, ruled_artefacts=lambda: ()
+    ) == {"touches-code", "touches-secrets"}
+    # Asked whatever the paths: a change to the declared places alone alters
+    # artefacts whose files it does not touch.
+    assert rr.reached_floors(
+        floors, [".pkit/project/config.yaml"], not_code=not_code, ruled_artefacts=ruled
+    ) == {"touches-code", "touches-ruled-artefact", "touches-secrets"}
+    assert rr.reached_floors(floors, [_RULED_PAGE], not_code=not_code, ruled_artefacts=ruled) == {
+        "touches-ruled-artefact",
+        "touches-secrets",
+    }
+    assert asked == ["ruled", "ruled"]
+    found = rr.reached_floors(
+        frozenset({"touches-ruled-artefact"}),
+        [_RULED_PAGE],
+        ruled_artefacts=lambda: rr._Unresolvable("boom"),
+    )
+    assert isinstance(found, rr._RuledArtefactsUnresolvable) and found.reason == "boom"
