@@ -12,9 +12,8 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-12T23:26:19Z
-      outcome: unchanged
-      unchanged-because: This change builds where an accepted rule binds (COR-051 point 7), the parts of rules that checks enforce, and their validation, conflicts between routes included. The page's statuses bullet says accepted rules bind, which still holds. Its validation bullet names the checks in brief, and already left out the container inside each rule. It sends the reader to the schemas reference for every check, which now names the new ones. Its other sentences on rule sets describe none of this, so the page holds.
+      at: 2026-10-13T04:27:15Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
@@ -73,9 +72,15 @@ Each kind of thing a record, an agent or a skill cites has one written form:
 
 Every file has exactly one owner — kit or project — and they never share a path.
 
-This invariant is what makes the namespace split above operationally safe. project-kit's sync operation works on a fixed set of kit-owned paths; project-owned paths are never read or written by sync. There is no merge logic, no conflict UI, no marker comments, no include-with-substitution mechanism.
+This invariant is what makes the namespace split above operationally safe. project-kit's sync operation copies a fixed set of kit-owned paths. There is no conflict UI, no marker comments, no include-with-substitution mechanism.
 
-Sync **cannot** produce a conflict. You can run it whenever you like — it cannot break anything you wrote.
+Sync reads from your side what it needs, such as the versions your project records. It writes into a file of yours through merge delivery's tier that asks nothing. That tier adds the kit's entries and never removes one you wrote (COR-002). Sync **cannot** produce a conflict, and it cannot break anything you wrote.
+
+COR-059 has sync run at the versions your project records, move none of them, and write a project-owned path only through merge delivery. Under a pkit at another version, or over an unfinished version transition, COR-059 has sync stop. Until that is built, sync also does three things COR-059 rules out:
+
+- **It moves your recorded backbone version** to the running pkit's version. It refuses under an older pkit. `pkit sync` also refuses to move past backbone migrations, and names `pkit upgrade`, which runs them.
+- **It refreshes each installed capability the kit ships** to the version the running pkit ships, and runs that capability's migrations.
+- **It creates what is missing on your side:** the agents overlay, `.pkit/agents/project/overlay.yaml`, and an area's `project/` folder.
 
 The same `core/` / `project/` pattern (and the same invariant) governs other kit areas in your project — `.pkit/agents/`, `.pkit/rules/`, and so on. To extend kit-shipped content, add sibling files in the matching `project/` directory; never edit a kit-owned file.
 

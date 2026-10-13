@@ -1,0 +1,19 @@
+component: backbone
+kind: none
+body: >
+  Design-ahead: COR-059 makes a version transition the one operation that
+  moves a project's recorded versions, and every migration of the backbone
+  and of each shipped component runs inside it, under the one consent of
+  choosing its target. Sync runs at the recorded versions, moves none, runs
+  no migration, and writes project-owned files only through merge delivery's
+  auto-add tier. A transition records its target first and its completion
+  last, moves every shipped component together, and creates a missing seed
+  path. A command that copies content under another version than the
+  project records stops and names the remedy. COR-001, COR-002, COR-004,
+  COR-010, COR-017 and COR-048 are refined or partially superseded to match.
+  Core rule 5, the lifecycle README's script contract and the
+  migration-author skill ask a backbone migration to act only on a positive
+  sign that its change is needed. The decisions README, the CLI reference
+  and the README follow the records, and the pages that rely on them are
+  revalidated. It is record and page text only, and nothing you run
+  changes. The build Tasks (#1458 to #1465) carry the real changesets.

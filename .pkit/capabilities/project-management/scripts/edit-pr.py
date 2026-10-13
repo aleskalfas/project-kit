@@ -24,7 +24,13 @@ earlier run left under `## Friction answers` is carried the same way, its
 words unchanged until land-work writes it again. Any other — inside a
 supplied body, a second list, or one typed by hand with no markers — is
 dropped with a warning: only open-pr and land-work write one, from the
-change check, and edit-pr derives nothing.
+change check, and edit-pr derives nothing. Each `updated` document in the
+list carried gives the sentence on what changed in it as the edited body's
+`## What changed in each updated document` section now has it, or says
+there is none; the check's words are carried unchanged. A sentence that
+reads as a closing reference or holds an HTML comment's delimiter is not
+copied: the list keeps the sentences it had, with a warning, and land-work
+refuses until it is reworded.
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/edit-pr.py 99 --append "Additional notes..."
@@ -228,7 +234,7 @@ def main() -> int:
         added_closes = [n for n in dict.fromkeys(args.closes) if n not in already]
         new_body = pr_validation.with_closing_references(new_body, args.closes)
     if answers is not None:
-        new_body = friction_answers.stamp(new_body, answers)
+        new_body = friction_answers.stamp(new_body, _with_sentences(answers, new_body))
     current_body = carried_body
 
     print(f"edit-pr: #{args.pr_number}")
@@ -293,6 +299,30 @@ def main() -> int:
         return 3
     print(f"\n[ok] edited PR #{args.pr_number}.")
     return 0
+
+
+def _with_sentences(answers: str, body: str) -> str:
+    """The list `answers` carried, each `updated` document's sentence taken from
+    `body`'s `## What changed in each updated document` as it now stands (DEC-055
+    point 2). A sentence the list must not hold — one that reads as a closing
+    reference or holds an HTML comment's delimiter — leaves the list's sentences
+    as they were, with a warning: land-work refuses the list until it is
+    reworded."""
+    given = friction_answers.given_in(answers, friction_answers.sentences(body))
+    for found, why in (
+        (friction_answers.sentence_closing_reference(given), "reads as a closing reference"),
+        (friction_answers.sentence_comment_delimiter(given), "holds an HTML comment's delimiter"),
+    ):
+        if found is not None:
+            location, words = found
+            print(
+                f"warn: the sentence on what changed in {location} {why} ({words}), so the "
+                f"list's sentences are left as they were; reword it under "
+                f"`{friction_answers.SENTENCES_HEADING}` — land-work refuses the list until then",
+                file=sys.stderr,
+            )
+            return answers
+    return friction_answers.with_sentences(answers, given)
 
 
 def _compute_new_body(current_body: str, args: argparse.Namespace) -> str | None:

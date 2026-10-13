@@ -5,13 +5,21 @@ The capability's first artefacts, each held to living-docs DEC-001:
 - the **validator**, `pkit living-docs validate` — the `living-docs:spaces`
   member of `pkit validate` — over an adopter repository with the capability
   installed: one test per rule it applies (an out-of-root place without an
-  assignment, a place enclosing a root, a record declared as a page, another
-  component's place or held document, an entry point outside its space, a page's fields, the
-  most specific place, a definition that does not inherit LDOC), and the
-  readers each page's reader resolves against, named in its summary (reader
-  resolution itself is `test_living_docs_points.py`'s);
-- the **LDOC rule set** validating as a method rule set with its origins, and
-  a space definition instantiated from the template inheriting it;
+  assignment, a place enclosing a root, a decision record that declares a page
+  kind, another owner's document by its type, place or holder, an entry point
+  outside its space, a page's fields, the backbone's order of places, a
+  definition that does not inherit LDOC), and the readers each page's reader
+  resolves against, named in its summary (reader resolution itself is
+  `test_living_docs_points.py`'s);
+- **types** (#1411; DEC-001 points 1, 2 and 4; COR-056): the page and template
+  types the package declares and its places give, a page as a document of the
+  page type, the pages of a project place that gives no type, and the
+  assignment held to the definitions' scopes — each page an assigned place
+  gives a space inside that definition's scope and no other's, and an
+  assigned place giving the page type where its definition selects by type;
+- the **LDOC rule set** validating as a method rule set with its origins and
+  the parts its validator enforces, and a space definition instantiated from
+  the template inheriting it;
 - the **page templates** — the signpost and the reference page — each
   validating: its own fields by the capability's schema, its friction block
   by the core's;
@@ -294,7 +302,7 @@ def test_the_most_specific_place_wins(project: AdopterRepo) -> None:
     assert summary[2].startswith("technical: 2 page(s)")
 
 
-def test_a_file_two_project_places_claim_with_equal_specificity_is_an_error(
+def test_a_file_two_project_places_claim_at_equal_rank_is_an_error(
     project: AdopterRepo,
 ) -> None:
     declare(
@@ -306,31 +314,208 @@ def test_a_file_two_project_places_claim_with_equal_specificity_is_an_error(
     location, message = only_error(run(project))
     assert location == f"{CONFIG}:/friction/places/2"
     assert (
-        "'extra/*.md' and 'extra/[ab].md' both claim extra/a.md with equal specificity" in message
+        "'extra/*.md' and 'extra/[ab].md' both claim extra/a.md at equal rank in the backbone's "
+        "order of places (COR-056 point 3)" in message
     )
+
+
+def test_the_backbone_s_order_of_places_gives_a_page_its_space(project: AdopterRepo) -> None:
+    """DEC-001 point 1 takes the core's order (COR-056 point 3): at equal length of
+    literal part, a glob beats a folder. `extra/` and `extra/*.md` both have the
+    literal part `extra/`, so the glob gives extra/a.md its space. The capability
+    reads the order from the backbone and ranks no place itself."""
+    declare(
+        project,
+        places=["README.md", "extra/", "extra/*.md"],
+        assignments={"README.md": "user", "extra/": "user", "extra/*.md": "technical"},
+    )
+    project.write({"extra/a.md": PAGE, "extra/deeper/b.md": PAGE})
+    document = run(project)
+    assert errors(document) == []
+    # extra/a.md takes the glob's space; extra/deeper/b.md only the folder matches.
+    assert document["summary"][1].startswith("user: 3 page(s)")
+    assert document["summary"][2].startswith("technical: 2 page(s)")
+
+
+def test_a_file_without_front_matter_in_nested_places_is_reported_never_failed(
+    project: AdopterRepo,
+) -> None:
+    """The backbone ranks the places of artefacts only. A file with no front matter
+    holds no artefact, so where its places would give it different spaces, or one
+    lies outside every root with no assignment, which holds it cannot be told: it
+    is reported and unclassified, never a false failure of a place it may not
+    belong to."""
+    declare(
+        project,
+        places=["README.md", "extra/", "extra/README.md"],
+        assignments={"README.md": "user", "extra/README.md": "technical"},
+    )
+    project.write({"extra/README.md": "# Extra\n"})
+    document = run(project)
+    assert errors(document) == []
+    (report,) = [f for f in document["findings"] if f["location"] == "extra/README.md"]
+    assert report["severity"] == "report"
+    assert "holds no artefact — no front matter the backbone reads" in report["message"]
+    assert "project place 'extra/', project place 'extra/README.md'" in report["message"]
+    assert "1 unclassified document(s)" in document["summary"][3]
+
+
+def test_an_entry_point_without_front_matter_in_nested_places_is_not_failed(
+    project: AdopterRepo,
+) -> None:
+    """An entry point not yet a page, in places that would give it different spaces:
+    one of them gives its space, so it is no failure (DEC-001 point 1)."""
+    declare(
+        project,
+        places=["README.md", "guides/", "guides/api/"],
+        assignments={"README.md": "user", "guides/": "user", "guides/api/": "technical"},
+        spaces={
+            "user": {"entry-point": "README.md", "definition": f"{DEFINITIONS}/user.md"},
+            "technical": {
+                "entry-point": "guides/api/README.md",
+                "definition": f"{DEFINITIONS}/technical.md",
+            },
+        },
+    )
+    project.write({"guides/api/README.md": "# API\n"})
+    document = run(project)
+    assert errors(document) == []
+    assert (
+        "entry point guides/api/README.md, not yet a page (its space not told)"
+        in document["summary"][2]
+    )
+
+
+def test_a_file_without_front_matter_whose_places_agree_takes_their_space(
+    project: AdopterRepo,
+) -> None:
+    """Where every place of a file without front matter gives the same space and none
+    lies outside every root, the order between them is moot."""
+    declare(project, places=["README.md", "docs/guides/"], assignments={"README.md": "user"})
+    project.write({"docs/guides/old.md": "# Old\n"})
+    document = run(project)
+    assert errors(document) == []
+    assert [f for f in document["findings"] if f["location"] == "docs/guides/old.md"] == []
+    assert "1 unclassified document(s)" in document["summary"][3]
+
+
+def test_a_file_without_front_matter_only_in_unassigned_places_needs_an_assignment(
+    project: AdopterRepo,
+) -> None:
+    """Every place of the file lies outside every root with no assignment, so
+    whichever holds it owes one: that fails, without ranking the places."""
+    declare(project, places=["README.md", "extra/", "extra/sub/"])
+    project.write({"extra/sub/a.md": "# A\n"})
+    location, message = only_error(run(project))
+    assert location == "extra/sub/a.md"
+    assert "whichever of them holds it, that place needs an assignment" in message
+
+
+def test_an_entry_point_without_front_matter_only_in_places_of_no_space_fails(
+    project: AdopterRepo,
+) -> None:
+    declare(
+        project,
+        places=["README.md", "extra/", "extra/sub/"],
+        spaces={
+            "user": {"entry-point": "README.md", "definition": f"{DEFINITIONS}/user.md"},
+            "technical": {
+                "entry-point": "extra/sub/README.md",
+                "definition": f"{DEFINITIONS}/technical.md",
+            },
+        },
+    )
+    project.write({"extra/sub/README.md": "# Sub\n"})
+    found = dict(errors(run(project)))
+    message = found[f"{LD_CONFIG}:/spaces/technical/entry-point"]
+    assert "'extra/sub/README.md', lies only in places of no space;" in message
+    assert "whichever of them holds it" in found["extra/sub/README.md"]
+
+
+def test_a_file_without_front_matter_in_an_assigned_place_and_a_root_of_one_space(
+    project: AdopterRepo,
+) -> None:
+    """An assigned place outside every root owes no assignment, so where it and the
+    root give the file one space, the order between them is moot: no report."""
+    declare(
+        project,
+        places=["README.md", "**/CHANGES.md"],
+        assignments={"README.md": "user", "**/CHANGES.md": "user"},
+    )
+    project.write({"docs/CHANGES.md": "# Changes\n"})
+    document = run(project)
+    assert errors(document) == []
+    assert [f for f in document["findings"] if f["location"] == "docs/CHANGES.md"] == []
+
+
+def test_the_capability_s_scripts_rank_no_place_themselves() -> None:
+    """The order of places is the backbone's answer, `ranked_places` (COR-056 point
+    6); no script of the capability measures a place's specificity."""
+    for path in sorted((CAPABILITY / "scripts").rglob("*.py")):
+        code = path.read_text(encoding="utf-8")
+        assert "specificity" not in code, path
+        assert "literal_text_prefix" not in code, path
 
 
 # --- what is never a page (DEC-001 points 1 and 4) ---------------------------------------
 
 
-def test_a_record_declared_as_a_page_is_an_error(project: AdopterRepo) -> None:
+def test_a_decision_record_that_declares_a_page_kind_is_an_error(project: AdopterRepo) -> None:
+    """A decision record under a root that declares a page kind takes the page type
+    (COR-056 point 4); it is never a page, so validation fails it (DEC-001 point 4).
+    One that names a reader alone declares no kind, takes no type, and is a record."""
     adr = "tech-docs/architecture/decisions/ADR-001-a-decision.md"
     project.write(
         {adr: RECORD.replace("status: accepted\n", "status: accepted\nreader: maintainer\n")}
     )
+    document = run(project)
+    assert errors(document) == []
+    assert "1 decision record(s)" in document["summary"][3]
+    project.write({adr: RECORD.replace("status: accepted\n", "status: accepted\nkind: signpost\n")})
+    document = run(project)
+    location, message = only_error(document)
+    assert location == f"{adr}:/kind"
+    assert (
+        "is a decision record (ADR-001), an anchor target (COR-050), and declares a page kind"
+        in (message)
+    )
+    assert "so it takes the type living-docs:page, or counts as it in a tie" in message
+    assert "remove `kind`" in message
+    assert "1 decision record(s)" in document["summary"][3]
+
+
+def test_a_decision_record_in_an_untyped_out_of_root_place_declaring_a_kind_fails_too(
+    project: AdopterRepo,
+) -> None:
+    declare(project, places=["README.md", "records/"], assignments={"README.md": "user"})
+    project.write({"records/ADR-002-other.md": RECORD.replace("ADR-001", "ADR-002") + ""})
+    assert errors(run(project)) == []
+    project.write(
+        {
+            "records/ADR-002-other.md": RECORD.replace("ADR-001", "ADR-002").replace(
+                "status: accepted\n", "status: accepted\nkind: signpost\n"
+            )
+        }
+    )
     location, message = only_error(run(project))
-    assert location == f"{adr}:/reader"
-    assert "is a decision record (ADR-001), an anchor target" in message
-    assert "remove `reader`" in message
+    assert location == "records/ADR-002-other.md:/kind"
+    assert "outside every root that gives no type, so it would be a page" in message
 
 
-def test_a_rule_set_file_declared_as_a_page_is_an_error(project: AdopterRepo) -> None:
+def test_a_rule_set_file_is_never_a_page_and_its_fields_are_the_rule_set_pass_s(
+    project: AdopterRepo,
+) -> None:
+    """A rule-set file holds rules, each of the backbone's type for rules (COR-056
+    point 3). living-docs reads none of its fields: the rule-sets pass refuses a
+    key the rule-set shape does not know."""
     rule_set = "tech-docs/rule-sets/cmn.md"
     front = "rule-set: CMN\nversion: 1.0.0\nrules: {}\nreader: user\nkind: signpost\n"
     project.write({rule_set: f"---\n{front}---\n"})
-    location, message = only_error(run(project))
-    assert location == f"{rule_set}:/reader"
-    assert "is a rule-set file, an anchor target (COR-051)" in message
+    document = run(project)
+    assert errors(document) == []
+    assert "1 rule-set file(s)" in document["summary"][3]
+    refused = [f.pointer for f in rs.validate_rule_sets(project.root).errors]
+    assert "/reader" in refused and "/kind" in refused
 
 
 def _install_component_with_place(
@@ -366,16 +551,74 @@ def _install_component_with_place(
     write_backbone_manifest(repo.root, backbone)
 
 
-def test_another_component_s_place_is_never_a_page(project: AdopterRepo) -> None:
+def test_a_document_of_another_component_s_type_is_never_a_page(project: AdopterRepo) -> None:
+    """The type the backbone gives says whose a document is (DEC-001 point 1): one of
+    another component's type is that component's, never a page, and its own fields
+    are its owner's — a `kind` it carries is never read as a page kind."""
+    _install_component_with_place(
+        project,
+        {
+            "types": {"use-case": {"description": "A use case."}},
+            "places": [{"location": "analysis", "path": ".", "type": "use-case"}],
+        },
+    )
+    project.write({"tech-docs/analysis/uc-001.md": "---\nid: UC-001\nkind: main\n---\n"})
+    document = run(project)
+    assert errors(document) == []
+    assert "1 of another component" in document["summary"][3]
+    assert "0 unclassified document(s)" in document["summary"][3]
+    assert document["summary"][2].startswith("technical: 1 page(s)")
+
+
+def test_a_document_that_counts_as_the_page_type_in_a_tie_is_a_page(project: AdopterRepo) -> None:
+    """Another component's typed place over the whole internal root ties with the
+    root's page type (COR-056 point 3). While the tie stands the document counts
+    as each type, so it is a page until the tie is mended (DEC-001 point 4)."""
+    _install_component_with_place(
+        project,
+        {
+            "types": {"note": {"description": "A note."}},
+            "places": [{"location": "whole", "path": "**", "type": "note"}],
+        },
+    )
+    package = project.root / ".pkit" / "capabilities" / "analysis-test" / "package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8").replace(
+            "analysis:\n      path: analysis", "whole:\n      path: .\n      root: internal"
+        ),
+        encoding="utf-8",
+    )
+    found = _artefacts(project)
+    (readme,) = [a for a in found["artefacts"] if a["location"] == "tech-docs/README.md"]
+    assert readme["type"] is None
+    assert {tied["type"] for tied in readme["type_conflict"]} == {
+        "living-docs:page",
+        "analysis-test:note",
+    }
+    document = run(project)
+    assert errors(document) == []
+    assert document["summary"][2].startswith("technical: 1 page(s)")
+
+
+def test_a_document_of_no_type_in_another_component_s_place_is_that_component_s(
+    project: AdopterRepo,
+) -> None:
+    """A component's place that names no type gives none and shadows no other place
+    (COR-056 point 3). A document there that declares no page kind takes no type
+    and stays the component's. One that declares a page kind takes the page type
+    from the root around it, so it is a page."""
     _install_component_with_place(project)
     project.write({"tech-docs/analysis/uc-001.md": "---\nid: UC-001\n---\n"})
     document = run(project)
     assert errors(document) == []
     assert "1 of another component" in document["summary"][3]
-    project.write({"tech-docs/analysis/uc-001.md": "---\nid: UC-001\nkind: signpost\n---\n"})
-    location, message = only_error(run(project))
-    assert location == "tech-docs/analysis/uc-001.md:/kind"
-    assert "is an artefact of analysis-test, which declares the place it is in" in message
+    project.write(
+        {"tech-docs/analysis/uc-001.md": "---\nreader: maintainer\nkind: signpost\n---\n\n# UC\n"}
+    )
+    document = run(project)
+    assert errors(document) == []
+    assert "0 of another component" in document["summary"][3]
+    assert document["summary"][2].startswith("technical: 2 page(s)")
 
 
 def test_a_document_another_component_holds_is_never_a_page_nor_unclassified(
@@ -391,12 +634,11 @@ def test_a_document_another_component_holds_is_never_a_page_nor_unclassified(
     assert errors(document) == []
     assert "1 of another component" in document["summary"][3]
     assert "0 unclassified document(s)" in document["summary"][3]
-    project.write({record: "---\ndate: '2026-10-01'\nreader: user\n---\n"})
-    location, message = only_error(run(project))
-    assert location == f"{record}:/reader"
-    assert "is a document analysis-test holds in a folder it declares (COR-050 point 1)" in (
-        message
-    )
+    # Its own fields are its holder's: a `kind` there is never read as a page kind.
+    project.write({record: "---\ndate: '2026-10-01'\nreader: user\nkind: signpost\n---\n"})
+    document = run(project)
+    assert errors(document) == []
+    assert "1 of another component" in document["summary"][3]
 
 
 # --- entry points (DEC-001 point 1) ------------------------------------------------------
@@ -447,7 +689,6 @@ def test_an_entry_point_not_yet_a_page_is_shown_not_failed(project: AdopterRepo)
         ("reader: User Guide\nkind: signpost", "docs/guide.md:/reader"),
         ("reader: [user, maintainer]\nkind: signpost", "docs/guide.md:/reader"),
         ("reader: user\nkind: 3", "docs/guide.md:/kind"),
-        ("reader: user", "docs/guide.md"),
         ("kind: signpost", "docs/guide.md"),
     ],
 )
@@ -466,6 +707,20 @@ def test_a_document_carrying_neither_field_is_unclassified_for_onboarding(
     project.write({"docs/old.md": "# An old page\n"})
     document = run(project)
     assert errors(document) == []
+    assert "1 unclassified document(s) for onboarding" in document["summary"][3]
+
+
+@pytest.mark.parametrize("front", ["reader: user", "reader: user\nkind: ''", "kind:"])
+def test_a_document_that_declares_no_page_kind_takes_no_type_and_is_unclassified(
+    project: AdopterRepo, front: str
+) -> None:
+    """The page type's kind field gates it (COR-056 point 4; DEC-001 point 4): a
+    document in a root that declares no page kind — the field absent or empty —
+    takes no type, so it is no page."""
+    project.write({"docs/old.md": f"---\n{front}\n---\n\n# An old page\n"})
+    document = run(project)
+    assert errors(document) == []
+    assert document["summary"][1].startswith("user: 2 page(s)")
     assert "1 unclassified document(s) for onboarding" in document["summary"][3]
 
 
@@ -601,12 +856,247 @@ def test_roots_that_are_one_folder_are_reported_not_failed(project: AdopterRepo)
 
 def test_the_package_declares_the_roots_and_the_definitions_as_places(project: AdopterRepo) -> None:
     settings = fd.read_friction_settings(project.root)
-    ours = [p.resolved for p in settings.places if p.source == "capability:living-docs"]
-    assert ours == ["docs/**", "tech-docs/**", "tech-docs/living-docs/rule-sets"]
+    ours = [(p.resolved, p.type) for p in settings.places if p.source == "capability:living-docs"]
+    assert ours == [
+        ("docs/**", "living-docs:page"),
+        ("tech-docs/**", "living-docs:page"),
+        ("tech-docs/living-docs/rule-sets", None),
+        ("tech-docs/living-docs/**", "living-docs:template"),
+    ]
     # The definitions are project rule sets: the backbone reads them there.
     places = fd.rule_set_places(project.root, settings)
     definitions = [p for p in places if p.pattern == "tech-docs/living-docs/rule-sets"]
     assert [p.component for p in definitions] == [None]
+
+
+def test_the_package_declares_the_page_and_template_types(project: AdopterRepo) -> None:
+    """DEC-001 points 2 and 4 (COR-056 point 2): `page`, with `kind` as its kind
+    field and project places admitted, and `template`, which admits none."""
+    document = _artefacts(project)
+    types = {name: entry for name, entry in document["types"].items() if "living-docs" in name}
+    assert {name: (t["kind_field"], t["project_places"]) for name, t in types.items()} == {
+        "living-docs:page": ("kind", True),
+        "living-docs:template": (None, False),
+    }
+
+
+def _artefacts(repo: AdopterRepo) -> dict[str, Any]:
+    """The backbone's artefacts document over `repo`, as the validator reads it."""
+    completed = subprocess.run(
+        ["pkit", "friction", "artefacts", "--json"],
+        cwd=repo.root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    return json.loads(completed.stdout)
+
+
+def _type_of(document: Mapping[str, Any], location: str) -> str | None:
+    (artefact,) = [a for a in document["artefacts"] if a["location"] == location]
+    return artefact["type"]
+
+
+def test_a_page_under_a_root_is_of_the_page_type_and_a_template_is_not(
+    project: AdopterRepo,
+) -> None:
+    """A root gives the page type to what declares its page kind; the definitions
+    location gives the template type and ranks ahead of the internal root, so a
+    page template copied there is a template, never a page (DEC-001 point 2)."""
+    template = "tech-docs/living-docs/templates/signpost.md"
+    project.write({template: (CAPABILITY / "templates" / "signpost.md").read_text("utf-8")})
+    found = _artefacts(project)
+    assert _type_of(found, "docs/guide.md") == "living-docs:page"
+    assert _type_of(found, "tech-docs/README.md") == "living-docs:page"
+    assert _type_of(found, template) == "living-docs:template"
+    assert _type_of(found, "tech-docs/architecture/decisions/ADR-001-a-decision.md") is None
+    document = run(project)
+    assert errors(document) == []
+    assert "3 in the definitions location" in document["summary"][3]
+    assert document["summary"][2].startswith("technical: 1 page(s)")
+
+
+def test_a_project_place_may_give_the_page_type_or_a_type_of_its_own(project: AdopterRepo) -> None:
+    """The page type admits project places (COR-056 point 2): an out-of-root place
+    that gives it holds pages by their type. A project place inside a root that
+    gives a type of the project's own outranks the root: its documents are the
+    project's, and their `kind` is never read as a page kind."""
+    config = {
+        "docs": {"user": "docs/", "internal": "tech-docs/"},
+        "friction": {
+            "places": [
+                {"path": "README.md", "type": "living-docs:page"},
+                {"path": "docs/changes", "type": "change-note"},
+            ]
+        },
+    }
+    project.write(
+        {
+            CONFIG: _yaml(config),
+            "docs/changes/2026-10-01.md": "---\nkind: fix\n---\n\n# A change\n",
+        }
+    )
+    found = _artefacts(project)
+    assert _type_of(found, "README.md") == "living-docs:page"
+    assert _type_of(found, "docs/changes/2026-10-01.md") == "change-note"
+    document = run(project)
+    assert errors(document) == []
+    assert document["summary"][1].startswith("user: 2 page(s)")
+    assert "1 of a type the project gives" in document["summary"][3]
+    assert "0 unclassified document(s)" in document["summary"][3]
+
+
+def test_a_document_declaring_no_kind_in_a_place_giving_the_page_type_is_unclassified(
+    project: AdopterRepo,
+) -> None:
+    config = {
+        "docs": {"user": "docs/", "internal": "tech-docs/"},
+        "friction": {"places": [{"path": "README.md", "type": "living-docs:page"}]},
+    }
+    project.write({CONFIG: _yaml(config), "README.md": "---\nreader: user\n---\n\n# Project\n"})
+    document = run(project)
+    assert errors(document) == []
+    assert "entry point README.md, not yet a page" in document["summary"][1]
+    assert "1 unclassified document(s)" in document["summary"][3]
+
+
+def test_a_backbone_that_gives_no_types_is_one_error_and_nothing_checked(
+    project: AdopterRepo,
+    pkit_on_path: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A backbone whose artefacts document predates types: the validator cannot tell
+    a page by its type, which is one error — never every page read as untyped."""
+    old = tmp_path_factory.mktemp("untyped-pkit")
+    strip = old / "strip.py"
+    strip.write_text(
+        "import json, sys\n"
+        "document = json.load(sys.stdin)\n"
+        "document.pop('types', None)\n"
+        "for artefact in document.get('artefacts', []):\n"
+        "    for key in ('type', 'type_place', 'type_conflict', 'ranked_places'):\n"
+        "        artefact.pop(key, None)\n"
+        "json.dump(document, sys.stdout)\n",
+        encoding="utf-8",
+    )
+    (old / "pkit").write_text(
+        '#!/bin/sh\nif [ "$1" = friction ] && [ "$2" = artefacts ]; then\n'
+        f'  "{pkit_on_path}/pkit" "$@" | "{sys.executable}" "{strip}"; exit $?\nfi\n'
+        f'exec "{pkit_on_path}/pkit" "$@"\n',
+        encoding="utf-8",
+    )
+    (old / "pkit").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{old}{os.pathsep}{os.environ['PATH']}")
+    location, message = only_error(run(project))
+    assert location == CONFIG
+    assert "answered without each artefact's type and ranked places" in message
+
+
+# --- the definitions' scopes joined with the assignment (DEC-001 point 1) ----------------
+
+
+def _scoped_definition(set_name: str, scope: Mapping[str, Any] | list[str]) -> str:
+    """A space definition from the template, with `scope` (COR-051 point 2)."""
+    return _definition(set_name).replace("rules: {}", f"scope: {json.dumps(scope)}\nrules: {{}}", 1)
+
+
+def _out_of_root(project: AdopterRepo, *, typed: bool) -> None:
+    """README.md and CONTRIBUTING.md outside both roots, assigned to the user and
+    the technical space, each given the page type or none."""
+    places: list[Any] = ["README.md", "CONTRIBUTING.md"]
+    if typed:
+        places = [{"path": path, "type": "living-docs:page"} for path in places]
+    declare(project, assignments={"README.md": "user", "CONTRIBUTING.md": "technical"})
+    config = {"docs": {"user": "docs/", "internal": "tech-docs/"}, "friction": {"places": places}}
+    project.write({CONFIG: _yaml(config), "CONTRIBUTING.md": PAGE.replace("user", "maintainer")})
+
+
+def test_a_definition_with_no_scope_joins_nothing(project: AdopterRepo) -> None:
+    _out_of_root(project, typed=False)
+    document = run(project)
+    assert errors(document) == []
+    assert (
+        "scopes: no space's definition carries one, so no assigned place is joined with a "
+        "scope (DEC-001 point 1)."
+    ) in document["summary"]
+
+
+def test_an_assigned_place_lies_in_its_own_definition_s_scope(project: AdopterRepo) -> None:
+    _out_of_root(project, typed=False)
+    project.write(
+        {
+            f"{DEFINITIONS}/user.md": _scoped_definition("USER", ["docs/**", "README.md"]),
+            f"{DEFINITIONS}/technical.md": _scoped_definition("TECH", ["tech-docs/**"]),
+        }
+    )
+    location, message = only_error(run(project))
+    assert location == f"{LD_CONFIG}:/places/CONTRIBUTING.md"
+    assert (
+        "place 'CONTRIBUTING.md' is assigned to space 'technical' and gives it "
+        "CONTRIBUTING.md, which the scope of that space's definition, "
+        f"{DEFINITIONS}/technical.md, does not cover" in message
+    )
+    project.write(
+        {
+            f"{DEFINITIONS}/technical.md": _scoped_definition(
+                "TECH", ["tech-docs/**", "CONTRIBUTING.md"]
+            )
+        }
+    )
+    document = run(project)
+    assert errors(document) == []
+    assert any(
+        line.startswith("scopes: technical, user — 2 page(s)") for line in document["summary"]
+    )
+
+
+def test_an_assigned_place_lies_in_no_other_definition_s_scope(project: AdopterRepo) -> None:
+    """Checked against every other definition with a scope, even where the place's
+    own space's definition carries none (DEC-001 point 1)."""
+    _out_of_root(project, typed=False)
+    project.write({f"{DEFINITIONS}/user.md": _scoped_definition("USER", ["*.md", "docs/**"])})
+    location, message = only_error(run(project))
+    assert location == f"{LD_CONFIG}:/places/CONTRIBUTING.md"
+    assert (
+        "which the scope of space 'user''s definition, "
+        f"{DEFINITIONS}/user.md, also covers" in message
+    )
+    assert "leave the place out of that scope with its `exclude`" in message
+    project.write(
+        {
+            f"{DEFINITIONS}/user.md": _scoped_definition(
+                "USER", {"paths": ["*.md", "docs/**"], "exclude": ["CONTRIBUTING.md"]}
+            )
+        }
+    )
+    assert errors(run(project)) == []
+
+
+def test_a_place_assigned_where_the_definition_selects_by_type_gives_the_page_type(
+    project: AdopterRepo,
+) -> None:
+    """Where a space's definition selects by type, an assigned place outside every
+    root that gives no page type would hold pages the scope misses without a word:
+    validation fails the place (DEC-001 point 1)."""
+    _out_of_root(project, typed=False)
+    by_type = {"paths": ["docs/**", "README.md"], "types": ["living-docs:page"]}
+    project.write({f"{DEFINITIONS}/user.md": _scoped_definition("USER", by_type)})
+    location, message = only_error(run(project))
+    assert location == f"{CONFIG}:/friction/places/0"
+    assert (
+        "project place 'README.md' lies outside every documentation root and is assigned to "
+        f"space 'user', whose definition, {DEFINITIONS}/user.md, selects by type, but it names "
+        "no type" in message
+    )
+    assert "`{path: README.md, type: living-docs:page}`" in message
+    _out_of_root(project, typed=True)
+    assert errors(run(project)) == []
+    # A definition that selects by paths alone asks no type of the places.
+    _out_of_root(project, typed=False)
+    project.write({f"{DEFINITIONS}/user.md": _scoped_definition("USER", ["docs/**", "README.md"])})
+    assert errors(run(project)) == []
 
 
 # --- the LDOC rule set and the space definition template (DEC-001 points 2 and 3) --------
@@ -626,6 +1116,31 @@ def test_ldoc_validates_as_a_method_rule_set_with_its_origins(project: AdopterRe
         assert rule.status == "accepted"
         assert rule.origin == {"decision": "living-docs:DEC-001"}
         assert rule.anchors("record") == ("living-docs:DEC-001",)
+
+
+def test_ldoc_declares_the_parts_its_validation_enforces(project: AdopterRepo) -> None:
+    """DEC-001 point 6 (COR-051 point 2): RS-LDOC-004's structure and RS-LDOC-003's
+    field are the capability's validator's, a command its package registers; the
+    declarations name no check that is not there."""
+    result = rs.validate_rule_sets(project.root)
+    assert result.errors == ()
+    assert [f for f in result.findings if "check" in f.kind.value] == []
+    (ldoc,) = result.discovery.sets_named("LDOC")
+    declared = {
+        rule.id: [(part.owner, part.name) for part in rule.checks]
+        for rule in ldoc.rules
+        if rule.checks
+    }
+    assert declared == {
+        "RS-LDOC-003": [("living-docs", "validate")],
+        "RS-LDOC-004": [("living-docs", "validate")],
+    }
+    format_rule, reader_rule = ldoc.rule("RS-LDOC-004"), ldoc.rule("RS-LDOC-003")
+    assert format_rule is not None and reader_rule is not None
+    (structure,) = format_rule.checks
+    assert "sections its kind's declared structure names" in structure.part
+    (field,) = reader_rule.checks
+    assert "`reader` field" in field.part
 
 
 def test_a_space_definition_from_the_template_inherits_ldoc(project: AdopterRepo) -> None:

@@ -14,7 +14,7 @@ Existing records cover parts of this:
 
 - COR-001 covers in-tree content lifecycle (propagation, extension, suspension, install-time seeding).
 - COR-002 covers fixed-path config-file updates (merge delivery operation).
-- COR-004 names the upgrade command with "version-aware migrations" but doesn't specify what migrations are or how they're authored.
+- COR-004 sets the rules for commands, and its list of operations names the version transition, the operation that runs migrations (COR-059). COR-004 does not specify what migrations are or how they're authored.
 - COR-005 establishes bundles and adapters as pluggable components with their own contracts.
 
 What's missing is a unified principle: **what does it mean for a resource to be installed by the core layer**, what lifecycle operations apply across all such resources, how does the methodology version itself, and how do component versions relate to the methodology's version? Without this, each new resource type and each component re-derives tracking, update, and removal semantics from scratch, and version transitions remain ad hoc.
@@ -23,7 +23,7 @@ This record fixes the rules. The architecture (manifest schema, upgrade procedur
 
 ## Decision
 
-Core content is organized in two tiers — a **backbone** that ships together, and **components** that depend on backbone versions but evolve independently. Project-side state is tracked through a backbone manifest (registry of installed components) plus per-component manifests (each component's state). Lifecycle operations apply uniformly across resources; whole-methodology upgrade orchestrates per-tier and per-component updates under explicit compatibility resolution.
+Core content is organized in two tiers — a **backbone** that ships together, and **components** that depend on backbone versions but evolve independently. Project-side state is tracked through a backbone manifest (registry of installed components) plus per-component manifests (each component's state). Lifecycle operations apply uniformly across resources; whole-methodology upgrade, a version transition (COR-059), orchestrates per-tier and per-component moves under explicit compatibility resolution.
 
 ### Two tiers: backbone + components
 
@@ -31,7 +31,7 @@ The backbone is the cohesive core: decisions, rules, the workflow-framework cont
 
 Both tiers use semantic versioning (`major.minor.patch`). Components express compatibility via `requires_backbone: ">=X.Y.Z, <W.0.0"` recorded in their per-component manifest. Patch-level releases (the third segment) are backward-compatible bug fixes by semver convention and do not have migrations — migration directories are named with the full three-segment target version, with patch always `0` (e.g., `2.1.0/`), and cover all patches within that minor line.
 
-A backbone change affects every adopter (the methodology itself moved); a component change might only affect adopters who installed that component. Independent versioning lets bundle / adapter authors release without bumping the whole methodology, and lets adopters upgrade selectively, with the semver range catching incompatibilities at upgrade time.
+A backbone change affects every adopter (the methodology itself moved); a component change might only affect adopters who installed that component. Independent versioning lets bundle / adapter authors release without bumping the whole methodology, with the semver range catching incompatibilities at upgrade time. A component the methodology ships moves with the release that ships it, or alone to the version the project's recorded release ships. An externally-sourced component moves on its own, by its pin (COR-041 and COR-059).
 
 **The dependency direction cannot invert.** A component declares its dependency *on* the backbone; the reverse must never hold. A component — and especially an opt-in one such as a capability — must not govern a process the backbone depends on for its own existence. Any process the backbone needs in order to exist, evolve, or ship — cutting the backbone's own releases is the archetype — belongs to the backbone tier. Locating it in a component would make the always-present core depend on an optional, independently-versioned piece, inverting the two-tier direction and breaking for any adopter who never installed that component. This is the discriminator when a responsibility is ambiguous ("is this the backbone's, or a component's?"): if the backbone's own existence depends on it, it is backbone.
 
@@ -57,7 +57,7 @@ Four operations apply to every resource the core layer installs, regardless of r
 
 1. **Install** — the relevant tier's setup primitive creates the resource and (for non-derivable state) records it in the appropriate manifest.
 2. **Inspect** — `status` walks the registry, reads each component manifest, surfaces aggregated state. `validate` computes expected state for derivable resources from the spec at the recorded version + adopter's config and compares to reality; manifest-tracked resources are compared directly.
-3. **Update** — re-running the setup primitive reconciles installed state with the current version's spec. Derivable resources are regenerated; non-derivable resources are updated via their recorded opaque ID. Idempotent.
+3. **Update** — re-running the setup primitive reconciles installed state with the spec at the versions the project records. It moves no recorded version and runs no migration: a version transition moves them (COR-059). Derivable resources are regenerated; non-derivable resources are updated via their recorded opaque ID. Idempotent.
 4. **Remove** — the bundle / adapter remove command tears down the component's resources, deletes its per-component manifest, and removes its registry entry. Adopter content is never touched (per COR-005 + the no-shared-files invariant).
 
 ### Three migration scopes per tier
@@ -68,13 +68,18 @@ Migrations come in three categories by scope. Each tier (backbone, component) ha
 - **Structural** — affect the directory shape of the tier (a backbone-wide rename; a bundle's internal restructure within the bundle). They run *before* resource-scoped migrations of the same target version.
 - **Resource-scoped** — affect a single resource type (a label is renamed, a setting key changes shape, a primitive moves).
 
-Migrations are versioned (tied to a specific tier-and-version transition), idempotent, and update the affected resource. For manifest-tracked resources, the migration also updates the relevant manifest entry. For derivable resources, no manifest update is needed — the upgrade flow's reconciliation step regenerates the state from the new spec.
+Migrations are versioned (tied to a specific tier-and-version transition), idempotent, and update the affected resource. For manifest-tracked resources, the migration also updates the relevant manifest entry. For derivable resources, no manifest update is needed — the transition regenerates the state from the new spec.
 
 ### Cross-tier upgrade requires explicit compatibility resolution
 
-A whole-methodology upgrade cannot proceed past a component's `requires_backbone` range. Before applying any migrations, the upgrade command resolves compatibility across all installed components and either succeeds (every component is compatible with the target backbone, possibly after upgrading some components) or refuses with a surfaced conflict for the adopter to address.
+A whole-methodology upgrade is a version transition (COR-059). It cannot proceed past a component's `requires_backbone` range. Before applying any migrations, the upgrade command resolves compatibility across all installed components and either succeeds (every component, at the version the transition leaves it, is compatible with the target backbone) or refuses with a surfaced conflict for the adopter to address.
 
-The reconciliation order — compatibility resolution → propagation → backbone migrations → component migrations → derivable-state reconciliation → recorded-version updates — is set by the lifecycle spec and applies symmetrically to per-component upgrades (which gate on the same compatibility check).
+A transition's order — compatibility and collision resolution → the target recorded → propagation → backbone migrations → component migrations → derivable state regenerated → the completion recorded — is set by the lifecycle spec.
+
+- **Derivable state that a migration reads,** such as a rendered ignore file, is also regenerated right after propagation, so the migration reads the target's.
+- **Each shipped component's recorded version** moves to the version the target ships when that component's migrations finish.
+- **A project is at a version only when its recorded target and its recorded completion both name it.** A transition that stops before its completion never reads as finished, and the next transition of the backbone finishes it (COR-059 point 6).
+- **A transition of one shipped component** follows the same order for that component, without the backbone's two recorded states. It gates on the same compatibility check, and records its version when its migrations finish.
 
 ### Migrations are mandatory on adopter-breaking surface changes
 
@@ -86,11 +91,13 @@ A change that **alters an installed adopter's state observably and breaks agains
 - Breaking signature changes in `pkit` CLI commands (a flag's meaning inverts; a subcommand renames).
 - **Capability subtree restructures** (a capability's `skills/`, `agents/`, `decisions/` layout changes).
 
-Pure additions don't trigger migration: a new skill, a new schema, a new decision, a new bundle are observed only by adopters who sync to receive them, and their absence doesn't break against existing installed state. Documentation refinements, internal source refactors, and behavior-preserving fixes also don't trigger.
+Pure additions don't trigger migration: a new skill, a new schema, a new decision, a new bundle are observed only by adopters who move to a release that ships them, and their absence doesn't break against existing installed state. Documentation refinements, internal source refactors, and behavior-preserving fixes also don't trigger.
 
 The rule applies symmetrically across tiers: backbone surface changes ship backbone migrations; bundle surface changes ship bundle migrations; adapter and capability surface changes ship their tier's migrations. The migration is idempotent (already-applied state is a no-op) so adopters can re-run safely.
 
-This couples surface changes to migration coverage: the version bump (per the project's version-bump policy) and the migration land together, not in separate PRs. The lifecycle's reconciliation order assumes every adopter-breaking change has a migration to run; merging surface changes without one leaves adopters with state the upgrade flow can't bridge.
+A backbone migration is also safe over any state. It acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown (COR-059 point 6). A missing default the migration adds counts as a positive sign. So running it again may restore a default the project removed after it first ran, and the release's notes say so.
+
+This couples surface changes to migration coverage: the version bump (per the project's version-bump policy) and the migration land together, not in separate PRs. A transition's order assumes every adopter-breaking change has a migration to run; merging surface changes without one leaves adopters with state a transition can't bridge.
 
 ## Rationale
 
@@ -102,7 +109,7 @@ This couples surface changes to migration coverage: the version bump (per the pr
 
 **Why the manifest is intentionally small at each tier.** Listing every core-managed resource (every file, every label, every symlink) bloats the manifest with state already determined by the core spec at the recorded version + adopter's config. Adopter manifests would churn on every core content release — high-noise diffs in version control with no information gain. Keeping each manifest scoped to recorded-version + opaque IDs (and the registry, for the backbone) makes its diffs meaningful (a bundle was installed; a board UUID was recorded) without duplicating derivable state.
 
-**Why migrations don't always update the manifest.** If a migration affects a derivable resource, the new state is implied by the new core spec + adopter's config; reconciliation regenerates it. If a migration affects a non-derivable resource, the migration updates the relevant manifest entry directly. The migration only writes manifest entries when the entry is the source of truth.
+**Why migrations don't always update the manifest.** If a migration affects a derivable resource, the new state is implied by the new core spec + adopter's config; the transition regenerates it. If a migration affects a non-derivable resource, the migration updates the relevant manifest entry directly. The migration only writes manifest entries when the entry is the source of truth.
 
 **Why three migration scopes per tier.** Resource-scoped migrations have clear locality. Structural migrations don't fit any single resource's locality but still need a place to live and an ordering relative to resource-scoped ones (structural first, so the tree is in the new shape). Manifest-schema migrations bootstrap the very mechanism the runtime uses to track progress; they have to run first.
 
@@ -119,7 +126,7 @@ This couples surface changes to migration coverage: the version bump (per the pr
 - **No project-side manifests at all (everything implicit by convention).** Rejected — opaque identifiers (project boards, webhook IDs) and recorded versions need persistent storage.
 - **No formal lifecycle; each resource type re-derives semantics.** Rejected — fractures the methodology. New resource types invent inconsistent behaviour and adopters can't reason uniformly.
 - **All migrations in one global directory.** Rejected for component migrations — divorces them from the bundle or area that gives them context. Backbone-wide and manifest-schema migrations (which have no single component context) appropriately live in a backbone-wide location.
-- **Migrations as one-shot scripts that don't track version state.** Rejected — re-running a migration on an already-migrated adopter would do harm. Recording the version plus idempotent re-runs prevents this.
+- **Migrations as one-shot scripts that don't track version state.** Rejected — re-running a migration on an already-migrated adopter would do harm. Recording the version plus idempotent re-runs prevents this, and a backbone migration that acts only on a positive sign is safe even where the recorded history is lost.
 - **Compatibility checked migration-by-migration instead of resolved up front.** Rejected — failures surface mid-upgrade after partial state changes. Resolver-then-applier (the package-manager pattern) is the safer order.
 
 ## Implications

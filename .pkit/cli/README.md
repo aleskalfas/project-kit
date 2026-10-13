@@ -51,7 +51,7 @@ pkit:
         - src/project_kit/rule_set_reading.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-054, COR-055, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064]
     revalidated:
-      at: 2026-10-13T00:07:46Z
+      at: 2026-10-13T04:29:12Z
       outcome: updated
 ---
 
@@ -237,7 +237,7 @@ If you arrive at a partial or broken state, run `validate` to see what is and is
 
 ### `sync`
 
-Re-runs propagation only. Pulls current canonical core content into your project's `.pkit/` tree. Does **not** invoke seed (one-shot only — see COR-001) or merge (separate consent profile — see COR-002 and COR-004). Idempotent: re-running with no changes pending reports "current" and exits cleanly.
+Re-runs propagation. Pulls current canonical core content into your project's `.pkit/` tree, and runs the adapter's merge delivery without its prompt-once tier (COR-002 and COR-059 point 2). For Claude Code that merges `.claude/settings.json` and `CLAUDE.md`, adding the kit's entries and asking nothing. Idempotent: re-running with no changes pending reports "current" and exits cleanly.
 
 **Agent workspace.** Sync runs the same workspace step as `init` (step 4 above) — self-host included — so a project installed before the workspace existed, or one whose folder or exclude entry has gone missing, gets them back. It creates only what is missing and reports each part `unchanged` otherwise.
 
@@ -368,7 +368,7 @@ What a capability connects to is readable before it is installed, and what an in
 
 ## Configuration file
 
-A project keeps its declarations to the backbone in **one project-owned file**: `.pkit/project/config.yaml` ([COR-048](../decisions/core/COR-048-backbone-configuration.md) point 1). It sits in the project namespace — `sync`, `upgrade` and every uninstall leave it alone — and it is the file `pkit report` already reads the project's `name` from. An absent file, an empty file or a missing key means the owning record's default applies; that is never an error (point 3).
+A project keeps its declarations to the backbone in **one project-owned file**: `.pkit/project/config.yaml` ([COR-048](../decisions/core/COR-048-backbone-configuration.md) point 1). It sits in the project namespace, and no `sync`, `upgrade` or uninstall removes it. A migration writes it only where the record that owns the key allows (point 5). It is the file `pkit report` already reads the project's `name` from. An absent file, an empty file or a missing key means the owning record's default applies; that is never an error (point 3).
 
 **Every key is owned by a core record** (point 2), which defines its meaning, default and writers. A capability never adds a key here; its settings live in its own subtree. Project records may own keys only under the reserved `project` block.
 

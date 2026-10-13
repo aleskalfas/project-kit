@@ -486,8 +486,8 @@ def test_record_status_in_a_flow_block_stays_inside_it(repo: AdopterRepo) -> Non
 def test_without_consent_an_answer_is_refused_with_no_ready_made_yes(
     repo: AdopterRepo, command: tuple[str, ...]
 ) -> None:
-    """An answer is written on a person's decision (COR-050 point 3): the refusal names
-    the dry run and says what `--yes` does, and prints no command that writes."""
+    """An answer may be a person's decision (COR-050 point 3): the refusal names the
+    dry run and says what `--yes` does, and prints no command that writes."""
     _put(repo, GUIDE)
     result = _cli(*command)
     assert result.exit_code == 1
@@ -497,8 +497,8 @@ def test_without_consent_an_answer_is_refused_with_no_ready_made_yes(
         "was not given (COR-050 point 13). Nothing was written.\n"
         "To see the change first, run:\n"
         f"  {rerun} --dry-run\n"
-        "`--yes` writes without asking. An answer on an artefact is written on a person's "
-        "decision (COR-050 point 3).\n"
+        "`--yes` writes without asking. An answer on an artefact may be a person's decision "
+        "(COR-050 point 3).\n"
     )
     assert f"{rerun} --yes" not in result.output
     assert not any(line.strip().endswith("--yes") for line in result.output.splitlines())

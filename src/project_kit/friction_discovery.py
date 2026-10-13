@@ -19,8 +19,9 @@ is the one reader of those declarations and the one walker of the places:
   to validation — is done in `friction_validate`.
 - `declared_places` — the resolved places, project first (in declaration
   order) then capabilities by name. A capability's place is an object
-  `{path, location?}` (the package schema's `friction-place`): with
-  `location`, inside that entry of the document locations it declares — where
+  `{path, location?, type?, description?}` (the package schema's
+  `friction-place`): with `location`, inside that entry of the document
+  locations it declares — where
   `docs_roots.read_capability_locations`, the one reading of a capability's
   locations, puts it: its recorded location, else its declared sub-path under
   the root it names (COR-049 points 4 and 5; COR-050 point 1); without one,
@@ -157,9 +158,10 @@ FRICTION_KEY = "friction"
 # anchors: the reason a person accepted it with none (COR-050 point 1).
 UNANCHORED_BECAUSE_KEY = "unanchored-because"
 
-# The package schema's shape a capability place is read in: `{path, location?}`,
-# `location` naming an entry of the capability's `docs.locations`, which
-# `docs_roots.read_capability_locations` resolves.
+# The package schema's shape a capability place is read in:
+# `{path, location?, type?, description?}`, `location` naming an entry of the
+# capability's `docs.locations`, which `docs_roots.read_capability_locations`
+# resolves.
 PATH_KEY = "path"
 LOCATION_KEY = "location"
 
@@ -169,6 +171,13 @@ LOCATION_KEY = "location"
 PLACES_KEY = "places"
 HELD_KEY = "held"
 _ENTRY_NOUN = {PLACES_KEY: "place", HELD_KEY: "held folder"}
+
+# The package schema's shape of one entry of each list, as a finding names it:
+# `friction-place` and `friction-held`.
+_ENTRY_SHAPE = {
+    PLACES_KEY: "{path, location?, type?, description?}",
+    HELD_KEY: "{location, path, description?}",
+}
 
 # A type (COR-056 points 1 and 2): the key of a component's type registry in
 # its `friction` block, the keys of a registry entry, and the key of the type a
@@ -701,7 +710,8 @@ def _capability_places(
     """A capability's `friction.places` — or, with `key`, its `friction.held` —
     read in the package schema's shape (COR-050 point 1).
 
-    Each entry is an object `{path, location?}`. With `location`, `path` lies
+    A place is an object `{path, location?, type?, description?}`, and a held
+    folder `{location, path, description?}`. With `location`, `path` lies
     inside that entry of the capability's `docs.locations`, where `locations`
     — the one reading, `docs_roots.read_capability_locations` — puts it: its
     recorded location, else its declared `{path, root?}` under the root it
@@ -786,7 +796,7 @@ def _resolve_capability_place(
     """
     noun = _ENTRY_NOUN[key]
     if not isinstance(entry, Mapping):
-        return _Unresolved(f"the {noun} is {_shape(entry)}, not an object `{{path, location?}}`")
+        return _Unresolved(f"the {noun} is {_shape(entry)}, not an object `{_ENTRY_SHAPE[key]}`")
     written = entry.get(PATH_KEY)
     path = _text_or_none(written)
     if path is None:

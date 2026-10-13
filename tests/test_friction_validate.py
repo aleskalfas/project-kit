@@ -208,7 +208,7 @@ def test_a_place_ending_in_double_star_means_every_markdown_file_beneath(
     assert result.errors == ()
 
 
-# --- capability places (the package schema's `{path, location?}`) ------------
+# --- capability places (the package schema's `{path, location?, type?, description?}`) ---
 
 EVIDENCE_PACKAGE = ".pkit/capabilities/evidence/package.yaml"
 
@@ -297,7 +297,9 @@ def test_a_capability_place_in_another_shape_is_a_finding_and_is_not_walked(
     assert {f.location for f in result.errors} == {EVIDENCE_PACKAGE}
     reasons = {f.pointer: f.message.split(", so friction discovery")[0] for f in result.errors}
     assert reasons == {
-        "/friction/places/0": "the place is text ('**/*.md'), not an object `{path, location?}`",
+        "/friction/places/0": (
+            "the place is text ('**/*.md'), not an object `{path, location?, type?, description?}`"
+        ),
         "/friction/places/1": "the place has no `path`",
         "/friction/places/2": "the place's `path` is a list, not a path or glob",
         "/friction/places/3": "the place's `location` is a list, not a name from `docs.locations`",
@@ -316,8 +318,8 @@ def test_a_capability_place_in_another_shape_is_a_finding_and_is_not_walked(
     }
     assert result.errors[0].message.endswith(
         "so friction discovery walks nothing under it; a capability place is "
-        "`{path, location?}`, its `location` naming a `docs.locations` entry written "
-        "`{path, root?}` (COR-050 point 7)."
+        "`{path, location?, type?, description?}`, its `location` naming a "
+        "`docs.locations` entry written `{path, root?}` (COR-050 point 7)."
     )
 
 
@@ -836,7 +838,7 @@ def test_a_held_folder_in_another_shape_is_a_finding_and_holds_nothing(
     reasons = {f.pointer: f.message.split(", so friction discovery")[0] for f in result.errors}
     assert reasons == {
         "/friction/held/0": (
-            "the held folder is text ('records'), not an object `{path, location?}`"
+            "the held folder is text ('records'), not an object `{location, path, description?}`"
         ),
         "/friction/held/1": (
             "the held folder names no `location`: a held folder lies within one of the "

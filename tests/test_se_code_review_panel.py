@@ -402,3 +402,85 @@ def test_pre_existing_clause_is_identical_across_the_panel():
 @pytest.mark.parametrize("agent", _PANEL_AGENTS)
 def test_pre_existing_clause_cites_d3(agent):
     assert "[software-engineering:DEC-002-code-review-panel] D3" in _pre_existing_clause(agent)
+
+
+# ---------------------------------------------------------------------------
+# docs-reviewer checks the answers a change wrote (COR-050 point 3, #1496)
+# ---------------------------------------------------------------------------
+
+
+def _answers_check() -> list[str]:
+    """The docs reviewer's "The answers a change wrote" section, one item per line."""
+    body = (
+        REPO_ROOT
+        / ".pkit"
+        / "capabilities"
+        / "software-engineering"
+        / "agents"
+        / "docs-reviewer.md"
+    ).read_text(encoding="utf-8")
+    section = body.split("\n## The answers a change wrote\n", 1)[1].split("\n## ", 1)[0]
+    return [line for line in section.splitlines() if line.strip()]
+
+
+@pytest.mark.parametrize(
+    ("lead", "says"),
+    [
+        (
+            "Read the answers from the change check, never from the author.",
+            [
+                "`pkit friction check --base <base> --head <head>`",
+                "Answers written in this change",
+                "reports friction dormant",
+            ],
+        ),
+        (
+            "An `unchanged` reason must hold against the change.",
+            ["is a `[block]`", "leaves out an edit that makes the document untrue"],
+        ),
+        (
+            "A deferral the change writes or rewords must hold, and name an open follow-up.",
+            ["is a `[block]`", "names no issue, or that names a closed one", "not judged again"],
+        ),
+        (
+            "Each `updated` document needs its sentence, and the sentence must match.",
+            [
+                "is a `[block]`",
+                "`## What changed in each updated document`",
+                "with no sentence, or with one that does not match what changed",
+            ],
+        ),
+    ],
+)
+def test_the_docs_reviewer_blocks_on_each_answer_that_does_not_hold(lead, says):
+    """The reviewer other than the answers' writer (COR-050 point 3, DEC-055 point 3)
+    works from the change check's own list, and raises a `[block]` finding — never a
+    verdict line of its own — on each failure the records name."""
+    (item,) = [line for line in _answers_check() if line.startswith(f"- **{lead}**")]
+    for words in says:
+        assert words in item, (lead, words)
+
+
+def test_an_answer_that_is_a_person_s_decision_is_named_not_blocked():
+    """Whether a person accepted an answer on an artefact the change was not asked
+    about, or a reason for having no anchors, is a fact no reviewer can read (COR-050
+    point 3): the reviewer names it, as an advisory, and judges a reworded deferral on
+    an artefact it was asked about by the other rules. The sentence on such an
+    `updated` answer is still checked, since COR-050 point 3 asks it of every one."""
+    lead = "- **Some answers are a person's decision, not yours to judge.**"
+    (item,) = [line for line in _answers_check() if line.startswith(lead)]
+    for words in (
+        "An answer on an artefact the change check asked nothing about",
+        "every reason for having no anchors",
+        "so do not block on it",
+        "in an `[advisory]` finding",
+        "such as a deferral the change rewords, is judged by the bullets above",
+        "Where such an answer is `updated`, its sentence is still checked",
+    ):
+        assert words in item, words
+
+
+def test_the_docs_reviewer_s_answers_check_raises_findings_not_a_verdict_line():
+    intro = _answers_check()[0]
+    assert "Each failure below is a `[block]` finding in your verdict" in intro
+    assert "never a verdict line of its own" in intro
