@@ -18,9 +18,8 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-12T20:31:25Z
-      outcome: unchanged
-      unchanged-because: router.py changed only in two docstrings, which now cite ADR-063 for the tool staleness probe and ADR-064 for the default pin; this page describes the routes, the degrade when a pin cannot be fetched and the escape hatches, none of which changed
+      at: 2026-10-13T04:27:17Z
+      outcome: updated
 ---
 
 # Contributing to project-kit
@@ -171,7 +170,7 @@ Inventory pinned inside a COR has two costs:
 Examples in the corpus to read for shape:
 
 - **COR-003** — captures the *principles* for assigning a mechanism + delivery to any artifact type. It does not list which paths use which mechanism. The actual path-to-mechanism map lives in each area's README plus the install/sync manifest.
-- **COR-004** — captures the *design rules* for the CLI command surface (one operation per command, sync/merge stay separate, init is one-shot, etc.). It does not list the current commands. The command list lives in `.pkit/cli/README.md`.
+- **COR-004** — captures the *design rules* for the CLI command surface (one operation per command, merge as a command of its own, init is one-shot, etc.). It does not list the current commands. The command list lives in `.pkit/cli/README.md`.
 
 **Pre-draft check.** Before writing a COR, list every piece of content that might land in it and tag each as either a *rule among alternatives* (decision-worthy, with rationale) or *current state* (inventory, will change as content lands). Inventory gets one cross-reference line in the COR, not enumeration. If an item sits ambiguously between the two, default to inventory unless the *why* is non-obvious and contested.
 

@@ -6,6 +6,8 @@ date: 2026-05-01
 author: Ales Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [COR-059](COR-059-version-transition.md).** Overturned: seeding as one write at first install, wherever COR-001 states it, the Rationale's reading of seeding as one event included. A version transition of the backbone also creates each declared seed path that is missing, from its target's seed, and never writes over one that exists. Among what stands: the three mechanisms, seeding as a delivery operation and no fourth mechanism, the seeded path's ownership by the project, and that sync never seeds. COR-059's "What this overturns, and what stands" lists each passage.
+
 ## Context
 
 The no-shared-files invariant (in `.pkit/decisions/README.md`) settles ownership: every file in a project has exactly one owner — core or project — and they never share a path. The invariant tells us *who* owns each file; it does not describe the operational mechanisms by which canonical core content reaches projects, by which projects add their own content alongside, or by which projects override core content where it is allowed.
@@ -22,21 +24,21 @@ In addition to the three mechanisms, the core layer performs an **install-time s
 
 ### Propagation (synced core content)
 
-A canonical file lives at a core-owned path (e.g. inside `core/`). The project receives a verbatim copy at the same relative path. Every subsequent sync overwrites the project's copy with the current canonical version. The project must not edit synced files; if it does, the edits are lost on the next sync.
+A canonical file lives at a core-owned path (e.g. inside `core/`). The project receives a verbatim copy at the same relative path. Every subsequent sync overwrites the project's copy with the canonical version at the release the project records. A version transition overwrites it with its target's (COR-059). The project must not edit synced files; if it does, the edits are lost on the next sync.
 
 - **Ownership:** core, forever.
-- **Cadence:** written on first install, rewritten on every sync.
+- **Cadence:** written on first install, rewritten on every sync and every version transition.
 - **Contract:** the path will only contain the canonical version of the content; the project guarantees not to edit it.
 
 ### Extension (project-side content)
 
-The project owns content in project-owned paths (e.g. inside `project/`). The names do not collide with anything in core. The core layer never reads from or writes to these paths.
+The project owns content in project-owned paths (e.g. inside `project/`). The names do not collide with anything in core. The core layer writes these paths only through an operation that a record names as that content's writer, with the consent that record sets. Sync writes them only through merge delivery (COR-002), and seeds nothing. The core layer reads them where an operation needs them, as merge and validation do.
 
 - **Ownership:** project, forever.
-- **Cadence:** written and updated entirely by the project, on the project's schedule.
-- **Contract:** project-owned paths are not touched by sync; the project may add, edit, or remove its own content freely.
+- **Cadence:** written and updated by the project, on its own schedule, and by the core layer only through the writers that records name.
+- **Contract:** the core layer writes project-owned paths only through the writers that records name, and sync writes them only through merge delivery. The project may add, edit, or remove its own content freely.
 
-Extension content can be **seeded at first install** by the core layer (see *Install-time seeding* below). Once seeded, the file is just regular project-owned content — sync never touches it again, and the project owns it.
+Extension content can be **seeded at first install** by the core layer (see *Install-time seeding* below). Once seeded, the file is just regular project-owned content under the contract above, and the project owns it.
 
 ### Suspension (project overrides core)
 
@@ -65,7 +67,7 @@ Some files must live at fixed paths the project will want to extend — root `CL
 - A short **extension** at the fixed path. Project-owned. Seeded at first install with a delegation reference to the core canonical content using the platform's include mechanism (e.g. Claude Code's `@`-include syntax for `CLAUDE.md`). After install, the project owns it and may add project-specific content freely.
 - A **propagation** target at a separate core-owned path holding the canonical content. Updated on every sync.
 
-The fixed-path file is small (a delegation header plus any project-specific content) and is owned by the project. The canonical content evolves through sync without ever touching the fixed-path file. This is not a separate mechanism — it is a way to combine propagation and extension (with install-time seeding) to handle a specific class of file.
+The fixed-path file is small (a delegation header plus any project-specific content) and is owned by the project. The canonical content evolves through propagation. Sync writes the fixed-path file only through merge delivery, which may create it where it is missing (COR-059 point 2). This is not a separate mechanism — it is a way to combine propagation and extension (with install-time seeding) to handle a specific class of file.
 
 ## Rationale
 
@@ -107,9 +109,10 @@ The pattern combines propagation, extension, and install-time seeding — all al
   - **Synced manifest** — paths under propagation, mirrored on every sync.
   - **Seed manifest** — extension paths the core layer writes once at first install with initial content.
 - These two manifests are disjoint. The synced manifest lists paths the core layer owns forever; the seed manifest lists paths the core layer writes once and then releases.
-- First-install runs both: propagation for the synced manifest, then seeding for the seed manifest. Subsequent syncs run propagation only.
+- First-install runs both: propagation for the synced manifest, then seeding for the seed manifest. Subsequent syncs seed nothing: they run propagation, and write project-owned paths only through merge delivery.
 - Each artifact type declares whether extension and suspension are supported. For example: decisions support extension (project-side records) but not suspension (no overrides of methodology decisions); agents likely support both extension (new agents) and suspension (overriding base agents); the methodology spec doc itself supports neither (core-owned, no project content). Per-artifact-type mapping is a separate decision and will be recorded separately.
-- **Synced (propagation) artifacts** are core-owned forever. Adopter edits to them are not preserved. The contract holds because the sync operation guarantees not to touch project-owned paths in return.
+- **Synced (propagation) artifacts** are core-owned forever. Adopter edits to them are not preserved. The contract holds because the sync operation guarantees in return to write project-owned paths only through merge delivery, which adds to them and never removes what the project wrote.
+- **The writers of project-owned paths** are named by records. Among them are seeding and merge delivery, sync's merge included. A version transition's creation of a missing seed path and its recorded versions are writers too (COR-059). So are its migrations, within the writes that the records owning the written content allow (COR-059 point 3). Each writes with the consent its record sets.
 - **Seeded extension artifacts** are project-owned after first install. Core makes no further claim on them.
 - For artifact types where suspension is supported, the precedence rule must be specified (e.g. "the consumer prefers `project/<name>` over `core/<name>` for matching names") and whether disabling is supported (typically yes — an empty file or a `disabled: true` marker would do it). The precedence and disabling rules can vary per artifact type; they are part of each type's own record.
 - The set of placeholder values adopters must provide at first install for parameterised seed templates (project name, repo slug, etc.) is a separate decision and will be recorded in its own future record.

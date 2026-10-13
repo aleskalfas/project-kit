@@ -1,0 +1,7 @@
+component: claude-code
+kind: none
+body: >
+  Only the friction block of the adapter README changes: it is revalidated,
+  unchanged, against COR-059's refinement of COR-002. Its text does not
+  change, and nothing you run changes. Inert in an adopting project: a
+  synced tree is never a place (ADR-055).

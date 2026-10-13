@@ -25,7 +25,7 @@ The three steady-state mechanisms cover ownership; seeding covers the simple one
 
 ## Decision
 
-Establish a second delivery operation alongside seeding: **merge**. Like seeding, it is not a steady-state mechanism — it is an operation the core layer performs against a project-owned file. Unlike seeding, merge is **repeatable**: it runs at first install AND can be re-run later (manually, or as part of an upgrade flow) to deliver new core-baseline content without losing adopter additions.
+Establish a second delivery operation alongside seeding: **merge**. Like seeding, it is not a steady-state mechanism — it is an operation the core layer performs against a project-owned file. Unlike seeding, merge is **repeatable**: it runs at first install AND can be re-run later (manually, on every sync, or as part of an upgrade flow) to deliver new core-baseline content without losing adopter additions.
 
 ### The merge operation
 
@@ -49,10 +49,12 @@ And performs:
 
 - The adopter's file is **project-owned**. Sync never silently overwrites it.
 - The core baseline source is **propagated** (core-owned, synced) — the merge source stays current as the methodology evolves.
-- Merge runs at three points:
+- Merge runs at four points:
   - First install, as part of the install flow alongside seeding and propagation.
   - Manually on demand, via a CLI gesture (name TBD with the rest of the CLI surface).
-  - During upgrade flows, when the baseline source has grown.
+  - During upgrade flows, when the baseline source has grown. An upgrade is a version transition (COR-059).
+  - On every sync, without its prompt-once tier. It adds each missing auto-add entry the core layer contributes and restores the safety entries. It reads content at the versions the project records, components' contributions included, and the project's own declarations (COR-059 point 2).
+- The prompt-once tier runs only where a person can answer: at first install, on demand and in an upgrade flow. With nobody to answer, it writes nothing.
 
 ### Per-format adapters
 
@@ -72,7 +74,7 @@ Each merge target declares its file type and per-tier classification in the core
 | **Seeding** (delivery operation) | Once at install | Yes (core never re-touches) | No |
 | **Merge** (delivery operation) | Install + repeatable | Yes (append-only / baseline-enforce) | Yes |
 | **Authoritative region** (delivery operation) | Install + repeatable | Yes outside the region; the region itself is realizer-owned and replaced | Yes |
-| **Extension** (mechanism) | Adopter-driven only | N/A — file is project-owned, never core-touched | No |
+| **Extension** (mechanism) | Adopter-driven | N/A — file is project-owned, written by the core layer only through a writer a record names (COR-001) | No |
 | **Suspension** (mechanism) | Adopter-driven only | N/A — file is project-owned override | No |
 
 Merge fills the gap between propagation (no adopter customisation possible) and seeding (no later updates).

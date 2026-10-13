@@ -18,6 +18,10 @@ ACT-adopter:
         record:
           - COR-001
           - COR-010
+      revalidated:
+        at: 2026-10-13T04:39:27Z
+        outcome: unchanged
+        unchanged-because: The adopter needs to upgrade like a dependency, with the migrations run and their own files left alone, and the core line names the owner split and the install and upgrade lifecycle. COR-001 now names a transition's migrations among the writers of project-owned paths, limited to the writes the owning records allow, and its creation of a missing seed path, which brings back a deleted starter file and never writes over one that exists. COR-010 makes the upgrade a version transition that runs every migration. So the need and the core line hold.
 ACT-ai-agent:
   name: AI agent
   status: active

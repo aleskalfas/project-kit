@@ -11,8 +11,9 @@ pkit:
         - src/project_kit/install.py
       record: [COR-001, COR-014]
     revalidated:
-      at: 2026-10-12T11:22:06Z
-      outcome: updated
+      at: 2026-10-13T04:27:22Z
+      outcome: unchanged
+      unchanged-because: The page says core.md is refreshed on every sync and that sync never touches project.md, and it lists migrations idempotency among the hard rules. COR-001 now lets sync write a project-owned path only through merge delivery, which never targets project.md, and rule 5 keeps idempotency while adding that a backbone migration is safe over any state, so the page holds.
 ---
 
 # Rules

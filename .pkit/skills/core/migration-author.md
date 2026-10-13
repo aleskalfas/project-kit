@@ -80,7 +80,7 @@ The command stamps `<NNN>-<slug>.sh` in the right `<X.Y.0>/` directory, where `N
 
 ### 6. Implement the migration
 
-Open the stamped script and replace the TODO body with the actual change. Two requirements (per COR-010 / lifecycle spec's "Script contract"):
+Open the stamped script and replace the TODO body with the actual change. Three requirements (per COR-010 / lifecycle spec's "Script contract"):
 
 - **Idempotent** — detect already-applied state and exit cleanly. The stamped boilerplate shows the pattern:
 
@@ -91,6 +91,8 @@ Open the stamped script and replace the TODO body with the actual change. Two re
   fi
   # ... apply ...
   ```
+
+- **Safe over any state, for a backbone migration** — it acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown. A missing default the migration adds counts as a positive sign. So running it again may restore a default the project removed after it first ran. If the script adds a missing default, say so in the release's notes.
 
 - **Updates the affected resource.** For derivable resources (files in the core content directory, labels on a tracker), the migration mutates the resource directly — no manifest update. For non-derivable resources (opaque backend IDs in `backend_state`), the migration updates the manifest entry.
 
@@ -103,10 +105,11 @@ Walk the script against the contract:
 - *Does it `set -euo pipefail`?*
 - *Does it consume `ROOT` from the environment, not hardcode paths?*
 - *Is it idempotent — would re-running on already-migrated state be a no-op?*
+- *For a backbone migration: does it act only on a positive sign that its change is needed, and never delete by a path's name or position alone?*
 - *Does it update the affected resource (or the relevant manifest entry, for non-derivable state)?*
 - *Did you place it in the right tier × version × scope ordering?*
 
-Test the script locally on a fresh checkout if practical.
+Test the script locally if practical: on a fresh checkout and, for a backbone migration, on a state that never needed it and on one the project changed after it first ran.
 
 ### 8. Commit
 
@@ -123,5 +126,5 @@ The migration is part of the version-bump commit's surface change (per PRJ-002 f
 
 ## Variations
 
-- **A migration that fully reconciles is unnecessary** — if the upgrade flow's reconciliation step regenerates the resource from the new spec, no migration is needed. Migrations only exist for state the reconciliation cannot derive (renames, removals, opaque backend IDs).
+- **A migration that fully reconciles is unnecessary** — if the transition regenerates the resource from the new spec, no migration is needed. Migrations only exist for state the transition cannot derive (renames, removals, opaque backend IDs).
 - **Multiple migrations at one version** — the next-index numbering supports this. Place manifest-schema migrations first (lowest NNN), then structural, then resource-scoped. The runtime walks them in that order.
