@@ -63,9 +63,10 @@ Reconciliation is the sync operation (COR-001), COR-010's Update. It is one oper
 
 - **What it is:** an operation that moves a project's recorded versions to a target. An upgrade is one.
 - **It is one operation on COR-004's list,** beside propagation, seeding and merge.
-- **Two forms:**
+- **Three forms:**
   - **a transition of the backbone** moves the project to a target release. Points 6 to 8 describe it.
   - **a transition of one shipped component** moves that component to the version the project's recorded release ships, and runs only under the CLI at the recorded backbone version (point 9). It runs that component's migrations, and records its version in its manifest when they finish.
+  - **a transition of one externally-sourced component** repoints its pin (COR-041).
 - **Every migration of the backbone and of each shipped component runs inside a transition,** backbone migrations first and then each component's. No other operation runs one.
 - **What a transition writes:**
   - the target's content
@@ -73,7 +74,7 @@ Reconciliation is the sync operation (COR-001), COR-010's Update. It is one oper
   - derivable state, merge delivery included
   - the seed paths point 8 names
   - the recorded versions and states
-- **An externally-sourced component moves by its pin.** A transition repoints the pin, alone or with the backbone, and reconciliation brings the copy to the pin, as COR-041 sets. Its migrations are outside this point. Until a decision record places them, its content moves by that match without them.
+- **An externally-sourced component moves by its pin.** A transition repoints the pin, of that component alone or with the backbone, and reconciliation brings the copy to the pin, as COR-041 sets. Its migrations are outside this point. Until a decision record places them, its content moves by that match without them.
 
 ### 4. One consent covers a transition's parts
 
@@ -95,7 +96,7 @@ Reconciliation is the sync operation (COR-001), COR-010's Update. It is one oper
 - **Two recorded states:**
   - **the target,** written as the backbone's recorded version before the transition writes anything else
   - **the completion,** the last of the recorded states, written once every migration has run and the derivable state is regenerated
-- **A transition is complete when the two are equal.** Each component's manifest moves to the version the target ships when that component's migrations finish.
+- **A transition is complete when the two are equal.** A project is at a version only when both states name it. Each component's manifest moves to the version the target ships when that component's migrations finish.
 - **First install creates the recorded versions.** It records them in the same order: the target before it writes anything else, and the completion last.
 - **The next transition of the backbone finishes an incomplete one.** It runs the backbone migrations from the recorded completion, and each component's from the version its manifest records.
 - **A missing completion reads as incomplete, with no lower bound.** The project's backbone migration history is unknown, so its next transition runs every backbone migration up to its target, once. So every backbone migration must be safe to run over any state, a contract COR-010's migration rule takes (Implications).
@@ -137,15 +138,16 @@ Reconciliation is the sync operation (COR-001), COR-010's Update. It is one oper
 
 ### What this overturns, and what stands
 
-This record partially supersedes COR-001, COR-004 and COR-017. Each overturned passage stays in its record as it stood. A passage whose decision stands, narrowed or completed by this change, is refined in place in its record. The last list below says why each such passage is no overturn.
+This record partially supersedes COR-001, COR-004 and COR-017. Each overturned passage stays in its record as it stood. A passage whose decision stands, narrowed or completed by this change, is refined in place in its record. The last list below gives the reason for each such passage that could read as an overturn. The other refinements, named in the Implications, add to a record or correct a fact.
 
 - **COR-004:**
   - **Overturned:**
     - in "Each command anchors to one mechanism or operation", the sentence "Compound verbs (e.g., an "update" that does sync + merge + migrations) hide which contract is being invoked, conflate consent profiles, and resist the manifest-level reasoning the install/sync runtime needs"
     - the rejected alternative "One smart `update` verb that picks sync / merge / migration as needed". A version transition is one operation (points 3 and 4).
     - in "`sync` and `merge` stay separate", "They are different verbs because they encode different consent", as far as it keeps merge out of sync, with the argument that folding them "either leaks the silent-overwrite contract onto project-owned files or makes routine refresh interactive", and the Implications' example "a sub-verb that combined sync + merge would hit the anchoring rule". Reconciliation carries merge delivery's auto-add tier, which asks nothing and never removes an entry the project wrote, and a tier that prompts never runs in it (point 2).
-    - in "`init` is one-shot", the reason that a re-run would "resurface seeded content (violating COR-001's seed contract)". A transition creates a seed path that is missing (point 8).
-  - **Stands:** one operation for each command, the Rationale's case against compound verbs and against verbs that conflate consent classes, merge as a command of its own, a routine refresh that never asks, and first install as one-shot.
+    - the Rationale's "Why the sync/merge separation matters more than "they're different operations."", to the same extent, as far as it keeps merge's tier that asks nothing out of sync
+    - in "`init` is one-shot", the reason that a re-run would "resurface seeded content (violating COR-001's seed contract)", and its restatement in the Rationale, "which paths it can resurface (none, per the seed contract)". A transition creates a seed path that is missing (point 8).
+  - **Stands:** one operation for each command, the Rationale's case against compound verbs, merge as a command of its own, a routine refresh that never asks, and first install as one-shot.
 - **COR-001,** "Install-time seeding":
   - **Overturned:** the claim that seeding is one write at first install, wherever COR-001 states it:
     - the Decision's "Seeding is a one-time delivery event", the section's heading ("one-time delivery") and lead ("written once", "the core layer never touches it again")
@@ -159,8 +161,8 @@ This record partially supersedes COR-001, COR-004 and COR-017. Each overturned p
   - **Overturned:** the sentence that sync "auto-upgrades installed capabilities", the paragraph's refusal on a new collision, which names an interactive capability upgrade as the way to resolve it, and the Implications' "**Sync extension** — refreshes installed capabilities; surfaces no-longer-shipped capabilities; refuses upgrade on new collisions". A transition moves the capabilities, and resolves a new collision inside it or refuses (point 7). Reconciliation keeps a capability at its recorded version (point 2).
   - **Stands:** install and its collision flow, the warning for a capability the methodology no longer ships, the skipped-artifact records, which reconciliation and the next transition both respect, the single-capability upgrade command, which is a transition of one component (point 3), and uninstall.
 - **Refined in place, since the decision stands:**
-  - **COR-001's extension contract,** "project-owned paths are not touched by sync", and the Implications' "Subsequent syncs run propagation only". The decision is that a project-owned path stays the project's: the project adds, edits and removes its content freely, and the core layer never takes any of it away. That stands. Merge delivery writes to project-owned paths under COR-002, append-only, at install and on demand. Reconciliation runs the same writer in its tier that asks nothing. So the sentences narrow to "touched by sync only through merge delivery", and sync seeds nothing.
-  - **COR-010's order,** with the recorded versions last. The decision is that a project never reads as at a version whose migrations have not run. That stands: the completion is that record, and it is written last. The target recorded first is a second state, which says where an incomplete transition is going.
+  - **COR-001's extension contract:** the lead "The core layer never reads from or writes to these paths", the Contract "project-owned paths are not touched by sync", and the Implications' "Subsequent syncs run propagation only" and "the sync operation guarantees not to touch project-owned paths in return". The decision is that a project-owned path stays the project's: the project adds, edits and removes what it wrote freely, and the core layer never takes any of it away. That stands. Merge delivery writes to project-owned paths under COR-002, at install, on demand and in upgrades, appending its baseline and restoring its safety entries, and reading the project's own entries to do so. Reconciliation runs the same writer, in its tier that asks nothing. So the sentences narrow to a rule on writers: the core layer writes a project-owned path only through a writer a record names, sync writes one only through merge delivery, and sync seeds nothing. Reading such a path takes nothing from the project, and validation and merge already read them.
+  - **COR-010's order,** with the recorded versions last. The decision is that a project never reads as having reached a version whose migrations have not run. That stands. A project is at a version only when its target and its completion both name it (point 6), and the completion is written last. The target, written first, names where an incomplete transition is going, and says nothing of having reached it.
   - **COR-010's Update,** which "reconciles installed state with the current version's spec". COR-010 already regenerates derivable state from the spec "at the recorded version". The Update is made to say the same, and it moves no version.
   - **COR-010's two tiers,** which let adopters "upgrade selectively". The decision is that components version on their own and declare the backbone versions they accept. That stands. A shipped component moves with its release, alone only to the version its release ships, and freely where its source is its own.
 
@@ -174,7 +176,7 @@ This record partially supersedes COR-001, COR-004 and COR-017. Each overturned p
 
 **Why one consent.** COR-004 rejects a compound verb because it hides which contract runs and asks for consent unevenly. A transition's parts all follow from one choice, the target. The person who chooses the target already runs that release's code, its migrations included. Asking again for each part would ask about consequences of a choice already made. The choices that do not follow from the target keep the consent their own records set. Each is given explicitly wherever it arises, and never taken silently, so no choice is silent in one case and asked in another.
 
-**Why the target is recorded first.** An older CLI meeting a project mid-transition reads only the state it already knows: the recorded version. Recorded first, the target shows the older CLI a newer version, and an older CLI that applies point 9 refuses. Recorded last, the record would show the older CLI its own version, and it would copy its older content over a half-migrated tree. A separate "in progress" marker would not help, since the older CLI cannot read it. So the transition records two states, and the completion comes last. The protection holds against every CLI that applies point 9, and not against one released before it. First install records the two states in the same order, so an interrupted install is finished by the next transition.
+**Why the target is recorded first.** An older CLI meeting a project mid-transition reads only the state it already knows: the recorded version. Recorded first, the target shows the older CLI a newer version, and an older CLI that applies point 9 refuses. Recorded last, the backbone's version would show the older CLI its own version, and it would copy its older content over a half-migrated tree. A separate "in progress" marker would not help, since the older CLI cannot read it. So the transition records two states, and the completion comes last. The protection holds against every CLI that applies point 9, and not against one released before it. First install records the two states in the same order, so an interrupted install is finished by the next transition.
 
 **Why every shipped component moves together.** A project that mixes two releases needs gates for every pair that might not agree, and no release was tested in that mix. Moving every shipped component together keeps the project at one release. A collision, the one thing that could hold a component back, is resolved inside the transition or stops it before it writes.
 
@@ -215,5 +217,5 @@ This record partially supersedes COR-001, COR-004 and COR-017. Each overturned p
 - **COR-048 point 1:** no lifecycle command removes the configuration file, and a transition writes it only through the migrations point 5 names.
 - **The operational rule for migrations, the lifecycle reference's script contract and the migration-authoring skill** state the same migration contract as COR-010.
 - **The decisions specification's no-shared-files invariant** says that sync writes a project-owned path only through merge delivery, that it reads what it needs from the project's side, and that it stops under a CLI at another version than the project's.
-- **Restatements in other records read with this one.** COR-002 describes seeding as one-shot, as COR-001's overturned passages do, and point 8 applies to it. COR-025 and COR-031 restate the invariant that sync never reads or writes a project-owned path, which COR-001's contract and the decisions specification state as above.
-- **The realisation** is the implementing project's. A realising decision records it (COR-025), among other things the commands, where the completion is recorded, how a component with no manifest is read, how each version of the CLI is tied to one content, and the remedies each stop names.
+- **Restatements in other records read with this one.** COR-002 and COR-003 describe seeding as one-shot, as COR-001's overturned passages do, and point 8 applies to them. COR-003's discriminator holds: a seed is a file the core layer never revisits once it exists, and merge re-runs. COR-025 and COR-031 restate the invariant that sync never reads or writes a project-owned path, which COR-001's contract and the decisions specification state as above.
+- **The realisation** is the implementing project's. A realising decision records it (COR-025), among other things the commands, where the completion is recorded, how a component with no manifest is read, how each version of the CLI is tied to one content, how a release that moves only a component reaches a project, and the remedies each stop names.
