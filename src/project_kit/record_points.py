@@ -3,11 +3,12 @@
 The one reading of a record's points, over the reading of where a part of a
 document lies (`document_parts`). Validation's decisions member calls it
 (`decisions_validate.check_points`, COR-058 point 7), and so do the
-numbering check (`decisions_check_diff`, COR-058 point 8) and friction, for
-an anchor on one point (COR-050 point 5). The conversion (COR-058 point 9)
-is to call it. No
-other module of the binary reads a record's points, and artefact discovery
-does not: a record is read here whether or not a place holds it.
+numbering check (`decisions_check_diff`, COR-058 point 8), friction, for
+an anchor on one point (COR-050 point 5), and the artefacts document, for
+such an anchor's span. The conversion (COR-058 point 9) is to call it. No
+other module of the binary reads a record's points itself. The reading lives
+here, not in artefact discovery: a record is read here whether or not a place
+holds it, and this module calls nothing of the friction engine.
 
 - `read_points` reads one record's text:
   - **the Decision's extent:** the section of the body's first `Decision`
@@ -43,8 +44,10 @@ does not: a record is read here whether or not a place holds it.
   retired id with its successors, a record whose points are a list, or
   nothing. `RecordPoints.standing` gives what a live point stands on as the
   friction checks and the debt listing compare it, one state with another
-  (`Standing`). `split_anchor` reads a record anchor's value as its record
-  and its point, `COR-058#4`.
+  (`Standing`). `RecordPoints.span` gives the lines of the record's file a
+  point's section spans, the section `Standing` compares, for the artefacts
+  document's part anchors (`friction_discovery`). `split_anchor` reads a
+  record anchor's value as its record and its point, `COR-058#4`.
 - `hold_stubs` holds each stub to its entry in `retired-points`, both ways
   (COR-058 point 6): a retired id with no stub, a stub whose id is not
   retired, and a stub whose sentence differs from the one its entry gives
@@ -58,8 +61,8 @@ An anchor may name one point, and what the point stands on is the
 anchors-and-friction record's (COR-050 points 2 and 5, as COR-058 point 10
 leaves it). Friction reads the point and what it stands on here and nowhere
 else (ADR-057 point 2): the change check and the whole-repository check, at
-each state they compare, and validation's friction member, at the working
-tree.
+each state they compare, validation's friction member, at the working tree,
+and the artefacts document, for a point anchor's span at the state it reads.
 """
 
 from __future__ import annotations
@@ -71,7 +74,15 @@ from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Any, cast
 
-from project_kit.document_parts import Body, Extent, Heading, Line, parse_front_matter
+from project_kit.document_parts import (
+    Body,
+    Extent,
+    Heading,
+    Line,
+    SectionSpan,
+    body_first_line,
+    parse_front_matter,
+)
 from project_kit.line_breaks import universal_newlines
 
 #: The front-matter field that lists a record's retired ids with their successors.
@@ -282,6 +293,9 @@ class RecordPoints:
       `retired_problems` names what of `retired-points` could not be read.
     - `list_points`: its points in list form, while it has no point heading
       or stub; once it has one, every numbered list in it is a list.
+    - `body_line`: the line of the record's file its body opens on
+      (`document_parts.body_first_line`), from which a point's lines are
+      counted (`span`).
     """
 
     body: Body
@@ -295,6 +309,7 @@ class RecordPoints:
     retired_problems: tuple[str, ...] = ()
     list_points: tuple[ListPoint, ...] = ()
     front_matter_problem: str | None = None
+    body_line: int = 1
 
     @property
     def in_list_form(self) -> bool:
@@ -358,6 +373,16 @@ class RecordPoints:
             for key, value in sorted(ground.fields.items())
         )
         return Standing(fields, section, "\n".join(shared))
+
+    def span(self, point: PointHeading) -> SectionSpan | None:
+        """The lines of the record's file that `point`'s section spans, counted from 1 with
+        its front matter, as an entry's span is (`document_parts.Body.span_of`).
+
+        Joined with a line break after each, they are exactly the section the friction
+        checks compare (`Standing.section`). What else a point stands on, its record's
+        fields and the parts every point shares, is not in them (COR-050 point 5).
+        """
+        return self.body.span_of(point.extent, self.body_line)
 
     def anchored(self, point_id: str) -> AnchoredPoint:
         """What an anchor on the point `point_id` finds in this record (COR-050 point 7).
@@ -426,6 +451,7 @@ def read_points(text: str) -> RecordPoints:
     written, body_text, problem = parse_front_matter(text)
     front_matter: Mapping[str, Any] = written if written is not None else {}
     body = Body.read(body_text)
+    body_line = body_first_line(text, body_text)
     retired, retired_problems = _retired(front_matter.get(RETIRED_POINTS_KEY))
     decision = _decision(body)
     if decision is None:
@@ -436,6 +462,7 @@ def read_points(text: str) -> RecordPoints:
             retired=retired,
             retired_problems=retired_problems,
             front_matter_problem=problem,
+            body_line=body_line,
         )
     inside = _headings_inside(body, decision)
     level = next((h.level for _index, h in inside if _point_id(h.title) is not None), None)
@@ -466,6 +493,7 @@ def read_points(text: str) -> RecordPoints:
         retired_problems=retired_problems,
         list_points=() if headed else _list_points(body, decision),
         front_matter_problem=problem,
+        body_line=body_line,
     )
 
 

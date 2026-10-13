@@ -9,11 +9,14 @@ each stub to its entry in `retired-points`.
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 from project_kit import record_points as rp
+from project_kit.document_parts import SectionSpan
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -434,6 +437,57 @@ def test_what_a_point_stands_on_holds_through_a_move_and_changes_with_its_ground
     ):
         assert rp.read_points(differs).standing("2") != standing
     assert standing.lines()[:3] == ["### 2. Second", "", "Two."]
+
+
+def test_the_home_calls_nothing_of_the_friction_engine() -> None:
+    """ADR-057 point 2: this home calls nothing of the friction engine, artefact discovery
+    included. So validation, the numbering check and the conversion read a record without
+    it, and discovery and the checks call this home from above."""
+    loaded = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys, project_kit.record_points; print('\\n'.join(sorted(sys.modules)))",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    assert "project_kit.record_points" in loaded
+    assert [m for m in loaded if m.startswith("project_kit.friction")] == []
+
+
+def test_a_point_s_span_is_the_lines_of_its_file_its_section_spans() -> None:
+    """`span` counts the file's lines from 1, its front matter included, as an entry's span
+    is. Its lines are exactly the section the checks compare, under a group heading too,
+    and a file written with `\\r\\n` has the same span."""
+    text = _record(
+        "The lead.\n\n### Group\n\nGroup text.\n\n#### 1. First\n\nOne.\n\n"
+        "#### 2. Second\n\nTwo,\nover two lines.\n\n\n### Lifecycle\n\nAfter.\n"
+    )
+    read = rp.read_points(text)
+    point = read.point("2")
+    assert point is not None
+    span = read.span(point)
+    assert span is not None
+    lines = text.split("\n")[span.first_line - 1 : span.last_line]
+    assert "\n".join(lines) + "\n" == "#### 2. Second\n\nTwo,\nover two lines.\n"
+    standing = read.standing("2")
+    assert standing is not None and "\n".join(lines) + "\n" == standing.section
+    crlf = rp.read_points_bytes(text.replace("\n", "\r\n").encode("utf-8"))
+    assert crlf is not None
+    crlf_point = crlf.point("2")
+    assert crlf_point is not None and crlf.span(crlf_point) == span
+    # Without its front matter, the same section opens as many lines earlier as the
+    # front matter and the blank line after it took.
+    no_front = rp.read_points(text.split("---\n\n", 1)[1])
+    no_front_point = no_front.point("2")
+    assert no_front_point is not None
+    shift = read.body_line - 1
+    assert no_front.body_line == 1
+    assert no_front.span(no_front_point) == SectionSpan(
+        span.first_line - shift, span.last_line - shift
+    )
 
 
 def test_what_an_anchor_on_a_point_finds_in_its_record() -> None:

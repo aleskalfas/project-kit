@@ -14,6 +14,6 @@ body: >
   successors, its points in list form and what each point stands on, and it
   holds each stub to its entry in `retired-points`. `pkit friction artefacts
   --json` gives each artefact a `part_anchors` list, added within version 1:
-  each anchor that names a part of a file, today an `artefact` anchor on a
-  collection entry such as a rule, with the file and the span that part
+  each anchor that names a part of a file, such as an `artefact` anchor on a
+  collection entry, a rule among them, with the file and the span that part
   resolves to.
