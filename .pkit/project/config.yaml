@@ -41,37 +41,41 @@ friction:
   # audience; a README an adopter reads to use an area, capability or adapter
   # is a page, a maintainer-facing sub-README is not. This explicit list is the
   # source of truth; each place's space is assigned in
-  # `.pkit/capabilities/living-docs/project/config.yaml`. Not places: CLAUDE.md
-  # and `.pkit/rules/{core,project}.md` (included into the harness file, so no
-  # front matter) and the maintainer sub-READMEs under templates and
-  # migrations. Decision records and rule sets are anchor targets, not pages.
+  # `.pkit/capabilities/living-docs/project/config.yaml`. Each place gives
+  # living-docs' page type (COR-056 point 2): the spaces' definitions, TECH and
+  # USER, select pages by that type, so an untyped place outside the roots
+  # would fall outside their scopes (living-docs DEC-001 point 1). Not places:
+  # CLAUDE.md and `.pkit/rules/{core,project}.md` (included into the harness
+  # file, so no front matter) and the maintainer sub-READMEs under templates
+  # and migrations. Decision records and rule sets are anchor targets, not
+  # pages.
   places:
     # technical space — its entry point until tech-docs/README.md exists
-    - CONTRIBUTING.md
+    - {path: CONTRIBUTING.md, type: living-docs:page}
     # technical space — project-kit's own release process: a maintainer guide,
     # which COR-049 counts as technical documentation
-    - .pkit/release/README.md
+    - {path: .pkit/release/README.md, type: living-docs:page}
     # user space
-    - README.md
-    - .pkit/README.md
-    - .pkit/adapters/README.md
-    - .pkit/adapters/claude-code/README.md
-    - .pkit/agents/README.md
-    - .pkit/capabilities/demo-recording/README.md
-    - .pkit/capabilities/evidence/README.md
-    - .pkit/capabilities/living-docs/README.md
-    - .pkit/capabilities/project-management/README.md
-    - .pkit/capabilities/software-analysis/README.md
-    - .pkit/capabilities/software-engineering/README.md
-    - .pkit/cli/README.md
-    - .pkit/decisions/README.md
-    - .pkit/lifecycle/README.md
-    - .pkit/permissions/README.md
-    - .pkit/process/README.md
-    - .pkit/rules/README.md
-    - .pkit/schemas/README.md
-    - .pkit/scratchpad/README.md
-    - .pkit/skills/README.md
+    - {path: README.md, type: living-docs:page}
+    - {path: .pkit/README.md, type: living-docs:page}
+    - {path: .pkit/adapters/README.md, type: living-docs:page}
+    - {path: .pkit/adapters/claude-code/README.md, type: living-docs:page}
+    - {path: .pkit/agents/README.md, type: living-docs:page}
+    - {path: .pkit/capabilities/demo-recording/README.md, type: living-docs:page}
+    - {path: .pkit/capabilities/evidence/README.md, type: living-docs:page}
+    - {path: .pkit/capabilities/living-docs/README.md, type: living-docs:page}
+    - {path: .pkit/capabilities/project-management/README.md, type: living-docs:page}
+    - {path: .pkit/capabilities/software-analysis/README.md, type: living-docs:page}
+    - {path: .pkit/capabilities/software-engineering/README.md, type: living-docs:page}
+    - {path: .pkit/cli/README.md, type: living-docs:page}
+    - {path: .pkit/decisions/README.md, type: living-docs:page}
+    - {path: .pkit/lifecycle/README.md, type: living-docs:page}
+    - {path: .pkit/permissions/README.md, type: living-docs:page}
+    - {path: .pkit/process/README.md, type: living-docs:page}
+    - {path: .pkit/rules/README.md, type: living-docs:page}
+    - {path: .pkit/schemas/README.md, type: living-docs:page}
+    - {path: .pkit/scratchpad/README.md, type: living-docs:page}
+    - {path: .pkit/skills/README.md, type: living-docs:page}
   # The declared surface (COR-050 point 8): the code project-kit says ought to
   # be described. It is the code the project-management code-to-doc mapping
   # obliged documentation for, kept when the mapping's rules became page
