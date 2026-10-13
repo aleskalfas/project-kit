@@ -1,0 +1,8 @@
+component: backbone
+kind: none
+body: >
+  The lifecycle and schemas READMEs are revalidated, unchanged, against
+  ADR-057's homes for where a part of a document lies and for a record's
+  points. The CLI reference defers ADR-058's new member order to #1419,
+  which reorders the members in the code. Only their friction front matter
+  changed. No command changed.
