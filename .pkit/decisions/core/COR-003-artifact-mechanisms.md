@@ -45,7 +45,7 @@ Some project-side paths host content **regenerated** at sync/install time from s
 
 ### Out of scope
 
-The core layer ships, syncs, and seeds the methodology surface only — decisions, hard rules, agents, workflow bundles, and the project-side config baselines those bundles plug into. The core layer does **not** touch:
+The core layer ships, syncs, and seeds the methodology surface only — decisions, hard rules, agents, workflow bundles, and the project-side config baselines those bundles plug into. The following lie outside that surface. The core layer writes them only through a writer a record names, as it writes any project-owned path (COR-001):
 
 - **Project content** — architecture docs, domain methodology, use-cases, project-specific scripts, project-specific tooling.
 - **Per-machine state files** — e.g., personal-overrides files, runtime worktree directories. The core layer may ensure these are listed in the project's `.gitignore`; nothing more.
