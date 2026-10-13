@@ -218,8 +218,8 @@ def test_headings_bold_labels_and_code_blocks_are_not_read() -> None:
 
 def test_markup_and_markdown_that_holds_no_prose_are_not_read() -> None:
     """A fence closes only on a bare fence at least as long, a list item may open one, a
-    setext heading's text is a heading, and an inline comment, an entity and a URL are
-    no prose."""
+    setext heading's text is a heading, an inline comment is not read, and no pattern
+    searches an entity or a URL."""
     text = (
         "````markdown\n```python\nx; y\n```\nstill code; here\n````\n\n"
         "- ```yaml\n  a: b; c\n  ```\n\n"
@@ -228,6 +228,35 @@ def test_markup_and_markdown_that_holds_no_prose_are_not_read() -> None:
     )
     assert found(text) == []
     assert counted("Text <!-- a b --> and&nbsp;more at https://example.org/a;b here.\n") == [5]
+
+
+def test_a_bare_url_ends_before_the_punctuation_after_it() -> None:
+    """The sentence's own full stop or semicolon after a URL is prose, a URL is a word for a
+    count, and an `&` that opens no entity is text."""
+    fourteen = " ".join(["word"] * 14)
+    assert counted(f"Read {fourteen} at https://example.org. {fourteen} here.\n") == [17, 15]
+    assert counted(f"{' '.join(['word'] * 25)} https://example.org/a;b\n") == [26]
+    assert found("See https://example.org; then go.\n\nWe fund R&D; it pays.\n") == [
+        '1 RS-WRITE-008: a semicolon: "See https://example.org; then go."',
+        '3 RS-WRITE-008: a semicolon: "We fund R&D; it pays."',
+    ]
+
+
+def test_a_block_quote_starts_a_block_and_its_fence_holds_code() -> None:
+    """A quoted line after a paragraph starts a block of its own, and a fence inside a
+    block quote holds code that is not read."""
+    assert found(f"Plain; one.\n> Quoted; two.\n\n> ```\n> {LONG}\n> ```\n") == [
+        '1 RS-WRITE-008: a semicolon: "Plain; one."'
+    ]
+
+
+def test_only_a_link_definition_is_read_as_one() -> None:
+    """A footnote, a label line with no quoted title and a list item are not definitions."""
+    links = pl.entry({"rule": "RS-USER-001", "type": "link-resolves"})
+    text = '[^1]: The note.\n\n[Optional]: the field is.\n\n- [x]: done\n\n[r]: gone.md "T"\n'
+    assert found(text, [links], path="a.md", exists=lambda _rel: False) == [
+        '7 RS-USER-001: the link target "gone.md" does not exist'
+    ]
 
 
 def test_a_block_quote_is_quoted() -> None:

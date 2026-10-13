@@ -26,8 +26,9 @@ How it reads text follows RS-WRITE-005's *How* (`tech-docs/rule-sets/writing.md`
   a space or a line end. Each block ends one too: a paragraph, a list item, a
   table cell and a front-matter value.
 - Headings, bold labels, code blocks and the quoted example of an item labelled
-  "Breaks the rule" are not read. Nor is markup: a link's target, a bare URL,
-  an HTML entity and an HTML comment.
+  "Breaks the rule" are not read, and nor is an HTML comment. A link's
+  target, a bare URL and an HTML entity count as words, and no pattern
+  searches them.
 
 `lint_text` reads a given text whole, as a test of stamped template text calls
 it. From the repository root:
@@ -195,8 +196,8 @@ class Block:
     its backticks and its HTML comments are removed. Each of its characters
     carries its offset in the source, and whether it lies in a code span, in
     quotation marks or in markup: a link's target, a bare URL or an HTML
-    entity. A link definition is a block of markup alone, which only a link's
-    check reads.
+    entity. A link definition is a block of its own, which only a link's check
+    reads.
     """
 
     text: str
@@ -205,16 +206,19 @@ class Block:
     quoted: tuple[bool, ...]
     markup: tuple[bool, ...]
     cell: bool = False
+    definition: bool = False
 
-    def view(self, exceptions: frozenset[str], *, markup: bool = False) -> str:
-        """The text with markup, and the parts an entry does not read, blanked out.
+    def view(self, exceptions: frozenset[str], *, hide_markup: bool = False) -> str:
+        """The text with the parts an entry does not read blanked out, and with
+        `hide_markup` the markup too.
 
-        With `markup`, the markup is kept, for a link's check to read.
+        A count reads markup as the How reads any token. A pattern does not, so a
+        URL or an entity holds no semicolon.
         """
         hide_code, hide_quotes = "code" in exceptions, "quotes" in exceptions
         return "".join(
             " "
-            if (not markup and self.markup[i])
+            if (hide_markup and self.markup[i])
             or (hide_code and self.code[i])
             or (hide_quotes and self.quoted[i])
             else char
@@ -240,7 +244,10 @@ _ITEM = re.compile(rf"^(\s*){_LIST_MARKER}(\s+|$)")
 _THEMATIC_BREAK = re.compile(r"^\s{0,3}([-*_])(\s*\1){2,}\s*$")
 _QUOTE_PREFIX = re.compile(r"^\s{0,3}(>\s?)+")
 _TABLE_ROW = re.compile(r"^\s*\|")
-_LINK_DEFINITION = re.compile(r"^\s{0,3}\[[^\]]+\]:\s*(\S+)")
+# A link definition: a label that is no footnote's, its target, and an optional quoted title.
+_LINK_DEFINITION = re.compile(
+    r"^\s{0,3}\[(?!\^)[^\]]+\]:\s*(\S+)(?:\s+(?:\"[^\"]*\"|'[^']*'|\([^)]*\)))?\s*$"
+)
 _HTML_LINE = re.compile(r"^\s*<[^>]*>\s*$")
 _DELIMITER_CELL = re.compile(r"^\s*:?-+:?\s*$")
 _NO_PROSE = (_HEADING, _THEMATIC_BREAK, _HTML_LINE)
@@ -253,10 +260,12 @@ def markdown_blocks(text: str) -> list[Block]:
     - **No prose:** fenced code, headings (a setext heading's text included),
       thematic breaks, HTML comments and lines that are one HTML tag. A fence
       closes on a bare fence of its own character, at least as long as it.
-    - **Blocks:** a blank line ends a block, and a list marker starts one. Each
-      table cell is a block of its own, and so is each link definition.
+    - **Blocks:** a blank line ends a block, and so does the start of a block
+      quote. A list marker starts one. Each table cell is a block of its own,
+      and so is each link definition.
     - **Block quotes:** a line is read without its `>` marks, and the text of a
-      block quote is quoted.
+      block quote is quoted. An unquoted line that goes on from a quoted one
+      stays in its block.
     """
     blocks: list[Block] = []
     current: list[tuple[int, int]] = []
@@ -277,26 +286,29 @@ def markdown_blocks(text: str) -> list[Block]:
         if in_comment:
             in_comment = "-->" not in line
             continue
+        quote = _QUOTE_PREFIX.match(line)
+        column = quote.end() if quote is not None else 0
+        rest = line[column:]
         if fence is not None:
-            close = _FENCE_CLOSE.match(line)
+            close = _FENCE_CLOSE.match(rest)
             if close is not None and close.group(1).startswith(fence):
                 fence = None
             continue
-        opened = _FENCE_OPEN.match(line)
+        opened = _FENCE_OPEN.match(rest)
         if opened is not None:
             flush()
             fence = opened.group(1)
             continue
-        if line.lstrip().startswith("<!--"):
+        if rest.lstrip().startswith("<!--"):
             flush()
             in_comment = "-->" not in line
             continue
-        quote = _QUOTE_PREFIX.match(line)
-        column = quote.end() if quote is not None else 0
-        rest = line[column:]
-        if current and paragraph and _SETEXT_UNDERLINE.match(rest):
-            current.clear()  # the paragraph was a setext heading's text
-            continue
+        if current and quote is not None and not quoted:
+            flush()  # a block quote interrupts a paragraph or a list item
+        if current and paragraph and quoted == (quote is not None):
+            if _SETEXT_UNDERLINE.match(rest):
+                current.clear()  # the paragraph was a setext heading's text
+                continue
         if not rest.strip() or any(p.match(rest) for p in _NO_PROSE):
             flush()
         elif _TABLE_ROW.match(rest):
@@ -349,8 +361,15 @@ def _table_cells(text: str, start: int, end: int) -> list[tuple[int, int]]:
 
 # A link's target with its optional title, from the `(` after the text to the `)`.
 _LINK_TARGET = re.compile(r"\]\([^)\s]+(?:\s+\"[^\"]*\")?\)")
-_BARE_URL = re.compile(r"<?[A-Za-z][A-Za-z0-9+.-]*://[^\s)>\]]+>?")
-_ENTITY = re.compile(r"&(?:#[0-9]+|#[xX][0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);")
+# A bare URL, ending before trailing punctuation as an autolink does, so a sentence's own
+# full stop or semicolon after it is prose.
+_BARE_URL = re.compile(r"<?[A-Za-z][A-Za-z0-9+.-]*://[^\s<>)\]]*[^\s<>)\].,;:!?'\"*_~]>?")
+# An HTML entity: a number, or a name of the few that prose writes.
+_ENTITY = re.compile(
+    r"&(?:#[0-9]+|#[xX][0-9a-fA-F]+"
+    r"|nbsp|amp|lt|gt|quot|apos|mdash|ndash|hellip|lsquo|rsquo|ldquo|rdquo|laquo|raquo"
+    r"|copy|reg|trade|times|minus|rarr|larr|middot|shy|zwj|zwnj);"
+)
 _HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 
 
@@ -405,6 +424,7 @@ def block_of(
         quoted=tuple(marks[i] for i in kept),
         markup=tuple(markup[i] for i in kept),
         cell=cell,
+        definition=definition,
     )
 
 
@@ -776,8 +796,16 @@ def check_source(
 
 
 def _breaks(item: Entry, block: Block, path: str, exists: Exists) -> Iterable[tuple[int, int, str]]:
-    """Each break of one entry in one block: `(start, end, message)`, indexing the block."""
-    view = block.view(item.exceptions)
+    """Each break of one entry in one block: `(start, end, message)`, indexing the block.
+
+    A link definition is read by a link's check alone.
+    """
+    if item.type == "link-resolves":
+        yield from _links(item, block, path, exists)
+        return
+    if block.definition:
+        return
+    view = block.view(item.exceptions, hide_markup=item.type != "count")
     if item.type == "count":
         yield from _count(item, block, view)
     elif item.type == "forbid":
@@ -787,18 +815,20 @@ def _breaks(item: Entry, block: Block, path: str, exists: Exists) -> Iterable[tu
                 what = name or f'"{match.group()}"'
                 context = _context(block.text, match.start(), match.end())
                 yield match.start(), match.end(), f"{what}: {context}"
-    elif item.type == "substitute":
+    else:
         for word, replacement in item.fields["replace"].items():
             pattern = r"(?<![\w-])" + r"\s+".join(map(re.escape, word.split())) + r"(?![\w-])"
             for match in re.finditer(pattern, view, re.IGNORECASE):
                 yield match.start(), match.end(), f'"{match.group()}": write "{replacement}"'
-    else:
-        linkable = block.view(item.exceptions | {"code"}, markup=True)
-        for pattern in (_LINK, _LINK_DEFINITION):
-            for match in pattern.finditer(linkable):
-                target = match.group(1)
-                if not _resolves(target, path, exists):
-                    yield match.start(), match.end(), f'the link target "{target}" does not exist'
+
+
+def _links(item: Entry, block: Block, path: str, exists: Exists) -> Iterable[tuple[int, int, str]]:
+    """Each link of a block whose target does not resolve; a link in code is none."""
+    linkable = block.view(item.exceptions | {"code"})
+    for match in (_LINK_DEFINITION if block.definition else _LINK).finditer(linkable):
+        target = match.group(1)
+        if not _resolves(target, path, exists):
+            yield match.start(), match.end(), f'the link target "{target}" does not exist'
 
 
 def _count(item: Entry, block: Block, view: str) -> Iterable[tuple[int, int, str]]:
@@ -1015,6 +1045,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         lint = lint_change(ROOT, args.base)
+        report = render(lint)
     except (LintError, click.ClickException) as exc:
         message = exc.format_message() if isinstance(exc, click.ClickException) else str(exc)
         print(f"prose lint: {message}", file=sys.stderr)
@@ -1023,7 +1054,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         traceback.print_exc()
         print("prose lint: failed with the error above", file=sys.stderr)
         return 2
-    print(render(lint), end="")
+    print(report, end="")
     return 1 if lint.findings else 0
 
 
