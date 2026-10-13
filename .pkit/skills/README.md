@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-10-13T06:30:56Z
+      at: 2026-10-13T07:06:18Z
       outcome: unchanged
-      unchanged-because: "COR-003's change rewrites its seed and merge sentences: seeding writes at first install, and in a transition of the backbone where the file is missing, it never revisits a seed that exists, and merge creating its own missing target is merge. Its out-of-scope list says only that those paths lie outside the methodology surface. The page cites COR-003 only for the core/ and project/ split, which the change leaves as it was, and it names no seed, merge target or out-of-scope path, so it holds."
+      unchanged-because: The change rewrites the migration-author skill's steps on the target version, the --version default and the commit, and drops a project record from its reads. The page names that skill only as walking tier, scope, version and slug selection, scaffold, body drafting, self-checks and commit. All of that still holds, and the page names no target version, bump policy or record the skill reads.
 ---
 
 # Skills

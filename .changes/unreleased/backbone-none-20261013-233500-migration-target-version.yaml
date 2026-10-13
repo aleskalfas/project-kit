@@ -1,0 +1,10 @@
+component: backbone
+kind: none
+body: >
+  The migration-author skill names a migration's target version as the
+  version its backbone or component takes in the release that ships the
+  change. That is the bumped version where the change's branch bumps it, and
+  the predicted next release where a release step does. The skill points to
+  the project's own version-bump policy and no longer cites a project record.
+  The skills README is revalidated, unchanged. It is skill text only, and no
+  command changes.
