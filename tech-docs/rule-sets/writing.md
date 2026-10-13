@@ -47,10 +47,10 @@ rules:
 checks:
   RS-WRITE-005:
     - check: prose-lint
-      part: A sentence a change adds or moves holds at most 25 words, its words and sentences read as the How says.
+      part: A sentence that holds text a change adds or moves has at most 25 words, counted as the How counts them, outside the `pkit` container.
   RS-WRITE-008:
     - check: prose-lint
-      part: Text a change adds or moves holds no semicolon outside code and quotation marks.
+      part: Text a change adds or moves holds no semicolon outside code, quotation marks and the `pkit` container.
 ---
 
 # WRITE — project-kit's general writing rules
@@ -69,7 +69,7 @@ These are project-kit's general writing rules. `ANA`, the analysis's own set, in
   - *Breaks the rule on a page* and *Keeps the rule on a page* quote a reference page before and after its try-out on `docs/1348-write-tryout`.
   - An example that quotes anything else says so.
 - **What binds:** a rule's statement and its *How*. Both are the rule's content in the sense of COR-051 point 2, and the examples only illustrate them. Inside a *How*, a "such as" phrase and a sentence that starts "An example is" only illustrate too. The rest of the *How* binds.
-- **What a tool checks:** project-kit's prose lint (`scripts/prose_lint.py`) checks RS-WRITE-005's word count and RS-WRITE-008's semicolons in the text a change adds or moves. The `checks` in the front matter declare those parts, so a reviewer leaves them to the lint (COR-051 point 2).
+- **What a tool checks:** the `checks` in the front matter name the parts of rules that project-kit's prose lint (`scripts/prose_lint.py`) checks. It checks them in the text a change adds or moves, on the artefacts where these rules bind. A reviewer leaves those parts to the lint there, and judges them on templates and structures (COR-051 point 2).
 - **Held back:** RS-WRITE-002, on labels, and RS-WRITE-006, on one idea per sentence, stay proposed. The maintainer held both back on 5 October. RS-WRITE-006's `why` says what the trial could not show, and what splitting put at risk.
 - **Proposed:** RS-WRITE-014, on citing by permanent id, waits for the maintainer's acceptance.
 - **A number not reused:** RS-WRITE-012 was the rule on needs and goals. It left this set, since needs and goals are the analysis's own, and its number stays unused here.
