@@ -348,13 +348,31 @@ PR** a human merges — it is *not* auto-run on every merge.
 | `pkit release check-shareable <component>` | no | Pre-sharing lint: is a capability ready to be consumed externally-sourced (COR-041)? (below). |
 
 `apply` in order: writes each tier's version (`.pkit/VERSION` for the backbone,
-and with it the self-host `.pkit/manifest.yaml`'s `backbone_version:` line,
+and with it the self-host `.pkit/manifest.yaml`'s `backbone_version:` and
+`completed_version:` lines, the second added beside the first where the
+manifest has none,
 [PRJ-007](../decisions/project/PRJ-007-release-maintains-self-host-manifest.md);
 the `version:` line in a component's `package.yaml`); **broadens**
 `requires_backbone` (see below); **raises the declared floors** (below);
 prepends a `CHANGELOG.md` entry from the notes, stating each raised floor; and
 deletes the consumed changesets. `plan` shows each floor it will raise under
 the component's bump.
+
+### A replay may restore a removed default
+
+A version transition may run every backbone migration again, over a project
+whose migration history is unknown (COR-010; the lifecycle README, "The
+replay"). A backbone migration that adds a missing default then restores one
+the project removed after the migration first ran. COR-010 has the release's
+notes say so. Before `apply`, the release step checks that a pending changeset
+says it, naming the default, in each of two cases:
+
+- the release ships a backbone migration that adds a missing default
+- the release ships a change that replays the backbone migrations, as the
+  release that first records `completed_version` does
+
+Where none says it, add the sentence to the changeset that ships the change,
+so the changelog `apply` writes carries it.
 
 ### The requires_backbone broaden — two shapes (PRJ-002 D4 + #494)
 

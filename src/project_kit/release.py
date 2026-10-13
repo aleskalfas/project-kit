@@ -47,6 +47,7 @@ from project_kit.changesets import (
     segment_rank,
     unreleased_dir,
 )
+from project_kit.manifest import BACKBONE_VERSION_KEY, COMPLETED_VERSION_KEY, set_state_line
 from project_kit.migrations import _VERSION_DIR_RE, parse_version_tuple
 
 # Repo-root-relative path prefixes whose changes count as touching the
@@ -131,9 +132,12 @@ _LIST_ITEM_RE = re.compile(r"^[ \t]*(?:[-*+]|\d+[.)])[ \t]+\S")
 # regex (not a YAML round-trip) to preserve quoting, key order, and trailing
 # comments — same discipline as versioning.py's requires_backbone rewrite.
 _PACKAGE_VERSION_LINE_RE = re.compile(r"(?m)^(\s+version:\s*)(\d+\.\d+\.\d+)")
-# The self-host manifest's `backbone_version:` line, which a backbone release
-# rewrites (PRJ-007), under the source kit.
+# The self-host manifest's `backbone_version:` and `completed_version:` lines,
+# which a backbone release rewrites in place (PRJ-007; ADR-065 point 3), under
+# the source kit. The completion's line is added beside the backbone's where the
+# manifest has none.
 _MANIFEST_BACKBONE_LINE_RE = re.compile(r"(?m)^(backbone_version:[ \t]*)(\S+)")
+_MANIFEST_COMPLETED_LINE_RE = re.compile(r"(?m)^(completed_version:[ \t]*)(\S*)")
 SELF_HOST_MANIFEST_NAME = "manifest.yaml"
 
 
@@ -163,8 +167,8 @@ def release_writes(source_kit: Path) -> tuple[ReleaseWrite, ...]:
     - each component's version file — the backbone's `VERSION` whole, a
       `package.yaml` only in its `version:` line and a `requires_backbone:` line
       of the shapes the broaden and a declared floor rewrite;
-    - the self-host manifest's `backbone_version:` line, on a backbone release
-      (`_sync_self_host_manifest_backbone`, PRJ-007);
+    - the self-host manifest's `backbone_version:` and `completed_version:`
+      lines, on a backbone release (`_sync_self_host_manifest_backbone`, PRJ-007);
     - `CHANGELOG.md`, created or prepended;
     - the consumed changesets, deleted — in every release, but a diff deleting
       only changesets is none.
@@ -184,7 +188,7 @@ def release_writes(source_kit: Path) -> tuple[ReleaseWrite, ...]:
         ReleaseWrite(
             _repo_rel(repo_root, source_kit / SELF_HOST_MANIFEST_NAME),
             "M",
-            (_MANIFEST_BACKBONE_LINE_RE,),
+            (_MANIFEST_BACKBONE_LINE_RE, _MANIFEST_COMPLETED_LINE_RE),
         ),
         ReleaseWrite(CHANGELOG_NAME, "AM"),
         ReleaseWrite(
@@ -824,23 +828,26 @@ def _write_component_version(rel: ComponentRelease) -> None:
 
 
 def _sync_self_host_manifest_backbone(source_kit: Path, new_version: str) -> None:
-    """Keep the source repo's own `.pkit/manifest.yaml` backbone_version current.
+    """Keep the source repo's own `.pkit/manifest.yaml` recorded states current.
 
     project-kit self-hosts: its `.pkit/` is both the methodology *source* and a
     notional *install*, but the source repo never runs install/sync/upgrade on
     itself — so its manifest's `backbone_version` froze at genesis while
     `.pkit/VERSION` advanced, leaving `pkit status` permanently misreporting the
     self-host backbone. On a backbone bump the release is the exact moment the
-    source repo's backbone moves, so it records the new value here too (PRJ-007).
+    source repo's backbone moves, so it records the new value here too, as both
+    `backbone_version` and `completed_version` (PRJ-007; ADR-065 point 3).
 
     Keyed to the backbone-bump branch: a capability-only release never reaches
-    this, so `backbone_version` is untouched when the backbone did not move. Only
-    the `backbone_version:` line is rewritten, in place, through the pattern the
-    changeset guard admits it by (`release_writes`): the components registry,
-    schema version, and comments keep every byte, so the release's manifest diff
-    is that one line. A no-op when no manifest exists (an adopter repo running
-    `apply` has no self-host manifest to maintain — this is source-repo-only
-    mechanics).
+    this, so neither key moves when the backbone did not. Each key's own line is
+    rewritten in place, through the pattern the changeset guard admits it by
+    (`release_writes`), and the completion's line is added right after the
+    backbone's where the manifest has none: the components registry, schema
+    version, and comments keep every byte, so the release's manifest diff is
+    those lines. Each line is checked on its own, so a run that finds the
+    backbone already at the new version still writes a completion left behind.
+    A no-op when no manifest exists (an adopter repo running `apply` has no
+    self-host manifest to maintain — this is source-repo-only mechanics).
     """
     path = source_kit / SELF_HOST_MANIFEST_NAME
     if not path.is_file():
@@ -851,11 +858,16 @@ def _sync_self_host_manifest_backbone(source_kit: Path, new_version: str) -> Non
         raise click.ClickException(
             f"could not find a `backbone_version:` line to rewrite in {path}"
         )
-    if match.group(2) == new_version:
+    updated = text
+    if match.group(2) != new_version:
+        updated = f"{updated[: match.start(2)]}{new_version}{updated[match.end(2) :]}"
+    updated = set_state_line(
+        updated, COMPLETED_VERSION_KEY, new_version, after=BACKBONE_VERSION_KEY
+    )
+    if updated == text:
         return
-    updated = f"{text[: match.start(2)]}{new_version}{text[match.end(2) :]}"
     path.write_text(updated, encoding="utf-8")
-    click.echo(f"Self-host manifest backbone_version -> {new_version}")
+    click.echo(f"Self-host manifest backbone_version and completed_version -> {new_version}")
 
 
 def render_changelog_entry(

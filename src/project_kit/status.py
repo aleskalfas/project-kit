@@ -25,11 +25,12 @@ import click
 
 from project_kit import cli_render, workspace
 from project_kit.install import find_source_kit, find_target_root
-from project_kit.manifest import read_backbone_manifest, read_kit_version
+from project_kit.manifest import BackboneManifest, read_backbone_manifest, read_kit_version
 
 if TYPE_CHECKING:
     from project_kit.connections import Binding, PointBinding, RoleBinding, Wiring
     from project_kit.data_points import ResolvedPoint
+    from project_kit.upgrade import ComponentMove
 
 # The indent of an entry listed under a status line's label.
 _LIST_INDENT = " " * 25
@@ -103,13 +104,65 @@ def _report_backbone_version(target_root: Path, source_kit: Path) -> None:
         source_version = ""
 
     if not installed:
-        click.echo(f"  {'Backbone version:':<22} unknown (no manifest)")
+        click.echo(
+            f"  {'Backbone version:':<22} unknown (no manifest — `pkit upgrade` writes it "
+            "at its version)"
+        )
         return
     if source_version and installed != source_version:
         gloss = f"source {source_version} — run `pkit upgrade --dry-run` to preview"
     else:
         gloss = "up to date"
     click.echo(f"  {'Backbone version:':<22} {installed}   ({gloss})")
+    if manifest is not None and source_version:
+        _report_transition_state(target_root, source_kit, manifest, source_version)
+
+
+def _report_transition_state(
+    target_root: Path, source_kit: Path, manifest: BackboneManifest, source_version: str
+) -> None:
+    """Beside the backbone line: an incomplete transition, and each component a
+    transition to the running pkit's release would move (ADR-065 point 8).
+
+    Neither applies in the methodology's source repository, where no transition
+    ever runs (ADR-065 point 3). Each line names `pkit upgrade`, which finishes
+    an incomplete transition and moves every component listed.
+    """
+    from project_kit.install import is_self_host
+    from project_kit.upgrade import component_moves
+
+    if is_self_host(target_root, source_kit):
+        return
+    if manifest.transition_incomplete:
+        if manifest.completed_version is None:
+            state = (
+                "incomplete — no completion is recorded, so `pkit upgrade` runs every "
+                "backbone migration once"
+            )
+        else:
+            state = (
+                f"incomplete — completed_version is {manifest.completed_version}; "
+                "`pkit upgrade` finishes it"
+            )
+        click.echo(f"  {'Transition:':<22} {state}")
+    try:
+        moves = component_moves(target_root, source_kit, manifest)
+    except Exception:
+        # Defensive, as the capabilities section is: a malformed record never crashes status.
+        moves = []
+    if not moves:
+        return
+    first, *rest = moves
+    click.echo(f"  {'A transition moves:':<22} {_move_line(first)}")
+    for move in rest:
+        click.echo(f"{_LIST_INDENT}{_move_line(move)}")
+    click.echo(f"{_LIST_INDENT}(to {source_version}; `pkit upgrade` moves them)")
+
+
+def _move_line(move: ComponentMove) -> str:
+    """One component a transition would move: kind, name, recorded and bundled version."""
+    recorded = move.recorded if move.recorded is not None else "no record"
+    return f"{move.kind} {move.name}: {recorded} -> {move.bundled}"
 
 
 def _report_workspace(target_root: Path) -> None:

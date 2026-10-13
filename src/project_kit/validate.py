@@ -97,7 +97,10 @@ def _validate_backbone_manifest(
         return [
             Issue(
                 location=".pkit/manifest.yaml",
-                diagnosis="missing — run 'pkit init' or 'pkit sync' to seed the backbone manifest.",
+                diagnosis=(
+                    "missing — run 'pkit upgrade', which writes it at its version and runs "
+                    "every backbone migration once."
+                ),
             )
         ]
 

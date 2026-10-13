@@ -659,18 +659,29 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
     click.echo()
 
     _mkdir(target_root / ".pkit", ctx)
+    # First install records the backbone's two states in a transition's order
+    # (ADR-065 point 4): the target before anything is copied, the completion
+    # last. An interrupted install then reads as incomplete, and the next
+    # `pkit upgrade` finishes it.
+    _record_install_target(ctx)
     for area in PROPAGATED_AREAS:
         src = source_kit / area
         if src.is_dir():
             _install_area(src, target_root / ".pkit" / area, ctx)
 
+    # Every adapter the copy placed is registered, and recorded at the version
+    # it ships, before deploy, the render and provisioning read the registry.
+    if ctx.dry_run:
+        click.echo("  would register each adapter at the version it ships (.pkit/manifest.yaml)")
+    else:
+        register_adapters(target_root)
     _backup_existing_claude_settings(ctx)
     run_installed_adapter_primitives(ctx)
 
-    _stamp_backbone_manifest(ctx)
     _render_runtime_ignore(ctx)
     ensure_agent_workspace(ctx)
     provision_query_commands(ctx)
+    _record_install_completion(ctx)
     _print_next_steps()
 
 
@@ -722,50 +733,86 @@ def _render_runtime_ignore(ctx: InstallContext) -> None:
     click.echo(visibility.render_runtime_ignore(ctx.target_root, dry_run=ctx.dry_run))
 
 
-def _stamp_backbone_manifest(ctx: InstallContext) -> None:
-    """Write the initial `.pkit/manifest.yaml` with the source kit's backbone version.
+def _record_install_target(ctx: InstallContext) -> None:
+    """Write `.pkit/manifest.yaml` at the source kit's backbone version, its target,
+    before anything is copied (ADR-065 point 4). No component is registered yet,
+    and no completion is recorded until the install's last step.
 
-    Auto-registers every installed adapter (adapters ship with the kit
-    and get installed during init, so each lands in the components
-    registry from the start — per COR-010's principle that install adds
-    a registry entry).
-
-    Local import to avoid an import-time cycle: `project_kit.sync`
-    imports `project_kit.install`, and `project_kit.manifest` is
-    intentionally lighter than both — it's fine to import here at call
-    time.
+    Local import to avoid an import-time cycle: `project_kit.sync` imports
+    `project_kit.install`, and `project_kit.manifest` is intentionally lighter
+    than both — it's fine to import here at call time.
     """
-    if ctx.dry_run:
-        click.echo("  would stamp  .pkit/manifest.yaml (backbone manifest + adapter registry)")
-        return
+    from project_kit.manifest import read_kit_version, record_backbone_target
 
+    backbone_version = read_kit_version(ctx.source_kit)
+    if ctx.dry_run:
+        click.echo(
+            f"  {'would record':<12} .pkit/manifest.yaml backbone_version {backbone_version} "
+            "(the target, before anything is copied)"
+        )
+        return
+    record_backbone_target(ctx.target_root, backbone_version)
+    click.echo(
+        f"  {'recorded':<12} .pkit/manifest.yaml backbone_version {backbone_version} (the target)"
+    )
+
+
+def _record_install_completion(ctx: InstallContext) -> None:
+    """Record `completed_version` equal to `backbone_version`, the install's last
+    write (ADR-065 point 4): from here the project reads as complete."""
+    from project_kit.manifest import read_kit_version, record_completed_version
+
+    backbone_version = read_kit_version(ctx.source_kit)
+    if ctx.dry_run:
+        click.echo(
+            f"  {'would record':<12} .pkit/manifest.yaml completed_version {backbone_version} "
+            "(the completion, last)"
+        )
+        return
+    record_completed_version(ctx.target_root, backbone_version)
+    click.echo(
+        f"  {'recorded':<12} .pkit/manifest.yaml completed_version {backbone_version} "
+        "(the install is complete)"
+    )
+
+
+def register_adapters(target_root: Path) -> list[str]:
+    """Register each adapter under `.pkit/adapters/` that the backbone manifest does
+    not register, and record it at the version its copy ships (ADR-065 point 2).
+
+    First install registers every adapter it copies this way (COR-010: install
+    adds a registry entry), and a version transition registers an adapter its
+    target adds, after propagation. An adapter already registered is left to the
+    transition, which records one with no manifest at its bundled version. Returns
+    the names registered, in name order. Writes nothing when no manifest exists.
+    """
     from project_kit.manifest import (
-        BackboneManifest,
         ComponentRegistryEntry,
-        read_kit_version,
+        adapter_manifest_rel,
+        read_backbone_manifest,
+        record_adapter_version,
         write_backbone_manifest,
     )
 
-    backbone_version = read_kit_version(ctx.source_kit)
-    components: list[ComponentRegistryEntry] = []
-
-    adapters_dir = ctx.target_root / ".pkit" / "adapters"
-    if adapters_dir.is_dir():
-        for adapter_dir in sorted(p for p in adapters_dir.iterdir() if p.is_dir()):
-            components.append(
-                ComponentRegistryEntry(
-                    kind="adapter",
-                    name=adapter_dir.name,
-                    manifest=f".pkit/adapters/{adapter_dir.name}/project/manifest.yaml",
-                )
-            )
-
-    write_backbone_manifest(
-        ctx.target_root,
-        BackboneManifest(backbone_version=backbone_version, components=components),
+    backbone = read_backbone_manifest(target_root)
+    if backbone is None:
+        return []
+    registered = {c.name for c in backbone.components if c.kind == "adapter"}
+    added = [d.name for d in _installed_adapter_dirs(target_root) if d.name not in registered]
+    if not added:
+        return []
+    backbone.components.extend(
+        ComponentRegistryEntry(kind="adapter", name=name, manifest=adapter_manifest_rel(name))
+        for name in added
     )
-    suffix = f"; {len(components)} adapter(s) registered" if components else ""
-    click.echo(f"  {'stamped':<12} .pkit/manifest.yaml (backbone v{backbone_version}{suffix})")
+    write_backbone_manifest(target_root, backbone)
+    for name in added:
+        version = record_adapter_version(
+            target_root, name, target_root / ".pkit" / "adapters" / name / "package.yaml"
+        )
+        at = f" at {version}" if version is not None else " (its package names no version)"
+        click.echo(f"  {'registered':<12} adapter {name!r}{at}")
+    return added
 
 
 def sync_remedy(project_root: Path, cwd: Path | None = None) -> str:
@@ -864,7 +911,7 @@ def _refuse_if_target_is_source(ctx: InstallContext) -> None:
 def _refuse_reserved_adapter_names(ctx: InstallContext) -> None:
     """Refuse a source that ships an adapter under a reserved name, before anything
     is written: init installs every adapter the source ships and registers it
-    under its directory's name (`_stamp_backbone_manifest`), so it would register
+    under its directory's name (`register_adapters`), so it would register
     that one too. The reasons are `pkit new adapter`'s (`scaffolds.RESERVED_ADAPTER_NAMES`);
     the rename is the source's. Local import: the scaffolds import the dispatcher,
     which imports this module."""

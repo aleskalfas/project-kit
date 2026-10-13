@@ -4,17 +4,25 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from project_kit.manifest import (
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
     BackboneManifest,
     ComponentRegistryEntry,
+    adapter_manifest_rel,
     capability_manifest_rel,
     read_backbone_manifest,
     read_capability_origin,
+    read_component_manifest,
+    record_adapter_version,
+    record_backbone_target,
+    record_completed_version,
     recorded_capability_manifest,
     set_capability_origin,
     set_component_manifest_path,
+    set_state_line,
     write_backbone_manifest,
 )
 
@@ -319,3 +327,134 @@ def test_the_root_manifest_is_read_first_then_the_one_under_project(tmp_path: Pa
 
     (cap / "manifest.yaml").write_text("schema_version: 1\n", encoding="utf-8")
     assert recorded_capability_manifest(tmp_path, "evidence") == cap / "manifest.yaml"
+
+
+# --- The backbone's two recorded states (ADR-065 point 3) --------------------------
+
+
+_STATES = """\
+schema_version: 1
+# The install record.
+backbone_version: 1.149.0
+completed_version: 1.148.0
+future_key: kept as written
+components:
+  - kind: adapter
+    name: claude-code
+    manifest: .pkit/adapters/claude-code/project/manifest.yaml
+"""
+
+
+def _write_raw(root: Path, text: str) -> Path:
+    path = root / ".pkit" / "manifest.yaml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def test_the_writer_keeps_a_key_it_does_not_know(tmp_path: Path) -> None:
+    """A registry write keeps every key it does not set: the completion, and a key
+    a later release may add. So an older pkit's writer leaves both in place, and
+    the completion needs no schema bump (ADR-065 point 3)."""
+    _write_raw(tmp_path, _STATES)
+    loaded = read_backbone_manifest(tmp_path)
+    assert loaded is not None
+    loaded.components = []
+    loaded.completed_version = "9.9.9"  # never written by the registry writer
+
+    write_backbone_manifest(tmp_path, loaded)
+
+    text = (tmp_path / ".pkit" / "manifest.yaml").read_text(encoding="utf-8")
+    assert "future_key: kept as written" in text
+    assert "completed_version: 1.148.0" in text
+    reread = read_backbone_manifest(tmp_path)
+    assert reread is not None
+    assert reread.completed_version == "1.148.0"
+    assert reread.components == []
+
+
+def test_a_missing_or_empty_completion_reads_as_none(tmp_path: Path) -> None:
+    _write_raw(tmp_path, "schema_version: 1\nbackbone_version: 1.0.0\ncomponents: []\n")
+    loaded = read_backbone_manifest(tmp_path)
+    assert loaded is not None and loaded.completed_version is None
+    _write_raw(tmp_path, "schema_version: 1\nbackbone_version: 1.0.0\ncompleted_version:\n")
+    loaded = read_backbone_manifest(tmp_path)
+    assert loaded is not None and loaded.completed_version is None
+
+
+@pytest.mark.parametrize(
+    ("completed", "incomplete"),
+    [
+        (None, True),  # no completion: the history is unknown
+        ("1.148.0", True),  # behind its target: an interrupted transition
+        ("1.150.0", True),  # ahead: an older pkit synced over a finished transition
+        ("1.149.0", False),
+    ],
+)
+def test_a_transition_is_complete_only_when_both_states_are_equal(
+    completed: str | None, incomplete: bool
+) -> None:
+    state = BackboneManifest(backbone_version="1.149.0", completed_version=completed)
+    assert state.transition_incomplete is incomplete
+
+
+def test_the_target_is_written_by_an_in_place_edit_of_its_own_line(tmp_path: Path) -> None:
+    """Every other byte stays: the comment, the completion, an unknown key."""
+    path = _write_raw(tmp_path, _STATES)
+
+    record_backbone_target(tmp_path, "1.150.0")
+
+    assert path.read_text(encoding="utf-8") == _STATES.replace(
+        "backbone_version: 1.149.0", "backbone_version: 1.150.0"
+    )
+
+
+def test_the_target_seeds_a_missing_manifest_with_no_completion(tmp_path: Path) -> None:
+    (tmp_path / ".pkit").mkdir()
+
+    record_backbone_target(tmp_path, "1.150.0")
+
+    loaded = read_backbone_manifest(tmp_path)
+    assert loaded is not None
+    assert loaded.backbone_version == "1.150.0"
+    assert loaded.completed_version is None
+    assert loaded.components == []
+
+
+def test_the_completion_rewrites_its_line_or_adds_it_after_the_target(tmp_path: Path) -> None:
+    path = _write_raw(tmp_path, _STATES)
+    record_completed_version(tmp_path, "1.149.0")
+    assert path.read_text(encoding="utf-8") == _STATES.replace(
+        "completed_version: 1.148.0", "completed_version: 1.149.0"
+    )
+
+    without = _STATES.replace("completed_version: 1.148.0\n", "")
+    _write_raw(tmp_path, without)
+    record_completed_version(tmp_path, "1.149.0")
+    assert path.read_text(encoding="utf-8") == without.replace(
+        "backbone_version: 1.149.0\n", "backbone_version: 1.149.0\ncompleted_version: 1.149.0\n"
+    )
+
+
+def test_set_state_line_appends_where_no_anchor_line_exists() -> None:
+    assert set_state_line("a: 1", "completed_version", "1.0.0", after="backbone_version") == (
+        "a: 1\ncompleted_version: 1.0.0\n"
+    )
+    assert set_state_line("", "backbone_version", "1.0.0") == "backbone_version: 1.0.0\n"
+
+
+def test_an_adapter_is_recorded_at_the_version_its_package_ships(tmp_path: Path) -> None:
+    package = tmp_path / "package.yaml"
+    package.write_text(
+        "schema_version: 1\ncomponent:\n  kind: adapter\n  name: harness\n  version: 0.4.0\n"
+        'requires_backbone: ">=1.0.0,<2.0.0"\n',
+        encoding="utf-8",
+    )
+
+    assert record_adapter_version(tmp_path, "harness", package) == "0.4.0"
+
+    recorded = read_component_manifest(tmp_path / adapter_manifest_rel("harness"))
+    assert recorded is not None
+    assert (recorded.kind, recorded.name, recorded.version) == ("adapter", "harness", "0.4.0")
+    assert recorded.requires_backbone == ">=1.0.0,<2.0.0"
+    assert record_adapter_version(tmp_path, "harness", tmp_path / "missing.yaml") is None

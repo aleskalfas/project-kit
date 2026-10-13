@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import click
 import pytest
@@ -61,6 +62,54 @@ def test_install_kit_writes_expected_top_level_layout(tmp_target: Path) -> None:
     # propagating, every installed capability with schemas would fail
     # validation in the adopter.
     assert (pkit_dir / "schemas" / "_defs" / "refs.schema.json").is_file()
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_install_kit_records_the_target_first_and_the_completion_last(
+    tmp_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """First install records the backbone's two states in a transition's order: the
+    target before it copies anything, the completion after provisioning, last. It
+    registers each adapter after the copy and records it at the version its copy
+    ships (ADR-065 points 2 and 4)."""
+    from project_kit import manifest
+
+    version = manifest.read_kit_version(install.find_source_kit())
+    seen: list[tuple[str, tuple[str, str | None] | None]] = []
+
+    def states() -> tuple[str, str | None] | None:
+        recorded = manifest.read_backbone_manifest(tmp_target)
+        return None if recorded is None else (recorded.backbone_version, recorded.completed_version)
+
+    real_area, real_provision = install._install_area, install.provision_query_commands
+
+    def area(*args: Any, **kwargs: Any) -> None:
+        seen.append(("copy", states()))
+        real_area(*args, **kwargs)
+
+    def provision(*args: Any, **kwargs: Any) -> None:
+        seen.append(("provisioning", states()))
+        real_provision(*args, **kwargs)
+
+    monkeypatch.setattr(install, "_install_area", area)
+    monkeypatch.setattr(install, "provision_query_commands", provision)
+
+    install.install_kit(tmp_target)
+
+    assert seen[0] == ("copy", (version, None))
+    assert seen[-1] == ("provisioning", (version, None))
+    assert states() == (version, version)
+    recorded = manifest.read_backbone_manifest(tmp_target)
+    assert recorded is not None
+    adapters = [c for c in recorded.components if c.kind == "adapter"]
+    assert adapters, "every adapter the copy placed is registered"
+    for entry in adapters:
+        shipped = manifest.read_component_package(
+            tmp_target / ".pkit" / "adapters" / entry.name / "package.yaml"
+        )
+        record = manifest.read_component_manifest(tmp_target / entry.manifest)
+        assert shipped is not None and record is not None
+        assert record.version == shipped[0]
 
 
 @pytest.mark.usefixtures("stub_adapter_primitives")

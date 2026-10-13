@@ -40,6 +40,7 @@ import re
 import shlex
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import NoReturn
 
@@ -51,13 +52,20 @@ from project_kit.install import (
     is_self_host,
     refuse_if_source_kit_incomplete,
     refuse_propagation_into_source,
+    register_adapters,
 )
 from project_kit.manifest import (
+    ORIGIN_KIT_SHIPPED,
+    BackboneManifest,
     ComponentManifest,
     ComponentRegistryEntry,
     read_backbone_manifest,
     read_component_manifest,
+    read_component_package,
     read_kit_version,
+    record_adapter_version,
+    record_backbone_target,
+    record_completed_version,
     write_component_manifest,
 )
 from project_kit.migrations import (
@@ -104,14 +112,6 @@ def run_upgrade(
     """
     if not (target_root / ".pkit").is_dir():
         raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
-
-    manifest = read_backbone_manifest(target_root)
-    if manifest is None:
-        raise click.ClickException(
-            f"{target_root}/.pkit/manifest.yaml is missing. The kit at this target "
-            "pre-dates the manifest layer (COR-010). Run 'pkit sync' once to seed "
-            "the manifest, then retry upgrade."
-        )
 
     source_kit = find_source_kit()
 
@@ -181,17 +181,22 @@ def run_upgrade(
     # pin's own code and recovers a content-ahead-of-pin state by raising the
     # pin, and the tool step, which leaves the project untouched and whose
     # re-exec under a newer tool is a way past this refusal.
+    # The older direction of sync's guard (ADR-065 point 7): the running pkit
+    # against the newest of `backbone_version`, `completed_version` and the pin.
     refuse_content_downgrade(target_root, source_kit, command="upgrade")
 
     target_version = read_kit_version(source_kit)
-    current_version = manifest.backbone_version
+    # Read before anything is written. No manifest is no refusal: the transition
+    # writes one at its target and replays (ADR-065 points 2 and 5).
+    manifest = read_backbone_manifest(target_root)
+    components = manifest.components if manifest is not None else []
 
     # Step 1: compatibility resolution against the POST-upgrade (source)
     # component versions — what sync will refresh them to — not the stale
     # installed copies (which always lag the auto-broadened source ceiling).
-    _resolve_compatibility(manifest.components, target_root, source_kit, target_version)
+    _resolve_compatibility(components, target_root, source_kit, target_version)
 
-    if current_version == target_version:
+    if manifest is not None and is_current(target_root, source_kit, manifest, target_version):
         click.echo(f"Already at backbone v{target_version}; nothing to upgrade.")
         # ADR-049: content is already current, but a pinned project may still
         # need its pin flipped forward (e.g. raised via the bypass with content
@@ -204,21 +209,48 @@ def run_upgrade(
             _pin_after_upgrade(target_root, target_version, dry_run)
         return
 
-    click.echo(f"Upgrading backbone: {current_version} -> {target_version}")
-    if dry_run:
-        click.echo("  (dry-run — no changes will be written)")
-    click.echo()
+    # The lower bound of the backbone's migration window: the last completed
+    # transition, or none, which replays every backbone migration once.
+    completed = _as_version(manifest.completed_version) if manifest is not None else None
+    _report_transition(manifest, completed, target_version, dry_run)
 
-    # Step 2: pull new propagated content (sync). Sync also updates the
-    # recorded backbone version (step 6 for the backbone tier).
+    # The target is recorded before anything else is written (ADR-065 point 4,
+    # step 2), so an interrupted transition reads as one, to this pkit and to an
+    # older one alike. Then propagation at the target (step 3).
     if dry_run:
+        click.echo(
+            f"  {'would record':<12} .pkit/manifest.yaml backbone_version -> {target_version} "
+            "(the target, before anything else is written)"
+        )
         click.echo("  would sync   .pkit/ kit-owned content from source")
+        _report_adapters_to_register(target_root, source_kit, components)
     else:
+        record_backbone_target(target_root, target_version)
+        click.echo(
+            f"  {'recorded':<12} .pkit/manifest.yaml backbone_version -> {target_version} "
+            "(the target)"
+        )
         run_sync(target_root, dry_run=False)
+        register_adapters(target_root)
+        reread = read_backbone_manifest(target_root)
+        components = reread.components if reread is not None else []
 
-    # Steps 3-5: migrations + reconciliation. Skeleton today.
-    _run_backbone_migrations(target_root, current_version, target_version, dry_run)
-    _run_component_migrations(target_root, manifest.components, dry_run)
+    _run_backbone_migrations(target_root, source_kit, completed, target_version, dry_run)
+    _run_component_migrations(target_root, source_kit, components, dry_run)
+
+    # The completion is recorded last before the pin (ADR-065 point 4, step 9):
+    # every migration has run and the derivable state is regenerated.
+    if dry_run:
+        click.echo(
+            f"  {'would record':<12} .pkit/manifest.yaml completed_version -> {target_version} "
+            "(the completion, once every migration has run)"
+        )
+    else:
+        record_completed_version(target_root, target_version)
+        click.echo(
+            f"  {'recorded':<12} .pkit/manifest.yaml completed_version -> {target_version} "
+            "(the transition is complete)"
+        )
 
     # ADR-049: on a pinned project, flip the pin LAST — after content sync and
     # migrations — so a failed upgrade never advances the pin past content that
@@ -232,6 +264,157 @@ def run_upgrade(
 
     click.echo()
     click.echo("Upgrade complete.")
+
+
+# --- What a transition records and moves (ADR-065 points 2, 3 and 5) -----------
+
+
+@dataclass(frozen=True)
+class ComponentMove:
+    """One component a version transition would move: its recorded version, None
+    when it records none, and the version the running pkit's bundle ships."""
+
+    kind: str
+    name: str
+    recorded: str | None
+    bundled: str
+
+
+def _as_version(text: str | None) -> str | None:
+    """A recorded version as the `X.Y.Z` the migration window reads, or None when
+    it is missing or no version (ADR-065 point 2)."""
+    if not text:
+        return None
+    try:
+        parsed = Version(text)
+    except InvalidVersion:
+        return None
+    return f"{parsed.major}.{parsed.minor}.{parsed.micro}"
+
+
+def _bundled_adapter_package(source_kit: Path, name: str) -> Path:
+    """Where the running pkit's bundle keeps adapter *name*'s `package.yaml`."""
+    return source_kit / "adapters" / name / "package.yaml"
+
+
+def component_moves(
+    target_root: Path, source_kit: Path, manifest: BackboneManifest
+) -> list[ComponentMove]:
+    """Each component a transition to the running pkit's release would move (ADR-065 point 2).
+
+    A registered adapter the bundle ships, whose manifest does not record the
+    version the bundle ships, a missing manifest included. A registered
+    `kit-shipped` capability the bundle ships, whose record (its manifest, else
+    its installed `package.yaml`) is not the version the bundle ships. An
+    incubated, externally-sourced or no-longer-shipped component moves by its own
+    course, and is not listed. Read-only.
+    """
+    from project_kit import capabilities as caps
+
+    moves: list[ComponentMove] = []
+    for entry in manifest.components:
+        if entry.kind == "adapter":
+            package = read_component_package(_bundled_adapter_package(source_kit, entry.name))
+            if package is None:
+                continue
+            recorded_manifest = _read_adapter_manifest(target_root, entry)
+            recorded = recorded_manifest.version if recorded_manifest is not None else None
+            if recorded != package[0]:
+                moves.append(ComponentMove("adapter", entry.name, recorded, package[0]))
+        elif entry.kind == "capability" and entry.origin == ORIGIN_KIT_SHIPPED:
+            source = caps.find_capability_in_source(source_kit, entry.name)
+            if source is None:
+                continue
+            recorded = caps.read_capability_record(target_root, entry.name).version
+            if recorded != source.package.version:
+                moves.append(
+                    ComponentMove("capability", entry.name, recorded, source.package.version)
+                )
+    return moves
+
+
+def is_current(
+    target_root: Path, source_kit: Path, manifest: BackboneManifest, target_version: str
+) -> bool:
+    """Whether upgrade's early return applies (ADR-065 point 2): `backbone_version`
+    and `completed_version` both name *target_version*, and every registered
+    adapter and shipped capability records the version the bundle ships."""
+    return (
+        manifest.backbone_version == target_version
+        and manifest.completed_version == target_version
+        and not component_moves(target_root, source_kit, manifest)
+    )
+
+
+def _read_adapter_manifest(
+    target_root: Path, entry: ComponentRegistryEntry
+) -> ComponentManifest | None:
+    """A registered adapter's manifest, None when it has none or records no version.
+
+    The path is the one its registry entry names. A manifest whose version is no
+    version records nothing, as a missing one (ADR-065 point 2).
+    """
+    recorded = read_component_manifest(target_root / entry.manifest)
+    if recorded is None or _as_version(recorded.version) is None:
+        return None
+    return recorded
+
+
+def _report_transition(
+    manifest: BackboneManifest | None,
+    completed: str | None,
+    target_version: str,
+    dry_run: bool,
+) -> None:
+    """The transition's opening lines: where it moves from, and where its
+    backbone migrations run from, the replay named (ADR-065 point 5)."""
+    if manifest is None:
+        origin = "no .pkit/manifest.yaml"
+    elif _as_version(manifest.backbone_version) is None:
+        origin = f"{manifest.backbone_version!r}, which is no version"
+    else:
+        origin = manifest.backbone_version
+    if origin == target_version:
+        click.echo(f"Completing the transition to backbone v{target_version}")
+    else:
+        click.echo(f"Upgrading backbone: {origin} -> {target_version}")
+    if dry_run:
+        click.echo("  (dry-run — no changes will be written)")
+    if manifest is None:
+        click.echo(
+            f"  The project has no manifest: the upgrade writes one at {target_version}, "
+            "as first install does."
+        )
+    if completed is None:
+        click.echo(
+            "  No completed transition is recorded (`completed_version` in "
+            ".pkit/manifest.yaml), so this project's backbone migration history is "
+            f"unknown. Every backbone migration up to {target_version} runs once, and "
+            "the completion recorded at the end keeps it from running again."
+        )
+    elif manifest is not None and manifest.transition_incomplete:
+        click.echo(
+            f"  The last transition is incomplete: completed_version is {completed}. "
+            f"The backbone migrations run from {completed}."
+        )
+    click.echo()
+
+
+def _report_adapters_to_register(
+    target_root: Path, source_kit: Path, components: list[ComponentRegistryEntry]
+) -> None:
+    """The dry run's line for each adapter the bundle ships that the registry
+    lacks, which the transition registers after its copy."""
+    registered = {c.name for c in components if c.kind == "adapter"}
+    adapters = source_kit / "adapters"
+    if not adapters.is_dir():
+        return
+    for adapter_dir in sorted(p for p in adapters.iterdir() if p.is_dir()):
+        if adapter_dir.name in registered:
+            continue
+        package = read_component_package(adapter_dir / "package.yaml")
+        at = f" at {package[0]}" if package is not None else ""
+        click.echo(f"  {'would register':<12} adapter {adapter_dir.name!r}{at}")
 
 
 # --- Per-project version pin (ADR-049) -----------------------------------------
@@ -409,16 +592,18 @@ def _require_backbone_version(target_root: Path) -> str:
 
     Both `pkit pin` gestures need `.pkit/manifest.yaml`'s `backbone_version` — the
     no-arg freeze pins *at* it, and `pin <version>` orders the target *against* it.
-    Absent, there is no recorded content version, so both hard-refuse with the same
-    seed-the-manifest posture `run_upgrade` uses (ADR-049). Raises
-    `click.ClickException`; nothing is written.
+    Absent, there is no recorded content version, so both hard-refuse and name
+    `pkit upgrade`, which writes the manifest at its target and replays every
+    backbone migration once (ADR-065 point 8). Raises `click.ClickException`;
+    nothing is written.
     """
     manifest = read_backbone_manifest(target_root)
     if manifest is None:
         raise click.ClickException(
             f"{target_root}/.pkit/manifest.yaml is missing — pkit has no record of "
-            "this project's content version to pin against. Run 'pkit sync' once to "
-            "seed the manifest, then retry."
+            "this project's content version to pin against. Run 'pkit upgrade', which "
+            "writes the manifest at its version and runs every backbone migration once, "
+            "then retry."
         )
     return manifest.backbone_version
 
@@ -458,8 +643,8 @@ def _pin_order(target: str, current: str) -> str:
     except InvalidVersion as exc:
         raise click.ClickException(
             f"this project's recorded content version {current!r} is not valid "
-            "semver — the manifest may be corrupt. Run 'pkit sync' to reconcile it, "
-            "then retry."
+            "semver — the manifest may be corrupt. Run 'pkit upgrade', which records "
+            "its own version over it, then retry."
         ) from exc
     if parsed_target == parsed_current:
         return "equal"
@@ -977,37 +1162,46 @@ def _resolve_package_yaml(
 
 
 def _run_backbone_migrations(
-    target_root: Path, current_version: str, target_version: str, dry_run: bool
+    target_root: Path,
+    source_kit: Path,
+    completed_version: str | None,
+    target_version: str,
+    dry_run: bool,
 ) -> None:
-    """Walk backbone migrations between current and target versions and execute them.
+    """Run the backbone's migration window, from the last completed transition.
 
     Per COR-010, backbone migrations live at
     `.pkit/migrations/backbone/<X.Y.0>/<NNN>-<slug>.sh`. They're
-    kit-shipped content propagated by sync; by the time this runs
-    (upgrade step 3, after sync), they're present in the target tree.
+    kit-shipped content propagated by sync; by the time this runs, after
+    the propagation, they're present in the target tree. A dry run copies
+    nothing, so it reads the same scripts from the running pkit's bundle.
 
-    Window: every minor version strictly above `current_version` and
-    at-or-below `target_version`. Halts on first non-zero exit so a
-    half-applied upgrade is visible.
+    Window: every minor version strictly above `completed_version` and
+    at-or-below `target_version` (ADR-065 point 3). A missing completion has no
+    lower bound: every backbone migration up to the target runs once, the
+    replay (point 5), which the report names and lists. Halts on the first
+    non-zero exit, so the completion is not recorded and the next upgrade runs
+    the migration again.
 
     Scope ordering (manifest-schema → structural → resource) per COR-010
     is *within* a version dir, expressed via `NNN-*.sh` filename order
     — author by convention rather than declared metadata for now.
     """
-    migrations_root = target_root / ".pkit" / "migrations" / "backbone"
-    scripts = pending_migration_scripts(migrations_root, current_version, target_version)
+    base = source_kit if dry_run else target_root / ".pkit"
+    migrations_root = base / "migrations" / "backbone"
+    scripts = pending_migration_scripts(migrations_root, completed_version, target_version)
+    lower = completed_version or "no completed transition"
 
     if not scripts:
-        click.echo(
-            f"  no backbone migrations to run between {current_version} and {target_version}"
-        )
+        click.echo(f"  no backbone migrations to run between {lower} and {target_version}")
         return
 
+    replay = "" if completed_version is not None else ", the replay"
     if dry_run:
         report_pending_migrations(
             scripts,
-            label="backbone",
-            installed_version=current_version,
+            label=f"backbone{replay}",
+            installed_version=lower,
             target_version=target_version,
             dry_run=True,
             label_rel_to=migrations_root,
@@ -1015,7 +1209,7 @@ def _run_backbone_migrations(
         return
 
     click.echo(
-        f"  running {len(scripts)} backbone migration(s) ({current_version} -> v{target_version})"
+        f"  running {len(scripts)} backbone migration(s){replay} ({lower} -> v{target_version})"
     )
     execute_migration_scripts(
         scripts,
@@ -1027,119 +1221,95 @@ def _run_backbone_migrations(
 
 def _run_component_migrations(
     target_root: Path,
+    source_kit: Path,
     components: list[ComponentRegistryEntry],
     dry_run: bool,
 ) -> None:
-    """Walk each installed adapter, run any pending migrations.
+    """Run each registered adapter's migrations, and record it at its bundled version.
 
     Capabilities are NOT handled here — their migration story runs
     through `pkit sync` → `_sync_installed_capabilities` →
     `refresh_capability` (per COR-017). Double-running here would
     re-execute scripts that sync already applied.
 
-    For each component:
-    - Read installed version from the per-component manifest.
-    - Read source version from the kit-shipped `package.yaml`.
-    - Walk `<source>/migrations/<X.Y.0>/` for the open window.
-    - Execute scripts.
-    - On success, re-stamp the per-component manifest with the new
-      version + a fresh `installed_at` timestamp.
+    For each registered adapter the running pkit's bundle ships (ADR-065
+    point 2):
+    - **No manifest,** or one that records no version: it reads as at the
+      backbone. It is recorded at the version the bundle ships, and runs no
+      migration.
+    - **A manifest:** the scripts in its window run, read from the project's
+      copy of the adapter (the bundle once #1461 reads them there). It is then
+      recorded at the bundled version, with no script in the window too, so a
+      record never stays behind the content.
     """
-    if not components:
-        return
-
     eligible = [c for c in components if c.kind == "adapter"]
     if not eligible:
         return
 
     ran = 0
     for entry in eligible:
-        component_dirs = _resolve_component_dirs(target_root, entry)
-        if component_dirs is None:
-            # Unable to resolve source / installed manifest for this
-            # component — skip rather than raise.
+        package = read_component_package(_bundled_adapter_package(source_kit, entry.name))
+        if package is None:
+            # The bundle no longer ships it: no version to move it to.
             continue
-        source_dir, installed_manifest_path = component_dirs
-        package_yaml = source_dir / "package.yaml"
-        if not package_yaml.is_file():
-            continue
-        source_version = _extract_package_version(package_yaml)
-        if source_version is None:
-            continue
-
-        installed_manifest = read_component_manifest(installed_manifest_path)
-        if installed_manifest is None:
-            # No record of installed version — skip rather than guess.
-            continue
-
-        migrations_root = source_dir / "migrations"
-        scripts = pending_migration_scripts(
-            migrations_root, installed_manifest.version, source_version
-        )
-        if not scripts:
-            continue
-
+        bundled = package[0]
+        installed_manifest_path = target_root / entry.manifest
         label = f"{entry.kind} {entry.name!r}"
-        if dry_run:
-            report_pending_migrations(
-                scripts,
-                label=label,
-                installed_version=installed_manifest.version,
-                target_version=source_version,
-                dry_run=True,
-                label_rel_to=source_dir,
+
+        installed_manifest = _read_adapter_manifest(target_root, entry)
+        if installed_manifest is None:
+            verb = "would record" if dry_run else "recorded"
+            if not dry_run:
+                record_adapter_version(
+                    target_root,
+                    entry.name,
+                    target_root / ".pkit" / "adapters" / entry.name / "package.yaml",
+                )
+            click.echo(
+                f"  {verb:<12} {label} at {bundled} (no record before: it reads as at "
+                "the backbone, so no migration runs)"
             )
             ran += 1
             continue
 
-        click.echo(
-            f"  running {len(scripts)} migration(s) for {label} "
-            f"({installed_manifest.version} -> v{source_version})"
+        source_dir = target_root / ".pkit" / "adapters" / entry.name
+        scripts = pending_migration_scripts(
+            source_dir / "migrations", installed_manifest.version, bundled
         )
-        execute_migration_scripts(scripts, target_root, label=label, label_rel_to=source_dir)
-        # Re-stamp installed manifest with new version + timestamp.
-        _restamp_component_manifest_version(
-            installed_manifest_path, installed_manifest, source_version
-        )
-        ran += 1
+        if dry_run:
+            if scripts:
+                report_pending_migrations(
+                    scripts,
+                    label=label,
+                    installed_version=installed_manifest.version,
+                    target_version=bundled,
+                    dry_run=True,
+                    label_rel_to=source_dir,
+                )
+            if installed_manifest.version != bundled:
+                click.echo(
+                    f"  {'would record':<12} {label} at {bundled} "
+                    f"(from {installed_manifest.version})"
+                )
+                ran += 1
+            continue
+
+        if scripts:
+            click.echo(
+                f"  running {len(scripts)} migration(s) for {label} "
+                f"({installed_manifest.version} -> v{bundled})"
+            )
+            execute_migration_scripts(scripts, target_root, label=label, label_rel_to=source_dir)
+        if installed_manifest.version != bundled:
+            prior = installed_manifest.version
+            _restamp_component_manifest_version(
+                installed_manifest_path, installed_manifest, bundled
+            )
+            click.echo(f"  {'recorded':<12} {label} at {bundled} (from {prior})")
+            ran += 1
 
     if ran == 0:
         click.echo(f"  no component migrations to run (0 of {len(eligible)} adapter component(s))")
-
-
-def _resolve_component_dirs(
-    target_root: Path, entry: ComponentRegistryEntry
-) -> tuple[Path, Path] | None:
-    """Return (source_dir, installed_manifest_path) for a registered component.
-
-    Source dir contains `package.yaml` + `migrations/`. Installed manifest
-    is where the adopter-side per-component receipt lives.
-    - Adapter: source `.pkit/adapters/<name>/`, manifest
-      `.pkit/adapters/<name>/project/manifest.yaml`.
-
-    Returns None when resolution fails (missing files, unknown kind).
-    Capabilities are handled by sync; future kinds skip.
-    """
-    pkit_dir = target_root / ".pkit"
-
-    if entry.kind == "adapter":
-        source_dir = pkit_dir / "adapters" / entry.name
-        installed_manifest = source_dir / "project" / "manifest.yaml"
-        if not source_dir.is_dir():
-            return None
-        return source_dir, installed_manifest
-
-    # Unknown kind (capability handled by sync; future kinds skip).
-    return None
-
-
-def _extract_package_version(package_yaml: Path) -> str | None:
-    """Parse `version:` from a component's `package.yaml`, returning None if absent."""
-    import re as _re
-
-    text = package_yaml.read_text(encoding="utf-8")
-    match = _re.search(r"version:\s*([0-9]+\.[0-9]+\.[0-9]+)", text)
-    return match.group(1) if match else None
 
 
 def _restamp_component_manifest_version(

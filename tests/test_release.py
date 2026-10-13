@@ -610,12 +610,14 @@ def test_apply_backbone_bump_preserves_other_manifest_keys(tmp_path: Path) -> No
     assert updated.components[0].kind == "adapter"
 
 
-def test_apply_backbone_bump_rewrites_only_the_manifest_backbone_version_line(
+def test_apply_backbone_bump_rewrites_only_the_manifest_version_lines(
     tmp_path: Path,
 ) -> None:
-    """The one `backbone_version:` line is rewritten in place: a comment and an
-    explicit default `origin:`, which a YAML round-trip drops, keep every byte —
-    so the release's manifest diff is the line the changeset guard admits (#1161)."""
+    """The `backbone_version:` line is rewritten in place and the missing
+    `completed_version:` line added right after it: a comment and an explicit
+    default `origin:`, which a YAML round-trip drops, keep every byte — so the
+    release's manifest diff is the lines the changeset guard admits (#1161,
+    PRJ-007, ADR-065 point 3)."""
     source_kit = _make_kit(tmp_path, backbone="1.5.0")
     original = (
         "schema_version: 1\n"
@@ -634,7 +636,42 @@ def test_apply_backbone_bump_rewrites_only_the_manifest_backbone_version_line(
     release.apply_release(source_kit, release.compute_release(source_kit), tag=False)
 
     assert manifest.read_text(encoding="utf-8") == original.replace(
-        "backbone_version: 1.5.0", "backbone_version: 1.6.0"
+        "backbone_version: 1.5.0\n", "backbone_version: 1.6.0\ncompleted_version: 1.6.0\n"
+    )
+
+
+def test_apply_backbone_bump_rewrites_an_existing_completion_line(tmp_path: Path) -> None:
+    """Both recorded states move to the release, each on its own line (PRJ-007,
+    ADR-065 point 3): the source reads as complete at the version it ships."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    manifest = source_kit / "manifest.yaml"
+    original = (
+        "schema_version: 1\nbackbone_version: 1.5.0\ncompleted_version: 1.5.0\ncomponents: []\n"
+    )
+    manifest.write_text(original, encoding="utf-8")
+    _add(source_kit, "backbone", "minor", "x", "a.yaml")
+
+    release.apply_release(source_kit, release.compute_release(source_kit), tag=False)
+
+    assert manifest.read_text(encoding="utf-8") == original.replace("1.5.0", "1.6.0")
+    updated = read_backbone_manifest(source_kit.parent)
+    assert updated is not None and not updated.transition_incomplete
+
+
+def test_apply_writes_a_completion_left_behind_when_the_backbone_line_is_current(
+    tmp_path: Path,
+) -> None:
+    """Each line is checked on its own: a manifest whose backbone line already names
+    the release still gains the completion beside it."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    manifest = source_kit / "manifest.yaml"
+    manifest.write_text("schema_version: 1\nbackbone_version: 1.6.0\n", encoding="utf-8")
+    _add(source_kit, "backbone", "minor", "x", "a.yaml")
+
+    release.apply_release(source_kit, release.compute_release(source_kit), tag=False)
+
+    assert manifest.read_text(encoding="utf-8") == (
+        "schema_version: 1\nbackbone_version: 1.6.0\ncompleted_version: 1.6.0\n"
     )
 
 
