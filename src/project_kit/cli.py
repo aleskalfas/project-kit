@@ -5484,6 +5484,12 @@ def decisions_validate() -> None:
     claimed twice across the rule sets. Exits non-zero on any duplicate or
     mismatch.
 
+    A record that arrives as a synced copy (a core record, or a kit-shipped
+    capability's, in a project that is not the methodology's source) is not
+    checked, since the project cannot mend it (COR-055 point 1). It is read
+    for its id alone, so a project's record that takes a synced copy's id is
+    reported, on the project's record.
+
     Then warns, without failing, of every line where a record narrates its
     own revision — an amendment heading or marker, a revision stamped with an
     issue number or a date, change-log phrasing — since a record is refined in
