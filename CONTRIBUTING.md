@@ -123,7 +123,7 @@ Each mechanical part of a rule is an entry in `scripts/prose-lint.yaml`, of one 
 - the deploy removes a tracked copy, as its agent no longer ships, or
 - the deploy skips the agent, for the reason it prints.
 
-To fix a copy, run `.pkit/adapters/claude-code/deploy-agents.sh` and commit what it changes in `.claude/agents/`. A rerun skips a skipped agent again, so its finding carries the remediation the deploy prints. Follow it, then run the deploy. The check exits 0 when it finds nothing, 1 on a finding, and 2 when it cannot run.
+To fix a copy, run `.pkit/adapters/claude-code/deploy-agents.sh` and commit what it changes in `.claude/agents/`. A rerun skips a skipped agent again, so its finding carries the remediation the deploy prints. Follow it, then run the deploy and commit what it changes. The check exits 0 when it finds nothing, 1 on a finding, and 2 when it cannot run.
 
 **Optional task runner.** A [`mise.toml`](mise.toml) provides convenience aliases over the underlying `uv run ...` commands — `mise tasks` lists them, `mise run check` runs the lint/format/typecheck/test bundle. After cloning, run `mise trust` once to enable the task runner: mise gates untrusted config by design, so a fresh clone prints a "not trusted" error on every shell until you do. Not using mise? Run the `uv run ...` commands (or `./scripts/check.sh`) directly — mise is sugar, not a requirement.
 
