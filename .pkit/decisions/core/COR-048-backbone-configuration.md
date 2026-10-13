@@ -20,7 +20,7 @@ The backbone already reads the project's name from a project-owned file. No core
 
 **A project keeps its declarations to the backbone in one project-owned configuration file. The backbone reads it, sync never touches it, and it is validated as a whole against a schema.**
 
-1. **One file, owned by the project.** It holds project-level declarations the backbone reads. It sits in the project-owned part of the tree. It survives upgrade, sync, and uninstalling any capability or the tool itself, because none of them writes or removes it. Its location is documented in the CLI reference.
+1. **One file, owned by the project.** It holds project-level declarations the backbone reads. It sits in the project-owned part of the tree. It survives upgrade, sync, and uninstalling any capability or the tool itself, because none of them removes it. Sync never writes it. An upgrade, a version transition (COR-059), writes it only through the migrations point 5 names. Its location is documented in the CLI reference.
 
 2. **Every key is owned by a record.** A key exists because a decision record introduced it, and that record defines the key's meaning, its default and who may write it.
    - **Core records** own the keys the backbone reads. This record takes ownership of the project-name key the backbone already reads.
