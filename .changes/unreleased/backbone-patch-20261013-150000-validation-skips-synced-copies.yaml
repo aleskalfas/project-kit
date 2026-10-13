@@ -1,0 +1,13 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+  pr: "1556"
+body: >
+  Validation's decisions member reports nothing on a synced copy of a record in
+  an adopter's project, as COR-055 point 1 asks (#1542). The front-matter check
+  and the id check of `pkit validate` and `pkit decisions validate` leave out a
+  core record, or a kit-shipped capability's, as the narration warnings and the
+  point checks already did. A synced copy is still read for its id, so a
+  project's record that takes a synced copy's id is reported, on the project's
+  record. The count of records checked is the project's own.

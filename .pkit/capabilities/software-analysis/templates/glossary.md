@@ -22,7 +22,7 @@ TERM-term:
 
 # Glossary
 
-The words of the domain and what each means. A term's id is stable; its name may change, and the names it replaces are kept.
+The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
 
 ## TERM-term — <Term>
 

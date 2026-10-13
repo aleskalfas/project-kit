@@ -94,14 +94,32 @@ def _yaml(data: Mapping[str, Any]) -> str:
     return buffer.getvalue()
 
 
-def _definition(set_name: str, inherits: list[str] | None = None) -> str:
-    """A space definition instantiated from the capability's template."""
+#: The template's scope: its line and the lines indented under it.
+TEMPLATE_SCOPE = re.compile(r"^scope:.*\n(?:[ \t]+.*\n)*", re.MULTILINE)
+
+#: The scope each fixture definition is given in place of the template's: the
+#: space's root and the place assigned to it, by path alone. The fixture's places
+#: outside the roots give no type, and DEC-001 point 1 asks one of them only where
+#: a definition selects by type.
+SPACE_SCOPES: dict[str, Any] = {"USER": ["docs/**", "README.md"], "TECH": ["tech-docs/**"]}
+
+#: A definition written without a scope.
+UNSCOPED = object()
+
+
+def _definition(set_name: str, inherits: list[str] | None = None, scope: Any = None) -> str:
+    """A space definition instantiated from the capability's template, with `scope` —
+    the space's own in `SPACE_SCOPES` by default, none for `UNSCOPED`."""
     template = (CAPABILITY / "templates" / "space-definition.md").read_text(encoding="utf-8")
     text = template.replace("rule-set: SPACE", f"rule-set: {set_name}").replace(
         "<space>", set_name.lower()
     )
     if inherits is not None:
         text = text.replace("inherits: [living-docs:LDOC@1]", f"inherits: {json.dumps(inherits)}")
+    scope = SPACE_SCOPES.get(set_name) if scope is None else scope
+    written = "" if scope is UNSCOPED or scope is None else f"scope: {json.dumps(scope)}\n"
+    text, replaced = TEMPLATE_SCOPE.subn(written, text, count=1)
+    assert replaced == 1
     return text
 
 
@@ -158,6 +176,44 @@ def project(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRe
         }
     )
     return repo
+
+
+def unscoped(repo: AdopterRepo) -> None:
+    """Both spaces' definitions written without a scope, for a test of the places
+    alone: the scopes joined with the assignment are tested on their own (DEC-001
+    point 1), and a definition with no scope is reported, never failed."""
+    repo.write(
+        {
+            f"{DEFINITIONS}/user.md": _definition("USER", scope=UNSCOPED),
+            f"{DEFINITIONS}/technical.md": _definition("TECH", scope=UNSCOPED),
+        }
+    )
+
+
+def outside_every_space(repo: AdopterRepo) -> None:
+    """The user definition's scope leaves `docs/drafts/` out, so a page there lies in
+    the user space, under its root, and in no definition's scope: no rule of LDOC
+    binds on it (COR-051 point 7; DEC-001 point 3)."""
+    scope = {"paths": ["docs/**", "README.md"], "exclude": ["docs/drafts/**"]}
+    repo.write({f"{DEFINITIONS}/user.md": _definition("USER", scope=scope)})
+
+
+def left_out(*pages: str) -> dict[str, str]:
+    """The report on the user space's pages its definition's scope leaves out (DEC-001
+    point 2): no rule binds on them through it, so nothing is checked there."""
+    named = pages[0] + (f" and {len(pages) - 1} other page(s)" if len(pages) > 1 else "")
+    return {
+        "severity": "report",
+        "location": f"{DEFINITIONS}/user.md",
+        "message": (
+            f"the scope of space 'user''s definition, {DEFINITIONS}/user.md, leaves out {named} "
+            "of the space's pages, so neither living-docs:LDOC's rules nor the space's own bind "
+            "on them through it (COR-051 point 7). Widen the scope to them — its `paths` name "
+            "the space's root and the places assigned to it, and a placeholder such as `<root>` "
+            "names nothing — or move them to the space they belong to. A scope may leave pages "
+            "out on purpose, with `exclude`, so this is reported, never failed (DEC-001 point 2)."
+        ),
+    }
 
 
 def run(repo: AdopterRepo) -> dict[str, Any]:
@@ -311,6 +367,7 @@ def test_a_file_two_project_places_claim_at_equal_rank_is_an_error(
         places=["README.md", "extra/*.md", "extra/[ab].md"],
         assignments={"README.md": "user", "extra/*.md": "user", "extra/[ab].md": "technical"},
     )
+    unscoped(project)
     project.write({"extra/a.md": PAGE})
     location, message = only_error(run(project))
     assert location == f"{CONFIG}:/friction/places/2"
@@ -330,6 +387,7 @@ def test_the_backbone_s_order_of_places_gives_a_page_its_space(project: AdopterR
         places=["README.md", "extra/", "extra/*.md"],
         assignments={"README.md": "user", "extra/": "user", "extra/*.md": "technical"},
     )
+    unscoped(project)
     project.write({"extra/a.md": PAGE, "extra/deeper/b.md": PAGE})
     document = run(project)
     assert errors(document) == []
@@ -690,7 +748,6 @@ def test_an_entry_point_not_yet_a_page_is_shown_not_failed(project: AdopterRepo)
         ("reader: User Guide\nkind: signpost", "docs/guide.md:/reader"),
         ("reader: [user, maintainer]\nkind: signpost", "docs/guide.md:/reader"),
         ("reader: user\nkind: 3", "docs/guide.md:/kind"),
-        ("kind: signpost", "docs/guide.md"),
     ],
 )
 def test_a_page_with_a_wrong_reader_or_kind_field_fails(
@@ -700,6 +757,39 @@ def test_a_page_with_a_wrong_reader_or_kind_field_fails(
     found_location, message = only_error(run(project))
     assert found_location == location
     assert "schemas/page.schema.json; DEC-001 point 4" in message
+
+
+def test_a_page_rs_ldoc_003_binds_on_names_its_reader(project: AdopterRepo) -> None:
+    """Where RS-LDOC-003 binds, the part its set declares is checked: the page names
+    its reader (DEC-001 point 3; COR-051 point 2)."""
+    project.write({"docs/guide.md": "---\nkind: signpost\n---\n\n# Guide\n"})
+    assert only_error(run(project)) == (
+        "docs/guide.md",
+        "docs/guide.md names no reader, and RS-LDOC-003 binds on it: the page names its reader "
+        "in its `reader` field, a word that names a reader the readers point holds — add "
+        "`reader: <id>` (DEC-001 point 3; RS-LDOC-003).",
+    )
+
+
+@pytest.mark.parametrize(
+    "front",
+    ["kind: signpost", "reader: User Guide\nkind: signpost", "reader: guest\nkind: signpost"],
+)
+def test_a_page_rs_ldoc_003_does_not_bind_on_has_no_reader_read(
+    project: AdopterRepo, front: str
+) -> None:
+    """A check enforces its part of a rule only where the rule binds (COR-051 point 2):
+    a page no definition's scope selects is bound by no LDOC rule, so its reader is
+    not read — absent, malformed or one the readers point does not hold."""
+    outside_every_space(project)
+    project.write({"docs/drafts/guide.md": f"---\n{front}\n---\n\n# Guide\n"})
+    document = run(project)
+    assert document["findings"] == [left_out("docs/drafts/guide.md")]
+    (line,) = [line for line in document["summary"] if line.startswith("readers")]
+    assert line == (
+        "readers (pkit::documentation:readers): maintainer, user; 3 page reader(s) checked; "
+        "1 page(s) RS-LDOC-003 does not bind on, not checked."
+    )
 
 
 def test_a_document_carrying_neither_field_is_unclassified_for_onboarding(
@@ -801,6 +891,172 @@ def test_a_definition_lives_in_the_definitions_location_s_rule_sets(project: Ado
     location, message = only_error(run(project))
     assert location == f"{LD_CONFIG}:/spaces/technical/definition"
     assert f"lies outside {DEFINITIONS}/" in message
+
+
+def test_a_definition_with_no_scope_is_reported_naming_the_scope_to_give_it(
+    project: AdopterRepo,
+) -> None:
+    """A definition with no scope selects no page, so no rule binds through it
+    (COR-051 point 7): reported, never failed, naming the scope that selects the
+    space's pages — its root, the places assigned to it, by the page type — and the
+    places a scope that selects by type asks to give the page type (DEC-001 points
+    1 and 2). Nothing is checked on the space's pages meanwhile."""
+    declare(
+        project,
+        places=["README.md", "docs/internal/"],
+        assignments={"README.md": "user", "docs/internal/": "technical"},
+    )
+    unscoped(project)
+    project.write({"docs/ref.md": _page("reference", "No title.\n")})
+    document = run(project)
+    assert errors(document) == []
+    reports = {
+        f["location"]: f["message"]
+        for f in document["findings"]
+        if f["severity"] == "report" and f["location"].startswith(DEFINITIONS)
+    }
+    assert reports == {
+        f"{DEFINITIONS}/user.md": (
+            f"the definition of space 'user', {DEFINITIONS}/user.md, carries no scope, so it "
+            "selects no page itself: neither living-docs:LDOC's rules nor its own reach the "
+            "space's pages through it, nor do the checks of their parts (COR-051 points 2 and "
+            "7). Give it the scope of the space's pages, `scope: {paths: "
+            "[docs/**, README.md], exclude: [docs/internal/], types: "
+            "[living-docs:page]}` (DEC-001 point 2). Give README.md the page type in "
+            "`friction.places` too, as a scope that selects by type asks (DEC-001 point 1)."
+        ),
+        f"{DEFINITIONS}/technical.md": (
+            f"the definition of space 'technical', {DEFINITIONS}/technical.md, carries no scope, "
+            "so it selects no page itself: neither living-docs:LDOC's rules nor its own reach "
+            "the space's pages through it, nor do the checks of their parts (COR-051 points 2 "
+            "and 7). Give it the scope of the space's pages, `scope: {paths: "
+            "[tech-docs/**, docs/internal/], types: [living-docs:page]}` (DEC-001 point 2)."
+        ),
+    }
+    assert _format_line(document).startswith(
+        "page formats: not checked — RS-LDOC-004 binds on none of the 4 page(s)"
+    )
+
+
+def test_a_definition_whose_scope_leaves_its_pages_out_is_reported(project: AdopterRepo) -> None:
+    """A scope whose path misses the root — a typo, say — leaves every page there out,
+    so nothing is checked on them, and that is reported rather than silent: a scope
+    may leave part of a space out on purpose, so never failed (DEC-001 point 2)."""
+    project.write(
+        {
+            f"{DEFINITIONS}/user.md": _definition("USER", scope=["doc/**", "README.md"]),
+            "docs/ref.md": _page("reference", "No title.\n"),
+        }
+    )
+    document = run(project)
+    assert document["findings"] == [left_out("docs/guide.md", "docs/ref.md")]
+
+
+def test_a_definition_copied_with_the_template_s_placeholder_is_reported(
+    project: AdopterRepo,
+) -> None:
+    """The template's `<root>` names no file: a definition copied without writing the
+    space's paths is reported as soon as it exists, naming the paths to write, and
+    the pages it leaves out besides (DEC-001 point 2)."""
+    template = (CAPABILITY / "templates" / "space-definition.md").read_text(encoding="utf-8")
+    project.write({f"{DEFINITIONS}/user.md": template.replace("rule-set: SPACE", "rule-set: USER")})
+    document = run(project)
+    # README.md, the place assigned to the user space outside the roots, fails point 1
+    # on its own: the copied scope selects by type and names the place nowhere.
+    assert [location for location, _message in errors(document)] == [f"{CONFIG}:/friction/places/0"]
+    placeholder = {
+        "severity": "report",
+        "location": f"{DEFINITIONS}/user.md",
+        "message": (
+            f"the scope of space 'user''s definition, {DEFINITIONS}/user.md, still holds the "
+            "template's placeholder `<root>/**`, which names no file: write the space's root "
+            "and the places assigned to it in its place — `paths: [docs/**, README.md]` "
+            "(DEC-001 point 2). Until then the join with the assignment fails each place "
+            "assigned to the space that the scope misses (DEC-001 point 1)."
+        ),
+    }
+    assert placeholder in document["findings"]
+    assert left_out("docs/guide.md") in document["findings"]
+
+
+def test_the_scope_named_for_nested_roots_leaves_the_inner_one_out(project: AdopterRepo) -> None:
+    """With the internal root inside the user root, the user space's scope leaves the
+    inner root out, and names back a place in it assigned to the user space; the
+    technical space's scope leaves that place out (DEC-001 points 1 and 2)."""
+    tech = "docs/tech/living-docs/rule-sets"
+    declare(
+        project,
+        roots={"user": "docs/", "internal": "docs/tech/"},
+        places=["README.md", "docs/tech/guide/"],
+        assignments={"README.md": "user", "docs/tech/guide/": "user"},
+        spaces={
+            "user": {"entry-point": "README.md", "definition": f"{tech}/user.md"},
+            "technical": {
+                "entry-point": "docs/tech/README.md",
+                "definition": f"{tech}/technical.md",
+            },
+        },
+    )
+    project.write(
+        {
+            "docs/tech/README.md": "---\nreader: maintainer\nkind: signpost\n---\n\n# Tech\n",
+            f"{tech}/user.md": _definition("USER", scope=UNSCOPED),
+            f"{tech}/technical.md": _definition("TECH", scope=UNSCOPED),
+        }
+    )
+    reports = {
+        f["location"]: f["message"]
+        for f in run(project)["findings"]
+        if f["severity"] == "report" and f["location"].startswith(tech)
+    }
+    assert (
+        "`scope: {paths: [docs/**, README.md, docs/tech/guide/], exclude: [docs/tech/**], "
+        "types: [living-docs:page]}`" in reports[f"{tech}/user.md"]
+    )
+    assert (
+        "`scope: {paths: [docs/tech/**], exclude: [docs/tech/guide/], types: [living-docs:page]}`"
+        in reports[f"{tech}/technical.md"]
+    )
+
+
+def test_a_reader_is_not_checked_while_rs_ldoc_003_is_not_accepted(project: AdopterRepo) -> None:
+    """A rule of any status but accepted binds nothing (COR-051 point 4): no page's
+    reader is read, and the summary says why."""
+    ldoc = project.root / LD / "rule-sets" / "ldoc.md"
+    accepted = "  RS-LDOC-003:\n    status: accepted\n"
+    text = ldoc.read_text(encoding="utf-8")
+    assert accepted in text
+    ldoc.write_text(text.replace(accepted, "  RS-LDOC-003:\n    status: proposed\n"), "utf-8")
+    project.write({"docs/guide.md": "---\nkind: signpost\n---\n\n# Guide\n"})
+    document = run(project)
+    assert document["findings"] == []
+    (line,) = [line for line in document["summary"] if line.startswith("readers")]
+    assert line == (
+        "readers: not checked — RS-LDOC-003 is proposed, so it binds nothing (COR-051 point 4)."
+    )
+
+
+def test_a_space_definition_from_the_template_carries_a_scope_selecting_pages() -> None:
+    """Creating a space gives its definition a scope (DEC-001 point 2): the template
+    carries one, selecting by path and by the page type, its paths a placeholder
+    the writer replaces with the space's root and places."""
+    front = _template_front_matter("space-definition")
+    assert front["scope"] == {"paths": ["<root>/**"], "types": ["living-docs:page"]}
+    assert front["inherits"] == ["living-docs:LDOC@1"]
+
+
+def test_a_definition_written_from_the_template_makes_ldoc_bind_on_its_space_s_pages(
+    project: AdopterRepo,
+) -> None:
+    """The fixture's definitions are the template with their paths written in: LDOC's
+    rules bind on every page of their spaces, so the structure and the reader are
+    checked from the first page (DEC-001 point 2)."""
+    document = run(project)
+    assert document["findings"] == []
+    assert _format_line(document).startswith(
+        "page formats (RS-LDOC-004, accepted): 3 page(s) checked"
+    )
+    assert not _format_line(document).endswith("does not bind on, not checked.")
 
 
 def test_a_space_without_a_definition_yet_is_reported(project: AdopterRepo) -> None:
@@ -1000,7 +1256,7 @@ def test_a_backbone_that_gives_no_types_is_one_error_and_nothing_checked(
 
 def _scoped_definition(set_name: str, scope: Mapping[str, Any] | list[str]) -> str:
     """A space definition from the template, with `scope` (COR-051 point 2)."""
-    return _definition(set_name).replace("rules: {}", f"scope: {json.dumps(scope)}\nrules: {{}}", 1)
+    return _definition(set_name, scope=scope)
 
 
 def _out_of_root(project: AdopterRepo, *, typed: bool) -> None:
@@ -1016,6 +1272,7 @@ def _out_of_root(project: AdopterRepo, *, typed: bool) -> None:
 
 def test_a_definition_with_no_scope_joins_nothing(project: AdopterRepo) -> None:
     _out_of_root(project, typed=False)
+    unscoped(project)
     document = run(project)
     assert errors(document) == []
     assert (
@@ -1057,7 +1314,12 @@ def test_an_assigned_place_lies_in_no_other_definition_s_scope(project: AdopterR
     """Checked against every other definition with a scope, even where the place's
     own space's definition carries none (DEC-001 point 1)."""
     _out_of_root(project, typed=False)
-    project.write({f"{DEFINITIONS}/user.md": _scoped_definition("USER", ["*.md", "docs/**"])})
+    project.write(
+        {
+            f"{DEFINITIONS}/user.md": _scoped_definition("USER", ["*.md", "docs/**"]),
+            f"{DEFINITIONS}/technical.md": _definition("TECH", scope=UNSCOPED),
+        }
+    )
     location, message = only_error(run(project))
     assert location == f"{LD_CONFIG}:/places/CONTRIBUTING.md"
     assert (
@@ -1083,7 +1345,12 @@ def test_a_place_assigned_where_the_definition_selects_by_type_gives_the_page_ty
     validation fails the place (DEC-001 point 1)."""
     _out_of_root(project, typed=False)
     by_type = {"paths": ["docs/**", "README.md"], "types": ["living-docs:page"]}
-    project.write({f"{DEFINITIONS}/user.md": _scoped_definition("USER", by_type)})
+    project.write(
+        {
+            f"{DEFINITIONS}/user.md": _scoped_definition("USER", by_type),
+            f"{DEFINITIONS}/technical.md": _definition("TECH", scope=UNSCOPED),
+        }
+    )
     location, message = only_error(run(project))
     assert location == f"{CONFIG}:/friction/places/0"
     assert (
@@ -1433,6 +1700,114 @@ def test_a_shared_method_without_the_rule_checks_no_body_and_says_so(
     assert _format_line(document) == (
         f"page formats: not checked — {LD.as_posix()}/rule-sets/ldoc.md holds no RS-LDOC-004."
     )
+
+
+def test_a_page_outside_every_space_is_not_checked_against_its_kind_s_structure(
+    project: AdopterRepo,
+) -> None:
+    """RS-LDOC-004 binds on a page only through a set of the project's own whose scope
+    selects it (COR-051 point 7; DEC-001 point 3). A page no definition's scope
+    selects departs from its kind's structure and fails nothing, and the summary
+    counts it apart."""
+    outside_every_space(project)
+    project.write({"docs/drafts/ref.md": _page("reference", "No title.\n")})
+    document = run(project)
+    # The page is reported as left out of its space's scope, never failed.
+    assert document["findings"] == [left_out("docs/drafts/ref.md")]
+    assert _format_line(document) == (
+        "page formats (RS-LDOC-004, accepted): 3 page(s) checked against the structure their "
+        f"kind declares in {PAGE_KINDS_PATH}, 0 departing from it; 0 page(s) not checked, of "
+        "0 kind(s) that declare no structure; 1 page(s) RS-LDOC-004 does not bind on, not "
+        "checked."
+    )
+    # The same page inside the scope fails.
+    project.write({"docs/ref.md": _page("reference", "No title.\n")})
+    assert only_error(run(project)) == ("docs/ref.md", LACKS_TITLE)
+
+
+def test_a_page_reached_through_a_pin_behind_ldoc_s_major_is_not_checked(
+    project: AdopterRepo,
+) -> None:
+    """No rule binds through a pin behind its set (COR-051 point 7): the definitions
+    pin LDOC at a major it has left, so no page's structure or reader is checked,
+    and the backbone's own `rule-sets` member names the pin."""
+    for name, space in (("USER", "user"), ("TECH", "technical")):
+        project.write({f"{DEFINITIONS}/{space}.md": _definition(name, ["living-docs:LDOC@0"])})
+    project.write({"docs/ref.md": _page("reference", "No title.\n")})
+    document = run(project)
+    assert errors(document) == []
+    assert _format_line(document) == (
+        "page formats: not checked — RS-LDOC-004 binds on none of the 4 page(s) (COR-051 point "
+        "7): living-docs:LDOC binds only through a set of the project's own whose scope selects "
+        "a page, such as a space's definition (DEC-001 point 2)."
+    )
+    (line,) = [line for line in document["summary"] if line.startswith("readers")]
+    assert line == (
+        "readers: not checked — RS-LDOC-003 binds on none of the 4 page(s), so "
+        "pkit::documentation:readers is not read (COR-051 point 7)."
+    )
+
+
+def test_where_the_rules_bind_unread_is_one_error_and_no_structure_or_reader_checked(
+    project: AdopterRepo,
+    pkit_on_path: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A `pkit` that gives no answer of where the rules bind: a check of a rule's part
+    runs only where the rule binds, which cannot be told, so neither part is
+    checked, and that is one error (DEC-001 point 3)."""
+    broken = tmp_path_factory.mktemp("no-reach-pkit")
+    (broken / "pkit").write_text(
+        '#!/bin/sh\nif [ "$1" = rule-sets ]; then echo "no reach here" >&2; exit 2; fi\n'
+        f'exec "{pkit_on_path}/pkit" "$@"\n',
+        encoding="utf-8",
+    )
+    (broken / "pkit").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{broken}{os.pathsep}{os.environ['PATH']}")
+    project.write({"docs/ref.md": _page("reference", "No title.\n")})
+    document = run(project)
+    location, message = only_error(document)
+    assert location == CONFIG
+    assert message == (
+        "where living-docs:LDOC's rules bind cannot be read — `pkit rule-sets reach --json` "
+        "exited 2 without its document: no reach here. No page's structure or reader is "
+        "checked until it can: living-docs checks each part of a rule only where the rule "
+        "binds, read through the backbone's `pkit rule-sets reach --json` (DEC-001 point 3; "
+        "COR-051 point 7)."
+    )
+    assert _format_line(document) == (
+        "page formats: not checked — where RS-LDOC-004 binds cannot be read."
+    )
+
+
+binding = _library("binding")
+
+
+def test_the_answer_of_where_rules_bind_reads_each_document_s_rules() -> None:
+    """The `pkit rule-sets reach --json` document, read as the validator reads it:
+    each document artefact's rules as cited; an entry of a collection file is no
+    page, so it is left out; a version other than 1 is no answer."""
+    answer = {
+        "schema_version": 1,
+        "commit": None,
+        "artefacts": [
+            {
+                "path": "docs/a.md",
+                "kind": "document",
+                "rules": [{"rule": "living-docs:RS-LDOC-003"}, {"rule": "RS-USER-001"}],
+            },
+            {"path": "rules.md", "kind": "entry", "rules": [{"rule": "living-docs:RS-LDOC-001"}]},
+        ],
+    }
+    read = binding.binding_of(answer)
+    assert read.binds("docs/a.md", "living-docs:RS-LDOC-003")
+    assert not read.binds("docs/a.md", "living-docs:RS-LDOC-004")
+    assert not read.binds("rules.md", "living-docs:RS-LDOC-001")
+    assert not read.binds("docs/b.md", "living-docs:RS-LDOC-003")
+    for wrong in ({**answer, "schema_version": 2}, {"schema_version": 1}):
+        with pytest.raises(binding.Unreadable):
+            binding.binding_of(wrong)
 
 
 @pytest.mark.parametrize(

@@ -9,12 +9,13 @@
 """living-docs capability — validate: the project's documentation spaces (DEC-001).
 
 Checks the places the spaces' pages are found in and their assignment to a
-space, what is never a page, the pages' own fields and whether each page's
-reader resolves, each page's body against the structure its kind declares
-(RS-LDOC-004), each space's entry point and definition, whether the two
-spaces are separate, and the captured sources' layout and what names them
-(DEC-001 point 4). `_lib/spaces.py` and `_lib/sources.py` state every check
-and the record point it applies.
+space, what is never a page, the pages' own fields, each page's reader where
+RS-LDOC-003 binds on it and its body against the structure its kind declares
+where RS-LDOC-004 binds (DEC-001 point 3), each space's entry point and
+definition with its scope, whether the two spaces are separate, and the
+captured sources' layout and what names them (DEC-001 point 4).
+`_lib/spaces.py` and `_lib/sources.py` state every check and the record point
+it applies.
 
 The backbone runs it as this capability's validator, the `living-docs:spaces`
 member of `pkit validate` (ADR-058): from the project root, with `--json`
@@ -22,8 +23,10 @@ alone and the offline marker set, reading one findings document from standard
 output. It is a query — bounded, deterministic, read-only, needing no network —
 and `pkit init` and `pkit sync` provision its dependencies in uv's cache. It
 reads through the backbone's read commands: the roots, the places and the
-documents in them through `pkit friction artefacts`, and the readers point
-through `pkit connections resolve`, only when some page names a reader.
+documents in them through `pkit friction artefacts`, where the rules bind
+through `pkit rule-sets reach`, only when there is a page, and the readers
+point through `pkit connections resolve`, only when some page names a reader
+where RS-LDOC-003 binds.
 
 Usage:
   pkit living-docs validate           the summary, the findings, the unclassified documents

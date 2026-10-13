@@ -9,7 +9,9 @@ Two of the umbrella's members (`project_kit.validators`, ADR-058) live here:
   requires_backbone) and a matching name and kind. A missing manifest is
   skipped: adapters and capabilities propagate through sync and stamp none.
 - **`decisions`**, the front-matter half — each `.pkit/decisions/{core,project}/*.md`
-  carries valid front matter (id, title, status, date, author). The id-space
+  carries valid front matter (id, title, status, date, author). A record that
+  arrives as a synced copy is left out, as the member's other checks leave it
+  (`decisions_validate.synced_record_test`, COR-055 point 1). The id-space
   half is `decisions_validate`, which composes both into the member.
 
 Every finding is an error; the checks read only.
@@ -66,7 +68,8 @@ def manifest_issues(target_root: Path) -> list[Issue]:
 
 
 def decision_frontmatter_issues(target_root: Path) -> list[Issue]:
-    """Every decision record's front matter, under `.pkit/decisions/{core,project}/`."""
+    """Every decision record's front matter, under `.pkit/decisions/{core,project}/`,
+    a synced copy left out."""
     return _validate_decisions(target_root)
 
 
@@ -179,18 +182,27 @@ def _validate_component_manifest_fields(location: str, component: ComponentManif
 
 
 def _validate_decisions(target_root: Path) -> list[Issue]:
-    """Walk decisions/{core,project}/ and validate each record's frontmatter."""
+    """Walk decisions/{core,project}/ and validate each record's frontmatter.
+
+    A synced copy is not read: the project cannot mend it, so it is checked where
+    it is authored (COR-055 point 1).
+    """
+    from project_kit.decisions_validate import synced_record_test
+
     issues: list[Issue] = []
     decisions_dir = target_root / ".pkit" / "decisions"
     if not decisions_dir.is_dir():
         return issues
 
+    is_synced = synced_record_test(target_root)
     for namespace in ("core", "project"):
         ns_dir = decisions_dir / namespace
         if not ns_dir.is_dir():
             continue
         for record in sorted(ns_dir.glob("*.md")):
             if record.name == "README.md":
+                continue
+            if is_synced(record.relative_to(target_root).as_posix()):
                 continue
             issues.extend(_validate_decision_record(target_root, record))
     return issues

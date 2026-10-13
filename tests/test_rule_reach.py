@@ -248,6 +248,139 @@ def test_no_rule_binds_through_a_pin_behind_its_set(repo: AdopterRepo) -> None:
     assert bound(repo) == ["RS-DOC-001"]
 
 
+def held(repo: AdopterRepo, location: str = A) -> list[tuple[str, list[str]]]:
+    """The rules pins behind their sets hold back from the artefact at `location`, as
+    cited, each with those pins as `<set> pins <pin>`."""
+    found = rs.reach_at(repo.root)[2].of(location).held
+    return [
+        (h.rule_set.cite(h.rule.id), [f"{by.citation} pins {pin}" for by, _i, pin in h.pins])
+        for h in found
+    ]
+
+
+def test_the_answer_names_the_rules_a_pin_behind_its_set_holds_back(repo: AdopterRepo) -> None:
+    """COR-057's Implications: the backbone gives the rules a pin behind its set holds back,
+    beside the rules that bind. They bind nothing; a reviewer may only inform of them."""
+    lay_out(
+        repo,
+        {
+            "cmn": rule_set(
+                "CMN", "2.0.0", entries={**rules("RS-CMN-001", "RS-CMN-002"), "RS-CMN-003": {}}
+            ),
+            "doc": rule_set("DOC", inherits=["CMN@1"], scope=scoped(f"{GUIDES}/**")),
+        },
+        a=page(),
+    )
+    assert bound(repo) == ["RS-DOC-001"]
+    # The proposed RS-CMN-003 binds nothing whatever its pins, so nothing holds it back.
+    assert held(repo) == [
+        ("RS-CMN-001", ["DOC pins CMN@1"]),
+        ("RS-CMN-002", ["DOC pins CMN@1"]),
+    ]
+    document = reading.reach_document(repo.root)
+    (entry,) = document["artefacts"]
+    assert [(h["rule"], h["status"], h["rule_set_path"], h["pins"]) for h in entry["held"]] == [
+        (
+            "RS-CMN-001",
+            "accepted",
+            f"{SETS}/cmn.md",
+            [{"by": f"{SETS}/doc.md", "by_rule_set": "DOC", "pin": "CMN@1"}],
+        ),
+        (
+            "RS-CMN-002",
+            "accepted",
+            f"{SETS}/cmn.md",
+            [{"by": f"{SETS}/doc.md", "by_rule_set": "DOC", "pin": "CMN@1"}],
+        ),
+    ]
+    assert entry["held"][0]["text"].startswith("## RS-CMN-001 — Rule RS-CMN-001")
+    assert "RS-CMN-001  (CMN)  held back, binding nothing: DOC pins CMN@1" in (
+        reading.render_reach_human(document)
+    )
+
+
+def test_a_rule_reached_cleanly_too_is_not_held_back(repo: AdopterRepo) -> None:
+    """A rule binds through any route whose pins are not behind, so a second route behind
+    its set holds nothing back; a set beyond the held one is held back by the same pin."""
+    lay_out(
+        repo,
+        {
+            "base": rule_set("BASE"),
+            "cmn": rule_set("CMN", "2.0.0", inherits=["BASE@1"]),
+            "doc": rule_set("DOC", inherits=["CMN@1"], scope=scoped(f"{GUIDES}/**")),
+            "own": rule_set("OWN", inherits=["CMN@2"], scope=scoped(f"{GUIDES}/b.md")),
+        },
+        a=page(),
+        b=page(),
+    )
+    assert held(repo) == [
+        ("RS-BASE-001", ["DOC pins CMN@1"]),
+        ("RS-CMN-001", ["DOC pins CMN@1"]),
+    ]
+    b = f"{GUIDES}/b.md"
+    assert bound(repo, b) == ["RS-BASE-001", "RS-CMN-001", "RS-DOC-001", "RS-OWN-001"]
+    assert held(repo, b) == []
+
+
+def test_a_rule_that_fills_is_never_held_back_as_a_rule(repo: AdopterRepo) -> None:
+    """A fill binds only as a fill, so a pin behind its set holds back the rules of the
+    sets beyond it, and never a filling rule as a rule of its own."""
+    lay_out(
+        repo,
+        {
+            "cmn": _offering(),
+            "fill": rule_set(
+                "FILL", "2.0.0", inherits=["CMN@1"], entries=rules("RS-FILL-001", **_filling())
+            ),
+            "doc": rule_set("DOC", inherits=["FILL@1"], scope=scoped(f"{GUIDES}/**")),
+        },
+        a=page(),
+    )
+    assert bound(repo) == ["RS-DOC-001"]
+    assert held(repo) == [
+        ("RS-CMN-001", ["DOC pins FILL@1"]),
+        ("RS-CMN-002", ["DOC pins FILL@1"]),
+    ]
+
+
+def test_a_held_rule_names_only_the_pins_on_the_artefact_s_routes(repo: AdopterRepo) -> None:
+    """A pin leads towards a held rule only along routes that pass each set's own scope:
+    TTT is reached through WWW alone, since the route through YYY stops at ZZZ, whose
+    scope does not select the artefact."""
+    lay_out(
+        repo,
+        {
+            "doc": rule_set("DOC", inherits=["YYY@1", "WWW@1"], scope=scoped(f"{GUIDES}/**")),
+            "yyy": rule_set("YYY", "2.0.0", inherits=["ZZZ@1"]),
+            "zzz": rule_set("ZZZ", inherits=["TTT@1"], scope=scoped("docs/other/**")),
+            "www": rule_set("WWW", "2.0.0", inherits=["TTT@1"]),
+            "ttt": rule_set("TTT"),
+        },
+        a=page(),
+    )
+    assert held(repo) == [
+        ("RS-TTT-001", ["DOC pins WWW@1"]),
+        ("RS-WWW-001", ["DOC pins WWW@1"]),
+        ("RS-YYY-001", ["DOC pins YYY@1"]),
+    ]
+
+
+def test_an_artefact_whose_rules_are_all_held_back_is_listed(repo: AdopterRepo) -> None:
+    lay_out(
+        repo,
+        {
+            "cmn": rule_set("CMN", "2.0.0"),
+            "doc": rule_set(
+                "DOC", inherits=["CMN@1"], scope=scoped(f"{GUIDES}/**"), entries={"RS-DOC-001": {}}
+            ),
+        },
+        a=page(),
+    )
+    (entry,) = reading.reach_document(repo.root)["artefacts"]
+    assert entry["location"] == A and entry["rules"] == [] and entry["conflicts"] == []
+    assert [h["rule"] for h in entry["held"]] == ["RS-CMN-001"]
+
+
 def test_a_pin_ahead_of_its_set_is_not_behind_it(repo: AdopterRepo) -> None:
     """COR-051 point 7 holds rules back only through a pin behind its set; a pin ahead
     does not hold, and the version relations report it (`PinCheck.problem`)."""
@@ -464,7 +597,92 @@ def test_a_declared_check_part_is_listed_on_its_rule_and_one_not_there_is_report
     document = reading.reach_document(repo.root)
     (entry,) = [a for a in document["artefacts"] if a["location"] == A]
     (cmn,) = [r for r in entry["rules"] if r["id"] == "RS-CMN-001"]
-    assert cmn["checks"][0] == {"check": "backbone:validate", "part": "The field resolves."}
+    # Each declared part says whether its check is there, as validation judges it
+    # (COR-057's Implications): a part whose check is not there is the reviewer's.
+    assert [(c["check"], c["there"], c["problem"]) for c in cmn["checks"]] == [
+        ("backbone:validate", True, None),
+        ("backbone:friction check", True, None),
+        ("living-docs:validate", True, None),
+        ("lint-writing", True, None),
+        ("backbone:no-such-check", False, "the backbone has no check `pkit no-such-check`"),
+        (
+            "living-docs:no-such-command",
+            False,
+            "living-docs registers no command `no-such-command` in its package metadata",
+        ),
+        ("nocapability:validate", False, "no installed component is named nocapability"),
+    ]
+    assert cmn["checks"][0]["part"] == "The field resolves."
+    human = reading.render_reach_human(document)
+    assert "checked by backbone:validate: The field resolves.\n" in human
+    assert (
+        "checked by backbone:no-such-check: Nothing.  "
+        "(not there: the backbone has no check `pkit no-such-check`)"
+    ) in human
+
+
+def test_a_component_s_check_is_judged_at_the_state_read_a_backbone_check_by_the_tool(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A component's check is there by the registrations of the state read: the working
+    tree's, or the commit's with `--at`, and the base's and the head's for `altered`. A
+    backbone check is there by the `pkit` that runs, whatever the state, since no commit
+    holds the tool (ADR-057 point 2)."""
+    repo = make_adopter_repo(capabilities=("living-docs",))
+    parts = {
+        "RS-CMN-001": [
+            {"check": "living-docs:validate", "part": "The sections."},
+            {"check": "backbone:validate", "part": "The field resolves."},
+        ]
+    }
+    lay_out(
+        repo,
+        {
+            "cmn": rule_set("CMN", checks=parts),
+            "doc": rule_set("DOC", inherits=["CMN@1"], scope=scoped(f"{GUIDES}/**")),
+        },
+        a=page(),
+    )
+    commit = repo.commit("living-docs installed")  # on main, the base below
+
+    def presence(entry: Mapping[str, Any]) -> list[tuple[bool, str | None]]:
+        (cmn,) = [r for r in entry["rules"] if r["id"] == "RS-CMN-001"]
+        return [(c["there"], c["problem"]) for c in cmn["checks"]]
+
+    def reach(at: str | None) -> list[tuple[bool, str | None]]:
+        (entry,) = reading.reach_document(repo.root, at)["artefacts"]
+        return presence(entry)
+
+    there = [(True, None), (True, None)]
+    gone = [(False, "no installed component is named living-docs"), (True, None)]
+    assert reach(None) == reach(commit) == there
+    repo.write({".pkit/capabilities/living-docs/package.yaml": None, A: page(body="Edited.")})
+    assert reach(None) == gone
+    assert reach(commit) == there  # the commit holds the package, whatever this checkout does
+    (altered,) = reading.altered_document(repo.root, "main")["artefacts"]
+    assert altered["change"] == "changed"
+    assert presence(altered["base"]) == there and presence(altered["head"]) == gone
+
+
+def test_a_commit_s_installed_packages_are_read_from_that_commit(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The packages a commit installs are its manifest's components whose package file it
+    holds: an empty one is installed and registers nothing, an absent one is left out, as
+    the working tree's reader keeps and leaves them."""
+    repo = make_adopter_repo(capabilities=("living-docs",))
+    package = ".pkit/capabilities/living-docs/package.yaml"
+
+    def at(commit: str) -> dict[str, dict[str, Any]]:
+        tree = fc.CommitTree(repo.root, commit)
+        return {name: found for name, _dir, found in fd.installed_packages_at(repo.root, tree)}
+
+    installed = at(repo.commit("installed"))
+    assert "commands" in installed["living-docs"]
+    repo.write({package: ""})
+    assert at(repo.commit("an empty package file"))["living-docs"] == {}
+    repo.write({package: None})
+    assert "living-docs" not in at(repo.commit("no package file"))
 
 
 def test_a_check_part_is_no_part_of_the_rule_s_content(repo: AdopterRepo) -> None:
@@ -557,11 +775,12 @@ def test_reach_gives_each_ruled_artefact_with_its_rules(repo: AdopterRepo) -> No
     document = json.loads(result.output)
     assert document["schema_version"] == 1 and document["commit"] is None
     (entry,) = document["artefacts"]
-    assert {k: entry[k] for k in ("location", "kind", "span", "conflicts")} == {
+    assert {k: entry[k] for k in ("location", "kind", "span", "conflicts", "held")} == {
         "location": A,
         "kind": "document",
         "span": None,
         "conflicts": [],
+        "held": [],
     }
     assert [r["rule"] for r in entry["rules"]] == ["RS-CMN-001", "RS-DOC-001"]
     cmn = entry["rules"][0]

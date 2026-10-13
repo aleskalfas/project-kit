@@ -5,8 +5,9 @@ DEC-001 point 3). The part of a format a tool checks is the page's
 **structure**: the sections every page of the kind carries, in order where
 order matters. Each kind's structure is declared once, in this capability's
 `schemas/page-kinds.yaml` — never read out of the template's text — and read
-here; the validator checks every page of the kind against it, and a test
-checks every template against it, so neither holds a copy that can drift.
+here; the validator checks a page of the kind against it where RS-LDOC-004
+binds on the page, as `spaces` reads it from the backbone, and a test checks
+every template against it, so neither holds a copy that can drift.
 
 What a **section** is, precisely: a heading written as a line that opens, with
 no space before it, with one to six `#`, then a space, a tab or the end of the
