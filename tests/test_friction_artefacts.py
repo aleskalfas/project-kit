@@ -12,7 +12,9 @@ calls instead of re-reading the declarations or walking the places itself:
   claim, whether it is excluded, and its front matter's own fields;
 - every **artefact**, with its id, kind, place and own fields — an entry with
   the span of its section, exactly the text friction compares, and each
-  artefact with the rule sets whose scope covers it (#1361);
+  artefact with the rule sets whose scope covers it (#1361) and the span each
+  of its part anchors resolves to: an entry's section (#1414), or a record's
+  point, read through the one reading of a record's points (#1552);
 - every **folder of held documents**, declared as a place is, and every file it
   holds, with the places that left it out — never a file or an artefact of any
   place (#1130);
@@ -30,8 +32,10 @@ import pytest
 from click.testing import CliRunner
 
 from project_kit import friction_discovery as fd
+from project_kit import record_points as rp
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.friction_documents import POINTED, POINTS, pointed_record
 
 CONFIG = ".pkit/project/config.yaml"
 EVIDENCE_PACKAGE = ".pkit/capabilities/evidence/package.yaml"
@@ -437,6 +441,129 @@ def test_at_a_commit_a_part_anchor_s_span_is_that_state_s(adopter: AdopterRepo) 
     at_head = _part_anchors(json.loads(_run("--at", "HEAD", "--json").output))
     assert now == {"first_line": 20, "last_line": 26}
     assert at_head["notes/page.md"][0]["span"] == {"first_line": 18, "last_line": 24}
+
+
+# --- each point anchor's span (#1552) ---------------------------------------------------------
+
+
+def _page(**anchors: list[str]) -> str:
+    """A page in a project place, its anchors by kind in the order given."""
+    lines = "".join(f"      {kind}: [{', '.join(values)}]\n" for kind, values in anchors.items())
+    return f"---\nid: page\npkit:\n  friction:\n    anchors:\n{lines}---\n\n# Page\n"
+
+
+def test_an_anchor_on_a_record_s_point_gives_the_span_of_the_point_s_section(
+    adopter: AdopterRepo,
+) -> None:
+    """COR-050 point 2: an anchor may name one point of a record. Its span is the lines of
+    the record's file the point's section spans, read through the one reading of a record's
+    points (ADR-057 point 2): exactly the section the checks compare. `artefact` anchors
+    come first, then `record` anchors, each in written order. A whole record, a dead point
+    and a missing record name no part."""
+    record = pointed_record()
+    page = _page(
+        record=["PRJ-900#3", "PRJ-900", "PRJ-900#9", "PRJ-999#1", "PRJ-900#1"],
+        artefact=["term-a"],  # written after the record anchors, listed before them
+    )
+    adopter.write({POINTED: record, TERMS: SECTIONED, "notes/page.md": page})
+    document = _document()
+    assert document["schema_version"] == 1  # a key added within the document's version
+    found = _part_anchors(document)["notes/page.md"]
+    assert [(a["kind"], a["value"]) for a in found] == [
+        ("artefact", "term-a"),
+        ("record", "PRJ-900#3"),
+        ("record", "PRJ-900#1"),
+    ]
+    third, first = found[1], found[2]
+    assert third == {
+        "kind": "record",
+        "value": "PRJ-900#3",
+        "path": POINTED,
+        "span": {"first_line": 27, "last_line": 29},
+    }
+    assert _lines(record, third["span"]) == "### 3. Third\n\nThe third point.\n"
+    assert _lines(record, first["span"]) == "### 1. First\n\nThe first point.\n"
+    standing = rp.read_points(record).standing("3")
+    assert standing is not None and _lines(record, third["span"]) == standing.section
+
+
+def test_an_anchor_on_a_retired_point_is_listed_with_no_span(adopter: AdopterRepo) -> None:
+    """COR-050 points 5 and 7: an anchor on a retired point resolves, since the record says
+    where the point went, and stands on nothing, so it has no span."""
+    points = (POINTS[0], ("2", "Retired", "Its content is in point 3."), POINTS[2])
+    adopter.write(
+        {
+            POINTED: pointed_record(points, retired={"2": ["3"]}),
+            "notes/page.md": _page(record=["PRJ-900#2"]),
+        }
+    )
+    assert _part_anchors(_document())["notes/page.md"] == [
+        {"kind": "record", "value": "PRJ-900#2", "path": POINTED, "span": None}
+    ]
+
+
+@pytest.mark.parametrize(
+    "decision",
+    [
+        pytest.param("### 1. First\n\nOne.\n\n### 1. Again\n\nTwo.\n", id="ambiguous"),
+        pytest.param("1. **First.** One.\n2. **Second.** Two.\n", id="list-form"),
+    ],
+)
+def test_an_ambiguous_point_anchor_or_one_on_a_record_in_list_form_names_no_part(
+    adopter: AdopterRepo, decision: str
+) -> None:
+    """COR-050 point 7: an id two live points share is ambiguous, and a record in list form
+    holds no point an anchor can name; neither names a part."""
+    record = pointed_record().split("## Decision\n\n")[0] + f"## Decision\n\n{decision}\n"
+    adopter.write({POINTED: record, "notes/page.md": _page(record=["PRJ-900#1"])})
+    document = _document()
+    assert _part_anchors(document) == {}
+    page = next(a for a in document["artefacts"] if a["path"] == "notes/page.md")
+    assert page["part_anchors"] == []
+
+
+def test_a_point_of_an_adr_or_of_a_capability_s_decision_gives_its_span(
+    adopter: AdopterRepo,
+) -> None:
+    """The record is found as the checks find it: an ADR in the folder the agents overlay
+    names, and a capability's decision as `<capability>:DEC-NNN`, with or without its
+    slug."""
+    adr = "docs/architecture/decisions/ADR-007-pointed.md"
+    decision = ".pkit/capabilities/evidence/decisions/DEC-003-pointed.md"
+    record = pointed_record()
+    adopter.write(
+        {
+            ".pkit/agents/project/overlay.yaml": "adr-records:\n  - docs/architecture/decisions/\n",
+            adr: record.replace("PRJ-900", "ADR-007"),
+            decision: record.replace("PRJ-900", "DEC-003"),
+            "notes/page.md": _page(
+                record=["ADR-007#2", "evidence:DEC-003#1", "evidence:DEC-003-pointed#3"]
+            ),
+        }
+    )
+    found = _part_anchors(_document())["notes/page.md"]
+    assert [(a["value"], a["path"], a["span"]) for a in found] == [
+        ("ADR-007#2", adr, {"first_line": 23, "last_line": 25}),
+        ("evidence:DEC-003#1", decision, {"first_line": 19, "last_line": 21}),
+        ("evidence:DEC-003-pointed#3", decision, {"first_line": 27, "last_line": 29}),
+    ]
+
+
+def test_at_a_commit_a_point_anchor_s_span_is_that_state_s(adopter: AdopterRepo) -> None:
+    """With `--at`, the record is read at that commit: its listing finds the record and its
+    text gives the lines."""
+    record = pointed_record()
+    adopter.write({POINTED: record, "notes/page.md": _page(record=["PRJ-900#2"])})
+    adopter.commit("a pointed record")
+    adopter.write({POINTED: pointed_record(context="Why it came up.\n\nTwo more lines.")})
+    now = _part_anchors(_document())["notes/page.md"][0]["span"]
+    at_head = _part_anchors(json.loads(_run("--at", "HEAD", "--json").output))
+    assert now == {"first_line": 25, "last_line": 27}
+    assert at_head["notes/page.md"][0]["span"] == {"first_line": 23, "last_line": 25}
+    (adopter.root / POINTED).unlink()
+    assert _part_anchors(_document()) == {}  # gone from the working tree: a dead anchor
+    at_head = _part_anchors(json.loads(_run("--at", "HEAD", "--json").output))
+    assert at_head["notes/page.md"][0]["path"] == POINTED
 
 
 # --- the rule sets whose scope covers an artefact (#1361) -----------------------------------

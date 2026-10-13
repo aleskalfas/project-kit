@@ -89,8 +89,9 @@ is the one reader of those declarations and the one walker of the places:
 - `artefacts_document` — the one walk's answer as a stable document: the
   declared places with the files each matches and the skips validation
   applies, every file read with its place and its front matter's own fields,
-  every artefact with its anchors, an entry's section span, its type and the
-  rule sets whose scope covers it, every declared type, and the held folders,
+  every artefact with its anchors, an entry's section span, the span each of
+  its part anchors resolves to, its type and the rule sets whose scope covers
+  it, every declared type, and the held folders,
   declared as places are, with every file each holds — of the working tree, or
   of a commit.
   `pkit friction artefacts --json` prints it, and a capability's script reads
@@ -154,6 +155,7 @@ from project_kit.document_parts import (
 )
 from project_kit.line_breaks import line_break
 from project_kit.manifest import read_backbone_manifest
+from project_kit.record_points import PointState, RecordPoints, read_points_bytes, split_anchor
 from project_kit.report_context import project_config_path
 from project_kit.working_tree import WorkingTree, working_tree
 
@@ -3470,7 +3472,8 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
       file in COR-056 point 3's order (`{place, rank}`, places that rank
       equal sharing a rank). Its `part_anchors`, added within version 1 too:
       each anchor that names a part of a file, with the span that part
-      resolves to (`_part_anchors`).
+      resolves to (`_part_anchors`): an entry's section, or a record's point,
+      read through the one reading of a record's points (`record_points`).
     - `types`: every declared type by its full name — the backbone's own and
       each installed component's type registry — with its `component`,
       `name`, `description`, `kind_field` and `project_places`. Added within
@@ -3533,6 +3536,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
         held_of.setdefault(held.folder, []).append(held.path)
     in_scope_of = covering_rule_sets(discovery)
     types = discovery.types
+    anchored_points = _AnchoredPoints(target_root, tree)
 
     return {
         "schema_version": ARTEFACTS_SCHEMA_VERSION,
@@ -3580,7 +3584,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
                 "unanchored_because": artefact.unanchored_because,
                 "fields": _own_fields(artefact.carrier),
                 "span": _span_entry(artefact.span),
-                "part_anchors": _part_anchors(discovery, artefact),
+                "part_anchors": _part_anchors(discovery, artefact, anchored_points),
                 "in_scope_of": list(in_scope_of.get(artefact.location, ())),
                 **_type_entry(types.of(artefact), index),
             }
@@ -3709,27 +3713,113 @@ def _malformed_held_entry(declaration: MalformedDeclaration) -> dict[str, Any]:
     }
 
 
-def _part_anchors(discovery: Discovery, artefact: Artefact) -> list[dict[str, Any]]:
+def _part_anchors(
+    discovery: Discovery, artefact: Artefact, points: _AnchoredPoints
+) -> list[dict[str, Any]]:
     """Each anchor of `artefact` that names a part of a file, with the span that part
-    resolves to, in the order the artefact lists them.
+    resolves to: by kind name, then each kind's values in the order the block writes
+    them, as the document's sorted `anchors` shows them.
 
-    An `artefact` anchor names a part when the artefact it resolves to is a
-    collection entry, whose content is its data and the body section headed by
-    its id (COR-050 point 1); a rule is one (COR-051 point 2). It resolves as
-    the friction checks resolve it (`Discovery.find`). Each is `{kind, value,
-    path, span}`: `path` the file the part lies in, and `span` its section's
-    lines as the entry's own `span` gives them, `None` for an entry with no
-    section. An anchor on a whole document or a whole file, a dead anchor and
-    an anchor of another kind name no part, so none is listed. No record's
-    points are listed: a record is not an artefact.
+    - **An `artefact` anchor** names a part when the artefact it resolves to is
+      a collection entry, whose content is its data and the body section headed
+      by its id (COR-050 point 1); a rule is one (COR-051 point 2). It resolves
+      as the friction checks resolve it (`Discovery.find`). Its `span` is its
+      section's lines as the entry's own `span` gives them, `None` for an entry
+      with no section.
+    - **A `record` anchor** names a part when it names one point of the record
+      (COR-050 point 2), found as the friction checks find it (`_AnchoredPoints`).
+
+    Each is `{kind, value, path, span}`, `path` the file the part lies in. An
+    anchor on a whole document, a whole file or a whole record, a dead or
+    ambiguous anchor and an anchor of another kind name no part, so none is
+    listed. The document lists a record's points only where an anchor names one.
     """
     found: list[dict[str, Any]] = []
-    for value in artefact.anchors_of_kind("artefact"):
-        target = discovery.find(value)
-        if target is not None and target.kind is ArtefactKind.ENTRY:
-            span = _span_entry(target.span)
-            found.append({"kind": "artefact", "value": value, "path": target.path, "span": span})
+    for kind in sorted(artefact.anchors):
+        for value in artefact.anchors_of_kind(kind):
+            if kind == "artefact":
+                target = discovery.find(value)
+                if target is not None and target.kind is ArtefactKind.ENTRY:
+                    span = _span_entry(target.span)
+                    found.append({"kind": kind, "value": value, "path": target.path, "span": span})
+            elif kind == "record":
+                part = points.part(value)
+                if part is not None:
+                    found.append(part)
     return found
+
+
+class _AnchoredPoints:
+    """The records the point anchors of the artefacts document name, each read once from
+    the state the document reads, its points through `record_points` (ADR-057 point 2).
+
+    A record anchor's file is found by the friction checks' resolver of it
+    (`friction_check.record_file`), over that state's listing, and what an anchor
+    on one point finds in it by `RecordPoints.anchored` (COR-050 point 7):
+
+    - **a live point** gives the lines of the record's file its section spans
+      (`RecordPoints.span`), the section the checks compare. What else the point
+      stands on, the record's fields and the parts every point shares, has no
+      span here (COR-050 point 5).
+    - **a retired point** gives `None`. It is no dead anchor, so it is listed,
+      and it stands on nothing, so it spans no lines (COR-050 points 5 and 7).
+    - **a dead anchor**, on a record or a point the state does not hold or on a
+      record whose points are a list, and **an ambiguous one**, on an id two
+      live points share, name no part.
+
+    The working tree is listed only when an anchor names a point, through its
+    one listing (`working_tree`), which a run shares with discovery.
+    """
+
+    def __init__(self, target_root: Path, tree: RepositoryTree | None) -> None:
+        self.root = target_root
+        self.tree = tree
+        self._listing: RepositoryTree | None = None
+        self._files: frozenset[str] | None = None
+        self._records: dict[str, RecordPoints | None] = {}
+
+    def part(self, value: str) -> dict[str, Any] | None:
+        """The part the record anchor `value` names, `{kind, value, path, span}`, or `None`
+        when it names a whole record or no part at all."""
+        # The change check imports this module; the resolver of a record anchor's file is its.
+        from project_kit.friction_check import record_file
+
+        record, point_id = split_anchor(value)
+        if point_id is None:
+            return None
+        rel = record_file(self.root, self.files, record)
+        points = None if rel is None else self._read(rel)
+        if rel is None or points is None:
+            return None
+        found = points.anchored(point_id)
+        point = points.point(point_id)
+        if found.state is PointState.LIVE and point is not None:
+            span = _span_entry(points.span(point))
+        elif found.state is PointState.RETIRED:
+            span = None
+        else:
+            return None
+        return {"kind": "record", "value": value, "path": rel, "span": span}
+
+    @property
+    def listing(self) -> RepositoryTree:
+        """The state's listing: the commit's, or the working tree's one listing."""
+        if self._listing is None:
+            self._listing = self.tree if self.tree is not None else working_tree(self.root)
+        return self._listing
+
+    @property
+    def files(self) -> frozenset[str]:
+        if self._files is None:
+            self._files = frozenset(self.listing.files())
+        return self._files
+
+    def _read(self, rel: str) -> RecordPoints | None:
+        """The record at `rel`, its points read once, or `None` when it is no text."""
+        if rel not in self._records:
+            raw = self.listing.read_bytes([rel]).get(rel)
+            self._records[rel] = None if raw is None else read_points_bytes(raw)
+        return self._records[rel]
 
 
 def _span_entry(span: SectionSpan | None) -> dict[str, int] | None:

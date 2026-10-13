@@ -1,0 +1,17 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit friction artefacts --json` lists an anchor on one point of a record
+  among an artefact's `part_anchors`, beside an `artefact` anchor on a
+  collection entry (COR-050 point 2, #1552). Its `path` is the record's file,
+  and its `span` the lines the point's section spans, `{first_line,
+  last_line}`. These are exactly the section friction compares, found by the
+  one reading of a record's points. The span does not give what else the point
+  stands on, such as the record's status. An anchor on a retired point is
+  listed with a `null` span, since it is no dead anchor and stands on nothing.
+  A whole-record anchor, a dead anchor and an ambiguous one are not listed. The
+  list is ordered by kind name, then each kind's values as written. A reader
+  skips an entry of a kind it does not read. The key's meaning stays the same,
+  each anchor that names a part, so the document's `schema_version` stays 1.
