@@ -14,7 +14,7 @@ import math
 import os
 import shlex
 import sys
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -23,7 +23,7 @@ import click
 if TYPE_CHECKING:
     from ruamel.yaml.comments import CommentedMap
 
-    from project_kit.capabilities import CapabilitySource, MandatoryUpstream
+    from project_kit.capabilities import CapabilitySource, CollisionFinding, MandatoryUpstream
 
 from project_kit import (
     __version__,
@@ -4400,6 +4400,10 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         )
 
     new_skipped: list[tuple[str, str]] = []
+    # An override replaces the project's artefact (COR-017), and takes the name
+    # out of the skip state, so the capability's artefact is copied in.
+    overrides: list[tuple[str, str]] = []
+    overridden: list[Path] = []
     if new_collisions and interactive:
         click.echo(
             "\n  "
@@ -4409,12 +4413,21 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
             + "\n"
         )
         for finding in new_collisions:
-            choice = _resolve_collision_interactive(target_root, finding, dry_run=dry_run)
+            choice = _resolve_collision_interactive(
+                target_root, finding, capability=name, dry_run=dry_run
+            )
             if choice == "skip":
                 new_skipped.append((finding.artifact_kind, finding.artifact_name))
+            else:
+                overrides.append((finding.artifact_kind, finding.artifact_name))
+                overridden.extend(
+                    caps.project_artefact_paths(
+                        target_root, finding.artifact_kind, finding.artifact_name
+                    )
+                )
 
     # Merge prior + new skip state. De-dup by (kind, name).
-    merged_skipped = tuple(sorted(set(prior_skipped).union(new_skipped)))
+    merged_skipped = tuple(sorted(set(prior_skipped).union(new_skipped).difference(overrides)))
 
     refreshed_path = caps.refresh_capability(
         target_root,
@@ -4422,6 +4435,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         skipped_artifacts=merged_skipped,
         dry_run=dry_run,
     )
+    _remove_overridden(target_root, overridden, dry_run=dry_run)
 
     verb = "Would refresh" if dry_run else "Refreshed"
     skip_note = f" ({len(merged_skipped)} artifact(s) skipped)" if merged_skipped else ""
@@ -6080,6 +6094,9 @@ def install_capability_cmd(
     # Pre-flight: collision detection.
     collisions = caps.detect_collisions(target_root, capability_source)
     skipped: list[tuple[str, str]] = []
+    # The project's artefacts an override replaces (COR-017), removed once the
+    # capability's are in place.
+    overridden: list[Path] = []
 
     if collisions:
         click.echo(
@@ -6088,9 +6105,17 @@ def install_capability_cmd(
             + "\n"
         )
         for finding in collisions:
-            choice = _resolve_collision_interactive(target_root, finding, dry_run=dry_run)
+            choice = _resolve_collision_interactive(
+                target_root, finding, capability=name, dry_run=dry_run
+            )
             if choice == "skip":
                 skipped.append((finding.artifact_kind, finding.artifact_name))
+            else:
+                overridden.extend(
+                    caps.project_artefact_paths(
+                        target_root, finding.artifact_kind, finding.artifact_name
+                    )
+                )
 
     # Install.
     installed_path = caps.install_capability(
@@ -6099,6 +6124,7 @@ def install_capability_cmd(
         skipped_artifacts=tuple(skipped),
         dry_run=dry_run,
     )
+    _remove_overridden(target_root, overridden, dry_run=dry_run)
 
     verb = "Would install" if dry_run else "Installed"
     skip_note = f" ({len(skipped)} artifact(s) skipped)" if skipped else ""
@@ -6734,18 +6760,45 @@ def _gate_desynced_dependents(
     )
 
 
-def _resolve_collision_interactive(target_root, finding, *, dry_run: bool) -> str:
+def _resolve_collision_interactive(
+    target_root: Path, finding: CollisionFinding, *, capability: str, dry_run: bool
+) -> str:
     """Prompt the adopter for override/skip/inspect on a single collision.
 
     Loops on `inspect` (re-prompts after showing diff) until adopter
     picks override or skip. Returns the final choice as a string.
-    """
 
+    Before each prompt it names what `override` would do (COR-017): each path of
+    the project's own artefact of that name it removes, which the caller removes
+    once the capability is in place, and each artefact core or another capability
+    ships, which it leaves. `override` is refused, and the prompt asked again,
+    while git could not give the project's artefact back as it stands.
+    """
+    from project_kit import capabilities as caps
+
+    kind, name = finding.artifact_kind, finding.artifact_name
+    replaced = caps.project_artefact_paths(target_root, kind, name)
+    left = caps.shipped_artefact_paths(target_root, kind, name, capability=capability)
     while True:
         click.echo(
-            f"  - {finding.artifact_kind} '{finding.artifact_name}' "
-            f"collides with existing {finding.target_path.relative_to(target_root)}"
+            f"  - {kind} '{name}' collides with existing "
+            f"{finding.target_path.relative_to(target_root)}"
         )
+        unheld = caps.paths_git_cannot_restore(target_root, replaced)
+        for path in replaced:
+            click.echo(
+                f"    override removes {path.relative_to(target_root)}, "
+                + (
+                    "which git does not hold as it stands, so override is refused"
+                    if path in unheld
+                    else "which git keeps"
+                )
+            )
+        for path in left:
+            click.echo(
+                f"    override leaves {path.relative_to(target_root)}: it is not the "
+                "project's, and the deploy's name precedence picks which one deploys"
+            )
         choice = click.prompt(
             "    [override / skip / inspect]",
             type=click.Choice(["override", "skip", "inspect"]),
@@ -6755,7 +6808,33 @@ def _resolve_collision_interactive(target_root, finding, *, dry_run: bool) -> st
         if choice == "inspect":
             _show_unified_diff(finding.target_path, finding.source_path)
             continue
+        if choice == "override":
+            lost = caps.paths_git_cannot_restore(target_root, replaced)
+            if lost:
+                for path in lost:
+                    click.echo(
+                        f"    override refused: {path.relative_to(target_root)} is not "
+                        "committed as it stands, so git could not give it back. "
+                        "Choose skip, or commit it and choose override."
+                    )
+                continue
         return choice
+
+
+def _remove_overridden(target_root: Path, paths: Sequence[Path], *, dry_run: bool) -> None:
+    """Remove the project's artefacts an override chose to replace, naming each (COR-017).
+
+    Runs after the capability is copied in and before deploy, so the project's
+    artefact no longer comes first under the name. Git keeps what is removed: the
+    prompt refused an override git could not give back.
+    """
+    from project_kit import capabilities as caps
+
+    if not dry_run:
+        caps.remove_overridden(paths)
+    verb = "would remove" if dry_run else "removed"
+    for path in paths:
+        click.echo(f"  {verb:<12} {path.relative_to(target_root)} (override; git keeps it)")
 
 
 def _show_unified_diff(existing: Path, incoming: Path) -> None:

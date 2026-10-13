@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-13T11:48:59Z
+      at: 2026-10-13T11:38:51Z
       outcome: unchanged
-      unchanged-because: The decisions README gains a paragraph on what validation leaves out in an adopter's project, and the CLI reference says the same of decisions validate and of the decisions member. The map gives each README's role and link. Neither role nor link moves, so the map holds.
+      unchanged-because: The CLI reference's entry for capabilities install gains what override, skip and inspect do on a naming collision. The map gives the CLI reference's role as the command-line surface and names some of its commands. Neither the role nor the link moves, so the map holds.
 ---
 
 # project-kit
