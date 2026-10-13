@@ -92,6 +92,13 @@ Reviewer agent (local, pm-reviewer): CHANGES_REQUESTED
 
 Subsequent lines: a bulleted rationale, one bullet per finding, citing the record / schema entry that grounds the finding. For `APPROVED` verdicts, surface only warnings and any criteria worth flagging despite passing; do not list every passing criterion. For `CHANGES_REQUESTED` verdicts, list every failing criterion plus enough context for the author to act.
 
+Begin each bullet with the finding tag that says what the finding does to the merge ([project-management:DEC-028-agent-as-approver-paths], "Finding tags"), and write your severity after it:
+
+- `[block] (hard-reject)`, and `[block] (bypassable-with-audit)` for one with no audit comment — the findings that make your verdict `CHANGES_REQUESTED`. Your `[block]` findings are exactly those.
+- `[advisory] (bypassable-with-audit)` for one whose audit comment is on the PR, and `[advisory] (warning)` — they withhold nothing.
+
+You judge no rule of a rule set, so you never write `[person]`.
+
 End your output with the verdict marker on its own line:
 
 ```
