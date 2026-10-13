@@ -148,7 +148,7 @@ Sections:
 - **`requires_backbone`** — semver range pinned to this version of the component. Recorded into the manifest at install/upgrade so the next upgrade run can verify compatibility.
 - **`backend_state`** — opaque backend identifiers the kit cannot rederive (board UUIDs, webhook IDs, etc.). Empty `{}` for components that have none.
   - **`backend_state.skipped`**, in a capability's manifest: the skills and agents the project chose to skip on a naming collision (COR-017), each as a `{kind, name}` entry. A refresh reads them back from here and leaves those artefacts out of its copy.
-  - **A restamp** changes the version, the timestamp and the range. It replaces `skipped` with the skips in force, and keeps every other key of `backend_state` (ADR-065 point 2).
+  - **A restamp** changes the version, the timestamp and the range. It replaces `skipped` with the skips in force, and keeps every other key of `backend_state` (ADR-065 point 2). It reads the manifest after the capability's migrations, so a key a migration wrote stays. A manifest that does not parse, such as one left with merge-conflict markers, is replaced by a new one.
 
 Notably absent: enumerations of files, labels, symlinks, settings entries, templates. These are *derivable* state — the kit-side spec at the component's recorded version + the adopter's config tells you what should exist; the validate/upgrade reconciliation tells you whether reality matches.
 
@@ -159,11 +159,11 @@ A capability's manifest sits at `.pkit/capabilities/<name>/project/manifest.yaml
 - **Why there:** every ownership predicate treats a capability's `project/` as the project's ("The ownership predicates" below). So no copy of the capability's tree deletes or overwrites the manifest, and the bundle ships none.
 - **Who writes it:** a capability's install, and the restamp after each refresh. Each points the capability's registry entry at that path. An incubated capability is registered with the same path, and nothing writes a manifest there (COR-031 D2).
 - **A manifest at the capability's root,** `.pkit/capabilities/<name>/manifest.yaml`, is where older releases wrote it. There every refresh deleted it or overwrote it. The code that writes the record moves it under `project/`:
-  - A refresh moves it before its migrations and its copy, and its restamp moves any it still finds.
+  - A refresh moves it before its migrations and its copy. A root manifest the restamp still finds came with the copy from the source, so the restamp removes it.
   - The move rewrites the registry entry's path, then removes the root file. So an interrupted move leaves two equal copies, and the next move finishes it.
   - The root manifest replaces one already under `project/`.
 - **Which one is read:** every reader of a capability's record reads the root manifest where one exists, then the one under `project/`, then the capability's installed `package.yaml`. The capability downgrade check and the dependency gates are among those readers. Both manifests exist only after an interrupted move, or after a write that does not know the move, such as an older pkit's restamp or a rollback of `.pkit/`. Either way the root one names the content the project holds, so it wins.
-- **Read before propagation:** `pkit sync` reads every capability's record before it copies anything, since a capability's copy replaces its installed `package.yaml`. Its restamp keeps the `backend_state` read then.
+- **Read before propagation:** `pkit sync` reads every capability's record before it copies anything, since a capability's copy replaces its installed `package.yaml`.
 - **Who moves it, for now:** a refresh, so `pkit sync`, `pkit upgrade` and `pkit capabilities upgrade` all move it today. Under ADR-065 a version transition moves every root manifest in its step 2, before its copy (#1461), and sync moves none and skips such a capability (#1460).
 
 ### Package metadata (`package.yaml`)

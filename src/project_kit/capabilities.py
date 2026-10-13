@@ -531,8 +531,6 @@ class CapabilityRecord:
     version: str | None
     # The skips the project chose, from `backend_state.skipped`.
     skipped: tuple[tuple[str, str], ...] = ()
-    # The manifest's whole `backend_state`, which a restamp keeps but for its skips.
-    backend_state: Mapping[str, Any] = field(default_factory=lambda: {})
     # The manifest still sits at the capability's root, where a copy prunes it.
     at_root: bool = False
 
@@ -540,19 +538,18 @@ class CapabilityRecord:
 def read_capability_record(target_root: Path, name: str) -> CapabilityRecord:
     """Read what the project records for capability *name* (ADR-065 point 2).
 
-    The one reader behind the version, the skips and the state a restamp keeps:
-    the capability downgrade check, the dependency gates and a refresh read
-    through it. The manifest read is the root one where it exists, then the one
-    under ``project/``. A manifest that does not parse reads as recording
-    nothing, and the version then falls back to the installed ``package.yaml``,
-    the version of record for an incubated capability, which has no manifest
-    (COR-031 D2).
+    The one reader behind the version and the skips: the capability downgrade
+    check, the dependency gates and a refresh read through it. The manifest
+    read is the root one where it exists, then the one under ``project/``. A
+    manifest that does not parse reads as recording nothing, and the version
+    then falls back to the installed ``package.yaml``, the version of record
+    for an incubated capability, which has no manifest (COR-031 D2). A
+    refresh's restamp then writes a new manifest (`_stamp_component_manifest`).
     """
     manifest = recorded_capability_manifest(target_root, name)
     raw = _load_mapping(manifest) if manifest is not None else None
     version: str | None = None
     skipped: tuple[tuple[str, str], ...] = ()
-    backend_state: dict[str, Any] = {}
     if raw is not None:
         component = raw.get("component")
         if isinstance(component, dict):
@@ -561,8 +558,7 @@ def read_capability_record(target_root: Path, name: str) -> CapabilityRecord:
                 version = recorded
         state = raw.get("backend_state")
         if isinstance(state, dict):
-            backend_state = dict(cast("dict[str, Any]", state))
-            skipped = _parse_skipped(backend_state.get(SKIPPED_KEY))
+            skipped = _parse_skipped(cast("dict[str, Any]", state).get(SKIPPED_KEY))
     if version is None:
         package_path = target_root / ".pkit" / "capabilities" / name / "package.yaml"
         package = _read_package_yaml(package_path) if package_path.is_file() else None
@@ -572,7 +568,6 @@ def read_capability_record(target_root: Path, name: str) -> CapabilityRecord:
         name=name,
         version=version,
         skipped=skipped,
-        backend_state=backend_state,
         at_root=manifest is not None
         and manifest == capability_root_manifest_path(target_root, name),
     )
@@ -601,9 +596,9 @@ def move_capability_manifest(target_root: Path, name: str) -> bool:
     there.
 
     The code that writes the record calls it: a refresh, before its
-    migrations and its copy (``refresh_capability``), and every write of the
-    record (``_stamp_component_manifest``). The version transition calls it
-    in its step 2, before its copy, once #1461 builds that transition.
+    migrations and its copy (``refresh_capability``). The version transition
+    calls it in its step 2, before its copy, once #1461 builds that
+    transition.
     """
     root = capability_root_manifest_path(target_root, name)
     if not root.is_file():
@@ -1399,7 +1394,8 @@ def refresh_capability(
     when the caller read it before its own propagation, else here
     (`read_capability_record`). A manifest still at the capability's root
     then moves under its ``project/`` (`move_capability_manifest`), before the
-    copy, which would prune it there.
+    migrations and the copy. The copy would prune it at the root, and under
+    ``project/`` a migration finds it where the restamp reads it.
 
     Migrations are run BEFORE the file refresh (per COR-010's resource-
     lifecycle pattern). For each minor version in the interval
@@ -1408,8 +1404,8 @@ def refresh_capability(
     `ROOT=<target_root>` in its environment and runs from `target_root`
     as cwd. A non-zero exit halts the refresh.
 
-    The restamp that follows the copy keeps the record's `backend_state`,
-    replacing only its skips with `skipped_artifacts`.
+    The restamp that follows the copy keeps the manifest's `backend_state`, as
+    the migrations left it, replacing only its skips with `skipped_artifacts`.
 
     Returns the refreshed path. Does NOT do collision detection — sync's
     auto-upgrade is opt-out at install time, not opt-in at refresh time.
@@ -1453,9 +1449,7 @@ def refresh_capability(
     # Re-stamp the per-component manifest with the new version + install
     # timestamp, keeping the rest of its state. Backbone manifest registration
     # stays as-is (the capability was already registered at the original install).
-    _stamp_component_manifest(
-        target_root, capability_source, skipped_artifacts, prior_state=record.backend_state
-    )
+    _stamp_component_manifest(target_root, capability_source, skipped_artifacts, restamp=True)
     return dest
 
 
@@ -2014,25 +2008,37 @@ def _stamp_component_manifest(
     capability_source: CapabilitySource,
     skipped_artifacts: tuple[tuple[str, str], ...],
     *,
-    prior_state: Mapping[str, Any] | None = None,
+    restamp: bool = False,
 ) -> None:
     """Write the capability's manifest under its ``project/`` (ADR-065 point 2).
 
     Records the version, the install timestamp and the range of
     *capability_source*, and the skips in force in ``backend_state.skipped``,
-    for the next refresh to read back (`read_prior_skipped_artifacts`). A
-    restamp passes the ``backend_state`` it read before propagation as
-    *prior_state*: every key of it is kept but the skips, which
-    *skipped_artifacts* replaces. An install passes none.
+    for the next refresh to read back (`read_prior_skipped_artifacts`), and
+    points the registry entry at the path written.
 
-    A manifest still at the capability's root moves first
-    (`move_capability_manifest`), and the registry entry is pointed at the
-    path written, so no stale copy is left where readers look first.
+    A *restamp*, after a refresh's migrations and copy, keeps every key of the
+    manifest's ``backend_state`` but the skips, which *skipped_artifacts*
+    replaces. The refresh moved the manifest under ``project/`` before its
+    migrations, so it reads it there, with what the migrations wrote. A manifest
+    there that does not read as a mapping, such as one left with merge-conflict
+    markers, is replaced by a new one, as an install writes.
+
+    A manifest at the capability's root here came with the copy, from the
+    source: the project's own moved before the copy, or there was none. It is
+    removed, since readers read a root manifest first.
     """
     name = capability_source.name
-    move_capability_manifest(target_root, name)
+    capability_root_manifest_path(target_root, name).unlink(missing_ok=True)
+    path = capability_manifest_path(target_root, name)
+    prior = _load_mapping(path) if restamp and path.is_file() else None
+    if prior is None:
+        path.unlink(missing_ok=True)
+    state = prior.get("backend_state") if prior is not None else None
     backend_state: dict[str, Any] = {
-        key: value for key, value in (prior_state or {}).items() if key != SKIPPED_KEY
+        key: value
+        for key, value in (cast("dict[str, Any]", state) if isinstance(state, dict) else {}).items()
+        if key != SKIPPED_KEY
     }
     if skipped_artifacts:
         backend_state[SKIPPED_KEY] = [{"kind": k, "name": n} for (k, n) in skipped_artifacts]
@@ -2044,5 +2050,5 @@ def _stamp_component_manifest(
         requires_backbone=capability_source.package.requires_backbone,
         backend_state=backend_state,
     )
-    write_component_manifest(capability_manifest_path(target_root, name), manifest)
+    write_component_manifest(path, manifest)
     set_component_manifest_path(target_root, "capability", name, capability_manifest_rel(name))

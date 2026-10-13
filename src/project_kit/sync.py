@@ -123,7 +123,7 @@ def run_sync(target_root: Path, dry_run: bool = False, force: bool = False) -> N
 
     # Every capability's record is read before anything is copied (ADR-065
     # point 2): its version falls back to the installed `package.yaml`, which the
-    # capability's copy replaces, and its restamp keeps the `backend_state` read here.
+    # capability's copy replaces.
     from project_kit import capabilities as caps
 
     records = caps.read_capability_records(target_root)
@@ -396,8 +396,8 @@ def _sync_installed_capabilities(
     """Refresh installed capabilities from source per COR-017 / COR-031.
 
     *records* holds each capability's record, read before propagation
-    (`capabilities.read_capability_records`). Its version, its skips and the
-    state its restamp keeps are taken from there.
+    (`capabilities.read_capability_records`). Its version and its skips are
+    taken from there.
 
     For each capability listed in the adopter's backbone manifest:
     - `kit-shipped` origin:

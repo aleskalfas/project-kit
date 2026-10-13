@@ -1712,6 +1712,76 @@ def test_a_refresh_neither_deletes_nor_overwrites_the_record(
     assert record.backend_state == _BOARD
 
 
+def test_the_restamp_removes_a_root_manifest_the_copy_brought_from_the_source(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """A source that ships a root manifest is out of contract: what the copy puts at the
+    root is the source's record, not the project's, and readers would read it first."""
+    _install_at(kit_target, kit_source, "0.1.0")
+    _write_record(kit_target, "evidence", backend_state=_BOARD)
+    cap_dir = _stage_capability_in_source(kit_source, "evidence", version="0.2.0")
+    (cap_dir / "manifest.yaml").write_text(
+        "component:\n  version: 9.9.9\nbackend_state:\n  foreign: true\n", encoding="utf-8"
+    )
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+
+    caps.refresh_capability(kit_target, source)
+
+    assert not _record_path(kit_target, "evidence", at_root=True).exists()
+    record = read_component_manifest(_record_path(kit_target, "evidence"))
+    assert record is not None
+    assert (record.version, record.backend_state) == ("0.2.0", _BOARD)
+
+
+def test_the_restamp_keeps_what_a_migration_wrote_into_backend_state(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """The restamp reads the manifest after the migrations ran: a key one wrote stays."""
+    _install_at(kit_target, kit_source, "0.1.0")
+    _as_an_older_release_left_it(kit_target, _BOARD)
+    cap_dir = _stage_capability_in_source(kit_source, "evidence", version="0.2.0")
+    script = cap_dir / "migrations" / "0.2.0" / "001-record-a-webhook.sh"
+    script.parent.mkdir(parents=True)
+    # `backend_state` is the manifest's last block, so an indented line appends a key to it.
+    record = "$ROOT/.pkit/capabilities/evidence/project/manifest.yaml"
+    script.write_text(
+        f'#!/usr/bin/env bash\nset -euo pipefail\nprintf "  webhook: wh-1\\n" >> "{record}"\n',
+        encoding="utf-8",
+    )
+    script.chmod(0o755)
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+
+    caps.refresh_capability(kit_target, source)
+
+    record = read_component_manifest(_record_path(kit_target, "evidence"))
+    assert record is not None
+    assert record.backend_state == _BOARD | {"webhook": "wh-1"}
+
+
+@pytest.mark.parametrize("at_root", [False, True], ids=["under-project", "at-root"])
+def test_a_refresh_over_a_record_that_does_not_parse_writes_a_new_one(
+    kit_target: Path, kit_source: Path, at_root: bool
+) -> None:
+    """A record left with merge-conflict markers no longer stops every refresh: the
+    restamp writes a new one, as the copy's pruning did at the root before the move."""
+    _install_at(kit_target, kit_source, "0.1.0", with_skills=("one",))
+    _record_path(kit_target, "evidence").unlink()
+    broken = _record_path(kit_target, "evidence", at_root=at_root)
+    broken.write_text(
+        "<<<<<<< HEAD\ncomponent:\n  version: 0.1.0\n=======\n>>>>>>> theirs\n",
+        encoding="utf-8",
+    )
+
+    for version in ("0.2.0", "0.3.0"):
+        _refresh_to(kit_source, kit_target, version, with_skills=("one",))
+        record = read_component_manifest(_record_path(kit_target, "evidence"))
+        assert record is not None
+        assert (record.version, record.backend_state) == (version, {})
+    assert not _record_path(kit_target, "evidence", at_root=True).exists()
+
+
 def test_the_root_record_wins_when_both_exist(kit_target: Path, kit_source: Path) -> None:
     """Every reader reads the root record first: it names the content the project holds."""
     _install_at(kit_target, kit_source, "0.1.0")
