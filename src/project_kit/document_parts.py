@@ -5,8 +5,10 @@ that cuts a part of a document calls it, so they all find the same parts:
 
 - `split_front_matter` — a text's front matter and its body, line breaks read
   universally (`universal_newlines`), so a file written with `\\r\\n` has the
-  body the same file written with `\\n` has. `body_first_line` is the line of
-  the text the body opens on, from which a part's lines are counted.
+  body the same file written with `\\n` has. `parse_front_matter` parses the
+  front matter too, and says why it does not parse (`yaml_reason`).
+  `body_first_line` is the line of the text the body opens on, from which a
+  part's lines are counted.
 - `Body` — a body read once: its headings outside fenced code
   (`body_headings`), and where each part lies, as an `Extent` of the body:
   - **a section** runs from its heading to the next heading of the same or a
@@ -34,10 +36,16 @@ anchor name them, they are found here (ADR-057 point 2).
 
 from __future__ import annotations
 
+import io
 import re
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
+from typing import Any, cast
 
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
+
+from project_kit.backbone_schemas import as_written
 from project_kit.line_breaks import universal_newlines
 
 _FRONT_MATTER_FENCE = re.compile(r"^---[ \t]*$", re.MULTILINE)
@@ -52,6 +60,9 @@ _HEADING = re.compile(r"^(#{1,6})[ \t]+(.*?)[ \t]*#*[ \t]*$")
 # What continues an id past a heading's opening characters: a word character, or a hyphen or
 # a dot joined to one — so `uc-login` is not the id opening `uc-login-sso` or `uc-login.v2`.
 _ID_CONTINUES = re.compile(r"\w|[-.]\w")
+
+# ruamel.yaml is untyped; the loaded value is judged where it is read.
+_yaml: Any = YAML(typ="safe")
 
 
 def split_front_matter(text: str) -> tuple[str | None, str]:
@@ -75,6 +86,36 @@ def split_front_matter(text: str) -> tuple[str | None, str]:
     if closing is None:
         return None, text
     return text[first_line_end + 1 : closing.start()], text[closing.end() :].lstrip("\n")
+
+
+def parse_front_matter(text: str) -> tuple[Mapping[str, Any] | None, str, str | None]:
+    """A text's front matter as written when it is a mapping, its body, and why the
+    front matter does not parse, if it does not: `(front_matter, body, reason)`.
+
+    Both are read with `\\n` line breaks, whatever the text's
+    (`split_front_matter`). Front matter that is absent, or not a mapping, gives
+    `None` with no reason. YAML dates and non-text keys are rendered back to their
+    written form (`backbone_schemas.as_written`).
+    """
+    front_matter, body = split_front_matter(text)
+    if front_matter is None:
+        return None, body, None
+    try:
+        data = _yaml.load(io.StringIO(front_matter))
+    except YAMLError as exc:
+        return None, body, yaml_reason(exc)
+    if not isinstance(data, Mapping):
+        return None, body, None
+    return cast("Mapping[str, Any]", as_written(data)), body, None
+
+
+def yaml_reason(exc: YAMLError) -> str:
+    """Why YAML did not parse: the problem, with its line and column when it has them."""
+    problem = getattr(exc, "problem", None) or next(iter(str(exc).splitlines()), "") or "invalid"
+    mark = getattr(exc, "problem_mark", None)
+    if mark is not None:
+        return f"{problem} at line {mark.line + 1} col {mark.column + 1}"
+    return str(problem)
 
 
 def body_first_line(text: str, body: str) -> int:

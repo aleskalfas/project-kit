@@ -54,14 +54,14 @@ is the one reader of those declarations and the one walker of the places:
   reading of where a part of a document lies (`document_parts`), from the
   headings outside fenced code. The rule-set pass lists a file's sections by
   the same reading, so the two find the same sections. A plain YAML file in a
-  place is not a
-  document (ADR-056 point 2). `parse_artefacts` is the reading of one file's
-  text this walk applies; the whole-repository check applies it to a file's
-  earlier versions too, so history is read by the same rule as the present.
-  A text is read whatever its line endings (`universal_newlines`, in
-  `document_parts.split_front_matter`), so a clone that checks files out with `\\r\\n` finds
-  the blocks and the content one with `\\n` finds; a file mixing them is
-  recorded (`DiscoveredFile.mixed_line_endings`) for the validation pass.
+  place is not a document (ADR-056 point 2). `parse_artefacts` is the reading
+  of one file's text this walk applies; the whole-repository check applies it
+  to a file's earlier versions too, so history is read by the same rule as the
+  present. A text is read whatever its line endings (`universal_newlines`, in
+  `document_parts.split_front_matter`), so a clone that checks files out with
+  `\\r\\n` finds the blocks and the content one with `\\n` finds; a file
+  mixing them is recorded (`DiscoveredFile.mixed_line_endings`) for the
+  validation pass.
   A file a declared place matches that is a synced copy is not walked — a
   place is never a synced tree (COR-050 point 14) — and is kept as a
   `SyncedMatch` for the validation pass to report; the question is the tree's
@@ -130,7 +130,6 @@ git plumbing behind a commit in `friction_git`.
 from __future__ import annotations
 
 import functools
-import io
 import json
 import os
 import re
@@ -145,8 +144,14 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from project_kit import command_runner, docs_roots, lifecycle_ownership, validators
-from project_kit.backbone_schemas import CONTAINER_KEY, as_written
-from project_kit.document_parts import Body, SectionSpan, body_first_line, split_front_matter
+from project_kit.backbone_schemas import CONTAINER_KEY
+from project_kit.document_parts import (
+    Body,
+    SectionSpan,
+    body_first_line,
+    parse_front_matter,
+    yaml_reason,
+)
 from project_kit.line_breaks import line_break
 from project_kit.manifest import read_backbone_manifest
 from project_kit.report_context import project_config_path
@@ -2384,14 +2389,14 @@ def _held_file(
 ) -> HeldFile:
     """A held file, read for its front matter and every friction block in it.
 
-    Its front matter is parsed as a file in a place is (`_parsed_front_matter`),
+    Its front matter is parsed as a file in a place is (`document_parts.parse_front_matter`),
     and searched whole for a friction block (`_friction_blocks`): no reading of
     it as an artefact is assumed, so a block is found wherever it is written —
     as a document's, an entry's, a rule's, or deeper.
     """
     if isinstance(text, ReadFailure):
         return HeldFile(rel, folder, places, front_matter=None, unreadable=text.reason, blocks=())
-    front_matter, _body, reason = _parsed_front_matter(text)
+    front_matter, _body, reason = parse_front_matter(text)
     blocks = tuple(_friction_blocks(front_matter, "")) if front_matter is not None else ()
     return HeldFile(rel, folder, places, front_matter, unreadable=reason, blocks=blocks)
 
@@ -2471,10 +2476,10 @@ def parse_artefacts(
     `(artefacts, None)` — empty when the text carries no front matter, or front
     matter that is not a mapping, since neither makes an artefact — or
     `([], reason)` when the front matter does not parse as YAML. Line endings
-    are read universally (`\\r\\n` and `\\r` as `\\n`, `split_front_matter`), as
-    a text file is read, whether the text came from disk or from git — so an
-    artefact whose line endings changed while its text did not has the same
-    content (COR-050 point 5).
+    are read universally (`\\r\\n` and `\\r` as `\\n`,
+    `document_parts.split_front_matter`), as a text file is read, whether the
+    text came from disk or from git — so an artefact whose line endings changed
+    while its text did not has the same content (COR-050 point 5).
     """
     _front_matter, found, reason = _read_artefacts(rel, place, text, rule_set=rule_set)
     return found, reason
@@ -2485,28 +2490,12 @@ def _read_artefacts(
 ) -> tuple[Mapping[str, Any] | None, list[Artefact], str | None]:
     """`parse_artefacts`, with the file's front matter as written when it is a
     mapping: `(front_matter, artefacts, reason)`."""
-    written, body, reason = _parsed_front_matter(text)
+    written, body, reason = parse_front_matter(text)
     if written is None:
         return None, [], reason
     body_line = body_first_line(text, body)
     found = _artefacts_of_file(rel, place, written, body, body_line, rule_set=rule_set)
     return written, found, None
-
-
-def _parsed_front_matter(text: str) -> tuple[Mapping[str, Any] | None, str, str | None]:
-    """A file's front matter as written when it is a mapping, its body, and why the
-    front matter does not parse, if it does not: `(front_matter, body, reason)`.
-    Both are read with `\\n` line breaks, whatever the file's (`split_front_matter`)."""
-    front_matter, body = split_front_matter(text)
-    if front_matter is None:
-        return None, body, None
-    try:
-        data = _yaml.load(io.StringIO(front_matter))
-    except YAMLError as exc:
-        return None, body, _yaml_reason(exc)
-    if not isinstance(data, Mapping):
-        return None, body, None
-    return as_written(data), body, None
 
 
 def _artefacts_of_file(
@@ -2661,14 +2650,6 @@ def _entry_body(read: Body, entry_id: str, body_line: int) -> tuple[str, Section
     if extent is None:
         return "", None
     return read.text_of(extent), read.span_of(extent, body_line)
-
-
-def _yaml_reason(exc: YAMLError) -> str:
-    problem = getattr(exc, "problem", None) or str(exc).splitlines()[0]
-    mark = getattr(exc, "problem_mark", None)
-    if mark is not None:
-        return f"{problem} at line {mark.line + 1} col {mark.column + 1}"
-    return str(problem)
 
 
 # --- artefact types (COR-056) ---------------------------------------------------
@@ -3401,7 +3382,7 @@ def unreadable_configuration(target_root: Path, tree: RepositoryTree | None = No
     except (OSError, UnicodeDecodeError) as exc:
         return f"the configuration {rel} cannot be read: {exc}"
     except YAMLError as exc:
-        return f"the configuration {rel} does not parse as YAML: {_yaml_reason(exc)}"
+        return f"the configuration {rel} does not parse as YAML: {yaml_reason(exc)}"
     if data is not None and not isinstance(data, Mapping):
         return f"the configuration {rel} is not a mapping of keys to values"
     return None
@@ -3458,7 +3439,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
       file in COR-056 point 3's order (`{place, rank}`, places that rank
       equal sharing a rank). Its `part_anchors`, added within version 1 too:
       each anchor that names a part of a file, with the span that part
-      resolves to (`part_anchors`).
+      resolves to (`_part_anchors`).
     - `types`: every declared type by its full name — the backbone's own and
       each installed component's type registry — with its `component`,
       `name`, `description`, `kind_field` and `project_places`. Added within
@@ -3568,7 +3549,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
                 "unanchored_because": artefact.unanchored_because,
                 "fields": _own_fields(artefact.carrier),
                 "span": _span_entry(artefact.span),
-                "part_anchors": part_anchors(discovery, artefact),
+                "part_anchors": _part_anchors(discovery, artefact),
                 "in_scope_of": list(in_scope_of.get(artefact.location, ())),
                 **_type_entry(types.of(artefact), index),
             }
@@ -3697,9 +3678,9 @@ def _malformed_held_entry(declaration: MalformedDeclaration) -> dict[str, Any]:
     }
 
 
-def part_anchors(discovery: Discovery, artefact: Artefact) -> list[dict[str, Any]]:
+def _part_anchors(discovery: Discovery, artefact: Artefact) -> list[dict[str, Any]]:
     """Each anchor of `artefact` that names a part of a file, with the span that part
-    resolves to, in the order the artefact lists its anchors.
+    resolves to, in the order the artefact lists them.
 
     An `artefact` anchor names a part when the artefact it resolves to is a
     collection entry, whose content is its data and the body section headed by
@@ -3712,21 +3693,11 @@ def part_anchors(discovery: Discovery, artefact: Artefact) -> list[dict[str, Any
     points are listed: a record is not an artefact.
     """
     found: list[dict[str, Any]] = []
-    for kind, values in artefact.anchors.items():
-        if kind != "artefact":
-            continue
-        for value in values:
-            target = discovery.find(value)
-            if target is None or target.kind is not ArtefactKind.ENTRY:
-                continue
-            found.append(
-                {
-                    "kind": kind,
-                    "value": value,
-                    "path": target.path,
-                    "span": _span_entry(target.span),
-                }
-            )
+    for value in artefact.anchors_of_kind("artefact"):
+        target = discovery.find(value)
+        if target is not None and target.kind is ArtefactKind.ENTRY:
+            span = _span_entry(target.span)
+            found.append({"kind": "artefact", "value": value, "path": target.path, "span": span})
     return found
 
 

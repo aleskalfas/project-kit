@@ -36,6 +36,31 @@ def test_split_front_matter(text: str, expected: tuple[str | None, str]) -> None
     assert dp.split_front_matter(text) == expected
 
 
+@pytest.mark.parametrize(
+    ("text", "front_matter", "reason"),
+    [
+        (
+            "---\nid: X\ndate: 2026-10-13\n6: [7]\n---\nbody\n",
+            {"id": "X", "date": "2026-10-13", "6": [7]},
+            None,
+        ),
+        ("---\n- a list\n---\nbody\n", None, None),  # front matter that is no mapping
+        ("no front matter\n", None, None),
+        ("---\nid: [unclosed\n---\nbody\n", None, "line 2"),
+    ],
+)
+def test_front_matter_is_parsed_as_written(
+    text: str, front_matter: dict[str, object] | None, reason: str | None
+) -> None:
+    """Dates and keys come back as written; a parse failure names where it failed."""
+    parsed, body, why = dp.parse_front_matter(text)
+    assert parsed == front_matter
+    assert body == dp.split_front_matter(text)[1]
+    assert (why is None) == (reason is None)
+    if reason is not None:
+        assert why is not None and reason in why
+
+
 def test_the_body_opens_on_the_line_after_its_front_matter_and_the_blank_lines() -> None:
     text = "---\na: 1\n---\n\n\nbody\n"
     _front, body = dp.split_front_matter(text)
