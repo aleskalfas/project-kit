@@ -1,0 +1,8 @@
+component: project-management
+kind: none
+body: >
+  Internal. Project-kit's own record of its project-management install moves,
+  unchanged, from the capability's root under its `project/` folder, so the
+  bundle no longer ships it. The backbone's changeset says what an adopter
+  sees of that. A comment in the bootstrap gate now says where a capability's
+  manifest sits. Nothing you run or read of the capability changes.
