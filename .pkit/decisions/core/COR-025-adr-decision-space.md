@@ -121,6 +121,8 @@ date: YYYY-MM-DD
 author: <author>
 supersedes: ADR-NNN     # when superseding a prior ADR
 superseded_by: ADR-NNN  # when superseded
+retired-points:         # when a point is retired: its id, with the points that took its text
+  "6": ["7", "16"]
 ---
 
 ## Context

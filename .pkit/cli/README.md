@@ -844,7 +844,7 @@ The output filename is `<NNN>-<slug>.sh`, where `NNN` is the next zero-padded in
 
 ### `new decision <namespace> <slug> [--yes]`
 
-Scaffolds a new decision-record stub per the schema in `.pkit/decisions/README.md`. The command is the deterministic part of authoring a record: pick the next number in the namespace, stamp the frontmatter and the four required section headers, leave the body empty for the author to fill.
+Scaffolds a new decision-record stub per the schema in `.pkit/decisions/README.md`. The command is the deterministic part of authoring a record: pick the next number in the namespace, stamp the frontmatter, the four required section headers and a first point heading, and leave the rest of the body for the author to fill.
 
 - **`<namespace>`** is one of:
 
@@ -878,7 +878,7 @@ Per-agent overrides of `adr-records` (under `overrides.<agent>:`) are *not* cons
 The stamped file includes:
 
 - Frontmatter — `id` (auto-numbered), `title` (placeholder), `status: proposed`, `date` (today's date), `author` (read from `git config user.name` and `git config user.email`).
-- The four required section headers — `## Context`, `## Decision`, `## Rationale`, `## Implications` — empty.
+- The four required section headers — `## Context`, `## Decision`, `## Rationale`, `## Implications` — empty, but for a first point heading under `## Decision`, `### 1. Point title`. A record's points are headings that keep their numbers ([COR-058](../decisions/core/COR-058-record-points.md) points 1 and 3). The decisions README's "Adding a record" says what the stamped heading fixes, and when to delete it.
 
 Refuses if a record with the same slug already exists in the id-space, or if the namespace is invalid — for a capability namespace, "invalid" means no capability of that name exists under `.pkit/capabilities/`.
 

@@ -1,0 +1,17 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  The decisions README writes a record's points as headings that keep their
+  numbers (#1422, COR-058). Its schema shows each point as a heading,
+  `### 5. Title` or `### D1 — Title`, the optional `retired-points` field,
+  and a stub for each retired point. A numbered list stays allowed inside a
+  point or another sub-section. Its refining rule has a new point take the
+  next unused number, never renumbers one, and keeps the id of a point no
+  other point continues in `retired-points`, with a stub. It reads the entry
+  and the stub as data, not residue. Its citing section names a point two
+  ways, "COR-050 point 11" in prose and `COR-050#11` as an anchor's value.
+  `pkit new decision` stamps a first point heading, `### 1. Point title`,
+  under `## Decision`, so a new record starts with its points as headings.
+  COR-025's illustrative ADR block shows the `retired-points` field.
