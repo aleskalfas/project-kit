@@ -34,17 +34,29 @@ The forcing question (its producing issue, #249) is whether the unsandboxed-comm
 
 **`pkit permissions setup autonomy` makes strict fail-over the autonomy default: standing up the posture asserts `allowUnsandboxedCommands: false`, so the per-command `dangerouslyDisableSandbox` escape is inert and no agent can silently disable the sandbox under autonomy.** Each condition below is load-bearing.
 
-1. **Posture-tier, not baseline.** The seal takes effect *because the operator opted into autonomy* by running `setup autonomy` — it is the autonomy posture's default, exactly where ADR-004 decision point 4 places the strict lockdown. It is **not** a kit baseline default applied to every adopter before opt-in. Baseline-`false` was already rejected at the code level for breaking legitimate fail-over (a project that deliberately runs commands unsandboxed), and a baseline seal would override the operator's posture choice that ADR-008 keeps the operator owning. The seal lives at the posture the operator chose, and nowhere upstream of that choice.
+### 1. Posture-tier, not baseline
 
-2. **Reuses the existing `--strict` mechanism — no new mechanism.** `sandbox enable --strict` already writes `allowUnsandboxedCommands: false`; `setup autonomy` reaches the seal by composing that existing primitive (default-on for the autonomy goal), not by introducing a new writer or a new settings key. "Owns nothing" (ADR-007 rule 2) holds: the strict write is the `sandbox enable` primitive's effect, individually reversible by turning strict off.
+The seal takes effect *because the operator opted into autonomy* by running `setup autonomy` — it is the autonomy posture's default, exactly where ADR-004 decision point 4 places the strict lockdown. It is **not** a kit baseline default applied to every adopter before opt-in. Baseline-`false` was already rejected at the code level for breaking legitimate fail-over (a project that deliberately runs commands unsandboxed), and a baseline seal would override the operator's posture choice that ADR-008 keeps the operator owning. The seal lives at the posture the operator chose, and nowhere upstream of that choice.
 
-3. **Orthogonal to the macOS exclusion path.** The seal (`allowUnsandboxedCommands: false`) and the macOS pkit/uv `excludedCommands` exclusion ([ADR-014](ADR-014-macos-sandbox-platform-stance.md)) are different keys on different layers and do not collide: strict closes the *per-command disable-the-box* escape; the exclusion carves *one named command* out of the box while keeping it hook-gated. The macOS exclusion still resolves under strict (ADR-008's `--strict` honesty bullet: under strict, `excludedCommands` is the only out-of-box path and stays a deliberate, reported reduction). **The implementing work MUST carry a probe assertion that the macOS pkit/uv exclusion still resolves with strict on** — so the seal can never silently break the path that makes macOS autonomy work.
+### 2. Reuses the existing `--strict` mechanism — no new mechanism
 
-4. **rule-14 teaching stays; the seal is its mechanical backing, never a fail-open pseudo-deny.** [core.md rule 14](../../../.pkit/rules/core.md) stays in core.md, loaded into every agent — the seal does not replace the teaching, it enforces its intent under the posture. The seal MAY be echoed as *reported state* in `sandbox status` ("unsandboxed-command escape: sealed under strict"), but only as honest reporting of the live `allowUnsandboxedCommands: false` setting — never as a fail-open pseudo-deny that claims a boundary the configuration does not actually hold.
+`sandbox enable --strict` already writes `allowUnsandboxedCommands: false`; `setup autonomy` reaches the seal by composing that existing primitive (default-on for the autonomy goal), not by introducing a new writer or a new settings key. "Owns nothing" (ADR-007 rule 2) holds: the strict write is the `sandbox enable` primitive's effect, individually reversible by turning strict off.
 
-5. **The escape survives outside the posture — strict is opt-in and reversible.** Sealing the escape under autonomy does **not** revoke the operator's ability to use `dangerouslyDisableSandbox` outside that posture. The escape remains the blessed operator stopgap ADR-017 sanctioned; the seal is the autonomy posture's choice, reversible by the operator turning strict off (`sandbox enable` without `--strict`, or disabling autonomy). What the posture removes is the *agent's silent* reach for the escape under autonomy — not the *operator's deliberate* use of it elsewhere.
+### 3. Orthogonal to the macOS exclusion path
 
-6. **decide.py untouched.** This is settings/posture configuration, not a change to the decision core. The hook's `decide()` and the same-code invariant ([ADR-003](ADR-003-permission-core-code-home.md)) are unaffected — the seal lives entirely in the `sandbox` block written by the existing primitive.
+The seal (`allowUnsandboxedCommands: false`) and the macOS pkit/uv `excludedCommands` exclusion ([ADR-014](ADR-014-macos-sandbox-platform-stance.md)) are different keys on different layers and do not collide: strict closes the *per-command disable-the-box* escape; the exclusion carves *one named command* out of the box while keeping it hook-gated. The macOS exclusion still resolves under strict (ADR-008's `--strict` honesty bullet: under strict, `excludedCommands` is the only out-of-box path and stays a deliberate, reported reduction). **The implementing work MUST carry a probe assertion that the macOS pkit/uv exclusion still resolves with strict on** — so the seal can never silently break the path that makes macOS autonomy work.
+
+### 4. rule-14 teaching stays; the seal is its mechanical backing, never a fail-open pseudo-deny
+
+[core.md rule 14](../../../.pkit/rules/core.md) stays in core.md, loaded into every agent — the seal does not replace the teaching, it enforces its intent under the posture. The seal MAY be echoed as *reported state* in `sandbox status` ("unsandboxed-command escape: sealed under strict"), but only as honest reporting of the live `allowUnsandboxedCommands: false` setting — never as a fail-open pseudo-deny that claims a boundary the configuration does not actually hold.
+
+### 5. The escape survives outside the posture — strict is opt-in and reversible
+
+Sealing the escape under autonomy does **not** revoke the operator's ability to use `dangerouslyDisableSandbox` outside that posture. The escape remains the blessed operator stopgap ADR-017 sanctioned; the seal is the autonomy posture's choice, reversible by the operator turning strict off (`sandbox enable` without `--strict`, or disabling autonomy). What the posture removes is the *agent's silent* reach for the escape under autonomy — not the *operator's deliberate* use of it elsewhere.
+
+### 6. decide.py untouched
+
+This is settings/posture configuration, not a change to the decision core. The hook's `decide()` and the same-code invariant ([ADR-003](ADR-003-permission-core-code-home.md)) are unaffected — the seal lives entirely in the `sandbox` block written by the existing primitive.
 
 ## Rationale
 

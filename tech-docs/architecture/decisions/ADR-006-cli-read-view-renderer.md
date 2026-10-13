@@ -43,31 +43,39 @@ here (per [PRJ-005](../../../.pkit/decisions/project/PRJ-005-adopt-adrs.md)).
 Extract a **tool-internal read-view renderer** at `src/project_kit/cli_render.py`,
 scoped strictly to read-for-understanding views.
 
-1. **Shape — Option A′.** String/tuple helpers carrying **semantic data** feed a
-   single `view(...)` assembler that owns *all* layout/convention decisions (zone
-   order, blank-line rhythm, header casing, status-as-footer, no-rules). A
-   `table()` primitive owns computed-width alignment + constant-column suppression;
-   `legend()`/`commands()` format the reference blocks. The parts a command passes
-   are data (a title is `(label, count, gloss)`, a table is `(rows, columns)`), not
-   pre-aligned strings — presentation lives only in `view()`.
+### 1. Shape — Option A′
 
-2. **Defer the typed `Document` model (Option B).** A typed block hierarchy that
-   makes illegal output unrepresentable is deferred, not adopted, behind a pinned
-   trigger: **promote when a second independent command family adopts the read-view
-   shape *and* the conventions have stopped churning, *or* when a correctness
-   regression ships that a type would have caught.**
+String/tuple helpers carrying **semantic data** feed a
+single `view(...)` assembler that owns *all* layout/convention decisions (zone
+order, blank-line rhythm, header casing, status-as-footer, no-rules). A
+`table()` primitive owns computed-width alignment + constant-column suppression;
+`legend()`/`commands()` format the reference blocks. The parts a command passes
+are data (a title is `(label, count, gloss)`, a table is `(rows, columns)`), not
+pre-aligned strings — presentation lives only in `view()`.
 
-3. **Layering.** Three layers, each with one owner:
-   [COR-004](../../../.pkit/decisions/core/COR-004-cli-surface.md) owns *which*
-   commands exist; the convention notes own the *house rules*; this renderer owns
-   the *mechanical half of how a read-view renders*.
+### 2. Defer the typed `Document` model (Option B)
 
-4. **Placement — tool-internal, not propagated.** The module lives in
-   `src/project_kit/` because its only consumer is the global `pkit` CLI. This is
-   the **inverse** of [ADR-003](ADR-003-permission-core-code-home.md)'s constraint
-   (the decision core is propagated *because* an in-tree hook must import it without
-   the global runtime); the renderer has no such consumer, so it is **not** a second
-   member of ADR-003's "neutral propagated shared code" category.
+A typed block hierarchy that
+makes illegal output unrepresentable is deferred, not adopted, behind a pinned
+trigger: **promote when a second independent command family adopts the read-view
+shape *and* the conventions have stopped churning, *or* when a correctness
+regression ships that a type would have caught.**
+
+### 3. Layering
+
+Three layers, each with one owner:
+[COR-004](../../../.pkit/decisions/core/COR-004-cli-surface.md) owns *which*
+commands exist; the convention notes own the *house rules*; this renderer owns
+the *mechanical half of how a read-view renders*.
+
+### 4. Placement — tool-internal, not propagated
+
+The module lives in
+`src/project_kit/` because its only consumer is the global `pkit` CLI. This is
+the **inverse** of [ADR-003](ADR-003-permission-core-code-home.md)'s constraint
+(the decision core is propagated *because* an in-tree hook must import it without
+the global runtime); the renderer has no such consumer, so it is **not** a second
+member of ADR-003's "neutral propagated shared code" category.
 
 ## Rationale
 

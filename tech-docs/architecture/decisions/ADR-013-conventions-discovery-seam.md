@@ -22,15 +22,25 @@ This ADR records the **cross-cutting contract** — the discovery seam itself, o
 
 **An agent discovers a project's conventions through an overlay-resolved `<project-conventions>` category — the same [COR-013](../../../.pkit/decisions/core/COR-013-agent-architecture.md) placeholder mechanism the `architect` uses for `<architecture-docs>`. The category is adopter-owned and resolves to wherever the adopter's overlay points; it is *not* a hard-coded path and *not* owned by any single capability. The consumer contract is the category name; what the category *resolves to* is the adopter's concern and may change over time without changing the consumer.**
 
-1. **The discovery mechanism is the overlay placeholder, never a path.** A consuming agent declares `<project-conventions>` in its frontmatter `reads.patterns` and cites it in its body; the deploy-time overlay resolution ([COR-013](../../../.pkit/decisions/core/COR-013-agent-architecture.md) rule 5) substitutes the adopter's resolved value. The agent never names a filesystem path for conventions. This is the identical machinery `architect` rides for `<architecture-docs>` / `<adr-records>` ([COR-024](../../../.pkit/decisions/core/COR-024-critic-and-architect-agents.md)).
+### 1. The discovery mechanism is the overlay placeholder, never a path
 
-2. **The category is adopter-owned and capability-independent.** Conventions live wherever the adopter's `.pkit/agents/project/overlay.yaml` resolves `<project-conventions>` — adopter-owned content under the no-shared-files invariant. No capability owns the corpus; uninstalling any single capability (including the one that ships the first consumer) never touches it. The methodology does not seed a capability-specific category into the core overlay.
+A consuming agent declares `<project-conventions>` in its frontmatter `reads.patterns` and cites it in its body; the deploy-time overlay resolution ([COR-013](../../../.pkit/decisions/core/COR-013-agent-architecture.md) rule 5) substitutes the adopter's resolved value. The agent never names a filesystem path for conventions. This is the identical machinery `architect` rides for `<architecture-docs>` / `<adr-records>` ([COR-024](../../../.pkit/decisions/core/COR-024-critic-and-architect-agents.md)).
 
-3. **The consumer contract is the category, not the source set.** A consumer agent reads "the project conventions" by reading what `<project-conventions>` resolves to. Today that is a single adopter-pointed location with one consumer; the contract is written so that when conventions later come from multiple sources, **only what the category resolves to changes** (single path → a union) — the consumer's declaration and read are unchanged.
+### 2. The category is adopter-owned and capability-independent
 
-4. **The aggregation mechanism is deferred, designed-for but not built ([COR-007](../../../.pkit/decisions/core/COR-007-pattern-extraction.md)).** A consumer reading the *union* of conventions contributed across many installed capabilities — and the capability `depends_on` that would let one capability declare another's conventions as input — are deferred until a real second case appears. The seam is shaped now so the aggregator lands without changing the consumer contract; the aggregator itself is not part of this decision.
+Conventions live wherever the adopter's `.pkit/agents/project/overlay.yaml` resolves `<project-conventions>` — adopter-owned content under the no-shared-files invariant. No capability owns the corpus; uninstalling any single capability (including the one that ships the first consumer) never touches it. The methodology does not seed a capability-specific category into the core overlay.
 
-5. **Conventions content is out of scope.** What the corpus *says* (naming, modularity, DRY, comment discipline, …) is adopter-owned prose that accretes empirically. This ADR fixes only *how an agent discovers* the corpus, not what it contains.
+### 3. The consumer contract is the category, not the source set
+
+A consumer agent reads "the project conventions" by reading what `<project-conventions>` resolves to. Today that is a single adopter-pointed location with one consumer; the contract is written so that when conventions later come from multiple sources, **only what the category resolves to changes** (single path → a union) — the consumer's declaration and read are unchanged.
+
+### 4. The aggregation mechanism is deferred, designed-for but not built ([COR-007](../../../.pkit/decisions/core/COR-007-pattern-extraction.md))
+
+A consumer reading the *union* of conventions contributed across many installed capabilities — and the capability `depends_on` that would let one capability declare another's conventions as input — are deferred until a real second case appears. The seam is shaped now so the aggregator lands without changing the consumer contract; the aggregator itself is not part of this decision.
+
+### 5. Conventions content is out of scope
+
+What the corpus *says* (naming, modularity, DRY, comment discipline, …) is adopter-owned prose that accretes empirically. This ADR fixes only *how an agent discovers* the corpus, not what it contains.
 
 ## Rationale
 
