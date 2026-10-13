@@ -20,7 +20,7 @@ A `critic` + `architect` consult established the load-bearing distinction this r
 
 ### 1. Confinement toolkits are data (new `confinement-toolkit` schema, COR-018)
 
-A *toolkit* is a named bundle of the sandbox allowances one tool (or tool-group) needs — `uv`, `gh`, `docker`, `node`, … — with each entry **classified `narrowing` or `widening`** in the data itself. A new `confinement-toolkit` schema + JSON Schema companion under `.pkit/schemas/`; backbone ships a small known set, projects extend/override by same-name in the project tree (the privilege-catalog / profile shipped-data pattern). This is the confinement-axis peer of `privilege-catalog` (intent-axis); it belongs in neither `permission-config` (adopter pointer-state) nor `permission-profile` (kept confinement-free by ADR-005 §23).
+A *toolkit* is a named bundle of the sandbox allowances one tool (or tool-group) needs — `uv`, `gh`, `docker`, `node`, … — with each entry **classified `narrowing` or `widening`** in the data itself. A new `confinement-toolkit` schema + JSON Schema companion under `.pkit/schemas/`; backbone ships a small known set, projects extend/override by same-name in the project tree (the privilege-catalog / profile shipped-data pattern). This is the confinement-axis peer of `privilege-catalog` (intent-axis); it belongs in neither `permission-config` (adopter pointer-state) nor `permission-profile` (kept confinement-free by ADR-005 point 2).
 
 ### 2. One sandbox-block writer, additive with provenance
 
@@ -36,7 +36,7 @@ All `sandbox`-block mutation routes through a single internal helper shared by `
 
 ### 5. Profile references a hint; config disposes; the goal applies; activate never writes
 
-A profile MAY carry `recommended_accommodations` (narrowing only) as a **documentation hint** surfaced by `profile show` and seeded into config by `setup autonomy` on first run. The **authoritative** list is `permission-config.confinement_accommodations`; the profile's field never causes a write on its own. `profile activate` stays nudge-only (ADR-005 §27, ADR-007 rule 1) — reading the field gives it no sandbox side-effect. Shipped data proposes; project config disposes (the `active_profile` precedent, ADR-005 §25).
+A profile MAY carry `recommended_accommodations` (narrowing only) as a **documentation hint** surfaced by `profile show` and seeded into config by `setup autonomy` on first run. The **authoritative** list is `permission-config.confinement_accommodations`; the profile's field never causes a write on its own. `profile activate` stays nudge-only (ADR-005 point 4, ADR-007 rule 1) — reading the field gives it no sandbox side-effect. Shipped data proposes; project config disposes (the `active_profile` precedent, ADR-005 point 3).
 
 ### 6. Read surface + honesty (COR-028)
 
@@ -61,7 +61,7 @@ A **named, bounded** egress host — [ADR-015](ADR-015-command-declared-network-
 - **One undifferentiated "manage sandbox allowances" surface (commit a `confinement_toolkits` list applied wholesale by setup).** Rejected — a committed file applying `excludedCommands` silently lowers the boundary for every checkout, the exact thing ADR-005 rule 6 forbade for profile YAML; relocating it to `config.yaml` + `setup` does not change the effect. The split exists to make this representable safely.
 - **`detect` proposes widening exclusions from lockfile presence.** Rejected — inferring "carve docker out of the box" from a Dockerfile's existence is the §49 trap mechanized. `detect` proposes narrowing only.
 - **Hardcode a narrowing floor in `sandbox enable`; no schema until a second adopter (the critic's minimal v1).** Considered and not taken *for this record's scope*: the recurrence is judged already met (rule 1 rationale), and the product owner chose the full data-driven surface now. The hardcode path remains the honest fallback if the schema proves over-built; the build keeps the shipped toolkit set minimal to bound that risk.
-- **Fold confinement-allowance data into `permission-config` or `permission-profile`.** Rejected — config is adopter pointer-state and the profile is deliberately confinement-free (ADR-005 §23); both would conflate the two axes ADR-004 separated.
+- **Fold confinement-allowance data into `permission-config` or `permission-profile`.** Rejected — config is adopter pointer-state and the profile is deliberately confinement-free (ADR-005 point 2); both would conflate the two axes ADR-004 separated.
 
 ## Implications
 
