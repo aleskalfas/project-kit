@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit validate` names the right shape when it refuses a capability's place
+  or folder of held documents that is not an object (#1411). A place's
+  message gave `{path, location?}`, though the package schema's place is
+  `{path, location?, type?, description?}`. A held folder's message gave the
+  same place shape, though a held folder is `{location, path, description?}`.
+  Each message now gives its own shape.
