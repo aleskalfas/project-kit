@@ -36,7 +36,10 @@ part. A part differs from a state (`friction_history.differs`) as follows:
 a path anchor's files by mode and object — HEAD's from its tree, a state's
 from the state's tree objects, read through `git cat-file --batch`
 (`TreeReader`) — a record's file and a registered kind's files the same
-way, followed across renames; an artefact anchor's target by its content,
+way, followed across renames; an anchor on a record's point by what the
+point stands on, cut from each version of the record's file through
+`record_points` (`_Judge.standing_in`), so a version that changed the file
+elsewhere is no change to it; an artefact anchor's target by its content,
 read at the state's commit. An edit put back, however many commits made and
 undid it, is no change. Where a merge lies between a state and HEAD, every
 part the anchor stands on at the state or at HEAD is compared, whatever the
@@ -126,8 +129,9 @@ walk to a point — have their one home in `friction_check`,
 
 from __future__ import annotations
 
+import difflib
 import json
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from enum import Enum
@@ -144,6 +148,7 @@ from project_kit.friction_check import (
     counted,
     exclusion_change,
     left_out_message,
+    retired_note,
     truth_chain_order,
     uncommitted_paths,
 )
@@ -190,6 +195,11 @@ from project_kit.friction_history import (
     shallow_commits,
 )
 from project_kit.project_config import PROJECT_CONFIG_RELPATH
+from project_kit.record_points import RecordPoints, Standing, read_points_bytes, split_anchor
+
+#: How a tree entry's mode opens for a regular file, executable or not: the only blob
+#: a record is read from.
+_FILE_MODE = "100"
 
 #: The share of the tracked files (excluded paths left out) above which a
 #: path anchor is over-broad (COR-050 point 7: "broad enough to match most
@@ -520,6 +530,7 @@ class _Judge:
         self._exclusions: dict[tuple[Anchor, int, frozenset[str]], _Exclusion] = {}
         self._flips: dict[int, tuple[FrictionSettings, list[Callable[[str], bool]]] | None] = {}
         self._lines: dict[tuple[Any, ...], dict[int, Any]] = {}
+        self._records: dict[str, RecordPoints | None] = {}  # by blob: a record's points
         self.taken: dict[tuple[int, int], set[str]] = {}
         """By merge and answering state, the files a merge took whole from one side that
         `line` read as changes measured from that state: git's combined diff lists none of
@@ -893,7 +904,9 @@ class _Judge:
         each commit that changed a file it leaves out, lets in or that is gone
         while the anchor stood on the file (`counts`), and each that let one of
         its files in. A record anchor: each commit that changed the content of
-        the record's file. An anchor of a registered kind: each commit that
+        the record's file. One on a record's point: each commit at which what
+        the point stands on differs from what it stood on at every parent of
+        the commit (`standing_in`). An anchor of a registered kind: each commit that
         changed the content of a file its resolver says it stands on, followed
         through renames as a record's file is, its artefact's own names left
         out as a path anchor's are. One pass over the history's listing,
@@ -914,6 +927,19 @@ class _Judge:
                     if index not in covered and self.counts(index, rel)
                 )
             return touched | self.flips(moved.let_in, covered, excluded=False)
+        if anchor.kind == "record" and split_anchor(anchor.value)[1] is not None:
+            rel = self.head.record_path(anchor.value)
+            standing = self.standing_in(anchor)
+            return {
+                v.index
+                for v in (self.history.versions(rel) if rel is not None else ())
+                if v.index not in covered
+                and all(
+                    standing(source or v.path, None if source is None else before)
+                    != standing(v.path, v.entry.after)
+                    for before, source in v.parents()
+                )
+            }
         return {
             v.index
             for rel in self.files_of(anchor, own)
@@ -958,21 +984,27 @@ class _Judge:
         *,
         renames: bool = False,
         target: Artefact | None = None,
+        point: Anchor | None = None,
     ) -> dict[int, Any]:
         """The changes to a part since the answering state at `state`, on the lines that carry
         it to the commit at `start`, where its file is at `rel`, each with the part where it
         changed (`line_changes`) — once per part, state and commit for the run.
 
         The part is the file's entry, `then` its entry at the state; for `target`,
-        an artefact anchor's, the target's content, `then` its content there. Each
-        merge among the changes that lists none of the file's names took it whole
-        from one side: recorded in `taken`.
+        an artefact anchor's, the target's content, `then` its content there; for
+        `point`, an anchor on a record's point, what the point stands on
+        (`standing_in`), `then` what it stood on there. Each merge among the
+        changes that lists none of the file's names took it whole from one side:
+        recorded in `taken`.
         """
         value: Callable[[str, TreeEntry | None], Any] = file_entry
         key: tuple[Any, ...] = ("file", state, start, rel, renames, then)
         if target is not None:
             key = ("artefact", state, start, rel, renames, target.id)
             value = self._content_in(target)
+        elif point is not None:
+            key = ("point", state, start, rel, renames, point.value)
+            value = self.standing_in(point)
         found = self._lines.get(key)
         if found is None:
             found = self._lines[key] = line_changes(
@@ -1081,6 +1113,8 @@ class _Judge:
             return None if target is None else self._target_since(target, state)
         if anchor.kind == "path":
             return self._path_since(anchor, state, own)
+        if anchor.kind == "record" and split_anchor(anchor.value)[1] is not None:
+            return self._point_since(anchor, state)
         covered = self.history.ancestors(state)
         merged = self.history.merged(state, 0)
         origins: list[int] = []
@@ -1175,6 +1209,62 @@ class _Judge:
         changes = self.line(state, 0, target.path, then, renames=True, target=target)
         found = origin(self.history, changes, then)
         return None if found is None else Change(found, frozenset(changes))
+
+    def _point_since(self, anchor: Anchor, state: int) -> Change | None:
+        """`since` for an anchor on a record's point: what the point stands on at HEAD
+        against what it stood on at the state (COR-050 point 5), the record's file followed
+        across renames, as a record anchor's is.
+
+        The point is cut from each version of the file (`standing_in`): a point
+        missing at a version, or retired there, stands on nothing. So a version
+        that changed the file elsewhere is no change to the point, and debt is
+        dated from the oldest version from which what it stands on has
+        differed without returning (point 9). On one line, where no commit
+        since the state touched the file, it stands as it stood.
+        """
+        rel = self.head.record_path(anchor.value)
+        if rel is None:
+            return None
+        reached = self.history.ancestors(state)
+        versions = list(self.history.versions(rel))
+        if not self.history.merged(state, 0) and all(v.index in reached for v in versions):
+            return None  # one line, and no commit since the state touched the record's file
+        then = self.standing_at(anchor, state)
+        if self.head.standing(anchor, rel) == then:
+            return None
+        changes = self.line(state, 0, rel, then, renames=True, point=anchor)
+        found = origin(self.history, changes, then)
+        return None if found is None else Change(found, frozenset(changes))
+
+    def standing_at(self, anchor: Anchor, state: int) -> Standing | None:
+        """What an anchor on a record's point stood on at the state at `state` (COR-050
+        point 5): the record read from the state's tree, under the file's name there as the
+        history follows it, else under the name it has at HEAD."""
+        rel = self.head.record_path(anchor.value)
+        if rel is None:
+            return None
+        reached = self.history.ancestors(state)
+        version = next((v for v in self.history.versions(rel) if v.index in reached), None)
+        name = rel if version is None else version.path
+        entry = self.trees.entry(self.history.commits[state].sha, name)
+        return self.standing_in(anchor)(name, entry)
+
+    def standing_in(self, anchor: Anchor) -> Callable[[str, TreeEntry | None], Standing | None]:
+        """What an anchor on a record's point stands on in the record's file at a path, with
+        an entry: the point cut from the blob the entry names, each blob read once for the
+        run (`record_points.read_points`), and nothing where there is no file."""
+        point = split_anchor(anchor.value)[1]
+
+        def standing(_path: str, entry: TreeEntry | None) -> Standing | None:
+            if point is None or entry is None or not entry[0].startswith(_FILE_MODE):
+                return None  # no file there, or a link or a submodule, which holds no record
+            if entry[1] not in self._records:
+                raw = self.blobs.read_object(entry[1])
+                self._records[entry[1]] = None if raw is None else read_points_bytes(raw)
+            points = self._records[entry[1]]
+            return None if points is None else points.anchored(point).standing
+
+        return standing
 
 
 # --- the check ---------------------------------------------------------------------
@@ -1399,6 +1489,9 @@ def _check_artefact(
             f'{came.short} "{came.subject}" ({came.author}, {came.day}), a change not put '
             f"back since"
         )
+        retired = retired_note(anchor, judge.head)
+        if retired is not None:
+            message += f"; {retired}"
         asking = next(
             (found for found in (judge.exclusion(anchor, s, own) for s in answering) if found.asks),
             None,
@@ -1616,7 +1709,9 @@ class ArtefactCheck:
     are then what the check reports of its declarations. Otherwise both are the
     check's own for this artefact, the findings in its order. Whenever it is
     judged, `files` holds each path anchor's files (`AnchorFiles`) — with no
-    point's for an excluded artefact, which has no points.
+    point's for an excluded artefact, which has no points. `diffs` holds, for
+    each stale anchor on a record's point, what changed in what the point
+    stands on (`_point_diffs`).
     """
 
     head: HeadState
@@ -1625,6 +1720,7 @@ class ArtefactCheck:
     report: ArtefactReport | None
     findings: tuple[TracedFinding, ...]
     files: Mapping[Anchor, AnchorFiles] = field(default_factory=dict[Anchor, AnchorFiles])
+    diffs: Mapping[Anchor, tuple[str, ...]] = field(default_factory=dict[Anchor, tuple[str, ...]])
 
 
 def run_artefact_check(
@@ -1669,9 +1765,11 @@ def run_artefact_check(
         traced = _traced(artefact, judge, findings)
         point = None if report is None else _index_of(history, report)
         files = _anchor_files(judge, artefact, point)
+        stale = {f.anchor for f in findings if f.kind is RepositoryFindingKind.STALE}
+        diffs = _point_diffs(judge, stale, point)
     finally:
         blobs.close()
-    return ArtefactCheck(head, bool(history.shallow), artefact, report, traced, files)
+    return ArtefactCheck(head, bool(history.shallow), artefact, report, traced, files, diffs)
 
 
 def _index_of(history: History, report: ArtefactReport) -> int | None:
@@ -1704,6 +1802,35 @@ def _anchor_files(
         )
         for anchor in anchors
     }
+
+
+def _point_diffs(
+    judge: _Judge, stale: Collection[Anchor | None], point: int | None
+) -> dict[Anchor, tuple[str, ...]]:
+    """For each stale anchor on a record's point, what changed in what the point stands on
+    from the revalidation point to HEAD, as a unified diff of its lines (`Standing.lines`):
+    the point's diff alone, never the rest of the record (COR-050 point 6)."""
+    if point is None:
+        return {}
+    commit = judge.history.commits[point]
+    diffs: dict[Anchor, tuple[str, ...]] = {}
+    for anchor in stale:
+        if anchor is None or anchor.kind != "record" or split_anchor(anchor.value)[1] is None:
+            continue
+        then = judge.standing_at(anchor, point)
+        now = judge.head.standing(anchor, judge.head.record_path(anchor.value))
+        if then == now:
+            continue
+        diffs[anchor] = tuple(
+            difflib.unified_diff(
+                [] if then is None else then.lines(),
+                [] if now is None else now.lines(),
+                fromfile=f"{anchor.value} at {commit.short}",
+                tofile=f"{anchor.value} at HEAD",
+                lineterm="",
+            )
+        )
+    return diffs
 
 
 def _traced(

@@ -2,9 +2,10 @@
 
 The one reading of a record's points, over the reading of where a part of a
 document lies (`document_parts`). Validation's decisions member calls it
-(`decisions_validate.check_points`, COR-058 point 7), and so does the
-numbering check (`decisions_check_diff`, COR-058 point 8). The conversion
-(COR-058 point 9) is to call it. No
+(`decisions_validate.check_points`, COR-058 point 7), and so do the
+numbering check (`decisions_check_diff`, COR-058 point 8) and friction, for
+an anchor on one point (COR-050 point 5). The conversion (COR-058 point 9)
+is to call it. No
 other module of the binary reads a record's points, and artefact discovery
 does not: a record is read here whether or not a place holds it.
 
@@ -33,10 +34,17 @@ does not: a record is read here whether or not a place holds it.
     bold holds the title (`**5. Title.**`) or only the id (`**5.** Title`,
     `**D1** — Title`). A numbered list inside a point or another sub-section
     holds no points. Whoever converts the record confirms this reading.
-- `RecordPoints.ground` gives what a point stands on: its section, the
-  record's status, supersession and title fields, its preamble (the text
-  before its first section) and Summary, and the Decision's text outside
-  every point and stub. A stub is no point, and stands on nothing.
+- `RecordPoints.ground` gives what a point stands on (COR-050 point 5): its
+  section, the record's status, supersession and title fields, its preamble
+  (the text before its first section) and Summary, and the Decision's text
+  outside every point and stub. A stub is no point, and stands on nothing.
+- `RecordPoints.anchored` gives what an anchor on one point finds in the
+  record (COR-050 point 7): a live point, an id two live points share, a
+  retired id with its successors, a record whose points are a list, or
+  nothing. `RecordPoints.standing` gives what a live point stands on as the
+  friction checks and the debt listing compare it, one state with another
+  (`Standing`). `split_anchor` reads a record anchor's value as its record
+  and its point, `COR-058#4`.
 - `hold_stubs` holds each stub to its entry in `retired-points`, both ways
   (COR-058 point 6): a retired id with no stub, a stub whose id is not
   retired, and a stub whose sentence differs from the one its entry gives
@@ -46,15 +54,17 @@ does not: a record is read here whether or not a place holds it.
   `id_series` splits an id into its series and its number, which count apart
   (COR-058 point 3).
 
-Whether an anchor may name one point, and what such a point stands on, are the
-anchors-and-friction record's to decide (COR-050, as COR-058 point 10 says).
-No anchor names a point yet, so nothing reads `ground` for an anchor. When
-COR-050 lets an anchor name a point, friction reads the point and its ground
-here (ADR-057 point 2).
+An anchor may name one point, and what the point stands on is the
+anchors-and-friction record's (COR-050 points 2 and 5, as COR-058 point 10
+leaves it). Friction reads the point and what it stands on here and nowhere
+else (ADR-057 point 2): the change check and the whole-repository check, at
+each state they compare, and validation's friction member, at the working
+tree.
 """
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
@@ -62,6 +72,7 @@ from enum import Enum
 from typing import Any, cast
 
 from project_kit.document_parts import Body, Extent, Heading, Line, parse_front_matter
+from project_kit.line_breaks import universal_newlines
 
 #: The front-matter field that lists a record's retired ids with their successors.
 RETIRED_POINTS_KEY = "retired-points"
@@ -74,6 +85,9 @@ DECISION_TITLE = "Decision"
 
 #: The heading of a summary section, which every point stands on.
 SUMMARY_TITLE = "Summary"
+
+#: What sets the point an anchor names apart from its record: `COR-058#4` (COR-050 point 2).
+POINT_MARK = "#"
 
 #: The record's own fields every point stands on: its status, supersession and title.
 GROUND_FIELDS = ("status", "supersedes", "superseded_by", "title")
@@ -184,6 +198,72 @@ class PointGround:
 
 
 @dataclass(frozen=True)
+class Standing:
+    """What an anchor on one point stands on at one state, as the friction checks and the
+    debt listing compare it (COR-050 point 5).
+
+    - `fields`: those of `GROUND_FIELDS` the record writes, each as YAML reads
+      it, written out as JSON with its keys sorted, so a reformatted field is
+      no change.
+    - `section`: the point's section, its heading and its text.
+    - `shared`: the parts of the record every point stands on, its preamble,
+      its Summary and the Decision's text outside every point and stub, in the
+      body's order, each ending with one line break and set apart by a blank
+      line.
+
+    Where the point sits in its record is not compared, so a move changes
+    nothing. Two states compare equal when the point stands on the same in
+    both.
+    """
+
+    fields: tuple[tuple[str, str], ...]
+    section: str
+    shared: str
+
+    def lines(self) -> list[str]:
+        """The standing as lines, for a diff between two states: the point's section,
+        then the fields, then the shared parts, each block set apart by a blank line."""
+        fields = [f"{key}: {value}" for key, value in self.fields]
+        blocks = [self.section, "\n".join(fields) + "\n" if fields else "", self.shared]
+        return "\n".join(block for block in blocks if block).splitlines()
+
+
+class PointState(Enum):
+    """What an anchor on one point of a record finds there (COR-050 points 5 and 7)."""
+
+    LIVE = "live"  # one live point has the id
+    RETIRED = "retired"  # the record retires the id: it stands on nothing, and is not dead
+    AMBIGUOUS = "ambiguous"  # two live points or more share the id
+    LIST_FORM = "list-form"  # the record writes its points as a list: none an anchor can name
+    MISSING = "missing"  # no point has the id, and the record retires none: a dead anchor
+
+
+@dataclass(frozen=True)
+class AnchoredPoint:
+    """One record's answer to an anchor on its point `id` (COR-050 points 5 and 7).
+
+    - `state`: what the anchor finds (`PointState`).
+    - `standing`: what it stands on, `None` where it stands on nothing: a
+      retired id, or no point with the id. An ambiguous anchor reads the
+      first point with the id, as `ground` does.
+    - `successors`: a retired id's, from `retired-points`.
+    - `sharing`: how many live points have the id.
+    """
+
+    id: str
+    state: PointState
+    standing: Standing | None = None
+    successors: tuple[str, ...] = ()
+    sharing: int = 0
+
+    @property
+    def dead(self) -> bool:
+        """Whether the anchor is dead: the record holds no point an anchor can name by
+        the id, and retires none (COR-050 point 7)."""
+        return self.state in (PointState.MISSING, PointState.LIST_FORM)
+
+
+@dataclass(frozen=True)
 class RecordPoints:
     """One record's points, as `read_points` reads them.
 
@@ -265,6 +345,37 @@ class RecordPoints:
         shared += self._outside_points()
         shared = sorted((e for e in shared if e.end > e.start), key=lambda e: e.start)
         return PointGround(point=point, fields=fields, extents=(point.extent, *shared))
+
+    def standing(self, point_id: str) -> Standing | None:
+        """What an anchor on the live point `point_id` stands on, as the checks compare it
+        (`Standing`), from `ground`; `None` where it stands on nothing."""
+        ground = self.ground(point_id)
+        if ground is None:
+            return None
+        section, *shared = (self.body.text_of(extent) for extent in ground.extents)
+        fields = tuple(
+            (key, json.dumps(value, sort_keys=True, default=str))
+            for key, value in sorted(ground.fields.items())
+        )
+        return Standing(fields, section, "\n".join(shared))
+
+    def anchored(self, point_id: str) -> AnchoredPoint:
+        """What an anchor on the point `point_id` finds in this record (COR-050 point 7).
+
+        A live point with the id, or several, which makes the anchor ambiguous.
+        Else the id the record retires, with its successors. Else, in a record
+        whose points are a list, nothing an anchor can name, since a list's
+        numbers are not permanent (COR-058 point 9). Else nothing at all.
+        """
+        sharing = sum(1 for point in self.points if point.id == point_id)
+        if sharing:
+            state = PointState.LIVE if sharing == 1 else PointState.AMBIGUOUS
+            return AnchoredPoint(point_id, state, self.standing(point_id), sharing=sharing)
+        if point_id in self.retired:
+            return AnchoredPoint(point_id, PointState.RETIRED, successors=self.retired[point_id])
+        if self.in_list_form:
+            return AnchoredPoint(point_id, PointState.LIST_FORM)
+        return AnchoredPoint(point_id, PointState.MISSING)
 
     def _preamble(self) -> Extent:
         """The text before the record's first section: before its first heading at the
@@ -358,6 +469,30 @@ def read_points(text: str) -> RecordPoints:
     )
 
 
+def read_points_bytes(raw: bytes) -> RecordPoints | None:
+    """`read_points` of a record read as bytes, from disk or from git, whatever its line
+    endings; `None` when it is no UTF-8 text."""
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    return read_points(universal_newlines(text))
+
+
+def split_anchor(value: str) -> tuple[str, str | None]:
+    """A record anchor's value as the record it names and the point, if it names one:
+    `("COR-050", "11")` for `COR-050#11`, and `("COR-050", None)` for the whole record
+    (COR-050 point 2). The value splits at its last `#`, the mark COR-051 point 3 gives
+    a part of a record."""
+    record, mark, point = value.rpartition(POINT_MARK)
+    return (record, point) if mark else (value, None)
+
+
+def is_point_id(text: str) -> bool:
+    """Whether `text` is written as a point id: a number, or a label (COR-058 point 1)."""
+    return bool(_POINT_ID.match(text))
+
+
 def id_series(point_id: str) -> tuple[str, int] | None:
     """A point id's series and number (COR-058 point 3): `("", 5)` for `5`, `("D", 1)`
     for `D1`, or `None` for what is no point id. Numbers and each series of labels
@@ -370,11 +505,17 @@ def stub_sentence(successors: Sequence[str]) -> str:
     """The one sentence a stub holds, written from its entry's successors (COR-058
     point 4): "Its content is in point 7.", "… in points 7 and 16.", "… in points 7,
     12 and 16.", or "Its content is in no other point." with none."""
+    return f"Its content is in {successors_phrase(successors)}."
+
+
+def successors_phrase(successors: Sequence[str]) -> str:
+    """Where a retired point's content went, as its stub's sentence names it (COR-058
+    point 4): "point 7", "points 7 and 16", "points 7, 12 and 16", or "no other point"."""
     if not successors:
-        return "Its content is in no other point."
+        return "no other point"
     if len(successors) == 1:
-        return f"Its content is in point {successors[0]}."
-    return f"Its content is in points {', '.join(successors[:-1])} and {successors[-1]}."
+        return f"point {successors[0]}"
+    return f"points {', '.join(successors[:-1])} and {successors[-1]}"
 
 
 class StubMismatchKind(Enum):
