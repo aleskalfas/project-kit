@@ -32,10 +32,11 @@ What is checked, each against the record's words:
 - **Pages** (point 4). A document is a page when it is of the page type: the
   place that wins for it gives that type and it declares its page kind in
   `kind`. In a project place outside every root that gives no type, a document
-  of no type that declares its page kind is a page too. A page's `reader` and
-  `kind` are validated by this capability's companion schema,
-  `schemas/page.schema.json`. The friction block in the container is the
-  core's, and the backbone's `friction` pass validates it. Any other document
+  of no type that declares its page kind is a page too. A page's `kind`, and
+  its `reader` where RS-LDOC-003 binds on it, are validated by this
+  capability's companion schema, `schemas/page.schema.json`. The friction
+  block in the container is the core's, and the backbone's `friction` pass
+  validates it. Any other document
   in the spaces' places is an **unclassified document**, counted for
   onboarding (point 8) and never failed.
 - **Pages left unanchored** (point 8). Onboarding is complete when no page is
@@ -44,22 +45,30 @@ What is checked, each against the record's words:
   person accepted it with none — its `unanchored-because`, the core's key
   (COR-050 point 1) — which is counted apart. Both as the backbone reads the
   block; an excluded page is in neither (COR-050 point 7). Never failed.
+- **Where `LDOC` binds** (point 3). Each check of a part of an `LDOC` rule
+  runs only on the pages where that rule binds (COR-051 point 2), read once from
+  the backbone's one answer (`binding`, COR-051 point 7). `LDOC` binds only
+  through a set of the project's own whose scope selects the page, such as the
+  page's space definition. No answer is one error, and then no page's
+  structure or reader is checked.
 - **Page formats** (point 3; RS-LDOC-004). A page whose kind declares its
   structure — the sections its body carries, in order where order matters, in
-  this capability's `schemas/page-kinds.yaml` — is checked against it. While
-  the rule is accepted in the shared method, a section the page lacks or
-  carries out of order is an error; under any other status the rule binds
-  nothing and no body is checked (`SEVERITY_OF_STATUS`). A kind that declares
-  no structure is reported with the pages that name it, never failed. A
-  declaration that gives no reading is one error, "structures unreadable", and
-  no body is checked; a page whose body cannot be read is an error of its own.
-  `formats` says what a section is.
-- **Readers** (points 4 and 7). Each page's `reader` resolves against the
-  readers point, `pkit::documentation:readers`, read as it resolves (`readers`)
-  — only when some page names a well-formed reader. A reader the point does not
+  this capability's `schemas/page-kinds.yaml` — is checked against it where
+  RS-LDOC-004 binds on it: a section the page lacks or carries out of order is
+  an error. Under any status but accepted the rule binds nothing, so the
+  backbone's answer names no page, and the summary says why (`_unaccepted`).
+  A kind that declares no structure is reported with the pages that name it,
+  never failed. A declaration that gives no reading is one error, "structures
+  unreadable", and no body is checked; a page whose body cannot be read is an
+  error of its own. `formats` says what a section is.
+- **Readers** (points 3, 4 and 7). Where RS-LDOC-003 binds on a page, the page
+  names its reader in `reader`, and the reader resolves against the readers
+  point, `pkit::documentation:readers`, read as it resolves (`readers`) — only
+  when some such page names a well-formed reader. A reader the point does not
   hold fails the page, naming the readers it holds. An unresolved point — a
   filler out of step, under the point's `fail` policy — is one error, "readers
-  unresolved", never one per page: no reader can be checked against it.
+  unresolved", never one per page: no reader can be checked against it. Where
+  RS-LDOC-003 does not bind, the page's `reader` is not read.
 - **Entry points** (point 1). Each space's entry point resolves to a document
   of that space — under its root, or in a place assigned to it — and is not
   another component's, a record or a rule set. Whether it is already a page
@@ -67,7 +76,10 @@ What is checked, each against the record's words:
 - **Definitions** (point 2). Each space's definition lies in the definitions
   location's `rule-sets/` folder, where the backbone reads it as a project
   rule set, and inherits the shared method, `living-docs:LDOC`. A space
-  without one yet is reported.
+  without one yet is reported, and so is a definition with no scope, or with
+  the template's placeholder in its scope, naming the scope that selects the
+  space's pages. So is each page of a space its definition's scope leaves
+  out, unless the join with the assignment fails it.
 - **Separation** (point 1). Roots that are the same folder, or nested, are
   reported for onboarding to clear, never failed.
 - **Captured sources** (point 4). The sources folder holds only captured
@@ -91,9 +103,10 @@ friction block and the rule sets themselves are the backbone's `friction` and
 `rule-sets` passes; an unresolved readers point is also the backbone's finding,
 under `connections`, which names its fix.
 
-`pages` answers which documents are pages without reading the readers point:
-the doc-check filler asks it while the backbone resolves every point, so it
-must not ask the backbone for one. Reading the places resolves no point.
+`pages` answers which documents are pages without reading the readers point or
+where the rules bind: the doc-check filler asks it while the backbone resolves
+every point, so it must not ask the backbone for one. Reading the places
+resolves no point.
 """
 
 from __future__ import annotations
@@ -109,6 +122,8 @@ from jsonschema import Draft202012Validator
 
 from _lib import formats, sources
 from _lib.artefacts import Document, Unreadable, read_artefacts
+from _lib.binding import Binding, read_binding
+from _lib.binding import Unreadable as Unbound
 from _lib.declarations import (
     BACKBONE_CONFIG,
     CAPABILITIES_DIR,
@@ -150,7 +165,12 @@ PAGE_KINDS = Path(__file__).resolve().parents[2] / formats.PAGE_KINDS
 PAGE_KINDS_PATH = f"{CAPABILITIES_DIR}/{CAPABILITY}/{formats.PAGE_KINDS.as_posix()}"
 
 #: The shared method rule set a space's definition inherits (DEC-001 point 2).
-LDOC_PIN = re.compile(rf"^{re.escape(CAPABILITY)}:LDOC@(?:0|[1-9][0-9]*)$")
+LDOC = f"{CAPABILITY}:LDOC"
+LDOC_PIN = re.compile(rf"^{re.escape(LDOC)}@(?:0|[1-9][0-9]*)$")
+
+#: The shared method's rule whose part the reader check enforces: a page names its
+#: reader, one the readers point holds (DEC-001 points 3 and 6; RS-LDOC-003).
+READER_RULE = "RS-LDOC-003"
 
 #: A decision record's own id, in the four id-spaces of the decision-record
 #: specification: COR, PRJ, ADR and a capability's DEC.
@@ -161,11 +181,6 @@ RECORD_ID = re.compile(r"^(?:COR|PRJ|ADR|DEC)-[0-9]{3,}$")
 RULE_SETS = "rule-sets"
 
 ERROR, REPORT = "error", "report"
-
-#: What a rule's status makes of a departure from it (COR-051 point 4): an
-#: accepted rule binds, and checks enforce it; a rule of any other status — a
-#: rule without one is proposed — binds nothing, so nothing is checked.
-SEVERITY_OF_STATUS = {"accepted": ERROR}
 
 
 @dataclass(frozen=True)
@@ -356,7 +371,10 @@ class _Walk:
     claims: dict[str, Claim] = field(default_factory=dict)
     pages: dict[str, str | None] = field(default_factory=dict)  # page -> space
     giver: dict[str, ProjectPlace] = field(default_factory=dict)  # page -> its project place
-    readers: dict[str, str] = field(default_factory=dict)  # page -> its well-formed reader
+    fronts: dict[str, Mapping[str, Any]] = field(default_factory=dict)  # page -> its front matter
+    # The pages RS-LDOC-003 binds on, each with its well-formed reader, if it names one.
+    readers: dict[str, str] = field(default_factory=dict)
+    reader_bound: set[str] = field(default_factory=set)
     kinds: dict[str, str] = field(default_factory=dict)  # page -> its well-formed kind
     holds: dict[int, str] = field(
         default_factory=dict
@@ -367,14 +385,22 @@ class _Walk:
     untold: dict[str, list[Place]] = field(default_factory=dict)
 
 
-def check(root: Path, read: Callable[[], Readers] = read_readers) -> Outcome:
+def check(
+    root: Path,
+    read: Callable[[], Readers] = read_readers,
+    reach: Callable[[Path], Binding] = read_binding,
+) -> Outcome:
     """Every check of this module over the project at `root`; `read` answers the
-    readers point, asked only when some page names a well-formed reader. When
-    the backbone gives no reading of the places, that is the one finding."""
+    readers point, asked only when some page names a well-formed reader where
+    RS-LDOC-003 binds, and `reach` where the rules bind, asked only when there is
+    a page. When the backbone gives no reading of the places, that is the one
+    finding."""
     try:
         decl, refused, walk, outcome = _classify(root)
     except Unreadable as exc:
         return _unreadable(exc)
+    binding = _binding(root, walk, reach, outcome)
+    _field_findings(walk, binding, outcome)
     _assignment_findings(decl, refused, walk, outcome)
     _tie_findings(decl, walk, outcome)
     _untold_findings(decl, walk, outcome)
@@ -382,8 +408,8 @@ def check(root: Path, read: Callable[[], Readers] = read_readers) -> Outcome:
     entry_notes = _entry_point_findings(root, decl, walk, outcome)
     definition_notes = _definition_findings(decl, outcome)
     _separation_findings(decl, outcome)
-    reader_note = _reader_findings(decl, walk, read, outcome)
-    format_note = _format_findings(root, decl, walk, outcome)
+    reader_note = _reader_findings(decl, walk, binding, read, outcome)
+    format_note = _format_findings(root, decl, walk, binding, outcome)
     captured = sources.check(root, decl.artefacts)
     outcome.findings.extend(
         Finding(ERROR if problem.error else REPORT, problem.location, problem.message)
@@ -475,7 +501,6 @@ def _refused_places(decl: Declarations, outcome: Outcome) -> set[int]:
 def _walk(decl: Declarations, places: Sequence[Reach], outcome: Outcome) -> _Walk:
     """Classify every document the spaces' places reach, and validate the pages."""
     walk = _Walk()
-    schema = Draft202012Validator(json.loads(PAGE_SCHEMA.read_text(encoding="utf-8")))
     reach = {index: place for indices, place in places for index in indices}
     for rel, document in sorted(decl.documents.items()):
         ordered = _ordered(document, reach)
@@ -514,14 +539,7 @@ def _walk(decl: Declarations, places: Sequence[Reach], outcome: Outcome) -> _Wal
             if winner.project is not None:
                 walk.giver[rel] = winner.project
             _anchoring(rel, document, outcome)
-            findings, invalid = _page_findings(rel, front or {}, schema)
-            outcome.findings.extend(findings)
-            reader = (front or {}).get("reader")
-            if isinstance(reader, str) and "reader" not in invalid:
-                walk.readers[rel] = reader
-            kind = (front or {}).get("kind")
-            if isinstance(kind, str) and "kind" not in invalid:
-                walk.kinds[rel] = kind
+            walk.fronts[rel] = front or {}
         elif not document.excluded:
             # Excluded paths are left out of the measures (COR-050 point 7).
             outcome.unclassified.append(rel)
@@ -638,6 +656,72 @@ def _space_of_place(place: Place, decl: Declarations) -> str | None:
     return root_space(literal_prefix(place.project.path), decl)
 
 
+def cited(rule: str) -> str:
+    """A rule of the shared method, as the backbone's answer cites it (COR-051 point 6)."""
+    return f"{CAPABILITY}:{rule}"
+
+
+def _binding(
+    root: Path, walk: _Walk, reach: Callable[[Path], Binding], outcome: Outcome
+) -> Binding | None:
+    """Where the rules bind on the pages, read once from the backbone's one answer
+    (COR-051 point 7; DEC-001 point 3), and only when there is a page. A check of a
+    part of a rule runs only where the rule binds (COR-051 point 2). So when the
+    answer cannot be read, that is one error, and neither a page's structure nor
+    its reader is checked: `None`."""
+    if not walk.pages:
+        return Binding()
+    try:
+        return reach(root)
+    except Unbound as exc:
+        outcome.findings.append(
+            Finding(
+                ERROR,
+                BACKBONE_CONFIG,
+                f"where {LDOC}'s rules bind cannot be read — {str(exc).rstrip('.')}. No page's "
+                f"structure or reader is checked until it can: {CAPABILITY} checks each part of a "
+                f"rule only where the rule binds, read through the backbone's `pkit rule-sets "
+                f"reach --json` (DEC-001 point 3; COR-051 point 7).",
+            )
+        )
+        return None
+
+
+def _field_findings(walk: _Walk, binding: Binding | None, outcome: Outcome) -> None:
+    """Each page's own fields against the companion schema (DEC-001 point 4), and its
+    reader where RS-LDOC-003 binds on it (point 3): there the page names its reader,
+    a word, which `_reader_findings` resolves. Where the rule does not bind, the
+    page's `reader` is not read. Records the readers to resolve and the kinds whose
+    structure to check."""
+    schema = Draft202012Validator(json.loads(PAGE_SCHEMA.read_text(encoding="utf-8")))
+    rule = cited(READER_RULE)
+    for rel in sorted(walk.pages):
+        front = walk.fronts.get(rel, {})
+        bound = binding is not None and binding.binds(rel, rule)
+        fields = {key: value for key, value in front.items() if bound or key != "reader"}
+        findings, invalid = _page_findings(rel, fields, schema)
+        outcome.findings.extend(findings)
+        kind = front.get("kind")
+        if isinstance(kind, str) and "kind" not in invalid:
+            walk.kinds[rel] = kind
+        if not bound:
+            continue
+        walk.reader_bound.add(rel)
+        reader = front.get("reader")
+        if "reader" not in front:
+            outcome.findings.append(
+                Finding(
+                    ERROR,
+                    rel,
+                    f"{rel} names no reader, and {READER_RULE} binds on it: the page names its "
+                    f"reader in its `reader` field, a word that names a reader the readers point "
+                    f"holds — add `reader: <id>` (DEC-001 point 3; {READER_RULE}).",
+                )
+            )
+        elif isinstance(reader, str) and "reader" not in invalid:
+            walk.readers[rel] = reader
+
+
 def _page_findings(
     rel: str, front: Mapping[str, Any], schema: Draft202012Validator
 ) -> tuple[list[Finding], set[str]]:
@@ -656,21 +740,34 @@ def _page_findings(
             Finding(
                 ERROR,
                 location,
-                f"{error.message} — a page names its reader and its kind, each a word "
-                f"(`[a-z][a-z0-9-]*`), in the fields {CAPABILITY}'s schema fixes "
-                f"(schemas/page.schema.json; DEC-001 point 4).",
+                f"{error.message} — a page names its kind, and its reader where "
+                f"{READER_RULE} binds on it, each a word (`[a-z][a-z0-9-]*`), in the fields "
+                f"{CAPABILITY}'s schema fixes (schemas/page.schema.json; DEC-001 point 4).",
             )
         )
     return findings, invalid
 
 
 def _reader_findings(
-    decl: Declarations, walk: _Walk, read: Callable[[], Readers], outcome: Outcome
+    decl: Declarations,
+    walk: _Walk,
+    binding: Binding | None,
+    read: Callable[[], Readers],
+    outcome: Outcome,
 ) -> str:
-    """Each page's reader resolves against the readers point (DEC-001 points 4 and 7).
-    Returns the summary's line about it."""
+    """Each page's reader resolves against the readers point where RS-LDOC-003 binds
+    on the page (DEC-001 points 3 and 7). Returns the summary's line about it."""
+    if binding is None:
+        return f"readers: not checked — where {READER_RULE} binds cannot be read."
+    unbound = len(walk.pages) - len(walk.reader_bound)
+    if walk.pages and not walk.reader_bound:
+        return (
+            f"readers: not checked — {READER_RULE} binds on none of the {unbound} page(s), so "
+            f"{READERS_POINT} is not read (COR-051 point 7)."
+        )
+    beyond = f"; {unbound} page(s) {READER_RULE} does not bind on, not checked" if unbound else ""
     if not walk.readers:
-        return f"readers: no page names one yet, so {READERS_POINT} is not read."
+        return f"readers: no page names one yet, so {READERS_POINT} is not read{beyond}."
     readers = read()
     if not readers.resolved:
         outcome.findings.append(
@@ -683,7 +780,7 @@ def _reader_findings(
                 f"(DEC-001 point 7; COR-052 point 6).",
             )
         )
-        return f"readers unresolved: {len(walk.readers)} page reader(s) not checked."
+        return f"readers unresolved: {len(walk.readers)} page reader(s) not checked{beyond}."
     known = set(readers.ids)
     for rel, reader in sorted(walk.readers.items()):
         if reader in known:
@@ -700,29 +797,34 @@ def _reader_findings(
         )
     return (
         f"readers ({READERS_POINT}): {', '.join(readers.ids) or 'none'}; "
-        f"{len(walk.readers)} page reader(s) checked."
+        f"{len(walk.readers)} page reader(s) checked{beyond}."
     )
 
 
-def _format_findings(root: Path, decl: Declarations, walk: _Walk, outcome: Outcome) -> str:
-    """Each page's body against the structure its kind declares (DEC-001 point 3;
-    RS-LDOC-004), at the severity the rule's status in the shared method gives:
-    an error while the rule is accepted, and under any other status no body is
-    checked. A kind that declares no structure is reported, never failed; a
-    declaration that gives no reading is one error. Returns the summary's line
-    about it."""
+def _format_findings(
+    root: Path, decl: Declarations, walk: _Walk, binding: Binding | None, outcome: Outcome
+) -> str:
+    """Each page's body against the structure its kind declares, where RS-LDOC-004
+    binds on the page, as the backbone's answer gives it (DEC-001 point 3; COR-051
+    point 7). There a departure is an error. No body is checked on a page the rule
+    does not bind on, and under any status but accepted it binds on none. A kind that declares
+    no structure is reported, never failed; a declaration that gives no reading is
+    one error. Returns the summary's line about it."""
     rule = formats.FORMAT_RULE
-    entry = decl.ldoc_rules.get(rule)
-    if not isinstance(entry, Mapping):
-        return f"page formats: not checked — {LDOC_FILE} holds no {rule}."
-    status = entry.get("status")
-    status = status if isinstance(status, str) and status else "proposed"
-    severity = SEVERITY_OF_STATUS.get(status)
-    if severity is None:
-        return (
-            f"page formats: not checked — {rule} is {status}, so it binds nothing "
-            f"(COR-051 point 4)."
-        )
+    if binding is None:
+        return f"page formats: not checked — where {rule} binds cannot be read."
+    kinds = {rel: kind for rel, kind in walk.kinds.items() if binding.binds(rel, cited(rule))}
+    unbound = sum(1 for rel in walk.pages if not binding.binds(rel, cited(rule)))
+    if unbound == len(walk.pages):
+        why = _unaccepted(rule, decl)
+        if why is not None:
+            return f"page formats: not checked — {why}."
+        if walk.pages:
+            return (
+                f"page formats: not checked — {rule} binds on none of the {unbound} page(s) "
+                f"(COR-051 point 7): {LDOC} binds only through a set of the project's own whose "
+                f"scope selects a page, such as a space's definition (DEC-001 point 2)."
+            )
     try:
         structures = formats.read_structures(PAGE_KINDS)
     except formats.Unreadable as exc:
@@ -739,7 +841,7 @@ def _format_findings(root: Path, decl: Declarations, walk: _Walk, outcome: Outco
         return "page formats: structures unreadable, so no page's body is checked."
     checked = departing = unreadable = 0
     undeclared: dict[str, list[str]] = {}
-    for rel, kind in sorted(walk.kinds.items()):
+    for rel, kind in sorted(kinds.items()):
         structure = structures.get(kind)
         if structure is None:
             undeclared.setdefault(kind, []).append(rel)
@@ -754,7 +856,7 @@ def _format_findings(root: Path, decl: Declarations, walk: _Walk, outcome: Outco
         found = formats.departures(formats.headings(text), structure)
         departing += 1 if found else 0
         outcome.findings.extend(
-            Finding(severity, rel, _departure_message(rel, kind, structure, departure))
+            Finding(ERROR, rel, _departure_message(rel, kind, structure, departure))
             for departure in found
         )
     outcome.findings.extend(
@@ -763,12 +865,28 @@ def _format_findings(root: Path, decl: Declarations, walk: _Walk, outcome: Outco
     )
     unchecked = sum(len(rels) for rels in undeclared.values())
     return (
-        f"page formats ({rule}, {status}): {checked} page(s) checked against the structure "
+        f"page formats ({rule}, accepted): {checked} page(s) checked against the structure "
         f"their kind declares in {PAGE_KINDS_PATH}, {departing} departing from it; "
         f"{unchecked} page(s) not checked, of {len(undeclared)} kind(s) that declare no structure"
         + (f"; {unreadable} page(s) that cannot be read" if unreadable else "")
+        + (f"; {unbound} page(s) {rule} does not bind on, not checked" if unbound else "")
         + "."
     )
+
+
+def _unaccepted(rule: str, decl: Declarations) -> str | None:
+    """Why a rule of the shared method binds on no page whatever the scopes say, for
+    the summary: the shared method holds no such rule, or the rule is not accepted
+    (COR-051 point 4). `None` for an accepted rule. Where it binds is the backbone's
+    answer alone; this only words why that answer is empty."""
+    entry = decl.ldoc_rules.get(rule)
+    if not isinstance(entry, Mapping):
+        return f"{LDOC_FILE} holds no {rule}"
+    status = entry.get("status")
+    status = status if isinstance(status, str) and status else "proposed"
+    if status == "accepted":
+        return None
+    return f"{rule} is {status}, so it binds nothing (COR-051 point 4)"
 
 
 def _departure_message(
@@ -1033,6 +1151,7 @@ def _scope_findings(decl: Declarations, refused: set[int], walk: _Walk, outcome:
                 f"`exclude`, or assign the place to that space (DEC-001 point 1).",
             )
         )
+    _left_out_findings(decl, walk, scopes, outcome)
     if not scopes:
         return (
             "scopes: no space's definition carries one, so no assigned place is joined with a "
@@ -1043,6 +1162,41 @@ def _scope_findings(decl: Declarations, refused: set[int], walk: _Walk, outcome:
         f"scopes: {', '.join(sorted(scopes))} — {joined} page(s) of assigned places joined with "
         f"the definitions' scopes; a definition with no scope joins nothing (DEC-001 point 1)."
     )
+
+
+def _left_out_findings(
+    decl: Declarations, walk: _Walk, scopes: Mapping[str, _Scope], outcome: Outcome
+) -> None:
+    """Each page of a space whose definition carries a scope that leaves the page out
+    (DEC-001 point 2): no rule binds on it through the definition. Reported, one
+    finding per space, since a scope may leave pages out on purpose; a page an
+    assigned place gives is point 1's, which fails it (`_scope_findings`)."""
+    left_out: dict[str, list[str]] = {}
+    for rel, space in sorted(walk.pages.items()):
+        scope = scopes.get(space) if space is not None else None
+        if scope is None:
+            continue
+        giver = walk.giver.get(rel)
+        if giver is not None and decl.assigned(giver.path) is not None:
+            continue
+        covering = {normalise(path) for path in decl.documents[rel].in_scope_of}
+        if scope.definition not in covering:
+            left_out.setdefault(space, []).append(rel)
+    for space, files in sorted(left_out.items()):
+        definition = scopes[space].definition
+        outcome.findings.append(
+            Finding(
+                REPORT,
+                definition,
+                f"the scope of space {space!r}'s definition, {definition}, leaves out "
+                f"{_files_named(files)} of the space's pages, so neither {LDOC}'s rules nor the "
+                f"space's own bind on them through it (COR-051 point 7). Widen the scope to them — "
+                f"its `paths` name the space's root and the places assigned to it, and a "
+                f"placeholder such as `<root>` names nothing — or move them to the space they "
+                f"belong to. A scope may leave pages out on purpose, with `exclude`, so this is "
+                f"reported, never failed (DEC-001 point 2).",
+            )
+        )
 
 
 def _files_named(files: Sequence[str]) -> str:
@@ -1112,7 +1266,9 @@ def _entry_point_findings(
 
 def _definition_findings(decl: Declarations, outcome: Outcome) -> dict[str, str]:
     """Each space's definition is a project rule set in the definitions location that
-    inherits the shared method (DEC-001 point 2). Returns a note per space."""
+    inherits the shared method, with a scope that selects the space's pages (DEC-001
+    point 2). A definition with no scope is reported, naming the scope to give it.
+    Returns a note per space."""
     notes: dict[str, str] = {}
     folder = f"{decl.definitions}/{RULE_SETS}" if decl.definitions is not None else None
     pin = f"{CAPABILITY}:LDOC@{_ldoc_major(decl)}"
@@ -1125,7 +1281,8 @@ def _definition_findings(decl: Declarations, outcome: Outcome) -> dict[str, str]
                     REPORT,
                     f"{LIVING_DOCS_CONFIG}:/spaces/{pointer_token(space)}",
                     f"space {space!r} has no definition yet: its rules — a project rule set "
-                    f"inheriting {pin}, {where} — are written on first use, from "
+                    f"inheriting {pin}, scoped to the space's pages, {where} — are written on "
+                    f"first use, from "
                     f"{CAPABILITIES_DIR}/{CAPABILITY}/templates/space-definition.md, and named "
                     f"as the space's `definition` (DEC-001 point 2).",
                 )
@@ -1158,9 +1315,125 @@ def _definition_findings(decl: Declarations, outcome: Outcome) -> dict[str, str]
                 )
             )
             notes[space] = f"definition {definition} (unresolved)"
-        else:
-            notes[space] = f"definition {definition}"
+            continue
+        notes[space] = f"definition {definition}"
+        fields = decl.documents[definition].fields or {}
+        if "scope" not in fields:
+            outcome.findings.append(
+                Finding(REPORT, definition, _no_scope_message(space, definition, decl))
+            )
+        elif placeholders := _placeholders(fields.get("scope")):
+            outcome.findings.append(
+                Finding(
+                    REPORT,
+                    definition,
+                    _placeholder_message(space, definition, placeholders, decl),
+                )
+            )
     return notes
+
+
+#: A placeholder a template leaves for its writer: words in angle brackets.
+PLACEHOLDER = re.compile(r"<[^<>]*>")
+
+
+def _placeholders(scope: Any) -> list[str]:
+    """The paths of a scope, as written, that still hold a template's placeholder."""
+    if isinstance(scope, list):
+        scope = {"paths": scope}
+    if not isinstance(scope, Mapping):
+        return []
+    return [
+        path
+        for key in ("paths", "exclude")
+        for path in (scope.get(key) if isinstance(scope.get(key), list) else [])
+        if isinstance(path, str) and PLACEHOLDER.search(path)
+    ]
+
+
+def _placeholder_message(
+    space: str, definition: str, placeholders: Sequence[str], decl: Declarations
+) -> str:
+    """A scope copied with the template's placeholder: it names no file, so the
+    rules reach none of the space's pages through it (DEC-001 point 2)."""
+    paths, exclude = _space_paths(space, decl)
+    named = ", ".join(f"`{path}`" for path in placeholders)
+    fix = (
+        f" — `paths: [{', '.join(paths)}]`"
+        + (f", `exclude: [{', '.join(exclude)}]`" if exclude else "")
+        if paths
+        else ""
+    )
+    return (
+        f"the scope of space {space!r}'s definition, {definition}, still holds the template's "
+        f"placeholder {named}, which names no file: write the space's root and the places "
+        f"assigned to it in its place{fix} (DEC-001 point 2)."
+    )
+
+
+def _no_scope_message(space: str, definition: str, decl: Declarations) -> str:
+    """A definition with no scope selects no page, so no rule binds through it
+    (COR-051 points 2 and 7): reported, naming the scope that selects the space's
+    pages (DEC-001 point 2)."""
+    paths, exclude = _space_paths(space, decl)
+    if paths:
+        left_out = f", exclude: [{', '.join(exclude)}]" if exclude else ""
+        scope = f"`scope: {{paths: [{', '.join(paths)}]{left_out}, types: [{PAGE_TYPE}]}}`"
+    else:
+        scope = f"a scope whose `paths` name the space's places, with `types: [{PAGE_TYPE}]`"
+    untyped = sorted(
+        place.written
+        for place in decl.project_places
+        if decl.assigned(place.path) == space
+        and not in_root(place, decl)
+        and place.type != PAGE_TYPE
+    )
+    typing = (
+        f" Give {', '.join(untyped)} the page type in `friction.places` too, as a scope that "
+        f"selects by type asks (DEC-001 point 1)."
+        if untyped
+        else ""
+    )
+    shared = (
+        " The two documentation roots are one folder, so separate them first: each space's "
+        "scope then names its own root (DEC-001 point 1)."
+        if decl.user_root == decl.internal_root and space in SPACE_OF_ROOT.values()
+        else ""
+    )
+    return (
+        f"the definition of space {space!r}, {definition}, carries no scope, so it selects no "
+        f"page itself: neither {LDOC}'s rules nor its own reach the space's pages through it, "
+        f"nor do the checks of their parts (COR-051 points 2 and 7). Give it the scope of the "
+        f"space's pages, {scope} (DEC-001 point 2).{typing}{shared}"
+    )
+
+
+def _space_paths(space: str, decl: Declarations) -> tuple[list[str], list[str]]:
+    """The paths that select a space's pages, as a scope writes them, and those it
+    leaves out: the space's root, everything beneath it, unless the two roots are
+    one folder, then each place assigned to the space outside that root. Left out
+    are a root nested in it and each place in it assigned to another space."""
+    root = next(
+        (
+            path
+            for audience, path in decl.roots().items()
+            if SPACE_OF_ROOT[audience] == space and decl.user_root != decl.internal_root
+        ),
+        None,
+    )
+    paths = [f"{root}/**"] if root is not None else []
+    exclude = [
+        f"{other}/**"
+        for other in decl.roots().values()
+        if root is not None and other != root and is_within(other, root)
+    ]
+    for assignment in decl.assignments:
+        inside = root is not None and is_within(literal_prefix(assignment.path), root)
+        if assignment.space == space and not inside:
+            paths.append(assignment.written)
+        elif assignment.space != space and inside:
+            exclude.append(assignment.written)
+    return paths, exclude
 
 
 def _inherits_ldoc(front: Mapping[str, Any] | None) -> bool:

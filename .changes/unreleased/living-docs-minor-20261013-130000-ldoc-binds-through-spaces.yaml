@@ -1,0 +1,21 @@
+component: living-docs
+kind: minor
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  `LDOC` binds on a page only through a rule set of the project's own whose
+  scope selects the page, such as its space's definition (living-docs DEC-001
+  points 2 and 3, COR-051 point 7). The validator checks a page's structure
+  only where `RS-LDOC-004` binds on it, and its reader only where `RS-LDOC-003`
+  binds, reading where they bind from `pkit rule-sets reach --json`. On any
+  other page it reads neither, and `schemas/page.schema.json` requires a
+  page's `kind` alone. The space-definition template carries a scope. A
+  definition with no scope is reported with the scope to give it, and so are
+  the pages of a space that its definition's scope leaves out. Act on
+  upgrade: a definition written from the template before this release has no
+  scope, so neither check runs on its space's pages until you give it the
+  scope `pkit living-docs validate` names. The `living-docs` agent judges a
+  page against the rules that bind on it. `pkit rule-sets reach` comes with
+  the backbone this release ships: upgrade the capability together with the
+  backbone.
