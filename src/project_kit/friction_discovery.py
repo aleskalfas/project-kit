@@ -3781,15 +3781,17 @@ class _AnchoredPoints:
     def part(self, value: str) -> dict[str, Any] | None:
         """The part the record anchor `value` names, `{kind, value, path, span}`, or `None`
         when it names a whole record or no part at all."""
-        # The change check imports this module; the resolver of a record anchor's file is its.
-        from project_kit.friction_check import record_file
-
         record, point_id = split_anchor(value)
         if point_id is None:
             return None
+        # The change check imports this module; the resolver of a record anchor's file is its.
+        from project_kit.friction_check import record_file
+
         rel = record_file(self.root, self.files, record)
-        points = None if rel is None else self._read(rel)
-        if rel is None or points is None:
+        if rel is None:
+            return None
+        points = self._read(rel)
+        if points is None:
             return None
         found = points.anchored(point_id)
         point = points.point(point_id)
