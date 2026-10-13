@@ -488,11 +488,6 @@ def split_anchor(value: str) -> tuple[str, str | None]:
     return (record, point) if mark else (value, None)
 
 
-def is_point_id(text: str) -> bool:
-    """Whether `text` is written as a point id: a number, or a label (COR-058 point 1)."""
-    return bool(_POINT_ID.match(text))
-
-
 def id_series(point_id: str) -> tuple[str, int] | None:
     """A point id's series and number (COR-058 point 3): `("", 5)` for `5`, `("D", 1)`
     for `D1`, or `None` for what is no point id. Numbers and each series of labels
