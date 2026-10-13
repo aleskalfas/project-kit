@@ -1,36 +1,29 @@
-"""`pkit upgrade` — version-aware migrations + sync per COR-010.
+"""`pkit upgrade` — the version transition of the backbone (COR-059, ADR-065).
 
-The full lifecycle COR-010 specifies six steps:
+The one command that moves a project to a new release. It records its target
+first, as `backbone_version`, and its completion last, as `completed_version`,
+and every migration runs inside it. Its steps today:
 
   1. Resolve compatibility (every component's *post-upgrade* `requires_backbone`
-     — read from source, the version sync will refresh it to — must include the
-     target backbone version).
-  2. Pull new propagated content (sync per COR-001).
-  3. Run backbone migrations: manifest-schema → structural → resource-scoped.
-  4. Run per-component migrations.
-  5. Reconcile derivable state (setup primitives idempotently re-apply).
-  6. Update recorded versions in manifests.
+     — read from source, the version the copy brings — must include the target
+     backbone version), and the capability dependency gate.
+  2. Record the target, and move each capability manifest still at its root
+     under its `project/`.
+  3. Propagate at the target, through the propagation step `pkit sync` runs
+     (`sync.propagate`), never the sync command, so sync's guard never stops an
+     upgrade (ADR-065 point 1).
+  4. Run each copied capability's migrations, after its copy, and restamp it.
+  5. Register an adapter the target adds, create each missing seed path, and
+     regenerate the derivable state.
+  6. Run the backbone migrations, from the last completion, then each adapter's.
+  7. Record the completion, then the pin.
 
-PR-J ships the **skeleton**: steps 1, 2, 6 are real (compatibility check,
-sync delegation, manifest version update via sync). Steps 3, 4, 5 are
-placeholders today — no migration scripts exist in the source kit yet,
-and no setup primitive contract is fully formalised. The upgrade walks
-the migrations tree, reports what it finds (empty today), and
-graduates each step into a real implementation as the kit grows.
+#1461 puts these in COR-010's order: the backbone's migrations, the adapters'
+and the capabilities', dependencies first, before the seed paths and the
+derivable state (ADR-065 point 4).
 
-Compared to `pkit sync` (PR-G), `pkit upgrade` adds:
-
-- Compatibility resolution: refuses if a component's *post-upgrade* (source)
-  `requires_backbone` doesn't include the target backbone version. Catches the
-  "the new adapter version genuinely can't run on the new backbone" failure
-  mode — without the false positive of reading the stale installed ceiling,
-  which always lags the auto-broadened source and would block every adopter a
-  minor behind.
-- Migration discovery + ordered execution (skeleton; no scripts yet).
-- Clear "upgrading from X to Y" framing (vs sync's "refreshing").
-
-When the kit is up to date, upgrade reports it and exits — refreshing
-content is `sync`'s job, not upgrade's.
+When the project is current, upgrade reports it and exits: refreshing content
+at the recorded version is `sync`'s job, not upgrade's.
 """
 
 from __future__ import annotations
@@ -48,11 +41,13 @@ import click
 from packaging.version import InvalidVersion, Version
 
 from project_kit.install import (
+    InstallContext,
     find_source_kit,
     is_self_host,
     refuse_if_source_kit_incomplete,
     refuse_propagation_into_source,
     register_adapters,
+    seed_missing_paths,
 )
 from project_kit.manifest import (
     ORIGIN_KIT_SHIPPED,
@@ -84,8 +79,30 @@ from project_kit.router import (
     running_version,
     write_version_pin,
 )
-from project_kit.sync import refuse_content_downgrade, run_sync
+from project_kit.sync import (
+    AT_ROOT,
+    COPY,
+    EXTERNAL,
+    INCUBATED,
+    NEWER,
+    OLDER,
+    ORPHAN,
+    UNRECORDED,
+    CapabilityPlan,
+    plan_capabilities,
+    propagate,
+    refuse_content_downgrade,
+    regenerate_derivable_state,
+    report_incubated_capability,
+    run_self_host,
+)
 from project_kit.versioning import is_release_version
+
+# The capabilities a transition copies and migrates: every shipped one the
+# bundle ships, but one it ships older than the record, which a transition
+# never moves down (ADR-065 point 7). A capability with no recorded version is
+# copied and recorded, and runs none of its migrations (point 2).
+_TRANSITION_COPIES = frozenset({COPY, NEWER, AT_ROOT, UNRECORDED})
 
 # Capability-dependency check (COR-030) — imported lazily below to avoid
 # any circular-import issues at module load time. The functions used are:
@@ -116,17 +133,18 @@ def run_upgrade(
     source_kit = find_source_kit()
 
     # Self-host (project-kit): the source IS the installed state, so there is
-    # no backbone to upgrade. Delegate to sync, whose self-host branch re-runs
-    # the deploy primitives so the harness picks up source edits. Skips the
-    # version comparison (the recorded manifest version is moot on self-host)
-    # and the migration steps (self-host authors migrations with the source
-    # change; it does not run them against itself). The test is sync's test for
-    # the methodology's source repository (ADR-059 point 2).
+    # no backbone to upgrade. Run sync's self-host branch, before any of
+    # upgrade's checks, which re-runs the deploy primitives so the harness picks
+    # up source edits (ADR-065 point 1). Skips the version comparison (the
+    # recorded manifest version is moot on self-host) and the migration steps
+    # (self-host authors migrations with the source change; it does not run them
+    # against itself). The test is sync's test for the methodology's source
+    # repository (ADR-059 point 2).
     if is_self_host(target_root, source_kit):
         click.echo("Self-host: source is the installed state; no backbone upgrade needed.")
         click.echo("Re-running deploy primitives via sync.")
         click.echo()
-        run_sync(target_root, dry_run=dry_run)
+        run_self_host(target_root, source_kit, dry_run=dry_run)
         return
 
     # Sync's test has said no, but the markers may still call the target the
@@ -192,7 +210,7 @@ def run_upgrade(
     components = manifest.components if manifest is not None else []
 
     # Step 1: compatibility resolution against the POST-upgrade (source)
-    # component versions — what sync will refresh them to — not the stale
+    # component versions — what the propagation step copies — not the stale
     # installed copies (which always lag the auto-broadened source ceiling).
     _resolve_compatibility(components, target_root, source_kit, target_version)
 
@@ -214,15 +232,31 @@ def run_upgrade(
     completed = replay_lower_bound(manifest)
     _report_transition(manifest, completed, target_version, dry_run)
 
+    # Every capability's record is read before anything is written (ADR-065
+    # point 2): its version falls back to the installed `package.yaml`, which the
+    # copy replaces. The transition copies and migrates every shipped capability
+    # the bundle ships, but one it ships older.
+    from project_kit import capabilities as caps
+
+    plans = plan_capabilities(target_root, source_kit, caps.read_capability_records(target_root))
+    moving = [plan for plan in plans if plan.disposition in _TRANSITION_COPIES]
+    ctx = InstallContext(target_root=target_root, source_kit=source_kit, dry_run=dry_run)
+
     # The target is recorded before anything else is written (ADR-065 point 4,
     # step 2), so an interrupted transition reads as one, to this pkit and to an
-    # older one alike. Then propagation at the target (step 3).
+    # older one alike. Then each capability manifest still at its root moves
+    # under its `project/`, where the copy cannot prune it. Then propagation at
+    # the target (step 3), through the propagation step sync runs, never the sync
+    # command, so sync's guard never stops an upgrade.
     if dry_run:
         click.echo(
             f"  {'would record':<12} .pkit/manifest.yaml backbone_version -> {target_version} "
             "(the target, before anything else is written)"
         )
-        click.echo("  would sync   .pkit/ kit-owned content from source")
+        _move_root_manifests(target_root, plans, dry_run=True)
+        click.echo(
+            "  would copy   .pkit/ kit-owned content and each shipped capability from source"
+        )
         _report_adapters_to_register(target_root, source_kit, components)
     else:
         record_backbone_target(target_root, target_version)
@@ -230,15 +264,30 @@ def run_upgrade(
             f"  {'recorded':<12} .pkit/manifest.yaml backbone_version -> {target_version} "
             "(the target)"
         )
-        run_sync(target_root, dry_run=False)
-        if register_adapters(target_root):
-            # The render after propagation reads the registry, so it is rendered
-            # again with the adapters just registered (ADR-065 point 4, step 3).
-            from project_kit import visibility
+        _move_root_manifests(target_root, plans, dry_run=False)
+        propagate(ctx, moving)
 
-            click.echo(visibility.render_runtime_ignore(target_root))
+    # Each capability's migrations run after its copy, from the version it
+    # records, and its manifest is restamped when they finish (ADR-065 point 4).
+    # #1461 orders them dependencies first, after the backbone's and the
+    # adapters', and the derivable state after them all.
+    _migrate_capabilities(target_root, plans, moving, dry_run=dry_run)
+
+    if not dry_run:
+        # An adapter the copy placed that the registry lacks is registered, and
+        # recorded at the version it ships, before the render reads the registry.
+        register_adapters(target_root)
         reread = read_backbone_manifest(target_root)
         components = reread.components if reread is not None else []
+
+    # The seed paths a release declares are created where missing, never over
+    # one that exists (ADR-065 point 11), before deploy reads the overlay and
+    # merge the adapter's project settings. Then the derivable state: merge
+    # delivery, deploy, the `.pkit/.gitignore` render, which a backbone
+    # migration may read, the agent workspace and provisioning.
+    seed_missing_paths(ctx, capabilities=[plan.name for plan in moving])
+    if not dry_run:
+        regenerate_derivable_state(ctx)
 
     _run_backbone_migrations(target_root, source_kit, completed, target_version, dry_run)
     _run_component_migrations(target_root, source_kit, components, dry_run)
@@ -384,12 +433,28 @@ def is_current(
 ) -> bool:
     """Whether upgrade's early return applies (ADR-065 point 2): `backbone_version`
     and `completed_version` both name *target_version*, and every registered
-    adapter and shipped capability records the version the bundle ships."""
+    adapter and shipped capability records the version the bundle ships, under
+    its `project/`. A capability manifest still at its root is one sync skips
+    and names `pkit upgrade` for, so the transition runs to move it."""
     return (
         manifest.backbone_version == target_version
         and manifest.completed_version == target_version
         and not component_moves(target_root, source_kit, manifest)
+        and not _capability_manifests_at_root(target_root, manifest)
     )
+
+
+def _capability_manifests_at_root(target_root: Path, manifest: BackboneManifest) -> list[str]:
+    """The shipped capabilities whose manifest is still at the capability's root."""
+    from project_kit import capabilities as caps
+
+    return [
+        entry.name
+        for entry in manifest.components
+        if entry.kind == "capability"
+        and entry.origin == ORIGIN_KIT_SHIPPED
+        and caps.read_capability_record(target_root, entry.name).at_root
+    ]
 
 
 def _read_adapter_manifest(
@@ -450,6 +515,79 @@ def _report_transition(
             f"The backbone migrations run from {completed}."
         )
     click.echo()
+
+
+def _move_root_manifests(target_root: Path, plans: list[CapabilityPlan], *, dry_run: bool) -> None:
+    """Move each capability manifest still at its root under its `project/`.
+
+    A transition does it right after recording its target, before its copy,
+    which would prune a manifest at the root (ADR-065 point 2). Sync never
+    moves one: it skips such a capability. The root manifest replaces one
+    already under `project/`, and the registry entry follows
+    (`capabilities.move_capability_manifest`).
+    """
+    from project_kit import capabilities as caps
+    from project_kit.manifest import capability_manifest_rel, capability_root_manifest_path
+
+    for plan in plans:
+        if plan.record is None or not plan.record.at_root:
+            continue
+        root = capability_root_manifest_path(target_root, plan.name).relative_to(target_root)
+        dest = capability_manifest_rel(plan.name)
+        move = f"the manifest of capability {plan.name!r}: {root} -> {dest}"
+        if dry_run:
+            click.echo(f"  would move {move}")
+        elif caps.move_capability_manifest(target_root, plan.name):
+            click.echo(f"  moved {move}")
+
+
+def _migrate_capabilities(
+    target_root: Path, plans: list[CapabilityPlan], moving: list[CapabilityPlan], *, dry_run: bool
+) -> None:
+    """Each copied capability's migrations, after its copy, then its restamp; and a
+    line for each capability the transition leaves where it is.
+
+    *moving* are the capabilities the propagation step copied, in registry
+    order (`capabilities.migrate_copied_capability`). A capability bundled
+    older than its record is kept: a transition never moves a recorded version
+    down, and #1461 refuses it. An incubated, externally sourced or
+    no-longer-shipped capability keeps its own course.
+    """
+    from project_kit import capabilities as caps
+
+    if not plans:
+        return
+    left = [plan for plan in plans if plan not in moving]
+    click.echo()
+    click.echo("  Capabilities")
+    for plan in moving:
+        if plan.source is None or plan.record is None:
+            continue
+        caps.migrate_copied_capability(target_root, plan.source, plan.record, dry_run=dry_run)
+    for plan in left:
+        name = repr(plan.name)
+        if plan.disposition == OLDER:
+            click.echo(
+                f"    {'kept':<12} {name} at v{plan.recorded}: the bundle ships v{plan.bundled}, "
+                "older, and a recorded version never moves down."
+            )
+        elif plan.disposition == ORPHAN:
+            click.echo(
+                f"    {'orphan':<12} {name} — no longer ships from source; "
+                "leaving installed copy in place."
+            )
+        elif plan.disposition == INCUBATED:
+            report_incubated_capability(plan)
+        elif plan.disposition == EXTERNAL:
+            click.echo(
+                f"    {'skipped':<12} {name} — externally sourced: it moves by its pin "
+                "(COR-041), never as shipped."
+            )
+        else:
+            click.echo(
+                f"    {'skipped':<12} {name} — the bundle's package.yaml names no version "
+                f"({plan.bundled!r}), so there is nothing to move it to."
+            )
 
 
 def _report_adapters_to_register(
@@ -1224,8 +1362,8 @@ def _run_backbone_migrations(
 
     Per COR-010, backbone migrations live at
     `.pkit/migrations/backbone/<X.Y.0>/<NNN>-<slug>.sh`. They're
-    kit-shipped content propagated by sync; by the time this runs, after
-    the propagation, they're present in the target tree. A dry run copies
+    kit-shipped content the propagation step copies; by the time this runs,
+    after the propagation, they're present in the target tree. A dry run copies
     nothing, so it reads the same scripts from the running pkit's bundle.
 
     Window: every minor version strictly above `completed_version` and
@@ -1279,10 +1417,8 @@ def _run_component_migrations(
 ) -> None:
     """Run each registered adapter's migrations, and record it at its bundled version.
 
-    Capabilities are NOT handled here — their migration story runs
-    through `pkit sync` → `_sync_installed_capabilities` →
-    `refresh_capability` (per COR-017). Double-running here would
-    re-execute scripts that sync already applied.
+    Capabilities are not handled here: the transition runs each capability's
+    migrations after its copy (`_migrate_capabilities`).
 
     For each registered adapter the running pkit's bundle ships (ADR-065
     point 2):

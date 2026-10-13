@@ -87,7 +87,7 @@ from project_kit.scratchpads import (
 )
 from project_kit.status import report_status
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
-from project_kit.sync import refuse_stranding_backbone_migrations, run_sync
+from project_kit.sync import SYNC_FORCE_IGNORED, run_sync
 from project_kit.upgrade import (
     freeze_at_content,
     reconcile_pin,
@@ -3995,19 +3995,20 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
     "--force",
     is_flag=True,
     default=False,
-    help="Overwrite an installed capability even when the source version is "
-    "OLDER than the installed one (a downgrade). Without this, sync refuses "
-    "such a downgrade rather than silently clobbering newer state (issue #524).",
+    help="Ignored, and removed in a later release. Sync never copies a capability "
+    "over a newer one: it copies each at the version the project records.",
 )
 def sync(dry_run: bool, force: bool) -> None:
-    """Re-run propagation: refresh kit-owned content from source (per COR-001)."""
+    """Reconcile the project at the version it records: copy that release's
+    content, regenerate the derivable state, and move no version (COR-059)."""
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    # The sync command's guard, not `run_sync`'s: `pkit upgrade` runs `run_sync`
-    # and then the backbone migrations this refuses to strand (#1452).
-    refuse_stranding_backbone_migrations(target_root)
-    run_sync(target_root, dry_run=dry_run, force=force)
+    if force:
+        # Accepted and ignored for one release (ADR-065 point 10). Its one effect,
+        # copying an older capability over a newer one, moved a version down.
+        click.echo(SYNC_FORCE_IGNORED, err=True)
+    run_sync(target_root, dry_run=dry_run)
 
 
 @main.command()

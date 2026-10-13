@@ -1,4 +1,4 @@
-"""Install helpers for `pkit init` and `pkit sync`.
+"""Install helpers for `pkit init`, `pkit sync` and `pkit upgrade`.
 
 The Python port of `cmd_init` from `.pkit/cli/pkit`. Behaviour preserved
 exactly: same target-root resolution, same area iteration order, same
@@ -14,6 +14,7 @@ import shlex
 import shutil
 import stat
 import subprocess
+from collections.abc import Iterable
 from contextlib import ExitStack
 from dataclasses import dataclass
 from enum import StrEnum
@@ -47,11 +48,12 @@ EMPTY_PROJECT_SETTINGS_JSON = """\
 """
 
 
-# Seeded into `.pkit/agents/project/overlay.yaml` on first install (or
-# when sync catches up an adopter installed before the agents area
-# landed). Safe defaults so deploy-agents.sh succeeds out of the box;
-# adopters tailor the paths to their actual layout.
-_AGENTS_OVERLAY_SEED = """\
+# Seeded into `.pkit/agents/project/overlay.yaml` where it is missing: by first
+# install, by a version transition (`seed_missing_paths`), and by `pkit agents
+# reconcile --write`, which repairs a deleted one (ADR-065 point 11). Safe
+# defaults so deploy-agents.sh succeeds out of the box; adopters tailor the
+# paths to their actual layout.
+AGENTS_OVERLAY_SEED = """\
 # Adopter overlay for kit-shipped agents (per COR-013).
 #
 # Each top-level key is a *category* — a named bucket of adopter-specific
@@ -124,10 +126,10 @@ PROPAGATED_AREAS: tuple[str, ...] = (
     # propagated `rules/core.md` already cites for the migration-script contract.
     "lifecycle",
     # Backbone migrations must reach the adopter tree: `pkit upgrade` reads
-    # `<target>/.pkit/migrations/backbone/` *after* sync to run pending
-    # backbone migrations (ADR-033 §4 — fixes a pre-existing omission where
-    # migrations were read from the source kit but never propagated). Sync
-    # runs before the migration steps in `run_upgrade`, so listing the area
+    # `<target>/.pkit/migrations/backbone/` *after* its propagation step to run
+    # pending backbone migrations (ADR-033 §4 — fixes a pre-existing omission
+    # where migrations were read from the source kit but never propagated). The
+    # step runs before the migration steps in `run_upgrade`, so listing the area
     # here is sufficient for ordering. `capabilities` is deliberately NOT
     # here: capability source is bundled (a distribution medium) but installed
     # on demand, not auto-propagated to every adopter (ADR-033 §3).
@@ -569,8 +571,8 @@ def refuse_propagation_into_source(
     when given, what the checkout's own code does instead.
 
     Nothing overrides the refusal. The gap is a defect path, not a choice:
-    `--force` overrides only sync's capability downgrade guard, and the routing
-    bypass is itself a way into the gap. The remedy is to run the checkout's own
+    no `--force` overrides it, and the routing bypass is itself a way into the
+    gap. The remedy is to run the checkout's own
     code, which the message names.
     """
     if is_self_host(target_root, source_kit) or not is_source_checkout(target_root):
@@ -668,6 +670,9 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
         src = source_kit / area
         if src.is_dir():
             _install_area(src, target_root / ".pkit" / area, ctx)
+    # The seed paths, before deploy reads the overlay and merge the adapter's
+    # project settings (ADR-065 point 11).
+    seed_missing_paths(ctx)
 
     # Every adapter the copy placed is registered, and recorded at the version
     # it ships, before deploy, the render and provisioning read the registry.
@@ -962,8 +967,14 @@ def _install_area(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool 
 
     `overwrite=False` (init): refuses to copy over existing trees, so
     re-running init is the structural error COR-004 specifies.
-    `overwrite=True` (sync): refreshes kit-owned content in place,
-    leaving project-owned content untouched.
+    `overwrite=True` (the propagation step of sync and of a transition):
+    refreshes kit-owned content in place, leaving project-owned content
+    untouched.
+
+    It creates no seed path: an area's `project/` folder, the scratchpad's
+    state folders, the agents overlay and an adapter's project settings are
+    `seed_missing_paths`'s, which first install and a transition run and sync
+    does not (ADR-065 point 11).
     """
     area_name = src.name
     _mkdir(dst, ctx)
@@ -1026,40 +1037,70 @@ def _install_area(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool 
             _copy_file(entry, target, ctx)
             click.echo(f"  {verb:<12} .pkit/{area_name}/{entry.name}")
 
-    # Scratchpad state folders are adopter-owned (per COR-012). Sync must
-    # never touch them; init stubs them so the layout exists for the
-    # adopter's first note. Folder *contents* in the source kit (e.g.
-    # project-kit's own inventory note in done/) are not propagated.
-    if area_name == "scratchpad" and not overwrite:
-        for state_dir in ("active", "done", "dropped"):
-            state_dst = dst / state_dir
-            _mkdir(state_dst, ctx)
-            _touch(state_dst / ".gitkeep", ctx)
-        click.echo(f"  {'stubbed':<12} .pkit/scratchpad/{{active,done,dropped}}/")
 
-    # Sync must NEVER overwrite project/ content. But it MAY stub the
-    # project/ directory if it doesn't yet exist on the adopter side —
-    # this catches up adopters who installed before an area landed,
-    # so they get the project/ scaffolding without an extra step.
-    # Anything already in project/ is left untouched.
-    if (src / "project").is_dir():
-        project_dst = dst / "project"
-        if not project_dst.is_dir():
-            _mkdir(project_dst, ctx)
-            _touch(project_dst / ".gitkeep", ctx)
-            click.echo(f"  {'stubbed':<12} .pkit/{area_name}/project/")
+# The scratchpad's state folders (COR-012): seed paths, never propagated.
+_SCRATCHPAD_STATE_DIRS = ("active", "done", "dropped")
 
-    # Agents area: seed a starter overlay.yaml if the adopter doesn't
-    # have one yet. The seed declares the categories kit-shipped agents
-    # reference (`<workflow-docs>`, `<project-root-docs>`) with safe
-    # defaults so deploy-agents.sh succeeds out of the box; adopters
-    # tailor the paths to their actual layout. Never overwrites an
-    # existing overlay.
-    if area_name == "agents":
-        overlay = dst / "project" / "overlay.yaml"
-        if not overlay.exists():
-            _write_text(overlay, _AGENTS_OVERLAY_SEED, ctx)
-            click.echo(f"  {'seeded':<12} .pkit/agents/project/overlay.yaml")
+
+def seed_missing_paths(ctx: InstallContext, *, capabilities: Iterable[str] = ()) -> None:
+    """Create each seed path that is missing, and never write over one that exists.
+
+    The one seeding step first install and a version transition of the backbone
+    run (ADR-065 point 11, COR-059 point 8). Sync runs none: a seed the project
+    deleted on purpose returns at the next transition, not on every routine run.
+    The seed paths:
+
+    - each area's `project/` folder, where the area ships one, with a `.gitkeep`
+    - the scratchpad's state folders, each with a `.gitkeep` (COR-012)
+    - the agents overlay, `.pkit/agents/project/overlay.yaml` (COR-013)
+    - each adapter's `settings/project/` folder and its `settings.json`
+    - the `project/` folder of each shipped capability in *capabilities*
+
+    The areas and adapters are those the running pkit's bundle ships. A path
+    that exists, file or folder, is left as it is: the folder's contents and
+    the file's text are the project's.
+    """
+    pkit = ctx.target_root / ".pkit"
+    for area in PROPAGATED_AREAS:
+        src = ctx.source_kit / area
+        if not src.is_dir():
+            continue
+        if (src / "project").is_dir():
+            _seed_folder(pkit / area / "project", ctx)
+        if area == "scratchpad":
+            for state_dir in _SCRATCHPAD_STATE_DIRS:
+                _seed_folder(pkit / area / state_dir, ctx)
+        if area == "agents":
+            _seed_file(pkit / area / "project" / "overlay.yaml", AGENTS_OVERLAY_SEED, ctx)
+        if area == "adapters":
+            for adapter_src in sorted(p for p in src.iterdir() if p.is_dir()):
+                if (adapter_src / "settings" / "project").is_dir():
+                    _seed_file(
+                        pkit / area / adapter_src.name / "settings" / "project" / "settings.json",
+                        EMPTY_PROJECT_SETTINGS_JSON,
+                        ctx,
+                    )
+    for name in capabilities:
+        _seed_folder(pkit / "capabilities" / name / "project", ctx)
+
+
+def _seed_folder(path: Path, ctx: InstallContext) -> None:
+    """Create the seed folder *path* with a `.gitkeep`, if it is missing."""
+    if path.exists():
+        return
+    _mkdir(path, ctx)
+    _touch(path / ".gitkeep", ctx)
+    verb = "would stub" if ctx.dry_run else "stubbed"
+    click.echo(f"  {verb:<12} {path.relative_to(ctx.target_root)}/")
+
+
+def _seed_file(path: Path, content: str, ctx: InstallContext) -> None:
+    """Write the seed file *path* with *content*, if it is missing."""
+    if path.exists():
+        return
+    _write_text(path, content, ctx)
+    verb = "would seed" if ctx.dry_run else "seeded"
+    click.echo(f"  {verb:<12} {path.relative_to(ctx.target_root)}")
 
 
 def _install_adapter(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool = False) -> None:
@@ -1095,6 +1136,9 @@ def _install_adapter(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bo
             if orphan.name not in kept:
                 _remove_file(orphan, ctx, label=f".pkit/adapters/{adapter_name}/{orphan.name}")
 
+    # The adapter's own settings. Its `settings/project/` and the
+    # `settings.json` there are the project's: a seed path, which
+    # `seed_missing_paths` creates where it is missing and no copy touches.
     settings_src = src / "settings"
     if settings_src.is_dir():
         settings_dst = dst / "settings"
@@ -1102,15 +1146,6 @@ def _install_adapter(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bo
         core_src = settings_src / "core"
         if core_src.is_dir():
             _copy_tree(core_src, settings_dst / "core", ctx, overwrite=overwrite)
-        project_src = settings_src / "project"
-        if project_src.is_dir():
-            project_dst = settings_dst / "project"
-            _mkdir(project_dst, ctx)
-            seed_target = project_dst / "settings.json"
-            # Sync must NEVER overwrite an existing project/settings.json
-            # — that's adopter content. Init seeds it only when absent.
-            if not seed_target.exists() and not overwrite:
-                _write_text(seed_target, EMPTY_PROJECT_SETTINGS_JSON, ctx)
 
     verb = "refreshed" if overwrite else "installed"
     click.echo(f"  {verb:<12} .pkit/adapters/{adapter_name}/")

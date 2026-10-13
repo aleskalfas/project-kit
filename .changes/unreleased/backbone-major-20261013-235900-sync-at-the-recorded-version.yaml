@@ -1,0 +1,31 @@
+component: backbone
+kind: major
+custom:
+  category: Changed
+body: >
+  `pkit sync` now works at the release your project records, and moves no
+  version (COR-059, ADR-065). It copies that release's content, regenerates
+  what is derived from your project's own declarations, and runs merge delivery
+  in its tier that asks nothing. It writes no version, no manifest and no seed
+  path, and runs no migration. `pkit upgrade` is the one command that moves a
+  project to a new release, and every migration runs inside it. Sync copies a
+  capability only at the version the project records: one the running pkit
+  ships newer is reported pending `pkit upgrade`, and one it ships older is
+  skipped, with no override. `pkit upgrade` copies through the same step, runs
+  each capability's migrations after its copy, and creates each missing seed
+  path (the agents overlay, an area's or a capability's `project/` folder, an
+  adapter's project settings), never over one that exists. `pkit agents
+  reconcile --write` creates a missing agents overlay from the seed.
+  **Pipelines and every project's first sync.** Sync now stops, writing
+  nothing, when the running pkit is not the release the project records, when
+  the last upgrade is incomplete, or when the pin is newer than the running
+  pkit, and its message names the remedy. No flag overrides the stop. A project
+  upgraded before this release has no recorded completion, so its first
+  `pkit sync` under this release stops and names `pkit upgrade`. A project that
+  pins no version, run by a pkit installed fresh in each pipeline run, meets the
+  stop at every release until it pins: commit a pin (`pkit pin`, or the pin
+  `pkit upgrade` writes by default), or install the project's version of pkit in
+  the pipeline. `pkit sync --force` is accepted for this release and ignored,
+  with a notice, and a later release removes it. This release's migration names
+  each file of your project that passes it. The guard replaces #1452's refusal,
+  which no release shipped.
