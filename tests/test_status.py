@@ -273,6 +273,9 @@ def test_status_says_a_record_newer_than_the_bundle_is_never_moved_down(
     assert result.exit_code == 0, result.output
     assert "adapter claude-code: 99.0.0, newer than " in result.output
     assert "never moved down" in result.output
+    # Nothing listed moves up, so status points at no command that would do nothing.
+    assert "a transition never moves a record down)" in result.output
+    assert "`pkit upgrade` moves each one up" not in result.output
 
 
 def test_status_names_upgrade_for_an_empty_backbone_version(installed_target: Path) -> None:

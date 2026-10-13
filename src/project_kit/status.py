@@ -167,9 +167,14 @@ def _report_transition_state(
     click.echo(f"  {'A transition moves:':<22} {_move_line(first)}")
     for move in rest:
         click.echo(f"{_LIST_INDENT}{_move_line(move)}")
-    click.echo(
-        f"{_LIST_INDENT}(this pkit ships {source_version}; `pkit upgrade` moves each one up)"
+    # Name `pkit upgrade` only where it moves something: a record ahead of this
+    # pkit's stays, since a transition never moves one down (ADR-065 point 7).
+    remedy = (
+        "a transition never moves a record down"
+        if all(move.ahead for move in moves)
+        else "`pkit upgrade` moves each one up"
     )
+    click.echo(f"{_LIST_INDENT}(this pkit ships {source_version}; {remedy})")
 
 
 def _move_line(move: ComponentMove) -> str:
