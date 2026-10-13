@@ -15,9 +15,9 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-13T04:27:21Z
+      at: 2026-10-13T07:23:33Z
       outcome: unchanged
-      unchanged-because: The page names pkit upgrade and pkit capabilities upgrade as what brings a new version of the capability, and says nothing of sync upgrading it or refusing a collision. COR-017 now has a version transition, not sync, move a capability to a newer version, and both commands are version transitions, so the page holds.
+      unchanged-because: Of the capability's decisions only DEC-030 changes. It says that sync reads the live overlay in its merge and never writes it, that sync restores the template at the recorded version and a version transition replaces it, and that COR-001, COR-017 and DEC-030 let uninstall remove the capability's whole folder. The page's default-agent section has enable copy the template to the activation file and re-run the merge, and disable strip the agent key and remove the file. The change leaves those as they were, so the page holds against it.
 ---
 
 # project-management capability
