@@ -42,6 +42,12 @@
 #     not the tree. They are not validators and stay their own lines; a
 #     capability's line is here because that capability is installed here.
 #
+# One more line is project-kit's own and neither kind: the deployed agents'
+# check (`scripts/check_deployed_agents.py`, #1559). Each tracked copy under
+# `.claude/agents/` must be what `deploy-agents.sh` writes from its source. It
+# reads git's index, not the working tree, because CI's `pkit sync` redeploys
+# the working tree's copies before this aggregator runs.
+#
 # Runs every check (does not stop at the first failure) and reports a summary,
 # so one run surfaces all problems. Exits non-zero if any check failed.
 
@@ -161,6 +167,7 @@ run "format"             uv run ruff format --check .
 run "types"              uv run python scripts/pyright_ratchet.py
 run "tests"              run_tests
 run "validate"           uv run pkit validate
+run "deployed agents"    uv run python scripts/check_deployed_agents.py
 run "migrations check"   uv run pkit migrations check-diff
 run "record numbering"   uv run pkit decisions check-diff
 run "friction check"     uv run pkit friction check
