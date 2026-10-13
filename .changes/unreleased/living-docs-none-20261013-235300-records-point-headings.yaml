@@ -4,4 +4,7 @@ body: >
   Placeholder segment, for the maintainer to judge (#1421). DEC-001 writes
   each of its points as a heading carrying its number, word for word. No
   point's text, number or citation changes, so a rule's origin and the
-  README still name the same points.
+  README still name the same points. The shared rule set LDOC now anchors
+  each rule to the point of DEC-001 that states it, `living-docs:DEC-001#3`,
+  and RS-LDOC-003 and RS-LDOC-004 also to `#4`, which gives the page's
+  `reader` and `kind` fields.
