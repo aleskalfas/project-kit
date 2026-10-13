@@ -17,9 +17,9 @@ body: >
   ruled only through the rules that bind on it, never through rules a pin
   holds back. Your `review.floors.not_code` list narrows `touches-code`
   alone, and a page it lists still fires the new floor. Such a reviewer's
-  approval stays fresh after a later push that alters none of the ruled
-  artefacts the pull request alters, and after a clean merge of the base
-  (DEC-028). Reading the change needs the base and head commits locally: a
+  approval stays fresh after later commits that alter no ruled artefact,
+  read a run of your commits at a time between merges of the base, and
+  after a clean merge of the base (DEC-028). Reading the change needs the base and head commits locally: a
   missing one is fetched by its object name, and a shallow checkout, a
   failing command or a backbone without it fails the resolution with its
   reason. A contribution naming a

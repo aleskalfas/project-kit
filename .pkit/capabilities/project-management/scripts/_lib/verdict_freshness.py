@@ -25,10 +25,11 @@ so a superseded verdict never counts however fresh it would be. Per verdict:
     changes reach none of its floors, each read as the resolver reads it
     (`_lib.required_reviewers.reached_floors`): `touches-code` through the
     same not-code list, `touches-ruled-artefact` by asking the backbone which
-    artefacts each of the author's commits since the reviewed head altered —
-    a merge of the base only when the author changed something inside it —
-    and counting one an accepted rule binds on before or after that commit,
-    and a floor this pm does not know by any change. Any
+    artefacts the author's changes since the reviewed head altered, a run of
+    the author's own commits between merges of the base at a time — a merge
+    of the base only when the author changed something inside it — and
+    counting one an accepted rule binds on at the start or the end of its
+    run, and a floor this pm does not know by any change. Any
     other verdict goes stale on any change: one from the baseline or from a
     reviewer with any classification rule — matched on this PR or not, it
     declares a remit wider than the floors — and every CHANGES_REQUESTED —
@@ -67,6 +68,7 @@ try:
         _Unresolvable,
         reached_floors,
     )
+    from _lib.review_contributions import FLOOR_TOUCHES_RULED_ARTEFACT
     from _lib.ruled_artefacts import RuledAlteration
 except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
     from agent_verdicts import (  # type: ignore[no-redef]
@@ -84,6 +86,7 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
         _Unresolvable,
         reached_floors,
     )
+    from review_contributions import FLOOR_TOUCHES_RULED_ARTEFACT  # type: ignore[no-redef]
     from ruled_artefacts import RuledAlteration  # type: ignore[no-redef]
 
 
@@ -201,6 +204,12 @@ class FreshnessRule:
             )
         reached = sorted(found)
         if reached:
+            ruled = self._rulings.get(verdict.sha)
+            if FLOOR_TOUCHES_RULED_ARTEFACT in found and isinstance(ruled, tuple) and ruled:
+                # What cost the approval may lie outside the changed paths: a
+                # page a change to the places brought in, or one the base's
+                # side of a merge the author changed something inside altered.
+                changed += f"; ruled artefacts altered: {_name_paths(ruled)}"
             return Freshness(False, f"{changed} — reaches its {', '.join(reached)} floor")
         return Freshness(
             True, f"{changed} — reaches none of its floors ({', '.join(sorted(floors))})"
@@ -269,11 +278,18 @@ class FreshnessRule:
         return self._rulings[sha]
 
     def _read_ruled(self, delta: AuthorDelta) -> tuple[str, ...] | _Unresolvable:
-        """Of what each of the author's commits altered, each artefact an
-        accepted rule binds on before or after that commit. A clean merge of
-        the base is no such commit, so what it brings never counts, whatever
-        it is: an edit, a rule or a place. The first commit that alters one
-        settles it, so no later commit is asked about."""
+        """Of what each stretch of the author's change altered — a run of
+        the author's own commits between merges of the base, or a merge of
+        the base the author changed something inside — each artefact an
+        accepted rule binds on at the stretch's start or end. A clean merge
+        of the base is no stretch, so what it brings never counts, whatever
+        it is: an edit, a rule or a place. The first stretch that alters one
+        settles it, so no later stretch is asked about. Changed paths with no
+        stretch to ask about cannot be read, never read as nothing."""
+        if delta.paths and not delta.stretches:
+            return _Unresolvable(
+                "the author's changes since the review name no stretch to ask the backbone about"
+            )
         for stretch in delta.stretches:
             found = self._altered_in(stretch.start, stretch.end)
             if not found.ok:

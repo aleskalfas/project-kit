@@ -560,8 +560,9 @@ def test_a_merge_of_another_branch_is_the_authors_change(av, ad, vf, repo) -> No
 
 
 def test_the_delta_names_each_stretch_of_the_authors_change(ad, repo) -> None:
-    """Each of the author's commits is a stretch, and so is a merge of the base
-    the author changed something inside; a clean merge is none (#1386)."""
+    """Each run of the author's own commits between merges of the base is a
+    stretch, and so is a merge of the base the author changed something
+    inside. A clean merge is none, and it ends the run before it (#1386)."""
     reviewed = repo.commit({"src/app.py": "x = 2\n"}, "feature")
     zeroth = repo.commit({"src/app.py": "x = 4\n"}, "first fix")
     first = repo.commit({"src/app.py": "x = 3\n"}, "fix")
@@ -582,9 +583,9 @@ def test_the_delta_names_each_stretch_of_the_authors_change(ad, repo) -> None:
 
     delta = ad.author_delta(reviewed, edited, base_tip=repo.head("main"), cwd=repo.root)
     assert delta.paths == ("README.md", "src/app.py")
+    assert zeroth != first
     assert delta.stretches == (
-        ad.Stretch(reviewed, zeroth),
-        ad.Stretch(zeroth, first),
+        ad.Stretch(reviewed, first),
         ad.Stretch(clean, second),
         ad.Stretch(second, edited),
     )
@@ -878,10 +879,11 @@ def test_head_sha_falls_back_to_the_last_commit(vf) -> None:
 #
 # A reviewer contributed by the floor alone keeps its approval while the
 # author's own changes reach nothing the floor counts. The backbone is asked
-# what each of the author's commits since the review altered — a merge of the
-# base only when the author changed something inside it, a clean merge never.
-# An altered artefact counts when a rule binds on it before or after that
-# commit (DEC-028).
+# what the author's changes since the review altered, a run of the author's
+# own commits between merges of the base at a time — a merge of the base only
+# when the author changed something inside it, a clean merge never. An altered
+# artefact counts when a rule binds on it at the start or the end of its run
+# (DEC-028).
 
 RULES = "rule-set-reviewer"
 RULED_FLOOR = {RULES: frozenset({"touches-ruled-artefact"})}
@@ -966,22 +968,72 @@ def test_a_push_to_the_declared_places_alone_stales_the_approval(av, ad, vf, rep
     assert assessed.reason.endswith("reaches its touches-ruled-artefact floor")
 
 
-def test_a_rule_only_commit_after_an_edit_keeps_the_approval(av, ad, vf, repo) -> None:
+def test_an_edit_a_later_commit_brings_under_a_rule_stales_the_approval(av, ad, vf, repo) -> None:
     """After the review the author edits a page no rule binds on, then accepts a
-    rule that binds on it. Each commit is judged under the rules before and
-    after it: the edit under none, the rule change altering no page it
-    governs, so the approval stands (DEC-028)."""
+    rule that binds on it. Both commits are one run, read together: the page
+    is altered, and a rule binds on it at the run's end, so the approval goes
+    stale, as the resolver counts the page for the PR (DEC-028)."""
     reviewed = repo.commit({GUIDE: "guide, reviewed\n"}, "page")
-    edit = repo.commit({"README.md": "readme, edited\n"}, "readme")
+    repo.commit({"README.md": "readme, edited\n"}, "readme")
     accept = repo.commit({"docs/rules.md": "RS-DOC-001 accepted\n"}, "accept a rule")
     asked: list[tuple] = []
+    rule = _ruled_rule(vf, ad, repo, [_altered("README.md")], asked)
+    assessed = rule.assess(_verdict(av, RULES, reviewed))
+    assert not assessed.fresh
+    assert assessed.reason.endswith("reaches its touches-ruled-artefact floor")
+    assert asked == [(reviewed, accept)]
+
+
+def test_a_rule_only_commit_keeps_the_approval(av, ad, vf, repo) -> None:
+    """After the review the author only accepts a rule over a page the review
+    saw. A change to the rules alone alters no page they govern, so the
+    backbone lists none and the approval stands (DEC-028)."""
+    reviewed = repo.commit({GUIDE: "guide, reviewed\n"}, "page")
+    accept = repo.commit({"docs/rules.md": "RS-DOC-001 accepted\n"}, "accept a rule")
+    asked: list[tuple] = []
+    rule = _ruled_rule(vf, ad, repo, [], asked)
+    assert rule.assess(_verdict(av, RULES, reviewed)).fresh
+    assert asked == [(reviewed, accept)]
+
+
+def test_an_edit_undone_within_a_run_keeps_the_approval(av, ad, vf, repo) -> None:
+    """The author edits a ruled page and then undoes the edit. The run is read
+    whole, so the backbone sees no change to the page (COR-050 point 5)."""
+    reviewed = repo.commit({GUIDE: "guide, reviewed\n"}, "page")
+    repo.commit({GUIDE: "guide, rewritten\n"}, "page fix")
+    undone = repo.commit({GUIDE: "guide, reviewed\n"}, "undo the page fix")
 
     def answer(start, end):
-        return [_altered("README.md", ruled=False)] if end == edit else []
+        return [] if (start, end) == (reviewed, undone) else [_altered(GUIDE)]
 
+    asked: list[tuple] = []
     rule = _ruled_rule(vf, ad, repo, answer, asked)
-    assert rule.assess(_verdict(av, RULES, reviewed)).fresh
-    assert asked == [(reviewed, edit), (edit, accept)]
+    assessed = rule.assess(_verdict(av, RULES, reviewed))
+    assert assessed.fresh, assessed.reason
+    assert asked == [(reviewed, undone)]
+
+
+def test_changed_paths_without_a_stretch_stale_the_approval(av, vf) -> None:
+    """A reader of the author's changes that names paths but no stretch to ask
+    the backbone about cannot say the change alters no ruled artefact."""
+    ad_module = importlib.import_module("_lib.author_delta")
+    asked: list[tuple] = []
+
+    def ruled(start, end):
+        asked.append((start, end))
+        return importlib.import_module("_lib.ruled_artefacts").RuledAlteration()
+
+    rule = vf.FreshnessRule(
+        head_sha="h" * 40,
+        base_tip="b" * 40,
+        floors_by_reviewer=RULED_FLOOR,
+        delta_since=lambda since: ad_module.AuthorDelta(paths=(GUIDE,)),
+        ruled_since=ruled,
+    )
+    assessed = rule.assess(_verdict(av, RULES, "r" * 40))
+    assert not assessed.fresh
+    assert "name no stretch to ask the backbone about" in assessed.reason
+    assert asked == []
 
 
 def test_a_push_the_backbone_counts_nothing_for_keeps_the_approval(av, ad, vf, repo) -> None:
@@ -1053,6 +1105,8 @@ def test_a_merge_the_author_changed_something_inside_counts_whole(av, ad, vf, re
     assessed = rule.assess(_verdict(av, RULES, reviewed))
     assert not assessed.fresh
     assert assessed.reason.endswith("reaches its touches-ruled-artefact floor")
+    # The page that cost the approval is named, though the author changed only code.
+    assert "changed since: src/app.py; ruled artefacts altered: docs/other.md" in (assessed.reason)
     assert asked == [(reviewed, merge)]
 
 
@@ -1144,11 +1198,16 @@ def test_the_ruled_artefacts_are_read_once_per_reviewed_head(av, ad, vf, repo) -
     assert len(asked) == 1
 
 
-def test_the_first_commit_that_reaches_the_floor_settles_it(av, ad, vf, repo) -> None:
-    """Two commits since the review each alter a ruled page; the first settles
-    the verdict, so the second is not asked about."""
+def test_the_first_stretch_that_reaches_the_floor_settles_it(av, ad, vf, repo) -> None:
+    """Two runs since the review, apart by a clean merge of the base, each
+    alter a ruled page. The first settles the verdict, so the second is not
+    asked about."""
     reviewed = repo.commit({"src/app.py": "x = 2\n"}, "code")
     first = repo.commit({GUIDE: "guide, once\n"}, "page fix")
+    repo.git("checkout", "-q", "main")
+    repo.commit({"docs/other.md": "other\n"}, "main moves")
+    repo.git("checkout", "-q", "feat")
+    repo.git("merge", "-q", "--no-edit", "main")
     repo.commit({GUIDE: "guide, twice\n"}, "page fix again")
     asked: list[tuple] = []
     rule = _ruled_rule(vf, ad, repo, [_altered(GUIDE)], asked)

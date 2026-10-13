@@ -24,11 +24,17 @@ parents) from the PR head back to it.
 
 It also names the same change as `stretches`, for a reader that asks what a
 change altered of something other than paths (the `touches-ruled-artefact`
-floor asks the backbone which artefacts, #1386): each of the author's own
-commits that changed something, and each merge of the base the author
-changed something inside, whole — no path tells what the author's change
-inside a merge brought in. A clean merge is no stretch. Each stretch runs
-from a commit's first parent to the commit.
+floor asks the backbone which artefacts, #1386):
+
+  * each run of the author's own commits between merges of the base that
+    changed something, from the first one's first parent to the last one —
+    so an edit and a later commit that brings it under a rule are read
+    together, and an edit undone within the run is no change;
+  * each merge of the base the author changed something inside, whole, from
+    its first parent — no path tells what the author's change inside a
+    merge brought in.
+
+A clean merge is no stretch, and it ends the run before it.
 
 `base_kept` answers whether the base a verdict was reviewed against is an
 ancestor of the base branch's head now. A base that moved forward is; one a
@@ -75,9 +81,10 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
 
 @dataclass(frozen=True)
 class Stretch:
-    """One stretch of the author's change: the commit `end`, from its first
-    parent `start`. One of the author's own commits, or a merge of the base
-    the author changed something inside."""
+    """One stretch of the author's change, from the commit `start` to the
+    commit `end`: a run of the author's own commits between merges of the
+    base, from the first one's first parent, or a merge of the base the
+    author changed something inside, from its first parent."""
 
     start: str
     end: str
@@ -159,15 +166,24 @@ def author_delta(
         base = _BaseBranch(git, base_tip)
         paths: set[str] = set()
         stretches: list[Stretch] = []
+        current: Stretch | None = None  # the run of the author's own commits so far
+        current_changed = False
         for commit, parents in reversed(git.first_parent_line(since, head)):
             if len(parents) == 2 and base.contains(parents[1]):
+                if current is not None and current_changed:
+                    stretches.append(current)
+                current, current_changed = None, False
                 merged = git.clean_merge(parents[0], parents[1])
                 own = git.changed_paths(merged, commit)
+                if own:
+                    stretches.append(Stretch(parents[0], commit))
             else:
                 own = git.changed_paths(parents[0], commit)
-            if own:
-                stretches.append(Stretch(parents[0], commit))
+                current = Stretch(current.start if current is not None else parents[0], commit)
+                current_changed = current_changed or bool(own)
             paths |= own
+        if current is not None and current_changed:
+            stretches.append(current)
     except _GitFailed as exc:
         return AuthorDelta(error=str(exc))
     return AuthorDelta(paths=tuple(sorted(paths)), stretches=tuple(stretches))
