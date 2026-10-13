@@ -1,0 +1,9 @@
+component: project-management
+kind: none
+body: >
+  DEC-030 is refined in place: sync reads the live adapter overlay in its
+  merge and never writes it, sync restores the overlay template at the
+  version your project records, and a version transition replaces it. Its
+  uninstall section names the records that let uninstall remove the whole
+  capability folder. The README's friction block is revalidated,
+  unchanged. Nothing you run changes.

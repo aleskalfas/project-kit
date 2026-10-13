@@ -1,0 +1,7 @@
+component: claude-code
+kind: none
+body: >
+  Only the friction block of the adapter README changes: it is revalidated,
+  unchanged, against project-management DEC-030's refinement on what sync
+  does to the live overlay. Its text does not change, and nothing you run
+  changes.

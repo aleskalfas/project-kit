@@ -1,0 +1,11 @@
+component: backbone
+kind: none
+body: >
+  COR-010, COR-027 and COR-051 are refined in place to say what sync does
+  to a project's paths as COR-059 does. The skills and agents READMEs say
+  that sync reads your own skills and agents and never writes them. The
+  schemas README says that sync never reads or writes a project rule set,
+  and uninstall never writes one. The decisions README's list of what sync
+  does today adds the missing project/ folder of a capability it
+  refreshes. Other READMEs' friction blocks are revalidated. It is record
+  and documentation text only, and nothing you run changes.
