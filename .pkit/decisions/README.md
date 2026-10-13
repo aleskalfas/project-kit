@@ -14,9 +14,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
     revalidated:
-      at: 2026-10-13T10:43:50Z
+      at: 2026-10-13T11:45:25Z
       outcome: unchanged
-      unchanged-because: "This change adds to record_points what an anchor on a point stands on, which friction reads, and lets # in a record anchor's value name a point (COR-051 point 3). The page's checks of a record's points and of a change's numbering do not change. Citing a point as an anchor's value waits, with the rest of its point form, on #1422, which the kept COR-051 deferral names."
+      unchanged-because: The rule-set module gains one judgement of whether a declared check is there, shared by validation and the reading commands, and its reach walk names the rules a pin behind its set holds back. This page's section on rule sets gives their statuses, the acceptance gate, where sets live, how a rule is cited and what validation checks. It says nothing of declared checks, pins or the reading commands, so it holds.
       deferred:
         - anchor:
             kind: record
