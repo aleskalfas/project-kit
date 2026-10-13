@@ -25,9 +25,9 @@
 # turn logging on itself (`pkit config set process.journal.enabled true --yes`).
 #
 # `.pkit/.gitignore` is rendered after the upgrade's copy and before its
-# migrations, i.e. before this setting existed, so it ignores journals. When the journals
-# are committed, the backbone's journal ignore line is removed here so it does
-# not wait for the next render (which would drop it anyway). A component still
+# migrations, i.e. before this setting existed, so it ignores journals. When
+# the journals are committed, the backbone's journal ignore line is removed
+# here so it does not wait for the next render (which would drop it anyway). A component still
 # declaring its own journal line keeps its journals ignored until that render,
 # which drops the component's line too while the journals are committed; the
 # migration says so, and `pkit validate` names the component.

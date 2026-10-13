@@ -31,9 +31,9 @@
 #     are reported with the command to finish by hand, and do not fail the
 #     upgrade: neither is a fault of the migration, and the operator finishes
 #     both once the repository is ready. Unlike that verb it asks no
-#     confirmation: a declared
-#     file is one its component says must not be tracked, and the removal is
-#     only staged, so the operator's commit is the point of decision.
+#     confirmation: a declared file is one its component says must not be
+#     tracked, and the removal is only staged, so the operator's commit is the
+#     point of decision.
 #
 # OTHER CLONES. The staged removal, once committed, reaches other clones as a
 # deletion. A clone that pulls it while the file is still tracked there has git
