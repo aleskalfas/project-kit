@@ -1,0 +1,19 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A new core agent, `rule-set-reviewer`, judges one change against the
+  accepted rules that bind on each artefact it alters (COR-057). It reads
+  those rules only from the rule sets, through `pkit rule-sets altered`: the
+  head's rules judge what the head holds, and the base's rules judge what the
+  change removes. It judges only the text the change owns, and only the parts
+  of a rule that no check is there to enforce. Each finding cites its rule by
+  id, the artefact, the line and the passage. Whoever invokes it names the
+  form of its verdict and the mark of each kind of finding. It is advisory:
+  run it by hand on any change. Sync deploys it with the other core agents.
+  `pkit rule-sets reach` and `pkit rule-sets altered` give what it reads:
+  each declared check part now says whether its check is there (`there`,
+  `problem`), and each artefact lists the accepted rules that a pin behind
+  its set holds back (`held`). `reach` also lists an artefact whose rules are
+  all held back (#1385).
