@@ -2,6 +2,7 @@ component: backbone
 kind: major
 custom:
   category: Changed
+  pr: "1574"
 body: >
   `pkit upgrade` runs every migration inside the transition, in COR-010's order
   (ADR-065 point 4). It copies the release, renders `.pkit/.gitignore`, runs the
