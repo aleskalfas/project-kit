@@ -29,17 +29,13 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-13T21:19:56Z
+      at: 2026-10-14T09:30:51Z
       outcome: updated
       deferred:
         - anchor:
             kind: record
             value: COR-010
-          reason: "COR-010 has a version transition record its target first and its completion last, run every migration inside it in its order, and move a shipped component alone only to the version its recorded release ships. This page states the script contract, the two recorded states, the replay, and sync moving no version behind one guard. Its upgrade flow still runs the capabilities' migrations, the seed paths and the derivable state before the backbone's migrations, and its per-component upgrade takes any version within requires_backbone, as the code still does. It follows with #1461, which puts the upgrade flow in COR-010's order and rewrites the per-component upgrade."
-        - anchor:
-            kind: record
-            value: COR-017
-          reason: "COR-017 no longer has sync upgrade the installed capabilities: a version transition moves them and resolves a new collision, and sync keeps each at its recorded version. This page now has sync copy a capability only at its recorded version, and the transition copy and migrate each one. It does not yet say how a transition resolves a new collision, and has pkit capabilities upgrade run a capability's migrations before its copy, as the code still does. It follows with #1461, where the transition resolves a new collision and the single-capability upgrade becomes a transition of one component."
+          reason: "COR-010 has a version transition record its target first and its completion last, run every migration inside it in its order, and move a shipped component alone only to the version its recorded release ships. This page states that order, and pkit capabilities upgrade as a transition of one capability. Its per-component upgrade moves a capability to the version the running pkit's bundle ships, which is the recorded release's only while that pkit is the project's version, as the code still does. It follows with #1463, which stops pkit capabilities upgrade under any other pkit."
 ---
 
 # Lifecycle
