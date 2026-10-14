@@ -13,9 +13,8 @@ pkit:
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053]
       artefact: [RS-SAN-001]
     revalidated:
-      at: 2026-10-14T18:58:33Z
-      outcome: unchanged
-      unchanged-because: DEC-001, COR-049, COR-050, COR-052 and COR-053 now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed, so every point this page cites names the same text, DEC-001 points 1 to 7 and 9 among them. DEC-001's deferral is kept as it was, since the page still describes what the capability ships ahead of the record's refinements. It holds.
+      at: 2026-10-14T20:01:31Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
