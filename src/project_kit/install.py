@@ -1104,35 +1104,39 @@ def _seed_file(path: Path, content: str, ctx: InstallContext) -> None:
 
 
 def _install_adapter(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool = False) -> None:
+    """Copy one adapter's kit-owned files into the project (ADR-065 point 4).
+
+    The copy carries every file the core layer reads from the project's copy
+    of an adapter: each file at the adapter's top level, its README, its
+    `package.yaml` (the compatibility check's range, COR-010), its declaration
+    of which permission dimensions its harness enforces
+    (`permission-enforcement.yaml`, which `pkit permissions` reads) and its
+    scripts, and its core settings. Scripts (`*.sh`, `*.py`) keep their
+    executable bit, so a shebang works directly. It carries no `migrations/`:
+    a transition reads an adapter's migrations from the bundle, as it reads a
+    capability's. The adapter's `project/` and `settings/project/` are the
+    project's, and no copy touches them.
+    """
     adapter_name = src.name
     _mkdir(dst, ctx)
 
-    readme = src / "README.md"
-    if readme.is_file():
-        _copy_file(readme, dst / "README.md", ctx)
+    # Every top-level file, a Python cache aside. The bash orchestrator may
+    # call Python helpers self-contained via PEP 723 inline metadata (see
+    # deploy-agents.sh + _resolve_agent.py), so both kinds of script run from
+    # the project's side.
+    src_files = sorted(
+        p for p in src.iterdir() if p.is_file() and not treecopy.is_python_cache(PurePath(p.name))
+    )
+    for file in src_files:
+        _copy_file(file, dst / file.name, ctx, executable=file.suffix in (".sh", ".py"))
 
-    # Adapter metadata file (per COR-010): kit-owned, propagated to
-    # adopter so `pkit upgrade`'s compatibility check has access to the
-    # adapter's recorded `requires_backbone` range.
-    package_yaml = src / "package.yaml"
-    if package_yaml.is_file():
-        _copy_file(package_yaml, dst / "package.yaml", ctx)
-
-    # Propagate orchestrator scripts (*.sh) and sibling helpers (*.py).
-    # The bash orchestrator may call Python helpers self-contained via
-    # PEP 723 inline metadata (see deploy-agents.sh + _resolve_agent.py).
-    # Both are executable from the adopter side; preserve the executable
-    # bit so the shebang works directly.
-    src_scripts = sorted([*src.glob("*.sh"), *src.glob("*.py")])
-    for script in src_scripts:
-        _copy_file(script, dst / script.name, ctx, executable=True)
-
-    # Sync mode: drop any *.sh / *.py in dst whose source counterpart no
-    # longer exists. Init never runs into orphans (fresh tree), so gate
-    # on overwrite to keep init's behaviour unchanged.
+    # Sync mode: drop any top-level file in dst whose source counterpart no
+    # longer exists. The adapter's top level is kit-owned (COR-001). Init
+    # never runs into orphans (fresh tree), so gate on overwrite to keep
+    # init's behaviour unchanged.
     if overwrite and dst.is_dir():
-        kept = {p.name for p in src_scripts}
-        for orphan in sorted([*dst.glob("*.sh"), *dst.glob("*.py")]):
+        kept = {p.name for p in src_files}
+        for orphan in sorted(p for p in dst.iterdir() if p.is_file()):
             if orphan.name not in kept:
                 _remove_file(orphan, ctx, label=f".pkit/adapters/{adapter_name}/{orphan.name}")
 

@@ -16,10 +16,12 @@ from project_kit.manifest import (
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
     ComponentManifest,
+    ComponentRegistryEntry,
     read_backbone_manifest,
     read_capability_origin,
     read_component_manifest,
     set_component_manifest_path,
+    write_backbone_manifest,
     write_component_manifest,
 )
 from tests.adopter_repo import GitRepo, MakeAdopterRepo
@@ -1466,49 +1468,257 @@ def test_cli_uninstall_not_installed_errors(kit_target: Path) -> None:
 # --- pkit capabilities upgrade (per COR-017) ---------------------------
 
 
-def test_detect_upgrade_collisions_excludes_self_collisions(
+def test_detect_new_collisions_leaves_out_the_names_the_installed_copy_holds(
     kit_target: Path, kit_source: Path
 ) -> None:
-    """The upgrade-only variant filters out collisions against the upgrading capability's own
-    tree."""
+    """A name the capability's installed copy holds is not new (ADR-065 point 6)."""
     _stage_capability_in_source(kit_source, "evidence", with_skills=("add-evidence",))
     source = caps.find_capability_in_source(kit_source, "evidence")
     assert source is not None
     caps.install_capability(kit_target, source)
+    _project_skill(kit_target, "add-evidence")
 
-    # Standard detect_collisions sees the installed copy as a collision against itself.
-    standard = caps.detect_collisions(kit_target, source)
-    assert any(c.artifact_name == "add-evidence" for c in standard)
-
-    # The upgrade variant filters those out.
-    upgrade = caps.detect_upgrade_collisions(kit_target, source)
-    assert not any(c.artifact_name == "add-evidence" for c in upgrade)
-
-
-def test_detect_upgrade_collisions_surfaces_genuinely_new_collisions(
-    kit_target: Path, kit_source: Path
-) -> None:
-    """A skill added in the upgraded source that collides with core/project content is flagged."""
-    # Install v0.1 with one skill.
-    _stage_capability_in_source(kit_source, "evidence", with_skills=("add-evidence",))
-    source = caps.find_capability_in_source(kit_source, "evidence")
-    assert source is not None
-    caps.install_capability(kit_target, source)
-
-    # Adopter writes a project-side skill of name "new-skill".
-    project_skill = kit_target / ".pkit" / "skills" / "project" / "new-skill.md"
-    project_skill.parent.mkdir(parents=True, exist_ok=True)
-    project_skill.write_text("---\nname: new-skill\n---\n# New\n", encoding="utf-8")
-
-    # The upgraded source adds "new-skill".
-    (kit_source / "capabilities" / "evidence" / "skills" / "new-skill.md").write_text(
-        "---\nname: new-skill\n---\n# From evidence\n", encoding="utf-8"
+    # Install's check sees the installed copy as a collision against itself.
+    assert any(
+        c.artifact_name == "add-evidence" for c in caps.detect_collisions(kit_target, source)
     )
+    assert caps.detect_new_collisions(kit_target, source) == []
 
+
+def test_detect_new_collisions_surfaces_one_with_the_projects_own_artefact(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """A skill the new version adds, which the project's own skill already names."""
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("add-evidence",))
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+    caps.install_capability(kit_target, source)
+    project_skill = _project_skill(kit_target, "new-skill")
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("add-evidence", "new-skill"))
     source_v2 = caps.find_capability_in_source(kit_source, "evidence")
     assert source_v2 is not None
-    upgrade = caps.detect_upgrade_collisions(kit_target, source_v2)
-    assert any(c.artifact_name == "new-skill" for c in upgrade)
+
+    found = caps.detect_new_collisions(kit_target, source_v2)
+
+    assert [(c.artifact_kind, c.artifact_name, c.target_path) for c in found] == [
+        ("skill", "new-skill", project_skill)
+    ]
+    # A skip the project already chose is not new either.
+    assert caps.detect_new_collisions(kit_target, source_v2, skipped=[("skill", "new-skill")]) == []
+
+
+def test_detect_new_collisions_leaves_out_the_release_and_externally_sourced_content(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """Core's artefacts and a released capability's are the release's, and an
+    externally-sourced one surfaces as COR-041 sets: neither is asked about. An
+    incubated capability's is the project's own content, and is (ADR-065 point 6)."""
+    _stage_capability_in_source(kit_source, "evidence", with_agents=("core-a", "rel-a", "ext-a"))
+    _stage_capability_in_source(kit_source, "evidence", with_agents=("inc-a",))
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+    pkit = kit_target / ".pkit"
+    (pkit / "agents" / "core").mkdir(parents=True, exist_ok=True)
+    (pkit / "agents" / "core" / "core-a.md").write_text("# core\n", encoding="utf-8")
+    for cap, agent, origin in (
+        ("released", "rel-a", ORIGIN_KIT_SHIPPED),
+        ("outside", "ext-a", "externally-sourced"),
+        ("homegrown", "inc-a", ORIGIN_INCUBATED_IN_REPO),
+    ):
+        agents = pkit / "capabilities" / cap / "agents"
+        agents.mkdir(parents=True)
+        (agents / f"{agent}.md").write_text(f"# {cap}\n", encoding="utf-8")
+        backbone = read_backbone_manifest(kit_target)
+        assert backbone is not None
+        backbone.components.append(
+            ComponentRegistryEntry(
+                kind="capability",
+                name=cap,
+                manifest=f".pkit/capabilities/{cap}/project/manifest.yaml",
+                origin=origin,
+            )
+        )
+        write_backbone_manifest(kit_target, backbone)
+
+    found = caps.detect_new_collisions(kit_target, source, released={"released"})
+
+    assert [(c.artifact_name, c.target_path.parent.parent.name) for c in found] == [
+        ("inc-a", "homegrown")
+    ]
+
+
+def test_detect_new_collisions_reads_the_folder_form_too(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """A skill is a file `<name>.md` or a folder `<name>/` holding it (COR-015), on
+    either side of a collision."""
+    cap_dir = _stage_capability_in_source(kit_source, "evidence")
+    (cap_dir / "skills" / "fold").mkdir(parents=True)
+    (cap_dir / "skills" / "fold" / "fold.md").write_text("# fold\n", encoding="utf-8")
+    project = kit_target / ".pkit" / "skills" / "project" / "fold"
+    project.mkdir(parents=True)
+    (project / "fold.md").write_text("# the project's\n", encoding="utf-8")
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+
+    found = caps.detect_new_collisions(kit_target, source)
+
+    assert [(c.artifact_name, c.target_path) for c in found] == [("fold", project / "fold.md")]
+
+
+def test_a_skipped_folder_form_artefact_is_left_out_of_the_copy(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    (source / "skills" / "fold" / "refs").mkdir(parents=True)
+    (source / "skills" / "fold" / "fold.md").write_text("# fold\n", encoding="utf-8")
+    (source / "skills" / "fold" / "refs" / "more.md").write_text("# more\n", encoding="utf-8")
+    (source / "skills" / "kept.md").write_text("# kept\n", encoding="utf-8")
+    dest = tmp_path / "dest"
+
+    caps._copy_capability_tree(source, dest, (("skill", "fold"),))
+
+    assert (dest / "skills" / "kept.md").is_file()
+    assert not (dest / "skills" / "fold").exists()
+
+
+def test_record_skips_keeps_the_version_and_the_rest_of_backend_state(
+    kit_target: Path, kit_source: Path
+) -> None:
+    _install_at(kit_target, kit_source, "0.1.0")
+    _write_record(kit_target, "evidence", backend_state=_BOARD)
+
+    assert caps.record_skips(kit_target, "evidence", [("skill", "one")], version="0.1.0")
+
+    record = read_component_manifest(_record_path(kit_target, "evidence"))
+    assert record is not None
+    assert record.version == "0.1.0"
+    assert record.backend_state == _BOARD | {"skipped": [{"kind": "skill", "name": "one"}]}
+
+
+def test_record_skips_writes_a_record_only_where_a_version_is_known(
+    kit_target: Path, kit_source: Path
+) -> None:
+    _install_at(kit_target, kit_source, "0.1.0")
+    _record_path(kit_target, "evidence").unlink()
+
+    assert not caps.record_skips(kit_target, "evidence", [("agent", "two")], version=None)
+    assert not _record_path(kit_target, "evidence").exists()
+
+    assert caps.record_skips(kit_target, "evidence", [("agent", "two")], version="0.1.0")
+    record = read_component_manifest(_record_path(kit_target, "evidence"))
+    assert record is not None
+    assert (record.version, record.backend_state) == (
+        "0.1.0",
+        {"skipped": [{"kind": "agent", "name": "two"}]},
+    )
+
+
+# --- pkit capabilities upgrade: a transition of one capability (ADR-065 point 4) ---
+
+
+def _upgrade_cli(kit_source: Path, monkeypatch, *args: str, answers: str | None = None):
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    return CliRunner().invoke(main, ["capabilities", "upgrade", "evidence", *args], input=answers)
+
+
+def test_capabilities_upgrade_runs_a_migration_after_the_copy_then_restamps(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Copy, migrate, stamp: each migration reads the files of the version it
+    migrates to (COR-010's order)."""
+    _install_at(kit_target, kit_source, "0.1.0", with_skills=("add-evidence",))
+    cap_dir = _stage_capability_in_source(
+        kit_source, "evidence", version="0.2.0", with_skills=("add-evidence",)
+    )
+    (cap_dir / "skills" / "add-evidence.md").write_text("# v0.2 body\n", encoding="utf-8")
+    trace = kit_target / "trace.txt"
+    script = cap_dir / "migrations" / "0.2.0" / "001-read-the-copy.sh"
+    script.parent.mkdir(parents=True)
+    script.write_text(
+        "#!/usr/bin/env bash\nset -euo pipefail\n"
+        'if grep -q "v0.2 body" "$ROOT/.pkit/capabilities/evidence/skills/add-evidence.md"; then\n'
+        f'  echo after >> "{trace}"\nelse\n  echo before >> "{trace}"\nfi\n',
+        encoding="utf-8",
+    )
+
+    result = _upgrade_cli(kit_source, monkeypatch)
+
+    assert result.exit_code == 0, result.output
+    assert trace.read_text(encoding="utf-8").split() == ["after"]
+    record = read_component_manifest(_record_path(kit_target, "evidence"))
+    assert record is not None and record.version == "0.2.0"
+
+
+def test_capabilities_upgrade_moves_nothing_before_its_checks_pass(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """A new collision without `--interactive` refuses before the manifest moves:
+    the record an older release left at the root stays there."""
+    _install_at(kit_target, kit_source, "0.1.0")
+    _as_an_older_release_left_it(kit_target, _BOARD)
+    root = _record_path(kit_target, "evidence", at_root=True)
+    before = root.read_bytes()
+    _project_skill(kit_target, "clash")
+    _stage_capability_in_source(kit_source, "evidence", version="0.2.0", with_skills=("clash",))
+
+    result = _upgrade_cli(kit_source, monkeypatch)
+
+    assert result.exit_code != 0
+    assert "--interactive" in result.output
+    assert root.read_bytes() == before
+    assert not _record_path(kit_target, "evidence").exists()
+
+
+def test_capabilities_upgrade_records_a_skip_before_the_copy_and_never_asks_again(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """A skip chosen under `--interactive` is recorded before the copy, so a refresh
+    a migration stops keeps it, and the next upgrade does not ask again."""
+    _install_at(kit_target, kit_source, "0.1.0")
+    _project_skill(kit_target, "clash")
+    cap_dir = _stage_capability_in_source(
+        kit_source, "evidence", version="0.2.0", with_skills=("clash",)
+    )
+    script = cap_dir / "migrations" / "0.2.0" / "001-fails.sh"
+    script.parent.mkdir(parents=True)
+    script.write_text("#!/usr/bin/env bash\nexit 4\n", encoding="utf-8")
+
+    stopped = _upgrade_cli(kit_source, monkeypatch, "--interactive", answers="skip\n")
+
+    assert stopped.exit_code != 0
+    assert "exited with status 4" in stopped.output
+    record = read_component_manifest(_record_path(kit_target, "evidence"))
+    assert record is not None and record.version == "0.1.0"
+    assert record.backend_state["skipped"] == [{"kind": "skill", "name": "clash"}]
+
+    script.unlink()
+    finished = _upgrade_cli(kit_source, monkeypatch)
+
+    assert finished.exit_code == 0, finished.output
+    record = read_component_manifest(_record_path(kit_target, "evidence"))
+    assert record is not None and record.version == "0.2.0"
+    assert record.backend_state["skipped"] == [{"kind": "skill", "name": "clash"}]
+    assert not (kit_target / ".pkit" / "capabilities" / "evidence" / "skills" / "clash.md").exists()
+
+
+def test_capabilities_upgrade_refuses_a_version_whose_range_excludes_the_backbone(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """A transition of one capability gates on the same compatibility check as the
+    backbone's: the new version's `requires_backbone` against the recorded backbone
+    (COR-010)."""
+    _install_at(kit_target, kit_source, "0.1.0")
+    _stage_capability_in_source(
+        kit_source, "evidence", version="0.2.0", requires_backbone=">=0.1.0,<0.2.0"
+    )
+
+    result = _upgrade_cli(kit_source, monkeypatch)
+
+    assert result.exit_code != 0
+    assert "capability 'evidence' requires backbone >=0.1.0,<0.2.0" in result.output
+    record = read_component_manifest(_record_path(kit_target, "evidence"))
+    assert record is not None and record.version == "0.1.0"
 
 
 def test_read_prior_skipped_artifacts_returns_empty_when_no_manifest(kit_target: Path) -> None:

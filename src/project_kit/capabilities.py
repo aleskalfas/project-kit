@@ -6,9 +6,9 @@ at `.pkit/capabilities/<name>/`. Adopters install per project via
 `pkit capabilities uninstall <name>`. Capabilities slot into the kit's existing component
 registry (per COR-010) alongside adapters.
 
-This module covers the deterministic mechanics. Interactive collision
-resolution (override / skip / inspect) lives in the CLI layer where
-Click prompts are available.
+This module covers the deterministic mechanics, and the one prompt both a
+capability's install and a version transition ask on a naming collision
+(override / skip / inspect, ``resolve_collision_interactive``, COR-017).
 
 Capability dependencies (COR-030): a capability may declare
 ``requires_capabilities`` in its ``package.yaml`` — an optional list of
@@ -37,8 +37,8 @@ import datetime as _dt
 import re
 import shutil
 import subprocess
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from collections.abc import Collection, Iterable, Mapping, Sequence
+from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePath
 from typing import TYPE_CHECKING, Any, cast
 
@@ -59,6 +59,7 @@ from project_kit.manifest import (
     capability_root_manifest_path,
     read_backbone_manifest,
     read_capability_origin,
+    read_component_manifest,
     recorded_capability_manifest,
     set_component_manifest_path,
     write_backbone_manifest,
@@ -612,6 +613,56 @@ def move_capability_manifest(target_root: Path, name: str) -> bool:
     return True
 
 
+def record_skips(
+    target_root: Path,
+    name: str,
+    skipped: Sequence[tuple[str, str]],
+    *,
+    version: str | None,
+) -> bool:
+    """Record the skips in force in the capability's manifest, before its copy (ADR-065 point 6).
+
+    A transition records each skip a person chose on a new collision in step 2,
+    after the manifest's move under ``project/`` and before the copy. So a
+    transition a migration stops does not ask again: the next one reads the
+    skip, and the collision is no longer new. The manifest's version and every
+    other key of ``backend_state`` stay as they are, until the restamp after the
+    capability's migrations.
+
+    A capability with no manifest under ``project/`` gets one at *version*, the
+    version it records, with the skips alone. With no version to record, or a
+    manifest that does not read as a mapping, nothing is written, and the
+    restamp records the skips. Returns True when the manifest was written.
+    """
+    path = capability_manifest_path(target_root, name)
+    entries = [{"kind": kind, "name": artefact} for kind, artefact in skipped]
+    if path.is_file():
+        if _load_mapping(path) is None:
+            return False
+        manifest = read_component_manifest(path)
+        if manifest is None:
+            return False
+    elif version is not None:
+        manifest = ComponentManifest(
+            kind="capability",
+            name=name,
+            version=version,
+            installed_at=_dt.datetime.now(_dt.UTC).isoformat(),
+            requires_backbone="",
+            backend_state={},
+        )
+    else:
+        return False
+    manifest.backend_state = {
+        key: value for key, value in manifest.backend_state.items() if key != SKIPPED_KEY
+    }
+    if entries:
+        manifest.backend_state[SKIPPED_KEY] = entries
+    write_component_manifest(path, manifest)
+    set_component_manifest_path(target_root, "capability", name, capability_manifest_rel(name))
+    return True
+
+
 @dataclass(frozen=True)
 class CapabilityDependencyConflict:
     """One failing dependency found during the pre-flight check (COR-030)."""
@@ -817,6 +868,39 @@ def mandatory_counterparts_left_unmet(
         for binding in after.unmet_marks(cx.CounterpartKind.DEPENDENCY)
         if binding.counterpart.capability != name and _mark_key(binding) not in unmet_before
     ]
+
+
+def marks_a_transition_leaves_unmet(
+    target_root: Path, sources: Sequence[CapabilitySource]
+) -> tuple[list[MandatoryUpstream], list[MandatoryUpstream]]:
+    """The mandatory process connections a transition moving *sources* would leave
+    unmet that the live wiring does not (COR-053 point 6, ADR-065 point 6).
+
+    The wiring judged is the one the transition would leave: each capability of
+    *sources* at its source version in place of its installed copy, every other
+    at its installed version. A mark already unmet before is not the
+    transition's to report. Returns two lists, in COR-030's direction split:
+    the marks a moving capability carries, which the transition refuses, and
+    the marks of a capability that does not move, which it warns about and lets
+    through only under its `--force`.
+    """
+    from project_kit import connections as cx
+
+    candidates = [c for c in (_as_candidate(target_root, s) for s in sources) if c is not None]
+    if not candidates:
+        return [], []
+    moving = {c.name for c in candidates}
+    before = cx.resolve_wiring(target_root)
+    after = cx.resolve_wiring_with(target_root, add=candidates, remove=moving)
+    unmet_before = {_mark_key(b) for b in before.unmet_marks(cx.CounterpartKind.DEPENDENCY)}
+    new = [
+        binding
+        for binding in after.unmet_marks(cx.CounterpartKind.DEPENDENCY)
+        if _mark_key(binding) not in unmet_before
+    ]
+    carried = [_mandatory_upstream(b, after) for b in new if b.counterpart.capability in moving]
+    left = [_mandatory_upstream(b, after) for b in new if b.counterpart.capability not in moving]
+    return carried, left
 
 
 def _as_candidate(target_root: Path, source: CapabilitySource) -> Installed | None:
@@ -1025,6 +1109,107 @@ def remove_overridden(paths: Sequence[Path]) -> None:
             shutil.rmtree(path)
         else:
             path.unlink(missing_ok=True)
+
+
+def resolve_collision_interactive(
+    target_root: Path, finding: CollisionFinding, *, capability: str
+) -> str:
+    """Ask the person for override, skip or inspect on one collision (COR-017).
+
+    The one prompt a capability's install, `pkit capabilities upgrade
+    --interactive` and a version transition ask. It loops on `inspect`, which
+    shows the diff and asks again, until the person picks override or skip, and
+    returns that choice.
+
+    Before each prompt it names what `override` would do: each path of the
+    project's own artefact of that name it removes, which the caller removes
+    once the capability is in place (`apply_overrides`), and each artefact core
+    or another capability ships, which it leaves. `override` is refused, and the
+    prompt asked again, while git could not give the project's artefact back as
+    it stands.
+    """
+    kind, name = finding.artifact_kind, finding.artifact_name
+    replaced = project_artefact_paths(target_root, kind, name)
+    left = shipped_artefact_paths(target_root, kind, name, capability=capability)
+    while True:
+        click.echo(
+            f"  - {kind} '{name}' collides with existing "
+            f"{finding.target_path.relative_to(target_root)}"
+        )
+        unheld = paths_git_cannot_restore(target_root, replaced)
+        for path in replaced:
+            click.echo(
+                f"    override removes {path.relative_to(target_root)}, "
+                + (
+                    "which git does not hold as it stands, so override is refused"
+                    if path in unheld
+                    else "which git keeps"
+                )
+            )
+        for path in left:
+            click.echo(
+                f"    override leaves {path.relative_to(target_root)}: it is not the "
+                "project's, and the deploy's name precedence picks which one deploys"
+            )
+        choice = click.prompt(
+            "    [override / skip / inspect]",
+            type=click.Choice(["override", "skip", "inspect"]),
+            default="inspect",
+            show_default=False,
+        )
+        if choice == "inspect":
+            show_unified_diff(finding.target_path, finding.source_path)
+            continue
+        if choice == "override":
+            lost = paths_git_cannot_restore(target_root, replaced)
+            if lost:
+                for path in lost:
+                    click.echo(
+                        f"    override refused: {path.relative_to(target_root)} is not "
+                        "committed as it stands, so git could not give it back. "
+                        "Choose skip, or commit it and choose override."
+                    )
+                continue
+        return choice
+
+
+def apply_overrides(target_root: Path, paths: Sequence[Path], *, dry_run: bool) -> None:
+    """Remove the project's artefacts an override chose to replace, naming each (COR-017).
+
+    Runs after the capability is copied in and before deploy, so the project's
+    artefact no longer comes first under the name. Git keeps what is removed: the
+    prompt refused an override git could not give back.
+    """
+    if not dry_run:
+        remove_overridden(paths)
+    verb = "would remove" if dry_run else "removed"
+    for path in paths:
+        click.echo(f"  {verb:<12} {path.relative_to(target_root)} (override; git keeps it)")
+
+
+def show_unified_diff(existing: Path, incoming: Path) -> None:
+    """Show a unified diff between the existing file and the incoming one."""
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--no-index", "--color=always", str(existing), str(incoming)],
+            capture_output=True,
+            text=True,
+        )
+        click.echo(result.stdout)
+    except FileNotFoundError:
+        # git not available: fall back to a plain difflib diff.
+        import difflib
+
+        existing_lines = existing.read_text().splitlines(keepends=True)
+        incoming_lines = incoming.read_text().splitlines(keepends=True)
+        diff = difflib.unified_diff(
+            existing_lines,
+            incoming_lines,
+            fromfile=str(existing),
+            tofile=str(incoming),
+        )
+        for line in diff:
+            click.echo(line, nl=False)
 
 
 def install_capability(
@@ -1316,28 +1501,107 @@ def _package_as_mapping(package: CapabilityPackage) -> dict[str, Any]:
     return raw
 
 
-def detect_upgrade_collisions(
+def artefact_names(area_dir: Path) -> dict[str, Path]:
+    """The skills or agents a folder holds, by name, each with the file that holds it.
+
+    A skill or an agent is a file `<name>.md`, or a folder `<name>/` holding
+    `<name>.md` (COR-015). Where a folder holds both forms of one name, the
+    first in name order is listed. Empty when the folder is missing.
+    """
+    found: dict[str, Path] = {}
+    if not area_dir.is_dir():
+        return found
+    for entry in sorted(area_dir.iterdir()):
+        if entry.is_file() and entry.suffix == ".md":
+            found.setdefault(entry.stem, entry)
+        elif entry.is_dir() and (entry / f"{entry.name}.md").is_file():
+            found.setdefault(entry.name, entry / f"{entry.name}.md")
+    return found
+
+
+def shipped_capability_names(target_root: Path, source_kit: Path) -> frozenset[str]:
+    """The registered ``kit-shipped`` capabilities the running pkit's bundle ships.
+
+    Their artefacts are the release's, as core's are: a collision between two
+    artefacts one release ships is the release's to prevent, and no transition
+    asks about it (ADR-065 point 6).
+    """
+    return frozenset(
+        name
+        for name, origin in installed_capability_origins(target_root).items()
+        if origin == KIT_SHIPPED and find_capability_in_source(source_kit, name) is not None
+    )
+
+
+def detect_new_collisions(
     target_root: Path,
     capability_source: CapabilitySource,
+    *,
+    skipped: Iterable[tuple[str, str]] = (),
+    released: Collection[str] = (),
 ) -> list[CollisionFinding]:
-    """Detect collisions for an upgrade: skip self-collisions per COR-017.
+    """The new collisions a capability's target version brings (ADR-065 point 6, COR-017).
 
-    `detect_collisions` walks every installed capability, so the
-    in-place currently-installed copy of the upgrading capability
-    surfaces as a collision against itself. For upgrade, every such
-    self-collision is a false positive — those files will be replaced
-    in-place by `refresh_capability`. This filters them out by checking
-    whether the colliding target lives under the upgrading capability's
-    own installed tree.
+    A new collision is a skill or agent name the target version ships, in either
+    form (`artefact_names`), that another installed artefact already uses. A name
+    the capability's installed copy holds is not new, and neither is one its
+    manifest records as skipped (*skipped*): the project already chose.
+
+    The other installed artefacts are the project's own, under
+    `.pkit/skills/project/` and `.pkit/agents/project/`, and those of each other
+    capability that is neither the release's nor externally sourced: an
+    incubated one, or one the methodology no longer ships. So the flow leaves
+    out core's artefacts and those of each capability in *released*
+    (`shipped_capability_names`), since a clash between two artefacts one
+    release ships is the release's to prevent, and a collision with
+    externally-sourced content, which surfaces as COR-041 sets. Read-only.
     """
-    installed_dir = target_root / ".pkit" / "capabilities" / capability_source.name
+    own = capability_source.name
+    installed = target_root / ".pkit" / "capabilities" / own
+    already_chosen = set(skipped)
+    origins = installed_capability_origins(target_root)
     findings: list[CollisionFinding] = []
-    for finding in detect_collisions(target_root, capability_source):
-        try:
-            finding.target_path.relative_to(installed_dir)
-        except ValueError:
-            findings.append(finding)
+    for kind, area in _ARTEFACT_AREAS.items():
+        shipped = artefact_names(capability_source.path / area)
+        if not shipped:
+            continue
+        held = artefact_names(installed / area)
+        existing = _artefacts_outside_the_release(
+            target_root, area, own=own, released=released, origins=origins
+        )
+        for artefact, source_path in shipped.items():
+            if artefact in held or (kind, artefact) in already_chosen:
+                continue
+            target_path = existing.get(artefact)
+            if target_path is not None:
+                findings.append(CollisionFinding(kind, artefact, source_path, target_path))
     return findings
+
+
+def _artefacts_outside_the_release(
+    target_root: Path,
+    area: str,
+    *,
+    own: str,
+    released: Collection[str],
+    origins: Mapping[str, str],
+) -> dict[str, Path]:
+    """The installed artefacts of one area a capability's new artefact can collide
+    with: the project's own first, then each other capability's that is neither the
+    release's nor externally sourced (`detect_new_collisions`)."""
+    found = dict(artefact_names(target_root / ".pkit" / area / "project"))
+    caps_dir = target_root / ".pkit" / "capabilities"
+    if not caps_dir.is_dir():
+        return found
+    for cap in sorted(caps_dir.iterdir()):
+        if not cap.is_dir() or cap.name == own or cap.name in released:
+            continue
+        origin = origins.get(cap.name)
+        if origin is not None and origin not in (KIT_SHIPPED, INCUBATED_IN_REPO):
+            continue
+        for artefact, path in artefact_names(cap / area).items():
+            found.setdefault(artefact, path)
+    return found
 
 
 def detect_incubated_collisions(
@@ -1380,41 +1644,36 @@ def refresh_capability(
     dry_run: bool = False,
     record: CapabilityRecord | None = None,
 ) -> Path:
-    """Refresh an already-installed capability in place from source (per COR-017).
+    """Move an installed capability to its source version: a transition of one capability.
 
-    `pkit capabilities upgrade` runs it. Sync never does, and a transition of
-    the backbone copies through the propagation step and then runs
-    `migrate_copied_capability` (ADR-065 points 1 and 4).
+    `pkit capabilities upgrade` runs it, after its own step 1: the dependency
+    gates and the collision flow, which choose *skipped_artifacts* (ADR-065
+    point 4, "A transition of one capability"; COR-010). Sync never does, and
+    a transition of the backbone copies through the propagation step and then
+    runs `migrate_copied_capability` (ADR-065 points 1 and 4). Its steps:
 
-    Differs from `install_capability` in three ways:
-    - Requires the capability to already be installed (raises if not).
-    - Re-copies the source subtree wholesale: new files appear, removed
-      files disappear, modified files update.
-    - Preserves `skipped_artifacts` semantics: caller should pass the
-      skip state recovered from the capability's manifest
-      (`read_prior_skipped_artifacts`) so previously-skipped files stay
-      absent.
+    1. **The record** is read before anything is written: *record* when the
+       caller read it, else here (`read_capability_record`).
+    2. **The manifest** still at the capability's root moves under its
+       ``project/`` (`move_capability_manifest`), where the copy cannot prune
+       it. Where *skipped_artifacts* differ from the skips it records, they are
+       recorded there before the copy (`record_skips`), so a refresh a
+       migration stops does not ask again.
+    3. **The copy** replaces the kit-owned part of the installed subtree with
+       the source's, leaving out *skipped_artifacts*. It creates no seed path,
+       so it stubs no ``project/``.
+    4. **The migrations** then run, so each reads the files of the version it
+       migrates to (COR-010's order), from the version the record names, and
+       the manifest is restamped when they finish, with *skipped_artifacts*
+       (`migrate_copied_capability`). A capability with no readable version
+       runs none of its migrations and is recorded at the source version. A
+       migration that exits non-zero raises before the restamp, so the
+       manifest still names the version the migrations run from, and the next
+       refresh runs them again.
 
-    The capability's record is read before anything is written: *record*
-    when the caller read it before its own propagation, else here
-    (`read_capability_record`). A manifest still at the capability's root
-    then moves under its ``project/`` (`move_capability_manifest`), before the
-    migrations and the copy. The copy would prune it at the root, and under
-    ``project/`` a migration finds it where the restamp reads it.
-
-    Migrations are run BEFORE the file refresh (per COR-010's resource-
-    lifecycle pattern). For each minor version in the interval
-    (installed, source] the matching `<source>/migrations/<X.Y.0>/*.sh`
-    scripts are executed against the adopter root. Each script gets
-    `ROOT=<target_root>` in its environment and runs from `target_root`
-    as cwd. A non-zero exit halts the refresh.
-
-    The restamp that follows the copy keeps the manifest's `backend_state`, as
-    the migrations left it, replacing only its skips with `skipped_artifacts`.
-
-    Returns the refreshed path. Does NOT do collision detection: its caller,
-    `pkit capabilities upgrade X`, detects collisions before this and resolves
-    them under `--interactive` (COR-017's "new collision during upgrade").
+    Requires the capability to be installed. Under *dry_run* it writes
+    nothing, and says what it would move and run. Returns the refreshed path.
+    Collision detection is its caller's (`detect_new_collisions`).
     """
     name = capability_source.name
     if not is_installed(target_root, name):
@@ -1422,7 +1681,8 @@ def refresh_capability(
             f"capability {name!r} is not installed; use 'pkit capabilities install {name}' first."
         )
     dest = target_root / ".pkit" / "capabilities" / name
-    # Before the move and the migrations, which would otherwise write into the source.
+    # Before the move, the copy and the migrations, which would otherwise write
+    # into the source.
     _refuse_copy_onto_itself(capability_source.path, dest)
 
     if record is None:
@@ -1432,27 +1692,24 @@ def refresh_capability(
         f"{capability_root_manifest_path(target_root, name).relative_to(target_root)} -> "
         f"{capability_manifest_rel(name)}"
     )
+    in_force = replace(record, skipped=tuple(skipped_artifacts))
 
     if dry_run:
         # Report what would happen without writing.
         if record.at_root:
             click.echo(f"  would move {move}")
-        _report_pending_migrations(capability_source, record.version, dry_run=True)
+        migrate_copied_capability(target_root, capability_source, in_force, dry_run=True)
         return dest
 
     if move_capability_manifest(target_root, name):
         click.echo(f"  moved {move}")
+    if set(in_force.skipped) != set(record.skipped):
+        record_skips(target_root, name, in_force.skipped, version=record.version)
 
-    # Run migrations first so adopter state migrates before the new
-    # capability files arrive. If a script fails, halt — the file
-    # refresh is skipped to keep state consistent.
-    _run_capability_migrations(target_root, capability_source, record.version)
-
-    _copy_capability_tree(capability_source.path, dest, skipped_artifacts)
-    # Re-stamp the per-component manifest with the new version + install
-    # timestamp, keeping the rest of its state. Backbone manifest registration
-    # stays as-is (the capability was already registered at the original install).
-    _stamp_component_manifest(target_root, capability_source, skipped_artifacts, restamp=True)
+    _copy_capability_tree(capability_source.path, dest, in_force.skipped, stub_project=False)
+    # Its migrations, after its copy, then the restamp with the skips in force,
+    # keeping the rest of the manifest's state. The registry entry stays as it is.
+    migrate_copied_capability(target_root, capability_source, in_force)
     return dest
 
 
@@ -1486,7 +1743,8 @@ def migrate_copied_capability(
 ) -> None:
     """Run a copied capability's migrations, then restamp its manifest (ADR-065 point 4).
 
-    A transition of the backbone calls it after its copy, so each migration
+    A transition calls it after its copy, of the backbone in its step 6 and of
+    one capability in `refresh_capability`, so each migration
     reads the files of the version it migrates to, as COR-010's order sets. The
     window runs from the version *record* names to the version the copy ships,
     read from the bundle. A capability with no readable version runs none of
@@ -2012,10 +2270,28 @@ def _copy_capability_tree(
     where it is missing (ADR-065 point 11).
     """
     # Skipped skills/agents become generic relative-path exclusions for the
-    # primitive (it knows nothing of "skipped artifacts"). Decisions and
-    # other artifacts are not skip-eligible (they don't collide by name).
+    # primitive (it knows nothing of "skipped artifacts"), in either form
+    # (COR-015): the file `<name>.md`, and every file of the folder `<name>/`.
+    # Decisions and other artifacts are not skip-eligible (they don't collide
+    # by name).
+    skipped_folders = [
+        source / _ARTEFACT_AREAS[kind] / name
+        for kind, name in skipped_artifacts
+        if kind in _ARTEFACT_AREAS
+    ]
     exclude = frozenset(
-        f"{kind}s/{name}.md" for kind, name in skipped_artifacts if kind in ("skill", "agent")
+        {
+            f"{_ARTEFACT_AREAS[kind]}/{name}.md"
+            for kind, name in skipped_artifacts
+            if kind in _ARTEFACT_AREAS
+        }
+        | {
+            path.relative_to(source).as_posix()
+            for folder in skipped_folders
+            if folder.is_dir()
+            for path in folder.rglob("*")
+            if path.is_file()
+        }
     )
     treecopy.refresh_owned_tree(
         source,
@@ -2024,6 +2300,12 @@ def _copy_capability_tree(
         exclude=exclude,
         seed_owned=False,
     )
+    # The primitive reproduces every source folder, so a skipped folder-form
+    # artefact leaves its folders behind, empty: remove each one.
+    for folder in skipped_folders:
+        copied = dest / folder.relative_to(source)
+        if copied.is_dir() and not any(p.is_file() for p in copied.rglob("*")):
+            shutil.rmtree(copied)
     if not stub_project:
         return
     # Stub the adopter-owned tree so the directory exists to be written into,

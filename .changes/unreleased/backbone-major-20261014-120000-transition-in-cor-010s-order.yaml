@@ -1,0 +1,31 @@
+component: backbone
+kind: major
+custom:
+  category: Changed
+body: >
+  `pkit upgrade` runs every migration inside the transition, in COR-010's order
+  (ADR-065 point 4). It copies the release, renders `.pkit/.gitignore`, runs the
+  backbone's migrations, then each adapter's, then each capability's,
+  dependencies first, and only then creates the missing seed paths and
+  regenerates merge, deploy, the ignore file, the workspace and provisioning.
+  An adapter's migrations are read from the release's bundle, so they run in a
+  project for the first time, and a project's copy of an adapter now carries
+  every file pkit reads there, `permission-enforcement.yaml` among them.
+  **New stops, before anything is written.** A capability's new version that
+  ships a skill or agent your project's own artefact already names is asked
+  about at a terminal (override, skip or inspect), and a skip is recorded in
+  the capability's manifest before its copy. Without a terminal the upgrade
+  stops and names a re-run at a terminal or a rename. An adapter or a
+  capability this pkit ships older than your project records stops the
+  upgrade, with no override. **The dependency gates** read the versions the
+  upgrade installs: a capability the upgrade moves whose dependency is missing
+  or out of range stops it, and a moved dependency that leaves a capability of
+  your own out of range, or with a mandatory process connection unmet, warns
+  and proceeds only under the new `pkit upgrade --force`, which overrides
+  nothing else. The report lists each allow entry and top-level key the
+  settings merge adds to `.claude/settings.json`, and the dry run lists each
+  component's migrations and each collision it would ask about.
+  `pkit capabilities upgrade` becomes a transition of one capability: it checks
+  the new version's `requires_backbone`, records a skip before its copy, and
+  runs the capability's migrations after its copy, then deploys and renders
+  `.pkit/.gitignore`.

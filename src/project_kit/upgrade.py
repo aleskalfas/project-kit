@@ -2,25 +2,28 @@
 
 The one command that moves a project to a new release. It records its target
 first, as `backbone_version`, and its completion last, as `completed_version`,
-and every migration runs inside it. Its steps today:
+and every migration runs inside it, in COR-010's order (ADR-065 point 4):
 
-  1. Resolve compatibility (every component's *post-upgrade* `requires_backbone`
-     — read from source, the version the copy brings — must include the target
-     backbone version), and the capability dependency gate.
-  2. Record the target, and move each capability manifest still at its root
-     under its `project/`.
+  1. Compatibility and collisions, each of which may refuse and none of which
+     writes: the refusal of an adapter or capability its bundle ships older
+     than the project records (point 7), every component's post-upgrade
+     `requires_backbone` against the target, the dependency gates over the set
+     the transition would leave (COR-030, COR-053 point 6), and the collision
+     flow, which asks at a terminal and refuses without one (point 6).
+  2. Record the target, move each capability manifest still at its root under
+     its `project/`, and record each skip chosen in step 1.
   3. Propagate at the target, through the propagation step `pkit sync` runs
      (`sync.propagate`), never the sync command, so sync's guard never stops an
-     upgrade (ADR-065 point 1).
-  4. Run each copied capability's migrations, after its copy, and restamp it.
-  5. Register an adapter the target adds, create each missing seed path, and
-     regenerate the derivable state.
-  6. Run the backbone migrations, from the last completion, then each adapter's.
-  7. Record the completion, then the pin.
-
-#1461 puts these in COR-010's order: the backbone's migrations, the adapters'
-and the capabilities', dependencies first, before the seed paths and the
-derivable state (ADR-065 point 4).
+     upgrade (ADR-065 point 1). Remove each project artefact an override
+     replaced, register an adapter the target adds, and render
+     `.pkit/.gitignore`, so a migration reads the target's render.
+  4. Run the backbone migrations, from the last completion.
+  5. Run each adapter's migrations, read from the bundle, and record it.
+  6. Run each capability's migrations, dependencies first, and restamp it.
+  7. Create each missing seed path.
+  8. Regenerate the derivable state, and report each widening the settings
+     merge brings.
+  9. Record the completion, then (10) the pin.
 
 When the project is current, upgrade reports it and exits: refreshing content
 at the recorded version is `sync`'s job, not upgrade's.
@@ -33,9 +36,10 @@ import re
 import shlex
 import subprocess
 import sys
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import NoReturn
+from typing import TYPE_CHECKING, NoReturn
 
 import click
 from packaging.version import InvalidVersion, Version
@@ -83,8 +87,8 @@ from project_kit.sync import (
     COPIES,
     EXTERNAL,
     INCUBATED,
-    OLDER,
     ORPHAN,
+    UNVERSIONED,
     CapabilityPlan,
     plan_capabilities,
     propagate,
@@ -95,6 +99,9 @@ from project_kit.sync import (
 )
 from project_kit.versioning import is_release_version
 
+if TYPE_CHECKING:
+    from project_kit.capabilities import MandatoryUpstream
+
 # Capability-dependency check (COR-030) — imported lazily below to avoid
 # any circular-import issues at module load time. The functions used are:
 #   capabilities.check_capability_dependencies
@@ -104,9 +111,19 @@ from project_kit.versioning import is_release_version
 
 
 def run_upgrade(
-    target_root: Path, dry_run: bool = False, pin: bool = True, self_update: bool = True
+    target_root: Path,
+    dry_run: bool = False,
+    pin: bool = True,
+    self_update: bool = True,
+    force: bool = False,
 ) -> None:
     """Transition the project to the source kit's current backbone version.
+
+    The steps run in COR-010's order, as the module docstring lists them
+    (ADR-065 point 4). *force* (`pkit upgrade --force`) overrides the two
+    warnings of the dependency gates, for a capability that does not move, and
+    nothing else: no guard, no compatibility refusal, no refusal of a
+    component bundled older, and no collision (point 6).
 
     **Pins by default** (ADR-064): an **un-pinned** project is pinned at the
     version its content just synced to, so pinning is the norm and a project
@@ -200,11 +217,8 @@ def run_upgrade(
     manifest = read_backbone_manifest(target_root)
     components = manifest.components if manifest is not None else []
 
-    # Step 1: compatibility resolution against the POST-upgrade (source)
-    # component versions — what the propagation step copies — not the stale
-    # installed copies (which always lag the auto-broadened source ceiling).
-    _resolve_compatibility(components, target_root, source_kit, target_version)
-
+    # A project already current returns after upgrade's own checks, before step
+    # 1, and only writes or raises its pin (ADR-065 point 4).
     if manifest is not None and is_current(target_root, source_kit, manifest, target_version):
         click.echo(f"Already at backbone v{target_version}; nothing to upgrade.")
         # ADR-049: content is already current, but a pinned project may still
@@ -225,22 +239,37 @@ def run_upgrade(
 
     # Every capability's record is read before anything is written (ADR-065
     # point 2): its version falls back to the installed `package.yaml`, which the
-    # copy replaces. The transition copies and migrates every shipped capability
-    # the bundle ships, but one it ships older.
+    # copy replaces.
     from project_kit import capabilities as caps
 
     plans = plan_capabilities(target_root, source_kit, caps.read_capability_records(target_root))
-    # Every shipped capability the bundle ships, but one it ships older than its
-    # record, which a transition never moves down (ADR-065 point 7).
+    moves = component_moves(target_root, source_kit, manifest) if manifest is not None else []
+    _report_component_moves(moves)
+
+    # Step 1: compatibility and collisions (ADR-065 points 4, 6 and 7). Each may
+    # refuse, and none writes: the refusal of a component its bundle ships older,
+    # compatibility resolution against the post-upgrade (bundled) versions, the
+    # dependency gates over the set the transition would leave, and the
+    # collision flow, which asks a person or refuses.
+    refuse_components_bundled_older(moves)
+    _resolve_compatibility(components, target_root, source_kit, target_version)
+    _check_capability_dep_conflicts_for_upgrade(target_root, plans, force=force)
+    answers = _settle_new_collisions(target_root, plans, dry_run=dry_run)
+    plans = [answers.in_force(plan) for plan in plans]
+    # Every shipped capability the bundle ships moves with the release.
     moving = [plan for plan in plans if plan.disposition in COPIES]
     ctx = InstallContext(target_root=target_root, source_kit=source_kit, dry_run=dry_run)
 
-    # The target is recorded before anything else is written (ADR-065 point 4,
-    # step 2), so an interrupted transition reads as one, to this pkit and to an
-    # older one alike. Then each capability manifest still at its root moves
-    # under its `project/`, where the copy cannot prune it. Then propagation at
-    # the target (step 3), through the propagation step sync runs, never the sync
-    # command, so sync's guard never stops an upgrade.
+    # Step 2: the target is recorded before anything else is written, so an
+    # interrupted transition reads as one, to this pkit and to an older one
+    # alike. Then each capability manifest still at its root moves under its
+    # `project/`, where the copy cannot prune it, and each skip chosen in step 1
+    # is recorded there, so an interrupted transition does not ask again.
+    # Step 3: propagation at the target, through the propagation step sync runs,
+    # never the sync command, so sync's guard never stops an upgrade. Then each
+    # override removes the project's artefact, an adapter the target adds is
+    # registered, and `.pkit/.gitignore` is rendered, so a migration reads the
+    # target's render.
     if dry_run:
         click.echo(
             f"  {'would record':<12} .pkit/manifest.yaml backbone_version -> {target_version} "
@@ -258,35 +287,42 @@ def run_upgrade(
             "(the target)"
         )
         _move_root_manifests(target_root, plans, dry_run=False)
+        _record_new_skips(target_root, moving, answers)
         propagate(ctx, moving)
-
-    # Each capability's migrations run after its copy, from the version it
-    # records, and its manifest is restamped when they finish (ADR-065 point 4).
-    # #1461 orders them dependencies first, after the backbone's and the
-    # adapters', and the derivable state after them all.
-    _migrate_capabilities(target_root, plans, moving, dry_run=dry_run)
-
-    if not dry_run:
-        # An adapter the copy placed that the registry lacks is registered, and
-        # recorded at the version it ships, before the render reads the registry.
+        caps.apply_overrides(target_root, answers.overridden, dry_run=False)
         register_adapters(target_root)
         reread = read_backbone_manifest(target_root)
         components = reread.components if reread is not None else []
+        _render_runtime_ignore(target_root)
 
-    # The seed paths a release declares are created where missing, never over
-    # one that exists (ADR-065 point 11), before deploy reads the overlay and
-    # merge the adapter's project settings. Then the derivable state: merge
-    # delivery, deploy, the `.pkit/.gitignore` render, which a backbone
-    # migration may read, the agent workspace and provisioning.
-    seed_missing_paths(ctx, capabilities=[plan.name for plan in moving])
-    if not dry_run:
-        regenerate_derivable_state(ctx)
-
+    # Step 4: the backbone's migrations, from the last completion.
     _run_backbone_migrations(target_root, source_kit, completed, target_version, dry_run)
+    # Step 5: each adapter's, read from the bundle, and its record.
     _run_component_migrations(target_root, source_kit, components, dry_run)
+    # Step 6: each capability's, after its copy, dependencies first, and its
+    # restamp.
+    _migrate_capabilities(target_root, plans, dependencies_first(moving), dry_run=dry_run)
 
-    # The completion is recorded last before the pin (ADR-065 point 4, step 9):
-    # every migration has run and the derivable state is regenerated.
+    # Step 7: the seed paths a release declares are created where missing, never
+    # over one that exists (ADR-065 point 11): after the migrations, so a
+    # migration that moves a project's file to a seed path finds no fresh seed
+    # there, and before deploy reads the overlay and merge the adapter's project
+    # settings.
+    seed_missing_paths(ctx, capabilities=[plan.name for plan in moving])
+    # Step 8: the derivable state, after every migration: merge delivery,
+    # deploy, `.pkit/.gitignore` rendered again, the agent workspace and
+    # provisioning. The report names each widening the settings merge brings.
+    if not dry_run:
+        from project_kit import settings_consolidate as settings
+
+        before = settings.read_merged_settings(target_root)
+        regenerate_derivable_state(ctx)
+        settings.report_widening(
+            settings.settings_widening(before, settings.read_merged_settings(target_root))
+        )
+
+    # Step 9: the completion is recorded last before the pin: every migration
+    # has run and the derivable state is regenerated.
     if dry_run:
         click.echo(
             f"  {'would record':<12} .pkit/manifest.yaml completed_version -> {target_version} "
@@ -299,11 +335,12 @@ def run_upgrade(
             "(the transition is complete)"
         )
 
-    # ADR-049: on a pinned project, flip the pin LAST — after content sync and
-    # migrations — so a failed upgrade never advances the pin past content that
-    # isn't in place. The write itself is atomic. On an un-pinned project the same
-    # last-position write freezes the pin at the just-synced version by default
-    # (pin-by-default, ADR-064; `--no-pin` sets pin=False to skip it).
+    # Step 10, ADR-049: on a pinned project, flip the pin LAST — after content
+    # sync and migrations — so a failed upgrade never advances the pin past
+    # content that isn't in place. The write itself is atomic. On an un-pinned
+    # project the same last-position write freezes the pin at the just-synced
+    # version by default (pin-by-default, ADR-064; `--no-pin` sets pin=False to
+    # skip it).
     if pinned:
         _raise_pin_to(target_root, target_version, dry_run)
     elif pin:
@@ -322,7 +359,8 @@ class ComponentMove:
 
     *recorded* is None when it records no version. Most are moves a transition
     makes. One *ahead* of the bundle is not: a transition never moves a recorded
-    state down (ADR-065 point 7), and refuses it once #1461 builds that refusal.
+    state down, and refuses it in its step 1 (ADR-065 point 7,
+    `refuse_components_bundled_older`).
     """
 
     kind: str
@@ -510,6 +548,212 @@ def _report_transition(
     click.echo()
 
 
+def _report_component_moves(moves: Sequence[ComponentMove]) -> None:
+    """Each component's move, in the report and the dry run alike (ADR-065 point 4):
+    every registered adapter and shipped capability the transition records at the
+    version the bundle ships. One the bundle ships older is not a move, and step 1
+    refuses it."""
+    up = [move for move in moves if not move.ahead]
+    if not up:
+        return
+    click.echo("  Components")
+    for move in up:
+        origin = move.recorded if move.recorded is not None else "no recorded version"
+        click.echo(f"    {move.kind} {move.name!r}: {origin} -> {move.bundled}")
+    click.echo()
+
+
+def refuse_components_bundled_older(moves: Sequence[ComponentMove]) -> None:
+    """Refuse a transition whose bundle ships an adapter or a capability older than
+    the project records (ADR-065 point 7).
+
+    Copying it would move its recorded version down, under migrations that run
+    forward only (COR-010). Skipping it would leave the project at two releases
+    (COR-059 point 7). So the transition refuses in its step 1, before it writes
+    anything. No flag overrides it, `pkit upgrade --force` included. The message
+    names each component, both versions, and a pkit whose bundle ships that
+    version or newer.
+    """
+    ahead = [move for move in moves if move.ahead]
+    if not ahead:
+        return
+    lines = [
+        f"refusing to upgrade: this pkit's bundle ships {move.kind} {move.name!r} at "
+        f"{move.bundled}, older than the {move.recorded} this project records."
+        for move in ahead
+    ]
+    lines.append(
+        "A transition never moves a recorded version down: migrations run forward only "
+        "(COR-010, ADR-065 point 7). Nothing was written, and no flag overrides this refusal."
+    )
+    lines.extend(
+        f"Run the upgrade with a pkit whose bundle ships {move.kind} {move.name!r} at "
+        f"{move.recorded} or newer."
+        for move in ahead
+    )
+    raise click.ClickException("\n       ".join(lines))
+
+
+@dataclass(frozen=True)
+class CollisionAnswers:
+    """What a person chose for each new collision in step 1 (ADR-065 point 6).
+
+    *skips* holds the artefacts each capability's copy leaves out, by
+    capability, and *overridden* the project's artefacts an override removes
+    once the capabilities are copied in.
+    """
+
+    skips: Mapping[str, tuple[tuple[str, str], ...]] = field(default_factory=lambda: {})
+    overridden: tuple[Path, ...] = ()
+
+    def in_force(self, plan: CapabilityPlan) -> CapabilityPlan:
+        """*plan* with the skips in force: those its record holds and those chosen."""
+        chosen = self.skips.get(plan.name)
+        if not chosen or plan.record is None:
+            return plan
+        skipped = tuple(sorted({*plan.record.skipped, *chosen}))
+        return replace(plan, record=replace(plan.record, skipped=skipped))
+
+
+def _settle_new_collisions(
+    target_root: Path, plans: Sequence[CapabilityPlan], *, dry_run: bool
+) -> CollisionAnswers:
+    """The collision flow of a transition of the backbone (ADR-065 point 6, COR-017).
+
+    For each shipped capability the transition moves, the new collisions its
+    bundled version brings (`capabilities.detect_new_collisions`): a name its
+    installed copy holds, or its record skips, is not new, and the artefacts of
+    the release, core's and each shipped capability's, are left out. Where a
+    person can answer, standard input and standard output both terminals, it
+    asks override, skip or inspect for each. With nobody to answer it refuses,
+    before anything is written, and names a terminal re-run or a rename. A dry
+    run lists each collision and asks nothing. No capability is held back, so
+    the project stays at one release (COR-059 point 7).
+    """
+    from project_kit import capabilities as caps
+
+    released = frozenset(
+        plan.name
+        for plan in plans
+        if plan.source is not None and plan.disposition not in (INCUBATED, EXTERNAL)
+    )
+    found = [
+        (plan.name, finding)
+        for plan in plans
+        if plan.disposition in COPIES and plan.source is not None
+        for finding in caps.detect_new_collisions(
+            target_root,
+            plan.source,
+            skipped=plan.record.skipped if plan.record is not None else (),
+            released=released,
+        )
+    ]
+    if not found:
+        return CollisionAnswers()
+    click.echo(f"  {len(found)} new naming collision(s) a capability's new version brings:")
+    for name, finding in found:
+        click.echo(
+            f"    - capability {name!r}: {finding.artifact_kind} '{finding.artifact_name}' "
+            f"collides with {finding.target_path.relative_to(target_root)}"
+        )
+    if dry_run:
+        click.echo(
+            "  The upgrade asks about each one where a person can answer (override, skip or "
+            "inspect), and refuses without one, before it writes anything."
+        )
+        click.echo()
+        return CollisionAnswers()
+    if not _at_a_terminal():
+        raise click.ClickException(
+            "\n       ".join(
+                [
+                    "refusing to upgrade: a capability's new version brings a new naming "
+                    "collision, and nobody can answer here: standard input and standard "
+                    "output are not both terminals. Nothing was written.",
+                    "Run `pkit upgrade` again at a terminal: it asks about each collision, "
+                    "override, skip or inspect (COR-017).",
+                    "Or rename the project's artefact, so the names no longer collide, and "
+                    "run `pkit upgrade` again.",
+                ]
+            )
+        )
+    click.echo()
+    skips: dict[str, list[tuple[str, str]]] = {}
+    overridden: list[Path] = []
+    for name, finding in found:
+        choice = caps.resolve_collision_interactive(target_root, finding, capability=name)
+        artefact = (finding.artifact_kind, finding.artifact_name)
+        if choice == "skip":
+            skips.setdefault(name, []).append(artefact)
+        else:
+            overridden.extend(caps.project_artefact_paths(target_root, *artefact))
+    click.echo()
+    return CollisionAnswers(
+        skips={name: tuple(chosen) for name, chosen in skips.items()},
+        overridden=tuple(overridden),
+    )
+
+
+def _record_new_skips(
+    target_root: Path, moving: Sequence[CapabilityPlan], answers: CollisionAnswers
+) -> None:
+    """Record each skip chosen in step 1 in its capability's manifest, before the
+    copy (ADR-065 point 6), so a transition a migration stops does not ask again."""
+    from project_kit import capabilities as caps
+
+    for plan in moving:
+        if plan.name not in answers.skips or plan.record is None:
+            continue
+        written = caps.record_skips(
+            target_root, plan.name, plan.record.skipped, version=plan.recorded
+        )
+        where = "in its manifest" if written else "at its restamp, since it records no version"
+        click.echo(
+            f"  {'recorded':<12} the skips of capability {plan.name!r} {where}: "
+            + ", ".join(f"{kind} '{name}'" for kind, name in answers.skips[plan.name])
+        )
+
+
+def dependencies_first(moving: Sequence[CapabilityPlan]) -> list[CapabilityPlan]:
+    """*moving* ordered so that each capability follows those it requires (COR-030).
+
+    A capability's requirements are its bundled version's `requires_capabilities`
+    among the capabilities the transition moves, optional ones included. Each
+    keeps its registry order otherwise. A cycle is broken at the capability of
+    it first in registry order: the others in the cycle run before it.
+    """
+    by_name = {plan.name: plan for plan in moving}
+    ordered: list[CapabilityPlan] = []
+    placed: set[str] = set()
+    visiting: set[str] = set()
+
+    def place(plan: CapabilityPlan) -> None:
+        if plan.name in placed or plan.name in visiting:
+            return
+        visiting.add(plan.name)
+        requires = plan.source.package.requires_capabilities if plan.source is not None else ()
+        for dependency in requires:
+            required = by_name.get(dependency.name)
+            if required is not None:
+                place(required)
+        visiting.discard(plan.name)
+        placed.add(plan.name)
+        ordered.append(plan)
+
+    for plan in moving:
+        place(plan)
+    return ordered
+
+
+def _render_runtime_ignore(target_root: Path) -> None:
+    """Render `.pkit/.gitignore` from the declarations the target ships, right after
+    propagation, so a migration reads the target's render (ADR-065 point 4, step 3).
+    The derivable state renders it again after every migration."""
+    from project_kit import visibility
+
+    click.echo(visibility.render_runtime_ignore(target_root))
+
+
 def _move_root_manifests(target_root: Path, plans: list[CapabilityPlan], *, dry_run: bool) -> None:
     """Move each capability manifest still at its root under its `project/`.
 
@@ -538,13 +782,14 @@ def _migrate_capabilities(
     target_root: Path, plans: list[CapabilityPlan], moving: list[CapabilityPlan], *, dry_run: bool
 ) -> None:
     """Each copied capability's migrations, after its copy, then its restamp; and a
-    line for each capability the transition leaves where it is.
+    line for each capability the transition leaves where it is (ADR-065 point 4,
+    step 6).
 
-    *moving* are the capabilities the propagation step copied, in registry
-    order (`capabilities.migrate_copied_capability`). A capability bundled
-    older than its record is kept: a transition never moves a recorded version
-    down, and #1461 refuses it. An incubated, externally sourced or
-    no-longer-shipped capability keeps its own course.
+    *moving* are the capabilities the propagation step copied, in the order
+    their migrations run, dependencies first (`dependencies_first`,
+    `capabilities.migrate_copied_capability`). A capability bundled older than
+    its record never reaches here: step 1 refuses the transition. An incubated,
+    externally sourced or no-longer-shipped capability keeps its own course.
     """
     from project_kit import capabilities as caps
 
@@ -559,12 +804,7 @@ def _migrate_capabilities(
         caps.migrate_copied_capability(target_root, plan.source, plan.record, dry_run=dry_run)
     for plan in left:
         name = repr(plan.name)
-        if plan.disposition == OLDER:
-            click.echo(
-                f"    {'kept':<12} {name} at v{plan.recorded}: the bundle ships v{plan.bundled}, "
-                "older, and a recorded version never moves down."
-            )
-        elif plan.disposition == ORPHAN:
+        if plan.disposition == ORPHAN:
             click.echo(
                 f"    {'orphan':<12} {name} — no longer ships from source; "
                 "leaving installed copy in place."
@@ -576,7 +816,7 @@ def _migrate_capabilities(
                 f"    {'skipped':<12} {name} — externally sourced: it moves by its pin "
                 "(COR-041), never as shipped."
             )
-        else:
+        elif plan.disposition == UNVERSIONED:
             click.echo(
                 f"    {'skipped':<12} {name} — the bundle's package.yaml names no version "
                 f"({plan.bundled!r}), so there is nothing to move it to."
@@ -1270,13 +1510,8 @@ def _resolve_compatibility(
     (`connections.range_admits`). Raises `click.ClickException` on conflict so
     the caller surfaces it before any state changes.
 
-    Also checks capability dependency requirements (COR-030): for each installed
-    capability that declares ``requires_capabilities``, verifies that each
-    required dependency is installed and each installed one satisfies its
-    range. Uses the *installed* copies and versions of both sides, as they stand
-    before this upgrade's copy — which moves every installed kit-shipped
-    capability its bundle ships, but one it ships older, and restamps its
-    version. Conflicts are refused with an actionable hint.
+    Compatibility resolution in step 1 (ADR-065 point 4). The dependency gates
+    between capabilities follow it (`_check_capability_dep_conflicts_for_upgrade`).
     """
     from project_kit.connections import REQUIRES_BACKBONE_KEY, range_admits, read_package
 
@@ -1307,14 +1542,6 @@ def _resolve_compatibility(
             "compatibility check failed — installed components are not compatible "
             f"with backbone v{target_version}:\n" + "\n".join(conflicts)
         )
-
-    # Capability-dependency check (COR-030): refuse backbone upgrade when an
-    # installed capability's required dependency is absent, or an installed one
-    # is out of range. It reads the installed copies and versions of both sides,
-    # as they stand before this upgrade's copy. The copy moves every installed
-    # kit-shipped capability its bundle ships, but one it ships older, and this
-    # check does not read the versions it installs (#1461 has it read them).
-    _check_capability_dep_conflicts_for_upgrade(target_root, components)
 
 
 def _resolve_package_yaml(
@@ -1418,10 +1645,14 @@ def _run_component_migrations(
     - **No manifest,** or one that records no version: it reads as at the
       backbone. It is recorded at the version the bundle ships, and runs no
       migration.
-    - **A manifest:** the scripts in its window run, read from the project's
-      copy of the adapter (the bundle once #1461 reads them there). It is then
-      recorded at the bundled version, with no script in the window too, so a
-      record never stays behind the content.
+    - **A manifest:** the scripts in its window run, read from the running
+      pkit's bundle, as a capability's are: the adapter copy carries no
+      `migrations/` (ADR-065 point 4, step 5). It is then recorded at the
+      bundled version, with no script in the window too, so a record never
+      stays behind the content.
+
+    An adapter the bundle ships older than its record never reaches here: step
+    1 refuses the transition (`refuse_components_bundled_older`).
     """
     eligible = [c for c in components if c.kind == "adapter"]
     if not eligible:
@@ -1454,17 +1685,11 @@ def _run_component_migrations(
             ran += 1
             continue
 
-        if _same_version(installed_manifest.version, bundled):
-            continue
         if not _moves_up(installed_manifest.version, bundled):
-            if installed_manifest.version != bundled:
-                # Never moved down (ADR-065 point 7); #1461 refuses the transition.
-                click.echo(
-                    f"  {'kept':<12} {label} at {installed_manifest.version}: the bundle "
-                    f"ships {bundled}, older, and a recorded version never moves down"
-                )
+            # At its bundled version, or ahead of it, which step 1 refuses: a
+            # recorded version never moves down (ADR-065 point 7).
             continue
-        source_dir = target_root / ".pkit" / "adapters" / entry.name
+        source_dir = _bundled_adapter_package(source_kit, entry.name).parent
         scripts = pending_migration_scripts(
             source_dir / "migrations", installed_manifest.version, bundled
         )
@@ -1512,60 +1737,131 @@ def _restamp_component_manifest_version(
 
 def _check_capability_dep_conflicts_for_upgrade(
     target_root: Path,
-    components: list[ComponentRegistryEntry],
+    plans: Sequence[CapabilityPlan],
+    *,
+    force: bool,
 ) -> None:
-    """Refuse backbone upgrade when any installed capability has an unsatisfied dependency.
+    """The dependency gates of a transition of the backbone, over the set it would
+    leave (ADR-065 point 6; COR-030, COR-053 point 6).
 
-    Iterates over every installed capability in the registry, reads its
-    installed ``package.yaml`` (not the source copy), and calls
-    ``capabilities.check_capability_dependencies`` to evaluate each declared
-    ``requires_capabilities`` entry against the installed state, as it stands
-    before this upgrade's copy. The copy moves every installed kit-shipped
-    capability its bundle ships, but one it ships older, and restamps its
-    version; this check does not read the versions it installs. An optional
-    dependency that is not installed passes.
+    That set holds every shipped capability the transition moves at the version
+    its bundle ships, with that version's `requires_capabilities` and
+    mandatory process connections, and every other capability at its installed
+    version. Within one release the moving capabilities agree, so a conflict
+    involves a capability that does not move: an incubated, externally-sourced
+    or no-longer-shipped one. The gates run as `pkit capabilities upgrade` runs
+    them, in COR-030's direction split:
 
-    This is the backbone-wide half of the capability-dependency gate
-    (COR-030). The single-capability-upgrade half lives in
-    ``upgrade_capability_cmd`` in ``cli.py``.
+    - **A moving capability** whose required dependency is not installed, or
+      whose dependency is out of the range it declares, refuses with a hint,
+      and so does one whose mandatory upstream it would leave unmet. The
+      project controls that dependency. No flag overrides it.
+    - **A moving dependency** whose new version falls outside the range a
+      capability that does not move declares for it warns, naming each such
+      dependent, and so does one that leaves a dependent's mandatory
+      connection unmet. The transition proceeds only under *force*
+      (`pkit upgrade --force`), so neither is a hard block.
 
-    Direction: the check reads the state before the copy moves any capability
-    version, so any desync found here is pre-existing. We apply the "dependent
-    against out-of-range dependency" disposition (refuse with hint) rather than
-    the "dependency past dependent's range" disposition (warn + force), because
-    the operator can resolve by first upgrading the dependency capability.
+    A pair in which neither side moves is not the transition's to judge, and
+    neither is a mandatory connection already unmet before it. An optional
+    dependency that is not installed passes. Read-only.
     """
     from project_kit import capabilities as caps
+    from project_kit.connections import range_admits
 
-    dep_conflicts: list[str] = []
-    for entry in components:
-        if entry.kind != "capability":
-            continue
-        pkg_yaml_path = target_root / ".pkit" / "capabilities" / entry.name / "package.yaml"
-        if not pkg_yaml_path.is_file():
-            continue
-        pkg = caps._read_package_yaml(pkg_yaml_path)
-        if pkg is None or not pkg.requires_capabilities:
-            continue
-        conflicts = caps.check_capability_dependencies(target_root, pkg.requires_capabilities)
-        for conflict in conflicts:
-            if conflict.reason == "absent":
-                dep_conflicts.append(
-                    f"  capability '{entry.name}' requires capability "
-                    f"'{conflict.dep_name}' ({conflict.dep_version_range}), "
-                    f"which is not installed — install it first"
-                )
+    moving = {
+        plan.name: plan for plan in plans if plan.disposition in COPIES and plan.source is not None
+    }
+    if not moving:
+        return
+    registered = {plan.name for plan in plans}
+
+    def version_after(name: str) -> str | None:
+        plan = moving.get(name)
+        if plan is not None:
+            return plan.bundled
+        return caps.get_installed_capability_version(target_root, name)
+
+    refusals: list[str] = []
+    for plan in moving.values():
+        requires = plan.source.package.requires_capabilities if plan.source is not None else ()
+        for dep in requires:
+            if dep.name not in registered:
+                if not dep.optional:
+                    refusals.append(
+                        f"capability {plan.name!r} v{plan.bundled} requires capability "
+                        f"{dep.name!r} ({dep.version}), which is not installed: install it first"
+                    )
+                continue
+            version = version_after(dep.name)
+            if version is None or range_admits(dep.version, version) is not False:
+                continue
+            if dep.name in moving:
+                why = f"and this release ships v{version}"
             else:
-                dep_conflicts.append(
-                    f"  capability '{entry.name}' requires capability "
-                    f"'{conflict.dep_name}' {conflict.dep_version_range}, "
-                    f"but v{conflict.installed_version} is installed — "
-                    f"upgrade it first"
+                why = (
+                    f"and v{version} is installed, which this upgrade does not move: "
+                    "upgrade it first"
                 )
-
-    if dep_conflicts:
+            refusals.append(
+                f"capability {plan.name!r} v{plan.bundled} requires capability "
+                f"{dep.name!r} {dep.version}, {why}"
+            )
+    sources = [plan.source for plan in moving.values() if plan.source is not None]
+    carried, left = caps.marks_a_transition_leaves_unmet(target_root, sources)
+    refusals.extend(_mandatory_line(unmet) for unmet in carried)
+    if refusals:
         raise click.ClickException(
-            "capability dependency check failed — installed capabilities have "
-            "unsatisfied dependencies:\n" + "\n".join(dep_conflicts) + "\n"
-            "Resolve the dependencies first, then retry the backbone upgrade."
+            "capability dependency check failed: the capabilities this upgrade moves "
+            "would have unmet dependencies:\n"
+            + "".join(f"  - {line}\n" for line in refusals)
+            + "Install or upgrade the capabilities they need first, then retry the "
+            "upgrade (COR-030, COR-053 point 6). No flag overrides this refusal."
         )
+
+    desynced = [
+        f"{dependent.name!r} declares {name!r} {requirement.version} "
+        f"(this upgrade brings v{plan.bundled})"
+        for dependent in plans
+        if dependent.name not in moving
+        for name, plan in moving.items()
+        for requirement in caps.declared_dependencies(target_root, dependent.name, name)
+        if range_admits(requirement.version, plan.bundled or "") is False
+    ]
+    if not (desynced or left):
+        return
+    heading = "Warning (--force):" if force else "Warning:"
+    if desynced:
+        click.echo(
+            f"  {heading} {len(desynced)} declared range(s) of a capability this upgrade "
+            "does not move would exclude the version it brings (COR-030):"
+        )
+        for line in desynced:
+            click.echo(f"    - {line}")
+    if left:
+        click.echo(
+            f"  {heading} {len(left)} mandatory process connection(s) of a capability this "
+            "upgrade does not move would be left unmet (COR-053 point 6):"
+        )
+        for unmet in left:
+            click.echo(f"    - {_mandatory_line(unmet, carrier=True)}")
+    if force:
+        click.echo(
+            "  Proceeding under --force: upgrade or uninstall those capabilities to restore "
+            "consistency."
+        )
+        click.echo()
+        return
+    raise click.ClickException(
+        "refusing to upgrade: a capability this upgrade moves would leave a capability "
+        "that does not move out of range, or its mandatory process connection unmet.\n"
+        "Upgrade or uninstall those capabilities first, or pass --force to proceed anyway "
+        "(the deadlock-free override, COR-030 and COR-053 point 6)."
+    )
+
+
+def _mandatory_line(unmet: MandatoryUpstream, *, carrier: bool = False) -> str:
+    """One unmet mandatory mark: the capability carrying it where it is not the one
+    the line is about, the upstream, why it is not met, and the mark's reason."""
+    who = f"{unmet.capability!r} depends on " if carrier else f"capability {unmet.capability!r}: "
+    return f"{who}{unmet.process!r}: {unmet.problem} (mandatory: {unmet.reason})"
