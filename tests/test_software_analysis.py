@@ -348,7 +348,9 @@ def test_every_stamped_artefact_passes_the_core_s_friction_pass(seeded: AdopterR
     result = validate_friction(seeded.root)
     assert result.errors == ()
     discovery = fd.discover_artefacts(seeded.root)
-    ids = [a.id for a in discovery.artefacts]
+    # The analysis's own artefacts: the capability's method rule set ships rules,
+    # which are artefacts too (RS-SAN-001, COR-051 point 2), outside the analysis.
+    ids = [a.id for a in discovery.artefacts if a.path.startswith(f"{ANALYSIS}/")]
     assert ids == ["TERM-sandbox", "ACT-tester", "UC-001", "UC-002", "JRN-001"]
 
 

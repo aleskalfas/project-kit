@@ -29,6 +29,8 @@ from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import CAPABILITY, SA, actor_at, installed
 from tests.test_rule_sets import rule_set_text
 
+Kind = rs.RuleSetFindingKind
+
 SAN = CAPABILITY / "rule-sets" / "san.md"
 SAN_REL = f"{SA.as_posix()}/rule-sets/san.md"
 RULE = "RS-SAN-001"
@@ -48,10 +50,10 @@ def _shipped() -> tuple[dict[str, Any], str]:
 
 
 def _section(body: str, rule_id: str) -> str:
-    """The body section headed by `rule_id`, up to the next heading of its level."""
-    match = re.search(rf"^## {rule_id} — .*?(?=^## |\Z)", body, re.MULTILINE | re.DOTALL)
-    assert match is not None, f"no section headed by {rule_id}"
-    return match.group(0)
+    """The body section headed by `rule_id`, read as the rule-set reader reads it."""
+    section = document_parts.entry_section(body, rule_id)
+    assert section, f"no section headed by {rule_id}"
+    return section
 
 
 @pytest.fixture
@@ -80,7 +82,7 @@ def test_the_set_holds_the_format_rule_proposed_its_origin_dec_001() -> None:
     assert entry["origin"] == {"decision": "software-analysis:DEC-001"}
     assert entry["pkit"]["friction"]["anchors"] == {"record": ["software-analysis:DEC-001"]}
     statement = _section(body, RULE).split("\n\n")[1]
-    assert statement == (
+    assert " ".join(statement.split()) == (
         "An analysis artefact or a revalidation record carries its kind's declared "
         "structure, and each kind has a template."
     )
@@ -146,6 +148,8 @@ def _bound(project: AdopterRepo) -> list[str]:
 
 def test_validation_accepts_the_set_as_the_capability_s_method_set(project: AdopterRepo) -> None:
     result = rs.validate_rule_sets(project.root)
+    # The schema was there to judge the set, so no finding means it passed.
+    assert Kind.SCHEMA_UNAVAILABLE not in [f.kind for f in result.findings]
     (san,) = result.discovery.sets_named("SAN")
     assert (san.path, san.citation) == (SAN_REL, "software-analysis:SAN")
     assert [f.where for f in result.findings if f.location.startswith(SAN_REL)] == []
@@ -165,6 +169,8 @@ def test_accepted_the_same_rule_binds_and_its_part_is_the_check_s(project: Adopt
     """The control: the route above carries the rule once it is accepted, and the part
     it declares names a check that is there, so a reviewer leaves it to the check."""
     _with_an_actor_and_a_set_inheriting_san(project)
+    # A fixture, not the acceptance procedure: accepting the rule also takes the set
+    # to a new major (COR-051 point 7), which validation does not hold it to.
     text = (project.root / SAN_REL).read_text(encoding="utf-8")
     project.write({SAN_REL: text.replace("status: proposed", "status: accepted", 1)})
     assert not rs.validate_rule_sets(project.root).errors
