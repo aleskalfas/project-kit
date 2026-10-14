@@ -503,18 +503,18 @@ def _document(kind: str, new_id: str, request: Request) -> str:
     if kind == ACTOR:
         placeholder = str(data["name"])
         data["name"] = _title(request)
-        data[CONTAINER] = _container(request, [])
-        body = body.replace(template_id, new_id).replace(placeholder, _title(request))
-        return f"---\n{dump(data)}---\n\n{body}"
-    data["title"] = _title(request)
-    data["actor"] = request.actor
-    if kind == JOURNEY:
-        data["steps"] = list(request.steps)
-        anchored = list(dict.fromkeys(request.steps))
+        anchored: list[str] = []
     else:
-        anchored = [str(request.actor)]
+        placeholder = TITLE
+        data["title"] = _title(request)
+        data["actor"] = request.actor
+        if kind == JOURNEY:
+            data["steps"] = list(request.steps)
+            anchored = list(dict.fromkeys(request.steps))
+        else:
+            anchored = [str(request.actor)]
     data[CONTAINER] = _container(request, anchored)
-    body = body.replace(template_id, new_id).replace(TITLE, _title(request))
+    body = body.replace(template_id, new_id).replace(placeholder, _title(request))
     if kind == JOURNEY:
         body = _journey_body(body, request.steps)
     return f"---\n{dump(data)}---\n\n{body}"

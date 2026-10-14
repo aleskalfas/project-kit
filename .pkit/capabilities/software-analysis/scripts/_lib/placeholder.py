@@ -32,8 +32,8 @@ from collections.abc import Sequence
 PLACEHOLDER = re.compile(r"<[a-z][^<>\n]*\s[^<>\n]*>")
 
 #: Every placeholder the artefact templates (`templates/actor.md`, `glossary.md`,
-#: `use-case.md`, `journey.md`, and `actors.md`, the collection template `actor.md`
-#: replaced) ever shipped in a front matter's value or a body. Append-only.
+#: `use-case.md`, `journey.md`, and `actors.md`, the collection template that
+#: `actor.md` replaced) ever shipped in a front matter's value or a body. Append-only.
 IN_TEMPLATES = (
     "<Display name>",
     "<what this actor needs from the system, in one sentence>",

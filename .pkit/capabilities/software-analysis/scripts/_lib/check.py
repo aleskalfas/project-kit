@@ -35,7 +35,8 @@ What is checked, each against the record's words:
 - **A name the id disagrees with** (point 3). A use case or journey whose
   file's name carries a number (`UC-007-<slug>.md`) its front matter does not
   give — no id, or another: the stamp counts the number its name carries, so
-  the front matter says the same.
+  the front matter says the same. An actor whose file is not named
+  `<id>.md`: an actor's id names its file.
 - **What a use case or journey names** (points 1 and 3): its actor, and a
   journey's steps, are an actor and use cases of the analysis; and one in
   force names none withdrawn. The stamp refuses the same (`Analysis.unfit`),
@@ -420,6 +421,29 @@ def _named_otherwise(analysis: Analysis) -> list[Finding]:
         else:
             continue
         found.append(Finding(ERROR, artefact.location, message))
+    return found + _actors_named_otherwise(analysis)
+
+
+def _actors_named_otherwise(analysis: Analysis) -> list[Finding]:
+    """An actor whose file's name is not its id: an actor's id names its file (DEC-001
+    point 3), as the stamp names it, so the two say the same. An actor with no id, or
+    one that is no actor id, is the schema's to report."""
+    found: list[Finding] = []
+    pattern = schemas.id_pattern(ACTOR)
+    for artefact in analysis.of_kind(ACTOR):
+        if artefact.entry or artefact.id is None or not pattern.match(artefact.id):
+            continue
+        name = artefact.path.rsplit("/", 1)[-1]
+        if name == f"{artefact.id}.md":
+            continue
+        found.append(
+            Finding(
+                ERROR,
+                artefact.location,
+                f"its name is {name}, its front matter's id {artefact.id}: an actor's id names "
+                f"its file — name the file {artefact.id}.md, or correct `id` (DEC-001 point 3)",
+            )
+        )
     return found
 
 

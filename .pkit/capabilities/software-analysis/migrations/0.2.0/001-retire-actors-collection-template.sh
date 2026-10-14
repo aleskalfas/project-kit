@@ -18,9 +18,9 @@
 #   capability's tree brings `actor.md` and leaves no `actors.md` behind, so
 #   nothing here needs removing.
 # - The actors are the project's files, outside the capability's tree. Moving
-#   one changes its content, and the move needs a revalidation a person
-#   answers (COR-050 point 3), which no script can write. A migration would
-#   also edit files the project owns.
+#   one changes its content, and the move needs the revalidation the change
+#   check asks for (COR-050 point 3), which no script can judge. A migration
+#   would also edit files the project owns.
 # - software-analysis is installed only in project-kit's own clones (the
 #   maintainer's decision for #1346). project-kit moves its own actors in the
 #   change that ships this version, each with its revalidation.

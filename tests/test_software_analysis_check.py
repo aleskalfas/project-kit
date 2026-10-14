@@ -511,6 +511,25 @@ def test_an_actor_without_its_id_or_with_a_foreign_one_is_reported(seeded: Adopt
     assert found[0] == (f"{tester}:/id", "'tester' does not match '^ACT-[a-z][a-z0-9-]*$'")
 
 
+def test_an_actor_whose_file_s_name_is_not_its_id_is_reported(seeded: AdopterRepo) -> None:
+    """An actor's id names its file (DEC-001 point 3), as the stamp names it: a file named
+    otherwise is reported, a file in a folder of the actors' place included, and one named
+    after its id passes wherever it lies."""
+    tester = actor_at("ACT-tester")
+    text = (seeded.root / tester).read_text(encoding="utf-8")
+    other = text.replace("id: ACT-tester", "id: ACT-other").replace(
+        "# ACT-tester — Tester", "# ACT-other — Tester"
+    )
+    seeded.write({tester: other, f"{ACTORS}/people/ACT-tester.md": text})
+    assert errors(check(seeded)) == [
+        (
+            actor_at("ACT-tester"),
+            "its name is ACT-tester.md, its front matter's id ACT-other: an actor's id names "
+            "its file — name the file ACT-other.md, or correct `id` (DEC-001 point 3)",
+        )
+    ]
+
+
 def test_an_entry_missing_its_parts_or_keyed_by_a_foreign_id_is_reported(
     project: AdopterRepo,
 ) -> None:
