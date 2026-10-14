@@ -27,10 +27,10 @@ Usage:
 
 Exit codes:
   0  answered
-  1  no answer: the analysis could not be read, or the actors' file cannot be
-     read as a collection of actors — never an empty answer in its place,
-     whatever the point's policy (COR-052 point 6). An entry that is no actor
-     is skipped, not a reason to give no answer.
+  1  no answer: the analysis could not be read, or any one actor file cannot
+     be read as an actor — never an empty answer in its place, whatever the
+     point's policy (COR-052 point 6). A file that reads, but whose id is no
+     actor id, is skipped, not a reason to give no answer.
 """
 
 from __future__ import annotations

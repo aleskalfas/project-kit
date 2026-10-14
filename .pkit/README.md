@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-14T08:57:38Z
+      at: 2026-10-14T09:31:03Z
       outcome: unchanged
-      unchanged-because: The decisions README now writes points as headings, and the CLI reference says `pkit new decision` stamps a first point heading. This page only signposts the two, by what they hold, so it holds.
+      unchanged-because: The CLI reference and the lifecycle README now give the upgrade's steps in COR-010's order, its collision flow and dependency gates, and pkit capabilities upgrade as a transition of one capability. The map gives each area's role and link, and no role or link moves, so the map holds.
 ---
 
 # project-kit

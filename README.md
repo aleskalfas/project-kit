@@ -17,9 +17,8 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-14T08:57:34Z
-      outcome: unchanged
-      unchanged-because: ADR-049 and ADR-064 now write their points as headings carrying the same numbers, word for word. ADR-049's sentence that it does not reopen ADR-039 moves into its opening, unchanged, and its citation of ADR-039 names a section instead of lines, with the same meaning. merge-settings.sh changes only a comment, which cites ADR-002 and COR-002 by point and section instead of by line, and merges nothing differently. So what this page says of upgrading, pinning and merging into `.claude/settings.json` still holds.
+      at: 2026-10-14T09:30:48Z
+      outcome: updated
 ---
 
 # project-kit
@@ -32,7 +31,7 @@ pkit:
 
 You've probably done this: you write your conventions into `CLAUDE.md`, have Claude generate a couple of agent files, and it works — until it **rots**. Nobody improves it, a fix you make in project A never reaches project B, and there's no safe way to pull updates. You end up owning a pile you now have to maintain by hand.
 
-**project-kit is the missing piece: the maintained, versioned, *safe-to-update* home for your project's methodology** — the rules, decisions, agents, and disciplines your AI reads at the start of every session. It installs like a dependency and upgrades like one. And it **never touches the files you write**, except two it merges into rather than overwrites, on every `init`, `sync` and `upgrade`: `CLAUDE.md` (it adds two `@.pkit/rules/…` include lines if they're missing) and `.claude/settings.json` (it adds the kit's settings and keeps yours, though a kit deny rule you removed is put back; `init` backs the file up first, to `.claude/settings.json.pre-pkit`). A migration may also change a file of yours where a decision record allows it, such as adding a category your agents' overlay lacks. And `pkit upgrade` puts back a starter file you deleted, such as that overlay. Every file has exactly one owner (the kit's, or yours), so an update structurally *cannot* clobber your work.
+**project-kit is the missing piece: the maintained, versioned, *safe-to-update* home for your project's methodology** — the rules, decisions, agents, and disciplines your AI reads at the start of every session. It installs like a dependency and upgrades like one. And it **never touches the files you write**, except two it merges into rather than overwrites, on every `init`, `sync` and `upgrade`: `CLAUDE.md` (it adds two `@.pkit/rules/…` include lines if they're missing) and `.claude/settings.json` (it adds the kit's settings and keeps yours, though a kit deny rule you removed is put back; `init` backs the file up first, to `.claude/settings.json.pre-pkit`). A migration may also change a file of yours where a decision record allows it, such as adding a category your agents' overlay lacks. And `pkit upgrade` puts back a starter file you deleted, such as that overlay. Where a capability ships a skill or an agent named like one of yours, `pkit capabilities install` and `pkit upgrade` ask you first: only your answer replaces yours, and git keeps it. Every file has exactly one owner (the kit's, or yours), so an update structurally *cannot* clobber your work.
 
 That's the honest pitch, including its limit:
 
@@ -90,7 +89,7 @@ Think of pkit as a **package manager for your project's methodology**. Four idea
 
 1. **The tool vs. the install.** `pkit` (the CLI) manages `.pkit/` (the methodology in your repo) — exactly like a package manager and the packages it installs.
 2. **Capabilities are packages.** A small always-there **backbone**, plus **opt-in capabilities** — disciplines you install only if you want them (issue-tracking, code-review, citations). Add what you need, ignore the rest.
-3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched, apart from the merges, migrations and starter files above). That's *why* updates can't conflict, and why you keep everything you write.
+3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched, apart from the merges, migrations, starter files and replacements you choose above). That's *why* updates can't conflict, and why you keep everything you write.
 4. **Versioned, upgrades cleanly.** `pkit upgrade` pulls new versions and runs any migrations automatically — like upgrading a dependency — then pins the project to the version it reached, so the project keeps that version when the installed pkit moves on (`--no-pin` skips the pin).
 
 The shape of `.pkit/`:

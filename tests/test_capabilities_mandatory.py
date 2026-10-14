@@ -14,9 +14,11 @@ judged by the wiring resolver."""
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from typing import Any
 
+import click
 import pytest
 from click.testing import CliRunner
 from ruamel.yaml import YAML
@@ -318,3 +320,80 @@ def test_a_mark_already_unmet_is_not_the_operations_to_warn_about(
 
     broken = caps.mandatory_counterparts_left_unmet(repo.root, "tracker")
     assert [(b.capability, b.process) for b in broken] == [("flow", ISSUES)]
+
+
+# --- a transition of the backbone, over the set it would leave (ADR-065 point 6) ---
+
+
+def _transition_gates(repo: AdopterRepo, kit_source: Path, *, force: bool) -> None:
+    """Upgrade's dependency gates, with every capability *kit_source* ships moving."""
+    from project_kit import upgrade
+    from project_kit.sync import plan_capabilities
+
+    plans = plan_capabilities(repo.root, kit_source, caps.read_capability_records(repo.root))
+    upgrade._check_capability_dep_conflicts_for_upgrade(repo.root, plans, force=force)
+
+
+def test_a_transition_refuses_a_moving_carrier_whose_new_mark_is_unmet(
+    repo: AdopterRepo, kit_source: Path
+) -> None:
+    """The side carrying the mark is refused, `--force` included."""
+    _source(kit_source, "flow")
+    _install(repo, kit_source, "flow")
+    _source(kit_source, "flow", "0.2.0", definitions={"flow": [_coupling(ISSUES)]})
+
+    with pytest.raises(click.ClickException) as excinfo:
+        _transition_gates(repo, kit_source, force=True)
+
+    assert "capability dependency check failed" in excinfo.value.message
+    assert (
+        f"- capability 'flow': '{ISSUES}': its capability 'tracker' is not installed "
+        f"(mandatory: {REASON})"
+    ) in excinfo.value.message
+
+
+def test_a_transition_warns_for_a_capability_that_does_not_move_and_proceeds_under_force(
+    repo: AdopterRepo, kit_source: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`flow` no longer ships, so it does not move; the provider's new version breaks
+    the interface its mark targets: warned, refused, and let through under force."""
+    _source(kit_source, "docs-a", offers={REVIEW: 1})
+    _source(kit_source, "flow", definitions={"flow": [_coupling(REVIEW, version=1)]})
+    _install(repo, kit_source, "docs-a")
+    _install(repo, kit_source, "flow")
+    shutil.rmtree(kit_source / "capabilities" / "flow")
+    _source(kit_source, "docs-a", "0.2.0", offers={REVIEW: 2})
+
+    with pytest.raises(click.ClickException, match="or pass --force to proceed anyway"):
+        _transition_gates(repo, kit_source, force=False)
+
+    out = capsys.readouterr().out
+    assert (
+        "Warning: 1 mandatory process connection(s) of a capability this upgrade does not "
+        "move would be left unmet (COR-053 point 6):"
+    ) in out
+    assert (
+        f"- 'flow' depends on '{REVIEW}': 'docs-a' offers it at interface version 2, and the "
+        f"entry targets version 1 (mandatory: {REASON})"
+    ) in out
+
+    _transition_gates(repo, kit_source, force=True)
+
+    assert "Proceeding under --force" in capsys.readouterr().out
+
+
+def test_a_transition_refuses_a_moving_carrier_whose_mark_was_already_unmet(
+    repo: AdopterRepo, kit_source: Path
+) -> None:
+    """A moving capability's mark is judged in the wiring the transition leaves, as
+    `capabilities upgrade` judges it: one already unmet before still refuses."""
+    _source(kit_source, "flow", definitions={"flow": [_coupling(ISSUES)]})
+    _install(repo, kit_source, "flow")  # installed past the gate, its mark unmet
+    _source(kit_source, "flow", "0.2.0", definitions={"flow": [_coupling(ISSUES)]})
+
+    with pytest.raises(click.ClickException) as excinfo:
+        _transition_gates(repo, kit_source, force=True)
+
+    assert f"- capability 'flow': '{ISSUES}': its capability 'tracker' is not installed" in (
+        excinfo.value.message
+    )

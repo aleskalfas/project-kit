@@ -59,7 +59,6 @@ from project_kit import refs
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
-    ACTORS,
     ANALYSIS,
     CAPABILITY,
     CONFIG,
@@ -68,6 +67,7 @@ from tests.analysis_repo import (
     REPO,
     SA,
     USE_CASES,
+    actor_at,
     installed,
     load,
     prepare,
@@ -89,7 +89,7 @@ FIRST_RUN = f"{JOURNEYS}/JRN-001-first-run.md"
 
 #: A file under `src/generated`, which `friction.exclude` leaves out of the actor's `src/**`.
 GENERATED = "src/generated/stub.py"
-#: The placeholder the stamp leaves in an actor's section.
+#: The placeholder the stamp leaves in an actor's body.
 WHO = "<Who this is, when they come to the system, and what they bring with them.>"
 
 
@@ -551,17 +551,18 @@ def test_a_quote_surviving_only_under_an_excluded_path_is_gone(
     """An anchor stands on no file `friction.exclude` leaves out, so a quote only such a
     file still holds is gone — whether it held the quote at the revalidation point or
     the code was carried into it — never kept, and never moved there: the anchor
-    re-pointed would stand on nothing. The actor is an entry of a collection file,
-    read by the section the explanation gives as its body."""
+    re-pointed would stand on nothing. The actor is a file of its own, read by the
+    body the explanation gives."""
     repo = installed(make_adopter_repo, monkeypatch)
     config = "docs:\n  internal: tech-docs\nfriction:\n  exclude:\n    - src/generated\n"
     stub = {GENERATED: "from run import run_suite\n"}
     runner = {CONFIG: config, RUN: "def run_suite(fast=False):\n    print('run')\n"}
     repo.commit("feat: the runner", runner if carried else {**runner, **stub})
     seed(repo, filled=False)
-    text = (repo.root / ACTORS).read_text(encoding="utf-8")
+    tester = actor_at("ACT-tester")
+    text = (repo.root / tester).read_text(encoding="utf-8")
     assert WHO in text
-    repo.write({ACTORS: text.replace(WHO, "The tester starts `run_suite` to check a change.")})
+    repo.write({tester: text.replace(WHO, "The tester starts `run_suite` to check a change.")})
     repo.commit("docs(analysis): the tester and the suite")
     change = {RUN: "def execute(fast=False):\n    print('run')\n"}
     carried_in = {GENERATED: "def run_suite(fast=False):\n    print('run')\n"}

@@ -11,8 +11,8 @@ declared here and exercised in `test_software_analysis_use_cases.py`.
 - the contribution through the real backbone: with software-analysis alone it
   is inert — no documentation provider, its filler never run; with living-docs
   installed, the actors in force are readers beside the default ones, a page
-  may name one, and an actors file that cannot be read leaves the readers
-  point unresolved rather than answer without them;
+  may name one, and any one actor file that cannot be read leaves the readers
+  point unresolved rather than answer without it;
 - the evidence point through the real backbone — a project filler's entries
   resolve against the companion schema, a malformed one is the project's error;
   an entry is keyed by artefact, commit and check (#1143), so two fillers'
@@ -54,13 +54,13 @@ from project_kit.manifest import (
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
-    ACTORS,
     CAPABILITY,
     JOURNEYS,
     REPO,
     SA,
     USE_CASES,
     VALIDATE,
+    actor_at,
     installed,
     load,
     prepare_seeded,
@@ -364,30 +364,36 @@ def test_alone_the_contributions_are_inert_and_their_fillers_never_run(
     )
 
 
-def _actor(name: str, status: str, *needs: str) -> dict[str, Any]:
-    anchors = {"path": ["src/**"]}
-    return {
+def _actor(actor_id: str, name: str, status: str, *needs: str) -> dict[str, str]:
+    """One actor's file, by where it lies — its front matter written as JSON, valid YAML
+    and exact about strings — headed by its id and name."""
+    fields = {
+        "id": actor_id,
         "name": name,
         "status": status,
         "needs": list(needs),
-        "pkit": {"friction": {"anchors": anchors}},
+        "pkit": {"friction": {"anchors": {"path": ["src/**"]}}},
+    }
+    return {
+        actor_at(actor_id): f"---\n{json.dumps(fields, indent=2)}\n---\n\n# {actor_id} — {name}\n"
     }
 
 
 def _actors(repo: AdopterRepo) -> None:
-    """Two actors in force with their needs, and a withdrawn one, in the actors'
-    collection file — front matter written as JSON, valid YAML and exact about strings."""
-    actors = {
-        "ACT-operator": _actor("Operator", "active", "Keep the service up."),
-        "ACT-retired": _actor("Retired", "withdrawn", "Nothing any more"),
-        "ACT-tester": _actor(
-            "Test author",
-            "active",
-            "Run the suite against a clean sandbox",
-            "Read a failure's cause",
-        ),
-    }
-    repo.write({ACTORS: f"---\n{json.dumps(actors, indent=2)}\n---\n\n# Actors\n"})
+    """Two actors in force with their needs, and a withdrawn one, a file each."""
+    repo.write(
+        {
+            **_actor("ACT-operator", "Operator", "active", "Keep the service up."),
+            **_actor("ACT-retired", "Retired", "withdrawn", "Nothing any more"),
+            **_actor(
+                "ACT-tester",
+                "Test author",
+                "active",
+                "Run the suite against a clean sandbox",
+                "Read a failure's cause",
+            ),
+        }
+    )
 
 
 def test_the_actors_in_force_are_readers_beside_the_defaults(documented: AdopterRepo) -> None:
@@ -450,21 +456,18 @@ def test_a_page_may_name_an_actor_as_its_reader(documented: AdopterRepo) -> None
     assert run_script(documented, VALIDATE).returncode == 0
 
 
-def test_an_entry_that_is_no_actor_is_no_reader(documented: AdopterRepo) -> None:
-    """The actors file is judged as a whole, an entry alone: an entry whose key is no
-    actor id is not a reader — the filler skips it and still answers — and the
-    capability's own check reports it."""
-    actors = {
-        "ACT-tester": _actor("Test author", "active", "Run the suite"),
-        "USER-stray": _actor("Stray", "active", "Anything"),
-    }
-    documented.write({ACTORS: f"---\n{json.dumps(actors, indent=2)}\n---\n\n# Actors\n"})
+def test_a_file_whose_id_is_no_actor_s_is_no_reader(documented: AdopterRepo) -> None:
+    """An actor file that reads is judged alone: one whose `id` is no actor id is not a
+    reader — the filler skips it and still answers — and the capability's own check
+    reports it."""
+    stray = _actor("USER-stray", "Stray", "active", "Anything")
+    documented.write({**_actor("ACT-tester", "Test author", "active", "Run the suite"), **stray})
     completed = run_script(documented, FILL, "--json")
     assert completed.returncode == 0, completed.stderr
     assert [reader["id"] for reader in json.loads(completed.stdout)["value"]] == ["act-tester"]
     assert [e["id"] for e in _resolve(READERS)["entries"]] == ["act-tester", "maintainer", "user"]
     locations = [location for location, _message in _findings(_check(documented), "error")]
-    assert f"{ACTORS}#USER-stray" in locations
+    assert f"{actor_at('USER-stray')}:/id" in locations
 
 
 def test_no_analysis_contributes_no_reader(documented: AdopterRepo) -> None:
@@ -475,18 +478,20 @@ def test_no_analysis_contributes_no_reader(documented: AdopterRepo) -> None:
     assert (ours["state"], ours["query_contract"]) == ("taken", True)
 
 
-def test_an_actors_file_that_cannot_be_read_leaves_the_readers_unresolved(
+def test_any_one_actor_file_that_cannot_be_read_leaves_the_readers_unresolved(
     documented: AdopterRepo,
 ) -> None:
     """A command filler fails closed whatever the point's policy (COR-052 point 6):
-    without the actors it gives no answer, never an empty one; and under the
-    readers point's `fail` policy no page's reader is checked against the rest."""
+    without every actor it gives no answer, never a shorter or an empty one; and under
+    the readers point's `fail` policy no page's reader is checked against the rest. One
+    actor file of three that cannot be read is enough (#1346)."""
     _actors(documented)
-    documented.write({ACTORS: "---\nACT-tester: [unclosed\n---\n\n# Actors\n"})
+    tester = actor_at("ACT-tester")
+    documented.write({tester: "---\nid: [unclosed\n---\n\n# ACT-tester — Test author\n"})
     completed = run_script(documented, FILL, "--json")
     assert (completed.returncode, completed.stdout) == (1, "")
     assert completed.stderr == (
-        f"error: the actors cannot be read: {ACTORS}'s front matter does not parse; "
+        f"error: the actors cannot be read: {tester}'s front matter does not parse; "
         "no readers can be given.\n"
     )
     resolved = _resolve(READERS)
@@ -495,13 +500,21 @@ def test_an_actors_file_that_cannot_be_read_leaves_the_readers_unresolved(
     assert ours["state"] == "inert"
     assert ours["reason"] == (
         "command 'fill-readers' exited 1: error: the actors cannot be read: "
-        f"{ACTORS}'s front matter does not parse; no readers can be given"
+        f"{tester}'s front matter does not parse; no readers can be given"
     )
-    # A file that is no collection of actors is no answer either.
-    documented.write({ACTORS: "# Actors, in prose only\n"})
+    # A file with no front matter is no actor, and no answer either.
+    documented.write({tester: "# ACT-tester — Test author, in prose only\n"})
     completed = run_script(documented, FILL, "--json")
     assert completed.returncode == 1
-    assert completed.stderr.startswith(f"error: the actors cannot be read: {ACTORS} has no ")
+    assert completed.stderr.startswith(f"error: the actors cannot be read: {tester} has no ")
+    # Nor is a file holding keyed entries, as the actors' collection file once did.
+    entries = "---\nACT-tester:\n  name: Test author\n  pkit: {friction: {}}\n---\n"
+    documented.write({tester: entries})
+    completed = run_script(documented, FILL, "--json")
+    assert completed.returncode == 1
+    assert completed.stderr.startswith(
+        f"error: the actors cannot be read: {tester} holds keyed entries: "
+    )
 
 
 # --- the evidence point (DEC-001 point 7) ----------------------------------------------------

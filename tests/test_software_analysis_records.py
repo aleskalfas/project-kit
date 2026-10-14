@@ -19,7 +19,7 @@ Held to software-analysis DEC-001 points 5, 6 and 9:
   `unanchored-because`, instead of anchors, and never with both — written in
   its friction block, the core's key, which the core reads (COR-050 point 1);
   an artefact carrying both, written by hand, is the core's validation finding,
-  and the reason among the entry's own fields is refused;
+  and the reason among the artefact's own fields is refused;
 - **an open regression is visible**: the check reports a record's
   `code-regressed` artefact until it is revalidated on a later day than the
   record, and never fails on it.
@@ -45,6 +45,7 @@ from tests.analysis_repo import (
     NEW,
     RECORDS,
     USE_CASES,
+    actor_at,
     fill,
     front,
     installed,
@@ -353,7 +354,8 @@ def test_a_record_already_written_is_not_overwritten(project: AdopterRepo) -> No
 
 
 @pytest.mark.parametrize(
-    ("kind", "rel", "prefix"), [("actor", ACTORS, "ACT"), ("term", GLOSSARY, "TERM")]
+    ("kind", "rel", "prefix"),
+    [("actor", actor_at("ACT-sponsor"), "ACT"), ("term", GLOSSARY, "TERM")],
 )
 def test_an_actor_or_term_nothing_embodies_carries_its_reason(
     project: AdopterRepo, kind: str, rel: str, prefix: str
@@ -361,7 +363,8 @@ def test_an_actor_or_term_nothing_embodies_carries_its_reason(
     reason = "No code or decision embodies it: it is who funds the project."
     stamped(project, kind, "sponsor", "--unanchored-because", reason)
     fill(project)
-    entry = front(project, rel)[f"{prefix}-sponsor"]
+    written = front(project, rel)
+    entry = written if kind == "actor" else written[f"{prefix}-sponsor"]
     # In the core friction block, never among the entry's own fields (COR-050 point 1).
     assert "unanchored-because" not in entry and list(entry)[-1] == "pkit"
     assert entry["pkit"] == {"friction": {"unanchored-because": reason}}
@@ -390,11 +393,11 @@ def test_an_actor_or_term_nothing_embodies_carries_its_reason(
 def test_unanchored_is_refused_with_anchors_or_without_a_reason(
     project: AdopterRepo, args: tuple[str, ...], refusal: str
 ) -> None:
-    before = {p: (project.root / p).read_text(encoding="utf-8") for p in (ACTORS,)}
+    before = sorted(p.name for p in (project.root / ACTORS).iterdir())
     completed = new(project, *args)
     assert completed.returncode == 1
     assert refusal in completed.stderr
-    assert {p: (project.root / p).read_text(encoding="utf-8") for p in before} == before
+    assert sorted(p.name for p in (project.root / ACTORS).iterdir()) == before
     assert not (project.root / GLOSSARY).exists()
 
 
@@ -410,22 +413,20 @@ def test_unanchored_because_beside_anchors_is_the_core_s_finding(project: Adopte
     """The stamp refuses the pair; a hand edit that writes it into the friction block
     fails the core's validation (COR-050 point 12), and the capability's check says
     nothing of it — the key is the core's."""
-    text = (project.root / ACTORS).read_text(encoding="utf-8")
+    tester = actor_at("ACT-tester")
+    text = (project.root / tester).read_text(encoding="utf-8")
     block = re.search(r"\n( +)friction:\n", text)
     assert block is not None
     indent = block.group(1) + "  "
     written = f"{block.group(0)}{indent}unanchored-because: No code embodies it.\n"
-    project.write({ACTORS: text.replace(block.group(0), written, 1)})
-    assert front(project, ACTORS)["ACT-tester"]["pkit"]["friction"]["anchors"]
+    project.write({tester: text.replace(block.group(0), written, 1)})
+    assert front(project, tester)["pkit"]["friction"]["anchors"]
 
     document = check(project)
     assert errors(document) == [] and _said(document, "warning") == []
     (finding,) = validate_friction(project.root).errors
     assert finding.kind is FrictionFindingKind.UNANCHORED_BESIDE_ANCHORS
-    assert (finding.location, finding.pointer) == (
-        f"{ACTORS}#ACT-tester",
-        "/pkit/friction/unanchored-because",
-    )
+    assert (finding.location, finding.pointer) == (tester, "/pkit/friction/unanchored-because")
 
 
 def test_a_placeholder_left_in_the_block_s_reason_fails_the_check(project: AdopterRepo) -> None:
@@ -433,23 +434,23 @@ def test_a_placeholder_left_in_the_block_s_reason_fails_the_check(project: Adopt
     friction block by hand is caught as a placeholder left in an own field is."""
     stamped(project, "actor", "sponsor", "--unanchored-because", "Nothing embodies it.")
     fill(project)
-    text = (project.root / ACTORS).read_text(encoding="utf-8")
+    sponsor = actor_at("ACT-sponsor")
+    text = (project.root / sponsor).read_text(encoding="utf-8")
     placeholder = "<why nothing embodies it>"
-    project.write({ACTORS: text.replace("Nothing embodies it.", placeholder, 1)})
-    assert front(project, ACTORS)["ACT-sponsor"]["pkit"]["friction"] == {
-        "unanchored-because": placeholder
-    }
+    project.write({sponsor: text.replace("Nothing embodies it.", placeholder, 1)})
+    assert front(project, sponsor)["pkit"]["friction"] == {"unanchored-because": placeholder}
     ((location, message),) = errors(check(project))
-    assert location == f"{ACTORS}#ACT-sponsor:/pkit/friction/unanchored-because"
+    assert location == f"{sponsor}:/pkit/friction/unanchored-because"
     assert f"still holds the placeholder '{placeholder}'" in message
 
 
-def test_the_reason_among_an_entry_s_own_fields_is_refused(project: AdopterRepo) -> None:
-    """The reason is the friction block's, not the entry's: written among the entry's
+def test_the_reason_among_an_artefact_s_own_fields_is_refused(project: AdopterRepo) -> None:
+    """The reason is the friction block's, not the artefact's: written among the actor's
     own fields, the companion schema refuses it as a field it does not know."""
-    text = (project.root / ACTORS).read_text(encoding="utf-8")
-    reason = "ACT-tester:\n  unanchored-because: No code embodies it.\n"
-    project.write({ACTORS: text.replace("ACT-tester:\n", reason, 1)})
+    tester = actor_at("ACT-tester")
+    text = (project.root / tester).read_text(encoding="utf-8")
+    reason = "id: ACT-tester\nunanchored-because: No code embodies it.\n"
+    project.write({tester: text.replace("id: ACT-tester\n", reason, 1)})
     ((location, message),) = errors(check(project))
-    assert location == f"{ACTORS}#ACT-tester"
+    assert location == tester
     assert "'unanchored-because' was unexpected" in message

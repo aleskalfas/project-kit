@@ -11,9 +11,9 @@ pkit:
         - src/project_kit/install.py
       record: [COR-001, COR-014]
     revalidated:
-      at: 2026-10-13T21:19:51Z
+      at: 2026-10-14T09:31:01Z
       outcome: unchanged
-      unchanged-because: This change moves seeding out of the area copy into one seeding step that init and upgrade run, so sync no longer creates a missing project folder. The page says core.md is refreshed on every sync and that sync never touches project.md, which is no seed path. Both still hold, so the page holds.
+      unchanged-because: This change has the adapter copy carry each file at the adapter's top level, and has upgrade run every migration in COR-010's order and settle a new collision first. The page says core.md is refreshed on every sync and that sync never touches project.md. The copy of the rules area does not change, so both still hold and the page holds.
 ---
 
 # Rules

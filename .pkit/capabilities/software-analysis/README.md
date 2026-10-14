@@ -12,14 +12,13 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
     revalidated:
-      at: 2026-10-13T20:06:12Z
-      outcome: unchanged
-      unchanged-because: DEC-001, COR-049, COR-050, COR-052 and COR-053 now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed. Every point this page cites names the same text. DEC-001's deferral is kept as it was, since the page still describes what the capability ships ahead of the record's refinements. It holds.
+      at: 2026-10-14T09:16:59Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
             value: software-analysis:DEC-001
-          reason: "DEC-001 refines ahead of the code: each kind's declared structure, actors as files of their own, the new anchors and a planned record's reviewed-against. The capability does not ship them yet, so this page describes what it ships: the actors in one collection file, a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #234 that apply them. #1363 declares the structure and reviewed-against, and #1346 gives each actor its file. The new anchors follow under EPIC #234, which has no Task for them yet."
+          reason: "DEC-001 refines ahead of the code: each kind's declared structure, the new anchors and a planned record's reviewed-against. The capability does not ship them yet, so this page describes what it ships: a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #1547 that apply them. #1363 declares the structure and reviewed-against, and #1507 writes the new anchors."
 ---
 
 # software-analysis capability
@@ -43,7 +42,8 @@ Under the `analysis/` folder of your internal documentation root (COR-049) — `
 analysis/
 ├── glossary.md                      collection: one entry per term
 ├── use-case-model/
-│   ├── actors.md                    collection: one entry per actor
+│   ├── actors/
+│   │   └── ACT-<slug>.md            one file per actor
 │   ├── use-cases/
 │   │   ├── UC-001-<slug>.md
 │   │   └── <area>/UC-014-<slug>.md  optional grouping by functional area
@@ -62,7 +62,7 @@ A kind with many files gets a folder, and a kind with one file is a file. Folder
 | Place | Each artefact in it | Type |
 |---|---|---|
 | `glossary.md` | an entry | `software-analysis:term` |
-| `use-case-model/actors.md` | an entry | `software-analysis:actor` |
+| `use-case-model/actors/` | a file | `software-analysis:actor` |
 | `use-case-model/use-cases/` | a file, one in an area's folder included | `software-analysis:use-case` |
 | `use-case-model/journeys/` | a file | `software-analysis:journey` |
 
@@ -78,7 +78,7 @@ Create artefacts with the stamp, never by copying a template by hand: it gives e
 
 | Command | Writes |
 |---|---|
-| `pkit analysis new actor <slug> [--name <text>] [--unanchored-because <text>]` | the entry `ACT-<slug>` of `use-case-model/actors.md`, with its section |
+| `pkit analysis new actor <slug> [--name <text>] [--unanchored-because <text>]` | `use-case-model/actors/ACT-<slug>.md`, headed `# ACT-<slug> — <name>`, its needs in its front matter |
 | `pkit analysis new term <slug> [--name <text>] [--unanchored-because <text>]` | the entry `TERM-<slug>` of `glossary.md`, with its section |
 | `pkit analysis new use-case <slug> --actor <ACT-id> [--area <area>] [--title <text>]` | `use-case-model/use-cases/[<area>/]UC-NNN-<slug>.md`, its actor anchored |
 | `pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> … [--title <text>]` | `use-case-model/journeys/JRN-NNN-<slug>.md`, its steps anchored |
@@ -86,10 +86,10 @@ Create artefacts with the stamp, never by copying a template by hand: it gives e
 
 Every artefact form also takes `--path <glob>` and `--record <id>`, each repeatable: the code that makes the artefact true and the decisions it relies on, written as its path and record anchors. Without them an actor or term is stamped unanchored — the core reports that, and never fails on it. An actor or term nothing embodies takes `--unanchored-because <why>` instead: the reason is written as `unanchored-because` in its friction block — the core's key (COR-050 point 1), so the core's unanchored measure lists the artefact apart, with its reason, rather than counting it — and the stamp refuses it beside `--path` or `--record`.
 
-- **Ids.** A slug is a word: a lowercase letter, then lowercase letters, digits and hyphens. An actor is `ACT-<slug>` and a term `TERM-<slug>`; the stamp refuses an id already held, withdrawn or not, since an id is never used again. A use case or journey takes the **next free number**: one past the highest the working tree and the default branch hold, and past every number the default branch's history ever gave a file of its place — one deleted since included; when the history's number is the one it follows, the stamp says which file it was given to. Only your numbering setting frees a number ("Configuration" below): an id it frees is not counted, and the stamp says so, naming the commit, when it is the number it would have followed. A file's number is read from its front matter and from its name (`UC-007-<slug>.md`, as the stamp names it), so a file whose id can't be read still holds its number. The history counts the files the tree reading counts: one `git log` lists the paths ever added under the kind's place, and a path past the tree's highest number counts unless the core's reading at the commit that added it, the place then where it is now, held it as no file of the place — not a Markdown file there, or left out by `friction.exclude` — so a diagram named `UC-800-flow.svg`, or an excluded example, raises nothing, while a Markdown note named `UC-2026-notes.md` held its number while it was there and still does. A file never named after its number, and deleted since, is the one it can't count. In a shallow clone the history stops where the clone does, and the stamp says so; `git fetch --unshallow` reads it all. An actor's or term's id is a slug a person chooses, not a number the stamp gives, and point 3 keeps a withdrawn one in its collection file, where the stamp refuses it — so no history is read for one, and a slug deleted against the rule is not caught. A number has one spelling — three digits below 1000 (`UC-007`), no leading zero from 1000 on (`UC-1000`); the check refuses another (`UC-0007`), and both the stamp and the duplicate check read it as the number it spells, so it is never a second id. What the stamp numbers past is the default branch — `repository.default-branch` in the backbone configuration, `main` when undeclared, read as its upstream or `origin/<name>`, and as the local branch only in a clone with no remote (COR-054) — and, when you name one, the base `--base <ref>` names too; the stamp never reads `$PKIT_CHECK_BASE`, the base a pipeline sets for its checks, so a pipeline's base never moves where it numbers from (COR-054 point 3). When the default branch or the base names no commit here, the stamp refuses with the core's reason and fix — fetch it, declare the right one — rather than number from the working tree alone. A number another branch takes after yours is `pkit analysis check-numbers`' to report (below).
-- **What it writes.** The artefact's own fields from its template, its title or name (the slug, capitalised, by default) — a use case's or journey's title in its front matter and in its heading after the id — and the friction block with the anchors the decision asks for: a use case anchors to its actor, and a journey to the use cases of its steps. What only you can write it leaves as the template's placeholders, `<…>` — an actor's needs, a term's definition, a body's goal and steps — and `pkit analysis validate` fails until you have filled each.
-- **Collection files.** A new actor or term is added to the file's front matter, and its section to the body, each where its id sorts among those already there; every other byte stays as it was — the file's last line ending and blank lines included, when the section goes last — and the stamp checks the result reads back as the file plus the new entry before writing. Kept sorted, two branches adding different entries touch different places of the file and merge without a conflict unless their ids are neighbours. The file is created from the template the first time. Its line endings are kept too: a file whose every line ends CRLF — as a checkout with `core.autocrlf` writes it — is edited as LF and written back CRLF, the entry's and the section's lines included; a file with mixed line endings is refused, saying so, since which ending the new lines take cannot be told.
-- **Written whole, or not at all.** Every file the stamp writes — a collection file included — goes to a temporary file beside it and is then moved over it, keeping its mode, so a failure halfway never leaves it half-written. The location is recorded only once the file is written, and only while it is not recorded yet: a write that fails leaves `docs-locations.yaml` untouched, a recording that fails puts the file back as it was, so a refused stamp writes nothing, and a stamp that needs no recording never runs it. A file or folder reached through a link is refused and the link left as it is: the core's discovery reads no link as a document, nor anything beneath a linked folder, so what the stamp wrote there would be no part of the analysis — and a file written whole would replace the link.
+- **Ids.** A slug is a word: a lowercase letter, then lowercase letters, digits and hyphens. An actor is `ACT-<slug>` and a term `TERM-<slug>`; the stamp refuses an id already held, withdrawn or not, since an id is never used again. A use case or journey takes the **next free number**: one past the highest the working tree and the default branch hold, and past every number the default branch's history ever gave a file of its place — one deleted since included; when the history's number is the one it follows, the stamp says which file it was given to. Only your numbering setting frees a number ("Configuration" below): an id it frees is not counted, and the stamp says so, naming the commit, when it is the number it would have followed. A file's number is read from its front matter and from its name (`UC-007-<slug>.md`, as the stamp names it), so a file whose id can't be read still holds its number. The history counts the files the tree reading counts: one `git log` lists the paths ever added under the kind's place, and a path past the tree's highest number counts unless the core's reading at the commit that added it, the place then where it is now, held it as no file of the place — not a Markdown file there, or left out by `friction.exclude` — so a diagram named `UC-800-flow.svg`, or an excluded example, raises nothing, while a Markdown note named `UC-2026-notes.md` held its number while it was there and still does. A file never named after its number, and deleted since, is the one it can't count. In a shallow clone the history stops where the clone does, and the stamp says so; `git fetch --unshallow` reads it all. An actor's or term's id is a slug a person chooses, not a number the stamp gives, and point 3 keeps a withdrawn one in its file or its glossary entry, where the stamp refuses it — so no history is read for one, and a slug deleted against the rule is not caught. A number has one spelling — three digits below 1000 (`UC-007`), no leading zero from 1000 on (`UC-1000`); the check refuses another (`UC-0007`), and both the stamp and the duplicate check read it as the number it spells, so it is never a second id. What the stamp numbers past is the default branch — `repository.default-branch` in the backbone configuration, `main` when undeclared, read as its upstream or `origin/<name>`, and as the local branch only in a clone with no remote (COR-054) — and, when you name one, the base `--base <ref>` names too; the stamp never reads `$PKIT_CHECK_BASE`, the base a pipeline sets for its checks, so a pipeline's base never moves where it numbers from (COR-054 point 3). When the default branch or the base names no commit here, the stamp refuses with the core's reason and fix — fetch it, declare the right one — rather than number from the working tree alone. A number another branch takes after yours is `pkit analysis check-numbers`' to report (below).
+- **What it writes.** The artefact's own fields from its template, its title or name (the slug, capitalised, by default) — a use case's or journey's title, and an actor's name, in its front matter and in its heading after the id — and the friction block with the anchors the decision asks for: a use case anchors to its actor, and a journey to the use cases of its steps. What only you can write it leaves as the template's placeholders, `<…>` — an actor's needs, a term's definition, a body's goal and steps — and `pkit analysis validate` fails until you have filled each.
+- **The glossary, a collection file.** A new term is added to the file's front matter, and its section to the body, each where its id sorts among those already there; every other byte stays as it was — the file's last line ending and blank lines included, when the section goes last — and the stamp checks the result reads back as the file plus the new entry before writing. Kept sorted, two branches adding different entries touch different places of the file and merge without a conflict unless their ids are neighbours. The file is created from the template the first time. Its line endings are kept too: a file whose every line ends CRLF — as a checkout with `core.autocrlf` writes it — is edited as LF and written back CRLF, the entry's and the section's lines included; a file with mixed line endings is refused, saying so, since which ending the new lines take cannot be told.
+- **Written whole, or not at all.** Every file the stamp writes — the glossary included — goes to a temporary file beside it and is then moved over it, keeping its mode, so a failure halfway never leaves it half-written. The location is recorded only once the file is written, and only while it is not recorded yet: a write that fails leaves `docs-locations.yaml` untouched, a recording that fails puts the file back as it was, so a refused stamp writes nothing, and a stamp that needs no recording never runs it. A file or folder reached through a link is refused and the link left as it is: the core's discovery reads no link as a document, nor anything beneath a linked folder, so what the stamp wrote there would be no part of the analysis — and a file written whole would replace the link.
 - **What it refuses**, writing nothing: an actor, or a step, that is not in the analysis or is withdrawn — the check holds every use case and journey in force to the same; a journey with fewer than two steps; a slug or area that is not a word; an id already held; a use case or journey while your numbering setting has an entry the stamp cannot honour ("Configuration" below); a file or folder reached through a link; a `--title`, `--name` or `--unanchored-because` still holding a placeholder the templates or the skill's commands shipped (`<Title>`, `<why>`), matched exactly — words of your own in angle brackets are yours to write.
 - **Only an actor or a term is ever unanchored.** A use case always anchors to its actor and a journey to its steps' use cases (DEC-001 point 4), so neither is ever without anchors, and the reason an unanchored artefact carries (point 9) never applies to them: `--unanchored-because` is an actor's and a term's alone.
 
@@ -131,34 +131,42 @@ The heading is the id and the `title`, `# <id> — <title>`, and the check requi
 
 **Journey** (`schemas/journey.schema.json`) — the same fields, `title` and heading included, plus `steps`: the use cases it passes through, in order, at least two. `steps` is the source; the stamp writes its use cases into the artefact anchors, and the check requires the two to match. Add the code at the seams as path anchors. The body gives where it starts, the ordered steps, the **seams to watch** between them, and when it is done.
 
-**Actors** (`schemas/actor.schema.json`) — a collection file: the front matter maps each id to its entry, and the body has one `## <id> — <name>` section per entry.
+**Actor** (`schemas/actor.schema.json`) — a file of its own, `use-case-model/actors/ACT-<slug>.md`. Its needs sit in its front matter, a few lines above the description its body gives, so a tool reads them as data and never from the body (DEC-001 point 1):
 
-```yaml
-ACT-tester:
-  name: Test author             # may change; the id does not
-  status: active
-  needs:
-    - Run the suite against a clean sandbox
-  pkit:
-    friction:
-      anchors:
-        path:
-          - src/cli/**
+```markdown
+---
+id: ACT-tester
+name: Test author               # may change; the id does not
+status: active
+needs:
+  - Run the suite against a clean sandbox
+pkit:
+  friction:
+    anchors:
+      path:
+        - src/cli/**
+---
+
+# ACT-tester — Test author
+
+Whoever writes and runs the project's tests. They come with every change, and bring the suite and a sandbox to run it in.
 ```
 
-**Glossary** (`schemas/term.schema.json`) — the same collection shape, each entry a `name`, a `status`, a one-sentence `definition`, and on a rename the former names, newest first, in `replaces`. The id never changes.
+The heading is the id and the `name`, `# <id> — <name>`, and the check requires the two to agree, as it does a use case's title. The id is the slug the file is named by, and never changes.
 
-An actor or a term nothing embodies carries `unanchored-because:` in its friction block instead of anchors — the reason onboarding accepts it unanchored (DEC-001 point 9). The key is the core's, not one of the entry's own fields (COR-050 point 1): `pkit friction check --all` lists the artefact apart with its reason and never counts it as unanchored, and `pkit validate` refuses the reason beside anchors.
+**Glossary** (`schemas/term.schema.json`) — one collection file: its front matter maps each term's id to its entry, and its body has one `## <id> — <name>` section per entry. Each entry has a `name`, a `status`, a one-sentence `definition`, and on a rename the former names, newest first, in `replaces`. The id never changes. The glossary stays one collection file, serving everything (DEC-001 point 2).
+
+An actor or a term nothing embodies carries `unanchored-because:` in its friction block instead of anchors — the reason onboarding accepts it unanchored (DEC-001 point 9). The key is the core's, not one of the artefact's own fields (COR-050 point 1): `pkit friction check --all` lists the artefact apart with its reason and never counts it as unanchored, and `pkit validate` refuses the reason beside anchors.
 
 ```yaml
-ACT-sponsor:
-  name: Sponsor
-  status: active
-  needs:
-    - Sees what the project delivers for its funding
-  pkit:
-    friction:
-      unanchored-because: No code or decision embodies it; it funds the project.
+id: ACT-sponsor
+name: Sponsor
+status: active
+needs:
+  - Sees what the project delivers for its funding
+pkit:
+  friction:
+    unanchored-because: No code or decision embodies it; it funds the project.
 ```
 
 **Revalidation record** (`schemas/revalidation-record.schema.json`) — no friction block; stamped by `pkit analysis new revalidation` from `templates/revalidation-record.md` as `revalidations/<date>-<subject>.md` ("Revalidation records" below):
@@ -187,12 +195,13 @@ The body gives each artefact's outcome with its justification, then the gaps and
 
 `pkit validate` runs the check as its `software-analysis:artefacts` member, so it runs wherever your check gate runs `pkit validate`; `pkit analysis validate` runs it alone, and `--json` prints the findings document it reads. It is a query: read-only, offline, and `pkit sync` provisions its dependencies. It reads the working tree — and the evidence point, when a record copies evidence — so the same tree gets the same answer as long as the evidence fillers read the tree alone. A file your `friction.exclude` leaves out is no part of the analysis: the check reads nothing of it, and the stamp counts no number it holds — as friction neither counts such a file nor asks it for an answer (COR-050 point 7). The same goes for a revalidation record under an excluded path: the core still lists it as this capability's held document, marked as excluded, and the check neither counts nor checks it. It fails on:
 
-- **a file in a place that is not its kind's shape** — a file without front matter, or whose front matter does not parse, a glossary or actors file that is not a collection, a use-case or journey file holding entries. What such a file holds can't be read, its ids included, and an id is never used again, so it is never skipped: the stamp counts the number its name carries;
+- **a file in a place that is not its kind's shape** — a file without front matter, or whose front matter does not parse, a glossary that is not a collection, an actor, use-case or journey file holding entries. What such a file holds can't be read, its ids included, and an id is never used again, so it is never skipped: the stamp counts the number a use case's or journey's name carries;
 - **missing required parts** — an artefact's own fields against its schema, and a collection entry whose key is not its kind's id;
-- **a placeholder left unfilled** — what the stamp leaves for you to write is no part of the analysis until you write it: an own field, or an actor's or term's `unanchored-because` in its friction block, still holding a placeholder the templates or the skill's commands ever shipped (`<Title>`, an actor's `<what this actor needs …>`, a term's placeholder `definition`), or a body — an actor's or term's section, heading included — still holding one of the templates'. Each is matched against those texts exactly, and the capability keeps every one it ever shipped, so a reworded template never hides an old placeholder, and words of your own in angle brackets — `maps <user id> to a session`, code a body quotes — are never taken for one;
-- **a use case or journey whose heading is not its id and title** — `# UC-003 — <title>`, the `title` its front matter gives;
+- **a placeholder left unfilled** — what the stamp leaves for you to write is no part of the analysis until you write it: an own field, or an actor's or term's `unanchored-because` in its friction block, still holding a placeholder the templates or the skill's commands ever shipped (`<Title>`, an actor's `<what this actor needs …>`, a term's placeholder `definition`), or a body — an actor's, a use case's or a journey's, or a term's section with its heading — still holding one of the templates'. Each is matched against those texts exactly, and the capability keeps every one it ever shipped, so a reworded template never hides an old placeholder, and words of your own in angle brackets — `maps <user id> to a session`, code a body quotes — are never taken for one;
+- **an actor, a use case or a journey whose heading is not its id and its title or name** — `# UC-003 — <title>`, the `title` its front matter gives, or an actor's `# ACT-tester — <name>`, its `name`;
 - **duplicate ids** — two artefacts holding one id;
 - **a use case or journey whose name carries a number its front matter doesn't give** — `UC-007-<slug>.md` with no `id`, or with `id: UC-008`: the stamp counts the number the name carries, so the front matter says the same — write the id, or name the file after it;
+- **an actor whose file's name is not its id** — `ACT-tester.md` holding `id: ACT-other`: an actor's id names its file (DEC-001 point 3), so the two say the same — name the file after its id, or correct `id`;
 - **a use case or journey naming what the stamp would refuse** — an actor, or a journey's step, that is not in the analysis, or that is withdrawn while the use case or journey is in force. A withdrawn artefact may name withdrawn ones: it is history;
 - **a use case not anchored to its actor**, so a changed actor would not flag it;
 - **a journey whose use-case anchors do not match its steps** — the message names the anchors to write;
@@ -380,7 +389,7 @@ It never proposes `gap-found`: behaviour nothing describes is found by reading. 
 
 **The commands for the person.** For a verdict that comes to an outcome — a proposal, or a reading with its lean — it gives what the person does first (the edit, a defect to report) and the writer commands that record it, word for word and with no `--yes`: the friction writers each ask once, and the record stamp has no prompt and writes what its command line says. Where the words are the agent's to draft (`<why it still holds against this change>`, `<why it is still wanted>`) or the person's alone (`<the defect reference>` — the defect is theirs to report and name), a placeholder stands, and the writers refuse it until it is filled. An ambiguous verdict has no commands, only its question.
 
-**What an anchor matches is the explanation's.** `propose` matches no anchor itself: the files each path anchor stands on at the revalidation point and at HEAD, the commits behind each finding with the paths behind them — for a dead anchor, where its files went — and the artefact's body (for an actor or a term, its own section) all come from `pkit friction explain --json`, so they never disagree with what the checks decide. Git only reads what those files hold. A file `friction.exclude` leaves out is none of them: a quote only such a file still holds is gone, not kept.
+**What an anchor matches is the explanation's.** `propose` matches no anchor itself: the files each path anchor stands on at the revalidation point and at HEAD, the commits behind each finding with the paths behind them — for a dead anchor, where its files went — and the artefact's body (for a term, its own section) all come from `pkit friction explain --json`, so they never disagree with what the checks decide. Git only reads what those files hold. A file `friction.exclude` leaves out is none of them: a quote only such a file still holds is gone, not kept.
 
 `--json` prints `{schema_version, artefact, location, state, head, revalidation_point, verdict, rule, reason, hint, question, anchors, read, answer}`: each changed anchor with its `shape` (`kept`, `moved`, `gone`, `deliberate`, `unread`), the commits behind it — each `{commit, change, paths}`, the paths behind the finding it touched, so `git show <commit> -- <paths>` is what changed under the anchor — what it `quoted`, what is `gone` and where it `moved_to`; each quote read with its `source`, `source_kind` (`commit` or `other`) and `verified` (`true`, `false`, or `null` when it cannot be checked); and the `answer`, `{outcome, first, commands}` or `null`. It reads HEAD, as the explanation does; exit `1` when the artefact cannot be explained (not committed, not found) or was not judged, `2` on a usage error such as a quote without its source. A query: read-only, offline, and `pkit sync` provisions its dependencies.
 
@@ -424,11 +433,11 @@ The point is `union`: entries from every filler merge by id, and yours replaces 
 
 A page names an actor as its reader by that id (`reader: act-tester`). `pkit analysis fill-readers` prints the readers for you, `--json` the envelope the backbone reads. The filler reads the analysis through the core's reading command, `pkit friction artefacts`, and never walks the folders.
 
-- **Fail closed, whatever the point's policy** (COR-052 point 6). An actors file that cannot be read as a whole — its front matter does not parse, or it is not a collection — is no answer rather than no readers: the command exits 1, and under living-docs' `fail` policy the readers point is unresolved, its reason naming the file, until you fix it.
-- **An entry is judged alone.** An entry of the actors file whose key is no actor id is not a reader: the filler skips it, and `pkit analysis validate` reports it.
+- **Fail closed, whatever the point's policy** (COR-052 point 6). Any one actor file that cannot be read as an actor — its front matter does not parse, it has none, or it holds keyed entries — is no answer rather than fewer readers: the command exits 1, and under living-docs' `fail` policy the readers point is unresolved, its reason naming the file, until you fix it.
+- **A file that reads is judged alone.** An actor file whose `id` is no actor id is not a reader: the filler skips it, and `pkit analysis validate` reports it.
 - **Inert when no capability provides the documentation role**: the contribution is reported as having no active provider, its command never runs, and this capability never requires one.
 
-An install plan predicts the wiring, not the data (COR-053 point 7): it shows this contribution connecting and never runs the filler, so installing software-analysis beside a documentation provider puts the actors file's readability on that provider's validation path — from then on, an actors file that does not parse leaves the readers point unresolved, which `pkit validate` reports as an error.
+An install plan predicts the wiring, not the data (COR-053 point 7): it shows this contribution connecting and never runs the filler, so installing software-analysis beside a documentation provider puts each actor file's readability on that provider's validation path — from then on, an actor file that does not parse leaves the readers point unresolved, which `pkit validate` reports as an error.
 
 **Contributes to `pkit::work-tracking:use-cases`** (version 1), the work-tracking role's point for the use cases settled on the default branch, through the `fill-use-cases` command: one entry per use case the default branch holds.
 

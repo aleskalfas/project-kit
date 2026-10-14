@@ -9,8 +9,9 @@
 """software-analysis capability — validate: the analysis artefacts (DEC-001).
 
 Checks each artefact's shape and own fields against its companion schema, a
-use case's or journey's heading against its id and title, ids two artefacts
-share, an actor or step the stamp would refuse, a use case not anchored to
+use case's or journey's heading against its id and title and an actor's
+against its id and name, an actor's file named after its id, ids two
+artefacts share, an actor or step the stamp would refuse, a use case not anchored to
 its actor, a journey whose use-case anchors do not match its steps, and the
 revalidation records' front matter, the artefacts they cite and the evidence
 they copy. Where it reads the evidence point, it warns on an entry whose `id`

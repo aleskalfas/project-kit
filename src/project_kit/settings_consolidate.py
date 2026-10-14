@@ -35,6 +35,10 @@ Per the kit's "preserve adopter content" stance (per COR-001), this
 module is the carrier for *deliberate* cleanup. Sync prints a hint when
 opportunities are detected but doesn't act on them; the adopter runs
 `pkit settings consolidate` explicitly when ready.
+
+It also tells what a settings merge widens: the allow entries and the
+top-level keys a version transition's merge adds to `.claude/settings.json`,
+which the transition's report lists (ADR-065 point 4, `settings_widening`).
 """
 
 from __future__ import annotations
@@ -42,7 +46,9 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
+
+import click
 
 SETTINGS_FILENAMES: tuple[str, ...] = ("settings.json", "settings.local.json")
 
@@ -280,3 +286,64 @@ def _read_allow_list(data: Any) -> list[str] | None:
     if not isinstance(allow, list):
         return None
     return [str(entry) for entry in allow]
+
+
+# --- What the settings merge widens (ADR-065 point 4) ----------------------------
+
+# The project's additions to the merged settings, where an `ask` rule the
+# project writes survives the merge (#1454).
+PROJECT_SETTINGS_ADDITIONS = ".pkit/adapters/claude-code/settings/project/settings.json"
+
+
+@dataclass(frozen=True)
+class SettingsWidening:
+    """What a settings merge adds to `.claude/settings.json`: each allow entry, and
+    each top-level key, such as `hooks`, `env` or `sandbox`."""
+
+    allow: tuple[str, ...] = ()
+    keys: tuple[str, ...] = ()
+
+    def __bool__(self) -> bool:
+        return bool(self.allow or self.keys)
+
+
+def read_merged_settings(target_root: Path) -> dict[str, Any] | None:
+    """`.claude/settings.json` as a mapping, or None where it is missing or is not
+    a JSON object. A version transition reads it before and after the merge."""
+    path = target_root / ".claude" / SETTINGS_FILENAMES[0]
+    try:
+        data: object = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return cast("dict[str, Any]", data) if isinstance(data, dict) else None
+
+
+def settings_widening(
+    before: dict[str, Any] | None, after: dict[str, Any] | None
+) -> SettingsWidening:
+    """The allow entries and the top-level keys *after* holds that *before* does not."""
+    if after is None:
+        return SettingsWidening()
+    held = set(_read_allow_list(before) or [])
+    return SettingsWidening(
+        allow=tuple(entry for entry in _read_allow_list(after) or [] if entry not in held),
+        keys=tuple(key for key in after if before is None or key not in before),
+    )
+
+
+def report_widening(widening: SettingsWidening) -> None:
+    """A version transition's lines for each widening the settings merge brings
+    (ADR-065 point 4): an added allow entry, or an added top-level key. An `ask`
+    rule in the project's additions brings the question back, and the last line
+    says so."""
+    if not widening:
+        return
+    click.echo("  The settings merge widens .claude/settings.json:")
+    for entry in widening.allow:
+        click.echo(f"    {'allow':<12} {entry}")
+    for key in widening.keys:
+        click.echo(f"    {'key':<12} {key}")
+    click.echo(
+        "  To be asked before an allowed entry runs, add it as an `ask` rule to "
+        f"{PROJECT_SETTINGS_ADDITIONS}, then run `pkit merge`."
+    )

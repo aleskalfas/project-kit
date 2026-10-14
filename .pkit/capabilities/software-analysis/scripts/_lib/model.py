@@ -10,10 +10,10 @@ the backbone's reading command, `pkit friction artefacts --json`, at the
 working tree or, with `--at`, at one commit (`backbone.read_document`).
 
 What this module decides over the answer is DEC-001's: each place of this
-capability holds one kind of artefact (point 2) — the glossary and the actors
-are collection files, one keyed entry per artefact; a use case and a journey
-are a document each — and a file in a place that holds no artefact of its
-kind's shape is a stray the check reports. The revalidation records are not
+capability holds one kind of artefact (point 2) — the glossary is a collection
+file, one keyed entry per term; an actor, a use case and a journey are a
+document each — and a file in a place that holds no artefact of its kind's
+shape is a stray the check reports. The revalidation records are not
 artefacts: their folder is this capability's folder of held documents (COR-050
 point 1), and the records are the files the answer's declaration of that
 folder holds. A file the project's `friction.exclude` leaves out is no part of
@@ -39,8 +39,10 @@ LOCATION = "analysis"
 ACTOR, TERM, USE_CASE, JOURNEY = "actor", "term", "use-case", "journey"
 KINDS = (ACTOR, TERM, USE_CASE, JOURNEY)
 
-#: The kinds kept as one collection file, an entry per artefact (DEC-001 point 2).
-COLLECTIONS = frozenset({ACTOR, TERM})
+#: The kinds kept as one collection file, an entry per artefact (DEC-001 point 2):
+#: the glossary. An actor is a document of its own, so its needs, in its front
+#: matter, read beside its description.
+COLLECTIONS = frozenset({TERM})
 
 #: Each kind's id prefix (DEC-001 point 3); use cases and journeys are numbered.
 PREFIX = {ACTOR: "ACT", TERM: "TERM", USE_CASE: "UC", JOURNEY: "JRN"}
@@ -104,7 +106,7 @@ def _spelt(found: re.Match[str]) -> str:
 #: each holds. A test holds this table to the package.
 KIND_OF_PLACE = {
     "glossary.md": TERM,
-    "use-case-model/actors.md": ACTOR,
+    "use-case-model/actors": ACTOR,
     "use-case-model/use-cases": USE_CASE,
     "use-case-model/journeys": JOURNEY,
 }
