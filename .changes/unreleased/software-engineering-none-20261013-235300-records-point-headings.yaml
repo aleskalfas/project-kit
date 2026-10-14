@@ -1,8 +1,0 @@
-component: software-engineering
-kind: none
-body: >
-  Placeholder segment, for the maintainer to judge (#1421). DEC-001 and
-  DEC-002 write each of their points as a heading carrying its number, word
-  for word. No point's text, number or citation changes. DEC-002's paragraph
-  on the pm-side companion decisions, after its point 7, sits under a heading
-  of its own, with the same words.
