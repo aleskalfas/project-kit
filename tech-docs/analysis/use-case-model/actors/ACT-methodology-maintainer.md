@@ -3,7 +3,7 @@ id: ACT-methodology-maintainer
 name: Methodology maintainer
 status: active
 needs:
-  - Develop the system in its source repository, where no sync copies over my work, and run what I ship there before any adopter does.
+  - Develop the methodology in its source repository, where no sync copies over my work, and run what I ship there before any adopter does.
   - Keep each core record true for any project that adopts it.
   - Release the backbone so adopters can upgrade and pin to it, and know what each change since the last release means for them.
   - Never ship a backbone change that breaks installed projects without the migration that carries them across.

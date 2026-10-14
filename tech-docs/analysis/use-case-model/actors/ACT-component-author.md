@@ -3,7 +3,7 @@ id: ACT-component-author
 name: Component author
 status: active
 needs:
-  - Package a recurring discipline as a capability from the system's primitives, without forking the system.
+  - Package a recurring discipline as a capability from the methodology's primitives, without forking the methodology.
   - Keep a capability I wrote in my own repository, where sync never overwrites it and uninstall never deletes it.
   - Give my capability roles, data points and processes that other components can connect to without naming it, and have the engine run and check them.
   - Release my component on its own version, and say which backbone versions it works with.

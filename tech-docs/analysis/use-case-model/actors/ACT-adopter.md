@@ -8,7 +8,7 @@ needs:
   - Add or remove a capability, one shared from another of my repositories included, and be told of a name collision instead of being overwritten.
   - Choose which installed capability provides a role.
   - Declare my project's settings once (name, default branch, documentation roots, friction mode, anchored places, declared surface, excluded paths) and have them validated.
-  - Add my own operational rules, settings, permission grants and agent paths beside the system's, never editing its files.
+  - Add my own operational rules, settings, permission grants and agent paths beside the methodology's, never editing its files.
   - Make my merges wait on the system's checks, knowing they bind only once my CI requires them.
   - Re-pin an inherited rule set to its new major version once I have reviewed it.
   - Report a problem with the system, and follow what happens to it.
@@ -36,4 +36,4 @@ The person who adopts the methodology for a project and keeps its setup.
   - at each upgrade
   - when the project needs a discipline
 - **Brings:** their project, its existing `CLAUDE.md` and settings, its repository settings, and the rules and grants they add.
-- **Core:** the split between the files the system owns and those the project owns, and the install and upgrade lifecycle, exist for this role. Installing a capability is itself a core act.
+- **Core:** the split between methodology-owned and project-owned files, and the install and upgrade lifecycle, exist for this role. Installing a capability is itself a core act.
