@@ -31,7 +31,9 @@ states the rules.
 It also writes a revalidation record, `revalidations/<date>-<slug>.md`, and only
 one with something to say — a planned revalidation, one that found a
 regression or a gap (point 6), or one where a person decided an artefact was
-stale (point 5); `_lib/revalidation.py` states the rules.
+stale (point 5); `_lib/revalidation.py` states the rules. A planned record names
+the sources of the design it reviewed, which the stamp does not take yet, so it
+refuses one, as the record's schema requires them.
 
 Usage:
   pkit analysis new use-case <slug> --actor <ACT-id> [--area <area>] [--title <text>]
@@ -147,7 +149,9 @@ def _parser() -> argparse.ArgumentParser:
     help_text = (
         "A revalidation record, kept only when there is something to say: a planned "
         "revalidation, one that found a regression or a gap, or one where a person decided "
-        "an artefact was stale."
+        "an artefact was stale. A planned record names the sources of the design it "
+        "reviewed in `reviewed-against`, which this stamp does not take yet, so it refuses "
+        "a planned record."
     )
     _revalidation_arguments(kinds.add_parser(REVALIDATION, help=help_text, description=help_text))
     return parser

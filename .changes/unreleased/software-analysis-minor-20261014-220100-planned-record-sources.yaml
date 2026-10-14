@@ -1,0 +1,17 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Changed
+  pr: "1578"
+body: >
+  The revalidation record's schema gains `reviewed-against`, the sources of
+  the design a planned record reviewed (DEC-001 point 6, #1363). It is
+  required when `trigger` is `planned`, and refused otherwise. Each source
+  has a `title`, a `version` and, outside this repository, an absolute `url`.
+  Without a `url`, the version is a commit's full id or `this change`. With
+  one, it is the time the text was read or a commit's full id. This breaks a
+  planned record without the field: `pkit analysis validate` fails it, and
+  `pkit analysis new` refuses to stamp a planned record until it takes the
+  sources. The segment is `minor`, as semver allows a breaking change before
+  1.0.0, and the capability is installed only in project-kit's own clones,
+  which hold no planned record.

@@ -383,12 +383,14 @@ def test_what_the_stamp_writes_holds_no_semicolon_and_no_long_sentence(
         "--change",
         "#45",
         "--trigger",
-        "planned",
+        "drift",
         "--outcome",
-        "UC-001=holds",
+        "UC-001=analysis-stale",
         "--because",
-        "UC-001=The suite still runs from the CLI.",
+        "UC-001=The suite now runs from the CLI, as step 1 says.",
         "--by",
+        "Sam",
+        "--confirmed-by",
         "Sam",
     )
     assert record.returncode == 0, record.stderr

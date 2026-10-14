@@ -148,10 +148,37 @@ PLANNED = (
 )
 
 
-def test_a_planned_revalidation_is_recorded_even_when_everything_holds(
+def test_a_planned_revalidation_is_something_to_say_and_names_its_sources(
     project: AdopterRepo,
 ) -> None:
+    """A planned revalidation leaves a record even when everything holds (DEC-001 point
+    6), and the record names the sources of the design it reviewed in `reviewed-against`,
+    which its schema requires (#1363). The stamp does not take the sources yet, so it
+    refuses the record with the schema's reason, never with "nothing to record"."""
     completed = _record(project, "report-redesign", *PLANNED)
+    assert completed.returncode == 1, completed.stdout
+    assert "'reviewed-against' is a required property" in completed.stderr
+    assert "nothing to record" not in completed.stderr
+    assert _records(project) == []
+
+
+#: A drift revalidation where a person decided UC-002 was stale: something to say.
+STALE = (
+    "--change",
+    "#50",
+    "--trigger",
+    "drift",
+    "--outcome",
+    "UC-002=analysis-stale",
+    "--because",
+    "UC-002=The redesign moved the report's layout on purpose, and step 2 now says so.",
+    "--confirmed-by",
+    "Sam",
+)
+
+
+def test_a_record_with_no_gap_says_none_found(project: AdopterRepo) -> None:
+    completed = _record(project, "report-redesign", *STALE)
     assert completed.returncode == 0, completed.stderr
     rel = f"{RECORDS}/{_today()}-report-redesign.md"
     assert front(project, rel)["by"] == "pkit-test"  # git's user.name, when --by is not given
@@ -342,7 +369,7 @@ def test_a_person_and_an_agent_are_not_both_who_performed_it(project: AdopterRep
 
 
 def test_a_record_already_written_is_not_overwritten(project: AdopterRepo) -> None:
-    args = PLANNED
+    args = STALE
     assert _record(project, "report-redesign", *args).returncode == 0
     completed = _record(project, "report-redesign", *args)
     assert completed.returncode == 1

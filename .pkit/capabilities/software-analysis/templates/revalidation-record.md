@@ -15,6 +15,10 @@
 # shape is `schemas/revalidation-record.schema.json`.
 change: "#000"                    # the work item, pull request or range of commits that carried it
 trigger: planned                  # planned | drift | scheduled | close | onboarding
+reviewed-against:                 # a planned record's only: each source of the design it reviewed
+  - title: <what the source is>
+    url: https://tracker.example/issues/0   # its link, left out for a source in this repository
+    version: "2026-01-01T00:00:00Z"         # the time it was read, or a commit's full id. Without a link: a commit's full id, or `this change`
 date: "2026-01-01"                # the day it was performed, in UTC
 by: <who performed it — a person, or an agent>
 confirmed-by: <the person who confirmed an agent's outcomes, or decided stale>   # optional

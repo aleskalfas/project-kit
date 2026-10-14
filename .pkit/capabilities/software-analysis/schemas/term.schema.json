@@ -15,11 +15,11 @@
       "$ref": "analysis.schema.json#/$defs/status"
     },
     "definition": {
-      "description": "What the term means, in a sentence; the body section says more when it needs to.",
+      "description": "What the term means: a phrase that could stand in for the term, its broader kind and then what sets it apart (DEC-001 point 1). The kind's declared structure gives it the form `definition` (`artefact-kinds.yaml`).",
       "$ref": "analysis.schema.json#/$defs/text"
     },
     "replaces": {
-      "description": "The names the term was written as before, newest first — the record of renames (DEC-001 point 1).",
+      "description": "The names the term was written as before, newest first — the record of renames (DEC-001 point 1). Only names it carried in the analysis or in an accepted record. A working name that now means something else is one of the words the term could be confused with.",
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,

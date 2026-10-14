@@ -29,6 +29,7 @@ pkit analysis new revalidation <slug> --change <ref> --trigger <planned|drift|sc
 
 - **`--change`** — what carried it: a work item (`#123`), a pull request, or a range of commits.
 - **`--trigger`** — `planned` before code; `drift` on a pull request's friction; `scheduled` for friction the whole-repository check found; `close` when a pull request changing artefacts lands; `onboarding`.
+- **A planned record** names the sources of the design it reviewed in `reviewed-against`, which its schema requires: the capability README's [Revalidation records](../../README.md#revalidation-records) gives the form. The stamp does not take the sources yet, so it refuses a planned record for now.
 - **`--outcome`** — each artefact covered, withdrawn ones included, and how it ended.
 - **`--because`** — each outcome's justification, one per `--outcome`: the stamp refuses an outcome without one.
 - **`--gap`** — each gap and what resolved it, as one pair: `"<gap> => <resolution>"`. A regression or a gap found must name at least one.
