@@ -17,8 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-14T09:30:48Z
-      outcome: updated
+      at: 2026-10-14T19:21:30Z
+      outcome: unchanged
+      unchanged-because: The README says pkit upgrade pulls a new version, runs its migrations and pins the project at the version it reached. This change orders a pinned upgrade's own checks, has it finish its pin, and refuses it under the router's fallback. The README describes none of that, and what it does say still holds.
 ---
 
 # project-kit
