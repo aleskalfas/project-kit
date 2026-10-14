@@ -1,0 +1,8 @@
+component: claude-code
+kind: none
+body: >
+  Internal. The adapter's README is revalidated against the records it relies
+  on, which now write their points as headings with the same numbers (#1421).
+  The README and a comment in `merge-settings.sh` cited ADR-004, ADR-002 and
+  COR-002 by line number. Each now cites the point or section that line held.
+  Nothing you run changes.

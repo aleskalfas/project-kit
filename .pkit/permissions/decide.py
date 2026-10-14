@@ -399,7 +399,9 @@ def _scope_ok(
       unsupported and rejected with a clear reason rather than silently
       accepted.  Rationale: a tool-layer denylist is a false boundary — an
       agent's raw ``bash curl`` bypasses it at the agent-blind sandbox layer
-      (ADR-004 §61).  Only positive allow-lists are honest at this layer.
+      (ADR-004, Alternatives considered, "Relabel `network-egress` as
+      natively enforced…").  Only positive allow-lists are honest at this
+      layer.
 
     When ``scope`` is absent or empty the grant is unconstrained (anywhere).
     """
@@ -413,7 +415,8 @@ def _scope_ok(
         return False, (
             f"deny/negation scopes are unsupported for domain-scoped privileges "
             f"({negation_globs!r}): a tool-layer denylist is a false boundary "
-            f"(ADR-004 §61); use positive allow-list globs only"
+            f'(ADR-004, Alternatives considered, "Relabel `network-egress` as '
+            f'natively enforced…"); use positive allow-list globs only'
         )
 
     if scope_type == "domain":

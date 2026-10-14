@@ -70,7 +70,7 @@ pkit new decision adr <slug>             # for ADR (per COR-025)
 pkit new decision <capability> <slug>    # for DEC (capability-scoped)
 ```
 
-The command picks the next number in the id-space, stamps the frontmatter (`id`, `title` placeholder, `status: proposed`, today's `date`, `author` from git config), and writes the four required section headers (`## Context`, `## Decision`, `## Rationale`, `## Implications`) with empty bodies.
+The command picks the next number in the id-space, stamps the frontmatter (`id`, `title` placeholder, `status: proposed`, today's `date`, `author` from git config), and writes the four required section headers (`## Context`, `## Decision`, `## Rationale`, `## Implications`) with empty bodies, but for a first point heading under `## Decision`, `### 1. Point title`.
 
 For the `adr` namespace, the target directory is resolved from `.pkit/agents/project/overlay.yaml`'s top-level `adr-records:` key (first entry). A directory named there must exist before stamping — if not, the command refuses with a `mkdir -p` hint. If the key is present but empty, or the path points inside `.pkit/`, the command refuses with a pointer to COR-024/COR-025. With no `adr-records:` key, the command derives the directory from the project's internal documentation root (`docs/architecture/decisions/` by default) and records it in the overlay before stamping, saying what it recorded and which root it came from ([COR-049](../../decisions/core/COR-049-documentation-roots.md) point 5). A folder that is absent or empty is created and recorded without asking. A folder that already holds documents is recorded only with consent, because the recording puts those documents within reach of every agent that references `adr-records`: a terminal is asked once, `--yes` consents without a prompt, and a run with nobody to ask and no `--yes` records nothing and stamps nothing, naming the command to run with `--yes`.
 
@@ -84,7 +84,7 @@ Open the stamped file and fill in:
 
 - **Title** — replace the placeholder with the actual short imperative title.
 - **`## Context`** — what situation prompted this decision?
-- **`## Decision`** — what was decided. Single crisp sentence ideally; complex decisions may use sub-sections.
+- **`## Decision`** — what was decided. Single crisp sentence ideally. A complex decision gives each part a point: a heading with its number and a title, `### 1. Title`, which keeps that number for good (`.pkit/decisions/README.md`, "Schema"). The stamped point heading sets the points' level, and once it is there a numbered list in the record is a list, never points. Delete it before the record first lands if the decision has no parts (`.pkit/decisions/README.md`, "Adding a record").
 - **`## Rationale`** — why this choice over alternatives. May include an `### Alternatives considered` sub-section.
 - **`## Implications`** — what does this mean for code, tests, workflow, downstream decisions?
 

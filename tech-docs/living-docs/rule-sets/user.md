@@ -12,11 +12,11 @@ rules:
     origin: {decision: "living-docs:DEC-001"}
     pkit:
       friction:
-        anchors: {record: ["living-docs:DEC-001"]}
+        anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-13T11:37:05Z
+          at: 2026-10-13T20:06:25Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001 points 2 and 3 say LDOC binds on a page through a scoped set of the project's own, such as this definition, whose scope selects the user space's pages. Nothing in them touches the links between pages, so the paths the user space's readers take through its pages stay unbroken.
+          unchanged-because: "living-docs DEC-001's points are now headings, so the anchor names point 3, which states this rule: the user space adds that reader paths stay unbroken. Point 3's text is unchanged, so the rule holds."
 ---
 
 # The user space's definition

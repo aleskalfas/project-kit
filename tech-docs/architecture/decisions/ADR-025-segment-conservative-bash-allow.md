@@ -80,52 +80,63 @@ the existing grant model. It is a prompt-reduction over already-granted intent,
 never a new grant. Every uncertainty fails closed (abstain / prompt), never to
 auto-allow. A general all-segments-allowed widening is deferred, not taken.**
 
-1. **Phase 1 — strip a leading `cd`, decide on the remainder.** When the first
-   segment of a compound is a bare `cd <path>` (no quotes, no substitution, no
-   redirection), the core drops it and evaluates the remaining command against the
-   grant model exactly as if it had been issued alone. `cd src && gh pr list` with
-   `gh pr list` granted auto-approves; `cd src && rm -rf /` does not (the remainder
-   matches no allow and, for guardrail denies, the deny still binds). The strip is
-   the *only* widening this ADR makes.
+### 1. Phase 1 — strip a leading `cd`, decide on the remainder
 
-2. **Inherited fail-closed-on-uncertainty (ADR-004 decision point 4),
-   non-negotiable.** Any segment the dumb splitter cannot trust — a quote, a `$()`
-   command substitution, a backtick, a `<` / `>` / redirection, or an unrecognized
-   command — makes the core **abstain (prompt)**. It NEVER auto-allows under
-   uncertainty. The splitter stays dumb; the conservatism lives in the
-   classification, not in smarter parsing.
+When the first
+segment of a compound is a bare `cd <path>` (no quotes, no substitution, no
+redirection), the core drops it and evaluates the remaining command against the
+grant model exactly as if it had been issued alone. `cd src && gh pr list` with
+`gh pr list` granted auto-approves; `cd src && rm -rf /` does not (the remainder
+matches no allow and, for guardrail denies, the deny still binds). The strip is
+the *only* widening this ADR makes.
 
-3. **No shell parser.** The core keeps its dumb regex segmenter (`_SEP`). A real
-   shell parser is **rejected on altitude grounds**: the hook runs bare `python3`
-   in-sandbox ([ADR-014](ADR-014-macos-sandbox-platform-stance.md)), and importing
-   an adversarial-input parser into a fail-open, security-adjacent component trades
-   a bounded, auditable splitter for parsing fragility in the worst place to host
-   it. Conservatism is achieved by abstaining on anything the dumb splitter cannot
-   trust, not by parsing harder.
+### 2. Inherited fail-closed-on-uncertainty (ADR-004 decision point 4), non-negotiable
 
-4. **Code home — the shared neutral core, not the adapter hook.** The change
-   lands in `.pkit/permissions/decide.py` (`segments()` / classification), the
-   single neutral core both the hook and `pkit permissions` import. This preserves
-   the [ADR-002](ADR-002-permission-realizer-ownership.md) /
-   [ADR-003](ADR-003-permission-core-code-home.md) same-code invariant — one
-   `decide()`, identical decisions — and is covered by the existing conformance
-   fixtures.
+Any segment the dumb splitter cannot trust — a quote, a `$()`
+command substitution, a backtick, a `<` / `>` / redirection, or an unrecognized
+command — makes the core **abstain (prompt)**. It NEVER auto-allows under
+uncertainty. The splitter stays dumb; the conservatism lives in the
+classification, not in smarter parsing.
 
-5. **The deny side is unchanged and remains porous.** This ADR touches only the
-   *allow* path's prompt-reduction. The deny side — guardrail denies, the fail-open
-   hook + fail-closed native double-lock — is untouched, and the merge layer / hook
-   remains a **speed-bump, not a boundary**
-   ([ADR-004](ADR-004-autonomy-intent-confinement.md),
-   [ADR-019](ADR-019-enforcement-gate-mechanism-vs-boundary.md)). A reader must not
-   read a tighter allow path as a hardened deny path. Real confinement is still the
-   OS sandbox; real merge enforcement is still adopter-wired CI.
+### 3. No shell parser
 
-6. **The broader widening is deferred per COR-007.** A general
-   "auto-approve any compound whose every segment is independently safe" is **not**
-   taken (and is rejected outright as unsound — see Rationale). Any widening beyond
-   the leading-`cd` strip is gated on a *demonstrated residual-prompt need* — the
-   [COR-007](../../../.pkit/decisions/core/COR-007-pattern-extraction.md) recurrence
-   test, not speculative generality.
+The core keeps its dumb regex segmenter (`_SEP`). A real
+shell parser is **rejected on altitude grounds**: the hook runs bare `python3`
+in-sandbox ([ADR-014](ADR-014-macos-sandbox-platform-stance.md)), and importing
+an adversarial-input parser into a fail-open, security-adjacent component trades
+a bounded, auditable splitter for parsing fragility in the worst place to host
+it. Conservatism is achieved by abstaining on anything the dumb splitter cannot
+trust, not by parsing harder.
+
+### 4. Code home — the shared neutral core, not the adapter hook
+
+The change
+lands in `.pkit/permissions/decide.py` (`segments()` / classification), the
+single neutral core both the hook and `pkit permissions` import. This preserves
+the [ADR-002](ADR-002-permission-realizer-ownership.md) /
+[ADR-003](ADR-003-permission-core-code-home.md) same-code invariant — one
+`decide()`, identical decisions — and is covered by the existing conformance
+fixtures.
+
+### 5. The deny side is unchanged and remains porous
+
+This ADR touches only the
+*allow* path's prompt-reduction. The deny side — guardrail denies, the fail-open
+hook + fail-closed native double-lock — is untouched, and the merge layer / hook
+remains a **speed-bump, not a boundary**
+([ADR-004](ADR-004-autonomy-intent-confinement.md),
+[ADR-019](ADR-019-enforcement-gate-mechanism-vs-boundary.md)). A reader must not
+read a tighter allow path as a hardened deny path. Real confinement is still the
+OS sandbox; real merge enforcement is still adopter-wired CI.
+
+### 6. The broader widening is deferred per COR-007
+
+A general
+"auto-approve any compound whose every segment is independently safe" is **not**
+taken (and is rejected outright as unsound — see Rationale). Any widening beyond
+the leading-`cd` strip is gated on a *demonstrated residual-prompt need* — the
+[COR-007](../../../.pkit/decisions/core/COR-007-pattern-extraction.md) recurrence
+test, not speculative generality.
 
 ## Rationale
 

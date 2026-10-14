@@ -80,7 +80,7 @@ The trigger case for adopting pkit (IGW + AUJ) reveals a constraint the original
 
 - IGW and AUJ both feed an **org-level Projects v2 board** (Team Planning, owned by `ai-platform-incubation`) — see the sibling scratchpad `declarative-pm-hooks.md` for the field IDs.
 - That board carries a `Workstream` single-select field with portfolio-scale values (`Spyre`, `llm-d`, `Agent Platform`, `Storage`, `Kagenti`).
-- The board, not either repo's config, is authoritative for the workstream taxonomy. DEC-022 line 76 makes this explicit: *"when both peers use board substrate, the board IS the shared substrate and per-repo comparison is meaningless."*
+- The board, not either repo's config, is authoritative for the workstream taxonomy. DEC-022 makes this explicit among what its "Scope — what state gets compared" leaves out: *"when both peers use board substrate, the board IS the shared substrate and per-repo comparison is meaningless."*
 - Direction Y would require **renaming the board's field** — not just label vocabulary in each repo. The board owner (a separate org-level role) would have to coordinate the rename across every peer repo's adopter config and every existing issue's board item. This is multi-team, multi-repo, multi-environment coordination for what is fundamentally a linguistic cleanup.
 
 For board-substrate adopters in shared-board topologies, **Direction Y is infeasible**, not just expensive. The substrate vetoes the rename regardless of pkit's willingness to migrate. Label-substrate adopters could in principle do Direction Y, but a methodology can't ship a primitive that works for some substrates and breaks for others.

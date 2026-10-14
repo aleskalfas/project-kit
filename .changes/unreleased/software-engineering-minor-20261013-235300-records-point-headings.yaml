@@ -1,0 +1,12 @@
+component: software-engineering
+kind: minor
+custom:
+  category: Changed
+body: >
+  DEC-001 and DEC-002 write each of their points as a heading carrying its
+  number, word for word (#1421, COR-058). A page can now anchor to one point
+  of them, such as `software-engineering:DEC-002#3`, and a change to another
+  point of the record does not ask for the page to be revalidated. No
+  point's text, number or citation changes. DEC-002's paragraph on the
+  pm-side companion decisions, after its point 7, sits under a heading of its
+  own, with the same words.

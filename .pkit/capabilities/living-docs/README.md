@@ -12,8 +12,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-13T11:51:45Z
-      outcome: updated
+      at: 2026-10-13T20:06:30Z
+      outcome: unchanged
+      unchanged-because: living-docs DEC-001, with COR-049, COR-050, COR-051 and COR-053, now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed. Every point this page cites, such as DEC-001 points 1, 2, 3, 6 and 8, names the same text, so it holds.
 ---
 
 # living-docs capability

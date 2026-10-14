@@ -16,19 +16,31 @@ The seam holds by inspection: `workflow.yaml`'s `states` and `transitions` map o
 
 **In plain terms:** restructure `workflow.yaml` so its states + transitions conform to the substrate shape, ship the `keyed` cardinality the issue lifecycle needs, move the state-machine mechanics into the engine (pm keeps its domain side-effects + cascade), and migrate installed adopters.
 
-**D1 — Bind as a keyed process.** The issue lifecycle is keyed — many issues, each at its own position — relying on the `keyed` cardinality slot shipped by [COR-032](../../../decisions/core/COR-032-keyed-process-subjects.md) (this rebind is the binding that drove it). The substrate widening (schema enum + engine subject-threading) lives in COR-032; here pm declares `subject: { cardinality: keyed, key: issue-number }`. Cross-subject effects (the parent/child cascade) are *breadth* — altitude-2, still deferred — and stay capability-local.
+### D1 — Bind as a keyed process
 
-**D2 — Conform the definition.** Each state replaces its `inferred_from` prose with `detection: { mode: classified, predicate: { run: <pm's lifecycle classifier> } }` — one predicate, named by all five states, that answers which state the issue is in ([COR-033](../../../decisions/core/COR-033-process-substrate.md) point 5). The per-state detectors stay registered, for direct use. Each transition gains `gate: { kind, predicate }` (the checkbox close-gate → `deterministic`; the PR-merge gate → `authorisation-artifact`, cross-authority). `subject: { cardinality: keyed, key: issue-number }`; add `id` + `version`; bump `schema_version` 2 → 3.
+The issue lifecycle is keyed — many issues, each at its own position — relying on the `keyed` cardinality slot shipped by [COR-032](../../../decisions/core/COR-032-keyed-process-subjects.md) (this rebind is the binding that drove it). The substrate widening (schema enum + engine subject-threading) lives in COR-032; here pm declares `subject: { cardinality: keyed, key: issue-number }`. Cross-subject effects (the parent/child cascade) are *breadth* — altitude-2, still deferred — and stay capability-local.
 
-**D3 — pm-local fields stay.** `cascade`, `closure_triggers`, `pr_state_effect`, `source`, `display_name` remain in `workflow.yaml` (the engine ignores them); pm's wrappers continue to run the cascade + closure semantics. The shared shape is not polluted with pm domain fields.
+### D2 — Conform the definition
+
+Each state replaces its `inferred_from` prose with `detection: { mode: classified, predicate: { run: <pm's lifecycle classifier> } }` — one predicate, named by all five states, that answers which state the issue is in ([COR-033](../../../decisions/core/COR-033-process-substrate.md) point 5). The per-state detectors stay registered, for direct use. Each transition gains `gate: { kind, predicate }` (the checkbox close-gate → `deterministic`; the PR-merge gate → `authorisation-artifact`, cross-authority). `subject: { cardinality: keyed, key: issue-number }`; add `id` + `version`; bump `schema_version` 2 → 3.
+
+### D3 — pm-local fields stay
+
+`cascade`, `closure_triggers`, `pr_state_effect`, `source`, `display_name` remain in `workflow.yaml` (the engine ignores them); pm's wrappers continue to run the cascade + closure semantics. The shared shape is not polluted with pm domain fields.
 
 > **Amended in part by [DEC-034](DEC-034-cascade-slot-binding.md).** Once the shared cascade slot shipped ([COR-037](../../../decisions/core/COR-037-process-cascade.md)), pm's **closure** cascade was rebound onto it (the slot is itself content-free, so D3's boundary rationale is preserved). The *other* D3 fields (`closure_triggers`, `pr_state_effect`, `source`, `display_name`) and pm's **forward** cascade remain capability-local as decided here.
 
-**D4 — Predicate commands.** pm ships read-only detector/gate commands (lifting `move-issue`'s inference: branch-exists, PR-merged + cross-authority, checkboxes-ticked) that return the structured JSON the engine's predicate runner expects, registered in `package.yaml`.
+### D4 — Predicate commands
 
-**D5 — Delegate to the engine.** `move-issue` and the verb-subject wrappers delegate the state-machine mechanics (position / validation / journal) to `pkit process`; pm retains its domain side-effects (branch/PR creation, assignment, cascade, closure).
+pm ships read-only detector/gate commands (lifting `move-issue`'s inference: branch-exists, PR-merged + cross-authority, checkboxes-ticked) that return the structured JSON the engine's predicate runner expects, registered in `package.yaml`.
 
-**D6 — Migration (warn-on-override only).** `workflow.yaml` is kit-owned and delivered by `sync`, so the v3 definition is **authored source**, not a rewrite of adopter state. Per the existing v2 migration precedent, the capability-tier migration ([COR-010](../../../decisions/core/COR-010-resource-lifecycle.md)) only **detects an adopter override** (a `project/schema-overrides/workflow.yaml`) still at `schema_version` 2 and **warns** them to hand-update it — it never rewrites the kit-shipped file or auto-edits project-owned content. Idempotent (no override, or already-current → exit clean).
+### D5 — Delegate to the engine
+
+`move-issue` and the verb-subject wrappers delegate the state-machine mechanics (position / validation / journal) to `pkit process`; pm retains its domain side-effects (branch/PR creation, assignment, cascade, closure).
+
+### D6 — Migration (warn-on-override only)
+
+`workflow.yaml` is kit-owned and delivered by `sync`, so the v3 definition is **authored source**, not a rewrite of adopter state. Per the existing v2 migration precedent, the capability-tier migration ([COR-010](../../../decisions/core/COR-010-resource-lifecycle.md)) only **detects an adopter override** (a `project/schema-overrides/workflow.yaml`) still at `schema_version` 2 and **warns** them to hand-update it — it never rewrites the kit-shipped file or auto-edits project-owned content. Idempotent (no override, or already-current → exit clean).
 
 ## Rationale
 

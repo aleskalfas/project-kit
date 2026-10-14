@@ -18,31 +18,53 @@ The design space was explored in the scratchpad note `2026-08-12-code-review-dis
 
 **Ship a three-agent code-review panel from `software-engineering`, registered via the reviewer-contribution socket, folding through the existing all-must-approve gate.**
 
-1. **The panel.** Three reviewer agents, each emitting the standard [project-management:DEC-028] verdict grammar (`APPROVED`/`CHANGES_REQUESTED` + the `<!-- pkit-verdict -->` marker — the block token is `CHANGES_REQUESTED`; DEC-028 deliberately declined `REJECTED` as too terminal), registered through the reviewer-contribution declaration (the pm-owned schema):
-   - **`code-reviewer`** — the generalist headline: correctness/logic at its core, plus general code quality; the "review this PR" an operator reaches for.
-   - **`security-reviewer`** — illustratively: auth, secrets-in-argv, `shell=True`/injection, crypto, dependency hygiene (its contract lives in the agent body, not this record).
-   - **`docs-reviewer`** — documentation completeness, understandability, docs-match-behaviour (leaning on [project-management:DEC-015]'s doc obligations), and the answers a change wrote (below).
+### 1. The panel
 
-   **`docs-reviewer` and a change's answers.** Wherever `docs-reviewer` reviews a change, it also checks the answers the change wrote ([COR-050] point 3). It checks them as a reviewer other than their writer, the role [COR-050] point 3 and [project-management:DEC-055] point 3 describe. Which reviewer fills that role is the project's choice.
-   - **What it reads.** It takes the answers from the change check's own list, never from an account the author wrote. Only the sentence on each `updated` artefact is the author's own.
-   - **What it blocks on.** Each of these withholds `APPROVED`:
-     - on an artefact the change check asked about, an `unchanged` reason that does not hold against the change
-     - on such an artefact, a deferral the change writes or rewords whose reason does not hold, or that names no open follow-up
-     - any `updated` artefact with no sentence from the change's author on what changed, or with one that does not match the diff
-   - **What it does not block on.** An answer on an artefact the change check asked nothing about stays a person's decision, even when an agent writes it. So does a reason for having no anchors. `docs-reviewer` cannot tell whether the person accepted one, so it names each in an `[advisory]` finding. A deferral the change keeps as it was is not judged again.
-   - **Where it does not review a change.** No reviewer of this panel checks that change's answers (see Implications).
-2. **Home: `software-engineering`.** Co-located with the producer (rationale below). Recorded here as the boundary call per [COR-026].
-3. **Block-threshold discipline (per-agent).** Each agent withholds `APPROVED` **only on objective failures of the change** within its remit; softer or subjective findings, and defects the change merely sits beside, are posted as `APPROVED`-with-comments (advisory). This keeps the binary all-must-approve gate from becoming a subjective merge-blocking veto.
-   - **What the change owns.** A defect it introduces — including one it newly exposes (a new caller, a default path that now reaches it), one in code it moves or copies, and one whose reach it widens.
-   - **A pre-existing defect blocks only when the change asserts it away.** The assertion is the PR's title or body stating that the change fixes, prevents, or guards against a behaviour, or text the diff adds or edits (documentation, a help string, a message, a comment, a test name) stating that the case is handled. A surviving defect the assertion rules out makes the assertion false — a failure of the change. The remedy is to make it true (fix the defect) or retract it (narrow the claim, remove the sentence). Commit messages are not a claim source: squash-merge discards them and the PR body becomes the commit ([project-management:DEC-013]).
-   - **Limits.** The assertion must be stated, not inferred from the change's topic; a defect that shares vocabulary with the claim, or errs in the direction the claim permits, does not contradict it. The surviving defect must lie in the agent's own remit, so each remit blocks at most once per defect — a false doc the diff adds is also `docs-reviewer`'s own failure. An assertion whose scope is ambiguous resolves to advisory.
-   - **Everything else pre-existing is advisory however severe**, surfaced for the caller to file, and labelled as pre-existing with a one-line reason why no assertion of the change is falsified.
-4. **Knowledge split.** Each agent body carries only **universal** review knowledge; project-specific rules are read from the overlay-resolved `<project-conventions>` corpus (ADR-013), mirroring DEC-001's producer discipline — so a later generation-side sharing (feeding `software-engineer`) is a non-breaking addition, not a body-extraction migration.
-5. **Composability.** `code-reviewer` alone = *basic* review; adding specialists = *complex* review. Install-driven per DEC-032.
-6. **Aggregation is unchanged.** Verdicts fold through DEC-028/DEC-032 binary all-must-approve. This DEC introduces **no** new aggregation.
-7. **Increment 1 is human-triggered** (local identity, via `review-pr`); the fully-autonomous remote-contributed path is deferred.
+Three reviewer agents, each emitting the standard [project-management:DEC-028] verdict grammar (`APPROVED`/`CHANGES_REQUESTED` + the `<!-- pkit-verdict -->` marker — the block token is `CHANGES_REQUESTED`; DEC-028 deliberately declined `REJECTED` as too terminal), registered through the reviewer-contribution declaration (the pm-owned schema):
+- **`code-reviewer`** — the generalist headline: correctness/logic at its core, plus general code quality; the "review this PR" an operator reaches for.
+- **`security-reviewer`** — illustratively: auth, secrets-in-argv, `shell=True`/injection, crypto, dependency hygiene (its contract lives in the agent body, not this record).
+- **`docs-reviewer`** — documentation completeness, understandability, docs-match-behaviour (leaning on [project-management:DEC-015]'s doc obligations), and the answers a change wrote (below).
 
-**Required pm-side companion decisions (cited, decided in sibling Tasks — not here):** (a) the reviewer-contribution predicate keyed on the `type` axis **plus a diff-touches-code floor**, so the panel activates on any code-carrying PR regardless of the closing issue's classification (closes #715's mislabeled/unclassified escape); (b) a **per-reviewer override** — override one agent's block with an audited reason, without discarding the whole gate; (c) an honest **`done-work` gate summary** enumerating which perspectives reviewed and any required-but-missing one.
+**`docs-reviewer` and a change's answers.** Wherever `docs-reviewer` reviews a change, it also checks the answers the change wrote ([COR-050] point 3). It checks them as a reviewer other than their writer, the role [COR-050] point 3 and [project-management:DEC-055] point 3 describe. Which reviewer fills that role is the project's choice.
+- **What it reads.** It takes the answers from the change check's own list, never from an account the author wrote. Only the sentence on each `updated` artefact is the author's own.
+- **What it blocks on.** Each of these withholds `APPROVED`:
+  - on an artefact the change check asked about, an `unchanged` reason that does not hold against the change
+  - on such an artefact, a deferral the change writes or rewords whose reason does not hold, or that names no open follow-up
+  - any `updated` artefact with no sentence from the change's author on what changed, or with one that does not match the diff
+- **What it does not block on.** An answer on an artefact the change check asked nothing about stays a person's decision, even when an agent writes it. So does a reason for having no anchors. `docs-reviewer` cannot tell whether the person accepted one, so it names each in an `[advisory]` finding. A deferral the change keeps as it was is not judged again.
+- **Where it does not review a change.** No reviewer of this panel checks that change's answers (see Implications).
+
+### 2. Home: `software-engineering`
+
+Co-located with the producer (rationale below). Recorded here as the boundary call per [COR-026].
+
+### 3. Block-threshold discipline (per-agent)
+
+Each agent withholds `APPROVED` **only on objective failures of the change** within its remit; softer or subjective findings, and defects the change merely sits beside, are posted as `APPROVED`-with-comments (advisory). This keeps the binary all-must-approve gate from becoming a subjective merge-blocking veto.
+- **What the change owns.** A defect it introduces — including one it newly exposes (a new caller, a default path that now reaches it), one in code it moves or copies, and one whose reach it widens.
+- **A pre-existing defect blocks only when the change asserts it away.** The assertion is the PR's title or body stating that the change fixes, prevents, or guards against a behaviour, or text the diff adds or edits (documentation, a help string, a message, a comment, a test name) stating that the case is handled. A surviving defect the assertion rules out makes the assertion false — a failure of the change. The remedy is to make it true (fix the defect) or retract it (narrow the claim, remove the sentence). Commit messages are not a claim source: squash-merge discards them and the PR body becomes the commit ([project-management:DEC-013]).
+- **Limits.** The assertion must be stated, not inferred from the change's topic; a defect that shares vocabulary with the claim, or errs in the direction the claim permits, does not contradict it. The surviving defect must lie in the agent's own remit, so each remit blocks at most once per defect — a false doc the diff adds is also `docs-reviewer`'s own failure. An assertion whose scope is ambiguous resolves to advisory.
+- **Everything else pre-existing is advisory however severe**, surfaced for the caller to file, and labelled as pre-existing with a one-line reason why no assertion of the change is falsified.
+
+### 4. Knowledge split
+
+Each agent body carries only **universal** review knowledge; project-specific rules are read from the overlay-resolved `<project-conventions>` corpus (ADR-013), mirroring DEC-001's producer discipline — so a later generation-side sharing (feeding `software-engineer`) is a non-breaking addition, not a body-extraction migration.
+
+### 5. Composability
+
+`code-reviewer` alone = *basic* review; adding specialists = *complex* review. Install-driven per DEC-032.
+
+### 6. Aggregation is unchanged
+
+Verdicts fold through DEC-028/DEC-032 binary all-must-approve. This DEC introduces **no** new aggregation.
+
+### 7. Increment 1 is human-triggered
+
+**Increment 1 is human-triggered** (local identity, via `review-pr`); the fully-autonomous remote-contributed path is deferred.
+
+### Required pm-side companion decisions (cited, decided in sibling Tasks — not here)
+
+(a) the reviewer-contribution predicate keyed on the `type` axis **plus a diff-touches-code floor**, so the panel activates on any code-carrying PR regardless of the closing issue's classification (closes #715's mislabeled/unclassified escape); (b) a **per-reviewer override** — override one agent's block with an audited reason, without discarding the whole gate; (c) an honest **`done-work` gate summary** enumerating which perspectives reviewed and any required-but-missing one.
 
 ## Rationale
 

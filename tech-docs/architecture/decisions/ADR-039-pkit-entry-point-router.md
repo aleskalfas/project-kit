@@ -58,19 +58,27 @@ developers alike.** On every invocation it selects one of three routes,
 **cheap-first** — the route is chosen *before* the heavy import, so the fast path
 never pays Python cold-start it can avoid:
 
-1. **Source checkout → exec the in-tree dispatcher.** When the invocation resolves
-   inside a project-kit source checkout, exec that checkout's `.pkit/cli/pkit`,
-   running the working tree. This preserves the deploy-primitive bypass the shim's
-   route delivers today.
+### 1. Source checkout → exec the in-tree dispatcher
 
-2. **Project pins a version ≠ me → re-exec `uvx project-kit@<pin>`.** When the
-   enclosing project pins a version that differs from the running binary's,
-   re-exec `uvx project-kit@<pin>` and let that process serve the command.
+When the invocation resolves
+inside a project-kit source checkout, exec that checkout's `.pkit/cli/pkit`,
+running the working tree. This preserves the deploy-primitive bypass the shim's
+route delivers today.
 
-3. **Match, or no pin → run self.** When the pin matches the running binary, or the
-   project pins nothing, run in-process.
+### 2. Project pins a version ≠ me → re-exec `uvx project-kit@<pin>`
 
-**D1 — Version-lock soundness rests on ADR-033.** Re-execing to `uvx
+When the
+enclosing project pins a version that differs from the running binary's,
+re-exec `uvx project-kit@<pin>` and let that process serve the command.
+
+### 3. Match, or no pin → run self
+
+When the pin matches the running binary, or the
+project pins nothing, run in-process.
+
+### D1 — Version-lock soundness rests on ADR-033
+
+Re-execing to `uvx
 project-kit@<pin>` brings CLI code *and* bundled content *from the same wheel*:
 `find_source_kit()` keys off the installed package location
 ([ADR-033](ADR-033-official-install-bundles-content.md)), so the re-exec'd process
@@ -79,17 +87,23 @@ diverge. This resolver is only possible *because* ADR-033 collapsed the
 binary-vs-content drift axis; without it, re-execing the code to a pin would say
 nothing about the content that pin syncs.
 
-**D2 — Graceful degradation is mandatory.** An unresolvable pin — offline, an
+### D2 — Graceful degradation is mandatory
+
+An unresolvable pin — offline, an
 untagged version, missing auth — falls back to running self with a **loud drift
 warning**. The resolver never hard-fails mid-command over a pin it cannot fetch; a
 degraded-but-running command beats a broken one.
 
-**D3 — Pin correspondence assumes disciplined tagging.** `uvx
+### D3 — Pin correspondence assumes disciplined tagging
+
+`uvx
 project-kit@vX.Y.Z` resolves the git tag `vX.Y.Z`, so route 2 assumes total
 tag⟺`.pkit/VERSION` correspondence. That correspondence is a release-discipline
 property, owned by #464 (and already mandated in spirit by PRJ-004, which cuts
 annotated tags matching `.pkit/VERSION`). The resolver depends on it; it does not
 enforce it.
+
+### The pin source
 
 The **pin source** — whether the project's pin is read from `.pkit/VERSION` or from
 a dedicated pin file — is left to the implementation (#465) to decide and reconcile

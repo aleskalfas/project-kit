@@ -50,7 +50,9 @@ the methodology's; the presentation is the adopter's to restyle.
 It separates a fixed machine layer from an overridable presentation layer, and the
 existing audit strings plus the new ownership event log are all expressed through it.
 
-**1. A structured audit record is the input.** Every audit event is a record with a
+### 1. A structured audit record is the input
+
+Every audit event is a record with a
 fixed field vocabulary: `event` type (e.g. `promote`, `bypass`, `handoff`, `claim`,
 `abandon`, `release`), `actor` (login + display name; email where the source has it),
 `timestamp`, the affected subject, an event-specific structured `payload` (e.g.
@@ -58,7 +60,8 @@ fixed field vocabulary: `event` type (e.g. `promote`, `bypass`, `handoff`, `clai
 free-text `reason` where the event carries one. Call sites construct the record;
 they never format the comment themselves.
 
-**2. Each posted comment carries two layers.**
+### 2. Each posted comment carries two layers
+
 - A **hidden, versioned machine stamp** — a single HTML-comment line encoding the
   record's structured fields (`<!-- pkit:audit v=1 event=… … -->`). It is **fixed
   and stable**: tooling parses it, and the [project-management:DEC-024-lifecycle-hooks]
@@ -68,13 +71,17 @@ they never format the comment themselves.
 - A **rendered human presentation** — generated from the record through a template.
   Nothing parses this layer, so it is free to be readable.
 
-**3. The presentation template is adopter-overridable; the stamp is not.** The kit
+### 3. The presentation template is adopter-overridable; the stamp is not
+
+The kit
 ships a sensible default render; an adopter who wants a different house style edits
 the template, and all tooling keeps working because the stamp is untouched. This is
 the project-neutrality split: structure is the methodology's, aesthetics are the
 adopter's.
 
-**4. The default render is richer than today, and verbosity is per-event-type.** The
+### 4. The default render is richer than today, and verbosity is per-event-type
+
+The
 kit default uses GitHub-native alert callouts to carry event class visually
 (routine → `[!NOTE]`, an override happened → `[!WARNING]`, terminal → `[!IMPORTANT]`),
 a bold title line, and a consistent `actor · timestamp` metadata line, with the
@@ -85,7 +92,9 @@ aesthetic is confirmed against a live rendered ticket** during implementation, n
 frozen here — this record fixes the *structure* (two layers, per-event verbosity,
 overridable template), not the final glyphs.
 
-**5. The existing audit strings migrate onto the facility.** The DEC-026 promote /
+### 5. The existing audit strings migrate onto the facility
+
+The DEC-026 promote /
 handoff strings and the DEC-014 bypass template are re-expressed as events through
 this facility; their machine stamps preserve the parseable-prefix intent DEC-026
 called out. The **instance-ownership event log** (DEC-043 D3) is this facility
@@ -93,8 +102,9 @@ specialised with the ownership event types — it is *not* a parallel comment
 mechanism, and its per-object-atomic append semantics (one comment per event) are the
 facility's normal append behaviour.
 
-**6. The facility is presentation only — it changes no gate, transition, or
-severity.** It is the carrier for audit comments; what *requires* an audit comment,
+### 6. The facility is presentation only — it changes no gate, transition, or severity
+
+It is the carrier for audit comments; what *requires* an audit comment,
 and at what severity, remains owned by DEC-014 / DEC-024 / DEC-026 / DEC-043. Posting
 through the facility does not alter when a comment is required or what it authorises.
 

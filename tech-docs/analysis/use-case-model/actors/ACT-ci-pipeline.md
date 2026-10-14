@@ -17,8 +17,9 @@ pkit:
         - COR-054
         - COR-050
     revalidated:
-      at: 2026-10-14T09:21:11Z
-      outcome: updated
+      at: 2026-10-14T18:58:44Z
+      outcome: unchanged
+      unchanged-because: COR-054 and COR-050 now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed, so COR-054 point 3 and COR-050 point 12, which the Core line cites for one base a pipeline names for every check and for the checks binding once the project makes them a required status, name the same text. The pipeline's needs rest on it, so the actor holds.
 ---
 
 # ACT-ci-pipeline — CI pipeline

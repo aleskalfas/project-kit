@@ -1,0 +1,13 @@
+component: demo-recording
+kind: minor
+custom:
+  category: Changed
+body: >
+  DEC-002 and DEC-004 write each of their points as a heading carrying its
+  number, word for word (#1421, COR-058). A page can now anchor to one point
+  of them, such as `demo-recording:DEC-002#4`, and a change to another point
+  of the record does not ask for the page to be revalidated. No point's
+  text, number or citation changes. DEC-002 gains point 4, "One-directional
+  knowledge flow": the sentence after its point 3, that Layer 1 knows nothing
+  of Layers 2 and 3 and Layer 3 depends on both, is now a point of its own,
+  with the same words.

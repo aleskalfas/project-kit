@@ -26,12 +26,14 @@ The load-bearing observation: **the timeline already logs label changes**, so a 
 
 ## Decision
 
-**1. Where the canonical audit trail lives follows the project's journal setting.** Journal logging is the project's choice and off by default (COR-033 point 7: `process.journal` in the backbone configuration, with `enabled` and `committed`).
+### 1. Where the canonical audit trail lives follows the project's journal setting
+
+Journal logging is the project's choice and off by default (COR-033 point 7: `process.journal` in the backbone configuration, with `enabled` and `committed`).
 
 - **Logging on — the engine journal is the canonical audit trail.** Substrate-neutral (the COR-033 process engine), append-only, one entry per pkit-governed move with actor + pkit version. It is **reliable-and-complete**: a move that fails to journal is surfaced, not silently dropped. GitHub's timeline and comments are **projections** of this trail, never the source of truth. Committed journals (`committed: true`) make it shared, reviewable and durable. Clone-local journals (`committed: false`) record only the moves made from that clone, and go with it.
 - **Logging off — the tracker is the canonical audit trail.** The GitHub timeline records every state change, governed or not, with actor and timestamp; pkit's audit comments add what the timeline cannot — the *why* of an override at `audit`, and at `full` the provenance of every governed mutation. pkit keeps no second record.
 
-**2. GitHub comments are a configurable, provenance-stamped projection with three intensities:**
+### 2. GitHub comments are a configurable, provenance-stamped projection with three intensities
 
 - **`off`** — no audit comments. With logging on the engine journal is the record; with logging off the timeline alone remains.
 - **`audit`** *(default)* — only override/authorisation justifications: a `bypassable-with-audit` bypass (DEC-014), a `--force` override (DEC-046), a user-authorised transition carrying a reason. The *why* that must survive a failed mutation and be visible to a reviewer.
@@ -39,7 +41,9 @@ The load-bearing observation: **the timeline already logs label changes**, so a 
 
 The knob controls only the GitHub comments. Where a journal is kept it records every governed move regardless of level.
 
-**3. The governance boundary.** At `full`, provenance-stamped comments make governed-vs-ungoverned changes visible on the issue: a timeline event with no matching pkit comment is an out-of-band mutation (a manual label flip, a raw `gh` edit) — the issue-tracker analogue of the COR-039 cross-repo interlock. **`pkit pm history <N>`** renders the journal and **`--check-drift`** diffs it against the GitHub timeline's state-label events. What each guarantees depends on the mode:
+### 3. The governance boundary
+
+At `full`, provenance-stamped comments make governed-vs-ungoverned changes visible on the issue: a timeline event with no matching pkit comment is an out-of-band mutation (a manual label flip, a raw `gh` edit) — the issue-tracker analogue of the COR-039 cross-repo interlock. **`pkit pm history <N>`** renders the journal and **`--check-drift`** diffs it against the GitHub timeline's state-label events. What each guarantees depends on the mode:
 
 - **Logging on, committed.** `history` shows every governed move from any clone; `--check-drift` flags each timeline state change with no journal entry (exit 3) — an out-of-band mutation, or a governed move that failed to journal.
 - **Logging on, clone-local.** `history` shows the governed moves made from *this* clone. `--check-drift` compares the timeline against those moves only, so a move governed from another clone reads as drift. The check is sound only for a single-clone workflow.
@@ -47,7 +51,9 @@ The knob controls only the GitHub comments. Where a journal is kept it records e
 
 The drift check also needs `state` to be carried by labels; where the board or a derivation carries it, the check is skipped in every mode ([project-management:DEC-051-axis-carriage-activation]).
 
-**Format + single-poster rules.** Exactly **one** audit comment per audited mutation — the underlying mutator (`move-issue`) is the sole audit-comment writer; wrappers pass the reason through rather than posting their own. **One** canonical format, sourced from a single schema field (`validation-severity.yaml`'s `audit_comment_template`), carrying a `<!-- pkit-audit -->` marker + actor + transition + reason, and — at `full` — provenance. Consistent with the existing `<!-- pkit-verdict -->` / `<!-- pkit-provenance -->` / `<!-- pkit-hook -->` markers.
+### 4. Format + single-poster rules
+
+Exactly **one** audit comment per audited mutation — the underlying mutator (`move-issue`) is the sole audit-comment writer; wrappers pass the reason through rather than posting their own. **One** canonical format, sourced from a single schema field (`validation-severity.yaml`'s `audit_comment_template`), carrying a `<!-- pkit-audit -->` marker + actor + transition + reason, and — at `full` — provenance. Consistent with the existing `<!-- pkit-verdict -->` / `<!-- pkit-provenance -->` / `<!-- pkit-hook -->` markers.
 
 ## Rationale
 

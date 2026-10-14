@@ -22,66 +22,76 @@ The capabilities stay independent. Whatever keeps the use cases works with no wo
 
 **This capability accepts a data point for the use cases settled on the default branch and reads it through the backbone's resolution. What it does depends on how that resolution ended. When the point is off, nothing happens. When it cannot be read, the check says so and judges nothing. When it holds a set, batch planning walks it and body validation warns of a cited use case the set does not hold.**
 
-1. **The point.** As the provider of the work-tracking role, this capability accepts `<methodology>::work-tracking:use-cases` (COR-053). It is a data point whose value is the use cases settled on the default branch (COR-052; COR-054).
-   - **Its entries are `{id, title, status, path?}`**, the shape of a companion schema named after the point, at version 1 (COR-052 point 5).
-     - `id` follows the point's own pattern: at version 1, `UC-` and three or more digits. Body validation derives its citation matcher from that pattern, so the two never disagree.
-     - `status` is the point's two-value vocabulary, `active` and `withdrawn`. A filler maps its own lifecycle onto it. Planning reads it and walks active use cases only; body validation does not read it.
-     - `path`, optional, is the repository-relative path of the document that describes the use case.
-   - **Its combination is `single`.** One keeper answers, and a project filler replaces the answer whole.
-   - **It has no default.** This capability holds no use cases of its own.
-   - **Its inert policy is `fallback`**: its consumers only report, and a consumer that only reports may declare `fallback` (COR-052 point 6). The policy holds on three conditions, and they are part of this decision:
-     - nothing refuses on the point, and nothing fails on it;
-     - no finding is drawn from an id the point lacks unless the point resolved with no inert filler (point 3);
-     - raising the rule of point 4 above a warning reopens the policy.
+### 1. The point
 
-2. **The filler's contract.** The point's description states it, as what the point means and what one may rely on (COR-053 point 3), so any keeper can meet it without this capability knowing the keeper:
-   - the value holds **every use case that ever settled**, withdrawn ones included, but not one whose id the project freed;
-   - **an id is never reused**: once settled, it names the same use case for good, unless the project declares that nothing cites it. Then that use case may leave the value, and its id may later name a different use case. Anything that keeps an id is citing it;
-   - the answer is **complete or none**: a filler that cannot read a use case gives no answer, never a shorter list;
-   - a capability's filler **declares that it reads settled state**, so no base named for a run reaches it, and the backbone does not start it where that branch cannot be read (COR-052 point 6).
+As the provider of the work-tracking role, this capability accepts `<methodology>::work-tracking:use-cases` (COR-053). It is a data point whose value is the use cases settled on the default branch (COR-052; COR-054).
+- **Its entries are `{id, title, status, path?}`**, the shape of a companion schema named after the point, at version 1 (COR-052 point 5).
+  - `id` follows the point's own pattern: at version 1, `UC-` and three or more digits. Body validation derives its citation matcher from that pattern, so the two never disagree.
+  - `status` is the point's two-value vocabulary, `active` and `withdrawn`. A filler maps its own lifecycle onto it. Planning reads it and walks active use cases only; body validation does not read it.
+  - `path`, optional, is the repository-relative path of the document that describes the use case.
+- **Its combination is `single`.** One keeper answers, and a project filler replaces the answer whole.
+- **It has no default.** This capability holds no use cases of its own.
+- **Its inert policy is `fallback`**: its consumers only report, and a consumer that only reports may declare `fallback` (COR-052 point 6). The policy holds on three conditions, and they are part of this decision:
+  - nothing refuses on the point, and nothing fails on it;
+  - no finding is drawn from an id the point lacks unless the point resolved with no inert filler (point 3);
+  - raising the rule of point 4 above a warning reopens the policy.
 
-   A project filler is the project's own statement of its use cases. It is held to the point's shape and taken as given.
+### 2. The filler's contract
 
-   This record names no keeper, none of a keeper's files and nothing else a keeper keeps.
+The point's description states it, as what the point means and what one may rely on (COR-053 point 3), so any keeper can meet it without this capability knowing the keeper:
+- the value holds **every use case that ever settled**, withdrawn ones included, but not one whose id the project freed;
+- **an id is never reused**: once settled, it names the same use case for good, unless the project declares that nothing cites it. Then that use case may leave the value, and its id may later name a different use case. Anything that keeps an id is citing it;
+- the answer is **complete or none**: a filler that cannot read a use case gives no answer, never a shorter list;
+- a capability's filler **declares that it reads settled state**, so no base named for a run reaches it, and the backbone does not start it where that branch cannot be read (COR-052 point 6).
 
-3. **The states the rule distinguishes.** This capability reads the point through the backbone's document for one point (`pkit connections resolve --json`). It decides on the document's `outcome` and on its fillers' `state`. It never decides on the sentence in `why`, though it may show that sentence to people.
-   - **Off**: `undefined` or `unfilled`. Nothing defines the point, or nothing fills it. There is no finding, and nothing mentions use cases.
-   - **Could not check**: `no-answer`, `inert-fail`, `collision`, `selection-needed`, `selection-unmatched`, `definer-defect`, or a value this version does not know. There is no set to judge against. The same holds where the command returns no document, or one whose version this capability does not know.
-     - One notice says the citations were not checked, and why. It is a notice about the check, not a finding against the body, and no citation is reported as unknown. It is reported at warning severity.
-     - This point's own declaration cannot produce two of these values: `collision` under `single`, and `inert-fail` under `fallback`. They are read the same way all the same, so the consumer does not depend on the declaration staying as it is.
-   - **Partly checked**: `resolved`, with a filler whose state is `inert`. The point answered without a filler that was meant to answer.
-     - An id the point holds passes. The ids it lacks are named as not checked, never as unknown, in one notice that lists them, at warning severity.
-     - Under `single` with no default, this state arises only where more than one filler is declared and one that was asked gives no answer while another answers.
-   - **Empty** and **has entries**: `resolved`, with no inert filler. The value is the whole set, and the rule and the planning step apply to it.
+A project filler is the project's own statement of its use cases. It is held to the point's shape and taken as given.
 
-4. **The rule.** Body validation reads citations from a `## Use cases` section only. The section is optional on Feature and Task bodies and lies outside the minimum structure ([project-management:DEC-010-issue-body-minimum-structure]). On EPIC, Umbrella and Milestone bodies the rule reads nothing; a `## Use cases` heading there is ordinary content, neither checked nor reported. A citation is an id in that section that matches the point's pattern.
-   - **A cited id the resolved point does not hold is reported as a warning** ([project-management:DEC-014-validation-severity-model]).
-     - The severity is the rule's token in the body-format schema; this record fixes it at `warning`, and no project setting changes it.
-     - The warning is a report, never a refusal, wherever a body is validated: on reading, filing or editing an issue. No verb refuses or fails on it.
-     - Unlike the body rules that refuse, it never stops a filing or an edit.
-   - **The check is of existence only, and the rule says so wherever it is stated.** An id that exists but names a different use case from the one the author meant passes.
-   - **A citation of a withdrawn use case passes silently.**
-   - **The point is resolved only for a body that cites a use case.** A body with no citation starts no filler.
-   - **The finding says what it was read against.** Where the answering filler read the default branch, the finding names the commit it read and suggests fetching the default branch. Where the project's own filler answered, the finding names that file.
+This record names no keeper, none of a keeper's files and nothing else a keeper keeps.
 
-5. **The planning step.** Batch planning reads the point before it proposes a slicing. The step is active only when the point is not off.
-   - **With entries**, the agent walks the active use cases against the intent before it slices.
-     - Each proposed Feature and Task names the use cases it satisfies in its `## Use cases` section. An issue that serves none, such as an internal refactor, has no such section.
-     - The plan shown at the single approval gate ([project-management:DEC-029-project-manager-agent-shape]) surfaces both kinds of gap. One is a use case the plan leaves out: the intent touches it, but no planned issue names it. The other is behaviour the plan builds that no use case describes.
-     - Where entries carry `path`, the agent may read those documents. Otherwise it maps the intent from titles alone, and the plan says so.
-   - **Partly checked:** the agent walks the entries the point holds. The plan says that the set may be incomplete, and which filler did not answer.
-     - Behaviour that no held use case describes is shown as a possible gap, since the missing filler may describe it.
-     - An empty value read in this state does not lead to the prerequisite Task below.
-   - **With an empty set**, the plan includes a prerequisite Task to author the use cases when the planned work touches what users do, unless the Task was declined earlier the same day in the checkout (the clone's folder, or a worktree's) where the plan is made.
-     - Work touches what users do when it serves a goal someone using (not building) the software reaches, which a use case would describe. Internal work serves none: the build, tests, CI, refactors, tooling, and documentation of how the software is built and worked on. For a library or a command-line program, using it is calling or running it to reach the user's goal; building, testing or releasing it is internal.
-     - The agent judges each planned Feature and Task after it slices. It is the judgement the walk over a set with entries makes for the second kind of gap: whether the plan builds behaviour a use case would describe. The plan at the gate shows, for every Feature and Task, whether it touches what users do and, where it does, what it depends on for its use cases. A plan of internal work only has no prerequisite Task, and the gate says so and why, so the user can correct the judgement.
-     - Only the planned issues that touch what users do depend on the Task; internal work in the same plan does not. The dependent issues state the goals they serve as text and cite no use case, since none has settled.
-     - One of the Task's acceptance criteria is that the dependent issues name their use cases.
-     - The Task is in the plan by default, and the user revises it away to plan without use cases. That answer is kept in the checkout where the plan was made, and is never committed. It holds for the rest of the calendar day on which the plan was approved, in the machine's local time: until then, a plan from that checkout leaves the Task out and says at the gate when it was declined. From the next day on, the Task is offered again.
-     - Only the user's answer is kept, and only when the plan is approved. A plan that leaves the Task out on a kept answer does not renew it, an approved plan that includes the Task discards it, and a plan the user refuses at the gate keeps nothing. Correcting the judgement is not a decline. Neither is removing the Task because an open issue already plans the authoring of the use cases: the dependent issues then depend on that issue, and nothing is kept. An answer that cannot be read hides nothing: the Task is offered, and the gate says an earlier answer could not be read.
-     - Where the Task is left out on the user's answer, given at the gate or kept, the plan's topmost new issue says in prose that it was planned without use cases — or, where the plan files only under an existing issue, each filed issue does.
-   - **Could not check:** the plan says the use cases could not be read, and why, and proceeds without the step.
-   - **The agent does not write use cases.** It plans their authoring as work. Describing what the software must do is not project management.
+### 3. The states the rule distinguishes
+
+This capability reads the point through the backbone's document for one point (`pkit connections resolve --json`). It decides on the document's `outcome` and on its fillers' `state`. It never decides on the sentence in `why`, though it may show that sentence to people.
+- **Off**: `undefined` or `unfilled`. Nothing defines the point, or nothing fills it. There is no finding, and nothing mentions use cases.
+- **Could not check**: `no-answer`, `inert-fail`, `collision`, `selection-needed`, `selection-unmatched`, `definer-defect`, or a value this version does not know. There is no set to judge against. The same holds where the command returns no document, or one whose version this capability does not know.
+  - One notice says the citations were not checked, and why. It is a notice about the check, not a finding against the body, and no citation is reported as unknown. It is reported at warning severity.
+  - This point's own declaration cannot produce two of these values: `collision` under `single`, and `inert-fail` under `fallback`. They are read the same way all the same, so the consumer does not depend on the declaration staying as it is.
+- **Partly checked**: `resolved`, with a filler whose state is `inert`. The point answered without a filler that was meant to answer.
+  - An id the point holds passes. The ids it lacks are named as not checked, never as unknown, in one notice that lists them, at warning severity.
+  - Under `single` with no default, this state arises only where more than one filler is declared and one that was asked gives no answer while another answers.
+- **Empty** and **has entries**: `resolved`, with no inert filler. The value is the whole set, and the rule and the planning step apply to it.
+
+### 4. The rule
+
+Body validation reads citations from a `## Use cases` section only. The section is optional on Feature and Task bodies and lies outside the minimum structure ([project-management:DEC-010-issue-body-minimum-structure]). On EPIC, Umbrella and Milestone bodies the rule reads nothing; a `## Use cases` heading there is ordinary content, neither checked nor reported. A citation is an id in that section that matches the point's pattern.
+- **A cited id the resolved point does not hold is reported as a warning** ([project-management:DEC-014-validation-severity-model]).
+  - The severity is the rule's token in the body-format schema; this record fixes it at `warning`, and no project setting changes it.
+  - The warning is a report, never a refusal, wherever a body is validated: on reading, filing or editing an issue. No verb refuses or fails on it.
+  - Unlike the body rules that refuse, it never stops a filing or an edit.
+- **The check is of existence only, and the rule says so wherever it is stated.** An id that exists but names a different use case from the one the author meant passes.
+- **A citation of a withdrawn use case passes silently.**
+- **The point is resolved only for a body that cites a use case.** A body with no citation starts no filler.
+- **The finding says what it was read against.** Where the answering filler read the default branch, the finding names the commit it read and suggests fetching the default branch. Where the project's own filler answered, the finding names that file.
+
+### 5. The planning step
+
+Batch planning reads the point before it proposes a slicing. The step is active only when the point is not off.
+- **With entries**, the agent walks the active use cases against the intent before it slices.
+  - Each proposed Feature and Task names the use cases it satisfies in its `## Use cases` section. An issue that serves none, such as an internal refactor, has no such section.
+  - The plan shown at the single approval gate ([project-management:DEC-029-project-manager-agent-shape]) surfaces both kinds of gap. One is a use case the plan leaves out: the intent touches it, but no planned issue names it. The other is behaviour the plan builds that no use case describes.
+  - Where entries carry `path`, the agent may read those documents. Otherwise it maps the intent from titles alone, and the plan says so.
+- **Partly checked:** the agent walks the entries the point holds. The plan says that the set may be incomplete, and which filler did not answer.
+  - Behaviour that no held use case describes is shown as a possible gap, since the missing filler may describe it.
+  - An empty value read in this state does not lead to the prerequisite Task below.
+- **With an empty set**, the plan includes a prerequisite Task to author the use cases when the planned work touches what users do, unless the Task was declined earlier the same day in the checkout (the clone's folder, or a worktree's) where the plan is made.
+  - Work touches what users do when it serves a goal someone using (not building) the software reaches, which a use case would describe. Internal work serves none: the build, tests, CI, refactors, tooling, and documentation of how the software is built and worked on. For a library or a command-line program, using it is calling or running it to reach the user's goal; building, testing or releasing it is internal.
+  - The agent judges each planned Feature and Task after it slices. It is the judgement the walk over a set with entries makes for the second kind of gap: whether the plan builds behaviour a use case would describe. The plan at the gate shows, for every Feature and Task, whether it touches what users do and, where it does, what it depends on for its use cases. A plan of internal work only has no prerequisite Task, and the gate says so and why, so the user can correct the judgement.
+  - Only the planned issues that touch what users do depend on the Task; internal work in the same plan does not. The dependent issues state the goals they serve as text and cite no use case, since none has settled.
+  - One of the Task's acceptance criteria is that the dependent issues name their use cases.
+  - The Task is in the plan by default, and the user revises it away to plan without use cases. That answer is kept in the checkout where the plan was made, and is never committed. It holds for the rest of the calendar day on which the plan was approved, in the machine's local time: until then, a plan from that checkout leaves the Task out and says at the gate when it was declined. From the next day on, the Task is offered again.
+  - Only the user's answer is kept, and only when the plan is approved. A plan that leaves the Task out on a kept answer does not renew it, an approved plan that includes the Task discards it, and a plan the user refuses at the gate keeps nothing. Correcting the judgement is not a decline. Neither is removing the Task because an open issue already plans the authoring of the use cases: the dependent issues then depend on that issue, and nothing is kept. An answer that cannot be read hides nothing: the Task is offered, and the gate says an earlier answer could not be read.
+  - Where the Task is left out on the user's answer, given at the gate or kept, the plan's topmost new issue says in prose that it was planned without use cases — or, where the plan files only under an existing issue, each filed issue does.
+- **Could not check:** the plan says the use cases could not be read, and why, and proceeds without the step.
+- **The agent does not write use cases.** It plans their authoring as work. Describing what the software must do is not project management.
 
 ## Rationale
 

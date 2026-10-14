@@ -7,61 +7,61 @@ rules:
     origin: {decision: "living-docs:DEC-001"}
     pkit:
       friction:
-        anchors: {record: ["living-docs:DEC-001"]}
+        anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-13T11:36:49Z
+          at: 2026-10-13T20:06:25Z
           outcome: unchanged
-          unchanged-because: "DEC-001 points 2 and 3 say where LDOC binds: through a set of the project's own whose scope selects the page, such as its space's definition, and a check enforces its part only there. Point 4 describes the page's reader and kind fields. None of it changes what this rule asks: a page's anchors ground every statement it makes."
+          unchanged-because: living-docs DEC-001's points are now headings, so the anchor names point 3, which states this rule's property, that a page's anchors ground every statement. Point 3's text is unchanged, so the rule holds.
   RS-LDOC-002:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
     pkit:
       friction:
-        anchors: {record: ["living-docs:DEC-001"]}
+        anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-13T11:37:00Z
+          at: 2026-10-13T20:06:26Z
           outcome: unchanged
-          unchanged-because: DEC-001 points 2 and 3 say where LDOC binds, through a scoped set of the project's own such as a space's definition, and point 7 resolves a reader only where the rule on readers binds. Nothing in them touches stating a fact on one page, so each fact is stated once and other pages link to it.
+          unchanged-because: living-docs DEC-001's points are now headings, so the anchor names point 3, which states this rule's property, that each fact is stated once. Point 3's text is unchanged, so the rule holds.
   RS-LDOC-003:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
     pkit:
       friction:
-        anchors: {record: ["living-docs:DEC-001"]}
+        anchors: {record: ["living-docs:DEC-001#3", "living-docs:DEC-001#4"]}
         revalidated:
-          at: 2026-10-13T11:37:01Z
+          at: 2026-10-13T20:06:27Z
           outcome: unchanged
-          unchanged-because: "DEC-001 point 3 enforces this rule's checked part, the reader field resolving against the readers point, only where the rule binds, and point 4 describes the field. Where the rule binds it asks the same: each page names its reader in its reader field and says only what that reader needs."
+          unchanged-because: living-docs DEC-001's points are now headings, so the anchors name point 3, which states that each page names its reader, and point 4, which gives a page its `reader` field. Their text is unchanged, so the rule holds.
   RS-LDOC-004:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
     pkit:
       friction:
-        anchors: {record: ["living-docs:DEC-001"]}
+        anchors: {record: ["living-docs:DEC-001#3", "living-docs:DEC-001#4"]}
         revalidated:
-          at: 2026-10-13T11:37:02Z
+          at: 2026-10-13T20:06:28Z
           outcome: unchanged
-          unchanged-because: "DEC-001 point 3 checks a page's structure only where this rule binds, through a set of the project's own whose scope selects the page. Where it binds the rule asks the same: pages of a kind follow one format, with a template per kind, and a page names its kind in its kind field."
+          unchanged-because: living-docs DEC-001's points are now headings, so the anchors name point 3, which states that pages of a kind follow one format and how a kind's structure is checked, and point 4, which gives a page its `kind` field. Their text is unchanged, so the rule holds.
   RS-LDOC-005:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
     pkit:
       friction:
-        anchors: {record: ["living-docs:DEC-001"]}
+        anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-13T11:37:03Z
+          at: 2026-10-13T20:06:29Z
           outcome: unchanged
-          unchanged-because: DEC-001 points 2 and 3 say where LDOC binds, through a scoped set of the project's own such as a space's definition. They say nothing of what an index-like file tells its reader, so such a file is a signpost to what a folder holds, never a summary of its contents.
+          unchanged-because: living-docs DEC-001's points are now headings, so the anchor names point 3, which states this rule's property, that an index-like file is a signpost. Point 3's text is unchanged, so the rule holds.
   RS-LDOC-006:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
     pkit:
       friction:
-        anchors: {record: ["living-docs:DEC-001"]}
+        anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-13T11:52:00Z
+          at: 2026-10-13T20:06:30Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 2 has a space's definition written with its scope, so no scope is written ahead of the definition that needs it, and points 3 and 7 say where LDOC's checks run. None of it creates anything ahead of its need, so nothing is created ahead of the need for it.
+          unchanged-because: living-docs DEC-001's points are now headings, so the anchor names point 3, which states this rule's property, that nothing is created ahead of the need for it. Point 3's text is unchanged, so the rule holds.
 # The parts of these rules that this capability's validation enforces (COR-051
 # point 2; DEC-001 point 6), each only where its rule binds: a reader-review
 # leaves them to it and judges the rest.

@@ -25,20 +25,30 @@ The proposed status is the acceptance-gate gesture per [PRJ-005](../../../.pkit/
 
 **Agent autonomy is the product of two independent axes — intent × confinement — and the two are modelled separately because exactly one is per-agent-expressible and exactly one is OS-enforceable.**
 
-**1. Intent (what may be invoked).** Intent is the permission model's existing surface. It splits by the granularity the harness can honour, per the prior pass:
+### 1. Intent (what may be invoked)
+
+Intent is the permission model's existing surface. It splits by the granularity the harness can honour, per the prior pass:
 
 - *Tool-gating* is **per-agent** — agent frontmatter (`tools`/`disallowedTools`), native to the harness.
 - *Command rules* are **session-wide** — the `permissions` block, a project-level union across installed agents; never per-agent.
 
 Intent is **pkit-owned** and double-locked per ADR-002: the fail-open PreToolUse hook carries the nuanced, evolving rules; the fail-closed native deny carries the non-negotiable denies.
 
-**2. Confinement (how bounded reach is).** Confinement is filesystem and network *reach*. It is **not command-inspection-enforceable** (a shell escapes any cwd check via `cd` or absolute paths) and is therefore **OS-sandbox-enforced**, never hook-enforced. pkit **manages but delegates** this axis: pkit may write and merge the adapter's `sandbox` block (an adapter-tier settings contribution through the existing merge primitive) and *declare* which layer enforces each dimension, but **the OS sandbox enforces it — pkit must never imply the hook does.**
+### 2. Confinement (how bounded reach is)
 
-**3. Own vs delegate is split per-axis.** pkit **OWNS** the intent axis *and* the *declaration* of which layer enforces each dimension (`permission-enforcement.yaml`). pkit **MANAGES-BUT-DELEGATES** confinement to the harness sandbox. The declaration is the honest contract: it is the artifact that says "this dimension is sandbox-native, that one is hook-runtime, that one is an out-of-harness residual gap."
+Confinement is filesystem and network *reach*. It is **not command-inspection-enforceable** (a shell escapes any cwd check via `cd` or absolute paths) and is therefore **OS-sandbox-enforced**, never hook-enforced. pkit **manages but delegates** this axis: pkit may write and merge the adapter's `sandbox` block (an adapter-tier settings contribution through the existing merge primitive) and *declare* which layer enforces each dimension, but **the OS sandbox enforces it — pkit must never imply the hook does.**
 
-**4. Fail-closed invariant on confinement-conditioned prompt-suppression.** Any mechanism that suppresses prompts *because* execution is confined — the sandbox's auto-allow mode, or any future preset that turns it on — **MUST fail closed.** If the confinement layer is unavailable or unverified, prompt-suppression must NOT take effect. Concretely: a preset that enables auto-allow-when-sandboxed MUST also assert `sandbox.failIfUnavailable: true` (so a missing sandbox blocks rather than silently degrades) and SHOULD assert the strict escape-hatch lockdown (`allowUnsandboxedCommands: false`), so a command cannot silently fall back to running unconfined-and-unprompted. A confinement preset that can run unconfined-and-unprompted is worse than prompting: the user believes a boundary holds that does not. This resolves the prior open question ("does a profile refuse or warn-and-prompt when the sandbox can't start?") as a decision, not a deferred toggle — the safe default is the only correct default. *(The autonomy posture promotes this SHOULD to its default — see [ADR-028](ADR-028-seal-unsandboxed-escape-under-autonomy-posture.md).)*
+### 3. Own vs delegate is split per-axis
 
-**5. No per-agent confinement.** The sandbox is session-wide (subagents share the parent session's configuration). Per-agent differentiation is therefore honestly expressible **only on the intent axis, and only its tool-gating sub-axis.** "project-manager is autonomous but critic is read-only" is expressible as *tool* gating (per-agent, frontmatter) and is **not** expressible as differential confinement. Consequently, any future "profile" abstraction is a **per-PROJECT concept for confinement, not a per-agent one.** A profile binds {a chosen session-wide confinement posture} × {a chosen intent set, whose only per-agent lever is tool-gating} under one project-chosen name. This is recorded so a future surface cannot reintroduce a per-agent confinement profile the harness cannot honour.
+pkit **OWNS** the intent axis *and* the *declaration* of which layer enforces each dimension (`permission-enforcement.yaml`). pkit **MANAGES-BUT-DELEGATES** confinement to the harness sandbox. The declaration is the honest contract: it is the artifact that says "this dimension is sandbox-native, that one is hook-runtime, that one is an out-of-harness residual gap."
+
+### 4. Fail-closed invariant on confinement-conditioned prompt-suppression
+
+Any mechanism that suppresses prompts *because* execution is confined — the sandbox's auto-allow mode, or any future preset that turns it on — **MUST fail closed.** If the confinement layer is unavailable or unverified, prompt-suppression must NOT take effect. Concretely: a preset that enables auto-allow-when-sandboxed MUST also assert `sandbox.failIfUnavailable: true` (so a missing sandbox blocks rather than silently degrades) and SHOULD assert the strict escape-hatch lockdown (`allowUnsandboxedCommands: false`), so a command cannot silently fall back to running unconfined-and-unprompted. A confinement preset that can run unconfined-and-unprompted is worse than prompting: the user believes a boundary holds that does not. This resolves the prior open question ("does a profile refuse or warn-and-prompt when the sandbox can't start?") as a decision, not a deferred toggle — the safe default is the only correct default. *(The autonomy posture promotes this SHOULD to its default — see [ADR-028](ADR-028-seal-unsandboxed-escape-under-autonomy-posture.md).)*
+
+### 5. No per-agent confinement
+
+The sandbox is session-wide (subagents share the parent session's configuration). Per-agent differentiation is therefore honestly expressible **only on the intent axis, and only its tool-gating sub-axis.** "project-manager is autonomous but critic is read-only" is expressible as *tool* gating (per-agent, frontmatter) and is **not** expressible as differential confinement. Consequently, any future "profile" abstraction is a **per-PROJECT concept for confinement, not a per-agent one.** A profile binds {a chosen session-wide confinement posture} × {a chosen intent set, whose only per-agent lever is tool-gating} under one project-chosen name. This is recorded so a future surface cannot reintroduce a per-agent confinement profile the harness cannot honour.
 
 ## Rationale
 

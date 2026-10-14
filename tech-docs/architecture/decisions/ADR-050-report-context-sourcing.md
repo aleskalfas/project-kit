@@ -17,9 +17,17 @@ Reports gain a visible project + workstream context line + parseable marker (EPI
 
 ## Decision
 
-1. **Project name: declared, with a two-step fallback.** A `name` key in the adopter's project config is the source of truth; on first report without one, the compose flow **prompts once** and offers to write it. Fallback: the git remote's **repo name** (without the owner/org — an adopter's private org name is itself potentially sensitive; the confirm gate shows whatever is chosen either way). Never a filesystem path segment, including the directory basename. No name resolvable ⇒ the context line is omitted, stated as omitted in the composed body.
-2. **Workstream: the backbone asks pm.** The pm capability ships a small **read verb** (context-workstream: resolve the current branch → issue → workstream, print one value or nothing); the backbone report compose invokes it **by subprocess through the existing capability-command dispatcher** (COR-021's pattern — the same mechanic every pm verb already uses), and treats it as optional: pm not installed, the verb absent, the branch not issue-shaped, or the issue unlabelled ⇒ workstream omitted. `--workstream <value>` on the report verbs overrides. The backbone never parses `workstreams.yaml`, never reads issue labels itself, and carries no knowledge of pm's schema.
-3. **Both values are body content, not target-repo labels.** They render as the human context line + the `key=value` report marker (the #639 marker format, extended with `project=` / `workstream=`), and stamp into a reported scratchpad note's frontmatter at send time ([COR-043](../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md)). The upstream repo's label vocabulary is never touched.
+### 1. Project name: declared, with a two-step fallback
+
+A `name` key in the adopter's project config is the source of truth; on first report without one, the compose flow **prompts once** and offers to write it. Fallback: the git remote's **repo name** (without the owner/org — an adopter's private org name is itself potentially sensitive; the confirm gate shows whatever is chosen either way). Never a filesystem path segment, including the directory basename. No name resolvable ⇒ the context line is omitted, stated as omitted in the composed body.
+
+### 2. Workstream: the backbone asks pm
+
+The pm capability ships a small **read verb** (context-workstream: resolve the current branch → issue → workstream, print one value or nothing); the backbone report compose invokes it **by subprocess through the existing capability-command dispatcher** (COR-021's pattern — the same mechanic every pm verb already uses), and treats it as optional: pm not installed, the verb absent, the branch not issue-shaped, or the issue unlabelled ⇒ workstream omitted. `--workstream <value>` on the report verbs overrides. The backbone never parses `workstreams.yaml`, never reads issue labels itself, and carries no knowledge of pm's schema.
+
+### 3. Both values are body content, not target-repo labels
+
+They render as the human context line + the `key=value` report marker (the #639 marker format, extended with `project=` / `workstream=`), and stamp into a reported scratchpad note's frontmatter at send time ([COR-043](../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md)). The upstream repo's label vocabulary is never touched.
 
 ### The project config file is defined by COR-048 (refinement per COR-048)
 
