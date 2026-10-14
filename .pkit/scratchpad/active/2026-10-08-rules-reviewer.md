@@ -257,7 +257,7 @@ It judges what no check enforces, and leaves to a check whatever part of a rule 
 - **Its own text:** what it adds, what it moves or copies, and a break its edit introduces or widens.
 - **Not its own:** a break its edit only sits beside. Fixing one word in an old 40-word sentence leaves the length pre-existing, so the finding is advisory.
 - **A deletion can break a rule.** A page removed can break the reader paths of RS-USER-001 (`tech-docs/living-docs/rule-sets/user.md:24`). The base's rules judge it (part 2).
-- **Asserted away.** A pre-existing break blocks when the change claims to have fixed it, as DEC-002 point 3 holds in "A pre-existing defect blocks only when the change asserts it away". A rewrite "to `WRITE`" that leaves a 40-word sentence is an example.
+- **Asserted away.** A pre-existing break blocks when the change claims to have fixed it, as DEC-002 point 3 holds in "A pre-existing defect blocks only when the change asserts it away" and its "Limits". A rewrite "to `WRITE`" that leaves a 40-word sentence is an example.
 - **Only content.** The friction block sits in the container, which is no part of an artefact's content (COR-050 point 5).
   - Its answers are a person's decision, never reworded for style (`tech-docs/rule-sets/writing.md:224` and `.pkit/rules/core.md` rule 20). So the reviewer never judges them.
 
