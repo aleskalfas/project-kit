@@ -3147,3 +3147,65 @@ def test_cli_upgrade_force_flag_forwards(monkeypatch: pytest.MonkeyPatch) -> Non
     assert seen["force"] is True
     assert CliRunner().invoke(cli.main, ["upgrade"]).exit_code == 0
     assert seen["force"] is False
+
+
+def test_an_override_holds_when_a_migration_stops_the_transition(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The override removes the project's artefact in step 2, before the copy, so a
+    transition a migration stops keeps the answer: the next one finds the name in
+    the capability's installed copy, asks nothing, and the capability's deploys
+    (ADR-065 point 6)."""
+    cap = _a_new_collision(installed_target, tmp_path, monkeypatch)
+    fixed = tmp_path / "fixed"
+    _stage_script(cap, "0.2.0", _tracing(tmp_path / "trace.txt", "ran", unless_missing=fixed))
+    project = installed_target / ".pkit" / "skills" / "project" / "clash.md"
+
+    stopped = _upgrade_at_a_terminal(monkeypatch, "override\n")
+
+    assert stopped.exit_code != 0
+    assert "exited with status 3" in stopped.output
+    assert not project.exists()
+
+    fixed.touch()
+    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: False)
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert not project.exists()
+    copied = installed_target / ".pkit" / "capabilities" / "trial" / "skills" / "clash.md"
+    assert copied.read_text(encoding="utf-8") == "---\nname: clash\n---\n# Trial's\n"
+    record = _trial_record(installed_target)
+    assert record is not None and record.version == "0.2.0"
+
+
+def test_a_skip_of_a_capability_with_no_readable_version_is_recorded_before_the_copy(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With no readable version, the skip is recorded at the bundled version, which
+    the transition records anyway, so a transition a later step stops does not ask
+    again (ADR-065 points 2 and 6)."""
+    _a_new_collision(installed_target, tmp_path, monkeypatch)
+    installed = installed_target / ".pkit" / "capabilities" / "trial"
+    (installed / "project" / "manifest.yaml").unlink()
+    (installed / "package.yaml").write_text("not: a package\n", encoding="utf-8")
+    fixed = tmp_path / "fixed"
+    _stage_backbone_migration(
+        upgrade.find_source_kit(),
+        "0.2.0",
+        "001-flaky.sh",
+        _tracing(tmp_path / "trace.txt", "ran", unless_missing=fixed),
+    )
+    _record_finished_at(installed_target, "0.1.0")
+
+    stopped = _upgrade_at_a_terminal(monkeypatch, "skip\n")
+
+    assert stopped.exit_code != 0
+    record = _trial_record(installed_target)
+    assert record is not None and record.version == "0.2.0"
+    assert record.backend_state["skipped"] == [{"kind": "skill", "name": "clash"}]
+
+    fixed.touch()
+    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: False)
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert not (installed / "skills" / "clash.md").exists()

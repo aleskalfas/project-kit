@@ -11,11 +11,11 @@ and every migration runs inside it, in COR-010's order (ADR-065 point 4):
      the transition would leave (COR-030, COR-053 point 6), and the collision
      flow, which asks at a terminal and refuses without one (point 6).
   2. Record the target, move each capability manifest still at its root under
-     its `project/`, and record each skip chosen in step 1.
+     its `project/`, record each skip chosen in step 1, and remove each project
+     artefact an override replaces.
   3. Propagate at the target, through the propagation step `pkit sync` runs
      (`sync.propagate`), never the sync command, so sync's guard never stops an
-     upgrade (ADR-065 point 1). Remove each project artefact an override
-     replaced, register an adapter the target adds, and render
+     upgrade (ADR-065 point 1). Register an adapter the target adds, and render
      `.pkit/.gitignore`, so a migration reads the target's render.
   4. Run the backbone migrations, from the last completion.
   5. Run each adapter's migrations, read from the bundle, and record it.
@@ -263,13 +263,14 @@ def run_upgrade(
     # Step 2: the target is recorded before anything else is written, so an
     # interrupted transition reads as one, to this pkit and to an older one
     # alike. Then each capability manifest still at its root moves under its
-    # `project/`, where the copy cannot prune it, and each skip chosen in step 1
-    # is recorded there, so an interrupted transition does not ask again.
+    # `project/`, where the copy cannot prune it, each skip chosen in step 1 is
+    # recorded there, and each override removes the project's artefact. So an
+    # interrupted transition does not ask again: the next one finds a skip in
+    # the record, and an overridden name in the capability's installed copy.
     # Step 3: propagation at the target, through the propagation step sync runs,
-    # never the sync command, so sync's guard never stops an upgrade. Then each
-    # override removes the project's artefact, an adapter the target adds is
-    # registered, and `.pkit/.gitignore` is rendered, so a migration reads the
-    # target's render.
+    # never the sync command, so sync's guard never stops an upgrade. Then an
+    # adapter the target adds is registered, and `.pkit/.gitignore` is
+    # rendered, so a migration reads the target's render.
     if dry_run:
         click.echo(
             f"  {'would record':<12} .pkit/manifest.yaml backbone_version -> {target_version} "
@@ -288,8 +289,8 @@ def run_upgrade(
         )
         _move_root_manifests(target_root, plans, dry_run=False)
         _record_new_skips(target_root, moving, answers)
-        propagate(ctx, moving)
         caps.apply_overrides(target_root, answers.overridden, dry_run=False)
+        propagate(ctx, moving)
         register_adapters(target_root)
         reread = read_backbone_manifest(target_root)
         components = reread.components if reread is not None else []
@@ -698,16 +699,22 @@ def _record_new_skips(
     target_root: Path, moving: Sequence[CapabilityPlan], answers: CollisionAnswers
 ) -> None:
     """Record each skip chosen in step 1 in its capability's manifest, before the
-    copy (ADR-065 point 6), so a transition a migration stops does not ask again."""
+    copy (ADR-065 point 6), so a transition a migration stops does not ask again.
+
+    A capability with no readable version is recorded at its bundled version,
+    which the transition records anyway, running none of its migrations (point
+    2). A manifest that does not read as a mapping is left to the restamp, which
+    replaces it and records the skips then.
+    """
     from project_kit import capabilities as caps
 
     for plan in moving:
         if plan.name not in answers.skips or plan.record is None:
             continue
         written = caps.record_skips(
-            target_root, plan.name, plan.record.skipped, version=plan.recorded
+            target_root, plan.name, plan.record.skipped, version=plan.recorded or plan.bundled
         )
-        where = "in its manifest" if written else "at its restamp, since it records no version"
+        where = "in its manifest" if written else "at its restamp: its manifest does not read"
         click.echo(
             f"  {'recorded':<12} the skips of capability {plan.name!r} {where}: "
             + ", ".join(f"{kind} '{name}'" for kind, name in answers.skips[plan.name])
@@ -719,8 +726,9 @@ def dependencies_first(moving: Sequence[CapabilityPlan]) -> list[CapabilityPlan]
 
     A capability's requirements are its bundled version's `requires_capabilities`
     among the capabilities the transition moves, optional ones included. Each
-    keeps its registry order otherwise. A cycle is broken at the capability of
-    it first in registry order: the others in the cycle run before it.
+    keeps its registry order otherwise. The walk follows registry order and each
+    capability's requirements, and a cycle is broken at the first of its
+    capabilities the walk reaches: the others in the cycle run before it.
     """
     by_name = {plan.name: plan for plan in moving}
     ordered: list[CapabilityPlan] = []
@@ -1797,7 +1805,11 @@ def _check_capability_dep_conflicts_for_upgrade(
             if version is None or range_admits(dep.version, version) is not False:
                 continue
             if dep.name in moving:
-                why = f"and this release ships v{version}"
+                why = (
+                    f"and this release ships v{version}: the release's own versions "
+                    "disagree, which no step of yours resolves, so report it to its "
+                    "maintainers"
+                )
             else:
                 why = (
                     f"and v{version} is installed, which this upgrade does not move: "

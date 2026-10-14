@@ -1721,6 +1721,40 @@ def test_capabilities_upgrade_refuses_a_version_whose_range_excludes_the_backbon
     assert record is not None and record.version == "0.1.0"
 
 
+def test_capabilities_upgrade_keeps_an_override_when_a_migration_stops_it(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """The override removes the project's artefact before the copy, so a run a
+    migration stops keeps the answer: the next run asks nothing, and the project's
+    artefact stays removed."""
+    _install_at(kit_target, kit_source, "0.1.0")
+    project_skill = _project_skill(kit_target, "clash")
+    _commit_all(kit_target)
+    cap_dir = _stage_capability_in_source(
+        kit_source, "evidence", version="0.2.0", with_skills=("clash",)
+    )
+    script = cap_dir / "migrations" / "0.2.0" / "001-fails.sh"
+    script.parent.mkdir(parents=True)
+    script.write_text("#!/usr/bin/env bash\nexit 4\n", encoding="utf-8")
+
+    stopped = _upgrade_cli(kit_source, monkeypatch, "--interactive", answers="override\n")
+
+    assert stopped.exit_code != 0
+    assert "exited with status 4" in stopped.output
+    assert not project_skill.exists()
+
+    script.unlink()
+    finished = _upgrade_cli(kit_source, monkeypatch)
+
+    assert finished.exit_code == 0, finished.output
+    assert not project_skill.exists()
+    installed = kit_target / ".pkit" / "capabilities" / "evidence" / "skills" / "clash.md"
+    assert installed.is_file()
+    record = read_component_manifest(_record_path(kit_target, "evidence"))
+    assert record is not None and record.version == "0.2.0"
+    assert "skipped" not in record.backend_state
+
+
 def test_read_prior_skipped_artifacts_returns_empty_when_no_manifest(kit_target: Path) -> None:
     assert caps.read_prior_skipped_artifacts(kit_target, "nope") == ()
 

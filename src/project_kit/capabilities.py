@@ -874,15 +874,20 @@ def marks_a_transition_leaves_unmet(
     target_root: Path, sources: Sequence[CapabilitySource]
 ) -> tuple[list[MandatoryUpstream], list[MandatoryUpstream]]:
     """The mandatory process connections a transition moving *sources* would leave
-    unmet that the live wiring does not (COR-053 point 6, ADR-065 point 6).
+    unmet (COR-053 point 6, ADR-065 point 6), in COR-030's direction split.
 
     The wiring judged is the one the transition would leave: each capability of
     *sources* at its source version in place of its installed copy, every other
-    at its installed version. A mark already unmet before is not the
-    transition's to report. Returns two lists, in COR-030's direction split:
-    the marks a moving capability carries, which the transition refuses, and
-    the marks of a capability that does not move, which it warns about and lets
-    through only under its `--force`.
+    at its installed version. Returns two lists, judged as `capabilities
+    upgrade` judges each side:
+
+    - the marks a moving capability carries that this wiring leaves unmet,
+      which the transition refuses (`unmet_mandatory_upstreams`)
+    - the marks of a capability that does not move that this wiring leaves
+      unmet and the live wiring does not, which the transition warns about and
+      lets through only under its `--force` (`mandatory_counterparts_left_unmet`).
+      A mark of such a capability already unmet before is not the transition's
+      to report.
     """
     from project_kit import connections as cx
 
@@ -890,16 +895,15 @@ def marks_a_transition_leaves_unmet(
     if not candidates:
         return [], []
     moving = {c.name for c in candidates}
-    before = cx.resolve_wiring(target_root)
     after = cx.resolve_wiring_with(target_root, add=candidates, remove=moving)
+    unmet = after.unmet_marks(cx.CounterpartKind.DEPENDENCY)
+    carried = [_mandatory_upstream(b, after) for b in unmet if b.counterpart.capability in moving]
+    staying = [b for b in unmet if b.counterpart.capability not in moving]
+    if not staying:
+        return carried, []
+    before = cx.resolve_wiring(target_root)
     unmet_before = {_mark_key(b) for b in before.unmet_marks(cx.CounterpartKind.DEPENDENCY)}
-    new = [
-        binding
-        for binding in after.unmet_marks(cx.CounterpartKind.DEPENDENCY)
-        if _mark_key(binding) not in unmet_before
-    ]
-    carried = [_mandatory_upstream(b, after) for b in new if b.counterpart.capability in moving]
-    left = [_mandatory_upstream(b, after) for b in new if b.counterpart.capability not in moving]
+    left = [_mandatory_upstream(b, after) for b in staying if _mark_key(b) not in unmet_before]
     return carried, left
 
 
@@ -1123,7 +1127,7 @@ def resolve_collision_interactive(
 
     Before each prompt it names what `override` would do: each path of the
     project's own artefact of that name it removes, which the caller removes
-    once the capability is in place (`apply_overrides`), and each artefact core
+    (`apply_overrides`), and each artefact core
     or another capability ships, which it leaves. `override` is refused, and the
     prompt asked again, while git could not give the project's artefact back as
     it stands.
@@ -1176,8 +1180,11 @@ def resolve_collision_interactive(
 def apply_overrides(target_root: Path, paths: Sequence[Path], *, dry_run: bool) -> None:
     """Remove the project's artefacts an override chose to replace, naming each (COR-017).
 
-    Runs after the capability is copied in and before deploy, so the project's
-    artefact no longer comes first under the name. Git keeps what is removed: the
+    Runs before deploy, so the project's artefact no longer comes first under the
+    name. A capability's install runs it after its copy. A transition runs it
+    before its copy, beside the skips it records, so the answer holds when a
+    migration stops the transition: the next one finds the name in the
+    capability's installed copy, and asks nothing. Git keeps what is removed: the
     prompt refused an override git could not give back.
     """
     if not dry_run:
@@ -1643,11 +1650,13 @@ def refresh_capability(
     skipped_artifacts: tuple[tuple[str, str], ...] = (),
     dry_run: bool = False,
     record: CapabilityRecord | None = None,
+    overridden: Sequence[Path] = (),
 ) -> Path:
     """Move an installed capability to its source version: a transition of one capability.
 
     `pkit capabilities upgrade` runs it, after its own step 1: the dependency
-    gates and the collision flow, which choose *skipped_artifacts* (ADR-065
+    gates and the collision flow, which choose *skipped_artifacts* and the
+    project's artefacts an override replaces, *overridden* (ADR-065
     point 4, "A transition of one capability"; COR-010). Sync never does, and
     a transition of the backbone copies through the propagation step and then
     runs `migrate_copied_capability` (ADR-065 points 1 and 4). Its steps:
@@ -1657,11 +1666,14 @@ def refresh_capability(
     2. **The manifest** still at the capability's root moves under its
        ``project/`` (`move_capability_manifest`), where the copy cannot prune
        it. Where *skipped_artifacts* differ from the skips it records, they are
-       recorded there before the copy (`record_skips`), so a refresh a
-       migration stops does not ask again.
+       recorded there before the copy (`record_skips`), and each artefact in
+       *overridden* is removed (`apply_overrides`). So each answer holds when
+       a migration stops the refresh: the next one does not ask again, and the
+       name it then finds in the installed copy is no longer a collision.
     3. **The copy** replaces the kit-owned part of the installed subtree with
        the source's, leaving out *skipped_artifacts*. It creates no seed path,
-       so it stubs no ``project/``.
+       so it stubs no ``project/``. Then `.pkit/.gitignore` is rendered, so a
+       migration reads the render of the new version's declarations.
     4. **The migrations** then run, so each reads the files of the version it
        migrates to (COR-010's order), from the version the record names, and
        the manifest is restamped when they finish, with *skipped_artifacts*
@@ -1698,15 +1710,23 @@ def refresh_capability(
         # Report what would happen without writing.
         if record.at_root:
             click.echo(f"  would move {move}")
+        apply_overrides(target_root, overridden, dry_run=True)
         migrate_copied_capability(target_root, capability_source, in_force, dry_run=True)
         return dest
 
     if move_capability_manifest(target_root, name):
         click.echo(f"  moved {move}")
     if set(in_force.skipped) != set(record.skipped):
-        record_skips(target_root, name, in_force.skipped, version=record.version)
+        # A capability with no readable version is recorded at the version the
+        # copy brings, and none of its migrations runs (ADR-065 point 2).
+        version = record.version or capability_source.package.version
+        record_skips(target_root, name, in_force.skipped, version=version)
+    apply_overrides(target_root, overridden, dry_run=False)
 
     _copy_capability_tree(capability_source.path, dest, in_force.skipped, stub_project=False)
+    from project_kit import visibility
+
+    click.echo(visibility.render_runtime_ignore(target_root))
     # Its migrations, after its copy, then the restamp with the skips in force,
     # keeping the rest of the manifest's state. The registry entry stays as it is.
     migrate_copied_capability(target_root, capability_source, in_force)

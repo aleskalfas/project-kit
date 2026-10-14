@@ -4469,16 +4469,17 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     merged_skipped = tuple(sorted(set(prior_skipped).union(new_skipped).difference(overrides)))
 
     # The transition of one capability (ADR-065 point 4): its manifest moves
-    # under project/ and the skips chosen above are recorded, then its copy, its
-    # migrations and its restamp.
+    # under project/, the skips chosen above are recorded and each override
+    # removes the project's artefact, then its copy, its migrations and its
+    # restamp.
     refreshed_path = caps.refresh_capability(
         target_root,
         capability_source,
         skipped_artifacts=merged_skipped,
         dry_run=dry_run,
         record=record,
+        overridden=overridden,
     )
-    caps.apply_overrides(target_root, overridden, dry_run=dry_run)
 
     verb = "Would refresh" if dry_run else "Refreshed"
     skip_note = f" ({len(merged_skipped)} artifact(s) skipped)" if merged_skipped else ""
