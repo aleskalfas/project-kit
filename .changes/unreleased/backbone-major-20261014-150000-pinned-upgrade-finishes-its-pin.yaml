@@ -2,6 +2,7 @@ component: backbone
 kind: major
 custom:
   category: Changed
+  pr: "1575"
 body: >
   A pinned project's `pkit upgrade` finishes its own pin first. Run under the
   pin's code, it hands over to a newer latest release as
