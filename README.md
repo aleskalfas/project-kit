@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-13T21:19:47Z
+      at: 2026-10-14T08:57:34Z
       outcome: unchanged
-      unchanged-because: This change has pkit sync work at the version the project records and stop under another pkit, has upgrade run each capability's migrations after its copy and create each missing seed path, and gives the router an HTTPS address and a reader of its fallback mark. The page says pkit never touches the project's files but the two it merges on init, sync and upgrade, that a migration may change one where a record allows, and that pkit upgrade puts back a deleted starter file such as the overlay. Each still holds, so the page holds.
+      unchanged-because: ADR-049 and ADR-064 now write their points as headings carrying the same numbers, word for word. ADR-049's sentence that it does not reopen ADR-039 moves into its opening, unchanged, and its citation of ADR-039 names a section instead of lines, with the same meaning. merge-settings.sh changes only a comment, which cites ADR-002 and COR-002 by point and section instead of by line, and merges nothing differently. So what this page says of upgrading, pinning and merging into `.claude/settings.json` still holds.
 ---
 
 # project-kit
