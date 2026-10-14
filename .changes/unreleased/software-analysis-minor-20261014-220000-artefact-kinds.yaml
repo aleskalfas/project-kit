@@ -2,6 +2,7 @@ component: software-analysis
 kind: minor
 custom:
   category: Added
+  pr: "1578"
 body: >
   Each analysis kind declares its structure once, as data, in
   `schemas/artefact-kinds.yaml` (DEC-001 point 1, #1363). Its schema,

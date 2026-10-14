@@ -2,6 +2,7 @@ component: software-analysis
 kind: minor
 custom:
   category: Changed
+  pr: "1578"
 body: >
   The revalidation record's schema gains `reviewed-against`, the sources of
   the design a planned record reviewed (DEC-001 point 6, #1363). It is
