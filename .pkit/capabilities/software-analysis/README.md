@@ -10,9 +10,10 @@ pkit:
         - .pkit/capabilities/software-analysis/templates/**
         - .pkit/capabilities/software-analysis/skills/**
         - .pkit/capabilities/software-analysis/agents/**
-      record: ["software-analysis:DEC-001", COR-049, COR-050, COR-052, COR-053]
+      record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053]
+      artefact: [RS-SAN-001]
     revalidated:
-      at: 2026-10-14T09:16:59Z
+      at: 2026-10-14T19:24:54Z
       outcome: updated
       deferred:
         - anchor:
@@ -222,6 +223,19 @@ It says nothing of an id the point no longer holds, or of a point that does not 
 It reports, and never fails on, **an open regression**: a record's `code-regressed` artefact that has not been revalidated since the record — its `at` falls on no later day (UTC) than the record's date. The defect the record names is still open, or its fix was never revalidated against the artefact. It is worked out from the records and the artefacts each time, never kept in a ledger.
 
 Friction itself, dead anchors and the friction block's own shape are the core's checks (`pkit validate`'s `friction` member and `pkit friction check`), which report front matter that does not parse too; an unanchored artefact is the core's measure, never an error. So is `unanchored-because` beside anchors: the reason says why an actor or term has none, so one that has anchors says two things at once. The stamp refuses the pair, and a hand edit that writes it fails `pkit validate`'s `friction` member (`unanchored-beside-anchors`, COR-050 point 12).
+
+## The method rule set: `SAN`
+
+`rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds one rule, the format rule, proposed, with the decision as its origin and its anchor (DEC-001 point 1):
+
+| Rule | Status | Statement |
+|---|---|---|
+| `RS-SAN-001` | proposed | An analysis artefact or a revalidation record carries its kind's declared structure, and each kind has a template. |
+
+- **What the rule binds.** The presence and the order of every part a kind ships, and the form of each part and front-matter field its structure gives one. A revalidation record or a withdrawn artefact is held to the structure in force when it was written or withdrawn. A hint binds nothing, so the voice a hint asks for is no part of the rule. The rule's *How* says where a sentence ends, for text of the `sentence` form.
+- **What it gates.** The check of each kind's structure, since a structure binds at the rule's status (DEC-001 point 1). While the rule is proposed, the check reports nothing of a structure (COR-051 point 4). A kind's schema checks the front matter of an artefact or a record whatever the rule's status. The capability does not ship the declared structures yet, nor a check that reads them.
+- **What the check settles.** `SAN` declares, under `checks`, what this capability's check, `software-analysis:validate`, enforces of the rule (COR-051 point 2). That command is the one `pkit validate` runs as its `software-analysis:artefacts` member. The declared part is what the rule binds, above. Whoever judges the rest of the rule leaves that part to the check, and `pkit rule-sets reach` lists the part wherever the rule binds.
+- **Its name and scope.** `SAN` takes no scope, as no method rule set does (COR-051 point 2). You never edit it (COR-051 point 6). Its name is reserved in your project. A rule set of yours named `SAN` clashes with it, and `pkit validate` fails on the clash (COR-051 point 3).
 
 ## Numbers another branch took: `pkit analysis check-numbers`
 
@@ -457,7 +471,7 @@ An install plan predicts the wiring, not the data (COR-053 point 7): it shows th
 
 ## What's shipped now, what's next
 
-Shipped: the decision; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
+Shipped: the decision; the method rule set `SAN`, its format rule proposed; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
 
 ## Citing this capability's decisions
 
