@@ -1555,6 +1555,27 @@ def test_sync_under_the_routers_fallback_names_reconnecting_not_a_bare_upgrade(
     assert "Run `pkit upgrade`" not in message
 
 
+def test_sync_under_the_routers_fallback_of_a_pin_that_is_no_version_names_no_release(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The router could not fetch a pin that is no version, and never will: the
+    message builds no command from it, and names replacing it with `pkit pin` or
+    moving on purpose."""
+    _record_states(installed_target, _OLDER, _OLDER)
+    _write_pin(installed_target, "main")
+    monkeypatch.setenv(router._PIN_UNRESOLVED_ENV, "main")
+    monkeypatch.delenv(router._BYPASS_ENV, raising=False)
+
+    message = _refusal(installed_target)
+
+    assert "This project pins pkit main, which the router could not fetch" in message
+    assert "The pin, 'main', is no version, so the router can never fetch it." in message
+    assert "Replace it with `pkit pin`" in message
+    assert "`pkit unpin`, then `pkit upgrade`" in message
+    assert "@vmain" not in message
+    assert "Reconnect" not in message
+
+
 def test_sync_under_the_routers_fallback_runs_where_it_finds_no_mismatch(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

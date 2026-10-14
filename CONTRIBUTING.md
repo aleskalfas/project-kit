@@ -21,9 +21,8 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-14T08:57:36Z
-      outcome: unchanged
-      unchanged-because: COR-050, PRJ-010, ADR-019, ADR-039, ADR-055 and project-management DEC-053 now write their points as headings carrying the same numbers, word for word. ADR-039's routes are its points 1 to 3, and its sentence on the pin source sits under a heading of its own, unchanged. So the routes, ADR-055 point 5 and DEC-053 point 3, which this guide cites, name the same text. The decisions README now writes points as headings. This guide sends an author there for the schema and the refining procedure and restates neither, so it holds.
+      at: 2026-10-14T20:02:11Z
+      outcome: updated
 ---
 
 # Contributing to project-kit
@@ -133,7 +132,7 @@ To fix a copy, run `.pkit/adapters/claude-code/deploy-agents.sh` and commit what
 1. **Install** — `mise run pkit:pinned-install` (or `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git` directly). Installs/refreshes the global release and puts `pkit` on PATH via `uv tool dir --bin`.
 2. **Verify** — `command -v pkit` should resolve to that bin dir; `mise run pkit:which` reports the active binary, its version, and what bare `pkit` runs from this checkout (route 1).
 
-Routing happens *before* the CLI loads, so the common path (running self, or execing a checkout) stays cheap. An adopter pin that can't be resolved (offline, missing tag, missing auth, no `uvx`) **degrades loudly to running self** — it never hard-fails a routine command. When the binary it runs is older than the pin, the notice says so. `pkit upgrade` refuses a binary older than the project rather than take the project back to it (#1212), and `pkit sync` stops under any binary that is not the project's version, naming the remedy for the fallback first ([ADR-065](tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) points 7 and 8). Escape hatches: `PKIT_NO_ROUTE=1` forces in-process execution; `PKIT_ROUTED=1` is the internal loop guard.
+Routing happens *before* the CLI loads, so the common path (running self, or execing a checkout) stays cheap. An adopter pin that can't be resolved (offline, missing tag, missing auth, no `uvx`) **degrades loudly to running self** — it never hard-fails a routine command. When the binary it runs is older than the pin, the notice says so. `pkit upgrade` refuses a binary older than the project rather than take the project back to it (#1212), and under that degrade it refuses any binary, older or newer, rather than move the pin to a version it did not resolve. `pkit sync` stops under any binary that is not the project's version, naming the remedy for the fallback first ([ADR-065](tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) points 7 to 9). Escape hatches: `PKIT_NO_ROUTE=1` forces in-process execution; `PKIT_ROUTED=1` is the internal loop guard.
 
 > **Retiring the old `pkit-router` shim.** Earlier setups installed a separate `scripts/pkit-router` shim at `~/.pkit/shim/pkit` and put it ahead of the pinned binary on PATH. That shim is gone — the binary now routes natively. If you have one, remove it (`rm ~/.pkit/shim/pkit`) and drop the `export PATH="$HOME/.pkit/shim:$PATH"` line from your shell profile so bare `pkit` resolves to the global install.
 
