@@ -35,35 +35,49 @@ Replacing the tool is a network write outside any one project. Where a sandbox c
 
 **When the installed tool runs `pkit upgrade` and is behind the latest release, the upgrade installs that release and runs again under it. Where it cannot or may not install, it prints the command. A failed lookup or install never fails the upgrade. Where the upgrade detects a failed hand-over, it stops with an error before it syncs or pins anything, and names the command to re-run.**
 
-1. **Detect, best-effort.** The upgrade asks the release source for its highest release, read from its `v`-prefixed tags. It runs `git ls-remote --tags` against the distribution URL compiled into the tool, the URL the router fetches pins from, with a short time limit. A pre-release or dev release tag is skipped, even one above the latest release. When the running tool is at or above that version, the upgrade says the tool is current.
+### 1. Detect, best-effort
 
-   Any failure — offline, no credentials, no `git`, the limit reached, no release tag — prints a warning on standard error. The upgrade then goes on with its own steps under the running tool, as if the tool were current. Those steps may find nothing to upgrade.
+The upgrade asks the release source for its highest release, read from its `v`-prefixed tags. It runs `git ls-remote --tags` against the distribution URL compiled into the tool, the URL the router fetches pins from, with a short time limit. A pre-release or dev release tag is skipped, even one above the latest release. When the running tool is at or above that version, the upgrade says the tool is current.
 
-2. **Install when the tool is behind.** When the running pkit is the installed tool, the upgrade runs `uv tool install --force <distribution URL>@v<latest>`. The installed tool is the pkit that runs from the environment `uv tool install` made for it, under `uv tool dir`. pkit asks no question of its own before the install.
+Any failure — offline, no credentials, no `git`, the limit reached, no release tag — prints a warning on standard error. The upgrade then goes on with its own steps under the running tool, as if the tool were current. Those steps may find nothing to upgrade.
 
-   When the install succeeds, the upgrade hands itself over, replacing its own process with the same command, run by the first `pkit` the `PATH` finds. That is the new tool when uv's tool directory comes first on the `PATH`. The new process carries `PKIT_SELF_UPDATED=1`. A process that carries it never installs the tool, whatever the versions say.
+### 2. Install when the tool is behind
 
-3. **Print the command where it cannot or may not install, and stop where the hand-over fails.** The upgrade installs nothing when standard input or standard output is not a terminal, when `--no-self-update` is passed, or when the process carries `PKIT_SELF_UPDATED=1`. It prints the install command instead, with a note to run `pkit upgrade` again, unless it stops as below. It prints the same when the install exits non-zero or cannot be started. A sandbox that refuses the install ends here.
+When the running pkit is the installed tool, the upgrade runs `uv tool install --force <distribution URL>@v<latest>`. The installed tool is the pkit that runs from the environment `uv tool install` made for it, under `uv tool dir`. pkit asks no question of its own before the install.
 
-   The upgrade installs only under the installed tool. A pkit run another way is not that tool: through `uv run`, a pip install or a `uvx` served from uv's cache. Such a pkit prints the newer release and its command, and the upgrade goes on under it. So does any pkit when `uv` cannot say where its tools live, unless a hand-over started it.
+When the install succeeds, the upgrade hands itself over, replacing its own process with the same command, run by the first `pkit` the `PATH` finds. That is the new tool when uv's tool directory comes first on the `PATH`. The new process carries `PKIT_SELF_UPDATED=1`. A process that carries it never installs the tool, whatever the versions say.
 
-   When the install succeeds and the upgrade detects a failed hand-over, it stops with an error before it syncs or pins anything. It names the command to re-run once uv's tool directory comes first on the `PATH`. It detects two failed hand-overs:
-   - **`pkit` cannot be started.** The process that ran the install stops.
-   - **The `PATH` finds another pkit.** The new process carries `PKIT_SELF_UPDATED=1` and a terminal, and checks itself. It stops when it is behind the latest release, by its own lookup, and is not the installed tool by point 2's test. Where `uv` cannot say where its tools live, that test answers no. Where the lookup fails, the new process goes on, as point 1 says.
+### 3. Print the command where it cannot or may not install, and stop where the hand-over fails
 
-   Under `--dry-run` the upgrade runs nothing. The installed tool says which install it would run, with or without a terminal. A pkit run another way prints the command.
+The upgrade installs nothing when standard input or standard output is not a terminal, when `--no-self-update` is passed, or when the process carries `PKIT_SELF_UPDATED=1`. It prints the install command instead, with a note to run `pkit upgrade` again, unless it stops as below. It prints the same when the install exits non-zero or cannot be started. A sandbox that refuses the install ends here.
 
-4. **Before the project's own steps.** The tool step comes before the upgrade compares the project's content with the tool. It also comes before the refusal to run under a pkit older than the project's content or pin (#1212). So a stale tool is reported, or replaced, even when the project has nothing to upgrade. Where the running pkit is too old for the project, the run under the new tool is the way past that refusal.
+The upgrade installs only under the installed tool. A pkit run another way is not that tool: through `uv run`, a pip install or a `uvx` served from uv's cache. Such a pkit prints the newer release and its command, and the upgrade goes on under it. So does any pkit when `uv` cannot say where its tools live, unless a hand-over started it.
 
-5. **Where the step runs.** The step runs in two places:
-   - outside any project, with no git repository and no `.pkit/` above the working directory. There it is the whole of `pkit upgrade`, rather than an error about a missing project.
-   - in an un-pinned project.
+When the install succeeds and the upgrade detects a failed hand-over, it stops with an error before it syncs or pins anything. It names the command to re-run once uv's tool directory comes first on the `PATH`. It detects two failed hand-overs:
+- **`pkit` cannot be started.** The process that ran the install stops.
+- **The `PATH` finds another pkit.** The new process carries `PKIT_SELF_UPDATED=1` and a terminal, and checks itself. It stops when it is behind the latest release, by its own lookup, and is not the installed tool by point 2's test. Where `uv` cannot say where its tools live, that test answers no. Where the lookup fails, the new process goes on, as point 1 says.
 
-   A pinned project's upgrade never runs it. Its pin moves through the router's bypass, and the installed tool is left alone (ADR-064). The step does not run where routing is bypassed (`PKIT_NO_ROUTE`), whether a pin raise set it or an operator did. It is never reached in the methodology's source repository. There the upgrade hands over to sync under the checkout's own code, and refuses under any other code, both before this step ([ADR-059](ADR-059-methodology-source-repository.md)). Inside a git repository with no `.pkit/`, or a `.pkit/` with no manifest, the upgrade stops with an error before the step.
+Under `--dry-run` the upgrade runs nothing. The installed tool says which install it would run, with or without a terminal. A pkit run another way prints the command.
 
-6. **What the run under the new tool does.** The new process routes like any `pkit` command. In an un-pinned project the router runs the new tool. Its upgrade finds the tool current, brings the content to the new bundle, and pins the project there unless `--no-pin` was passed (ADR-064). One command leaves the tool and the project at the latest release.
+### 4. Before the project's own steps
 
-7. **The tool, from its compiled URL.** The step installs the tool from the distribution URL compiled into it. It touches no content a project takes from an external source ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)). A fork that builds its own wheel compiles its own URL, so its tool updates from the fork. A tool installed from anywhere else — a local path, a mirror — is replaced by the compiled URL's release once that release is newer. `--no-self-update` keeps such an install. The step uses the router's URL and leaves the router's route decision as ADR-039 sets it.
+The tool step comes before the upgrade compares the project's content with the tool. It also comes before the refusal to run under a pkit older than the project's content or pin (#1212). So a stale tool is reported, or replaced, even when the project has nothing to upgrade. Where the running pkit is too old for the project, the run under the new tool is the way past that refusal.
+
+### 5. Where the step runs
+
+The step runs in two places:
+- outside any project, with no git repository and no `.pkit/` above the working directory. There it is the whole of `pkit upgrade`, rather than an error about a missing project.
+- in an un-pinned project.
+
+A pinned project's upgrade never runs it. Its pin moves through the router's bypass, and the installed tool is left alone (ADR-064). The step does not run where routing is bypassed (`PKIT_NO_ROUTE`), whether a pin raise set it or an operator did. It is never reached in the methodology's source repository. There the upgrade hands over to sync under the checkout's own code, and refuses under any other code, both before this step ([ADR-059](ADR-059-methodology-source-repository.md)). Inside a git repository with no `.pkit/`, or a `.pkit/` with no manifest, the upgrade stops with an error before the step.
+
+### 6. What the run under the new tool does
+
+The new process routes like any `pkit` command. In an un-pinned project the router runs the new tool. Its upgrade finds the tool current, brings the content to the new bundle, and pins the project there unless `--no-pin` was passed (ADR-064). One command leaves the tool and the project at the latest release.
+
+### 7. The tool, from its compiled URL
+
+The step installs the tool from the distribution URL compiled into it. It touches no content a project takes from an external source ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)). A fork that builds its own wheel compiles its own URL, so its tool updates from the fork. A tool installed from anywhere else — a local path, a mirror — is replaced by the compiled URL's release once that release is newer. `--no-self-update` keeps such an install. The step uses the router's URL and leaves the router's route decision as ADR-039 sets it.
 
 ## Rationale
 

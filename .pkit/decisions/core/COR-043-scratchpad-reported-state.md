@@ -18,11 +18,25 @@ In practice the two meet: an adopter's richest problem descriptions *are* scratc
 
 **In plain terms:** when a note is actually sent as a report, the project may remember that — the note moves into a `reported/` folder that exists only while needed, its header says which issue(s) it became and fingerprints what was sent, and the tooling shows how those issues are doing and warns if the local file diverges from what went out. Nothing about ordinary scratchpad life changes; a note that is never reported never sees any of this.
 
-1. **`reported` is an optional side-state of `active`, not a fourth lifecycle stage.** The lifecycle remains COR-012's three states; `reported` refines *active* ("still live, and currently sent upstream"). Retirement proceeds `reported/ → done/` (or `dropped/`) by the same human gestures with the same semantics; the reported note's `produced` refs at retirement naturally include the upstream issue(s). Directories keep encoding a note's **most specific state** — the folder-as-state rule is preserved, refined from "three folders" to "the folders encode the state, including this optional refinement of active" (COR-012 carries a refinement pointer to this record).
-2. **The `reported/` directory is lazy.** It is created when the first note enters it and removed when it empties. A project that never reports shows no trace of the mechanism.
-3. **Entering the state is produced by an actual send, never by intent.** The report surface stamps the note **only on a successful post** (the draft/URL path sends nothing and stamps nothing). Because the surface's primary posture is URL-first — the post may happen in a browser, outside the tooling — a **manual stamp gesture** exists (supply the note and the resulting issue ref); it also serves retroactive stamping of notes hand-carried before this record. Frontmatter records: the issue ref(s) (one note may become several issues), the reported date, and a **content hash of the full local file at send time**.
-4. **Reported notes are frozen by convention and guarded by detection.** Notes are plain files; prevention is not honest — so the discipline is: a note in `reported/` is not edited (the as-sent text is preserved verbatim in the issue it became); follow-up thinking is a **new note** cross-referencing the reported one; and the tooling **detects** divergence (current content vs the stamped hash) and surfaces it wherever the note is listed and before any subsequent send from the project. Detection is a warning, never a gate.
-5. **Read-back is live and pull-only.** Listing resolves each reported ref's upstream state at the moment of asking (a cross-repository *read*, unrestricted per [COR-039](COR-039-session-repo-mutation-boundary.md)); nothing is stored or synced, so nothing drifts (the derive-don't-store discipline). Offline or unresolvable degrades to "reported, state unknown" — never blocking, never guessing. When **all** of a note's refs are closed, the listing **prompts** retirement; it never auto-retires (retirement carries `produced` refs only a human can complete — COR-012's retirement-as-human-gesture is unchanged).
+### 1. `reported` is an optional side-state of `active`, not a fourth lifecycle stage
+
+The lifecycle remains COR-012's three states; `reported` refines *active* ("still live, and currently sent upstream"). Retirement proceeds `reported/ → done/` (or `dropped/`) by the same human gestures with the same semantics; the reported note's `produced` refs at retirement naturally include the upstream issue(s). Directories keep encoding a note's **most specific state** — the folder-as-state rule is preserved, refined from "three folders" to "the folders encode the state, including this optional refinement of active" (COR-012 carries a refinement pointer to this record).
+
+### 2. The `reported/` directory is lazy
+
+It is created when the first note enters it and removed when it empties. A project that never reports shows no trace of the mechanism.
+
+### 3. Entering the state is produced by an actual send, never by intent
+
+The report surface stamps the note **only on a successful post** (the draft/URL path sends nothing and stamps nothing). Because the surface's primary posture is URL-first — the post may happen in a browser, outside the tooling — a **manual stamp gesture** exists (supply the note and the resulting issue ref); it also serves retroactive stamping of notes hand-carried before this record. Frontmatter records: the issue ref(s) (one note may become several issues), the reported date, and a **content hash of the full local file at send time**.
+
+### 4. Reported notes are frozen by convention and guarded by detection
+
+Notes are plain files; prevention is not honest — so the discipline is: a note in `reported/` is not edited (the as-sent text is preserved verbatim in the issue it became); follow-up thinking is a **new note** cross-referencing the reported one; and the tooling **detects** divergence (current content vs the stamped hash) and surfaces it wherever the note is listed and before any subsequent send from the project. Detection is a warning, never a gate.
+
+### 5. Read-back is live and pull-only
+
+Listing resolves each reported ref's upstream state at the moment of asking (a cross-repository *read*, unrestricted per [COR-039](COR-039-session-repo-mutation-boundary.md)); nothing is stored or synced, so nothing drifts (the derive-don't-store discipline). Offline or unresolvable degrades to "reported, state unknown" — never blocking, never guessing. When **all** of a note's refs are closed, the listing **prompts** retirement; it never auto-retires (retirement carries `produced` refs only a human can complete — COR-012's retirement-as-human-gesture is unchanged).
 
 ## Rationale
 

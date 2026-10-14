@@ -46,89 +46,105 @@ that term already carries two meanings: team membership in
 [project-management:DEC-021-team-membership-gate] and cascade membership in
 [project-management:DEC-034-cascade-slot-binding]).
 
-1. **Activation is per-clone and opt-in.** A clone sets its own identity with a
-   `set-instance <N>` command that writes a clone-local **instance id** to a
-   git-ignored runtime file (declared via the capability's `runtime_ignore:`
-   key per [pkit:ADR-009] rule 7, so it is never committed). A clone with
-   no instance id set behaves exactly as today — no marking, no guard, no
-   signing. The presence of the id is the sole activation gate.
+### 1. Activation is per-clone and opt-in
 
-   > **Refined by [DEC-045](DEC-045-named-per-user-instances.md).** Opt-in and
-   > additive on top of the numeric id: a clone's identity may also carry a
-   > human-readable **name** (e.g. `data`, `map`), and a **per-user-local topology
-   > file** (never committed) may list the person's named instances and the
-   > workstreams each *references* for routing. The *expected* owner of an issue is
-   > then derived from its workstream's referencing instance (feeding the pm-layer
-   > guard only — realm-blindness preserved); where the reference is absent or
-   > shared, the guard falls back to the flat numeric commons behaviour described
-   > here. The numeric model, the ownership marker, and the clash mechanics are
-   > unchanged and remain the fallback — refinement-in-place, not a supersession.
+A clone sets its own identity with a
+`set-instance <N>` command that writes a clone-local **instance id** to a
+git-ignored runtime file (declared via the capability's `runtime_ignore:`
+key per [pkit:ADR-009] rule 7, so it is never committed). A clone with
+no instance id set behaves exactly as today — no marking, no guard, no
+signing. The presence of the id is the sole activation gate.
 
-2. **Ownership is carried by an `instance:N` GitHub label, paired with the
-   assignee.** The label reuses the label substrate of
-   [project-management:DEC-012-classification-axes] but is **not** a
-   classification axis (it is optional, never inferred from issue content, and
-   carries no required/mutually-exclusive semantics — it gets its own schema
-   home, not a slot in the axes map). The owner is the **`(assignee, instance:N)`
-   pair**: the pool of instance numbers (default 4) is *per-assignee*, so one
-   assignee's `instance:2` is distinct from another's. Labels are created lazily
-   on first use, so default `bootstrap` is untouched.
+> **Refined by [DEC-045](DEC-045-named-per-user-instances.md).** Opt-in and
+> additive on top of the numeric id: a clone's identity may also carry a
+> human-readable **name** (e.g. `data`, `map`), and a **per-user-local topology
+> file** (never committed) may list the person's named instances and the
+> workstreams each *references* for routing. The *expected* owner of an issue is
+> then derived from its workstream's referencing instance (feeding the pm-layer
+> guard only — realm-blindness preserved); where the reference is absent or
+> shared, the guard falls back to the flat numeric commons behaviour described
+> here. The numeric model, the ownership marker, and the clash mechanics are
+> unchanged and remain the fallback — refinement-in-place, not a supersession.
 
-   > **Refined by [DEC-043](DEC-043-ownership-substrate-selection.md).** The
-   > ownership marker's substrate is now *selectable*, "substrate-where-available":
-   > the `instance:N` label described here is one binding, kept for repos that can
-   > create labels; where they cannot, the marker is carried by a per-instance
-   > append-only comment log (source of truth) plus a derived, regenerable
-   > owner-mirror in the issue description. Comment-create is per-object atomic, so
-   > the same-instant tie-break in point 6 holds unchanged. Refinement-in-place,
-   > not a supersession — this label mechanism and the clash-guard semantics stand.
+### 2. Ownership is carried by an `instance:N` GitHub label, paired with the assignee
 
-3. **A clone claims at creation, for the whole tree.** `create-issue` stamps the
-   creating clone's instance label; the clone owns the entire filed arc
-   (containers + leaves) from birth. `start-work` claims an issue that has no
-   owner yet (legacy / human-filed / pre-feature — the *commons*).
+The label reuses the label substrate of
+[project-management:DEC-012-classification-axes] but is **not** a
+classification axis (it is optional, never inferred from issue content, and
+carries no required/mutually-exclusive semantics — it gets its own schema
+home, not a slot in the axes map). The owner is the **`(assignee, instance:N)`
+pair**: the pool of instance numbers (default 4) is *per-assignee*, so one
+assignee's `instance:2` is distinct from another's. Labels are created lazily
+on first use, so default `bootstrap` is untouched.
 
-4. **Ownership releases on terminal transitions and transfers on reclaim.** The
-   label is stripped when the issue closes (PR-merge or won't-do). For a
-   container that closes via the cascade fold
-   ([project-management:DEC-034-cascade-slot-binding]), the **pm closure wrapper
-   that observes the fold strips the label** — the engine fold itself stays
-   realm-blind. Work is redistributed with `handoff-issue` extended by
-   `--to-instance <N>` (push), `--to-instance self` (pull/claim), and
-   `--recursive` (subtree). Reclaim between one person's own clones changes only
-   the label, not the assignee.
+> **Refined by [DEC-043](DEC-043-ownership-substrate-selection.md).** The
+> ownership marker's substrate is now *selectable*, "substrate-where-available":
+> the `instance:N` label described here is one binding, kept for repos that can
+> create labels; where they cannot, the marker is carried by a per-instance
+> append-only comment log (source of truth) plus a derived, regenerable
+> owner-mirror in the issue description. Comment-create is per-object atomic, so
+> the same-instant tie-break in point 6 holds unchanged. Refinement-in-place,
+> not a supersession — this label mechanism and the clash-guard semantics stand.
 
-5. **Changing the assignee strips the label.** Because the owner is the
-   `(assignee, instance:N)` pair, assigning an issue to a *different person*
-   removes the instance label; the new assignee re-claims with their own clone
-   (or leaves it, if they run none). Filing for another
-   (`create-issue --assignee <other>`) is the same case: the creating clone's
-   label does not stick to an issue assigned to someone else.
+### 3. A clone claims at creation, for the whole tree
 
-6. **The clash guard catches and resolves; it does not lock.** An *ordinary*
-   lifecycle verb (`start-work`, `done-work`, `edit-issue`, `move-issue`) acting
-   on an issue already owned by another instance is refused with
-   `[validation-severity:bypassable-with-audit]` — overridable with a reason
-   that posts an audit comment; reclaim is the clean alternative. This catches
-   the everyday clash. For the *same-instant* clash (two clones claim the same
-   commons issue before either label is visible — unpreventable, as GitHub has
-   no atomic claim), the claiming verb **re-reads after stamping**; if two
-   instance labels are present it has detected a collision and the
-   **higher-numbered instance auto-backs-off** (removes its label, abandons the
-   claim, notifies). The **lowest instance number wins** — a tie-break both
-   clones compute identically from the labels alone, with no coordination.
+`create-issue` stamps the
+creating clone's instance label; the clone owns the entire filed arc
+(containers + leaves) from birth. `start-work` claims an issue that has no
+owner yet (legacy / human-filed / pre-feature — the *commons*).
 
-7. **Listings show every issue, signed by owner** (`mine` / `other instance` /
-   `unclaimed`), with a flag to narrow to this instance's own.
+### 4. Ownership releases on terminal transitions and transfers on reclaim
 
-8. **The instance marker is a pm-domain side-effect, never engine state.**
-   Claim, release, transfer, and the guard all live in the capability's command
-   wrappers (the same seam branch-creation rides per DEC-033). The process
-   engine and its cascade predicates
-   ([project-management:DEC-034-cascade-slot-binding],
-   [pkit:COR-037-process-cascade]) stay **realm-blind**: instance ownership is
-   never an input to a gate, a transition, or the cascade fold. This keeps the
-   shared substrate content-free.
+The
+label is stripped when the issue closes (PR-merge or won't-do). For a
+container that closes via the cascade fold
+([project-management:DEC-034-cascade-slot-binding]), the **pm closure wrapper
+that observes the fold strips the label** — the engine fold itself stays
+realm-blind. Work is redistributed with `handoff-issue` extended by
+`--to-instance <N>` (push), `--to-instance self` (pull/claim), and
+`--recursive` (subtree). Reclaim between one person's own clones changes only
+the label, not the assignee.
+
+### 5. Changing the assignee strips the label
+
+Because the owner is the
+`(assignee, instance:N)` pair, assigning an issue to a *different person*
+removes the instance label; the new assignee re-claims with their own clone
+(or leaves it, if they run none). Filing for another
+(`create-issue --assignee <other>`) is the same case: the creating clone's
+label does not stick to an issue assigned to someone else.
+
+### 6. The clash guard catches and resolves; it does not lock
+
+An *ordinary*
+lifecycle verb (`start-work`, `done-work`, `edit-issue`, `move-issue`) acting
+on an issue already owned by another instance is refused with
+`[validation-severity:bypassable-with-audit]` — overridable with a reason
+that posts an audit comment; reclaim is the clean alternative. This catches
+the everyday clash. For the *same-instant* clash (two clones claim the same
+commons issue before either label is visible — unpreventable, as GitHub has
+no atomic claim), the claiming verb **re-reads after stamping**; if two
+instance labels are present it has detected a collision and the
+**higher-numbered instance auto-backs-off** (removes its label, abandons the
+claim, notifies). The **lowest instance number wins** — a tie-break both
+clones compute identically from the labels alone, with no coordination.
+
+### 7. Listings show every issue, signed by owner
+
+**Listings show every issue, signed by owner** (`mine` / `other instance` /
+`unclaimed`), with a flag to narrow to this instance's own.
+
+### 8. The instance marker is a pm-domain side-effect, never engine state
+
+Claim, release, transfer, and the guard all live in the capability's command
+wrappers (the same seam branch-creation rides per DEC-033). The process
+engine and its cascade predicates
+([project-management:DEC-034-cascade-slot-binding],
+[pkit:COR-037-process-cascade]) stay **realm-blind**: instance ownership is
+never an input to a gate, a transition, or the cascade fold. This keeps the
+shared substrate content-free.
+
+### How this record extends DEC-026
 
 This DEC **extends the `handoff-issue` contract** of
 [project-management:DEC-026-work-ownership-lifecycle] (new `--to-instance` modes

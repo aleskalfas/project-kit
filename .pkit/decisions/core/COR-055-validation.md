@@ -16,12 +16,29 @@ Core records say that a defect in a project's files "fails validation" or is "re
 
 **Validation is the project's one check of its own state against the invariants its records own. The backbone's functionalities and installed components join it by registering validators; every finding carries a severity from one shared set; exactly one severity fails.**
 
-1. **What validation owns.** Validation judges the project's state against the invariants its records own. A finding that fails it says one of two things: an invariant is broken, or a validator that owed an answer gave none (point 6). It is not every check of state. A check stays outside when failing on it would fail the project for what it cannot correct in its own files — debt that was already there, the harness, a subject in motion — or when its own record puts it elsewhere. Three examples: the whole-repository friction check, which reports and never fails (COR-050 point 12); the process engine's check of one subject against a process's declared invariants (COR-035) and process health (COR-042), which answer about subjects in motion and are commands of their own; the harness requirement report, whose truth shows only where the harness is observed and which has a surface of its own (COR-047).
-2. **State, not a change.** A validator answers about the project's state and takes no base named for one run; a check that compares a change with a base (COR-054 point 3) is a command of its own. A validator reads the working tree. History and settled state reach validation only through a slot whose filler declares them (COR-052 point 6), so beyond the working tree validation's answer varies with those states and with nothing else, and the report names them (COR-052 point 7). The backbone keeps a run's base from reaching a validator; that a validator reads nothing else beyond the working tree is its component's obligation, trusted as those of COR-050 point 2 are.
-3. **A component joins by naming a command.** An installed component registers each validator in its package metadata by naming a command it registers there (COR-021). Validation runs that command as a query with no subject, as it runs a slot's filler (COR-052 point 6), under the limits of COR-050 point 2, and reads its findings in machine-readable form. The command stays runnable by itself.
-4. **Severity is on the finding.** Each finding carries one severity from a closed set shared by every validator, the backbone's and a component's alike; a validator cannot add one. The record that owns a check decides which of its findings takes which severity.
-5. **Exactly one severity fails.** Validation fails when a finding carries the failing severity, and only then. A finding takes it when an invariant is broken or an owed answer is missing (point 6); what other records call a validation error is a finding at this severity. Every other severity — one that asks for attention, one that states a fact, one that marks what an owning record says is reported rather than judged, for example — prints and never fails. A command run by itself, outside validation, may keep a stricter exit.
-6. **A validator that gives no answer fails.** A registered validator that cannot be run, ends abnormally, overruns its time or prints anything but its findings yields a failing finding, never a clean pass. No policy turns a validator's missing answer into a warning, as a slot's inert policy can for a filler; a filler or a resolver that gives no answer inside validation follows its own record (COR-052 point 6, COR-050 point 2).
+### 1. What validation owns
+
+Validation judges the project's state against the invariants its records own. A finding that fails it says one of two things: an invariant is broken, or a validator that owed an answer gave none (point 6). It is not every check of state. A check stays outside when failing on it would fail the project for what it cannot correct in its own files — debt that was already there, the harness, a subject in motion — or when its own record puts it elsewhere. Three examples: the whole-repository friction check, which reports and never fails (COR-050 point 12); the process engine's check of one subject against a process's declared invariants (COR-035) and process health (COR-042), which answer about subjects in motion and are commands of their own; the harness requirement report, whose truth shows only where the harness is observed and which has a surface of its own (COR-047).
+
+### 2. State, not a change
+
+A validator answers about the project's state and takes no base named for one run; a check that compares a change with a base (COR-054 point 3) is a command of its own. A validator reads the working tree. History and settled state reach validation only through a slot whose filler declares them (COR-052 point 6), so beyond the working tree validation's answer varies with those states and with nothing else, and the report names them (COR-052 point 7). The backbone keeps a run's base from reaching a validator; that a validator reads nothing else beyond the working tree is its component's obligation, trusted as those of COR-050 point 2 are.
+
+### 3. A component joins by naming a command
+
+An installed component registers each validator in its package metadata by naming a command it registers there (COR-021). Validation runs that command as a query with no subject, as it runs a slot's filler (COR-052 point 6), under the limits of COR-050 point 2, and reads its findings in machine-readable form. The command stays runnable by itself.
+
+### 4. Severity is on the finding
+
+Each finding carries one severity from a closed set shared by every validator, the backbone's and a component's alike; a validator cannot add one. The record that owns a check decides which of its findings takes which severity.
+
+### 5. Exactly one severity fails
+
+Validation fails when a finding carries the failing severity, and only then. A finding takes it when an invariant is broken or an owed answer is missing (point 6); what other records call a validation error is a finding at this severity. Every other severity — one that asks for attention, one that states a fact, one that marks what an owning record says is reported rather than judged, for example — prints and never fails. A command run by itself, outside validation, may keep a stricter exit.
+
+### 6. A validator that gives no answer fails
+
+A registered validator that cannot be run, ends abnormally, overruns its time or prints anything but its findings yields a failing finding, never a clean pass. No policy turns a validator's missing answer into a warning, as a slot's inert policy can for a filler; a filler or a resolver that gives no answer inside validation follows its own record (COR-052 point 6, COR-050 point 2).
 
 ## Rationale
 

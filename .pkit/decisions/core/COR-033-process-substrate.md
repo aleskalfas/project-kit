@@ -18,15 +18,25 @@ Two constraints shape how. First, only one instance is *shipped* today, so the e
 
 The methodology adopts a shared, **content-free process substrate** — a state machine of states + guarded transitions + a per-subject position + a self-explaining status view, with an optional append-only journal as audit — that capability-owned **process definitions** bind to. The backbone owns the shape and the engine; each capability owns its own process definition.
 
-**P1 — Vocabulary (one substrate, two altitudes).** *State machine* is the content-free substrate. A *process* is one discipline's substrate-bound journey over its own subjects (the depth altitude). An *orchestration* is a system of interacting processes (the breadth altitude). A discipline's existing lifecycle artifact is, under this scheme, a process definition and need not be renamed.
+### P1 — Vocabulary (one substrate, two altitudes)
 
-**P2 — Ownership.** The backbone owns the process *shape contract* (a shared schema fragment) and the engine. Each capability ships its **own** process definition as an instance that conforms to the shape and binds via the existing grammar (COR-023), addressable as `<capability>:<process-id>`. The substrate adds no new binding mechanism; capabilities stay independent, self-describing peers.
+*State machine* is the content-free substrate. A *process* is one discipline's substrate-bound journey over its own subjects (the depth altitude). An *orchestration* is a system of interacting processes (the breadth altitude). A discipline's existing lifecycle artifact is, under this scheme, a process definition and need not be renamed.
 
-**P3 — The engine is a deterministic validator and a self-explaining memory.** Given a definition and observable reality, "where is this subject", "may it move from here to there", and "is it valid" are *definite* answers. The status view renders where the subject is, why, how it got there (where the project keeps a journal, P7), and what it may do next — each with a **live** check, and the live check is authoritative over any prose label or journal entry.
+### P2 — Ownership
 
-**P4 — Gates must be checkable.** Every transition gate reduces to either a deterministic predicate the engine evaluates, or a recorded authorisation artifact the engine confirms exists **and that was produced by a different authority than the actor being gated**. An actor's own assertion that a gate passed is never sufficient — a judgment gate must leave a cross-authority, checkable trace.
+The backbone owns the process *shape contract* (a shared schema fragment) and the engine. Each capability ships its **own** process definition as an instance that conforms to the shape and binds via the existing grammar (COR-023), addressable as `<capability>:<process-id>`. The substrate adds no new binding mechanism; capabilities stay independent, self-describing peers.
 
-**P5 — Name broad, ship narrow.** The shape *names* the full design space; the engine *ships* only the minimal core — a single subject, state read live from reality, guarded transitions, position, and the status view — plus the optional journal of P7. Richer capabilities — multiple keyed subjects, stored or hybrid state detection, transition side-effects, position-independent invariants, cross-subject breadth, dynamic (data-resolved or open) structure, and composition of one process inside another — are **named extension points that stay unbuilt until a real binding needs one** (COR-016). The full shape lives in the process area's reference, not in this record.
+### P3 — The engine is a deterministic validator and a self-explaining memory
+
+Given a definition and observable reality, "where is this subject", "may it move from here to there", and "is it valid" are *definite* answers. The status view renders where the subject is, why, how it got there (where the project keeps a journal, P7), and what it may do next — each with a **live** check, and the live check is authoritative over any prose label or journal entry.
+
+### P4 — Gates must be checkable
+
+Every transition gate reduces to either a deterministic predicate the engine evaluates, or a recorded authorisation artifact the engine confirms exists **and that was produced by a different authority than the actor being gated**. An actor's own assertion that a gate passed is never sufficient — a judgment gate must leave a cross-authority, checkable trace.
+
+### P5 — Name broad, ship narrow
+
+The shape *names* the full design space; the engine *ships* only the minimal core — a single subject, state read live from reality, guarded transitions, position, and the status view — plus the optional journal of P7. Richer capabilities — multiple keyed subjects, stored or hybrid state detection, transition side-effects, position-independent invariants, cross-subject breadth, dynamic (data-resolved or open) structure, and composition of one process inside another — are **named extension points that stay unbuilt until a real binding needs one** (COR-016). The full shape lives in the process area's reference, not in this record.
 
 Detection, in that core:
 
@@ -35,9 +45,13 @@ Detection, in that core:
 - **A mode the engine does not implement.** A definition can declare a mode that the engine reading it does not implement. Because every state declares the same mode, that engine can ask about none of them: it reports that it cannot tell where the subject is, and it permits no move. It never answers that the subject is in no state, and never places the subject from some of the states.
 - **A definition that mixes modes.** A definition whose states declare different modes does not conform to the shape: validation reports it as an error, and an engine that implements more than one mode resolves no position from it and says why.
 
-**P6 — Determinism survives dynamic structure.** A process may enumerate its transitions statically, resolve them at runtime from data over a *known* set of blocks, or declare an *open region* bounded only by invariants and an exit gate. In every case the engine stays a deterministic validator — a resolver returns a definite set; an open region reduces to a definite boundary check.
+### P6 — Determinism survives dynamic structure
 
-**P7 — The journal is optional audit, off unless the project turns it on.** The engine can keep an append-only journal per subject: an entry for each move it executes, recording who moved the subject, from where to where, and under which version. The journal is audit, never runtime. Position is re-derived from reality every time (P3), so nothing the engine decides reads the journal, and a project that keeps none gets the same answers to "where is this subject", "may it move", and "is it valid".
+A process may enumerate its transitions statically, resolve them at runtime from data over a *known* set of blocks, or declare an *open region* bounded only by invariants and an exit gate. In every case the engine stays a deterministic validator — a resolver returns a definite set; an open region reduces to a definite boundary check.
+
+### P7 — The journal is optional audit, off unless the project turns it on
+
+The engine can keep an append-only journal per subject: an entry for each move it executes, recording who moved the subject, from where to where, and under which version. The journal is audit, never runtime. Position is re-derived from reality every time (P3), so nothing the engine decides reads the journal, and a project that keeps none gets the same answers to "where is this subject", "may it move", and "is it valid".
 
 - **The project's choice.** Keeping a journal is one project-level declaration. Absent it, the engine keeps no journal.
 - **Committed or clone-local.** A project that keeps a journal also declares whether the journals are committed with the project — shared, reviewable, and outliving any one clone — or kept local to each clone and excluded from version control. The version-control ignore rules follow that declaration, so the default for journal files is excluded and only an explicit "committed" lets them in.

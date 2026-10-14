@@ -16,8 +16,9 @@ pkit:
         - COR-028
         - COR-039
     revalidated:
-      at: 2026-10-14T09:21:19Z
-      outcome: updated
+      at: 2026-10-14T18:58:47Z
+      outcome: unchanged
+      unchanged-because: COR-028 and COR-039 now write their points as headings carrying the same numbers, word for word. COR-028's closing sentence, that the model is authoritative, and COR-039's paragraph on where its realization is recorded move into each record's opening, unchanged. The operator's needs, to know where confinement does not hold and to be asked before an agent changes another repository, rest on the same text, so the actor holds.
 ---
 
 # ACT-operator — Operator

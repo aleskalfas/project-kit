@@ -69,7 +69,7 @@ The agent surfaces reviewer findings to the user as part of the single approval 
 
 **Rename.** The `-agent` suffix is convention-inconsistent (other kit agents drop it) and creates surface ambiguity (is `pm-agent` an agent or a pm-related artifact?). `project-manager` is the discipline-fitting name; the role is project-management.
 
-**Two visible modes + invisible variation.** Adding a third visible mode would force the user to learn a new mode name and decide when to invoke it. The user's actual ask is "do this for me" — a role-shaped invocation, not a mode-picking decision. Inference from request shape matches today's PM-vs-Implementer pattern and stays inside DEC-008's frame. (DEC-008's Implications line 82 explicitly punts deployment-shape; extending the agent's mode-switching to cover this variation is the natural continuation.)
+**Two visible modes + invisible variation.** Adding a third visible mode would force the user to learn a new mode name and decide when to invoke it. The user's actual ask is "do this for me" — a role-shaped invocation, not a mode-picking decision. Inference from request shape matches today's PM-vs-Implementer pattern and stays inside DEC-008's frame. (DEC-008's Implications bullet on how the project-manager is deployed explicitly punts deployment-shape; extending the agent's mode-switching to cover this variation is the natural continuation.)
 
 **Sub-procedure in the existing composite skill.** Per [COR-006](../../../decisions/core/COR-006-artifact-roles.md), procedures live in skills. The pm composite skill already exists as the agent's procedure home; adding `batch-plan.md` as a sibling sub-procedure keeps the agent body thin (it dispatches; the skill steps) and avoids a separate top-level skill that the user has to discover. The agent is the single role surface; the skill carries the multi-step procedure underneath.
 
@@ -95,7 +95,7 @@ The agent surfaces reviewer findings to the user as part of the single approval 
 
 - Future capability features that touch the agent's mode surface should refine this DEC in place rather than supersede it (the load-bearing claim — the rename + two-mode-with-invisible-variation shape — is stable; sub-procedure boundary changes are refinement).
 - The reviewer-invocation threshold may prove too coarse or too fine with lived experience. Adjustments to the threshold land as in-place refinements to this DEC; a fundamental rework (e.g., per-issue reviewer choice) warrants a successor DEC.
-- [DEC-008](DEC-008-pm-and-implementer-roles.md) is refined in the same change-set with a forward-pointer to this DEC — DEC-008's Implications line 82 ("deployment shape is the adopter's choice") is now answered for this capability by this DEC.
+- [DEC-008](DEC-008-pm-and-implementer-roles.md) is refined in the same change-set with a forward-pointer to this DEC — DEC-008's Implications bullet on how the project-manager is deployed ("deployment shape is the adopter's choice") is now answered for this capability by this DEC.
 
 ### What this DEC does NOT cover
 

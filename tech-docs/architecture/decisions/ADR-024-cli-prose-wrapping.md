@@ -97,97 +97,105 @@ in scope here (per [PRJ-005](../../../.pkit/decisions/project/PRJ-005-adopt-adrs
 ADR-011's colour policy and a never-load-bearing invariant that mirrors
 ADR-011's.**
 
-1. **A leaf `wrap()` now, `view()`-internal on the second-consumer trigger.**
-   Prose layout lives in a standalone
-   `cli_render.wrap(text, *, indent, hang, width=None) -> list[str]` — the one
-   place prose breaks into lines. Two distinct judgements land it here, and they
-   should not be conflated. (a) *Whether to extract a shared primitive at all* is
-   the [COR-007](../../../.pkit/decisions/core/COR-007-pattern-extraction.md)
-   recurrence test: two hand-rolled prose layouts (`_prompt_lines` plus the
-   scattered `lines.append` indentation) is the trigger to extract rather than
-   re-patch. (b) *Whether the carrier is a leaf or a `view()` extension* is
-   ADR-006's read-view scope: the procedural narratives this serves
-   (`render_status_narrative`, `probe`, `setup`, journal dumps) sit **outside**
-   read-views, so the carrier must be callable without `view()`. The leaf is
-   therefore the entry point both consumers reach — exactly as `style()` is
-   (ADR-011 rule 4): the narratives call `wrap()` *directly* today, and `view()`
-   / `section()` call it *internally later* when a read-view first needs a prose
-   block (ADR-006's promotion-on-second-consumer discipline governs that
-   layering). It takes one logical prose field plus its indent context and owns
-   the line-breaking bytes — the same move `title(noun, count, gloss)` and
-   `style(role, text)` make, applied to prose.
+### 1. A leaf `wrap()` now, `view()`-internal on the second-consumer trigger
 
-2. **Hanging-indent is unconditional; width-wrap is TTY-gated.** Author newlines
-   (`\n` in the field) always produce continuation lines indented under the
-   field — even when piped — because the human narrative is a *presentation*
-   surface where readability is the goal and a multi-line field dumped flush at
-   column 0 is simply wrong on it. Only the *hard-wrap of an over-long single
-   line to terminal width* is gated on a TTY. Both transformations mutate the
-   piped narrative's bytes relative to the raw field text — hanging-indent
-   injects leading whitespace, width-wrap injects breaks; **neither is required
-   to be byte-stable**, because (per rule 4) nothing parses the human narrative.
-   The split between them is a *presentation* judgement (structural indentation is
-   always wanted; width reflow is only wanted on a TTY), not a load-bearing-bytes
-   judgement.
+Prose layout lives in a standalone
+`cli_render.wrap(text, *, indent, hang, width=None) -> list[str]` — the one
+place prose breaks into lines. Two distinct judgements land it here, and they
+should not be conflated. (a) *Whether to extract a shared primitive at all* is
+the [COR-007](../../../.pkit/decisions/core/COR-007-pattern-extraction.md)
+recurrence test: two hand-rolled prose layouts (`_prompt_lines` plus the
+scattered `lines.append` indentation) is the trigger to extract rather than
+re-patch. (b) *Whether the carrier is a leaf or a `view()` extension* is
+ADR-006's read-view scope: the procedural narratives this serves
+(`render_status_narrative`, `probe`, `setup`, journal dumps) sit **outside**
+read-views, so the carrier must be callable without `view()`. The leaf is
+therefore the entry point both consumers reach — exactly as `style()` is
+(ADR-011 rule 4): the narratives call `wrap()` *directly* today, and `view()`
+/ `section()` call it *internally later* when a read-view first needs a prose
+block (ADR-006's promotion-on-second-consumer discipline governs that
+layering). It takes one logical prose field plus its indent context and owns
+the line-breaking bytes — the same move `title(noun, count, gloss)` and
+`style(role, text)` make, applied to prose.
 
-3. **Width resolved once at the command boundary.** A `resolve_width(...)` /
-   `_wrap_width` pair sits beside ADR-011's `resolve_color` / `_color_enabled`.
-   `wrap()` reads the resolved value; it never sniffs `isatty()` itself (the same
-   wrong-stream factoring ADR-011 §2 fixed for colour — the `(report, str)`
-   return pattern means the builder can't see the print stream). Resolution:
+### 2. Hanging-indent is unconditional; width-wrap is TTY-gated
 
-   - **Piped is always no-wrap, regardless of `COLUMNS`.** When the stream is not
-     a TTY, resolve to the no-hard-wrap sentinel *unconditionally*. This is where
-     the colour parallel **deliberately diverges** from ADR-011's precedence: for
-     colour, an explicit override (`--color always`, `COLUMNS`-style env) beats
-     the environment, so a forced setting survives a pipe. Applying that rule
-     here would let `COLUMNS` inject width-driven breaks into piped output — the
-     exact corruption the presentation/contract split avoids — so width does the
-     opposite: piped wins over `COLUMNS`. `COLUMNS` (and a future `--width`) sets
-     the width used **only when on a TTY** (or when an explicit `--width` is given
-     for a TTY render); it never *forces* wrapping onto a pipe.
-   - **On a TTY:** width is `COLUMNS` if set and valid, else
-     `shutil.get_terminal_size((80, …)).columns`. **Guard a zero / nonsensical
-     reading:** if `get_terminal_size` returns `columns == 0` (or any value below
-     the floor), treat it as indeterminate and resolve to no-wrap rather than
-     producing one-char-per-line output.
-   - **Minimum-width floor.** A resolved width below `indent + hang + a small
-     content minimum` is treated as no-wrap (there is no sane reflow into a column
-     narrower than the indentation plus a few characters). This makes degenerate
-     narrow widths degrade to the readable piped form instead of pathological
-     output.
-   - **`break_long_words=False`.** A single token longer than the available width
-     (a long path, URL, or `command`-role string) **overflows the column rather
-     than being hard-broken mid-token.** ADR-011 keeps `command` strings
-     copy-pasteable / load-bearing; a mid-token break would corrupt a path the
-     reader is meant to copy. Overflow-don't-break preserves the token, accepting
-     one over-long line as the lesser harm.
+Author newlines
+(`\n` in the field) always produce continuation lines indented under the
+field — even when piped — because the human narrative is a *presentation*
+surface where readability is the goal and a multi-line field dumped flush at
+column 0 is simply wrong on it. Only the *hard-wrap of an over-long single
+line to terminal width* is gated on a TTY. Both transformations mutate the
+piped narrative's bytes relative to the raw field text — hanging-indent
+injects leading whitespace, width-wrap injects breaks; **neither is required
+to be byte-stable**, because (per rule 4) nothing parses the human narrative.
+The split between them is a *presentation* judgement (structural indentation is
+always wanted; width reflow is only wanted on a TTY), not a load-bearing-bytes
+judgement.
 
-4. **The load-bearing invariant is `--json` byte-stability — a tested
-   invariant.** Scriptability rests on the *machine* surface, not the human one.
-   The pinned, golden-tested invariant is: **`render_status_json` produces
-   byte-identical output regardless of TTY / `COLUMNS` / piped**, because it never
-   calls `wrap()` (no presentation decision can reach the `--json` envelope a
-   consumer parses). This is the prose analogue of ADR-011's
-   `strip_ansi(styled) == plain` — the thing a script depends on, pinned so it
-   cannot drift. The golden test stabilizes `render_status_json` across TTY,
-   `COLUMNS`, and piped invocations.
+### 3. Width resolved once at the command boundary
 
-   A **second, weaker net** guards the human narrative against a width-wrap
-   *regression*: when width resolves to no-wrap (piped / indeterminable), the
-   narrative contains **no width-driven hard breaks**. Note precisely what this
-   does and does not claim — it does **not** assert the piped narrative is
-   byte-identical to the raw field text (hanging-indent still injects whitespace
-   per rule 2); it asserts only that *width* introduces no breaks when piped. It
-   is a presentation regression net, explicitly the weaker check, **not** the
-   invariant scriptability rests on. Width measurement is against **visible**
-   width, so prose is wrapped *before* styling (never measure already-SGR'd text),
-   keeping the two leaves composable.
+A `resolve_width(...)` /
+`_wrap_width` pair sits beside ADR-011's `resolve_color` / `_color_enabled`.
+`wrap()` reads the resolved value; it never sniffs `isatty()` itself (the same
+wrong-stream factoring ADR-011 §2 fixed for colour — the `(report, str)`
+return pattern means the builder can't see the print stream). Resolution:
 
-5. **`_prompt_lines` becomes a thin caller.** The #216 ad-hoc wrapper is rewired
-   onto `wrap()` (its `❓ ` marker is a first-line prefix; marker-prefix +
-   hanging-indent is exactly the general shape `wrap`'s `hang` parameter
-   exposes), retiring the second hand-rolled prose layout into the shared leaf.
+- **Piped is always no-wrap, regardless of `COLUMNS`.** When the stream is not
+  a TTY, resolve to the no-hard-wrap sentinel *unconditionally*. This is where
+  the colour parallel **deliberately diverges** from ADR-011's precedence: for
+  colour, an explicit override (`--color always`, `COLUMNS`-style env) beats
+  the environment, so a forced setting survives a pipe. Applying that rule
+  here would let `COLUMNS` inject width-driven breaks into piped output — the
+  exact corruption the presentation/contract split avoids — so width does the
+  opposite: piped wins over `COLUMNS`. `COLUMNS` (and a future `--width`) sets
+  the width used **only when on a TTY** (or when an explicit `--width` is given
+  for a TTY render); it never *forces* wrapping onto a pipe.
+- **On a TTY:** width is `COLUMNS` if set and valid, else
+  `shutil.get_terminal_size((80, …)).columns`. **Guard a zero / nonsensical
+  reading:** if `get_terminal_size` returns `columns == 0` (or any value below
+  the floor), treat it as indeterminate and resolve to no-wrap rather than
+  producing one-char-per-line output.
+- **Minimum-width floor.** A resolved width below `indent + hang + a small
+  content minimum` is treated as no-wrap (there is no sane reflow into a column
+  narrower than the indentation plus a few characters). This makes degenerate
+  narrow widths degrade to the readable piped form instead of pathological
+  output.
+- **`break_long_words=False`.** A single token longer than the available width
+  (a long path, URL, or `command`-role string) **overflows the column rather
+  than being hard-broken mid-token.** ADR-011 keeps `command` strings
+  copy-pasteable / load-bearing; a mid-token break would corrupt a path the
+  reader is meant to copy. Overflow-don't-break preserves the token, accepting
+  one over-long line as the lesser harm.
+
+### 4. The load-bearing invariant is `--json` byte-stability — a tested invariant
+
+Scriptability rests on the *machine* surface, not the human one.
+The pinned, golden-tested invariant is: **`render_status_json` produces
+byte-identical output regardless of TTY / `COLUMNS` / piped**, because it never
+calls `wrap()` (no presentation decision can reach the `--json` envelope a
+consumer parses). This is the prose analogue of ADR-011's
+`strip_ansi(styled) == plain` — the thing a script depends on, pinned so it
+cannot drift. The golden test stabilizes `render_status_json` across TTY,
+`COLUMNS`, and piped invocations.
+
+A **second, weaker net** guards the human narrative against a width-wrap
+*regression*: when width resolves to no-wrap (piped / indeterminable), the
+narrative contains **no width-driven hard breaks**. Note precisely what this
+does and does not claim — it does **not** assert the piped narrative is
+byte-identical to the raw field text (hanging-indent still injects whitespace
+per rule 2); it asserts only that *width* introduces no breaks when piped. It
+is a presentation regression net, explicitly the weaker check, **not** the
+invariant scriptability rests on. Width measurement is against **visible**
+width, so prose is wrapped *before* styling (never measure already-SGR'd text),
+keeping the two leaves composable.
+
+### 5. `_prompt_lines` becomes a thin caller
+
+The #216 ad-hoc wrapper is rewired
+onto `wrap()` (its `❓ ` marker is a first-line prefix; marker-prefix +
+hanging-indent is exactly the general shape `wrap`'s `hang` parameter
+exposes), retiring the second hand-rolled prose layout into the shared leaf.
 
 ## Rationale
 

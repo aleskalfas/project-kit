@@ -93,11 +93,11 @@ Migrations carry a project's installed state across a version. No rule says plai
 No one rule settles it. Several accepted records keep the core off a project's content, and two open a door.
 
 - **Records that keep the core off:**
-  - **COR-001:** "The core layer never reads from or writes to these paths", and they "are not touched by sync" (`.pkit/decisions/core/COR-001-content-mechanisms.md:33` and `:37`). A seeded file gets "no further claim" (`:113`).
-  - **COR-002:** "The core layer only contributes; it never subtracts" (`.pkit/decisions/core/COR-002-merge-delivery.md:96`).
+  - **COR-001:** "The core layer never reads from or writes to these paths", and they "are not touched by sync" (COR-001, "Extension (project-side content)"). A seeded file gets "no further claim" (its Implications, "Seeded extension artifacts").
+  - **COR-002:** "The core layer only contributes; it never subtracts" (COR-002, "Why append-only for adopter content").
   - **COR-010:** "Adopter content is never touched" on removal (COR-010, "Lifecycle operations apply uniformly", item 4). Project-side records are "never core-managed by definition" (its Implications).
-  - **COR-017:** the disposition "never edit adopter prose" (`.pkit/decisions/core/COR-017-capability-pattern.md:132` and `:146`).
-  - **COR-023:** auto-migrating a project's data "is out of scope for v1", since "silent transformation is the wrong default" (`.pkit/decisions/core/COR-023-schema-binds-inline.md:72` and `:123`).
+  - **COR-017:** the disposition "never edit adopter prose" (COR-017, Rationale, "Why uninstall refuses with references rather than auto-cleaning", and Alternatives considered, "Strip references automatically on uninstall").
+  - **COR-023:** auto-migrating a project's data "is out of scope for v1", since "silent transformation is the wrong default" (COR-023, "Schema-version mismatch handling", and Alternatives considered, "Auto-migrate on schema-version mismatch").
   - **The decisions README:** "project-owned paths are never read or written by sync" (`.pkit/decisions/README.md:71`).
 - **Records that open a door:**
   - **COR-048 point 5:** a configuration key may be written "by an upgrade migration that the owning record specifies, where running the upgrade is the consent".
@@ -109,7 +109,7 @@ No one rule settles it. Several accepted records keep the core off a project's c
   - claude-code's `0.5.0/001` adds an include line to the host `CLAUDE.md`, under the merge contract (COR-002).
 - **Sync runs some of them.** A capability's migrations run inside sync's refresh (`src/project_kit/capabilities.py:1170-1173`, `src/project_kit/upgrade.py:917-920`).
   - **So sync writes project-owned paths today:** project-management's `0.55.0/004` writes `.pkit/project/config.yaml` while claiming "the upgrade being the consent" (`.pkit/capabilities/project-management/migrations/0.55.0/004-default-branch-to-backbone.sh:33`).
-  - **That contradicts** COR-001 line 37, COR-048 point 1, and the decisions README's line 71.
+  - **That contradicts** the contract in COR-001's "Extension (project-side content)", COR-048 point 1, and the decisions README's line 71.
 - **No migration has rewritten** a record, an analysis artefact, a page or a scratchpad note. Such changes were made by hand (#860, #1350), or avoided by tolerance.
 
 ### The ownership predicates
@@ -147,7 +147,7 @@ The lifecycle README contradicts itself at lines 758 and 767. Line 767 holds. Th
 - **A pinned raise runs in two processes.** The routed child runs the old pin's code, and hands the raise to a full upgrade under the target's code (`src/project_kit/upgrade.py:140-145` and `:435`).
 - **Backbone migrations can be stranded today.** Sync records the new backbone version and runs no backbone migration. A later upgrade then finds the project at the target and returns early.
 - **Why it matters here:** a step hooked behind those returns, or to one path, is skipped once another path has moved the version.
-- **Note:** COR-004 refuses one verb that compounds operations. Its example is an "update that does sync + merge + migrations", which conflates consent profiles (`.pkit/decisions/core/COR-004-cli-surface.md:27` and `:59`).
+- **Note:** COR-004 refuses one verb that compounds operations. Its example is an "update that does sync + merge + migrations", which conflates consent profiles (COR-004, "Each command anchors to one mechanism or operation", and Alternatives considered, "One smart `update` verb that picks sync / merge / migration as needed").
 
 ### Pins and skipped versions (ADR-049)
 

@@ -16,31 +16,40 @@ The mapping is a coarse guess written from the code's side, so broad rules fire 
 
 **What a change owes to its documentation is collected through a slot — a data point under the work-tracking role this capability provides, `<methodology>::work-tracking:doc-check` (refinement per COR-053). This capability's own checks are always one of its fillers, and a documentation capability may add to them.**
 
-1. **The slot** (COR-052), resolved for a pull request against its diff:
-   - **Its entries are documentation obligations.** Each names the document or path concerned, the reason (a mapped path changed, an anchored page went stale, new code is undocumented), and its source. Obligations from different sources are keyed so that they never collide or replace one another. A mapping obligation is keyed by its mapping rule, as today. Other obligations are keyed by document and source. The shape is a companion schema named after the point, at version 1.
-   - **Policy:** `additive`. Obligations are requirements, so none may be dropped silently. A project removes one only through a removal override that records its reason, the audited escape the slots record provides. Keys include the source, so the policy's collision rule never fires between sources.
-   - **Default:** always included. This capability's code-to-doc mapping is the default filler.
-   - **Inert policy:** `fail`, because the slot feeds the merge gate. A documentation filler that goes out of step makes the check report "unresolved", naming the filler and the fix: update it, pin it, or uninstall it. It never reports a weaker pass.
+### 1. The slot
 
-   The requirement that every Task and pull request carries a well-formed `## Doc impact` section is not an obligation. It stays a rule of the gate itself ([project-management:DEC-015-doc-update-obligations]), whatever fills the slot.
+**The slot** (COR-052), resolved for a pull request against its diff:
+- **Its entries are documentation obligations.** Each names the document or path concerned, the reason (a mapped path changed, an anchored page went stale, new code is undocumented), and its source. Obligations from different sources are keyed so that they never collide or replace one another. A mapping obligation is keyed by its mapping rule, as today. Other obligations are keyed by document and source. The shape is a companion schema named after the point, at version 1.
+- **Policy:** `additive`. Obligations are requirements, so none may be dropped silently. A project removes one only through a removal override that records its reason, the audited escape the slots record provides. Keys include the source, so the policy's collision rule never fires between sources.
+- **Default:** always included. This capability's code-to-doc mapping is the default filler.
+- **Inert policy:** `fail`, because the slot feeds the merge gate. A documentation filler that goes out of step makes the check report "unresolved", naming the filler and the fix: update it, pin it, or uninstall it. It never reports a weaker pass.
 
-2. **How obligations are met.**
-   - **Mapping obligations are met exactly as today.** The diff touches one of the rule's documents, or the `## Doc impact` section names the changed code path or the rule's pattern. A project without a documentation capability sees no change.
-   - **Obligations from other sources** are met by the artefact, not by the section (refinement per COR-050): a friction obligation on an anchored page is met when the page carries one of the core record's three answers in the diff — updated, unchanged with its justification, or deferred with its reason. This capability lists those answers in the description, in a section of their own written from the change check's list (refinement per [project-management:DEC-055-pr-lists-answers]); the `## Doc impact` section does not carry them, and a documentation capability's agent may propose that section, but no line of either meets one of these obligations on its own, because the check must hold for a pull request from any tool and with no description at all. An obligation for undocumented new code is met when a page anchoring that code appears in the diff; the audited escape is the removal override of point 1.
-   - A section-wide "No doc impact" justification meets only mapping obligations, and only while the mapping's setting is advisory.
+The requirement that every Task and pull request carries a well-formed `## Doc impact` section is not an obligation. It stays a rule of the gate itself ([project-management:DEC-015-doc-update-obligations]), whatever fills the slot.
 
-   An obligation left unaddressed is reported.
+### 2. How obligations are met
 
-3. **Enforcement per source.** Each source of obligations has its own enforcement setting in this capability's project configuration.
-   - The mapping keeps its existing setting.
-   - Obligations contributed by a documentation capability have a separate setting, advisory by default.
-   - Enforcing one never enforces another.
+- **Mapping obligations are met exactly as today.** The diff touches one of the rule's documents, or the `## Doc impact` section names the changed code path or the rule's pattern. A project without a documentation capability sees no change.
+- **Obligations from other sources** are met by the artefact, not by the section (refinement per COR-050): a friction obligation on an anchored page is met when the page carries one of the core record's three answers in the diff — updated, unchanged with its justification, or deferred with its reason. This capability lists those answers in the description, in a section of their own written from the change check's list (refinement per [project-management:DEC-055-pr-lists-answers]); the `## Doc impact` section does not carry them, and a documentation capability's agent may propose that section, but no line of either meets one of these obligations on its own, because the check must hold for a pull request from any tool and with no description at all. An obligation for undocumented new code is met when a page anchoring that code appears in the diff; the audited escape is the removal override of point 1.
+- A section-wide "No doc impact" justification meets only mapping obligations, and only while the mapping's setting is advisory.
 
-   As before, a warning at pull-request time is only a speed-bump. Real enforcement is the project wiring the documentation check as a required status in its continuous integration.
+An obligation left unaddressed is reported.
 
-4. **What a documentation capability contributes.** When one contributes to the point, it contributes obligations of two kinds: friction on anchored pages, and uncovered surface — new code that nothing describes (COR-050 point 8). It may also propose a `## Doc impact` section through its own agent, for the author to confirm or edit. That proposal is not slot data, because the slot carries obligations only. An anchored page's friction is cleared on the page itself — a revalidation or a deferral (COR-050) — and the core change check verifies that; this capability's check reads the same machine-readable result rather than re-deriving it.
+### 3. Enforcement per source
 
-5. **Retiring the mapping.** Once a project's pages are anchored, the mapping duplicates what anchors say more precisely. A documentation capability's onboarding may convert mapping rules into page anchors and propose emptying the mapping, as the living-docs decision's onboarding describes. The project makes that a reviewed change. Until then, both sources contribute, and an update to a document named by both — present in the diff, with the page's answer — meets both.
+Each source of obligations has its own enforcement setting in this capability's project configuration.
+- The mapping keeps its existing setting.
+- Obligations contributed by a documentation capability have a separate setting, advisory by default.
+- Enforcing one never enforces another.
+
+As before, a warning at pull-request time is only a speed-bump. Real enforcement is the project wiring the documentation check as a required status in its continuous integration.
+
+### 4. What a documentation capability contributes
+
+When one contributes to the point, it contributes obligations of two kinds: friction on anchored pages, and uncovered surface — new code that nothing describes (COR-050 point 8). It may also propose a `## Doc impact` section through its own agent, for the author to confirm or edit. That proposal is not slot data, because the slot carries obligations only. An anchored page's friction is cleared on the page itself — a revalidation or a deferral (COR-050) — and the core change check verifies that; this capability's check reads the same machine-readable result rather than re-deriving it.
+
+### 5. Retiring the mapping
+
+Once a project's pages are anchored, the mapping duplicates what anchors say more precisely. A documentation capability's onboarding may convert mapping rules into page anchors and propose emptying the mapping, as the living-docs decision's onboarding describes. The project makes that a reviewed change. Until then, both sources contribute, and an update to a document named by both — present in the diff, with the page's answer — meets both.
 
 ## Rationale
 

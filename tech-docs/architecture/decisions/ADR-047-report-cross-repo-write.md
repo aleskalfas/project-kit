@@ -46,43 +46,50 @@ realization.
 fixed, distribution-set target. It sits outside the accidental-handoff interlock by
 category — not by override — and its autonomy semantics degrade to a draft.**
 
-1. **Outside the interlock by category, not by flag.** The `session_guard` interlock
-   exists to catch a mutation that *could have been meant for this repo* landing
-   elsewhere (accidental handoff of a governance artifact — an issue/decision/commit
-   belonging to *this* project). A `report` is a *message addressed to the tool's
-   makers*; it could **never** have been meant for the adopter's own tracker, and it
-   lands **no** governance artifact in any project. So `report` is a *different
-   category* of write and is scoped **outside** the interlock's domain — stated
-   explicitly in code and here — rather than tripping it and overriding. No
-   `--allow-foreign-repo` path is added or reused for `report`.
+### 1. Outside the interlock by category, not by flag
 
-2. **Never-silent, realized as confirm-or-draft.** The per-change human gesture
-   COR-039 requires cannot be "the agent ran `report`" (an autonomous agent could
-   file to a public repo under the user's identity without the human seeing the
-   body). So:
-   - Interactive: a **target-naming confirmation of the exact body before send**
-     ("posts a PUBLIC issue to `<owner/repo>` under your gh identity — confirm").
-   - Autonomy / `--yes`: **degrade to producing the draft** (the prefilled-issue URL,
-     or a file) — **do not post.** This is a deliberate **asymmetry**: everywhere
-     else in the CLI `--yes` means "proceed"; for `report`'s foreign write it means
-     "produce, don't send." It unifies with the no-`gh`-auth fallback (same "make the
-     draft, don't post" path) and with the URL-first posture.
+The `session_guard` interlock
+exists to catch a mutation that *could have been meant for this repo* landing
+elsewhere (accidental handoff of a governance artifact — an issue/decision/commit
+belonging to *this* project). A `report` is a *message addressed to the tool's
+makers*; it could **never** have been meant for the adopter's own tracker, and it
+lands **no** governance artifact in any project. So `report` is a *different
+category* of write and is scoped **outside** the interlock's domain — stated
+explicitly in code and here — rather than tripping it and overriding. No
+`--allow-foreign-repo` path is added or reused for `report`.
 
-   > **Refinement ([COR-043](../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md) arc, #642, 2026-08-10) — the confirmed unit is the send payload, not only the body.** An attached scratchpad note that exceeds the issue-body budget is sent as an excerpted body **plus one overflow comment** carrying the full as-sent text — mechanically a second API call to the same foreign issue, but **one logical send**: the *entire payload* (body + overflow comment, with the truncation flagged) is shown and confirmed as **a single gesture before any post**. Partial failure fails closed and loud: if the issue posts but the overflow comment fails, nothing is stamped `reported` (the send did not complete as confirmed), the created issue is named to the operator with the remediation (retry the comment or edit the issue), and the error is surfaced verbatim. This does **not** relax the three bars: no new write category (same target, same issue, one confirm), no override flag, no configurable target. Reviewers should continue to reject any *independent* second write — this refinement covers only the overflow comment of an already-confirmed send. Additionally, the redaction lint over attached content runs at **compose time on every path** — drafts and URL-first included — since "redaction by construction" is a property of the composed payload, not of the channel that carries it.
+### 2. Never-silent, realized as confirm-or-draft
 
-   > **Refinement (#662, 2026-08-11) — same bars, new send-path realization.** The never-silent gesture is now realized as a **confirm-before-API-post primary path**: with `gh` authenticated, the full send payload (body + any overflow comment) is shown once and the confirm names both the target and the posting identity ("posts as `@<gh login>` to `<owner/repo>`") before the `gh` post — the note travels as the issue body, never URL-embedded. Autonomy / `--yes` **stages** the composed payload to a local draft, and a human posts it with the interactive-only `pkit report submit <id>`, which re-shows the payload and confirms — so `--yes` still produces and never posts. The prefilled-URL form survives only where it is honest — no `gh` auth, or an explicit `--url`, within a ~6000-char budget (beyond it the form hard-fails at GitHub's edge) — and always warns that the browser's logged-in account, not the CLI identity, authors the submit (the #659 misattribution). All three bars are unchanged: categorical scope, no override flag, fixed target, one confirmed logical send.
+The per-change human gesture
+COR-039 requires cannot be "the agent ran `report`" (an autonomous agent could
+file to a public repo under the user's identity without the human seeing the
+body). So:
+- Interactive: a **target-naming confirmation of the exact body before send**
+  ("posts a PUBLIC issue to `<owner/repo>` under your gh identity — confirm").
+- Autonomy / `--yes`: **degrade to producing the draft** (the prefilled-issue URL,
+  or a file) — **do not post.** This is a deliberate **asymmetry**: everywhere
+  else in the CLI `--yes` means "proceed"; for `report`'s foreign write it means
+  "produce, don't send." It unifies with the no-`gh`-auth fallback (same "make the
+  draft, don't post" path) and with the URL-first posture.
 
-3. **Fixed, distribution-set target — not configurable-per-adopter, not a
-   `--repo`.** The target is one value set by the *distribution's* project config
-   (project-kit → its repo; a fork → its own), never an adopter-facing argument. A
-   configurable/`--repo` target would turn `report` into a general foreign-issue
-   filer and dissolve the containment COR-039 exists to protect. A fork retargets by
-   editing its config — an explicit, honest edit, not a runtime knob.
+> **Refinement ([COR-043](../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md) arc, #642, 2026-08-10) — the confirmed unit is the send payload, not only the body.** An attached scratchpad note that exceeds the issue-body budget is sent as an excerpted body **plus one overflow comment** carrying the full as-sent text — mechanically a second API call to the same foreign issue, but **one logical send**: the *entire payload* (body + overflow comment, with the truncation flagged) is shown and confirmed as **a single gesture before any post**. Partial failure fails closed and loud: if the issue posts but the overflow comment fails, nothing is stamped `reported` (the send did not complete as confirmed), the created issue is named to the operator with the remediation (retry the comment or edit the issue), and the error is surfaced verbatim. This does **not** relax the three bars: no new write category (same target, same issue, one confirm), no override flag, no configurable target. Reviewers should continue to reject any *independent* second write — this refinement covers only the overflow comment of an already-confirmed send. Additionally, the redaction lint over attached content runs at **compose time on every path** — drafts and URL-first included — since "redaction by construction" is a property of the composed payload, not of the channel that carries it.
 
-4. **The maintainer side is same-repo — no cross-repo machinery.** `report inbox` /
-   `report link` operate on the *current* repo, which for a project-kit developer
-   *is* the target. They are ordinary same-repo issue edits and are gated only by
-   "current repo == report target" (which is also what scopes them to developers).
+> **Refinement (#662, 2026-08-11) — same bars, new send-path realization.** The never-silent gesture is now realized as a **confirm-before-API-post primary path**: with `gh` authenticated, the full send payload (body + any overflow comment) is shown once and the confirm names both the target and the posting identity ("posts as `@<gh login>` to `<owner/repo>`") before the `gh` post — the note travels as the issue body, never URL-embedded. Autonomy / `--yes` **stages** the composed payload to a local draft, and a human posts it with the interactive-only `pkit report submit <id>`, which re-shows the payload and confirms — so `--yes` still produces and never posts. The prefilled-URL form survives only where it is honest — no `gh` auth, or an explicit `--url`, within a ~6000-char budget (beyond it the form hard-fails at GitHub's edge) — and always warns that the browser's logged-in account, not the CLI identity, authors the submit (the #659 misattribution). All three bars are unchanged: categorical scope, no override flag, fixed target, one confirmed logical send.
+
+### 3. Fixed, distribution-set target — not configurable-per-adopter, not a `--repo`
+
+The target is one value set by the *distribution's* project config
+(project-kit → its repo; a fork → its own), never an adopter-facing argument. A
+configurable/`--repo` target would turn `report` into a general foreign-issue
+filer and dissolve the containment COR-039 exists to protect. A fork retargets by
+editing its config — an explicit, honest edit, not a runtime knob.
+
+### 4. The maintainer side is same-repo — no cross-repo machinery
+
+`report inbox` /
+`report link` operate on the *current* repo, which for a project-kit developer
+*is* the target. They are ordinary same-repo issue edits and are gated only by
+"current repo == report target" (which is also what scopes them to developers).
 
 ## Rationale
 

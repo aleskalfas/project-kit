@@ -125,6 +125,20 @@ def pointed_record(
     )
 
 
+#: A project record not yet converted, its points a numbered list (COR-058 point 2).
+LISTED = ".pkit/decisions/project/PRJ-910-listed.md"
+
+
+def listed_record() -> str:
+    """`PRJ-910`, the points of `POINTS` written as a numbered list in its Decision's lead.
+
+    An anchor on one of its points names nothing it can stand on, since a list's
+    numbers are not permanent (COR-050 point 7).
+    """
+    items = "\n".join(f"{pid}. **{name}.** {text}" for pid, name, text in POINTS)
+    return pointed_record((), title="A listed record", lead=items).replace("PRJ-900", "PRJ-910")
+
+
 class Timeline:
     """Commits on an adopter repository, each a day after the last, so origins have known dates."""
 

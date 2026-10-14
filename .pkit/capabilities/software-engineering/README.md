@@ -13,9 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-13T14:19:56Z
+      at: 2026-10-13T21:44:50Z
       outcome: unchanged
-      unchanged-because: DEC-032 adds a second floor kind, touches-ruled-artefact, which asks the backbone which ruled artefacts a change alters. The not-code list now narrows touches-code alone. DEC-032 also admits a contributed agent that core ships. DEC-028 reads freshness per floor kind, and touches-code still reads the author's paths through the not-code list. The page describes the panel's touches-code floor, the not-code list's effect on it, the accepted docs gap, a floor approval that outlives a change touching no code, and the reviewer of answers. Each still holds as stated.
+      unchanged-because: The capability's DEC-001 and DEC-002, with COR-050, COR-057, ADR-013, ADR-052 and project-management DEC-055, now write their points as headings carrying the same numbers, word for word. DEC-002's paragraph on the pm-side companion decisions, after its point 7, sits under a heading of its own, with the same words. DEC-002's points 3 and 4, which this page cites as D3 and D4, name the same text, so it holds.
 ---
 
 # software-engineering capability

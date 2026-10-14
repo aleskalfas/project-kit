@@ -109,7 +109,7 @@ This follow-up should ALSO go through project-manager: a `type:refactor` (or `ty
 
 - **Orphan issues drift**: 6 open issues without parent-refs (surfaced by `show-tree` during the dogfood). Not a blocker; worth a triage pass when the wall is fully exercised.
 - **storyboard-author skill case** from COR-017's Retroactive reclassification: still open; not yet addressed.
-- **DEC-028 example block (lines 76–79)** shows two `local_registered:` entries when v1 is singleton — illustrative of the shape, but technically invalid per the singleton rule. Not blocking; flag if any reader trips on it.
+- **DEC-028 example block (its `local_registered:` list, under "Two paths, two registration lists")** shows two `local_registered:` entries when v1 is singleton — illustrative of the shape, but technically invalid per the singleton rule. Not blocking; flag if any reader trips on it.
 
 ## Definitely not next-session work
 

@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  The core records whose points were a numbered list, or paragraphs opening
+  with a bold number or label, write each point as a heading carrying its
+  number or label, word for word (#1421, COR-058): COR-028, COR-029,
+  COR-031, COR-033, COR-039, COR-043, COR-046, COR-048 to COR-057. A page
+  can now anchor to one point of these records, such as `COR-050#11`, and a
+  change to another point of the record does not ask for the page to be
+  revalidated (COR-050 point 5). No point's text, number or citation
+  changes, so every citation of a point still names it. The sentence after
+  the last point of COR-028, COR-031 and COR-039 moves into the Decision's
+  opening, with the same words. Where text cited a record by line number, it
+  now cites the point or section that line held, so the citation survives
+  the conversion. The `pkit permissions` messages, the permission hook's
+  reason for refusing a negation glob in a domain-scoped grant, and the
+  confinement toolkit's notes cite ADR-004's alternative "Relabel
+  `network-egress` as natively enforced…" instead of "ADR-004 §61".

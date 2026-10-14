@@ -16,15 +16,23 @@ This is the substrate-availability problem [project-management:DEC-036-substrate
 
 **Containment becomes a selectable substrate: native sub-issues where the tracker supports them, a textual representation where it does not.** The methodology's native ideal is kept; this adds the fallback.
 
-**D1 — Refine DEC-005 to native-*where-available*.** Native sub-issues are canonical **where the tracker supports them** (not unconditionally). Where native is unavailable, or the operator selects textual, containment uses the textual representation instead. This refines DEC-005's unconditional contract; it does **not** change the upstream methodology ideal (pm-workflow MET-004, which DEC-005 distills) — native-sub-issues-as-the-ideal stands. Project-kit's *adaptation layer* (this record + DEC-036) carries the degradation, exactly as DEC-036 degrades other distilled axes without rewriting their upstream source.
-
-**D2 — Extend DEC-036 with a `containment` axis.** A new substrate axis in `substrate-map.yaml`: `containment: native | textual`, a **manual operator selector**. (Auto-detection of sub-issue support is explicitly deferred — see Implications.) This is the axis's first home; DEC-036's per-axis model gains a sixth axis.
-
-**D3 — The child-side textual parent-ref is the universal spine.** It is always written, in both modes (DEC-005's textual projection). `show-tree` and every containment consumer therefore resolve children regardless of substrate; **native wins** on conflict (DEC-005's existing rule, now spanning mixed-substrate repos). The single read-seam realizing this is #345.
-
-**D4 — Textual-mode parent-side visibility is render-on-demand, not a stored block.** Where there is no native panel, the parent-side children view is a **generated "do-not-edit" children comment** the read path refreshes (full overwrite, single source) — **not** a body block appended on every child-create. A stored block would make each child-create a read-modify-write of the *parent* body (concurrency race, partial-failure drift, a second source of truth the read-seam already derives); render-on-demand avoids all of it.
-
 The **formal** read-seam + sole-constructor contract (the consistency invariants) is pinned in a sibling architect-owned ADR (the third sibling to [ADR-026] read-path / [ADR-031] write-path); this record decides the *rule*, the ADR the *contract*.
+
+### D1 — Refine DEC-005 to native-*where-available*
+
+Native sub-issues are canonical **where the tracker supports them** (not unconditionally). Where native is unavailable, or the operator selects textual, containment uses the textual representation instead. This refines DEC-005's unconditional contract; it does **not** change the upstream methodology ideal (pm-workflow MET-004, which DEC-005 distills) — native-sub-issues-as-the-ideal stands. Project-kit's *adaptation layer* (this record + DEC-036) carries the degradation, exactly as DEC-036 degrades other distilled axes without rewriting their upstream source.
+
+### D2 — Extend DEC-036 with a `containment` axis
+
+A new substrate axis in `substrate-map.yaml`: `containment: native | textual`, a **manual operator selector**. (Auto-detection of sub-issue support is explicitly deferred — see Implications.) This is the axis's first home; DEC-036's per-axis model gains a sixth axis.
+
+### D3 — The child-side textual parent-ref is the universal spine
+
+It is always written, in both modes (DEC-005's textual projection). `show-tree` and every containment consumer therefore resolve children regardless of substrate; **native wins** on conflict (DEC-005's existing rule, now spanning mixed-substrate repos). The single read-seam realizing this is #345.
+
+### D4 — Textual-mode parent-side visibility is render-on-demand, not a stored block
+
+Where there is no native panel, the parent-side children view is a **generated "do-not-edit" children comment** the read path refreshes (full overwrite, single source) — **not** a body block appended on every child-create. A stored block would make each child-create a read-modify-write of the *parent* body (concurrency race, partial-failure drift, a second source of truth the read-seam already derives); render-on-demand avoids all of it.
 
 ## Rationale
 

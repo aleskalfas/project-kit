@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-10-13T07:06:18Z
+      at: 2026-10-13T20:06:20Z
       outcome: unchanged
-      unchanged-because: The change rewrites the migration-author skill's steps on the target version, the --version default and the commit, and drops a project record from its reads. The page names that skill only as walking tier, scope, version and slug selection, scaffold, body drafting, self-checks and commit. All of that still holds, and the page names no target version, bump policy or record the skill reads.
+      unchanged-because: The decision-author skill says that `pkit new decision` stamps a first point heading, and when to delete it. This page describes the skills area, how skills deploy and pair with commands, and nothing of what a skill drafts, so it holds.
 ---
 
 # Skills

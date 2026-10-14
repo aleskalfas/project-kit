@@ -20,11 +20,19 @@ A monolith forces the stable structural code, the dispatch seam, and the volatil
 
 Storyboard execution is split into **three layers with one-directional knowledge flow**:
 
-1. **Parser (Layer 1)** — reads the storyboard markdown and produces a structural tree: `{title, intro_prose, steps:[{number, title, prose, fences:[{lang, content, line}]}]}`. It knows document structure and nothing about what any directive means. Validation here is purely structural (missing H1, duplicate step numbers, unclosed fences).
+### 1. Parser (Layer 1)
 
-2. **Plugin interface (Layer 2)** — a `Plugin` abstract base class and a `PluginRegistry` that dispatches a fence by its language tag to the plugin that owns it. Each plugin implements three methods: `validate(lang, content) → errors`, `describe(lang, content) → one-line summary`, and `actions(lang, content, context) → list of (action_name, arg…) tuples`. A shared mutable `context` dict threads across the run. The registry knows nothing domain-specific; unknown tags are warnings.
+**Parser (Layer 1)** — reads the storyboard markdown and produces a structural tree: `{title, intro_prose, steps:[{number, title, prose, fences:[{lang, content, line}]}]}`. It knows document structure and nothing about what any directive means. Validation here is purely structural (missing H1, duplicate step numbers, unclosed fences).
 
-3. **Recording plugin (Layer 3)** — owns the recording directive vocabulary and emits named action tuples. A bash runner dispatches each tuple to a concrete primitive (keystroke injection, pane selection, screen capture). All domain and platform knowledge lives here.
+### 2. Plugin interface (Layer 2)
+
+**Plugin interface (Layer 2)** — a `Plugin` abstract base class and a `PluginRegistry` that dispatches a fence by its language tag to the plugin that owns it. Each plugin implements three methods: `validate(lang, content) → errors`, `describe(lang, content) → one-line summary`, and `actions(lang, content, context) → list of (action_name, arg…) tuples`. A shared mutable `context` dict threads across the run. The registry knows nothing domain-specific; unknown tags are warnings.
+
+### 3. Recording plugin (Layer 3)
+
+**Recording plugin (Layer 3)** — owns the recording directive vocabulary and emits named action tuples. A bash runner dispatches each tuple to a concrete primitive (keystroke injection, pane selection, screen capture). All domain and platform knowledge lives here.
+
+### 4. One-directional knowledge flow
 
 Layer 1 knows nothing of Layer 2 or 3; Layer 2 knows nothing of Layer 3's vocabulary; Layer 3 depends on both. The core (Layers 1 + 2) is domain-neutral by construction.
 

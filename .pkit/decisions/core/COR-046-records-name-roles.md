@@ -26,11 +26,15 @@ This record governs only *how a record refers to things*. The neighbouring quest
 
 **Refer to a thing the way you mean it.** Where a record means *whatever plays this part* — what answers a question, what owns a boundary, what a caller may rely on — it names the part, not whichever component is playing it today. Where a record means a *particular name* — because that name is what the record decides, or because it belongs to something outside the project and is being recorded as a fact — it names it plainly.
 
-1. **Prefer the role when the role is what you mean.** A record reaching for a path, a module or a function to identify *the thing that does X* is naming an understudy for the part. The name will change; the part will not.
+### 1. Prefer the role when the role is what you mean
 
-   The counterfactual tells you which you meant: **would this sentence become false if the name changed, and no decision changed?** If yes, you meant the role and wrote a name. If no — because changing the name would itself be changing the decision, or because the name is not yours to change — then the name *is* what you meant, and it belongs there.
+A record reaching for a path, a module or a function to identify *the thing that does X* is naming an understudy for the part. The name will change; the part will not.
 
-2. **Precision is required either way.** Naming a role is not licence for vagueness. A record must stay falsifiable — a reader has to be able to tell whether the system conforms. That comes from describing the part sharply enough that only one thing could be playing it. Where a concrete anchor genuinely helps a reader, its home is the work implementing the decision, which is expected to age, rather than the record, which is not.
+The counterfactual tells you which you meant: **would this sentence become false if the name changed, and no decision changed?** If yes, you meant the role and wrote a name. If no — because changing the name would itself be changing the decision, or because the name is not yours to change — then the name *is* what you meant, and it belongs there.
+
+### 2. Precision is required either way
+
+Naming a role is not licence for vagueness. A record must stay falsifiable — a reader has to be able to tell whether the system conforms. That comes from describing the part sharply enough that only one thing could be playing it. Where a concrete anchor genuinely helps a reader, its home is the work implementing the decision, which is expected to age, rather than the record, which is not.
 
 ## Rationale
 

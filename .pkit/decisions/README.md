@@ -12,16 +12,10 @@ pkit:
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
-      record: [COR-001, COR-019, COR-025, COR-051, COR-053, COR-055]
+      record: [COR-001, COR-019, COR-025, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058]
     revalidated:
-      at: 2026-10-13T17:09:18Z
-      outcome: unchanged
-      unchanged-because: The points module gains the line a record's body opens on, and the lines of the file a point's section spans, which the artefacts document gives an anchor on one point. The numbering check's docstring says it does not follow a taken point id to what anchors it, since it compares records only and friction reports what such an anchor finds. This page says how records are cited, refined and checked. Its numbering check runs whether or not anything is anchored, which still holds. It says nothing of spans or of the artefacts document, so it holds.
-      deferred:
-        - anchor:
-            kind: record
-            value: COR-051
-          reason: "COR-051's rejected prose markers name decision records' point headings as an exception, citing COR-058. COR-058 decides that a record's points are headings that keep their ids, and that a retired point is kept in retired-points with a stub. This page's schema section still has a complex decision use a numbered list. Its refining section says where a new point goes, but not that it takes the next unused number, or how a dropped point is kept. Its section on rule sets still holds. It follows with #1422, which writes points as headings in the refining, schema and citing sections."
+      at: 2026-10-13T20:06:15Z
+      outcome: updated
 ---
 
 # Decision records
@@ -50,7 +44,7 @@ Beyond the two top-level namespaces, decision records also appear in two other p
 
 A capability's **DEC** records are numbered **per capability** — each capability is its own DEC id-space, so two different capabilities may both hold a `DEC-001` without conflict. Only two records sharing a `DEC-NNN` *within the same capability* collide.
 
-`pkit decisions validate` enforces uniqueness within each id-space (core, project, ADR, and per-capability DEC), and of rule ids across the rule sets (below), and is wired into the project's check gate — it catches two records hand-authored with the same id before they land.
+`pkit decisions validate` enforces uniqueness within each id-space (core, project, ADR, and per-capability DEC), and of rule ids across the rule sets (below), and is wired into the project's check gate. It reads one tree. So it finds two records with one id only once both are in the tree it checks. A gate that checks a pull request merged with the default branch as it stands at the merge finds them before the second lands. A gate that checks the branch alone finds them only after both landed. The numbering check, `pkit decisions check-diff` (below), compares a change with the default branch. Where your project runs it, it fails a change whose new record takes an id that another change has already landed.
 
 Validation checks your own records only. A record that arrives as a synced copy is a core record, or a kit-shipped capability's, in your project. It is checked where it is authored, since the next sync overwrites an edit here. Validation fails a project only for what it can correct in its own files ([COR-055](core/COR-055-validation.md) point 1). So `pkit validate` and `pkit decisions validate` report nothing on a synced copy: not its front matter, not its id against its filename, and not an id only synced copies share. A record of yours that takes a synced copy's id is still reported, on your record, because the copy keeps its id.
 
@@ -67,9 +61,10 @@ Rules are not decision records, but they share their guarantees ([COR-051](core/
 
 ## Citing
 
-Each kind of thing a record, an agent or a skill cites has one written form:
+Each kind of thing a record, an agent or a skill cites has one written form, and a point of a record has two:
 
 - **A record** by its id: `COR-019`, `PRJ-007`, `ADR-012`. A capability's record goes in brackets with the capability in front: `[project-management:DEC-053-doc-check-slot]`.
+- **A point of a record** by the record and the point's id: "COR-050 point 11" in prose, and `COR-050#11` as an anchor's value ([COR-050](core/COR-050-anchors-and-friction.md) point 2). A labelled point is named by its label, as in `COR-033#P3`. A capability's record keeps its brackets in prose, "[project-management:DEC-055] point 3", and drops them in an anchor's value, `project-management:DEC-055#3`. A point written as a heading keeps its id for good, so its citations stay on it (see "Schema" below). A record whose points are still a list holds no point an anchor can name, since its numbers move (COR-050 point 7).
 - **A rule** by its rule id, as "Rule sets" above describes: `RS-CMN-003`, `[living-docs:RS-LDOC-003]`.
 - **A role or a point of a connection** by its address, in brackets ([COR-019](core/COR-019-schema-reference-form.md), [COR-053](core/COR-053-connection-points.md)): `[pkit::documentation]` names the documentation role and `[pkit::documentation:readers]` its readers point. The double colon marks an address; `[issue-types:task]`, with a single colon, stays a schema reference. An address resolves to what an installed capability declares in its package metadata. `pkit refs validate` reports an address that names no declared role or point, and reports a bracketed token with a double colon that is not an address — `[::documentation:readers]`, with no publisher — as malformed. `pkit refs lookup '[pkit::documentation:readers]'` prints where the point is declared.
 
@@ -117,6 +112,8 @@ status: proposed | accepted | superseded
 date: YYYY-MM-DD
 author: Name <email>  # primary author (git-style)
 supersedes: PRJ-NNN  # optional — same-namespace prefix as the superseded record
+retired-points:      # optional — each retired point's id, with the points that took its text
+  "2": ["3"]
 ---
 
 ## Context
@@ -125,7 +122,18 @@ What situation or question prompted this decision?
 
 ## Decision
 
-What was decided. Single sentence ideally; complex decisions may use a numbered list (1., 2., …) but the top line stays crisp.
+What was decided. Single sentence ideally. A decision of several parts gives each part a point, and the top line stays crisp.
+
+### 1. A point's title
+
+The point's text, up to the next heading of the same or a higher level.
+
+### 2. Retired
+Its content is in point 3.
+
+### 3. Another point's title
+
+Its text.
 
 ## Rationale
 
@@ -137,6 +145,17 @@ What does this mean for the code, the tests, the workflow, downstream decisions?
 ```
 
 Larger records may add sub-sections (e.g. *Alternatives considered*, *Migration path*). Those four headings are the contract; everything else is optional.
+
+**Points.** A Decision of several parts writes each part as a *point*: a heading that opens with the point's id, then its title. The id names the point for good ([COR-058](core/COR-058-record-points.md) points 1 and 3). The example's retired point 2 only shows the form. A new record retires nothing.
+
+- **The form:** `### 5. Title` for a numbered point, a number then a full stop and a space. `### D1 — Title` for a labelled one, letters then a number, then a space, an em dash and a space. A record that labels its points keeps its labels.
+- **The level:** one below `## Decision`, or one below the group headings that gather the points, as in `#### 11. Title`. The Decision's first heading in this form sets the level, and a heading in this form at another level is no point. A record's points all sit at one level, and their ids are unique across its groups.
+- **The text** runs from the heading to the next heading of the same or a higher level.
+- **A numbered list stays allowed** inside a point or another sub-section, for steps or an order. Once a record has point headings, every numbered list in it is a list, never points. Its items renumber when an item is inserted.
+- **`retired-points`** is optional. It maps each retired id to the list of points that took its text, one id to a line, in the order of the ids, at the top level of the front matter. A point no other point took writes an empty list, `"9": []`.
+- **A stub** stays where each retired point was: a heading with its id and the title `Retired`, then one sentence written from its entry. The sentence is "Its content is in point 7.", "Its content is in points 7 and 16.", "Its content is in points 7, 12 and 16." or "Its content is in no other point." It says nothing else, and no live point takes the title `Retired` (COR-058 point 4).
+
+A record whose points are still a numbered list, or paragraphs that open with a bold number or label, is in *list form*. It keeps working. A point inserted into a numbered list moves the numbers after it (COR-058 point 9).
 
 The **`author`** field captures responsibility for the record — git-style `Name <email>` matching the value the author would use as their git commit identity. When multiple users collaborate on a project, this makes per-record authorship explicit at a glance; git history captures the rest (commit author, `Co-Authored-By` trailers). The schema may grow a `co-authors` list if frequent multi-author records earn it.
 
@@ -171,9 +190,18 @@ For clarifications, scope tweaks, or refinements that do not invalidate the orig
 To refine a record in place:
 
 1. **Rewrite the section the change belongs to** — the decision point, the rationale paragraph, the implication — so it states the corrected fact as part of the decision. A new point goes where it belongs among the others, not at the end of the record.
-2. **Add no revision marker** — no amendment heading, no block stamped with a date or an issue number, no note that the record was amended in place rather than superseded.
-3. **Leave no residue of the change.** A word that makes sense only against the old text — "now", "no longer", "still", "corrected above" — is restated as plain fact. An issue number in a record cites evidence; it never dates a revision.
-4. **Check the rest of the record agrees** — the summary, the Context, and any other sentence that restates the fact.
+   - **In a record whose points are headings,** the new point takes the next unused number: one past the highest the record holds, retired ids included. A label carries its number, so a record labelled up to D5 goes on with D6, and numbers and each series of labels count apart. No point is renumbered, and no id is reused, so the numbers may read out of order, such as 4, 16, 5. A point you amend or move keeps its id ([COR-058](core/COR-058-record-points.md) point 3).
+   - **In a record in list form,** the new point goes where it belongs. In a numbered list, the numbers after it move (COR-058 point 9).
+2. **Keep the id of a point no other point continues.** This applies in a record whose points are headings. A point is retired when no point continues its claim. Its id goes into `retired-points`, with the points that took its text, and a one-line stub stays where it was ("Schema" above) (COR-058 point 4).
+   - **A dropped point** is retired with no successor.
+   - **A split point:** where one part keeps the claim, that part keeps the id, and each other part is a new point with the next unused number. Where no part keeps it, the id is retired, with the new points as its successors.
+   - **A merge:** the point that keeps the claim keeps its id. The other is retired, with that point as its successor.
+   - **A successor retired later** gets a line of its own. The earlier line and its stub stay as they are.
+   - **A point another record overturns** is not retired. It stays as it stood, and the record's top line reads *Partially superseded by …* (COR-058 point 5, and "To supersede" below).
+   - **In a record in list form,** a dropped point goes, and in a numbered list the numbers after it move. Nothing is retired there, since its numbers are not permanent (COR-058 point 9).
+3. **Add no revision marker** — no amendment heading, no block stamped with a date or an issue number, no note that the record was amended in place rather than superseded.
+4. **Leave no residue of the change.** A word that makes sense only against the old text — "now", "no longer", "still", "corrected above" — is restated as plain fact. An issue number in a record cites evidence; it never dates a revision. A `retired-points` entry and its stub are data, not residue: they say where a point's content went, never when or why.
+5. **Check the rest of the record agrees** — the summary, the Context, and any other sentence that restates the fact.
 
 The commit message says what changed and why.
 
@@ -236,14 +264,20 @@ The recommended path is the kit's authoring command (specified in `.pkit/cli/REA
 pkit new decision project <slug>
 ```
 
-This stamps `PRJ-NNN-slug.md` with the schema's frontmatter and four section headers; you fill in the body and flip status to `accepted` once agreed.
+This stamps `PRJ-NNN-slug.md` with the schema's frontmatter, the four section headers and a first point heading, `### 1. Point title`, under `## Decision`. You fill in the body and flip status to `accepted` once agreed.
+
+The stamped heading puts the record's points in the heading form from the start ("Schema" above):
+
+- **Its level is the points' level.** To gather points under group headings, move it one level down, below the first group heading.
+- **A numbered list you write beside it** is a list, never points.
+- **A decision with no parts** has no points. Delete the heading before the record first lands. A point dropped after that is retired, with a stub ("Refining an accepted record" above).
 
 The same command stamps the other id-spaces by passing a different namespace: `core` (COR), `adr` (ADR, at the overlay-resolved path), or a **capability name** (DEC, under `.pkit/capabilities/<capability>/decisions/`, numbered per capability). The capability must already exist; the command refuses an unknown name.
 
 If you prefer to author by hand, the procedure is:
 
 1. Pick the next available number in `project/`.
-2. Create `PRJ-NNN-slug.md` with the frontmatter and the four sections above.
+2. Create `PRJ-NNN-slug.md` with the frontmatter and the four sections above. Leave out the example's `retired-points` and its stub, and number your points from 1 with no gap.
 3. Open it as `proposed` if it is still under discussion, `accepted` once agreed.
 
 The directory listing in `project/` serves as the index — file names carry their slugs, and most projects' corpora are small enough that no separate index is needed. If yours grows numerous, a `README.md` index can be added inside `project/` as a convenience.
