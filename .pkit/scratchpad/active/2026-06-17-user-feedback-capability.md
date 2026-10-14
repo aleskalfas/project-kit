@@ -36,7 +36,7 @@ The title "session start …" reads naturally for either. Pick one before buildi
 
 ## Open questions from the critic pass (2026-06-17)
 
-- **Threat model (R3):** an "innocent user + autonomous agent on their own machine" is a larger attack surface than a developer who understands the agent — prompt-injection via the feedback text the agent treats as instructions; the agent's filesystem reach; the blast radius of the credential it uses. Needs a threat-model section, not a hand-wave. (Note: ties to the permission/sandbox model — the OS sandbox bounds the agent; the intent-layer denies don't fully, per ADR-004 §61.)
+- **Threat model (R3):** an "innocent user + autonomous agent on their own machine" is a larger attack surface than a developer who understands the agent — prompt-injection via the feedback text the agent treats as instructions; the agent's filesystem reach; the blast radius of the credential it uses. Needs a threat-model section, not a hand-wave. (Note: ties to the permission/sandbox model — the OS sandbox bounds the agent; the intent-layer denies don't fully, per ADR-004, Alternatives considered, "Relabel `network-egress` as natively enforced…")
 - **PM-issue-fit:** confirmed PM validation is a hard gate; the `feedback` lightweight type is the resolution (a small, contained PM extension — a new *type*, far less invasive than a new *role*).
 - **Mapping:** the durable thread is closer to an Umbrella-style bucket than a Task — make the containment mapping explicit when building.
 

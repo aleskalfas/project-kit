@@ -25,7 +25,7 @@ The classifier between PRJ and ADR, for project-kit:
 | **PRJ** | Project-specific decisions of any kind (workflow, tooling, distribution, conventions, architecture-flavoured choices that touch tooling). | Default for project-side decisions. Workflow conventions, branch naming, tooling choices contained within the kit's existing surface, distribution policy. |
 | **ADR** | Architectural decisions about the adopter's project — system boundaries, technology choices, integration patterns, key abstractions, deployment topology. | When the rationale needs to be findable by a future maintainer or new contributor orienting in the codebase, not only by people already working on it. Decisions whose consequences propagate to system shape, integration patterns, or contributor mental models. |
 
-The boundary is fuzzy at the edges. PRJ-003 (Python as implementation language) is architecture-flavoured but stays as PRJ — grandfathered, and per COR-025's no-retroactive-backfill stance (line 132). A similar decision authored today would also reasonably land as PRJ if its consequences are bounded to a single tooling axis. Authors lean PRJ for kit-internal mechanism choices, ADR for decisions whose rationale outlives the people who made them.
+The boundary is fuzzy at the edges. PRJ-003 (Python as implementation language) is architecture-flavoured but stays as PRJ — grandfathered, and per COR-025's no-retroactive-backfill stance (its section "No retroactive backfill"). A similar decision authored today would also reasonably land as PRJ if its consequences are bounded to a single tooling axis. Authors lean PRJ for kit-internal mechanism choices, ADR for decisions whose rationale outlives the people who made them.
 
 No retroactive backfill of existing PRJ records. Records authored as PRJs stay as PRJs.
 
@@ -39,7 +39,7 @@ Project-kit has candidates already surfaced in `CLAUDE.md` and area READMEs (the
 
 - **Defer ADR adoption until a specific architectural decision demands it.** Rejected — the architect agent gains a real corpus to operate on now, the COR/PRJ/ADR boundary becomes concrete, and the affordance gets exercised in its source repo. Deferring means a future adopter is the first user of an untested affordance.
 
-- **Retroactively reclassify architecturally-flavoured PRJs (notably PRJ-003) as ADRs.** Rejected — COR-025 line 132 establishes the no-retroactive-backfill stance; this project follows it. Reclassification across namespaces is not blocked methodologically (the `supersedes:` field accepts any record ID), but spending the convention now on one inconsistency isn't worth the cost.
+- **Retroactively reclassify architecturally-flavoured PRJs (notably PRJ-003) as ADRs.** Rejected — COR-025 establishes the no-retroactive-backfill stance in its section "No retroactive backfill"; this project follows it. Reclassification across namespaces is not blocked methodologically (the `supersedes:` field accepts any record ID), but spending the convention now on one inconsistency isn't worth the cost.
 
 - **Use a `kind:` field on existing PRJ records to mark architecturally-flavoured ones.** Rejected for the same reason COR-025 rejected the equivalent for adopters: a soft field doesn't solve the audience-separation problem; the architect agent and human readers still have to filter the PRJ corpus.
 

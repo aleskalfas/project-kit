@@ -9,4 +9,8 @@ body: >
   changes, so every citation of a point still names it. A point of these
   records can now be named by an anchor, such as `COR-050#11`. The sentence
   after the last point of COR-028, COR-031 and COR-039 moves into the
-  Decision's opening, with the same words.
+  Decision's opening, with the same words. Where text cited a record by line
+  number, it now cites the point or section that line held, so the citation
+  survives the conversion: the `pkit permissions` messages and the confinement
+  toolkit's notes cite ADR-004's alternative "Relabel `network-egress` as
+  natively enforced…" instead of "ADR-004 §61".

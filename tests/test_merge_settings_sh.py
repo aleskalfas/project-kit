@@ -338,7 +338,7 @@ def test_capability_overlay_overrides_project_settings(adapter_tree: Path) -> No
     assert merged.get("agent") == "overlay-default"
 
 
-# --- authoritative-region tier (COR-002 §80-84 / ADR-002 / #251) -----------
+# --- authoritative-region tier (COR-002, "Authoritative-region delivery" / ADR-002 / #251)
 
 
 def _set_target(adapter_tree: Path, payload: dict) -> None:

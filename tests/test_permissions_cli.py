@@ -2465,7 +2465,10 @@ def test_gh_required_exclusion_auto_applies_on_macos_with_github_marker(tmp_path
     # Loud, dedicated block — and the egress-cost banner naming UNCONFINED egress.
     assert "Required exclusion (platform-mandatory" in out
     assert "REQUIRED exclusion auto-applied: `gh` runs OUTSIDE the box" in out
-    assert "network egress is UNCONFINED (ADR-004 §61)" in out
+    assert (
+        "network egress is UNCONFINED (ADR-004, Alternatives considered, "
+        '"Relabel `network-egress` as natively enforced…")' in out
+    )
     # Applied via the real primitive → lands in live settings excludedCommands.
     assert "gh" in _sb(proj)["excludedCommands"]
     # ADR-029 routing: a widening → ONLY the gitignored local file carries it.
@@ -3013,7 +3016,7 @@ def test_next_step_gh_required_copy_on_macos():
     out = _next_steps([("gh", "gh")], platform="darwin", width=0)
     text = "\n".join(out)
     assert "`gh` — REQUIRED on macOS" in text
-    assert "UNCONFINED" in text and "ADR-004 §61" in text
+    assert "UNCONFINED" in text and "Relabel `network-egress` as natively enforced…" in text
     assert "Still gated by the permission hook." in text
     assert "        `pkit permissions sandbox exclude gh`" in out
 

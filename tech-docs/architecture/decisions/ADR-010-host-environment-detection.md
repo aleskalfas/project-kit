@@ -36,7 +36,7 @@ A host-detected accommodation is keyed by its source (e.g. `ssh-agent`), and eac
 
 ### 5. Liveness-honest
 
-Detection that finds a signal but cannot confirm a working endpoint (an env var set but the socket dead/unconnectable) **does not claim "applied"** — it reports the honest state and, where it cannot safely auto-resolve, falls back to a nudge naming the exact `accommodate --socket` command. Never assert a boundary works when it doesn't (COR-028 / ADR-004 §49, the usability inversion).
+Detection that finds a signal but cannot confirm a working endpoint (an env var set but the socket dead/unconnectable) **does not claim "applied"** — it reports the honest state and, where it cannot safely auto-resolve, falls back to a nudge naming the exact `accommodate --socket` command. Never assert a boundary works when it doesn't (COR-028 / ADR-004, Rationale, "Why the fail-closed invariant is a decision, not a toggle": the usability inversion).
 
 ### 6. Vendor-neutral signals only; narrowing only; no schema change
 
@@ -44,7 +44,7 @@ The built-in host-detection set stays universal — protocol/standard env-var si
 
 ### 7. Credential-floor collision → never silently auto-apply
 
-A detected socket whose resolved path falls *under* the credential `denyRead` floor (`SANDBOX_CREDENTIAL_DENY_READ` — `~/.ssh`, `~/.aws`, …; some agents put their socket there) creates a same-block contradiction: a deny-read directory plus an allow-socket inside it. Resolving it silently is the trap either way — if deny-read wins, setup would falsely report "applied" for a socket the box still blocks (the ADR-004 §49 believed-but-absent boundary); if the socket-allow wins, it punches a hole through the credential floor the operator believes is solid (a silent floor reduction — widening through the narrowing door). So `setup autonomy` **must not auto-apply a socket inside the floor**: it reports the collision honestly and falls back to the nudge (rule 5), naming the explicit `accommodate --socket` gesture so the operator decides the tradeoff. Auto-apply proceeds only for resolved paths *outside* the floor. Liveness (rule 5) is necessary but not sufficient here — a socket can be live *and* inside the floor — so the floor check is a distinct gate.
+A detected socket whose resolved path falls *under* the credential `denyRead` floor (`SANDBOX_CREDENTIAL_DENY_READ` — `~/.ssh`, `~/.aws`, …; some agents put their socket there) creates a same-block contradiction: a deny-read directory plus an allow-socket inside it. Resolving it silently is the trap either way — if deny-read wins, setup would falsely report "applied" for a socket the box still blocks (the believed-but-absent boundary of ADR-004, Rationale, "Why the fail-closed invariant is a decision, not a toggle"); if the socket-allow wins, it punches a hole through the credential floor the operator believes is solid (a silent floor reduction — widening through the narrowing door). So `setup autonomy` **must not auto-apply a socket inside the floor**: it reports the collision honestly and falls back to the nudge (rule 5), naming the explicit `accommodate --socket` gesture so the operator decides the tradeoff. Auto-apply proceeds only for resolved paths *outside* the floor. Liveness (rule 5) is necessary but not sufficient here — a socket can be live *and* inside the floor — so the floor check is a distinct gate.
 
 ## Rationale
 

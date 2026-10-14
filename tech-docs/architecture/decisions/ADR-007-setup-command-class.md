@@ -42,7 +42,7 @@ Escape hatches (`--dangerously-allow-unconfined`, `--bypass`, …) stay on the p
 
 ### 7. Teardown reports residual state loudly
 
-A goal's down-form (`pkit <domain> setup <goal> down` — a subcommand, not a flag: tearing down is the *opposite* mutation set, and a flag that inverts a command's direction is the mode-flag smell; the subcommand spelling parallels the project's existing `enable`/`disable` pairs) reverses the live switches the goal stood up and enumerates what it deliberately leaves (e.g. "profile 'autonomous' still active in the model but unenforced") — never a bare success that lets the operator believe more was torn down than was (the ADR-004 §49 trap in reverse).
+A goal's down-form (`pkit <domain> setup <goal> down` — a subcommand, not a flag: tearing down is the *opposite* mutation set, and a flag that inverts a command's direction is the mode-flag smell; the subcommand spelling parallels the project's existing `enable`/`disable` pairs) reverses the live switches the goal stood up and enumerates what it deliberately leaves (e.g. "profile 'autonomous' still active in the model but unenforced") — never a bare success that lets the operator believe more was torn down than was (the trap of ADR-004, Rationale, "Why the fail-closed invariant is a decision, not a toggle", in reverse).
 
 ### First instance: `pkit permissions setup autonomy [--profile <name>]`
 
@@ -60,7 +60,7 @@ A goal's down-form (`pkit <domain> setup <goal> down` — a subcommand, not a fl
 
 ### Alternatives considered
 
-- **A one-off composing verb (`permissions engage`).** Rejected — relitigates the gate with no contract for the next instance; the consult also showed its naive teardown shape walks into the §49 residual-state trap rule 7 now forecloses.
+- **A one-off composing verb (`permissions engage`).** Rejected — relitigates the gate with no contract for the next instance; the consult also showed its naive teardown shape walks into the residual-state trap of ADR-004, Rationale, "Why the fail-closed invariant is a decision, not a toggle", which rule 7 now forecloses.
 - **Chaining flags on `profile activate` (`--then-enable --then-confine`).** Rejected — re-fuses enforcement into the activation verb ADR-005 explicitly de-fused; mutating side-effects behind flags is the silent-fusion shape regardless of spelling.
 - **A skill/runbook only (no CLI surface).** Rejected as the primary carrier — the audience is operators who should not need to read a runbook to stand up the environment; the CLI is the surface they touch. Retained as complement: the recipe documentation remains, and the skill/doc explains what `setup` automates.
 - **Do nothing (document the four steps).** Rejected — defeats the operator-experience purpose the product owner named; the four-step sequence is exactly the deep-knowledge requirement pkit promises to remove.

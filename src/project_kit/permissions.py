@@ -1146,7 +1146,7 @@ def _enforcement_on(target_root: Path) -> bool:
 
 # ---- enforcement-runtime self-check (ADR-002 point 4) ----------------------
 #
-# Distinct from the decision-time fail-open (§32 in ADR-002). An
+# Distinct from the decision-time fail-open (ADR-002 point 3). An
 # enforcement-runtime fault means the hook CANNOT START — its python3 runtime
 # can't be found, the script has a syntax error, or `decide.py` is missing.
 # When the runtime is dead, the hook never reaches decide() and silently
@@ -3329,7 +3329,8 @@ def confinement_show(target_root: Path, name: str) -> str:
         if a.get("kind") == "allow-host" and a.get("effect") == "narrowing":
             lines.append(
                 f"              ↳ session-wide egress to {tgt}; not a security boundary "
-                f"(no TLS inspection — ADR-004 §61 / ADR-015)"
+                f"(no TLS inspection — ADR-004, Alternatives considered, "
+                f'"Relabel `network-egress` as natively enforced…" / ADR-015)'
             )
     widening = _widening(spec.get("allowances", []))
     if widening:
@@ -3881,7 +3882,8 @@ def _widening_desc(tool: str, cmd: str) -> tuple[str, str]:
                 (
                     "`gh` can't run inside the box (a fixed Seatbelt mach-service "
                     "denial; no setting fixes it), so it must run unconfined — its "
-                    "network egress is then UNCONFINED (ADR-004 §61). Not optional — "
+                    "network egress is then UNCONFINED (ADR-004, Alternatives considered, "
+                    '"Relabel `network-egress` as natively enforced…"). Not optional — '
                     "the documented macOS stance (ADR-014/ADR-030). `setup autonomy` "
                     "auto-applies this in a `.github/` project. Still gated by the "
                     "permission hook."
@@ -4405,7 +4407,8 @@ def _required_apply_lines(cmd: str) -> list[str]:
     """The LOUD apply banner for a freshly auto-applied `_required` exclusion —
     member-specific (ADR-030 condition 2). `uv` names its local-runtime carve-out;
     `gh` names its UNCONFINED network egress (the materially larger boundary
-    statement — ADR-004 §61). A candidate with no bespoke copy falls back to a
+    statement — ADR-004, Alternatives considered, "Relabel `network-egress` as
+    natively enforced…"). A candidate with no bespoke copy falls back to a
     generic loud line so the set never applies silently."""
     if cmd == "uv":
         return [
@@ -4422,7 +4425,8 @@ def _required_apply_lines(cmd: str) -> list[str]:
     if cmd == "gh":
         return [
             "  ⚠ REQUIRED exclusion auto-applied: `gh` runs OUTSIDE the box — its "
-            "network egress is UNCONFINED (ADR-004 §61). Full host reach for a "
+            "network egress is UNCONFINED (ADR-004, Alternatives considered, "
+            '"Relabel `network-egress` as natively enforced…"). Full host reach for a '
             "command whose whole purpose is talking to GitHub.",
             "    macOS-mandatory and necessity-verified: gh's Go TLS handshake "
             "hits a fixed `com.apple.SecurityServer` Seatbelt denial the box "
