@@ -3,8 +3,8 @@ kind: major
 custom:
   category: Changed
 body: >
-  A pinned project's `pkit upgrade` finishes its own pin first (ADR-065 point
-  9). Run under the pin's code, it hands over to a newer latest release as
+  A pinned project's `pkit upgrade` finishes its own pin first. Run under the
+  pin's code, it hands over to a newer latest release as
   before, and that release's upgrade finishes any interrupted transition on the
   way. With no newer release, at the latest release, ahead of it or offline,
   it now runs the transition to its pin itself, so content behind the pin or
