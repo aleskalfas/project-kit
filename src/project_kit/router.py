@@ -329,8 +329,18 @@ def fell_back_from_pin(environ: Mapping[str, str]) -> bool:
     The router sets its fallback mark, the pin's version, on the environment of
     the command it degrades (`_notice_pin_unresolved`). `PKIT_NO_ROUTE` marks a
     run an operator or a raise asked for, so that run is not a fallback. Sync's
-    guard reads it only to choose its message."""
-    return bool(environ.get(_PIN_UNRESOLVED_ENV, "").strip()) and not is_route_bypassed(environ)
+    guard reads it only to choose its message, and `pkit upgrade` refuses under
+    it."""
+    return unresolved_pin(environ) is not None
+
+
+def unresolved_pin(environ: Mapping[str, str]) -> str | None:
+    """The pin the router could not fetch, as its fallback mark names it, or None
+    when the run is no fallback (`fell_back_from_pin`)."""
+    pin = environ.get(_PIN_UNRESOLVED_ENV, "").strip()
+    if not pin or is_route_bypassed(environ):
+        return None
+    return pin
 
 
 def _read_pkit_version(root: Path) -> str | None:

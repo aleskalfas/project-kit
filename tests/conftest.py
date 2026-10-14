@@ -37,6 +37,19 @@ def outside_any_run(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def outside_any_route(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every test starts outside any route of the entry-point router: no loop
+    guard, no bypass and no fallback mark, whatever started the suite. A
+    pinned project's upgrade reads all three (ADR-065 point 9). The router
+    sets its fallback mark on this process's environment when it degrades,
+    and monkeypatch restores a variable only once it has recorded it, so each
+    is set before it is removed."""
+    for name in ("PKIT_ROUTED", "PKIT_NO_ROUTE", "PKIT_PIN_UNRESOLVED"):
+        monkeypatch.setenv(name, "")
+        monkeypatch.delenv(name)
+
+
+@pytest.fixture(autouse=True)
 def outside_any_session(monkeypatch: pytest.MonkeyPatch) -> None:
     """Every test starts outside any harness session, whatever started the
     suite: no session's anchor, so the cross-repository guard a backbone
