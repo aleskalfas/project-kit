@@ -1174,9 +1174,9 @@ def runs_at_its_pin(pin: str) -> bool:
     deliberate bypass (`PKIT_NO_ROUTE`) is the code an operator or a raise
     asked for, so it is neither.
     """
-    if is_routed_child(os.environ):
-        return True
-    return not is_route_bypassed(os.environ) and pin == running_version()
+    if is_route_bypassed(os.environ):
+        return False
+    return is_routed_child(os.environ) or pin == running_version()
 
 
 def _auto_advance_pinned(
@@ -1226,7 +1226,7 @@ def _auto_advance_pinned(
             click.secho(
                 f"warning: this project's pin ({current_pin!r}) is not valid semver, so "
                 f"`pkit upgrade` cannot order it against the latest release (v{latest}) "
-                "and hands over to none. Re-pin with `pkit pin <version>`.",
+                "and hands over to none.",
                 err=True,
                 fg="yellow",
             )
@@ -1255,13 +1255,13 @@ def _hand_over_to_latest(
     router's bypass, and flip the pin last (ADR-049, ADR-065 point 9).
 
     A dry run runs the target's upgrade with `--dry-run`, so it lists what that
-    upgrade would do, and writes no pin.
+    upgrade would do, the pin it would raise included, and writes no pin.
     """
     if dry_run:
         click.echo(
-            f"  (dry-run) would raise pin {current_pin} -> {target} (latest pkit "
-            "release). The target's own upgrade runs with --dry-run, through the "
-            "router's bypass:"
+            f"  (dry-run) the latest pkit release, v{target}, is newer than the pin, "
+            f"{current_pin}: its own upgrade runs with --dry-run, through the router's "
+            "bypass."
         )
         reconcile_forward_via_target(target_root, target, dry_run=True, force=force)
         return

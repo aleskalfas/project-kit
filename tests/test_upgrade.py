@@ -1732,7 +1732,10 @@ def test_upgrade_pinned_child_dry_run_runs_the_targets_upgrade_with_dry_run(
 
     flags = ["--dry-run", "--force"] if force else ["--dry-run"]
     assert handed == [("2.0.0", ["upgrade", *flags])]
-    assert "would raise pin 1.0.0 -> 2.0.0" in capsys.readouterr().out
+    assert (
+        "(dry-run) the latest pkit release, v2.0.0, is newer than the pin, 1.0.0: its own "
+        "upgrade runs with --dry-run"
+    ) in capsys.readouterr().out
     assert router.read_version_pin(installed_target) == "1.0.0"  # unchanged
 
 
@@ -1855,8 +1858,9 @@ def test_runs_at_its_pin_is_the_routed_child_or_the_installed_pin_never_a_bypass
     assert not upgrade.runs_at_its_pin("0.1.0")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
     assert upgrade.runs_at_its_pin("0.1.0")
-    monkeypatch.delenv(router._LOOP_GUARD_ENV)
     monkeypatch.setenv(router._BYPASS_ENV, "1")
+    assert not upgrade.runs_at_its_pin("0.1.0")
+    monkeypatch.delenv(router._LOOP_GUARD_ENV)
     assert not upgrade.runs_at_its_pin(_this_pkit())
 
 

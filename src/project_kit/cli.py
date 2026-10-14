@@ -4118,8 +4118,9 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool) -> N
     is_flag=True,
     default=False,
     help="Pass `--force` to the `pkit upgrade` a newer VERSION runs: it overrides that "
-    "upgrade's two dependency-gate warnings and nothing else. The refusal of an older "
-    "VERSION takes no override. Per ADR-065 point 9.",
+    "upgrade's two dependency-gate warnings and nothing else. A VERSION whose upgrade "
+    "has no `--force` stops with an error, and the pin does not move. The refusal of an "
+    "older VERSION takes no override. Per ADR-065 point 9.",
 )
 def pin(version: str | None, force: bool) -> None:
     """Pin this project to a pkit version (per ADR-049): write `.pkit/version-pin`.
