@@ -69,7 +69,7 @@
           }
         },
         "front-matter": {
-          "description": "The front-matter fields a writer fills, each with its hint, its example and, where a script checks one, its form. The kind's companion schema checks each field's shape whatever the format rule's status. A form binds at the format rule's status, as every other form does.",
+          "description": "The front-matter fields a writer fills, each with its hint, its example and, where a script checks one, its form. A field's hint is for the placeholder the template's front matter, written by hand, gives the field. The kind's companion schema checks each field's shape whatever the format rule's status. A form binds at the format rule's status, as every other form does.",
           "type": "object",
           "minProperties": 1,
           "propertyNames": {

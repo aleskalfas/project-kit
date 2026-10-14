@@ -19,7 +19,7 @@ pkit:
         - anchor:
             kind: record
             value: software-analysis:DEC-001
-          reason: "DEC-001 refines ahead of the code. The capability now declares each kind's structure and a planned record's reviewed-against, and this page describes both. It does not yet check a body against its structure or render the templates from it. Nor does it stamp a planned record's sources, check where their commits sit, or write the new anchors. So this page describes the check, the stamp and the anchors it ships: a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #1547 that apply the rest: #1364 and #1365 check the structure, #1366 renders the templates and stamps the sources, #1448 checks the commits, and #1507 writes the new anchors."
+          reason: "DEC-001 refines ahead of the code. The capability now declares each kind's structure and a planned record's reviewed-against, and this page describes both. It does not yet check a body against its structure or render the templates from it. Nor does it stamp a planned record's sources, check where their commits sit, take a project's additions to a structure, keep steps append-only, or write the new anchors. So this page describes the check, the stamp and the anchors it ships: a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #1547 that apply the rest: #1364 and #1365 check the structure, #1366 renders the templates and stamps the sources, #1367 takes a project's additions, #1375 keeps steps append-only, #1448 checks the commits, and #1507 writes the new anchors."
 ---
 
 # software-analysis capability
@@ -155,7 +155,7 @@ Whoever writes and runs the project's tests. They come with every change, and br
 
 The heading is the id and the `name`, `# <id> — <name>`, and the check requires the two to agree, as it does a use case's title. The id is the slug the file is named by, and never changes.
 
-**Glossary** (`schemas/term.schema.json`) — one collection file: its front matter maps each term's id to its entry, and its body has one `## <id> — <name>` section per entry. Each entry has a `name`, a `status`, a one-sentence `definition`, and on a rename the former names, newest first, in `replaces`. The id never changes. The glossary stays one collection file, serving everything (DEC-001 point 2).
+**Glossary** (`schemas/term.schema.json`) — one collection file: its front matter maps each term's id to its entry, and its body has one `## <id> — <name>` section per entry. Each entry has a `name`, a `status`, a `definition` — a phrase that could stand in for the term, of the form `definition` ("Each kind's structure", below) — and on a rename the former names, newest first, in `replaces`. The id never changes. The glossary stays one collection file, serving everything (DEC-001 point 2).
 
 An actor or a term nothing embodies carries `unanchored-because:` in its friction block instead of anchors — the reason onboarding accepts it unanchored (DEC-001 point 9). The key is the core's, not one of the artefact's own fields (COR-050 point 1): `pkit friction check --all` lists the artefact apart with its reason and never counts it as unanchored, and `pkit validate` refuses the reason beside anchors.
 
@@ -230,7 +230,7 @@ The forms, each described in the schema:
 
 **What binds it.** The structure is the checkable part of the format rule, `RS-SAN-001`, and binds at that rule's status, which is proposed ("The method rule set: `SAN`", below). A kind's companion schema still checks its front matter whatever the rule's status.
 
-**What reads it.** Nothing yet: a test holds the file to its schema. No check holds a body to its structure yet, and the templates are not yet rendered from it. So the templates, and the use case shown above, still show each kind's earlier parts.
+**What reads it.** Nothing yet: a test holds the file to its schema. No check holds a body to its structure yet, and the templates are not yet rendered from it. So the templates, and the use case, journey and actor described above, still show each kind's earlier parts: what the stamp writes today.
 
 ## Checking: `pkit analysis validate`
 
@@ -394,7 +394,7 @@ Friction you choose not to resolve yet is not an outcome but a deferral: `pkit f
 
 - **It writes** the front matter — the change that carried it (a work item, a pull request, or a range of commits on the default branch, as DEC-001 point 6 says), the trigger, the day in UTC (as a revalidation's `at` is), who performed it and who confirmed an agent's outcomes — and a body giving each outcome with its justification and each gap with what resolved it, or "None found." Who performed it is git's user name unless `--by` names another person; an agent that performed it is `--by-agent <name>`, which needs `--confirmed-by`: an agent proposes, a person decides.
 - **Every word is the person's.** Each `--outcome` has its `--because`, and each gap is written as one pair with what resolved it, `--gap "<gap> => <resolution>"`, so no justification is left as the template's placeholder and no gap is matched with another's resolution. A text still holding a placeholder — words in angle brackets, as a command shown for you writes what you supply (`<the defect reference>`) — is refused, as the friction writers refuse one.
-- **It refuses**, writing nothing: a record with nothing to say; a regression or gap that names no gap; a `--gap` that is not `<gap> => <resolution>`; an outcome without its `--because`, or with two; an agent without the person who confirmed it; a placeholder left unfilled; no outcome, an outcome that is not one of the four, or two for one artefact; an artefact that is not in the analysis (withdrawn ones are fine); a subject already recorded that day.
+- **It refuses**, writing nothing: a record with nothing to say; a regression or gap that names no gap; a `--gap` that is not `<gap> => <resolution>`; an outcome without its `--because`, or with two; an agent without the person who confirmed it; a placeholder left unfilled; no outcome, an outcome that is not one of the four, or two for one artefact; an artefact that is not in the analysis (withdrawn ones are fine); a subject already recorded that day; and, for now, a planned record, whose sources it does not take yet (below).
 
 **What a planned record reviewed: `reviewed-against`.** A planned record names where the design it reviewed stood, one source at a time (DEC-001 point 6). The record's schema requires the field when `trigger` is `planned`, and refuses it on a record of any other trigger. `pkit analysis validate` applies that schema, so it checks the field's form whatever the format rule's status.
 
@@ -413,7 +413,7 @@ reviewed-against:
 - **A source outside this repository** has an absolute `url`, which names no tracker. Its `version` is the time its text was read, or a commit's full id in another repository.
 - **A time** is a UTC timestamp, as a revalidation's `at` is. **A commit** is its full id, since an abbreviation can come to name two commits as the history grows. Quote both: YAML reads a time, or a commit id of digits alone, as something other than text.
 - **Not a pointer** (DEC-001 point 6): a pull request's head, since a rebase loses a head reviewed mid-way. Nor is any commit the default branch does not hold, since a squash leaves a branch's commits off it.
-- **The stamp does not take the sources yet,** so it refuses a planned record, naming the missing field. Until it does, write a planned record by hand from `templates/revalidation-record.md`.
+- **The stamp does not take the sources yet,** so it refuses a planned record, naming the missing field.
 
 The record never clears friction itself: commit it in the same change as the answers on the artefacts it covers. `pkit analysis validate` holds it to its schema and to the artefacts it cites. It finds the records as the files the core says the held folder holds (`pkit friction artefacts --json`): every Markdown file beneath `revalidations/`, sub-folders included — a record there was once skipped, and is checked now — from the files git sees, so a draft you keep git-ignored in the folder is not checked. If the core skips the folder — another declaration overlapping it, say — the check's summary says the folder holds nothing, and `pkit validate` says why. A record carries no friction block: it is not an artefact, and `pkit validate` refuses one written into it.
 
