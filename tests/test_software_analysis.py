@@ -10,8 +10,9 @@ Held to software-analysis DEC-001 points 2 to 4:
   and `JRN-NNN` numbered past the working tree and the default branch,
   withdrawn ones included, `ACT-<slug>` and `TERM-<slug>`; the location
   recorded on first use, so a later root change moves nothing; the anchors
-  point 4 asks for; an entry added to a collection file with every other byte
-  kept; and what it refuses;
+  point 4 asks for; an actor a file of its own, its needs in its front matter
+  beside its description (#1346); a term added to the glossary, a collection
+  file, with every other byte kept; and what it refuses;
 - **one home for discovery**: the scripts read the places through the
   backbone, at head and at a commit, and record the location through it;
   they carry no matcher, listing, place reader or location writer of their own.
@@ -52,6 +53,7 @@ from tests.analysis_repo import (
     RECORDS,
     USE_CASES,
     VALIDATE,
+    actor_at,
     below_floor,
     front,
     installed,
@@ -261,7 +263,7 @@ def test_the_first_stamp_records_the_location_and_a_root_change_moves_nothing(
         f"recorded software-analysis analysis = {ANALYSIS}  ({RECORDED})",
         "  derived from the internal root, tech-docs (explicit); it stays here if the root "
         "changes. To move it: edit that line and move the documents.",
-        f"stamped ACT-tester at {ACTORS}#ACT-tester",
+        f"stamped ACT-tester at {actor_at('ACT-tester')}",
     ]
     assert dr.recorded_capability_locations(project.root, "software-analysis") == {
         "analysis": ANALYSIS
@@ -303,6 +305,44 @@ def test_use_cases_and_journeys_are_numbered_in_order_with_their_anchors(
     assert "\n# UC-003 — Export: the report as a file\n" in body
 
 
+def test_an_actor_is_a_file_of_its_own_its_needs_beside_its_description(
+    project: AdopterRepo,
+) -> None:
+    """An actor is `ACT-<slug>.md` in the actors' folder (#1346): its id and name in its
+    front matter and in its heading, its needs in its front matter, a few lines above
+    the description its body gives — the needs stay data, never read from a body."""
+    reason = ("--unanchored-because", "No code embodies it: it funds the project.")
+    assert stamped(project, "actor", "sponsor", "--name", "Sponsor", *reason) == "ACT-sponsor"
+    assert stamped(project, "actor", "tester", "--path", "src/**") == "ACT-tester"
+    tester = actor_at("ACT-tester")
+    assert sorted(p.name for p in (project.root / ACTORS).iterdir()) == [
+        "ACT-sponsor.md",
+        "ACT-tester.md",
+    ]
+    assert front(project, tester) == {
+        "id": "ACT-tester",
+        "name": "Tester",
+        "status": "active",
+        "needs": ["<what this actor needs from the system, in one sentence>"],
+        "pkit": {"friction": {"anchors": {"path": ["src/**"]}}},
+    }
+    assert front(project, actor_at("ACT-sponsor"))["pkit"] == {
+        "friction": {"unanchored-because": "No code embodies it: it funds the project."}
+    }
+    text = (project.root / tester).read_text(encoding="utf-8")
+    _front, body = text.split("\n---\n\n", 1)
+    assert body == (
+        "# ACT-tester — Tester\n\n"
+        "<Who this is, when they come to the system, and what they bring with them.>\n"
+    )
+    # The needs sit about ten lines above the description, never far from it.
+    lines = text.splitlines()
+    assert lines.index("# ACT-tester — Tester") - lines.index("needs:") <= 10
+    # A term is still an entry of the glossary, a collection (#1346).
+    stamped(project, "term", "suite")
+    assert list(front(project, GLOSSARY)) == ["TERM-suite"]
+
+
 def test_every_stamped_artefact_passes_the_core_s_friction_pass(seeded: AdopterRepo) -> None:
     stamped(seeded, "term", "sandbox", "--name", "Sandbox", "--record", "ADR-001")
     result = validate_friction(seeded.root)
@@ -318,7 +358,7 @@ def test_what_the_stamp_writes_holds_no_semicolon_and_no_long_sentence(
     """The text the stamp writes for every kind, the revalidation record's included, is
     plain enough for any project's writing rules (#1351). It holds no semicolon and no
     sentence over 25 words, read as the prose lint reads them (`below_floor`). The
-    collection files are new from their templates here, or gain an entry."""
+    glossary is new from its template here, and an actor is a file of its own (#1346)."""
     stamped(seeded, "term", "sandbox")
     stamped(seeded, "actor", "admin")
     stamped(seeded, "use-case", "export", "--actor", "ACT-admin")
@@ -353,7 +393,7 @@ def test_what_the_stamp_writes_holds_no_semicolon_and_no_long_sentence(
     (written,) = (seeded.root / RECORDS).glob("*-plain-text.md")
     files = [
         GLOSSARY,
-        ACTORS,
+        actor_at("ACT-admin"),
         f"{USE_CASES}/UC-003-export.md",
         f"{JOURNEYS}/JRN-002-export-run.md",
         written.relative_to(seeded.root).as_posix(),
@@ -363,52 +403,52 @@ def test_what_the_stamp_writes_holds_no_semicolon_and_no_long_sentence(
 
 
 def _placeholder_line() -> str:
-    template = (CAPABILITY / "templates" / "actors.md").read_text(encoding="utf-8")
+    template = (CAPABILITY / "templates" / "glossary.md").read_text(encoding="utf-8")
     return template.rsplit("\n\n", 1)[1]
 
 
-_ADMIN_ONLY = (
+_SESSION_ONLY = (
     "---\n"
     "# The project's own comment, kept.\n"
-    "ACT-admin:\n"
-    "  name: Admin   # inline, kept\n"
+    "TERM-session:\n"
+    "  name: session   # inline, kept\n"
     "  status: active\n"
-    "  needs: [Configure the service]\n"
+    "  definition: time a user spends logged in\n"
     "  pkit: {friction: {anchors: {path: [src/**]}}}\n"
     "---\n"
     "\n"
-    "# Actors\n"
+    "# Glossary\n"
     "\n"
-    "## ACT-admin — Admin\n"
+    "## TERM-session — session\n"
     "\n"
-    "Runs it.\n"
+    "Ends at logout.\n"
 )
 
 
 def test_an_entry_is_added_to_a_collection_leaving_every_other_byte(project: AdopterRepo) -> None:
-    project.write({ACTORS: _ADMIN_ONLY})
-    assert stamped(project, "actor", "tester", "--name", "Test author") == "ACT-tester"
-    text = (project.root / ACTORS).read_text(encoding="utf-8")
-    closing = _ADMIN_ONLY.index("---\n", 4)
-    assert text.startswith(_ADMIN_ONLY[:closing])
-    assert text[closing:].startswith("ACT-tester:\n  name: Test author\n")
-    assert text.endswith("Runs it.\n\n## ACT-tester — Test author\n\n" + _placeholder_line())
-    assert list(front(project, ACTORS)) == ["ACT-admin", "ACT-tester"]
+    project.write({GLOSSARY: _SESSION_ONLY})
+    assert stamped(project, "term", "suite", "--name", "test suite") == "TERM-suite"
+    text = (project.root / GLOSSARY).read_text(encoding="utf-8")
+    closing = _SESSION_ONLY.index("---\n", 4)
+    assert text.startswith(_SESSION_ONLY[:closing])
+    assert text[closing:].startswith("TERM-suite:\n  name: test suite\n")
+    assert text.endswith("Ends at logout.\n\n## TERM-suite — test suite\n\n" + _placeholder_line())
+    assert list(front(project, GLOSSARY)) == ["TERM-session", "TERM-suite"]
 
 
 def test_an_entry_is_added_where_its_id_sorts(project: AdopterRepo) -> None:
     """Before the first entry and section whose id sorts after it — in the front matter
     and in the body alike — with every other byte as it was."""
-    project.write({ACTORS: _ADMIN_ONLY})
-    assert stamped(project, "actor", "able", "--name", "Able") == "ACT-able"
-    text = (project.root / ACTORS).read_text(encoding="utf-8")
+    project.write({GLOSSARY: _SESSION_ONLY})
+    assert stamped(project, "term", "build", "--name", "build") == "TERM-build"
+    text = (project.root / GLOSSARY).read_text(encoding="utf-8")
     comment = "---\n# The project's own comment, kept.\n"
-    entry = text[len(comment) : text.index("ACT-admin:\n")]
-    assert entry.startswith("ACT-able:\n  name: Able\n")
-    section = "## ACT-able — Able\n\n" + _placeholder_line()
-    rest = _ADMIN_ONLY[len(comment) :].replace("# Actors\n\n", f"# Actors\n\n{section}\n")
+    entry = text[len(comment) : text.index("TERM-session:\n")]
+    assert entry.startswith("TERM-build:\n  name: build\n")
+    section = "## TERM-build — build\n\n" + _placeholder_line()
+    rest = _SESSION_ONLY[len(comment) :].replace("# Glossary\n\n", f"# Glossary\n\n{section}\n")
     assert text == comment + entry + rest
-    assert list(front(project, ACTORS)) == ["ACT-able", "ACT-admin"]
+    assert list(front(project, GLOSSARY)) == ["TERM-build", "TERM-session"]
 
 
 @pytest.mark.parametrize(
@@ -422,27 +462,27 @@ def test_an_entry_added_last_keeps_the_file_s_ending(
     """The section added after the last one keeps every byte of the file before it —
     no line ending added to its last line, no blank line taken away — and only what
     separates the two is written."""
-    original = _ADMIN_ONLY.removesuffix("\n") + ending
-    project.write({ACTORS: original})
-    stamped(project, "actor", "tester", "--name", "Test author")
-    text = (project.root / ACTORS).read_text(encoding="utf-8")
+    original = _SESSION_ONLY.removesuffix("\n") + ending
+    project.write({GLOSSARY: original})
+    stamped(project, "term", "suite", "--name", "test suite")
+    text = (project.root / GLOSSARY).read_text(encoding="utf-8")
     closing = original.index("---\n", 4)
-    assert text.startswith(original[:closing] + "ACT-tester:\n  name: Test author\n")
-    section = "## ACT-tester — Test author\n\n" + _placeholder_line()
+    assert text.startswith(original[:closing] + "TERM-suite:\n  name: test suite\n")
+    section = "## TERM-suite — test suite\n\n" + _placeholder_line()
     assert text.endswith(original[closing:] + between + section)
 
 
-def test_a_collection_file_is_replaced_whole_keeping_its_mode(project: AdopterRepo) -> None:
+def test_a_file_the_stamp_writes_is_replaced_whole_keeping_its_mode(project: AdopterRepo) -> None:
     """Written beside itself and moved over, so a failure halfway never leaves it
     half-written: a new file in its place, with its mode, and nothing left beside it."""
-    project.write({ACTORS: _ADMIN_ONLY})
-    actors = project.root / ACTORS
-    actors.chmod(0o640)
-    inode = actors.stat().st_ino
-    stamped(project, "actor", "tester")
-    assert actors.stat().st_ino != inode
-    assert stat.S_IMODE(actors.stat().st_mode) == 0o640
-    assert sorted(p.name for p in actors.parent.iterdir()) == ["actors.md"]
+    project.write({GLOSSARY: _SESSION_ONLY})
+    glossary = project.root / GLOSSARY
+    glossary.chmod(0o640)
+    inode = glossary.stat().st_ino
+    stamped(project, "term", "suite")
+    assert glossary.stat().st_ino != inode
+    assert stat.S_IMODE(glossary.stat().st_mode) == 0o640
+    assert sorted(p.name for p in glossary.parent.iterdir()) == ["glossary.md"]
 
 
 def test_a_collection_file_with_crlf_line_endings_stays_crlf(project: AdopterRepo) -> None:
@@ -450,14 +490,14 @@ def test_a_collection_file_with_crlf_line_endings_stays_crlf(project: AdopterRep
     it as LF and writes it back CRLF, so it is byte for byte the LF result with every
     line ending CRLF — the file's own bytes kept, the entry's and the section's lines
     ending as the file's do."""
-    project.write({ACTORS: _ADMIN_ONLY})
-    stamped(project, "actor", "able")
-    stamped(project, "actor", "tester")
-    as_lf = (project.root / ACTORS).read_bytes()
-    project.write({ACTORS: _ADMIN_ONLY.replace("\n", "\r\n")})
-    stamped(project, "actor", "able")
-    stamped(project, "actor", "tester")
-    assert (project.root / ACTORS).read_bytes() == as_lf.replace(b"\n", b"\r\n")
+    project.write({GLOSSARY: _SESSION_ONLY})
+    stamped(project, "term", "build")
+    stamped(project, "term", "suite")
+    as_lf = (project.root / GLOSSARY).read_bytes()
+    project.write({GLOSSARY: _SESSION_ONLY.replace("\n", "\r\n")})
+    stamped(project, "term", "build")
+    stamped(project, "term", "suite")
+    assert (project.root / GLOSSARY).read_bytes() == as_lf.replace(b"\n", b"\r\n")
 
 
 def _refusal(completed: subprocess.CompletedProcess[str]) -> str:
@@ -469,16 +509,16 @@ def _refusal(completed: subprocess.CompletedProcess[str]) -> str:
 
 
 def test_a_collection_file_with_mixed_line_endings_is_refused(project: AdopterRepo) -> None:
-    mixed = _ADMIN_ONLY.replace("\n", "\r\n", 3)
-    project.write({ACTORS: mixed})
-    completed = new(project, "actor", "tester")
+    mixed = _SESSION_ONLY.replace("\n", "\r\n", 3)
+    project.write({GLOSSARY: mixed})
+    completed = new(project, "term", "suite")
     assert completed.returncode == 1
     assert _refusal(completed) == (
-        f"refused: {ACTORS} has mixed line endings — some lines end CRLF, others LF or a lone "
-        "CR: the stamp writes its lines with the file's own ending, and this file has no one "
-        "ending — make them one, then stamp again"
+        f"refused: {GLOSSARY} has mixed line endings — some lines end CRLF, others LF or a "
+        "lone CR: the stamp writes its lines with the file's own ending, and this file has no "
+        "one ending — make them one, then stamp again"
     )
-    assert (project.root / ACTORS).read_bytes() == mixed.encode("utf-8")
+    assert (project.root / GLOSSARY).read_bytes() == mixed.encode("utf-8")
 
 
 def test_a_write_that_fails_records_no_location(project: AdopterRepo) -> None:
@@ -506,14 +546,15 @@ sys.exit(subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]]).re
 """
 
 
-# Slow by design: four stamps, each a script that starts several `pkit` processes.
+# Slow by design: six stamps, each a script that starts several `pkit` processes.
 def test_a_recording_that_fails_leaves_nothing_written(
     project: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The artefact written, the location cannot be recorded: the file is put back as it
-    was — a collection's bytes, or no file and no folder made for it."""
+    was — the glossary's bytes, or no file and no folder made for it."""
     stamped(project, "actor", "tester")
-    before = (project.root / ACTORS).read_bytes()
+    stamped(project, "term", "suite")
+    before = (project.root / GLOSSARY).read_bytes()
     (project.root / RECORDED).unlink()
     failing = tmp_path / "failing-record"
     failing.mkdir()
@@ -521,34 +562,39 @@ def test_a_recording_that_fails_leaves_nothing_written(
     (failing / "pkit").chmod(0o755)
     monkeypatch.setenv("PATH", f"{failing}{os.pathsep}{os.environ['PATH']}")
     for args, gone in (
-        (("actor", "admin"), None),
+        (("term", "session"), None),
+        (("actor", "admin"), actor_at("ACT-admin")),
         (("use-case", "export", "--actor", "ACT-tester", "--area", "reports"), USE_CASES),
     ):
         completed = new(project, *args)
         assert completed.returncode == 1, completed.stdout
         assert "the analysis location could not be recorded: " in completed.stderr
-        assert (project.root / ACTORS).read_bytes() == before
+        assert (project.root / GLOSSARY).read_bytes() == before
         assert gone is None or not (project.root / gone).exists()
     assert not (project.root / RECORDED).exists()
     # Recorded already, the stamp needs no recording and never runs it: it cannot fail on one.
     project.write({RECORDED: "locations:\n  analysis: tech-docs/analysis\n"})
     completed = new(project, "actor", "admin")
     assert completed.returncode == 0, completed.stderr
-    assert completed.stdout.splitlines() == [f"stamped ACT-admin at {ACTORS}#ACT-admin"]
+    assert completed.stdout.splitlines() == [f"stamped ACT-admin at {actor_at('ACT-admin')}"]
 
 
-@pytest.mark.parametrize("linked", ["file", "folder"])
+@pytest.mark.parametrize("linked", ["file", "folder", "actors"])
 def test_a_place_reached_through_a_link_is_refused(project: AdopterRepo, linked: str) -> None:
     """The core's discovery reads no link as a document, nor anything beneath a linked
     folder: an entry or a file written there would be no part of the analysis, and
     written whole it would replace the link. The stamp refuses it, leaving the link."""
-    project.write({f"shared/{Path(ACTORS).name}": _ADMIN_ONLY})
+    project.write({f"shared/{Path(GLOSSARY).name}": _SESSION_ONLY})
     shared = project.root / "shared"
-    link = project.root / (ACTORS if linked == "file" else USE_CASES)
+    rel = {"file": GLOSSARY, "folder": USE_CASES, "actors": ACTORS}[linked]
+    link = project.root / rel
     link.parent.mkdir(parents=True, exist_ok=True)
-    link.symlink_to(shared / "actors.md" if linked == "file" else shared)
-    rel = ACTORS if linked == "file" else USE_CASES
-    args = ("actor", "tester") if linked == "file" else ("use-case", "one", "--actor", "ACT-x")
+    link.symlink_to(shared / "glossary.md" if linked == "file" else shared)
+    args = {
+        "file": ("term", "suite"),
+        "folder": ("use-case", "one", "--actor", "ACT-x"),
+        "actors": ("actor", "tester"),
+    }[linked]
     if linked == "folder":
         stamped(project, "actor", "x")
     completed = new(project, *args)
@@ -557,31 +603,27 @@ def test_a_place_reached_through_a_link_is_refused(project: AdopterRepo, linked:
         completed.stderr
     )
     assert link.is_symlink()
-    assert (shared / "actors.md").read_text(encoding="utf-8") == _ADMIN_ONLY
-    assert sorted(p.name for p in shared.iterdir()) == ["actors.md"]
+    assert (shared / "glossary.md").read_text(encoding="utf-8") == _SESSION_ONLY
+    assert sorted(p.name for p in shared.iterdir()) == ["glossary.md"]
 
 
-@pytest.mark.parametrize(
-    ("kind", "rel", "prefix"), [("actor", ACTORS, "ACT"), ("term", GLOSSARY, "TERM")]
-)
-def test_entries_two_branches_add_merge_cleanly(
-    project: AdopterRepo, kind: str, rel: str, prefix: str
-) -> None:
-    """Two lines of work adding different entries write to different places of the
-    collection file, so git merges them without a conflict."""
-    stamped(project, kind, "middle")
+def test_entries_two_branches_add_merge_cleanly(project: AdopterRepo) -> None:
+    """Two lines of work adding different terms write to different places of the
+    glossary, so git merges them without a conflict. Two adding actors write files of
+    their own."""
+    stamped(project, "term", "middle")
     project.commit("middle")
     project.checkout("early", create=True)
-    stamped(project, kind, "alpha")
+    stamped(project, "term", "alpha")
     project.commit("alpha, on early")
     project.checkout("main")
-    stamped(project, kind, "zulu")
+    stamped(project, "term", "zulu")
     project.commit("zulu, on main")
     merged = project.git("merge", "--no-edit", "early", check=False)
     assert merged.returncode == 0, merged.stdout + merged.stderr
-    ids = [f"{prefix}-alpha", f"{prefix}-middle", f"{prefix}-zulu"]
-    assert list(front(project, rel)) == ids
-    text = (project.root / rel).read_text(encoding="utf-8")
+    ids = ["TERM-alpha", "TERM-middle", "TERM-zulu"]
+    assert list(front(project, GLOSSARY)) == ids
+    text = (project.root / GLOSSARY).read_text(encoding="utf-8")
     assert re.findall(r"^## (\S+)", text, flags=re.MULTILINE) == ids
 
 
@@ -725,7 +767,7 @@ def test_a_shallow_clone_s_stamp_says_its_history_stops_early(
     assert done == f"stamped UC-002 at {USE_CASES}/UC-002-two.md"
     # An actor's or term's id is a person's choice: no history is read for one.
     completed = new(clone, "actor", "admin")
-    assert completed.stdout.splitlines() == [f"stamped ACT-admin at {ACTORS}#ACT-admin"]
+    assert completed.stdout.splitlines() == [f"stamped ACT-admin at {actor_at('ACT-admin')}"]
 
 
 # Slow by design: four stamps, each a script that starts several `pkit` processes.
@@ -831,9 +873,9 @@ def _ground(repo: AdopterRepo) -> None:
     stamped(repo, "actor", "tester")
     stamped(repo, "actor", "retired")
     stamped(repo, "use-case", "one", "--actor", "ACT-tester")
-    text = (repo.root / ACTORS).read_text(encoding="utf-8")
-    marker = "ACT-retired:\n  name: Retired\n  status: active"
-    (repo.root / ACTORS).write_text(text.replace(marker, marker.replace("active", "withdrawn")))
+    retired = repo.root / actor_at("ACT-retired")
+    text = retired.read_text(encoding="utf-8")
+    retired.write_text(text.replace("status: active", "status: withdrawn", 1), encoding="utf-8")
 
 
 @pytest.fixture

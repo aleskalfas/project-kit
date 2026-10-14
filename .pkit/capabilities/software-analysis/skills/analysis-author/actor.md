@@ -1,6 +1,6 @@
 # Adding an actor
 
-An actor is a named role that uses the system, with needs of its own. It is an entry of the actors' collection file, `ACT-<slug>`, and the use cases and journeys that are its goals name it.
+An actor is a named role that uses the system, with needs of its own. It is a file of its own, `use-case-model/actors/ACT-<slug>.md`, and the use cases and journeys that are its goals name it.
 
 ## 1. Is it an actor?
 
@@ -10,7 +10,7 @@ A user story — a need in one sentence — is not an artefact of its own: it is
 
 ## 2. Choose the slug and the name
 
-The role as the domain says it, in the singular — `tester`, `release-manager`, `billing-system`. The slug is the id for ever; `--name` is the display name and may change.
+The role as the domain says it, in the singular — `tester`, `release-manager`, `billing-system`. The slug is the id for ever, and names the file. `--name` is the display name and may change.
 
 ## 3. Decide what it rests on
 
@@ -25,16 +25,16 @@ pkit analysis new actor <slug> --name "<Display name>" [--path <glob>]... [--rec
 pkit analysis new actor <slug> --name "<Display name>" --unanchored-because "<why nothing embodies it>"
 ```
 
-The entry is added to the actors' file where its id sorts, with its section in the body; the file is created the first time.
+The stamp writes `ACT-<slug>.md` in the actors' folder, headed `# ACT-<slug> — <name>`. Its front matter holds the id, the name and the needs, so the needs read just above the description.
 
 ## 5. Fill it
 
-- **`needs`** — what the actor needs from the system, one line each, replacing the placeholder.
-- **The body section** — who this is, when they come to the system, and what they bring with them.
+- **`needs`** — in the front matter, what the actor needs from the system, one line each, replacing the placeholder. A tool reads them from there, so they never go in the body.
+- **The body** — under the heading, who this is, when they come to the system, and what they bring with them.
 
 Then run the checks in the shared framing's "After stamping".
 
 ## Later
 
-- **Renaming** — change `name`; the id stays, so nothing citing it breaks.
-- **Withdrawing** — set `status: withdrawn` once no use case or journey in force names the actor.
+- **Renaming** — change `name`, and the heading after the id with it: the check holds the two to agree. The id and the file's name stay, so nothing citing it breaks.
+- **Withdrawing** — set `status: withdrawn` once no use case or journey in force names the actor. The file stays.

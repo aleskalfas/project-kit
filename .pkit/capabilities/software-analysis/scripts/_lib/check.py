@@ -3,18 +3,18 @@
 What is checked, each against the record's words:
 
 - **Shape** (points 1 and 2). Every file in one of the places holds artefacts of
-  that place's kind: the glossary and the actors are collection files, one
-  entry per artefact keyed by its id; a use case and a journey are a document
-  each. A file without front matter, one whose front matter does not parse, a
-  collection file that is not one, or a use-case or journey file holding
+  that place's kind: the glossary is a collection file, one entry per term
+  keyed by its id; an actor, a use case and a journey are a document each. A
+  file without front matter, one whose front matter does not parse, a glossary
+  that is no collection, or an actor, use-case or journey file holding
   entries, is an error: what it holds cannot be read, its ids included, and
-  an id is never used again (point 3) — the stamp then counts the number the
-  file's name carries.
+  an id is never used again (point 3) — the stamp then counts the number a
+  use case's or journey's file name carries.
 - **Missing required parts** (points 1 and 3). Each artefact's own fields
-  against its kind's companion schema — its id, its title, its status, its
-  actor, its steps, its needs, its definition — and an entry's id against its
-  kind's id. Unknown fields are refused, so a misspelt one is never silently
-  ignored.
+  against its kind's companion schema — its id, its title or name, its
+  status, its actor, its steps, its needs, its definition — and an entry's id
+  against its kind's id. Unknown fields are refused, so a misspelt one is
+  never silently ignored.
 - **A placeholder left** (point 1). What the stamp leaves a person to write —
   an actor's need, a term's definition, a use case's goal and steps — is no
   part of the analysis until written: an own field — or the reason an actor
@@ -25,16 +25,18 @@ What is checked, each against the record's words:
   (`_lib/placeholder.py`), so a capitalised one (`<Title>`) is caught and
   words of the artefact's own in angle brackets — code a body quotes — never
   are.
-- **A use case's and a journey's heading** is its id and its front matter's
-  title, `# UC-NNN — <title>`: what a reader of the front matter alone sees —
-  a data point publishing `{id, title, status}`, say — is what the page shows.
-  The heading is read from the file discovery names.
+- **A document's heading** is its id and its front matter's title — an
+  actor's name — `# UC-NNN — <title>`, `# ACT-<slug> — <name>`: what a reader
+  of the front matter alone sees — a data point publishing `{id, title,
+  status}`, say — is what the page shows. The heading is read from the file
+  discovery names.
 - **Duplicate ids** (point 3). No two artefacts in the analysis share an id,
   a number spelt with other zeros included — as the stamp counts it held.
 - **A name the id disagrees with** (point 3). A use case or journey whose
   file's name carries a number (`UC-007-<slug>.md`) its front matter does not
   give — no id, or another: the stamp counts the number its name carries, so
-  the front matter says the same.
+  the front matter says the same. An actor whose file is not named
+  `<id>.md`: an actor's id names its file.
 - **What a use case or journey names** (points 1 and 3): its actor, and a
   journey's steps, are an actor and use cases of the analysis; and one in
   force names none withdrawn. The stamp refuses the same (`Analysis.unfit`),
@@ -123,6 +125,7 @@ from _lib.model import (
     NOUN,
     NUMBERED,
     REVALIDATED_AT,
+    TERM,
     UNANCHORED_BECAUSE,
     USE_CASE,
     Analysis,
@@ -140,6 +143,10 @@ ARTEFACT_ANCHORS = f"/{CONTAINER}/friction/anchors/artefact"
 #: Where in an artefact the reason it has no anchors sits: the core's key, in its
 #: friction block (COR-050 point 1), which the stamp writes from a person's words.
 REASON_POINTER = f"/{CONTAINER}/friction/{UNANCHORED_BECAUSE}"
+
+#: The front-matter field a document's heading repeats after its id: an actor's name,
+#: a use case's or journey's title. A term is an entry, with no heading of its own.
+TITLED = {ACTOR: "name", TERM: "name", USE_CASE: "title", JOURNEY: "title"}
 
 #: The outcome whose record stays open until the artefact is revalidated again.
 REGRESSED = "code-regressed"
@@ -322,11 +329,12 @@ def _read(path: Path) -> str | None:
 
 
 def _headings(root: Path, analysis: Analysis) -> list[Finding]:
-    """A use case's and a journey's heading reads `<id> — <title>`, as its front matter
-    gives them."""
+    """A document's heading reads `<id> — <title>` — an actor's `<id> — <name>` — as its
+    front matter gives them."""
     found: list[Finding] = []
     for artefact in analysis.artefacts:
-        title = artefact.fields.get("title")
+        field = TITLED[artefact.kind]
+        title = artefact.fields.get(field)
         if (
             artefact.entry
             or artefact.id is None
@@ -334,7 +342,7 @@ def _headings(root: Path, analysis: Analysis) -> list[Finding]:
             or not isinstance(title, str)
             or not title
         ):
-            continue  # an entry has no heading of its own; the schema reports the rest
+            continue  # a term's entry has no heading of its own; the schema reports the rest
         try:
             _front, body = markdown.split((root / artefact.path).read_text(encoding="utf-8"))
         except (OSError, UnicodeDecodeError):
@@ -346,7 +354,7 @@ def _headings(root: Path, analysis: Analysis) -> list[Finding]:
         what = (
             "has no heading"
             if written is None
-            else f"its heading, `# {written}`, is not its id and its front matter's title"
+            else f"its heading, `# {written}`, is not its id and its front matter's {field}"
         )
         found.append(
             Finding(
@@ -354,7 +362,7 @@ def _headings(root: Path, analysis: Analysis) -> list[Finding]:
                 artefact.location,
                 f"{what}: {with_article(artefact.kind)} opens with `# {wanted}`, so what a "
                 f"reader of its front matter sees is what the page shows — write the heading, "
-                f"or change `title`",
+                f"or change `{field}`",
             )
         )
     return found
@@ -413,6 +421,29 @@ def _named_otherwise(analysis: Analysis) -> list[Finding]:
         else:
             continue
         found.append(Finding(ERROR, artefact.location, message))
+    return found + _actors_named_otherwise(analysis)
+
+
+def _actors_named_otherwise(analysis: Analysis) -> list[Finding]:
+    """An actor whose file's name is not its id: an actor's id names its file (DEC-001
+    point 3), as the stamp names it, so the two say the same. An actor with no id, or
+    one that is no actor id, is the schema's to report."""
+    found: list[Finding] = []
+    pattern = schemas.id_pattern(ACTOR)
+    for artefact in analysis.of_kind(ACTOR):
+        if artefact.entry or artefact.id is None or not pattern.match(artefact.id):
+            continue
+        name = artefact.path.rsplit("/", 1)[-1]
+        if name == f"{artefact.id}.md":
+            continue
+        found.append(
+            Finding(
+                ERROR,
+                artefact.location,
+                f"its name is {name}, its front matter's id {artefact.id}: an actor's id names "
+                f"its file — name the file {artefact.id}.md, or correct `id` (DEC-001 point 3)",
+            )
+        )
     return found
 
 

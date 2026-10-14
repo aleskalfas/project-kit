@@ -6,17 +6,21 @@ Held to software-analysis DEC-001 points 1 to 6:
   revalidation record — and the evidence point's (#1001), each valid Draft
   2020-12, sharing one home for the id shapes (`analysis.schema.json`);
 - each anchored kind's **template** carrying the friction block inside the
-  methodology's container — in the front matter of a document, in each entry
-  of a collection — valid against the core's container schema and against the
-  kind's own; the journey's anchors written from its steps; the revalidation
-  record's no anchored artefact.
+  methodology's container — in the front matter of a document, an actor's
+  included (#1346), in each entry of the glossary, a collection — valid against
+  the core's container schema and against the kind's own; the journey's
+  anchors written from its steps; the revalidation record's no anchored
+  artefact.
 """
 
 from __future__ import annotations
 
 import ast
 import json
+import os
 import re
+import subprocess
+from pathlib import Path
 from typing import Any, cast
 
 import pytest
@@ -247,7 +251,9 @@ def test_every_id_shape_has_one_home() -> None:
         assert holders == ["analysis", "revalidation-evidence"], prefix
 
 
-@pytest.mark.parametrize(("template", "schema"), [("use-case", "use-case"), ("journey", "journey")])
+@pytest.mark.parametrize(
+    ("template", "schema"), [("actor", "actor"), ("use-case", "use-case"), ("journey", "journey")]
+)
 def test_a_document_template_carries_the_friction_block_in_the_container(
     template: str, schema: str
 ) -> None:
@@ -257,7 +263,7 @@ def test_a_document_template_carries_the_friction_block_in_the_container(
     assert _schema_errors(schema, {k: v for k, v in data.items() if k != "pkit"}) == []
 
 
-@pytest.mark.parametrize(("template", "schema"), [("actors", "actor"), ("glossary", "term")])
+@pytest.mark.parametrize(("template", "schema"), [("glossary", "term")])
 def test_a_collection_template_carries_the_friction_block_in_each_entry(
     template: str, schema: str
 ) -> None:
@@ -271,11 +277,46 @@ def test_a_collection_template_carries_the_friction_block_in_each_entry(
         assert _schema_errors(schema, {k: v for k, v in entry.items() if k != "pkit"}) == []
 
 
-@pytest.mark.parametrize("template", ["use-case", "journey"])
-def test_a_document_template_s_heading_is_its_id_and_title(template: str) -> None:
+@pytest.mark.parametrize(
+    ("template", "field"), [("actor", "name"), ("use-case", "title"), ("journey", "title")]
+)
+def test_a_document_template_s_heading_is_its_id_and_title(template: str, field: str) -> None:
+    """A use case's or journey's heading is its id and title, an actor's its id and name."""
     text = (CAPABILITY / "templates" / f"{template}.md").read_text(encoding="utf-8")
     data = _template(template)
-    assert f"\n# {data['id']} — {data['title']}\n" in text
+    assert f"\n# {data['id']} — {data[field]}\n" in text
+
+
+#: The migration that retires the actors' collection template (#1346).
+RETIRED = CAPABILITY / "migrations" / "0.2.0" / "001-retire-actors-collection-template.sh"
+
+
+def test_the_actors_collection_template_is_retired_by_a_migration_that_changes_nothing(
+    tmp_path: Path,
+) -> None:
+    """An actor is a file of its own (#1346): the capability ships `actor.md` and no
+    longer `actors.md`. The migration that goes with it does nothing and says why — the
+    copy of the capability's tree drops the template, and the actors are the project's
+    to move, each with its revalidation. Run twice over a project holding the old
+    collection file, it leaves every byte as it was."""
+    templates = sorted(p.name for p in (CAPABILITY / "templates").glob("*.md"))
+    assert "actor.md" in templates and "actors.md" not in templates
+    held = tmp_path / "tech-docs" / "analysis" / "use-case-model" / "actors.md"
+    held.parent.mkdir(parents=True)
+    held.write_text("---\nACT-admin:\n  name: Admin\n---\n", encoding="utf-8")
+    before = sorted((p.relative_to(tmp_path), p.read_bytes()) for p in tmp_path.rglob("*.md"))
+    for _run in range(2):
+        done = subprocess.run(
+            ["bash", str(RETIRED)],
+            env={**os.environ, "ROOT": str(tmp_path)},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert done.returncode == 0, done.stderr
+        assert done.stdout.startswith("  note     actors.md template retired: ")
+    after = sorted((p.relative_to(tmp_path), p.read_bytes()) for p in tmp_path.rglob("*.md"))
+    assert after == before
 
 
 def test_the_journey_template_anchors_its_steps() -> None:
@@ -347,7 +388,7 @@ def test_every_placeholder_shipped_is_in_the_append_only_lists() -> None:
     in_templates, in_commands = _shipped("IN_TEMPLATES"), _shipped("IN_COMMANDS")
     assert len(set(in_templates)) == len(in_templates)
     shipped: set[str] = set()
-    for name in ("actors", "glossary", "use-case", "journey"):
+    for name in ("actor", "glossary", "use-case", "journey"):
         text = (CAPABILITY / "templates" / f"{name}.md").read_text(encoding="utf-8")
         _front, body = document_parts.split_front_matter(text)
         for value in [*_texts(_template(name)), body]:
@@ -370,13 +411,13 @@ TEMPLATES = tuple(sorted(p.stem for p in (CAPABILITY / "templates").glob("*.md")
 
 #: A collection template's opening sentence, which the stamp writes once (#1351).
 COLLECTION_OPENINGS = {
-    "actors": "Who uses the system, and what each needs from it.",
     "glossary": "The words of the domain and what each means.",
 }
 
 #: What a document template opens with after its heading: its first part, whose sentence
 #: its author writes, or a revalidation record's outcomes (#1351).
 DOCUMENT_OPENINGS = {
+    "actor": "<Who this is, ",
     "use-case": "**Goal:** <",
     "journey": "**Starts:** <",
     "revalidation-record": "## Outcomes",
@@ -457,8 +498,9 @@ def test_a_collection_template_opens_with_one_sentence_on_what_it_holds(
 
 @pytest.mark.parametrize(("name", "opening"), sorted(DOCUMENT_OPENINGS.items()))
 def test_a_document_template_opens_with_its_first_part(name: str, opening: str) -> None:
-    """A use case or a journey opens with its first part, the goal or where the actor
-    starts, whose sentence its author writes in place of the placeholder. A revalidation
+    """An actor, a use case or a journey opens with its first part — who the actor is,
+    the goal, or where the actor starts — whose sentence its author writes in place of
+    the placeholder. A revalidation
     record opens with its outcomes, a section that is only a list, which its heading
     names (#1351)."""
     heading, first, *_rest = _body(name).split("\n\n")
@@ -497,7 +539,13 @@ def test_a_document_template_opens_with_its_first_part(name: str, opening: str) 
             },
             "should be non-empty",
         ),
-        ("actor", {"name": "A", "status": "active", "needs": []}, "should be non-empty"),
+        (
+            "actor",
+            {"id": "ACT-a", "name": "A", "status": "active", "needs": []},
+            "should be non-empty",
+        ),
+        ("actor", {"name": "A", "status": "active", "needs": ["N"]}, "'id' is a required"),
+        ("actor", {"id": "a", "name": "A", "status": "active", "needs": ["N"]}, "does not match"),
         (
             "term",
             {"name": "T", "status": "active", "definition": "d", "replaces": ["x", "x"]},

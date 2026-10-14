@@ -16,7 +16,8 @@ time an artefact is placed there (COR-049 point 5):
   actor and the actor anchor;
 - a journey, `use-case-model/journeys/JRN-NNN-<slug>.md`, with its steps and,
   from them, its use-case anchors;
-- an actor, the entry `ACT-<slug>` of `use-case-model/actors.md`;
+- an actor, `use-case-model/actors/ACT-<slug>.md`, headed by its id and name,
+  with its needs in its front matter;
 - a term, the entry `TERM-<slug>` of `glossary.md`.
 
 A use case or journey takes the next free number on the default branch — every

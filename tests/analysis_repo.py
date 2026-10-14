@@ -43,7 +43,7 @@ CONFIG = ".pkit/project/config.yaml"
 RECORDED = f"{SA.as_posix()}/project/docs-locations.yaml"
 
 ANALYSIS = "tech-docs/analysis"
-ACTORS = f"{ANALYSIS}/use-case-model/actors.md"
+ACTORS = f"{ANALYSIS}/use-case-model/actors"
 GLOSSARY = f"{ANALYSIS}/glossary.md"
 USE_CASES = f"{ANALYSIS}/use-case-model/use-cases"
 JOURNEYS = f"{ANALYSIS}/use-case-model/journeys"
@@ -53,6 +53,11 @@ RECORDS = f"{ANALYSIS}/revalidations"
 MAIN = "main"
 
 _yaml: Any = YAML(typ="safe")
+
+
+def actor_at(actor_id: str) -> str:
+    """An actor's file: `ACT-<slug>.md`, named by its id, in the actors' folder."""
+    return f"{ACTORS}/{actor_id}.md"
 
 
 def load(text: str) -> Any:
