@@ -1,0 +1,21 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Changed
+body: >
+  Each actor is a file of its own, `use-case-model/actors/ACT-<slug>.md`, so
+  its needs read beside its description (DEC-001 points 2 and 3, #1346). The
+  needs stay in the front matter, where the schema checks them and the
+  readers filler reads them. The actor's schema gains an `id`. `pkit analysis
+  new actor` stamps the file from the new `actor.md` template, headed
+  `# ACT-<slug> — <name>`, and `pkit analysis validate` checks that heading as
+  it checks a use case's. The readers filler gives no answer when any one
+  actor file cannot be read. The actors' place in the package metadata is now
+  the folder, and the old collection template, `actors.md`, is gone, with a
+  migration that does nothing and says why. Glossary terms stay in their
+  collection file. This breaks a project that keeps its actors in
+  `use-case-model/actors.md`: that file is no longer a place, and its actors
+  must move by hand, each with its revalidation. The segment is `minor`, as
+  semver allows a breaking change before 1.0.0, and the capability is
+  installed only in project-kit's own clones, whose actors move in the same
+  change.

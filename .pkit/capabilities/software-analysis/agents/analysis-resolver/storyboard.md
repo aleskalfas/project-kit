@@ -13,7 +13,7 @@ This storyboard scripts how the `analysis-resolver` agent resolves the friction 
 
 The scenarios operate on:
 
-- **The analysis artefacts** — actors and glossary terms (entries of their collection files), use cases and journeys (a file each) under the analysis location, each carrying its anchors and its `revalidated` block in the friction block of the `pkit` container.
+- **The analysis artefacts** — glossary terms (entries of the glossary's collection file), actors, use cases and journeys (a file each) under the analysis location, each carrying its anchors and its `revalidated` block in the friction block of the `pkit` container.
 - **What flags them** — `pkit friction check --json`, the change check of a pull request; `pkit friction check --all --json` or `pkit friction debt --json`, the whole-repository report. Findings come upstream first: an actor before its use cases, a use case before the journeys through it.
 - **The evidence** — `pkit friction explain <artefact> --json` (its anchors, the commits behind each changed one, its deferrals) and `pkit analysis propose <artefact> --json` (what the evidence comes to, by which rule, each quote's check, and the person's commands); git's history, read with `git show`; the change's context — the commit messages, and the pull request or work item that carried the change.
 - **The four outcomes and the core's two answers** — the one table is the capability README's, "Revalidation: four outcomes, two answers"; when a revalidation also leaves a record is the table under its "Revalidation records". This storyboard follows them and does not restate them.

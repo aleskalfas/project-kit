@@ -164,7 +164,7 @@ def test_the_status_report_shows_roots_places_and_the_records_inside_the_interna
     # software-analysis' places under its recorded location (DEC-001 point 2).
     analysis_places = (
         "glossary.md",
-        "use-case-model/actors.md",
+        "use-case-model/actors",
         "use-case-model/use-cases",
         "use-case-model/journeys",
     )

@@ -76,9 +76,9 @@ friction:
       type: term
       description: The glossary, one entry per term.
     - location: analysis
-      path: use-case-model/actors.md
+      path: use-case-model/actors
       type: actor
-      description: The actors, one entry per actor.
+      description: The actors, one file each.
     - location: analysis
       path: use-case-model/use-cases
       type: use-case

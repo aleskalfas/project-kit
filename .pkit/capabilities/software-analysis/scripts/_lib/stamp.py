@@ -18,10 +18,13 @@ the capability's places put it under the analysis location:
   and from its name, so a file whose id cannot be read still holds its number.
   Numbers two branches take in parallel are `pkit analysis check-numbers`' to
   report (point 3);
-- an **actor** or a **term** is a new entry, `ACT-<slug>` or `TERM-<slug>`, of
-  its collection file — added to its front matter, and its section to the
-  body, each where its id sorts, every other byte left as it was — the file
-  created from the template the first time.
+- an **actor** is a new file, `ACT-<slug>.md`, its id a slug a person chooses,
+  headed by its id and name, with its needs in its front matter beside the
+  description its body gives;
+- a **term** is a new entry, `TERM-<slug>`, of the glossary, a collection file
+  — added to its front matter, and its section to the body, each where its id
+  sorts, every other byte left as it was — the file created from the template
+  the first time.
 
 It writes the anchors DEC-001 point 4 asks for: a use case's actor, and a
 journey's use cases from its steps, beside the paths and records it is given.
@@ -41,8 +44,8 @@ fails leaves the recorded locations untouched, and a recording that fails puts
 the file back as it was: a refused stamp writes nothing (`write_and_record`); a
 stamp that needs no recording never runs it. A path reached through a link is
 refused: the discovery never reads one. Every file is written whole, to a
-temporary file beside it then moved over it, keeping its mode; a
-collection file keeps every byte but the entry and section it gains, its line
+temporary file beside it then moved over it, keeping its mode; the
+glossary keeps every byte but the entry and section it gains, its line
 endings too: one whose every line ends CRLF, as a checkout with
 `core.autocrlf` writes it, is edited as LF and written back CRLF, and one
 with mixed line endings is refused. Where the analysis is, and what it holds, is
@@ -103,7 +106,7 @@ TEMPLATES = Path(__file__).resolve().parents[2] / "templates"
 TEMPLATE_OF = {
     USE_CASE: "use-case.md",
     JOURNEY: "journey.md",
-    ACTOR: "actors.md",
+    ACTOR: "actor.md",
     TERM: "glossary.md",
 }
 
@@ -201,7 +204,9 @@ def stamp(
         location = f"{place}#{new_id}"
     else:
         folder = f"{place}/{request.area}" if request.area else place
-        location = f"{folder}/{new_id}-{request.slug}.md"
+        # An actor's id is its slug, so its file is named by the id alone.
+        name = new_id if kind == ACTOR else f"{new_id}-{request.slug}"
+        location = f"{folder}/{name}.md"
         target = root / location
         refuse_links(root, target, location)
         if target.exists():
@@ -318,7 +323,7 @@ def _check_placeholders(request: Request) -> None:
     or the skill's commands shipped is refused — matched exactly, as the check matches
     an artefact's fields (`_lib/placeholder.py`), so words of the person's own in angle
     brackets are theirs to write."""
-    flag = "--name" if request.kind in COLLECTIONS else "--title"
+    flag = "--title" if request.kind in NUMBERED else "--name"
     for option, text in (
         (flag, request.title),
         ("--unanchored-because", request.unanchored_because),
@@ -338,7 +343,7 @@ def _check_unanchored(request: Request) -> None:
     4), so neither is ever unanchored, and point 9's reason never applies to them."""
     if request.unanchored_because is None:
         return
-    if request.kind not in COLLECTIONS:
+    if request.kind in NUMBERED:
         rests_on = "its actor" if request.kind == USE_CASE else "the use cases of its steps"
         raise Refused(
             f"{with_article(request.kind)} anchors to {rests_on}, so it is never unanchored"
@@ -423,7 +428,7 @@ def _held(
     problem — an entry that is no commit of the default branch's history, or an id it
     lists that its commit does not free — and noting each id a named commit would free
     that no entry lists, which stays taken. An actor's or term's id is a slug a person
-    chooses, and a withdrawn one stays in its collection file, so no history is read
+    chooses, and a withdrawn one stays in its file or its entry, so no history is read
     for one."""
     held = analysis.held()
     named = " and ".join(ref for ref, _commit in tips)
@@ -489,11 +494,18 @@ def _new_id(kind: str, slug: str, held: set[str], base: str) -> str:
 
 
 def _document(kind: str, new_id: str, request: Request) -> str:
-    """A use case's or a journey's file, from its template."""
+    """A use case's, a journey's or an actor's file, from its template: its id, and its
+    title — an actor's name — in its front matter and in its heading after the id."""
     front, body = _template(kind)
     data = dict(markdown.load(front))
     template_id = str(data["id"])
     data["id"] = new_id
+    if kind == ACTOR:
+        placeholder = str(data["name"])
+        data["name"] = _title(request)
+        data[CONTAINER] = _container(request, [])
+        body = body.replace(template_id, new_id).replace(placeholder, _title(request))
+        return f"---\n{dump(data)}---\n\n{body}"
     data["title"] = _title(request)
     data["actor"] = request.actor
     if kind == JOURNEY:

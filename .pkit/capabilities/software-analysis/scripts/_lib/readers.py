@@ -28,14 +28,15 @@ asks for a point.
 
 **Fail closed.** A command filler fails closed whatever the point's policy
 (COR-052 point 6): what cannot be answered in full is no answer — raised, and
-the command exits 1, never an empty list in its place. That is the actors'
-file as a whole: the backbone gives no reading, or the file's front matter does
-not parse, or it is not a collection. An entry is judged alone: one whose key
-is no actor id is not a reader and is skipped, and `pkit analysis validate`
-reports it; a withdrawn actor gives no reader, so a page naming it fails the
-documentation provider's check while this capability's passes. An analysis
-with no actors, or no analysis yet, answers the empty list: there is no reader
-to add.
+the command exits 1, never an empty list in its place. Each actor is a file of
+its own, and any one that cannot be read gives no answer: the backbone gives
+no reading, or an actor file's front matter does not parse, or it has none, or
+it holds keyed entries rather than one actor. A file that reads is judged
+alone: one whose `id` is no actor id is not a reader and is skipped, and `pkit
+analysis validate` reports it; a withdrawn actor gives no reader, so a page
+naming it fails the documentation provider's check while this capability's
+passes. An analysis with no actors, or no analysis yet, answers the empty
+list: there is no reader to add.
 """
 
 from __future__ import annotations
@@ -58,11 +59,11 @@ class NoAnswer(Exception):
 
 def readers(analysis: Analysis) -> list[dict[str, str]]:
     """The readers the analysis's actors map to, sorted by id. Raises NoAnswer when
-    the actors' file as a whole cannot be read as a collection of actors; an entry
-    that is no actor is skipped."""
-    actors_file = analysis.places.get(ACTOR)
-    if actors_file is not None and actors_file in analysis.unreadable:
-        raise NoAnswer(f"the actors cannot be read: {actors_file}'s front matter does not parse")
+    any one actor file cannot be read as an actor; a file that reads, but whose id is
+    no actor id, is skipped."""
+    for path in sorted(analysis.unreadable):
+        if analysis.files.get(path) == ACTOR:
+            raise NoAnswer(f"the actors cannot be read: {path}'s front matter does not parse")
     for stray in analysis.strays:
         if stray.kind == ACTOR:
             raise NoAnswer(f"the actors cannot be read: {stray.path} {stray.why}")

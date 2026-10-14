@@ -35,6 +35,7 @@ from tests.analysis_repo import (
     RECORDS,
     USE_CASES,
     VALIDATE,
+    actor_at,
     fill,
     front,
     installed,
@@ -117,13 +118,13 @@ def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled
             "sentence is not enough: where it applies, what it is not, an example.>': " + left,
         ),
         (
-            f"{ACTORS}#ACT-admin:/needs/0",
+            f"{actor_at('ACT-admin')}:/needs/0",
             "still holds the placeholder '<what this actor needs from the system, in one "
             f"sentence>': {rule} actor (DEC-001 point 1)",
         ),
         (
-            f"{ACTORS}#ACT-admin",
-            "its section still holds the template's placeholder '<Who this is, when they come "
+            actor_at("ACT-admin"),
+            "its body still holds the template's placeholder '<Who this is, when they come "
             "to the system, and what they bring with them.>': " + left,
         ),
         (
@@ -203,15 +204,22 @@ def test_a_placeholder_is_a_text_the_templates_shipped_never_a_shape(
         "  definition: what the term means, in one sentence",
         "  definition: Maps <user id> to a session.",
     )
-    _set(seeded, ACTORS, "  name: Tester", "  name: <Display name>")
+    tester = actor_at("ACT-tester")
+    _set(seeded, tester, "name: Tester", "name: <Display name>")
+    _set(seeded, tester, "# ACT-tester — Tester", "# ACT-tester — <Display name>")
     run_suite = f"{USE_CASES}/UC-001-run-suite.md"
     _set(seeded, run_suite, "title: Run suite", "title: <Title>")
     _set(seeded, run_suite, "# UC-001 — Run suite", "# UC-001 — <Title>")
     rule = "write in its place what it asks for — until then it says nothing of the"
     assert errors(check(seeded)) == [
         (
-            f"{ACTORS}#ACT-tester:/name",
+            f"{tester}:/name",
             f"still holds the placeholder '<Display name>': {rule} actor (DEC-001 point 1)",
+        ),
+        (
+            tester,
+            "its body still holds the template's placeholder '<Display name>': write in each "
+            "one's place what it asks for, or remove it (DEC-001 point 1)",
         ),
         (
             f"{run_suite}:/title",
@@ -400,6 +408,21 @@ def test_a_file_whose_id_cannot_be_read_is_reported(seeded: AdopterRepo) -> None
                 )
             ],
         ),
+        # An actor is a file of its own (#1346): a file of the actors' folder holding
+        # keyed entries, as the actors' collection file once did, is no actor.
+        (
+            {
+                f"{ACTORS}/all.md": (
+                    "---\nACT-admin:\n  name: Admin\n  status: active\n  needs: [Run it]\n"
+                    "  pkit: {friction: {}}\n---\n\n# Actors\n\n## ACT-admin — Admin\n"
+                )
+            },
+            [(f"{ACTORS}/all.md", "holds keyed entries: each actor is a document of its own")],
+        ),
+        (
+            {actor_at("ACT-bare"): "# ACT-bare — Bare\n"},
+            [(actor_at("ACT-bare"), "has no front matter: every file here is an actor")],
+        ),
     ],
 )
 def test_missing_or_misshapen_parts_are_reported(
@@ -439,21 +462,70 @@ def test_a_heading_other_than_the_id_and_title_is_reported(seeded: AdopterRepo) 
     assert errors(check(seeded)) == []
 
 
+def test_an_actor_s_heading_is_its_id_and_name(seeded: AdopterRepo) -> None:
+    """An actor is checked as a use case is (#1346): its heading is its id and the `name`
+    its front matter gives, so what a reader of the front matter sees is what the page
+    shows."""
+    tester = actor_at("ACT-tester")
+    text = (seeded.root / tester).read_text(encoding="utf-8")
+    assert "\n# ACT-tester — Tester\n" in text
+    seeded.write({tester: text.replace("name: Tester", "name: Test author")})
+    wanted = (
+        "an actor opens with `# ACT-tester — Test author`, so what a reader of its front "
+        "matter sees is what the page shows — write the heading, or change `name`"
+    )
+    assert errors(check(seeded)) == [
+        (
+            tester,
+            "its heading, `# ACT-tester — Tester`, is not its id and its front matter's name: "
+            + wanted,
+        )
+    ]
+    seeded.write({tester: text.replace("# ACT-tester — Tester\n", "")})
+    assert errors(check(seeded)) == [
+        (
+            tester,
+            "has no heading: an actor opens with `# ACT-tester — Tester`, so what a reader of "
+            "its front matter sees is what the page shows — write the heading, or change `name`",
+        )
+    ]
+
+
+def test_an_actor_without_its_id_or_with_a_foreign_one_is_reported(seeded: AdopterRepo) -> None:
+    """The actor's schema has an `id` (#1346): an actor file with none is reported, and so
+    is one whose id is no actor id. Neither is an actor the analysis holds, so a use case
+    naming it names no actor."""
+    tester = actor_at("ACT-tester")
+    text = (seeded.root / tester).read_text(encoding="utf-8")
+    seeded.write({tester: text.replace("id: ACT-tester\n", "")})
+    found = errors(check(seeded))
+    assert found[0] == (tester, "'id' is a required property")
+    unnamed = (
+        f"{USE_CASES}/UC-001-run-suite.md:/actor",
+        "no actor ACT-tester in the analysis: what a use case names is in the analysis "
+        "(DEC-001 point 3)",
+    )
+    assert unnamed in found
+    seeded.write({tester: text.replace("id: ACT-tester", "id: tester")})
+    found = errors(check(seeded))
+    assert found[0] == (f"{tester}:/id", "'tester' does not match '^ACT-[a-z][a-z0-9-]*$'")
+
+
 def test_an_entry_missing_its_parts_or_keyed_by_a_foreign_id_is_reported(
     project: AdopterRepo,
 ) -> None:
-    stamped(project, "actor", "tester")
+    stamped(project, "term", "suite")
     fill(project)
-    text = (project.root / ACTORS).read_text(encoding="utf-8")
-    text = text.replace("ACT-tester:", "tester:").replace("  needs:\n", "  wants:\n")
-    project.write({ACTORS: text})
+    text = (project.root / GLOSSARY).read_text(encoding="utf-8")
+    text = text.replace("TERM-suite:", "suite:").replace("  definition:", "  meaning:")
+    project.write({GLOSSARY: text})
     assert errors(check(project)) == [
         (
-            f"{ACTORS}#tester",
-            "the entry's key 'tester' is not an actor id, `ACT-<slug>` (DEC-001 point 3)",
+            f"{GLOSSARY}#suite",
+            "the entry's key 'suite' is not a term id, `TERM-<slug>` (DEC-001 point 3)",
         ),
-        (f"{ACTORS}#tester", "'needs' is a required property"),
-        (f"{ACTORS}#tester", "Additional properties are not allowed ('wants' was unexpected)"),
+        (f"{GLOSSARY}#suite", "'definition' is a required property"),
+        (f"{GLOSSARY}#suite", "Additional properties are not allowed ('meaning' was unexpected)"),
     ]
 
 
@@ -487,9 +559,7 @@ def test_an_artefact_in_force_names_nothing_withdrawn_as_the_stamp_refuses(
 ) -> None:
     stamped(seeded, "actor", "retired")
     fill(seeded)
-    _set(
-        seeded, ACTORS, "  name: Retired\n  status: active", "  name: Retired\n  status: withdrawn"
-    )
+    _set(seeded, actor_at("ACT-retired"), "status: active", "status: withdrawn")
     _set(seeded, READ_REPORT, "actor: ACT-tester", "actor: ACT-retired")
     _set(seeded, READ_REPORT, "- ACT-tester", "- ACT-retired")
     _set(seeded, f"{USE_CASES}/UC-001-run-suite.md", "status: active", "status: withdrawn")
@@ -499,8 +569,8 @@ def test_an_artefact_in_force_names_nothing_withdrawn_as_the_stamp_refuses(
     assert errors(check(seeded)) == [
         (
             f"{READ_REPORT}:/actor",
-            f"actor ACT-retired is withdrawn ({ACTORS}#ACT-retired): a use case in force {rule} "
-            "(DEC-001 point 3)",
+            f"actor ACT-retired is withdrawn ({actor_at('ACT-retired')}): a use case in force "
+            f"{rule} (DEC-001 point 3)",
         ),
         (
             f"{JOURNEY}:/steps/0",

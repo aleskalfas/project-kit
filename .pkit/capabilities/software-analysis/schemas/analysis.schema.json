@@ -20,7 +20,7 @@
       "enum": ["active", "withdrawn"]
     },
     "actor-id": {
-      "description": "An actor's id: `ACT-` and a slug, stable across renames; the key of its entry in the actors' collection file.",
+      "description": "An actor's id: `ACT-` and a slug, stable across renames; the name of its file, `ACT-<slug>.md`, in the actors' folder.",
       "type": "string",
       "pattern": "^ACT-[a-z][a-z0-9-]*$"
     },
