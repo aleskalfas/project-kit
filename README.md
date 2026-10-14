@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-13T21:44:44Z
+      at: 2026-10-14T08:38:52Z
       outcome: unchanged
-      unchanged-because: ADR-049 and ADR-064 now write their points as headings carrying the same numbers, word for word. ADR-049's sentence that it does not reopen ADR-039 moves into its opening, unchanged, and its citation of ADR-039 names a section instead of lines, with the same meaning. So what this page says of upgrading and pinning still holds.
+      unchanged-because: ADR-049 and ADR-064 now write their points as headings carrying the same numbers, word for word. ADR-049's sentence that it does not reopen ADR-039 moves into its opening, unchanged, and its citation of ADR-039 names a section instead of lines, with the same meaning. merge-settings.sh changes only a comment, which cites ADR-002 and COR-002 by point and section instead of by line, and merges nothing differently. So what this page says of upgrading, pinning and merging into `.claude/settings.json` still holds.
 ---
 
 # project-kit
