@@ -4383,7 +4383,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     record = caps.read_capability_record(target_root, name)
     move = capability_move(name, record.version, capability_source.package.version)
     refuse_components_bundled_older(
-        [move] if move is not None else [], one_capability=f"capabilities upgrade {name}"
+        [move] if move is not None else [], command=f"capabilities upgrade {name}"
     )
 
     # Compatibility (ADR-065 point 4, step 1; COR-010): the new version's
@@ -6084,8 +6084,9 @@ def install_capability_cmd(
     refuse_version_mismatch(target_root, source_kit, command=f"capabilities install {name}")
     # The methodology's source repository run by code that is not its own (the
     # gap, ADR-059): the install would copy the running code's capability
-    # subtree into the tree it is built from. Refuse before anything else —
-    # the plan included, since the install it previews would refuse (#1090).
+    # subtree into the tree it is built from. Refuse before any other pre-flight
+    # (sync's guard lets the source pass), the plan included, since the install
+    # it previews would refuse (#1090).
     refuse_propagation_into_source(
         target_root,
         source_kit,

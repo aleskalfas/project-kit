@@ -605,7 +605,7 @@ def _report_component_moves(moves: Sequence[ComponentMove]) -> None:
 
 
 def refuse_components_bundled_older(
-    moves: Sequence[ComponentMove], *, one_capability: str | None = None
+    moves: Sequence[ComponentMove], *, command: str | None = None
 ) -> None:
     """Refuse a transition whose bundle ships an adapter or a capability older than
     the project records (ADR-065 point 7).
@@ -617,18 +617,18 @@ def refuse_components_bundled_older(
     component, both versions, and a pkit whose bundle ships that version or
     newer.
 
-    *one_capability* is None for the transition of the backbone, `pkit
-    upgrade`. For the transition of one capability it is that command as the
-    operator runs it, `capabilities upgrade <name>`. That transition runs only
-    where this pkit is the release the project records (sync's guard, point 7),
-    so its remedy is `pkit upgrade`, run by a pkit whose bundle ships the
-    capability at the recorded version or newer.
+    *command* is None for the transition of the backbone, `pkit upgrade`. For
+    the transition of one capability it is that command as the operator runs
+    it, `capabilities upgrade <name>`, as sync's guard takes it. That transition
+    runs only where this pkit is the release the project records (sync's guard,
+    point 7), so its remedy is `pkit upgrade`, run by a pkit whose bundle ships
+    the capability at the recorded version or newer.
     """
     ahead = [move for move in moves if move.ahead]
     if not ahead:
         return
-    backbone = one_capability is None
-    opening = "refusing to upgrade" if backbone else f"refusing to run `pkit {one_capability}`"
+    backbone = command is None
+    opening = "refusing to upgrade" if backbone else f"refusing to run `pkit {command}`"
     lines = [
         f"{opening}: this pkit's bundle ships {move.kind} {move.name!r} at "
         f"{move.bundled}, older than the {move.recorded} this project records."
@@ -648,7 +648,7 @@ def refuse_components_bundled_older(
         lines.extend(
             f"Run `pkit upgrade` with a pkit whose bundle ships {move.kind} {move.name!r} at "
             f"{move.recorded} or newer: it moves the project to that pkit's release. "
-            f"`pkit {one_capability}` moves a capability only to the version the project's "
+            f"`pkit {command}` moves a capability only to the version the project's "
             "release ships."
             for move in ahead
         )
