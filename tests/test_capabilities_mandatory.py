@@ -25,14 +25,19 @@ from ruamel.yaml import YAML
 
 from project_kit import capabilities as caps
 from project_kit import cli as cli_mod
+from project_kit import install
 from project_kit import process_dependencies as deps
 from project_kit.cli import main
 from project_kit.manifest import (
     ComponentRegistryEntry,
     read_backbone_manifest,
+    read_kit_version,
     write_backbone_manifest,
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+
+# The version an installed fixture records: the real source kit's.
+_PROJECTS_VERSION = read_kit_version(install.find_source_kit())
 
 ISSUES = "tracker:issue-lifecycle"
 DOCS = "pkit::documentation"
@@ -48,9 +53,13 @@ def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
 @pytest.fixture
 def kit_source(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A scratch kit source the CLI installs and upgrades from; below the project
-    root, so the project is never taken for the self-host."""
+    root, so the project is never taken for the self-host. It is a usable kit at
+    the version the project records, its `VERSION` and `decisions/`, so sync's
+    guard lets `install` and `upgrade` run (ADR-065 point 7)."""
     source = tmp_path / "elsewhere" / ".kit-source"
     (source / "capabilities").mkdir(parents=True)
+    (source / "decisions").mkdir()
+    (source / "VERSION").write_text(f"{_PROJECTS_VERSION}\n", encoding="utf-8")
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: source)
     return source
 
