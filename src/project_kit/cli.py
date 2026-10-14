@@ -4383,7 +4383,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     record = caps.read_capability_record(target_root, name)
     move = capability_move(name, record.version, capability_source.package.version)
     refuse_components_bundled_older(
-        [move] if move is not None else [], command=f"capabilities upgrade {name}"
+        [move] if move is not None else [], one_capability=f"capabilities upgrade {name}"
     )
 
     # Compatibility (ADR-065 point 4, step 1; COR-010): the new version's
