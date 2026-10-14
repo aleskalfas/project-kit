@@ -176,7 +176,6 @@ src/project_kit/settings_consolidate.py reportUnknownVariableType 6
 src/project_kit/status.py reportUnusedFunction 1
 src/project_kit/sync.py reportPrivateUsage 2
 src/project_kit/upgrade.py reportAttributeAccessIssue 1
-src/project_kit/upgrade.py reportPrivateUsage 1
 src/project_kit/upgrade.py reportUnknownArgumentType 1
 src/project_kit/upgrade.py reportUnknownMemberType 1
 src/project_kit/upgrade.py reportUnknownVariableType 3
