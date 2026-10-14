@@ -71,7 +71,7 @@ Developers don't stamp these layouts by hand. The kit ships authoring commands (
 │       └── manifest.yaml                            ← per-component manifest
 └── adapters/<adapter>/
     ├── package.yaml
-    ├── migrations/<major>.<minor>.0/...
+    ├── migrations/<major>.<minor>.0/...             ← in the source only: a transition reads them from the bundle
     └── project/
         └── manifest.yaml                            ← per-component manifest
 ```
@@ -154,7 +154,7 @@ Sections:
 - **`component`** — kind, name, recorded version, install timestamp.
 - **`requires_backbone`** — semver range pinned to this version of the component. Recorded into the manifest at install/upgrade so the next upgrade run can verify compatibility.
 - **`backend_state`** — opaque backend identifiers the kit cannot rederive (board UUIDs, webhook IDs, etc.). Empty `{}` for components that have none.
-  - **`backend_state.skipped`**, in a capability's manifest: the skills and agents the project chose to skip on a naming collision (COR-017), each as a `{kind, name}` entry. A refresh reads them back from here and leaves those artefacts out of its copy.
+  - **`backend_state.skipped`**, in a capability's manifest: the skills and agents the project chose to skip on a naming collision (COR-017), each as a `{kind, name}` entry. A refresh reads them back from here and leaves those artefacts out of its copy. A skip chosen in a transition is recorded here before the copy, so a transition a migration stops does not ask again, and a name recorded here is never a new collision ("A new collision", below).
   - **A restamp** changes the version, the timestamp and the range. It replaces `skipped` with the skips in force, and keeps every other key of `backend_state` (ADR-065 point 2). It reads the manifest after the capability's migrations, so a key a migration wrote stays. A manifest that does not parse, such as one left with merge-conflict markers, is replaced by a new one, and the refresh says so.
 
 Notably absent: enumerations of files, labels, symlinks, settings entries, templates. These are *derivable* state — the kit-side spec at the component's recorded version + the adopter's config tells you what should exist; the validate/upgrade reconciliation tells you whether reality matches.
@@ -165,8 +165,9 @@ An adapter's manifest sits at `.pkit/adapters/<name>/project/manifest.yaml`, and
 
 - **Who writes it:** first install, for each adapter it copies, which it registers at the same time. A transition of the backbone writes it too:
   - an adapter with no manifest is recorded at the version the target ships, and runs none of its migrations
-  - an adapter with a manifest is recorded at that version once the migrations in its window have run. A manifest that records a newer version than the target ships stays as it is: a transition never moves a recorded version down.
+  - an adapter with a manifest is recorded at that version once the migrations in its window have run. Their scripts are read from the running pkit's bundle, since a project's copy of an adapter carries no `migrations/`. A manifest that records a newer version than the target ships refuses the transition before it writes anything: a transition never moves a recorded version down.
   - an adapter the target adds is registered after the copy, and recorded at the version it ships
+- **What a project's copy holds:** each file at the adapter's top level, its declaration of the permission dimensions its harness enforces among them, and its core settings. A transition removes a top-level file the bundle no longer ships. The adapter's `project/` and `settings/project/` are the project's, and no copy touches them.
 - **A registered adapter with no manifest** reads as at the backbone. Every project's adapter is in that state until its first transition under the release that writes the manifest.
 
 #### Where a capability's manifest lives
@@ -174,14 +175,14 @@ An adapter's manifest sits at `.pkit/adapters/<name>/project/manifest.yaml`, and
 A capability's manifest sits at `.pkit/capabilities/<name>/project/manifest.yaml` ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 2).
 
 - **Why there:** every ownership predicate treats a capability's `project/` as the project's ("The ownership predicates" below). So no copy of the capability's tree deletes or overwrites the manifest, and the bundle ships none.
-- **Who writes it:** a capability's install, and the restamp after a capability's migrations, in `pkit upgrade` and in `pkit capabilities upgrade`. Each points the capability's registry entry at that path. Sync writes none. An incubated capability is registered with the same path, and nothing writes a manifest there (COR-031 D2).
+- **Who writes it:** a capability's install, and the restamp after a capability's migrations, in `pkit upgrade` and in `pkit capabilities upgrade`. Each of the two upgrades also records there, before its copy, each skip a person chose on a new collision. Each points the capability's registry entry at that path. Sync writes none. An incubated capability is registered with the same path, and nothing writes a manifest there (COR-031 D2).
 - **A manifest at the capability's root,** `.pkit/capabilities/<name>/manifest.yaml`, is where older releases wrote it. There every copy deleted it or overwrote it. The code that writes the record moves it under `project/`:
-  - `pkit upgrade` moves it right after recording its target, before its copy. `pkit capabilities upgrade` moves it before its migrations and its copy. A root manifest the restamp still finds came with the copy from the source, so the restamp removes it.
+  - `pkit upgrade` moves it right after recording its target, before its copy. `pkit capabilities upgrade` moves it after its checks, before its copy. A root manifest the restamp still finds came with the copy from the source, so the restamp removes it.
   - The move rewrites the registry entry's path, then removes the root file. So an interrupted move leaves two equal copies, and the next move finishes it.
   - The root manifest replaces one already under `project/`.
 - **Which one is read:** every reader of a capability's recorded version, and of its skips, reads the root manifest where one exists, then the one under `project/`, then the capability's installed `package.yaml`. The capability downgrade check, the dependency gates and the wiring resolver are among those readers. The report's environment block reads the two manifests alone, and `pkit validate`'s check of the manifests reads the one the registry entry names. Both manifests exist only after an interrupted move, or after a write that does not know the move, such as an older pkit's restamp or a rollback of `.pkit/`. Either way the root one names the content the project holds, so it wins.
 - **Read before propagation:** `pkit sync` and `pkit upgrade` read every capability's record before they copy anything, since a capability's copy replaces its installed `package.yaml`.
-- **Sync moves none:** sync never copies a capability whose manifest is still at the root, since the copy would prune the manifest there (ADR-065 point 2). One the running pkit ships at or above its recorded version is reported pending `pkit upgrade`, and the next `pkit upgrade` moves every root manifest, that of a capability it no longer ships or ships older included. `pkit capabilities upgrade` moves its own before its migrations until #1461 makes it a transition of one capability, which moves it after its refusals.
+- **Sync moves none:** sync never copies a capability whose manifest is still at the root, since the copy would prune the manifest there (ADR-065 point 2). One the running pkit ships at or above its recorded version is reported pending `pkit upgrade`, and the next `pkit upgrade` moves every root manifest, that of a capability it no longer ships included. `pkit capabilities upgrade` moves its own after its checks.
 
 ### Package metadata (`package.yaml`)
 
@@ -773,18 +774,56 @@ Component migrations are tied to the component's version, not the backbone's. A 
 
 ## The upgrade flow
 
-The upgrade command transitions an adopter project to a target backbone version (and optionally specific component versions). It runs inside the backbone's two recorded states: it records its target first and its completion last (below). Six steps:
+The upgrade command transitions an adopter project to a target backbone version. It runs inside the backbone's two recorded states: it records its target first and its completion last (below). Every migration runs inside it, in COR-010's order ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 4):
 
-1. **Resolve compatibility.** Read each installed component's `requires_backbone` against the target backbone version. Refuse to upgrade backbone past a component's range, unless the component is also being upgraded to a version compatible with the new backbone. Surface conflicts so the adopter can address them (upgrade specific components, pin backbone, or remove an incompatible component). Also checks **capability dependencies (COR-030)**: for each installed capability, verifies its `requires_capabilities` entries against the *installed* copies and versions of both sides, as they stand before step 2. Step 2's copy then moves every installed kit-shipped capability, and this check does not read the versions the copy brings (#1461 has it read them). Refuses with an actionable hint if any required dependency is absent or any installed one is out of range; an optional dependency that is not installed passes.
-2. **Pull new propagated content.** First the target is recorded: `backbone_version` becomes the target, by an edit of its own line, before anything else is written, and `completed_version` keeps its value or stays missing. Each capability manifest still at its root then moves under its `project/`. Then the propagation step `pkit sync` runs copies the target's content (per COR-001): the backbone's trees, adapters included, and every installed kit-shipped capability the target ships, with its skips, but one the target ships older than its record, which stays. The upgrade calls the step, never the sync command, so sync's guard never stops it (ADR-065 point 1). Each copied capability's migrations then run, after its copy, from the version it records, and it is restamped at the version it ships. One with no readable version runs none and is recorded at that version. An adapter the copy placed that the registry lacks is registered, and recorded at the version it ships. Each seed path that is missing is created, never over one that exists ("Seed paths", below), and the derivable state is regenerated, `.pkit/.gitignore` included, so a backbone migration reads the target's render.
-3. **Run backbone migrations** in order: manifest-schema → structural → resource-scoped, across minor-version boundaries from the recorded completion, `completed_version`, to the target. With no completion recorded, every backbone migration up to the target runs (the replay, below).
-4. **For each adapter**, run its migrations in version order with the same scope ordering within each `<major>.<minor>.0/` directory. Each registered adapter is then recorded at the version the target ships; one with no manifest runs no migration ("An adapter's manifest", above). The capabilities' migrations ran in step 2, after their copy. #1461 runs them here, dependencies first, after the backbone's and the adapters', with the seed paths and the derivable state after them all (ADR-065 point 4).
-5. **Reconcile derivable state.** Each component's setup primitive re-applies the kit-side spec at its current version + adopter's config (idempotent — labels, files, symlinks, merged settings). Today this runs in step 2, after the seed paths and before the backbone migrations. #1461 runs it after every migration.
-6. **Update recorded versions.** Component versions in their respective manifests. Last, after merge, deploy, the workspace and provisioning, and before the pin, the completion: `completed_version` becomes the target, by an edit of its own line.
+1. **Compatibility and collisions.** Each check may refuse, and none writes.
+   - **A component its bundle ships older:** an adapter or a capability the running pkit's bundle ships older than the version the project records refuses the transition. Copying it would move its recorded version down, under migrations that run forward only. The refusal names the component, both versions, and a pkit whose bundle ships that version or newer. No flag overrides it.
+   - **Compatibility resolution:** each installed component's post-upgrade `requires_backbone` must admit the target. It is read from the bundle where the bundle ships the component, and from the installed copy where it does not. Conflicts are surfaced so the adopter can address them: upgrade specific components, pin the backbone, or remove an incompatible component.
+   - **The dependency gates** run over the set the transition would leave ("The dependency gates", below).
+   - **The collision flow** asks about each new naming collision, or refuses ("A new collision", below).
+2. **The target is recorded.** `backbone_version` becomes the target, by an edit of its own line, before anything else is written. `completed_version` keeps its value or stays missing. Each capability manifest still at its root then moves under its `project/`, and each skip chosen in step 1 is recorded there.
+3. **Propagation at the target.** The propagation step `pkit sync` runs copies the target's content (per COR-001): the backbone's trees, adapters included, and every installed kit-shipped capability the target ships, with its skips. The upgrade calls the step, never the sync command, so sync's guard never stops it (ADR-065 point 1). Each project artefact an override chose to replace is removed. An adapter the copy placed that the registry lacks is registered, and recorded at the version it ships. Then `.pkit/.gitignore` is rendered, so a migration reads the render of the target's declarations.
+4. **Backbone migrations** run in order: manifest-schema → structural → resource-scoped, across minor-version boundaries from the recorded completion, `completed_version`, to the target. With no completion recorded, every backbone migration up to the target runs (the replay, below).
+5. **Adapter migrations** run for each adapter, from the version its manifest records, in version order with the same scope ordering within each `<major>.<minor>.0/` directory. Their scripts are read from the running pkit's bundle, as a capability's are. Each registered adapter is then recorded at the version the target ships. One with no manifest runs no migration ("An adapter's manifest", above).
+6. **Capability migrations** run for each copied capability, dependencies first by their `requires_capabilities` (COR-030), each from the version it records. Each capability is then restamped at the version it ships. One with no readable version runs none and is recorded at that version.
+7. **Seed paths.** Each one that is missing is created, never over one that exists ("Seed paths", below). They follow the migrations, so a migration that moves a project's file to a seed path finds no fresh seed there.
+8. **Derivable state.** Each component's setup primitive re-applies the kit-side spec at its current version and the adopter's config, idempotently: merge delivery in its tier that asks nothing, deploy, `.pkit/.gitignore` rendered again, the agent workspace and provisioning. The report lists each widening the settings merge brings ("What the settings merge widens", below).
+9. **The completion is recorded.** `completed_version` becomes the target, by an edit of its own line.
+10. **The pin,** last, as ADR-049 and ADR-064 set.
 
-**Already current:** upgrade returns early, writing or raising only its pin, when `backbone_version` and `completed_version` both name the target and every registered adapter and shipped capability records the version the target ships, each capability under its `project/`. Otherwise it runs, to finish what is not, even at the same backbone version.
+**Already current:** upgrade returns early, before step 1, writing or raising only its pin, when `backbone_version` and `completed_version` both name the target and every registered adapter and shipped capability records the version the target ships, each capability under its `project/`. Otherwise it runs, to finish what is not, even at the same backbone version.
+
+**The report and the dry run** name the target, each component's move, and the replay where no completion is recorded. They list each component's migrations and each collision the upgrade asks about. `--dry-run` asks nothing and writes nothing.
 
 **Seed paths.** One seeding step creates the paths a project is seeded with: each area's `project/` folder, the scratchpad's state folders, the agents overlay (`.pkit/agents/project/overlay.yaml`), each adapter's `settings/project/settings.json`, and each shipped capability's `project/` folder ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 11). First install and a version transition run it, and create each one that is missing, never over one that exists. Sync runs none, so a seed the project deleted on purpose returns only at the next transition (COR-059 point 8). `pkit agents reconcile --write` also creates a missing overlay, the one writer outside the lifecycle that creates a seed path.
+
+### A new collision
+
+A new collision is a skill or agent name that a shipped capability's target version ships, in either of its forms (COR-015), and that another installed artefact already uses: the project's own, or an incubated or no-longer-shipped capability's. A name the capability's installed copy holds, or its manifest records as skipped, is not new ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 6).
+
+- **The flow is COR-017's install-time flow.** Where a person can answer, with standard input and standard output both terminals, the upgrade asks for each collision:
+  - **skip:** the copy leaves the capability's artefact out. Its manifest records the skip in step 2, before the copy, so an interrupted upgrade does not ask again.
+  - **override:** the capability's artefact replaces the project's, which git keeps. Nothing is recorded.
+  - **inspect:** shows the diff and asks again.
+- **With nobody to answer,** the upgrade refuses before it writes anything. It names two ways on: run it again at a terminal, or rename the project's artefact.
+- **No capability is held back,** so the project stays at one release (COR-059 point 7).
+- **What the flow leaves out:**
+  - a core skill or agent a release adds, which a project artefact of the same name suspends by deploy's name precedence
+  - a clash between two artefacts one release ships, core's or a shipped capability's, which is the release's to prevent
+  - a collision with externally-sourced content, which surfaces as COR-041 sets
+
+### The dependency gates
+
+The gates run as `pkit capabilities upgrade` runs them (COR-030, COR-053 point 6), over the set the transition would leave. That set holds every shipped capability the bundle ships at its bundled version, and every other capability at its installed version. Within one release the moving capabilities agree, so a conflict involves a capability that does not move: an incubated, externally-sourced or no-longer-shipped one.
+
+- **A moving capability** refuses, with a hint, when a dependency its new version requires is not installed, or is out of the range it declares. So does one whose new version carries a mandatory process connection the set leaves unmet. The project controls that dependency, and no flag overrides the refusal. An optional dependency that is not installed passes.
+- **A moving dependency** warns when its new version falls outside the range a capability that does not move declares for it, naming each such dependent. So does one that leaves such a capability's mandatory connection unmet. The upgrade proceeds only under `pkit upgrade --force`, so neither is a hard block.
+- **`--force` overrides those two warnings and nothing else.** It overrides no guard, no compatibility refusal, no refusal of a component bundled older, and no collision.
+- **Not the upgrade's to judge:** a pair in which neither side moves, and a mandatory connection already unmet before the upgrade.
+
+### What the settings merge widens
+
+The merge delivery in step 8 may add to the settings file the adapter's merge writes, `.claude/settings.json` for Claude Code. The upgrade reads the file before and after the merge, and its report lists each allow entry and each top-level key the merge adds, such as `hooks`, `env` or `sandbox`. An `ask` rule for an entry, in the project's additions to the adapter's settings, brings the question back. A release's changelog names each widening too: a change that adds an allow entry or a top-level key to an adapter's baseline settings says so in its changeset.
 
 ### Two recorded states, and an interrupted upgrade
 
@@ -826,11 +865,19 @@ Only an unambiguous order is compared: a pin that is not a version blocks nothin
 
 ### Per-component upgrade
 
-Upgrading just one component (e.g., the project-management capability) skips backbone-side steps as long as the component's new version remains within `requires_backbone` of the current backbone. The same compatibility check from step 1 gates entry. Its migrations, component-scoped reconciliation and the bump of its manifest's version run, and only the component's source is pulled. Today `pkit capabilities upgrade` runs a capability's migrations before its copy, and #1461 makes it a transition of one capability, which runs them after.
+`pkit capabilities upgrade <name>` is a transition of one capability ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 4, COR-010). It runs in the transition's order for that capability alone, at the recorded backbone, and writes neither of the backbone's two recorded versions:
+
+1. **Its checks,** each of which may refuse and none of which writes: its new version's `requires_backbone` against the recorded backbone, the dependency check in both directions (below), its mandatory process connections, and the collision flow. A new collision is asked about only under `--interactive`. Without the flag the command refuses and names it.
+2. **Its manifest,** still at the capability's root, moves under its `project/`, and each skip chosen in step 1 is recorded there, before the copy.
+3. **Its copy,** with its skips. It creates no seed path.
+4. **Its migrations,** after the copy, from the version it records, then its restamp at the version it ships. One with no readable version runs none.
+5. **Its derivable state:** merge delivery and deploy, its query commands' provisioning, and `.pkit/.gitignore` rendered again.
+
+It finishes a capability an interrupted transition or an untagged install left behind. It moves the capability to the version the running pkit's bundle ships, which is the version the project's recorded release ships only while that pkit is the project's version. Sync's guard stops `pkit sync` under any other pkit, and #1463 has it stop `pkit capabilities upgrade` there too.
 
 #### Upgrading an incubated capability (COR-031 D1/D4)
 
-`pkit capabilities upgrade <name>` is **origin-aware**. For an `incubated-in-repo` capability there is no kit source to resolve against — the working tree *is* the source — so the command **must not** route through the kit-source resolution path. Doing so would mislabel the capability "no longer ships from source" and steer the adopter toward the destructive uninstall. Instead, "upgrade" for an incubated capability **re-applies deploy from the in-repo tree** (mirroring the sync skip-branch below): any newly-authored skills/agents re-materialise in the harness, and source-reconciliation stays suppressed. If the in-repo subtree has gone missing, the command reports that plainly — never as a kit-source orphan, and never suggesting uninstall. A `kit-shipped` capability's upgrade path is unchanged (resolve from kit source, refresh, run migrations).
+`pkit capabilities upgrade <name>` is **origin-aware**. For an `incubated-in-repo` capability there is no kit source to resolve against — the working tree *is* the source — so the command **must not** route through the kit-source resolution path. Doing so would mislabel the capability "no longer ships from source" and steer the adopter toward the destructive uninstall. Instead, "upgrade" for an incubated capability **re-applies deploy from the in-repo tree** (mirroring the sync skip-branch below): any newly-authored skills/agents re-materialise in the harness, and source-reconciliation stays suppressed. If the in-repo subtree has gone missing, the command reports that plainly — never as a kit-source orphan, and never suggesting uninstall. A `kit-shipped` capability's upgrade path is the transition of one capability above.
 
 In the methodology's source repository, run by its own code ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)), a `kit-shipped` capability's kit source *is* its subtree, so its upgrade re-applies deploy in place the same way: the deploy primitives re-run and its query commands are provisioned, with nothing copied, no receipt restamped and no migration run — migrations carry an adopter's copy forward, and there is no copy. It is sync's self-host path for one capability.
 
@@ -839,7 +886,7 @@ For capabilities, a **direction-split dependency check (COR-030)** runs before c
 - *Upgrading a dependent* — the new source version's `requires_capabilities` is checked against the installed dependency versions. If a required dependency is absent, or any installed one is out of range, the upgrade **refuses with an actionable hint** (the operator controls the dependent version; no deadlock). An optional dependency that is not installed passes.
 - *Upgrading a dependency* — installed capabilities that declare this capability in their `requires_capabilities`, required or optional, are checked against the new version. If the new version falls outside a dependent's declared range, the upgrade **warns loudly and requires `--force` to proceed** — it is not a hard block. A hard block would deadlock (the operator cannot advance the dependency without cascade-upgrading the dependent, which is out of scope per COR-030). Use `--force` as the by-hand analogue of cascade-upgrade, then upgrade the now-desynced dependents to restore consistency.
 
-Both entry points — backbone-wide `pkit upgrade` and single-capability `pkit capabilities upgrade <name>` — share one version-range / installed-state predicate (`capabilities.check_capability_dependencies`). The backbone-wide path checks the installed versions before its copy, which then moves every installed kit-shipped capability to its source version without that check reading the versions it installs. So only the "dependent against unsatisfied dependency" direction (refuse) applies there. The warn+force direction applies in the single-capability path, and at install and register ("Install pre-flight checks", above).
+Both entry points run the same direction split, and compare a range through one relation (`connections.range_admits`). The backbone-wide `pkit upgrade` runs it over the set it would leave, every shipped capability at its bundled version ("The dependency gates", above). The single-capability `pkit capabilities upgrade <name>` runs it over the installed set with that one capability at its new version. The warn+force direction also applies at install and register ("Install pre-flight checks", above).
 
 #### Mandatory process connections (COR-053 point 6)
 
@@ -848,14 +895,14 @@ A capability's generated `depends-on` entries may carry a mandatory mark (the pr
 - **The side carrying the mark is refused.** `install`, `register` and `capabilities upgrade` refuse a capability whose mandatory upstream would be missing — its capability not installed, no installed capability providing its role, or no such process offered or defined — or offered at another interface version, one line per unmet mark with the mark's reason, and the hint to install or upgrade the upstream first. There is no override: the operator chooses which version of the carrier to install, so nothing deadlocks.
 - **The side the mark targets is warned.** `capabilities upgrade` and `uninstall` of a capability name every other capability whose mandatory mark the operation would leave unmet — met, or at least not already unmet, before it — and refuse unless `--force` is passed; under `--force` the warning is still printed and the operation proceeds. A mark that was unmet before is not the operation's to report. Never a hard block: a hard block could deadlock.
 
-Two marks facing each other — each capability's mandatory connection needing the other installed first — are a cycle no install order satisfies; validation rejects it and the install plan reports it (COR-053 point 6). The backbone-wide `pkit upgrade` does not run this gate: it moves every kit-shipped capability at once, and `pkit validate` reports any mark the upgraded tree leaves unmet.
+Two marks facing each other — each capability's mandatory connection needing the other installed first — are a cycle no install order satisfies; validation rejects it and the install plan reports it (COR-053 point 6). The backbone-wide `pkit upgrade` runs the same split over the set it would leave, with every capability it moves at its bundled version ("The dependency gates", above). It refuses a moving capability that carries a mark the set leaves unmet, and warns, proceeding only under `--force`, for a capability that does not move.
 
 ## Reconciling derivable state
 
 Two commands consume the manifests differently for the same conceptual job — "is reality consistent with the spec at the recorded version?":
 
 - **`validate`** computes the expected state for derivable resources at each recorded version + adopter's config, compares to actual reality, reports drift. Manifest-tracked resources are compared directly: manifest entries vs. backend.
-- **`upgrade`** does the same comparison, then *applies* changes to bring reality into line (step 5 of the flow).
+- **`upgrade`** does the same comparison, then *applies* changes to bring reality into line (step 8 of the flow).
 
 Either way, the kit-side spec at the recorded version is the source of truth for what should exist; the manifest tracks only what the spec can't recover (recorded version, opaque IDs).
 
@@ -875,7 +922,7 @@ A `kit-shipped` capability's copy replaces its subtree wholesale. On its own tha
 - **source version > installed version:** skip it too, reported `pending`: moving a capability is `pkit upgrade`'s, with its migrations.
 - **equal:** copy it, with no migration and no stamp.
 
-A version that cannot be read on the installed side skips the capability, so none of its migrations runs anywhere. One the bundle's package does not name skips it as well. The incubated skip-branch above is unchanged (no kit source to compare against), and so is the "no longer ships from source" orphan case. A version transition keeps a capability its bundle ships older, copying and restamping nothing, and #1461 makes it refuse instead. Before any capability is reached, sync's guard has already stopped a running pkit at another version than the project's ("Sync's guard" above).
+A version that cannot be read on the installed side skips the capability, so none of its migrations runs anywhere. One the bundle's package does not name skips it as well. The incubated skip-branch above is unchanged (no kit source to compare against), and so is the "no longer ships from source" orphan case. A version transition refuses a capability its bundle ships older, in its step 1, before it writes anything ("The upgrade flow", above). Before any capability is reached, sync's guard has already stopped a running pkit at another version than the project's ("Sync's guard" above).
 
 ### The ownership predicates (`ownership.py`)
 
