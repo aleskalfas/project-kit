@@ -50,15 +50,15 @@ def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
 
 
 @pytest.fixture
-def kit_source(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def kit_source(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A scratch kit source, the one the CLI and the status report read.
 
-    Below the project root, never its child, so sync's test never takes the
-    project for the methodology's source. A usable kit at the version the
-    project records, its `VERSION` and `decisions/`, so sync's guard lets
-    `install` run (ADR-065 point 7).
+    Outside the project, so sync's test never takes the project for the
+    methodology's source. A usable kit at the version the project records, its
+    `VERSION` and `decisions/`, so sync's guard lets `install` run (ADR-065
+    point 7).
     """
-    source = tmp_path / "elsewhere" / ".kit-source"
+    source = tmp_path_factory.mktemp("kit-source")
     (source / "capabilities").mkdir(parents=True)
     (source / "decisions").mkdir()
     (source / "VERSION").write_text(

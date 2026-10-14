@@ -87,10 +87,14 @@ def _installed(project: Path, source: Path, version: str) -> None:
     caps.install_capability(project, _stage(source, version))
 
 
-def _record_states(project: Path, backbone: str, completed: str | None) -> None:
-    """Record the backbone's two states, *completed* None leaving no completion."""
-    record_backbone_target(project, backbone)
+def _record_states(project: Path, backbone: str | None, completed: str | None) -> None:
+    """Record the backbone's two states, *completed* None leaving no completion,
+    and *backbone* None removing the manifest."""
     path = project / ".pkit" / "manifest.yaml"
+    if backbone is None:
+        path.unlink()
+        return
+    record_backbone_target(project, backbone)
     if completed is None:
         lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
         path.write_text(
@@ -153,6 +157,20 @@ _STATES = {
             f"from {_OLDER}.",
         ],
     ),
+    "no-version": (
+        ("not-a-version", "not-a-version"),
+        [
+            "`backbone_version` in .pkit/manifest.yaml is 'not-a-version', which is no version",
+            "Run `pkit upgrade`: it writes the manifest at its version",
+        ],
+    ),
+    "no-manifest": (
+        (None, None),
+        [
+            ".pkit/manifest.yaml is missing",
+            "Run `pkit upgrade`: it writes the manifest at its version",
+        ],
+    ),
 }
 
 # Each command the guard stops, with the flags each run passes.
@@ -174,9 +192,10 @@ _COMMANDS = {
 def test_each_command_stops_where_sync_stops_writing_nothing_and_naming_its_remedy(
     project: Path, source: Path, command: str, state: str
 ) -> None:
-    """Under a newer or an older pkit, or over an unfinished upgrade, `install` and
-    `upgrade` stop before anything is written, under `--dry-run`, `--plan` and
-    `--force` too, and name the remedy sync's guard names for that state."""
+    """Under a newer or an older pkit, over an unfinished upgrade, or with no
+    manifest or no version recorded, `install` and `upgrade` stop before anything
+    is written, under `--dry-run`, `--plan` and `--force` too, and name the remedy
+    sync's guard names for that state."""
     if command == "upgrade":
         _installed(project, source, "0.1.0")
     _stage(source, "0.2.0")
@@ -262,15 +281,43 @@ def test_upgrade_runs_at_the_projects_version(project: Path, source: Path) -> No
     assert record is not None and record.version == "0.2.0"
 
 
+def test_upgrade_of_an_incubated_capability_stops_too_and_runs_at_the_projects_version(
+    project: Path, source: Path
+) -> None:
+    """The guard runs at `capabilities upgrade`'s entry, as sync's does, before the
+    command reads the capability's origin (ADR-065 points 4 and 7). So the
+    re-deploy of an incubated capability, which copies nothing, stops under another
+    pkit too, as `pkit sync`, which also re-deploys it, does. At the project's
+    version it re-deploys as before."""
+    _stage(project / ".pkit", "0.1.0")
+    assert _cli("register", _NAME).exit_code == 0
+
+    ran = _cli("upgrade", _NAME)
+
+    assert ran.exit_code == 0, ran.output
+    assert f"Re-deployed incubated capability '{_NAME}'" in ran.output
+
+    _record_states(project, _OLDER, _OLDER)
+    before = _tree_bytes(project)
+
+    stopped = _cli("upgrade", _NAME)
+
+    assert stopped.exit_code != 0
+    assert f"refusing to run `pkit capabilities upgrade {_NAME}`:" in _said(stopped)
+    assert _tree_bytes(project) == before
+
+
 # --- register copies nothing, and is not guarded ----------------------------------
 
 
-@pytest.mark.parametrize("state", list(_STATES))
+@pytest.mark.parametrize("state", [state for state in _STATES if state != "no-manifest"])
 def test_register_runs_in_every_state_the_guard_stops_in(
     project: Path, source: Path, state: str
 ) -> None:
     """`register` activates a capability authored in the project, copying nothing,
-    so a pkit at another version, or an unfinished upgrade, does not stop it."""
+    so a pkit at another version, an unfinished upgrade or a recorded version that
+    is no version does not stop it. With no manifest it refuses as before, by its
+    own check: it registers the capability in the manifest."""
     _stage(project / ".pkit", "0.1.0")
     (backbone, completed), _remedies = _STATES[state]
     _record_states(project, backbone, completed)

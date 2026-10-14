@@ -124,16 +124,15 @@ def kit_target(make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPat
 
 
 @pytest.fixture
-def kit_source(tmp_path: Path) -> Path:
+def kit_source(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """A scratch directory that masquerades as the kit source for capability lookups.
 
-    Below the project root, never its child, so sync's test never takes the
-    project for the methodology's source. A usable kit at the version the
-    project records, its `VERSION` and `decisions/`, so sync's guard lets
-    `install` and `upgrade` run (ADR-065 point 7).
+    Outside the project, so sync's test never takes the project for the
+    methodology's source. A usable kit at the version the project records, its
+    `VERSION` and `decisions/`, so sync's guard lets `install` and `upgrade`
+    run (ADR-065 point 7).
     """
-    source = tmp_path / "elsewhere" / ".kit-source"
-    source.mkdir(parents=True)
+    source = tmp_path_factory.mktemp("kit-source")
     (source / "decisions").mkdir()
     (source / "VERSION").write_text(f"{_PROJECTS_VERSION}\n", encoding="utf-8")
     return source
