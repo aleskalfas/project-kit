@@ -2465,7 +2465,10 @@ def test_gh_required_exclusion_auto_applies_on_macos_with_github_marker(tmp_path
     # Loud, dedicated block — and the egress-cost banner naming UNCONFINED egress.
     assert "Required exclusion (platform-mandatory" in out
     assert "REQUIRED exclusion auto-applied: `gh` runs OUTSIDE the box" in out
-    assert "network egress is UNCONFINED (ADR-004 §61)" in out
+    assert (
+        "network egress is UNCONFINED (ADR-004, Alternatives considered, "
+        '"Relabel `network-egress` as natively enforced…")' in out
+    )
     # Applied via the real primitive → lands in live settings excludedCommands.
     assert "gh" in _sb(proj)["excludedCommands"]
     # ADR-029 routing: a widening → ONLY the gitignored local file carries it.
@@ -2726,10 +2729,38 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_UNTRUSTED",
         "_BARE_CD",
     )
+    # Deliberate, reviewed wording change (#1421): `_scope_ok` cited
+    # "ADR-004 §61", in its docstring and in the reason it gives for refusing a
+    # negation glob. ADR-004 now writes its points as headings, so its line 61
+    # no longer holds the alternative those words named. Both now cite that
+    # alternative by section. Only the citation's words change, not the logic
+    # or a verdict, so this one rewrite is applied to main's side and the rest
+    # of `_scope_ok` is compared byte for byte. Once this is on main, main
+    # carries the new words, the rewrite finds nothing to replace, and the
+    # guard compares main as it stands, and this entry may be deleted.
+    sanctioned = {
+        "_scope_ok": (
+            (
+                "      (ADR-004 §61).  Only positive allow-lists are honest at this layer.",
+                '      (ADR-004, Alternatives considered, "Relabel `network-egress` as\n'
+                '      natively enforced…").  Only positive allow-lists are honest at this\n'
+                "      layer.",
+            ),
+            (
+                '            f"(ADR-004 §61); use positive allow-list globs only"',
+                "            f'(ADR-004, Alternatives considered, \"Relabel `network-egress` as '\n"
+                "            f'natively enforced…\"); use positive allow-list globs only'",
+            ),
+        ),
+    }
     for fn in frozen:
-        assert _extract_func_source(working, fn) == _extract_func_source(base, fn), (
-            f"the `{fn}` verdict path diverged from main — ADR-032 requires it "
-            f"byte-identical (only `load_model` / `active_profile` / "
+        base_source = _extract_func_source(base, fn)
+        for old, new in sanctioned.get(fn, ()):
+            base_source = base_source.replace(old, new)
+        rewritten = " (after the sanctioned rewrite of its citation)" if fn in sanctioned else ""
+        assert _extract_func_source(working, fn) == base_source, (
+            f"the `{fn}` verdict path diverged from main{rewritten} — ADR-032 "
+            f"requires it byte-identical (only `load_model` / `active_profile` / "
             f"`_active_profile_grants` may change)"
         )
 
@@ -3013,7 +3044,10 @@ def test_next_step_gh_required_copy_on_macos():
     out = _next_steps([("gh", "gh")], platform="darwin", width=0)
     text = "\n".join(out)
     assert "`gh` — REQUIRED on macOS" in text
-    assert "UNCONFINED" in text and "ADR-004 §61" in text
+    assert "UNCONFINED" in text
+    assert (
+        'ADR-004, Alternatives considered, "Relabel `network-egress` as natively enforced…"' in text
+    )
     assert "Still gated by the permission hook." in text
     assert "        `pkit permissions sandbox exclude gh`" in out
 

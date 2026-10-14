@@ -23,15 +23,21 @@ Two prior structures bound the shape of any fix and must be honoured rather than
 
 **A session's mutating context must match the repo it mutates.** By default, a session mutates only the repo it is rooted in. A cross-repo mutation — mutating a *different* project's repo from within this session — is a legitimate but **operator-gated** exception: it is surfaced to the operator and confirmed per change, and is **never** performed silently.
 
+The principle is harness-neutral and universal ([COR-014](COR-014-universal-applicability.md)); the *how* — the session-anchor signal, the detection point in the CLI, the per-platform confinement story — is realization detail recorded by the permission-model realization (an ADR) and the operational discipline (a rule), not here.
+
 Three properties make this real and honest:
 
-1. **Operator-gated, not blocked.** When a context-mismatch is detected, the default is to **refuse-with-explanation (under autonomy) or prompt the operator (interactively)** — not a hard deny. An operator who genuinely intends the cross-repo mutation confirms and proceeds. This preserves coordinated cross-repo work as a sanctioned, deliberate, per-change gesture rather than outlawing it.
+### 1. Operator-gated, not blocked
 
-2. **Enforced at the program that owns the mutation, where it can see both sides.** The honest place to detect the mismatch is the layer that *performs* the mutation and runs as itself — the methodology CLI and its capability scripts — because that layer holds both the session anchor (the repo the session is rooted in) and the mutation target (the repo about to be changed), and can compare them. This is the reliable lever precisely because the layers *around* it cannot carry the check: the intent layer is defeated by directory-change/redirection, and confinement is partial where the mutating tools run unconfined.
+When a context-mismatch is detected, the default is to **refuse-with-explanation (under autonomy) or prompt the operator (interactively)** — not a hard deny. An operator who genuinely intends the cross-repo mutation confirms and proceeds. This preserves coordinated cross-repo work as a sanctioned, deliberate, per-change gesture rather than outlawing it.
 
-3. **Honest about reach — an interlock, not a security boundary.** The mechanism catches the realistic failure: an *accidental* cross-repo mutation performed through the methodology's own validated path while the session is misdirected. It does **not** claim to stop a determined bypass that routes around the methodology entirely (a raw tool invocation, or unsetting the session anchor). No layer advertises a boundary it does not hold ([COR-028](COR-028-permission-model-realization.md)). A discipline rule (the operational realization) carries the principle on the paths no methodology code interposes on — teaching where mechanism cannot reach.
+### 2. Enforced at the program that owns the mutation, where it can see both sides
 
-The principle is harness-neutral and universal ([COR-014](COR-014-universal-applicability.md)); the *how* — the session-anchor signal, the detection point in the CLI, the per-platform confinement story — is realization detail recorded by the permission-model realization (an ADR) and the operational discipline (a rule), not here.
+The honest place to detect the mismatch is the layer that *performs* the mutation and runs as itself — the methodology CLI and its capability scripts — because that layer holds both the session anchor (the repo the session is rooted in) and the mutation target (the repo about to be changed), and can compare them. This is the reliable lever precisely because the layers *around* it cannot carry the check: the intent layer is defeated by directory-change/redirection, and confinement is partial where the mutating tools run unconfined.
+
+### 3. Honest about reach — an interlock, not a security boundary
+
+The mechanism catches the realistic failure: an *accidental* cross-repo mutation performed through the methodology's own validated path while the session is misdirected. It does **not** claim to stop a determined bypass that routes around the methodology entirely (a raw tool invocation, or unsetting the session anchor). No layer advertises a boundary it does not hold ([COR-028](COR-028-permission-model-realization.md)). A discipline rule (the operational realization) carries the principle on the paths no methodology code interposes on — teaching where mechanism cannot reach.
 
 ## Rationale
 

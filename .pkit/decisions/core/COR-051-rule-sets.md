@@ -21,82 +21,93 @@ Rules are also layered. A component ships the rules its discipline needs, and ea
 
 **Rules are kept in rule-set files. Each rule is a named, permanent, gated statement with a recorded origin. Each project extends the rule sets a component ships without editing them, and its own sets say where the rules bind.**
 
-1. **What a rule is.** A rule is a statement that every artefact it binds on must satisfy (point 7). It is caused by a decision, and a tool, an agent or a reviewer can check it. It differs from its neighbours:
-   - a decision record chooses among alternatives and records why;
-   - a template is a starting shape;
-   - a schema checks the mechanically checkable part of some rules.
+### 1. What a rule is
 
-   Rules serve four needs: instructions for whoever writes an artefact, criteria for whoever checks it, a name that findings can cite, and extension across layers. The methodology's own operational rules for agents working in a repository are a different thing that shares the word, and are not governed by this record.
+A rule is a statement that every artefact it binds on must satisfy (point 7). It is caused by a decision, and a tool, an agent or a reviewer can check it. It differs from its neighbours:
+- a decision record chooses among alternatives and records why;
+- a template is a starting shape;
+- a schema checks the mechanically checkable part of some rules.
 
-2. **A rule set is a collection of artefacts.** A rule set is one file. In the terms of the anchors-and-friction record (COR-050), it is a collection file whose entries are rules, and each rule is an artefact in its own right.
-   - **Its front matter holds the data:**
-     - the rule set's name and version;
-     - what it inherits (point 7);
-     - which artefacts it selects for its rules (its *scope*, below);
-     - a map from each rule's id to that rule's machine fields: status, origin, the extension points it **offers**, the extension points it **fills**, its successor, and, inside the entry's methodology container, the friction block — anchors and revalidation — every artefact carries (COR-050);
-     - the parts of its rules that checks enforce, which are not among any rule's own fields (below).
-   - **Its body holds the prose:** one section per rule, headed by the rule's id and title, containing the statement.
-   - A schema fixes the data's shape. Validation checks the schema, and also that every rule in the body has data and every data entry has a rule in the body.
-   - **Discovery:** rule sets are found where artefacts are found, in the places a component or the project declares to hold them (COR-050).
+Rules serve four needs: instructions for whoever writes an artefact, criteria for whoever checks it, a name that findings can cite, and extension across layers. The methodology's own operational rules for agents working in a repository are a different thing that shares the word, and are not governed by this record.
 
-   **Scope.** A set's scope selects artefacts by the paths of their files and by their types (refinement per COR-056). It has three keys, each a list. A path is relative to the repository root. It names a file, a folder with everything beneath it, or a glob in which `**` matches across folders.
-   - `paths`: an artefact is selected when one of these paths matches its file. Without `paths`, every file matches.
-   - `exclude`: a selected artefact is left out when one of these paths matches its file. Without `exclude`, nothing is left out.
-   - `types`: an artefact is selected when its type, or a type in contention for it (COR-056 point 3), is one of these. Without `types`, every artefact matches, with a type or with none.
+### 2. A rule set is a collection of artefacts
 
-   An artefact is in the scope when `paths` and `types` both select it and `exclude` does not leave it out. An empty list is refused, since it could mean nothing or everything. A scope with neither `paths` nor `types` is refused too. A type in `types` must be one its owner declares (COR-056 point 2), and any other is a validation error. A scope written as a plain list of paths is its `paths`. An artefact under the excluded paths of the anchors-and-friction record (COR-050 point 7) stays in any scope that selects it. A set with no scope selects no artefact itself, and its rules bind only through the sets that inherit it (point 7). A method rule set (point 6), whether the backbone or a component ships it, takes no scope, and a scope on one is a validation error.
+A rule set is one file. In the terms of the anchors-and-friction record (COR-050), it is a collection file whose entries are rules, and each rule is an artefact in its own right.
+- **Its front matter holds the data:**
+  - the rule set's name and version;
+  - what it inherits (point 7);
+  - which artefacts it selects for its rules (its *scope*, below);
+  - a map from each rule's id to that rule's machine fields: status, origin, the extension points it **offers**, the extension points it **fills**, its successor, and, inside the entry's methodology container, the friction block — anchors and revalidation — every artefact carries (COR-050);
+  - the parts of its rules that checks enforce, which are not among any rule's own fields (below).
+- **Its body holds the prose:** one section per rule, headed by the rule's id and title, containing the statement.
+- A schema fixes the data's shape. Validation checks the schema, and also that every rule in the body has data and every data entry has a rule in the body.
+- **Discovery:** rule sets are found where artefacts are found, in the places a component or the project declares to hold them (COR-050).
 
-   **Anchoring.** An artefact may anchor to an individual rule. A rule's content is its data entry together with its statement, and so includes its status. Editing a statement, or accepting, superseding or withdrawing a rule, is therefore a change that the rule's dependants see as friction. Nothing keeps silently obeying a rule that has changed.
+**Scope.** A set's scope selects artefacts by the paths of their files and by their types (refinement per COR-056). It has three keys, each a list. A path is relative to the repository root. It names a file, a folder with everything beneath it, or a glob in which `**` matches across folders.
+- `paths`: an artefact is selected when one of these paths matches its file. Without `paths`, every file matches.
+- `exclude`: a selected artefact is left out when one of these paths matches its file. Without `exclude`, nothing is left out.
+- `types`: an artefact is selected when its type, or a type in contention for it (COR-056 point 3), is one of these. Without `types`, every artefact matches, with a type or with none.
 
-   **What a check enforces.** A check can enforce part of a rule, such as a validator that reads a field, or a tool that counts the words in a sentence. The rule's owner declares that part in the set's front matter, beside the rule but not among its own fields. The declaration names the check and whose it is. A check may be the backbone's, a command a component registers in its package metadata, or the project's own tool. A check enforces its part only where the rule binds (point 7), and whoever judges the rest of the rule leaves that part to it.
-   - **Outside the content.** The declaration is none of the rule's own fields and no part of its statement, so it is no part of the rule's content (COR-050). Declaring a check, or changing one, changes no rule and flags nothing anchored to it.
-   - **A check that is not there.** A declaration may name a backbone check that does not exist, or a component command that no installed component registers. Validation reports it without failing, and that part goes back to whoever judges the rest of the rule.
-   - **A check nobody runs.** A project's own tool is trusted by its name, and validation cannot see whether a named check is run at all. A tool that stops running, or a check that nothing runs, leaves its part unjudged until the declaration is removed.
+An artefact is in the scope when `paths` and `types` both select it and `exclude` does not leave it out. An empty list is refused, since it could mean nothing or everything. A scope with neither `paths` nor `types` is refused too. A type in `types` must be one its owner declares (COR-056 point 2), and any other is a validation error. A scope written as a plain list of paths is its `paths`. An artefact under the excluded paths of the anchors-and-friction record (COR-050 point 7) stays in any scope that selects it. A set with no scope selects no artefact itself, and its rules bind only through the sets that inherit it (point 7). A method rule set (point 6), whether the backbone or a component ships it, takes no scope, and a scope on one is a validation error.
 
-3. **Identifiers.** A rule's id is `RS-<SET>-NNN`: the family prefix, the rule set's name, and a number. Ids are permanent. A rule is never renumbered, and a retired id is never reused. Rule-set names must be unique among rule sets. Because every rule id carries the `RS` family prefix, rule ids cannot collide with other identifier families. An **extension point** a rule offers is named with `#`, as in `RS-CMN-003#cause-location`, so that it never clashes with the colon that separates a namespace in a citation. In a record anchor's value, `#` also names one point of the record, as in `COR-058#4` (COR-050 point 2). An extension point is no anchor value: an anchor names a rule by its id alone.
+**Anchoring.** An artefact may anchor to an individual rule. A rule's content is its data entry together with its statement, and so includes its status. Editing a statement, or accepting, superseding or withdrawing a rule, is therefore a change that the rule's dependants see as friction. Nothing keeps silently obeying a rule that has changed.
 
-4. **Statuses and the gate.**
-   - A rule without a status is **proposed**, and binds nothing.
-   - **Accepted** rules bind, on the artefacts point 7 says: writers follow them and checks enforce them.
-   - A **superseded** rule names its successor and binds nothing.
-   - A **withdrawn** rule is retired without a successor and binds nothing.
-   - Superseded and withdrawn rules stay in place with their ids.
-   - Accepting a rule is a reviewed change, like accepting a decision record under the decision-record specification's acceptance gate. Where that path involves a person, an agent may draft rules and propose their acceptance, but it is the person's review that accepts them.
-   - A successor sits in the same rule set, or in a set that inherits it. It binds wherever its own set's rules bind (point 7), which may be less than where the rule it replaces bound. A set that inherits the replaced rule's set, but not the successor's, loses the rule. A supersession requires a new major, so that set's pin falls behind, and the loss is reviewed before the pin is updated (point 7).
+**What a check enforces.** A check can enforce part of a rule, such as a validator that reads a field, or a tool that counts the words in a sentence. The rule's owner declares that part in the set's front matter, beside the rule but not among its own fields. The declaration names the check and whose it is. A check may be the backbone's, a command a component registers in its package metadata, or the project's own tool. A check enforces its part only where the rule binds (point 7), and whoever judges the rest of the rule leaves that part to it.
+- **Outside the content.** The declaration is none of the rule's own fields and no part of its statement, so it is no part of the rule's content (COR-050). Declaring a check, or changing one, changes no rule and flags nothing anchored to it.
+- **A check that is not there.** A declaration may name a backbone check that does not exist, or a component command that no installed component registers. Validation reports it without failing, and that part goes back to whoever judges the rest of the rule.
+- **A check nobody runs.** A project's own tool is trusted by its name, and validation cannot see whether a named check is run at all. A tool that stops running, or a check that nothing runs, leaves its part unjudged until the declaration is removed.
 
-5. **Origins, checked deterministically.** Every accepted rule carries an origin: when it was decided, by whom, and why, in the decider's words. Alternatively, the origin may cite a decision record for a rule whose reasoning outgrows a line. An origin may also cite a **source**: a captured record of where the quoted words were said, of a kind some capability resolves as an anchor kind. Validation fails unless all of the following hold:
-   - every accepted rule has a complete origin;
-   - a cited decision record exists, and is accepted whenever the rule is accepted;
-   - a cited source resolves through the anchor kind a capability registered for it (COR-050). A source kind with no installed resolver is reported as unresolved-kind, never silently passed;
-   - ids are unique and not reused;
-   - every successor exists;
-   - the join between data and prose holds.
+### 3. Identifiers
 
-   Whether a quoted reason truly supports its rule is judgment, left to agents and reviewers. A project may additionally require that every origin cite a source.
+A rule's id is `RS-<SET>-NNN`: the family prefix, the rule set's name, and a number. Ids are permanent. A rule is never renumbered, and a retired id is never reused. Rule-set names must be unique among rule sets. Because every rule id carries the `RS` family prefix, rule ids cannot collide with other identifier families. An **extension point** a rule offers is named with `#`, as in `RS-CMN-003#cause-location`, so that it never clashes with the colon that separates a namespace in a citation. In a record anchor's value, `#` also names one point of the record, as in `COR-058#4` (COR-050 point 2). An extension point is no anchor value: an anchor names a rule by its id alone.
 
-6. **Two kinds, two owners.**
-   - **Method rule sets** ship with the backbone or with a component. They are owned and versioned with it and refreshed by sync.
-   - **Project rule sets** are owned by the project. They live in places the project declares, by default under its internal documentation root (COR-049). Sync never reads or writes them, and uninstall never writes them.
+### 4. Statuses and the gate
 
-   A project never edits a method rule set; it extends it. A method rule set is cited with its component's name; a project rule set is cited bare.
+- A rule without a status is **proposed**, and binds nothing.
+- **Accepted** rules bind, on the artefacts point 7 says: writers follow them and checks enforce them.
+- A **superseded** rule names its successor and binds nothing.
+- A **withdrawn** rule is retired without a successor and binds nothing.
+- Superseded and withdrawn rules stay in place with their ids.
+- Accepting a rule is a reviewed change, like accepting a decision record under the decision-record specification's acceptance gate. Where that path involves a person, an agent may draft rules and propose their acceptance, but it is the person's review that accepts them.
+- A successor sits in the same rule set, or in a set that inherits it. It binds wherever its own set's rules bind (point 7), which may be less than where the rule it replaces bound. A set that inherits the replaced rule's set, but not the successor's, loses the rule. A supersession requires a new major, so that set's pin falls behind, and the loss is reviewed before the pin is updated (point 7).
 
-7. **Inheritance, and where rules bind.**
-   - **Inheriting.** A rule set may inherit one or more rule sets, and inherits all their rules unchanged. Because rule ids carry their set's name, rules from different inherited sets cannot collide. A capability's rule set may inherit another capability's rule set only if it declares a required dependency on that capability, using the mechanism by which capabilities depend on one another (COR-030). Any capability may inherit a rule set the backbone ships. A set's inheritance *chain* is the set and every set it inherits, directly or not.
-   - **Pins.** Inheriting a rule set **pins that set's major version**, written as the set name followed by `@` and the major version. A rule set's version is its own, not its component's. A new major version is required when:
-     - an accepted rule is withdrawn, superseded or tightened
-     - an offered extension point is removed
-     - a new accepted rule is added
-     - what the set inherits changes: a set added or dropped, or a pin moved to another major
-   - **Routes.** A *route* leads from an artefact to a rule set. It starts at a set whose scope selects the artefact, and follows what that set inherits, pin by pin. It passes only through sets whose own scope, where they have one, also selects the artefact. A set *reaches* every artefact from which a route leads to it. One artefact may have several routes to one set: from two sets whose scopes both select it, or along two lines of inheritance from one set.
-   - **Where a rule binds.** An inherited rule binds within the scope of the set that inherits it. Exactly: an accepted rule binds on an artefact when a route leads from the artefact to the rule's set, and no pin on that route is behind its set (below). A *shared set*, one with no scope of its own, therefore reaches wherever the sets that inherit it reach, and nowhere else. A set that declares a scope keeps it. Its rules bind only on artefacts its own scope selects, whoever inherits it, so inheriting a set never widens its scope.
-   - **Method rule sets.** A method rule set takes no scope (point 2), so every route starts at a set of the project's own. No rule of a method rule set binds, even on the artefacts of the backbone or component that ships it, until a set of the project's own with a scope inherits it, directly or not.
-   - **One answer.** The backbone answers, for each artefact, which accepted rules bind on it. Writers, checks and reviewers all read that one answer.
-   - **A pin behind its set.** When a new major version of an inherited set arrives, the inheriting set is reported in status and fails validation wherever the check is enforced, until the project reviews it and updates the pin. Until then, the pin is behind its set, and no rule binds through it, whether the new major changed the rule or not. The repository holds only the newer major, and nobody has reviewed it for the inheriting set. So each inheritor's pin decides when a shared set's new rules start binding within its reach.
-   - **Pins that disagree.** One artefact reached through two routes that pin the same set at different majors is a validation error, never a silent choice between them.
-   - **Adding and filling.** An inheriting set may add rules of its own, and may fill extension points that inherited rules offer. Each extension point is filled at most once along an inheritance chain. A filling rule anchors to the rule it fills, so a change to the inherited rule flags the fill. A fill binds only where the rule it fills binds through the filling set, and only while both are accepted.
-   - **Fills through several sets.** An offering rule may bind on one artefact through several sets whose scopes select it. Where one of those sets inherits another, directly or not, it is the *more specific* of the two. The most specific sets, those that none of the others inherits, decide the extension point. Each brings the accepted fill its chain holds for that extension point, or none. Where they agree, that fill binds, or none does. Where they differ, by two different rules or by a rule against none, that is a validation error, never a silent choice between them. Until it is mended, the backbone's answer for that artefact names the conflict and takes no side.
-   - **No relaxing.** An inheriting set may not contradict or relax an inherited rule. Validation checks what can be checked mechanically: no redefined inherited id, no fill of an undeclared point, no second fill of the same point. Anything beyond that is left to reviewers. A project that disagrees with an inherited rule proposes a change to its owner, or does not inherit that set. It does not quietly override it.
-   - **Orphaned fills.** A fill whose inherited rule is superseded or withdrawn is reported as orphaned.
+### 5. Origins, checked deterministically
+
+Every accepted rule carries an origin: when it was decided, by whom, and why, in the decider's words. Alternatively, the origin may cite a decision record for a rule whose reasoning outgrows a line. An origin may also cite a **source**: a captured record of where the quoted words were said, of a kind some capability resolves as an anchor kind. Validation fails unless all of the following hold:
+- every accepted rule has a complete origin;
+- a cited decision record exists, and is accepted whenever the rule is accepted;
+- a cited source resolves through the anchor kind a capability registered for it (COR-050). A source kind with no installed resolver is reported as unresolved-kind, never silently passed;
+- ids are unique and not reused;
+- every successor exists;
+- the join between data and prose holds.
+
+Whether a quoted reason truly supports its rule is judgment, left to agents and reviewers. A project may additionally require that every origin cite a source.
+
+### 6. Two kinds, two owners
+
+- **Method rule sets** ship with the backbone or with a component. They are owned and versioned with it and refreshed by sync.
+- **Project rule sets** are owned by the project. They live in places the project declares, by default under its internal documentation root (COR-049). Sync never reads or writes them, and uninstall never writes them.
+
+A project never edits a method rule set; it extends it. A method rule set is cited with its component's name; a project rule set is cited bare.
+
+### 7. Inheritance, and where rules bind
+
+- **Inheriting.** A rule set may inherit one or more rule sets, and inherits all their rules unchanged. Because rule ids carry their set's name, rules from different inherited sets cannot collide. A capability's rule set may inherit another capability's rule set only if it declares a required dependency on that capability, using the mechanism by which capabilities depend on one another (COR-030). Any capability may inherit a rule set the backbone ships. A set's inheritance *chain* is the set and every set it inherits, directly or not.
+- **Pins.** Inheriting a rule set **pins that set's major version**, written as the set name followed by `@` and the major version. A rule set's version is its own, not its component's. A new major version is required when:
+  - an accepted rule is withdrawn, superseded or tightened
+  - an offered extension point is removed
+  - a new accepted rule is added
+  - what the set inherits changes: a set added or dropped, or a pin moved to another major
+- **Routes.** A *route* leads from an artefact to a rule set. It starts at a set whose scope selects the artefact, and follows what that set inherits, pin by pin. It passes only through sets whose own scope, where they have one, also selects the artefact. A set *reaches* every artefact from which a route leads to it. One artefact may have several routes to one set: from two sets whose scopes both select it, or along two lines of inheritance from one set.
+- **Where a rule binds.** An inherited rule binds within the scope of the set that inherits it. Exactly: an accepted rule binds on an artefact when a route leads from the artefact to the rule's set, and no pin on that route is behind its set (below). A *shared set*, one with no scope of its own, therefore reaches wherever the sets that inherit it reach, and nowhere else. A set that declares a scope keeps it. Its rules bind only on artefacts its own scope selects, whoever inherits it, so inheriting a set never widens its scope.
+- **Method rule sets.** A method rule set takes no scope (point 2), so every route starts at a set of the project's own. No rule of a method rule set binds, even on the artefacts of the backbone or component that ships it, until a set of the project's own with a scope inherits it, directly or not.
+- **One answer.** The backbone answers, for each artefact, which accepted rules bind on it. Writers, checks and reviewers all read that one answer.
+- **A pin behind its set.** When a new major version of an inherited set arrives, the inheriting set is reported in status and fails validation wherever the check is enforced, until the project reviews it and updates the pin. Until then, the pin is behind its set, and no rule binds through it, whether the new major changed the rule or not. The repository holds only the newer major, and nobody has reviewed it for the inheriting set. So each inheritor's pin decides when a shared set's new rules start binding within its reach.
+- **Pins that disagree.** One artefact reached through two routes that pin the same set at different majors is a validation error, never a silent choice between them.
+- **Adding and filling.** An inheriting set may add rules of its own, and may fill extension points that inherited rules offer. Each extension point is filled at most once along an inheritance chain. A filling rule anchors to the rule it fills, so a change to the inherited rule flags the fill. A fill binds only where the rule it fills binds through the filling set, and only while both are accepted.
+- **Fills through several sets.** An offering rule may bind on one artefact through several sets whose scopes select it. Where one of those sets inherits another, directly or not, it is the *more specific* of the two. The most specific sets, those that none of the others inherits, decide the extension point. Each brings the accepted fill its chain holds for that extension point, or none. Where they agree, that fill binds, or none does. Where they differ, by two different rules or by a rule against none, that is a validation error, never a silent choice between them. Until it is mended, the backbone's answer for that artefact names the conflict and takes no side.
+- **No relaxing.** An inheriting set may not contradict or relax an inherited rule. Validation checks what can be checked mechanically: no redefined inherited id, no fill of an undeclared point, no second fill of the same point. Anything beyond that is left to reviewers. A project that disagrees with an inherited rule proposes a change to its owner, or does not inherit that set. It does not quietly override it.
+- **Orphaned fills.** A fill whose inherited rule is superseded or withdrawn is reported as orphaned.
 
 ## Rationale
 

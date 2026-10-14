@@ -135,87 +135,98 @@ boundary. The mechanism is an interlock against accidental handoff, not a
 security boundary, and its residual gap is declared.** Each point below is
 load-bearing.
 
-1. **The pkit self-guard is the honest, reliable lever.** The mutating program —
-   the project-management capability scripts and `pkit` — computes the mutation
-   target from cwd (the repo `gh`/`git` would act on) and compares it against the
-   **session anchor** (`CLAUDE_PROJECT_DIR`). On divergence it **refuses (under
-   autonomy) or prompts (interactively)**. This is feasible *because the anchor
-   does not move with `cd`*: `cd /B && create-issue` leaves the anchor at A, so
-   the comparison sees A-vs-B and gates. The cd-defeat that breaks command-string
-   inspection **does not recur one layer down**, because the comparison's anchor
-   is the environment variable the harness froze at launch, **not** a second
-   cwd-walk that `cd` would redirect. This does **not** contradict
-   [ADR-001](ADR-001-project-root-resolution.md)'s cwd-only root resolution:
-   ADR-001 governs *ordinary single-repo* root resolution (no `--root`, no env
-   side channel) for commands operating within their own tree; a *foreign-repo
-   guard* reading the harness session anchor to detect a cross-repo mismatch is a
-   distinct concern, layered on top, not a violation of the resolver's contract.
-   The purpose-asymmetry is decisive: ADR-001 bars an env var as a root *input*
-   precisely because a stale/forgotten variable makes resolution confusing — so
-   the anchor here is **never** a root input (the resolver still finds the root
-   from cwd, untouched); it is only a **comparand**, and its very stickiness — the
-   property ADR-001 distrusted for resolution — is exactly what lets it catch the
-   divergence a pure-cwd resolver follows blind. (ADR-001's own Implications even
-   contemplate an override layered *ahead of* the resolver as a non-breaking
-   extension; this guard is less invasive still — it sits beside the resolver, not
-   in it.)
+### 1. The pkit self-guard is the honest, reliable lever
 
-2. **One detectable corner at the intent layer — a small honest catch, not the
-   lever.** The PreToolUse hook MAY **prompt** on an `Edit`/`Write` whose
-   `tool_input` carries an absolute path under a foreign repo. Edit/Write carry
-   the literal target path in their tool input (unlike a bash command, whose
-   target is buried in argv the dumb segmenter does not parse —
-   [ADR-025](ADR-025-segment-conservative-bash-allow.md)), so this one surface is
-   honestly inspectable. It is a small catch covering only the Edit/Write
-   surface; it does **not** cover bash / `uv` / `gh`, so it is explicitly **not**
-   the lever — the self-guard (point 1) is. Naming it as a corner, not a wall,
-   keeps the honesty discipline intact.
+The mutating program —
+the project-management capability scripts and `pkit` — computes the mutation
+target from cwd (the repo `gh`/`git` would act on) and compares it against the
+**session anchor** (`CLAUDE_PROJECT_DIR`). On divergence it **refuses (under
+autonomy) or prompts (interactively)**. This is feasible *because the anchor
+does not move with `cd`*: `cd /B && create-issue` leaves the anchor at A, so
+the comparison sees A-vs-B and gates. The cd-defeat that breaks command-string
+inspection **does not recur one layer down**, because the comparison's anchor
+is the environment variable the harness froze at launch, **not** a second
+cwd-walk that `cd` would redirect. This does **not** contradict
+[ADR-001](ADR-001-project-root-resolution.md)'s cwd-only root resolution:
+ADR-001 governs *ordinary single-repo* root resolution (no `--root`, no env
+side channel) for commands operating within their own tree; a *foreign-repo
+guard* reading the harness session anchor to detect a cross-repo mismatch is a
+distinct concern, layered on top, not a violation of the resolver's contract.
+The purpose-asymmetry is decisive: ADR-001 bars an env var as a root *input*
+precisely because a stale/forgotten variable makes resolution confusing — so
+the anchor here is **never** a root input (the resolver still finds the root
+from cwd, untouched); it is only a **comparand**, and its very stickiness — the
+property ADR-001 distrusted for resolution — is exactly what lets it catch the
+divergence a pure-cwd resolver follows blind. (ADR-001's own Implications even
+contemplate an override layered *ahead of* the resolver as a non-breaking
+extension; this guard is less invasive still — it sits beside the resolver, not
+in it.)
 
-3. **Session-root write-scoping is NOT introduced as a foreign-repo boundary.** A
-   `filesystem.allowWrite` fence at the session root is **rejected as the
-   foreign-repo lever** on macOS: `uv`/`pkit` and `gh` are required exclusions
-   running unconfined ([ADR-014](ADR-014-macos-sandbox-platform-stance.md) /
-   [ADR-027](ADR-027-required-sandbox-exclusion-auto-apply.md) /
-   [ADR-030](ADR-030-gh-exclusion-required-subclass-generalises.md)), so the
-   fence would be partial for *exactly* the incident's command class (pm scripts
-   via `uv`, and `gh`). Advertising a partial fence as a foreign-repo boundary is
-   the believed-but-absent-boundary trap
-   ([ADR-004](ADR-004-autonomy-intent-confinement.md) decision point 4). The
-   existing confinement is kept for its **existing** purpose (the
-   filesystem-confinement dimension of ADR-004); it is **not** repurposed or
-   re-advertised here. *(Where a platform genuinely confines the mutating tools —
-   e.g. Linux/WSL2 bubblewrap, where `uv`/`gh` run inside the box — write-scoping
-   is a legitimate per-platform **reinforcement** of the self-guard: optional,
-   additive, never the principle.)*
+### 2. One detectable corner at the intent layer — a small honest catch, not the lever
 
-4. **Operator-gated, not blocked.** On divergence the default is
-   **refuse-with-explanation under autonomy / prompt interactively** — never a
-   hard deny. An operator who genuinely intends the cross-repo mutation confirms
-   and proceeds. This is mesh-compatible: it is the same per-change human gate
-   [DEC-022 (methodology-mesh)](../../../.pkit/capabilities/project-management/decisions/DEC-022-methodology-mesh.md)
-   already calls for, applied at mutation time, so the sanctioned
-   coordinated-cross-repo pattern stays reachable as the confirmed exception.
+The PreToolUse hook MAY **prompt** on an `Edit`/`Write` whose
+`tool_input` carries an absolute path under a foreign repo. Edit/Write carry
+the literal target path in their tool input (unlike a bash command, whose
+target is buried in argv the dumb segmenter does not parse —
+[ADR-025](ADR-025-segment-conservative-bash-allow.md)), so this one surface is
+honestly inspectable. It is a small catch covering only the Edit/Write
+surface; it does **not** cover bash / `uv` / `gh`, so it is explicitly **not**
+the lever — the self-guard (point 1) is. Naming it as a corner, not a wall,
+keeps the honesty discipline intact.
 
-5. **A discipline-grade interlock, not a security boundary.** The self-guard
-   catches the *accidental-handoff* shape — the incident: the methodology's own
-   validated path (`create-issue`, `pkit`, the capability scripts) invoked while
-   the session is `cd`'d into the wrong repo — reliably, for that path. It does
-   **not** stop a determined bypass that routes *around* the methodology: a raw
-   `gh -R owner/B ...`, a raw `git -C /B ...`, or `unset CLAUDE_PROJECT_DIR`
-   followed by a cwd-walk. Per
-   [COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md),
-   that residual gap is **declared, not hidden**: the mechanism is reported as an
-   interlock against accidental handoff, never as a wall, and the discipline rule
-   (COR-039's operational carrier) teaches the boundary on the paths no
-   methodology code interposes on.
+### 3. Session-root write-scoping is NOT introduced as a foreign-repo boundary
 
-6. **`decide.py`'s bash-path core is untouched.** The shared decision core
-   (`.pkit/permissions/decide.py`) and its bash classification are unchanged; the
-   [ADR-002](ADR-002-permission-realizer-ownership.md) /
-   [ADR-003](ADR-003-permission-core-code-home.md) same-code invariant (hook and
-   `pkit permissions` decide identically from one `decide()`) stands. The only
-   hook change is the additive Edit/Write foreign-path prompt (point 2); the
-   self-guard (point 1) lives in the mutating program, not the decision core.
+A
+`filesystem.allowWrite` fence at the session root is **rejected as the
+foreign-repo lever** on macOS: `uv`/`pkit` and `gh` are required exclusions
+running unconfined ([ADR-014](ADR-014-macos-sandbox-platform-stance.md) /
+[ADR-027](ADR-027-required-sandbox-exclusion-auto-apply.md) /
+[ADR-030](ADR-030-gh-exclusion-required-subclass-generalises.md)), so the
+fence would be partial for *exactly* the incident's command class (pm scripts
+via `uv`, and `gh`). Advertising a partial fence as a foreign-repo boundary is
+the believed-but-absent-boundary trap
+([ADR-004](ADR-004-autonomy-intent-confinement.md) decision point 4). The
+existing confinement is kept for its **existing** purpose (the
+filesystem-confinement dimension of ADR-004); it is **not** repurposed or
+re-advertised here. *(Where a platform genuinely confines the mutating tools —
+e.g. Linux/WSL2 bubblewrap, where `uv`/`gh` run inside the box — write-scoping
+is a legitimate per-platform **reinforcement** of the self-guard: optional,
+additive, never the principle.)*
+
+### 4. Operator-gated, not blocked
+
+On divergence the default is
+**refuse-with-explanation under autonomy / prompt interactively** — never a
+hard deny. An operator who genuinely intends the cross-repo mutation confirms
+and proceeds. This is mesh-compatible: it is the same per-change human gate
+[DEC-022 (methodology-mesh)](../../../.pkit/capabilities/project-management/decisions/DEC-022-methodology-mesh.md)
+already calls for, applied at mutation time, so the sanctioned
+coordinated-cross-repo pattern stays reachable as the confirmed exception.
+
+### 5. A discipline-grade interlock, not a security boundary
+
+The self-guard
+catches the *accidental-handoff* shape — the incident: the methodology's own
+validated path (`create-issue`, `pkit`, the capability scripts) invoked while
+the session is `cd`'d into the wrong repo — reliably, for that path. It does
+**not** stop a determined bypass that routes *around* the methodology: a raw
+`gh -R owner/B ...`, a raw `git -C /B ...`, or `unset CLAUDE_PROJECT_DIR`
+followed by a cwd-walk. Per
+[COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md),
+that residual gap is **declared, not hidden**: the mechanism is reported as an
+interlock against accidental handoff, never as a wall, and the discipline rule
+(COR-039's operational carrier) teaches the boundary on the paths no
+methodology code interposes on.
+
+### 6. `decide.py`'s bash-path core is untouched
+
+The shared decision core
+(`.pkit/permissions/decide.py`) and its bash classification are unchanged; the
+[ADR-002](ADR-002-permission-realizer-ownership.md) /
+[ADR-003](ADR-003-permission-core-code-home.md) same-code invariant (hook and
+`pkit permissions` decide identically from one `decide()`) stands. The only
+hook change is the additive Edit/Write foreign-path prompt (point 2); the
+self-guard (point 1) lives in the mutating program, not the decision core.
 
 ## Rationale
 

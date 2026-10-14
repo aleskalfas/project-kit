@@ -20,31 +20,44 @@ The backbone already reads the project's name from a project-owned file. No core
 
 **A project keeps its declarations to the backbone in one project-owned configuration file. The backbone reads it, sync never writes it, and it is validated as a whole against a schema.**
 
-1. **One file, owned by the project.** It holds project-level declarations the backbone reads. It sits in the project-owned part of the tree. It survives upgrade, sync, and uninstalling any capability or the tool itself, because none of them removes it. Sync never writes it. A version transition (COR-059), an upgrade among them, writes it only through the migrations point 5 names. Its location is documented in the CLI reference.
+### 1. One file, owned by the project
 
-2. **Every key is owned by a record.** A key exists because a decision record introduced it, and that record defines the key's meaning, its default and who may write it.
-   - **Core records** own the keys the backbone reads. This record takes ownership of the project-name key the backbone already reads.
-   - **Project records** may own keys only under a reserved `project` block. That block is checked for being well-formed only; project-supplied schemas for it are deferred until a real need appears.
-   - **Capabilities do not add keys.** Their settings stay in their own subtrees.
-   - **Values that must reach every adopter of a distribution** do not belong here, because this file is never distributed.
-   - **Keys naming installed components.** A core record may define a key whose entries name installed components, such as selecting which capability answers something. That record says how the entries are checked: against what is installed, not against a fixed list. It also says what happens when a named component is uninstalled. The uninstall offers to clear the entry with consent, and validation otherwise reports the stale entry with the fix.
+It holds project-level declarations the backbone reads. It sits in the project-owned part of the tree. It survives upgrade, sync, and uninstalling any capability or the tool itself, because none of them removes it. Sync never writes it. A version transition (COR-059), an upgrade among them, writes it only through the migrations point 5 names. Its location is documented in the CLI reference.
 
-3. **Absence means defaults.** A missing file, an empty file, or a missing key means the owning record's default applies. That is never an error unless the owning record says so.
+### 2. Every key is owned by a record
 
-4. **Strict when checked, forgiving when read.**
-   - **Validation** (the methodology's validate command, and continuous integration) is strict. An unknown key is an error, reported with the nearest known key. So is a known key with an invalid value, and so is a file that does not parse.
-   - **Commands that merely read** the file never fail because of it. On an unparsable file or an invalid value they warn and use the default. A typo is caught where checking happens and never blocks ordinary work.
+A key exists because a decision record introduced it, and that record defines the key's meaning, its default and who may write it.
+- **Core records** own the keys the backbone reads. This record takes ownership of the project-name key the backbone already reads.
+- **Project records** may own keys only under a reserved `project` block. That block is checked for being well-formed only; project-supplied schemas for it are deferred until a real need appears.
+- **Capabilities do not add keys.** Their settings stay in their own subtrees.
+- **Values that must reach every adopter of a distribution** do not belong here, because this file is never distributed.
+- **Keys naming installed components.** A core record may define a key whose entries name installed components, such as selecting which capability answers something. That record says how the entries are checked: against what is installed, not against a fixed list. It also says what happens when a named component is uninstalled. The uninstall offers to clear the entry with consent, and validation otherwise reports the stale entry with the fix.
 
-5. **Written only with consent.** A key is written only by the writers its owning record names, such as a backbone command or a capability offering to record a value on install, and only with consent:
-   - interactively, by asking once;
-   - non-interactively, only when an explicit confirmation flag is given;
-   - by an upgrade migration that the owning record specifies, where running the upgrade is the consent.
+### 3. Absence means defaults
 
-   With nobody to ask and no flag, nothing is written and the default applies.
+A missing file, an empty file, or a missing key means the owning record's default applies. That is never an error unless the owning record says so.
 
-6. **Keys change like any surface.** Adding a key is additive. Retiring or renaming one is a surface change and ships a migration (COR-010). Moving a project back to an older tool version that does not know a newer key requires removing that key first. The older tool's validation names it as an unknown key, possibly from a newer version.
+### 4. Strict when checked, forgiving when read
 
-7. **Adopts the existing file.** The file the backbone already reads for the project's name is this file. A project that has it keeps it unchanged; a project without it gains it only when a key is first written.
+- **Validation** (the methodology's validate command, and continuous integration) is strict. An unknown key is an error, reported with the nearest known key. So is a known key with an invalid value, and so is a file that does not parse.
+- **Commands that merely read** the file never fail because of it. On an unparsable file or an invalid value they warn and use the default. A typo is caught where checking happens and never blocks ordinary work.
+
+### 5. Written only with consent
+
+A key is written only by the writers its owning record names, such as a backbone command or a capability offering to record a value on install, and only with consent:
+- interactively, by asking once;
+- non-interactively, only when an explicit confirmation flag is given;
+- by an upgrade migration that the owning record specifies, where running the upgrade is the consent.
+
+With nobody to ask and no flag, nothing is written and the default applies.
+
+### 6. Keys change like any surface
+
+Adding a key is additive. Retiring or renaming one is a surface change and ships a migration (COR-010). Moving a project back to an older tool version that does not know a newer key requires removing that key first. The older tool's validation names it as an unknown key, possibly from a newer version.
+
+### 7. Adopts the existing file
+
+The file the backbone already reads for the project's name is this file. A project that has it keeps it unchanged; a project without it gains it only when a key is first written.
 
 ## Rationale
 

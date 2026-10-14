@@ -26,15 +26,25 @@ ADR-049's case for a single raise mechanism rests on [ADR-044](ADR-044-upgrade-s
 
 **An upgrade leaves the project pinned, unless `--no-pin` is passed. In an un-pinned project, `pkit upgrade` ends by pinning the project at the version its content just reached.**
 
-1. **The default pin.** In an un-pinned project, `pkit upgrade` writes `.pkit/version-pin` at the version of the running tool's bundle. That is the version the upgrade has just brought the content to. The tool reads it from its own bundle, so the pin needs no network. The upgrade writes the pin last, after the sync and the migrations, as ADR-049 point 1 orders every pin write. The write is atomic, so the router never reads a torn pin. The upgrade pins the project also when the content was already at that version. A sync that fails stops the upgrade before the pin. `--dry-run` says which pin it would write, and writes none.
+### 1. The default pin
 
-2. **`--no-pin`.** The flag skips the pin. The project stays un-pinned and keeps following the installed tool. The opt-out holds for one upgrade only: nothing records it, so the next upgrade without the flag pins the project. `pkit unpin` removes a pin the default wrote (ADR-049 point 3), and it too lasts until the next upgrade without the flag. In a pinned project the flag changes nothing, since the upgrade raises the existing pin either way.
+In an un-pinned project, `pkit upgrade` writes `.pkit/version-pin` at the version of the running tool's bundle. That is the version the upgrade has just brought the content to. The tool reads it from its own bundle, so the pin needs no network. The upgrade writes the pin last, after the sync and the migrations, as ADR-049 point 1 orders every pin write. The write is atomic, so the router never reads a torn pin. The upgrade pins the project also when the content was already at that version. A sync that fails stops the upgrade before the pin. `--dry-run` says which pin it would write, and writes none.
 
-3. **What the default does not reach.** `init` and `sync` write no pin (ADR-049 point 2). The methodology's source repository is never pinned. Its upgrade hands over to sync, or refuses under code that is not the checkout's own, before any pin is written ([ADR-059](ADR-059-methodology-source-repository.md)).
+### 2. `--no-pin`
 
-4. **One raise mechanism, on its own reason.** `pkit pin <newer>` and a pinned `pkit upgrade` raise a pin the same way (ADR-049 point 5). Each resolves a target version, the argument or the latest release. Each runs the target's own upgrade through the router's bypass, then writes the pin. They share the mechanism because both need the target's code to bring the content to the target. The router runs before any command, so a run at the pin cannot load a newer pkit from inside. Neither raise touches the installed tool. Updating the tool is a separate step, ADR-063's, which runs only outside any project or in an un-pinned project.
+The flag skips the pin. The project stays un-pinned and keeps following the installed tool. The opt-out holds for one upgrade only: nothing records it, so the next upgrade without the flag pins the project. `pkit unpin` removes a pin the default wrote (ADR-049 point 3), and it too lasts until the next upgrade without the flag. In a pinned project the flag changes nothing, since the upgrade raises the existing pin either way.
 
-5. **A specific version.** `pkit pin <version>` is the way to a specific newer version, and `pkit upgrade` takes no version target (ADR-049 point 7). Installing that version as the tool does not move a pinned project. The project keeps running its pin, whatever tool is installed.
+### 3. What the default does not reach
+
+`init` and `sync` write no pin (ADR-049 point 2). The methodology's source repository is never pinned. Its upgrade hands over to sync, or refuses under code that is not the checkout's own, before any pin is written ([ADR-059](ADR-059-methodology-source-repository.md)).
+
+### 4. One raise mechanism, on its own reason
+
+`pkit pin <newer>` and a pinned `pkit upgrade` raise a pin the same way (ADR-049 point 5). Each resolves a target version, the argument or the latest release. Each runs the target's own upgrade through the router's bypass, then writes the pin. They share the mechanism because both need the target's code to bring the content to the target. The router runs before any command, so a run at the pin cannot load a newer pkit from inside. Neither raise touches the installed tool. Updating the tool is a separate step, ADR-063's, which runs only outside any project or in an un-pinned project.
+
+### 5. A specific version
+
+`pkit pin <version>` is the way to a specific newer version, and `pkit upgrade` takes no version target (ADR-049 point 7). Installing that version as the tool does not move a pinned project. The project keeps running its pin, whatever tool is installed.
 
 ### What this overturns in ADR-049, and what stands
 

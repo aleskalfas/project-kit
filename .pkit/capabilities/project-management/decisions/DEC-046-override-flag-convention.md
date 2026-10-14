@@ -54,8 +54,9 @@ around it.
 rule below; and DEC-014's `hard-reject` is amended to carry an operator-`--force`
 override.**
 
-**1. `--bypass[-<gate>]` — the sanctioned override of a `bypassable-with-audit`
-gate.** Where a gate is `bypassable-with-audit`, the override is a **`--bypass`
+### 1. `--bypass[-<gate>]` — the sanctioned override of a `bypassable-with-audit` gate
+
+Where a gate is `bypassable-with-audit`, the override is a **`--bypass`
 family** flag carrying a **required reason** (inline or a paired `--bypass-reason`)
 and the DEC-014 audit comment, posted *before* the mutation. A command with one
 bypassable gate spells it `--bypass`; a command with **several** (the CI-status gate
@@ -84,15 +85,18 @@ flag, warns, refuses if both are supplied, and retires at the next major — so 
 convention governs everything new, and the exception is a time-boxed compatibility
 debt (see [project-management:DEC-050-per-reviewer-override] Decision 1).
 
-**2. `--force` — the operator's override of a `hard-reject` finding or a hard
-precondition.** Boolean. It covers **two** firm stops: a DEC-014 `hard-reject`
+### 2. `--force` — the operator's override of a `hard-reject` finding or a hard precondition
+
+Boolean. It covers **two** firm stops: a DEC-014 `hard-reject`
 *finding*, and a **script-level precondition** the methodology treats as firm but
 which is *not* a DEC-014 finding. It leaves a durable audit trail **where the
 substrate can carry one** — an issue or PR comment, a milestone's description — and,
 where the substrate has no annotation surface (a bare label), surfaces the override
 in the command output instead. Audit is **substrate-conditional**, not universal.
 
-**3. The discriminator, and where it is mechanical vs a judgement.** *Is the stop a
+### 3. The discriminator, and where it is mechanical vs a judgement
+
+*Is the stop a
 `bypassable-with-audit` gate?* → `--bypass[-<gate>]`. *A `hard-reject` finding or a
 hard precondition?* → `--force`. For a **DEC-014 finding** this is mechanical —
 resolve the finding's severity, read off the flag. For a **script precondition**
@@ -100,8 +104,9 @@ there is no severity token; it is a firm-stop-by-construction and takes `--force
 this rule. The record does not pretend the precondition branch is a severity read —
 it is the one place the choice is by construction, not by a checkable field.
 
-**4. Amend DEC-014 — a `hard-reject` is operator-`--force`-overridable (out of
-band).** DEC-014's `hard-reject` keeps **`bypassable: false`** — there is no in-band,
+### 4. Amend DEC-014 — a `hard-reject` is operator-`--force`-overridable (out of band)
+
+DEC-014's `hard-reject` keeps **`bypassable: false`** — there is no in-band,
 reason-based `--bypass` for it, and that is correct. What is added, openly, is that a
 hard-reject additionally carries an **out-of-band operator `--force` override**,
 audited where the substrate allows. This lands two ways in the same change-set: a

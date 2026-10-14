@@ -18,21 +18,31 @@ The contract is in core. The configuration record makes the file strict and says
 
 ## Decision
 
-1. **Home: propagated, one copy, under `.pkit/schemas/backbone/`.** Schemas are propagated data in this distribution (the permission core's decision data, the process shape contract — [ADR-003](ADR-003-permission-core-code-home.md), [ADR-020](ADR-020-process-engine-code-home.md) Implications), and these are schemas. Two reasons make the tree the *right* copy rather than merely a permitted one: the configuration file's shape is the one the installed backbone defines, and the installed backbone is the tree (COR-048 point 6); and an editor reading a `$schema` directive is a consumer that cannot reach the binary. The binary reads the tree's files and carries none of its own. A tree that lacks a schema for a kind — one recorded before that schema landed — skips that kind and reports "no schema present, skipped", never validates against a shape the tree never shipped. The directive is stamped only where an editor can use it: the configuration file and filler files, which are plain YAML.
+### 1. Home: propagated, one copy, under `.pkit/schemas/backbone/`
 
-2. **Binding by location rule, in this order.** A file is claimed by the first rule that matches; a claimed file never reaches the capability-data resolution of COR-023.
-   - **Fixed path** — the configuration file at the path the CLI reference documents (COR-048 point 1).
-   - **Filler path** — the path derived from a point address under the backbone-owned sub-path beneath the internal documentation root (COR-052 point 2). The mapping from `<publisher>::<role>:<point>` to a path is **injective on valid addresses**, so that no two points share a file and no path binds the wrong schema; the reference shows the mapping and its inverse.
-   - **Rule-set file** — a collection file in a place declared to hold rule sets (COR-051 point 2). Its entries also carry the container, so the container rule applies inside it.
-   - **Container** — the front matter of a Markdown document, or a collection entry, in a declared place (COR-050 point 1). A plain YAML data file in a declared place is not a document: it falls through to COR-023.
+Schemas are propagated data in this distribution (the permission core's decision data, the process shape contract — [ADR-003](ADR-003-permission-core-code-home.md), [ADR-020](ADR-020-process-engine-code-home.md) Implications), and these are schemas. Two reasons make the tree the *right* copy rather than merely a permitted one: the configuration file's shape is the one the installed backbone defines, and the installed backbone is the tree (COR-048 point 6); and an editor reading a `$schema` directive is a consumer that cannot reach the binary. The binary reads the tree's files and carries none of its own. A tree that lacks a schema for a kind — one recorded before that schema landed — skips that kind and reports "no schema present, skipped", never validates against a shape the tree never shipped. The directive is stamped only where an editor can use it: the configuration file and filler files, which are plain YAML.
 
-   Consequences stated so nobody discovers them: `pkit data validate` delegates a location-claimed path to this pass rather than refusing it for lack of a binding; a capability whose `binds_to:` glob would match a claimed path is a capability defect, not an ambiguity; a filler whose point has no active provider has its envelope validated and its body left alone, reported as inert (COR-052 point 2).
+### 2. Binding by location rule, in this order
 
-3. **Versions, as the records place them.** The filler envelope and each point block inside a role block carry `schema_version`, the companion integer of the point (COR-052 point 5, COR-053 point 10). Backbone-owned shapes — the configuration file, the friction block, the rule-set file's shape — carry no version: they change through migrations ([COR-010](../../../.pkit/decisions/core/COR-010-resource-lifecycle.md)), and a version key in the configuration file would be a key only a core record may own (COR-048 point 2). One invariant binds any migration of the friction block: it preserves the parsed value of `at`, or every revalidation point in the repository moves (COR-050 point 3).
+A file is claimed by the first rule that matches; a claimed file never reaches the capability-data resolution of COR-023.
+- **Fixed path** — the configuration file at the path the CLI reference documents (COR-048 point 1).
+- **Filler path** — the path derived from a point address under the backbone-owned sub-path beneath the internal documentation root (COR-052 point 2). The mapping from `<publisher>::<role>:<point>` to a path is **injective on valid addresses**, so that no two points share a file and no path binds the wrong schema; the reference shows the mapping and its inverse.
+- **Rule-set file** — a collection file in a place declared to hold rule sets (COR-051 point 2). Its entries also carry the container, so the container rule applies inside it.
+- **Container** — the front matter of a Markdown document, or a collection entry, in a declared place (COR-050 point 1). A plain YAML data file in a declared place is not a document: it falls through to COR-023.
 
-4. **One renderer.** Every unknown-key finding across the class comes from one module: the offending key, the nearest known key by edit distance, and — for the container — the reminder that a role block needs a versioned point block. The known set for the container is the shipped functionality names, the active role words and their qualified forms (COR-053 point 10). Reading posture is not unified here and stays with each owning record: configuration readers warn and use the default (COR-048 point 4); the friction checks never skip an unparsable artefact (COR-050 point 2).
+Consequences stated so nobody discovers them: `pkit data validate` delegates a location-claimed path to this pass rather than refusing it for lack of a binding; a capability whose `binds_to:` glob would match a claimed path is a capability defect, not an ambiguity; a filler whose point has no active provider has its envelope validated and its body left alone, reported as inert (COR-052 point 2).
 
-5. **Run by `pkit validate`.** The pass is a registered validator of the umbrella command the configuration record names (COR-048 point 4); `pkit data validate` and `pkit schemas validate` remain as focused surfaces and are registered members of the same umbrella.
+### 3. Versions, as the records place them
+
+The filler envelope and each point block inside a role block carry `schema_version`, the companion integer of the point (COR-052 point 5, COR-053 point 10). Backbone-owned shapes — the configuration file, the friction block, the rule-set file's shape — carry no version: they change through migrations ([COR-010](../../../.pkit/decisions/core/COR-010-resource-lifecycle.md)), and a version key in the configuration file would be a key only a core record may own (COR-048 point 2). One invariant binds any migration of the friction block: it preserves the parsed value of `at`, or every revalidation point in the repository moves (COR-050 point 3).
+
+### 4. One renderer
+
+Every unknown-key finding across the class comes from one module: the offending key, the nearest known key by edit distance, and — for the container — the reminder that a role block needs a versioned point block. The known set for the container is the shipped functionality names, the active role words and their qualified forms (COR-053 point 10). Reading posture is not unified here and stays with each owning record: configuration readers warn and use the default (COR-048 point 4); the friction checks never skip an unparsable artefact (COR-050 point 2).
+
+### 5. Run by `pkit validate`
+
+The pass is a registered validator of the umbrella command the configuration record names (COR-048 point 4); `pkit data validate` and `pkit schemas validate` remain as focused surfaces and are registered members of the same umbrella.
 
 ## Rationale
 

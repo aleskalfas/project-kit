@@ -26,11 +26,13 @@ from project_kit import friction_report as frep
 from project_kit import friction_repository as fr
 from tests.adopter_repo import MakeAdopterRepo
 from tests.friction_documents import (
+    LISTED,
     POINTED,
     POINTS,
     T2,
     Timeline,
     guide,
+    listed_record,
     pointed_record,
 )
 
@@ -242,14 +244,22 @@ def test_an_anchor_already_dead_and_made_ambiguous_is_the_change_s(timeline: Tim
 
 
 def test_a_point_anchor_on_a_record_in_list_form_is_dead(timeline: Timeline) -> None:
-    _start(timeline)
+    """The record holds a list item numbered 2, and still no point an anchor can name."""
+    timeline.start(
+        {
+            POINTED: pointed_record(),
+            LISTED: listed_record(),
+            "docs/guide.md": guide(anchors=ON_POINT),
+        }
+    )
+    timeline.adopter.checkout("feature", create=True)
     timeline.commit(
         "anchor a point of a list-form record",
-        {"docs/guide.md": guide(anchors={"record": ["COR-050#5"]}, at=T2, because="re-pointed")},
+        {"docs/guide.md": guide(anchors={"record": ["PRJ-910#2"]}, at=T2, because="re-pointed")},
     )
     findings = fc.run_change_check(timeline.adopter.root, "main").findings
     (dead,) = [f for f in findings if f.kind is fc.FindingKind.DEAD_ANCHOR]
-    assert dead.message.startswith("COR-050 writes its points as a list")
+    assert dead.message.startswith("PRJ-910 writes its points as a list")
     assert dead.message.endswith("; the anchor was added in this diff")
 
 

@@ -18,15 +18,25 @@ Two facts shape the fix. First, a capability schema that *describes* adopter dat
 
 **In adopter data, a typed reference resolves *through the binding to the bound instance*, not into the namespace-declaring schema's own collection. Resolution runs only at fields the citing schema marks reference-bearing; it locates the namespace's id pool as the **union of files bound to that namespace's schema within the validation scope** (the subtree `pkit data validate` is run on), reading each via its `x-pkit-id-collection`, and checks the id against that pool.** `pkit data validate` performs this as a default-on pass (`--shape-only` skips it).
 
-1. **Position-gate annotation.** A field that holds references is marked on the citing schema's companion with `x-pkit-reference-namespace: "<namespace>"` — a value-position annotation mirroring the existing key-position `x-pkit-keys-from-namespace` ([COR-019]). The resolver inspects **only** annotated fields. It is a *position-gate*, not a namespace-source: the namespace is already in the token; the annotation declares that this position holds references at all.
+### 1. Position-gate annotation
 
-2. **Resolution target is the bound instance.** The token's namespace resolves to its schema (by stem, as the existing resolver does); the id is then sought in the adopter file *bound to that schema*, following its companion's `x-pkit-id-collection` — not in the schema's own (empty) YAML. This refines COR-019's resolution target for the adopter-data case; see Rationale.
+A field that holds references is marked on the citing schema's companion with `x-pkit-reference-namespace: "<namespace>"` — a value-position annotation mirroring the existing key-position `x-pkit-keys-from-namespace` ([COR-019]). The resolver inspects **only** annotated fields. It is a *position-gate*, not a namespace-source: the namespace is already in the token; the annotation declares that this position holds references at all.
 
-3. **Resolution scope is the validated subtree.** A namespace's id pool is the **union of every file bound to that namespace under the directory `pkit data validate` is run on**. A token resolves iff its id is in that pool. Isolation is by *what you validate*: a narrower target is a stricter universe (validate one instance's subtree and only its data is in scope); a wider target deliberately unions more (validate a parent and a shared file under it serves every instance below). Resolution is not positional — moving a file within the scope does not change what resolves — and there is no shadowing: the pool is a union, so two files defining the **same id** in one scope is a surfaced **duplicate-id error**, never a silent pick.
+### 2. Resolution target is the bound instance
 
-4. **Failure surface.** A dangling id at an annotated position (the namespace has a pool in scope but the id is absent from it) is a **hard error** — non-zero exit, same severity as a shape violation. A **duplicate id** across bound files in scope is also a hard error (the pool is ambiguous). "No file bound to the namespace anywhere in scope" is a **distinct, softer** outcome: incremental authoring routinely references a not-yet-created sibling. (`--strict` escalation of the soft case is deferred until a need appears.)
+The token's namespace resolves to its schema (by stem, as the existing resolver does); the id is then sought in the adopter file *bound to that schema*, following its companion's `x-pkit-id-collection` — not in the schema's own (empty) YAML. This refines COR-019's resolution target for the adopter-data case; see Rationale.
 
-5. **Scope of this decision.** Value-position references only. Two extensions are **deferred** to successor decisions, each pending a real consumer: (a) **cross-scope shared reference roots** — letting a shared catalog serve many instances *without* unioning the instances into one validation scope (a declared search-path entry), wanted only once a real shared-data layout exists; and (b) foreign-keyed **mapping keys** (a document schema exporting a sub-collection so another file's keys validate against it).
+### 3. Resolution scope is the validated subtree
+
+A namespace's id pool is the **union of every file bound to that namespace under the directory `pkit data validate` is run on**. A token resolves iff its id is in that pool. Isolation is by *what you validate*: a narrower target is a stricter universe (validate one instance's subtree and only its data is in scope); a wider target deliberately unions more (validate a parent and a shared file under it serves every instance below). Resolution is not positional — moving a file within the scope does not change what resolves — and there is no shadowing: the pool is a union, so two files defining the **same id** in one scope is a surfaced **duplicate-id error**, never a silent pick.
+
+### 4. Failure surface
+
+A dangling id at an annotated position (the namespace has a pool in scope but the id is absent from it) is a **hard error** — non-zero exit, same severity as a shape violation. A **duplicate id** across bound files in scope is also a hard error (the pool is ambiguous). "No file bound to the namespace anywhere in scope" is a **distinct, softer** outcome: incremental authoring routinely references a not-yet-created sibling. (`--strict` escalation of the soft case is deferred until a need appears.)
+
+### 5. Scope of this decision
+
+Value-position references only. Two extensions are **deferred** to successor decisions, each pending a real consumer: (a) **cross-scope shared reference roots** — letting a shared catalog serve many instances *without* unioning the instances into one validation scope (a declared search-path entry), wanted only once a real shared-data layout exists; and (b) foreign-keyed **mapping keys** (a document schema exporting a sub-collection so another file's keys validate against it).
 
 ## Rationale
 

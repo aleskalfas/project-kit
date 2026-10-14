@@ -46,22 +46,34 @@ The decomposition below is the generalisation of that already-existing split. As
 
 **An enforcement gate offered by a capability decomposes into a capability-owned *mechanism* and an adopter-wired *boundary*; the capability ships only the mechanism, declares the residual gap, and never claims the boundary it does not own. The decomposition is the contract; a capability that wants a gate conforms to it rather than re-deriving where enforcement lives.**
 
-**1. The capability ships the mechanism, not the boundary.** The capability's deliverable is two things and only two:
+### 1. The capability ships the mechanism, not the boundary
+
+The capability's deliverable is two things and only two:
 
 - a **read-only, verb-subject check script** (the [`check-mesh.py`](../../../.pkit/capabilities/project-management/scripts/check-mesh.py) shape) — for the code→doc instance, a `check-doc-mapping` verb-subject script that reads the adopter's mapping config, inspects the PR diff, and **exits non-zero on a violation but blocks nothing by itself**;
 - a **soft warning** emitted in the capability's own PR-open / merge flow (`open-pr` / `merge-pr`) when the script reports a violation.
 
 The capability MUST NOT implement the hard reject *inside* `merge-pr` and present that as the enforcement boundary. Refusing to run its own command is a speed-bump; it is not a merge boundary, and calling it one is the overstatement [COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md) forbids.
 
-**2. The adopter wires the boundary.** Real enforcement is the adopter adding the capability's check script as a **required CI status check** behind **branch protection** (the [`scripts/check.sh`](../../../scripts/check.sh) shape). This is the only place a merge is actually blocked. It is the adopter's wiring of config the adopter owns; the capability documents *how* to wire it but does not — and per [COR-014](../../../.pkit/decisions/core/COR-014-universal-applicability.md) cannot — write or assume it.
+### 2. The adopter wires the boundary
 
-**3. The capability declares the residual gap.** Wherever the gate is surfaced, the capability states plainly: *the PR-open warning is a speed-bump; the real boundary is your CI wiring of this script; without that wiring there is no enforcement.* This is [COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md)'s honesty-about-gaps obligation applied to the gate — the capability names which layer enforces (adopter CI) and reports the residual gap (an unwired adopter has detection only), exactly as [ADR-004](ADR-004-autonomy-intent-confinement.md) keeps `network-egress: enforcement: none` standing as the honest residual truth.
+Real enforcement is the adopter adding the capability's check script as a **required CI status check** behind **branch protection** (the [`scripts/check.sh`](../../../scripts/check.sh) shape). This is the only place a merge is actually blocked. It is the adopter's wiring of config the adopter owns; the capability documents *how* to wire it but does not — and per [COR-014](../../../.pkit/decisions/core/COR-014-universal-applicability.md) cannot — write or assume it.
 
-**4. The gate is two-tier.** Soft warning at PR-open (what [project-management:DEC-015-doc-update-obligations] specifies today) + hard-reject in the adopter-wired CI tier. This mirrors [project-management:DEC-031-reject-unauthored-placeholder-bodies]'s established house pattern — *warn at the open/create surface, hard-block at the surface where the harm actually lives* (for DEC-031 the first lifecycle transition; here the CI merge boundary). A capability gate adopts the same two-tier shape rather than inventing a new severity placement.
+### 3. The capability declares the residual gap
 
-**5. Default-off, opt-in upgrade — within DEC-015, no amendment.** The hard-reject tier is **off by default** and is reached only when an adopter who has *already* opted into the optional code→doc mapping upgrades *their* mapping's severity from `warning` to hard-reject. This is the "(adopter may upgrade)" latitude [project-management:DEC-015-doc-update-obligations]'s severity table already grants; it requires **no DEC-015 amendment and is not a DEC-015 reversal.** The mandatory / default-on variant (Case B) is rejected — it would reverse DEC-015 and fail [COR-014](../../../.pkit/decisions/core/COR-014-universal-applicability.md).
+Wherever the gate is surfaced, the capability states plainly: *the PR-open warning is a speed-bump; the real boundary is your CI wiring of this script; without that wiring there is no enforcement.* This is [COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md)'s honesty-about-gaps obligation applied to the gate — the capability names which layer enforces (adopter CI) and reports the residual gap (an unwired adopter has detection only), exactly as [ADR-004](ADR-004-autonomy-intent-confinement.md) keeps `network-egress: enforcement: none` standing as the honest residual truth.
 
-**6. The override channel is audit-trailed, not a bare flag.** When an author legitimately needs to land a code change without the mapped doc change, the override is the **existing `## Doc impact` section** — a line naming the code path and asserting no-doc-needed, at the **`bypassable-with-audit`** tier. It is **not** a bare `--skip` flag. An override that leaves an audit trail in the artifact the reviewer reads preserves the gate's intent; a silent flag defeats it.
+### 4. The gate is two-tier
+
+Soft warning at PR-open (what [project-management:DEC-015-doc-update-obligations] specifies today) + hard-reject in the adopter-wired CI tier. This mirrors [project-management:DEC-031-reject-unauthored-placeholder-bodies]'s established house pattern — *warn at the open/create surface, hard-block at the surface where the harm actually lives* (for DEC-031 the first lifecycle transition; here the CI merge boundary). A capability gate adopts the same two-tier shape rather than inventing a new severity placement.
+
+### 5. Default-off, opt-in upgrade — within DEC-015, no amendment
+
+The hard-reject tier is **off by default** and is reached only when an adopter who has *already* opted into the optional code→doc mapping upgrades *their* mapping's severity from `warning` to hard-reject. This is the "(adopter may upgrade)" latitude [project-management:DEC-015-doc-update-obligations]'s severity table already grants; it requires **no DEC-015 amendment and is not a DEC-015 reversal.** The mandatory / default-on variant (Case B) is rejected — it would reverse DEC-015 and fail [COR-014](../../../.pkit/decisions/core/COR-014-universal-applicability.md).
+
+### 6. The override channel is audit-trailed, not a bare flag
+
+When an author legitimately needs to land a code change without the mapped doc change, the override is the **existing `## Doc impact` section** — a line naming the code path and asserting no-doc-needed, at the **`bypassable-with-audit`** tier. It is **not** a bare `--skip` flag. An override that leaves an audit trail in the artifact the reviewer reads preserves the gate's intent; a silent flag defeats it.
 
 ## Rationale
 

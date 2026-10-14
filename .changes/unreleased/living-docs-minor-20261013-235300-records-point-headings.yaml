@@ -1,0 +1,14 @@
+component: living-docs
+kind: minor
+custom:
+  category: Changed
+body: >
+  DEC-001 writes each of its points as a heading carrying its number, word
+  for word (#1421, COR-058). A page can now anchor to one point of it, such
+  as `living-docs:DEC-001#3`, and a change to another point of the record
+  does not ask for the page to be revalidated. No point's text, number or
+  citation changes, so a rule's origin and the README still name the same
+  points. The shared rule set LDOC now anchors each rule to the point of
+  DEC-001 that states it, `living-docs:DEC-001#3`, and RS-LDOC-003 and
+  RS-LDOC-004 also to `#4`, which gives the page's `reader` and `kind`
+  fields.

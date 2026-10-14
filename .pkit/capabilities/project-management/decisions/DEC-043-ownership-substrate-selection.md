@@ -54,12 +54,16 @@ which is what labels are and what per-instance comments can be.
 labels are creatable, a comment-log-plus-derived-mirror where they are not.** DEC-035's label
 mechanism is kept as one option; this adds the label-free option and the selector.
 
-**1. Refine DEC-035 to substrate-*where-available*.** DEC-035's marker is no longer
+### 1. Refine DEC-035 to substrate-*where-available*
+
+DEC-035's marker is no longer
 unconditionally a label. It resolves through a selector; the label is one binding among two.
 This refines DEC-035 in place (reciprocal note, same change-set), it does not supersede it —
 the label mechanism and the clash-guard semantics stand.
 
-**2. A selector in instance-ownership's own schema home.** Values `label` and `comment`, in
+### 2. A selector in instance-ownership's own schema home
+
+Values `label` and `comment`, in
 the schema home DEC-035 reserved for the ownership marker — **not** in `substrate-map.yaml`, so
 that a repo opting into label-free ownership does not trip DEC-036's emergent-activation and
 degrade its unlisted axes. **The default is `comment`** (the universally-safe substrate); `label`
@@ -67,8 +71,9 @@ is the opt-in for repos whose operator knows labels are creatable. The default i
 *not* keyed off the presence of a substrate-map, because the motivating repo — label-locked but
 otherwise greenfield — has no substrate-map at all yet still cannot use labels.
 
-**3. In `comment` mode the source of truth is a per-instance, append-only ownership event
-log.** Each ownership event (claim / handoff / abandon / release) is a discrete GitHub issue
+### 3. In `comment` mode the source of truth is a per-instance, append-only ownership event log
+
+Each ownership event (claim / handoff / abandon / release) is a discrete GitHub issue
 comment carrying a hidden machine stamp plus visible human text. Comment-create is per-object
 atomic, so the substrate faithfully preserves DEC-035's guarantees:
 
@@ -82,7 +87,8 @@ atomic, so the substrate faithfully preserves DEC-035's guarantees:
   first-class log entries, not just current state. The log aligns with, and does not duplicate,
   the handoff audit comment [project-management:DEC-026-work-ownership-lifecycle] already posts.
 
-**4. The current owner is mirrored into the issue description as a derived, regenerable view.**
+### 4. The current owner is mirrored into the issue description as a derived, regenerable view
+
 Because "nobody wants to read the log," the read seam folds the event log to a current-owner
 summary and writes it into a capability-owned region of the issue description. This region is
 **derived, never authoritative** — the comment log is its regeneration spine. It is therefore
@@ -92,13 +98,17 @@ regenerates it from the log; no ownership record is lost. This is the
 regenerable view whose truth lives elsewhere), with the roles of comment and body swapped —
 here the *comments* are authoritative and the *body* is the view.
 
-**5. The write path is a sole-constructor pinned by a sibling ADR.** The comment-log write and
+### 5. The write path is a sole-constructor pinned by a sibling ADR
+
+The comment-log write and
 the description-mirror render join the substrate seam family (label read-path, field/milestone
 write-path, containment resolution) as a fourth sibling: one read seam, one construction point,
 a grep/AST guard, failure-posture-neutral. The ADR is authored by the architect once this
 record settles.
 
-**6. Realm-blindness is preserved.** The selector and both substrates are pm-layer
+### 6. Realm-blindness is preserved
+
+The selector and both substrates are pm-layer
 side-effects; instance ownership remains, per DEC-035, never an input to a gate, a transition,
 or the cascade fold. The engine stays content-free.
 

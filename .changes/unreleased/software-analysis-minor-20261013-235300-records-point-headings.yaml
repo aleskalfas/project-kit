@@ -1,0 +1,10 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Changed
+body: >
+  DEC-001 writes each of its points as a heading carrying its number, word
+  for word (#1421, COR-058). A page can now anchor to one point of it, such
+  as `software-analysis:DEC-001#5`, and a change to another point of the
+  record does not ask for the page to be revalidated. No point's text,
+  number or citation changes.

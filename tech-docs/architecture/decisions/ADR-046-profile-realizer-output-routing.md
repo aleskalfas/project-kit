@@ -26,19 +26,33 @@ One more composition fact matters: the harness itself writes operator "always al
 
 **`apply()` becomes a single realizer with two routed destinations, and gains provenance-scoped recompute-replace authority in the per-machine file only.** Each condition is load-bearing.
 
-1. **Routing by grant provenance, keyed to ADR-032 Rule A.** The model loader annotates profile-layer grants with their source (`_profile: <name>`, mirroring the existing `_capability` annotation; `decide()` ignores extra keys). `apply()` projects twice through the same `project()`: the full model, and the model minus profile grants. The profile-less projection (`committed_expected`) realizes additively into the committed `.claude/settings.json` exactly as today. The difference (`profile_expected` = full − committed) — the rules justified *only* by the active profile — realizes into the gitignored `.claude/settings.local.json`.
+### 1. Routing by grant provenance, keyed to ADR-032 Rule A
 
-2. **Shared derivation stays committed.** Because `project()` is a per-grant monotone union, a rule derivable from both the profile and a committed source (adopter `grants.yaml`, capability fragment) lands in `committed_expected` and is never ledgered — deactivating the profile cannot heal away a rule the adopter independently declared. This is the model-side analogue of ADR-005's manual-grants-always-survive layering, and it is a property of the *subtraction*, not of any per-rule judgment: a future refactor must preserve the double-projection shape.
+The model loader annotates profile-layer grants with their source (`_profile: <name>`, mirroring the existing `_capability` annotation; `decide()` ignores extra keys). `apply()` projects twice through the same `project()`: the full model, and the model minus profile grants. The profile-less projection (`committed_expected`) realizes additively into the committed `.claude/settings.json` exactly as today. The difference (`profile_expected` = full − committed) — the rules justified *only* by the active profile — realizes into the gitignored `.claude/settings.local.json`.
 
-3. **Ledgered recompute-replace in the local file.** A pkit-owned gitignored sidecar in `.pkit/permissions/project/` (the ADR-032 Rule B sidecar branch; the `sandbox-provenance.yaml` pattern) records which local allow rules pkit authored for the profile. On every `apply`: rules in the ledger no longer in `profile_expected` are removed from `settings.local.json`; missing expected rules are added; the ledger is rewritten to the new set. Entries not in the ledger — the operator's own always-allows, harness-authored rules — are never touched. **This recompute-replace authority is exclusive to `apply` and scoped to ledger-recorded entries: one subtractive code path, ever.**
+### 2. Shared derivation stays committed
 
-4. **The committed file's additive contract is untouched; overlap is skipped silently.** `apply` still never removes or replaces anything in `.claude/settings.json`. A profile-derived rule already present in the committed file (the baseline `git`/`gh`/`pkit` allows the merge primitive ships; historic drift) is silently skipped — committed presence is authoritative team state, and `apply` neither duplicates it locally nor advises relocation (the merge primitive's sources are invisible to `project()`, so "present in committed" is not evidence of drift).
+Because `project()` is a per-grant monotone union, a rule derivable from both the profile and a committed source (adopter `grants.yaml`, capability fragment) lands in `committed_expected` and is never ledgered — deactivating the profile cannot heal away a rule the adopter independently declared. This is the model-side analogue of ADR-005's manual-grants-always-survive layering, and it is a property of the *subtraction*, not of any per-rule judgment: a future refactor must preserve the double-projection shape.
 
-5. **Reader scope is a named contract.** With realized state legitimately in two files, every consumer of live settings declares its scope: **committed-scope** for floor claims (the probe's native double-lock check — a deny present only in the per-machine file must never certify a floor other checkouts lack), **union-scope** for live-behaviour claims (`diff`'s applied/not-applied reconciliation; the diagnose report, which already reads the union). `diff`'s unjustified-rule attribution stays committed-scope so harness-authored local always-allows are not flagged as model violations.
+### 3. Ledgered recompute-replace in the local file
 
-6. **Managed mode composes with the routing.** The future managed region (ADR-002 point 1) stays defined over the committed file's `permissions` key, but its composition excludes per-machine-classified sources: profile-derived `project()` allows route local even under managed mode. Without this, managed mode's wholesale regeneration would re-commit the profile's rules on every run — reintroducing this record's gap in a worse form. ADR-002 point 1 states the composition with this exclusion (Implications).
+A pkit-owned gitignored sidecar in `.pkit/permissions/project/` (the ADR-032 Rule B sidecar branch; the `sandbox-provenance.yaml` pattern) records which local allow rules pkit authored for the profile. On every `apply`: rules in the ledger no longer in `profile_expected` are removed from `settings.local.json`; missing expected rules are added; the ledger is rewritten to the new set. Entries not in the ledger — the operator's own always-allows, harness-authored rules — are never touched. **This recompute-replace authority is exclusive to `apply` and scoped to ledger-recorded entries: one subtractive code path, ever.**
 
-7. **Guardrail denies are unaffected.** They realize committed and double-locked (ADR-002 fail-open/double-lock), on both layers, regardless of profile state.
+### 4. The committed file's additive contract is untouched; overlap is skipped silently
+
+`apply` still never removes or replaces anything in `.claude/settings.json`. A profile-derived rule already present in the committed file (the baseline `git`/`gh`/`pkit` allows the merge primitive ships; historic drift) is silently skipped — committed presence is authoritative team state, and `apply` neither duplicates it locally nor advises relocation (the merge primitive's sources are invisible to `project()`, so "present in committed" is not evidence of drift).
+
+### 5. Reader scope is a named contract
+
+With realized state legitimately in two files, every consumer of live settings declares its scope: **committed-scope** for floor claims (the probe's native double-lock check — a deny present only in the per-machine file must never certify a floor other checkouts lack), **union-scope** for live-behaviour claims (`diff`'s applied/not-applied reconciliation; the diagnose report, which already reads the union). `diff`'s unjustified-rule attribution stays committed-scope so harness-authored local always-allows are not flagged as model violations.
+
+### 6. Managed mode composes with the routing
+
+The future managed region (ADR-002 point 1) stays defined over the committed file's `permissions` key, but its composition excludes per-machine-classified sources: profile-derived `project()` allows route local even under managed mode. Without this, managed mode's wholesale regeneration would re-commit the profile's rules on every run — reintroducing this record's gap in a worse form. ADR-002 point 1 states the composition with this exclusion (Implications).
+
+### 7. Guardrail denies are unaffected
+
+They realize committed and double-locked (ADR-002 fail-open/double-lock), on both layers, regardless of profile state.
 
 ## Rationale
 

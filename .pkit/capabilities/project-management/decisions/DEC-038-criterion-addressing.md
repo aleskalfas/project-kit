@@ -14,15 +14,23 @@ The targeted checkbox-mutation verbs `check-criterion` / `uncheck-criterion` (an
 
 ## Decision
 
-**D1 — Address a criterion by its 1-based index, with an optional expected-text guard.** A caller names a checkbox by its position in the acceptance-criteria list (`check-criterion 239 2` ticks the second box). A caller MAY also pass the text it expects at that position (`check-criterion 239 2 "docs updated"`); when supplied, the verb refuses to mutate unless the line at that index still matches the expected text.
+### D1 — Address a criterion by its 1-based index, with an optional expected-text guard
+
+A caller names a checkbox by its position in the acceptance-criteria list (`check-criterion 239 2` ticks the second box). A caller MAY also pass the text it expects at that position (`check-criterion 239 2 "docs updated"`); when supplied, the verb refuses to mutate unless the line at that index still matches the expected text.
 
 The text argument is the conceptual crux of this record: **it serves two purposes at once — a wording-based way to name the box, and a guard that the box has not moved between the caller reading the list and writing the tick.** That dual role is what lets a single optional argument buy text-match's safety on top of index's simplicity. No stable per-criterion identifier is introduced and the issue-body shape is unchanged — this decision deliberately avoids a `schema_version` bump to the body structure (per [project-management:DEC-010-issue-body-minimum-structure]) and the migration that would follow.
 
-**D2 — The verbs are intent-shaped substrate primitives, not a new layer.** They take narrow input (issue + index, never the whole body) and emit clean single-line output (a confirmation, nothing to `grep`). They are substrate primitives that refine the existing command layer of [project-management:DEC-020-methodology-as-executable-commands] — adding rows to its committed verb-subject set — not a new abstraction or a fourth layer. `check-criterion` / `uncheck-criterion` are clean substrate primitives (a single checkbox operation on an issue); `set-field` is the body/field-mutation case, which sits at DEC-020's looser GitHub-substrate tier rather than the workflow-wrapper tier — DEC-020 admits such verb-subject additions, so the layer claim holds, but `set-field` is named here as the looser fit.
+### D2 — The verbs are intent-shaped substrate primitives, not a new layer
 
-**D3 — Every verb is batch-capable.** One invocation acts on N criteria (`check-criterion 239 1 3 5`); ticking five boxes is one call, not five.
+They take narrow input (issue + index, never the whole body) and emit clean single-line output (a confirmation, nothing to `grep`). They are substrate primitives that refine the existing command layer of [project-management:DEC-020-methodology-as-executable-commands] — adding rows to its committed verb-subject set — not a new abstraction or a fourth layer. `check-criterion` / `uncheck-criterion` are clean substrate primitives (a single checkbox operation on an issue); `set-field` is the body/field-mutation case, which sits at DEC-020's looser GitHub-substrate tier rather than the workflow-wrapper tier — DEC-020 admits such verb-subject additions, so the layer claim holds, but `set-field` is named here as the looser fit.
 
-**D4 — Failure and recovery is validate-up-front plus idempotent-recovery, never a transaction.** GitHub offers no multi-mutation transaction, so the verbs do not pretend to roll back. Instead they validate the entire batch *before* any mutation and abort on any hard inconsistency, then apply idempotently so a half-applied batch recovers by simply re-running. This is the capability's established house pattern (the idempotent-recovery discipline of [project-management:DEC-026-work-ownership-lifecycle]) applied to checkbox mutation. The enumerated cases:
+### D3 — Every verb is batch-capable
+
+One invocation acts on N criteria (`check-criterion 239 1 3 5`); ticking five boxes is one call, not five.
+
+### D4 — Failure and recovery is validate-up-front plus idempotent-recovery, never a transaction
+
+GitHub offers no multi-mutation transaction, so the verbs do not pretend to roll back. Instead they validate the entire batch *before* any mutation and abort on any hard inconsistency, then apply idempotently so a half-applied batch recovers by simply re-running. This is the capability's established house pattern (the idempotent-recovery discipline of [project-management:DEC-026-work-ownership-lifecycle]) applied to checkbox mutation. The enumerated cases:
 
 | Case | Behaviour |
 |---|---|

@@ -15,8 +15,9 @@ pkit:
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051, ADR-062]
     revalidated:
-      at: 2026-10-02T10:23:11Z
-      outcome: updated
+      at: 2026-10-13T21:44:52Z
+      outcome: unchanged
+      unchanged-because: "COR-033, COR-053, ADR-048, ADR-051 and ADR-062 now write their points as headings carrying the same numbers, word for word. ADR-048's paragraphs after its point 2 keep their words: the binding's choice of mechanism and the placement of `health` are now its points 3 and 4, and the seam analogy's limit a note. The seam payloads this page describes rest on points 1 and 2, which read as before. COR-033 keeps its labels, so P3, which this page cites, names the same text. It holds."
 ---
 
 # Process

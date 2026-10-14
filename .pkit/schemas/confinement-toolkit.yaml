@@ -11,7 +11,8 @@
 #               verbatim "session-wide egress to <host>; not a security
 #               boundary" gloss in sandbox status / permissions overview /
 #               toolkit listing. The allowlist is not a security boundary (no
-#               TLS inspection; ADR-004 §61).
+#               TLS inspection; ADR-004, Alternatives considered, "Relabel
+#               `network-egress` as natively enforced…").
 #   widening  — lowers the boundary: a command carved OUT of the box to run
 #               unconfined (excludedCommands), weakened TLS, or allow-host
 #               with value `*` (open egress to every host). Explicit
@@ -85,7 +86,8 @@ toolkits:
         value: "api.github.com"
         note: >-
           session-wide egress to api.github.com; not a security boundary
-          (no TLS inspection — ADR-004 §61 / ADR-015). The sandbox allowlist
+          (no TLS inspection — ADR-004, Alternatives considered, "Relabel
+          `network-egress` as natively enforced…" / ADR-015). The sandbox allowlist
           bounds well-behaved egress but does not stop IP-literal / DNS-rebind
           / domain-fronting exfil. Apply only for capabilities that need the
           GitHub API; for fully unconfined gh CLI access, use `sandbox exclude gh`.
@@ -104,7 +106,8 @@ toolkits:
         value: "api.anthropic.com"
         note: >-
           session-wide egress to api.anthropic.com; not a security boundary
-          (no TLS inspection — ADR-004 §61 / ADR-015). The sandbox allowlist
+          (no TLS inspection — ADR-004, Alternatives considered, "Relabel
+          `network-egress` as natively enforced…" / ADR-015). The sandbox allowlist
           bounds well-behaved egress but does not stop IP-literal / DNS-rebind
           / domain-fronting exfil. Apply only for projects/capabilities that
           call the Anthropic API.
@@ -136,8 +139,9 @@ toolkits:
           auto-applies this on macOS WHENEVER the `.github/` detect glob is present
           (real project use — never bare gh-on-PATH; ADR-030 condition 4); it
           self-heals (removes the auto-applied entry) on Linux or once the marker
-          is gone. Excluding `gh` leaves its network egress UNCONFINED (ADR-004
-          §61) — a materially larger boundary statement than `uv`'s local runtime,
+          is gone. Excluding `gh` leaves its network egress UNCONFINED (ADR-004,
+          Alternatives considered, "Relabel `network-egress` as natively
+          enforced…") — a materially larger boundary statement than `uv`'s local runtime,
           named loudly at apply. `git`-over-HTTPS is unaffected (OpenSSL, not
           Security.framework). Revert: `pkit permissions sandbox exclude --remove
           gh`. Still gated by the permission hook.

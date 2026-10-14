@@ -8,7 +8,3 @@
 ## Writing
 
 3. **Write the analysis by `ANA`, and software-analysis's templates and structures by `WRITE`.** Whoever writes the analysis under `tech-docs/analysis/` follows the accepted rules of `ANA`, project-kit's rules for its analysis (`tech-docs/rule-sets/analysis.md`), and of `WRITE`, project-kit's general writing rules (`tech-docs/rule-sets/writing.md`). Whoever writes software-analysis's templates, or the structures its kinds declare (software-analysis DEC-001 point 1), follows `WRITE` (ADR-055 point 3). Where a rule of `WRITE` would carry project-kit's own vocabulary or style into that shipped text, universal applicability wins (COR-014). Examples are project-kit's glossary terms and its labels. The shipped text stays fit for any adopter. Specific to project-kit's own writing rules, so this rule lives here rather than in core.
-
-## Decision records
-
-4. **Keep every point at its number until project-kit's records are converted.** A record's points keep their numbers for good ([project-kit#1387](https://github.com/aleskalfas/project-kit/issues/1387)). Until project-kit's records are written as numbered headings, a refinement never changes an existing point's number. To insert or drop a point, first convert that record to numbered headings by hand. A new point then takes the next unused number, and a dropped point leaves its stub. The conversion of project-kit's records removes this rule. Specific to project-kit's own records and their conversion, so this rule lives here rather than in core.

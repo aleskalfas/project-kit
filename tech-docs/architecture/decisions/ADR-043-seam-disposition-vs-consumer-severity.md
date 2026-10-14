@@ -18,11 +18,17 @@ While making `validate-issue` substrate-aware (#553), the natural instinct was "
 
 **Disposition is a seam property, shared across consumers; severity is a consumer property, set by the consumer's role and phase. A consumer may never adopt another consumer's severity by appeal to shared disposition.** Three rules.
 
-- **D1 — The seam supplies disposition, not severity.** The `axis_labels` seam functions (`axis_disposition`, `axis_expects_kit_labels`, `axis_title_prefix_remap`, `resolve_read`, `resolve_title_prefix_read`, `derive_state`, `axis_is_title_carried`, `axis_is_label_bound`) answer *what substrate an axis resolves to and how to read it*. They return no severity. Every consumer that gates on an axis reads disposition from these functions and no other source (no inline `substrate_map.axes` shape-dives), so the disposition cannot drift between consumers.
+### D1 — The seam supplies disposition, not severity
 
-- **D2 — Severity is keyed to the consumer's role and phase, not to the other consumer.** A **health check** (`pre-check`) may degrade a per-axis finding to advisory. A **close-gate** (`validate-issue`, DEC-007 + CI `--json`) holds authored severity on a **served** axis: an axis-*presence* failure (no resolvable value in the axis's own substrate — no `type:*` label greenfield, no declared prefix under a title-prefix binding, no remapped label under a label binding) is a hard-reject, uniformly across all served arms. This is consistent with DEC-036 (degradation is scoped to `unsupported`/absent axes; a *served* rule stays as authored) and with the [project-management:DEC-011-title-formats] precedent that severity is phase-keyed, not substrate-keyed.
+The `axis_labels` seam functions (`axis_disposition`, `axis_expects_kit_labels`, `axis_title_prefix_remap`, `resolve_read`, `resolve_title_prefix_read`, `derive_state`, `axis_is_title_carried`, `axis_is_label_bound`) answer *what substrate an axis resolves to and how to read it*. They return no severity. Every consumer that gates on an axis reads disposition from these functions and no other source (no inline `substrate_map.axes` shape-dives), so the disposition cannot drift between consumers.
 
-- **D3 — "Mirror the other consumer" is a disposition claim only.** When a consumer's author reasons "consumer X already handles this substrate, do as X does," that borrowing is valid for *which substrate to read and how* (D1) and invalid for *how hard to react* (D2). A degrade in a health check is never evidence that a gate should degrade. If a *uniform* extras-degrade across all served arms is ever wanted, it is a deliberate decision made once for the gate, not smuggled into one arm by copying a health check's posture.
+### D2 — Severity is keyed to the consumer's role and phase, not to the other consumer
+
+A **health check** (`pre-check`) may degrade a per-axis finding to advisory. A **close-gate** (`validate-issue`, DEC-007 + CI `--json`) holds authored severity on a **served** axis: an axis-*presence* failure (no resolvable value in the axis's own substrate — no `type:*` label greenfield, no declared prefix under a title-prefix binding, no remapped label under a label binding) is a hard-reject, uniformly across all served arms. This is consistent with DEC-036 (degradation is scoped to `unsupported`/absent axes; a *served* rule stays as authored) and with the [project-management:DEC-011-title-formats] precedent that severity is phase-keyed, not substrate-keyed.
+
+### D3 — "Mirror the other consumer" is a disposition claim only
+
+When a consumer's author reasons "consumer X already handles this substrate, do as X does," that borrowing is valid for *which substrate to read and how* (D1) and invalid for *how hard to react* (D2). A degrade in a health check is never evidence that a gate should degrade. If a *uniform* extras-degrade across all served arms is ever wanted, it is a deliberate decision made once for the gate, not smuggled into one arm by copying a health check's posture.
 
 ## Rationale
 

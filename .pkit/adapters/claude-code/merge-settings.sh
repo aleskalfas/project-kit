@@ -186,11 +186,11 @@ done < <(collect_capability_overlay_sources)
 # JSON array of Skill(<name>) grants computed from the source tree.
 skill_grants_json=$(collect_skill_grants | jq -R . | jq -s .)
 
-# --- Authoritative-region tier (COR-002 §80-84 / ADR-002) ------------------
+# --- Authoritative-region tier (COR-002, "Authoritative-region delivery" / ADR-002)
 # In managed ownership mode the realizer owns the `permissions` region and
 # regenerates it WHOLESALE from its model projection, instead of unioning it
 # from the source chain (the additive default below). The owned region is a
-# fixed realizer constant — `.permissions` (ADR-002 §26/§30) — not an
+# fixed realizer constant — `.permissions` (ADR-002 points 1 and 2) — not an
 # adopter-configurable list.
 #
 # Gate: `ownership_mode: managed` in the project's permission config. The gate

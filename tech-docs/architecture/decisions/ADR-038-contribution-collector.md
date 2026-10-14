@@ -18,13 +18,21 @@ The cost of not extracting is not mere duplication: the orphan-safety invariant 
 
 **One contribution-collector core; each contribution kind instantiates it; the core owns the orphan-safe walk, the third kind is not hand-rolled.**
 
-1. **The core lives in the pm capability's `_lib/`**, not in the backbone or a core (COR-level) pattern. All three consumers are pm surfaces; there is no non-pm consumer, so promoting to backbone would be speculative generality. The manifest walked is backbone-owned *data*, but reading it *for a pm contribution* is a pm idiom; the seam stays with its consumers. A cross-capability promotion waits for a genuinely non-pm contribution consumer (the defer-until-second-instance discipline, one altitude up).
+### 1. The core lives in the pm capability's `_lib/`
 
-2. **The core owns the shared shape**: iterate `.pkit/manifest.yaml`'s `components:` (never the filesystem), read each registered capability's declaration file if present, validate its `schema_version`, and classify errors into a small taxonomy (parse / malformed / resolution). The orphan-safety invariant — collection keys on manifest registration, not directory presence — is realised **once**, here.
+**The core lives in the pm capability's `_lib/`**, not in the backbone or a core (COR-level) pattern. All three consumers are pm surfaces; there is no non-pm consumer, so promoting to backbone would be speculative generality. The manifest walked is backbone-owned *data*, but reading it *for a pm contribution* is a pm idiom; the seam stays with its consumers. A cross-capability promotion waits for a genuinely non-pm contribution consumer (the defer-until-second-instance discipline, one altitude up).
 
-3. **Each contribution kind is a thin instantiation** parameterised over: the declaration filename, the per-entry parser/schema, an optional resolution function (reviewer → deployed-agent-file check; label → none at collect time), and a **severity + malformed-disposition policy** (see rule 4). `review_contributions` and `label_contributions` are the first two instantiations; DEC-030's overlay/skill walker is a **later** refactor target — it composes over the same core plus overlay-specific reads, so it is not swallowed whole in v1.
+### 2. The core owns the shared shape
 
-4. **The severity/malformed-disposition rule is fixed, not re-derived per author.** An instantiation gates **fail-closed (blocking)** when a dropped contribution would silently weaken a control the contribution exists to enforce (a required reviewer — DEC-032). It gates **skip-and-warn** when a dropped contribution is self-healing or independently fail-closed downstream (a required label — DEC-042: bootstrap re-provisions it and the consumer's own predicate refuses without it). The discriminator a future kind applies: *does dropping this contribution fail open on a control, or degrade to a benign, downstream-caught state?*
+**The core owns the shared shape**: iterate `.pkit/manifest.yaml`'s `components:` (never the filesystem), read each registered capability's declaration file if present, validate its `schema_version`, and classify errors into a small taxonomy (parse / malformed / resolution). The orphan-safety invariant — collection keys on manifest registration, not directory presence — is realised **once**, here.
+
+### 3. Each contribution kind is a thin instantiation
+
+**Each contribution kind is a thin instantiation** parameterised over: the declaration filename, the per-entry parser/schema, an optional resolution function (reviewer → deployed-agent-file check; label → none at collect time), and a **severity + malformed-disposition policy** (see rule 4). `review_contributions` and `label_contributions` are the first two instantiations; DEC-030's overlay/skill walker is a **later** refactor target — it composes over the same core plus overlay-specific reads, so it is not swallowed whole in v1.
+
+### 4. The severity/malformed-disposition rule is fixed, not re-derived per author
+
+An instantiation gates **fail-closed (blocking)** when a dropped contribution would silently weaken a control the contribution exists to enforce (a required reviewer — DEC-032). It gates **skip-and-warn** when a dropped contribution is self-healing or independently fail-closed downstream (a required label — DEC-042: bootstrap re-provisions it and the consumer's own predicate refuses without it). The discriminator a future kind applies: *does dropping this contribution fail open on a control, or degrade to a benign, downstream-caught state?*
 
 ## Rationale
 

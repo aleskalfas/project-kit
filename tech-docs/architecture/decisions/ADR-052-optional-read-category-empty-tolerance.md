@@ -83,55 +83,65 @@ therefore the designated *optional* read channel; `reads.paths` and
 `reads.records` remain *hard* reads. Tolerance is inferred structurally from the
 reference site — no backbone constant names the tolerant category.**
 
-1. **`reads.patterns` is the optional read channel; `reads.paths` /
-   `reads.records` are hard.** An undefined `<cat>` in `reads.paths` or
-   `reads.records`, or in any list key (`owns` / `needs` / `answers`), still
-   fails the deploy loudly and skips the agent — unchanged. Only `reads.patterns`
-   gains the tolerant behaviour. Authors get a clean lever: a required read goes
-   in `reads.paths`, an optional/corpus read goes in `reads.patterns`.
+### 1. `reads.patterns` is the optional read channel; `reads.paths` / `reads.records` are hard
 
-2. **"Optional" is per-agent and structural: patterns-only, absent-from-hard.**
-   A category is optional *for an agent* iff it appears as an angle-bracket
-   placeholder under that agent's `reads.patterns` and as a placeholder under
-   *none* of its hard keys. A category that appears in both `reads.patterns` and,
-   say, `owns:` is *hard* — the hard reference wins. This keeps the ADR-051
-   write-carrying categories (`process-authoring-targets`, carried in `owns:`)
-   hard, even where an agent also lists the bare name in `reads.patterns` as a
-   label.
+An undefined `<cat>` in `reads.paths` or
+`reads.records`, or in any list key (`owns` / `needs` / `answers`), still
+fails the deploy loudly and skips the agent — unchanged. Only `reads.patterns`
+gains the tolerant behaviour. Authors get a clean lever: a required read goes
+in `reads.paths`, an optional/corpus read goes in `reads.patterns`.
 
-3. **Undefined optional resolves to a dropped item; the agent deploys.** Where a
-   hard undefined placeholder makes the resolver exit non-zero, an optional
-   undefined placeholder is simply omitted from the resolved list — the deployed
-   `reads.patterns` may shrink to `[]`. This restores ADR-013 D1's zero-config
-   empty-is-normal without an overlay entry of any kind. It is deliberately
-   *unlike* ADR-051's inert-deploy, which requires an explicit `[]` in the
-   overlay as its auditable opt-in gesture: an optional read needs no gesture,
-   because tolerating a missing read is the safe default, not a granted
-   authority.
+### 2. "Optional" is per-agent and structural: patterns-only, absent-from-hard
 
-4. **No backbone constant names the tolerant category.** Unlike ADR-051's
-   `WRITE_CARRYING_CATEGORIES` allowlist — legitimate because it names a
-   *core-introduced* write category with deliberate, auditable opt-in — read
-   optionality is derived from the reference site alone. The backbone never
-   learns `project-conventions` (or any capability's read category). This is the
-   maximal expression of ADR-013 D2 ("owned by no single capability") and of
-   COR-014 universal applicability: any capability's read-only category inherits
-   the behaviour with zero backbone edits.
+A category is optional *for an agent* iff it appears as an angle-bracket
+placeholder under that agent's `reads.patterns` and as a placeholder under
+*none* of its hard keys. A category that appears in both `reads.patterns` and,
+say, `owns:` is *hard* — the hard reference wins. This keeps the ADR-051
+write-carrying categories (`process-authoring-targets`, carried in `owns:`)
+hard, even where an agent also lists the bare name in `reads.patterns` as a
+label.
 
-5. **The scanner mirrors the resolver's channel split.** The backbone's
-   reference-detection and deploy-readiness view classify a patterns-only
-   category as optional exactly as the resolver treats it: an agent whose *only*
-   undefined categories are optional is **deployable**, not skipped;
-   `pkit agents reconcile` still *surfaces* the optional category (so an adopter
-   can define it to enrich the agent) but frames it as optional — "the agent
-   already deploys without this" — never as a blocker. The existing parity guard
-   is extended to pin the channel split across the two implementations.
+### 3. Undefined optional resolves to a dropped item; the agent deploys
 
-6. **The agents return to the angle-bracket form.** `software-engineer`,
-   `code-reviewer`, `security-reviewer`, and `docs-reviewer` declare
-   `reads.patterns: [<project-conventions>]` — the form ADR-013 D1 specified —
-   and now receive the resolved path when the adopter defines it, and deploy
-   cleanly (as generalists) when they do not.
+Where a
+hard undefined placeholder makes the resolver exit non-zero, an optional
+undefined placeholder is simply omitted from the resolved list — the deployed
+`reads.patterns` may shrink to `[]`. This restores ADR-013 D1's zero-config
+empty-is-normal without an overlay entry of any kind. It is deliberately
+*unlike* ADR-051's inert-deploy, which requires an explicit `[]` in the
+overlay as its auditable opt-in gesture: an optional read needs no gesture,
+because tolerating a missing read is the safe default, not a granted
+authority.
+
+### 4. No backbone constant names the tolerant category
+
+Unlike ADR-051's
+`WRITE_CARRYING_CATEGORIES` allowlist — legitimate because it names a
+*core-introduced* write category with deliberate, auditable opt-in — read
+optionality is derived from the reference site alone. The backbone never
+learns `project-conventions` (or any capability's read category). This is the
+maximal expression of ADR-013 D2 ("owned by no single capability") and of
+COR-014 universal applicability: any capability's read-only category inherits
+the behaviour with zero backbone edits.
+
+### 5. The scanner mirrors the resolver's channel split
+
+The backbone's
+reference-detection and deploy-readiness view classify a patterns-only
+category as optional exactly as the resolver treats it: an agent whose *only*
+undefined categories are optional is **deployable**, not skipped;
+`pkit agents reconcile` still *surfaces* the optional category (so an adopter
+can define it to enrich the agent) but frames it as optional — "the agent
+already deploys without this" — never as a blocker. The existing parity guard
+is extended to pin the channel split across the two implementations.
+
+### 6. The agents return to the angle-bracket form
+
+`software-engineer`,
+`code-reviewer`, `security-reviewer`, and `docs-reviewer` declare
+`reads.patterns: [<project-conventions>]` — the form ADR-013 D1 specified —
+and now receive the resolved path when the adopter defines it, and deploy
+cleanly (as generalists) when they do not.
 
 ## Rationale
 

@@ -8,7 +8,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from project_kit import decisions
+from project_kit import decisions, decisions_validate, record_points
 from project_kit import project_config as pc
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
@@ -52,6 +52,67 @@ def test_stamp_decision_writes_cor_in_core_namespace(kit_target: Path) -> None:
     assert "author: Test Author <test@example.com>" in content
     for header in ("## Context", "## Decision", "## Rationale", "## Implications"):
         assert header in content
+
+
+def test_stamp_decision_writes_its_first_point_as_a_point_heading(kit_target: Path) -> None:
+    """The stamped record's Decision holds point 1 as a heading (COR-058 point 1), so a new record
+    starts with its points in the heading form: no list form, and nothing validation reports."""
+    target = decisions.stamp_decision(kit_target, namespace="project", slug="pointed")
+    content = target.read_text(encoding="utf-8")
+
+    points = record_points.read_points(content)
+    assert points.level == 3
+    assert [(point.id, point.title) for point in points.points] == [("1", "Point title")]
+    assert not points.in_list_form
+    assert points.misspelt == ()
+    assert decisions_validate.check_points(target.name, content) == []
+
+
+def test_stamp_decision_puts_the_point_heading_in_the_decision_only(kit_target: Path) -> None:
+    """The point heading sits under `## Decision`, before `## Rationale`. A numbered heading
+    anywhere else would be no point, so a record stamped with it there would start with none."""
+    content = decisions.stamp_decision(kit_target, namespace="core", slug="placed").read_text(
+        encoding="utf-8"
+    )
+    decision, point, rationale = (
+        content.index("## Decision\n"),
+        content.index("### 1. Point title\n"),
+        content.index("## Rationale\n"),
+    )
+    assert decision < point < rationale
+    assert content.count("### ") == 1
+
+
+README = Path(__file__).resolve().parent.parent / ".pkit" / "decisions" / "README.md"
+
+
+def _schema_example() -> str:
+    """The record the decisions README's "Schema" section shows, its fenced example."""
+    text = README.read_text(encoding="utf-8")
+    section = text[text.index("\n## Schema\n") :]
+    start = section.index("```markdown\n") + len("```markdown\n")
+    return section[start : section.index("\n```\n", start) + 1]
+
+
+def test_readme_schema_example_is_a_record_validation_passes() -> None:
+    """The README's example writes its points as headings and retires one, with the entry and
+    the stub agreeing word for word (COR-058 points 1, 4 and 6), so a reader who copies the
+    form writes a record validation passes."""
+    example = _schema_example()
+    points = record_points.read_points(example)
+    assert [point.id for point in points.points] == ["1", "3"]
+    assert [stub.id for stub in points.stubs] == ["2"]
+    assert dict(points.retired) == {"2": ("3",)}
+    assert decisions_validate.check_points("PRJ-NNN-example.md", example) == []
+
+
+def test_readme_schema_example_would_fail_with_a_stub_out_of_step() -> None:
+    """The check the example passes is a real one: a stub whose sentence names another point
+    than its entry fails validation."""
+    example = _schema_example().replace("Its content is in point 3.", "Its content is in point 1.")
+    findings = decisions_validate.check_points("PRJ-NNN-example.md", example)
+    assert findings
+    assert all(finding.severity.fails for finding in findings)
 
 
 def test_stamp_decision_writes_prj_in_project_namespace(kit_target: Path) -> None:

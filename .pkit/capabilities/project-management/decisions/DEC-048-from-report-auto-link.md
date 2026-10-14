@@ -36,27 +36,38 @@ through when the plan originated from a report. The link-back is performed by
 invoking `pkit report link <N> <new>` as a subprocess — capability→backbone,
 the one-linker rule.**
 
-1. **Flag shape.** `--from-report <N>` names the feedback/change-request issue.
-   After a successful create, the script invokes `pkit report link <N> <new>`
-   with the new issue's number. The flag composes with every other create-issue
-   flag; batch-plan is prose (a skill), so its coverage is the filing loop
-   passing the flag per filed issue.
-2. **One-linker rule.** The `## Tracked by` edit is implemented **once**, in the
-   backbone's report link editor; pm **invokes** the canonical verb (a
-   subprocess, matching how pm scripts already shell to `pkit process …`) and
-   never imports backbone Python or reimplements the body edit. `--from-report`
-   and a manual `report link` therefore share one editor — the reporter's
-   tracking loop cannot fork. `report link` stays unchanged as the universal
-   fallback (pre-existing issues, non-pm repos).
-3. **Maintainer-side, same-repo posture.** The link runs where the fix is filed
-   — the report-target repo. The backbone verb owns that gate (it refuses
-   outside the target repo); pm does not duplicate the check and surfaces the
-   refusal verbatim. Nothing new versus pkit ADR-047's report-write posture.
-4. **Failure posture: warn loudly, never roll back.** A link failure after a
-   successful create prints the backbone's message verbatim plus the exact
-   remediation command (`pkit report link <N> <new>`) and exits non-zero
-   (exit 4) — the created issue is never deleted or closed to "undo" the
-   partial state.
+### 1. Flag shape
+
+`--from-report <N>` names the feedback/change-request issue.
+After a successful create, the script invokes `pkit report link <N> <new>`
+with the new issue's number. The flag composes with every other create-issue
+flag; batch-plan is prose (a skill), so its coverage is the filing loop
+passing the flag per filed issue.
+
+### 2. One-linker rule
+
+The `## Tracked by` edit is implemented **once**, in the
+backbone's report link editor; pm **invokes** the canonical verb (a
+subprocess, matching how pm scripts already shell to `pkit process …`) and
+never imports backbone Python or reimplements the body edit. `--from-report`
+and a manual `report link` therefore share one editor — the reporter's
+tracking loop cannot fork. `report link` stays unchanged as the universal
+fallback (pre-existing issues, non-pm repos).
+
+### 3. Maintainer-side, same-repo posture
+
+The link runs where the fix is filed
+— the report-target repo. The backbone verb owns that gate (it refuses
+outside the target repo); pm does not duplicate the check and surfaces the
+refusal verbatim. Nothing new versus pkit ADR-047's report-write posture.
+
+### 4. Failure posture: warn loudly, never roll back
+
+A link failure after a
+successful create prints the backbone's message verbatim plus the exact
+remediation command (`pkit report link <N> <new>`) and exits non-zero
+(exit 4) — the created issue is never deleted or closed to "undo" the
+partial state.
 
 ## Rationale
 

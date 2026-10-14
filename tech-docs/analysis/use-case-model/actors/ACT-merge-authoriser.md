@@ -11,10 +11,11 @@ pkit:
   friction:
     anchors:
       record:
-        - COR-050
+        - COR-050#3
     revalidated:
-      at: 2026-10-14T09:21:18Z
-      outcome: updated
+      at: 2026-10-14T18:58:46Z
+      outcome: unchanged
+      unchanged-because: COR-050's points are now headings, so the anchor names point 3, which the Core line cites for being told what a change updated before its merge or direct commit. Point 3's text is unchanged, so the actor holds.
 ---
 
 # ACT-merge-authoriser — Merge authoriser
