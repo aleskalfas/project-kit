@@ -23,6 +23,14 @@ beside anchors is the core's finding, in the friction block the key belongs
 to (COR-050 point 12). `_lib/check.py` states every check and the record point
 it applies.
 
+Each body is checked against its kind's declared structure too — a part
+missing, out of order or empty, `None.` where a part may not read it, and text
+of the `sentence` form that is not one sentence — at the status of the format
+rule, RS-SAN-001 (DEC-001 point 1): accepted, as errors; under any other status,
+not at all. `--preview` previews a proposed rule as if it were accepted: each
+departure is a report whose message opens `preview:`, so the exit is the normal
+check's. The backbone runs the normal check, with no preview.
+
 The backbone runs it as this capability's validator, the
 `software-analysis:artefacts` member of `pkit validate` (ADR-058): from the
 project root, with `--json` alone and the offline marker set, reading one
@@ -36,8 +44,9 @@ fillers read the tree alone; a number another branch took first reads a base,
 and is `pkit analysis check-numbers`' to report.
 
 Usage:
-  pkit analysis validate          the summary and the findings
-  pkit analysis validate --json   the findings document {summary, findings}
+  pkit analysis validate             the summary and the findings
+  pkit analysis validate --json      the findings document {summary, findings}
+  pkit analysis validate --preview   a proposed format rule's findings too, as reports
 
 Exit codes:
   0  answered; without --json, also: no error found
@@ -62,8 +71,10 @@ def main() -> int:
         description=(
             "Check the analysis artefacts (software-analysis DEC-001): shape and required "
             "parts, headings, duplicate ids, what an artefact names, actor and journey "
-            "anchors, revalidation records and the evidence they copy. Read-only and "
-            "offline; the working tree, and the evidence point when a record copies evidence."
+            "anchors, revalidation records and the evidence they copy, and each body against "
+            "its kind's structure where the format rule, RS-SAN-001, is accepted. Read-only "
+            "and offline; the working tree, and the evidence point when a record copies "
+            "evidence."
         ),
     )
     parser.add_argument(
@@ -71,9 +82,18 @@ def main() -> int:
         action="store_true",
         help="Print the findings document {summary, findings}, as `pkit validate` reads it.",
     )
+    parser.add_argument(
+        "--preview",
+        action="store_true",
+        help=(
+            "Preview the proposed format rule, RS-SAN-001, as if it were accepted: what each "
+            "body would break of its kind's structure, as reports opening `preview:`, which "
+            "never change the exit status."
+        ),
+    )
     args = parser.parse_args()
 
-    outcome = check.check(backbone.project_root())
+    outcome = check.check(backbone.project_root(), preview=args.preview)
     if args.json:
         print(json.dumps(outcome.document(), indent=2, ensure_ascii=False))
         return 0

@@ -88,6 +88,27 @@ And a finding that never fails:
   from the records and the artefacts in the working tree each time, never
   kept in a ledger (COR-050 point 9).
 
+And at the format rule's status:
+
+- **Each body against its kind's structure** (point 1; RS-SAN-001): every
+  artefact's body — a collection entry's section, as the backbone's reading
+  spans it, and the collection file's head — and every record's, against the
+  structure its kind declares (`_lib/structure.py`): a declared part missing,
+  out of order or empty, `None.` where the part may not read it, and text of
+  the `sentence` form, in a part or a front-matter field, that is not one
+  sentence. A part or a label a writer adds is never reported. A withdrawn
+  artefact is never failed for a part it lacks, since a part may be required
+  after its withdrawal. A record is held to the structure declared now, the
+  only one declared so far: holding it to the structure in force on its day
+  comes with the first change to a structure (DEC-001's Implications). A
+  document's missing title heading is the heading
+  check's, above, which holds it whatever the rule's status. The structure
+  binds at the rule's status (COR-051 point 4): accepted, each departure is an
+  error; under any other status the check reports none of it. On request
+  (`preview`), a proposed rule is previewed as accepted: each departure is a
+  report, its message opening `preview:`, so the exit is the normal check's.
+  A superseded or withdrawn rule binds nothing in a preview either.
+
 It reads the working tree — and, when a record copies evidence, the evidence
 point — so the same tree gets the same answer as long as the evidence fillers
 read the tree alone.
@@ -107,21 +128,24 @@ refuses beside anchors (COR-050 points 1, 8 and 12; DEC-001 point 9).
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
 from ruamel.yaml.error import YAMLError
 
-from _lib import backbone, evidence, markdown, schemas
+from _lib import backbone, evidence, markdown, schemas, structure
 from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome, at
 from _lib.model import (
     ACTOR,
+    CAPABILITY,
     COLLECTIONS,
     CONTAINER,
+    FORMAT_RULE,
     ID_SHAPE,
     JOURNEY,
     KINDS,
+    METHOD_SET,
     NOUN,
     NUMBERED,
     REVALIDATED_AT,
@@ -162,8 +186,9 @@ Record = tuple[str, dict[str, object]]
 AT_ODDS = {"holds": "failed", "code-regressed": "passed"}
 
 
-def check(root: Path) -> Outcome:
-    """Check the analysis in the working tree at `root`."""
+def check(root: Path, *, preview: bool = False) -> Outcome:
+    """Check the analysis in the working tree at `root` — with `preview`, a proposed
+    format rule's structure too, as reports that never fail."""
     outcome = Outcome()
     try:
         analysis = backbone.read_analysis(root)
@@ -197,6 +222,9 @@ def check(root: Path) -> Outcome:
         outcome.summary.append(summary)
         outcome.findings += compared
     outcome.findings += _open_regressions(root, read, analysis)
+    summary, departing = _structure(root, analysis, read, preview=preview)
+    outcome.summary.append(summary)
+    outcome.findings += departing
     return outcome
 
 
@@ -809,3 +837,282 @@ def _entries_of_the_point(point: evidence.Evidence) -> list[Finding]:
                 )
             )
     return found
+
+
+# --- each body against its kind's structure (DEC-001 point 1; RS-SAN-001) ------------------
+
+#: What a preview finding's message opens with: a finding of a rule not yet accepted,
+#: at the severity that reports without judging (DEC-001 point 1; COR-055 point 4).
+PREVIEW = "preview: "
+
+#: The statuses that decide whether the structure binds (COR-051 point 4).
+ACCEPTED, PROPOSED = "accepted", "proposed"
+
+
+def _structure(
+    root: Path, analysis: Analysis, records: list[Record], *, preview: bool
+) -> tuple[str, list[Finding]]:
+    """Each artefact's body, each collection file's head and each record's body against
+    the structure its kind declares, at the format rule's status (DEC-001 point 1): an
+    error where the rule is accepted, a report opening `preview:` where it is proposed
+    and a preview is asked for, and nothing otherwise. Returns the summary's line
+    about it, and the findings."""
+    rules = analysis.method_rules
+    status = None if rules is None else rules.get(FORMAT_RULE)
+    if status == ACCEPTED:
+        severity, label = ERROR, ""
+    elif status == PROPOSED and preview:
+        severity, label = REPORT, PREVIEW
+    else:
+        return _unchecked(status, rules is None, preview), []
+    declaration = _shown(structure.KINDS_FILE, root)
+    try:
+        kinds = structure.read_kinds()
+    except structure.Unreadable as exc:
+        return (
+            f"structure ({FORMAT_RULE}, {status}): not checked — the declaration cannot be read.",
+            [
+                Finding(
+                    severity,
+                    declaration,
+                    f"{label}the kinds' structures cannot be read: {exc}. No body is checked "
+                    f"against its structure until they can: the file is {CAPABILITY}'s own, "
+                    f"never the project's to edit — restore it as the capability ships it "
+                    f"(DEC-001 point 1)",
+                )
+            ],
+        )
+    found: list[Finding] = []
+    texts: dict[str, str | None] = {}
+    checked = 0
+    for artefact in analysis.artefacts:
+        kind = kinds.get(artefact.kind)
+        text = _cached(root, artefact.path, texts)
+        if kind is None or text is None:
+            continue  # the core reports a file it cannot read
+        checked += 1
+        found += _artefact_structure(artefact, kind, text)
+    found += _heads(root, analysis, kinds, texts)
+    record = kinds.get(structure.RECORD)
+    for rel, data in records:
+        text = _cached(root, rel, texts)
+        if record is None or text is None:
+            continue
+        checked += 1
+        subject = "a revalidation record"
+        found += [
+            Finding(ERROR, rel, _departure_message(d, record.sections, subject))
+            for d in structure.departures(structure.body_lines(text), record)
+        ]
+        found += _field_findings(rel, data, record, subject)
+    found = [Finding(severity, f.location, label + f.message) for f in found]
+    departing = len({f.location.split(":/", 1)[0] for f in found})
+    previewed = ", previewed as accepted" if label else ""
+    never = ", reported and never failing" if label else ""
+    return (
+        f"structure ({FORMAT_RULE}, {status}{previewed}): {checked} artefact(s) and record(s) "
+        f"checked against the structure their kind declares in {declaration}; "
+        f"{departing} departing from it{never}.",
+        found,
+    )
+
+
+def _unchecked(status: str | None, no_set: bool, preview: bool) -> str:
+    """The summary's line when the structure binds nothing, and why (COR-051 point 4)."""
+    if no_set:
+        return (
+            f"structure ({FORMAT_RULE}): not checked — the backbone's reading holds no "
+            f"{CAPABILITY}:{METHOD_SET}, so whether its format rule binds cannot be told."
+        )
+    if status is None:
+        return f"structure: not checked — {CAPABILITY}:{METHOD_SET} holds no {FORMAT_RULE}."
+    if status == PROPOSED:
+        return (
+            f"structure ({FORMAT_RULE}, proposed): not checked — the rule binds nothing until "
+            f"it is accepted (COR-051 point 4); `pkit analysis validate --preview` shows what "
+            f"it would report."
+        )
+    asked = " A preview shows only a proposed rule." if preview else ""
+    return (
+        f"structure ({FORMAT_RULE}, {status}): not checked — the rule binds nothing "
+        f"(COR-051 point 4).{asked}"
+    )
+
+
+def _artefact_structure(artefact: Artefact, kind: structure.Kind, text: str) -> list[Finding]:
+    """What an artefact's body — an entry's section — and its front matter break of its
+    kind's structure. A withdrawn artefact is never failed for a part it lacks, and a
+    document's missing title heading is `_headings`'."""
+    subject = with_article(artefact.kind)
+    if artefact.entry and not artefact.span_read:
+        return [
+            Finding(
+                ERROR,
+                artefact.location,
+                "its section is not checked against its kind's structure: the installed "
+                "backbone gives no entry's `span` in `pkit friction artefacts --json` — "
+                "upgrade it (`pkit upgrade`)",
+            )
+        ]
+    if not artefact.entry:
+        departing = structure.departures(structure.body_lines(text), kind)
+    elif artefact.span is not None:
+        departing = structure.departures(structure.span_lines(text, artefact.span), kind)
+    else:
+        departing = [structure.Departure(kind.sections[0], structure.MISSING)]
+    found = [
+        Finding(ERROR, artefact.location, _departure_message(d, kind.sections, subject))
+        for d in departing
+        if not _exempt(d, artefact)
+    ]
+    return found + _field_findings(artefact.location, artefact.fields, kind, subject)
+
+
+def _exempt(departure: structure.Departure, artefact: Artefact) -> bool:
+    """A part a withdrawn artefact lacks, which may be required since its withdrawal
+    (DEC-001 point 1), and a document's title heading, which `_headings` holds whatever
+    the format rule's status."""
+    if departure.how != structure.MISSING:
+        return False
+    if artefact.withdrawn:
+        return True
+    element = departure.element
+    return (
+        not artefact.entry
+        and artefact.kind in TITLED
+        and element.type == structure.HEADING
+        and element.text is None
+    )
+
+
+def _heads(
+    root: Path,
+    analysis: Analysis,
+    kinds: Mapping[str, structure.Kind],
+    texts: dict[str, str | None],
+) -> list[Finding]:
+    """Each collection file's head — its body above its first entry's section, as the
+    backbone's reading spans the entries — against its kind's declared head."""
+    found: list[Finding] = []
+    for path, kind_name in sorted(analysis.files.items()):
+        kind = kinds.get(kind_name)
+        if kind_name not in COLLECTIONS or kind is None or not kind.head:
+            continue
+        entries = [a for a in analysis.artefacts if a.path == path and a.entry]
+        text = _cached(root, path, texts)
+        if text is None or any(not a.span_read for a in entries):
+            continue  # an entry reports a backbone that gives no span
+        firsts = [a.span[0] for a in entries if a.span is not None]
+        lines = structure.body_lines(text)
+        if firsts:
+            lines = [line for line in lines if line[0] < min(firsts)]
+        subject = f"a file of {NOUN[kind_name]}s"
+        found += [
+            Finding(ERROR, path, _departure_message(d, kind.head, subject))
+            for d in structure.departures(lines, kind, head=True)
+        ]
+    return found
+
+
+def _field_findings(
+    location: str, fields: Mapping[str, Any], kind: structure.Kind, subject: str
+) -> list[Finding]:
+    """Each front-matter text that does not hold its field's form."""
+    found: list[Finding] = []
+    for departure in structure.field_departures(fields, kind):
+        field = departure.field
+        each = " in each item" if departure.pointer.count("/") > 1 else ""
+        found.append(
+            Finding(
+                ERROR,
+                at(location, departure.pointer),
+                f"{departure.text!r} is more than one sentence: {subject}'s `{field.name}` "
+                f"holds one sentence{each}, and a sentence ends at a full stop, a question mark "
+                f"or an exclamation mark before a space or a line end ({FORMAT_RULE}). "
+                f"{_advice(field.hint, field.example)}",
+            )
+        )
+    return found
+
+
+def _departure_message(
+    departure: structure.Departure, elements: Sequence[structure.Element], subject: str
+) -> str:
+    """What a departure breaks, where, and what goes in the part: its hint and example."""
+    element = departure.element
+    named = _named(element, elements)
+    line = f", at line {departure.line}," if departure.line is not None else ""
+    if departure.how == structure.MISSING:
+        problem = (
+            f"{named} is missing, {_place(element, elements)}: {subject} carries every part "
+            f"its kind ships"
+        )
+    elif departure.how == structure.OUT_OF_ORDER:
+        problem = (
+            f"{named}{line} is out of order, {_place(element, elements)}: the parts come in "
+            f"the order the kind gives"
+        )
+    elif departure.how == structure.EMPTY:
+        none = ", or `None.` when there is nothing to say" if element.allows_none else ""
+        problem = f"{named}{line} is empty: write in it what it asks for{none}"
+    elif departure.how == structure.NONE_REFUSED:
+        problem = (
+            f"{named}{line} reads `None.`, which only a part that allows it may: {subject} "
+            f"always has something to say here"
+        )
+    else:
+        problem = (
+            f"{named}{line} is more than one sentence: a sentence ends at a full stop, a "
+            f"question mark or an exclamation mark before a space or a line end, and one ends "
+            f"here before the text's last word"
+        )
+    return f"{problem} ({FORMAT_RULE}). {_advice(element.hint, element.example)}".rstrip()
+
+
+def _named(element: structure.Element, elements: Sequence[structure.Element]) -> str:
+    """An element as a writer writes it."""
+    if element.type == structure.LABEL:
+        return f"`**{element.text}:**`"
+    if element.type == structure.HEADING:
+        marks = "#" * (element.level or 1)
+        if element.text is not None:
+            return f"the section `{marks} {element.text}`"
+        return f"its `{marks} ` heading"
+    index = list(elements).index(element)
+    following = next((e for e in elements[index + 1 :] if e.type != structure.OPENING), None)
+    if following is None:
+        return "its opening text"
+    return f"the opening text before {_named(following, elements)}"
+
+
+def _place(element: structure.Element, elements: Sequence[structure.Element]) -> str:
+    """Where the element goes: first, or after the element listed before it."""
+    index = list(elements).index(element)
+    if index == 0:
+        return "and it comes first"
+    previous = elements[index - 1]
+    if previous.type == structure.OPENING:
+        return "and it comes after its opening"
+    return f"and it comes after {_named(previous, elements)}"
+
+
+def _advice(hint: str | None, example: str | None) -> str:
+    """A part's hint and example, as the check repeats them (DEC-001 point 1)."""
+    said = [f"What goes there: {hint}"] if hint else []
+    if example:
+        said.append(f"Example: {example}")
+    return " ".join(said)
+
+
+def _cached(root: Path, rel: str, texts: dict[str, str | None]) -> str | None:
+    if rel not in texts:
+        texts[rel] = _read(root / rel)
+    return texts[rel]
+
+
+def _shown(path: Path, root: Path) -> str:
+    """A path as a finding locates it: relative to the project root where it lies under it."""
+    try:
+        return path.relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()

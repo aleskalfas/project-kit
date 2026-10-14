@@ -979,7 +979,7 @@ def test_the_point_is_read_only_when_a_record_copies_evidence(
     project.write({RECORD: _record({"UC-001": "holds"})})
     document = _check(project)
     assert document["findings"] == []
-    assert len(document["summary"]) == 1
+    assert [line for line in document["summary"] if line.startswith("evidence")] == []
     project.write({RECORD: _record({"UC-001": "holds"}, [_entry("UC-001")])})
     document = _check(project)
     assert document["findings"] == []
