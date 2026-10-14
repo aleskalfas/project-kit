@@ -1127,10 +1127,9 @@ def resolve_collision_interactive(
 
     Before each prompt it names what `override` would do: each path of the
     project's own artefact of that name it removes, which the caller removes
-    (`apply_overrides`), and each artefact core
-    or another capability ships, which it leaves. `override` is refused, and the
-    prompt asked again, while git could not give the project's artefact back as
-    it stands.
+    (`apply_overrides`), and each artefact core or another capability ships,
+    which it leaves. `override` is refused, and the prompt asked again, while
+    git could not give the project's artefact back as it stands.
     """
     kind, name = finding.artifact_kind, finding.artifact_name
     replaced = project_artefact_paths(target_root, kind, name)

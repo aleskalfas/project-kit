@@ -600,8 +600,8 @@ class CollisionAnswers:
     """What a person chose for each new collision in step 1 (ADR-065 point 6).
 
     *skips* holds the artefacts each capability's copy leaves out, by
-    capability, and *overridden* the project's artefacts an override removes
-    once the capabilities are copied in.
+    capability, and *overridden* the project's artefacts an override removes in
+    step 2, before the copy.
     """
 
     skips: Mapping[str, tuple[tuple[str, str], ...]] = field(default_factory=lambda: {})
@@ -1771,8 +1771,9 @@ def _check_capability_dep_conflicts_for_upgrade(
       (`pkit upgrade --force`), so neither is a hard block.
 
     A pair in which neither side moves is not the transition's to judge, and
-    neither is a mandatory connection already unmet before it. An optional
-    dependency that is not installed passes. Read-only.
+    neither is a mandatory connection of a capability that does not move,
+    already unmet before it. An optional dependency that is not installed
+    passes. Read-only.
     """
     from project_kit import capabilities as caps
     from project_kit.connections import range_admits

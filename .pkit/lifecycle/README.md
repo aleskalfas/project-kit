@@ -918,7 +918,7 @@ A `kit-shipped` capability's copy replaces its subtree wholesale. On its own tha
 - **source version > installed version:** skip it too, reported `pending`: moving a capability is `pkit upgrade`'s, with its migrations.
 - **equal:** copy it, with no migration and no stamp.
 
-A version that cannot be read on the installed side skips the capability, so none of its migrations runs anywhere. One the bundle's package does not name skips it as well. The incubated skip-branch above is unchanged (no kit source to compare against), and so is the "no longer ships from source" orphan case. A version transition refuses a capability its bundle ships older, in its step 1, before it writes anything ("The upgrade flow", above). Before any capability is reached, sync's guard has already stopped a running pkit at another version than the project's ("Sync's guard" above).
+A version that cannot be read on the installed side skips the capability, so none of its migrations runs anywhere. One the bundle's package does not name skips it as well. The incubated skip-branch above is unchanged (no kit source to compare against), and so is the "no longer ships from source" orphan case. `pkit upgrade`, the transition of the backbone, refuses a capability its bundle ships older, in its step 1, before it writes anything ("The upgrade flow", above). `pkit capabilities upgrade` does not refuse it yet, and #1463 adds that refusal. Before any capability is reached, sync's guard has already stopped a running pkit at another version than the project's ("Sync's guard" above).
 
 ### The ownership predicates (`ownership.py`)
 

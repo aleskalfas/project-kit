@@ -380,3 +380,20 @@ def test_a_transition_warns_for_a_capability_that_does_not_move_and_proceeds_und
     _transition_gates(repo, kit_source, force=True)
 
     assert "Proceeding under --force" in capsys.readouterr().out
+
+
+def test_a_transition_refuses_a_moving_carrier_whose_mark_was_already_unmet(
+    repo: AdopterRepo, kit_source: Path
+) -> None:
+    """A moving capability's mark is judged in the wiring the transition leaves, as
+    `capabilities upgrade` judges it: one already unmet before still refuses."""
+    _source(kit_source, "flow", definitions={"flow": [_coupling(ISSUES)]})
+    _install(repo, kit_source, "flow")  # installed past the gate, its mark unmet
+    _source(kit_source, "flow", "0.2.0", definitions={"flow": [_coupling(ISSUES)]})
+
+    with pytest.raises(click.ClickException) as excinfo:
+        _transition_gates(repo, kit_source, force=True)
+
+    assert f"- capability 'flow': '{ISSUES}': its capability 'tracker' is not installed" in (
+        excinfo.value.message
+    )
