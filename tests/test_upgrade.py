@@ -1125,64 +1125,198 @@ backend_state: {{}}
     write_backbone_manifest(target_root, backbone)
 
 
-def test_backbone_upgrade_refuses_when_installed_cap_has_absent_dep(
-    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+def _package_text(
+    name: str,
+    version: str,
+    requires_capabilities: list[dict[str, Any]] | None = None,
+) -> str:
+    """A capability's `package.yaml`, with the `requires_capabilities` given."""
+    lines = [
+        "schema_version: 1",
+        "component:",
+        "  kind: capability",
+        f"  name: {name}",
+        f"  version: {version}",
+        "description: Test.",
+        'requires_backbone: ">=0.0.0"',
+    ]
+    if requires_capabilities:
+        lines.append("requires_capabilities:")
+        for req in requires_capabilities:
+            lines.append(f"  - name: {req['name']}")
+            lines.append(f'    version: "{req["version"]}"')
+            if req.get("optional"):
+                lines.append("    optional: true")
+    return "\n".join(lines) + "\n"
+
+
+def _stage_moving_capability(
+    source_kit: Path,
+    target: Path,
+    name: str,
+    *,
+    installed: str = "0.1.0",
+    bundled: str = "0.2.0",
+    requires_capabilities: list[dict[str, Any]] | None = None,
 ) -> None:
-    """Backbone upgrade refuses when an installed capability's declared dependency
-    is not installed."""
-    # Install consumer with a dep on evidence; evidence is NOT installed.
-    _stage_installed_capability(
-        installed_target,
-        "consumer",
-        requires_capabilities=[{"name": "evidence", "version": ">=0.1.0,<2.0.0"}],
+    """Capability *name* installed at *installed*, and bundled at *bundled* by
+    *source_kit*, whose version requires *requires_capabilities*: the transition
+    moves it."""
+    _stage_installed_capability(target, name, version=installed)
+    cap = source_kit / "capabilities" / name
+    cap.mkdir(parents=True, exist_ok=True)
+    (cap / "package.yaml").write_text(
+        _package_text(name, bundled, requires_capabilities), encoding="utf-8"
     )
 
-    with pytest.raises(click.ClickException, match="capability dependency check failed"):
-        upgrade.run_upgrade(installed_target)
 
-
-def test_backbone_upgrade_refuses_when_installed_cap_dep_out_of_range(
-    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+def test_the_gate_refuses_a_moving_capability_whose_dependency_is_not_installed(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Backbone upgrade refuses when a declared dependency is installed but out of range."""
-    _stage_installed_capability(installed_target, "evidence", version="0.1.0")
-    _stage_installed_capability(
+    """A moving capability's new version requires a capability the project has not
+    installed: the project controls it, so the transition refuses with a hint,
+    before it writes anything (ADR-065 point 6, COR-030)."""
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    _stage_moving_capability(
+        source,
         installed_target,
         "consumer",
-        requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<2.0.0"}],
+        requires_capabilities=[{"name": "absent", "version": ">=0.1.0,<2.0.0"}],
     )
+    before = _tree_bytes(installed_target)
 
-    with pytest.raises(click.ClickException, match="capability dependency check failed"):
-        upgrade.run_upgrade(installed_target)
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target, force=True)
+
+    message = excinfo.value.message
+    assert "capability dependency check failed" in message
+    assert "capability 'consumer' v0.2.0 requires capability 'absent'" in message
+    assert "which is not installed: install it first" in message
+    assert _tree_bytes(installed_target) == before
 
 
-def test_backbone_upgrade_passes_an_absent_optional_dependency(
-    installed_target: Path, capsys: pytest.CaptureFixture[str]
+@pytest.mark.parametrize("optional", [False, True], ids=["required", "optional"])
+def test_the_gate_refuses_a_moving_capability_whose_dependency_does_not_move_out_of_range(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, optional: bool
 ) -> None:
-    """An optional dependency that is not installed passes the backbone-wide check (COR-030)."""
-    _stage_installed_capability(
+    """The dependency is installed, does not move, and is out of the range the
+    moving capability's new version declares: refused, `--force` included. An
+    installed optional dependency must meet its range too (COR-030)."""
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    _stage_installed_capability(installed_target, "homegrown", version="0.1.0")
+    _stage_moving_capability(
+        source,
         installed_target,
         "consumer",
-        requires_capabilities=[{"name": "evidence", "version": ">=0.1.0,<2.0.0", "optional": True}],
+        requires_capabilities=[
+            {"name": "homegrown", "version": ">=0.2.0,<2.0.0", "optional": optional}
+        ],
     )
 
-    upgrade.run_upgrade(installed_target)
-    assert "Already at backbone v" in capsys.readouterr().out
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target, force=True)
+
+    assert (
+        "capability 'consumer' v0.2.0 requires capability 'homegrown' >=0.2.0,<2.0.0, and "
+        "v0.1.0 is installed, which this upgrade does not move: upgrade it first"
+    ) in excinfo.value.message
 
 
-def test_backbone_upgrade_refuses_an_installed_optional_dependency_out_of_range(
+def test_the_gate_passes_an_absent_optional_dependency(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An optional dependency that is not installed passes (COR-030)."""
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    _stage_moving_capability(
+        source,
+        installed_target,
+        "consumer",
+        requires_capabilities=[{"name": "absent", "version": ">=0.1.0", "optional": True}],
+    )
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert caps_version(installed_target, "consumer") == "0.2.0"
+
+
+def caps_version(target: Path, name: str) -> str | None:
+    from project_kit import capabilities as caps
+
+    return caps.get_installed_capability_version(target, name)
+
+
+def test_the_dependency_check_reads_the_versions_the_transition_installs(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Installed at 0.1.0, the dependency is out of the range the dependent's new
+    version declares, but the transition moves it to 0.2.0, inside the range: the
+    check reads the versions the transition installs, so the upgrade proceeds
+    (ADR-065 point 6)."""
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    _stage_moving_capability(source, installed_target, "provider")
+    _stage_moving_capability(
+        source,
+        installed_target,
+        "consumer",
+        requires_capabilities=[{"name": "provider", "version": ">=0.2.0,<1.0.0"}],
+    )
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert caps_version(installed_target, "consumer") == "0.2.0"
+    assert caps_version(installed_target, "provider") == "0.2.0"
+
+
+def test_the_gate_warns_when_a_moving_dependency_leaves_a_capability_that_does_not_move(
     installed_target: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """An installed optional dependency must meet its range, as a required one must (COR-030)."""
-    _stage_installed_capability(installed_target, "evidence", version="0.1.0")
+    """The dependency moves past the range a capability that does not move
+    declares for it: the transition warns, naming the dependent, and refuses
+    unless `--force`, under which it proceeds (ADR-065 point 6, COR-030)."""
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    _stage_moving_capability(source, installed_target, "provider")
     _stage_installed_capability(
         installed_target,
-        "consumer",
-        requires_capabilities=[{"name": "evidence", "version": ">=0.2.0,<2.0.0", "optional": True}],
+        "homegrown",
+        requires_capabilities=[{"name": "provider", "version": ">=0.1.0,<0.2.0"}],
     )
+    before = _tree_bytes(installed_target)
 
-    with pytest.raises(click.ClickException, match="capability dependency check failed"):
-        upgrade.run_upgrade(installed_target)
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target, pin=False)
+
+    out = capsys.readouterr().out
+    assert "Warning: 1 declared range(s) of a capability this upgrade does not move" in out
+    assert "- 'homegrown' declares 'provider' >=0.1.0,<0.2.0 (this upgrade brings v0.2.0)" in out
+    assert "or pass --force to proceed anyway" in excinfo.value.message
+    assert _tree_bytes(installed_target) == before
+
+    upgrade.run_upgrade(installed_target, pin=False, force=True)
+
+    out = capsys.readouterr().out
+    assert "Warning (--force): 1 declared range(s)" in out
+    assert "Proceeding under --force" in out
+    assert caps_version(installed_target, "provider") == "0.2.0"
+
+
+def test_force_overrides_no_refusal_of_a_component_bundled_older(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`pkit upgrade --force` overrides the two warnings and nothing else."""
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    _stage_moving_capability(source, installed_target, "provider", installed="0.3.0")
+
+    with pytest.raises(click.ClickException, match="no flag overrides this refusal"):
+        upgrade.run_upgrade(installed_target, force=True)
 
 
 def test_backbone_upgrade_succeeds_when_cap_deps_satisfied(
@@ -2184,28 +2318,37 @@ def test_the_early_return_needs_both_states_and_every_component_at_the_target(
     ]
 
 
-def test_a_record_newer_than_the_bundle_is_never_moved_down(
-    installed_target: Path, capsys: pytest.CaptureFixture[str]
+def test_a_record_newer_than_the_bundle_refuses_the_transition(
+    installed_target: Path,
 ) -> None:
     """A transition never moves a recorded state down (ADR-065 point 7): an adapter
-    recorded ahead of the bundle stays where it is. It is not at its bundled
-    version, so the early return does not apply (point 2), and the move is listed
-    as ahead."""
+    recorded ahead of the bundle refuses the transition in its step 1, before it
+    writes anything, with no override. It is not at its bundled version, so the
+    early return does not apply (point 2), and the move is listed as ahead."""
     record = installed_target / ".pkit" / "adapters" / "claude-code" / "project" / "manifest.yaml"
     record.write_text(
         re.sub(r"(?m)^  version: .*$", "  version: 99.0.0", record.read_text(encoding="utf-8")),
         encoding="utf-8",
     )
     _drop_completion(installed_target)
+    before = _tree_bytes(installed_target)
+    source = install.find_source_kit()
+    bundled = manifest.read_component_package(source / "adapters" / "claude-code" / "package.yaml")
+    assert bundled is not None
 
-    upgrade.run_upgrade(installed_target, pin=False)
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target, pin=False, force=True)
 
-    assert "kept         adapter 'claude-code' at 99.0.0" in capsys.readouterr().out
-    recorded = manifest.read_component_manifest(record)
-    assert recorded is not None and recorded.version == "99.0.0"
+    message = excinfo.value.message
+    assert (
+        f"this pkit's bundle ships adapter 'claude-code' at {bundled[0]}, older than the "
+        "99.0.0 this project records"
+    ) in message
+    assert "no flag overrides this refusal" in message
+    assert "a pkit whose bundle ships adapter 'claude-code' at 99.0.0 or newer" in message
+    assert _tree_bytes(installed_target) == before
     state = manifest.read_backbone_manifest(installed_target)
     assert state is not None
-    source = install.find_source_kit()
     moves = upgrade.component_moves(installed_target, source, state)
     assert [(m.name, m.recorded, m.ahead) for m in moves] == [("claude-code", "99.0.0", True)]
     assert not upgrade.is_current(installed_target, source, state, _this_pkit())
@@ -2253,7 +2396,9 @@ def test_an_adapter_registered_after_the_copy_is_rendered_into_the_ignore_file(
 
     upgrade.run_upgrade(installed_target, pin=False)
 
-    assert events[-2:] == ["register", "render"]
+    # Registered, then rendered after propagation, and rendered again with the
+    # derivable state.
+    assert events == ["register", "render", "render"]
 
 
 @pytest.mark.parametrize(
@@ -2521,27 +2666,30 @@ def test_upgrade_moves_the_root_record_of_a_capability_no_longer_shipped(
     assert "Already at backbone" in second
 
 
-def test_upgrade_keeps_a_capability_its_bundle_ships_older(
+def test_upgrade_refuses_a_capability_its_bundle_ships_older(
     installed_target: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """A transition never moves a recorded version down: a capability its bundle
-    ships older is neither copied nor restamped (#1461 refuses it)."""
-    installed = _install_trial(installed_target, tmp_path, "0.3.0")
-    skill = (installed / "skills" / "trial-skill.md").read_text(encoding="utf-8")
+    ships older refuses the transition before it writes anything, `--force`
+    included, naming both versions (ADR-065 point 7)."""
+    _install_trial(installed_target, tmp_path, "0.3.0")
     source = _real_source_copy(tmp_path)
     _use_source(monkeypatch, source)
     _stage_trial(source, "0.1.0", skill="# Older\n")
     _record_finished_at(installed_target, "0.1.0")
+    before = _tree_bytes(installed_target)
 
-    upgrade.run_upgrade(installed_target, pin=False)
+    for dry_run in (True, False):
+        with pytest.raises(click.ClickException) as excinfo:
+            upgrade.run_upgrade(installed_target, pin=False, dry_run=dry_run, force=True)
 
-    assert (installed / "skills" / "trial-skill.md").read_text(encoding="utf-8") == skill
-    record = _trial_record(installed_target)
-    assert record is not None and record.version == "0.3.0"
-    assert "kept         'trial' at v0.3.0" in capsys.readouterr().out
+        assert (
+            "this pkit's bundle ships capability 'trial' at 0.1.0, older than the 0.3.0 this "
+            "project records"
+        ) in excinfo.value.message
+        assert _tree_bytes(installed_target) == before
 
 
 def test_upgrade_creates_each_missing_seed_path_and_never_writes_over_one(
@@ -2591,3 +2739,473 @@ def test_upgrade_dry_run_lists_each_capability_migration_and_writes_nothing(
     assert "would run 1 migration(s) for capability 'trial' (0.1.0 -> v0.2.0)" in out
     assert "would record capability 'trial' at 0.2.0 (from 0.1.0)" in " ".join(out.split())
     assert _tree_bytes(installed_target) == before
+
+
+# --- every migration in COR-010's order, and the collisions and gates (#1461) ----
+
+
+def _bump_bundled_adapter(source_kit: Path, version: str) -> Path:
+    """The bundle's claude-code adapter at *version*; returns its folder."""
+    adapter = source_kit / "adapters" / "claude-code"
+    package = adapter / "package.yaml"
+    text = package.read_text(encoding="utf-8")
+    package.write_text(re.sub(r"(?m)^  version: .*$", f"  version: {version}", text), "utf-8")
+    return adapter
+
+
+def _stage_script(component: Path, version: str, body: str, name: str = "001-trace.sh") -> Path:
+    """A migration script under *component*'s `migrations/<version>/`."""
+    script = component / "migrations" / version / name
+    script.parent.mkdir(parents=True, exist_ok=True)
+    script.write_text(body, encoding="utf-8")
+    script.chmod(0o755)
+    return script
+
+
+def _note(trace: Path, label: str) -> None:
+    with trace.open("a", encoding="utf-8") as handle:
+        handle.write(f"{label}\n")
+
+
+def _lines(trace: Path) -> list[str]:
+    return trace.read_text(encoding="utf-8").splitlines()
+
+
+def test_an_upgrade_runs_every_step_in_cor_010s_order(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Propagation and the ignore render, then the backbone's, the adapters' and the
+    capabilities' migrations, then the seed paths, merge, deploy, the render again,
+    the workspace and provisioning, the completion and the pin (ADR-065 point 4)."""
+    from project_kit import visibility
+
+    _install_trial(installed_target, tmp_path, "0.1.0")
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    trace = tmp_path / "trace.txt"
+    _stage_backbone_migration(source, "0.2.0", "001-trace.sh", _tracing(trace, "backbone"))
+    _stage_script(_bump_bundled_adapter(source, "0.7.0"), "0.7.0", _tracing(trace, "adapter"))
+    _stage_script(_stage_trial(source, "0.2.0"), "0.2.0", _tracing(trace, "capability"))
+    _record_finished_at(installed_target, "0.1.0")
+
+    def spy(label: str, real: Any) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            _note(trace, label)
+            return real(*args, **kwargs)
+
+        return wrapper
+
+    for module, name, label in [
+        (upgrade, "record_backbone_target", "target"),
+        (upgrade, "propagate", "propagation"),
+        (visibility, "render_runtime_ignore", "render"),
+        (upgrade, "seed_missing_paths", "seed paths"),
+        (install, "run_installed_adapter_primitives", "merge and deploy"),
+        (install, "ensure_agent_workspace", "workspace"),
+        (install, "provision_query_commands", "provisioning"),
+        (upgrade, "record_completed_version", "completion"),
+        (upgrade, "freeze_pin", "pin"),
+    ]:
+        monkeypatch.setattr(module, name, spy(label, getattr(module, name)))
+
+    upgrade.run_upgrade(installed_target)
+
+    assert _lines(trace) == [
+        "target",
+        "propagation",
+        "render",
+        "backbone",
+        "adapter",
+        "capability",
+        "seed paths",
+        "merge and deploy",
+        "render",
+        "workspace",
+        "provisioning",
+        "completion",
+        "pin",
+    ]
+
+
+def test_an_adapter_migration_in_the_window_runs_from_the_bundle(
+    installed_target: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The project's copy of an adapter holds no `migrations/`: the transition reads
+    the adapter's migrations from the bundle, runs those in its window, and records
+    the adapter at its bundled version (ADR-065 point 4, step 5)."""
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    trace = tmp_path / "trace.txt"
+    adapter = _bump_bundled_adapter(source, "0.7.0")
+    _stage_script(adapter, "0.7.0", _tracing(trace, "0.7.0"))
+    project_adapter = installed_target / ".pkit" / "adapters" / "claude-code"
+    record = project_adapter / "project" / "manifest.yaml"
+    recorded = manifest.read_component_manifest(record)
+    assert recorded is not None and recorded.version == "0.6.0"
+
+    upgrade.run_upgrade(installed_target, dry_run=True)
+
+    out = capsys.readouterr().out
+    assert "adapter 'claude-code': 0.6.0 -> 0.7.0" in out
+    assert "would run 1 migration(s) for adapter 'claude-code' (0.6.0 -> v0.7.0)" in out
+    assert not trace.exists()
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert "running 1 migration(s) for adapter 'claude-code'" in capsys.readouterr().out
+    assert _lines(trace) == ["0.7.0"]
+    recorded = manifest.read_component_manifest(record)
+    assert recorded is not None and recorded.version == "0.7.0"
+    assert not (project_adapter / "migrations").exists()
+
+
+def test_the_adapter_copy_carries_its_permission_enforcement_declaration(
+    installed_target: Path,
+) -> None:
+    """First install copies the adapter's declaration of the permission dimensions
+    its harness enforces, a transition brings it to a project that lacks it, and
+    `pkit permissions` reads it there. A top-level file the bundle no longer ships
+    is removed (ADR-065 point 4)."""
+    from project_kit import permissions
+
+    adapter = installed_target / ".pkit" / "adapters" / "claude-code"
+    declaration = adapter / "permission-enforcement.yaml"
+    assert declaration.is_file()
+    declaration.unlink()  # as in every project installed before this release
+    stale = adapter / "retired.yaml"
+    stale.write_text("retired: true\n", encoding="utf-8")
+    _record_finished_at(installed_target, "0.1.0")
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert declaration.is_file()
+    assert not stale.exists()
+    gap = permissions._gap_report(installed_target, {"runtime": [], "unprojectable": []})
+    assert any("network-egress" in line for line in gap), gap
+
+
+def test_a_releases_new_adapter_is_registered_at_its_bundled_version(
+    installed_target: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """An adapter the target adds is registered by the transition that brings it,
+    and recorded at the version it ships (ADR-065 point 2)."""
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    harness = source / "adapters" / "harness"
+    harness.mkdir()
+    (harness / "package.yaml").write_text(
+        "schema_version: 1\ncomponent:\n  kind: adapter\n  name: harness\n  version: 0.3.0\n"
+        'requires_backbone: ">=0.0.0"\n',
+        encoding="utf-8",
+    )
+    _record_finished_at(installed_target, "0.1.0")
+
+    upgrade.run_upgrade(installed_target, pin=False, dry_run=True)
+    assert "would register adapter 'harness' at 0.3.0" in " ".join(capsys.readouterr().out.split())
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    backbone = manifest.read_backbone_manifest(installed_target)
+    assert backbone is not None
+    entries = {(c.kind, c.name): c.manifest for c in backbone.components}
+    assert entries[("adapter", "harness")] == ".pkit/adapters/harness/project/manifest.yaml"
+    record = manifest.read_component_manifest(
+        installed_target / ".pkit" / "adapters" / "harness" / "project" / "manifest.yaml"
+    )
+    assert record is not None and record.version == "0.3.0"
+
+
+def test_capability_migrations_run_dependencies_first(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`alpha` comes first in the registry and requires `beta`: `beta`'s migrations
+    run first, by `requires_capabilities`, not in the manifest's order (COR-030)."""
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    trace = tmp_path / "trace.txt"
+    _stage_moving_capability(
+        source,
+        installed_target,
+        "alpha",
+        requires_capabilities=[{"name": "beta", "version": ">=0.2.0,<1.0.0"}],
+    )
+    _stage_moving_capability(source, installed_target, "beta")
+    for name in ("alpha", "beta"):
+        _stage_script(source / "capabilities" / name, "0.2.0", _tracing(trace, name))
+    backbone = manifest.read_backbone_manifest(installed_target)
+    assert backbone is not None
+    assert [c.name for c in backbone.components if c.kind == "capability"] == ["alpha", "beta"]
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert _lines(trace) == ["beta", "alpha"]
+
+
+def test_dependencies_first_keeps_registry_order_otherwise_and_breaks_a_cycle() -> None:
+    from project_kit.capabilities import CapabilityDependency, CapabilityPackage, CapabilitySource
+    from project_kit.sync import COPY, CapabilityPlan
+
+    def plan(name: str, *requires: str) -> CapabilityPlan:
+        package = CapabilityPackage(
+            name=name,
+            version="0.2.0",
+            description="Test.",
+            requires_backbone=">=0.0.0",
+            requires_capabilities=tuple(CapabilityDependency(r, ">=0.0.0") for r in requires),
+        )
+        return CapabilityPlan(name, COPY, CapabilitySource(name, Path(name), package))
+
+    plans = [plan("a", "c"), plan("b"), plan("c", "a"), plan("d", "b")]
+
+    assert [p.name for p in upgrade.dependencies_first(plans)] == ["c", "a", "b", "d"]
+
+
+def _a_new_collision(target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """`trial` installed at 0.1.0, the project's own committed skill `clash`, and a
+    bundle whose `trial` 0.2.0 ships a skill `clash` too. Returns the bundle's
+    `trial`."""
+    from tests.adopter_repo import GitRepo
+
+    _install_trial(target, tmp_path, "0.1.0")
+    skill = target / ".pkit" / "skills" / "project" / "clash.md"
+    skill.parent.mkdir(parents=True, exist_ok=True)
+    skill.write_text("---\nname: clash\n---\n# The project's\n", encoding="utf-8")
+    GitRepo(target).commit("the project's skill")
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    cap = _stage_trial(source, "0.2.0")
+    (cap / "skills" / "clash.md").write_text("---\nname: clash\n---\n# Trial's\n", "utf-8")
+    return cap
+
+
+def _upgrade_at_a_terminal(monkeypatch: pytest.MonkeyPatch, answers: str) -> Any:
+    from click.testing import CliRunner
+
+    from project_kit.cli import main
+
+    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: True)
+    return CliRunner().invoke(main, ["upgrade", "--no-self-update", "--no-pin"], input=answers)
+
+
+def test_without_a_terminal_a_new_collision_refuses_before_anything_is_written(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With nobody to answer, the transition refuses before it writes anything, and
+    names a terminal re-run or a rename. `--force` does not override it (ADR-065
+    point 6)."""
+    _a_new_collision(installed_target, tmp_path, monkeypatch)
+    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: False)
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target, pin=False, force=True)
+
+    message = excinfo.value.message
+    assert "a capability's new version brings a new naming collision" in message
+    assert "nobody can answer here" in message
+    assert "Run `pkit upgrade` again at a terminal" in message
+    assert "rename the project's artefact" in message
+    assert _tree_bytes(installed_target) == before
+
+
+def test_at_a_terminal_a_skip_is_recorded_before_the_copy_and_never_asked_again(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A new collision is asked about at a terminal. A skip is recorded in the
+    capability's manifest before its copy, so after a migration stops the
+    transition, the next one, with nobody to answer, does not ask again
+    (ADR-065 point 6)."""
+    cap = _a_new_collision(installed_target, tmp_path, monkeypatch)
+    fixed = tmp_path / "fixed"
+    _stage_script(cap, "0.2.0", _tracing(tmp_path / "trace.txt", "ran", unless_missing=fixed))
+
+    result = _upgrade_at_a_terminal(monkeypatch, "skip\n")
+
+    assert result.exit_code != 0
+    assert "skill 'clash' collides with existing .pkit/skills/project/clash.md" in result.output
+    assert "exited with status 3" in result.output
+    record = _trial_record(installed_target)
+    assert record is not None and record.version == "0.1.0"
+    assert record.backend_state["skipped"] == [{"kind": "skill", "name": "clash"}]
+
+    fixed.touch()
+    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: False)
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    record = _trial_record(installed_target)
+    assert record is not None and record.version == "0.2.0"
+    assert record.backend_state["skipped"] == [{"kind": "skill", "name": "clash"}]
+    installed = installed_target / ".pkit" / "capabilities" / "trial" / "skills"
+    assert (installed / "trial-skill.md").is_file()
+    assert not (installed / "clash.md").exists()
+    project = installed_target / ".pkit" / "skills" / "project" / "clash.md"
+    assert project.read_text(encoding="utf-8") == "---\nname: clash\n---\n# The project's\n"
+
+
+def test_at_a_terminal_an_override_replaces_the_projects_artefact(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Override: the capability's artefact replaces the project's, which git keeps,
+    and nothing is recorded (ADR-065 point 6, COR-017)."""
+    _a_new_collision(installed_target, tmp_path, monkeypatch)
+
+    result = _upgrade_at_a_terminal(monkeypatch, "override\n")
+
+    assert result.exit_code == 0, result.output
+    assert "removed      .pkit/skills/project/clash.md (override; git keeps it)" in result.output
+    assert not (installed_target / ".pkit" / "skills" / "project" / "clash.md").exists()
+    copied = installed_target / ".pkit" / "capabilities" / "trial" / "skills" / "clash.md"
+    assert copied.read_text(encoding="utf-8") == "---\nname: clash\n---\n# Trial's\n"
+    record = _trial_record(installed_target)
+    assert record is not None and record.version == "0.2.0"
+    assert "skipped" not in record.backend_state
+
+
+def test_the_dry_run_lists_each_components_migrations_and_each_collision(
+    installed_target: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The dry run lists each component's move and migrations, and each collision a
+    real run would ask about, asks nothing and writes nothing (ADR-065 point 4)."""
+    cap = _a_new_collision(installed_target, tmp_path, monkeypatch)
+    source = cap.parent.parent
+    _stage_script(cap, "0.2.0", "#!/usr/bin/env bash\nexit 0\n")
+    _stage_script(_bump_bundled_adapter(source, "0.7.0"), "0.7.0", "#!/usr/bin/env bash\n")
+    _stage_backbone_migration(source, "0.2.0", "001-old.sh", "#!/usr/bin/env bash\n")
+    _record_finished_at(installed_target, "0.1.0")
+    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: False)
+    before = _tree_bytes(installed_target)
+
+    upgrade.run_upgrade(installed_target, dry_run=True)
+
+    out = " ".join(capsys.readouterr().out.split())
+    assert "Components adapter 'claude-code': 0.6.0 -> 0.7.0" in out
+    assert "capability 'trial': 0.1.0 -> 0.2.0" in out
+    assert "capability 'trial': skill 'clash' collides with .pkit/skills/project/clash.md" in out
+    assert "The upgrade asks about each one where a person can answer" in out
+    assert "migration(s) for backbone" in out and "0.2.0/001-old.sh" in out
+    assert "would run 1 migration(s) for adapter 'claude-code' (0.6.0 -> v0.7.0)" in out
+    assert "would run 1 migration(s) for capability 'trial' (0.1.0 -> v0.2.0)" in out
+    assert _tree_bytes(installed_target) == before
+
+
+def test_the_report_lists_each_widening_the_settings_merge_brings(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A baseline that adds an allow entry and a `hooks` key: the report names each,
+    and the `ask` rule that brings the question back (ADR-065 point 4)."""
+    import json
+
+    settings = installed_target / ".claude" / "settings.json"
+    settings.parent.mkdir(exist_ok=True)
+    held = {"permissions": {"allow": ["Bash(git:*)"], "deny": []}}
+    settings.write_text(json.dumps(held), encoding="utf-8")
+
+    def merge(_ctx: install.InstallContext) -> None:
+        widened = {
+            "permissions": {"allow": ["Bash(git:*)", "Bash(curl:*)"], "deny": []},
+            "hooks": {"PreToolUse": []},
+        }
+        settings.write_text(json.dumps(widened), encoding="utf-8")
+
+    monkeypatch.setattr(install, "run_installed_adapter_primitives", merge)
+    _record_finished_at(installed_target, "0.1.0")
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    out = capsys.readouterr().out
+    assert "The settings merge widens .claude/settings.json:" in out
+    assert "    allow        Bash(curl:*)" in out
+    assert "    key          hooks" in out
+    assert "allow        Bash(git:*)" not in out
+    assert (
+        "add it as an `ask` rule to .pkit/adapters/claude-code/settings/project/settings.json"
+    ) in out
+
+
+def test_cli_upgrade_force_flag_forwards(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`--force` threads through to `run_upgrade(force=True)`; the default is False."""
+    from click.testing import CliRunner
+
+    from project_kit import cli
+
+    seen: dict[str, object] = {}
+    monkeypatch.setattr(cli, "find_target_root", lambda: Path("/tmp"))
+    monkeypatch.setattr(cli, "run_upgrade", lambda _root, **kwargs: seen.update(kwargs))
+
+    assert CliRunner().invoke(cli.main, ["upgrade", "--force"]).exit_code == 0
+    assert seen["force"] is True
+    assert CliRunner().invoke(cli.main, ["upgrade"]).exit_code == 0
+    assert seen["force"] is False
+
+
+def test_an_override_holds_when_a_migration_stops_the_transition(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The override removes the project's artefact in step 2, before the copy, so a
+    transition a migration stops keeps the answer: the next one finds the name in
+    the capability's installed copy, asks nothing, and the capability's deploys
+    (ADR-065 point 6)."""
+    cap = _a_new_collision(installed_target, tmp_path, monkeypatch)
+    fixed = tmp_path / "fixed"
+    _stage_script(cap, "0.2.0", _tracing(tmp_path / "trace.txt", "ran", unless_missing=fixed))
+    project = installed_target / ".pkit" / "skills" / "project" / "clash.md"
+
+    stopped = _upgrade_at_a_terminal(monkeypatch, "override\n")
+
+    assert stopped.exit_code != 0
+    assert "exited with status 3" in stopped.output
+    assert not project.exists()
+
+    fixed.touch()
+    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: False)
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert not project.exists()
+    copied = installed_target / ".pkit" / "capabilities" / "trial" / "skills" / "clash.md"
+    assert copied.read_text(encoding="utf-8") == "---\nname: clash\n---\n# Trial's\n"
+    record = _trial_record(installed_target)
+    assert record is not None and record.version == "0.2.0"
+
+
+def test_a_skip_of_a_capability_with_no_readable_version_is_recorded_before_the_copy(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With no readable version, the skip is recorded at the bundled version, which
+    the transition records anyway, so a transition a later step stops does not ask
+    again (ADR-065 points 2 and 6)."""
+    _a_new_collision(installed_target, tmp_path, monkeypatch)
+    installed = installed_target / ".pkit" / "capabilities" / "trial"
+    (installed / "project" / "manifest.yaml").unlink()
+    (installed / "package.yaml").write_text("not: a package\n", encoding="utf-8")
+    fixed = tmp_path / "fixed"
+    _stage_backbone_migration(
+        upgrade.find_source_kit(),
+        "0.2.0",
+        "001-flaky.sh",
+        _tracing(tmp_path / "trace.txt", "ran", unless_missing=fixed),
+    )
+    _record_finished_at(installed_target, "0.1.0")
+
+    stopped = _upgrade_at_a_terminal(monkeypatch, "skip\n")
+
+    assert stopped.exit_code != 0
+    record = _trial_record(installed_target)
+    assert record is not None and record.version == "0.2.0"
+    assert record.backend_state["skipped"] == [{"kind": "skill", "name": "clash"}]
+
+    fixed.touch()
+    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: False)
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert not (installed / "skills" / "clash.md").exists()
