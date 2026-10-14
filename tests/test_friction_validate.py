@@ -26,7 +26,7 @@ from project_kit.manifest import (
     write_backbone_manifest,
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.friction_documents import POINTED, POINTS, pointed_record
+from tests.friction_documents import LISTED, POINTED, POINTS, listed_record, pointed_record
 
 CONFIG = ".pkit/project/config.yaml"
 
@@ -1614,10 +1614,12 @@ def test_a_dead_point_anchor_is_pointed_at_where_the_list_writes_it(
 
 
 def test_an_anchor_on_a_point_of_a_record_in_list_form_is_dead(adopter: AdopterRepo) -> None:
-    result = _pointed(adopter, "COR-050#5")
+    """The record holds a list item numbered 2, and still no point an anchor can name."""
+    adopter.write({LISTED: listed_record()})
+    result = _pointed(adopter, "PRJ-910#2")
     (finding,) = result.errors
     assert finding.kind is fv.FrictionFindingKind.DEAD_POINT_ANCHOR
-    assert "COR-050 writes its points as a list" in finding.message
+    assert "PRJ-910 writes its points as a list" in finding.message
 
 
 def test_an_anchor_on_an_id_two_points_share_is_ambiguous(adopter: AdopterRepo) -> None:
