@@ -777,8 +777,8 @@ The upgrade command transitions an adopter project to a target backbone version.
    - **Compatibility resolution:** each installed component's post-upgrade `requires_backbone` must admit the target. It is read from the bundle where the bundle ships the component, and from the installed copy where it does not. Conflicts are surfaced so the adopter can address them: upgrade specific components, pin the backbone, or remove an incompatible component.
    - **The dependency gates** run over the set the transition would leave ("The dependency gates", below).
    - **The collision flow** asks about each new naming collision, or refuses ("A new collision", below).
-2. **The target is recorded.** `backbone_version` becomes the target, by an edit of its own line, before anything else is written. `completed_version` keeps its value or stays missing. Each capability manifest still at its root then moves under its `project/`, and each skip chosen in step 1 is recorded there.
-3. **Propagation at the target.** The propagation step `pkit sync` runs copies the target's content (per COR-001): the backbone's trees, adapters included, and every installed kit-shipped capability the target ships, with its skips. The upgrade calls the step, never the sync command, so sync's guard never stops it (ADR-065 point 1). Each project artefact an override chose to replace is removed. An adapter the copy placed that the registry lacks is registered, and recorded at the version it ships. Then `.pkit/.gitignore` is rendered, so a migration reads the render of the target's declarations.
+2. **The target is recorded.** `backbone_version` becomes the target, by an edit of its own line, before anything else is written. `completed_version` keeps its value or stays missing. Each capability manifest still at its root then moves under its `project/`, each skip chosen in step 1 is recorded there, and each project artefact an override chose to replace is removed.
+3. **Propagation at the target.** The propagation step `pkit sync` runs copies the target's content (per COR-001): the backbone's trees, adapters included, and every installed kit-shipped capability the target ships, with its skips. The upgrade calls the step, never the sync command, so sync's guard never stops it (ADR-065 point 1). An adapter the copy placed that the registry lacks is registered, and recorded at the version it ships. Then `.pkit/.gitignore` is rendered, so a migration reads the render of the target's declarations.
 4. **Backbone migrations** run in order: manifest-schema → structural → resource-scoped, across minor-version boundaries from the recorded completion, `completed_version`, to the target. With no completion recorded, every backbone migration up to the target runs (the replay, below).
 5. **Adapter migrations** run for each adapter, from the version its manifest records, in version order with the same scope ordering within each `<major>.<minor>.0/` directory. Their scripts are read from the running pkit's bundle, as a capability's are. Each registered adapter is then recorded at the version the target ships. One with no manifest runs no migration ("An adapter's manifest", above).
 6. **Capability migrations** run for each copied capability, dependencies first by their `requires_capabilities` (COR-030), each from the version it records. Each capability is then restamped at the version it ships. One with no readable version runs none and is recorded at that version.
@@ -799,7 +799,7 @@ A new collision is a skill or agent name that a shipped capability's target vers
 
 - **The flow is COR-017's install-time flow.** Where a person can answer, with standard input and standard output both terminals, the upgrade asks for each collision:
   - **skip:** the copy leaves the capability's artefact out. Its manifest records the skip in step 2, before the copy, so an interrupted upgrade does not ask again.
-  - **override:** the capability's artefact replaces the project's, which git keeps. Nothing is recorded.
+  - **override:** the capability's artefact replaces the project's, which git keeps. The project's is removed in step 2, before the copy, so an interrupted upgrade finds the name in the capability's installed copy and does not ask again. Nothing is recorded.
   - **inspect:** shows the diff and asks again.
 - **With nobody to answer,** the upgrade refuses before it writes anything. It names two ways on: run it again at a terminal, or rename the project's artefact.
 - **No capability is held back,** so the project stays at one release (COR-059 point 7).
@@ -815,7 +815,7 @@ The gates run as `pkit capabilities upgrade` runs them (COR-030, COR-053 point 6
 - **A moving capability** refuses, with a hint, when a dependency its new version requires is not installed, or is out of the range it declares. So does one whose new version carries a mandatory process connection the set leaves unmet. The project controls that dependency, and no flag overrides the refusal. An optional dependency that is not installed passes.
 - **A moving dependency** warns when its new version falls outside the range a capability that does not move declares for it, naming each such dependent. So does one that leaves such a capability's mandatory connection unmet. The upgrade proceeds only under `pkit upgrade --force`, so neither is a hard block.
 - **`--force` overrides those two warnings and nothing else.** It overrides no guard, no compatibility refusal, no refusal of a component bundled older, and no collision.
-- **Not the upgrade's to judge:** a pair in which neither side moves, and a mandatory connection already unmet before the upgrade.
+- **Not the upgrade's to judge:** a pair in which neither side moves, and a mandatory connection of a capability that does not move, already unmet before the upgrade.
 
 ### What the settings merge widens
 
@@ -864,8 +864,8 @@ Only an unambiguous order is compared: a pin that is not a version blocks nothin
 `pkit capabilities upgrade <name>` is a transition of one capability ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 4, COR-010). It runs in the transition's order for that capability alone, at the recorded backbone, and writes neither of the backbone's two recorded versions:
 
 1. **Its checks,** each of which may refuse and none of which writes: its new version's `requires_backbone` against the recorded backbone, the dependency check in both directions (below), its mandatory process connections, and the collision flow. A new collision is asked about only under `--interactive`. Without the flag the command refuses and names it.
-2. **Its manifest,** still at the capability's root, moves under its `project/`, and each skip chosen in step 1 is recorded there, before the copy.
-3. **Its copy,** with its skips. It creates no seed path.
+2. **Its manifest,** still at the capability's root, moves under its `project/`, each skip chosen in step 1 is recorded there, and each project artefact an override chose to replace is removed, all before the copy.
+3. **Its copy,** with its skips, then `.pkit/.gitignore` rendered, so a migration reads the new version's render. It creates no seed path.
 4. **Its migrations,** after the copy, from the version it records, then its restamp at the version it ships. One with no readable version runs none.
 5. **Its derivable state:** merge delivery and deploy, its query commands' provisioning, and `.pkit/.gitignore` rendered again.
 
