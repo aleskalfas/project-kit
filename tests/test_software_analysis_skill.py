@@ -29,6 +29,7 @@ from project_kit import refs
 from project_kit.friction_validate import validate_friction
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
+    ANALYSIS,
     CAPABILITY,
     NEW,
     REPO,
@@ -163,7 +164,11 @@ def test_what_the_walkthroughs_stamp_passes_the_gate_and_carries_the_friction_bl
         text=True,
         check=True,
     )
-    artefacts = json.loads(listing.stdout)["artefacts"]
+    # The analysis's own artefacts: the capability's method rule set ships rules,
+    # which are artefacts too (RS-SAN-001, COR-051 point 2), outside the analysis.
+    artefacts = [
+        a for a in json.loads(listing.stdout)["artefacts"] if a["path"].startswith(f"{ANALYSIS}/")
+    ]
     ids = sorted(a["id"] for a in artefacts)
     assert ids == ["ACT-sponsor", "ACT-tester", "JRN-001", "TERM-suite", "UC-001", "UC-002"]
     assert all(a["container"] and a["friction"] for a in artefacts), artefacts

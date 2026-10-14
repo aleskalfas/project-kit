@@ -1,0 +1,21 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  The capability ships its method rule set, `software-analysis:SAN`, in
+  `rule-sets/san.md` (DEC-001 point 1). It takes no scope, as no method rule
+  set does. It holds the format rule, `RS-SAN-001`: an analysis artefact or a
+  revalidation record carries its kind's declared structure, and each kind has
+  a template. The rule is proposed, with DEC-001 as its origin, so it binds
+  nothing until it is accepted. Its *How* says where a sentence ends for text
+  of the `sentence` form. Under `checks`, the set declares what
+  `software-analysis:validate` enforces of the rule: the parts a kind ships,
+  their order and their forms. The set is at 0.1.0. The name `SAN` is now
+  taken, so a rule set of your own named `SAN` fails `pkit validate`. Renaming
+  that set renames every rule id in it. The segment is `minor`, as semver
+  allows a breaking change before 1.0.0, and the capability is installed only
+  in project-kit's own clones, which hold no set named `SAN`. The set declares
+  `checks`, which only the rule-set schema of the backbone this release ships
+  reads, so the capability requires that backbone.
