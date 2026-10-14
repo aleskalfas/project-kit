@@ -13,13 +13,13 @@ pkit:
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053]
       artefact: [RS-SAN-001]
     revalidated:
-      at: 2026-10-14T20:01:31Z
+      at: 2026-10-14T20:52:46Z
       outcome: updated
       deferred:
         - anchor:
             kind: record
             value: software-analysis:DEC-001
-          reason: "DEC-001 refines ahead of the code: each kind's declared structure, the new anchors and a planned record's reviewed-against. The capability does not ship them yet, so this page describes what it ships: a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #1547 that apply them. #1363 declares the structure and reviewed-against, and #1507 writes the new anchors."
+          reason: "DEC-001 refines ahead of the code. The capability now declares each kind's structure and a planned record's reviewed-against, and this page describes both. It does not yet check a body against its structure or render the templates from it. Nor does it stamp a planned record's sources, check where their commits sit, or write the new anchors. So this page describes the check, the stamp and the anchors it ships: a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #1547 that apply the rest: #1364 and #1365 check the structure, #1366 renders the templates and stamps the sources, #1448 checks the commits, and #1507 writes the new anchors."
 ---
 
 # software-analysis capability
