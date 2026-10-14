@@ -19,7 +19,8 @@ body: >
   capability this pkit ships older than your project records stops the
   upgrade, with no override. **The dependency gates** read the versions the
   upgrade installs: a capability the upgrade moves whose dependency is missing
-  or out of range stops it, and a moved dependency that leaves a capability of
+  or out of range, or whose mandatory process connection the upgrade would
+  leave unmet, stops it, and a moved dependency that leaves a capability of
   your own out of range, or with a mandatory process connection unmet, warns
   and proceeds only under the new `pkit upgrade --force`, which overrides
   nothing else. The report lists each allow entry and top-level key the
