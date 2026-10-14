@@ -43,6 +43,7 @@ from pathlib import Path, PurePath
 from typing import TYPE_CHECKING, Any, cast
 
 import click
+from packaging.version import InvalidVersion, Version
 from ruamel.yaml import YAML
 
 from project_kit import treecopy
@@ -595,10 +596,10 @@ def move_capability_manifest(target_root: Path, name: str) -> bool:
     finishes. Returns True when a root manifest was moved, False when none was
     there.
 
-    The code that writes the record calls it: a refresh, before its
-    migrations and its copy (``refresh_capability``). The version transition
-    calls it in its step 2, before its copy, once #1461 builds that
-    transition.
+    The code that writes the record calls it, never sync: the version
+    transition, before its copy (``upgrade.run_upgrade``), and the refresh of
+    ``pkit capabilities upgrade``, before its migrations and its copy
+    (``refresh_capability``).
     """
     root = capability_root_manifest_path(target_root, name)
     if not root.is_file():
@@ -1381,6 +1382,10 @@ def refresh_capability(
 ) -> Path:
     """Refresh an already-installed capability in place from source (per COR-017).
 
+    `pkit capabilities upgrade` runs it. Sync never does, and a transition of
+    the backbone copies through the propagation step and then runs
+    `migrate_copied_capability` (ADR-065 points 1 and 4).
+
     Differs from `install_capability` in three ways:
     - Requires the capability to already be installed (raises if not).
     - Re-copies the source subtree wholesale: new files appear, removed
@@ -1407,11 +1412,9 @@ def refresh_capability(
     The restamp that follows the copy keeps the manifest's `backend_state`, as
     the migrations left it, replacing only its skips with `skipped_artifacts`.
 
-    Returns the refreshed path. Does NOT do collision detection — sync's
-    auto-upgrade is opt-out at install time, not opt-in at refresh time.
-    A separate `pkit capabilities upgrade X --interactive` command is the
-    interactive surface (per COR-017's "new collision during upgrade"
-    semantics); that command can call detect_collisions() before this.
+    Returns the refreshed path. Does NOT do collision detection: its caller,
+    `pkit capabilities upgrade X`, detects collisions before this and resolves
+    them under `--interactive` (COR-017's "new collision during upgrade").
     """
     name = capability_source.name
     if not is_installed(target_root, name):
@@ -1451,6 +1454,78 @@ def refresh_capability(
     # stays as-is (the capability was already registered at the original install).
     _stamp_component_manifest(target_root, capability_source, skipped_artifacts, restamp=True)
     return dest
+
+
+def copy_shipped_capability(
+    target_root: Path,
+    capability_source: CapabilitySource,
+    skipped_artifacts: tuple[tuple[str, str], ...],
+) -> Path:
+    """Copy a shipped capability's files over its installed copy, and nothing else.
+
+    The propagation step's copy of one capability (ADR-065 point 1), for sync
+    and for a transition alike: the source subtree replaces the kit-owned part
+    of the installed one, leaving out the artefacts *skipped_artifacts* names.
+    It runs no migration, writes no manifest, and creates no seed path, so the
+    capability's ``project/`` is neither touched nor stubbed. Its caller has
+    already read the capability's record, and a transition has moved a root
+    manifest under ``project/``, where the copy cannot prune it.
+    """
+    dest = target_root / ".pkit" / "capabilities" / capability_source.name
+    _refuse_copy_onto_itself(capability_source.path, dest)
+    _copy_capability_tree(capability_source.path, dest, skipped_artifacts, stub_project=False)
+    return dest
+
+
+def migrate_copied_capability(
+    target_root: Path,
+    capability_source: CapabilitySource,
+    record: CapabilityRecord,
+    *,
+    dry_run: bool = False,
+) -> None:
+    """Run a copied capability's migrations, then restamp its manifest (ADR-065 point 4).
+
+    A transition of the backbone calls it after its copy, so each migration
+    reads the files of the version it migrates to, as COR-010's order sets. The
+    window runs from the version *record* names to the version the copy ships,
+    read from the bundle. A capability with no readable version runs none of
+    its migrations: its history is unknown, and the replay is the backbone's
+    alone (COR-059 point 6). It is recorded at the bundled version, and said so.
+
+    The restamp, under the capability's ``project/``, records the bundled
+    version, the timestamp and the range, and the skips *record* holds, and
+    keeps the rest of ``backend_state``. A migration that exits non-zero raises
+    before it, so the manifest still names the version the migrations run from.
+    """
+    name = capability_source.name
+    bundled = capability_source.package.version
+    recorded = _release_version(record.version)
+    if recorded is not None:
+        if dry_run:
+            _report_pending_migrations(capability_source, recorded, dry_run=True)
+        else:
+            _run_capability_migrations(target_root, capability_source, recorded)
+    if not dry_run:
+        _stamp_component_manifest(target_root, capability_source, record.skipped, restamp=True)
+    verb = "would record" if dry_run else "recorded"
+    origin = (
+        f"from {record.version}"
+        if recorded is not None
+        else "no recorded version before, so none of its migrations runs"
+    )
+    click.echo(f"    {verb:<12} capability {name!r} at {bundled} ({origin})")
+
+
+def _release_version(text: str | None) -> str | None:
+    """*text* as the `X.Y.Z` a migration window reads, or None when it is no version."""
+    if not text:
+        return None
+    try:
+        parsed = Version(text)
+    except InvalidVersion:
+        return None
+    return f"{parsed.major}.{parsed.minor}.{parsed.micro}"
 
 
 def _read_installed_capability_version(target_root: Path, name: str) -> str | None:
@@ -1905,6 +1980,8 @@ def _copy_capability_tree(
     source: Path,
     dest: Path,
     skipped_artifacts: tuple[tuple[str, str], ...],
+    *,
+    stub_project: bool = True,
 ) -> None:
     """Refresh capability content into dest, omitting any skipped artifacts.
 
@@ -1928,6 +2005,11 @@ def _copy_capability_tree(
 
     Seeding a *neutral starter* config is a separate question and deliberately
     not done here: that is new install behaviour and needs its own record.
+
+    *stub_project* creates the capability's ``project/`` folder, as an install
+    and ``pkit capabilities upgrade`` do. The propagation step passes False: the
+    folder is a seed path, which sync never creates and a transition creates
+    where it is missing (ADR-065 point 11).
     """
     # Skipped skills/agents become generic relative-path exclusions for the
     # primitive (it knows nothing of "skipped artifacts"). Decisions and
@@ -1942,6 +2024,8 @@ def _copy_capability_tree(
         exclude=exclude,
         seed_owned=False,
     )
+    if not stub_project:
+        return
     # Stub the adopter-owned tree so the directory exists to be written into,
     # mirroring the area install path's `_touch(project_dst / ".gitkeep")`.
     # Only the top level: nested structure is the adopter's to create as they

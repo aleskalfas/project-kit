@@ -18,7 +18,7 @@ pkit:
         - .pkit/agents/core/rule-set-reviewer.md
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052]
     revalidated:
-      at: 2026-10-13T11:45:21Z
+      at: 2026-10-13T21:19:37Z
       outcome: updated
 ---
 
@@ -293,6 +293,8 @@ Four rules apply to a write-carrying category:
   4. **Missing + no conventional default directory (hard)**: a commented stub is appended (e.g. `# architecture-docs:`) with `<path/relative/to/project/root>` guidance; because this is a hard read the agent stays **skipped** until the adopter fills in a real path and runs `pkit sync`. Or run `pkit agents adopt <agent>` to create the conventional layout and deploy it.
   5. **Commented stub already present**: reconcile does not append a duplicate; its guidance splits by channel. A **hard** stub reports "uncomment + set real paths" as *action needed* (the agent is skipped until then) — or run `pkit agents adopt <agent>` to create the conventional layout and deploy it. An **optional** stub reports the same uncomment-to-enrich guidance but framed as optional — the agent already deploys.
   6. **Defined** (uncommented entry with paths, or an explicit `[]`): nothing is written; an adopter-set value is never overwritten.
+
+  **A missing overlay** is repaired here too: with `--write`, reconcile creates `overlay.yaml` from the seed first install writes, and writes nothing else in that run, and the dry run says it would. The next dry run shows each category the seed does not define, so `--write` never records one you were not shown. Sync creates no seed path, so a deleted overlay otherwise returns only at the next `pkit upgrade` to a new release ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 11). `pkit agents adopt` names this repair where the overlay is missing.
 
   This is the path for an adopter whose overlay predates a newly-shipped agent's categories — the repair is an explicit, idempotent gesture rather than an automatic sync mutation. Dry-run by default: the preview shows each auto-fill as `category = path` with the agents that reach it once recorded — the same lines `adopt`'s question shows. **`--write` is the confirmation** (COR-049 point 5): for a command that only shows what it would record until it is told to write, the option that tells it to write is the confirmation flag, so `--write` records an auto-fill over a directory that already holds documents with no prompt, and each recording prints the root its path was derived from and where to change it.
 

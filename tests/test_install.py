@@ -172,6 +172,32 @@ def test_install_kit_creates_agents_area_with_readme_and_subdirs(tmp_target: Pat
     assert (agents / "project" / ".gitkeep").is_file(), "agents/project/.gitkeep not stubbed"
 
 
+@pytest.mark.parametrize("dry_run", [False, True], ids=["run", "dry-run"])
+def test_the_seeding_step_creates_only_what_is_missing(tmp_path: Path, dry_run: bool) -> None:
+    """One seeding step, for first install and a version transition: it creates each
+    seed path that is missing, a shipped capability's `project/` folder included,
+    and writes over none that exists (ADR-065 point 11). A dry run writes nothing."""
+    target = tmp_path / "target"
+    overlay = target / ".pkit" / "agents" / "project" / "overlay.yaml"
+    overlay.parent.mkdir(parents=True)
+    overlay.write_text("workflow-docs: []\n", encoding="utf-8")
+    ctx = install.InstallContext(
+        target_root=target, source_kit=install.find_source_kit(), dry_run=dry_run
+    )
+
+    install.seed_missing_paths(ctx, capabilities=["evidence"])
+
+    assert overlay.read_text(encoding="utf-8") == "workflow-docs: []\n"
+    seeded = (
+        target / ".pkit" / "decisions" / "project" / ".gitkeep",
+        target / ".pkit" / "scratchpad" / "done" / ".gitkeep",
+        target / ".pkit" / "adapters" / "claude-code" / "settings" / "project" / "settings.json",
+        target / ".pkit" / "capabilities" / "evidence" / "project" / ".gitkeep",
+    )
+    for path in seeded:
+        assert path.is_file() is not dry_run, path
+
+
 @pytest.mark.usefixtures("stub_adapter_primitives")
 def test_install_kit_copies_pkit_dispatcher_executable(tmp_target: Path) -> None:
     install.install_kit(tmp_target)

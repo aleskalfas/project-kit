@@ -96,17 +96,19 @@ def test_sync_refuses_under_no_route(
     _assert_untouched(source_checkout)
 
 
-@pytest.mark.parametrize("flags", [{"force": True}, {"dry_run": True}], ids=["force", "dry-run"])
+@pytest.mark.parametrize("flags", [("--force",), ("--dry-run",)], ids=["force", "dry-run"])
 def test_sync_refusal_has_no_override(
-    source_checkout: Path, monkeypatch: pytest.MonkeyPatch, flags: dict[str, bool]
+    source_checkout: Path, monkeypatch: pytest.MonkeyPatch, flags: tuple[str, ...]
 ) -> None:
-    """`--force` overrides the capability downgrade guard only, and a dry run
-    previews nothing past a refusal: the gap is a defect path, not a choice."""
+    """`--force` overrides nothing, and a dry run previews nothing past a refusal:
+    the gap is a defect path, not a choice."""
     monkeypatch.setenv(router._BYPASS_ENV, "1")
+    monkeypatch.chdir(source_checkout)
 
-    with pytest.raises(click.ClickException, match="no flag overrides this refusal"):
-        run_sync(source_checkout, **flags)
+    result = CliRunner().invoke(main, ["sync", *flags])
 
+    assert result.exit_code != 0
+    assert "no flag overrides this refusal" in " ".join(result.output.split())
     _assert_untouched(source_checkout)
 
 

@@ -87,7 +87,7 @@ from project_kit.scratchpads import (
 )
 from project_kit.status import report_status
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
-from project_kit.sync import refuse_stranding_backbone_migrations, run_sync
+from project_kit.sync import SYNC_FORCE_IGNORED, run_sync
 from project_kit.upgrade import (
     freeze_at_content,
     reconcile_pin,
@@ -194,6 +194,10 @@ def agents_reconcile(write: bool) -> None:
     consent (COR-049 point 5): `--write`, given after the dry run, is that
     consent, and nothing is asked. Each recording says which root its path was
     derived from and where to change it.
+
+    A missing overlay is created from the seed first install writes, under
+    `--write`, and nothing else is written in that run: the next dry run shows
+    each category the seed does not define (ADR-065 point 11).
     """
     from project_kit import agents_overlay as ao
 
@@ -3995,19 +3999,20 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
     "--force",
     is_flag=True,
     default=False,
-    help="Overwrite an installed capability even when the source version is "
-    "OLDER than the installed one (a downgrade). Without this, sync refuses "
-    "such a downgrade rather than silently clobbering newer state (issue #524).",
+    help="Ignored, and removed in a later release. Sync never copies a capability "
+    "over a newer one: it copies each at the version the project records.",
 )
 def sync(dry_run: bool, force: bool) -> None:
-    """Re-run propagation: refresh kit-owned content from source (per COR-001)."""
+    """Reconcile the project at the version it records: copy that release's
+    content, regenerate the derivable state, and move no version (COR-059)."""
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    # The sync command's guard, not `run_sync`'s: `pkit upgrade` runs `run_sync`
-    # and then the backbone migrations this refuses to strand (#1452).
-    refuse_stranding_backbone_migrations(target_root)
-    run_sync(target_root, dry_run=dry_run, force=force)
+    if force:
+        # Accepted and ignored for one release (ADR-065 point 10). Its one effect,
+        # copying an older capability over a newer one, moved a version down.
+        click.echo(SYNC_FORCE_IGNORED, err=True)
+    run_sync(target_root, dry_run=dry_run)
 
 
 @main.command()
@@ -6474,7 +6479,7 @@ def _upgrade_incubated_capability(
     D1/D4): there is nothing to refresh from kit source, so "upgrade" simply
     re-runs the harness deploy primitives so any newly-authored skills/agents
     in the in-repo tree land in the harness. This mirrors the sync skip-branch
-    (`sync._report_incubated_capability`): source-reconciliation stays
+    (`sync.report_incubated_capability`): source-reconciliation stays
     suppressed; only self-owned deploy re-runs.
 
     The capability subtree must still be readable. If it has gone missing the

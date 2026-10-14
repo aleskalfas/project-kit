@@ -37,7 +37,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
-from collections.abc import MutableMapping
+from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
 # Bypass: set by an operator to force in-process execution and skip all routing.
@@ -58,6 +58,10 @@ _PIN_UNRESOLVED_ENV = "PKIT_PIN_UNRESOLVED"
 # appended after `@` (PRJ-004's tag-pinning form); tag⟺`.pkit/VERSION`
 # correspondence is a release-discipline property owned by #464 (ADR-039 D3).
 DISTRIBUTION_GIT_URL = "git+ssh://git@github.com/aleskalfas/project-kit.git"
+# The same repository over HTTPS, which needs no SSH key. A remedy names it where
+# the SSH fetch is what fails (ADR-065 point 8): a pin's version installed from it
+# is one the router runs with no fetch.
+DISTRIBUTION_HTTPS_URL = "git+https://github.com/aleskalfas/project-kit.git"
 
 # The project-owned pin directive (ADR-049). Its *presence* opts a project into
 # per-project version pinning: the router reads it as the pin source and re-execs
@@ -316,6 +320,17 @@ def is_route_bypassed(environ) -> bool:
     staleness probe (which would issue a second `git ls-remote` and print a
     nonsensical "tool is current" line mid-raise)."""
     return _env_true(environ, _BYPASS_ENV)
+
+
+def fell_back_from_pin(environ: Mapping[str, str]) -> bool:
+    """True when the router could not fetch the project's pin and runs this binary
+    instead, and the run is no deliberate bypass (ADR-065 points 8 and 9).
+
+    The router sets its fallback mark, the pin's version, on the environment of
+    the command it degrades (`_notice_pin_unresolved`). `PKIT_NO_ROUTE` marks a
+    run an operator or a raise asked for, so that run is not a fallback. Sync's
+    guard reads it only to choose its message."""
+    return bool(environ.get(_PIN_UNRESOLVED_ENV, "").strip()) and not is_route_bypassed(environ)
 
 
 def _read_pkit_version(root: Path) -> str | None:

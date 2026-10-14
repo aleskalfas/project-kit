@@ -113,18 +113,18 @@ def test_upgrade_self_host_delegates_to_sync(monkeypatch: pytest.MonkeyPatch) ->
     """On self-host (source == target), upgrade short-circuits to sync's deploy.
 
     There is no backbone to upgrade — the source IS the installed state — so
-    upgrade delegates to sync (whose self-host branch re-runs the deploy
-    primitives) and skips the version comparison + migration steps.
+    upgrade runs sync's self-host branch (which re-runs the deploy primitives)
+    and skips the version comparison + migration steps (ADR-065 point 1).
     """
     source_repo = install.find_source_kit().parent
     monkeypatch.chdir(source_repo)
 
     called = {"sync": 0}
 
-    def _spy_sync(_target_root: Path, dry_run: bool = False) -> None:
+    def _spy_self_host(_target_root: Path, _source_kit: Path, *, dry_run: bool = False) -> None:
         called["sync"] += 1
 
-    monkeypatch.setattr(upgrade, "run_sync", _spy_sync)
+    monkeypatch.setattr(upgrade, "run_self_host", _spy_self_host)
 
     upgrade.run_upgrade(source_repo)  # must not raise
 
@@ -247,7 +247,7 @@ def test_compat_reads_the_range_as_the_resolver_does(
         _adapter_pkg("9.9.9", "").replace('requires_backbone: ""\n', written), encoding="utf-8"
     )
     monkeypatch.setattr(upgrade, "find_source_kit", lambda: src)
-    monkeypatch.setattr(upgrade, "run_sync", lambda *args, **kwargs: None)
+    monkeypatch.setattr(upgrade, "propagate", lambda *args, **kwargs: None)
     if refused:
         with pytest.raises(click.ClickException, match=r"requires backbone >=0\.1\.0,<1\.5\.0"):
             upgrade.run_upgrade(installed_target, dry_run=True)
@@ -342,7 +342,7 @@ def test_upgrade_skips_pin_when_sync_fails(
     def _boom(*_args: object, **_kwargs: object) -> None:
         raise click.ClickException("sync failed")
 
-    monkeypatch.setattr(upgrade, "run_sync", _boom)
+    monkeypatch.setattr(upgrade, "propagate", _boom)
 
     with pytest.raises(click.ClickException):
         upgrade.run_upgrade(installed_target)  # default pins, but sync fails first
@@ -717,7 +717,7 @@ def test_tool_step_hand_over_that_cannot_start_pins_nothing(
     _record_exec(monkeypatch, FileNotFoundError(2, "No such file or directory"))
     _content_behind(installed_target)
     synced: list[Path] = []
-    monkeypatch.setattr(upgrade, "run_sync", lambda root, dry_run=False: synced.append(root))
+    monkeypatch.setattr(upgrade, "propagate", lambda ctx, _caps: synced.append(ctx.target_root))
 
     with pytest.raises(click.ClickException) as raised:
         upgrade.run_upgrade(installed_target)
@@ -747,7 +747,7 @@ def test_tool_step_hand_over_to_a_pkit_still_behind_pins_nothing(
     execs = _record_exec(monkeypatch)
     _content_behind(installed_target)
     synced: list[Path] = []
-    monkeypatch.setattr(upgrade, "run_sync", lambda root, dry_run=False: synced.append(root))
+    monkeypatch.setattr(upgrade, "propagate", lambda ctx, _caps: synced.append(ctx.target_root))
 
     with pytest.raises(click.ClickException) as raised:
         upgrade.run_upgrade(installed_target)
@@ -1091,10 +1091,12 @@ requires_backbone: "{requires_backbone}"{req_caps_block}
         encoding="utf-8",
     )
 
-    # Stamp a minimal per-component manifest so version reads work.
+    # Stamp a minimal per-component manifest under its project/, where a capability
+    # records its version (ADR-065 point 2), so version reads work.
     import datetime as _dt
 
-    (cap_dir / "manifest.yaml").write_text(
+    (cap_dir / "project").mkdir(exist_ok=True)
+    (cap_dir / "project" / "manifest.yaml").write_text(
         f"""schema_version: 1
 component:
   kind: capability
@@ -1117,7 +1119,7 @@ backend_state: {{}}
         ComponentRegistryEntry(
             kind="capability",
             name=name,
-            manifest=f".pkit/capabilities/{name}/manifest.yaml",
+            manifest=f".pkit/capabilities/{name}/project/manifest.yaml",
         )
     )
     write_backbone_manifest(target_root, backbone)
@@ -1303,10 +1305,10 @@ def test_tool_staleness_degrades_on_ls_remote_failure_and_sync_proceeds(
 
     called = {"sync": 0}
 
-    def _spy_sync(_root: Path, dry_run: bool = False) -> None:
+    def _spy_propagate(_ctx: object, _capabilities: object) -> None:
         called["sync"] += 1
 
-    monkeypatch.setattr(upgrade, "run_sync", _spy_sync)
+    monkeypatch.setattr(upgrade, "propagate", _spy_propagate)
 
     # stub_ls_remote defaults to a failed lookup (returncode 1) → degrade.
     upgrade.run_upgrade(installed_target)  # must not raise → exit code unchanged
@@ -1461,7 +1463,7 @@ def test_tool_staleness_not_run_on_self_host(
     """The self-host short-circuit returns before the check — no ls-remote call."""
     source_repo = install.find_source_kit().parent
     monkeypatch.chdir(source_repo)
-    monkeypatch.setattr(upgrade, "run_sync", lambda *_a, **_k: None)
+    monkeypatch.setattr(upgrade, "run_self_host", lambda *_a, **_k: None)
 
     upgrade.run_upgrade(source_repo)
 
@@ -1630,10 +1632,10 @@ def test_upgrade_pinned_raise_flips_pin_after_content_sync(
 
     pin_seen_at_sync: list[str | None] = []
 
-    def spy_sync(root: Path, **_kw: object) -> None:
-        pin_seen_at_sync.append(router.read_version_pin(root))
+    def spy_propagate(ctx: install.InstallContext, _capabilities: object) -> None:
+        pin_seen_at_sync.append(router.read_version_pin(ctx.target_root))
 
-    monkeypatch.setattr(upgrade, "run_sync", spy_sync)
+    monkeypatch.setattr(upgrade, "propagate", spy_propagate)
 
     upgrade.run_upgrade(installed_target)
 
@@ -1672,7 +1674,7 @@ def test_upgrade_no_pin_writes_no_pin_file(
     assert m is not None
     m.backbone_version = "0.1.0"
     manifest.write_backbone_manifest(installed_target, m)
-    monkeypatch.setattr(upgrade, "run_sync", lambda *_a, **_k: None)
+    monkeypatch.setattr(upgrade, "propagate", lambda *_a, **_k: None)
 
     upgrade.run_upgrade(installed_target, pin=False)
 
@@ -1996,7 +1998,7 @@ def test_the_target_is_recorded_before_propagation_and_the_completion_before_the
     monkeypatch.setattr(
         upgrade, "record_backbone_target", spy("target", upgrade.record_backbone_target, first)
     )
-    monkeypatch.setattr(upgrade, "run_sync", spy("sync", upgrade.run_sync, first))
+    monkeypatch.setattr(upgrade, "propagate", spy("propagation", upgrade.propagate, of_ctx))
     monkeypatch.setattr(
         install,
         "run_installed_adapter_primitives",
@@ -2022,7 +2024,7 @@ def test_the_target_is_recorded_before_propagation_and_the_completion_before_the
     target = _this_pkit()
     assert events == [
         ("target", ("0.1.0", "0.1.0")),
-        ("sync", (target, "0.1.0")),
+        ("propagation", (target, "0.1.0")),
         ("merge and deploy", (target, "0.1.0")),
         ("workspace", (target, "0.1.0")),
         ("provisioning", (target, "0.1.0")),
@@ -2326,3 +2328,266 @@ def test_the_older_direction_check_reads_the_completion_too(
 def test_a_corrupt_recorded_version_names_upgrade_for_pin() -> None:
     with pytest.raises(click.ClickException, match="Run 'pkit upgrade'"):
         upgrade._pin_order("1.0.0", "not-a-version")
+
+
+# --- the propagation step, and each capability after its copy (#1460, ADR-065) ---
+
+
+def _stage_trial(source_kit: Path, version: str, *, skill: str = "# Skill\n") -> Path:
+    """The capability `trial` at *version* under *source_kit*'s `capabilities/`."""
+    cap = source_kit / "capabilities" / "trial"
+    (cap / "skills").mkdir(parents=True, exist_ok=True)
+    (cap / "package.yaml").write_text(
+        "schema_version: 1\ncomponent:\n  kind: capability\n  name: trial\n"
+        f'  version: {version}\ndescription: Test.\nrequires_backbone: ">=0.0.0"\n',
+        encoding="utf-8",
+    )
+    (cap / "skills" / "trial-skill.md").write_text(
+        f"---\nname: trial-skill\n---\n{skill}", encoding="utf-8"
+    )
+    return cap
+
+
+def _install_trial(
+    target: Path, tmp_path: Path, version: str, *, skipped: tuple[tuple[str, str], ...] = ()
+) -> Path:
+    """Install `trial` at *version* into *target*; returns its installed folder."""
+    from project_kit import capabilities as caps
+
+    install_source = tmp_path / "install-source" / ".pkit"
+    _stage_trial(install_source, version)
+    source = caps.find_capability_in_source(install_source, "trial")
+    assert source is not None
+    caps.install_capability(target, source, skipped_artifacts=skipped)
+    return target / ".pkit" / "capabilities" / "trial"
+
+
+def _trial_record(target: Path) -> manifest.ComponentManifest | None:
+    return manifest.read_component_manifest(
+        target / ".pkit" / "capabilities" / "trial" / "project" / "manifest.yaml"
+    )
+
+
+def test_an_upgrade_to_a_newer_release_runs_the_step_and_never_meets_syncs_guard(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An upgrade runs where the running pkit is newer than the project by design: it
+    calls the propagation step, never the sync command, so sync's guard never
+    stops it (ADR-065 point 1)."""
+    from project_kit import sync
+
+    _record_finished_at(installed_target, "0.1.0")
+    steps: list[Path] = []
+    real_step = upgrade.propagate
+
+    def step(ctx: install.InstallContext, capabilities: Any) -> None:
+        steps.append(ctx.target_root)
+        real_step(ctx, capabilities)
+
+    def guard(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("an upgrade ran sync's guard")
+
+    monkeypatch.setattr(upgrade, "propagate", step)
+    monkeypatch.setattr(sync, "refuse_version_mismatch", guard)
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert steps == [installed_target]
+    assert _states(installed_target) == (_this_pkit(), _this_pkit())
+
+
+def test_upgrade_runs_a_capability_migration_after_its_copy_and_restamps_it(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each capability's migrations run after its copy, so a migration reads the
+    files of the version it migrates to (COR-010's order), and the capability is
+    restamped when they finish."""
+    _install_trial(installed_target, tmp_path, "0.1.0")
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    cap = _stage_trial(source, "0.2.0", skill="# New\n")
+    trace = tmp_path / "trace.txt"
+    script = cap / "migrations" / "0.2.0" / "001-read-the-copy.sh"
+    script.parent.mkdir(parents=True)
+    script.write_text(
+        "#!/usr/bin/env bash\nset -euo pipefail\n"
+        'if grep -q "# New" "$ROOT/.pkit/capabilities/trial/skills/trial-skill.md"; then\n'
+        f'  echo after >> "{trace}"\nelse\n  echo before >> "{trace}"\nfi\n',
+        encoding="utf-8",
+    )
+    _record_finished_at(installed_target, "0.1.0")
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert trace.read_text(encoding="utf-8").split() == ["after"]
+    record = _trial_record(installed_target)
+    assert record is not None and record.version == "0.2.0"
+
+
+def test_upgrade_moves_a_root_record_under_project_before_its_copy(
+    installed_target: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A record an older release left at the root keeps the project from reading as
+    current. The transition moves it under project/ before its copy, which would
+    prune it there, keeping its state and skips (ADR-065 point 2)."""
+    installed = _install_trial(
+        installed_target, tmp_path, "0.1.0", skipped=(("skill", "trial-skill"),)
+    )
+    root = installed / "manifest.yaml"
+    (installed / "project" / "manifest.yaml").rename(root)
+    with root.open("a", encoding="utf-8") as f:
+        f.write("  project_board:\n    uuid: PVT_kwDOAA12345\n")
+    manifest.set_component_manifest_path(
+        installed_target, "capability", "trial", ".pkit/capabilities/trial/manifest.yaml"
+    )
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    _stage_trial(source, "0.1.0")
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert "Already at backbone" not in capsys.readouterr().out
+    assert not root.exists()
+    record = _trial_record(installed_target)
+    assert record is not None
+    assert record.version == "0.1.0"
+    assert record.backend_state == {
+        "skipped": [{"kind": "skill", "name": "trial-skill"}],
+        "project_board": {"uuid": "PVT_kwDOAA12345"},
+    }
+    assert not (installed / "skills" / "trial-skill.md").exists()
+    backbone = manifest.read_backbone_manifest(installed_target)
+    assert backbone is not None
+    assert {c.name: c.manifest for c in backbone.components}["trial"] == (
+        ".pkit/capabilities/trial/project/manifest.yaml"
+    )
+
+
+def test_upgrade_records_a_capability_with_no_readable_version_and_runs_none_of_its_migrations(
+    installed_target: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Neither a manifest nor a readable package.yaml: the transition copies the
+    capability, records the version its bundle ships, and runs none of its
+    migrations, since its history is unknown (ADR-065 point 2)."""
+    installed = _install_trial(installed_target, tmp_path, "0.1.0")
+    (installed / "project" / "manifest.yaml").unlink()
+    (installed / "package.yaml").write_text("not: a package\n", encoding="utf-8")
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    cap = _stage_trial(source, "0.2.0")
+    script = cap / "migrations" / "0.1.0" / "001-mark.sh"
+    script.parent.mkdir(parents=True)
+    script.write_text('#!/usr/bin/env bash\ntouch "$ROOT/migrated"\n', encoding="utf-8")
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert not (installed_target / "migrated").exists()
+    record = _trial_record(installed_target)
+    assert record is not None and record.version == "0.2.0"
+    assert "no recorded version before, so none of its migrations runs" in capsys.readouterr().out
+
+
+def test_upgrade_moves_the_root_record_of_a_capability_no_longer_shipped(
+    installed_target: Path,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The transition moves every root manifest (ADR-065 point 2), that of a
+    capability its bundle no longer ships included, so the next upgrade reads the
+    project as current. The capability itself stays installed (COR-017)."""
+    installed = _install_trial(installed_target, tmp_path, "0.1.0")
+    root = installed / "manifest.yaml"
+    (installed / "project" / "manifest.yaml").rename(root)
+    manifest.set_component_manifest_path(
+        installed_target, "capability", "trial", ".pkit/capabilities/trial/manifest.yaml"
+    )
+
+    upgrade.run_upgrade(installed_target, pin=False)
+    first = capsys.readouterr().out
+    upgrade.run_upgrade(installed_target, pin=False)
+    second = capsys.readouterr().out
+
+    assert "Already at backbone" not in first
+    assert "orphan       'trial'" in first
+    assert not root.exists()
+    record = _trial_record(installed_target)
+    assert record is not None and record.version == "0.1.0"
+    assert "Already at backbone" in second
+
+
+def test_upgrade_keeps_a_capability_its_bundle_ships_older(
+    installed_target: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A transition never moves a recorded version down: a capability its bundle
+    ships older is neither copied nor restamped (#1461 refuses it)."""
+    installed = _install_trial(installed_target, tmp_path, "0.3.0")
+    skill = (installed / "skills" / "trial-skill.md").read_text(encoding="utf-8")
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    _stage_trial(source, "0.1.0", skill="# Older\n")
+    _record_finished_at(installed_target, "0.1.0")
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert (installed / "skills" / "trial-skill.md").read_text(encoding="utf-8") == skill
+    record = _trial_record(installed_target)
+    assert record is not None and record.version == "0.3.0"
+    assert "kept         'trial' at v0.3.0" in capsys.readouterr().out
+
+
+def test_upgrade_creates_each_missing_seed_path_and_never_writes_over_one(
+    installed_target: Path,
+) -> None:
+    """A transition creates each declared seed path that is missing, and leaves one
+    that exists as the project wrote it (ADR-065 point 11, COR-059 point 8)."""
+    pkit = installed_target / ".pkit"
+    overlay = pkit / "agents" / "project" / "overlay.yaml"
+    overlay.unlink()
+    shutil.rmtree(pkit / "decisions" / "project")
+    shutil.rmtree(pkit / "scratchpad" / "active")
+    settings = pkit / "adapters" / "claude-code" / "settings" / "project" / "settings.json"
+    custom = '{"permissions": {"allow": ["Bash(echo:*)"], "deny": []}}'
+    settings.write_text(custom, encoding="utf-8")
+    _record_finished_at(installed_target, "0.1.0")
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert overlay.read_text(encoding="utf-8") == install.AGENTS_OVERLAY_SEED
+    assert (pkit / "decisions" / "project" / ".gitkeep").is_file()
+    assert (pkit / "scratchpad" / "active" / ".gitkeep").is_file()
+    assert settings.read_text(encoding="utf-8") == custom
+
+
+def test_upgrade_dry_run_lists_each_capability_migration_and_writes_nothing(
+    installed_target: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The dry run reads a capability's migrations from the bundle, lists them, and
+    writes nothing."""
+    _install_trial(installed_target, tmp_path, "0.1.0")
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    cap = _stage_trial(source, "0.2.0")
+    script = cap / "migrations" / "0.2.0" / "001-mark.sh"
+    script.parent.mkdir(parents=True)
+    script.write_text('#!/usr/bin/env bash\ntouch "$ROOT/migrated"\n', encoding="utf-8")
+    _record_finished_at(installed_target, "0.1.0")
+    before = _tree_bytes(installed_target)
+
+    upgrade.run_upgrade(installed_target, dry_run=True)
+
+    out = capsys.readouterr().out
+    assert "would run 1 migration(s) for capability 'trial' (0.1.0 -> v0.2.0)" in out
+    assert "would record capability 'trial' at 0.2.0 (from 0.1.0)" in " ".join(out.split())
+    assert _tree_bytes(installed_target) == before
