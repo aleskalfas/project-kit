@@ -1,6 +1,6 @@
 ---
 id: COR-057
-title: One reviewer judges a change against the accepted rules that bind on what it alters
+title: One reviewer judges a change against the accepted rules that bind on what it alters or brings under a rule
 status: accepted
 date: 2026-10-11
 author: Aleš Kalfas <kalfas.ales@gmail.com>
@@ -16,20 +16,20 @@ The reviewers that check a project's work form a stack, each at its own stage an
 
 ## Decision
 
-**A core agent, the rule-set reviewer, judges a change against the accepted rules that bind on each artefact the change alters. It takes those rules only from the rule sets, through the backbone's one answer. It judges only what the change owns, and only the parts of a rule that no check is declared to enforce. It is advisory unless a gate requires it, and this record requires no one to run it.**
+**A core agent, the rule-set reviewer, judges a change against the accepted rules that bind on what the change alters or brings under a rule. It takes those rules only from the rule sets, through the backbone's one answer. It judges only what the change owns, which includes the whole of an artefact the change brings under a rule, for that rule. It judges only the parts of a rule that no check is declared to enforce. It is advisory unless a gate requires it, and this record requires no one to run it.**
 
 ### 1. What it judges
 
 The agent is named `rule-set-reviewer`. It reviews one change at a time.
-- **The artefacts.** It judges each artefact the change *alters*: one the change adds or removes, or one whose content it changes (COR-050).
-- **Moves.** An artefact moved within the declared places is the same artefact, since its history follows the move (COR-050 point 3). So a move that keeps the content alters nothing. Moving an artefact out of the declared places removes it (COR-050 point 6).
+- **The artefacts.** It judges each artefact the change *alters*: one the change adds or removes, or one whose content it changes (COR-050). It also judges each artefact the change brings under a rule, even one whose content the change leaves as it was (point 2).
+- **Moves.** An artefact moved within the declared places is the same artefact, since its history follows the move (COR-050 point 3). So a move that keeps the content alters nothing. But it can bring the artefact under a rule, where a set's scope selects its new path and not its old one. Moving an artefact out of the declared places removes it (COR-050 point 6).
 - **The container.** The methodology's container is no part of the content. A change only inside it, to an answer or to the anchors, alters nothing, and the reviewer judges nothing there.
-- **The rules.** Its remit is every accepted rule that binds on an altered artefact, as the backbone answers (COR-051 point 7). The rules that bind at the change's head judge what the head holds. The rules that bound at the base judge an artefact the change removes.
+- **The rules.** Its remit is every accepted rule that binds on an altered artefact, or on an artefact the change brings under a rule, as the backbone answers (COR-051 point 7). The rules that bind at the change's head judge what the head holds. The rules that bound at the base judge an artefact the change removes.
 - **Rules that bind nothing.** A proposed, superseded or withdrawn rule binds nothing, and the reviewer judges nothing under it. A rule reached only through a pin behind its set binds nothing either (COR-051 point 7). The reviewer may still report a break of it as a finding that informs.
 - **A conflict in the answer.** Where the backbone's answer names a conflict for an artefact, the conflict is validation's finding, and validation fails on it (COR-051 point 7). The reviewer judges nothing that the conflict leaves unsettled. That alone does not keep it from approving.
-- **Only the altered artefacts.** It judges no artefact the change leaves unaltered, even where the change breaks a rule that binds there.
+- **Only what the change alters or brings under a rule.** It judges no other artefact, even where the change breaks a rule that binds there.
 - **No rules of its own.** Its instructions say how to judge, never what to require. They hold no rule.
-- **What it reads.** It reads the change, and each altered artefact at the base and at the head. It also reads what each rule names as what it needs, such as the artefact's anchors or the artefacts it must agree with. A fact a rule needs but does not name, it does not guess (point 3).
+- **What it reads.** It reads the change, and each artefact it judges at the base and at the head. It also reads what each rule names as what it needs, such as the artefact's anchors or the artefacts it must agree with. A fact a rule needs but does not name, it does not guess (point 3).
 - **A check's part.** A part of a rule that the rule's owner declares a check enforces is that check's while the check is there (COR-051 point 2). The reviewer does not judge that part, and runs no check. A part whose declared check is not there is the reviewer's. So is every other part, even one that a script could check.
 - **Never an answer.** An answer on an artefact, such as a revalidation, a deferral or a reason for having no anchors, is written by the agent making the change, where its change owes it, or decided by a person, and the answers a change owes are checked by a reviewer the project chooses (COR-050 point 3). This reviewer writes none, and judges none.
 - **Read-only.** It changes nothing it reviews.
@@ -37,8 +37,14 @@ The agent is named `rule-set-reviewer`. It reviews one change at a time.
 ### 2. What the change owns
 
 The reviewer judges only a break the change owns.
-- **Its own text.** The change owns what it adds, and a passage it moves or copies from elsewhere. It also owns a break that its edit introduces or widens. Moving a whole artefact moves none of its passages, so the change owns none of them by the move.
+- **Its own text.** The change owns what it adds, and a passage it moves or copies from elsewhere. It also owns a break that its edit introduces or widens. Moving a whole artefact moves none of its passages, so the change owns none of them by the move alone.
 - **What it removes.** Removing an artefact can break a rule that bound on it at the base. Removing a passage can leave the artefact breaking a rule at the head. The change owns both breaks.
+- **What it brings under a rule.** A change *brings an artefact under a rule* when the rule binds on the artefact at the head and did not bind on it at the base. Changes that can do so include:
+  - a change to the rule sets, such as widening a set's scope, accepting the rule, or updating a pin
+  - a change to the places, such as declaring or widening a place, or typing a place
+  - moving the artefact to a path a set's scope selects
+
+  For that rule, the change owns the whole of the artefact's content as the head holds it, whether it alters the artefact or not. A break of that rule there is the change's, though the text was there before. An artefact the change adds is brought under every rule that binds on it.
 - **A break it says it fixes.** A break that was there before becomes the change's own when the change says it fixes it, and the break survives.
 - **Everything else** that was there before is not the change's own, even where the change edits beside it.
 
@@ -49,7 +55,7 @@ A judgement under an accepted rule binds where the change owns the passage. Tast
 - **A passage for a person.** The rule binds and the change owns the passage. But judging it needs a reading the rule does not settle, or a fact the rule does not name. It withholds no approval, and waits for a person's judgement.
 - **A finding that informs.** It is a break the change does not own, with the reason it is not the change's. It may also be a break of a rule that a pin behind its set holds back. It withholds nothing and holds nothing.
 
-**A rule the change itself moves.** The change may make a rule bind or stop binding on an artefact it alters, through the rule's status, a scope or a pin. Whether that rule should then judge the passages the change owns there is a reading the rule's text does not settle. So a finding under that rule, on such a passage, is a passage for a person. Whoever reviews that change of the rules judges the text the rule now reaches.
+**A rule the change itself moves.** The change may make a rule bind or stop binding on an artefact, through the rule's status, a scope or a pin. Whether that rule should then judge the passages the change owns there is a reading the rule's text does not settle. So a finding under that rule, on such a passage, is a passage for a person. That holds on every passage of an artefact the change brings under the rule, all of whose content is the change's for that rule (point 2). Whoever reviews that change of the rules judges the text the rule now reaches. A rule that comes to bind only through a place, a type or a move is not moved by the change in this way. A break of it can then be a settled break. Where the change also edits the rule's status, or the scope or a pin of a set the rule binds through, the change moves the rule.
 
 **Its verdict.** The reviewer approves only when it judged the change and found no settled break. A reviewer that cannot judge the change does not approve, and says why. It cannot judge the change while a rule that binds on it cannot be judged. A fact the rule names that cannot be found is such a case.
 
@@ -68,7 +74,7 @@ It reviews a diff, beside the convention-compliance reviewer in the reviewer sta
 
 ### 6. What a contribution covers
 
-A component may contribute the reviewer. It then contributes it for every artefact a change alters on which an accepted rule binds, at the base or at the head. It does so for the artefacts of every owner, not only its own. So one contributor installed is enough for every such artefact to be judged at the gate.
+A component may contribute the reviewer. It then contributes it for every artefact a change alters on which an accepted rule binds, at the base or at the head. It also contributes it for every artefact a change brings under an accepted rule. It does so for the artefacts of every owner, not only its own. So one contributor installed is enough for every such artefact to be judged at the gate.
 
 ### 7. Rule sets and a project's prose conventions
 
@@ -88,15 +94,22 @@ The reviewer stack kept the critic and the architect advisory first (COR-024), a
 
 **Why the container is left out.** It holds the answers, which are a person's (COR-050 point 3), and the anchors, whose change the friction checks already bring to a person. A change only there would otherwise draw a review of text nobody changed. The cost is that a rule about an artefact's anchors goes unjudged here on a change that touches only the anchors.
 
-**Why only the altered artefacts.** Every artefact a change could affect is, through anchors and rules, most of a project. Judging only what the change alters keeps a review to the change. The cost is a break the change causes in an artefact it leaves alone, such as a removed definition that another artefact still uses. Such a break is the business of a check, or of a rule that binds on the removed artefact too.
+**Why only what the change alters or brings under a rule.** Every artefact a change could affect is, through anchors and rules, most of a project. Judging only what the change alters, and what it brings under a rule, keeps a review to the change. The cost is a break the change causes in an artefact it neither alters nor brings under a rule, such as a removed definition that another artefact still uses. Such a break is the business of a check, or of a rule that binds on the removed artefact too.
 
 **Why it never judges a check's part.** A part judged twice draws two findings, and the two can disagree. The rule's owner says which part a check settles (COR-051 point 2), and the reviewer takes the rest. A part whose declared check is not there comes back to the reviewer. COR-051 point 2 hands it to whoever judges the rest of the rule.
 
-**Why only what the change owns.** Otherwise a change that touches an old artefact would answer for every break the artefact already held. Each change would have to mend the past before it could land. A break the change says it fixes is its own, because a surviving break makes that claim false. Moving an artefact whole changes none of its text, so it owns none of the text's breaks. Following a move is a guess (COR-050 point 3). A move the backbone does not follow reads as a removal and an addition, and the change then owns the whole text. That errs toward too many findings, never too few. The cost of the rule is text that comes under a rule without being edited. That happens when a scope widens, a pin is updated, or an unchanged artefact moves into a set's paths. No later change owns that text, so its breaks only inform until a change edits it.
+**Why only what the change owns.** Otherwise a change that touches an old artefact would answer for every break the artefact already held. Each change would have to mend the past before it could land. A break the change says it fixes is its own, because a surviving break makes that claim false. Moving an artefact whole changes none of its text, so the change owns none of the text's breaks by the move alone. A move into a set's paths brings the text under that set's rules, as "Why a change owns the whole of what it brings under a rule" says. Following a move is a guess (COR-050 point 3). A move the backbone does not follow reads as a removal and an addition, and the change then owns the whole text. That errs toward too many findings, never too few.
+
+**Why a change owns the whole of what it brings under a rule.** Text can come under a rule without being edited, in the ways point 2 names. A later change owns only what it edits. So if the change that brings the text under the rule did not own it, no change would, and its breaks would only inform. The rule would then claim to cover text that nobody checks. The change that brings the text under the rule is the one that makes that claim, so it answers for the text. It owns the text for that rule only. A rule that bound there at the base judges only what the change edits, so the change does not answer for the artefact's whole past. The costs:
+- **A review of everything a rule newly reaches.** That can be much of a project, and a person judges each passage whose reading the rule does not settle.
+- **A scope can widen a folder at a time.** A set that widens its scope so, or leaves files out of it (COR-051 point 2), keeps the review to what it brings in. A rule accepted, or a pin updated, reaches the set's whole scope at once.
+- **A component's release can bring text under a rule.** A release that adds or types a place brings the project's text under the rules that select it, though the project made no choice to bring it there. The change that takes the release answers for that text.
+- **Nothing comes under a rule that binds at both states.** A rule whose text a change tightens judges only what the change edits. So does a rule that a set's new major keeps, where one change takes the major and updates the pin to it. Taken in two changes, the pin's update brings every rule of the set under it. A successor rule is a rule of its own, so the change that accepts it brings its whole scope under it.
+- **How an artefact comes under a rule decides the kind of a break in it.** A wider scope, an accepted rule or an updated pin sends a break to a person (point 3). A place, a type or a move can make it a settled break. So an author can choose the route whose breaks withhold no approval.
 
 **Why a passage for a person withholds no approval.** A judgement call that withheld approval would hold the change until someone overrode the reviewer, and overriding would become a habit. A judgement call that only informed would reach nobody. So it waits for a person, and withholds nothing. The rule binds, so the judgement is owed. The cost is that a gate which reads only the verdict brings it to nobody, so the gate decides how it reaches a person.
 
-**Why a rule the change moves goes to a person.** Take a change that accepts a rule and adds text beside it. It would otherwise be held by a rule that was not yet accepted when the text was written. A change that retires a rule and removes an artefact it bound on would be held by the rule it retires. In both, whether the rule should judge that text is the question the change itself puts. Accepting a rule is a reviewed change, a person's review where a person takes part (COR-051 point 4). A change that retires a rule, or moves a scope or a pin, changes the rule sets too. Whoever reviews that change of the rules is placed to judge the text it reaches.
+**Why a rule the change moves goes to a person.** Take a change that accepts a rule and adds text beside it. It would otherwise be held by a rule that was not yet accepted when the text was written. A change that retires a rule and removes an artefact it bound on would be held by the rule it retires. In both, whether the rule should judge that text is the question the change itself puts. Accepting a rule is a reviewed change, a person's review where a person takes part (COR-051 point 4). A change that retires a rule, or moves a scope or a pin, changes the rule sets too. Whoever reviews that change of the rules is placed to judge the text it reaches. That text includes the whole of each artefact the change brings under the rule (point 2). Declaring a place, typing one or moving an artefact changes no rule, and no review of the rules is placed to judge the text it reaches. So the reviewer judges that text as it judges any other text the change owns, and a break the rule settles withholds its approval.
 
 **Why it makes no finding of taste.** It has no rules of its own, and taste binds nothing, since no review accepted it as a rule. A finding of taste would also cite no rule, where every other finding cites one.
 
@@ -134,6 +147,7 @@ The reviewer stack kept the critic and the architect advisory first (COR-024), a
 - **It judges the parts a check enforces too.** Rejected. One part judged twice draws two findings that can disagree.
 - **A judgement call withholds approval.** Rejected. It holds the change until someone overrides the reviewer, which trains the habit of overriding.
 - **Every break in an altered artefact is the change's.** Rejected. A change that touches an old artefact would answer for its whole past.
+- **Text a change brings under a rule stays unowned until a change edits it.** Rejected. The rule would claim to cover text that nobody checks, and no later change would answer for it.
 - **A change to an artefact's anchors alters it, for this reviewer.** Not taken. The friction checks already bring an anchor's change to a person, and the content they rest on is unchanged.
 - **A shared principle of what any change owns, for every reviewer.** Not taken here. This record states what a change owns for its own reviewer. Lifting it would bind reviewers this record does not govern.
 
@@ -145,6 +159,7 @@ The reviewer stack kept the critic and the architect advisory first (COR-024), a
   - each artefact followed across the change, by the same pairing the friction checks use (COR-050)
   - for each part a check is declared to enforce, whether that check is there
   - the rules a pin behind its set holds back, beside the rules that bind
+  - the rules the change brings each artefact under, and each artefact it brings under a rule without altering it
 - **A change to the agent's instructions** changes every gate that requires the reviewer. So it is a surface change of the backbone (COR-010).
 - **The reviewer stack is refined in place,** atomically with this record's acceptance. Its statement of the stack admits the rule-set reviewer, on the diff, beside the convention-compliance reviewer (COR-024).
 - **Components** whose artefacts a project's rules may reach may contribute the reviewer to a gate, once they hold the evidence of point 8. A contribution covers every ruled artefact (point 6). Core runs no gate, so nothing in core checks a contribution. Points 6 and 8 bind the contributor as its own discipline.
