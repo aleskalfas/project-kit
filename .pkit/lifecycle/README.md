@@ -873,7 +873,7 @@ Only an unambiguous order is compared: a pin that is not a version blocks nothin
 4. **Its migrations,** after the copy, from the version it records, then its restamp at the version it ships. One with no readable version runs none.
 5. **Its derivable state:** merge delivery and deploy, its query commands' provisioning, and `.pkit/.gitignore` rendered again.
 
-It finishes a capability an interrupted transition or an untagged install left behind. It moves the capability to the version the running pkit's bundle ships. Sync's guard stops it under any pkit but the project's version, so that is the version the project's recorded release ships (COR-010), wherever a version names one content: under a tagged install (ADR-065 point 12).
+It finishes a capability that an interrupted transition of that capability, or an untagged install, left behind. Over an interrupted transition of the backbone, sync's guard stops it and names `pkit upgrade`, which finishes that transition. It moves the capability to the version the running pkit's bundle ships. Sync's guard stops it under any pkit but the project's version, so that is the version the project's recorded release ships (COR-010), wherever a version names one content: under a tagged install (ADR-065 point 12).
 
 #### Upgrading an incubated capability (COR-031 D1/D4)
 
