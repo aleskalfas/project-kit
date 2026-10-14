@@ -80,12 +80,13 @@ def _template(name: str) -> dict[str, Any]:
 
 
 def test_the_schemas_are_one_per_kind_and_valid() -> None:
-    """One per kind, the shared definitions, the evidence point's companion (#1001), and
-    the project configuration's (#1342)."""
+    """One per kind, the shared definitions, the evidence point's companion (#1001), the
+    project configuration's (#1342), and the kinds' declared structure's (#1363)."""
     stems = _stems()
     assert stems == [
         "actor",
         "analysis",
+        "artefact-kinds",
         "config",
         "journey",
         "revalidation-evidence",

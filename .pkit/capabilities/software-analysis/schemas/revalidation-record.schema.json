@@ -8,13 +8,19 @@
   "required": ["change", "trigger", "date", "by", "outcomes"],
   "properties": {
     "change": {
-      "description": "The change that carried the revalidation: a tracked work item (`#123`), a pull request, or a range of commits (`abc1234..def5678`).",
+      "description": "The change that carried the revalidation: a tracked work item (`#123`), a pull request, or a range of commits on the default branch (software-analysis DEC-001 point 6).",
       "$ref": "analysis.schema.json#/$defs/text"
     },
     "trigger": {
       "description": "What triggered it (DEC-001 point 5): `planned` — a change proposed, before code; `drift` — friction on a pull request; `scheduled` — friction the whole-repository check found; `close` — a pull request changing artefacts or their anchors lands; `onboarding`.",
       "type": "string",
       "enum": ["planned", "drift", "scheduled", "close", "onboarding"]
+    },
+    "reviewed-against": {
+      "description": "A planned record's only, and required there: where the design it reviewed stood, one mapping for each source of the design (DEC-001 point 6). Each source is named by its title, its link where it lies outside this repository, and its version, a pointer to the text reviewed. A record of another trigger leaves it out.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/source" }
     },
     "date": {
       "description": "The day it was performed, `YYYY-MM-DD`.",
@@ -45,6 +51,68 @@
       "minItems": 1,
       "uniqueItems": true,
       "items": { "$ref": "revalidation-evidence.schema.json#/$defs/evidence" }
+    }
+  },
+  "if": {
+    "properties": { "trigger": { "const": "planned" } },
+    "required": ["trigger"]
+  },
+  "then": { "required": ["reviewed-against"] },
+  "else": { "properties": { "reviewed-against": { "not": {} } } },
+  "$defs": {
+    "source": {
+      "description": "One source of the design a planned revalidation reviewed. Without a `url`, it lies in this repository: its `version` is a commit's full id, or `this change` when the design lands in the change that adds the record. With a `url`, it lies outside: its `version` is the time its text was read, or a commit's full id in another repository. These definitions are the one home of each form, so whatever checks a source reads them here.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "version"],
+      "properties": {
+        "title": {
+          "description": "What the source is, for the reader.",
+          "$ref": "analysis.schema.json#/$defs/text"
+        },
+        "url": {
+          "$ref": "#/$defs/link"
+        },
+        "version": {
+          "description": "The pointer to the text reviewed, never a version number: the capability's artefacts and records carry no declared versions.",
+          "type": "string"
+        }
+      },
+      "if": { "required": ["url"] },
+      "then": {
+        "properties": {
+          "version": {
+            "anyOf": [
+              { "$ref": "#/$defs/time" },
+              { "$ref": "analysis.schema.json#/$defs/commit" }
+            ]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "version": {
+            "anyOf": [
+              { "$ref": "analysis.schema.json#/$defs/commit" },
+              { "$ref": "#/$defs/this-change" }
+            ]
+          }
+        }
+      }
+    },
+    "link": {
+      "description": "An absolute link: a scheme, `://`, a host, and the rest with no white space. It names no tracker, so checking it needs no knowledge of one.",
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9+.-]*://[^\\s/?#]+(?:[/?#]\\S*)?$"
+    },
+    "time": {
+      "description": "When a text was read: a UTC timestamp, as a revalidation's `at` is (COR-050 point 3). Quoted in YAML, which would otherwise read it as a time and not as text.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "this-change": {
+      "description": "The change the record lands in, for a design that lands with its record. Its commit is the one that added the record, found from the history as a revalidation's is (DEC-001 point 6; COR-050 point 3).",
+      "const": "this change"
     }
   }
 }

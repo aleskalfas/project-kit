@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from collections.abc import Mapping
 from pathlib import Path
@@ -671,13 +672,17 @@ def test_a_journey_whose_use_case_anchors_do_not_match_its_steps_is_reported(
 
 # --- revalidation records (DEC-001 points 5 and 6) --------------------------------------------
 
+#: The template's `reviewed-against`, which a planned record carries, up to the next field.
+_SOURCES = re.compile(r"^reviewed-against:.*?\n(?=date:)", re.MULTILINE | re.DOTALL)
+
 
 def test_revalidation_records_are_held_to_their_schema(seeded: AdopterRepo) -> None:
     record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
     # From the template; a date written unquoted reads as the text it was written as.
     good = record.replace('"#000"', '"#887"').replace("UC-000", "UC-001")
     good = good.replace('date: "2026-01-01"', "date: 2026-10-01")
-    bad = good.replace("trigger: planned", "trigger: whim").replace("UC-001: holds", "UC-1: ok")
+    bad = _SOURCES.sub("", good)  # only a planned record names its sources
+    bad = bad.replace("trigger: planned", "trigger: whim").replace("UC-001: holds", "UC-1: ok")
     whim = f"{RECORDS}/2026-10-02-whim.md"
     seeded.write(
         {
@@ -705,6 +710,37 @@ def test_revalidation_records_are_held_to_their_schema(seeded: AdopterRepo) -> N
             "the date, who performed it and each artefact's outcome (DEC-001 point 6)",
         ),
     ]
+
+
+def test_a_planned_record_is_checked_for_the_sources_it_names(seeded: AdopterRepo) -> None:
+    """Validation applies the record's schema whatever the format rule's status, so it
+    checks `reviewed-against` (DEC-001 point 6, #1363): required on a planned record,
+    left out of a record of another trigger, and each source's version of the form its
+    place gives — here, an abbreviated commit is refused."""
+    record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
+    good = record.replace('"#000"', '"#887"').replace("UC-000", "UC-001")
+    short = 'reviewed-against:\n  - title: the redesign note\n    version: "4c1d2e9"\n'
+    seeded.write(
+        {
+            f"{RECORDS}/2026-10-01-planned.md": good,
+            f"{RECORDS}/2026-10-02-unnamed.md": _SOURCES.sub("", good),
+            f"{RECORDS}/2026-10-03-drift.md": good.replace("trigger: planned", "trigger: drift"),
+            f"{RECORDS}/2026-10-04-short.md": _SOURCES.sub(short, good),
+        }
+    )
+    found = dict(errors(check(seeded)))
+    assert sorted(found) == [
+        f"{RECORDS}/2026-10-02-unnamed.md",
+        f"{RECORDS}/2026-10-03-drift.md:/reviewed-against",
+        f"{RECORDS}/2026-10-04-short.md:/reviewed-against/0/version",
+    ]
+    assert found[f"{RECORDS}/2026-10-02-unnamed.md"] == "'reviewed-against' is a required property"
+    assert found[f"{RECORDS}/2026-10-03-drift.md:/reviewed-against"].endswith(
+        "should not be valid under {}"
+    )
+    assert found[f"{RECORDS}/2026-10-04-short.md:/reviewed-against/0/version"] == (
+        "'4c1d2e9' is not valid under any of the given schemas"
+    )
 
 
 def test_the_records_are_the_held_files_so_a_draft_git_ignores_is_not_checked(

@@ -9,9 +9,9 @@ term, use case, journey, revalidation record. Held here:
   walkthroughs give names a kind the stamp has, with flags that kind takes, so
   the skill cannot drift from the CLI unnoticed;
 - **what it produces passes the check gate and carries the friction block** —
-  the artefacts its walkthroughs stamp, an unanchored actor and a planned
-  revalidation record included, pass `pkit analysis validate` and the core's
-  friction pass, and each carries its `friction` block.
+  the artefacts its walkthroughs stamp, an unanchored actor and a revalidation
+  record included, pass `pkit analysis validate` and the core's friction pass,
+  and each carries its `friction` block.
 """
 
 from __future__ import annotations
@@ -139,19 +139,21 @@ def test_what_the_walkthroughs_stamp_passes_the_gate_and_carries_the_friction_bl
     stamped(project, "use-case", "read-report", "--actor", "ACT-tester", "--area", "reports")
     steps = ("--step", "UC-001", "--step", "UC-002")
     stamped(project, "journey", "first-run", "--actor", "ACT-tester", *steps)
-    planned = (
+    stale = (
         "revalidation",
         "report-redesign",
         "--change",
         "#50",
         "--trigger",
-        "planned",
+        "drift",
         "--outcome",
-        "UC-002=holds",
+        "UC-002=analysis-stale",
         "--because",
-        "UC-002=The redesign keeps the report's content; only its layout changes.",
+        "UC-002=The redesign moved the report's layout on purpose, and step 2 now says so.",
+        "--confirmed-by",
+        "Sam",
     )
-    completed = run_script(project, NEW, *planned)
+    completed = run_script(project, NEW, *stale)
     assert completed.returncode == 0, completed.stderr
 
     fill(project)  # the walkthroughs' "Fill it": the check fails a placeholder left

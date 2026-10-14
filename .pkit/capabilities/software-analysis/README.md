@@ -173,7 +173,7 @@ pkit:
 **Revalidation record** (`schemas/revalidation-record.schema.json`) — no friction block; stamped by `pkit analysis new revalidation` from `templates/revalidation-record.md` as `revalidations/<date>-<subject>.md` ("Revalidation records" below):
 
 ```yaml
-change: "#123"                  # the work item, pull request or commit range that carried it
+change: "#123"                  # the work item, pull request or range of commits on the default branch that carried it
 trigger: drift                  # planned | drift | scheduled | close | onboarding
 date: 2026-10-02                # the day in UTC, as a revalidation's `at` is
 by: Alex                        # a person, or an agent
@@ -190,7 +190,47 @@ evidence:                       # optional: the executed results drawn on, each 
     ran: tests/test_run.py::test_sandbox
 ```
 
-The body gives each artefact's outcome with its justification, then the gaps and what resolved each. Evidence supports an outcome and never stands in for one: each artefact the record draws evidence for has its outcome. The record **copies** each entry of the evidence point it draws on, whole and in the point's shape (Connections, below), rather than naming it by id: a record is permanent history, while the point holds what its fillers report now, so an id alone would point at nothing once a filler stops reporting that commit. The copy is the evidence the record shows.
+The body gives each artefact's outcome with its justification, then the gaps and what resolved each. Evidence supports an outcome and never stands in for one: each artefact the record draws evidence for has its outcome. The record **copies** each entry of the evidence point it draws on, whole and in the point's shape (Connections, below), rather than naming it by id: a record is permanent history, while the point holds what its fillers report now, so an id alone would point at nothing once a filler stops reporting that commit. The copy is the evidence the record shows. A planned record also names the sources of the design it reviewed, in `reviewed-against` ("Revalidation records" below).
+
+## Each kind's structure: `schemas/artefact-kinds.yaml`
+
+Each kind's structure is declared once, as data, in `schemas/artefact-kinds.yaml` (DEC-001 point 1). It lists the parts of the kind's body in their order, and the forms and hints of the front-matter fields a writer fills. Its shape is `schemas/artefact-kinds.schema.json`, a strict superset of living-docs' `page-kinds.schema.json`.
+
+- **The kinds:** `actor`, `use-case`, `journey` and `term`, keyed by the types their places give, and `revalidation-record`, which has no type.
+- **Each element of a body** has an `id`, permanent once shipped, and a `type`:
+  - `heading`: a heading's `level` and, where the kind fixes it, its `text`
+  - `label`: a bold label, such as `**Goal:**`, that opens a paragraph or a top-level list item
+  - `opening`: the text before the first label, such as an actor's description
+- **Every part is required.** A part with nothing to say reads `None.`, where its element sets `allows-none: true`.
+- **A hint and an example** go with each part a writer fills, one line each. A hint says what goes in the part. A heading the stamp writes has an example and no hint.
+- **Forms:** a part or a front-matter field may name a form, a check on its content from a closed list. In a list, each item holds it.
+- **The glossary, a collection:** the `term` kind declares each entry's section, and the file's `head`. The head is the file's heading and opening, which the stamp writes once, when it creates the file.
+
+The parts each kind ships:
+
+| Kind | Its body's parts, in order | May read `None.` | Front matter a writer fills |
+|---|---|---|---|
+| `actor` | the heading, an opening, *Occasions*, *Context* | *Occasions*, *Context* | `needs`, each of the form `sentence` |
+| `use-case` | the heading, *Goal*, *Other actors*, *Preconditions*, *Assumptions*, *Trigger*, *Main path*, *Variants*, *Postconditions*, *Minimal guarantees* | *Other actors*, *Preconditions*, *Assumptions*, *Variants*, *Minimal guarantees* | none |
+| `journey` | the heading, *Goal*, *Steps*, *Variants*, *Postconditions*, *Minimal guarantees* | *Variants*, *Minimal guarantees* | none |
+| `term` | each entry's heading, *Example*, *Distinctions* | *Example*, *Distinctions* | `name`, `definition` of the form `definition`, and `replaces` |
+| `revalidation-record` | the heading, `## Outcomes`, `## Gaps` | *Gaps* | `reviewed-against` |
+
+The forms, each described in the schema:
+
+| Form | Where | What it holds |
+|---|---|---|
+| `sentence` | a use case's and a journey's *Goal*, and each of an actor's `needs` | one sentence, ending where the *How* of `RS-SAN-001` says |
+| `numbered-steps` | a use case's *Main path* | items that each open with a number, no number twice |
+| `variants` | a use case's and a journey's *Variants* | items that each open with a step's number and a letter, such as `2a.` |
+| `steps-match-front-matter` | a journey's *Steps* | one line for each of its `steps`, in order, with each hand-over under the step that needs it |
+| `outcomes-match-front-matter` | a record's *Outcomes* | one item for each of its `outcomes`, in order, opening `**<id> — <outcome>.**` |
+| `gaps-match-outcomes` | a record's *Gaps* | one item for each gap, labelled with the ids it affects and holding its `**Resolution:**` |
+| `definition` | a term's `definition` | a phrase with no article first, no full stop last, and no word of the term's name |
+
+**What binds it.** The structure is the checkable part of the format rule, `RS-SAN-001`, and binds at that rule's status, which is proposed ("The method rule set: `SAN`", below). A kind's companion schema still checks its front matter whatever the rule's status.
+
+**What reads it.** Nothing yet: a test holds the file to its schema. No check holds a body to its structure yet, and the templates are not yet rendered from it. So the templates, and the use case shown above, still show each kind's earlier parts.
 
 ## Checking: `pkit analysis validate`
 
@@ -233,7 +273,7 @@ Friction itself, dead anchors and the friction block's own shape are the core's 
 | `RS-SAN-001` | proposed | An analysis artefact or a revalidation record carries its kind's declared structure, and each kind has a template. |
 
 - **What the rule binds.** The presence and the order of every part a kind ships, and the form of each part and front-matter field its structure gives one. A revalidation record or a withdrawn artefact is held to the structure in force when it was written or withdrawn. A hint binds nothing, so the voice a hint asks for is no part of the rule. The rule's *How* says where a sentence ends, for text of the `sentence` form.
-- **What it gates.** The check of each kind's structure, since a structure binds at the rule's status (DEC-001 point 1). While the rule is proposed, the check reports nothing of a structure (COR-051 point 4). A kind's schema checks the front matter of an artefact or a record whatever the rule's status. The capability does not ship the declared structures yet, nor a check that reads them.
+- **What it gates.** The check of each kind's structure, since a structure binds at the rule's status (DEC-001 point 1). While the rule is proposed, the check reports nothing of a structure (COR-051 point 4). A kind's schema checks the front matter of an artefact or a record whatever the rule's status. The capability ships the declared structures ("Each kind's structure", above), and no check reads them yet.
 - **What the check settles.** `SAN` declares, under `checks`, what this capability's check, `software-analysis:validate`, enforces of the rule (COR-051 point 2). That command is the one `pkit validate` runs as its `software-analysis:artefacts` member. The declared part is what the rule binds, above. Whoever judges the rest of the rule leaves that part to the check, and `pkit rule-sets reach` lists the part wherever the rule binds.
 - **Its name and scope.** `SAN` takes no scope, as no method rule set does (COR-051 point 2). You never edit it (COR-051 point 6). Its name is reserved in your project. A rule set of yours named `SAN` clashes with it, and `pkit validate` fails on the clash (COR-051 point 3).
 
@@ -352,9 +392,28 @@ Friction you choose not to resolve yet is not an outcome but a deferral: `pkit f
 | found an artefact **stale** where a person decided the change was meant — `analysis-stale`, with `--confirmed-by` naming them | yes: the decision point 5 leaves to a person is kept |
 | found every artefact **holds**, or updated artefacts because the change was plainly meant | no: each artefact's own revalidation is its record (point 6) |
 
-- **It writes** the front matter — the change that carried it, the trigger, the day in UTC (as a revalidation's `at` is), who performed it and who confirmed an agent's outcomes — and a body giving each outcome with its justification and each gap with what resolved it, or "None found." Who performed it is git's user name unless `--by` names another person; an agent that performed it is `--by-agent <name>`, which needs `--confirmed-by`: an agent proposes, a person decides.
+- **It writes** the front matter — the change that carried it (a work item, a pull request, or a range of commits on the default branch, as DEC-001 point 6 says), the trigger, the day in UTC (as a revalidation's `at` is), who performed it and who confirmed an agent's outcomes — and a body giving each outcome with its justification and each gap with what resolved it, or "None found." Who performed it is git's user name unless `--by` names another person; an agent that performed it is `--by-agent <name>`, which needs `--confirmed-by`: an agent proposes, a person decides.
 - **Every word is the person's.** Each `--outcome` has its `--because`, and each gap is written as one pair with what resolved it, `--gap "<gap> => <resolution>"`, so no justification is left as the template's placeholder and no gap is matched with another's resolution. A text still holding a placeholder — words in angle brackets, as a command shown for you writes what you supply (`<the defect reference>`) — is refused, as the friction writers refuse one.
 - **It refuses**, writing nothing: a record with nothing to say; a regression or gap that names no gap; a `--gap` that is not `<gap> => <resolution>`; an outcome without its `--because`, or with two; an agent without the person who confirmed it; a placeholder left unfilled; no outcome, an outcome that is not one of the four, or two for one artefact; an artefact that is not in the analysis (withdrawn ones are fine); a subject already recorded that day.
+
+**What a planned record reviewed: `reviewed-against`.** A planned record names where the design it reviewed stood, one source at a time (DEC-001 point 6). The record's schema requires the field when `trigger` is `planned`, and refuses it on a record of any other trigger. `pkit analysis validate` applies that schema, so it checks the field's form whatever the format rule's status.
+
+```yaml
+trigger: planned
+reviewed-against:
+  - title: "#42's body"                         # what the source is, for the reader
+    url: https://tracker.example/issues/42      # its link, outside this repository only
+    version: "2026-01-05T10:00:00Z"             # the time its text was read
+  - title: the redesign note
+    version: "4c1d2e9a7b3f5d8e0c6a2b4f9e1d3c5a7b9f0e2d"   # a commit on the default branch
+```
+
+- **A source in this repository** has no `url`. Its `version` is a commit's full id, or `this change` when the design lands in the change that adds the record.
+- **The commit behind `this change`** is the one that added the record. It is found from the history, as a revalidation's commit is found from its `at` (COR-050 point 3). So a record never has to name the commit it lands in.
+- **A source outside this repository** has an absolute `url`, which names no tracker. Its `version` is the time its text was read, or a commit's full id in another repository.
+- **A time** is a UTC timestamp, as a revalidation's `at` is. **A commit** is its full id, since an abbreviation can come to name two commits as the history grows. Quote both: YAML reads a time, or a commit id of digits alone, as something other than text.
+- **Not a pointer** (DEC-001 point 6): a pull request's head, since a rebase loses a head reviewed mid-way. Nor is any commit the default branch does not hold, since a squash leaves a branch's commits off it.
+- **The stamp does not take the sources yet,** so it refuses a planned record, naming the missing field. Until it does, write a planned record by hand from `templates/revalidation-record.md`.
 
 The record never clears friction itself: commit it in the same change as the answers on the artefacts it covers. `pkit analysis validate` holds it to its schema and to the artefacts it cites. It finds the records as the files the core says the held folder holds (`pkit friction artefacts --json`): every Markdown file beneath `revalidations/`, sub-folders included — a record there was once skipped, and is checked now — from the files git sees, so a draft you keep git-ignored in the folder is not checked. If the core skips the folder — another declaration overlapping it, say — the check's summary says the folder holds nothing, and `pkit validate` says why. A record carries no friction block: it is not an artefact, and `pkit validate` refuses one written into it.
 
@@ -471,7 +530,7 @@ An install plan predicts the wiring, not the data (COR-053 point 7): it shows th
 
 ## What's shipped now, what's next
 
-Shipped: the decision; the method rule set `SAN`, its format rule proposed; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
+Shipped: the decision; the method rule set `SAN`, its format rule proposed; each kind's declared structure, `schemas/artefact-kinds.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
 
 ## Citing this capability's decisions
 

@@ -1,0 +1,308 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "artefact-kinds.schema.json",
+  "title": "Analysis kinds and their structure — software-analysis capability",
+  "description": "Formal shape of the capability's `schemas/artefact-kinds.yaml`: each kind of analysis artefact, and the revalidation record, with the structure its files follow (software-analysis DEC-001 point 1). A structure lists the parts of the kind's body in their order, each with a permanent id, its type, whether it is required, whether it may read `None.`, its hint, its example and the form a script checks in it. It also gives the forms and the hints of the front-matter fields a writer fills, and a collection's file head. The one declaration of each kind's structure. It is the checkable part of the capability's format rule, and binds at that rule's status (DEC-001 point 1; COR-051 point 1). A strict superset of living-docs' `page-kinds.schema.json`: every declaration that schema accepts, this one accepts with the same meaning, since a section that names no type is a heading. Capability data, not adopter data.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kinds"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "kinds": {
+      "description": "The kinds, keyed by the type the capability's places give each artefact kind (DEC-001 point 2), and by a key of its own for the revalidation record, which has no type. Each kind's template is `templates/<kind>.md`, and the glossary's is `templates/glossary.md`.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/word"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/kind"
+      }
+    }
+  },
+  "$defs": {
+    "word": {
+      "description": "A lowercase letter, then lowercase letters, digits and hyphens.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "line": {
+      "description": "One line of text, not blank.",
+      "type": "string",
+      "pattern": "\\S",
+      "not": {
+        "pattern": "[\\r\\n]"
+      }
+    },
+    "kind": {
+      "title": "One kind's structure",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sections"
+      ],
+      "properties": {
+        "sections": {
+          "description": "The elements of the body, in order: for a document kind, its file's body, and for a collection kind, each entry's section. A body may carry other headings and labels besides, and only the declared ones belong to the structure.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/section"
+          }
+        },
+        "ordered": {
+          "description": "Whether the elements come in the order listed. True unless set to false.",
+          "type": "boolean",
+          "default": true
+        },
+        "head": {
+          "description": "A collection kind's file head, in order: the elements its file carries once, before the first entry's section. The stamp writes each when it creates the file, and the project may reword it afterwards. A kind with a head is a collection, and its `sections` give each entry's section.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/head-element"
+          }
+        },
+        "front-matter": {
+          "description": "The front-matter fields a writer fills, each with its hint, its example and, where a script checks one, its form. The kind's companion schema checks each field's shape whatever the format rule's status. A form binds at the format rule's status, as every other form does.",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "$ref": "#/$defs/word"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/field"
+          }
+        }
+      }
+    },
+    "section": {
+      "title": "One element of a body: a heading, a label or an opening",
+      "description": "A section that names no type is a heading, as living-docs declares one. An element that names its type names its id too.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "The element's id, unique within its kind, its head included. It is permanent once shipped: an element is retired, never renamed (DEC-001 point 1).",
+          "$ref": "#/$defs/word"
+        },
+        "type": {
+          "description": "`heading`: a heading written with one to six `#` at the start of a line. `label`: a bold label, its text then a colon, as `**Goal:**`, that opens a paragraph or a top-level list item. `opening`: the text before the body's first label. Only a declared label marks a part, so a bold run the kind does not declare is content.",
+          "enum": [
+            "heading",
+            "label",
+            "opening"
+          ],
+          "default": "heading"
+        },
+        "level": {
+          "description": "A heading's level: the number of `#`.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "text": {
+          "description": "A heading's text without its `#`, where the kind fixes it, or a label's text without its bold marks and colon. A heading without `text` is one the stamp or the writer words. Text is compared ignoring case, runs of white space and trailing punctuation.",
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "required": {
+          "description": "Whether every artefact of the kind carries the element. True unless set to false. Every element a kind ships is required (DEC-001 point 1).",
+          "type": "boolean",
+          "default": true
+        },
+        "allows-none": {
+          "description": "Whether the part may read `None.` and nothing else, when it has nothing to say (DEC-001 point 1). False unless set to true.",
+          "type": "boolean",
+          "default": false
+        },
+        "form": {
+          "$ref": "#/$defs/form"
+        },
+        "hint": {
+          "description": "What goes in the part, for whoever fills it. A heading the stamp writes has none.",
+          "$ref": "#/$defs/line"
+        },
+        "example": {
+          "description": "An example of what the hint asks for. For a heading the stamp writes, the heading as written.",
+          "$ref": "#/$defs/line"
+        }
+      },
+      "dependentRequired": {
+        "type": [
+          "id"
+        ]
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "heading"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "level"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "label"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "text",
+              "hint",
+              "example"
+            ],
+            "properties": {
+              "level": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "opening"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "hint",
+              "example"
+            ],
+            "properties": {
+              "level": false,
+              "text": false
+            }
+          }
+        }
+      ]
+    },
+    "head-element": {
+      "title": "One element of a collection's file head, with the words the stamp writes for it",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "stamp"
+      ],
+      "properties": {
+        "id": {
+          "description": "The element's id, unique within its kind, its sections included, and permanent once shipped.",
+          "$ref": "#/$defs/word"
+        },
+        "type": {
+          "description": "`heading` or `opening`, as a body's element.",
+          "enum": [
+            "heading",
+            "opening"
+          ]
+        },
+        "level": {
+          "description": "A heading's level: the number of `#`.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "stamp": {
+          "description": "The words the stamp writes for the element when it creates the file: a heading's text without its `#`, or the opening.",
+          "$ref": "#/$defs/line"
+        }
+      },
+      "if": {
+        "properties": {
+          "type": {
+            "const": "heading"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "level"
+        ]
+      },
+      "else": {
+        "properties": {
+          "level": false
+        }
+      }
+    },
+    "field": {
+      "title": "One front-matter field a writer fills",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hint",
+        "example"
+      ],
+      "properties": {
+        "form": {
+          "$ref": "#/$defs/form"
+        },
+        "hint": {
+          "description": "What goes in the field, for whoever fills it.",
+          "$ref": "#/$defs/line"
+        },
+        "example": {
+          "description": "An example of what the hint asks for.",
+          "$ref": "#/$defs/line"
+        }
+      }
+    },
+    "form": {
+      "description": "A check on the content of a part or a front-matter field, from a closed list the capability implements. In a list, each item holds it. A list form judges only the part's list items, so a line a writer adds inside the part never breaks it.",
+      "oneOf": [
+        {
+          "const": "sentence",
+          "description": "One sentence: no sentence ends before the text's last word. The format rule, RS-SAN-001, says where a sentence ends."
+        },
+        {
+          "const": "numbered-steps",
+          "description": "Each list item opens with a number, and no number repeats. Numbers need not run in sequence, since steps are append-only (DEC-001 point 3)."
+        },
+        {
+          "const": "variants",
+          "description": "Each list item opens with the number of a step and a letter, such as `2a.`: a step of a use case's main path, or of a journey's steps. Or the part reads `None.`."
+        },
+        {
+          "const": "steps-match-front-matter",
+          "description": "A journey's steps: one numbered item for each entry of the front matter's `steps`, in the same order and numbered from 1, each opening with its number, the use case's id, ` — ` and the use case's title, exactly. A hand-over sits under the step that needs it, and names an earlier step of the journey by its number and id, or a use case outside the journey that the journey relies on (DEC-001 point 4)."
+        },
+        {
+          "const": "outcomes-match-front-matter",
+          "description": "A record's outcomes: one top-level item for each entry of the front matter's `outcomes`, in the same order, each opening with `**<id> — <outcome>.**` for its entry, exactly, with text after it."
+        },
+        {
+          "const": "gaps-match-outcomes",
+          "description": "A record's gaps: the part reads `None.`, or holds one top-level item for each gap. Each item opens with a bold label of one or more ids from `outcomes`, separated by commas and ended by a colon, and holds `**Resolution:**` with text after it. Each artefact whose outcome is `code-regressed` or `gap-found` is named by a gap (DEC-001 point 6)."
+        },
+        {
+          "const": "definition",
+          "description": "A term's definition, a phrase that could stand in for the term (DEC-001 point 1): its first word is no article, `a`, `an` or `the`, its last character is no full stop, and it holds no whole word of the term's own `name`, in any case."
+        }
+      ]
+    }
+  }
+}
