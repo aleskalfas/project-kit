@@ -3016,7 +3016,10 @@ def test_next_step_gh_required_copy_on_macos():
     out = _next_steps([("gh", "gh")], platform="darwin", width=0)
     text = "\n".join(out)
     assert "`gh` — REQUIRED on macOS" in text
-    assert "UNCONFINED" in text and "Relabel `network-egress` as natively enforced…" in text
+    assert "UNCONFINED" in text
+    assert (
+        'ADR-004, Alternatives considered, "Relabel `network-egress` as natively enforced…"' in text
+    )
     assert "Still gated by the permission hook." in text
     assert "        `pkit permissions sandbox exclude gh`" in out
 
