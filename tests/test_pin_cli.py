@@ -231,6 +231,47 @@ def test_pin_newer_version_reconciles_forward_then_flips_pin_last(
     assert router.read_version_pin(tmp_path) == "2.0.0"  # flipped last
 
 
+def test_pin_newer_version_passes_force_to_the_targets_upgrade(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`pin <newer> --force` passes `--force` to the target's upgrade, with the
+    narrow reach `pkit upgrade --force` has there (ADR-065 point 9)."""
+    _git_repo(tmp_path)
+    _write_manifest(tmp_path, "1.0.0")
+    monkeypatch.chdir(tmp_path)
+    handed: list[tuple[str, list[str]]] = []
+    monkeypatch.setattr(
+        upgrade, "run_bypassed", lambda pin, argv, _environ=None: handed.append((pin, argv)) or 0
+    )
+
+    result = CliRunner().invoke(main, ["pin", "2.0.0", "--force"])
+
+    assert result.exit_code == 0, result.output
+    assert handed == [("2.0.0", ["upgrade", "--force"])]
+    assert router.read_version_pin(tmp_path) == "2.0.0"
+
+
+def test_pin_older_version_is_refused_under_force_too(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`--force` reaches only the target's upgrade: the refusal of an older version
+    still takes no override (ADR-049, ADR-065 point 9)."""
+    _git_repo(tmp_path)
+    _write_manifest(tmp_path, "2.0.0")
+    monkeypatch.chdir(tmp_path)
+
+    def _boom(*_a: object, **_k: object) -> int:
+        raise AssertionError("a downgrade must never reconcile content")
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _boom)
+
+    result = CliRunner().invoke(main, ["pin", "1.0.0", "--force"])
+
+    assert result.exit_code != 0
+    assert not router.pin_file_path(tmp_path).exists()
+    assert "forward-only" in result.output
+
+
 def test_pin_newer_version_aborts_without_advancing_pin_on_reconcile_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

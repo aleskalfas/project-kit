@@ -474,13 +474,7 @@ def _mismatch_lines(
             f"This project pins pkit {pin}, which the router could not fetch, so this run is "
             f"pkit {running}, not the pin.",
             rule,
-            f"Reconnect and run `pkit {command}` again: the router runs the pin whenever it can "
-            f"fetch it. Or run the pin through uvx: `uvx --from {DISTRIBUTION_GIT_URL}@v{pin} "
-            f"project-kit {command}`.",
-            "Where SSH keys are what fail, install the pin's version from the repository's "
-            f"HTTPS URL: `uv tool install --force {DISTRIBUTION_HTTPS_URL}@v{pin}`. The router "
-            "then runs it with no fetch.",
-            "To move the project on purpose: `pkit unpin`, then `pkit upgrade`.",
+            *fallback_remedies(command, pin),
         ]
     if manifest is None or not readable:
         return [
@@ -546,6 +540,35 @@ def _mismatch_lines(
     ]
 
 
+def fallback_remedies(command: str, pin: str) -> list[str]:
+    """The remedies of the router's fallback, the first row of ADR-065 point 8,
+    for *command* in a project that pins *pin*: sync's guard names them, and so
+    does `pkit upgrade`'s refusal under the fallback (point 9).
+
+    The router runs the pin whenever it can fetch it, so the remedies are
+    reconnecting, the pin run through `uvx`, or the pin's version installed
+    from the HTTPS URL where SSH keys fail. Moving on purpose is `pkit unpin`,
+    then `pkit upgrade`, never a bare `pkit upgrade`. A pin that is no version
+    names no release the router can ever fetch, so it gets no command built
+    from it: it is replaced with `pkit pin`, or the project moves on purpose.
+    """
+    if _parse_version(pin) is None:
+        return [
+            f"The pin, {pin!r}, is no version, so the router can never fetch it. Replace it "
+            "with `pkit pin`, which pins the project at its content's version.",
+            "To move the project on purpose: `pkit unpin`, then `pkit upgrade`.",
+        ]
+    return [
+        f"Reconnect and run `pkit {command}` again: the router runs the pin whenever it can "
+        f"fetch it. Or run the pin through uvx: `uvx --from {DISTRIBUTION_GIT_URL}@v{pin} "
+        f"project-kit {command}`.",
+        "Where SSH keys are what fail, install the pin's version from the repository's "
+        f"HTTPS URL: `uv tool install --force {DISTRIBUTION_HTTPS_URL}@v{pin}`. The router "
+        "then runs it with no fetch.",
+        "To move the project on purpose: `pkit unpin`, then `pkit upgrade`.",
+    ]
+
+
 def _mismatch_state(running: str, manifest: BackboneManifest | None, pin: str | None) -> str:
     """What the guard found, as the clause after `refusing to run …:`, in the
     order of the rows that name its remedy (`_mismatch_lines`)."""
@@ -590,7 +613,9 @@ def _mismatch_state(running: str, manifest: BackboneManifest | None, pin: str | 
     )
 
 
-def refuse_content_downgrade(target_root: Path, source_kit: Path, *, command: str) -> None:
+def refuse_content_downgrade(
+    target_root: Path, source_kit: Path, *, command: str, offline: bool = False
+) -> None:
     """Refuse to run under a pkit older than the project's content or pin (#1212).
 
     The older direction of sync's guard (ADR-065 point 7), which `pkit upgrade`
@@ -615,6 +640,12 @@ def refuse_content_downgrade(target_root: Path, source_kit: Path, *, command: st
     not valid semver (a corrupt manifest, over which `pkit upgrade` records its
     target; a pin that is not a version) is not ordered. *command* names the
     refusing command as the operator would re-run it.
+
+    *offline* is set by a pinned project's upgrade run under its pin's code
+    that could not look up the latest release (ADR-065 point 9). Content ahead
+    of the pin is then what an interrupted raise to a newer release leaves, so
+    the message names reconnecting: online, that upgrade hands over to the
+    latest release, whose upgrade finishes the raise.
     """
     tool = read_kit_version(source_kit)
     manifest = read_backbone_manifest(target_root)
@@ -627,12 +658,12 @@ def refuse_content_downgrade(target_root: Path, source_kit: Path, *, command: st
     if not (_is_older(tool, content) or _is_older(tool, pin)):
         return
     raise click.ClickException(
-        "\n       ".join(_content_downgrade_lines(command, tool, content, pin))
+        "\n       ".join(_content_downgrade_lines(command, tool, content, pin, offline=offline))
     )
 
 
 def _content_downgrade_lines(
-    command: str, tool: str, content: str | None, pin: str | None
+    command: str, tool: str, content: str | None, pin: str | None, *, offline: bool = False
 ) -> list[str]:
     """#1212's refusal: the versions ahead of this pkit, why, and the way to the right pkit."""
     ahead: list[str] = []
@@ -640,6 +671,14 @@ def _content_downgrade_lines(
         ahead.append(f"content ({content}, in .pkit/manifest.yaml)")
     if _is_older(tool, pin):
         ahead.append(f"pin ({pin}, in .pkit/version-pin)")
+    if offline:
+        remedy = [
+            "This upgrade could not look up the latest release, so it could not hand over "
+            f"to one. Reconnect and run `pkit {command}` again: it then hands over to the "
+            "latest release, whose upgrade finishes the interrupted raise.",
+        ]
+    else:
+        remedy = _content_downgrade_remedy(command, content, pin)
     return [
         f"refusing to run `pkit {command}`: this pkit is {tool}, older than this project's "
         + " and ".join(ahead)
@@ -648,7 +687,7 @@ def _content_downgrade_lines(
         "never moves a project to an older version: its migrations are forward-only "
         "(COR-010), and a pin is never moved down (ADR-049). Nothing was written, and no "
         "flag overrides this refusal.",
-        *_content_downgrade_remedy(command, content, pin),
+        *remedy,
         "To take the project back to an older version, restore `.pkit/` from git: "
         "`git checkout <ref> -- .pkit/`.",
     ]

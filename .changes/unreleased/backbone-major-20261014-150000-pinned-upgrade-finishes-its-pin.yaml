@@ -1,0 +1,27 @@
+component: backbone
+kind: major
+custom:
+  category: Changed
+body: >
+  A pinned project's `pkit upgrade` finishes its own pin first (ADR-065 point
+  9). Run under the pin's code, it hands over to a newer latest release as
+  before, and that release's upgrade finishes any interrupted transition on the
+  way. With no newer release, at the latest release, ahead of it or offline,
+  it now runs the transition to its pin itself, so content behind the pin or
+  an interrupted transition to it is finished. Content ahead of the pin, with
+  no newer release to hand over to, is refused before anything is written, and
+  offline the message names reconnecting. A pinned dry run now runs the newer
+  release's upgrade with `--dry-run`, and `--force` passes to it, as it does
+  from the new `pkit pin <version> --force`. A pinned project whose installed
+  pkit is its pin now advances the same way, without a terminal too, and its
+  upgrade no longer updates the pkit tool. The order lives in the pin's own
+  code, so a project pinned below this release gets it on its next raise past
+  this release. **`pkit upgrade` refuses under the
+  router's fallback.** Where the router cannot fetch the pin and runs your
+  installed pkit instead, `pkit upgrade` stops before it writes anything,
+  whether that pkit is older or newer than the pin, where it used to raise the
+  pin to the installed version. Its message names reconnecting, the pin run
+  through `uvx`, or the pin's version installed from the HTTPS URL. To move on
+  purpose, run `pkit unpin`, then `pkit upgrade`. A pin that is no version is
+  no longer turned into a `uvx` or install command in that message, or in
+  sync's.

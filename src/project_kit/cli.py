@@ -4064,7 +4064,8 @@ def merge(targets: tuple[str, ...], dry_run: bool) -> None:
     help="Proceed when a capability this upgrade moves would fall outside the range a "
     "capability that does not move declares for it (COR-030), or leave that "
     "capability's mandatory process connection unmet (COR-053 point 6). It overrides "
-    "those two warnings and nothing else. Per ADR-065 point 6.",
+    "those two warnings and nothing else. A pinned project's upgrade passes it to the "
+    "newer release it hands over to. Per ADR-065 points 6 and 9.",
 )
 def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool) -> None:
     """Transition the project to a newer backbone (per COR-010).
@@ -4089,6 +4090,12 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool) -> N
     it un-pinned. In a project that is already pinned, `--no-pin` changes nothing:
     the upgrade keeps the pin, and raises it when it reaches a newer version.
     Self-host is never pinned.
+
+    **In a pinned project** the upgrade runs under the pin's code (ADR-065 point
+    9): it hands over to a newer latest release, passing `--dry-run` and
+    `--force`, or else finishes the transition to its pin. It never updates the
+    tool. Where the router could not fetch the pin and runs the installed pkit
+    instead, it refuses, before it writes anything.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -4106,7 +4113,15 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool) -> N
 
 @main.command()
 @click.argument("version", required=False)
-def pin(version: str | None) -> None:
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Pass `--force` to the `pkit upgrade` a newer VERSION runs: it overrides that "
+    "upgrade's two dependency-gate warnings and nothing else. The refusal of an older "
+    "VERSION takes no override. Per ADR-065 point 9.",
+)
+def pin(version: str | None, force: bool) -> None:
     """Pin this project to a pkit version (per ADR-049): write `.pkit/version-pin`.
 
     VERSION, when given, is a version number only — `1.145.0`, or `v1.145.0`
@@ -4123,7 +4138,8 @@ def pin(version: str | None) -> None:
     \b
     - equal   → freeze in place (write the pin, no content sync);
     - newer   → reconcile content forward to the target under that version's own
-                code, then flip the pin last (atomically);
+                code, then flip the pin last (atomically); `--force` passes
+                to the target's upgrade;
     - older   → REFUSED — pkit migrations are forward-only (COR-010), so there is
                 no safe downgrade; `git checkout` the `.pkit/` tree to roll back.
 
@@ -4141,7 +4157,7 @@ def pin(version: str | None) -> None:
     if version is None:
         freeze_at_content(target_root)
         return
-    reconcile_pin(target_root, version)
+    reconcile_pin(target_root, version, force=force)
 
 
 @main.command()

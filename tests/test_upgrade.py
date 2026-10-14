@@ -1641,27 +1641,34 @@ def test_upgrade_pinned_child_auto_advances_to_latest(
     assert "uv tool install" not in out  # no manual escape any more
 
 
-def test_upgrade_pinned_child_noop_when_already_at_latest(
+def _no_hand_over(monkeypatch: pytest.MonkeyPatch, why: str) -> None:
+    """Make any hand-over through the router's bypass fail the test."""
+
+    def _boom(*_a: object, **_k: object) -> int:
+        raise AssertionError(why)
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _boom)
+
+
+def test_upgrade_pinned_child_at_the_latest_release_stays_at_its_pin(
     installed_target: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Pin already at the latest release → a clear no-op; the pin is not touched
-    and no reconcile is bootstrapped (ADR-049)."""
-    router.pin_file_path(installed_target).write_text("2.0.0\n", encoding="utf-8")
+    """Pin at the latest release, the project current: nothing to hand over to and
+    nothing to finish. No reconcile is bootstrapped and the pin is not touched
+    (ADR-065 point 9)."""
+    router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version("2.0.0"))
-
-    def _boom(*_a: object, **_k: object) -> int:
-        raise AssertionError("an at-latest pin must not reconcile content")
-
-    monkeypatch.setattr(upgrade, "run_bypassed", _boom)
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version(_this_pkit()))
+    _no_hand_over(monkeypatch, "an at-latest pin must not hand over")
 
     upgrade.run_upgrade(installed_target)
 
     out = capsys.readouterr().out
-    assert "Already at the latest pkit release (v2.0.0)" in out
-    assert router.read_version_pin(installed_target) == "2.0.0"
+    assert f"Already at the latest pkit release (v{_this_pkit()}); the pin stays." in out
+    assert "Already at backbone v" in out
+    assert router.read_version_pin(installed_target) == _this_pkit()
 
 
 def test_upgrade_pinned_child_leaves_pin_when_ahead_of_latest(
@@ -1671,20 +1678,16 @@ def test_upgrade_pinned_child_leaves_pin_when_ahead_of_latest(
 ) -> None:
     """Pin ahead of the newest release → a distinct message; pkit never downgrades
     a pin, so it is left unchanged and no reconcile runs (ADR-049)."""
-    router.pin_file_path(installed_target).write_text("3.0.0\n", encoding="utf-8")
+    router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version("2.0.0"))
-
-    def _boom(*_a: object, **_k: object) -> int:
-        raise AssertionError("a pin ahead of latest must not reconcile content")
-
-    monkeypatch.setattr(upgrade, "run_bypassed", _boom)
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version("1.0.0"))
+    _no_hand_over(monkeypatch, "a pin ahead of latest must not hand over")
 
     upgrade.run_upgrade(installed_target)
 
     out = capsys.readouterr().out
     assert "AHEAD of the latest" in out
-    assert router.read_version_pin(installed_target) == "3.0.0"  # unchanged
+    assert router.read_version_pin(installed_target) == _this_pkit()  # unchanged
 
 
 def test_upgrade_pinned_child_degrades_when_latest_unresolvable(
@@ -1692,45 +1695,288 @@ def test_upgrade_pinned_child_degrades_when_latest_unresolvable(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Offline / unresolvable latest (None) → degrade loudly to stderr and leave
-    the pin unchanged; never brick the command (ADR-049)."""
-    router.pin_file_path(installed_target).write_text("1.0.0\n", encoding="utf-8")
+    """Offline / unresolvable latest (None) → say so on stderr, hand over to no
+    release and leave the pin unchanged; never brick the command (ADR-049)."""
+    router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
     monkeypatch.setattr(upgrade, "_latest_released_version", lambda: None)
-
-    def _boom(*_a: object, **_k: object) -> int:
-        raise AssertionError("an unresolvable latest must not reconcile content")
-
-    monkeypatch.setattr(upgrade, "run_bypassed", _boom)
+    _no_hand_over(monkeypatch, "an unresolvable latest must not hand over")
 
     upgrade.run_upgrade(installed_target)  # must not raise
 
     err = capsys.readouterr().err
     assert "could not check for the latest pkit release" in err
-    assert router.read_version_pin(installed_target) == "1.0.0"  # unchanged
+    assert f"The pin stays at {_this_pkit()}" in err
+    assert router.read_version_pin(installed_target) == _this_pkit()  # unchanged
 
 
-def test_upgrade_pinned_child_dry_run_does_not_reconcile_or_flip(
+@pytest.mark.parametrize("force", [False, True], ids=["", "force"])
+def test_upgrade_pinned_child_dry_run_runs_the_targets_upgrade_with_dry_run(
     installed_target: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
+    force: bool,
 ) -> None:
-    """A dry-run auto-advance reports the plan but reconciles nothing and leaves
-    the pin (ADR-049 + COR-004)."""
+    """A pinned dry run hands over with `--dry-run`, so it lists what the target's
+    upgrade would do, and `--force` passes too. The pin is not flipped (ADR-065
+    point 9)."""
     router.pin_file_path(installed_target).write_text("1.0.0\n", encoding="utf-8")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
     monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version("2.0.0"))
+    handed: list[tuple[str, list[str]]] = []
+    monkeypatch.setattr(
+        upgrade, "run_bypassed", lambda pin, argv, _environ=None: handed.append((pin, argv)) or 0
+    )
 
-    def _boom(*_a: object, **_k: object) -> int:
-        raise AssertionError("dry-run must not reconcile content")
+    upgrade.run_upgrade(installed_target, dry_run=True, force=force)
 
-    monkeypatch.setattr(upgrade, "run_bypassed", _boom)
-
-    upgrade.run_upgrade(installed_target, dry_run=True)
-
-    out = capsys.readouterr().out
-    assert "would raise pin 1.0.0 -> 2.0.0" in out
+    flags = ["--dry-run", "--force"] if force else ["--dry-run"]
+    assert handed == [("2.0.0", ["upgrade", *flags])]
+    assert "would raise pin 1.0.0 -> 2.0.0" in capsys.readouterr().out
     assert router.read_version_pin(installed_target) == "1.0.0"  # unchanged
+
+
+def test_upgrade_pinned_child_passes_force_to_the_newer_release(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`pkit upgrade --force` reaches a pinned project's transition through the
+    hand-over: the target's upgrade gets `--force`, and the pin flips after it
+    (ADR-065 point 9)."""
+    router.pin_file_path(installed_target).write_text("1.0.0\n", encoding="utf-8")
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version("2.0.0"))
+    handed: list[tuple[str, list[str], str | None]] = []
+
+    def _bypassed(pin: str, argv: list[str], _environ: object = None) -> int:
+        handed.append((pin, argv, router.read_version_pin(installed_target)))
+        return 0
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _bypassed)
+
+    upgrade.run_upgrade(installed_target, force=True)
+
+    assert handed == [("2.0.0", ["upgrade", "--force"], "1.0.0")]
+    assert router.read_version_pin(installed_target) == "2.0.0"
+
+
+def _leave_behind_the_pin(target: Path, state: str) -> None:
+    """Leave the project short of its pin, this pkit's version: its content behind
+    the pin, or the last transition to the pin incomplete. 1.148.0 opens no
+    backbone migration window to this pkit's version."""
+    if state == "behind":
+        _record_finished_at(target, "1.148.0")
+    else:
+        manifest.record_completed_version(target, "1.148.0")
+    router.pin_file_path(target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
+
+
+@pytest.mark.parametrize("state", ["behind", "incomplete"])
+@pytest.mark.parametrize(
+    "latest",
+    ["at-latest", "ahead-of-latest", "offline"],
+)
+def test_a_routed_child_with_no_newer_release_finishes_the_transition_to_its_pin(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    state: str,
+    latest: str,
+) -> None:
+    """No newer latest release resolves, and the content is behind the pin or the
+    transition to it is incomplete: the routed child runs the transition to its pin
+    in its own process. It hands over to nothing, and the pin, already at the
+    target, is not written (ADR-065 point 9)."""
+    _leave_behind_the_pin(installed_target, state)
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    found = {
+        "at-latest": Version(_this_pkit()),
+        "ahead-of-latest": Version("1.0.0"),
+        "offline": None,
+    }[latest]
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: found)
+    _no_hand_over(monkeypatch, "no newer release resolves, so nothing to hand over to")
+    pin_at_copy: list[str | None] = []
+    real_propagate = upgrade.propagate
+
+    def spy_propagate(ctx: install.InstallContext, capabilities: Any) -> None:
+        pin_at_copy.append(router.read_version_pin(ctx.target_root))
+        real_propagate(ctx, capabilities)
+
+    monkeypatch.setattr(upgrade, "propagate", spy_propagate)
+    writes = _record_pin_writes(monkeypatch)
+
+    upgrade.run_upgrade(installed_target)
+
+    assert pin_at_copy == [_this_pkit()]
+    assert _states(installed_target) == (_this_pkit(), _this_pkit())
+    assert writes == []
+    assert router.read_version_pin(installed_target) == _this_pkit()
+
+
+@pytest.mark.parametrize("terminal", [False, True], ids=["no-terminal", "terminal"])
+def test_a_pinned_project_whose_installed_pkit_is_its_pin_advances_to_a_newer_release(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    terminal: bool,
+) -> None:
+    """The installed pkit is the pin, so the router runs it in process, with no mark
+    of a routed child. Its upgrade checks and advances as the routed child does,
+    with or without a terminal, and never updates the tool (ADR-065 point 9,
+    ADR-063 point 5)."""
+    router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
+    stub_ls_remote.ls_remote_returncode = 0
+    stub_ls_remote.ls_remote_stdout = _tag_output(_this_pkit(), _NEWER)
+    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: terminal)
+    monkeypatch.setattr(upgrade, "_running_is_installed_tool", lambda: True)
+    handed: list[tuple[str, list[str]]] = []
+    monkeypatch.setattr(
+        upgrade, "run_bypassed", lambda pin, argv, _environ=None: handed.append((pin, argv)) or 0
+    )
+
+    upgrade.run_upgrade(installed_target)
+
+    assert handed == [(_NEWER, ["upgrade"])]
+    assert router.read_version_pin(installed_target) == _NEWER
+    assert len(stub_ls_remote.ls_remote_calls) == 1  # its own lookup: no tool step
+    assert stub_ls_remote.install_calls == []
+    out = capsys.readouterr().out
+    assert "Already at backbone" not in out
+    assert "pkit tool" not in out
+
+
+def test_runs_at_its_pin_is_the_routed_child_or_the_installed_pin_never_a_bypass(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The routed child runs at its pin, and so does the installed pkit that is the
+    pin. Under `PKIT_NO_ROUTE` the run is the code an operator or a raise asked for
+    (ADR-065 point 9)."""
+    assert upgrade.runs_at_its_pin(_this_pkit())
+    assert not upgrade.runs_at_its_pin("0.1.0")
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    assert upgrade.runs_at_its_pin("0.1.0")
+    monkeypatch.delenv(router._LOOP_GUARD_ENV)
+    monkeypatch.setenv(router._BYPASS_ENV, "1")
+    assert not upgrade.runs_at_its_pin(_this_pkit())
+
+
+@pytest.mark.parametrize("latest", ["online", "offline"])
+def test_a_routed_child_refuses_content_ahead_of_its_pin_and_names_the_remedy(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch, latest: str
+) -> None:
+    """A recorded state ahead of the pin, and no newer release to hand over to: the
+    older-direction check refuses before the child's own transition writes
+    anything. Offline the message names reconnecting, and online #1212's remedies
+    (ADR-065 point 9)."""
+    _record_content_version(installed_target, _NEWER)
+    router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    found = Version(_this_pkit()) if latest == "online" else None
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: found)
+    _no_hand_over(monkeypatch, "no newer release resolves, so nothing to hand over to")
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target)
+
+    message = excinfo.value.message
+    assert f"content ({_NEWER}, in .pkit/manifest.yaml)" in message
+    if latest == "offline":
+        assert "Reconnect and run `pkit upgrade` again: it then hands over to the latest" in (
+            message
+        )
+        assert "pkit pin" not in message
+    else:
+        assert f"run `pkit pin {_NEWER}` to pin the project at its content" in message
+        assert "Reconnect" not in message
+    assert _tree_bytes(installed_target) == before
+
+
+@pytest.mark.parametrize(
+    "flags", [{}, {"dry_run": True}, {"force": True}], ids=["", "dry", "force"]
+)
+@pytest.mark.parametrize("installed", ["older", "newer"])
+def test_upgrade_under_the_routers_fallback_refuses_before_it_writes(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    installed: str,
+    flags: dict[str, bool],
+) -> None:
+    """The router could not fetch the pin and ran the installed pkit: upgrade
+    refuses in both directions, before its tool step and before anything is
+    written, under `--dry-run` and `--force` too, and never raises the pin to the
+    installed version (ADR-065 point 9)."""
+    pin = _NEWER if installed == "older" else "0.1.0"
+    router.pin_file_path(installed_target).write_text(f"{pin}\n", encoding="utf-8")
+    monkeypatch.setenv(router._PIN_UNRESOLVED_ENV, pin)
+    _no_hand_over(monkeypatch, "the fallback refuses before any hand-over")
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target, **flags)
+
+    message = excinfo.value.message
+    assert (
+        f"refusing to run `pkit upgrade`: this project pins pkit {pin}, which the router "
+        f"could not fetch, so this run is pkit {_this_pkit()}, not the pin."
+    ) in message
+    assert "Reconnect and run `pkit upgrade` again" in message
+    assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{pin} project-kit upgrade`" in message
+    assert f"`uv tool install --force {router.DISTRIBUTION_HTTPS_URL}@v{pin}`" in message
+    assert "`pkit unpin`, then `pkit upgrade`" in message
+    assert stub_ls_remote.ls_remote_calls == []
+    assert _tree_bytes(installed_target) == before
+
+
+def test_upgrade_under_the_routers_fallback_names_no_release_for_a_pin_that_is_no_version(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A pin that is no version is one the router can never fetch: the refusal
+    builds no command from it, and names replacing it or moving on purpose."""
+    router.pin_file_path(installed_target).write_text("main\n", encoding="utf-8")
+    monkeypatch.setenv(router._PIN_UNRESOLVED_ENV, "main")
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target)
+
+    message = excinfo.value.message
+    assert "The pin, 'main', is no version, so the router can never fetch it." in message
+    assert "Replace it with `pkit pin`" in message
+    assert "`pkit unpin`, then `pkit upgrade`" in message
+    assert "@vmain" not in message
+    assert router.read_version_pin(installed_target) == "main"
+
+
+def test_upgrade_under_a_deliberate_bypass_with_the_fallback_mark_runs(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`PKIT_NO_ROUTE` marks a run someone asked for, so the fallback mark it
+    carries refuses nothing: the upgrade moves the pin to the running version, as
+    a raise does (ADR-065 point 9)."""
+    router.pin_file_path(installed_target).write_text("0.1.0\n", encoding="utf-8")
+    monkeypatch.setenv(router._PIN_UNRESOLVED_ENV, "0.1.0")
+    monkeypatch.setenv(router._BYPASS_ENV, "1")
+
+    upgrade.run_upgrade(installed_target)
+
+    assert router.read_version_pin(installed_target) == _this_pkit()
+
+
+def test_a_routed_child_that_inherited_the_fallback_mark_never_meets_the_refusal(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The refusal comes after the routed child's checks: a routed child carrying
+    the mark from the command that spawned it runs as the pin's code (ADR-065
+    point 9)."""
+    router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    monkeypatch.setenv(router._PIN_UNRESOLVED_ENV, _this_pkit())
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: None)
+
+    upgrade.run_upgrade(installed_target)  # must not raise
+
+    assert router.read_version_pin(installed_target) == _this_pkit()
 
 
 def test_upgrade_skips_tool_staleness_on_bypass_hop(
