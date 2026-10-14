@@ -15,8 +15,9 @@ pkit:
         - ADR-059
         - PRJ-002
     revalidated:
-      at: 2026-10-14T09:21:18Z
-      outcome: updated
+      at: 2026-10-14T18:58:47Z
+      outcome: unchanged
+      unchanged-because: ADR-059 and PRJ-002 now write their points as headings carrying the same numbers and labels, word for word. PRJ-002's paragraph on what it leaves to the release-flow spec sits under a heading of its own, unchanged. The source repository and the release policy read as before, so the maintainer's needs to develop the methodology where no sync copies over their work, and to release the backbone, stand.
 ---
 
 # ACT-methodology-maintainer — Methodology maintainer

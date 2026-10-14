@@ -18,8 +18,9 @@ pkit:
         - COR-041
         - COR-047
     revalidated:
-      at: 2026-10-14T09:21:11Z
-      outcome: updated
+      at: 2026-10-14T18:58:45Z
+      outcome: unchanged
+      unchanged-because: COR-031's points D1 to D4 are now headings carrying the same labels, word for word, and its paragraph on the two deferred origins moves into its opening, unchanged. The actor's need to keep a capability in its own repository, where sync never overwrites it and uninstall never deletes it, rests on D1 and D4, which read as before, so it holds.
 ---
 
 # ACT-component-author — Component author
