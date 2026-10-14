@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-13T21:44:46Z
+      at: 2026-10-13T21:19:51Z
       outcome: unchanged
-      unchanged-because: The decisions README now writes points as headings, and the CLI reference says `pkit new decision` stamps a first point heading. This page only signposts the two, by what they hold, so it holds.
+      unchanged-because: The CLI reference, the lifecycle README, the agents README and the decisions README now say that sync works at the recorded version behind one guard, that upgrade creates each missing seed path and runs each capability's migrations after its copy, and that reconcile repairs a missing overlay. The map gives each area's role and link, and no role or link moves, so the map holds.
 ---
 
 # project-kit

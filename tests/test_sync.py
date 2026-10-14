@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -108,14 +107,14 @@ def test_sync_runs_idempotently_after_install(installed_target: Path) -> None:
 # --- the no-shared-files preservation invariant across sync's copy paths ---
 #
 # COR-001: every copy/refresh path `pkit sync` drives must preserve
-# adopter-owned `project/` content (seed-once, never overwrite/remove on
-# refresh). `pkit sync` fans out to three structurally-different copy
-# primitives — `_install_area` (backbone areas), `_install_adapter`
-# (harness adapters), and `_copy_capability_tree` via `refresh_capability`
-# (installed capabilities). Each enforces the rule with its own mechanics,
-# so each needs its own preservation guard at the `run_sync` entry point.
-# The capability case is the one that regressed in #332 (its guard lived
-# only at the `refresh_capability` unit level, a rung below `run_sync`).
+# adopter-owned `project/` content (never overwrite/remove on refresh).
+# `pkit sync` fans out to three structurally-different copy primitives —
+# `_install_area` (backbone areas), `_install_adapter` (harness adapters), and
+# `_copy_capability_tree` via `copy_shipped_capability` (installed
+# capabilities). Each enforces the rule with its own mechanics, so each needs
+# its own preservation guard at the `run_sync` entry point. The capability case
+# is the one that regressed in #332 (its guard lived only at the refresh's unit
+# level, a rung below `run_sync`).
 #
 # These guard the top-level `project/` convention per tier (the live
 # convention). A NEW copy path added to `run_sync` must add its own case
@@ -371,43 +370,34 @@ def test_sync_invokes_installed_adapter_primitives(
     assert "deploy-agents.sh" in calls
 
 
-def test_sync_stubs_project_dir_for_area_that_landed_after_install(
-    installed_target: Path,
-) -> None:
-    """Adopter installed before an area landed should get `project/` stubbed on sync.
+# Each seed path a project deleted (ADR-065 point 11), relative to the project root.
+_SEED_PATHS = (
+    ".pkit/agents/project",
+    ".pkit/decisions/project",
+    ".pkit/agents/project/overlay.yaml",
+    ".pkit/adapters/claude-code/settings/project/settings.json",
+    ".pkit/adapters/claude-code/settings/project",
+    ".pkit/scratchpad/active",
+)
 
-    Regression: example-brownfield was installed at backbone 0.13.0 (before the
-    agents area). Syncing forward to 1.17.x failed because `.pkit/agents/project/`
-    didn't exist, so `deploy-agents.sh` errored on missing overlay.yaml. Sync
-    must catch up the project/ scaffolding when it's missing.
-    """
-    project_dir = installed_target / ".pkit" / "agents" / "project"
-    # Simulate the pre-agents-area install state: remove project/ entirely.
+
+@pytest.mark.parametrize("seed", _SEED_PATHS)
+def test_sync_creates_no_seed_path(installed_target: Path, seed: str) -> None:
+    """A seed path the project deleted stays deleted: sync creates none, so a seed
+    removed on purpose does not return on every routine run (COR-059 point 8). The
+    next transition creates it where missing, and `pkit agents reconcile --write`
+    repairs a missing overlay."""
     import shutil
 
-    if project_dir.exists():
-        shutil.rmtree(project_dir)
-    assert not project_dir.exists()
+    path = installed_target / seed
+    if path.is_dir():
+        shutil.rmtree(path)
+    else:
+        path.unlink()
 
     sync.run_sync(installed_target)
 
-    assert project_dir.is_dir(), "sync didn't stub missing project/"
-    assert (project_dir / ".gitkeep").is_file()
-
-
-def test_sync_seeds_agents_overlay_if_missing(installed_target: Path) -> None:
-    """First sync after the agents area appears seeds a starter overlay.yaml."""
-    overlay = installed_target / ".pkit" / "agents" / "project" / "overlay.yaml"
-    if overlay.exists():
-        overlay.unlink()
-    assert not overlay.exists()
-
-    sync.run_sync(installed_target)
-
-    assert overlay.is_file(), "sync didn't seed overlay.yaml"
-    content = overlay.read_text(encoding="utf-8")
-    assert "workflow-docs" in content
-    assert "project-root-docs" in content
+    assert not path.exists(), f"sync created the seed path {seed}"
 
 
 def test_sync_does_not_overwrite_existing_overlay(installed_target: Path) -> None:
@@ -458,18 +448,18 @@ def _stage_capability_in_source(
     """Create a capability under source_kit/capabilities/<name>/ for sync tests.
 
     Mirrors the layout `pkit capabilities install` expects in source:
-    package.yaml + skills/ + decisions/. Also stamps a VERSION + decisions/
-    scaffold so sync's _update_recorded_backbone_version + the
-    source-kit-missing guard don't trip.
+    package.yaml + skills/ + decisions/. Also stamps a VERSION, at the version
+    the installed fixture records so sync's guard lets it run, and the
+    decisions/ scaffold the source-kit-missing guard reads.
 
     ``version`` sets the capability's package.yaml version, letting a test
     stage a source that is older / equal / newer than an installed copy —
-    the axis the #524 downgrade guard turns on.
+    the axis sync's handling of each capability turns on (ADR-065 point 1).
     """
     cap_dir = source_kit / "capabilities" / name
     (cap_dir / "skills").mkdir(parents=True, exist_ok=True)
     (cap_dir / "decisions").mkdir(parents=True, exist_ok=True)
-    # Sync's manifest update needs a VERSION file in the source.
+    # Sync's guard reads the source's VERSION, the version the fixture records.
     version_file = source_kit / "VERSION"
     if not version_file.is_file():
         version_file.write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
@@ -571,7 +561,7 @@ def test_sync_warns_when_capability_no_longer_in_source(
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source_b)
 
     # Required scaffolding so the early _refuse_if_source_kit_missing
-    # equivalent doesn't trip and sync's manifest update has a VERSION.
+    # equivalent doesn't trip and sync's guard reads the recorded version.
     (fake_source_b / "decisions").mkdir()
     (fake_source_b / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
 
@@ -584,7 +574,7 @@ def test_sync_warns_when_capability_no_longer_in_source(
     assert ghost_dir.is_dir()
 
 
-# --- downgrade guard: a stale source must not clobber a newer install (#524) ---
+# --- each capability by its recorded version: a stale source never clobbers (#524) ---
 
 
 def _install_then_repoint_source(
@@ -625,13 +615,14 @@ def _install_then_repoint_source(
     return installed_target / ".pkit" / "capabilities" / name / "skills" / f"{name}-skill.md"
 
 
-def test_sync_refuses_downgrade_and_leaves_tree_untouched(
+def test_sync_skips_a_capability_the_bundle_ships_older_and_leaves_its_tree(
     installed_target: Path,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """The trip-planner failure (#524): source older than installed → refuse, do not refresh."""
+    """The trip-planner failure (#524): a source older than the record is skipped and
+    reported, never copied, and nothing overrides it (ADR-065 point 1)."""
     skill = _install_then_repoint_source(
         installed_target,
         monkeypatch,
@@ -645,21 +636,22 @@ def test_sync_refuses_downgrade_and_leaves_tree_untouched(
     sync.run_sync(installed_target)
     out = capsys.readouterr().out
 
-    # Refused, naming both versions; the installed tree is byte-for-byte intact.
-    assert "refused" in out
-    assert "software-engineering" in out
-    assert "0.1.0" in out and "0.3.0" in out
+    # Skipped, naming both versions; the installed tree is byte-for-byte intact.
+    assert "skipped" in out
+    assert "'software-engineering'" in out
+    assert "v0.1.0, older than the recorded v0.3.0" in out
+    assert "never moves down" in out
     assert skill.read_text(encoding="utf-8") == before
     assert "From sync source" not in skill.read_text(encoding="utf-8")
 
 
-def test_sync_force_proceeds_with_downgrade_loudly(
+def test_cli_sync_force_is_accepted_ignored_and_reported(
     installed_target: Path,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
-    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """--force overrides the guard: the downgrade proceeds, but a loud line records it."""
+    """`pkit sync --force` is accepted for one release, ignored and reported: it no
+    longer copies an older capability over a newer one (ADR-065 point 10)."""
     skill = _install_then_repoint_source(
         installed_target,
         monkeypatch,
@@ -668,23 +660,24 @@ def test_sync_force_proceeds_with_downgrade_loudly(
         installed_version="0.3.0",
         source_version="0.1.0",
     )
+    before = skill.read_text(encoding="utf-8")
 
-    sync.run_sync(installed_target, force=True)
-    out = capsys.readouterr().out
+    result = _cli_sync("--force")
 
-    # Loud downgrade line naming both versions; the older source content lands.
-    assert "downgrade" in out
-    assert "0.1.0" in out and "0.3.0" in out
-    assert "From sync source" in skill.read_text(encoding="utf-8")
+    assert result.exit_code == 0, result.output
+    assert sync.SYNC_FORCE_IGNORED in result.output
+    assert "Sync complete." in result.output
+    assert skill.read_text(encoding="utf-8") == before
 
 
-def test_sync_refreshes_normally_when_source_newer(
+def test_sync_leaves_a_capability_the_bundle_ships_newer_to_upgrade(
     installed_target: Path,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Source newer than installed is a normal upgrade — the guard does not fire."""
+    """A source newer than the record is a move, which only a transition makes: sync
+    skips it, reports it pending `pkit upgrade`, and runs none of its migrations."""
     skill = _install_then_repoint_source(
         installed_target,
         monkeypatch,
@@ -693,22 +686,31 @@ def test_sync_refreshes_normally_when_source_newer(
         installed_version="0.1.0",
         source_version="0.3.0",
     )
+    migrations = tmp_path / "sync-source" / ".pkit" / "capabilities" / "evidence" / "migrations"
+    script = migrations / "0.3.0" / "001-mark.sh"
+    script.parent.mkdir(parents=True)
+    script.write_text('#!/usr/bin/env bash\nset -euo pipefail\ntouch "$ROOT/migrated"\n')
+    record = _record(installed_target, "evidence")
+    recorded = record.read_bytes()
 
     sync.run_sync(installed_target)
     out = capsys.readouterr().out
 
-    assert "refreshed" in out
-    assert "refused" not in out
-    assert "From sync source" in skill.read_text(encoding="utf-8")
+    assert "pending" in out
+    assert "the bundle ships v0.3.0, and the project records v0.1.0" in out
+    assert "`pkit upgrade` moves it" in out
+    assert "From sync source" not in skill.read_text(encoding="utf-8")
+    assert not (installed_target / "migrated").exists()
+    assert record.read_bytes() == recorded
 
 
-def test_sync_refreshes_when_source_equal(
+def test_sync_copies_a_capability_at_its_recorded_version(
     installed_target: Path,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Equal versions are not a downgrade — refresh proceeds unchanged."""
+    """Bundled at the recorded version: the one case sync copies, with no stamp."""
     skill = _install_then_repoint_source(
         installed_target,
         monkeypatch,
@@ -717,22 +719,24 @@ def test_sync_refreshes_when_source_equal(
         installed_version="0.2.0",
         source_version="0.2.0",
     )
+    record = _record(installed_target, "evidence")
+    recorded = record.read_bytes()
 
     sync.run_sync(installed_target)
     out = capsys.readouterr().out
 
-    assert "refreshed" in out
-    assert "refused" not in out
+    assert "copied       'evidence' at v0.2.0" in out
     assert "From sync source" in skill.read_text(encoding="utf-8")
+    assert record.read_bytes() == recorded, "sync wrote the capability's manifest"
 
 
-def test_sync_dry_run_previews_downgrade_refusal_and_writes_nothing(
+def test_sync_dry_run_over_an_older_bundle_reports_the_skip_and_writes_nothing(
     installed_target: Path,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Dry-run over a downgrade previews the refusal (not a 'would refresh') and writes nothing."""
+    """A dry run reports the skip as the run would, and writes nothing."""
     skill = _install_then_repoint_source(
         installed_target,
         monkeypatch,
@@ -746,8 +750,8 @@ def test_sync_dry_run_previews_downgrade_refusal_and_writes_nothing(
     sync.run_sync(installed_target, dry_run=True)
     out = capsys.readouterr().out
 
-    assert "refused" in out
-    assert "would refresh" not in out
+    assert "skipped" in out
+    assert "would copy" not in out
     assert skill.read_text(encoding="utf-8") == before
 
 
@@ -762,7 +766,7 @@ def _record(target: Path, name: str, *, at_root: bool = False) -> Path:
 def _installed_with_skip(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, name: str
 ) -> Path:
-    """Install `name` at 0.1.0 with its skill skipped, then point sync at a 0.2.0 source
+    """Install `name` at 0.1.0 with its skill skipped, then point sync at a 0.1.0 source
     that still ships the skill. Returns the skill's path in the project."""
     from project_kit import capabilities as caps
 
@@ -777,7 +781,7 @@ def _installed_with_skip(
 
     sync_source = tmp_path / "sync-source" / ".pkit"
     sync_source.mkdir(parents=True)
-    _stage_capability_in_source(sync_source, name, version="0.2.0")
+    _stage_capability_in_source(sync_source, name, version="0.1.0")
     monkeypatch.setattr(install, "find_source_kit", lambda: sync_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: sync_source)
     return installed_target / ".pkit" / "capabilities" / name / "skills" / f"{name}-skill.md"
@@ -786,53 +790,58 @@ def _installed_with_skip(
 def test_sync_keeps_an_artefact_the_project_skipped(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """The skip is read back from the record, so the refresh leaves the skill out again."""
+    """The skip is read from the record, so the copy leaves the skill out again, and
+    the record is left as it was."""
     from project_kit.manifest import read_component_manifest
 
     skill = _installed_with_skip(installed_target, monkeypatch, tmp_path, "evidence")
     assert not skill.exists()
+    recorded = _record(installed_target, "evidence").read_bytes()
 
     sync.run_sync(installed_target)
     sync.run_sync(installed_target)
 
     assert not skill.exists()
+    assert _record(installed_target, "evidence").read_bytes() == recorded
     record = read_component_manifest(_record(installed_target, "evidence"))
     assert record is not None
-    assert record.version == "0.2.0"
+    assert record.version == "0.1.0"
     assert record.backend_state["skipped"] == [{"kind": "skill", "name": "evidence-skill"}]
 
 
-def test_sync_moves_a_root_record_under_project_with_its_state(
-    installed_target: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+def test_sync_skips_a_capability_whose_record_is_still_at_the_root(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """A record an older release left at the root survives the refresh, moved under
-    project/, with the registry pointing at it and its state and skips kept."""
-    from project_kit.manifest import read_component_manifest, set_component_manifest_path
+    """A record an older release left at the root: sync never moves a record, and the
+    copy would prune it there, so sync skips the capability and names `pkit upgrade`,
+    which moves it (ADR-065 point 2)."""
+    from project_kit.manifest import set_component_manifest_path
 
-    skill = _installed_with_skip(installed_target, monkeypatch, tmp_path, "evidence")
+    _installed_with_skip(installed_target, monkeypatch, tmp_path, "evidence")
     root = _record(installed_target, "evidence", at_root=True)
     _record(installed_target, "evidence").rename(root)
-    with root.open("a", encoding="utf-8") as f:
-        f.write("  project_board:\n    uuid: PVT_kwDOAA12345\n")
     set_component_manifest_path(
         installed_target, "capability", "evidence", ".pkit/capabilities/evidence/manifest.yaml"
     )
+    recorded = root.read_bytes()
+    stale = installed_target / ".pkit" / "capabilities" / "evidence" / "skills" / "stale.md"
+    stale.write_text("not in the bundle\n", encoding="utf-8")
 
     sync.run_sync(installed_target)
+    out = capsys.readouterr().out
 
-    assert not root.exists()
-    record = read_component_manifest(_record(installed_target, "evidence"))
-    assert record is not None
-    assert record.version == "0.2.0"
-    assert record.backend_state == {
-        "skipped": [{"kind": "skill", "name": "evidence-skill"}],
-        "project_board": {"uuid": "PVT_kwDOAA12345"},
-    }
-    assert not skill.exists()
+    assert root.read_bytes() == recorded
+    assert not _record(installed_target, "evidence").exists()
+    assert stale.is_file(), "sync copied a capability whose record is at the root"
+    assert "pending" in out
+    assert "its manifest is still at the capability's root" in out
     backbone = read_backbone_manifest(installed_target)
     assert backbone is not None
     assert {c.name: c.manifest for c in backbone.components}["evidence"] == (
-        ".pkit/capabilities/evidence/project/manifest.yaml"
+        ".pkit/capabilities/evidence/manifest.yaml"
     )
 
 
@@ -851,7 +860,7 @@ def test_sync_reads_every_record_before_it_copies_anything(
     sync_source = tmp_path / "sync-source" / ".pkit"
     sync_source.mkdir(parents=True)
     for name in ("audit", "evidence"):
-        _stage_capability_in_source(sync_source, name, version="0.2.0")
+        _stage_capability_in_source(sync_source, name, version="0.1.0")
     monkeypatch.setattr(install, "find_source_kit", lambda: sync_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: sync_source)
 
@@ -870,9 +879,9 @@ def test_sync_reads_every_record_before_it_copies_anything(
         events.append("copy")
         copy_area(*args, **kwargs)
 
-    def _copy_capability(*args: Any) -> None:
-        events.append("copy")
-        copy_capability(*args)
+    def _copy_capability(*args: Any, **kwargs: Any) -> None:
+        events.append("copy capability")
+        copy_capability(*args, **kwargs)
 
     monkeypatch.setattr(caps, "read_capability_record", _read)
     monkeypatch.setattr(install, "_install_area", _copy_area)
@@ -881,15 +890,17 @@ def test_sync_reads_every_record_before_it_copies_anything(
     sync.run_sync(installed_target)
 
     assert {"read audit", "read evidence"} <= set(events)
+    assert events.count("copy capability") == 2
     first_copy = events.index("copy")
-    assert all(event == "copy" for event in events[first_copy:]), events
+    assert all(event.startswith("copy") for event in events[first_copy:]), events
 
 
-def test_sync_reads_the_installed_package_before_the_copy_replaces_it(
+def test_sync_reads_the_installed_package_when_no_manifest_records_a_version(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """With no record, the version falls back to the installed package.yaml, read before
-    the copy: the migrations between it and the source's version run."""
+    """With no manifest, the version falls back to the installed package.yaml, read
+    before the copy replaces it. At the bundled version, sync copies the capability,
+    runs no migration and writes no manifest."""
     from project_kit import capabilities as caps
 
     install_source = tmp_path / "install-source" / ".pkit"
@@ -902,18 +913,88 @@ def test_sync_reads_the_installed_package_before_the_copy_replaces_it(
 
     sync_source = tmp_path / "sync-source" / ".pkit"
     sync_source.mkdir(parents=True)
-    cap_dir = _stage_capability_in_source(sync_source, "evidence", version="0.2.0")
-    script = cap_dir / "migrations" / "0.2.0" / "001-mark.sh"
+    cap_dir = _stage_capability_in_source(
+        sync_source, "evidence", version="0.1.0", skill_body="# From sync source\n"
+    )
+    script = cap_dir / "migrations" / "0.1.0" / "001-mark.sh"
     script.parent.mkdir(parents=True)
     script.write_text('#!/usr/bin/env bash\nset -euo pipefail\ntouch "$ROOT/migrated"\n')
-    script.chmod(0o755)
     monkeypatch.setattr(install, "find_source_kit", lambda: sync_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: sync_source)
 
     sync.run_sync(installed_target)
 
-    assert (installed_target / "migrated").is_file()
-    assert caps.get_installed_capability_version(installed_target, "evidence") == "0.2.0"
+    skills = installed_target / ".pkit" / "capabilities" / "evidence" / "skills"
+    assert "From sync source" in (skills / "evidence-skill.md").read_text(encoding="utf-8")
+    assert not (installed_target / "migrated").exists()
+    assert not _record(installed_target, "evidence").exists()
+
+
+def test_sync_skips_a_capability_with_no_recorded_version(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Neither a manifest nor a readable package.yaml names a version: sync skips the
+    capability, reports it, and runs none of its migrations (Found on the way 14)."""
+    from project_kit import capabilities as caps
+
+    install_source = tmp_path / "install-source" / ".pkit"
+    install_source.mkdir(parents=True)
+    _stage_capability_in_source(install_source, "evidence", version="0.1.0")
+    source = caps.find_capability_in_source(install_source, "evidence")
+    assert source is not None
+    caps.install_capability(installed_target, source)
+    _record(installed_target, "evidence").unlink()
+    installed = installed_target / ".pkit" / "capabilities" / "evidence"
+    (installed / "package.yaml").write_text("not: a package\n", encoding="utf-8")
+
+    sync_source = tmp_path / "sync-source" / ".pkit"
+    sync_source.mkdir(parents=True)
+    cap_dir = _stage_capability_in_source(sync_source, "evidence", version="0.1.0")
+    script = cap_dir / "migrations" / "0.1.0" / "001-mark.sh"
+    script.parent.mkdir(parents=True)
+    script.write_text('#!/usr/bin/env bash\nset -euo pipefail\ntouch "$ROOT/migrated"\n')
+    monkeypatch.setattr(install, "find_source_kit", lambda: sync_source)
+    monkeypatch.setattr(sync.install, "find_source_kit", lambda: sync_source)
+
+    sync.run_sync(installed_target)
+    out = capsys.readouterr().out
+
+    assert "no recorded version" in out
+    assert not (installed_target / "migrated").exists()
+    assert (installed / "package.yaml").read_text(encoding="utf-8") == "not: a package\n"
+
+
+def test_sync_skips_an_externally_sourced_capability_by_its_origin(
+    installed_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """An externally-sourced registration is never read as shipped: neither refreshed
+    from a bundled capability of its name nor reported orphaned (Found on the way 13)."""
+    from project_kit import capabilities as caps
+    from project_kit.manifest import ORIGIN_EXTERNALLY_SOURCED
+
+    skill = _install_then_repoint_source(
+        installed_target,
+        monkeypatch,
+        tmp_path,
+        "evidence",
+        installed_version="0.2.0",
+        source_version="0.2.0",
+    )
+    before = skill.read_text(encoding="utf-8")
+    caps.set_capability_origin(installed_target, "evidence", ORIGIN_EXTERNALLY_SOURCED)
+
+    sync.run_sync(installed_target)
+    out = capsys.readouterr().out
+
+    assert "externally sourced" in out
+    assert "orphan" not in out
+    assert skill.read_text(encoding="utf-8") == before
 
 
 # --- incubated (in-repo) capabilities skip source-reconciliation (COR-031) ---
@@ -1166,14 +1247,32 @@ def test_sync_refuses_cleanly_when_source_incomplete(
 
 # A version no release reaches: the project's content or pin, ahead of this pkit.
 _NEWER = "999.0.0"
+# A release before this pkit's: the project's content, behind this pkit.
+_OLDER = "1.0.0"
 
 
 def _record_content_version(target: Path, version: str) -> None:
-    """Record *version* as the project's content version, as a newer pkit's sync would."""
+    """Record *version* as the project's `backbone_version`, as a newer pkit's sync did."""
     manifest = read_backbone_manifest(target)
     assert manifest is not None
     manifest.backbone_version = version
     write_backbone_manifest(target, manifest)
+
+
+def _record_states(target: Path, backbone: str, completed: str | None) -> None:
+    """Record the backbone's two states, *completed* None leaving no completion."""
+    from project_kit.manifest import record_backbone_target, record_completed_version
+
+    record_backbone_target(target, backbone)
+    path = target / ".pkit" / "manifest.yaml"
+    if completed is None:
+        lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+        path.write_text(
+            "".join(line for line in lines if not line.startswith("completed_version:")),
+            encoding="utf-8",
+        )
+    else:
+        record_completed_version(target, completed)
 
 
 def _write_pin(target: Path, version: str) -> None:
@@ -1188,6 +1287,21 @@ def _tree_bytes(root: Path) -> dict[str, bytes | None]:
         for path in sorted(root.rglob("*"))
         if path.relative_to(root).parts[0] != ".git"
     }
+
+
+def _cli_sync(*args: str):
+    from click.testing import CliRunner
+
+    from project_kit.cli import main
+
+    return CliRunner().invoke(main, ["sync", *args])
+
+
+def _refusal(target: Path) -> str:
+    """The guard's message for `pkit sync` in *target*, its lines joined."""
+    with pytest.raises(click.ClickException) as excinfo:
+        sync.run_sync(target)
+    return " ".join(excinfo.value.message.split())
 
 
 @pytest.mark.parametrize("pinned", [False, True], ids=["no-pin", "pinned"])
@@ -1239,46 +1353,60 @@ def test_sync_names_pinning_at_the_content_when_the_content_is_ahead_of_the_pin(
     installed_target: Path,
 ) -> None:
     """Content ahead of its pin, as an interrupted pin raise leaves it: the remedy is
-    pinning at the content, which needs no fetch."""
+    pinning at the content, which needs no fetch, or `pkit upgrade`, which finishes
+    the raise (ADR-065 point 8)."""
+    _record_content_version(installed_target, _NEWER)
+    _write_pin(installed_target, _INSTALLED_BACKBONE)
+
+    message = _refusal(installed_target)
+
+    assert f"run `pkit pin {_NEWER}`" in message
+    assert "Or run `pkit upgrade`, which finishes the interrupted raise." in message
+    assert router.read_version_pin(installed_target) == _INSTALLED_BACKBONE
+
+
+def test_upgrade_older_direction_names_no_upgrade_for_content_ahead_of_its_pin(
+    installed_target: Path,
+) -> None:
+    """Upgrade's own refusal, the older direction alone, does not name itself."""
     _record_content_version(installed_target, _NEWER)
     _write_pin(installed_target, _INSTALLED_BACKBONE)
 
     with pytest.raises(click.ClickException) as excinfo:
-        sync.run_sync(installed_target)
+        sync.refuse_content_downgrade(
+            installed_target, install.find_source_kit(), command="upgrade"
+        )
 
     assert f"run `pkit pin {_NEWER}`" in excinfo.value.message
-    assert router.read_version_pin(installed_target) == _INSTALLED_BACKBONE
+    assert "pkit upgrade`, which finishes" not in excinfo.value.message
 
 
-@pytest.mark.parametrize("flags", [{"force": True}, {"dry_run": True}], ids=["force", "dry-run"])
+@pytest.mark.parametrize("flags", [("--force",), ("--dry-run",)], ids=["force", "dry-run"])
 def test_sync_content_downgrade_refusal_has_no_override(
-    installed_target: Path, flags: dict[str, bool]
+    installed_target: Path, flags: tuple[str, ...]
 ) -> None:
-    """`--force` overrides only the capability guard, and a dry run refuses too."""
+    """`--force` overrides nothing, and a dry run refuses too."""
     _record_content_version(installed_target, _NEWER)
     before = _tree_bytes(installed_target)
 
-    with pytest.raises(click.ClickException, match="no flag overrides this refusal"):
-        sync.run_sync(installed_target, **flags)
+    result = _cli_sync(*flags)
 
+    assert result.exit_code != 0
+    assert "no flag overrides this refusal" in " ".join(result.output.split())
     assert _tree_bytes(installed_target) == before
 
 
 def test_cli_sync_exits_non_zero_on_the_content_downgrade_refusal(installed_target: Path) -> None:
-    from click.testing import CliRunner
-
-    from project_kit.cli import main
-
     _record_content_version(installed_target, _NEWER)
 
-    result = CliRunner().invoke(main, ["sync"])
+    result = _cli_sync()
 
     assert result.exit_code != 0
     assert "refusing to run `pkit sync`" in result.output
 
 
 def test_sync_at_the_content_version_proceeds(installed_target: Path) -> None:
-    """This pkit at the project's content and pin: sync runs as before."""
+    """This pkit at the project's content and pin, the last upgrade complete: sync runs."""
     _write_pin(installed_target, _INSTALLED_BACKBONE)
 
     sync.run_sync(installed_target)  # must not raise
@@ -1286,39 +1414,15 @@ def test_sync_at_the_content_version_proceeds(installed_target: Path) -> None:
     manifest = read_backbone_manifest(installed_target)
     assert manifest is not None
     assert manifest.backbone_version == _INSTALLED_BACKBONE
+    assert manifest.completed_version == _INSTALLED_BACKBONE
     assert router.read_version_pin(installed_target) == _INSTALLED_BACKBONE
 
 
-def test_sync_newer_than_the_content_moves_it_forward(installed_target: Path) -> None:
-    """This pkit newer than the project's content and pin: sync moves the content
-    forward as before, and leaves the pin to the pin gestures."""
-    _record_content_version(installed_target, "0.1.0")
-    _write_pin(installed_target, "0.1.0")
-
-    sync.run_sync(installed_target)
-
-    manifest = read_backbone_manifest(installed_target)
-    assert manifest is not None
-    assert manifest.backbone_version == _INSTALLED_BACKBONE
-    assert router.read_version_pin(installed_target) == "0.1.0"
-
-
-@pytest.mark.parametrize("unreadable", ["content", "pin"])
-def test_sync_does_not_order_a_version_that_is_not_one(
-    installed_target: Path, unreadable: str
-) -> None:
-    """Only an unambiguous downgrade refuses: a corrupt content version is one sync
-    repairs, and a pin that is not a version has no order to keep."""
-    if unreadable == "content":
-        _record_content_version(installed_target, "not-a-version")
-    else:
-        _write_pin(installed_target, "main")
+def test_sync_does_not_order_a_pin_that_is_not_a_version(installed_target: Path) -> None:
+    """A pin that is not a version has no order to keep, so it stops nothing."""
+    _write_pin(installed_target, "main")
 
     sync.run_sync(installed_target)  # must not raise
-
-    manifest = read_backbone_manifest(installed_target)
-    assert manifest is not None
-    assert manifest.backbone_version == _INSTALLED_BACKBONE
 
 
 def test_read_only_commands_run_under_a_pkit_older_than_the_content(
@@ -1338,123 +1442,223 @@ def test_read_only_commands_run_under_a_pkit_older_than_the_content(
     assert _NEWER in result.output
 
 
-# --- sync never strands backbone migrations (#1452) ------------------------------
-
-# The version directory the stop-gap was built for, and the scripts it holds.
-_MIGRATED = "1.150.0"
-_MIGRATED_SCRIPTS = ("001-keep-process-journal-logging.sh", "001-untrack-runtime-ignored-files.sh")
-
-
-def _source_at(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, version: str) -> Path:
-    """A throwaway copy of the live source whose pkit is *version*, resolved as this
-    run's source. The copy carries the real `migrations/backbone/` tree, so which
-    directories a sync crosses is the real tree's, read at a fixed version."""
-    import shutil
-
-    source = tmp_path / "source-copy" / ".pkit"
-    shutil.copytree(install.find_source_kit(), source)
-    (source / "VERSION").write_text(f"{version}\n", encoding="utf-8")
-    monkeypatch.setattr(install, "find_source_kit", lambda: source)
-    return source
-
-
-def _cli_sync(*args: str):
-    from click.testing import CliRunner
-
-    from project_kit.cli import main
-
-    return CliRunner().invoke(main, ["sync", *args])
+# --- sync's guard: another version, or an unfinished upgrade (ADR-065 points 7, 8) ---
 
 
 @pytest.mark.parametrize("flags", [(), ("--dry-run",), ("--force",)], ids=["", "dry-run", "force"])
-def test_sync_refuses_to_record_a_version_past_backbone_migrations(
-    installed_target: Path,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    flags: tuple[str, ...],
+def test_sync_stops_under_a_newer_pkit_and_names_moving_staying_and_pipelines(
+    installed_target: Path, flags: tuple[str, ...]
 ) -> None:
-    """A project at 1.149.0 synced by a 1.150.0 pkit would record 1.150.0 and run
-    neither `1.150.0/` migration, and a later upgrade would run none either. Sync
-    refuses before writing anything, naming the versions, the directory and
-    `pkit upgrade`. A dry run refuses too, and `--force` does not override it."""
-    _source_at(tmp_path, monkeypatch, _MIGRATED)
-    _record_content_version(installed_target, "1.149.0")
+    """Unpinned, this pkit newer than the content: sync stops before anything is
+    written, under a dry run and `--force` too. The message names moving with
+    `pkit upgrade`, staying with `pkit pin`, and a pipeline's two ways."""
+    _record_states(installed_target, _OLDER, _OLDER)
     before = _tree_bytes(installed_target)
 
     result = _cli_sync(*flags)
 
     assert result.exit_code != 0
     output = " ".join(result.output.split())
-    assert f"it would move this project from 1.149.0 to {_MIGRATED}" in output
-    assert f".pkit/migrations/backbone/{_MIGRATED}/ ({', '.join(_MIGRATED_SCRIPTS)})" in output
+    assert (
+        f"refusing to run `pkit sync`: this pkit is {_INSTALLED_BACKBONE}, newer than this "
+        f"project's content, {_OLDER}"
+    ) in output
+    assert "the project pins no version" in output
     assert "Nothing was written, and no flag overrides this refusal." in output
-    assert "Run `pkit upgrade` instead" in output
-    assert "Syncing project-kit" not in output  # refused before sync began
+    assert f"To move the project to {_INSTALLED_BACKBONE}: run `pkit upgrade`." in output
+    assert "`--no-pin`" in output and "`--no-self-update`" in output
+    assert f"To stay at {_OLDER}: run `pkit pin`." in output
+    assert "In a pipeline: commit a pin" in output
+    assert f"uv tool install --force {router.DISTRIBUTION_GIT_URL}@v{_OLDER}" in output
+    assert "Syncing project-kit" not in output
     assert _tree_bytes(installed_target) == before
 
 
-def test_sync_names_every_version_directory_it_would_cross(
-    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("completed", [None, _OLDER], ids=["no-completion", "behind"])
+def test_sync_stops_over_an_incomplete_upgrade(
+    installed_target: Path, completed: str | None
 ) -> None:
-    """A project several releases behind crosses each directory with a script."""
-    _source_at(tmp_path, monkeypatch, _MIGRATED)
-    _record_content_version(installed_target, "1.93.0")
+    """The last upgrade incomplete, this pkit at its target: sync stops and names
+    `pkit upgrade`, and for a migration that fails every time, a fix or a rollback."""
+    _record_states(installed_target, _INSTALLED_BACKBONE, completed)
+    before = _tree_bytes(installed_target)
 
-    result = _cli_sync()
+    message = _refusal(installed_target)
 
-    assert result.exit_code != 0
-    crossed = re.findall(r"\.pkit/migrations/backbone/([0-9.]+)/ \(", result.output)
-    assert crossed == ["1.140.0", _MIGRATED]
-
-
-def test_sync_across_no_backbone_migration_moves_the_version(
-    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """No version directory with a script between the recorded version and this
-    pkit's: sync moves the version as before. A directory without a script is
-    crossed freely."""
-    source = _source_at(tmp_path, monkeypatch, "1.149.0")
-    empty = source / "migrations" / "backbone" / "1.145.0"
-    empty.mkdir()
-    (empty / "README.md").write_text("No script.\n", encoding="utf-8")
-    _record_content_version(installed_target, "1.141.0")
-
-    result = _cli_sync()
-
-    assert result.exit_code == 0, result.output
-    manifest = read_backbone_manifest(installed_target)
-    assert manifest is not None
-    assert manifest.backbone_version == "1.149.0"
+    if completed is None:
+        assert "no completed upgrade is recorded for this project" in message
+        assert "it runs every backbone migration up to its version once" in message
+    else:
+        assert "the last upgrade of this project is incomplete" in message
+        assert f"running the backbone migrations from {completed}" in message
+    assert "Run `pkit upgrade`" in message
+    assert "`git checkout <ref> -- .pkit/`" in message
+    assert _tree_bytes(installed_target) == before
 
 
 @pytest.mark.parametrize("recorded", ["not-a-version", None], ids=["not-a-version", "absent"])
-def test_sync_does_not_order_a_recorded_version_that_is_not_one(
-    installed_target: Path,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    recorded: str | None,
+def test_sync_stops_with_no_manifest_or_a_recorded_version_that_is_no_version(
+    installed_target: Path, recorded: str | None
 ) -> None:
-    """Only an unambiguous order refuses: a recorded version that is absent or not
-    valid semver is not compared, so sync repairs it as before."""
-    _source_at(tmp_path, monkeypatch, _MIGRATED)
+    """No manifest, or a `backbone_version` that is no version: sync no longer writes
+    one. It stops and names `pkit upgrade`, which writes it and replays."""
     if recorded is None:
         (installed_target / ".pkit" / "manifest.yaml").unlink()
     else:
         _record_content_version(installed_target, recorded)
+    before = _tree_bytes(installed_target)
 
-    result = _cli_sync()
+    message = _refusal(installed_target)
 
-    assert result.exit_code == 0, result.output
-    manifest = read_backbone_manifest(installed_target)
-    assert manifest is not None
-    assert manifest.backbone_version == _MIGRATED
+    if recorded is None:
+        assert ".pkit/manifest.yaml is missing" in message
+    else:
+        assert "'not-a-version', which is no version" in message
+    assert "Run `pkit upgrade`: it writes the manifest at its version" in message
+    assert _tree_bytes(installed_target) == before
+
+
+def test_sync_stops_when_the_content_is_behind_the_pin_the_pin_running(
+    installed_target: Path,
+) -> None:
+    """Pinned, the content behind the pin, the pin's own code running: `pkit upgrade`
+    brings the content up to the pin."""
+    _record_states(installed_target, _OLDER, _OLDER)
+    _write_pin(installed_target, _INSTALLED_BACKBONE)
+
+    message = _refusal(installed_target)
+
+    assert f"this project pins pkit {_INSTALLED_BACKBONE}, and its content is behind" in message
+    assert "Run `pkit upgrade`: run under the pin, it brings the content up to the pin." in (
+        message
+    )
+
+
+def test_sync_under_the_routers_fallback_names_reconnecting_not_a_bare_upgrade(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pinned, the router could not fetch the pin and ran this pkit: the message names
+    reconnecting, the pin through uvx, an HTTPS install of the pin, and moving on
+    purpose with `pkit unpin` first, never a bare `pkit upgrade`."""
+    _record_states(installed_target, _OLDER, _OLDER)
+    _write_pin(installed_target, _OLDER)
+    monkeypatch.setenv(router._PIN_UNRESOLVED_ENV, _OLDER)
+    monkeypatch.delenv(router._BYPASS_ENV, raising=False)
+
+    message = _refusal(installed_target)
+
+    assert f"This project pins pkit {_OLDER}, which the router could not fetch" in message
+    assert "Reconnect and run `pkit sync` again" in message
+    assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{_OLDER} project-kit sync`" in message
+    assert f"`uv tool install --force {router.DISTRIBUTION_HTTPS_URL}@v{_OLDER}`" in message
+    assert "`pkit unpin`, then `pkit upgrade`" in message
+    assert "Run `pkit upgrade`" not in message
+
+
+def test_sync_under_the_routers_fallback_runs_where_it_finds_no_mismatch(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The fallback only chooses the message: with no mismatch, sync runs."""
+    _write_pin(installed_target, _INSTALLED_BACKBONE)
+    monkeypatch.setenv(router._PIN_UNRESOLVED_ENV, _INSTALLED_BACKBONE)
+    monkeypatch.delenv(router._BYPASS_ENV, raising=False)
+
+    sync.run_sync(installed_target)  # must not raise
+
+
+def test_sync_under_a_deliberate_bypass_of_a_pin_names_running_the_pin(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pinned, this pkit newer than the content and not the pin, run on purpose
+    (`PKIT_NO_ROUTE`, so no fallback even with the mark set): the message names
+    running the pin, or moving with `pkit upgrade`."""
+    _record_states(installed_target, _OLDER, _OLDER)
+    _write_pin(installed_target, _OLDER)
+    monkeypatch.setenv(router._PIN_UNRESOLVED_ENV, _OLDER)
+    monkeypatch.setenv(router._BYPASS_ENV, "1")
+
+    message = _refusal(installed_target)
+
+    assert f"and the project pins {_OLDER}" in message
+    assert "could not fetch" not in message
+    assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{_OLDER} project-kit sync`" in message
+    assert "To move the project on: run `pkit upgrade`." in message
+
+
+def test_sync_under_a_pin_that_is_no_version_names_no_release_to_run(
+    installed_target: Path,
+) -> None:
+    """A pin that is no version stops nothing by itself, and where the content is
+    behind this pkit the message names pinning or moving, never `uvx …@v<pin>`."""
+    _record_states(installed_target, _OLDER, _OLDER)
+    _write_pin(installed_target, "main")
+
+    message = _refusal(installed_target)
+
+    assert "the project's pin, 'main', is no version" in message
+    assert f"To stay at {_OLDER}: run `pkit pin`" in message
+    assert "@vmain" not in message
+
+
+def test_sync_refuses_a_pin_ahead_of_this_pkit_before_naming_upgrade(
+    installed_target: Path,
+) -> None:
+    """A pin ahead of this pkit is #1212's refusal, whose remedy is the pinned pkit:
+    `pkit upgrade` under this one would refuse too. So that row comes first, even
+    over an incomplete upgrade."""
+    _record_states(installed_target, _OLDER, None)
+    _write_pin(installed_target, _NEWER)
+
+    message = _refusal(installed_target)
+
+    assert f"older than this project's pin ({_NEWER}, in .pkit/version-pin)" in message
+    assert "Run `pkit upgrade`" not in message
+
+
+def test_a_sync_that_proceeds_writes_no_manifest_and_runs_no_migration(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """At the recorded version, sync writes neither the backbone's manifest nor a
+    capability's, and runs no migration, a capability pending an upgrade included."""
+    from project_kit import capabilities as caps
+    from project_kit import migrations
+
+    _install_then_repoint_source(
+        installed_target,
+        monkeypatch,
+        tmp_path,
+        "evidence",
+        installed_version="0.1.0",
+        source_version="0.2.0",
+    )
+    script = (
+        tmp_path / "sync-source" / ".pkit" / "capabilities" / "evidence" / "migrations" / "0.2.0"
+    ) / "001-mark.sh"
+    script.parent.mkdir(parents=True)
+    script.write_text('#!/usr/bin/env bash\nset -euo pipefail\ntouch "$ROOT/migrated"\n')
+    ran: list[str] = []
+
+    def _no_migration(*_args: object, **_kwargs: object) -> None:
+        ran.append("migration")
+
+    monkeypatch.setattr(migrations, "execute_migration_scripts", _no_migration)
+    monkeypatch.setattr(caps, "execute_migration_scripts", _no_migration)
+    backbone = installed_target / ".pkit" / "manifest.yaml"
+    record = _record(installed_target, "evidence")
+    before = (backbone.read_bytes(), record.read_bytes())
+
+    sync.run_sync(installed_target)
+
+    assert (backbone.read_bytes(), record.read_bytes()) == before
+    assert ran == []
+    assert not (installed_target / "migrated").exists()
 
 
 def test_sync_is_never_refused_in_the_methodology_source(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """project-kit's own sync moves no version, so it runs as today even where its
-    manifest records a version far behind its migrations. Its primitives are
+    manifest records a version far behind and no completion. Its primitives are
     stubbed, as in the self-host test above, so nothing is written here."""
     from project_kit.manifest import BackboneManifest
 
@@ -1475,24 +1679,6 @@ def test_sync_is_never_refused_in_the_methodology_source(
 
     assert result.exit_code == 0, result.output
     assert "Self-host sync complete" in result.output
-
-
-def test_sync_command_refuses_a_pin_ahead_of_this_pkit_before_naming_upgrade(
-    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A pin ahead of this pkit is #1212's refusal, whose remedy is the pinned
-    pkit: `pkit upgrade` under this one would refuse too. So that refusal comes
-    first, even where the sync would also cross a migration directory."""
-    _source_at(tmp_path, monkeypatch, _MIGRATED)
-    _record_content_version(installed_target, "1.149.0")
-    _write_pin(installed_target, _NEWER)
-
-    result = _cli_sync()
-
-    assert result.exit_code != 0
-    output = " ".join(result.output.split())
-    assert f"older than this project's pin ({_NEWER}, in .pkit/version-pin)" in output
-    assert "Run `pkit upgrade` instead" not in output
 
 
 def test_sync_command_refuses_an_incomplete_source_with_its_own_message(

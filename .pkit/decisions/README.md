@@ -27,7 +27,7 @@ This directory holds your project's architectural-decision record: why each sign
 | Directory | Prefix | Owner | Lifecycle |
 |---|---|---|---|
 | `core/` | **COR** | project-kit | Maintained by project-kit; refreshed on sync; **do not edit** |
-| `project/` | **PRJ** | Your project | Yours. project-kit never touches it |
+| `project/` | **PRJ** | Your project | Yours. project-kit creates the folder, with an empty `.gitkeep`, where it is missing, at first install and in `pkit upgrade`, and never writes your records |
 
 The two namespaces have **independent numbering**. `core/COR-001` and `project/PRJ-001` are separate decisions about separate things; neither blocks the other.
 
@@ -76,15 +76,19 @@ This invariant is what makes the namespace split above operationally safe. proje
 
 Sync reads from your side what it needs, such as the versions your project records. It writes into a file of yours through merge delivery's tier that asks nothing. That tier adds the kit's entries and never removes one you wrote (COR-002). Sync **cannot** produce a conflict, and it cannot break anything you wrote.
 
-COR-059 has sync run at the versions your project records, move none of them, and write a project-owned path only through merge delivery. Under a pkit at another version, or over an unfinished version transition, COR-059 has sync stop. Until that is built, sync also does three things COR-059 rules out:
+Sync runs at the versions your project records, and moves none of them ([COR-059](core/COR-059-version-transition.md)). It writes three kinds of thing, and no other:
 
-- **It moves your recorded backbone version** to the running pkit's version. It refuses under an older pkit. `pkit sync` also refuses to move past backbone migrations, and names `pkit upgrade`, which runs them.
-- **It refreshes each installed capability the kit ships** to the version the running pkit ships, and runs that capability's migrations.
-- **It creates what is missing on your side:** the agents overlay, `.pkit/agents/project/overlay.yaml`, and the `project/` folder of an area, or of a capability it refreshes.
+- **The methodology's content** at the versions your project records, a capability's included only where the running pkit ships it at its recorded version.
+- **State derived from your own declarations:** the deployed skills and agents, `.pkit/.gitignore`, the agent workspace and its line in your clone's local exclude file, and the query commands' environments.
+- **Your project-owned paths, through merge delivery only,** in its tier that asks nothing.
+
+It runs no migration, and writes no recorded version, no manifest and no seed path. Under a pkit at another version than your project records, or over an unfinished upgrade, it stops and writes nothing, and names the command that gets you on.
+
+`pkit upgrade` is the command that moves your project to another release. It also creates each seed path that is missing, such as the agents overlay, `.pkit/agents/project/overlay.yaml`, or the `project/` folder of an area or a capability, never over one that exists. Every migration runs inside it, and a migration changes a file of yours only within what the record that owns the file allows.
 
 The same `core/` / `project/` pattern (and the same invariant) governs other kit areas in your project — `.pkit/agents/`, `.pkit/rules/`, and so on. To extend kit-shipped content, add sibling files in the matching `project/` directory; never edit a kit-owned file.
 
-Some files must live at fixed paths that you will want to extend — root `CLAUDE.md` is the canonical example. The invariant rules out editing such files in place to add kit content; the resolution is to keep the fixed-path file project-owned and ship the kit's canonical content at a separate path that the project's file references. The lifecycle that supports this — when files are first written, when they are updated — is detailed in COR-001.
+Some files must live at fixed paths that you will want to extend — root `CLAUDE.md` and `.claude/settings.json` are the canonical examples. Each stays yours. The kit ships its canonical content at a separate path, and merge delivery adds what it needs into your file in place (COR-002): the line in `CLAUDE.md` that includes the kit's rules from that path, and the kit's entries in `.claude/settings.json`. It adds only what is missing, and never removes or rewrites what you wrote. The lifecycle that supports this — when files are first written, when they are updated — is detailed in COR-001.
 
 ## File naming
 

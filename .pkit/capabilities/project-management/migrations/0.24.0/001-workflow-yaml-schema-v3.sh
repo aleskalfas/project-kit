@@ -13,19 +13,20 @@
 # stay.
 #
 # The kit-shipped `workflow.yaml` under `.pkit/capabilities/project-
-# management/schemas/` is delivered by sync (it lives in the kit-owned
-# tree). Adopters who haven't customised the file get the v3 version
-# directly from sync — no migration action needed on their part.
+# management/schemas/` is copied by the upgrade that brings it (it lives in
+# the kit-owned tree), before this migration runs. Adopters who haven't
+# customised the file get the v3 version from that copy — no migration
+# action needed on their part.
 #
 # WARN-ON-OVERRIDE ONLY (DEC-033 D6): this migration's only job is to
 # detect the case where an adopter has overridden the kit-shipped
 # `workflow.yaml` (a `project/schema-overrides/workflow.yaml`) still at
 # schema_version 2 and surface a warning so they can hand-update it. It
-# NEVER rewrites the kit-shipped file (sync owns it) and NEVER auto-edits
+# NEVER rewrites the kit-shipped file (the copy owns it) and NEVER auto-edits
 # a project-owned override (that would silently clobber adopter intent —
 # the no-shared-files invariant + the COR-010 discipline).
 #
-# Idempotent: no override, or an override already at schema_version 3 →
+# Idempotent: no override, or an override at schema_version 3 or later →
 # exit clean. Re-runs are no-ops.
 #
 # Run via the upgrade runtime with ROOT=<adopter root>.
@@ -33,6 +34,16 @@
 set -euo pipefail
 
 : "${ROOT:?ROOT must be set by the upgrade runtime}"
+
+# True iff $1 is a whole number at or above $2. A later schema already holds
+# this migration's change, so neither the copy nor an override at a later
+# schema_version is reported as one this migration still has to make.
+at_least() {
+    case "$1" in
+        ''|*[!0-9]*) return 1 ;;
+    esac
+    [ "$1" -ge "$2" ]
+}
 
 CAP_DIR="$ROOT/.pkit/capabilities/project-management"
 PROJECT_OVERRIDES_DIR="$CAP_DIR/project/schema-overrides"
@@ -44,15 +55,18 @@ if [ ! -d "$CAP_DIR" ]; then
     exit 0
 fi
 
-# Kit-shipped workflow.yaml is updated by sync; we only verify the bump landed.
+# The kit-shipped workflow.yaml arrives with the upgrade's copy, which runs
+# before this migration (COR-010's order). We only verify the bump landed: on
+# an upgrade that crosses more than one version the copy is newer than 3, so
+# a schema_version of 3 or later means it landed.
 if [ ! -f "$KIT_WORKFLOW" ]; then
-    echo "  [warn] kit-shipped workflow.yaml not found at $KIT_WORKFLOW; sync may not have completed"
+    echo "  [warn] kit-shipped workflow.yaml not found at $KIT_WORKFLOW; the copy may not have completed"
     exit 0
 fi
 
 current_kit_version=$(grep -E '^schema_version:' "$KIT_WORKFLOW" | head -1 | awk '{print $2}')
-if [ "$current_kit_version" != "3" ]; then
-    echo "  [warn] kit-shipped workflow.yaml schema_version is $current_kit_version (expected 3); sync may not have completed"
+if ! at_least "$current_kit_version" 3; then
+    echo "  [warn] kit-shipped workflow.yaml schema_version is $current_kit_version (expected 3 or later); the copy may not have completed"
     exit 0
 fi
 
@@ -65,8 +79,8 @@ if [ ! -f "$WORKFLOW_OVERRIDE" ]; then
 fi
 
 override_version=$(grep -E '^schema_version:' "$WORKFLOW_OVERRIDE" | head -1 | awk '{print $2}')
-if [ "$override_version" = "3" ]; then
-    echo "  [ok] adopter override at $WORKFLOW_OVERRIDE already at schema_version 3"
+if at_least "$override_version" 3; then
+    echo "  [ok] adopter override at $WORKFLOW_OVERRIDE already at schema_version $override_version"
     exit 0
 fi
 
