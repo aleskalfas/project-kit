@@ -13,9 +13,8 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-13T21:44:50Z
-      outcome: unchanged
-      unchanged-because: The capability's DEC-001 and DEC-002, with COR-050, COR-057, ADR-013, ADR-052 and project-management DEC-055, now write their points as headings carrying the same numbers, word for word. DEC-002's paragraph on the pm-side companion decisions, after its point 7, sits under a heading of its own, with the same words. DEC-002's points 3 and 4, which this page cites as D3 and D4, name the same text, so it holds.
+      at: 2026-10-15T09:04:00Z
+      outcome: updated
 ---
 
 # software-engineering capability
@@ -50,7 +49,7 @@ The panel ([software-engineering:DEC-002-code-review-panel]) closes bug #715: be
 
 - An `unchanged` reason that does not hold against the change.
 - A deferral the change writes or rewords whose reason does not hold, or that names no open follow-up issue.
-- A document revalidated as `updated` with no sentence on what changed under the description's `## What changed in each updated document`, or with one that does not match the diff.
+- A document revalidated as `updated` with no sentence on what changed under the description's `## What changed in each updated document`, or with one that does not match the diff. `docs-reviewer` reads that section as the commands that write the list read it. An item they cannot read, such as one naming the document in bold, gives no sentence, and the finding gives the form it needs.
 
 A deferral the change keeps as it was is not judged again. An answer on an artefact the change check asked nothing about, and a reason for having no anchors, are a person's decision (COR-050 point 3). Whether the person accepted one is not something a reviewer can read, so `docs-reviewer` names each in an `[advisory]` finding rather than blocking on it. Where such an answer is `updated`, its sentence is checked like any other.
 

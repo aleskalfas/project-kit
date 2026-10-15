@@ -300,3 +300,39 @@ def test_a_sentence_the_list_must_not_hold_leaves_its_sentences_as_they_were(
     err = capsys.readouterr().err
     assert "the sentence on what changed in docs/guide.md reads as a closing reference" in err
     assert "land-work refuses the list until then" in err
+
+
+@pytest.mark.parametrize(
+    ("item", "unread"),
+    [
+        ("- **docs/guide.md:** The guide names the new flag.", True),
+        ("- docs/guide.md: The guide names the new flag.", True),
+        ("- `docs/guide.md`: The guide names the new flag.", False),
+    ],
+    ids=["bold path", "no code span", "read form"],
+)
+def test_an_item_it_cannot_read_is_a_warning_naming_its_line_and_the_form(
+    ep, monkeypatch, capsys, item, unread
+) -> None:
+    """On PR #1519 four sentences in bold read as none, while edit-pr said
+    "validation: clean". The edit is still written; the validation names the line
+    and the form a sentence takes."""
+    before = _updated_section(ep)
+    body = f"{PR_BODY}\n{before}\n\n{FOOTER}"
+    said = f"{SENTENCES}\n\n{item}\n"
+    rec = _run(ep, monkeypatch, ["7", "--append", said, "--yes"], body=body)
+    assert rec.rc == 0
+    written = rec.edits[0]["body"]
+    out = capsys.readouterr().out
+    if not unread:
+        assert "validation: clean (no findings)." in out
+        return
+    line = written.split("\n").index(item) + 1  # its line in the description written
+    assert "validation: clean" not in out
+    assert (
+        f"  [warning] body.sentences: line {line} of the description, under `## What changed in "
+        f'each updated document`, is not read as a sentence: "{item}" — write it as "- `path`: '
+        "sentence\", starting in the line's first column, the document in a code span as the "
+        "list names it"
+    ) in out.splitlines()
+    assert "(what changed: the pull request's author has not said)" in written
