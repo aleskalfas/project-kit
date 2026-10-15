@@ -11,5 +11,6 @@ body: >
   capability's DEC. `$PKIT_CHECK_BASE` never changes the number. Where the
   default branch cannot be read, the command says so on standard error, with
   the reason and any fixes, and numbers past the working tree alone. It also
-  says when it read the default branch from the local branch, in a repository
-  with no remote, and when the default branch has no commit yet.
+  warns when it read the default branch from the local branch, in a repository
+  with no remote. When the default branch has no commit yet, a line on
+  standard output says so, before the `Stamped:` line.

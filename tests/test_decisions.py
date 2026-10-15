@@ -969,6 +969,26 @@ def test_a_head_git_cannot_read_keeps_the_branch_s_own_reason_and_fixes(
     ]
 
 
+def test_a_repository_git_finds_keeps_the_branch_s_fixes_though_it_names_no_top(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A repository configured bare is one git finds, though it names no top: a default
+    branch never fetched keeps the backbone's reason and its fixes."""
+    repo = _git_project(tmp_path, monkeypatch)
+    repo.git("remote", "add", "origin", str(tmp_path / "never-fetched.git"))
+    repo.git("config", "core.bare", "true")
+
+    name, said = _stamp(repo, "project")
+
+    assert name == "PRJ-002-next.md"
+    assert len(said) == 1
+    assert said[0].startswith(
+        "the default branch 'main' resolves to no commit here: 'origin/main' names none — "
+        "fetch it (`git fetch origin main`)"
+    )
+    assert said[0].endswith(f". PRJ-002 {ALONE}")
+
+
 def test_a_repository_whose_top_git_cannot_name_is_reported(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -408,7 +408,7 @@ def _settled_names(target_root: Path, decisions_dir: Path) -> _Settled:
         return _Settled(warnings=warnings, empty=branch.name)
     if branch.commit is None:
         try:
-            _repository_top(target_root)
+            run_git(target_root, "rev-parse", "--git-dir")
         except click.ClickException as exc:
             problem = f"the default branch {branch.name!r} cannot be read: {_said(exc)}."
         else:
