@@ -686,7 +686,7 @@ def test_a_template_s_front_matter_shows_each_field_s_hint(name: str) -> None:
     for field, value in left.items():
         text = value[0] if isinstance(value, list) else value
         example = next(f.example for f in _kind(name).fields if f.name == field)
-        assert STRUCTURE.field_hint(text).endswith(f"Example: {example}")
+        assert STRUCTURE.hint_in(text).endswith(f"Example: {example}")
 
 
 def test_a_field_s_hint_is_one_marked_line_found_by_its_mark() -> None:
@@ -696,6 +696,6 @@ def test_a_field_s_hint_is_one_marked_line_found_by_its_mark() -> None:
     hint = RENDER.field_hint(needs)
     assert hint.startswith(MARK) and hint.endswith(CLOSE) and "\n" not in hint
     assert load(f"needs:\n  - '{hint}'\n") == {"needs": [hint]}
-    assert STRUCTURE.field_hint(hint) == hint[len(MARK) : -len(CLOSE)]
-    assert STRUCTURE.field_hint(f"Quote `{hint}` as code.") is None
-    assert STRUCTURE.field_hint("Export my report as a file.") is None
+    assert STRUCTURE.hint_in(hint) == hint[len(MARK) : -len(CLOSE)]
+    assert STRUCTURE.hint_in(f"Quote `{hint}` as code.") is None
+    assert STRUCTURE.hint_in("Export my report as a file.") is None

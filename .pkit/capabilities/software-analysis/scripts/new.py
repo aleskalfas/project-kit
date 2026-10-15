@@ -67,6 +67,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import backbone, revalidation, schemas, stamp
 from _lib.model import ACTOR, JOURNEY, TERM, USE_CASE
+from _lib.placeholder import unfilled
 
 #: The kind a revalidation record is stamped as.
 REVALIDATION = "revalidation"
@@ -241,9 +242,14 @@ def _gap(value: str) -> revalidation.Gap:
     gap, sep, resolved = value.partition(GAP_SEPARATOR)
     labelled, colon, found = gap.partition(IDS_SEPARATOR)
     ids = tuple(i.strip() for i in labelled.split(","))
-    no_id = [i for i in ids if i and not _artefact_id(i)] if colon else []
+    # A gap still holding a placeholder is the placeholder refusal's, which says to fill it.
+    named_ids = colon and unfilled(value) is None
+    no_id = [i for i in ids if i and not _artefact_id(i)] if named_ids else []
     if not (sep and colon and all(ids) and not no_id and found.strip() and resolved.strip()):
-        named = f" ({', '.join(map(repr, no_id))} is no artefact's id)" if no_id else ""
+        named = ""
+        if no_id:
+            are = "is no artefact's id" if len(no_id) == 1 else "are no artefacts' ids"
+            named = f" ({', '.join(map(repr, no_id))} {are})"
         raise stamp.Refused(
             f'--gap {value!r} is not "<ids>: <gap> => <resolution>"{named}: the ids of the '
             f"artefacts it affects, separated by commas, then the gap found, then what "

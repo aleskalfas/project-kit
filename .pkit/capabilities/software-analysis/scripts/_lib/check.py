@@ -305,7 +305,7 @@ def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
     (`_lib/placeholder.py`), so words of the
     artefact's own in angle brackets — `maps <user id> to a session`, code a body
     quotes — are never taken for one. A hint left in a field, a body or a section is one
-    too, found by its mark (`structure.field_hint`, `_hints_left`), the message repeating
+    too, found by its mark (`structure.hint_in`, `_hints_left`), the message repeating
     it."""
     texts: dict[str, str | None] = {}
     found: list[Finding] = []
@@ -314,7 +314,7 @@ def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
         if artefact.unanchored_because is not None:
             written.append((REASON_POINTER, artefact.unanchored_because))
         for pointer, text in written:
-            said = structure.field_hint(text)
+            said = structure.hint_in(text)
             if said is not None:
                 found.append(
                     Finding(

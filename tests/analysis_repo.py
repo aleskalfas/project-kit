@@ -77,6 +77,14 @@ def load_lib(*names: str) -> tuple[ModuleType, ...]:
         sys.modules.update(saved)
 
 
+def field_hint(kind: str, name: str) -> str:
+    """A front-matter field's declared hint as the stamp writes it, its placeholder (#1593)."""
+    structure, render = load_lib("structure", "render")
+    declared: Any = structure.read_kinds()[kind]
+    render_: Any = render
+    return render_.field_hint(next(f for f in declared.fields if f.name == name))
+
+
 def actor_at(actor_id: str) -> str:
     """An actor's file: `ACT-<slug>.md`, named by its id, in the actors' folder."""
     return f"{ACTORS}/{actor_id}.md"

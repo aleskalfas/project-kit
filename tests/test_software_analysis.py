@@ -55,10 +55,10 @@ from tests.analysis_repo import (
     VALIDATE,
     actor_at,
     below_floor,
+    field_hint,
     front,
     installed,
     load,
-    load_lib,
     new,
     prepare,
     prepare_seeded,
@@ -72,14 +72,6 @@ from tests.test_living_docs_spaces import (
     _code,
     _discovery_tokens,
 )
-
-_STRUCTURE, _RENDER = load_lib("structure", "render")
-
-
-def _field_hint(kind: str, name: str) -> str:
-    """A front-matter field's declared hint as the stamp writes it, its placeholder."""
-    declared = _STRUCTURE.read_kinds()[kind]
-    return _RENDER.field_hint(next(f for f in declared.fields if f.name == name))
 
 
 @pytest.fixture
@@ -334,7 +326,7 @@ def test_an_actor_is_a_file_of_its_own_its_needs_beside_its_description(
         "name": "Tester",
         "status": "active",
         # Its needs hold the field's declared hint as their placeholder (#1593).
-        "needs": [_field_hint("actor", "needs")],
+        "needs": [field_hint("actor", "needs")],
         "pkit": {"friction": {"anchors": {"path": ["src/**"]}}},
     }
     assert front(project, actor_at("ACT-sponsor"))["pkit"] == {
@@ -354,7 +346,7 @@ def test_an_actor_is_a_file_of_its_own_its_needs_beside_its_description(
     stamped(project, "term", "suite")
     assert list(front(project, GLOSSARY)) == ["TERM-suite"]
     # Its definition holds the field's declared hint as its placeholder (#1593).
-    assert front(project, GLOSSARY)["TERM-suite"]["definition"] == _field_hint("term", "definition")
+    assert front(project, GLOSSARY)["TERM-suite"]["definition"] == field_hint("term", "definition")
 
 
 def test_every_stamped_artefact_passes_the_core_s_friction_pass(seeded: AdopterRepo) -> None:

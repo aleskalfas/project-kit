@@ -585,8 +585,8 @@ def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Requ
     name = _title(request)
     structured = declared(kind)
     entry = {key: value for key, value in example.items() if key != CONTAINER}
-    entry["name"] = name
     entry.update(render.fields_left(structured, entry))
+    entry["name"] = name
     entry[CONTAINER] = _container(request, [])
     section = render.body(structured, f"{new_id} — {name}")
     added = dump({new_id: entry})

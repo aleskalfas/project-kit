@@ -490,6 +490,31 @@ WHY = ("--because", "UC-001=The suite still runs as described.")
                 "UC-001=gap-found",
                 *WHY,
                 "--gap",
+                "Step 2, step 3: export fails => #9",
+            ),
+            "('Step 2', 'step 3' are no artefacts' ids)",
+        ),
+        (
+            # The skill's command pasted as shown: its placeholders are what to fill first.
+            (
+                "--trigger",
+                "scheduled",
+                "--outcome",
+                "UC-001=gap-found",
+                *WHY,
+                "--gap",
+                "<ids>: <what was found> => <the defect reported, or the artefact written>",
+            ),
+            "--gap still holds the placeholder '<what was found>'",
+        ),
+        (
+            (
+                "--trigger",
+                "scheduled",
+                "--outcome",
+                "UC-001=gap-found",
+                *WHY,
+                "--gap",
                 "UC-001, : An export goes nowhere => defect #46 reported",
             ),
             'is not "<ids>: <gap> => <resolution>"',

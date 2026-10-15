@@ -71,7 +71,7 @@ never breaks it.
 the text of each front-matter field a writer fills (`_lib/render.py`). It is
 found as a comment is, outside fenced code and outside a code span that
 closes on its line, so a body may quote the mark. A mark inside another
-comment opens no hint. A field's text is read the same way (`field_hint`).
+comment opens no hint. A field's text is read the same way (`hint_in`).
 The placeholder check reports a hint left in whatever the format rule's
 status, as it reports any placeholder (DEC-001 point 1). So a field's text
 that still holds its hint is never judged against the field's form here.
@@ -443,7 +443,7 @@ def hints(lines: Sequence[Line]) -> list[tuple[int, str]]:
     return found
 
 
-def field_hint(text: str) -> str | None:
+def hint_in(text: str) -> str | None:
     """What the first hint a front-matter field's `text` still holds says, found as
     `hints` finds one in a body, or `None` when it holds none."""
     found = hints(list(enumerate(text.splitlines(), 1)))
@@ -583,7 +583,7 @@ def field_departures(fields: Mapping[str, Any], kind: Kind) -> list[FieldDepartu
             continue
         value = fields.get(field.name)
         for pointer, text in _texts(field.name, value):
-            if not text.strip() or field_hint(text) is not None:
+            if not text.strip() or hint_in(text) is not None:
                 continue  # a hint left in is the placeholder check's
             breach = forms.field_breach(field.form, text, fields)
             if breach is not None:

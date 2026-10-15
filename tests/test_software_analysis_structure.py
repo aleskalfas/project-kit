@@ -43,15 +43,14 @@ from tests.analysis_repo import (
     SA,
     VALIDATE,
     actor_at,
+    field_hint,
     installed,
     load_lib,
     run_script,
     stamped,
 )
 
-_CHECK, _MODEL, _STRUCTURE, _FORMS, _RENDER = load_lib(
-    "check", "model", "structure", "forms", "render"
-)
+_CHECK, _MODEL, _STRUCTURE, _FORMS = load_lib("check", "model", "structure", "forms")
 C: Any = _CHECK
 M: Any = _MODEL
 S: Any = _STRUCTURE
@@ -655,16 +654,10 @@ WRITTEN = {
 OPENING = "Whoever runs the project's tests."
 
 
-def _field_hint(kind: str, name: str) -> str:
-    """A front-matter field's hint as the stamp writes it, its placeholder (#1593)."""
-    declared = _STRUCTURE.read_kinds()[kind]
-    return _RENDER.field_hint(next(f for f in declared.fields if f.name == name))
-
-
-#: The front-matter fields' hints a person writes over, and what with.
+#: The front-matter fields' hints a person writes over, and what with (#1593).
 FIELDS = {
-    _field_hint("actor", "needs"): "Run the suite.",
-    _field_hint("term", "definition"): "set of tests run together",
+    field_hint("actor", "needs"): "Run the suite.",
+    field_hint("term", "definition"): "set of tests run together",
 }
 
 _HINTED = re.compile(r"(?:\*\*(?P<label>[^*\n]+):\*\* )?<!-- pkit:hint .*? -->")
