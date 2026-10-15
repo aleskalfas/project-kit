@@ -87,10 +87,12 @@ from project_kit.scratchpads import (
 )
 from project_kit.status import report_status
 from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
-from project_kit.sync import SYNC_FORCE_IGNORED, run_sync
+from project_kit.sync import SYNC_FORCE_IGNORED, refuse_version_mismatch, run_sync
 from project_kit.upgrade import (
+    capability_move,
     freeze_at_content,
     reconcile_pin,
+    refuse_components_bundled_older,
     run_tool_update,
     run_upgrade,
 )
@@ -4295,11 +4297,14 @@ def visibility_untrack(dry_run: bool) -> None:
 def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: bool) -> None:
     """Move a single installed capability to the version the source ships (COR-017).
 
-    A transition of one capability (ADR-065 point 4, COR-010): first its
-    checks, which may refuse and write nothing, then its manifest's move under
-    `project/` and the skips chosen, its copy, its migrations after the copy,
-    its restamp, and its derivable state. It writes neither of the backbone's
-    two recorded versions.
+    A transition of one capability (ADR-065 point 4, COR-010): first sync's
+    guard, which stops it under a pkit at another version than the project
+    records or over an unfinished upgrade (point 7), then its checks, which may
+    refuse and write nothing, then its manifest's move under `project/` and the
+    skips chosen, its copy, its migrations after the copy, its restamp, and its
+    derivable state. It writes neither of the backbone's two recorded versions.
+    Its checks begin with the refusal of a capability this pkit ships older
+    than the project records, which nothing overrides.
 
     It detects the *new* naming collisions the source version brings (a name
     its installed copy holds, or its record skips, is not new), and either:
@@ -4328,6 +4333,11 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
 
     source_kit = find_source_kit()
+    # Sync's guard first (ADR-065 points 4 and 7): it stops wherever `pkit sync`
+    # stops, before anything is read or written, under `--dry-run` too, and lets
+    # the methodology's source pass. So the version this command moves the
+    # capability to is the one the project's recorded release ships.
+    refuse_version_mismatch(target_root, source_kit, command=f"capabilities upgrade {name}")
     # The methodology's source repository run by code that is not its own (the
     # gap, ADR-059): refuse before anything is read or written (#1090).
     refuse_propagation_into_source(
@@ -4369,6 +4379,16 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
             "Use `pkit capabilities uninstall` to remove the orphan, or sync "
             "the source kit if you expect it to ship."
         )
+
+    # Step 1 (ADR-065 point 4). First the refusal of a capability this pkit's
+    # bundle ships older than the project records (point 7), with no override:
+    # a transition never moves a recorded version down. The record is read once,
+    # before anything is written, and serves the collision flow below.
+    record = caps.read_capability_record(target_root, name)
+    move = capability_move(name, record.version, capability_source.package.version)
+    refuse_components_bundled_older(
+        [move] if move is not None else [], command=f"capabilities upgrade {name}"
+    )
 
     # Compatibility (ADR-065 point 4, step 1; COR-010): the new version's
     # `requires_backbone` must admit the backbone the project records.
@@ -4433,7 +4453,6 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     # The new collisions the source version brings (ADR-065 point 6): a name its
     # installed copy holds, or its record skips, is not new, and an artefact of
     # the release, core's or another shipped capability's, is the release's.
-    record = caps.read_capability_record(target_root, name)
     prior_skipped = list(record.skipped)
     new_collisions = caps.detect_new_collisions(
         target_root,
@@ -6043,6 +6062,10 @@ def install_capability_cmd(
 ) -> None:
     """Install a capability: copy subtree into adopter, register in manifest, re-deploy.
 
+    Sync's guard comes first (ADR-065 point 7): the install copies the running
+    pkit's capability, so it stops under a pkit at another version than the
+    project records, or over an unfinished upgrade, naming sync's remedies.
+
     Installing a capability whose version falls outside a range an installed
     capability declares for it — required or optional — warns, naming each such
     dependent and its range, and refuses unless --force (COR-030).
@@ -6058,10 +6081,16 @@ def install_capability_cmd(
         raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
 
     source_kit = find_source_kit()
+    # Sync's guard first (ADR-065 point 7): it stops wherever `pkit sync` stops,
+    # before anything is read or written, and lets the methodology's source
+    # pass. It stops `--dry-run` and `--plan` too: under another pkit, both would
+    # preview the install of another release's capability, which would refuse.
+    refuse_version_mismatch(target_root, source_kit, command=f"capabilities install {name}")
     # The methodology's source repository run by code that is not its own (the
     # gap, ADR-059): the install would copy the running code's capability
-    # subtree into the tree it is built from. Refuse before anything else —
-    # the plan included, since the install it previews would refuse (#1090).
+    # subtree into the tree it is built from. Refuse before any other pre-flight
+    # (sync's guard lets the source pass), the plan included, since the install
+    # it previews would refuse (#1090).
     refuse_propagation_into_source(
         target_root,
         source_kit,
@@ -7254,6 +7283,13 @@ def new_decision(namespace: str, slug: str, yes: bool) -> None:
 
     Any NAMESPACE that is not core/project/adr is interpreted as a
     capability name; the command refuses if no such capability exists.
+
+    The number is one past the highest the namespace's folder holds in the
+    working tree or on the default branch (COR-054 point 3), so a branch cut
+    before another branch's record merged numbers past that record, once the
+    default branch is fetched. $PKIT_CHECK_BASE never changes it. Where the
+    default branch cannot be read, the command says so on standard error and
+    numbers past the working tree alone (point 4).
 
     For adr with <adr-records> unset, the location is derived from the internal
     documentation root and recorded in the overlay before the record is stamped

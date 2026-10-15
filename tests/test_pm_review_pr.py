@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -598,7 +601,8 @@ def _wire_main(
 
     `resolution` is the Resolution `_resolve_review` returns (so we
     exercise main's loop without the gh round-trips). Each `_invoke_agent`
-    call appends the name to `invoked` and returns an APPROVED verdict; the
+    call appends the name to `invoked` and returns an APPROVED verdict — the
+    reviewers run at once (#1594), so `invoked` is in no set order; the
     deployed-agent file existence check is satisfied by creating the files.
     `briefed`, when given, collects the `(base, head)` each call was passed.
 
@@ -625,6 +629,10 @@ def _wire_main(
         for name in resolution.required_local:
             (agents_dir / f"{name}.md").write_text("agent", encoding="utf-8")
 
+    # A developer may set these once in their own shell, as the README says;
+    # a test sets what it needs after wiring the run.
+    for variable in (rpr.PARALLEL_ENV, rpr.AGENT_TIMEOUT_ENV, rpr.AGENT_EFFORT_ENV):
+        monkeypatch.delenv(variable, raising=False)
     monkeypatch.setattr(rpr, "resolve_capability_root", lambda arg: cap_root)
     monkeypatch.setattr(
         rpr,
@@ -662,6 +670,7 @@ def _wire_main(
         base=None,
         head="HEAD",
         sha="",
+        say=None,
     ):
         invoked.append(name)
         if briefed is not None:
@@ -753,7 +762,7 @@ def test_multi_reviewer_invokes_baseline_plus_contributed(rpr, monkeypatch, tmp_
     _wire_main(rpr, monkeypatch, tmp_path, resolution=resolution, invoked=invoked)
     rc_code = rpr.main()
     assert rc_code == 0
-    assert invoked == ["reviewer", "design-reviewer"]
+    assert sorted(invoked) == ["design-reviewer", "reviewer"]
 
 
 def test_opted_out_contribution_is_listed_with_its_reason(
@@ -789,7 +798,7 @@ def test_opted_out_contribution_is_listed_with_its_reason(
     invoked: list[str] = []
     _wire_main(rpr, monkeypatch, tmp_path, resolution=resolution, invoked=invoked)
     assert rpr.main() == 0
-    assert invoked == ["reviewer", "code-reviewer"]
+    assert sorted(invoked) == sorted(["reviewer", "code-reviewer"])
     out = capsys.readouterr().out
     assert (
         "  opted out: docs-reviewer (capability `software-engineering`) — "
@@ -1074,7 +1083,7 @@ def test_force_re_runs_a_fresh_reviewer(rpr, monkeypatch, tmp_path, capsys) -> N
         argv=("--force",),
     )
     assert rpr.main() == 0
-    assert invoked == ["reviewer", "code-reviewer"]
+    assert sorted(invoked) == sorted(_PANEL)
     assert reads == []  # --force does not consult the verdicts at all.
     assert "not re-run" not in capsys.readouterr().out
 
@@ -1095,7 +1104,7 @@ def test_unreadable_verdicts_run_every_reviewer(
         unreadable=True,
     )
     assert rpr.main() == 0
-    assert invoked == ["reviewer", "code-reviewer"]
+    assert sorted(invoked) == sorted(_PANEL)
     assert "fresh verdicts: could not be read" in capsys.readouterr().out
 
 
@@ -1201,13 +1210,16 @@ def test_review_with_a_pinned_head_reviews_only_that_head(
     ) in capsys.readouterr().out
 
 
-def test_review_with_a_pinned_head_stops_when_it_moves_during_a_review(
-    rpr, monkeypatch, tmp_path
+def test_review_with_a_pinned_head_that_moves_during_the_reviews_posts_their_verdicts(
+    rpr, monkeypatch, tmp_path, capsys
 ) -> None:
-    """The verdict on the pinned head is posted — it is that head's — and no
-    further reviewer runs on a PR that has moved on."""
+    """The reviewers ran at once on the pinned head, and the PR moved while
+    they ran (#1594): every verdict they made is posted against the pinned
+    head — it is that head's — the move is reported, and the run exits as it
+    does for a move, with no native review on a head they never saw."""
     invoked: list[str] = []
     posted: list[str] = []
+    native: list[str] = []
     _wire_main(
         rpr,
         monkeypatch,
@@ -1215,15 +1227,21 @@ def test_review_with_a_pinned_head_stops_when_it_moves_during_a_review(
         resolution=rpr.Resolution(required_local=_PANEL),
         invoked=invoked,
         posted=posted,
+        native=native,
         heads=[_REVIEWED, _MOVED_TO],
         verdicts_head=_REVIEWED,
     )
     run = rpr.review(pinned_head=_REVIEWED)
     assert run.exit_code == 3
     assert run.moved_to == _MOVED_TO
-    assert invoked == ["reviewer"]
-    (comment,) = posted
-    assert f"sha={_REVIEWED}" in comment
+    assert sorted(invoked) == sorted(_PANEL)
+    assert list(run.posted) == list(_PANEL)
+    assert len(posted) == 2
+    assert all(f"sha={_REVIEWED}" in comment for comment in posted)
+    assert native == []
+    out = capsys.readouterr().out
+    for name in _PANEL:
+        assert f"[{name}] the PR's head moved from aaaaaaa to bbbbbbb" in out
 
 
 def test_review_with_a_pinned_head_that_holds_runs_every_reviewer(
@@ -1240,7 +1258,7 @@ def test_review_with_a_pinned_head_that_holds_runs_every_reviewer(
     )
     run = rpr.review(pinned_head=_REVIEWED)
     assert run.exit_code == 0
-    assert invoked == list(_PANEL)
+    assert sorted(invoked) == sorted(_PANEL)
     assert run.moved_to is None
 
 
@@ -1302,17 +1320,17 @@ def test_review_with_a_pinned_head_it_cannot_read_runs_no_reviewer(
     run = rpr.review(pinned_head=_REVIEWED)
     assert (run.exit_code, run.moved_to) == (2, None)
     assert run.reason == (
-        "PR #99's head could not be read before reviewer's review, so whether it is "
+        "PR #99's head could not be read before the reviews, so whether it is "
         "aaaaaaa, the head this review was asked to review, cannot be told"
     )
     assert invoked == []
 
 
-def test_review_with_a_pinned_head_unread_after_a_review_goes_on(
+def test_review_with_a_pinned_head_unread_after_the_reviews_goes_on(
     rpr, monkeypatch, tmp_path
 ) -> None:
-    """A head that could not be read again after a review is not a move: the
-    next reviewer's own read decides."""
+    """A head that could not be read again after the reviews is not a move:
+    the merge's own check decides."""
     invoked: list[str] = []
     _wire_main(
         rpr,
@@ -1320,12 +1338,12 @@ def test_review_with_a_pinned_head_unread_after_a_review_goes_on(
         tmp_path,
         resolution=rpr.Resolution(required_local=_PANEL),
         invoked=invoked,
-        heads=[_REVIEWED, "", _REVIEWED, _REVIEWED],
+        heads=[_REVIEWED, ""],
         verdicts_head=_REVIEWED,
     )
     run = rpr.review(pinned_head=_REVIEWED)
     assert (run.exit_code, run.moved_to) == (0, None)
-    assert invoked == list(_PANEL)
+    assert sorted(invoked) == sorted(_PANEL)
 
 
 def test_review_says_why_it_stopped_short(rpr, monkeypatch, tmp_path) -> None:
@@ -1707,3 +1725,335 @@ def test_resolution_error_ruled_artefacts_names_the_cause(rpr) -> None:
         "this checkout is shallow" in msg
     )
     assert "fetch the full history" in msg.split("Remediation:")[1]
+
+
+# ---- the reviewers at once (#1594) ------------------------------------
+#
+# Every required reviewer that is not fresh starts at the same time, each
+# shown the head read before they start; once they end, the head is read
+# again and each verdict is posted, in the order of the required set. A cap
+# limits how many run at once: `--parallel` > PKIT_REVIEW_PARALLEL > no cap.
+
+#: The four reviewers a code change requires in project-kit.
+_SET = ("pm-reviewer", "docs-reviewer", "code-reviewer", "security-reviewer")
+
+
+def _at_once(rpr, monkeypatch, tmp_path, invoke, **wiring):
+    """`_wire_main` over `_SET`, each invocation answered by
+    `invoke(name, say, sha)`; returns the names in the order they started."""
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=_SET),
+        invoked=[],
+        **wiring,
+    )
+    started: list[str] = []
+
+    def fake_invoke(name, pr_number, config, timeout=None, effort=None, *, say=print, **brief):
+        started.append(name)
+        return invoke(name, say, brief.get("sha", ""))
+
+    monkeypatch.setattr(rpr, "_invoke_agent", fake_invoke)
+    return started
+
+
+class _Concurrency:
+    """How many reviewers ran at once, at most."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._running = 0
+        self.most = 0
+
+    def __enter__(self) -> None:
+        with self._lock:
+            self._running += 1
+            self.most = max(self.most, self._running)
+
+    def __exit__(self, *exc: object) -> None:
+        with self._lock:
+            self._running -= 1
+
+
+def test_parallel_default_is_no_cap(rpr) -> None:
+    assert rpr._resolve_parallel(None, {}) is None
+    assert rpr._resolve_parallel(None, {rpr.PARALLEL_ENV: ""}) is None
+
+
+def test_parallel_env_and_flag(rpr) -> None:
+    env = {rpr.PARALLEL_ENV: "2"}
+    assert rpr._resolve_parallel(None, env) == 2
+    assert rpr._resolve_parallel("1", env) == 1
+
+
+@pytest.mark.parametrize("bad", ["abc", "1.5", ""])
+def test_parallel_non_integer_flag_errors(rpr, bad) -> None:
+    with pytest.raises(ValueError) as exc:
+        rpr._resolve_parallel(bad, {})
+    assert "--parallel" in str(exc.value)
+
+
+@pytest.mark.parametrize("bad", ["0", "-1"])
+def test_parallel_non_positive_errors(rpr, bad) -> None:
+    with pytest.raises(ValueError) as exc:
+        rpr._resolve_parallel(None, {rpr.PARALLEL_ENV: bad})
+    assert rpr.PARALLEL_ENV in str(exc.value)
+    assert "positive" in str(exc.value)
+
+
+def test_a_bad_cap_is_a_usage_error_before_anything_runs(
+    rpr, monkeypatch, tmp_path, capsys
+) -> None:
+    started = _at_once(
+        rpr, monkeypatch, tmp_path, lambda *a: ("APPROVED", "body"), argv=("--parallel", "0")
+    )
+    run = rpr.review()
+    assert run.exit_code == 2
+    assert started == []
+    assert "invalid reviewer cap from --parallel: 0" in capsys.readouterr().err
+
+
+def test_every_reviewer_not_fresh_starts_at_once_on_one_head(
+    rpr, monkeypatch, tmp_path, capsys
+) -> None:
+    """The reviewers that are not fresh are all running at the same moment —
+    the barrier lets none of them on until every one of them is waiting at it
+    — each is shown the head read before they start, and each verdict names
+    that head and its base. The fresh one is not run."""
+    barrier = threading.Barrier(len(_SET) - 1, timeout=10)
+    shown: list[str] = []
+
+    def invoke(name, say, sha):
+        shown.append(sha)
+        barrier.wait()
+        return "APPROVED", "body"
+
+    posted: list[str] = []
+    started = _at_once(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        invoke,
+        fresh={"pm-reviewer": "APPROVED"},
+        posted=posted,
+        heads=[_REVIEWED, _REVIEWED],
+    )
+    run = rpr.review()
+    assert run.exit_code == 0
+    assert sorted(started) == sorted(_SET[1:])
+    assert shown == [_REVIEWED] * 3
+    assert list(run.posted) == list(_SET[1:])
+    marker = f"<!-- pkit-verdict sha={_REVIEWED} base={_BASE} -->\n"
+    assert all(comment.endswith(marker) for comment in posted)
+    out = capsys.readouterr().out
+    assert "  parallel: all at once" in out
+    assert "  reviewing aaaaaaa: docs-reviewer, code-reviewer, security-reviewer" in out
+
+
+@pytest.mark.parametrize("set_by", ["flag", "env"])
+def test_a_cap_of_one_runs_the_reviewers_in_turn(
+    rpr, monkeypatch, tmp_path, capsys, set_by
+) -> None:
+    at_once = _Concurrency()
+
+    def invoke(name, say, sha):
+        with at_once:
+            time.sleep(0.02)
+        return "APPROVED", "body"
+
+    argv = ("--parallel", "1") if set_by == "flag" else ()
+    started = _at_once(rpr, monkeypatch, tmp_path, invoke, argv=argv)
+    if set_by == "env":
+        monkeypatch.setenv(rpr.PARALLEL_ENV, "1")
+    run = rpr.review()
+    assert run.exit_code == 0
+    assert started == list(_SET)
+    assert at_once.most == 1
+    assert "  parallel: one at a time" in capsys.readouterr().out
+
+
+def test_a_cap_limits_how_many_run_at_once(rpr, monkeypatch, tmp_path, capsys) -> None:
+    """With a cap of 2, two reviewers run together — the barrier holds each
+    until a second one is running — and never a third."""
+    at_once = _Concurrency()
+    pair = threading.Barrier(2, timeout=10)
+
+    def invoke(name, say, sha):
+        with at_once:
+            pair.wait()
+        return "APPROVED", "body"
+
+    started = _at_once(rpr, monkeypatch, tmp_path, invoke)
+    monkeypatch.setenv(rpr.PARALLEL_ENV, "2")
+    run = rpr.review()
+    assert run.exit_code == 0
+    assert sorted(started) == sorted(_SET)
+    assert at_once.most == 2
+    assert "  parallel: at most 2 at once" in capsys.readouterr().out
+
+
+def test_a_reviewer_that_fails_or_times_out_does_not_stop_the_others(
+    rpr, monkeypatch, tmp_path, capsys
+) -> None:
+    """Through the real invocation: one reviewer times out, one exits non-zero,
+    one raises. The other's verdict is posted, and the run reports the
+    failures and exits as it does today."""
+    real_invoke = rpr._invoke_agent
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=_SET),
+        invoked=[],
+    )
+    monkeypatch.setattr(rpr, "_invoke_agent", real_invoke)
+    monkeypatch.setattr(rpr.shutil, "which", lambda _bin: "/usr/bin/claude")
+
+    def fake_run(args, **kwargs):
+        name = args[args.index("--agent") + 1]
+        if name == "docs-reviewer":
+            raise subprocess.TimeoutExpired(args, kwargs["timeout"])
+        if name == "code-reviewer":
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="crashed")
+        if name == "security-reviewer":
+            raise OSError("no such device")
+        return subprocess.CompletedProcess(
+            args, 0, stdout=f"Reviewer agent (local, {name}): APPROVED\n", stderr=""
+        )
+
+    monkeypatch.setattr(rpr.subprocess, "run", fake_run)
+    run = rpr.review()
+    assert run.exit_code == 3
+    assert list(run.posted) == ["pm-reviewer"]
+    failed = "the invocation failed, so there is no verdict to post"
+    assert run.failed == {name: failed for name in _SET[1:]}
+    err = capsys.readouterr().err
+    assert "[docs-reviewer] invocation error: Command" in err
+    assert "timed out after 1200 seconds" in err
+    assert "[code-reviewer] agent exited 1: crashed" in err
+    assert "[security-reviewer] invocation error: no such device" in err
+
+
+def test_each_reviewers_lines_print_together_in_the_order_of_the_set(
+    rpr, monkeypatch, tmp_path, capsys
+) -> None:
+    """Reviewers write their lines while they run, interleaved in time: here
+    docs-reviewer writes its first line, code-reviewer writes its line, then
+    docs-reviewer its second. Each reviewer's lines print as one block, the
+    blocks in the order of the required set."""
+    first = threading.Event()
+    second = threading.Event()
+
+    def invoke(name, say, sha):
+        if name == "docs-reviewer":
+            say(f"  [{name}] first", file=sys.stderr)
+            first.set()
+            assert second.wait(10)
+            say(f"  [{name}] second", file=sys.stderr)
+            return None, ""
+        if name == "code-reviewer":
+            assert first.wait(10)
+            say(f"  [{name}] only", file=sys.stderr)
+            second.set()
+            return None, ""
+        return "APPROVED", "body"
+
+    _at_once(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        invoke,
+        stale={"docs-reviewer": ("APPROVED", "reviewed aaaaaaa; changed since: README.md")},
+    )
+    run = rpr.review()
+    assert run.exit_code == 3
+    captured = capsys.readouterr()
+    assert captured.err.splitlines() == [
+        "  [docs-reviewer] first",
+        "  [docs-reviewer] second",
+        "  [docs-reviewer] invocation failed; no verdict to post.",
+        "  [code-reviewer] only",
+        "  [code-reviewer] invocation failed; no verdict to post.",
+    ]
+    assert [line for line in captured.out.splitlines() if line.startswith("  [")] == [
+        "  [pm-reviewer] posted APPROVED",
+        "  [docs-reviewer] stale verdict APPROVED (reviewed aaaaaaa; changed since: "
+        "README.md) — re-run",
+        "  [security-reviewer] posted APPROVED",
+    ]
+
+
+@pytest.mark.parametrize("cap", [None, "1"], ids=["default", "cap-1"])
+def test_the_run_waits_for_the_slowest_reviewer_not_their_sum(
+    rpr, monkeypatch, tmp_path, cap
+) -> None:
+    """The gain, timed: four reviewers of 0.3s each take about 0.3s at the
+    default, and at least their sum, 1.2s, with the cap at 1. The default's
+    bound is loose, below what three of them take in a row, so a loaded
+    machine does not fail it: the barrier test proves they overlap."""
+    slow = 0.3
+
+    def invoke(name, say, sha):
+        time.sleep(slow)
+        return "APPROVED", "body"
+
+    argv = ("--parallel", cap) if cap else ()
+    _at_once(rpr, monkeypatch, tmp_path, invoke, argv=argv)
+    began = time.monotonic()
+    run = rpr.review()
+    took = time.monotonic() - began
+    assert run.exit_code == 0
+    if cap is None:
+        assert took < slow * (len(_SET) - 1), took
+    else:
+        assert took >= slow * len(_SET), took
+
+
+def test_each_native_review_reads_the_head_just_before_it(
+    rpr, monkeypatch, tmp_path, capsys
+) -> None:
+    """The verdicts are posted one after another, and GitHub attaches a native
+    review to the head of the moment it is posted. A push after the first
+    native review leaves the second verdict's comment on the head its
+    reviewer saw, with no native review on the new head."""
+    native: list[str] = []
+    posted: list[str] = []
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=_PANEL),
+        invoked=[],
+        posted=posted,
+        native=native,
+        # Before the reviews, after them, before each native review.
+        heads=[_REVIEWED, _REVIEWED, _REVIEWED, _MOVED_TO],
+    )
+    run = rpr.review()
+    assert run.exit_code == 0
+    assert native == ["APPROVED"]
+    assert len(posted) == 2
+    assert all(f"sha={_REVIEWED}" in comment for comment in posted)
+    assert "[native] skipped — the PR's head is not the one the reviewer saw" in (
+        capsys.readouterr().out
+    )
+
+
+def test_an_interrupt_starts_no_reviewer_waiting_for_a_slot(rpr) -> None:
+    """An interrupt reaches the run while it waits on the reviewers, here
+    raised out of the first review. The reviewer waiting for the slot is not
+    started, and the interrupt goes on."""
+    started: list[str] = []
+
+    def review_one(name):
+        started.append(name)
+        if name == "pm-reviewer":
+            raise KeyboardInterrupt
+        time.sleep(1)  # holds the one slot while the interrupt is handled
+        return "APPROVED", "body"
+
+    with pytest.raises(KeyboardInterrupt):
+        rpr._run_at_once(list(_SET[:3]), 1, review_one)
+    assert "code-reviewer" not in started

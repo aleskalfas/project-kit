@@ -1,0 +1,13 @@
+component: software-engineering
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `docs-reviewer` reads a pull request's `## What changed in each updated
+  document` as the commands that write the list of answers read it (#1523).
+  They read a sentence only from a top-level list item that starts with its
+  document in a code span, and the form to write is ``- `path`: sentence``.
+  Take an `updated` document whose only sentence they cannot read, such as one
+  naming the document in bold. The person who authorises the merge is told its
+  author has not said what changed. The reviewer now judges it as having no
+  sentence, and its `[block]` quotes the item and gives the form it needs.

@@ -8,10 +8,10 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from project_kit import decisions, decisions_validate, record_points
+from project_kit import decisions, decisions_validate, default_branch, record_points
 from project_kit import project_config as pc
 from project_kit.cli import main
-from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo, GitRepo, MakeAdopterRepo
 
 
 @pytest.fixture
@@ -415,6 +415,12 @@ def _set_internal_root(repo: AdopterRepo, root: str) -> None:
     path.write_text(f"docs:\n  internal: {root}\n", encoding="utf-8")
 
 
+def _told(record_id: str) -> str:
+    """The notice line of a stamp in an adopter with no commit yet, whose default branch
+    holds nothing (COR-054 point 4)."""
+    return _unborn(record_id) + "\n"
+
+
 def _new_adr(
     monkeypatch: pytest.MonkeyPatch, *args: str, terminal: bool, answer: str | None = None
 ) -> tuple[int, str]:
@@ -447,7 +453,7 @@ def test_new_adr_with_the_category_unset_creates_the_derived_folder_records_and_
     code, output = _new_adr(monkeypatch, "first", terminal=terminal)
 
     assert code == 0, output
-    assert output == DERIVED_NOTICE + f"Stamped: {DERIVED}/ADR-001-first.md\n"
+    assert output == _told("ADR-001") + DERIVED_NOTICE + f"Stamped: {DERIVED}/ADR-001-first.md\n"
     assert (repo.root / DERIVED / "ADR-001-first.md").is_file()
     assert (
         "# --- adr-records: recorded by `pkit new decision adr` from the documentation roots "
@@ -466,7 +472,7 @@ def test_new_adr_over_an_empty_derived_folder_records_without_asking(
     code, output = _new_adr(monkeypatch, "first", terminal=False)
 
     assert code == 0, output
-    assert output == DERIVED_NOTICE + f"Stamped: {DERIVED}/ADR-001-first.md\n"
+    assert output == _told("ADR-001") + DERIVED_NOTICE + f"Stamped: {DERIVED}/ADR-001-first.md\n"
     assert (repo.root / DERIVED / "ADR-001-first.md").is_file()
 
 
@@ -480,7 +486,7 @@ def test_new_adr_derives_from_the_declared_internal_root(
 
     assert code == 0, output
     assert output.startswith(
-        "recorded adr-records = tech-docs/architecture/decisions  "
+        _told("ADR-001") + "recorded adr-records = tech-docs/architecture/decisions  "
         "(.pkit/agents/project/overlay.yaml)\n"
         "  derived from the internal root, tech-docs (explicit). "
     )
@@ -512,7 +518,7 @@ def test_new_adr_over_a_folder_holding_documents_with_yes_records_and_stamps(
     code, output = _new_adr(monkeypatch, "second", "--yes", terminal=False)
 
     assert code == 0, output
-    assert output == DERIVED_NOTICE + f"Stamped: {DERIVED}/ADR-002-second.md\n"
+    assert output == _told("ADR-002") + DERIVED_NOTICE + f"Stamped: {DERIVED}/ADR-002-second.md\n"
     assert (repo.root / DERIVED / "ADR-001-existing.md").read_text(encoding="utf-8") == "# kept\n"
     assert "adr-records:\n  - docs/architecture/decisions\n" in (repo.root / OVERLAY).read_text(
         encoding="utf-8"
@@ -546,6 +552,7 @@ def test_new_adr_at_a_terminal_a_yes_records_and_stamps(
         "reach of the agents named:\n"
         "  adr-records = docs/architecture/decisions  (reached by architect)\n"
         "Record it in .pkit/agents/project/overlay.yaml? [Y/n]: y\n"
+        + _told("ADR-002")
         + DERIVED_NOTICE
         + f"Stamped: {DERIVED}/ADR-002-second.md\n"
     )
@@ -565,7 +572,7 @@ def test_new_adr_a_root_change_after_recording_moves_nothing(
     code, output = _new_adr(monkeypatch, "second", terminal=False)
 
     assert code == 0, output
-    assert output == f"Stamped: {DERIVED}/ADR-002-second.md\n"
+    assert output == _told("ADR-002") + f"Stamped: {DERIVED}/ADR-002-second.md\n"
     assert (repo.root / OVERLAY).read_text(encoding="utf-8") == overlay
     assert not (repo.root / "handbook").exists()
 
@@ -582,7 +589,7 @@ def test_new_adr_an_explicit_value_wins_over_the_root(
     code, output = _new_adr(monkeypatch, "second", terminal=False)
 
     assert code == 0, output
-    assert output == "Stamped: decisions/adr/ADR-002-second.md\n"
+    assert output == _told("ADR-002") + "Stamped: decisions/adr/ADR-002-second.md\n"
     assert (repo.root / OVERLAY).read_text(encoding="utf-8") == "adr-records:\n  - decisions/adr/\n"
     assert not (repo.root / "tech-docs").exists()
 
@@ -603,3 +610,419 @@ def test_new_adr_refuses_a_location_derived_inside_pkit(
         "documentation root, .pkit/docs) is inside .pkit/."
     ) in output
     assert _tree(repo.root) == before
+
+
+# --------------------------------- the number: past the default branch too (COR-054, #1501)
+
+
+#: Each namespace, the folder it stamps into and its prefix, in the project `_git_project` builds.
+NAMESPACES = [
+    ("core", ".pkit/decisions/core", "COR"),
+    ("project", ".pkit/decisions/project", "PRJ"),
+    ("adr", "docs/adr", "ADR"),
+    ("cap", ".pkit/capabilities/cap/decisions", "DEC"),
+]
+NAMESPACE_IDS = [namespace for namespace, _folder, _prefix in NAMESPACES]
+
+#: The backbone configuration, where the default branch is declared.
+CONFIG = pc.PROJECT_CONFIG_RELPATH.as_posix()
+
+#: What the stamp says after the reason the default branch was not read.
+ALONE = (
+    "is numbered past the working tree alone, so a record on the default branch may already "
+    "hold its number (COR-054 point 4)."
+)
+
+
+def _record(folder: str, prefix: str, number: int, slug: str) -> dict[str, str | None]:
+    return {f"{folder}/{prefix}-{number:03d}-{slug}.md": f"---\nid: {prefix}-{number:03d}\n---\n"}
+
+
+def _git_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> GitRepo:
+    """A git project on `main`, with no remote, whose first commit holds record 001 in every
+    namespace's folder, the capability `cap` and an overlay naming `docs/adr/` as
+    `adr-records`. No `$PKIT_CHECK_BASE` a developer set reaches it."""
+    monkeypatch.delenv(default_branch.CHECK_BASE_ENV, raising=False)
+    repo = GitRepo.init(tmp_path / "work")
+    files: dict[str, str | None] = {
+        OVERLAY.as_posix(): "adr-records:\n  - docs/adr/\n",
+        ".pkit/capabilities/cap/package.yaml": (
+            "component:\n  kind: capability\n  name: cap\n  version: 0.1.0\n"
+        ),
+    }
+    for _namespace, folder, prefix in NAMESPACES:
+        files |= _record(folder, prefix, 1, "first")
+    repo.commit("first", files)
+    return repo
+
+
+def _with_remote(repo: GitRepo, tmp_path: Path) -> None:
+    """A remote `origin` holding the repository as it stands, fetched."""
+    remote = tmp_path / "origin.git"
+    repo.git("clone", "-q", "--bare", str(repo.root), str(remote))
+    repo.git("remote", "add", "origin", str(remote))
+    repo.git("fetch", "-q", "origin")
+
+
+def _cut_before(repo: GitRepo, files: dict[str, str | None]) -> None:
+    """`topic` cut from `main`, then `files` committed on `main` — another branch's work
+    merged — and `topic` checked out again, its working tree without them."""
+    repo.checkout("topic", create=True)
+    repo.checkout("main")
+    repo.commit("another branch's work", files)
+    repo.checkout("topic")
+
+
+def _stamp(repo: GitRepo, namespace: str, slug: str = "next") -> tuple[str, list[str]]:
+    """Stamp a record; return its file name and what the stamp said of the default branch."""
+    said: list[str] = []
+    target = decisions.stamp_decision(repo.root, namespace=namespace, slug=slug, warn=said.append)
+    return target.name, said
+
+
+@pytest.mark.parametrize(("namespace", "folder", "prefix"), NAMESPACES, ids=NAMESPACE_IDS)
+def test_a_record_only_the_default_branch_holds_is_numbered_past(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, namespace: str, folder: str, prefix: str
+) -> None:
+    """A branch cut before another branch's record merged numbers past that record, so the
+    two never take one number (COR-054 point 3)."""
+    repo = _git_project(tmp_path, monkeypatch)
+    _cut_before(repo, _record(folder, prefix, 2, "landed"))
+    _with_remote(repo, tmp_path)
+    assert not list((repo.root / folder).glob(f"{prefix}-002-*.md"))
+
+    assert _stamp(repo, namespace) == (f"{prefix}-003-next.md", [])
+
+
+@pytest.mark.parametrize(("namespace", "folder", "prefix"), NAMESPACES, ids=NAMESPACE_IDS)
+def test_a_record_only_the_working_tree_holds_is_numbered_past(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, namespace: str, folder: str, prefix: str
+) -> None:
+    """The working tree counts, an uncommitted record too: the number goes past both sides."""
+    repo = _git_project(tmp_path, monkeypatch)
+    _cut_before(repo, _record(folder, prefix, 2, "landed"))
+    _with_remote(repo, tmp_path)
+    repo.write(_record(folder, prefix, 7, "uncommitted"))
+
+    assert _stamp(repo, namespace) == (f"{prefix}-008-next.md", [])
+
+
+def test_only_the_namespace_s_own_folder_counts_on_the_default_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A record of another id-space, of another capability, or in a folder beneath the
+    namespace's takes no number of it."""
+    repo = _git_project(tmp_path, monkeypatch)
+    _cut_before(
+        repo,
+        {
+            ".pkit/decisions/core/PRJ-009-misplaced.md": "x\n",
+            ".pkit/decisions/project/old/PRJ-008-nested.md": "x\n",
+            ".pkit/capabilities/other/decisions/DEC-009-other.md": "x\n",
+        },
+    )
+    _with_remote(repo, tmp_path)
+
+    assert _stamp(repo, "project")[0] == "PRJ-002-next.md"
+    assert _stamp(repo, "cap")[0] == "DEC-002-next.md"
+
+
+@pytest.mark.parametrize("named", ["ahead", "nowhere"])
+def test_the_variable_a_pipeline_sets_for_its_checks_never_changes_the_number(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, named: str
+) -> None:
+    """`$PKIT_CHECK_BASE` names a comparison's base, never what allocation reads (COR-054
+    point 3): a base holding a higher number does not raise the number, and one that
+    resolves nowhere is neither read nor reported."""
+    repo = _git_project(tmp_path, monkeypatch)
+    _cut_before(repo, _record(".pkit/decisions/project", "PRJ", 2, "landed"))
+    _with_remote(repo, tmp_path)
+    repo.checkout("ahead", create=True)
+    repo.commit("ahead", _record(".pkit/decisions/project", "PRJ", 9, "ahead"))
+    repo.checkout("topic")
+    monkeypatch.setenv(default_branch.CHECK_BASE_ENV, named)
+
+    assert _stamp(repo, "project") == ("PRJ-003-next.md", [])
+
+
+@pytest.mark.parametrize(("namespace", "folder", "prefix"), NAMESPACES, ids=NAMESPACE_IDS)
+def test_an_unreadable_default_branch_is_reported_and_the_working_tree_numbers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, namespace: str, folder: str, prefix: str
+) -> None:
+    """A remote whose copy of the default branch was never fetched: the stamp says so, with
+    the backbone's reason and fixes — the fetch and the declaration, never a base — and
+    numbers past the working tree alone (COR-054 point 4)."""
+    repo = _git_project(tmp_path, monkeypatch)
+    repo.write(_record(folder, prefix, 4, "here"))
+    repo.git("remote", "add", "origin", str(tmp_path / "never-fetched.git"))
+
+    assert _stamp(repo, namespace) == (
+        f"{prefix}-005-next.md",
+        [
+            "the default branch 'main' resolves to no commit here: 'origin/main' names none — "
+            "fetch it (`git fetch origin main`), or declare the right one "
+            "(`repository.default-branch` in .pkit/project/config.yaml). The local branch "
+            "'main' is not read while a remote holds the shared one — it can lag it or carry "
+            f"work nobody pushed. {prefix}-005 {ALONE}"
+        ],
+    )
+
+
+def test_a_default_branch_whose_files_cannot_be_read_is_reported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The branch resolves, and git cannot read the files of its commit: that is said too,
+    and the working tree numbers."""
+    repo = _git_project(tmp_path, monkeypatch)
+    _cut_before(repo, _record(".pkit/decisions/project", "PRJ", 2, "landed"))
+    _with_remote(repo, tmp_path)
+    tip = repo.git("rev-parse", "origin/main").stdout.strip()
+    # Made here, the commit's objects are loose here: the remote keeps its own copy.
+    repo.lose_object(repo.git("rev-parse", "origin/main^{tree}").stdout.strip())
+
+    name, said = _stamp(repo, "project")
+
+    assert name == "PRJ-002-next.md"
+    assert len(said) == 1
+    assert said[0].startswith(
+        f"the default branch 'main' (origin/main at {tip[:12]}) could not be read: `git ls-tree` "
+        "failed: "
+    )
+    assert said[0].endswith(f". PRJ-002 {ALONE}")
+
+
+def test_a_default_branch_read_from_the_local_branch_says_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With no remote the local branch is read, and the stamp says so, as every reader of
+    the default branch does (COR-054 point 2); its records still count."""
+    repo = _git_project(tmp_path, monkeypatch)
+    _cut_before(repo, _record(".pkit/decisions/project", "PRJ", 2, "landed"))
+
+    assert _stamp(repo, "project") == (
+        "PRJ-003-next.md",
+        [
+            "the default branch 'main' is read from the local branch 'main': this repository "
+            "has no remote to read the shared one from, and a local branch can lag it or carry "
+            "work nobody pushed (COR-054 point 2)"
+        ],
+    )
+
+
+def test_a_default_branch_with_no_commit_yet_holds_nothing_and_says_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Before the first commit the default branch holds nothing yet, which is no failure to
+    read it, and the reader reports that (COR-054 point 4): the working tree numbers, and
+    the stamp says so as a notice, never a warning."""
+    monkeypatch.delenv(default_branch.CHECK_BASE_ENV, raising=False)
+    repo = GitRepo.init(tmp_path / "work")
+    repo.write(_record(".pkit/decisions/project", "PRJ", 2, "here"))
+
+    told: list[str] = []
+    warned: list[str] = []
+    target = decisions.stamp_decision(
+        repo.root, namespace="project", slug="next", say=told.append, warn=warned.append
+    )
+
+    assert (target.name, told, warned) == ("PRJ-003-next.md", [_unborn("PRJ-003")], [])
+
+
+def _unborn(record_id: str, name: str = "main") -> str:
+    """What the stamp says of a default branch with no commit yet."""
+    return (
+        f"the default branch {name!r} has no commit yet, so it holds no record: {record_id} is "
+        f"numbered past the working tree (COR-054 point 4)."
+    )
+
+
+def test_the_declared_default_branch_is_the_one_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A project that declares `trunk` numbers past `trunk`, never past a `main` it also
+    has (COR-054 point 1)."""
+    monkeypatch.delenv(default_branch.CHECK_BASE_ENV, raising=False)
+    repo = GitRepo.init(tmp_path / "work", branch="trunk")
+    repo.commit(
+        "first",
+        {
+            CONFIG: "repository:\n  default-branch: trunk\n",
+            **_record(".pkit/decisions/project", "PRJ", 1, "first"),
+        },
+    )
+    repo.git("branch", "main")
+    repo.checkout("topic", create=True)
+    repo.checkout("main")
+    repo.commit("a stale main", _record(".pkit/decisions/project", "PRJ", 9, "stale"))
+    repo.checkout("trunk")
+    repo.commit("trunk's own", _record(".pkit/decisions/project", "PRJ", 2, "landed"))
+    _with_remote(repo, tmp_path)
+    repo.checkout("topic")
+
+    assert _stamp(repo, "project") == ("PRJ-003-next.md", [])
+
+
+def test_a_declaration_read_as_the_default_is_said(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A declared value that is no branch name is read as `main`, and the stamp says so,
+    as every reader of the default branch does (COR-048 point 4)."""
+    repo = _git_project(tmp_path, monkeypatch)
+    repo.write({CONFIG: "repository:\n  default-branch: two words\n"})
+    _cut_before(repo, _record(".pkit/decisions/project", "PRJ", 2, "landed"))
+    _with_remote(repo, tmp_path)
+
+    assert _stamp(repo, "project") == (
+        "PRJ-003-next.md",
+        [
+            "repository.default-branch 'two words' is not a branch name; read as 'main' — "
+            "`pkit validate` fails on it"
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    ("namespace", "folder", "prefix"),
+    [("project", "proj/.pkit/decisions/project", "PRJ"), ("adr", "adr", "ADR")],
+    ids=["project", "adr-beside-the-project"],
+)
+def test_a_project_below_the_repository_s_top_reads_its_folders_from_the_top(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, namespace: str, folder: str, prefix: str
+) -> None:
+    """A project root below the repository's top, and an ADR folder beside it rather than
+    in it, are read at the default branch's commit by their paths from the top."""
+    monkeypatch.delenv(default_branch.CHECK_BASE_ENV, raising=False)
+    repo = GitRepo.init(tmp_path / "work")
+    repo.commit(
+        "first",
+        {
+            f"proj/{OVERLAY.as_posix()}": "adr-records:\n  - ../adr/\n",
+            **_record("proj/.pkit/decisions/project", "PRJ", 1, "first"),
+            **_record("adr", "ADR", 1, "first"),
+        },
+    )
+    _cut_before(repo, _record(folder, prefix, 2, "landed"))
+    _with_remote(repo, tmp_path)
+
+    said: list[str] = []
+    target = decisions.stamp_decision(
+        repo.root / "proj", namespace=namespace, slug="next", warn=said.append
+    )
+
+    assert (target.name, said) == (f"{prefix}-003-next.md", [])
+
+
+def test_outside_a_repository_the_reason_is_that_git_finds_none(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With no repository here, the stamp gives git's own reason, rather than a fix to a
+    branch that cannot help, and the working tree numbers."""
+    monkeypatch.delenv(default_branch.CHECK_BASE_ENV, raising=False)
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))
+    project = tmp_path / "plain"
+    (project / ".pkit" / "decisions" / "project").mkdir(parents=True)
+
+    said: list[str] = []
+    target = decisions.stamp_decision(project, namespace="project", slug="x", warn=said.append)
+
+    assert target.name == "PRJ-001-x.md"
+    assert len(said) == 1
+    assert said[0].startswith("the default branch 'main' cannot be read: `git rev-parse` failed: ")
+    assert "not a git repository" in said[0]
+    assert said[0].endswith(f". PRJ-001 {ALONE}")
+
+
+def test_with_no_git_to_run_the_reason_says_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A repository git is missing to read: the reason is that git cannot run."""
+    repo = _git_project(tmp_path, monkeypatch)
+    monkeypatch.setenv("PATH", "")
+
+    name, said = _stamp(repo, "project")
+
+    assert name == "PRJ-002-next.md"
+    assert len(said) == 1
+    assert said[0].startswith("the default branch 'main' cannot be read: cannot run git: ")
+    assert said[0].endswith(f". PRJ-002 {ALONE}")
+
+
+def test_a_head_git_cannot_read_keeps_the_branch_s_own_reason_and_fixes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Where git finds the repository and the branch resolves to no commit, the backbone's
+    reason stands, with the references it tried and its fixes (COR-054 point 4), even
+    when HEAD names an object git cannot read."""
+    repo = _git_project(tmp_path, monkeypatch)
+    repo.git("remote", "add", "origin", str(tmp_path / "never-fetched.git"))
+    (repo.root / ".git" / "HEAD").write_text("0123456789abcdef0123456789abcdef01234567\n")
+
+    name, said = _stamp(repo, "project")
+
+    assert name == "PRJ-002-next.md"
+    assert said == [
+        "the default branch 'main' resolves to no commit here: 'origin/main' names none — "
+        "fetch it (`git fetch origin main`), or declare the right one "
+        "(`repository.default-branch` in .pkit/project/config.yaml). The local branch "
+        "'main' is not read while a remote holds the shared one — it can lag it or carry "
+        f"work nobody pushed. PRJ-002 {ALONE}"
+    ]
+
+
+def test_a_repository_git_finds_keeps_the_branch_s_fixes_though_it_names_no_top(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A repository configured bare is one git finds, though it names no top: a default
+    branch never fetched keeps the backbone's reason and its fixes."""
+    repo = _git_project(tmp_path, monkeypatch)
+    repo.git("remote", "add", "origin", str(tmp_path / "never-fetched.git"))
+    repo.git("config", "core.bare", "true")
+
+    name, said = _stamp(repo, "project")
+
+    assert name == "PRJ-002-next.md"
+    assert len(said) == 1
+    assert said[0].startswith(
+        "the default branch 'main' resolves to no commit here: 'origin/main' names none — "
+        "fetch it (`git fetch origin main`)"
+    )
+    assert said[0].endswith(f". PRJ-002 {ALONE}")
+
+
+def test_a_repository_whose_top_git_cannot_name_is_reported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The branch resolves, and git cannot name the repository's top to list its commit
+    from — a repository configured bare, say: that is said, and the working tree numbers."""
+    repo = _git_project(tmp_path, monkeypatch)
+    _cut_before(repo, _record(".pkit/decisions/project", "PRJ", 2, "landed"))
+    _with_remote(repo, tmp_path)
+    tip = repo.git("rev-parse", "origin/main").stdout.strip()
+    repo.git("config", "core.bare", "true")
+
+    name, said = _stamp(repo, "project")
+
+    assert name == "PRJ-002-next.md"
+    assert len(said) == 1
+    assert said[0].startswith(
+        f"the default branch 'main' (origin/main at {tip[:12]}) could not be read: "
+        "`git rev-parse` failed: "
+    )
+    assert said[0].endswith(f". PRJ-002 {ALONE}")
+
+
+def test_the_command_warns_on_standard_error_and_stamps_on_standard_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`pkit new decision` prints what it says of the default branch as a warning on
+    standard error; the stamped line stays alone on standard output."""
+    repo = _git_project(tmp_path, monkeypatch)
+    repo.git("remote", "add", "origin", str(tmp_path / "never-fetched.git"))
+    monkeypatch.chdir(repo.root)
+
+    result = CliRunner().invoke(main, ["new", "decision", "project", "next"])
+
+    assert result.exit_code == 0, result.output
+    assert result.stdout == "Stamped: .pkit/decisions/project/PRJ-002-next.md\n"
+    assert result.stderr.startswith("warning: the default branch 'main' resolves to no commit")
+    assert result.stderr.endswith(f"PRJ-002 {ALONE}\n")

@@ -13,6 +13,13 @@ Held to software-analysis DEC-001 points 5, 6 and 9:
   stale. One whose artefacts all hold, or were updated because the change was
   plainly meant, is refused: each artefact's own revalidation block is its
   record. A regression or a gap names what it found;
+- **its body rendered with no hints** (#1366) — each gap labelled with the ids
+  of the artefacts it affects, refused where the form `gaps-match-outcomes`
+  refuses it, and `None.` where there is none;
+- **a planned record's sources** (#1366) — `--reviewed-against`, once for each,
+  only on a planned record and required there, each held to the record's
+  schema; a commit the default branch does not hold is written with a warning,
+  and one the stamp cannot place says nothing;
 - **every word is the person's** — an outcome with no justification, and a text
   still holding a placeholder, are refused rather than written;
 - an **actor or term nothing embodies** is stamped with its reason,
@@ -38,7 +45,7 @@ import pytest
 
 from project_kit import friction_write as fw
 from project_kit.friction_validate import FrictionFindingKind, validate_friction
-from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo, sign_nothing
 from tests.analysis_repo import (
     ACTORS,
     GLOSSARY,
@@ -106,7 +113,7 @@ def test_a_regression_found_is_recorded_with_its_gap(project: AdopterRepo) -> No
         "--because",
         "JRN-001=The first run still passes through both use cases.",
         "--gap",
-        "The suite no longer runs from the CLI => defect #46 reported",
+        "UC-001: The suite no longer runs from the CLI => defect #46 reported",
         "--by-agent",
         "analysis-resolver",
         "--confirmed-by",
@@ -130,8 +137,42 @@ def test_a_regression_found_is_recorded_with_its_gap(project: AdopterRepo) -> No
         "change dropped it.\n" in body
     )
     assert "- **JRN-001 — holds.** The first run still passes through both use cases.\n" in body
-    assert "- The suite no longer runs from the CLI — **resolved:** defect #46 reported\n" in body
+    # The gap's ids as its label, then the gap and its resolution, each ended (#1366).
+    assert body.endswith(
+        "## Gaps\n\n- **UC-001:** The suite no longer runs from the CLI. **Resolution:** "
+        "defect #46 reported.\n"
+    )
     assert "<" not in body and "UC-000" not in body
+    assert errors(check(project)) == []
+
+
+def test_a_gap_names_each_artefact_it_affects(project: AdopterRepo) -> None:
+    """One gap may affect several artefacts: its ids, separated by commas, are its bold
+    label, and each regression or gap found is named by one (DEC-001 point 6, #1366)."""
+    completed = _record(
+        project,
+        "suite-lost",
+        "--change",
+        "#45",
+        "--trigger",
+        "scheduled",
+        "--outcome",
+        "UC-001=code-regressed",
+        "--outcome",
+        "JRN-001=code-regressed",
+        "--because",
+        "UC-001=Running the suite is still wanted.",
+        "--because",
+        "JRN-001=The first run still starts with the suite.",
+        "--gap",
+        "UC-001,JRN-001: The suite no longer runs? => defect #46 reported!",
+    )
+    assert completed.returncode == 0, completed.stderr
+    body = (project.root / RECORDS / f"{_today()}-suite-lost.md").read_text(encoding="utf-8")
+    assert body.endswith(
+        "## Gaps\n\n- **UC-001, JRN-001:** The suite no longer runs? **Resolution:** defect "
+        "#46 reported!\n"
+    )
     assert errors(check(project)) == []
 
 
@@ -148,15 +189,192 @@ PLANNED = (
 )
 
 
-def test_a_planned_revalidation_is_recorded_even_when_everything_holds(
+#: A source in the tracker, as `--reviewed-against` takes it: its title, its version and
+#: its link.
+TRACKER = "#50's body @ 2026-01-05T10:00:00Z @ https://tracker.example/issues/50"
+
+
+def _source_warnings(completed: subprocess.CompletedProcess[str]) -> list[str]:
+    """The stamp's warnings on the sources a record names, each opening with the source's
+    title: what the backbone warns of the default branch it reads stands apart."""
+    return [line for line in completed.stderr.splitlines() if line.startswith('warning: "')]
+
+
+def _off_the_default_branch(repo: AdopterRepo) -> str:
+    """A commit the clone holds and the default branch's history never reaches, as a
+    branch's commit is once a squash merge left it behind."""
+    tree = repo.git("rev-parse", "HEAD^{tree}").stdout.strip()
+    return repo.git("commit-tree", tree, "-p", "HEAD", "-m", "the design").stdout.strip()
+
+
+def test_a_planned_revalidation_is_something_to_say_and_names_its_sources(
     project: AdopterRepo,
 ) -> None:
+    """A planned revalidation leaves a record even when everything holds (DEC-001 point
+    6), and the record names each source of the design it reviewed in
+    `reviewed-against`, one `--reviewed-against` each (#1366): a title and a version, then
+    a link outside this repository. A time is written quoted, as is any value YAML would
+    read as something other than text, so each reads back as the text written. A commit
+    the default branch holds draws no warning."""
+    held = project.head()
+    sources = (
+        "--reviewed-against",
+        TRACKER,
+        "--reviewed-against",
+        f"the redesign note @ {held}",
+        "--reviewed-against",
+        "the export's design, part 2 @ this change",
+    )
+    completed = _record(project, "report-redesign", *PLANNED, *sources)
+    assert completed.returncode == 0, completed.stderr
+    assert _source_warnings(completed) == []
+    rel = f"{RECORDS}/{_today()}-report-redesign.md"
+    record = front(project, rel)
+    assert list(record) == ["change", "trigger", "reviewed-against", "date", "by", "outcomes"]
+    assert record["reviewed-against"] == [
+        {
+            "title": "#50's body",
+            "url": "https://tracker.example/issues/50",
+            "version": "2026-01-05T10:00:00Z",
+        },
+        {"title": "the redesign note", "version": held},
+        {"title": "the export's design, part 2", "version": "this change"},
+    ]
+    text = (project.root / rel).read_text(encoding="utf-8")
+    assert "version: '2026-01-05T10:00:00Z'" in text or 'version: "2026-01-05T10:00:00Z"' in text
+    assert text.endswith("## Gaps\n\nNone.\n")
+    assert errors(check(project)) == []
+
+
+def test_a_planned_record_names_its_sources_and_only_a_planned_record_does(
+    project: AdopterRepo,
+) -> None:
+    """A planned record without its sources is refused, saying how to give them, never
+    "nothing to record". A record of another trigger is refused one (DEC-001 point 6)."""
     completed = _record(project, "report-redesign", *PLANNED)
+    assert completed.returncode == 1, completed.stdout
+    assert "a planned record names each source of the design it reviewed" in completed.stderr
+    assert '"<title> @ <version>" for a source in this repository' in completed.stderr
+    assert "nothing to record" not in completed.stderr
+    completed = _record(project, "report-redesign", *STALE, "--reviewed-against", TRACKER)
+    assert completed.returncode == 1, completed.stdout
+    assert "a record triggered by drift takes none (DEC-001 point 6)" in completed.stderr
+    assert _records(project) == []
+
+
+@pytest.mark.parametrize(
+    ("value", "refusal"),
+    [
+        ("the redesign note", 'is not "<title> @ <version>"'),
+        (" @ this change", 'is not "<title> @ <version>"'),
+        (
+            "the redesign note @ 4c1d2e9",
+            "reads as title 'the redesign note', version '4c1d2e9', which the record's schema "
+            "refuses",
+        ),
+        (
+            "#50's body @ 2026-01-05 10:00 @ https://tracker.example/issues/50",
+            "version '2026-01-05 10:00', which the record's schema refuses",
+        ),
+        (
+            "#50's body @ this change @ https://tracker.example/issues/50",
+            "url 'https://tracker.example/issues/50', version 'this change', which",
+        ),
+        ("#50's body @ 2026-01-05T10:00:00Z", "version '2026-01-05T10:00:00Z', which"),
+        ("<what the source is> @ this change", "still holds the placeholder"),
+    ],
+    ids=[
+        "no-version",
+        "no-title",
+        "short-commit",
+        "time-not-utc",
+        "this-change-outside",
+        "time-without-a-link",
+        "placeholder",
+    ],
+)
+def test_a_source_the_record_s_schema_refuses_is_refused(
+    project: AdopterRepo, value: str, refusal: str
+) -> None:
+    """Each source is held to the record's schema before anything is written: a commit's
+    full id, or `this change`, in this repository, and outside it a time in UTC or a
+    commit's full id, beside its link (DEC-001 point 6)."""
+    completed = _record(project, "report-redesign", *PLANNED, "--reviewed-against", value)
+    assert completed.returncode == 1, completed.stdout
+    assert refusal in completed.stderr
+    assert _records(project) == []
+
+
+def test_a_commit_off_the_default_branch_is_written_with_a_warning(project: AdopterRepo) -> None:
+    """A source naming a commit the default branch does not hold is written all the same,
+    and the stamp warns that `pkit analysis check-pointers` fails the change until the
+    source names a commit the default branch holds, or `this change`: refusing would leave
+    no way to write the record while the design's pull request is open (#1366). The stamp
+    places the commit as that command does (#1448)."""
+    branch = _off_the_default_branch(project)
+    completed = _record(
+        project, "report-redesign", *PLANNED, "--reviewed-against", f"the redesign note @ {branch}"
+    )
+    assert completed.returncode == 0, completed.stderr
+    (warning,) = _source_warnings(completed)
+    assert warning.startswith(
+        f'warning: "the redesign note" names {branch[:12]}, which the default branch, main, '
+        f"does not hold: `pkit analysis check-pointers` fails the change that adds this record "
+        f"until the source names a commit main holds, or `this change`"
+    )
+    assert completed.stdout.splitlines()[-1].startswith("stamped ")
+    assert _records(project) == [f"{_today()}-report-redesign.md"]
+
+
+def test_a_commit_the_stamp_cannot_place_says_nothing(project: AdopterRepo, tmp_path: Path) -> None:
+    """A commit beyond a shallow clone's cut cannot be placed, and draws no warning: the
+    pointers are provenance, and `pkit analysis check-pointers` reports it as unknown
+    (#1448). A clone one commit deep holds the analysis, and not the commit before it. A
+    clone holds no `user.name` of its own, so the record names who performed it with
+    `--by`, and the test does not depend on the machine's git configuration."""
+    project.commit("the analysis")
+    before = project.git("rev-parse", "HEAD~1").stdout.strip()
+    shallow = tmp_path / "shallow"
+    project.git("clone", "-q", "--depth", "1", f"file://{project.root}", str(shallow))
+    clone = AdopterRepo(shallow, source_kit=project.source_kit)
+    sign_nothing(shallow)
+    completed = _record(
+        clone,
+        "report-redesign",
+        *PLANNED,
+        "--reviewed-against",
+        f"the redesign note @ {before}",
+        "--by",
+        "Sam",
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert _source_warnings(completed) == []
+    assert _records(clone) == [f"{_today()}-report-redesign.md"]
+
+
+#: A drift revalidation where a person decided UC-002 was stale: something to say.
+STALE = (
+    "--change",
+    "#50",
+    "--trigger",
+    "drift",
+    "--outcome",
+    "UC-002=analysis-stale",
+    "--because",
+    "UC-002=The redesign moved the report's layout on purpose, and step 2 now says so.",
+    "--confirmed-by",
+    "Sam",
+)
+
+
+def test_a_record_with_no_gap_says_none_found(project: AdopterRepo) -> None:
+    completed = _record(project, "report-redesign", *STALE)
     assert completed.returncode == 0, completed.stderr
     rel = f"{RECORDS}/{_today()}-report-redesign.md"
     assert front(project, rel)["by"] == "pkit-test"  # git's user.name, when --by is not given
     body = (project.root / rel).read_text(encoding="utf-8")
-    assert body.endswith("## Gaps\n\nNone found.\n")
+    assert body.endswith("## Gaps\n\nNone.\n")  # `None.`, as every part reads it (#1366)
+    assert "pkit:hint" not in body  # the stamp writes every part, so it writes no hint
     assert errors(check(project)) == []
 
 
@@ -173,7 +391,7 @@ def test_an_open_regression_is_reported_until_it_is_revalidated_on_a_later_day(
         "--because",
         "UC-001=Running the suite is still wanted; the change dropped it.",
         "--gap",
-        "The suite no longer runs => defect #46 reported",
+        "UC-001: The suite no longer runs => defect #46 reported",
     )
     assert _record(project, "suite-lost", *regression).returncode == 0
     where = f"{RECORDS}/{_today()}-suite-lost.md:/outcomes/UC-001"
@@ -231,11 +449,88 @@ WHY = ("--because", "UC-001=The suite still runs as described.")
         ),
         (
             ("--trigger", "scheduled", "--outcome", "UC-001=gap-found", *WHY, "--gap", "An export"),
-            'is not "<gap> => <resolution>"',
+            'is not "<ids>: <gap> => <resolution>"',
         ),
         (
             ("--trigger", "scheduled", "--outcome", "UC-001=gap-found", *WHY, "--gap", " => x"),
-            'is not "<gap> => <resolution>"',
+            'is not "<ids>: <gap> => <resolution>"',
+        ),
+        (
+            (
+                "--trigger",
+                "scheduled",
+                "--outcome",
+                "UC-001=gap-found",
+                *WHY,
+                "--gap",
+                "An export goes nowhere => defect #46 reported",
+            ),
+            'is not "<ids>: <gap> => <resolution>": the ids of the artefacts it affects',
+        ),
+        (
+            (
+                "--trigger",
+                "scheduled",
+                "--outcome",
+                "UC-001=gap-found",
+                *WHY,
+                "--gap",
+                "UC-001, : An export goes nowhere => defect #46 reported",
+            ),
+            'is not "<ids>: <gap> => <resolution>"',
+        ),
+        (
+            (
+                "--trigger",
+                "scheduled",
+                "--outcome",
+                "UC-001=gap-found",
+                *WHY,
+                "--gap",
+                "UC-002: An export goes nowhere => defect #46 reported",
+            ),
+            "--gap 'UC-002: An export goes nowhere => defect #46 reported': the gap names "
+            "`UC-002`, which `outcomes` does not list",
+        ),
+        (
+            (
+                "--trigger",
+                "scheduled",
+                "--outcome",
+                "UC-001=gap-found",
+                "--outcome",
+                "UC-002=code-regressed",
+                *WHY,
+                "--because",
+                "UC-002=Reading the report is still wanted.",
+                "--gap",
+                "UC-001: An export goes nowhere => defect #46 reported",
+            ),
+            "the gaps break the form `gaps-match-outcomes`: UC-002's outcome is "
+            "`code-regressed`, and no gap names it",
+        ),
+        (
+            (
+                "--trigger",
+                "scheduled",
+                "--outcome",
+                "UC-001=gap-found",
+                *WHY,
+                "--gap",
+                "UC-001: An export goes nowhere.\n\nNothing says so. => defect #46 reported",
+            ),
+            "holds a line break: the record writes it on one line",
+        ),
+        (
+            (
+                "--trigger",
+                "planned",
+                "--outcome",
+                "UC-001=holds",
+                "--because",
+                "UC-001=The suite still runs.\nAs described.",
+            ),
+            "--because UC-001 'The suite still runs.\\nAs described.' holds a line break",
         ),
         (
             ("--trigger", "planned", "--outcome", "UC-001=holds", "--outcome", "JRN-001=holds"),
@@ -258,7 +553,7 @@ WHY = ("--because", "UC-001=The suite still runs as described.")
                 "--because",
                 "UC-001=The export is wanted; defect <the defect reference> reported.",
                 "--gap",
-                "Nothing exports => defect #46 reported",
+                "UC-001: Nothing exports => defect #46 reported",
             ),
             "--because UC-001 still holds the placeholder '<the defect reference>'",
         ),
@@ -270,7 +565,7 @@ WHY = ("--because", "UC-001=The suite still runs as described.")
                 "UC-001=code-regressed",
                 *WHY,
                 "--gap",
-                "Nothing exports => defect <the defect reference> reported",
+                "UC-001: Nothing exports => defect <the defect reference> reported",
             ),
             "--gap still holds the placeholder '<the defect reference>'",
         ),
@@ -342,7 +637,7 @@ def test_a_person_and_an_agent_are_not_both_who_performed_it(project: AdopterRep
 
 
 def test_a_record_already_written_is_not_overwritten(project: AdopterRepo) -> None:
-    args = PLANNED
+    args = STALE
     assert _record(project, "report-redesign", *args).returncode == 0
     completed = _record(project, "report-redesign", *args)
     assert completed.returncode == 1

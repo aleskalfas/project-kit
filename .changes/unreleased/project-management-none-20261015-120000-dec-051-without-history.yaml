@@ -1,0 +1,6 @@
+component: project-management
+kind: none
+body: >
+  DEC-051 states its decision without the story of how the record was
+  revised. It decides what it decided before, and the README's answer
+  to the change says it holds. Nothing you run or configure changes.

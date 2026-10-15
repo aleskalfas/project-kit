@@ -24,7 +24,10 @@ What is checked, each against the record's words:
   still holding one of the templates', is an error. Matched exactly against those texts
   (`_lib/placeholder.py`), so a capitalised one (`<Title>`) is caught and
   words of the artefact's own in angle brackets — code a body quotes — never
-  are.
+  are. A hint the stamp wrote as a part's placeholder, still in a body or a
+  section, is an error too: a comment that opens with its mark, `<!--
+  pkit:hint`, outside fenced code and code spans (`structure.hints`). The
+  message repeats the hint. Neither needs a rule.
 - **A document's heading** is its id and its front matter's title — an
   actor's name — `# UC-NNN — <title>`, `# ACT-<slug> — <name>`: what a reader
   of the front matter alone sees — a data point publishing `{id, title,
@@ -42,6 +45,10 @@ What is checked, each against the record's words:
   force names none withdrawn. The stamp refuses the same (`Analysis.unfit`),
   so the check never accepts what the stamp would not write; a withdrawn
   artefact may name withdrawn ones.
+- **One actor's journey** (point 1): each step of a journey in force is a use
+  case of the journey's actor, since a journey is one actor's path across use
+  cases. The stamp refuses the same (`Analysis.another_actor`). A withdrawn
+  journey is history, so its steps are not compared.
 - **A use case anchors to its actor** (point 4), as an artefact anchor, so a
   changed actor flags it.
 - **A journey's anchors match its steps** (point 4): the use cases among its
@@ -88,6 +95,30 @@ And a finding that never fails:
   from the records and the artefacts in the working tree each time, never
   kept in a ledger (COR-050 point 9).
 
+And at the format rule's status:
+
+- **Each body against its kind's structure** (point 1; RS-SAN-001): every
+  artefact's body — a collection entry's section, as the backbone's reading
+  spans it, and the collection file's head — and every record's, against the
+  structure its kind declares (`_lib/structure.py`): a declared part missing,
+  out of order or empty, `None.` where the part may not read it, and a part or
+  a front-matter field that does not hold the form its element names
+  (`_lib/forms.py`), in each item of a list. A journey's steps read each use
+  case's title, and a record's outcomes and gaps its front matter. A part or a
+  label a writer adds is never reported, though what it holds is content of
+  the part it falls in, and a list form judges only the part's list items. A
+  withdrawn artefact is never failed for a part it lacks or for a form, since
+  either may have come after its withdrawal. A record is held to the structure declared
+  now, the only one declared so far: holding it to the structure in force on
+  its day comes with the first change to a structure (DEC-001's
+  Implications). A document's missing title heading is the heading check's,
+  above, which holds it whatever the rule's status. The structure
+  binds at the rule's status (COR-051 point 4): accepted, each departure is an
+  error; under any other status the check reports none of it. On request
+  (`preview`), a proposed rule is previewed as accepted: each departure is a
+  report, its message opening `preview:`, so the exit is the normal check's.
+  A superseded or withdrawn rule binds nothing in a preview either.
+
 It reads the working tree — and, when a record copies evidence, the evidence
 point — so the same tree gets the same answer as long as the evidence fillers
 read the tree alone.
@@ -106,22 +137,26 @@ refuses beside anchors (COR-050 points 1, 8 and 12; DEC-001 point 9).
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
 from ruamel.yaml.error import YAMLError
 
-from _lib import backbone, evidence, markdown, schemas
+from _lib import backbone, evidence, markdown, schemas, structure
 from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome, at
 from _lib.model import (
     ACTOR,
+    CAPABILITY,
     COLLECTIONS,
     CONTAINER,
+    FORMAT_RULE,
     ID_SHAPE,
     JOURNEY,
     KINDS,
+    METHOD_SET,
     NOUN,
     NUMBERED,
     REVALIDATED_AT,
@@ -133,6 +168,7 @@ from _lib.model import (
     Unreadable,
     id_in_name,
     identity,
+    one_actor,
     with_article,
 )
 from _lib.placeholder import IN_TEMPLATES, left_in
@@ -162,8 +198,9 @@ Record = tuple[str, dict[str, object]]
 AT_ODDS = {"holds": "failed", "code-regressed": "passed"}
 
 
-def check(root: Path) -> Outcome:
-    """Check the analysis in the working tree at `root`."""
+def check(root: Path, *, preview: bool = False) -> Outcome:
+    """Check the analysis in the working tree at `root` — with `preview`, a proposed
+    format rule's structure too, as reports that never fail."""
     outcome = Outcome()
     try:
         analysis = backbone.read_analysis(root)
@@ -188,6 +225,7 @@ def check(root: Path) -> Outcome:
     outcome.findings += _duplicates(analysis)
     outcome.findings += _named_otherwise(analysis)
     outcome.findings += _references(analysis)
+    outcome.findings += _journeys_of_one_actor(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
     record_findings, copies, read = _record_findings(root, records, analysis)
@@ -197,6 +235,9 @@ def check(root: Path) -> Outcome:
         outcome.summary.append(summary)
         outcome.findings += compared
     outcome.findings += _open_regressions(root, read, analysis)
+    summary, departing = _structure(root, analysis, read, preview=preview)
+    outcome.summary.append(summary)
+    outcome.findings += departing
     return outcome
 
 
@@ -261,7 +302,8 @@ def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
     or its section of a collection file, heading included. Matched exactly
     (`_lib/placeholder.py`), so words of the
     artefact's own in angle brackets — `maps <user id> to a session`, code a body
-    quotes — are never taken for one."""
+    quotes — are never taken for one. A hint left in a body or a section is one too
+    (`_hints_left`)."""
     texts: dict[str, str | None] = {}
     found: list[Finding] = []
     for artefact in analysis.artefacts:
@@ -285,6 +327,8 @@ def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
         text = texts[artefact.path]
         if text is None:
             continue  # the core reports a file it cannot read
+        where = "its section" if artefact.entry else "its body"
+        found += _hints_left(text, artefact, where)
         _front, body = markdown.split(text)
         if artefact.entry and artefact.id is not None:
             body = markdown.section(body, artefact.id)
@@ -292,7 +336,6 @@ def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
         if not held:
             continue
         more = f" and {len(held) - 1} more" if len(held) > 1 else ""
-        where = "its section" if artefact.entry else "its body"
         found.append(
             Finding(
                 ERROR,
@@ -302,6 +345,33 @@ def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
             )
         )
     return found
+
+
+def _hints_left(text: str, artefact: Artefact, where: str) -> list[Finding]:
+    """A hint the stamp wrote as a part's placeholder, still in the artefact's body or its
+    section, outside fenced code and code spans (`structure.hints`): an error whatever
+    the format rule's status, as any placeholder is, the message repeating the first
+    hint (DEC-001 point 1). An entry is read within the span the backbone gives it, and
+    one with no section holds no hint."""
+    if artefact.entry:
+        if artefact.span is None:
+            return []
+        lines = structure.span_lines(text, artefact.span)
+    else:
+        lines = structure.body_lines(text)
+    left = structure.hints(lines)
+    if not left:
+        return []
+    (line, said), more = left[0], len(left) - 1
+    others = f", and {more} more below it" if more else ""
+    return [
+        Finding(
+            ERROR,
+            artefact.location,
+            f"{where} still holds a hint at line {line}{others}: write in its place what it "
+            f"asks for, and delete the hint (DEC-001 point 1). The hint: {said}",
+        )
+    ]
 
 
 def _strings(value: object, pointer: str = "") -> list[tuple[str, str]]:
@@ -483,6 +553,37 @@ def _references(analysis: Analysis) -> list[Finding]:
     return found
 
 
+def _journeys_of_one_actor(analysis: Analysis) -> list[Finding]:
+    """A journey in force whose step is a use case of another actor than the journey's:
+    a journey is one actor's path across use cases (DEC-001 point 1), and the stamp
+    refuses the same (`Analysis.another_actor`). A withdrawn journey is history, and
+    its steps' actors may have changed since. A journey whose actor is no actor of the
+    analysis is `_references`' to report, and a step that is no use case of it too."""
+    found: list[Finding] = []
+    for journey in analysis.of_kind(JOURNEY):
+        actor, steps = journey.fields.get("actor"), journey.fields.get("steps")
+        if (
+            journey.withdrawn
+            or not isinstance(actor, str)
+            or analysis.of(actor, ACTOR) is None
+            or not isinstance(steps, list)
+        ):
+            continue
+        for index, step in enumerate(steps):
+            other = analysis.another_actor(step, actor) if isinstance(step, str) else None
+            if other is None:
+                continue
+            found.append(
+                Finding(
+                    ERROR,
+                    at(journey.location, f"/steps/{index}"),
+                    f"{one_actor(index + 1, step, other, actor)} — name one of {actor}'s in "
+                    f"its place, or correct the use case's actor (DEC-001 point 1)",
+                )
+            )
+    return found
+
+
 # --- anchors -------------------------------------------------------------------------------
 
 
@@ -547,6 +648,7 @@ def _record_findings(
         try:
             front, _body = markdown.split((root / rel).read_text(encoding="utf-8"))
             data = markdown.load(front) if front is not None else None
+            times = markdown.unquoted_times(front) if front is not None else {}
         except (OSError, UnicodeDecodeError) as exc:
             found.append(Finding(ERROR, rel, f"cannot be read: {exc}"))
             continue
@@ -566,6 +668,8 @@ def _record_findings(
             )
             continue
         for pointer, message in schemas.errors(schemas.RECORD, data):
+            if pointer in times:
+                message = _unquoted_time(pointer, times[pointer])
             found.append(Finding(ERROR, at(rel, pointer), message))
         found += _cited(rel, data.get("outcomes"), analysis)
         record_found, record_copies = _evidence_in_record(
@@ -575,6 +679,28 @@ def _record_findings(
         copies += record_copies
         read.append((rel, data))
     return found, copies, read
+
+
+#: Where in a record a time of day is written: a source's version, the time its text
+#: was read.
+_A_TIME = re.compile(r"^/reviewed-against/[0-9]+/version$")
+
+
+def _unquoted_time(pointer: str, read_as: str) -> str:
+    """Why a time written unquoted fails its record's schema: YAML reads it as a time,
+    not as the text written, and gives it back otherwise. Where the field holds a time,
+    the message gives its form. Elsewhere it gives the field's form in the schema."""
+    said = (
+        f"YAML reads this value as a time, since it is not quoted, and gives it back as "
+        f"{read_as!r}, not as written: quote it"
+    )
+    if _A_TIME.match(pointer):
+        return (
+            f"{said}, a time in UTC such as "
+            f'"2026-01-05T10:00:00Z", as a revalidation\'s `at` is written '
+            f"(`schemas/revalidation-record.schema.json`)"
+        )
+    return f"{said}, in the form the field takes (`schemas/revalidation-record.schema.json`)"
 
 
 def _cited(rel: str, outcomes: object, analysis: Analysis) -> list[Finding]:
@@ -809,3 +935,328 @@ def _entries_of_the_point(point: evidence.Evidence) -> list[Finding]:
                 )
             )
     return found
+
+
+# --- each body against its kind's structure (DEC-001 point 1; RS-SAN-001) ------------------
+
+#: What a preview finding's message opens with: a finding of a rule not yet accepted,
+#: at the severity that reports without judging (DEC-001 point 1; COR-055 point 4).
+PREVIEW = "preview: "
+
+#: The statuses that decide whether the structure binds (COR-051 point 4).
+ACCEPTED, PROPOSED = "accepted", "proposed"
+
+
+def _structure(
+    root: Path, analysis: Analysis, records: list[Record], *, preview: bool
+) -> tuple[str, list[Finding]]:
+    """Each artefact's body, each collection file's head and each record's body against
+    the structure its kind declares, at the format rule's status (DEC-001 point 1): an
+    error where the rule is accepted, a report opening `preview:` where it is proposed
+    and a preview is asked for, and nothing otherwise. Returns the summary's line
+    about it, and the findings."""
+    rules = analysis.method_rules
+    status = None if rules is None else rules.get(FORMAT_RULE)
+    if status == ACCEPTED:
+        severity, label = ERROR, ""
+    elif status == PROPOSED and preview:
+        severity, label = REPORT, PREVIEW
+    else:
+        return _unchecked(status, rules is None, preview), []
+    declaration = _shown(structure.KINDS_FILE, root)
+    try:
+        kinds = structure.read_kinds()
+    except structure.Unreadable as exc:
+        return (
+            f"structure ({FORMAT_RULE}, {status}): not checked — the declaration cannot be read.",
+            [
+                Finding(
+                    severity,
+                    declaration,
+                    f"{label}the kinds' structures cannot be read: {exc}. No body is checked "
+                    f"against its structure until they can: the file is {CAPABILITY}'s own, "
+                    f"never the project's to edit — restore it as the capability ships it "
+                    f"(DEC-001 point 1)",
+                )
+            ],
+        )
+    found: list[Finding] = []
+    texts: dict[str, str | None] = {}
+    titles = _titles(analysis)
+    checked = 0
+    for artefact in analysis.artefacts:
+        kind = kinds.get(artefact.kind)
+        text = _cached(root, artefact.path, texts)
+        if kind is None or text is None:
+            continue  # the core reports a file it cannot read
+        checked += 1
+        found += _artefact_structure(artefact, kind, text, titles)
+    heads, headed = _heads(root, analysis, kinds, texts)
+    found += heads
+    checked += headed
+    record = kinds.get(structure.RECORD)
+    for rel, data in records:
+        text = _cached(root, rel, texts)
+        if record is None or text is None:
+            continue
+        checked += 1
+        subject = "a revalidation record"
+        found += [
+            Finding(ERROR, rel, _departure_message(d, record.sections, subject))
+            for d in structure.departures(structure.body_lines(text), record, fields=data)
+        ]
+        found += _field_findings(rel, data, record, subject)
+    found = [Finding(severity, f.location, label + f.message) for f in found]
+    departing = len({f.location.split(":/", 1)[0] for f in found})
+    previewed = ", previewed as accepted" if label else ""
+    never = ", reported and never failing" if label else ""
+    return (
+        f"structure ({FORMAT_RULE}, {status}{previewed}): {checked} artefact(s), record(s) and "
+        f"file head(s) checked against the structure their kind declares in {declaration}; "
+        f"{departing} of them departing from it{never}.",
+        found,
+    )
+
+
+def _unchecked(status: str | None, no_set: bool, preview: bool) -> str:
+    """The summary's line when the structure binds nothing, and why (COR-051 point 4)."""
+    if no_set:
+        return (
+            f"structure ({FORMAT_RULE}): not checked — the backbone's reading holds no "
+            f"{CAPABILITY}:{METHOD_SET}, so whether its format rule binds cannot be told."
+        )
+    if status is None:
+        return f"structure: not checked — {CAPABILITY}:{METHOD_SET} holds no {FORMAT_RULE}."
+    if status == PROPOSED:
+        return (
+            f"structure ({FORMAT_RULE}, proposed): not checked — the rule binds nothing until "
+            f"it is accepted (COR-051 point 4); `pkit analysis validate --preview` shows what "
+            f"it would report."
+        )
+    asked = " A preview shows only a proposed rule." if preview else ""
+    return (
+        f"structure ({FORMAT_RULE}, {status}): not checked — the rule binds nothing "
+        f"(COR-051 point 4).{asked}"
+    )
+
+
+def _titles(analysis: Analysis) -> dict[str, str]:
+    """Each use case's title by its id, as a journey's steps quote it."""
+    titles: dict[str, str] = {}
+    for use_case in analysis.of_kind(USE_CASE):
+        title = use_case.fields.get("title")
+        if use_case.id and isinstance(title, str):
+            titles.setdefault(use_case.id, title)
+    return titles
+
+
+def _artefact_structure(
+    artefact: Artefact, kind: structure.Kind, text: str, titles: Mapping[str, str]
+) -> list[Finding]:
+    """What an artefact's body — an entry's section — and its front matter break of its
+    kind's structure. A withdrawn artefact is never failed for a part it lacks or for a
+    form, and a document's missing title heading is `_headings`'."""
+    subject = with_article(artefact.kind)
+    if artefact.entry and not artefact.span_read:
+        return [
+            Finding(
+                ERROR,
+                artefact.location,
+                "its section is not checked against its kind's structure: the installed "
+                "backbone gives no entry's `span` in `pkit friction artefacts --json` — "
+                "upgrade it (`pkit upgrade`)",
+            )
+        ]
+    if artefact.entry and artefact.span is None:
+        departing = [structure.Departure(kind.sections[0], structure.MISSING)]
+    else:
+        lines = (
+            structure.span_lines(text, artefact.span)
+            if artefact.entry and artefact.span is not None
+            else structure.body_lines(text)
+        )
+        departing = structure.departures(lines, kind, fields=artefact.fields, titles=titles)
+    found = [
+        Finding(ERROR, artefact.location, _departure_message(d, kind.sections, subject))
+        for d in departing
+        if not _exempt(d, artefact)
+    ]
+    if artefact.withdrawn:
+        return found
+    return found + _field_findings(artefact.location, artefact.fields, kind, subject)
+
+
+def _exempt(departure: structure.Departure, artefact: Artefact) -> bool:
+    """A part a withdrawn artefact lacks, or a form it breaks, either of which may have
+    come since its withdrawal (DEC-001 point 1), and a document's title heading, which
+    `_headings` holds whatever the format rule's status."""
+    if artefact.withdrawn and departure.how in structure.FORM_BREACHES:
+        return True
+    if departure.how != structure.MISSING:
+        return False
+    if artefact.withdrawn:
+        return True
+    element = departure.element
+    return (
+        not artefact.entry
+        and artefact.kind in TITLED
+        and element.type == structure.HEADING
+        and element.text is None
+    )
+
+
+def _heads(
+    root: Path,
+    analysis: Analysis,
+    kinds: Mapping[str, structure.Kind],
+    texts: dict[str, str | None],
+) -> tuple[list[Finding], int]:
+    """Each collection file's head — its body above its first entry's section, as the
+    backbone's reading spans the entries — against its kind's declared head, and how
+    many heads were checked. A file whose front matter does not parse, or that is no
+    collection, is reported as such, so its head is not checked."""
+    found: list[Finding] = []
+    checked = 0
+    failed = set(analysis.unreadable) | {stray.path for stray in analysis.strays}
+    for path, kind_name in sorted(analysis.files.items()):
+        kind = kinds.get(kind_name)
+        if kind_name not in COLLECTIONS or kind is None or not kind.head or path in failed:
+            continue
+        entries = [a for a in analysis.artefacts if a.path == path and a.entry]
+        text = _cached(root, path, texts)
+        if text is None or any(not a.span_read for a in entries):
+            continue  # an entry reports a backbone that gives no span
+        firsts = [a.span[0] for a in entries if a.span is not None]
+        lines = structure.body_lines(text)
+        if firsts:
+            lines = [line for line in lines if line[0] < min(firsts)]
+        checked += 1
+        subject = f"a file of {NOUN[kind_name]}s"
+        found += [
+            Finding(ERROR, path, _departure_message(d, kind.head, subject))
+            for d in structure.departures(lines, kind, head=True)
+        ]
+    return found, checked
+
+
+def _field_findings(
+    location: str, fields: Mapping[str, Any], kind: structure.Kind, subject: str
+) -> list[Finding]:
+    """Each front-matter text that does not hold its field's form. A text that is still a
+    placeholder a template shipped is the placeholder check's, so no form reports it."""
+    found: list[Finding] = []
+    for departure in structure.field_departures(fields, kind):
+        if departure.text.strip() in IN_TEMPLATES:
+            continue
+        field = departure.field
+        each = " in each item" if departure.pointer.count("/") > 1 else ""
+        if departure.how == structure.NOT_A_SENTENCE:
+            problem = (
+                f"{departure.text!r} is more than one sentence: {subject}'s `{field.name}` "
+                f"holds one sentence{each}, and a sentence ends at a full stop, a question mark "
+                f"or an exclamation mark before a space or a line end"
+            )
+        else:
+            problem = (
+                f"{departure.text!r} is not of the form `{field.form}` that {subject}'s "
+                f"`{field.name}` takes{each}: {departure.detail}"
+            )
+        found.append(
+            Finding(
+                ERROR,
+                at(location, departure.pointer),
+                f"{problem} ({FORMAT_RULE}). {_advice(field.hint, field.example)}",
+            )
+        )
+    return found
+
+
+def _departure_message(
+    departure: structure.Departure, elements: Sequence[structure.Element], subject: str
+) -> str:
+    """What a departure breaks, where, and what goes in the part: its hint and example."""
+    element = departure.element
+    named = _named(element, elements)
+    line = f", at line {departure.line}," if departure.line is not None else ""
+    if departure.how == structure.MISSING:
+        problem = (
+            f"{named} is missing, {_place(element, elements)}: {subject} carries every part "
+            f"its kind ships"
+        )
+    elif departure.how == structure.OUT_OF_ORDER:
+        problem = (
+            f"{named}{line} is out of order, {_place(element, elements)}: the parts come in "
+            f"the order the kind gives"
+        )
+    elif departure.how == structure.EMPTY:
+        none = ", or `None.` when there is nothing to say" if element.allows_none else ""
+        problem = f"{named}{line} is empty: write in it what it asks for{none}"
+    elif departure.how == structure.NONE_REFUSED:
+        problem = (
+            f"{named}{line} reads `None.`, which only a part that allows it may: {subject} "
+            f"always has something to say here"
+        )
+    elif departure.how == structure.NOT_A_SENTENCE:
+        ends = (
+            "a sentence ends at a full stop, a question mark or an exclamation mark before a "
+            "space or a line end, and one ends here before the text's last word"
+        )
+        if departure.detail:  # an item of a list in the part
+            problem = (
+                f"an item of {named}{line} is more than one sentence: {departure.detail}, "
+                f"and {ends}"
+            )
+        else:
+            problem = f"{named}{line} is more than one sentence: {ends}"
+    else:
+        problem = f"{named}{line} does not hold its form, `{element.form}`: {departure.detail}"
+    return f"{problem} ({FORMAT_RULE}). {_advice(element.hint, element.example)}".rstrip()
+
+
+def _named(element: structure.Element, elements: Sequence[structure.Element]) -> str:
+    """An element as a writer writes it."""
+    if element.type == structure.LABEL:
+        return f"`**{element.text}:**`"
+    if element.type == structure.HEADING:
+        marks = "#" * (element.level or 1)
+        if element.text is not None:
+            return f"the section `{marks} {element.text}`"
+        return f"its `{marks} ` heading"
+    index = list(elements).index(element)
+    following = next((e for e in elements[index + 1 :] if e.type != structure.OPENING), None)
+    if following is None:
+        return "its opening text"
+    return f"the opening text before {_named(following, elements)}"
+
+
+def _place(element: structure.Element, elements: Sequence[structure.Element]) -> str:
+    """Where the element goes: first, or after the element listed before it."""
+    index = list(elements).index(element)
+    if index == 0:
+        return "and it comes first"
+    previous = elements[index - 1]
+    if previous.type == structure.OPENING:
+        return "and it comes after its opening"
+    return f"and it comes after {_named(previous, elements)}"
+
+
+def _advice(hint: str | None, example: str | None) -> str:
+    """A part's hint and example, as the check repeats them (DEC-001 point 1)."""
+    said = [f"What goes there: {hint}"] if hint else []
+    if example:
+        said.append(f"Example: {example}")
+    return " ".join(said)
+
+
+def _cached(root: Path, rel: str, texts: dict[str, str | None]) -> str | None:
+    if rel not in texts:
+        texts[rel] = _read(root / rel)
+    return texts[rel]
+
+
+def _shown(path: Path, root: Path) -> str:
+    """A path as a finding locates it: relative to the project root where it lies under it."""
+    try:
+        return path.relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()

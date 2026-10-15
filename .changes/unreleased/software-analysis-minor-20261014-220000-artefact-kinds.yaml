@@ -1,0 +1,14 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+  pr: "1578"
+body: >
+  Each analysis kind declares its structure once, as data, in
+  `schemas/artefact-kinds.yaml` (DEC-001 point 1, #1363). Its schema,
+  `artefact-kinds.schema.json`, is a strict superset of living-docs'
+  `page-kinds.schema.json`. The file declares the actor, the use case, the
+  journey, the glossary term and the revalidation record, each with the parts
+  the template round chose. Each element has its id, its type, whether it may
+  read `None.`, its form, and its hint and example. Nothing reads the file
+  yet, and a test holds it to its schema.

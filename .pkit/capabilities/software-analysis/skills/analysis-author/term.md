@@ -23,8 +23,8 @@ pkit analysis new term <slug> --name "<Term>" --unanchored-because "<why nothing
 
 ## 5. Fill it
 
-- **`definition`** — what the term means, in one sentence.
-- **The body section** — more when one sentence is not enough: where it applies, what it is not, an example.
+- **`definition`** — what the term means, in a phrase that could stand in for the term: its broader kind, then what sets it apart (DEC-001 point 1).
+- **The body section** — *Example* and *Distinctions*, each as its hint says, or `None.`, the hint deleted.
 
 Then run the checks in the shared framing's "After stamping".
 

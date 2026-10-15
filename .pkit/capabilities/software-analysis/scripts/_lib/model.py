@@ -20,7 +20,9 @@ folder holds. A file the project's `friction.exclude` leaves out is no part of
 the analysis, as it is no part of friction (COR-050 point 7): the discovery
 marks it `excluded`, and the stamp, the checks and the filler read nothing of
 it — only its path is kept, so the history reading leaves it out too
-(`_lib/history.py`).
+(`_lib/history.py`). The same answer gives each collection entry's span and
+the status of each rule of the capability's method set, at which a kind's
+declared structure binds (DEC-001 point 1).
 """
 
 from __future__ import annotations
@@ -117,6 +119,10 @@ KIND_OF_PLACE = {
 #: this path. A test holds this to the package.
 REVALIDATIONS = "revalidations"
 
+#: The trigger of a revalidation planned before code (DEC-001 point 5), whose record
+#: names the sources of the design it reviewed (point 6).
+PLANNED = "planned"
+
 #: The methodology's front-matter container, and the friction block's keys that
 #: lead to an artefact's revalidation marker (COR-050 points 1 and 3).
 CONTAINER = "pkit"
@@ -138,6 +144,20 @@ ANCHORS = "anchors"
 #: added within its version: a backbone that predates it gives none.
 REASON = "unanchored_because"
 
+#: The key of each artefact's span in that document, added within its version: for
+#: a collection entry, the lines of its file its section spans, `{first_line,
+#: last_line}`, counted from 1 — exactly the text friction compares as the entry's
+#: body (COR-050 point 1); `null` for a document, or an entry with no section. The
+#: extent has one home, the backbone's (ADR-057 point 2), so it is read, never found.
+SPAN = "span"
+
+#: This capability's method rule set (DEC-001 point 1), and its format rule: the
+#: rule a kind's declared structure is the checkable part of, and binds at the
+#: status of (COR-051 points 1 and 4). The backbone reads the set where the
+#: capability's rule sets lie, a place it gives `rule_sets: {component: …}`.
+METHOD_SET = "SAN"
+FORMAT_RULE = "RS-SAN-001"
+
 #: The key of the folders of held documents in that document, each declared as a
 #: place is, with the files it holds (COR-050 point 1), and of the files they
 #: hold, each saying whether `friction.exclude` leaves it out.
@@ -155,7 +175,10 @@ class Artefact:
     none), where it is — `path`, and `location`, the path or `path#id` of an
     entry — its own fields, its anchors by kind, and the reason its friction
     block gives for having none (`UNANCHORED_BECAUSE`, whitespace folded, as
-    the backbone reads it; `None` when it gives none)."""
+    the backbone reads it; `None` when it gives none). An entry's `span` is the
+    first and last line of its section in its file (`SPAN`), `None` for a
+    document or an entry with no section; `span_read` says whether the backbone
+    gave the key at all, which one that predates it does not."""
 
     kind: str
     id: str | None
@@ -165,6 +188,8 @@ class Artefact:
     fields: Mapping[str, Any]
     anchors: Mapping[str, tuple[str, ...]]
     unanchored_because: str | None = None
+    span: tuple[int, int] | None = None
+    span_read: bool = False
 
     def anchored_to(self, anchor_kind: str) -> tuple[str, ...]:
         return self.anchors.get(anchor_kind, ())
@@ -200,6 +225,9 @@ class Analysis:
     leaves out, as it leaves out an artefact. `records_unheld` says why that
     folder holds nothing, when it does not: the backbone skipped it (its
     validation says why), or the reading declares no such folder.
+    `method_rules` are the statuses of the rules of this capability's method
+    set, `METHOD_SET`, by id, a rule without one `proposed` (COR-051 point 4);
+    `None` when the reading holds no such set.
     """
 
     location: str | None
@@ -211,6 +239,7 @@ class Analysis:
     records: tuple[str, ...]
     records_unheld: str | None = None
     excluded: frozenset[str] = frozenset()
+    method_rules: Mapping[str, str] | None = None
 
     def held(self) -> set[str]:
         """Every id this state of the analysis holds, as `identity` spells it: each
@@ -259,6 +288,29 @@ class Analysis:
         if in_force and found.withdrawn:
             return f"{NOUN[kind]} {artefact_id} is withdrawn ({found.location})"
         return None
+
+    def another_actor(self, step: str, actor: str) -> str | None:
+        """The actor whose use case `step` is, when it is not `actor`: a journey of
+        `actor` cannot pass through it. A journey is one actor's path across use cases
+        (DEC-001 point 1), so each of its steps is a use case of the journey's actor. A
+        step that is no use case of the analysis, or whose actor is not written, is
+        `None`: `unfit` and the use case's schema say what is wrong with it. A withdrawn
+        step is compared too, since being another actor's is a second fault beside the
+        one `unfit` names. One rule for the stamp and the check, as `unfit` is."""
+        found = self.of(step, USE_CASE)
+        own = found.fields.get("actor") if found is not None else None
+        return own if isinstance(own, str) and own != actor else None
+
+
+def one_actor(number: int, step: str, other: str, actor: str) -> str:
+    """What a journey of `actor` breaks when its step `number`, the use case `step`, is a
+    use case of `other` (`Analysis.another_actor`), as the check and the stamp say it.
+    Each adds the fix that fits what it reads."""
+    return (
+        f"step {number}, {step}, is a use case of {other}, and the journey is {actor}'s: a "
+        f"journey is one actor's path across use cases, so each step is a use case of the "
+        f"journey's actor"
+    )
 
 
 def analysis_of(document: Mapping[str, Any]) -> Analysis:
@@ -350,6 +402,8 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
                 fields=fields,
                 anchors=_anchors(entry.get(ANCHORS)),
                 unanchored_because=_text(entry.get(REASON)),
+                span=_span(entry.get(SPAN)),
+                span_read=SPAN in entry,
             )
         )
     return Analysis(
@@ -362,7 +416,50 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
         records=records,
         records_unheld=unheld,
         excluded=frozenset(excluded),
+        method_rules=_method_rules(document),
     )
+
+
+def _span(value: Any) -> tuple[int, int] | None:
+    """An entry's span, `{first_line, last_line}`, as the two lines; `None` for none."""
+    if not isinstance(value, Mapping):
+        return None
+    first, last = value.get("first_line"), value.get("last_line")
+    if isinstance(first, int) and isinstance(last, int) and 1 <= first <= last:
+        return first, last
+    return None
+
+
+def _method_rules(document: Mapping[str, Any]) -> dict[str, str] | None:
+    """The status of each rule of this capability's method set, by id, as the reading's
+    file of the set gives it — a rule without a status is proposed (COR-051 point 4);
+    `None` when no file of the capability's rule sets is that set. The backbone reads
+    a component's rule sets where it gives the place `rule_sets: {component: …}`."""
+    own = {
+        index
+        for index, place in enumerate(_mappings(document.get("places")))
+        if isinstance(place.get("rule_sets"), Mapping)
+        and place["rule_sets"].get("component") == CAPABILITY
+    }
+    for entry in _mappings(document.get("files")):
+        fields = entry.get("fields")
+        if (
+            not own.intersection(entry.get("places") or [])
+            or not isinstance(fields, Mapping)
+            or fields.get("rule-set") != METHOD_SET
+        ):
+            continue
+        rules = fields.get("rules")
+        return {
+            str(rule_id): _status(rule)
+            for rule_id, rule in (rules.items() if isinstance(rules, Mapping) else [])
+        }
+    return None
+
+
+def _status(rule: Any) -> str:
+    status = rule.get("status") if isinstance(rule, Mapping) else None
+    return status if isinstance(status, str) and status else "proposed"
 
 
 def _records(held: Any, held_files: Any) -> tuple[tuple[str, ...], str | None]:

@@ -581,6 +581,68 @@ def test_the_list_gives_each_updated_document_its_author_s_sentence(
 
 
 @pytest.mark.parametrize(
+    ("item", "unread"),
+    [
+        ("- **docs/guide.md:** The guide now names the renamed flag.", True),
+        ("- docs/guide.md: The guide now names the renamed flag.", True),
+        ("- `docs/guide.md`: The guide now names the renamed flag.", False),
+    ],
+    ids=["bold path", "no code span", "read form"],
+)
+def test_an_item_it_cannot_read_draws_a_warning_naming_its_line_and_the_form(
+    op, monkeypatch, tmp_path, capsys, item, unread
+) -> None:
+    """An item the reading leaves out is named by its line in the description, with
+    the form it needs; the list says its document has no sentence. The read form
+    draws no such warning."""
+    body_file = tmp_path / "body.md"
+    body_file.write_text(
+        SAID.replace("- `docs/guide.md`: The guide now names the renamed flag.", item)
+    )
+    captured = _open(op, monkeypatch, derived=_derived(op, *UPDATED), body_file=body_file)
+    assert op.main() == 3
+    body = captured["body"]
+    err = [ln for ln in capsys.readouterr().err.splitlines() if "is not read as a sentence" in ln]
+    if not unread:
+        assert err == []
+        return
+    assert body.split("\n")[7] == item  # line 8 of the description
+    assert err == [
+        "warn: line 8 of the description, under `## What changed in each updated document`, is "
+        f'not read as a sentence: "{item}" — write it as "- `path`: sentence", starting in the '
+        "line's first column, the document in a code span as the list names it"
+    ]
+    assert body.count("   - (what changed: the pull request's author has not said)") == 2
+
+
+def test_the_line_named_is_the_line_in_the_description_opened(
+    op, monkeypatch, tmp_path, capsys
+) -> None:
+    """`--doc-impact-from-friction` fills an empty `## Doc impact` above the sentences,
+    which moves them down: the warning names the line the item is on in the
+    description as it is opened, not in the body file."""
+    item = "- **docs/guide.md:** The guide now names the renamed flag."
+    body_file = tmp_path / "body.md"
+    body_file.write_text(
+        "Closes #42\n\n## Summary\nx\n\n## Doc impact\n\n"
+        f"## What changed in each updated document\n\n{item}\n",
+        encoding="utf-8",
+    )
+    captured = _open(
+        op,
+        monkeypatch,
+        "--doc-impact-from-friction",
+        derived=_derived(op, *UPDATED),
+        body_file=body_file,
+    )
+    assert op.main() == 3
+    opened = captured["body"].split("\n")
+    assert opened.index(item) + 1 != 10  # its line in the body file
+    (warning,) = [ln for ln in capsys.readouterr().err.splitlines() if item in ln]
+    assert warning.startswith(f"warn: line {opened.index(item) + 1} of the description, ")
+
+
+@pytest.mark.parametrize(
     ("sentence", "warning"),
     [
         ("This fixes #7.", "reads as a closing reference (fixes #7)"),

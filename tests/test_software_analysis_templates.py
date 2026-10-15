@@ -10,7 +10,11 @@ Held to software-analysis DEC-001 points 1 to 6:
   included (#1346), in each entry of the glossary, a collection — valid against
   the core's container schema and against the kind's own; the journey's
   anchors written from its steps; the revalidation record's no anchored
-  artefact.
+  artefact;
+- each template's **body rendered from its kind's declaration** (#1366), held
+  equal to the rendering: every part, in order, each a writer fills holding its
+  hint, a one-line `pkit:hint` comment with its example, and the revalidation
+  record's none.
 """
 
 from __future__ import annotations
@@ -30,7 +34,7 @@ from scripts import prose_lint as pl
 
 from project_kit import backbone_schemas as bs
 from project_kit import document_parts
-from tests.analysis_repo import CAPABILITY, REPO, below_floor, load
+from tests.analysis_repo import CAPABILITY, REPO, below_floor, load, load_lib
 
 SCHEMAS = CAPABILITY / "schemas"
 
@@ -80,12 +84,13 @@ def _template(name: str) -> dict[str, Any]:
 
 
 def test_the_schemas_are_one_per_kind_and_valid() -> None:
-    """One per kind, the shared definitions, the evidence point's companion (#1001), and
-    the project configuration's (#1342)."""
+    """One per kind, the shared definitions, the evidence point's companion (#1001), the
+    project configuration's (#1342), and the kinds' declared structure's (#1363)."""
     stems = _stems()
     assert stems == [
         "actor",
         "analysis",
+        "artefact-kinds",
         "config",
         "journey",
         "revalidation-evidence",
@@ -346,8 +351,27 @@ def test_the_revalidation_record_template_shows_an_evidence_copy() -> None:
     assert _schema_errors("revalidation-record", record) == []
 
 
-#: A text in angle brackets, as a template or a command writes a placeholder.
-_BRACKETED = re.compile(r"<[^<>\n]+>")
+#: A text in angle brackets, as a template or a command writes a placeholder. A part's
+#: hint, a comment, is matched by its mark instead, never by a list of its texts (#1366).
+_BRACKETED = re.compile(r"<(?!!--)[^<>\n]+>")
+
+#: Every placeholder the four artefact templates' bodies held before each part held its
+#: hint (#1366): an artefact stamped before is still caught while it holds one.
+EARLIER_BODIES = (
+    "<Who this is, when they come to the system, and what they bring with them.>",
+    "<More on the term when one sentence is not enough: where it applies, what it is not, "
+    "an example.>",
+    "<what the actor wants to achieve, in one sentence>",
+    "<what triggers it>",
+    "<what the actor or the system does>",
+    "<…>",
+    "<the condition at step 1, what happens instead, and where the path rejoins or ends>",
+    "<the state that shows the goal is met>",
+    "<where the actor begins, and what they want by the end>",
+    "<what the actor achieves in this use case>",
+    "<what carries over, and how it could break>",
+    "<the state that shows the whole path succeeded>",
+)
 
 #: A placeholder a skill's command shows for a text the artefact stamp writes.
 _SHOWN = re.compile(r'--(?:title|name|unanchored-because) "(<[^"]+>)"')
@@ -395,6 +419,7 @@ def test_every_placeholder_shipped_is_in_the_append_only_lists() -> None:
             shipped |= set(_BRACKETED.findall(value))
     assert "<Title>" in shipped and "<Display name>" in shipped and "<Term>" in shipped
     assert shipped <= set(in_templates), sorted(shipped - set(in_templates))
+    assert set(EARLIER_BODIES) <= set(in_templates), sorted(set(EARLIER_BODIES) - set(in_templates))
     skill = CAPABILITY / "skills" / "analysis-author"
     shown = {
         found
@@ -415,11 +440,12 @@ COLLECTION_OPENINGS = {
 }
 
 #: What a document template opens with after its heading: its first part, whose sentence
-#: its author writes, or a revalidation record's outcomes (#1351).
+#: its author writes in place of the part's hint, or a revalidation record's outcomes
+#: (#1351, #1366).
 DOCUMENT_OPENINGS = {
-    "actor": "<Who this is, ",
-    "use-case": "**Goal:** <",
-    "journey": "**Starts:** <",
+    "actor": "<!-- pkit:hint What this role is",
+    "use-case": "**Goal:** <!-- pkit:hint ",
+    "journey": "**Goal:** <!-- pkit:hint ",
     "revalidation-record": "## Outcomes",
 }
 
@@ -558,3 +584,85 @@ def test_the_schemas_refuse_what_the_decision_rules_out(
 ) -> None:
     (found,) = _schema_errors(stem, instance)
     assert message in found
+
+
+# --- each body rendered from its kind's declaration (#1366) --------------------------------
+
+_RENDER, _STRUCTURE = load_lib("render", "structure")
+RENDER: Any = _RENDER
+STRUCTURE: Any = _STRUCTURE
+
+#: Each template, and the kind whose declared structure renders its body.
+KIND_OF = {
+    "actor": "actor",
+    "glossary": "term",
+    "journey": "journey",
+    "revalidation-record": "revalidation-record",
+    "use-case": "use-case",
+}
+
+#: The mark that opens a hint, and what closes it (#1366).
+MARK, CLOSE = "<!-- pkit:hint ", " -->"
+
+
+def _kind(name: str) -> Any:
+    return STRUCTURE.read_kinds()[KIND_OF[name]]
+
+
+@pytest.mark.parametrize("name", TEMPLATES)
+def test_a_template_s_body_is_rendered_from_its_kind_s_declaration(name: str) -> None:
+    """The template's front matter is written by hand and held to its kind's schema
+    (above). Its body is its kind's structure rendered, and is held equal to it here, so
+    it shows exactly the structure: every part, in order (DEC-001 point 1)."""
+    assert set(KIND_OF) == set(TEMPLATES)
+    assert _body(name) == RENDER.template(_kind(name), _template(name))
+
+
+@pytest.mark.parametrize("name", TEMPLATES)
+def test_each_part_a_writer_fills_holds_its_hint_and_a_record_none(name: str) -> None:
+    """Each part a writer fills holds its hint as its placeholder, one marked line with
+    its example, as the check's reader finds it. A revalidation record holds none, since
+    its stamp writes every part (#1366)."""
+    found = [said for _line, said in STRUCTURE.hints(STRUCTURE.body_lines(_body(name)))]
+    if name == "revalidation-record":
+        assert found == []
+        assert "pkit:hint" not in _body(name)
+        return
+    filled = [e for e in _kind(name).sections if e.filled]
+    hints = [RENDER.hint(e) for e in filled]
+    assert [f"{MARK}{said}{CLOSE}" for said in found] == hints
+    assert all(f"Example: {e.example}" in h for e, h in zip(filled, hints, strict=True))
+    assert all(_body(name).count(h) == 1 for h in hints)
+
+
+@pytest.mark.parametrize("name", TEMPLATES)
+def test_a_template_misses_no_part_and_breaks_no_order(name: str) -> None:
+    """Read against its kind's structure, a template carries every part in order: each
+    part a writer fills is only empty, its hint being no content, and an opening holding
+    only its hint reads as missing. The record's template, filled with each part's
+    example, departs from nothing."""
+    kind = _kind(name)
+    lines = STRUCTURE.body_lines(_body(name))
+    if kind.head:
+        first = next(n for n, text in lines if text.startswith("## "))
+        lines = [(n, text) for n, text in lines if n >= first]
+    departing = STRUCTURE.departures(lines, kind, fields=_template(name))
+    if name == "revalidation-record":
+        assert departing == []
+        return
+    for departure in departing:
+        element = departure.element
+        assert element.filled, element.id
+        assert departure.how == ("missing" if element.type == "opening" else "empty"), element.id
+
+
+def test_a_hint_is_one_marked_comment_with_its_example() -> None:
+    """The issue's own example of a part as stamped (#1366), with the goal's hint as the
+    declaration words it."""
+    goal = next(e for e in STRUCTURE.read_kinds()["use-case"].sections if e.id == "goal")
+    assert RENDER.hint(goal) == (
+        "<!-- pkit:hint What the actor wants from this use case, in one sentence in their own "
+        "voice. Start with the verb, or with *Never* and the verb, with *I* and *my* where they "
+        "refer to themselves. Example: Export my report as a file. -->"
+    )
+    assert f"**Goal:** {RENDER.hint(goal)}\n" in _body("use-case")

@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-14T20:02:19Z
+      at: 2026-10-15T09:52:44Z
       outcome: unchanged
-      unchanged-because: The CLI reference and the lifecycle README now give a pinned upgrade's order and its refusal under the router's fallback. The map gives each area's role and link, and no role or link moves, so the map holds.
+      unchanged-because: The CLI reference's new decision entry now says where a record's number comes from. The map gives each area's role and link, and no role or link moves, so the map holds.
 ---
 
 # project-kit

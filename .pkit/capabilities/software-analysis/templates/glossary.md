@@ -3,12 +3,15 @@
 # file, `glossary.md` under the analysis location, serving everything — one
 # entry per term keyed by its stable id, each with a body section headed by
 # that id. Stamp entries, never copy them: `pkit analysis new term <slug>` adds
-# `TERM-<slug>` and its section, creating the file from this template the
-# first time. Renaming a term keeps its id: write the new `name`, and put the
-# old one first in `replaces:`. A term anchors to where the software or a
-# decision embodies it; one nothing embodies carries `unanchored-because:` in
-# its friction block instead of anchors (--unanchored-because). Each entry's
-# own fields' shape is `schemas/term.schema.json`.
+# `TERM-<slug>` and its section, creating the file the first time with the
+# head below. The head and each section are rendered from the term's declared
+# structure (`schemas/artefact-kinds.yaml`). Each part holds its hint until
+# you write in its place what it asks for. Renaming a term keeps its id: write
+# the new `name`, and put the old one first in `replaces:`. A term anchors to
+# where the software or a decision embodies it; one nothing embodies carries
+# `unanchored-because:` in its friction block instead of anchors
+# (--unanchored-because). Each entry's own fields' shape is
+# `schemas/term.schema.json`.
 TERM-term:
   name: <Term>                    # as it is written today; may change, the id does not
   status: active                  # or withdrawn: the entry stays and its id is never reused
@@ -26,4 +29,6 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-term — <Term>
 
-<More on the term when one sentence is not enough: where it applies, what it is not, an example.>
+**Example:** <!-- pkit:hint One case of the term, in a sentence or two that use it as the analysis would. Write `None.` when the definition needs none. Example: the analyst builds the weekly report from the template the administrator published. -->
+
+**Distinctions:** <!-- pkit:hint Each word the term could be confused with, labelled with that word, and how the two differ. Include a word the project avoids for this thing, or a working name that now means something else. Write `None.` when there is none. Example: **Report:** what an analyst builds from a template. A template holds no figures. -->

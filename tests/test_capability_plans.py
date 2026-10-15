@@ -19,11 +19,13 @@ from project_kit import capabilities as caps
 from project_kit import capability_plans as plans
 from project_kit import cli as cli_mod
 from project_kit import connections as cx
+from project_kit import install
 from project_kit import status as status_mod
 from project_kit.cli import main
 from project_kit.manifest import (
     ComponentRegistryEntry,
     read_backbone_manifest,
+    read_kit_version,
     write_backbone_manifest,
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
@@ -48,10 +50,20 @@ def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
 
 
 @pytest.fixture
-def kit_source(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A scratch kit source, the one the CLI and the status report read."""
-    source = tmp_path / ".kit-source"
+def kit_source(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A scratch kit source, the one the CLI and the status report read.
+
+    Outside the project, so sync's test never takes the project for the
+    methodology's source. A usable kit at the version the project records, its
+    `VERSION` and `decisions/`, so sync's guard lets `install` run (ADR-065
+    point 7).
+    """
+    source = tmp_path_factory.mktemp("kit-source")
     (source / "capabilities").mkdir(parents=True)
+    (source / "decisions").mkdir()
+    (source / "VERSION").write_text(
+        f"{read_kit_version(install.find_source_kit())}\n", encoding="utf-8"
+    )
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: source)
     monkeypatch.setattr(status_mod, "find_source_kit", lambda: source)
     return source

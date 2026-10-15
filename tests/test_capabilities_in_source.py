@@ -329,6 +329,37 @@ def test_upgrade_redeploys_an_authored_capability_without_copying(
     assert _snapshot(_cap_dir(source_repo)) == before
 
 
+@pytest.mark.parametrize("command", ["install", "upgrade"])
+def test_syncs_guard_lets_the_source_pass_whatever_it_records(
+    source_repo: Path, monkeypatch: pytest.MonkeyPatch, command: str
+) -> None:
+    """The source moves no version (ADR-059 point 2), so sync's guard lets `install`
+    and `upgrade` run there as before, even over recorded states that stop them in
+    an adopter: another backbone version and no completion (ADR-065 point 7)."""
+    from project_kit.manifest import record_backbone_target
+
+    if command == "upgrade":
+        _registered(source_repo)
+    record_backbone_target(source_repo, "1.0.0")
+    manifest = source_repo / ".pkit" / "manifest.yaml"
+    manifest.write_text(
+        "".join(
+            line
+            for line in manifest.read_text(encoding="utf-8").splitlines(keepends=True)
+            if not line.startswith("completed_version:")
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(install, "run_installed_adapter_primitives", lambda _ctx: None)
+
+    result = CliRunner().invoke(main, ["capabilities", command, _NAME])
+
+    assert result.exit_code == 0, result.output
+    assert "refusing" not in result.output
+    assert "authored in this repository, the methodology's source" in _output(result)
+    assert caps.is_installed(source_repo, _NAME)
+
+
 def test_a_refresh_onto_itself_is_refused_before_anything_runs(source_repo: Path) -> None:
     """A caller that skips the CLI and refreshes the source from itself is refused before
     its migrations or its copy, rather than crashing mid-copy or pruning a skipped

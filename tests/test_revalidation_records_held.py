@@ -42,8 +42,9 @@ UNANCHORED_PAGE = "tech-docs/guide.md"
 
 # Slow: the seed and a record stamped, once per session; the first test to ask pays it.
 def _record_a_revalidation(repo: AdopterRepo) -> None:
-    """The analysis prepared and seeded, one planned revalidation recorded, and one page
-    with no anchors beside them — all committed on `main`."""
+    """The analysis prepared and seeded, one revalidation recorded — an artefact a person
+    decided was stale — and one page with no anchors beside them, all committed on
+    `main`."""
     prepare(repo)
     seed(repo)
     stamped = run_script(
@@ -54,11 +55,13 @@ def _record_a_revalidation(repo: AdopterRepo) -> None:
         "--change",
         "#50",
         "--trigger",
-        "planned",
+        "drift",
         "--outcome",
-        "UC-002=holds",
+        "UC-002=analysis-stale",
         "--because",
-        "UC-002=The redesign keeps the report's content; only its layout changes.",
+        "UC-002=The redesign moved the report's layout on purpose, and step 2 now says so.",
+        "--confirmed-by",
+        "Sam",
     )
     assert stamped.returncode == 0, stamped.stderr
     repo.write({UNANCHORED_PAGE: "---\nreader: maintainer\nkind: signpost\n---\n\n# Guide\n"})

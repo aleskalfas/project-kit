@@ -23,15 +23,20 @@ The subject of the change, as a word: `export-dropped`, `report-redesign`. The f
 ```
 pkit analysis new revalidation <slug> --change <ref> --trigger <planned|drift|scheduled|close|onboarding>
     --outcome <id>=<outcome>... --because <id>=<why>...
-    [--gap "<what was found> => <the defect reported, or the artefact written>"]...
+    [--reviewed-against "<title> @ <version> [@ <link>]"]...
+    [--gap "<ids>: <what was found> => <the defect reported, or the artefact written>"]...
     [--by <who> | --by-agent <name>] [--confirmed-by <who>] [--title "<Subject>"]
 ```
 
-- **`--change`** — what carried it: a work item (`#123`), a pull request, or a range of commits.
+- **`--change`** — what carried it: a work item (`#123`), a pull request, or a range of commits on the default branch.
 - **`--trigger`** — `planned` before code; `drift` on a pull request's friction; `scheduled` for friction the whole-repository check found; `close` when a pull request changing artefacts lands; `onboarding`.
+- **`--reviewed-against`** — a planned record's only, once for each source of the design it reviewed: its title, then its version, then its link where it lies outside this repository. The stamp refuses a planned record without it, and a record of any other trigger with it. The capability README's [Revalidation records](../../README.md#revalidation-records) gives the form.
+  - **A source in this repository** is `"<title> @ <version>"`, its version a commit the default branch holds: the commit where the design landed. Name `this change` when the design lands with the record. A branch's commit is no pointer, since a squash merge leaves it off the default branch.
+  - **A source outside it** is `"<title> @ <version> @ <link>"`, its version the time its text was read, in UTC, such as `2026-01-05T10:00:00Z`.
+  - **A commit the default branch does not hold:** the stamp writes the record, and warns that `pkit analysis check-pointers` will fail the change until the source names one it holds, or `this change`. That command fails a change that adds such a record, naming the record and the source. The README's [Commits off the default branch](../../README.md#commits-off-the-default-branch-pkit-analysis-check-pointers) says how it places a commit.
 - **`--outcome`** — each artefact covered, withdrawn ones included, and how it ended.
 - **`--because`** — each outcome's justification, one per `--outcome`: the stamp refuses an outcome without one.
-- **`--gap`** — each gap and what resolved it, as one pair: `"<gap> => <resolution>"`. A regression or a gap found must name at least one.
+- **`--gap`** — each gap, as one with the artefacts it affects and what resolved it: `"<ids>: <gap> => <resolution>"`, the ids separated by commas, each one an `--outcome` gives. A regression or a gap found must name at least one, and each regression and each gap found is named among a gap's ids.
 - **`--by`** — the person who performed it (git's user name by default); **`--by-agent`** — the agent that did, which needs **`--confirmed-by`**: the person who confirmed its outcomes, and decided stale against regressed where the two were ambiguous.
 - **No placeholder left.** A command an agent proposes for you writes what only you can supply in angle brackets — `<the defect reference>`, `<your name>`; the stamp refuses to write one still holding it.
 
