@@ -1,0 +1,10 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Changed
+body: >
+  A journey is one actor's path across use cases, and the check and the stamp
+  now hold it. `pkit analysis validate` fails a journey in force whose step is
+  a use case of another actor, and its message names the step and both actors.
+  `pkit analysis new journey` refuses the same journey, writing nothing. A
+  withdrawn journey is history, so its steps are not compared.

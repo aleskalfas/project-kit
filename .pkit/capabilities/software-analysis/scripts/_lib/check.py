@@ -45,6 +45,10 @@ What is checked, each against the record's words:
   force names none withdrawn. The stamp refuses the same (`Analysis.unfit`),
   so the check never accepts what the stamp would not write; a withdrawn
   artefact may name withdrawn ones.
+- **One actor's journey** (point 1): each step of a journey in force is a use
+  case of the journey's actor, since a journey is one actor's path across use
+  cases. The stamp refuses the same (`Analysis.another_actor`). A withdrawn
+  journey is history, so its steps are not compared.
 - **A use case anchors to its actor** (point 4), as an artefact anchor, so a
   changed actor flags it.
 - **A journey's anchors match its steps** (point 4): the use cases among its
@@ -164,6 +168,7 @@ from _lib.model import (
     Unreadable,
     id_in_name,
     identity,
+    one_actor,
     with_article,
 )
 from _lib.placeholder import IN_TEMPLATES, left_in
@@ -220,6 +225,7 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _duplicates(analysis)
     outcome.findings += _named_otherwise(analysis)
     outcome.findings += _references(analysis)
+    outcome.findings += _journeys_of_one_actor(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
     record_findings, copies, read = _record_findings(root, records, analysis)
@@ -542,6 +548,36 @@ def _references(analysis: Analysis) -> list[Finding]:
             found.append(
                 Finding(
                     ERROR, at(artefact.location, pointer), f"{problem}: {rule} (DEC-001 point 3)"
+                )
+            )
+    return found
+
+
+def _journeys_of_one_actor(analysis: Analysis) -> list[Finding]:
+    """A journey in force whose step is a use case of another actor than the journey's:
+    a journey is one actor's path across use cases (DEC-001 point 1), and the stamp
+    refuses the same (`Analysis.another_actor`). A withdrawn journey is history, and
+    its steps' actors may have changed since. A journey whose actor is no actor of the
+    analysis is `_references`' to report, and a step that is no use case of it too."""
+    found: list[Finding] = []
+    for journey in analysis.of_kind(JOURNEY):
+        actor, steps = journey.fields.get("actor"), journey.fields.get("steps")
+        if (
+            journey.withdrawn
+            or not isinstance(actor, str)
+            or analysis.of(actor, ACTOR) is None
+            or not isinstance(steps, list)
+        ):
+            continue
+        for index, step in enumerate(steps):
+            other = analysis.another_actor(step, actor) if isinstance(step, str) else None
+            if other is None:
+                continue
+            found.append(
+                Finding(
+                    ERROR,
+                    at(journey.location, f"/steps/{index}"),
+                    f"{one_actor(index + 1, step, other, actor)} (DEC-001 point 1)",
                 )
             )
     return found

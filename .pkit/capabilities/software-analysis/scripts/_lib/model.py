@@ -289,6 +289,27 @@ class Analysis:
             return f"{NOUN[kind]} {artefact_id} is withdrawn ({found.location})"
         return None
 
+    def another_actor(self, step: str, actor: str) -> str | None:
+        """The actor whose use case `step` is, when it is not `actor`: a journey of
+        `actor` cannot pass through it. A journey is one actor's path across use cases
+        (DEC-001 point 1), so each of its steps is a use case of the journey's actor. A
+        step that is no use case of the analysis, or whose actor is not written, is
+        `None`: `unfit` and the use case's schema say what is wrong with it. One rule
+        for the stamp and the check, as `unfit` is."""
+        found = self.of(step, USE_CASE)
+        own = found.fields.get("actor") if found is not None else None
+        return own if isinstance(own, str) and own != actor else None
+
+
+def one_actor(number: int, step: str, other: str, actor: str) -> str:
+    """What a journey of `actor` breaks when its step `number`, the use case `step`, is a
+    use case of `other` (`Analysis.another_actor`), as the check and the stamp say it."""
+    return (
+        f"step {number}, {step}, is a use case of {other}, and the journey is {actor}'s: a "
+        f"journey is one actor's path across use cases, so each step is a use case of the "
+        f"journey's actor — name one of {actor}'s in its place"
+    )
+
 
 def analysis_of(document: Mapping[str, Any]) -> Analysis:
     """The `pkit friction artefacts --json` document as the analysis. Raises

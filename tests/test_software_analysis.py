@@ -365,7 +365,8 @@ def test_what_the_stamp_writes_holds_no_semicolon_and_no_long_sentence(
     glossary is new from its template here, and an actor is a file of its own (#1346)."""
     stamped(seeded, "term", "sandbox")
     stamped(seeded, "actor", "admin")
-    stamped(seeded, "use-case", "export", "--actor", "ACT-admin")
+    # The journey passes through the new use case, so it is the journey's actor's (#1584).
+    stamped(seeded, "use-case", "export", "--actor", "ACT-tester")
     stamped(
         seeded,
         "journey",

@@ -40,6 +40,7 @@ from tests.analysis_repo import (
     fill,
     front,
     installed,
+    new,
     prepare_seeded,
     run_script,
     stamped,
@@ -633,6 +634,13 @@ def test_an_artefact_in_force_names_nothing_withdrawn_as_the_stamp_refuses(
             f"use case UC-001 is withdrawn ({USE_CASES}/UC-001-run-suite.md): a journey in force "
             f"{rule} (DEC-001 point 3)",
         ),
+        # UC-002 is ACT-retired's now, so the journey through it is no longer one actor's.
+        (
+            f"{JOURNEY}:/steps/1",
+            "step 2, UC-002, is a use case of ACT-retired, and the journey is ACT-tester's: a "
+            "journey is one actor's path across use cases, so each step is a use case of the "
+            "journey's actor — name one of ACT-tester's in its place (DEC-001 point 1)",
+        ),
     ]
     # The stamp refuses the same, and a withdrawn artefact may name withdrawn ones: it is history.
     refused = run_script(seeded, NEW, "use-case", "later", "--actor", "ACT-retired")
@@ -640,6 +648,50 @@ def test_an_artefact_in_force_names_nothing_withdrawn_as_the_stamp_refuses(
     _set(seeded, READ_REPORT, "status: active", "status: withdrawn")
     _set(seeded, JOURNEY, "status: active", "status: withdrawn")
     assert errors(check(seeded)) == []
+
+
+def test_each_step_of_a_journey_is_a_use_case_of_the_journey_s_actor(
+    seeded: AdopterRepo,
+) -> None:
+    """A journey is one actor's path across use cases (DEC-001 point 1, #1584): the check
+    fails a journey in force with a step of another actor, naming the step and both
+    actors, and the stamp refuses the same journey, writing nothing."""
+    stamped(seeded, "actor", "operator")
+    assert stamped(seeded, "use-case", "restart", "--actor", "ACT-operator") == "UC-003"
+    fill(seeded)
+    # A journey of one actor passes.
+    assert errors(check(seeded)) == []
+    rule = (
+        "is a use case of ACT-operator, and the journey is ACT-tester's: a journey is one "
+        "actor's path across use cases, so each step is a use case of the journey's actor — "
+        "name one of ACT-tester's in its place"
+    )
+    before = sorted(p.relative_to(seeded.root) for p in (seeded.root / JOURNEYS).rglob("*"))
+    steps = ("--step", "UC-001", "--step", "UC-003", "--step", "UC-002")
+    refused = new(seeded, "journey", "mixed", "--actor", "ACT-tester", *steps)
+    assert refused.returncode == 1
+    assert f"step 2, UC-003, {rule}" in refused.stderr
+    assert sorted(p.relative_to(seeded.root) for p in (seeded.root / JOURNEYS).rglob("*")) == before
+    # The check fails the same journey written by hand, on the step.
+    _set(seeded, JOURNEY, "  - UC-002\n", "  - UC-002\n  - UC-003\n")
+    _set(seeded, JOURNEY, "        - UC-002\n", "        - UC-002\n        - UC-003\n")
+    assert errors(check(seeded)) == [
+        (f"{JOURNEY}:/steps/2", f"step 3, UC-003, {rule} (DEC-001 point 1)"),
+    ]
+    # A withdrawn journey is history: its steps' actors may have changed since.
+    _set(seeded, JOURNEY, "status: active", "status: withdrawn")
+    assert errors(check(seeded)) == []
+    # A step naming no use case is the reference check's alone.
+    _set(seeded, JOURNEY, "status: withdrawn", "status: active")
+    _set(seeded, JOURNEY, "  - UC-003\n", "  - UC-009\n")
+    _set(seeded, JOURNEY, "        - UC-003\n", "        - UC-009\n")
+    assert errors(check(seeded)) == [
+        (
+            f"{JOURNEY}:/steps/2",
+            "no use case UC-009 in the analysis: what a journey names is in the analysis "
+            "(DEC-001 point 3)",
+        ),
+    ]
 
 
 def test_a_record_cites_artefacts_of_the_analysis_withdrawn_ones_included(
