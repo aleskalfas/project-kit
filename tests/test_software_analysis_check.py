@@ -639,7 +639,8 @@ def test_an_artefact_in_force_names_nothing_withdrawn_as_the_stamp_refuses(
             f"{JOURNEY}:/steps/1",
             "step 2, UC-002, is a use case of ACT-retired, and the journey is ACT-tester's: a "
             "journey is one actor's path across use cases, so each step is a use case of the "
-            "journey's actor — name one of ACT-tester's in its place (DEC-001 point 1)",
+            "journey's actor — name one of ACT-tester's in its place, or correct the use "
+            "case's actor (DEC-001 point 1)",
         ),
     ]
     # The stamp refuses the same, and a withdrawn artefact may name withdrawn ones: it is history.
@@ -666,6 +667,7 @@ def test_each_step_of_a_journey_is_a_use_case_of_the_journey_s_actor(
         "actor's path across use cases, so each step is a use case of the journey's actor — "
         "name one of ACT-tester's in its place"
     )
+    fixed = ", or correct the use case's actor (DEC-001 point 1)"
     before = sorted(p.relative_to(seeded.root) for p in (seeded.root / JOURNEYS).rglob("*"))
     steps = ("--step", "UC-001", "--step", "UC-003", "--step", "UC-002")
     refused = new(seeded, "journey", "mixed", "--actor", "ACT-tester", *steps)
@@ -676,7 +678,7 @@ def test_each_step_of_a_journey_is_a_use_case_of_the_journey_s_actor(
     _set(seeded, JOURNEY, "  - UC-002\n", "  - UC-002\n  - UC-003\n")
     _set(seeded, JOURNEY, "        - UC-002\n", "        - UC-002\n        - UC-003\n")
     assert errors(check(seeded)) == [
-        (f"{JOURNEY}:/steps/2", f"step 3, UC-003, {rule} (DEC-001 point 1)"),
+        (f"{JOURNEY}:/steps/2", f"step 3, UC-003, {rule}{fixed}"),
     ]
     # A withdrawn journey is history: its steps' actors may have changed since.
     _set(seeded, JOURNEY, "status: active", "status: withdrawn")

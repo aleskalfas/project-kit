@@ -577,7 +577,8 @@ def _journeys_of_one_actor(analysis: Analysis) -> list[Finding]:
                 Finding(
                     ERROR,
                     at(journey.location, f"/steps/{index}"),
-                    f"{one_actor(index + 1, step, other, actor)} (DEC-001 point 1)",
+                    f"{one_actor(index + 1, step, other, actor)} — name one of {actor}'s in "
+                    f"its place, or correct the use case's actor (DEC-001 point 1)",
                 )
             )
     return found

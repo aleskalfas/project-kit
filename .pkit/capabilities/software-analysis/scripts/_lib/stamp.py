@@ -380,7 +380,10 @@ def _check_references(analysis: Analysis, request: Request) -> None:
         for number, step in enumerate(request.steps, 1):
             other = analysis.another_actor(step, str(request.actor))
             if other is not None:
-                raise Refused(one_actor(number, step, other, str(request.actor)))
+                raise Refused(
+                    f"{one_actor(number, step, other, str(request.actor))} — name one of "
+                    f"{request.actor}'s in its place"
+                )
 
 
 def _in_force(analysis: Analysis, artefact_id: str, kind: str) -> None:
