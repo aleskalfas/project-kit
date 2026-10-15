@@ -1,0 +1,17 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  `review-pr` runs the reviewers a pull request requires at the same time,
+  not one after another (#1594). A run, and the review step of `land-work`,
+  now waits for the slowest reviewer instead of the sum of all of them. Each
+  reviewer is shown the head read before they start. Once they end, the head
+  is read again and each verdict is posted against the head its reviewer
+  saw, in the order of the required set. Each reviewer's lines print
+  together, in that order. A reviewer that fails or times out does not stop
+  the others. With a pinned head, as `land-work` calls it, a head that moved
+  during the reviews stops the run as before, and the verdicts they made are
+  posted. A new setting caps how many reviewers run at once: the
+  `--parallel <n>` flag, then the `PKIT_REVIEW_PARALLEL` env var, then the
+  default, the whole set at once. `1` runs them in turn.

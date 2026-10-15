@@ -315,7 +315,8 @@ class _Run:
     land: ModuleType
     work: Path
     github: _FakeGitHub
-    #: Each reviewer invocation: (reviewer, the head it was shown).
+    #: Each reviewer invocation: (reviewer, the head it was shown), in no order:
+    #: the reviewers run at once (#1594).
     invoked: list[tuple[str, str]] = field(default_factory=list)
     #: What each reviewer answers: (verdict, body), or None for a failed run.
     answers: dict[str, tuple[str, str] | None] = field(default_factory=dict)
@@ -568,7 +569,7 @@ def test_green_checks_two_reviewers_and_a_merge_one_line_each(world, capsys) -> 
     assert run.derived == [(head, "main")]
     assert run.github.bodies == []
     # Every reviewer was shown the pinned head, and the merge was pinned to it.
-    assert run.invoked == [(name, head) for name in PANEL]
+    assert sorted(run.invoked) == sorted((name, head) for name in PANEL)
     subject = ["--subject", "feat(pm): land it"]
     assert run.github.merges == [
         ["pr", "merge", str(PR), "--squash", *subject, "--match-head-commit", head]
@@ -662,7 +663,7 @@ def test_a_green_run_on_an_older_head_does_not_count(world, capsys) -> None:
     assert f"  ci: no check has been reported for {_short(new)} yet" in out
     assert run.sleeps == [20.0]
     assert _steps(out)[1].startswith(f"ci: passed on {_short(new)}")
-    assert run.invoked == [(name, new) for name in PANEL]
+    assert sorted(run.invoked) == sorted((name, new) for name in PANEL)
 
 
 def test_a_failed_check_stops_before_the_review(world, capsys) -> None:
@@ -897,7 +898,7 @@ def test_a_rerun_waits_for_nothing_and_re_runs_no_fresh_verdict(world, capsys) -
     run = world()
     run.answers["code-reviewer"] = None
     assert run.run("--yes", capsys=capsys)[0] == 6
-    assert run.invoked == [(name, run.github.head) for name in PANEL]
+    assert sorted(run.invoked) == sorted((name, run.github.head) for name in PANEL)
     run.invoked.clear()
     del run.answers["code-reviewer"]
     rc, out, err = run.run("--yes", capsys=capsys)
@@ -918,7 +919,7 @@ def test_a_rerun_after_changes_requested_reviews_the_fix(world, capsys) -> None:
     rc, out, err = run.run("--yes", capsys=capsys)
     assert rc == 0, out + err
     # A change since makes both verdicts stale: both review the fix.
-    assert run.invoked == [(name, fixed) for name in PANEL]
+    assert sorted(run.invoked) == sorted((name, fixed) for name in PANEL)
     assert out.splitlines()[-1] == f"merge: merged as {'c' * 7}"
 
 
@@ -929,7 +930,7 @@ def test_a_rerun_after_the_head_moved_lands_the_new_head(world, capsys) -> None:
     run.github.checks[run.github.head] = [_GREEN]
     rc, out, err = run.run("--yes", capsys=capsys)
     assert rc == 0, out + err
-    assert run.invoked == [(name, run.github.head) for name in PANEL]
+    assert sorted(run.invoked) == sorted((name, run.github.head) for name in PANEL)
 
 
 def test_a_rerun_after_the_queue_merged_completes_the_issue(world, capsys) -> None:
@@ -1011,7 +1012,7 @@ def test_a_lookup_that_fails_then_answers_never_merges_unpinned(world, capsys) -
     rc, out, err = run.run("--yes", capsys=capsys)
     assert rc == 0, out + err
     head = run.github.head
-    assert run.invoked == [(name, head) for name in PANEL]
+    assert sorted(run.invoked) == sorted((name, head) for name in PANEL)
     assert [merge[-1] for merge in run.github.merges] == [head]
 
 
@@ -1199,9 +1200,10 @@ def test_review_pr_raising_still_ends_with_a_step_line(world, capsys, monkeypatc
 # ---- a head that moves --------------------------------------------------------
 
 
-def test_a_head_that_moves_during_a_review_stops_after_that_review(world, capsys) -> None:
-    """The first reviewer's verdict is the pinned head's and is posted; no
-    further reviewer is shown a head that moved, and nothing merges."""
+def test_a_head_that_moves_during_the_reviews_posts_their_verdicts_and_stops(world, capsys) -> None:
+    """The reviewers ran at once on the pinned head (#1594), and the PR moved
+    while they ran: each verdict is the pinned head's and is posted, and
+    nothing merges."""
     run = world()
     pinned = run.github.head
 
@@ -1211,8 +1213,9 @@ def test_a_head_that_moves_during_a_review_stops_after_that_review(world, capsys
     run.github.before(_nth(tips, 2), lambda: run.push_new_head("during.txt"))
     rc, out, _err = run.run("--yes", capsys=capsys)
     assert rc == run.land.EXIT_HEAD_MOVED
-    assert run.invoked == [(PANEL[0], pinned)]
-    assert f"sha={pinned}" in run.github.comments[0]["body"]
+    assert sorted(run.invoked) == sorted((name, pinned) for name in PANEL)
+    assert len(run.github.comments) == len(PANEL)
+    assert all(f"sha={pinned}" in comment["body"] for comment in run.github.comments)
     assert run.github.merges == []
     assert out.splitlines()[-1] == (
         f"review: stopped — PR #{PR}'s head is {_short(run.github.head)}, not "
@@ -1293,7 +1296,7 @@ def test_a_head_review_pr_cannot_read_stops_unreadable_not_moved(world, capsys) 
     assert rc == run.land.EXIT_UNREADABLE
     assert run.invoked == []
     assert out.splitlines()[-1] == (
-        f"review: stopped — PR #{PR}'s head could not be read before reviewer's review, so "
+        f"review: stopped — PR #{PR}'s head could not be read before the reviews, so "
         f"whether it is {_short(head)}, the head this review was asked to review, cannot "
         "be told"
     )
@@ -1404,7 +1407,7 @@ def test_without_yes_it_stops_ready_and_merges_nothing(world, capsys) -> None:
     )
     assert run.github.merges == []
     assert run.after_merge == []
-    assert run.invoked == [(name, head) for name in PANEL]
+    assert sorted(run.invoked) == sorted((name, head) for name in PANEL)
     run.invoked.clear()
     rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
     assert rc == 0, out + err

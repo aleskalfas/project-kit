@@ -42,17 +42,21 @@ Gates:
     gate's posture.
 
 Side-effects:
-  - For each required reviewer: read the PR's head commit and its base
-    branch's head, invoke the reviewer (via the harness's agent runtime) on
-    that head, read the head again, and post the verdict as a comment whose
-    marker names the head the reviewer was shown and the base it was reviewed
+  - Read the PR's head commit and its base branch's head once, then start
+    every required reviewer that is not fresh at the same time (#1594), each
+    invoked (via the harness's agent runtime) on that head, at most
+    `--parallel` of them at once. Once they end, read the head again and post
+    each verdict, in the order of the required set, as a comment whose marker
+    names the head the reviewer was shown and the base it was reviewed
     against (`<!-- pkit-verdict sha=<oid> base=<oid> -->`, #1179). A head
-    that moved during the review is reported and the verdict is still posted
-    against the head it reviewed — the freshness rule then judges the
-    changes since, exactly as for any later push; the native review is
-    skipped, since GitHub would attach it to a head the reviewer never saw.
-    When the head cannot be read the verdict names none and is judged by
-    the latest commit's time.
+    that moved during the reviews is reported and each verdict is still
+    posted against the head it reviewed — the freshness rule then judges the
+    changes since, exactly as for any later push; the native reviews are
+    skipped, since GitHub would attach them to a head the reviewers never
+    saw. When the head cannot be read the verdicts name none and are judged
+    by the latest commit's time. Each reviewer's lines print together, in
+    the order of the required set; one reviewer that fails or times out does
+    not stop the others.
   - Skips a required reviewer whose verdict is still fresh (#1178): its
     latest verdict is one the freshness rule (`_lib.verdict_freshness`, the
     one `done-work`'s gate applies, #1179) holds fresh, read with the SAME
@@ -84,11 +88,12 @@ Exit codes:
   1  membership refusal
   2  usage error / no agents configured / gh failure / required set
      unresolvable (fail-closed); or, called with a pinned head, the PR's head
-     could not be read before a review, and no further reviewer ran
+     could not be read before the reviews, and no reviewer ran
   3  one or more agent invocations failed (verdicts not posted); or, called
      with a pinned head (`review(argv, pinned_head=…)`, as `land-work` calls
-     it), the PR was found at another head — where its verdicts were read, or
-     before or after a review — and no further reviewer ran
+     it), the PR was found at another head — where its verdicts were read or
+     before the reviews, and no reviewer ran; or after the reviews, and the
+     verdicts they made were posted
 """
 
 from __future__ import annotations
@@ -100,6 +105,8 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
@@ -168,6 +175,16 @@ AGENT_TIMEOUT_ENV = "PKIT_REVIEW_AGENT_TIMEOUT"
 AGENT_EFFORT_ENV = "PKIT_REVIEW_AGENT_EFFORT"
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
 
+# ---- how many reviewers run at once (issue #1594) ----------------------
+#
+# The reviewers a run invokes start together, so the run waits for the slowest
+# of them, not for their sum. Each is a `claude` subprocess of its own, so a
+# thread per reviewer is all the run holds. A cap limits how many run at once:
+# `1` runs them in turn, in the order of the required set. Like the timeout it
+# is one value, resolved once in `review()`. Precedence: `--parallel` flag >
+# `PKIT_REVIEW_PARALLEL` env var > the default, no cap (the whole set at once).
+PARALLEL_ENV = "PKIT_REVIEW_PARALLEL"
+
 
 def _resolve_agent_timeout(cli_value: str | None, env: dict) -> int:
     """Resolve the per-agent reviewer timeout in seconds.
@@ -201,6 +218,43 @@ def _resolve_agent_timeout(cli_value: str | None, env: dict) -> int:
             "positive number of seconds."
         )
     return value
+
+
+def _resolve_parallel(cli_value: str | None, env: dict) -> int | None:
+    """Resolve how many reviewers run at once; None runs the whole set at once.
+
+    Precedence: `--parallel` flag > `PKIT_REVIEW_PARALLEL` env var > no cap.
+    An empty variable is treated as absent. A non-integer, zero, or negative
+    value is a usage error and raises `ValueError` naming its source (fail
+    fast), never a silent fall-back to the default.
+    """
+    if cli_value is not None:
+        raw: object = cli_value
+        source = "--parallel"
+    elif env.get(PARALLEL_ENV):
+        raw = env[PARALLEL_ENV]
+        source = f"${PARALLEL_ENV}"
+    else:
+        return None
+
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        raise ValueError(
+            f"invalid reviewer cap from {source}: {raw!r} is not an integer number of reviewers."
+        ) from None
+    if value <= 0:
+        raise ValueError(
+            f"invalid reviewer cap from {source}: {value} — must be a positive number of reviewers."
+        )
+    return value
+
+
+def _parallel_line(cap: int | None) -> str:
+    """The header line's words for the cap `_resolve_parallel` resolved."""
+    if cap is None:
+        return "all at once"
+    return "one at a time" if cap == 1 else f"at most {cap} at once"
 
 
 def _resolve_agent_effort(
@@ -288,12 +342,14 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
     """Run review-pr on `argv` (default: the command line).
 
     `pinned_head` is for a verb that composes this one (`land-work`, #1203): the
-    PR head it waited for the checks on. A reviewer is then invoked only on
-    that head, and a fresh verdict is kept only when it was judged fresh for
-    that head. When the PR is found at another head — where the verdicts are
-    read, before an invocation or after one — no further reviewer runs (exit
-    3, `ReviewRun.moved_to`); when the head cannot be read before an
-    invocation, none runs either (exit 2, `ReviewRun.reason`).
+    PR head it waited for the checks on. The reviewers are then invoked only
+    on that head, and a fresh verdict is kept only when it was judged fresh
+    for that head. When the PR is found at another head where the verdicts
+    are read, or before the reviews, no reviewer runs (exit 3,
+    `ReviewRun.moved_to`); when the head cannot be read before the reviews,
+    none runs either (exit 2, `ReviewRun.reason`). When it is found at
+    another head after the reviews, the verdicts they made are posted against
+    the pinned head, and the run exits 3 with `ReviewRun.moved_to` set.
     """
     parser = argparse.ArgumentParser(
         description=(
@@ -327,6 +383,14 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
         f"var > default {DEFAULT_AGENT_TIMEOUT}. Must be a positive integer.",
     )
     parser.add_argument(
+        "--parallel",
+        default=None,
+        metavar="N",
+        help="How many reviewers run at once; 1 runs them in turn, in the order of "
+        f"the required set. Precedence: this flag > ${PARALLEL_ENV} env var > "
+        "default, the whole set at once. Must be a positive integer.",
+    )
+    parser.add_argument(
         "--effort",
         default=None,
         metavar="LEVEL",
@@ -346,6 +410,7 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
 
     try:
         agent_timeout = _resolve_agent_timeout(args.timeout, os.environ)
+        parallel = _resolve_parallel(args.parallel, os.environ)
     except ValueError as exc:
         return _stopped(2, f"error: {exc}")
 
@@ -440,6 +505,7 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
             f"`{opt_out.capability}`) — {opt_out.reason}"
         )
     print(f"  timeout: {agent_timeout}s per agent")
+    print(f"  parallel: {_parallel_line(parallel)}")
     if agent_effort is None:
         print("  effort: harness default")
     else:
@@ -479,17 +545,22 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
         run.exit_code = 3
         return run
 
-    # For each required reviewer, invoke and post verdict.
+    # Each reviewer's lines are held and printed together, in the order of the
+    # required set, once the reviews end (#1594): the reviewers run at once, so
+    # their lines would otherwise interleave.
+    blocks = {name: _Block() for name in required_local}
+    to_run: list[str] = []
     failures = 0
     for name in required_local:
+        say = blocks[name].say
         if name in fresh:
-            print(f"  [{name}] fresh verdict {fresh[name]} — not re-run")
+            say(f"  [{name}] fresh verdict {fresh[name]} — not re-run")
             run.kept[name] = fresh[name]
             run.kept_bodies[name] = states.bodies.get(name, "")
             continue
         if name in states.stale:
             token, reason = states.stale[name]
-            print(f"  [{name}] stale verdict {token} ({reason}) — re-run")
+            say(f"  [{name}] stale verdict {token} ({reason}) — re-run")
 
         agent_file = repo_root / ".claude" / "agents" / f"{name}.md"
         if not agent_file.is_file():
@@ -498,7 +569,7 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
                 if name in contributed_by
                 else ""
             )
-            print(
+            say(
                 f"  [{name}] error: agent file not found at {agent_file}{provenance}",
                 file=sys.stderr,
             )
@@ -507,48 +578,79 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
             continue
 
         if args.dry_run:
-            print(f"  [{name}] (dry-run) would invoke against PR #{pr_number}")
+            say(f"  [{name}] (dry-run) would invoke against PR #{pr_number}")
             run.would_run.append(name)
             continue
+        to_run.append(name)
 
-        # The head this reviewer is shown (#1179): read before the invocation,
-        # named in its brief, and recorded in its verdict's marker together
-        # with the base branch's head it is reviewed against.
+    # The head every reviewer is shown (#1179): read once before they start,
+    # named in each brief, and recorded in each verdict's marker together with
+    # the base branch's head it is reviewed against.
+    reviewed = reviewed_base = ""
+    if to_run:
         reviewed, reviewed_base = _read_tips(pr_number, config)
         if pinned_head and not reviewed:
             # Not "moved": nothing is known about the head, so no reviewer is
             # shown one that may not be the pinned head.
             run.reason = (
-                f"PR #{pr_number}'s head could not be read before {name}'s review, so "
-                f"whether it is {short_sha(pinned_head)}, the head this review was asked "
-                "to review, cannot be told"
+                f"PR #{pr_number}'s head could not be read before the reviews, so whether "
+                f"it is {short_sha(pinned_head)}, the head this review was asked to "
+                "review, cannot be told"
             )
-            print(f"  [{name}] not run — {run.reason}.", file=sys.stderr)
-            break
-        if pinned_head and reviewed != pinned_head:
-            print(
-                f"  [{name}] not run — the PR's head is {short_sha(reviewed)}, not "
-                f"{short_sha(pinned_head)}, the head this review was asked to review."
-            )
+            for name in to_run:
+                blocks[name].say(f"  [{name}] not run — {run.reason}.", file=sys.stderr)
+            to_run = []
+        elif pinned_head and reviewed != pinned_head:
+            for name in to_run:
+                blocks[name].say(
+                    f"  [{name}] not run — the PR's head is {short_sha(reviewed)}, not "
+                    f"{short_sha(pinned_head)}, the head this review was asked to review."
+                )
             run.moved_to = reviewed
-            break
-        verdict, body = _invoke_agent(
-            name,
-            pr_number,
-            config,
-            agent_timeout,
-            effort=agent_effort,
-            base=pr.get("baseRefName"),
-            head=branch,
-            sha=reviewed,
-        )
+            to_run = []
+
+    def review_one(name: str) -> tuple[str | None, str]:
+        """One reviewer's review, its lines held in its block; a failure is
+        its own and never stops the others."""
+        try:
+            return _invoke_agent(
+                name,
+                pr_number,
+                config,
+                agent_timeout,
+                effort=agent_effort,
+                base=pr.get("baseRefName"),
+                head=branch,
+                sha=reviewed,
+                say=blocks[name].say,
+            )
+        except Exception as exc:
+            blocks[name].say(f"  [{name}] invocation error: {exc}", file=sys.stderr)
+            return None, ""
+
+    results: dict[str, tuple[str | None, str]] = {}
+    if to_run:
+        shown = short_sha(reviewed) if reviewed else "a head that could not be read"
+        print(f"  reviewing {shown}: {', '.join(to_run)}", flush=True)
+        results = _run_at_once(to_run, parallel, review_one)
+
+    # After the reviews, the head is read again: a verdict is posted against
+    # the head its reviewer saw either way, and the native review only while
+    # the PR is still at that head.
+    head_now = ""
+    if any(verdict is not None for verdict, _body in results.values()):
+        head_now, _base_now = _read_tips(pr_number, config)
+    for name in required_local:
+        blocks[name].print()
+        if name not in results:
+            continue
+        verdict, body = results[name]
         if verdict is None:
             print(f"  [{name}] invocation failed; no verdict to post.", file=sys.stderr)
             failures += 1
             run.failed[name] = "the invocation failed, so there is no verdict to post"
             continue
 
-        head_now, _base_now = _read_tips(pr_number, config)
         head_unchanged = _report_head_check(name, reviewed, head_now)
         comment = _format_verdict_comment(name, verdict, body, sha=reviewed, base=reviewed_base)
         if not _post_comment(pr_number, comment, config):
@@ -576,11 +678,11 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
                     "  [native] skipped — the PR's head is not the one the "
                     "reviewer saw. The comment verdict stands."
                 )
-        if pinned_head and head_now and head_now != pinned_head:
-            # A head that could not be read again is not a move: the next
-            # reviewer's read, or the merge's own check, tells.
-            run.moved_to = head_now
-            break
+    if pinned_head and head_now and head_now != pinned_head:
+        # A head that could not be read again is not a move: the merge's own
+        # check tells.
+        run.moved_to = head_now
+    run.failed = {name: run.failed[name] for name in required_local if name in run.failed}
 
     if fresh:
         print("  --force re-runs a reviewer whose verdict is fresh.")
@@ -589,6 +691,44 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
     elif failures > 0 or run.moved_to is not None:
         run.exit_code = 3
     return run
+
+
+# ---- reviewers at once (#1594) ---------------------------------------
+
+
+@dataclass
+class _Block:
+    """One reviewer's lines, held while the reviewers run so that each
+    reviewer's lines print together: each line with whether it goes to
+    standard error."""
+
+    lines: list[tuple[bool, str]] = field(default_factory=list)
+
+    def say(self, *values: object, file: object = None) -> None:
+        """Hold a line, as `print(*values, file=file)` would write it."""
+        self.lines.append((file is sys.stderr, " ".join(str(value) for value in values)))
+
+    def print(self) -> None:
+        for error, text in self.lines:
+            print(text, file=sys.stderr if error else sys.stdout, flush=True)
+
+
+def _run_at_once(
+    names: list[str],
+    cap: int | None,
+    review_one: Callable[[str], tuple[str | None, str]],
+) -> dict[str, tuple[str | None, str]]:
+    """`review_one` for each name, at most `cap` at once (all of them when
+    None), each result by name once every one has ended.
+
+    They start in the order of `names`, so a cap of 1 runs them in turn, in
+    that order. Each reviewer is a `claude` subprocess, so a thread that waits
+    on it is all a reviewer needs here. `review_one` holds its own failures.
+    """
+    workers = min(cap or len(names), len(names))
+    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="review-pr") as pool:
+        futures = {name: pool.submit(review_one, name) for name in names}
+    return {name: future.result() for name, future in futures.items()}
 
 
 # ---- agent invocation ------------------------------------------------
@@ -604,6 +744,7 @@ def _invoke_agent(
     base: str | None = None,
     head: str = "HEAD",
     sha: str = "",
+    say: Callable[..., None] = print,
 ) -> tuple[str | None, str]:
     """Invoke a Claude Code agent against the PR diff.
 
@@ -624,6 +765,11 @@ def _invoke_agent(
     brief's local-diff fallback (see `_review_brief`); `sha` is the PR head
     commit the reviewer is to review, "" when it could not be read.
 
+    `say` writes each line this reports, as `print` does (its default):
+    `review-pr` passes the reviewer's block, so that the lines of reviewers
+    run at once do not interleave (#1594). It is called from the thread the
+    reviewer runs on.
+
     At v1 this uses the `claude` CLI when available. Adopters with
     custom harnesses or invocation patterns override by editing this
     function. Per DEC-028's Implications, the methodology specifies
@@ -632,7 +778,7 @@ def _invoke_agent(
     """
     claude_bin = shutil.which("claude")
     if claude_bin is None:
-        print(
+        say(
             "  [warn] `claude` CLI not on PATH. The kit's review-pr.py at v1 "
             "invokes Claude Code agents via the `claude` CLI; for adopters "
             "with other harnesses, edit `_invoke_agent` in review-pr.py to "
@@ -655,11 +801,11 @@ def _invoke_agent(
             timeout=timeout,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
-        print(f"  [{name}] invocation error: {exc}", file=sys.stderr)
+        say(f"  [{name}] invocation error: {exc}", file=sys.stderr)
         return None, ""
 
     if proc.returncode != 0:
-        print(
+        say(
             f"  [{name}] agent exited {proc.returncode}: {proc.stderr.strip()}",
             file=sys.stderr,
         )
@@ -703,7 +849,7 @@ def _invoke_agent(
     # No grammar-matching line anywhere → fail-closed. Surface the agent's
     # FULL output (not a truncated first line) so the operator can debug the
     # non-conforming run.
-    print(
+    say(
         f"  [{name}] no DEC-028 verdict line found in agent output "
         f"(expected a line exactly {expected_approved!r} or "
         f"{expected_changes!r}). Full agent output follows:\n{output}",
