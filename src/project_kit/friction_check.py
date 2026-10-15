@@ -962,6 +962,7 @@ class Pairing:
     differs from its counterpart's, in the head's walk order, then each base
     artefact no head artefact pairs with, removed, in the base's walk order.
     So a move the pairing follows, keeping the content, alters nothing.
+    `unaltered` lists the rest of the head, each with its counterpart.
     """
 
     base: tuple[Artefact, ...]
@@ -977,6 +978,18 @@ class Pairing:
                 found.append(Alteration(before, artefact))
         paired = {id(before) for before in self.counterparts.values()}
         found.extend(Alteration(b, None) for b in self.base if id(b) not in paired)
+        return tuple(found)
+
+    @cached_property
+    def unaltered(self) -> tuple[tuple[Artefact, Artefact], ...]:
+        """Each head artefact paired with a base counterpart whose content is the same,
+        as `(before, after)`, in the head's walk order: what `altered` leaves out of the
+        head, a move the pairing follows included."""
+        found: list[tuple[Artefact, Artefact]] = []
+        for index, artefact in enumerate(self.head):
+            before = self.counterparts.get(index)
+            if before is not None and not content_differs(artefact, before):
+                found.append((before, artefact))
         return tuple(found)
 
 

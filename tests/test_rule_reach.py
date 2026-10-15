@@ -926,3 +926,152 @@ def test_the_change_check_and_the_command_share_one_pairing(
     ]
     assert _altered(repo) == []
     assert calls == ["pair", "pair"]
+
+
+# --- what a change brings under a rule (COR-057 point 2, #1560) ----------------------------
+
+
+def _brought(repo: AdopterRepo, **kwargs: Any) -> list[tuple[str, list[str]]]:
+    """Each artefact the change brought under a rule without altering it, with the rules
+    it brought it under."""
+    document = reading.altered_document(repo.root, "main", **kwargs)
+    assert all(e["change"] == "unaltered" for e in document["brought_unaltered"])
+    return [(e["head"]["location"], e["brought_under"]) for e in document["brought_unaltered"]]
+
+
+def _narrow_start(repo: AdopterRepo, **sets: Mapping[str, Any]) -> None:
+    """The base on `main`: guides `a` and `new/b` and the sets given; then branch
+    `feature`."""
+    lay_out(repo, sets, a=page(), new__b=page("B"))
+    repo.commit("base", files=None)
+    repo.checkout("feature", create=True)
+
+
+def _set(repo: AdopterRepo, key: str, front: Mapping[str, Any]) -> None:
+    repo.write({f"{SETS}/{key}.md": rule_set_text(front)})
+
+
+def test_widening_a_scope_brings_unaltered_artefacts_under_its_rules(repo: AdopterRepo) -> None:
+    """The first of the four (#1560): a set's scope widens over a page the change does not
+    edit. The `artefacts` list does not take it in, so its meaning holds."""
+    _narrow_start(repo, doc=rule_set("DOC", scope=scoped(f"{GUIDES}/new/**")))
+    _set(repo, "doc", rule_set("DOC", scope=scoped(f"{GUIDES}/**")))
+    assert _brought(repo) == [(A, ["RS-DOC-001"])]
+    assert _altered(repo) == []  # the rules are out of every scope, so nothing is altered
+
+
+def test_accepting_a_rule_brings_the_artefacts_it_binds_on_under_it(repo: AdopterRepo) -> None:
+    """The second: a proposed rule binds nothing, so accepting it brings each artefact in
+    its set's scope under it, and under it alone."""
+    proposed = {**rules("RS-DOC-001"), "RS-DOC-002": {}}
+    _narrow_start(repo, doc=rule_set("DOC", scope=scoped(f"{GUIDES}/**"), entries=proposed))
+    accepted = rules("RS-DOC-001", "RS-DOC-002")
+    _set(repo, "doc", rule_set("DOC", scope=scoped(f"{GUIDES}/**"), entries=accepted))
+    assert _brought(repo) == [(A, ["RS-DOC-002"]), (f"{GUIDES}/new/b.md", ["RS-DOC-002"])]
+
+
+def test_updating_a_pin_brings_the_rules_it_held_back_under_it(repo: AdopterRepo) -> None:
+    """The third: a rule a pin behind its set held back bound nothing at the base, so the
+    pin raised to reach it brings the artefacts under it."""
+    _narrow_start(
+        repo,
+        cmn=rule_set("CMN", "2.0.0"),
+        doc=rule_set("DOC", inherits=["CMN@1"], scope=scoped(f"{GUIDES}/new/**")),
+    )
+    _set(repo, "doc", rule_set("DOC", inherits=["CMN@2"], scope=scoped(f"{GUIDES}/new/**")))
+    assert _brought(repo) == [(f"{GUIDES}/new/b.md", ["RS-CMN-001"])]
+
+
+def test_typing_a_place_brings_its_artefacts_under_a_set_that_selects_the_type(
+    repo: AdopterRepo,
+) -> None:
+    """The fourth: a type is no part of content, so typing a place alters nothing, yet a
+    set whose scope selects the type reaches the place's artefacts (COR-056 point 5)."""
+    _narrow_start(repo, doc=rule_set("DOC", scope={"types": ["guide"]}))
+    typed: Any = {"path": GUIDES, "type": "guide"}
+    repo.write({CONFIG: friction_config(places=(typed,))})
+    assert _altered(repo) == []
+    assert _brought(repo) == [(A, ["RS-DOC-001"]), (f"{GUIDES}/new/b.md", ["RS-DOC-001"])]
+
+
+def test_a_move_into_a_set_s_paths_brings_the_artefact_under_its_rules(
+    repo: AdopterRepo,
+) -> None:
+    """A move the pairing follows, keeping the content, alters nothing, yet the scope that
+    selects its new path brings it under that set's rules."""
+    _narrow_start(repo, new=rule_set("NEW", scope=scoped(f"{GUIDES}/new/**")))
+    repo.rename(A, f"{GUIDES}/new/a.md")
+    assert _altered(repo) == []
+    assert _brought(repo) == [(f"{GUIDES}/new/a.md", ["RS-NEW-001"])]
+
+
+def test_each_altered_artefact_carries_the_rules_the_change_brings_it_under(
+    repo: AdopterRepo,
+) -> None:
+    """A changed artefact is brought under a rule that binds on it at the head only, an
+    added one under every rule that binds on it, a removed one under none. An artefact the
+    change alters is never listed apart as well."""
+    _narrow_start(
+        repo,
+        doc=rule_set("DOC", scope=scoped(f"{GUIDES}/**")),
+        new=rule_set("NEW", scope=scoped(f"{GUIDES}/new/**")),
+    )
+    _set(repo, "new", rule_set("NEW", scope=scoped(f"{GUIDES}/**")))
+    repo.write(
+        {
+            A: page(body="A changed body."),
+            f"{GUIDES}/new/b.md": None,
+            f"{GUIDES}/c.md": page("C", body="A guide the change adds, on its own subject."),
+        }
+    )
+    document = reading.altered_document(repo.root, "main")
+    assert [(e["change"], e["brought_under"]) for e in document["artefacts"]] == [
+        ("changed", ["RS-NEW-001"]),
+        ("added", ["RS-DOC-001", "RS-NEW-001"]),
+        ("removed", []),
+    ]
+    assert document["brought_unaltered"] == []
+
+
+def test_narrowing_a_scope_or_leaving_a_file_out_brings_nothing_under_a_rule(
+    repo: AdopterRepo,
+) -> None:
+    """Taking artefacts out from under a rule lists nothing, and a file the widened scope
+    leaves out with `exclude` is not brought under it (COR-051 point 2)."""
+    _narrow_start(repo, doc=rule_set("DOC", scope=scoped(f"{GUIDES}/new/**")))
+    _set(repo, "doc", rule_set("DOC", scope=scoped(f"{GUIDES}/none/**")))
+    assert _brought(repo) == [] and _altered(repo) == []
+    _set(
+        repo,
+        "doc",
+        rule_set("DOC", scope={"paths": [f"{GUIDES}/**"], "exclude": [f"{GUIDES}/a.md"]}),
+    )
+    assert _brought(repo) == []  # new/b is in scope at both states, a at neither
+
+
+def test_a_rule_that_binds_at_both_states_brings_nothing_under_it(repo: AdopterRepo) -> None:
+    """A set's change that leaves where its rule binds as it was brings nothing under it."""
+    _narrow_start(repo, doc=rule_set("DOC", scope=scoped(f"{GUIDES}/**")))
+    _set(repo, "doc", rule_set("DOC", "1.1.0", scope=scoped(f"{GUIDES}/**")))
+    assert _brought(repo) == []
+
+
+def test_the_cli_gives_what_a_change_brings_under_a_rule(repo: AdopterRepo) -> None:
+    _narrow_start(repo, doc=rule_set("DOC", scope=scoped(f"{GUIDES}/new/**")))
+    _set(repo, "doc", rule_set("DOC", scope=scoped(f"{GUIDES}/**")))
+    result = _cli("altered", "--base", "main", "--json")
+    assert result.exit_code == 0, result.output
+    document = json.loads(result.stdout)
+    assert document["schema_version"] == 1 and document["artefacts"] == []
+    (entry,) = document["brought_unaltered"]
+    assert entry["change"] == "unaltered" and entry["brought_under"] == ["RS-DOC-001"]
+    assert entry["base"]["location"] == entry["head"]["location"] == A
+    assert entry["base"]["rules"] == []
+    assert [r["rule"] for r in entry["head"]["rules"]] == ["RS-DOC-001"]
+    human = _cli("altered", "--base", "main")
+    assert human.exit_code == 0, human.output
+    assert "Brought under a rule, unaltered:" in human.output
+    assert f"unaltered {A}" in human.output and "brought under: RS-DOC-001" in human.output
+    assert "0 artefact(s) altered, 0 with a binding rule; 1 brought under a rule unaltered." in (
+        human.output
+    )

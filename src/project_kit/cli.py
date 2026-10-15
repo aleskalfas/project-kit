@@ -1923,7 +1923,11 @@ def rule_sets_altered_command(base_ref: str | None, head_rev: str | None, as_jso
     which base artefact a head artefact is, so a move it follows that keeps
     the content alters nothing, and so does a change that only writes a
     revalidation. Each altered artefact is listed with the walk's answer at
-    each state that holds it, as `pkit rule-sets reach` gives it. Exit 0
+    each state that holds it, as `pkit rule-sets reach` gives it, and with
+    the rules the change brings it under: those that bind on it at the head
+    and did not at the base. An artefact the change brings under a rule
+    without altering it, by a wider scope, an accepted rule, an updated pin
+    or a typed place, is listed apart (COR-057 point 2). Exit 0
     when answered; 1 when a configuration cannot be read, the base cannot be
     compared or REV names no commit; 2 on a usage error.
     """

@@ -1,0 +1,19 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit rule-sets altered` says what a change brings under a rule (COR-057
+  point 2, #1560). Each altered artefact gains `brought_under`: the rules that
+  bind on it at the head and did not bind on it at the base. A new key,
+  `brought_unaltered`, lists each artefact the change brings under a rule
+  without altering it, as `unaltered`: a wider scope, an accepted rule, an
+  updated pin, a typed place, or a move into a set's paths. The human view
+  shows both. The keys are added within `schema_version` 1. The
+  `rule-set-reviewer` agent judges such an artefact in full for each rule the
+  change brings it under, since the change owns the whole of it for that rule.
+  A break of such a rule there withholds the reviewer's approval where the
+  rule's text settles it, whatever brought the artefact under the rule
+  (COR-060). So a change that accepts a rule, updates a pin or widens a scope
+  answers for every document it brings under the rule, or leaves out of the
+  scope what it cannot mend yet.
