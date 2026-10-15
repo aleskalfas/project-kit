@@ -1,0 +1,16 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  The `touches-ruled-artefact` floor counts the documents a change brings
+  under a rule, as well as those it alters (DEC-032, #1560). A pull request
+  that widens a rule set's scope, accepts a rule, raises a pin behind its set
+  or types a place requires the floor's reviewer for each document it brings
+  under a rule, though it edits none of them. Such a push after a review
+  stales that reviewer's approval too (DEC-028). A change that only takes
+  documents out from under a rule fires nothing. The floor reads these
+  documents from `pkit rule-sets altered`'s `brought_unaltered`, so it needs
+  the backbone this release ships. An answer without that key fails the
+  resolution with a reason that names the backbone to upgrade to.

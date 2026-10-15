@@ -1106,7 +1106,9 @@ def test_a_merge_the_author_changed_something_inside_counts_whole(av, ad, vf, re
     assert not assessed.fresh
     assert assessed.reason.endswith("reaches its touches-ruled-artefact floor")
     # The page that cost the approval is named, though the author changed only code.
-    assert "changed since: src/app.py; ruled artefacts altered: docs/other.md" in (assessed.reason)
+    assert (
+        "changed since: src/app.py; ruled artefacts altered or brought under a rule: docs/other.md"
+    ) in assessed.reason
     assert asked == [(reviewed, merge)]
 
 

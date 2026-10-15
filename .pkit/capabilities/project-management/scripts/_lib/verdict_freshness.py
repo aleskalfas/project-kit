@@ -29,7 +29,8 @@ so a superseded verdict never counts however fresh it would be. Per verdict:
     the author's own commits between merges of the base at a time — a merge
     of the base only when the author changed something inside it — and
     counting one an accepted rule binds on at the start or the end of its
-    run, and a floor this pm does not know by any change. Any
+    run, and one the run brings under an accepted rule without altering it,
+    and a floor this pm does not know by any change. Any
     other verdict goes stale on any change: one from the baseline or from a
     reviewer with any classification rule — matched on this PR or not, it
     declares a remit wider than the floors — and every CHANGES_REQUESTED —
@@ -207,9 +208,12 @@ class FreshnessRule:
             ruled = self._rulings.get(verdict.sha)
             if FLOOR_TOUCHES_RULED_ARTEFACT in found and isinstance(ruled, tuple) and ruled:
                 # What cost the approval may lie outside the changed paths: a
-                # page a change to the places brought in, or one the base's
-                # side of a merge the author changed something inside altered.
-                changed += f"; ruled artefacts altered: {_name_paths(ruled)}"
+                # page a change to the places brought in, one a change to the
+                # rules brought under a rule, or one the base's side of a merge
+                # the author changed something inside altered.
+                changed += (
+                    f"; ruled artefacts altered or brought under a rule: {_name_paths(ruled)}"
+                )
             return Freshness(False, f"{changed} — reaches its {', '.join(reached)} floor")
         return Freshness(
             True, f"{changed} — reaches none of its floors ({', '.join(sorted(floors))})"
@@ -281,7 +285,8 @@ class FreshnessRule:
         """Of what each stretch of the author's change altered — a run of
         the author's own commits between merges of the base, or a merge of
         the base the author changed something inside — each artefact an
-        accepted rule binds on at the stretch's start or end. A clean merge
+        accepted rule binds on at the stretch's start or end, and each it
+        brought under an accepted rule without altering it. A clean merge
         of the base is no stretch, so what it brings never counts, whatever
         it is: an edit, a rule or a place. The first stretch that alters one
         settles it, so no later stretch is asked about. Changed paths with no
