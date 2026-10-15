@@ -98,6 +98,20 @@ def _evidence_entry() -> Draft202012Validator:
     )
 
 
+@functools.cache
+def _source() -> Draft202012Validator:
+    return Draft202012Validator(
+        {"$ref": f"{_schemas()[RECORD]['$id']}#/$defs/source"}, registry=_registry()
+    )
+
+
+def source_errors(value: object) -> list[str]:
+    """Each way `value` falls short of one source of a planned record's
+    `reviewed-against`, as the record's schema defines it (DEC-001 point 6)."""
+    errors = sorted(_source().iter_errors(value), key=lambda e: _pointer(e.absolute_path))
+    return [error.message for error in errors]
+
+
 def is_evidence(value: object) -> bool:
     """Whether `value` is one entry of the evidence point, in its companion's shape
     (DEC-001 point 7) — as a record copies it."""

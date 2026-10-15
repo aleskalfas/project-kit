@@ -99,41 +99,48 @@ def test_the_check_is_reached_under_the_capability_and_its_alias(
 def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled(
     seeded: AdopterRepo,
 ) -> None:
-    """What only a person can write the stamp leaves as the template's placeholders, and
-    the check fails each until it is written — in an own field, a body or a section,
-    matched against the placeholders the templates shipped."""
+    """What only a person can write the stamp leaves as the template's front-matter
+    placeholders, and each body part as its hint (#1366). The check fails each until it is
+    written — in an own field, a body or a section — the placeholders matched against
+    those the templates shipped, and each hint by its mark, the message repeating it."""
     stamped(seeded, "use-case", "export", "--actor", "ACT-tester", "--area", "reports")
     stamped(seeded, "term", "sandbox", "--record", "ADR-001")
     stamped(seeded, "actor", "admin", "--name", "Administrator")
     rule = "write in its place what it asks for — until then it says nothing of the"
-    left = "write in each one's place what it asks for, or remove it (DEC-001 point 1)"
+
+    def hinted(rel: str, where: str, more: int) -> str:
+        lines = (seeded.root / rel).read_text(encoding="utf-8").splitlines()
+        line = next(n for n, text in enumerate(lines, 1) if "<!-- pkit:hint " in text)
+        found = re.search(r"<!-- pkit:hint (.*) -->", lines[line - 1])
+        assert found is not None
+        return (
+            f"{where} still holds a hint at line {line}, and {more} more below it: write in "
+            f"its place what it asks for, and delete the hint (DEC-001 point 1). The hint: "
+            f"{found[1]}"
+        )
+
+    export = f"{USE_CASES}/reports/UC-003-export.md"
     assert errors(check(seeded)) == [
         (
             f"{GLOSSARY}#TERM-sandbox:/definition",
             f"still holds the placeholder '<what the term means, in one sentence>': {rule} "
             "term (DEC-001 point 1)",
         ),
-        (
-            f"{GLOSSARY}#TERM-sandbox",
-            "its section still holds the template's placeholder '<More on the term when one "
-            "sentence is not enough: where it applies, what it is not, an example.>': " + left,
-        ),
+        (f"{GLOSSARY}#TERM-sandbox", hinted(GLOSSARY, "its section", 1)),
         (
             f"{actor_at('ACT-admin')}:/needs/0",
             "still holds the placeholder '<what this actor needs from the system, in one "
             f"sentence>': {rule} actor (DEC-001 point 1)",
         ),
-        (
-            actor_at("ACT-admin"),
-            "its body still holds the template's placeholder '<Who this is, when they come "
-            "to the system, and what they bring with them.>': " + left,
-        ),
-        (
-            f"{USE_CASES}/reports/UC-003-export.md",
-            "its body still holds the template's placeholder '<what the actor wants to achieve, "
-            "in one sentence>' and 5 more: " + left,
-        ),
+        (actor_at("ACT-admin"), hinted(actor_at("ACT-admin"), "its body", 2)),
+        (export, hinted(export, "its body", 8)),
     ]
+    # The first hint each message repeats is the first part's.
+    assert dict(errors(check(seeded)))[export].endswith(
+        "The hint: What the actor wants from this use case, in one sentence in their own "
+        "voice. Start with the verb, or with *Never* and the verb, with *I* and *my* where "
+        "they refer to themselves. Example: Export my report as a file."
+    )
     # A placeholder quoted as code, not the template's, is no placeholder in a body.
     rel = f"{USE_CASES}/reports/UC-003-export.md"
     fill(seeded)
@@ -151,6 +158,31 @@ def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled
         ],
         "findings": [],
     }
+
+
+def test_a_hint_left_in_is_refused_with_no_rule_needed(seeded: AdopterRepo) -> None:
+    """A hint left in a body is an error while the format rule is still proposed, as any
+    placeholder is (DEC-001 point 1). Its mark is matched outside code spans and fenced
+    code, so a body may quote it (#1366)."""
+    rel = f"{USE_CASES}/UC-001-run-suite.md"
+    quoted = (seeded.root / rel).read_text(encoding="utf-8") + (
+        "\nThe stamp writes `<!-- pkit:hint … -->` where a part goes.\n\n"
+        "```markdown\n**Goal:** <!-- pkit:hint fenced -->\n```\n"
+    )
+    seeded.write({rel: quoted})
+    document = check(seeded)
+    assert errors(document) == []
+    assert "structure (RS-SAN-001, proposed): not checked" in document["summary"][1]
+    left = quoted.replace("**Trigger:** ", "**Trigger:** <!-- pkit:hint The event. --> ", 1)
+    seeded.write({rel: left})
+    line = left.splitlines().index(next(t for t in left.splitlines() if "The event." in t)) + 1
+    assert errors(check(seeded)) == [
+        (
+            rel,
+            f"its body still holds a hint at line {line}: write in its place what it asks for, "
+            "and delete the hint (DEC-001 point 1). The hint: The event.",
+        )
+    ]
 
 
 #: A `pkit` answering `friction artefacts` as a backbone from before the document
@@ -614,9 +646,8 @@ def test_a_record_cites_artefacts_of_the_analysis_withdrawn_ones_included(
     seeded: AdopterRepo,
 ) -> None:
     _set(seeded, JOURNEY, "status: active", "status: withdrawn")
-    record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
-    cited = record.replace(
-        "  UC-000: holds", "  UC-001: holds\n  JRN-001: analysis-stale\n  UC-009: gap-found"
+    cited = _record_text().replace(
+        "  UC-001: gap-found", "  UC-001: holds\n  JRN-001: analysis-stale\n  UC-009: gap-found"
     )
     rel = f"{RECORDS}/2026-10-01-first-run.md"
     seeded.write({rel: cited})
@@ -680,13 +711,18 @@ def test_a_journey_whose_use_case_anchors_do_not_match_its_steps_is_reported(
 _SOURCES = re.compile(r"^reviewed-against:.*?\n(?=date:)", re.MULTILINE | re.DOTALL)
 
 
-def test_revalidation_records_are_held_to_their_schema(seeded: AdopterRepo) -> None:
+def _record_text() -> str:
+    """The record template, a planned record that shows each part's example (#1366), citing
+    the seeded analysis's first use case in place of the example's."""
     record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
+    return record.replace("UC-007", "UC-001")
+
+
+def test_revalidation_records_are_held_to_their_schema(seeded: AdopterRepo) -> None:
     # From the template; a date written unquoted reads as the text it was written as.
-    good = record.replace('"#000"', '"#887"').replace("UC-000", "UC-001")
-    good = good.replace('date: "2026-01-01"', "date: 2026-10-01")
+    good = _record_text().replace('date: "2026-01-05"', "date: 2026-10-01")
     bad = _SOURCES.sub("", good)  # only a planned record names its sources
-    bad = bad.replace("trigger: planned", "trigger: whim").replace("UC-001: holds", "UC-1: ok")
+    bad = bad.replace("trigger: planned", "trigger: whim").replace("UC-001: gap-found", "UC-1: ok")
     whim = f"{RECORDS}/2026-10-02-whim.md"
     seeded.write(
         {
@@ -721,8 +757,7 @@ def test_a_planned_record_is_checked_for_the_sources_it_names(seeded: AdopterRep
     checks `reviewed-against` (DEC-001 point 6, #1363): required on a planned record,
     left out of a record of another trigger, and each source's version of the form its
     place gives — here, an abbreviated commit is refused."""
-    record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
-    good = record.replace('"#000"', '"#887"').replace("UC-000", "UC-001")
+    good = _record_text()
     short = 'reviewed-against:\n  - title: the redesign note\n    version: "4c1d2e9"\n'
     seeded.write(
         {
@@ -747,14 +782,32 @@ def test_a_planned_record_is_checked_for_the_sources_it_names(seeded: AdopterRep
     )
 
 
+def test_a_time_written_unquoted_is_told_to_be_quoted(seeded: AdopterRepo) -> None:
+    """YAML reads an unquoted time as a time, not as the text written, and gives it back
+    with `+00:00` for its `Z`, which the schema's form refuses: the message says why,
+    and that quoting it fixes it, rather than repeating the value it no longer has."""
+    good = _record_text()
+    unquoted = good.replace('version: "2026-01-05T10:00:00Z"', "version: 2026-01-05T10:00:00Z")
+    assert unquoted != good
+    seeded.write({f"{RECORDS}/2026-10-01-planned.md": unquoted})
+    assert errors(check(seeded)) == [
+        (
+            f"{RECORDS}/2026-10-01-planned.md:/reviewed-against/0/version",
+            "YAML reads this value as a time, since it is not quoted, and gives it back as "
+            "'2026-01-05T10:00:00+00:00', not as written: quote it, a time in UTC such as "
+            '"2026-01-05T10:00:00Z", as a revalidation\'s `at` is written '
+            "(`schemas/revalidation-record.schema.json`)",
+        )
+    ]
+
+
 def test_the_records_are_the_held_files_so_a_draft_git_ignores_is_not_checked(
     seeded: AdopterRepo,
 ) -> None:
     """The records are the files the held folder holds in `pkit friction artefacts`
     (COR-050 point 1), read from the working tree's one listing: a draft the project
     keeps git-ignored in the folder is not a record, whatever it holds."""
-    record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
-    good = record.replace('"#000"', '"#887"').replace("UC-000", "UC-001")
+    good = _record_text()
     seeded.write(
         {
             ".gitignore": "draft-*.md\n",
@@ -775,8 +828,7 @@ def test_a_record_nested_under_the_folder_is_a_record(seeded: AdopterRepo) -> No
     """The held folder holds every Markdown file beneath it, as a place matches: a
     record in a sub-folder is checked like one directly in it (the folder was
     once read by its direct children alone)."""
-    record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
-    good = record.replace('"#000"', '"#887"').replace("UC-000", "UC-001")
+    good = _record_text()
     seeded.write(
         {
             f"{RECORDS}/2026-10-01-first-run.md": good,
@@ -794,8 +846,7 @@ def test_a_record_friction_exclude_leaves_out_is_not_counted(seeded: AdopterRepo
     """A record under an excluded path is still held, but the backbone's listing says it is
     excluded, and the check leaves it out as an excluded artefact is no part of the
     analysis (COR-050 point 7): neither counted nor checked."""
-    record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
-    good = record.replace('"#000"', '"#887"').replace("UC-000", "UC-001")
+    good = _record_text()
     seeded.write(
         {
             CONFIG: f"docs:\n  internal: tech-docs\nfriction:\n  exclude: [{RECORDS}/archive]\n",
@@ -815,11 +866,10 @@ def test_a_records_folder_the_backbone_skips_is_said_to_hold_nothing(
     (COR-050 point 1), so the backbone skips it and `pkit validate` reports it at
     the declaration: the check reads no record, and says why rather than showing
     none as if there were none."""
-    record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
     seeded.write(
         {
             CONFIG: f"docs:\n  internal: tech-docs\nfriction:\n  places: [{RECORDS}]\n",
-            f"{RECORDS}/2026-10-01-first-run.md": record.replace("UC-000", "UC-001"),
+            f"{RECORDS}/2026-10-01-first-run.md": _record_text(),
         }
     )
     document = check(seeded)

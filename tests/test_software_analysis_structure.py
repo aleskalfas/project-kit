@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -35,13 +36,17 @@ from click.testing import CliRunner
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
+    ANALYSIS,
     GLOSSARY,
+    NEW,
+    RECORDS,
     SA,
     VALIDATE,
     actor_at,
     installed,
     load_lib,
     run_script,
+    stamped,
 )
 
 _CHECK, _MODEL, _STRUCTURE, _FORMS = load_lib("check", "model", "structure", "forms")
@@ -250,6 +255,38 @@ def test_code_and_comments_hide_marks_and_a_hint_left_alone_is_no_content() -> N
         "**Goal:** <!-- pkit:hint What the actor wants. -->",
     )
     assert _found(hinted) == [("goal", "empty", 3)]
+
+
+def test_a_hint_left_in_is_found_outside_code_and_other_comments() -> None:
+    """A hint is a comment that opens with its mark, found as a comment is: outside fenced
+    code and outside a code span that closes on its line, and never inside another
+    comment. Each is found at the line it opens on, with what it says (#1366)."""
+    body = "\n".join(
+        [
+            "# UC-007 — Export the report as a file",
+            "",
+            "**Goal:** <!-- pkit:hint What the actor wants. Example: Export it. -->",
+            "",
+            "**Trigger:** The analyst quotes `<!-- pkit:hint quoted -->` in a code span.",
+            "",
+            "```markdown",
+            "**Postconditions:** <!-- pkit:hint fenced -->",
+            "```",
+            "",
+            "<!-- a note of the writer's, <!-- pkit:hint inside it --> -->",
+            "",
+            "<!--pkit:hint spaced",
+            "over two lines -->",
+            "",
+            "Text <!-- an aside --> then <!-- pkit:hint after an aside -->",
+        ]
+    )
+    assert S.hints(_lines(body, first=10)) == [
+        (12, "What the actor wants. Example: Export it."),
+        (22, "spaced"),
+        (25, "after an aside"),
+    ]
+    assert S.hints(_lines(USE_CASE)) == []
 
 
 def test_a_label_opens_a_line_or_a_top_level_list_item_only() -> None:
@@ -573,3 +610,101 @@ def test_accepted_a_departure_fails_and_an_entry_is_read_within_its_span(
     assert any("(RS-SAN-001, accepted)" in line for line in document["summary"])
     code, _output = _validate(project)
     assert code == 1
+
+
+#: What a person writes in place of each part's hint, by the part's label: a list, below
+#: its label, starts on a line of its own. A journey's step lines are the stamp's, so its
+#: *Steps* take nothing more. An actor's opening has no label.
+WRITTEN = {
+    "Goal": "Run my suite.",
+    "Other actors": "None.",
+    "Preconditions": "None.",
+    "Assumptions": "None.",
+    "Trigger": "The tester asks to run the suite.",
+    "Main path": "\n\n1. The tester runs the suite.\n2. The system shows the result.",
+    "Variants": "None.",
+    "Postconditions": "The tester holds the result.",
+    "Minimal guarantees": "None.",
+    "Steps": "",
+    "Occasions": "With every change.",
+    "Context": "None.",
+    "Example": "None.",
+    "Distinctions": "None.",
+}
+OPENING = "Whoever runs the project's tests."
+
+#: The front-matter placeholders a person writes over, and what with.
+FIELDS = {
+    "<what this actor needs from the system, in one sentence>": "Run the suite.",
+    "<what the term means, in one sentence>": "set of tests run together",
+}
+
+_HINTED = re.compile(r"(?:\*\*(?P<label>[^*\n]+):\*\* )?<!-- pkit:hint .*? -->")
+
+
+def _written(text: str) -> str:
+    """`text` with each hint written over as a person writes the part it holds."""
+
+    def part(found: re.Match[str]) -> str:
+        label = found["label"]
+        if label is None:
+            return OPENING
+        content = WRITTEN[label]
+        return f"**{label}:**" + (content if not content or content[0] == "\n" else f" {content}")
+
+    text = _HINTED.sub(part, text)
+    for placeholder, words in FIELDS.items():
+        text = text.replace(placeholder, words)
+    return text
+
+
+def test_every_kind_stamped_and_filled_carries_its_structure(
+    project: AdopterRepo, pkit_on_path: Path
+) -> None:
+    """Each kind the stamp writes — an actor, a term, a use case, a journey and a record —
+    once its hints are written over, departs from nothing of its structure, with the format
+    rule accepted: every part present and in order, and each of its form (#1366)."""
+    stamped(project, "actor", "tester", "--path", "src/**")
+    stamped(project, "term", "suite", "--unanchored-because", "No code names it.")
+    stamped(project, "use-case", "run-suite", "--actor", "ACT-tester", "--path", "src/run.py")
+    stamped(project, "use-case", "read-report", "--actor", "ACT-tester")
+    stamped(
+        project,
+        "journey",
+        "first-run",
+        "--actor",
+        "ACT-tester",
+        "--step",
+        "UC-001",
+        "--step",
+        "UC-002",
+    )
+    record = run_script(
+        project,
+        NEW,
+        "revalidation",
+        "report-gap",
+        "--change",
+        "#45",
+        "--trigger",
+        "scheduled",
+        "--outcome",
+        "UC-002=gap-found",
+        "--because",
+        "UC-002=The report shows a total that no step describes.",
+        "--gap",
+        "UC-002: No step shows the total => step 2 written",
+    )
+    assert record.returncode == 0, record.stderr
+    for path in sorted((project.root / ANALYSIS).rglob("*.md")):
+        if (project.root / RECORDS) not in path.parents:
+            path.write_text(_written(path.read_text(encoding="utf-8")), encoding="utf-8")
+    text = (project.root / SAN_REL).read_text(encoding="utf-8")
+    project.write({SAN_REL: text.replace("status: proposed", "status: accepted", 1)})
+    code, document = _validate(project, "--json")
+    assert (code, _said(document)) == (0, [])
+    assert any(
+        "7 artefact(s), record(s) and file head(s) checked" in line
+        and "0 of them departing" in line
+        for line in document["summary"]
+    ), document["summary"]
