@@ -15,9 +15,8 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-15T10:10:37Z
-      outcome: unchanged
-      unchanged-because: DEC-051 is restated in place without the narration of its own revision, and decides what it decided before. The README cites DEC-051 for the carriage accessor and what rests on it (the label palettes, the kit-label checks, the journal drift check's state axis) and for the set-axis-label repair path. Each of these holds as the README writes it.
+      at: 2026-10-15T13:29:12Z
+      outcome: updated
 ---
 
 # project-management capability
