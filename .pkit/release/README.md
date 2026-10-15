@@ -14,9 +14,9 @@ pkit:
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
       source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-13T21:44:43Z
+      at: 2026-10-15T08:24:58Z
       outcome: unchanged
-      unchanged-because: ADR-040 and PRJ-002 now write their points as headings carrying the same numbers and labels, word for word. PRJ-002's paragraph that leaves the changeset format and the release mechanics to this guide sits under a heading of its own, with the same words. So D1 to D4, which this guide cites, name the same text, and it holds.
+      unchanged-because: PRJ-004 now names a release tag in its canonical install, and says the release step cuts the tag matching .pkit/VERSION on each release that moves it, as PRJ-002 says. The guide says the release step tags the committed backbone VERSION, that a component-only release cuts no tag, and that install stays the git URL at a tag. All three still hold, so the guide holds.
 ---
 
 # Release flow — changesets + the release step

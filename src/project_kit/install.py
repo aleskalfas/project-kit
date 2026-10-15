@@ -32,6 +32,7 @@ from project_kit.router import (
     is_routed_child,
     is_source_checkout,
     looks_like_pkit_install,
+    running_version,
     source_dispatcher,
     source_dispatcher_missing,
 )
@@ -1259,19 +1260,30 @@ def undeploy_capability_from_adapters(ctx: InstallContext, capability: str) -> t
     return tuple(lacking)
 
 
+def recommended_install_command(version: str) -> str:
+    """The install of pkit's release `version`, the canonical form (PRJ-004).
+
+    It names the release tag, `@v<version>`. Only a tagged install ties a version
+    to one content, so a project's recorded version names what it holds (ADR-065
+    point 12). An install with no tag is the development install.
+    """
+    return f"uv tool install {DISTRIBUTION_GIT_URL}@v{version}"
+
+
 def _print_next_steps() -> None:
     click.echo()
     click.echo("Install complete. Recommended next steps:")
     click.echo()
-    # The install the CLI reference recommends ("Installing pkit on PATH"). A test
-    # holds the two to the same command (#1376).
+    # The install the CLI reference recommends ("Installing pkit on PATH"), at this
+    # pkit's own release. A test holds the two to the same command (#1376).
     click.echo("  1. (Once per machine, skip if already done) Install pkit on PATH:")
     click.echo()
-    click.echo(f"       uv tool install {DISTRIBUTION_GIT_URL}")
+    click.echo(f"       {recommended_install_command(running_version())}")
     click.echo()
     click.echo("     One install serves every project on this machine that uses")
     click.echo("     project-kit. pkit finds the current project from the folder you")
-    click.echo("     run it in. To pin a version, see .pkit/cli/README.md, section")
+    click.echo("     run it in. The tag names this pkit's version. For another")
+    click.echo("     release, see .pkit/cli/README.md, section")
     click.echo('     "Installing pkit on PATH".')
     click.echo()
     click.echo("  2. Fill in adopter-side configs as needed:")
