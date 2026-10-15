@@ -41,7 +41,6 @@ analysis never rewritten to match broken code:
 
 from __future__ import annotations
 
-import importlib
 import json
 import os
 import re
@@ -49,7 +48,6 @@ import shlex
 import subprocess
 import sys
 from pathlib import Path
-from types import ModuleType
 from typing import Any
 
 import pytest
@@ -70,6 +68,7 @@ from tests.analysis_repo import (
     actor_at,
     installed,
     load,
+    load_lib,
     prepare,
     run_script,
     seed,
@@ -96,27 +95,7 @@ WHO = "<Who this is, when they come to the system, and what they bring with them
 # --- the rules, on their own ---------------------------------------------------------------
 
 
-def _load_lib(*names: str) -> tuple[ModuleType, ...]:
-    """Pure `_lib` modules, imported together as the scripts import them: `_lib` is on
-    the path only while they load, since another capability's `_lib` is not
-    importable beside it."""
-    scripts = str(CAPABILITY / "scripts")
-
-    def ours() -> list[str]:
-        return [k for k in sys.modules if k == "_lib" or k.startswith("_lib.")]
-
-    saved = {k: sys.modules.pop(k) for k in ours()}
-    sys.path.insert(0, scripts)
-    try:
-        return tuple(importlib.import_module(f"_lib.{name}") for name in names)
-    finally:
-        sys.path.remove(scripts)
-        for key in ours():
-            del sys.modules[key]
-        sys.modules.update(saved)
-
-
-_RESOLVE, _ANSWERS = _load_lib("resolve", "answers")
+_RESOLVE, _ANSWERS = load_lib("resolve", "answers")
 R: Any = _RESOLVE
 A: Any = _ANSWERS
 
