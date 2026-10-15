@@ -24,6 +24,21 @@ name** (Feature #162): `pkit new decision <capability> <slug>` stamps a
 `DEC-NNN` record under `.pkit/capabilities/<capability>/decisions/`, with
 the next number scoped to that capability (each capability is its own
 DEC id-space). The capability must exist; the command refuses otherwise.
+
+**The number** is one past the highest that the namespace's folder holds, in
+the working tree or on the default branch, each read from a record's file name
+(`_next_number`). A command that allocates from settled state reads the
+default branch and allocates past it (COR-054 point 3), so two branches cut at
+different times do not take one number. The default branch is the backbone's
+one resolution (`default_branch.resolve`), and its files are read from git
+objects (`friction_git.CommitTree`), so nothing is checked out. The variable a
+pipeline sets for its checks never reaches it, and the command takes no base
+of its own. Where the default branch resolves to no commit, or its files
+cannot be read, the stamp says so on standard error, with the backbone's
+reason and fixes, and numbers past the working tree alone (point 4). A default
+branch with no commit yet holds nothing, and nothing is said of it. A default
+branch read from the local branch, and a declaration read as the default, are
+said as every reader says them (`DefaultBranch.warnings`).
 """
 
 from __future__ import annotations
@@ -31,15 +46,17 @@ from __future__ import annotations
 import datetime as _dt
 import re
 import subprocess
-from collections.abc import Callable
-from pathlib import Path
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
+from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 
 import click
 from ruamel.yaml import YAML
 
-from project_kit import agents_overlay, docs_roots
+from project_kit import agents_overlay, default_branch, docs_roots
 from project_kit.capability_namespace import resolve_capability_dir
+from project_kit.friction_git import SHORT, CommitTree
 
 # The three fixed namespaces. A `new decision` namespace argument that is none
 # of these is interpreted as a capability name (DEC id-space).
@@ -80,6 +97,11 @@ author: {author}
 """
 
 
+def _warn(message: str) -> None:
+    """What the stamp says of the default branch, on standard error."""
+    click.echo(f"warning: {message}", err=True)
+
+
 def stamp_decision(
     target_root: Path,
     namespace: Namespace,
@@ -87,6 +109,7 @@ def stamp_decision(
     *,
     yes: bool = False,
     say: Callable[[str], None] = click.echo,
+    warn: Callable[[str], None] = _warn,
 ) -> Path:
     """Stamp a new decision-record stub.
 
@@ -100,6 +123,12 @@ def stamp_decision(
     is treated as a **capability name** (Feature #162): the record stamps under
     `.pkit/capabilities/<namespace>/decisions/` with the `DEC` prefix, numbered
     independently within that capability.
+
+    The number is one past the highest the namespace's folder holds in the working
+    tree or on the default branch (`_next_number`). What the stamp says of the
+    default branch — that it could not be read, so the number comes from the working
+    tree alone, or that it was read from the local branch — goes through `warn`,
+    which prints `warning: <message>` on standard error unless a caller passes its own.
 
     Returns the stamped file path. Raises `click.ClickException` for any
     user-facing precondition failure (invalid slug, missing decisions dir,
@@ -130,7 +159,8 @@ def stamp_decision(
             f"a record with slug {slug!r} already exists in the {namespace} namespace."
         )
 
-    next_num = _next_number(decisions_dir, prefix)
+    settled = _settled_names(target_root, decisions_dir)
+    next_num = _next_number(decisions_dir, prefix, settled.names)
     nnn = f"{next_num:03d}"
 
     notice = None
@@ -145,6 +175,8 @@ def stamp_decision(
         DECISION_TEMPLATE.format(prefix=prefix, nnn=nnn, today=today, author=author),
         encoding="utf-8",
     )
+    for message in settled.said(f"{prefix}-{nnn}"):
+        warn(message)
     if notice is not None:
         say(notice)
         say(f"run `pkit sync` to deploy the agent(s) that reference {_ADR_CATEGORY}.")
@@ -304,23 +336,80 @@ def _resolve_capability_decisions_dir(target_root: Path, capability: str) -> Pat
     return decisions_dir
 
 
-def _next_number(decisions_dir: Path, prefix: str) -> int:
-    """Highest NNN in `<prefix>-NNN-*.md` filenames + 1, defaulting to 1."""
-    highest = 0
-    for path in decisions_dir.glob(f"{prefix}-*.md"):
-        if not path.is_file():
+def _next_number(decisions_dir: Path, prefix: str, settled: Iterable[str] = ()) -> int:
+    """One past the highest NNN of the `<prefix>-NNN-*.md` records that the working tree's
+    `decisions_dir` holds or `settled` names — the file names the default branch holds
+    in that folder (`_settled_names`) — defaulting to 1."""
+    working = (path.name for path in decisions_dir.glob(f"{prefix}-*.md") if path.is_file())
+    return max(_numbers((*working, *settled), prefix), default=0) + 1
+
+
+def _numbers(names: Iterable[str], prefix: str) -> Iterable[int]:
+    """The NNN of each `<prefix>-NNN-<slug>.md` file name: the digits between the prefix
+    and the next hyphen. A name that is none is left out."""
+    for name in names:
+        if not (name.startswith(f"{prefix}-") and name.endswith(".md")):
             continue
-        # Filename: <prefix>-NNN-<slug>.md → NNN is the digits between the
-        # prefix and the next hyphen.
-        stem = path.name.removeprefix(f"{prefix}-")
-        num_str = stem.split("-", 1)[0]
+        num_str = name.removeprefix(f"{prefix}-").split("-", 1)[0]
         try:
-            num = int(num_str, base=10)
+            yield int(num_str, base=10)
         except ValueError:
             continue
-        if num > highest:
-            highest = num
-    return highest + 1
+
+
+@dataclass(frozen=True)
+class _Settled:
+    """What the default branch holds in a namespace's folder: the file names, what a
+    reader of it says (`DefaultBranch.warnings`), and why it was not read, if it was not."""
+
+    names: tuple[str, ...] = ()
+    warnings: tuple[str, ...] = ()
+    problem: str | None = None
+
+    def said(self, record_id: str) -> list[str]:
+        """What the stamp of `record_id` says of the default branch: its warnings, then,
+        when it was not read, the reason and that the number is the working tree's alone
+        (COR-054 point 4)."""
+        if self.problem is None:
+            return list(self.warnings)
+        alone = (
+            f"{self.problem} {record_id} is numbered past the working tree alone, so a record "
+            f"on the default branch may already hold its number (COR-054 point 4)."
+        )
+        return [*self.warnings, alone]
+
+
+def _settled_names(target_root: Path, decisions_dir: Path) -> _Settled:
+    """The file names the default branch holds directly in `decisions_dir`, read from git
+    objects at the commit the backbone resolves it to (COR-054 points 2 and 3). The
+    branch is read as a standing value reads it: no base reaches it, so its problem
+    names the fetch and the declaration as fixes, never a base. A branch with no commit
+    yet holds nothing; a folder outside the project holds nothing the branch can."""
+    branch = default_branch.resolve(target_root, standing=True)
+    warnings = tuple(branch.warnings)
+    if branch.unborn:
+        return _Settled(warnings=warnings)
+    if branch.commit is None:
+        problem = branch.problem or f"the default branch {branch.name!r} resolves to no commit."
+        return _Settled(warnings=warnings, problem=problem)
+    try:
+        folder = PurePosixPath(
+            decisions_dir.resolve().relative_to(target_root.resolve()).as_posix()
+        )
+    except ValueError:
+        return _Settled(warnings=warnings)
+    try:
+        files = CommitTree(target_root, branch.commit).files()
+    except click.ClickException as exc:
+        return _Settled(
+            warnings=warnings,
+            problem=(
+                f"the default branch {branch.name!r} ({branch.ref} at "
+                f"{branch.commit[:SHORT]}) could not be read: {exc.message.rstrip('.')}."
+            ),
+        )
+    names = tuple(PurePosixPath(rel).name for rel in files if PurePosixPath(rel).parent == folder)
+    return _Settled(names=names, warnings=warnings)
 
 
 def _resolve_author() -> str:

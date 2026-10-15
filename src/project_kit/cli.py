@@ -7280,6 +7280,12 @@ def new_decision(namespace: str, slug: str, yes: bool) -> None:
     Any NAMESPACE that is not core/project/adr is interpreted as a
     capability name; the command refuses if no such capability exists.
 
+    The number is one past the highest the namespace's folder holds in the
+    working tree or on the default branch (COR-054 point 3), so two branches cut
+    at different times do not take one number. $PKIT_CHECK_BASE never changes
+    it. Where the default branch cannot be read, the command says so on standard
+    error and numbers past the working tree alone (point 4).
+
     For adr with <adr-records> unset, the location is derived from the internal
     documentation root and recorded in the overlay before the record is stamped
     (COR-049 point 5); the command says what it recorded. Over a folder that

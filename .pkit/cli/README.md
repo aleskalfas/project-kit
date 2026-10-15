@@ -53,7 +53,7 @@ pkit:
         - src/project_kit/document_parts.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064]
     revalidated:
-      at: 2026-10-15T08:25:01Z
+      at: 2026-10-15T09:52:35Z
       outcome: updated
 ---
 
@@ -949,6 +949,14 @@ Scaffolds a new decision-record stub per the schema in `.pkit/decisions/README.m
   Numbering is independent per id-space. A `<namespace>` that is not `core`, `project`, or `adr` is interpreted as a capability name: the record stamps under that capability's `decisions/` directory with the `DEC` prefix, numbered independently within that capability (two different capabilities may both hold a `DEC-001`). The command refuses if no capability of that name exists under `.pkit/capabilities/` — a capability being a folder there that carries a `package.yaml` — naming the command's own namespaces and the capabilities that do exist; the `decisions/` subdirectory is created on first use.
 
 - **`<slug>`** is a kebab-case shorthand of the decision's title — short enough to keep listings self-documenting (e.g., `merge-delivery`, `pattern-extraction`).
+
+**Where the number comes from.** The number is one past the highest that the namespace's folder holds, in the working tree or on the default branch. Each is read from a record's file name. A branch cut before another branch's record merged numbers past that record, so the two never take one number ([COR-054](../decisions/core/COR-054-default-branch.md) point 3). The default branch is resolved as "The `repository` key" says, and its files are read from git objects at its commit. `$PKIT_CHECK_BASE` never reaches the command, and the command takes no base of its own. What it says of the default branch goes to standard error, as `warning: <message>`:
+
+- **The default branch cannot be read.** It resolves to no commit, or git cannot read its files. The command gives the reason and the fixes, which are to fetch it or to declare the right name. It numbers past the working tree alone (point 4).
+- **The default branch was read from the local branch**, in a repository with no remote (point 2).
+- **The declared name is read as the default**, because it is not a branch name.
+
+A default branch with no commit yet holds nothing, and nothing is said of it.
 
 For `core` and `project` namespaces, the target directory is fixed at `.pkit/decisions/<namespace>/`. For the `adr` namespace, the target directory is read from the agents overlay at `.pkit/agents/project/overlay.yaml` — specifically the first entry of the top-level `adr-records:` list (per COR-024's `<adr-records>` placeholder + COR-025's ADR decision space). An explicit value always wins; the command refuses with a helpful message if:
 

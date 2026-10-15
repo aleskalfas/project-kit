@@ -8,10 +8,10 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from project_kit import decisions, decisions_validate, record_points
+from project_kit import decisions, decisions_validate, default_branch, record_points
 from project_kit import project_config as pc
 from project_kit.cli import main
-from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo, GitRepo, MakeAdopterRepo
 
 
 @pytest.fixture
@@ -603,3 +603,226 @@ def test_new_adr_refuses_a_location_derived_inside_pkit(
         "documentation root, .pkit/docs) is inside .pkit/."
     ) in output
     assert _tree(repo.root) == before
+
+
+# --------------------------------- the number: past the default branch too (COR-054, #1501)
+
+
+#: Each namespace, the folder it stamps into and its prefix, in the project `_git_project` builds.
+NAMESPACES = [
+    ("core", ".pkit/decisions/core", "COR"),
+    ("project", ".pkit/decisions/project", "PRJ"),
+    ("adr", "docs/adr", "ADR"),
+    ("cap", ".pkit/capabilities/cap/decisions", "DEC"),
+]
+NAMESPACE_IDS = [namespace for namespace, _folder, _prefix in NAMESPACES]
+
+#: What the stamp says after the reason the default branch was not read.
+ALONE = (
+    "is numbered past the working tree alone, so a record on the default branch may already "
+    "hold its number (COR-054 point 4)."
+)
+
+
+def _record(folder: str, prefix: str, number: int, slug: str) -> dict[str, str | None]:
+    return {f"{folder}/{prefix}-{number:03d}-{slug}.md": f"---\nid: {prefix}-{number:03d}\n---\n"}
+
+
+def _git_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> GitRepo:
+    """A git project on `main`, with no remote, whose first commit holds record 001 in every
+    namespace's folder, the capability `cap` and an overlay naming `docs/adr/` as
+    `adr-records`. No `$PKIT_CHECK_BASE` a developer set reaches it."""
+    monkeypatch.delenv(default_branch.CHECK_BASE_ENV, raising=False)
+    repo = GitRepo.init(tmp_path / "work")
+    files: dict[str, str | None] = {
+        OVERLAY.as_posix(): "adr-records:\n  - docs/adr/\n",
+        ".pkit/capabilities/cap/package.yaml": (
+            "component:\n  kind: capability\n  name: cap\n  version: 0.1.0\n"
+        ),
+    }
+    for _namespace, folder, prefix in NAMESPACES:
+        files |= _record(folder, prefix, 1, "first")
+    repo.commit("first", files)
+    return repo
+
+
+def _with_remote(repo: GitRepo, tmp_path: Path) -> None:
+    """A remote `origin` holding the repository as it stands, fetched."""
+    remote = tmp_path / "origin.git"
+    repo.git("clone", "-q", "--bare", str(repo.root), str(remote))
+    repo.git("remote", "add", "origin", str(remote))
+    repo.git("fetch", "-q", "origin")
+
+
+def _cut_before(repo: GitRepo, files: dict[str, str | None]) -> None:
+    """`topic` cut from `main`, then `files` committed on `main` — another branch's work
+    merged — and `topic` checked out again, its working tree without them."""
+    repo.checkout("topic", create=True)
+    repo.checkout("main")
+    repo.commit("another branch's work", files)
+    repo.checkout("topic")
+
+
+def _stamp(repo: GitRepo, namespace: str, slug: str = "next") -> tuple[str, list[str]]:
+    """Stamp a record; return its file name and what the stamp said of the default branch."""
+    said: list[str] = []
+    target = decisions.stamp_decision(repo.root, namespace=namespace, slug=slug, warn=said.append)
+    return target.name, said
+
+
+@pytest.mark.parametrize(("namespace", "folder", "prefix"), NAMESPACES, ids=NAMESPACE_IDS)
+def test_a_record_only_the_default_branch_holds_is_numbered_past(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, namespace: str, folder: str, prefix: str
+) -> None:
+    """A branch cut before another branch's record merged numbers past that record, so the
+    two never take one number (COR-054 point 3)."""
+    repo = _git_project(tmp_path, monkeypatch)
+    _cut_before(repo, _record(folder, prefix, 2, "landed"))
+    _with_remote(repo, tmp_path)
+    assert not list((repo.root / folder).glob(f"{prefix}-002-*.md"))
+
+    assert _stamp(repo, namespace) == (f"{prefix}-003-next.md", [])
+
+
+@pytest.mark.parametrize(("namespace", "folder", "prefix"), NAMESPACES, ids=NAMESPACE_IDS)
+def test_a_record_only_the_working_tree_holds_is_numbered_past(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, namespace: str, folder: str, prefix: str
+) -> None:
+    """The working tree counts, an uncommitted record too: the number goes past both sides."""
+    repo = _git_project(tmp_path, monkeypatch)
+    _cut_before(repo, _record(folder, prefix, 2, "landed"))
+    _with_remote(repo, tmp_path)
+    repo.write(_record(folder, prefix, 7, "uncommitted"))
+
+    assert _stamp(repo, namespace) == (f"{prefix}-008-next.md", [])
+
+
+def test_only_the_namespace_s_own_folder_counts_on_the_default_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A record of another id-space, of another capability, or in a folder beneath the
+    namespace's takes no number of it."""
+    repo = _git_project(tmp_path, monkeypatch)
+    _cut_before(
+        repo,
+        {
+            ".pkit/decisions/core/PRJ-009-misplaced.md": "x\n",
+            ".pkit/decisions/project/old/PRJ-008-nested.md": "x\n",
+            ".pkit/capabilities/other/decisions/DEC-009-other.md": "x\n",
+        },
+    )
+    _with_remote(repo, tmp_path)
+
+    assert _stamp(repo, "project")[0] == "PRJ-002-next.md"
+    assert _stamp(repo, "cap")[0] == "DEC-002-next.md"
+
+
+@pytest.mark.parametrize("named", ["ahead", "nowhere"])
+def test_the_variable_a_pipeline_sets_for_its_checks_never_changes_the_number(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, named: str
+) -> None:
+    """`$PKIT_CHECK_BASE` names a comparison's base, never what allocation reads (COR-054
+    point 3): a base holding a higher number does not raise the number, and one that
+    resolves nowhere is neither read nor reported."""
+    repo = _git_project(tmp_path, monkeypatch)
+    _cut_before(repo, _record(".pkit/decisions/project", "PRJ", 2, "landed"))
+    _with_remote(repo, tmp_path)
+    repo.checkout("ahead", create=True)
+    repo.commit("ahead", _record(".pkit/decisions/project", "PRJ", 9, "ahead"))
+    repo.checkout("topic")
+    monkeypatch.setenv(default_branch.CHECK_BASE_ENV, named)
+
+    assert _stamp(repo, "project") == ("PRJ-003-next.md", [])
+
+
+@pytest.mark.parametrize(("namespace", "folder", "prefix"), NAMESPACES, ids=NAMESPACE_IDS)
+def test_an_unreadable_default_branch_is_reported_and_the_working_tree_numbers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, namespace: str, folder: str, prefix: str
+) -> None:
+    """A remote whose copy of the default branch was never fetched: the stamp says so, with
+    the backbone's reason and fixes — the fetch and the declaration, never a base — and
+    numbers past the working tree alone (COR-054 point 4)."""
+    repo = _git_project(tmp_path, monkeypatch)
+    repo.write(_record(folder, prefix, 4, "here"))
+    repo.git("remote", "add", "origin", str(tmp_path / "never-fetched.git"))
+
+    assert _stamp(repo, namespace) == (
+        f"{prefix}-005-next.md",
+        [
+            "the default branch 'main' resolves to no commit here: 'origin/main' names none — "
+            "fetch it (`git fetch origin main`), or declare the right one "
+            "(`repository.default-branch` in .pkit/project/config.yaml). The local branch "
+            "'main' is not read while a remote holds the shared one — it can lag it or carry "
+            f"work nobody pushed. {prefix}-005 {ALONE}"
+        ],
+    )
+
+
+def test_a_default_branch_whose_files_cannot_be_read_is_reported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The branch resolves, and git cannot read the files of its commit: that is said too,
+    and the working tree numbers."""
+    repo = _git_project(tmp_path, monkeypatch)
+    _cut_before(repo, _record(".pkit/decisions/project", "PRJ", 2, "landed"))
+    _with_remote(repo, tmp_path)
+    tip = repo.git("rev-parse", "origin/main").stdout.strip()
+    # Made here, the commit's objects are loose here: the remote keeps its own copy.
+    repo.lose_object(repo.git("rev-parse", "origin/main^{tree}").stdout.strip())
+
+    name, said = _stamp(repo, "project")
+
+    assert name == "PRJ-002-next.md"
+    assert len(said) == 1
+    assert said[0].startswith(
+        f"the default branch 'main' (origin/main at {tip[:12]}) could not be read: `git ls-tree` "
+        "failed: "
+    )
+    assert said[0].endswith(f". PRJ-002 {ALONE}")
+
+
+def test_a_default_branch_read_from_the_local_branch_says_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With no remote the local branch is read, and the stamp says so, as every reader of
+    the default branch does (COR-054 point 2); its records still count."""
+    repo = _git_project(tmp_path, monkeypatch)
+    _cut_before(repo, _record(".pkit/decisions/project", "PRJ", 2, "landed"))
+
+    assert _stamp(repo, "project") == (
+        "PRJ-003-next.md",
+        [
+            "the default branch 'main' is read from the local branch 'main': this repository "
+            "has no remote to read the shared one from, and a local branch can lag it or carry "
+            "work nobody pushed (COR-054 point 2)"
+        ],
+    )
+
+
+def test_a_default_branch_with_no_commit_yet_holds_nothing_and_says_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Before the first commit the default branch holds nothing yet, which is no failure to
+    read it (COR-054 point 4): the working tree numbers, and nothing is said."""
+    monkeypatch.delenv(default_branch.CHECK_BASE_ENV, raising=False)
+    repo = GitRepo.init(tmp_path / "work")
+    repo.write(_record(".pkit/decisions/project", "PRJ", 2, "here"))
+
+    assert _stamp(repo, "project") == ("PRJ-003-next.md", [])
+
+
+def test_the_command_warns_on_standard_error_and_stamps_on_standard_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`pkit new decision` prints what it says of the default branch as a warning on
+    standard error; the stamped line stays alone on standard output."""
+    repo = _git_project(tmp_path, monkeypatch)
+    repo.git("remote", "add", "origin", str(tmp_path / "never-fetched.git"))
+    monkeypatch.chdir(repo.root)
+
+    result = CliRunner().invoke(main, ["new", "decision", "project", "next"])
+
+    assert result.exit_code == 0, result.output
+    assert result.stdout == "Stamped: .pkit/decisions/project/PRJ-002-next.md\n"
+    assert result.stderr.startswith("warning: the default branch 'main' resolves to no commit")
+    assert result.stderr.endswith(f"PRJ-002 {ALONE}\n")
