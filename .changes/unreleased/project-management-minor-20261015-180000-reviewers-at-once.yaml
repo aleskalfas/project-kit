@@ -14,4 +14,7 @@ body: >
   during the reviews stops the run as before, and the verdicts they made are
   posted. A new setting caps how many reviewers run at once: the
   `--parallel <n>` flag, then the `PKIT_REVIEW_PARALLEL` env var, then the
-  default, the whole set at once. `1` runs them in turn.
+  default, the whole set at once. `1` runs them in turn. An adopter who edited
+  `_invoke_agent` for another harness re-applies the edit to its new form: it
+  takes a `say` writer for the lines it reports, and runs on a thread of its
+  own.
