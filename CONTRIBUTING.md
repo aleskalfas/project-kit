@@ -21,8 +21,9 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-15T08:25:02Z
-      outcome: updated
+      at: 2026-10-15T09:26:26Z
+      outcome: unchanged
+      unchanged-because: COR-050 is refined so an artefact anchor may name a document's section or its lead. This guide outlines the friction gate, the report and the answers, and leaves the gate's rules to the CLI reference's Friction checks section. Nothing it says of them changes.
 ---
 
 # Contributing to project-kit
