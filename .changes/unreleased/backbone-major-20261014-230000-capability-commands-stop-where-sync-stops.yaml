@@ -2,9 +2,10 @@ component: backbone
 kind: major
 custom:
   category: Changed
+  pr: "1580"
 body: >
   `pkit capabilities install` and `pkit capabilities upgrade` now stop wherever
-  `pkit sync` stops (ADR-065). Each copies the capability the running pkit
+  `pkit sync` stops. Each copies the capability the running pkit
   ships, so each stops, before it reads or writes anything, when the running
   pkit is not the release the project records, when the last upgrade is
   incomplete, when the manifest is missing or its version is no version, or
