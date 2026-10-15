@@ -13,13 +13,13 @@ pkit:
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053]
       artefact: [RS-SAN-001]
     revalidated:
-      at: 2026-10-15T09:01:03Z
+      at: 2026-10-15T09:47:06Z
       outcome: updated
       deferred:
         - anchor:
             kind: record
             value: software-analysis:DEC-001
-          reason: "DEC-001 refines ahead of the code. The capability now declares each kind's structure and a planned record's reviewed-against, and this page describes both. Its check holds each body and front matter to its structure's parts and forms, and this page describes that too. It does not yet render the templates from the structure. Nor does it stamp a planned record's sources, check where their commits sit, take a project's additions to a structure, keep steps append-only, or write the new anchors. Among those anchors is a journey's list of the use cases it relies on, which its schema does not take yet, so a journey with a hand-over from outside it cannot pass the check, once the format rule binds, until it does. So this page describes the check, the stamp and the anchors it ships: a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #1547 that apply the rest: #1366 renders the templates and stamps the sources, #1367 takes a project's additions, #1375 keeps steps append-only, #1448 checks the commits, and #1507 writes the new anchors."
+          reason: "DEC-001 refines ahead of the code. The capability now declares each kind's structure and a planned record's reviewed-against, and this page describes both. Its check holds each body and front matter to its structure's parts and forms, and this page describes that too. It also checks where the commits a planned record names sit, and this page describes that check. It does not yet render the templates from the structure. Nor does it stamp a planned record's sources, take a project's additions to a structure, keep steps append-only, or write the new anchors. Among those anchors is a journey's list of the use cases it relies on, which its schema does not take yet, so a journey with a hand-over from outside it cannot pass the check, once the format rule binds, until it does. So this page describes the check, the stamp and the anchors it ships: a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #1547 that apply the rest: #1366 renders the templates and stamps the sources, #1367 takes a project's additions, #1375 keeps steps append-only, and #1507 writes the new anchors."
 ---
 
 # software-analysis capability
@@ -335,6 +335,42 @@ It reads the default branch — its tip, where your branch left it, and its hist
 
 `--json` prints `{schema_version, base, freed, summary, findings}`: `base` is `{ref, tip, commit, outdated}` (`commit` is the merge-base), or `null` when nothing was compared; `freed` lists each file whose number your numbering setting frees, `{id, path, added_by, freed_by}`, and is empty without one. It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
 
+## Commits off the default branch: `pkit analysis check-pointers`
+
+`pkit analysis check-pointers [--base <ref>] [--json]` checks where each commit a planned record names sits (DEC-001 point 6). A planned record names the design it reviewed in `reviewed-against` ("Revalidation records" below). A source in this repository names a commit, or `this change`. Whoever reads the record later returns to the design through that commit. A commit the default branch holds stays reachable after a squash merge. A commit of the design's branch does not.
+
+It reads each source without a `url` whose `version` is a commit's full id, and places the commit on the default branch:
+
+| The commit | Placed as | In a record your change adds | In a record the merge-base holds |
+|---|---|---|---|
+| on the default branch's history | held | passes | passes |
+| off it, in a clone that holds all of that history: a branch's commit a squash merge left behind, or one missing from a full clone | not held | **an error**, naming the record and the source | reported, never an error |
+| not reached, in a shallow clone whose history of the default branch stops short, whether the clone holds it or not | unknown | reported, never an error | reported, never an error |
+
+- **What it skips.** A source naming `this change` is not placed, since its commit is found from the history. A source with a `url` lies outside this repository. A record of another trigger is not read.
+- **Why only a record your change adds fails.** A record is history and is never rewritten. A history rewrite on the default branch, such as removing a secret, takes every older pointer off it, and failing on those would fail every change for good. The change that adds a record is the one place its pointer can still be fixed. Name the commit where the design landed on the default branch, or `this change` when the design lands with the record.
+- **Why unknown never fails.** The pointers are provenance, not a gate (DEC-001 point 6). A shallow clone cannot tell where a commit beyond its history sits. `git fetch --unshallow` lets it tell.
+
+**Where it looks.** It places every commit on the default branch alone, as the core resolves it for every reader (COR-054 point 5), and never on a run's base. The base says only which records your change adds:
+
+- **The base** is `--base <ref>`, else `$PKIT_CHECK_BASE`, else the default branch, as for `check-numbers`.
+- **A record your change adds** is one whose file the merge-base of that base does not hold at its path. So a record your change moves reads as added. The working tree is read, uncommitted changes included.
+- **The default branch and the base** both come from `pkit repository base --json`. Git answers the rest from your clone's history, offline, and no remote is asked. A partial clone that lacks the merge-base's tree fails, rather than fetch it.
+- **Nothing to place.** A tree with no planned record, or whose planned records name no commit of this repository, reads no base and says so. A source in this repository that names neither a commit's full id nor `this change` is counted and not placed: `pkit analysis validate` fails its form.
+- **It fails** when no default branch resolves, or when the base names no commit or shares no history with `HEAD`. It gives the core's reason and fix (COR-054 point 4).
+
+**Wiring it in.** It answers about a change and reads history beyond the working tree, so it is not a member of `pkit validate` (COR-055 points 1 and 2). Run it as a line of its own in your check gate, beside `pkit analysis check-numbers` and `pkit friction check`, with the same base. It binds only where you wire it in. In CI:
+
+- a **`pull_request` checkout is GitHub's test merge** of your branch into the default branch. The records your branch adds are the ones the default branch lacks, so the line checks them there too.
+- a **depth-1 clone**, the default of `actions/checkout`, holds no merge-base, and may hold no `origin/<default-branch>` at all. So this line fails, as `check-numbers` does, whenever it has a commit to place. Fetch the whole history with `fetch-depth: 0`. A clone deep enough to hold the merge-base but still shallow reports what it cannot place as unknown.
+
+`--json` prints `{schema_version, default_branch, base, summary, findings, pointers}`:
+
+- `default_branch` is `{name, ref, commit}`, and `base` is `{ref, tip, commit}`, where `commit` is the merge-base. Both are `null` when nothing was placed.
+- `pointers` lists each source placed as `{record, source, title, commit, added, placement}`. `source` is the source's place in `reviewed-against`, and `added` says whether your change adds the record. `placement` is `held`, `not-held` or `unknown`.
+
+It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
+
 ## Configuration: `project/config.yaml`
 
 The settings of this capability you choose live in its settings file, `.pkit/capabilities/software-analysis/project/config.yaml`, beside the recorded location, `docs-locations.yaml`. The file is yours — sync never touches it — and has one shape, `schemas/config.schema.json`, which `pkit validate` checks it against with your other data (`pkit_schema: software-analysis:config`). Without the file, every setting is off. There is one setting:
@@ -442,6 +478,7 @@ reviewed-against:
 - **A source outside this repository** has an absolute `url`, which names no tracker. Its `version` is the time its text was read, or a commit's full id in another repository.
 - **A time** is a UTC timestamp, as a revalidation's `at` is. **A commit** is its full id, since an abbreviation can come to name two commits as the history grows. Quote both: YAML reads a time, or a commit id of digits alone, as something other than text.
 - **Not a pointer** (DEC-001 point 6): a pull request's head, since a rebase loses a head reviewed mid-way. Nor is any commit the default branch does not hold, since a squash leaves a branch's commits off it.
+- **Where a named commit is checked.** Validation checks a source's form alone. `pkit analysis check-pointers` places each commit a source in this repository names on the default branch. It fails a change that adds a record naming one the default branch does not hold ("Commits off the default branch" above).
 - **The stamp does not take the sources yet,** so it refuses a planned record, naming the missing field.
 
 The record never clears friction itself: commit it in the same change as the answers on the artefacts it covers. `pkit analysis validate` holds it to its schema and to the artefacts it cites. It finds the records as the files the core says the held folder holds (`pkit friction artefacts --json`): every Markdown file beneath `revalidations/`, sub-folders included — a record there was once skipped, and is checked now — from the files git sees, so a draft you keep git-ignored in the folder is not checked. If the core skips the folder — another declaration overlapping it, say — the check's summary says the folder holds nothing, and `pkit validate` says why. A record carries no friction block: it is not an artefact, and `pkit validate` refuses one written into it.
