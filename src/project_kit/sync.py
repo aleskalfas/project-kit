@@ -271,10 +271,19 @@ def _area_clash_stay_lines(target_root: Path) -> list[str]:
 
     An unpinned project pins the release it records, point 8's Stay remedy. A
     pinned project at its pin needs nothing: the transition moved no pin, and the
-    router goes on running that release. Otherwise no way to stay is named.
+    router goes on running that release. Otherwise no way to stay is named: in
+    particular where a completion is recorded apart from the target, an
+    unfinished upgrade whose target is no release the project holds. A manifest
+    with no completion names its `backbone_version` as the release to stay at,
+    since every manifest an upgrade before ADR-065 wrote has none.
     """
     manifest = read_backbone_manifest(target_root)
-    recorded = manifest.backbone_version if manifest is not None else None
+    if manifest is None:
+        return []
+    recorded = manifest.backbone_version
+    completed = manifest.completed_version
+    if completed is not None and _parse_version(completed) != _parse_version(recorded):
+        return []
     if _parse_version(recorded) is None:
         return []
     pin = read_version_pin(target_root)

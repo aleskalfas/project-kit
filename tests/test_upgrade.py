@@ -1341,6 +1341,7 @@ def test_a_transition_stops_on_the_projects_own_lifecycle_area_in_step_1(
     """Step 1 refuses before anything is written, under `--dry-run` too, and
     `--force` overrides nothing of it."""
     _content_behind(installed_target)
+    manifest.record_completed_version(installed_target, "0.1.0")
     _own_lifecycle_area(installed_target)
     before = _tree_bytes(installed_target)
 

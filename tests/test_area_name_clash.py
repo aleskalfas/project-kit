@@ -50,7 +50,7 @@ HOLD_MESSAGE = (
 
 
 def _bundled_adapters(source_kit: Path) -> frozenset[str]:
-    """The adapters the bundle ships, as first install and the copy walk them."""
+    """The adapters the bundle ships: its adapter folders, Python caches aside."""
     adapters = source_kit / "adapters"
     return frozenset(
         p.name
@@ -181,6 +181,40 @@ def test_a_pinned_project_stays_by_doing_nothing(target: Path) -> None:
 
     assert f"To stay at {recorded}: do nothing. This upgrade moved no pin" in message
     assert "run `pkit pin`" not in message
+
+
+def test_an_unfinished_upgrade_names_no_way_to_stay(target: Path) -> None:
+    """Over an unfinished upgrade, with its completion recorded apart from its
+    target, the target is no release the project holds, so pinning it would not
+    stay anywhere."""
+    from project_kit.manifest import record_backbone_target
+
+    _own_area(target)
+    record_backbone_target(target, "9.9.9")
+
+    message = _message(target, command="upgrade")
+
+    assert "To stay" not in message
+    assert "move the project's area to another name" in message
+
+
+def test_a_manifest_with_no_completion_stays_at_its_recorded_release(target: Path) -> None:
+    """Every manifest an upgrade before ADR-065 wrote has no completion: such a
+    project stays at the release it records."""
+    from project_kit.manifest import record_backbone_target
+
+    _own_area(target)
+    record_backbone_target(target, "1.148.1")
+    path = target / ".pkit" / "manifest.yaml"
+    lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+    path.write_text(
+        "".join(line for line in lines if not line.startswith("completed_version:")),
+        encoding="utf-8",
+    )
+
+    message = _message(target, command="upgrade")
+
+    assert "To stay at 1.148.1: run `pkit pin`" in message
 
 
 def test_syncs_message_names_no_way_to_stay(target: Path) -> None:

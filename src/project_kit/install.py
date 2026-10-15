@@ -24,6 +24,7 @@ from pathlib import Path, PurePath
 import click
 
 from project_kit import treecopy, workspace
+from project_kit.lifecycle_ownership import OWNERSHIP_MODULE
 from project_kit.router import (
     DISTRIBUTION_GIT_URL,
     can_exec_source_dispatcher,
@@ -144,8 +145,8 @@ PROPAGATED_AREAS: tuple[str, ...] = (
 # No release adds a core area or a core adapter until #1600 builds the full
 # check: `tests/test_area_name_clash.py` holds the set of areas above, and of the
 # adapters the bundle ships, to today's.
-LIFECYCLE_AREA = "lifecycle"
-LIFECYCLE_MARK = "ownership.py"
+LIFECYCLE_AREA = OWNERSHIP_MODULE.parent.name
+LIFECYCLE_MARK = OWNERSHIP_MODULE.name
 
 
 @dataclass(frozen=True)
