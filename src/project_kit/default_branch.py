@@ -151,6 +151,17 @@ class DefaultBranch:
     warning: str | None = None  # a declared value read as the default, and why
     unborn: bool = False  # no commit yet: no remote, HEAD on it before its first commit
 
+    @property
+    def warnings(self) -> list[str]:
+        """What a reader of the default branch prints on standard error: a declaration
+        read as the default (COR-048 point 4), and — since a local branch can lag the
+        shared one or carry work nobody pushed (point 2) — a branch read from the local
+        branch."""
+        said: list[str] = [self.warning] if self.warning else []
+        if self.resolved == RESOLVED_LOCAL:
+            said.append(_local(f"the default branch {self.name!r}", self.name))
+        return said
+
     def as_json(self) -> dict[str, Any]:
         return {
             "name": self.name,
@@ -230,11 +241,10 @@ class Settled:
         or carry work nobody pushed (point 2) — a base read from the local branch: the
         default branch when no base is named, else the named one."""
         branch, found = self.default_branch, self.base
-        said: list[str] = [branch.warning] if branch.warning else []
         if found.source == DEFAULT_BRANCH:
-            if branch.resolved == RESOLVED_LOCAL:
-                said.append(_local(f"the default branch {branch.name!r}", branch.name))
-        elif found.resolved == RESOLVED_LOCAL:
+            return branch.warnings
+        said: list[str] = [branch.warning] if branch.warning else []
+        if found.resolved == RESOLVED_LOCAL:
             said.append(_local(f"the base {found.ref!r}", found.ref))
         return said
 
@@ -276,9 +286,10 @@ def declared(target_root: Path) -> tuple[str, str, str | None]:
 def resolve(target_root: Path, *, standing: bool = False) -> DefaultBranch:
     """The default branch: declared, then resolved as point 2 orders it.
 
-    `standing` asks for it as a standing value reads it — a data point's filler,
-    which no base reaches (COR-054 point 3) — so a problem names the fetch and
-    the declaration as its fixes, and never a base."""
+    `standing` asks for it as a reader that no base reaches reads it — a data
+    point's filler, or a command that allocates past it and takes no base of its
+    own, such as `pkit new decision` (COR-054 point 3) — so a problem names the
+    fetch and the declaration as its fixes, and never a base."""
     declaration = declared(target_root)
     refs = _branch_refs(target_root, declaration[0])
     return _default_branch(target_root, declaration, refs, standing=standing)
