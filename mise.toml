@@ -64,7 +64,7 @@ target="$(uv tool dir --bin 2>/dev/null || echo "${UV_TOOL_BIN_DIR:-${XDG_BIN_HO
 # Clear a stray symlink (e.g. a legacy dev symlink) before installing.
 if [ -L "$target" ]; then echo "Removing stray symlink: $target"; rm "$target"; fi
 uv tool install --force git+ssh://git@github.com/aleskalfas/project-kit.git
-echo "Done. Global release at $target (routes per CWD + pin). Verify with: mise run pkit:which"
+echo "Done. Global development install at $target (routes per CWD + pin). Verify with: mise run pkit:which"
 '''
 
 [tasks."pkit:which"]

@@ -15,10 +15,10 @@
 #
 # `uv` and Python 3.11+ are required (per PRJ-003). The recommended
 # install names a release tag, `uv tool install git+ssh://git@github.com/
-# aleskalfas/project-kit.git@v<version>` (per PRJ-004), and puts a binary on
-# PATH that doesn't need this proxy at all. This proxy stays useful for the project-kit
-# source tree (where `uv run` resolves the in-tree Python via uv's
-# `--project` flag) and for adopters running pre-install bootstrap.
+# aleskalfas/project-kit.git@v<version>` (per PRJ-004), and puts a binary
+# on PATH that doesn't need this proxy at all. This proxy stays useful for
+# the project-kit source tree (where `uv run` resolves the in-tree Python
+# via uv's `--project` flag) and for adopters running pre-install bootstrap.
 #
 # Older bash command implementations were removed during the Python port
 # step 3 (umbrella #28). See git history for archaeology.

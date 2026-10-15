@@ -1282,7 +1282,7 @@ def _print_next_steps() -> None:
     click.echo()
     click.echo("     One install serves every project on this machine that uses")
     click.echo("     project-kit. pkit finds the current project from the folder you")
-    click.echo("     run it in. The tag names the release this pkit is. For another")
+    click.echo("     run it in. The tag names this pkit's version. For another")
     click.echo("     release, see .pkit/cli/README.md, section")
     click.echo('     "Installing pkit on PATH".')
     click.echo()

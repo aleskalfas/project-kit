@@ -653,6 +653,7 @@ _UNTAGGED_INSTALL = f"uv tool install {install.DISTRIBUTION_GIT_URL}"
 
 def _first_code_block_after(text: str, marker: str) -> str:
     """The one command in the first code block after `marker` in `text`."""
+    assert marker in text, f"no {marker!r} in the section"
     after = text.split(marker, 1)[1]
     block = re.search(r"```[^\n]*\n(.*?)```", after, re.DOTALL)
     assert block, f"no code block after {marker!r}"
@@ -715,7 +716,6 @@ def test_init_does_not_print_the_untagged_install(
 
     lines = _next_steps_lines(capsys)
 
-    assert _UNTAGGED_INSTALL not in lines
     assert not any(line.startswith("uv tool install") and "@v" not in line for line in lines)
 
 
