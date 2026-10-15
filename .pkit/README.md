@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-15T08:25:04Z
+      at: 2026-10-15T09:52:44Z
       outcome: unchanged
-      unchanged-because: The CLI reference now recommends the tagged install of pkit, and the lifecycle README says the version guard vouches for content only under it. The map gives each area's role and link, and no role or link moves, so the map holds.
+      unchanged-because: The CLI reference's new decision entry now says where a record's number comes from. The map gives each area's role and link, and no role or link moves, so the map holds.
 ---
 
 # project-kit
