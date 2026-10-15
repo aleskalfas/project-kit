@@ -1,0 +1,7 @@
+component: software-analysis
+kind: none
+body: >
+  Internal. The README is revalidated unchanged against COR-050 and COR-051,
+  refined so an artefact anchor can name a document's section or its lead.
+  Only the README's friction block changes, and nothing you run or read
+  changes.
