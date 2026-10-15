@@ -194,7 +194,9 @@ class FrictionFindingKind(Enum):
     RETIRED_POINT_ANCHOR = "retired-point-anchor"  # an anchor on a point its record retires
     DEAD_SECTION_ANCHOR = "dead-section-anchor"  # a section or lead anchor that names none
     AMBIGUOUS_SECTION_ANCHOR = "ambiguous-section-anchor"  # a slug two headings share
-    REFUSED_PART_ANCHOR = "refused-part-anchor"  # a part COR-050 point 2 refuses
+    REFUSED_SECTION_ANCHOR = (
+        "refused-section-anchor"  # a section or lead anchor COR-050 point 2 refuses
+    )
     CONTAINER_REPORT = "container-report"  # an orphaned role block, an inert point block
     SCHEMA_UNAVAILABLE = "schema-unavailable"  # the tree ships no readable container schema
 
@@ -888,7 +890,7 @@ def _part_anchor_findings(
                 f"another part (COR-050 point 7)."
             )
         elif found.state is PartState.REFUSED:
-            kind = FrictionFindingKind.REFUSED_PART_ANCHOR
+            kind = FrictionFindingKind.REFUSED_SECTION_ANCHOR
             message = f"artefact anchor {value!r} {problem} (COR-050 point 2)."
         else:
             kind = FrictionFindingKind.DEAD_SECTION_ANCHOR
@@ -937,7 +939,7 @@ def _cycles(discovery: Discovery) -> list[FrictionFinding]:
     """
     order = list(discovery.artefacts)
     edges: dict[int, list[int]] = {}
-    own_parts: dict[int, list[str]] = {}  # each artefact's anchors on a part of itself
+    own: dict[int, list[str]] = {}  # each artefact's anchors on itself, whole or a part
     index_of = {id(a): i for i, a in enumerate(order)}
     for i, artefact in enumerate(order):
         targets: list[int] = []
@@ -945,8 +947,8 @@ def _cycles(discovery: Discovery) -> list[FrictionFinding]:
             target = whole_target(discovery, reference)
             if target is not None:
                 targets.append(index_of[id(target)])
-                if target is artefact and discovery.find(reference) is None:
-                    own_parts.setdefault(i, []).append(reference)
+                if target is artefact:
+                    own.setdefault(i, []).append(reference)
         edges[i] = targets
 
     WHITE, GREY, BLACK = 0, 1, 2
@@ -971,8 +973,10 @@ def _cycles(discovery: Discovery) -> list[FrictionFinding]:
                 canonical = _rotate_to_smallest(cycle, order)
                 if canonical not in seen_cycles:
                     seen_cycles.add(canonical)
-                    parts = own_parts.get(canonical[0], []) if len(canonical) == 1 else []
-                    findings.append(_cycle_finding([order[i] for i in canonical], parts))
+                    selves = own.get(canonical[0], []) if len(canonical) == 1 else []
+                    findings.append(
+                        _cycle_finding([order[i] for i in canonical], selves, discovery)
+                    )
             elif colour[child] == WHITE:
                 colour[child] = GREY
                 path.append(child)
@@ -989,19 +993,24 @@ def _rotate_to_smallest(cycle: list[int], order: list[Artefact]) -> tuple[int, .
     return tuple(cycle[pivot:] + cycle[:pivot])
 
 
-def _cycle_finding(members: list[Artefact], own_parts: list[str]) -> FrictionFinding:
+def _cycle_finding(
+    members: list[Artefact], selves: list[str], discovery: Discovery
+) -> FrictionFinding:
+    """The finding on one cycle. An artefact that anchors a section or the lead of itself
+    is told so, with each anchor on itself it writes, whole or a part (`selves`)."""
     head = members[0]
     pointer = f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/anchors/artefact"
-    if own_parts:
-        named = ", ".join(repr(value) for value in own_parts)
+    if any(discovery.find(value) is None for value in selves):
+        named = ", ".join(repr(value) for value in selves)
+        whole = "" if all(discovery.find(value) is None for value in selves) else "itself, and "
         return FrictionFinding(
             location=head.location,
             pointer=pointer,
             severity=Severity.ERROR,
             kind=FrictionFindingKind.CYCLE,
             message=(
-                f"the artefact anchors a section or the lead of itself ({named}), which is a "
-                f"cycle: its own edits would flag it, and so would its own revalidation — "
+                f"the artefact anchors {whole}a section or the lead of itself ({named}), which "
+                f"is a cycle: its own edits would flag it, and so would its own revalidation — "
                 f"anchor what lies outside it (COR-050 point 5)."
             ),
         )

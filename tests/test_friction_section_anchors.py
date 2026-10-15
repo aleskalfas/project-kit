@@ -348,7 +348,8 @@ The second term.
 """
 
 DOC_RULES = (
-    "---\nrule-set: DOC\nversion: 1.0.0\nrules:\n  RS-DOC-001: {status: proposed}\n---\n\n"
+    "---\nrule-set: DOC\nversion: 1.0.0\nrules:\n"
+    "  RS-DOC-001: {status: proposed, offers: [labels]}\n---\n\n"
     "# Documentation rules\n\n## RS-DOC-001 — Say who reads it\n\nName the reader.\n"
 )
 
@@ -396,19 +397,21 @@ def test_validation_fails_dead_ambiguous_and_refused_part_anchors(adopter: Adopt
         "PRJ-900#2-second",  # 10: a record; the point whose heading has the slug
         "PRJ-900#context",  # 11: a record; no point, so the whole record
         "docs/nothing.md",  # 12: a whole anchor that names nothing: the checks' finding
+        "RS-DOC-001#say-who-reads-it",  # 13: a rule's section, which it offers as no point
     )
     errors = _errors(adopter)
     assert [(kind, index) for kind, index, _message in errors] == [
         ("dead-section-anchor", "2"),
         ("dead-section-anchor", "3"),
         ("ambiguous-section-anchor", "4"),
-        ("refused-part-anchor", "5"),
-        ("refused-part-anchor", "6"),
-        ("refused-part-anchor", "7"),
-        ("refused-part-anchor", "8"),
-        ("refused-part-anchor", "9"),
-        ("refused-part-anchor", "10"),
-        ("refused-part-anchor", "11"),
+        ("refused-section-anchor", "5"),
+        ("refused-section-anchor", "6"),
+        ("refused-section-anchor", "7"),
+        ("refused-section-anchor", "8"),
+        ("refused-section-anchor", "9"),
+        ("refused-section-anchor", "10"),
+        ("refused-section-anchor", "11"),
+        ("refused-section-anchor", "13"),
     ]
     messages = {index: message for _kind, index, message in errors}
     assert messages["2"] == (
@@ -445,12 +448,16 @@ def test_validation_fails_dead_ambiguous_and_refused_part_anchors(adopter: Adopt
     )
     assert messages["10"].endswith("— use the record anchor PRJ-900#2 (COR-050 point 2).")
     assert messages["11"].endswith("— use the record anchor PRJ-900 (COR-050 point 2).")
+    assert messages["13"] == (
+        "artefact anchor 'RS-DOC-001#say-who-reads-it' is refused: RS-DOC-001 is a collection "
+        "entry, cited whole by its id — use the artefact anchor RS-DOC-001 (COR-050 point 2)."
+    )
 
 
 def test_the_lead_of_a_collection_file_is_refused_naming_no_entry(adopter: AdopterRepo) -> None:
     _write(adopter, "docs/terms.md#")
     ((kind, _index, message),) = _errors(adopter)
-    assert kind == "refused-part-anchor"
+    assert kind == "refused-section-anchor"
     assert message.endswith("— anchor one of its entries by its id (COR-050 point 2).")
 
 
@@ -462,6 +469,17 @@ def test_an_anchor_on_a_part_of_its_own_artefact_is_a_cycle(adopter: AdopterRepo
         "the artefact anchors a section or the lead of itself ('docs/page.md#', 'page#page'), "
         "which is a cycle: its own edits would flag it, and so would its own revalidation — "
         "anchor what lies outside it (COR-050 point 5)."
+    )
+
+
+def test_an_artefact_anchoring_itself_whole_and_by_a_part_is_told_both(
+    adopter: AdopterRepo,
+) -> None:
+    _write(adopter, "docs/page.md", "docs/page.md#")
+    (cycle,) = fv.validate_friction(adopter.root).errors
+    assert cycle.message.startswith(
+        "the artefact anchors itself, and a section or the lead of itself ('docs/page.md', "
+        "'docs/page.md#'), which is a cycle"
     )
 
 

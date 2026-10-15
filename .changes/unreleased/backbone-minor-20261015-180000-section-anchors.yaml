@@ -23,6 +23,6 @@ body: >
   a section or lead anchor among `part_anchors` with the lines it spans.
   `pkit validate`'s `friction` member fails a dead, ambiguous or refused part
   anchor (`dead-section-anchor`, `ambiguous-section-anchor`,
-  `refused-part-anchor`) in either mode, its artefact gone included. A value
+  `refused-section-anchor`) in either mode, its artefact gone included. A value
   with a `#` that names an artefact whole is read whole, so an artefact anchor
   that resolved before resolves the same way.

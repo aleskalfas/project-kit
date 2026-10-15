@@ -23,7 +23,8 @@ read an artefact anchor through it, so they agree on what it names:
     the entry whose id follows the `#`, or whose section holds the heading
     with the slug;
   - a section or the lead of a collection entry, cited whole by its id. An
-    extension point of a rule, `RS-CMN-003#cause-location`, reads as one;
+    extension point a rule offers, `RS-CMN-003#cause-location`, reads as one,
+    and its reason says so;
   - a section or the lead of an artefact whose file a record anchor names,
     whose parts are its points (`record_points`): the point whose id follows
     the `#`, or whose heading has the slug, else the whole record.
@@ -51,6 +52,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from functools import cached_property
+from typing import cast
 
 from project_kit.document_parts import Body, Extent, SectionSpan, heading_slug
 from project_kit.friction_discovery import Anchor, Artefact, ArtefactKind, Discovery, content
@@ -157,7 +159,7 @@ class AnchoredPart:
             )
         if self.refusal is Refusal.RECORD:
             return f"{self.name} is a record, whose parts are its points{use}"
-        if self.target is not None and self.target.rule_set is not None and self.part:
+        if self.part and _offers(self.target, self.part):
             return (
                 f"#{self.part} names an extension point of the rule {self.name}, which is no "
                 f"anchor value (COR-051 point 3){use}"
@@ -255,6 +257,15 @@ def whole_target(discovery: Discovery, value: str) -> Artefact | None:
     return None if part is None else discovery.find(name)
 
 
+def _offers(target: Artefact | None, part: str) -> bool:
+    """Whether `target` is a rule that offers the extension point `part`, by its name in
+    the rule's `offers` (COR-051 point 3)."""
+    if target is None or target.rule_set is None:
+        return False
+    offers: object = target.carrier.get("offers")
+    return isinstance(offers, list) and part in cast("list[object]", offers)
+
+
 def _entry_for(entries: Sequence[Artefact], part: str) -> Artefact | None:
     """The entry a part of a collection file meant: the one whose id follows the `#`,
     else the first whose section holds a heading with the slug; `None` for the lead."""
@@ -267,9 +278,13 @@ def _entry_for(entries: Sequence[Artefact], part: str) -> Artefact | None:
 
 
 def _point_to_use(record: str, target: Artefact, part: str) -> str:
-    """The record anchor a part of the record `record` meant (COR-050 point 2): the point
-    whose id follows the `#`, else the one whose heading has the slug, both read by the
-    one reading of a record's points; else the whole record."""
+    """The record anchor a part of the record `record` meant (COR-050 point 2): the live
+    point whose id follows the `#`, else the one whose heading has the slug, both read by
+    the one reading of a record's points; else the whole record.
+
+    Only the point headings are asked of the record, so its body is read, without its
+    front matter. A retired id is no point the record holds, so it names the whole
+    record."""
     if part == LEAD:
         return record
     points = read_points(target.body).points
