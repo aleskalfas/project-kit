@@ -643,29 +643,109 @@ def test_bundled_source_kit_returns_on_disk_path_directly(
     assert resolved == kit
 
 
-# ── the install advice init closes with (#1376) ───────────────────────────
+# ── the install advice init closes with (#1376, #1465) ────────────────────
+
+#: The placeholder the CLI reference and the README write for a release's version.
+_VERSION_PLACEHOLDER = "<version>"
+
+_UNTAGGED_INSTALL = f"uv tool install {install.DISTRIBUTION_GIT_URL}"
+
+
+def _first_code_block_after(text: str, marker: str) -> str:
+    """The one command in the first code block after `marker` in `text`."""
+    assert marker in text, f"no {marker!r} in the section"
+    after = text.split(marker, 1)[1]
+    block = re.search(r"```[^\n]*\n(.*?)```", after, re.DOTALL)
+    assert block, f"no code block after {marker!r}"
+    (command,) = block.group(1).strip().splitlines()
+    return command
 
 
 def _install_the_cli_reference_recommends() -> str:
     """The command in the first code block after "Recommended" in the CLI
-    reference's section "Installing pkit on PATH"."""
+    reference's section "Installing pkit on PATH", its placeholder as written."""
     reference = (install.find_source_kit() / "cli" / "README.md").read_text(encoding="utf-8")
     section = reference.split("\n## Installing pkit on PATH\n", 1)[1].split("\n## ", 1)[0]
-    after_recommended = section.split("**Recommended", 1)[1]
-    block = re.search(r"```[^\n]*\n(.*?)```", after_recommended, re.DOTALL)
-    assert block, "no code block after the CLI reference's recommended install"
-    (command,) = block.group(1).strip().splitlines()
-    return command
+    return _first_code_block_after(section, "**Recommended")
+
+
+def _install_the_readme_recommends() -> str:
+    """The command in the first code block of the README's section "Install"."""
+    readme = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
+    section = readme.split("\n## Install\n", 1)[1].split("\n## ", 1)[0]
+    return _first_code_block_after(section, "Then install `pkit`")
+
+
+def _next_steps_lines(capsys: pytest.CaptureFixture[str]) -> list[str]:
+    install._print_next_steps()
+    return [line.strip() for line in capsys.readouterr().out.splitlines()]
 
 
 def test_init_recommends_the_install_the_cli_reference_recommends(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """`init`'s closing next steps and the CLI reference recommend one install
-    (PRJ-004), so following either gives the same pkit."""
+    (PRJ-004), so following either gives the same pkit. The reference writes the
+    release as a placeholder, and init fills in its own version."""
     recommended = _install_the_cli_reference_recommends()
+    assert _VERSION_PLACEHOLDER in recommended
 
-    install._print_next_steps()
+    lines = _next_steps_lines(capsys)
 
-    lines = [line.strip() for line in capsys.readouterr().out.splitlines()]
-    assert recommended in lines
+    assert recommended.replace(_VERSION_PLACEHOLDER, install.running_version()) in lines
+
+
+def test_init_prints_the_install_tagged_with_its_own_version(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The printed install names `@v<the running pkit's version>`, so the version
+    a project records names the content it holds (PRJ-004, ADR-065 point 12)."""
+    monkeypatch.setattr(install, "running_version", lambda: "9.8.7")
+
+    lines = _next_steps_lines(capsys)
+
+    assert f"uv tool install {install.DISTRIBUTION_GIT_URL}@v9.8.7" in lines
+
+
+def test_init_does_not_print_the_untagged_install(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The install from main is the development install, which no version vouches
+    for, so init never recommends it."""
+    monkeypatch.setattr(install, "running_version", lambda: "9.8.7")
+
+    lines = _next_steps_lines(capsys)
+
+    assert not any(line.startswith("uv tool install") and "@v" not in line for line in lines)
+
+
+@pytest.mark.parametrize(
+    ("version", "command"),
+    [
+        ("1.149.0", f"uv tool install {install.DISTRIBUTION_GIT_URL}@v1.149.0"),
+        ("2.0.0", f"uv tool install {install.DISTRIBUTION_GIT_URL}@v2.0.0"),
+    ],
+)
+def test_recommended_install_command_names_the_release_tag(version: str, command: str) -> None:
+    assert install.recommended_install_command(version) == command
+
+
+def test_the_readme_recommends_the_install_the_cli_reference_recommends() -> None:
+    """The README's install line names the tag too, as the CLI reference does."""
+    assert _install_the_readme_recommends() == _install_the_cli_reference_recommends()
+
+
+def test_the_dispatchers_install_advice_names_the_release_tag() -> None:
+    """`.pkit/cli/pkit` advises installing pkit in two errors. Each names the tag."""
+    dispatcher = (install.find_source_kit() / "cli" / "pkit").read_text(encoding="utf-8")
+    advised = re.findall(r"^\s*uv tool install (\S+)$", dispatcher, re.MULTILINE)
+
+    assert len(advised) == 2
+    assert all(url == f"{install.DISTRIBUTION_GIT_URL}@v{_VERSION_PLACEHOLDER}" for url in advised)
+
+
+def test_the_cli_reference_names_the_install_from_main_the_development_install() -> None:
+    reference = (install.find_source_kit() / "cli" / "README.md").read_text(encoding="utf-8")
+    section = reference.split("\n## Installing pkit on PATH\n", 1)[1].split("\n## ", 1)[0]
+
+    assert _first_code_block_after(section, "**The development install") == _UNTAGGED_INSTALL

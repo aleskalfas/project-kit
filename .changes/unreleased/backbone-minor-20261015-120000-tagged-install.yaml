@@ -1,0 +1,16 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+  pr: "1582"
+body: >
+  The recommended install of pkit names the release it installs. `pkit init`
+  ends by printing `uv tool install
+  git+ssh://git@github.com/aleskalfas/project-kit.git@v<version>` with its own
+  version, where it printed the URL with no tag. The CLI reference's
+  "Installing pkit on PATH" and the README recommend the same tagged install,
+  and so do the errors of `.pkit/cli/pkit` that advise installing pkit.
+  Only a tagged install ties pkit's version to one content, so the version a
+  project records names the content it holds. The URL with no tag installs
+  main's head: that is the development install, which no version vouches for.
+  It still works, and nothing checks whether an install is tagged.
