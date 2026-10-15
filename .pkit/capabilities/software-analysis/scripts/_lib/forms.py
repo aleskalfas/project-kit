@@ -487,28 +487,38 @@ def _texts(found: Listing, line: int) -> Iterator[tuple[int, str]]:
         yield from _texts(nested(item), item.line)
 
 
-def _where_a_list_goes(part: Part) -> str:
-    """Where a part's list must stand to be read as one, as a message advises it."""
-    if part.item:
+def _where_a_list_goes(listed: Listing) -> str:
+    """Where a part's list must stand to be read as one, as a message advises it: under
+    the label's own list item, where a list stands beside that item, and otherwise
+    where it opens."""
+    if listed.others:
         return (
             "indent the list under the label's own list item, as far in as the label's "
             "text, since a list beside that item is no part of it"
         )
     return (
         "start the list with `1.` or a bullet, or after a blank line, since a line that "
-        "opens `2.` right below the label continues the label's line"
+        "opens `2.` right below a paragraph continues it"
     )
 
 
+def _reads_none(part: Part) -> str:
+    """How a part with no item stands to `None.`: it reads more, or it does not read it."""
+    if " ".join(part.text.split()).startswith(NONE):
+        return "reads more than `None.`, which stands alone where there is nothing to say"
+    return "does not read `None.`"
+
+
 def _numbered_steps(part: Part) -> list[Breach]:
-    items = listing(part).items
+    listed = listing(part)
+    items = listed.items
     if not items:
         return [
             Breach(
                 BREAKS_FORM,
                 part.line,
                 "it holds no numbered step: write each step as a numbered list item, "
-                f"such as `1. The analyst chooses Export.`, and {_where_a_list_goes(part)}",
+                f"such as `1. The analyst chooses Export.`, and {_where_a_list_goes(listed)}",
             )
         ]
     found: list[Breach] = []
@@ -556,21 +566,16 @@ def _numbered(item: Item) -> tuple[int | None, str]:
 
 
 def _variants(part: Part, context: Context) -> list[Breach]:
-    items = listing(part).items
+    listed = listing(part)
+    items = listed.items
     if not items:
-        said = " ".join(part.text.split())
-        none = (
-            "reads more than `None.`, which stands alone where there is no variant"
-            if said.startswith(NONE)
-            else "does not read `None.`"
-        )
         return [
             Breach(
                 BREAKS_FORM,
                 part.line,
-                f"it holds no variant, and {none}: write each variant as a list item that "
-                f"opens with its step's number and a letter, such as `- **2a.** …`, and "
-                f"{_where_a_list_goes(part)}",
+                f"it holds no variant, and {_reads_none(part)}: write each variant as a list "
+                f"item that opens with its step's number and a letter, such as `- **2a.** …`, "
+                f"and {_where_a_list_goes(listed)}",
             )
         ]
     found: list[Breach] = []
@@ -861,8 +866,8 @@ def _gaps_match(part: Part, context: Context) -> list[Breach]:
             Breach(
                 BREAKS_FORM,
                 part.line,
-                "it holds no gap, and does not read `None.`: write each as a list item that "
-                "opens with the ids it affects, such as `- **UC-007:** …`",
+                f"it holds no gap, and {_reads_none(part)}: write each gap as a list item "
+                f"that opens with the ids it affects, such as `- **UC-007:** …`",
             )
         ]
     found: list[Breach] = []

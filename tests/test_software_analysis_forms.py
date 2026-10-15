@@ -243,20 +243,33 @@ def test_a_writer_s_item_beside_a_label_s_item_is_no_item_of_its_list() -> None:
     assert _found(USE_CASE.replace(goal, twice)) == [("goal", "not-a-sentence", 4)]
 
 
-def test_a_list_beside_a_label_s_item_is_told_to_indent_under_it() -> None:
-    """A list at the label's own indentation is no part of the label's item, as Markdown
-    reads it, so the message says to indent it; `None.` with a note beside it reads
-    more than `None.`."""
+def test_a_part_with_no_list_is_told_where_its_list_must_stand() -> None:
+    """A list beside the label's own list item is no part of it, as Markdown reads it, so
+    the message says to indent the list under that item. A list that opens `2.` right
+    below a paragraph continues it, so the message says how to start one. `None.` with
+    more after it reads more than `None.`."""
     labelled = "**Main path:**\n\n" + MAIN_PATH
     beside = USE_CASE.replace(labelled, "- **Main path:**\n\n" + MAIN_PATH)
     (detail,) = _details(beside)
     assert detail.startswith("it holds no numbered step")
     assert "indent the list under the label's own list item" in detail
+    under = USE_CASE.replace(labelled, "- **Main path:**\n  2. a\n  3. b")
+    (detail,) = _details(under)
+    assert detail.endswith(
+        "start the list with `1.` or a bullet, or after a blank line, since a line that "
+        "opens `2.` right below a paragraph continues it"
+    )
     noted = USE_CASE.replace(
         "**Variants:**\n\n" + VARIANT, "- **Variants:** None.\n- **Note:** none yet."
     )
     (detail,) = _details(noted)
-    assert detail.startswith("it holds no variant, and reads more than `None.`, which stands alone")
+    assert detail.startswith("it holds no variant, and reads more than `None.`, which stands")
+    prose = USE_CASE.replace(VARIANT, "The disk may be full.")
+    (detail,) = _details(prose)
+    assert detail.startswith("it holds no variant, and does not read `None.`: write each")
+    gaps = RECORD.replace(GAP, "None.\n\nNo gap this time.")
+    (detail,) = _details(gaps, "revalidation-record", fields=OUTCOMES)
+    assert detail.startswith("it holds no gap, and reads more than `None.`")
 
 
 def test_a_line_a_quote_in_an_item_runs_on_to_stays_its_text() -> None:
