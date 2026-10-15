@@ -16,8 +16,9 @@ What a body is made of, precisely:
 - **What hides a line from the marks.** A fenced code block opens on a line of
   three or more backticks or tildes, at any indentation and after block-quote
   and list markers, and closes on a line holding only as many of the same
-  character or more. An HTML comment runs from `<!--` to the next `-->`, on its
-  line or a later one. Code is content, and a comment is not.
+  character or more. An HTML comment runs from a `<!--` outside a code span to
+  the next `-->`, on its line or a later one. Code is content, and a comment is
+  not.
 - **A heading:** a line that opens, with no space before it, with one to six
   `#`, then a space, a tab or the line's end. Its level is the number of `#`,
   and its text the rest of the line without a closing run of `#`.
@@ -49,14 +50,16 @@ How a body departs from its kind's structure:
 - **`None.` refused:** a part whose content is `None.` and nothing else, where
   its element does not allow it.
 - **not one sentence:** text of the `sentence` form, in a part or in each item
-  of a front-matter field, in which a sentence ends before its last word. A
-  sentence ends at a full stop, a question mark or an exclamation mark, only
-  where a space, a line end or the text's end follows it, and never inside a
-  code span (RS-SAN-001's *How*).
+  of a front-matter field, in which a sentence ends before its last word. In a
+  part that holds a list, each top-level item, and any text before the first,
+  holds the form on its own. A sentence ends at a full stop, a question mark
+  or an exclamation mark, only where a space, a line end or the text's end
+  follows it, and never inside a code span (RS-SAN-001's *How*).
 
 Labels and sections a writer adds are never reported: the check judges only
-the declared elements. The other forms the declaration names are not read
-here yet.
+the declared elements. What a writer adds inside a part is that part's
+content, though, so it counts toward a `sentence` part's one sentence. The
+other forms the declaration names are not read here yet.
 """
 
 from __future__ import annotations
@@ -105,6 +108,7 @@ _QUOTED = r"[ \t]*(?:>[ \t]*)*"
 _FENCE = re.compile(
     rf"^{_QUOTED}(?:(?:[-+*]|[0-9]{{1,9}}[.)])[ \t]+(?:>[ \t]*)*)*(`{{3,}}|~{{3,}})(.*)$"
 )
+_ITEM = re.compile(r"^(?:[-+*]|[0-9]{1,9}[.)])(?:[ \t]+|$)")
 _LABEL = re.compile(r"^(?:(?:[-+*]|[0-9]{1,9}[.)])[ \t]+)?\*\*(?P<text>[^*\n]+?)\*\*(?P<rest>.*)$")
 _COMMENT_OPEN, _COMMENT_CLOSE = "<!--", "-->"
 _TRAILING = re.compile(r"[\s.,:;!?]+$")
@@ -350,13 +354,26 @@ def _without_comments(line: str, in_comment: bool) -> tuple[str, bool]:
                 return "".join(kept), True
             at, in_comment = end + len(_COMMENT_CLOSE), False
         else:
-            start = line.find(_COMMENT_OPEN, at)
+            start = _comment_opening(line, at)
             if start == -1:
                 kept.append(line[at:])
                 break
             kept.append(line[at:start])
             at, in_comment = start + len(_COMMENT_OPEN), True
     return "".join(kept), in_comment
+
+
+def _comment_opening(line: str, at: int) -> int:
+    """Where the next HTML comment opens on `line`, from `at`, outside a code span: a
+    code span's text is literal, so a quoted `<!--` opens none. -1 when none opens."""
+    spans = [match.span() for match in _CODE_SPAN.finditer(line, at)]
+    start = line.find(_COMMENT_OPEN, at)
+    while start != -1:
+        inside = next((end for first, end in spans if first <= start < end), None)
+        if inside is None:
+            return start
+        start = line.find(_COMMENT_OPEN, inside)
+    return -1
 
 
 def _closes(line: str, fence: tuple[str, int]) -> bool:
@@ -433,9 +450,22 @@ def judged(text: str, element: Element) -> str | None:
         return EMPTY
     if flat == NONE:
         return None if element.allows_none else NONE_REFUSED
-    if element.form == SENTENCE and not one_sentence(text):
+    if element.form == SENTENCE and not all(one_sentence(item) for item in _items(text)):
         return NOT_A_SENTENCE
     return None
+
+
+def _items(text: str) -> list[str]:
+    """A part's text as a form reads it: in a list, each top-level item, its marker left
+    out, and any text before the first item, each on its own; otherwise the whole text."""
+    chunks: list[list[str]] = [[]]
+    for line in text.split("\n"):
+        marker = _ITEM.match(line)
+        if marker is not None:
+            chunks.append([line[marker.end() :]])
+        else:
+            chunks[-1].append(line)
+    return ["\n".join(chunk) for chunk in chunks if "".join(chunk).strip()]
 
 
 def one_sentence(text: str) -> bool:

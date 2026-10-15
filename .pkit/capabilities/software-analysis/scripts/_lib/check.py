@@ -96,7 +96,8 @@ And at the format rule's status:
   structure its kind declares (`_lib/structure.py`): a declared part missing,
   out of order or empty, `None.` where the part may not read it, and text of
   the `sentence` form, in a part or a front-matter field, that is not one
-  sentence. A part or a label a writer adds is never reported. A withdrawn
+  sentence, each item of a list on its own. A part or a label a writer adds
+  is never reported, though what it holds is content of the part it falls in. A withdrawn
   artefact is never failed for a part it lacks, since a part may be required
   after its withdrawal. A record is held to the structure declared now, the
   only one declared so far: holding it to the structure in force on its day
@@ -892,7 +893,9 @@ def _structure(
             continue  # the core reports a file it cannot read
         checked += 1
         found += _artefact_structure(artefact, kind, text)
-    found += _heads(root, analysis, kinds, texts)
+    heads, headed = _heads(root, analysis, kinds, texts)
+    found += heads
+    checked += headed
     record = kinds.get(structure.RECORD)
     for rel, data in records:
         text = _cached(root, rel, texts)
@@ -910,9 +913,9 @@ def _structure(
     previewed = ", previewed as accepted" if label else ""
     never = ", reported and never failing" if label else ""
     return (
-        f"structure ({FORMAT_RULE}, {status}{previewed}): {checked} artefact(s) and record(s) "
-        f"checked against the structure their kind declares in {declaration}; "
-        f"{departing} departing from it{never}.",
+        f"structure ({FORMAT_RULE}, {status}{previewed}): {checked} artefact(s), record(s) and "
+        f"file head(s) checked against the structure their kind declares in {declaration}; "
+        f"{departing} of them departing from it{never}.",
         found,
     )
 
@@ -990,13 +993,17 @@ def _heads(
     analysis: Analysis,
     kinds: Mapping[str, structure.Kind],
     texts: dict[str, str | None],
-) -> list[Finding]:
+) -> tuple[list[Finding], int]:
     """Each collection file's head — its body above its first entry's section, as the
-    backbone's reading spans the entries — against its kind's declared head."""
+    backbone's reading spans the entries — against its kind's declared head, and how
+    many heads were checked. A file whose front matter does not parse, or that is no
+    collection, is reported as such, so its head is not checked."""
     found: list[Finding] = []
+    checked = 0
+    failed = set(analysis.unreadable) | {stray.path for stray in analysis.strays}
     for path, kind_name in sorted(analysis.files.items()):
         kind = kinds.get(kind_name)
-        if kind_name not in COLLECTIONS or kind is None or not kind.head:
+        if kind_name not in COLLECTIONS or kind is None or not kind.head or path in failed:
             continue
         entries = [a for a in analysis.artefacts if a.path == path and a.entry]
         text = _cached(root, path, texts)
@@ -1006,12 +1013,13 @@ def _heads(
         lines = structure.body_lines(text)
         if firsts:
             lines = [line for line in lines if line[0] < min(firsts)]
+        checked += 1
         subject = f"a file of {NOUN[kind_name]}s"
         found += [
             Finding(ERROR, path, _departure_message(d, kind.head, subject))
             for d in structure.departures(lines, kind, head=True)
         ]
-    return found
+    return found, checked
 
 
 def _field_findings(

@@ -23,6 +23,7 @@ adopter, where the backbone's reading gives the rule's status and each entry's s
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from collections.abc import Mapping
 from pathlib import Path
@@ -174,6 +175,28 @@ def test_a_part_of_the_sentence_form_holds_one_sentence() -> None:
     )
 
 
+def test_in_a_list_each_item_of_a_sentence_part_holds_one_sentence() -> None:
+    """As in a front-matter list, each top-level item of a `sentence` part, its marker
+    left out, holds the form on its own, and so does any text before the first."""
+    goal = "**Goal:** Export my report as a file."
+    listed = "**Goal:** Two things:\n\n- Export my report.\n- Share it with the team."
+    assert _found(USE_CASE.replace(goal, listed)) == []
+    numbered = "**Goal:**\n\n1. Export my report.\n2. Share it."
+    assert _found(USE_CASE.replace(goal, numbered)) == []
+    two = "**Goal:**\n\n- Export my report. Then share it.\n- Keep it."
+    assert _found(USE_CASE.replace(goal, two)) == [("goal", "not-a-sentence", 3)]
+
+
+def test_what_a_writer_adds_inside_a_sentence_part_counts_toward_it() -> None:
+    """A writer's label is content of the part it falls in, so under *Goal* it counts
+    toward the one sentence; after the next declared label it is that part's."""
+    note = "\n\n**Note:** asked by sales. Twice."
+    goal = "**Goal:** Export my report as a file."
+    assert _found(USE_CASE.replace(goal, goal + note)) == [("goal", "not-a-sentence", 3)]
+    other = "**Other actors:** None."
+    assert _found(USE_CASE.replace(other, other + note)) == []
+
+
 def test_only_declared_labels_delimit_so_a_writer_s_labels_and_sections_pass() -> None:
     """A variant's `**2a.**` and a writer's `**Note:**` are content, and a writer's own
     section ends the part above it without being reported."""
@@ -200,6 +223,11 @@ def test_code_and_comments_hide_marks_and_a_hint_left_alone_is_no_content() -> N
     fenced = USE_CASE.replace(trigger, f"```\n{trigger}\n```")
     commented = USE_CASE.replace(trigger, f"<!--\n{trigger}\n-->")
     assert _found(fenced) == _found(commented) == [("trigger", "missing", None)]
+    quoted = USE_CASE.replace(
+        "**Preconditions:** The analyst is signed in.",
+        "**Preconditions:** The analyst sees `<!--` in a hint.",
+    )
+    assert _found(quoted) == []  # a code span's text is literal, so it opens no comment
     hinted = USE_CASE.replace(
         "**Goal:** Export my report as a file.",
         "**Goal:** <!-- pkit:hint What the actor wants. -->",
@@ -416,7 +444,15 @@ def test_an_entry_is_read_within_its_span_and_the_file_s_head_above_the_first(
         (f"{glossary}#TERM-a", "`**Distinctions:**` is missing"),
         (glossary, "its opening text is missing"),
     ]
-    assert "2 artefact(s) and record(s) checked" in summary
+    assert "3 artefact(s), record(s) and file head(s) checked" in summary
+    assert "2 of them departing" in summary
+    # A glossary already failed as unreadable or as no collection has no head checked.
+    unreadable = dataclasses.replace(
+        _analysis(tmp_path, "accepted", a, b), unreadable={glossary: "it does not parse"}
+    )
+    summary, found = C._structure(tmp_path, unreadable, [], preview=False)
+    assert [f.location for f in found] == [f"{glossary}#TERM-a"]
+    assert "2 artefact(s), record(s) and file head(s) checked" in summary
     no_section = _artefact(tmp_path, glossary, "term", text, entry="TERM-a")
     [(_s, location, message)] = _structure(tmp_path, "accepted", no_section)[1][:1]
     assert (location, message.split(":")[0]) == (
