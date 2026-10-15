@@ -29,7 +29,10 @@ updated document's sentence from the change's author:
 - `sentences(body)` reads those sentences where the change's author keeps
   them: the description's own `## What changed in each updated document`
   section (`SENTENCES_HEADING`), one list item per document, the document in
-  a code span as the list names it. `given` is the ones the list shows, and
+  a code span as the list names it. `unread` names each list item there that
+  gives no sentence — one in another form, such as the document in bold — by
+  its line, and `unread_warning` is what a command says of it, with the form
+  a sentence takes (`SENTENCE_FORM`). `given` is the ones the list shows, and
   `with_sentences` puts them into a list already written, for an edit that
   derives nothing. `told` is what the person who authorises the merge is
   told, as information: those sentences, the documents left out of date, and
@@ -847,14 +850,98 @@ _SENTENCES_LINE = _heading_line(SENTENCES_HEADING)
 _SENTENCE_ITEM = re.compile(
     r"^(?:[-*+]|\d{1,9}[.)])[ \t]+(`+)(.+?)\1(?!`)[ \t]*(?:[:—–-][ \t]*)?(.*)$"
 )
+#: The form a sentence takes, as a warning names it.
+SENTENCE_FORM = "- `path`: sentence"
+#: A thematic break: three or more of one of `-`, `*`, `_`, spaces between.
+_BREAK = r" {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$"
 #: A line that ends the item above it: a list item of its own, at any depth, a
 #: heading, an HTML comment's opening, or a thematic break.
 _ITEM_END = re.compile(
     r"^[ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)"
     r"| {0,3}#{1,6}(?:[ \t]|$)"
     r"|[ \t]*<!--"
-    r"| {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$"
+    rf"|{_BREAK}"
 )
+#: A list item that opens at a list's top level: indented by at most three
+#: spaces. The thematic breaks a bullet's character can open are not items.
+_ITEM_OPENING = re.compile(r"^( {0,3})(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)")
+_THEMATIC_BREAK = re.compile(_BREAK)
+
+
+@dataclass(frozen=True)
+class Unread:
+    """A list item under `SENTENCES_HEADING` that gives no sentence: the number of
+    its line in the description, and the line, shown as a terminal shows it."""
+
+    line: int
+    text: str
+
+
+def _read_sentences(body: str) -> tuple[dict[str, str], list[Unread]]:
+    """The sentences the author wrote under `SENTENCES_HEADING`, and each list item
+    there that gives none (`sentences`, `unread`). One reading for both, so a
+    warning names exactly the items the reading leaves out. The list a command
+    wrote reads as a blank line, so its lines keep their numbers."""
+    lines_ = _split(provenance.strip_footer(body))
+    listed = {index for span in _spans(lines_) for index in range(span.first, span.last + 1)}
+    found: dict[str, str] = {}
+    unread_: list[Unread] = []
+    inside = False
+    fence: str | None = None
+    current: list[str] | None = None
+    key, at = "", 0
+    first_column = False
+
+    def close() -> None:
+        nonlocal current
+        if current is None:
+            return
+        words = " ".join(" ".join(current).split())
+        if not key or not words:
+            unread_.append(Unread(at, shown(lines_[at - 1])))
+        elif key not in found:
+            found[key] = words
+        current = None
+
+    for number, raw in enumerate(lines_, start=1):
+        line = "" if number - 1 in listed else raw
+        if fence is not None:
+            fence = None if _closes(line, fence) else fence
+            continue
+        opened = _FENCE.match(line)
+        if opened is not None:
+            close()
+            fence = opened.group(1)
+            continue
+        if _SENTENCES_LINE.match(line):
+            close()
+            inside, first_column = True, False
+            continue
+        if _SECTION_END.match(line):
+            close()
+            inside = False
+            continue
+        if not inside:
+            continue
+        item = _SENTENCE_ITEM.match(line)
+        if item is not None:
+            close()
+            key, at, current = item.group(2).strip(), number, [item.group(3)]
+            first_column = True
+        elif not line.strip() or _ITEM_END.match(line):
+            close()
+            opening = _ITEM_OPENING.match(line)
+            if opening is None or _THEMATIC_BREAK.match(line):
+                continue
+            # An item in the first column is a document's; an indented one is
+            # taken as nested under such an item, where one came before it.
+            if not opening.group(1) or not first_column:
+                unread_.append(Unread(number, shown(line)))
+            first_column = first_column or not opening.group(1)
+        elif current is not None:
+            current.append(line.strip())
+    close()
+    return found, unread_
 
 
 def sentences(body: str) -> dict[str, str]:
@@ -864,49 +951,26 @@ def sentences(body: str) -> dict[str, str]:
     on over the lines under it up to a blank line, another list item, a heading,
     an HTML comment, a thematic break or a fence, its whitespace folded. Of two
     items for one document, the first."""
-    lines_ = _split(strip(provenance.strip_footer(body)))
-    found: dict[str, str] = {}
-    inside = False
-    fence: str | None = None
-    current: list[str] | None = None
-    key = ""
+    return _read_sentences(body)[0]
 
-    def close() -> None:
-        if current is not None and key and key not in found:
-            words = " ".join(" ".join(current).split())
-            if words:
-                found[key] = words
 
-    for line in lines_:
-        if fence is not None:
-            fence = None if _closes(line, fence) else fence
-            continue
-        opened = _FENCE.match(line)
-        if opened is not None:
-            close()
-            current, fence = None, opened.group(1)
-            continue
-        if _SENTENCES_LINE.match(line):
-            close()
-            current, inside = None, True
-            continue
-        if _SECTION_END.match(line):
-            close()
-            current, inside = None, False
-            continue
-        if not inside:
-            continue
-        item = _SENTENCE_ITEM.match(line)
-        if item is not None:
-            close()
-            key, current = item.group(2).strip(), [item.group(3)]
-        elif not line.strip() or _ITEM_END.match(line):
-            close()
-            current = None
-        elif current is not None:
-            current.append(line.strip())
-    close()
-    return found
+def unread(body: str) -> list[Unread]:
+    """Each list item under `SENTENCES_HEADING` in `body` that `sentences` reads no
+    sentence from, in order: a top-level item not in the form `SENTENCE_FORM` —
+    one naming its document in bold, or with no code span — one indented with no
+    item in the line's first column before it, and one that names a document but
+    gives no words. An item nested under a document's item is not one."""
+    return _read_sentences(body)[1]
+
+
+def unread_warning(item: Unread) -> str:
+    """What a command says of `item`: the line it is on, and the form a sentence
+    takes."""
+    return (
+        f"line {item.line} of the description, under `{SENTENCES_HEADING}`, is not read as "
+        f'a sentence: "{item.text}" — write it as "{SENTENCE_FORM}", starting in the '
+        "line's first column, the document in a code span as the list names it"
+    )
 
 
 def given(document: Mapping[str, Any], sentences_: Mapping[str, str]) -> dict[str, str]:

@@ -2028,6 +2028,42 @@ def test_the_list_gives_each_updated_document_its_author_s_sentence(world, capsy
     assert f"{_STEP}: 3, {_IN_THE_DESCRIPTION}" in out.splitlines()
 
 
+@pytest.mark.parametrize(
+    ("item", "unread"),
+    [
+        ("- **docs/guide.md:** The guide names the new flag.", True),
+        ("- docs/guide.md: The guide names the new flag.", True),
+        ("- `docs/guide.md`: The guide names the new flag.", False),
+    ],
+    ids=["bold path", "no code span", "read form"],
+)
+def test_an_item_it_cannot_read_draws_a_warning_naming_its_line_and_the_form(
+    world, capsys, item, unread
+) -> None:
+    """As on PR #1519: a sentence in bold reads as none, and the person is told the
+    author has not said. The warning above the list names its line in the
+    description and the form a sentence takes; the read form draws none."""
+    run = world()
+    run.written = [UPDATED_INSTALL, UPDATED_GUIDE, DEFERRED]
+    run.github.body = f"{_SAID}{item}\n"
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    lines = out.splitlines()
+    warned = [line for line in lines if "is not read as a sentence" in line]
+    told = "  What changed in docs/guide.md: the pull request's author has not said"
+    if not unread:
+        assert warned == [] and told not in lines
+        return
+    assert run.github.body.split("\n")[17] == item  # line 18 of the description
+    assert warned == [
+        "  warn: line 18 of the description, under `## What changed in each updated document`, "
+        f'is not read as a sentence: "{item}" — write it as "- `path`: sentence", starting in '
+        "the line's first column, the document in a code span as the list names it"
+    ]
+    assert lines.index(warned[0]) < lines.index("  " + run.land.friction_answers.QUESTION)
+    assert told in lines
+
+
 def test_a_sentence_edited_in_the_description_is_written_again(world, capsys) -> None:
     run = world()
     run.written = [UPDATED_INSTALL]

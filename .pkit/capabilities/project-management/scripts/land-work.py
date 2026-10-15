@@ -75,7 +75,9 @@ It stops at the first step that cannot go on, and its last line says why.
           friction settings it alters, derived at the pinned head against the
           PR's base (`_lib.friction_answers`), each `updated` document with the
           sentence its author wrote under the description's `## What changed
-          in each updated document`, printed in full, in the plain words of
+          in each updated document` — each item there it cannot read draws a
+          `warn:` line naming its line and the form a sentence takes —
+          printed in full, in the plain words of
           the description's `## Documentation this change affects` section,
           and written into the PR's description, last before its footer, where
           it is not there already; its lines begin `documents this change
@@ -968,6 +970,8 @@ def _answers(
             f"(`pkit validate` names the problem), push, and run `land-work {issue}` again",
         )
     body = _read_body(head, config)
+    for item in friction_answers.unread(body):
+        print(f"  warn: {friction_answers.unread_warning(item)}")
     if not derived.listed:
         return _no_answers(args, head, body, config, capability_root)
     if derived.outdated:

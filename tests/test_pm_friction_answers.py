@@ -1107,6 +1107,81 @@ def test_an_item_is_a_top_level_list_item_and_ends_where_markdown_ends_it(
     assert fa.sentences(body) == read
 
 
+#: The form a warning names for a sentence.
+FORM = "- `path`: sentence"
+
+
+@pytest.mark.parametrize(
+    ("lines", "read", "unread"),
+    [
+        # The read form gives its sentence and draws no warning.
+        (["- `docs/a.md`: The intro."], {"docs/a.md": "The intro."}, []),
+        # A path in bold, as on PR #1519: no sentence, and its line is named.
+        (["- **docs/a.md:** The intro."], {}, [3]),
+        # A path with no code span.
+        (["- docs/a.md: The intro."], {}, [3]),
+        # A bold code span is no code span right after the marker either.
+        (["1. **`docs/a.md`**: The intro."], {}, [3]),
+        # An item that names its document but gives no words.
+        (["- `docs/a.md`:", "", "- `docs/b.md`: B."], {"docs/b.md": "B."}, [3]),
+        # A list indented whole: no item starts in the first column.
+        (["  - `docs/a.md`: The intro.", "  - `docs/b.md`: B."], {}, [3, 4]),
+        # An item nested under a document's item is not one, nor is a thematic break.
+        (
+            ["- `docs/a.md`: The intro.", "  - **docs/b.md** is linked from it", "* * *"],
+            {"docs/a.md": "The intro."},
+            [],
+        ),
+        # A paragraph and an item under another heading are not the section's items.
+        (["One sentence each:", "", "## Notes", "", "- **x**"], {}, []),
+    ],
+    ids=[
+        "read form",
+        "bold path",
+        "no code span",
+        "bold code span",
+        "no words",
+        "indented",
+        "nested",
+        "not an item",
+    ],
+)
+def test_an_item_the_reading_cannot_read_is_named_by_its_line(
+    fa: ModuleType, lines: list[str], read: dict[str, str], unread: list[int]
+) -> None:
+    """Every item under the heading either gives a sentence or is named, by the line
+    it is on in the description, as the line is written."""
+    body = "## What changed in each updated document\n\n" + "\n".join(lines) + "\n"
+    assert fa.sentences(body) == read
+    found = fa.unread(body)
+    assert [item.line for item in found] == unread
+    assert [item.text for item in found] == [body.split("\n")[n - 1] for n in unread]
+
+
+def test_the_warning_names_the_line_and_the_form(fa: ModuleType) -> None:
+    (item,) = fa.unread(SAID_BODY)  # `- not a document`
+    assert (item.line, item.text) == (13, "- not a document")
+    assert fa.SENTENCE_FORM == FORM
+    assert fa.unread_warning(item) == (
+        "line 13 of the description, under `## What changed in each updated document`, is not "
+        f'read as a sentence: "- not a document" — write it as "{FORM}", starting in the '
+        "line's first column, the document in a code span as the list names it"
+    )
+
+
+def test_a_line_keeps_its_number_past_the_list_and_is_shown_escaped(fa: ModuleType) -> None:
+    """The list a command wrote is never read, yet its lines are counted, so the
+    number is the line's in the description; a terminal is shown no control
+    character of the author's."""
+    listed = fa.render(_document(_entry("docs/a.md", "updated")), HEAD) or ""
+    said = "## What changed in each updated document\n\n- **docs/a.md\x1b[2J:** Done.\n"
+    body = f"Closes #42\n\n{listed}\n\n{said}\n{FOOTER}\n"
+    (item,) = fa.unread(body)
+    assert body.split("\n")[item.line - 1].startswith("- **docs/a.md")
+    assert item.text == "- **docs/a.md\\x1b[2J:** Done."
+    assert fa.sentences(body) == {}
+
+
 def test_a_reason_quoting_the_updated_label_marks_no_entry_updated(fa: ModuleType) -> None:
     """The label counts only outside the code spans an artefact's words sit in."""
     document = _document(_entry("docs/a.md", "unchanged", "Was **updated in this change**."))

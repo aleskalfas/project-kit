@@ -37,10 +37,12 @@ Inputs:
     it that the change's author wrote under the body's own `## What changed
     in each updated document` section — one list item per document, the
     document in a code span as the list names it — or says there is none,
-    with a warning naming it. A section the supplied body carries — written
-    by a command or typed by hand, under that heading or the one an earlier
-    run wrote — is dropped, with a warning. open-pr never refuses to open
-    over it: a list it cannot derive, a branch not pushed, a word or a
+    with a warning naming it. Each item under that heading it cannot read —
+    the document in bold, say, or with no code span — draws a warning naming
+    its line and the form a sentence takes. A section the supplied body
+    carries — written by a command or typed by hand, under that heading or
+    the one an earlier run wrote — is dropped, with a warning. open-pr never
+    refuses to open over it: a list it cannot derive, a branch not pushed, a word or a
     sentence that reads as a closing reference or holds an HTML comment's
     delimiter, or a body it would make too long leaves the section out with
     one warning line, and land-work writes it or says why it cannot.
@@ -358,6 +360,8 @@ def main() -> int:
     body = friction_answers.strip(body)
     versions = provenance.read_versions(capability_root)
     sentences = friction_answers.sentences(body)
+    for item in friction_answers.unread(body):
+        print(f"warn: {friction_answers.unread_warning(item)}", file=sys.stderr)
     answers = _fitting(body, _friction_answers(branch, base, sentences), versions)
     doc_impact_note = None
     if args.doc_impact_from_friction:
