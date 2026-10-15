@@ -15,7 +15,7 @@ id: JRN-000                       # stamped: the next free number, never reused
 title: <Title>                    # --title; the heading below repeats it after the id
 status: active                    # or withdrawn: the file stays and its id is never reused
 actor: ACT-actor                  # the actor who takes the journey
-steps: [UC-000, UC-001]           # the use cases it passes through, in order
+steps: [UC-000, UC-001]           # the actor's use cases it passes through, in order
 pkit:
   friction:
     anchors:

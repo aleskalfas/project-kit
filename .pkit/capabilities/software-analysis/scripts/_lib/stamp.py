@@ -40,6 +40,9 @@ a term's definition as the template's front-matter placeholders, and each
 body part as its hint (point 1). The check fails each until it is written.
 It writes a journey's step lines under *Steps*, each use case's id and title
 as the form asks, and leaves the part's hint above them for the hand-overs.
+It refuses a journey with a step that is a use case of another actor: a
+journey is one actor's path across use cases (point 1), and the check holds a
+journey in force to the same.
 A title, a name or a reason given to it still holding a placeholder the
 templates or the skill's commands shipped it refuses (`_lib/placeholder.py`).
 While the analysis location is not recorded yet, the stamp records it through
@@ -101,6 +104,7 @@ from _lib.model import (
     Unreadable,
     identity,
     number_of,
+    one_actor,
     with_article,
 )
 from _lib.placeholder import left_in
@@ -359,7 +363,8 @@ def _check_unanchored(request: Request) -> None:
 def _check_references(analysis: Analysis, request: Request) -> None:
     """A use case's and a journey's actor, and a journey's steps, are artefacts in force:
     what it stamps is in force, and the check holds it to the same rule
-    (`Analysis.unfit`)."""
+    (`Analysis.unfit`). Each of a journey's steps is a use case of its actor, as the
+    check holds a journey in force (`Analysis.another_actor`)."""
     if request.kind in NUMBERED:
         if request.actor is None:
             raise Refused(f"{with_article(request.kind)} is one actor's: name it with --actor")
@@ -372,6 +377,13 @@ def _check_references(analysis: Analysis, request: Request) -> None:
             )
         for step in request.steps:
             _in_force(analysis, step, USE_CASE)
+        for number, step in enumerate(request.steps, 1):
+            other = analysis.another_actor(step, str(request.actor))
+            if other is not None:
+                raise Refused(
+                    f"{one_actor(number, step, other, str(request.actor))} — name one of "
+                    f"{request.actor}'s in its place"
+                )
 
 
 def _in_force(analysis: Analysis, artefact_id: str, kind: str) -> None:
