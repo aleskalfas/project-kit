@@ -7281,10 +7281,11 @@ def new_decision(namespace: str, slug: str, yes: bool) -> None:
     capability name; the command refuses if no such capability exists.
 
     The number is one past the highest the namespace's folder holds in the
-    working tree or on the default branch (COR-054 point 3), so two branches cut
-    at different times do not take one number. $PKIT_CHECK_BASE never changes
-    it. Where the default branch cannot be read, the command says so on standard
-    error and numbers past the working tree alone (point 4).
+    working tree or on the default branch (COR-054 point 3), so a branch cut
+    before another branch's record merged numbers past that record, once the
+    default branch is fetched. $PKIT_CHECK_BASE never changes it. Where the
+    default branch cannot be read, the command says so on standard error and
+    numbers past the working tree alone (point 4).
 
     For adr with <adr-records> unset, the location is derived from the internal
     documentation root and recorded in the overlay before the record is stamped

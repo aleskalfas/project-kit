@@ -28,18 +28,20 @@ DEC id-space). The capability must exist; the command refuses otherwise.
 **The number** is one past the highest that the namespace's folder holds, in
 the working tree or on the default branch, each read from a record's file name
 (`_next_number`). A command that allocates from settled state reads the
-default branch and allocates past it (COR-054 point 3), so two branches cut at
-different times do not take one number. The default branch is the backbone's
-one resolution (`default_branch.resolve`), and its files are read from git
+default branch and allocates past it (COR-054 point 3), so a branch cut
+before another branch's record merged numbers past that record, once the
+default branch is fetched. The default branch is the backbone's one
+resolution (`default_branch.resolve`), and its files are read from git
 objects (`friction_git.CommitTree`), so nothing is checked out. The variable a
 pipeline sets for its checks never reaches it, and the command takes no base
 of its own. Where the default branch resolves to no commit, or its files
 cannot be read, the stamp says so on standard error and numbers past the
 working tree alone (point 4). It gives the reason, and the fixes the
-backbone names, if any. A default branch with no
-commit yet holds nothing, and nothing is said of it. A default branch read
-from the local branch, and a declaration read as the default, are said as
-every reader says them (`DefaultBranch.warnings`).
+backbone names, if any. A default branch with no commit yet holds nothing,
+which is no failure to read it: the stamp says so through `say`, beside its
+other notices, and numbers past the working tree. A default branch read from
+the local branch, and a declaration read as the default, are said as every
+reader says them (`DefaultBranch.warnings`).
 """
 
 from __future__ import annotations
@@ -130,6 +132,8 @@ def stamp_decision(
     default branch — that it could not be read, so the number comes from the working
     tree alone, or that it was read from the local branch — goes through `warn`,
     which prints `warning: <message>` on standard error unless a caller passes its own.
+    A default branch with no commit yet is no failure to read it, so that it holds no
+    record is said through `say`.
 
     Returns the stamped file path. Raises `click.ClickException` for any
     user-facing precondition failure (invalid slug, missing decisions dir,
@@ -178,6 +182,11 @@ def stamp_decision(
     )
     for message in settled.said(f"{prefix}-{nnn}"):
         warn(message)
+    if settled.empty is not None:
+        say(
+            f"the default branch {settled.empty!r} has no commit yet, so it holds no record: "
+            f"{prefix}-{nnn} is numbered past the working tree (COR-054 point 4)."
+        )
     if notice is not None:
         say(notice)
         say(f"run `pkit sync` to deploy the agent(s) that reference {_ADR_CATEGORY}.")
@@ -361,11 +370,13 @@ def _numbers(names: Iterable[str], prefix: str) -> Iterable[int]:
 @dataclass(frozen=True)
 class _Settled:
     """What the default branch holds in a namespace's folder: the file names, what a
-    reader of it says (`DefaultBranch.warnings`), and why it was not read, if it was not."""
+    reader of it says (`DefaultBranch.warnings`), why it was not read, if it was not, and
+    its name when it has no commit yet, so holds nothing (`empty`)."""
 
     names: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
     problem: str | None = None
+    empty: str | None = None
 
     def said(self, record_id: str) -> list[str]:
         """What the stamp of `record_id` says of the default branch: its warnings, then,
@@ -385,22 +396,23 @@ def _settled_names(target_root: Path, decisions_dir: Path) -> _Settled:
     objects at the commit the backbone resolves it to (COR-054 points 2 and 3).
 
     The branch is read as a standing value reads it: no base reaches it, so its problem
-    names the fetch and the declaration as fixes, never a base. Where git cannot read
-    HEAD either — no repository here, or no git to run — that is the reason given, since
-    no fix to the branch would help. A branch with no commit yet holds nothing, and so
-    does a folder outside the repository. The folder is placed from the repository's top,
-    so a project root below it, or an ADR folder beside it, is read all the same."""
+    names the fetch and the declaration as fixes, never a base. Where git cannot find a
+    repository here — none, no git to run, or one it refuses — that is the reason given,
+    since no fix to the branch would help. A branch with no commit yet holds nothing,
+    which is no failure to read it, and so does a folder outside the repository. The
+    folder is placed from the repository's top, so a project root below it, or an ADR
+    folder beside it, is read all the same."""
     branch = default_branch.resolve(target_root, standing=True)
     warnings = tuple(branch.warnings)
     if branch.unborn:
-        return _Settled(warnings=warnings)
+        return _Settled(warnings=warnings, empty=branch.name)
     if branch.commit is None:
-        head = default_branch.head(target_root)
-        problem = (
-            f"the default branch {branch.name!r} cannot be read: {head.problem}."
-            if head.problem is not None
-            else branch.problem or f"the default branch {branch.name!r} resolves to no commit."
-        )
+        try:
+            _repository_top(target_root)
+        except click.ClickException as exc:
+            problem = f"the default branch {branch.name!r} cannot be read: {_said(exc)}."
+        else:
+            problem = branch.problem or f"the default branch {branch.name!r} resolves to no commit."
         return _Settled(warnings=warnings, problem=problem)
     unread = f"the default branch {branch.name!r} ({branch.ref} at {branch.commit[:SHORT]})"
     try:

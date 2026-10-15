@@ -6,9 +6,10 @@ body: >
   `pkit new decision` numbers a new record past every record the default
   branch holds in the namespace's folder, as well as past the working tree's,
   as COR-054 point 3 asks (#1501). A branch cut before another branch's record
-  merged no longer takes that record's number again. This holds for every
-  namespace: core, project, ADR and each capability's DEC. `$PKIT_CHECK_BASE`
-  never changes the number. Where the default branch cannot be read, the
-  command says so on standard error, with the reason and any fixes, and numbers
-  past the working tree alone. It also says when it read the default branch
-  from the local branch, in a repository with no remote.
+  merged no longer takes that record's number again, once the default branch
+  is fetched. This holds for every namespace: core, project, ADR and each
+  capability's DEC. `$PKIT_CHECK_BASE` never changes the number. Where the
+  default branch cannot be read, the command says so on standard error, with
+  the reason and any fixes, and numbers past the working tree alone. It also
+  says when it read the default branch from the local branch, in a repository
+  with no remote, and when the default branch has no commit yet.
