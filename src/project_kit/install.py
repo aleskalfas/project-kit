@@ -24,6 +24,7 @@ from pathlib import Path, PurePath
 import click
 
 from project_kit import treecopy, workspace
+from project_kit.lifecycle_ownership import OWNERSHIP_MODULE
 from project_kit.router import (
     DISTRIBUTION_GIT_URL,
     can_exec_source_dispatcher,
@@ -136,6 +137,16 @@ PROPAGATED_AREAS: tuple[str, ...] = (
     # on demand, not auto-propagated to every adopter (ADR-033 §3).
     "migrations",
 )
+
+# The one core area a project's own area can share a name with today, and the
+# file that tells the core one apart (ADR-065 point 13). `lifecycle` first
+# shipped in v1.149.0, with `ownership.py` in the same commit, and the core area
+# has held that file since. Every other area above has shipped since v1.134.0.
+# No release adds a core area or a core adapter until #1600 builds the full
+# check: `tests/test_area_name_clash.py` holds the set of areas above, and of the
+# adapters the bundle ships, to today's.
+LIFECYCLE_AREA = OWNERSHIP_MODULE.parent.name
+LIFECYCLE_MARK = OWNERSHIP_MODULE.name
 
 
 @dataclass(frozen=True)
@@ -980,11 +991,19 @@ def _install_area(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool 
     area_name = src.name
     _mkdir(dst, ctx)
 
+    verb = "refreshed" if overwrite else "installed"
+
+    # The file that tells the core `lifecycle` area from a project's own area of
+    # that name is written first, so an interrupted copy leaves the area empty or
+    # holding it, and never reads as a clash of area names (ADR-065 point 13).
+    mark = src / LIFECYCLE_MARK
+    if area_name == LIFECYCLE_AREA and mark.is_file():
+        _copy_file(mark, dst / LIFECYCLE_MARK, ctx)
+        click.echo(f"  {verb:<12} .pkit/{area_name}/{LIFECYCLE_MARK}")
+
     readme = src / "README.md"
     if readme.is_file():
         _copy_file(readme, dst / "README.md", ctx)
-
-    verb = "refreshed" if overwrite else "installed"
 
     for sub in ("core", "_defs"):
         sub_src = src / sub
@@ -1027,6 +1046,8 @@ def _install_area(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool 
         # propagates core.md. On init (overwrite=False), project.md is
         # absent in fresh adopters so the file-presence guard below handles it.
         _handled.add("project.md")
+    elif area_name == LIFECYCLE_AREA:
+        _handled.add(LIFECYCLE_MARK)  # written first, above
     for entry in sorted(src.iterdir()):
         if entry.name in _handled or treecopy.is_python_cache(PurePath(entry.name)):
             continue

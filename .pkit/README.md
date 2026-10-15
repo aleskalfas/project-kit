@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-15T15:59:39Z
+      at: 2026-10-15T16:42:59Z
       outcome: unchanged
-      unchanged-because: The CLI reference, the agents README, the lifecycle README and the schemas README say that pkit rule-sets altered, and the rule-set reviewer that reads it, also cover what a change brings under a rule. The map gives each area's role and link, and no role or link moves, so it holds.
+      unchanged-because: The lifecycle README gains a section on a clash of area names, and the CLI reference's sync and upgrade entries name that stop. The map gives each area's role and link, and no role or link moves, so the map holds.
 ---
 
 # project-kit

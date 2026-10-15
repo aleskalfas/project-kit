@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -1416,6 +1417,48 @@ def test_sync_at_the_content_version_proceeds(installed_target: Path) -> None:
     assert manifest.backbone_version == _INSTALLED_BACKBONE
     assert manifest.completed_version == _INSTALLED_BACKBONE
     assert router.read_version_pin(installed_target) == _INSTALLED_BACKBONE
+
+
+# --- A clash of area names (ADR-065 point 13) ------------------------------------
+
+
+def _own_lifecycle_area(target: Path) -> None:
+    """Replace the core `lifecycle` area with a project's own, as one made before v1.149.0."""
+    area = target / ".pkit" / "lifecycle"
+    shutil.rmtree(area)
+    area.mkdir()
+    (area / "README.md").write_text("# Our lifecycle\n", encoding="utf-8")
+
+
+@pytest.mark.parametrize("dry_run", [False, True], ids=["run", "dry-run"])
+def test_sync_stops_on_the_projects_own_lifecycle_area_and_writes_nothing(
+    installed_target: Path, dry_run: bool
+) -> None:
+    """Sync's copy meets the clash at the recorded release, as on an untagged
+    install, and stops before it writes, under `--dry-run` too."""
+    _own_lifecycle_area(installed_target)
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        sync.run_sync(installed_target, dry_run=dry_run)
+
+    message = " ".join(excinfo.value.message.split())
+    assert "refusing to run `pkit sync`: .pkit/lifecycle/ is the project's own area" in message
+    assert "move the project's area to another name" in message
+    assert _tree_bytes(installed_target) == before
+
+
+def test_sync_over_the_core_lifecycle_area_proceeds(installed_target: Path) -> None:
+    (installed_target / ".pkit" / "lifecycle" / "README.md").write_text(
+        "edited\n", encoding="utf-8"
+    )
+
+    sync.run_sync(installed_target)  # must not raise
+
+    assert (installed_target / ".pkit" / "lifecycle" / "ownership.py").is_file()
+    assert (installed_target / ".pkit" / "lifecycle" / "README.md").read_text(
+        encoding="utf-8"
+    ) != "edited\n"
 
 
 def test_sync_does_not_order_a_pin_that_is_not_a_version(installed_target: Path) -> None:
