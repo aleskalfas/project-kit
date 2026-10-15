@@ -44,10 +44,11 @@ from tests.analysis_repo import (
     run_script,
 )
 
-_CHECK, _MODEL, _STRUCTURE = load_lib("check", "model", "structure")
+_CHECK, _MODEL, _STRUCTURE, _FORMS = load_lib("check", "model", "structure", "forms")
 C: Any = _CHECK
 M: Any = _MODEL
 S: Any = _STRUCTURE
+F: Any = _FORMS
 
 KINDS: dict[str, Any] = S.read_kinds()
 RULE = "RS-SAN-001"
@@ -160,7 +161,7 @@ def test_none_passes_only_where_the_part_allows_it() -> None:
     ],
 )
 def test_where_a_sentence_ends_is_rs_san_001_s_how(text: str, one: bool) -> None:
-    assert S.one_sentence(text) is one
+    assert F.one_sentence(text) is one
 
 
 def test_a_part_of_the_sentence_form_holds_one_sentence() -> None:
@@ -175,14 +176,28 @@ def test_a_part_of_the_sentence_form_holds_one_sentence() -> None:
     )
 
 
-def test_a_sentence_part_is_read_as_one_text_a_list_in_it_included() -> None:
-    """A body part is one text, so a list in a `sentence` part counts as one text too:
-    how a form reads a list's items in a body part comes with the list forms."""
+def test_in_a_list_each_item_of_a_sentence_part_holds_one_sentence() -> None:
+    """A `sentence` part written as a list holds the form in each item, as RS-SAN-001's
+    *How* says of a list: each item, a nested one apart from the item it sits in, and
+    the rest of the part taken as one text, each found at its own line (#1365)."""
     goal = "**Goal:** Export my report as a file."
     listed = "**Goal:**\n\n- Export my report.\n- Share it."
-    assert _found(USE_CASE.replace(goal, listed)) == [("goal", "not-a-sentence", 3)]
-    wrapped = "**Goal:** Export my report by the end of\n2026 as a file."
-    assert _found(USE_CASE.replace(goal, wrapped)) == []
+    assert _found(USE_CASE.replace(goal, listed)) == []
+    two = "**Goal:**\n\n- Export my report. Then share it.\n- Keep it."
+    assert _found(USE_CASE.replace(goal, two)) == [("goal", "not-a-sentence", 5)]
+    lead = "**Goal:** Two things. Both today.\n\n- Export my report.\n- Share it."
+    assert _found(USE_CASE.replace(goal, lead)) == [("goal", "not-a-sentence", 3)]
+    nested = "- **Goal:**\n  - Export my report.\n    - As a file.\n  - Share it."
+    assert _found(USE_CASE.replace(goal, nested)) == []
+    # A line wrapped under its item's text stays in the item, `2026.` and all.
+    wrapped = "**Goal:**\n\n- Export my report by the end of\n  2026. Then share it."
+    assert _found(USE_CASE.replace(goal, wrapped)) == [("goal", "not-a-sentence", 5)]
+    # Without a list the part is one text, and a wrapped `2026` continues it.
+    paragraph = "**Goal:** Export my report by the end of\n2026 as a file."
+    assert _found(USE_CASE.replace(goal, paragraph)) == []
+    # A line right below the label that opens with `2.` continues the label's paragraph.
+    continued = "**Goal:** Export my report.\n2. Then share it."
+    assert _found(USE_CASE.replace(goal, continued)) == [("goal", "not-a-sentence", 3)]
 
 
 def test_what_a_writer_adds_inside_a_sentence_part_counts_toward_it() -> None:

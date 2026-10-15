@@ -94,12 +94,14 @@ And at the format rule's status:
   artefact's body — a collection entry's section, as the backbone's reading
   spans it, and the collection file's head — and every record's, against the
   structure its kind declares (`_lib/structure.py`): a declared part missing,
-  out of order or empty, `None.` where the part may not read it, and text of
-  the `sentence` form, in a part or in each item of a front-matter field,
-  that is not one sentence. A part or a label a writer adds is never
-  reported, though what it holds is content of the part it falls in. A
-  withdrawn artefact is never failed for a part it lacks, since a part may be
-  required after its withdrawal. A record is held to the structure declared
+  out of order or empty, `None.` where the part may not read it, and a part or
+  a front-matter field that does not hold the form its element names
+  (`_lib/forms.py`), in each item of a list. A journey's steps read each use
+  case's title, and a record's outcomes and gaps its front matter. A part or a
+  label a writer adds is never reported, though what it holds is content of
+  the part it falls in, and a list form judges only the part's list items. A
+  withdrawn artefact is never failed for a part it lacks or for a form, since
+  either may have come after its withdrawal. A record is held to the structure declared
   now, the only one declared so far: holding it to the structure in force on
   its day comes with the first change to a structure (DEC-001's
   Implications). A document's missing title heading is the heading check's,
@@ -885,6 +887,7 @@ def _structure(
         )
     found: list[Finding] = []
     texts: dict[str, str | None] = {}
+    titles = _titles(analysis)
     checked = 0
     for artefact in analysis.artefacts:
         kind = kinds.get(artefact.kind)
@@ -892,7 +895,7 @@ def _structure(
         if kind is None or text is None:
             continue  # the core reports a file it cannot read
         checked += 1
-        found += _artefact_structure(artefact, kind, text)
+        found += _artefact_structure(artefact, kind, text, titles)
     heads, headed = _heads(root, analysis, kinds, texts)
     found += heads
     checked += headed
@@ -905,7 +908,7 @@ def _structure(
         subject = "a revalidation record"
         found += [
             Finding(ERROR, rel, _departure_message(d, record.sections, subject))
-            for d in structure.departures(structure.body_lines(text), record)
+            for d in structure.departures(structure.body_lines(text), record, fields=data)
         ]
         found += _field_findings(rel, data, record, subject)
     found = [Finding(severity, f.location, label + f.message) for f in found]
@@ -942,10 +945,22 @@ def _unchecked(status: str | None, no_set: bool, preview: bool) -> str:
     )
 
 
-def _artefact_structure(artefact: Artefact, kind: structure.Kind, text: str) -> list[Finding]:
+def _titles(analysis: Analysis) -> dict[str, str]:
+    """Each use case's title by its id, as a journey's steps quote it."""
+    titles: dict[str, str] = {}
+    for use_case in analysis.of_kind(USE_CASE):
+        title = use_case.fields.get("title")
+        if use_case.id and isinstance(title, str):
+            titles.setdefault(use_case.id, title)
+    return titles
+
+
+def _artefact_structure(
+    artefact: Artefact, kind: structure.Kind, text: str, titles: Mapping[str, str]
+) -> list[Finding]:
     """What an artefact's body — an entry's section — and its front matter break of its
-    kind's structure. A withdrawn artefact is never failed for a part it lacks, and a
-    document's missing title heading is `_headings`'."""
+    kind's structure. A withdrawn artefact is never failed for a part it lacks or for a
+    form, and a document's missing title heading is `_headings`'."""
     subject = with_article(artefact.kind)
     if artefact.entry and not artefact.span_read:
         return [
@@ -957,24 +972,31 @@ def _artefact_structure(artefact: Artefact, kind: structure.Kind, text: str) -> 
                 "upgrade it (`pkit upgrade`)",
             )
         ]
-    if not artefact.entry:
-        departing = structure.departures(structure.body_lines(text), kind)
-    elif artefact.span is not None:
-        departing = structure.departures(structure.span_lines(text, artefact.span), kind)
-    else:
+    if artefact.entry and artefact.span is None:
         departing = [structure.Departure(kind.sections[0], structure.MISSING)]
+    else:
+        lines = (
+            structure.span_lines(text, artefact.span)
+            if artefact.entry and artefact.span is not None
+            else structure.body_lines(text)
+        )
+        departing = structure.departures(lines, kind, fields=artefact.fields, titles=titles)
     found = [
         Finding(ERROR, artefact.location, _departure_message(d, kind.sections, subject))
         for d in departing
         if not _exempt(d, artefact)
     ]
+    if artefact.withdrawn:
+        return found
     return found + _field_findings(artefact.location, artefact.fields, kind, subject)
 
 
 def _exempt(departure: structure.Departure, artefact: Artefact) -> bool:
-    """A part a withdrawn artefact lacks, which may be required since its withdrawal
-    (DEC-001 point 1), and a document's title heading, which `_headings` holds whatever
-    the format rule's status."""
+    """A part a withdrawn artefact lacks, or a form it breaks, either of which may have
+    come since its withdrawal (DEC-001 point 1), and a document's title heading, which
+    `_headings` holds whatever the format rule's status."""
+    if artefact.withdrawn and departure.how in structure.FORM_BREACHES:
+        return True
     if departure.how != structure.MISSING:
         return False
     if artefact.withdrawn:
@@ -1025,19 +1047,30 @@ def _heads(
 def _field_findings(
     location: str, fields: Mapping[str, Any], kind: structure.Kind, subject: str
 ) -> list[Finding]:
-    """Each front-matter text that does not hold its field's form."""
+    """Each front-matter text that does not hold its field's form. A text that is still a
+    placeholder a template shipped is the placeholder check's, so no form reports it."""
     found: list[Finding] = []
     for departure in structure.field_departures(fields, kind):
+        if departure.text.strip() in IN_TEMPLATES:
+            continue
         field = departure.field
         each = " in each item" if departure.pointer.count("/") > 1 else ""
+        if departure.how == structure.NOT_A_SENTENCE:
+            problem = (
+                f"{departure.text!r} is more than one sentence: {subject}'s `{field.name}` "
+                f"holds one sentence{each}, and a sentence ends at a full stop, a question mark "
+                f"or an exclamation mark before a space or a line end"
+            )
+        else:
+            problem = (
+                f"{departure.text!r} is not of the form `{field.form}` that {subject}'s "
+                f"`{field.name}` takes{each}: {departure.detail}"
+            )
         found.append(
             Finding(
                 ERROR,
                 at(location, departure.pointer),
-                f"{departure.text!r} is more than one sentence: {subject}'s `{field.name}` "
-                f"holds one sentence{each}, and a sentence ends at a full stop, a question mark "
-                f"or an exclamation mark before a space or a line end ({FORMAT_RULE}). "
-                f"{_advice(field.hint, field.example)}",
+                f"{problem} ({FORMAT_RULE}). {_advice(field.hint, field.example)}",
             )
         )
     return found
@@ -1068,12 +1101,20 @@ def _departure_message(
             f"{named}{line} reads `None.`, which only a part that allows it may: {subject} "
             f"always has something to say here"
         )
-    else:
-        problem = (
-            f"{named}{line} is more than one sentence: a sentence ends at a full stop, a "
-            f"question mark or an exclamation mark before a space or a line end, and one ends "
-            f"here before the text's last word"
+    elif departure.how == structure.NOT_A_SENTENCE:
+        ends = (
+            "a sentence ends at a full stop, a question mark or an exclamation mark before a "
+            "space or a line end, and one ends here before the text's last word"
         )
+        if departure.detail:  # an item of a list in the part
+            problem = (
+                f"an item of {named}{line} is more than one sentence: {departure.detail}, "
+                f"and {ends}"
+            )
+        else:
+            problem = f"{named}{line} is more than one sentence: {ends}"
+    else:
+        problem = f"{named}{line} does not hold its form, `{element.form}`: {departure.detail}"
     return f"{problem} ({FORMAT_RULE}). {_advice(element.hint, element.example)}".rstrip()
 
 
