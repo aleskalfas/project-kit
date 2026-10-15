@@ -35,9 +35,10 @@ An actor or a term nothing embodies is stamped with the reason instead, its
 core's, which the unanchored measure reads (COR-050 points 1 and 8). A
 revalidation record is not an artefact and
 is stamped by `_lib/revalidation.py`.
-What only a person can write the stamp leaves for them: an actor's needs and
-a term's definition as the template's front-matter placeholders, and each
-body part as its hint (point 1). The check fails each until it is written.
+What only a person can write the stamp leaves for them, each holding its
+hint as its placeholder (point 1): a front-matter field it does not write
+itself — an actor's needs, a term's definition — and each body part. The
+check fails each until it is written.
 It writes a journey's step lines under *Steps*, each use case's id and title
 as the form asks, and leaves the part's hint above them for the hand-overs.
 It refuses a journey with a step that is a use case of another actor: a
@@ -506,11 +507,14 @@ def _new_id(kind: str, slug: str, held: set[str], base: str) -> str:
 
 def _document(kind: str, new_id: str, request: Request, analysis: Analysis) -> str:
     """A use case's, a journey's or an actor's file: its front matter from its template,
-    with its id and its title — an actor's name — and its body rendered from its kind's
-    structure, headed by the id and the title (`_lib/render.py`)."""
+    with its id and its title — an actor's name — and each field a writer fills holding
+    its hint, and its body rendered from its kind's structure, headed by the id and the
+    title (`_lib/render.py`)."""
     front, _body = _template(kind)
+    structured = declared(kind)
     data = dict(markdown.load(front))
     data["id"] = new_id
+    data.update(render.fields_left(structured, data))
     written: dict[str, str] = {}
     if kind == ACTOR:
         data["name"] = _title(request)
@@ -521,11 +525,11 @@ def _document(kind: str, new_id: str, request: Request, analysis: Analysis) -> s
         if kind == JOURNEY:
             data["steps"] = list(request.steps)
             anchored = list(dict.fromkeys(request.steps))
-            written = _step_lines(declared(kind), request.steps, analysis)
+            written = _step_lines(structured, request.steps, analysis)
         else:
             anchored = [str(request.actor)]
     data[CONTAINER] = _container(request, anchored)
-    body = render.body(declared(kind), f"{new_id} — {_title(request)}", written)
+    body = render.body(structured, f"{new_id} — {_title(request)}", written)
     return f"---\n{dump(data)}---\n\n{body}"
 
 
@@ -548,13 +552,15 @@ def _step_lines(kind: structure.Kind, steps: Sequence[str], analysis: Analysis) 
 
 def declared(kind: str) -> structure.Kind:
     """A kind's declared structure, or a refusal: the declaration is the capability's own,
-    so one that cannot be read, or whose hints cannot each be one comment on one line, is
-    restored, never edited."""
+    so one that cannot be read, or whose hints — a part's or a field's — cannot each be
+    one comment on one line, is restored, never edited."""
     try:
         declared_kind = structure.read_kinds()[kind]
         for element in declared_kind.sections:
             if element.filled:
                 render.hint(element)
+        for field in declared_kind.fields:
+            render.field_hint(field)
     except (structure.Unreadable, ValueError) as exc:
         raise Refused(
             f"the kinds' structures cannot be read: {exc}. A body is rendered from its kind's "
@@ -569,17 +575,19 @@ def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Requ
     entry and its body the entry's section, each where the id sorts among those
     already there, every other byte as it was. A new file gains the head its kind
     declares, which the stamp writes once. The entry's own fields come from the
-    template's front matter, and its section is rendered from its kind's structure
-    (`_lib/render.py`). Sorted rather than appended, so two lines of work adding
-    different entries write to different places of the file and merge cleanly unless
-    their ids are neighbours — as the core keeps deferrals sorted (COR-050 point 4)."""
+    template's front matter, each a writer fills holding its hint, and its section is
+    rendered from its kind's structure (`_lib/render.py`). Sorted rather than
+    appended, so two lines of work adding different entries write to different places
+    of the file and merge cleanly unless their ids are neighbours — as the core keeps
+    deferrals sorted (COR-050 point 4)."""
     front, _body = _template(kind)
     ((_template_id, example),) = dict(markdown.load(front)).items()
     name = _title(request)
+    structured = declared(kind)
     entry = {key: value for key, value in example.items() if key != CONTAINER}
+    entry.update(render.fields_left(structured, entry))
     entry["name"] = name
     entry[CONTAINER] = _container(request, [])
-    structured = declared(kind)
     section = render.body(structured, f"{new_id} — {name}")
     added = dump({new_id: entry})
     if not target.exists():

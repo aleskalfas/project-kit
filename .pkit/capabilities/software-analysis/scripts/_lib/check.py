@@ -24,10 +24,12 @@ What is checked, each against the record's words:
   still holding one of the templates', is an error. Matched exactly against those texts
   (`_lib/placeholder.py`), so a capitalised one (`<Title>`) is caught and
   words of the artefact's own in angle brackets — code a body quotes — never
-  are. A hint the stamp wrote as a part's placeholder, still in a body or a
-  section, is an error too: a comment that opens with its mark, `<!--
+  are. A hint the stamp wrote as a placeholder, still in an own field, a body
+  or a section, is an error too: a comment that opens with its mark, `<!--
   pkit:hint`, outside fenced code and code spans (`structure.hints`). The
-  message repeats the hint. Neither needs a rule.
+  stamp writes one as the text of each field it leaves to fill, an actor's
+  need and a term's definition, and as each body part. The message repeats
+  the hint. Neither needs a rule.
 - **A document's heading** is its id and its front matter's title — an
   actor's name — `# UC-NNN — <title>`, `# ACT-<slug> — <name>`: what a reader
   of the front matter alone sees — a data point publishing `{id, title,
@@ -302,8 +304,9 @@ def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
     or its section of a collection file, heading included. Matched exactly
     (`_lib/placeholder.py`), so words of the
     artefact's own in angle brackets — `maps <user id> to a session`, code a body
-    quotes — are never taken for one. A hint left in a body or a section is one too
-    (`_hints_left`)."""
+    quotes — are never taken for one. A hint left in a field, a body or a section is one
+    too, found by its mark (`structure.hint_in`, `_hints_left`), the message repeating
+    it."""
     texts: dict[str, str | None] = {}
     found: list[Finding] = []
     for artefact in analysis.artefacts:
@@ -311,6 +314,17 @@ def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
         if artefact.unanchored_because is not None:
             written.append((REASON_POINTER, artefact.unanchored_because))
         for pointer, text in written:
+            said = structure.hint_in(text)
+            if said is not None:
+                found.append(
+                    Finding(
+                        ERROR,
+                        at(artefact.location, pointer),
+                        f"still holds its hint: write in its place what it asks for, and delete "
+                        f"the hint (DEC-001 point 1). The hint: {said}",
+                    )
+                )
+                continue
             held = left_in(text)
             if held:
                 found.append(

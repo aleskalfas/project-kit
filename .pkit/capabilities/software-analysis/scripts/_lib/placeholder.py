@@ -11,8 +11,8 @@ Two readings, each where it is safe:
   writes nothing until its placeholders are filled. A bracket with no space
   inside, or opening in capitals, is code (`Vec<u8>`, `Map<String, int>`), not
   a placeholder.
-- **By the texts shipped**, for an artefact. What the stamp leaves for a person
-  to write is a template's placeholder, and what a person passes the artefact
+- **By the texts shipped**, for an artefact. What the stamp left for a person
+  to write was a template's placeholder, and what a person passes the artefact
   stamp comes from the skill's commands, so an artefact — its own fields, its
   body — and the artefact stamp's texts are matched against exactly those
   (`left_in`): the capitalised ones a shape would take for code (`<Title>`,
@@ -20,7 +20,9 @@ Two readings, each where it is safe:
   (`maps <user id> to a session`, code a body quotes) never are. The lists are
   append-only: a template reworded keeps its old placeholder here, so what was
   stamped before still fails until it is filled. A test holds them to the
-  templates and the skill.
+  templates and the skill. What the stamp leaves now, in a field a writer
+  fills or a body part, is its hint, which is found by its mark and needs no
+  list (`structure.hints`).
 """
 
 from __future__ import annotations

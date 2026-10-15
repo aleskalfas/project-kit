@@ -1,0 +1,16 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Changed
+body: >
+  A front-matter field the analysis stamp leaves you to fill now holds its
+  declared hint as its placeholder, as each body part does (DEC-001 point 1).
+  `pkit analysis new actor` writes `needs` with one item, the hint, and
+  `pkit analysis new term` writes `definition` the same way. The hint is the
+  marked comment a part holds, `<!-- pkit:hint … -->`, with the field's
+  example, and a YAML parse reads it as text. Each template's front matter
+  shows the same hint. `pkit analysis validate` refuses a hint left in a field
+  whatever the format rule's status, and repeats the hint. A field that still
+  holds an earlier `<…>` placeholder stays caught. A `--gap` written without
+  its ids, whose text holds a colon, is now refused for its form, naming what
+  is no id.

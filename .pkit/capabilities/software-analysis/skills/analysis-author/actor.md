@@ -25,11 +25,11 @@ pkit analysis new actor <slug> --name "<Display name>" [--path <glob>]... [--rec
 pkit analysis new actor <slug> --name "<Display name>" --unanchored-because "<why nothing embodies it>"
 ```
 
-The stamp writes `ACT-<slug>.md` in the actors' folder, headed `# ACT-<slug> — <name>`. Its front matter holds the id, the name and the needs, so the needs read just above the description.
+The stamp writes `ACT-<slug>.md` in the actors' folder, headed `# ACT-<slug> — <name>`. Its front matter holds the id, the name and the needs, so the needs read just above the description. `needs` holds one item, its hint, as each part of the body does: `<!-- pkit:hint … -->`, which says what goes there and gives an example.
 
 ## 5. Fill it
 
-- **`needs`** — in the front matter, what the actor needs from the system, one line each, replacing the placeholder. A tool reads them from there, so they never go in the body.
+- **`needs`** — in the front matter, what the actor needs from the system, one item each, in one sentence in their own voice, the hint deleted. A tool reads them from there, so they never go in the body.
 - **The body** — each part as its hint says, the hint deleted: under the heading, what the role is and does with the system, then *Occasions* and *Context*, each `None.` when there is none.
 
 Then run the checks in the shared framing's "After stamping".

@@ -97,21 +97,43 @@ def test_the_check_is_reached_under_the_capability_and_its_alias(
     assert "validate " in result.output
 
 
+#: What an actor's `needs` and a term's `definition` hold as the stamp writes them: each
+#: field's hint, as the declaration gives it, with its example (#1593).
+NEEDS_HINT = (
+    "What the actor needs from the system, each in one sentence in their own voice. Start "
+    "with the verb, or with *Never* and the verb, with *I* and *my* where they refer to "
+    "themselves. Example: Export my report as a file."
+)
+DEFINITION_HINT = (
+    "What the term means, in a phrase of the same part of speech that could replace it. "
+    "Start with its broader kind, with no article, then say what sets it apart. End with no "
+    "full stop, and never repeat the term. Example: layout an administrator publishes, from "
+    "which an analyst builds a report"
+)
+
+
+def _field_hint_left(said: str) -> str:
+    return (
+        "still holds its hint: write in its place what it asks for, and delete the hint "
+        f"(DEC-001 point 1). The hint: {said}"
+    )
+
+
 def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled(
     seeded: AdopterRepo,
 ) -> None:
-    """What only a person can write the stamp leaves as the template's front-matter
-    placeholders, and each body part as its hint (#1366). The check fails each until it is
-    written — in an own field, a body or a section — the placeholders matched against
-    those the templates shipped, and each hint by its mark, the message repeating it."""
+    """What only a person can write the stamp leaves as its hint: each front-matter field
+    it does not write itself (#1593), and each body part (#1366). The check fails each
+    until it is written — in an own field, a body or a section — whatever the format rule's
+    status, each hint found by its mark, the message repeating it."""
     stamped(seeded, "use-case", "export", "--actor", "ACT-tester", "--area", "reports")
     stamped(seeded, "term", "sandbox", "--record", "ADR-001")
     stamped(seeded, "actor", "admin", "--name", "Administrator")
-    rule = "write in its place what it asks for — until then it says nothing of the"
 
     def hinted(rel: str, where: str, more: int) -> str:
         lines = (seeded.root / rel).read_text(encoding="utf-8").splitlines()
-        line = next(n for n, text in enumerate(lines, 1) if "<!-- pkit:hint " in text)
+        body = lines.index("---", 1) + 1  # past the front matter, whose fields hold hints too
+        line = next(n for n, text in enumerate(lines, 1) if n > body and "<!-- pkit:hint " in text)
         found = re.search(r"<!-- pkit:hint (.*) -->", lines[line - 1])
         assert found is not None
         return (
@@ -122,17 +144,9 @@ def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled
 
     export = f"{USE_CASES}/reports/UC-003-export.md"
     assert errors(check(seeded)) == [
-        (
-            f"{GLOSSARY}#TERM-sandbox:/definition",
-            f"still holds the placeholder '<what the term means, in one sentence>': {rule} "
-            "term (DEC-001 point 1)",
-        ),
+        (f"{GLOSSARY}#TERM-sandbox:/definition", _field_hint_left(DEFINITION_HINT)),
         (f"{GLOSSARY}#TERM-sandbox", hinted(GLOSSARY, "its section", 1)),
-        (
-            f"{actor_at('ACT-admin')}:/needs/0",
-            "still holds the placeholder '<what this actor needs from the system, in one "
-            f"sentence>': {rule} actor (DEC-001 point 1)",
-        ),
+        (f"{actor_at('ACT-admin')}:/needs/0", _field_hint_left(NEEDS_HINT)),
         (actor_at("ACT-admin"), hinted(actor_at("ACT-admin"), "its body", 2)),
         (export, hinted(export, "its body", 8)),
     ]
@@ -159,6 +173,51 @@ def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled
         ],
         "findings": [],
     }
+
+
+def test_a_field_placeholder_a_template_once_shipped_is_still_caught(
+    seeded: AdopterRepo,
+) -> None:
+    """An actor or a term stamped before each field held its hint holds the template's
+    `<…>` text there: it stays caught while unfilled, since the list of placeholders is
+    append-only (#1593)."""
+    stamped(seeded, "term", "sandbox", "--record", "ADR-001")
+    fill(seeded)
+    tester = actor_at("ACT-tester")
+    needs = "<what this actor needs from the system, in one sentence>"
+    meaning = "<what the term means, in one sentence>"
+    _set(seeded, tester, "  - 'Export my report as a file.'", f"  - {needs}")
+    _set(
+        seeded,
+        GLOSSARY,
+        "  definition: 'layout an administrator publishes, from which an analyst builds a report'",
+        f"  definition: {meaning}",
+    )
+    rule = "write in its place what it asks for — until then it says nothing of the"
+    assert errors(check(seeded)) == [
+        (
+            f"{GLOSSARY}#TERM-sandbox:/definition",
+            f"still holds the placeholder {meaning!r}: {rule} term (DEC-001 point 1)",
+        ),
+        (
+            f"{tester}:/needs/0",
+            f"still holds the placeholder {needs!r}: {rule} actor (DEC-001 point 1)",
+        ),
+    ]
+
+
+def test_a_field_s_hint_is_never_judged_against_its_form(seeded: AdopterRepo) -> None:
+    """A field still holding its hint is the placeholder check's alone: previewed as
+    accepted, the format rule reports no form of it (#1593)."""
+    stamped(seeded, "actor", "admin", "--name", "Administrator")
+    completed = run_script(seeded, VALIDATE, "--json", "--preview")
+    document = json.loads(completed.stdout)
+    at_needs = [
+        f["message"]
+        for f in document["findings"]
+        if f["location"] == f"{actor_at('ACT-admin')}:/needs/0"
+    ]
+    assert at_needs == [_field_hint_left(NEEDS_HINT)]
 
 
 def test_a_hint_left_in_is_refused_with_no_rule_needed(seeded: AdopterRepo) -> None:
@@ -239,7 +298,7 @@ def test_a_placeholder_is_a_text_the_templates_shipped_never_a_shape(
     _set(
         seeded,
         GLOSSARY,
-        "  definition: what the term means, in one sentence",
+        "  definition: 'layout an administrator publishes, from which an analyst builds a report'",
         "  definition: Maps <user id> to a session.",
     )
     tester = actor_at("ACT-tester")
