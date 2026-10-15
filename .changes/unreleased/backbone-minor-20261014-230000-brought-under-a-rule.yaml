@@ -2,6 +2,7 @@ component: backbone
 kind: minor
 custom:
   category: Added
+  pr: "1579"
 body: >
   `pkit rule-sets altered` says what a change brings under a rule (COR-057
   point 2, #1560). Each altered artefact gains `brought_under`: the rules that
