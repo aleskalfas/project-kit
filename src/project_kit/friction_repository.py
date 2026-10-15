@@ -40,15 +40,17 @@ way, followed across renames; an anchor on a record's point by what the
 point stands on, cut from each version of the record's file through
 `record_points` (`_Judge.standing_in`), so a version that changed the file
 elsewhere is no change to it; an artefact anchor's target by its content,
-read at the state's commit. An edit put back, however many commits made and
-undid it, is no change. Where a merge lies between a state and HEAD, every
-part the anchor stands on at the state or at HEAD is compared, whatever the
-history lists — a merge that takes a file whole from one side lists nothing
-for it, yet the file may differ; where none does, the commits between are
-one line, and a part none of them touched stands as it stood. The
-history only dates the debt: each part is measured from the state it
-differs from, its origin the oldest change still standing on the lines that
-carry it to HEAD (`friction_history.line_changes`,
+read at the state's commit, and one on a document's section or its lead by
+what the part stands on, its text and the document's own fields, cut from
+each version through `artefact_parts` (`_Judge.part_in`). An edit put back,
+however many commits made and undid it, is no change. Where a merge lies
+between a state and HEAD, every part the anchor stands on at the state or at
+HEAD is compared, whatever the history lists — a merge that takes a file
+whole from one side lists nothing for it, yet the file may differ; where none
+does, the commits between are one line, and a part none of them touched
+stands as it stood. The history only dates the debt: each part is measured
+from the state it differs from, its origin the oldest change still standing on
+the lines that carry it to HEAD (`friction_history.line_changes`,
 `friction_history.origin`) — so never an edit a merge discarded — and the
 anchor's debt is dated where it came to differ from every state — of each
 state's oldest origin, the newest.
@@ -139,6 +141,7 @@ from pathlib import Path
 from typing import Any
 
 from project_kit import cli_render
+from project_kit.artefact_parts import part_standing
 from project_kit.friction_check import (
     ExclusionChange,
     HeadState,
@@ -985,21 +988,26 @@ class _Judge:
         renames: bool = False,
         target: Artefact | None = None,
         point: Anchor | None = None,
+        part: str | None = None,
     ) -> dict[int, Any]:
         """The changes to a part since the answering state at `state`, on the lines that carry
         it to the commit at `start`, where its file is at `rel`, each with the part where it
         changed (`line_changes`) — once per part, state and commit for the run.
 
         The part is the file's entry, `then` its entry at the state; for `target`,
-        an artefact anchor's, the target's content, `then` its content there; for
-        `point`, an anchor on a record's point, what the point stands on
-        (`standing_in`), `then` what it stood on there. Each merge among the
-        changes that lists none of the file's names took it whole from one side:
-        recorded in `taken`.
+        an artefact anchor's, the target's content, `then` its content there, or,
+        with `part`, what that section or the lead of the target stands on
+        (`part_in`), `then` what it stood on there; for `point`, an anchor on a
+        record's point, what the point stands on (`standing_in`), `then` what it
+        stood on there. Each merge among the changes that lists none of the
+        file's names took it whole from one side: recorded in `taken`.
         """
         value: Callable[[str, TreeEntry | None], Any] = file_entry
         key: tuple[Any, ...] = ("file", state, start, rel, renames, then)
-        if target is not None:
+        if target is not None and part is not None:
+            key = ("part", state, start, rel, renames, target.id, part)
+            value = self.part_in(target, part)
+        elif target is not None:
             key = ("artefact", state, start, rel, renames, target.id)
             value = self._content_in(target)
         elif point is not None:
@@ -1021,6 +1029,22 @@ class _Judge:
             return _content_of(walker.artefact_in(entry, path, target))
 
         return content_in
+
+    def part_in(self, target: Artefact, part: str) -> Callable[[str, TreeEntry | None], Any]:
+        """What an anchor on `part` of `target` stands on in the file at a path, with an
+        entry (COR-050 point 5): the document read by the same rule as the present, its
+        section or lead cut by the one reading of an artefact anchor's part
+        (`artefact_parts.part_standing`); nothing where there is no file, or where the
+        file at that path is a record's, whose sections are refused."""
+        walker = self.walker
+        head = self.head
+
+        def part_in(path: str, entry: TreeEntry | None) -> Any:
+            if head.record_named(path) is not None:
+                return None
+            return part_standing(walker.artefact_in(entry, path, target), part)
+
+        return part_in
 
     def lines(
         self, state: int, start: int, thens: Mapping[str, TreeEntry | None]
@@ -1109,8 +1133,12 @@ class _Judge:
         the lines that carry it to HEAD (`line_changes`).
         """
         if anchor.kind == "artefact":
-            target = self.head.find(anchor.value)
-            return None if target is None else self._target_since(target, state)
+            found = self.head.part_of(anchor.value)
+            if found.target is None:
+                return None
+            if found.names_part:
+                return self._part_since(anchor, state)
+            return self._target_since(found.target, state)
         if anchor.kind == "path":
             return self._path_since(anchor, state, own)
         if anchor.kind == "record" and split_anchor(anchor.value)[1] is not None:
@@ -1209,6 +1237,47 @@ class _Judge:
         changes = self.line(state, 0, target.path, then, renames=True, target=target)
         found = origin(self.history, changes, then)
         return None if found is None else Change(found, frozenset(changes))
+
+    def _part_since(self, anchor: Anchor, state: int) -> Change | None:
+        """`since` for an anchor on a document's section or its lead: what the part stands
+        on at HEAD against what it stood on at the state (COR-050 point 5), the document's
+        file followed across renames, as an artefact anchor's is.
+
+        The part is cut from each version of the file (`part_in`): a section no
+        heading's slug names at a version stands on nothing there. So a version
+        that changed the document elsewhere is no change to the part, and debt is
+        dated from the oldest version from which what it stands on has differed
+        without returning (point 9). On one line, where no commit since the state
+        touched the file, it stands as it stood.
+        """
+        found = self.head.part_of(anchor.value)
+        target, part = found.target, found.part
+        if target is None or part is None:
+            return None
+        reached = self.history.ancestors(state)
+        versions = list(self.history.versions(target.path))
+        if not self.history.merged(state, 0) and all(v.index in reached for v in versions):
+            return None  # one line, and no commit since the state touched the document's file
+        then = self.part_standing_at(anchor, state)
+        if found.standing == then:
+            return None
+        changes = self.line(state, 0, target.path, then, renames=True, target=target, part=part)
+        origin_at = origin(self.history, changes, then)
+        return None if origin_at is None else Change(origin_at, frozenset(changes))
+
+    def part_standing_at(self, anchor: Anchor, state: int) -> Standing | None:
+        """What an anchor on a document's section or its lead stood on at the state at
+        `state` (COR-050 point 5): the document read from the state's tree, under the
+        file's name there as the history follows it, else under the name it has at HEAD."""
+        found = self.head.part_of(anchor.value)
+        target, part = found.target, found.part
+        if target is None or part is None:
+            return None
+        reached = self.history.ancestors(state)
+        version = next((v for v in self.history.versions(target.path) if v.index in reached), None)
+        name = target.path if version is None else version.path
+        entry = self.trees.entry(self.history.commits[state].sha, name)
+        return self.part_in(target, part)(name, entry)
 
     def _point_since(self, anchor: Anchor, state: int) -> Change | None:
         """`since` for an anchor on a record's point: what the point stands on at HEAD
@@ -1599,9 +1668,9 @@ def _uncovered_surface(
                 if rel is not None:
                     anchored.add(rel)
             elif anchor.kind == "artefact":
-                target = head.find(anchor.value)
-                if target is not None:
-                    anchored.add(target.path)
+                found = head.part_of(anchor.value)  # a section or the lead names its file too
+                if found.resolves and found.target is not None:
+                    anchored.add(found.target.path)
             else:
                 anchored.update(kinds.files(anchor))
     return len(surface), tuple(sorted(surface - anchored))
@@ -1710,8 +1779,8 @@ class ArtefactCheck:
     check's own for this artefact, the findings in its order. Whenever it is
     judged, `files` holds each path anchor's files (`AnchorFiles`) — with no
     point's for an excluded artefact, which has no points. `diffs` holds, for
-    each stale anchor on a record's point, what changed in what the point
-    stands on (`_point_diffs`).
+    each stale anchor on a record's point or on a document's section or its
+    lead, what changed in what the part stands on (`_part_diffs`).
     """
 
     head: HeadState
@@ -1766,7 +1835,7 @@ def run_artefact_check(
         point = None if report is None else _index_of(history, report)
         files = _anchor_files(judge, artefact, point)
         stale = {f.anchor for f in findings if f.kind is RepositoryFindingKind.STALE}
-        diffs = _point_diffs(judge, stale, point)
+        diffs = _part_diffs(judge, stale, point)
     finally:
         blobs.close()
     return ArtefactCheck(head, bool(history.shallow), artefact, report, traced, files, diffs)
@@ -1804,21 +1873,28 @@ def _anchor_files(
     }
 
 
-def _point_diffs(
+def _part_diffs(
     judge: _Judge, stale: Collection[Anchor | None], point: int | None
 ) -> dict[Anchor, tuple[str, ...]]:
-    """For each stale anchor on a record's point, what changed in what the point stands on
-    from the revalidation point to HEAD, as a unified diff of its lines (`Standing.lines`):
-    the point's diff alone, never the rest of the record (COR-050 point 6)."""
+    """For each stale anchor on a record's point, or on a document's section or its lead,
+    what changed in what the part stands on from the revalidation point to HEAD, as a
+    unified diff of its lines (`Standing.lines`): the part's diff alone, never the rest
+    of the record or the document (COR-050 point 13)."""
     if point is None:
         return {}
     commit = judge.history.commits[point]
     diffs: dict[Anchor, tuple[str, ...]] = {}
     for anchor in stale:
-        if anchor is None or anchor.kind != "record" or split_anchor(anchor.value)[1] is None:
+        if anchor is None:
             continue
-        then = judge.standing_at(anchor, point)
-        now = judge.head.standing(anchor, judge.head.record_path(anchor.value))
+        if anchor.kind == "record" and split_anchor(anchor.value)[1] is not None:
+            then = judge.standing_at(anchor, point)
+            now = judge.head.standing(anchor, judge.head.record_path(anchor.value))
+        elif anchor.kind == "artefact" and judge.head.part_of(anchor.value).names_part:
+            then = judge.part_standing_at(anchor, point)
+            now = judge.head.part_of(anchor.value).standing
+        else:
+            continue
         if then == now:
             continue
         diffs[anchor] = tuple(
@@ -1929,7 +2005,7 @@ def _paths_behind(
             paths.update(moved.left_out + moved.let_in + moved.gone)
         return frozenset(paths) - own
     if anchor.kind == "artefact":
-        target = judge.head.find(anchor.value)
+        target = judge.head.part_of(anchor.value).target  # a section or the lead: its file
         return frozenset() if target is None else _names(judge.history, target.path)
     names = frozenset[str]().union(
         *(_names(judge.history, rel) for rel in judge.files_of(anchor, own))
@@ -1989,12 +2065,26 @@ def _changes(
 
     A path or a record: `_Judge.touching`. An artefact: each commit at which
     the target's content differs from its content at every parent of the
-    commit (`changed`).
+    commit (`changed`); for an anchor on a document's section or its lead, at
+    which what the part stands on differs so (`_Judge.part_in`).
     """
     if anchor.kind == "artefact":
-        target = judge.head.find(anchor.value)
+        found = judge.head.part_of(anchor.value)
+        target = found.target
         if target is None:
             return set()
+        if found.part is not None:
+            part_in = judge.part_in(target, found.part)
+            return {
+                version.index
+                for version in judge.history.versions(target.path)
+                if version.index not in covered
+                and all(
+                    part_in(source or version.path, None if source is None else before)
+                    != part_in(version.path, version.entry.after)
+                    for before, source in version.parents()
+                )
+            }
         walker = judge.walker
         return {
             version.index

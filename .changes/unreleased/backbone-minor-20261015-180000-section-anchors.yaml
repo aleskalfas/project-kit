@@ -1,0 +1,28 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  An artefact anchor can name one section of a document, or its lead, and
+  friction compares only that part (COR-050 points 2, 5 to 7, 9 and 11 to 13;
+  COR-051 point 3; #1423). A section is named by the artefact, `#` and its
+  heading's slug: `docs/guide.md#installing`. The lead, the body before the
+  first heading, is named by a bare `#`: `docs/guide.md#`. A slug is the
+  heading's title in lower case, every character but letters, digits, spaces
+  and hyphens dropped, each space made a hyphen. The anchor stands on the
+  part's text and on the document's own fields. `pkit friction check`, `check
+  --all` and `debt` read it through one reading, so they agree. A changed
+  section flags its dependants, and a change elsewhere in the document flags
+  none. A moved section holds. A renamed heading leaves a dead anchor, which
+  the change that renamed it owns. A slug two headings share makes the anchor
+  ambiguous, reported under `dead-anchor`. A section or the lead of a
+  collection file, a collection entry or a record is refused, naming the anchor
+  to use, and so is a rule's extension point, such as `RS-CMN-003#labels`. An
+  anchor on a part of its own artefact is a cycle. `pkit friction explain`
+  shows a stale section's diff alone, and `pkit friction artefacts --json` lists
+  a section or lead anchor among `part_anchors` with the lines it spans.
+  `pkit validate`'s `friction` member fails a dead, ambiguous or refused part
+  anchor (`dead-section-anchor`, `ambiguous-section-anchor`,
+  `refused-part-anchor`) in either mode, its artefact gone included. A value
+  with a `#` that names an artefact whole is read whole, so an artefact anchor
+  that resolved before resolves the same way.

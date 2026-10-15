@@ -633,6 +633,91 @@ def test_a_point_anchor_is_listed_exactly_where_the_friction_checks_resolve_it(
                 assert _lines(text, found[value]["span"]) == standing.section
 
 
+# --- each section or lead anchor's span (#1423) -----------------------------------------------
+
+HANDBOOK = """---
+id: handbook
+title: A handbook
+---
+
+# Handbook
+
+What the handbook is for.
+
+## Installing
+
+Run the installer.
+
+## Using
+
+Run the tool.
+
+## Using
+
+Again.
+"""
+
+
+def test_an_anchor_on_a_section_or_the_lead_gives_the_span_its_part_resolves_to(
+    adopter: AdopterRepo,
+) -> None:
+    """COR-050 point 2: an artefact anchor may name one section of a document by its
+    heading's slug, or its lead by a bare `#`. Its span is the lines of the document's file
+    that part spans, read through the one reading of an artefact anchor's part
+    (`artefact_parts`): exactly the text the checks compare. A dead, ambiguous or refused
+    part anchor names no part, and neither does a whole document."""
+    page = _page(
+        artefact=[
+            '"notes/handbook.md#installing"',
+            '"notes/handbook.md#"',
+            '"handbook#installing"',
+            '"notes/handbook.md#using"',  # two headings share the slug: ambiguous
+            '"notes/handbook.md#upgrading"',  # no heading has the slug: dead
+            '"notes/terms.md#term-a"',  # a collection file's part: refused
+            '"notes/handbook.md"',  # a whole document
+        ]
+    )
+    adopter.write({"notes/handbook.md": HANDBOOK, TERMS: SECTIONED, "notes/page.md": page})
+    found = _part_anchors(_document())["notes/page.md"]
+    section = {"first_line": 10, "last_line": 12}
+    assert found == [
+        {
+            "kind": "artefact",
+            "value": "notes/handbook.md#installing",
+            "path": "notes/handbook.md",
+            "span": section,
+        },
+        {
+            "kind": "artefact",
+            "value": "notes/handbook.md#",
+            "path": "notes/handbook.md",
+            "span": {"first_line": 6, "last_line": 8},
+        },
+        {
+            "kind": "artefact",
+            "value": "handbook#installing",
+            "path": "notes/handbook.md",
+            "span": section,
+        },
+    ]
+    assert _lines(HANDBOOK, section) == "## Installing\n\nRun the installer.\n"
+    assert _lines(HANDBOOK, found[1]["span"]) == "# Handbook\n\nWhat the handbook is for.\n"
+    side = Side(adopter.root, WorkingTree(adopter.root), fd.discover_artefacts(adopter.root))
+    for entry in found:
+        standing = side.part_of(entry["value"]).standing
+        assert standing is not None and _lines(HANDBOOK, entry["span"]) == standing.section
+
+
+def test_an_empty_lead_spans_no_lines(adopter: AdopterRepo) -> None:
+    """A document whose body opens with a second-level heading has an empty lead: the
+    anchor resolves, and spans no lines."""
+    opening = HANDBOOK.replace("# Handbook\n\nWhat the handbook is for.\n\n", "")
+    adopter.write({"notes/handbook.md": opening, "notes/page.md": _page(artefact=['"handbook#"'])})
+    assert _part_anchors(_document())["notes/page.md"] == [
+        {"kind": "artefact", "value": "handbook#", "path": "notes/handbook.md", "span": None}
+    ]
+
+
 # --- the rule sets whose scope covers an artefact (#1361) -----------------------------------
 
 

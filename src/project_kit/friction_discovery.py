@@ -2049,6 +2049,10 @@ class Artefact:
     - `span`: for an entry, the lines of its file its section spans — exactly
       the text `body` holds — else `None`: for a document, and for an entry
       with no section.
+    - `body_line`: for a document, the line of its file its body opens on
+      (`document_parts.body_first_line`), from which the lines its section or
+      its lead spans are counted (`artefact_parts`); `1` for an entry, whose
+      own `span` is counted already.
     - `container` / `friction`: the `pkit` value and its `friction` block, or
       `None` when absent; either may be a non-mapping when malformed — the
       block validator says so.
@@ -2076,6 +2080,7 @@ class Artefact:
     rule_set: RuleSetPlace | None = None
     excluded_by: SettingsPath | None = None
     span: SectionSpan | None = None
+    body_line: int = 1
 
     @property
     def excluded(self) -> bool:
@@ -2570,6 +2575,7 @@ def _artefacts_of_file(
                 place=place,
                 carrier=front_matter,
                 body=body,
+                body_line=body_line,
             )
         ]
     found: list[Artefact] = []
@@ -2638,6 +2644,7 @@ def _artefact(
     body: str,
     span: SectionSpan | None = None,
     rule_set: RuleSetPlace | None = None,
+    body_line: int = 1,
 ) -> Artefact:
     container = carrier.get(CONTAINER_KEY)
     friction = container.get(FRICTION_KEY) if isinstance(container, Mapping) else None
@@ -2665,6 +2672,7 @@ def _artefact(
         revalidated=revalidated,
         rule_set=rule_set,
         span=span,
+        body_line=body_line,
     )
 
 
@@ -3472,8 +3480,10 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
       file in COR-056 point 3's order (`{place, rank}`, places that rank
       equal sharing a rank). Its `part_anchors`, added within version 1 too:
       each anchor that names a part of a file, with the span that part
-      resolves to (`_part_anchors`): an entry's section, or a record's point,
-      read through the one reading of a record's points (`record_points`).
+      resolves to (`_part_anchors`): an entry's section, a document's section
+      or its lead, read through the one reading of an artefact anchor's part
+      (`artefact_parts`), or a record's point, read through the one reading of
+      a record's points (`record_points`).
     - `types`: every declared type by its full name — the backbone's own and
       each installed component's type registry — with its `component`,
       `name`, `description`, `kind_field` and `project_places`. Added within
@@ -3722,26 +3732,39 @@ def _part_anchors(
 
     - **An `artefact` anchor** names a part when the artefact it resolves to is
       a collection entry, whose content is its data and the body section headed
-      by its id (COR-050 point 1); a rule is one (COR-051 point 2). It resolves
-      as the friction checks resolve it (`Discovery.find`). Its `span` is its
-      section's lines as the entry's own `span` gives them, `None` for an entry
-      with no section.
+      by its id (COR-050 point 1); a rule is one (COR-051 point 2). Its `span`
+      is its section's lines as the entry's own `span` gives them, `None` for an
+      entry with no section. It names a part too when it names one section of a
+      document or its lead (COR-050 point 2). Its `span` is then the lines that
+      section or lead spans, `None` for an empty lead. Either resolves as the
+      friction checks resolve it (`artefact_parts.anchored_part`).
     - **A `record` anchor** names a part when it names one point of the record
       (COR-050 point 2), found as the friction checks find it (`_AnchoredPoints`).
 
     Each is `{kind, value, path, span}`, `path` the file the part lies in. An
-    anchor on a whole document, a whole file or a whole record, a dead or
-    ambiguous anchor and an anchor of another kind name no part, so none is
-    listed. The document lists a record's points only where an anchor names one.
+    anchor on a whole document, a whole file or a whole record, a dead,
+    ambiguous or refused anchor and an anchor of another kind name no part, so
+    none is listed. The document lists a record's points only where an anchor
+    names one.
     """
+    # The change check imports this module; the reading of an anchor's part imports it too.
+    from project_kit.artefact_parts import PartState, anchored_part
+
     found: list[dict[str, Any]] = []
     for kind in sorted(artefact.anchors):
         for value in artefact.anchors_of_kind(kind):
             if kind == "artefact":
-                target = discovery.find(value)
-                if target is not None and target.kind is ArtefactKind.ENTRY:
+                part = anchored_part(discovery, value, points.record_named)
+                target = part.target
+                if target is None or part.state not in (PartState.WHOLE, PartState.LIVE):
+                    continue
+                if part.state is PartState.LIVE:
+                    span = _span_entry(part.span)
+                elif target.kind is ArtefactKind.ENTRY:
                     span = _span_entry(target.span)
-                    found.append({"kind": kind, "value": value, "path": target.path, "span": span})
+                else:
+                    continue  # a whole document
+                found.append({"kind": kind, "value": value, "path": target.path, "span": span})
             elif kind == "record":
                 part = points.part(value)
                 if part is not None:
@@ -3777,6 +3800,17 @@ class _AnchoredPoints:
         self._listing: RepositoryTree | None = None
         self._files: frozenset[str] | None = None
         self._records: dict[str, RecordPoints | None] = {}
+        self._named: dict[str, str | None] = {}
+
+    def record_named(self, path: str) -> str | None:
+        """The record anchor that names the file at `path`, as the friction checks read it
+        (`friction_check.record_naming`), read once: a section or the lead of such a file
+        is refused (COR-050 point 2)."""
+        from project_kit.friction_check import record_naming
+
+        if path not in self._named:
+            self._named[path] = record_naming(self.root, path)
+        return self._named[path]
 
     def part(self, value: str) -> dict[str, Any] | None:
         """The part the record anchor `value` names, `{kind, value, path, span}`, or `None`
