@@ -16,9 +16,10 @@ What a body is made of, precisely:
 - **What hides a line from the marks.** A fenced code block opens on a line of
   three or more backticks or tildes, at any indentation and after block-quote
   and list markers, and closes on a line holding only as many of the same
-  character or more. An HTML comment runs from a `<!--` outside a code span to
-  the next `-->`, on its line or a later one. Code is content, and a comment is
-  not.
+  character or more. An HTML comment runs from a `<!--` to the next `-->`, on
+  its line or a later one. A `<!--` inside a code span that closes on its line
+  opens none, and one in a code span that runs on to the next line does. Code
+  is content, and a comment is not.
 - **A heading:** a line that opens, with no space before it, with one to six
   `#`, then a space, a tab or the line's end. Its level is the number of `#`,
   and its text the rest of the line without a closing run of `#`.
@@ -51,10 +52,10 @@ How a body departs from its kind's structure:
   its element does not allow it.
 - **not one sentence:** text of the `sentence` form, in a part or in each item
   of a front-matter field, in which a sentence ends before its last word. In a
-  part that holds a list, each top-level item, and any text before the first,
-  holds the form on its own. A sentence ends at a full stop, a question mark
-  or an exclamation mark, only where a space, a line end or the text's end
-  follows it, and never inside a code span (RS-SAN-001's *How*).
+  part that holds a list, each item holds the form on its own, and so do the
+  text before the list and the text after it. A sentence ends at a full stop, a
+  question mark or an exclamation mark, only where a space, a line end or the
+  text's end follows it, and never inside a code span (RS-SAN-001's *How*).
 
 Labels and sections a writer adds are never reported: the check judges only
 the declared elements. What a writer adds inside a part is that part's
@@ -108,7 +109,7 @@ _QUOTED = r"[ \t]*(?:>[ \t]*)*"
 _FENCE = re.compile(
     rf"^{_QUOTED}(?:(?:[-+*]|[0-9]{{1,9}}[.)])[ \t]+(?:>[ \t]*)*)*(`{{3,}}|~{{3,}})(.*)$"
 )
-_ITEM = re.compile(r"^(?:[-+*]|[0-9]{1,9}[.)])(?:[ \t]+|$)")
+_ITEM = re.compile(r"^[ \t]*(?:(?P<bullet>[-+*])|(?P<number>[0-9]{1,9})[.)])(?:[ \t]+|$)")
 _LABEL = re.compile(r"^(?:(?:[-+*]|[0-9]{1,9}[.)])[ \t]+)?\*\*(?P<text>[^*\n]+?)\*\*(?P<rest>.*)$")
 _COMMENT_OPEN, _COMMENT_CLOSE = "<!--", "-->"
 _TRAILING = re.compile(r"[\s.,:;!?]+$")
@@ -364,8 +365,10 @@ def _without_comments(line: str, in_comment: bool) -> tuple[str, bool]:
 
 
 def _comment_opening(line: str, at: int) -> int:
-    """Where the next HTML comment opens on `line`, from `at`, outside a code span: a
-    code span's text is literal, so a quoted `<!--` opens none. -1 when none opens."""
+    """Where the next HTML comment opens on `line`, from `at`, outside a code span that
+    closes on the line: a code span's text is literal, so a `<!--` quoted in one opens
+    none. A code span that runs on to the next line is not seen here, so a `<!--` in it
+    opens a comment. -1 when none opens."""
     spans = [match.span() for match in _CODE_SPAN.finditer(line, at)]
     start = line.find(_COMMENT_OPEN, at)
     while start != -1:
@@ -456,15 +459,29 @@ def judged(text: str, element: Element) -> str | None:
 
 
 def _items(text: str) -> list[str]:
-    """A part's text as a form reads it: in a list, each top-level item, its marker left
-    out, and any text before the first item, each on its own; otherwise the whole text."""
+    """A part's text as a form reads it: where it holds a list, each item, nested ones
+    included, its marker left out, and the text before the list and after it, each on its
+    own; otherwise the whole text.
+
+    A line opens an item where it starts with a marker after a blank line, within a list,
+    or with a bullet or the number 1, which may interrupt a paragraph. So a wrapped line
+    that starts `2026. ` continues its paragraph. Text after a blank line that opens with
+    no marker and no indentation ends the list."""
     chunks: list[list[str]] = [[]]
+    listed, blank = False, True
     for line in text.split("\n"):
         marker = _ITEM.match(line)
-        if marker is not None:
+        if marker is not None and (
+            blank or listed or marker["bullet"] is not None or int(marker["number"]) == 1
+        ):
             chunks.append([line[marker.end() :]])
+            listed = True
+        elif listed and blank and line.strip() and not line[0].isspace():
+            chunks.append([line])
+            listed = False
         else:
             chunks[-1].append(line)
+        blank = not line.strip()
     return ["\n".join(chunk) for chunk in chunks if "".join(chunk).strip()]
 
 

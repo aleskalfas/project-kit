@@ -270,14 +270,14 @@ Where the format rule, `RS-SAN-001`, is accepted, the check holds each body to t
 
 - **a declared part that is missing, out of order or empty;**
 - **`None.` in a part that may not read it**, such as a use case's *Trigger*, which always has something to say;
-- **text of the `sentence` form that is not one sentence**, in a part such as a use case's *Goal*, or in each of an actor's `needs`. In a part written as a list, each item holds one sentence. Where a sentence ends is the rule's *How*: at a full stop, a question mark or an exclamation mark before a space or a line end, and never inside a code span.
+- **text of the `sentence` form that is not one sentence**, in a part such as a use case's *Goal*, or in each of an actor's `needs`. In a part written as a list, each item holds one sentence, and so does any text before or after the list. Where a sentence ends is the rule's *How*: at a full stop, a question mark or an exclamation mark before a space or a line end, and never inside a code span.
 
 Each message gives the part's hint and example. How the check reads a body:
 
 - **What marks a part.** A heading, or a bold label such as `**Goal:**` that opens a line or a top-level list item. Only a label the kind declares marks a part, so a variant's `**2a.**` is content.
 - **Where a part ends.** A label sits one level below the heading it follows. Its part runs to the next declared label, or to a heading of its level or above. So under a use case's `#` heading, a `##` section ends the part above it, and a `###` one stays inside it.
 - **What you add passes.** A label or a section of your own is never reported. It is content of the part it falls in, though. So text you add inside a part of the `sentence` form, such as *Goal*, counts toward its one sentence.
-- **Code and comments.** A label in fenced code or in an HTML comment marks nothing. A comment is no content, so a part that holds only a comment is empty. A `<!--` inside a code span opens no comment.
+- **Code and comments.** A label in fenced code or in an HTML comment marks nothing. A comment is no content, so a part that holds only a comment is empty. A `<!--` inside a code span that closes on its own line opens no comment.
 - **A glossary entry** is read within the lines `pkit friction artefacts --json` gives as its section's `span`, the text friction compares as the entry. The glossary's head is its body above the first entry.
 - **A withdrawn artefact** is never failed for a part it lacks, since a part may be required after its withdrawal. The parts it carries are checked.
 - **A revalidation record** is held to the structure declared now, the only one the capability has declared. Holding a record to the structure in force on its day comes with the first change to a structure (DEC-001's Implications).

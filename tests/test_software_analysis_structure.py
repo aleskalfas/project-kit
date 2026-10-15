@@ -185,6 +185,15 @@ def test_in_a_list_each_item_of_a_sentence_part_holds_one_sentence() -> None:
     assert _found(USE_CASE.replace(goal, numbered)) == []
     two = "**Goal:**\n\n- Export my report. Then share it.\n- Keep it."
     assert _found(USE_CASE.replace(goal, two)) == [("goal", "not-a-sentence", 3)]
+    # A list nested under a label that opens a list item splits too.
+    nested = "- **Goal:**\n  - Export my report.\n  - Share it."
+    assert _found(USE_CASE.replace(goal, nested)) == []
+    # Text after the list, past a blank line, is judged on its own, not with the last item.
+    after = "**Goal:**\n\n- Export my report.\n- Share it.\n\nBoth today."
+    assert _found(USE_CASE.replace(goal, after)) == []
+    # A wrapped line that starts with a number other than 1 continues its paragraph.
+    wrapped = "**Goal:** Export my report by the end of\n2026. Then share it."
+    assert _found(USE_CASE.replace(goal, wrapped)) == [("goal", "not-a-sentence", 3)]
 
 
 def test_what_a_writer_adds_inside_a_sentence_part_counts_toward_it() -> None:
@@ -228,6 +237,10 @@ def test_code_and_comments_hide_marks_and_a_hint_left_alone_is_no_content() -> N
         "**Preconditions:** The analyst sees `<!--` in a hint.",
     )
     assert _found(quoted) == []  # a code span's text is literal, so it opens no comment
+    # Comments are found line by line, so a code span that runs on to the next line is
+    # not seen, and the `<!--` in it opens a comment that hides the rest of the body.
+    wrapped = quoted.replace("sees `<!--` in", "sees `a\n<!--` in")
+    assert ("trigger", "missing", None) in _found(wrapped)
     hinted = USE_CASE.replace(
         "**Goal:** Export my report as a file.",
         "**Goal:** <!-- pkit:hint What the actor wants. -->",
@@ -453,6 +466,13 @@ def test_an_entry_is_read_within_its_span_and_the_file_s_head_above_the_first(
     summary, found = C._structure(tmp_path, unreadable, [], preview=False)
     assert [f.location for f in found] == [f"{glossary}#TERM-a"]
     assert "2 artefact(s), record(s) and file head(s) checked" in summary
+    stray = dataclasses.replace(
+        _analysis(tmp_path, "accepted", a, b),
+        strays=(M.Stray("term", glossary, "it is no collection"),),
+    )
+    assert [f.location for f in C._structure(tmp_path, stray, [], preview=False)[1]] == [
+        f"{glossary}#TERM-a"
+    ]
     no_section = _artefact(tmp_path, glossary, "term", text, entry="TERM-a")
     [(_s, location, message)] = _structure(tmp_path, "accepted", no_section)[1][:1]
     assert (location, message.split(":")[0]) == (
