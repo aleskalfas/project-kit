@@ -629,6 +629,10 @@ def _wire_main(
         for name in resolution.required_local:
             (agents_dir / f"{name}.md").write_text("agent", encoding="utf-8")
 
+    # A developer may set these once in their own shell, as the README says;
+    # a test sets what it needs after wiring the run.
+    for variable in (rpr.PARALLEL_ENV, rpr.AGENT_TIMEOUT_ENV, rpr.AGENT_EFFORT_ENV):
+        monkeypatch.delenv(variable, raising=False)
     monkeypatch.setattr(rpr, "resolve_capability_root", lambda arg: cap_root)
     monkeypatch.setattr(
         rpr,
@@ -1857,9 +1861,9 @@ def test_a_cap_of_one_runs_the_reviewers_in_turn(
         return "APPROVED", "body"
 
     argv = ("--parallel", "1") if set_by == "flag" else ()
+    started = _at_once(rpr, monkeypatch, tmp_path, invoke, argv=argv)
     if set_by == "env":
         monkeypatch.setenv(rpr.PARALLEL_ENV, "1")
-    started = _at_once(rpr, monkeypatch, tmp_path, invoke, argv=argv)
     run = rpr.review()
     assert run.exit_code == 0
     assert started == list(_SET)
@@ -1878,8 +1882,8 @@ def test_a_cap_limits_how_many_run_at_once(rpr, monkeypatch, tmp_path, capsys) -
             pair.wait()
         return "APPROVED", "body"
 
-    monkeypatch.setenv(rpr.PARALLEL_ENV, "2")
     started = _at_once(rpr, monkeypatch, tmp_path, invoke)
+    monkeypatch.setenv(rpr.PARALLEL_ENV, "2")
     run = rpr.review()
     assert run.exit_code == 0
     assert sorted(started) == sorted(_SET)
@@ -1983,7 +1987,9 @@ def test_the_run_waits_for_the_slowest_reviewer_not_their_sum(
     rpr, monkeypatch, tmp_path, cap
 ) -> None:
     """The gain, timed: four reviewers of 0.3s each take about 0.3s at the
-    default, and at least their sum, 1.2s, with the cap at 1."""
+    default, and at least their sum, 1.2s, with the cap at 1. The default's
+    bound is loose, below what three of them take in a row, so a loaded
+    machine does not fail it: the barrier test proves they overlap."""
     slow = 0.3
 
     def invoke(name, say, sha):
@@ -1997,6 +2003,54 @@ def test_the_run_waits_for_the_slowest_reviewer_not_their_sum(
     took = time.monotonic() - began
     assert run.exit_code == 0
     if cap is None:
-        assert took < slow * len(_SET) / 2, took
+        assert took < slow * (len(_SET) - 1), took
     else:
         assert took >= slow * len(_SET), took
+
+
+def test_each_native_review_reads_the_head_just_before_it(
+    rpr, monkeypatch, tmp_path, capsys
+) -> None:
+    """The verdicts are posted one after another, and GitHub attaches a native
+    review to the head of the moment it is posted. A push after the first
+    native review leaves the second verdict's comment on the head its
+    reviewer saw, with no native review on the new head."""
+    native: list[str] = []
+    posted: list[str] = []
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=_PANEL),
+        invoked=[],
+        posted=posted,
+        native=native,
+        # Before the reviews, after them, before each native review.
+        heads=[_REVIEWED, _REVIEWED, _REVIEWED, _MOVED_TO],
+    )
+    run = rpr.review()
+    assert run.exit_code == 0
+    assert native == ["APPROVED"]
+    assert len(posted) == 2
+    assert all(f"sha={_REVIEWED}" in comment for comment in posted)
+    assert "[native] skipped — the PR's head is not the one the reviewer saw" in (
+        capsys.readouterr().out
+    )
+
+
+def test_an_interrupt_starts_no_reviewer_waiting_for_a_slot(rpr) -> None:
+    """An interrupt reaches the run while it waits on the reviewers, here
+    raised out of the first review. The reviewer waiting for the slot is not
+    started, and the interrupt goes on."""
+    started: list[str] = []
+
+    def review_one(name):
+        started.append(name)
+        if name == "pm-reviewer":
+            raise KeyboardInterrupt
+        time.sleep(1)  # holds the one slot while the interrupt is handled
+        return "APPROVED", "body"
+
+    with pytest.raises(KeyboardInterrupt):
+        rpr._run_at_once(list(_SET[:3]), 1, review_one)
+    assert "code-reviewer" not in started

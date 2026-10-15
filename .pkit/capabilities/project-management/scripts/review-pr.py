@@ -669,9 +669,10 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
         # GitHub-facing signal. Best-effort — a failure or a self-approval
         # degrade never fails review-pr (the comment verdict stands). GitHub
         # attaches a native review to the PR's current head, so it is skipped
-        # when that is not the head the reviewer saw.
+        # when that is not the head the reviewer saw — read again just before
+        # it, since the verdicts are posted one after another.
         if not args.no_native:
-            if head_unchanged:
+            if head_unchanged and _still_at(pr_number, config, reviewed):
                 _deliver_native_review(pr_number, verdict, comment, config)
             else:
                 print(
@@ -728,7 +729,12 @@ def _run_at_once(
     workers = min(cap or len(names), len(names))
     with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="review-pr") as pool:
         futures = {name: pool.submit(review_one, name) for name in names}
-    return {name: future.result() for name, future in futures.items()}
+        try:
+            return {name: future.result() for name, future in futures.items()}
+        except BaseException:
+            # An interrupt starts no reviewer still waiting for a slot.
+            pool.shutdown(wait=False, cancel_futures=True)
+            raise
 
 
 # ---- agent invocation ------------------------------------------------
@@ -959,6 +965,13 @@ def _read_tips(pr_number: int | None, config: dict) -> tuple[str, str]:
     if not isinstance(data, dict):
         return "", ""
     return str(data.get("headRefOid") or ""), str(data.get("baseRefOid") or "")
+
+
+def _still_at(pr_number: int | None, config: dict, reviewed: str) -> bool:
+    """Whether the PR is still at `reviewed`, read just before a native review,
+    which GitHub attaches to the head of that moment. A head never read names
+    nothing to differ from, so the check passes, as `_report_head_check` does."""
+    return not reviewed or _read_tips(pr_number, config)[0] == reviewed
 
 
 def _report_head_check(name: str, reviewed: str, now: str) -> bool:
