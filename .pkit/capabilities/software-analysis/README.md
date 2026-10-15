@@ -13,7 +13,7 @@ pkit:
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053]
       artefact: [RS-SAN-001]
     revalidated:
-      at: 2026-10-15T08:54:26Z
+      at: 2026-10-15T09:01:03Z
       outcome: updated
       deferred:
         - anchor:
@@ -283,7 +283,7 @@ Each message gives the part's hint and example. How the check reads a body:
 
 - **What marks a part.** A heading, or a bold label such as `**Goal:**` that opens a line or a top-level list item. Only a label the kind declares marks a part, so a variant's `**2a.**` is content.
 - **Where a part ends.** A label sits one level below the heading it follows. Its part runs to the next declared label, or to a heading of its level or above. So under a use case's `#` heading, a `##` section ends the part above it, and a `###` one stays inside it.
-- **A part's list.** Items are read as Markdown reads a list. A wrapped line indented under an item's text stays in the item, even one that starts `2026.`. Not indented, a line that starts with a number and a full stop opens an item, as Markdown shows it. A line right below a label that starts `2.` continues the label's line, so start a list right below a label with `1.` or a bullet, or after a blank line. Under a label that opens a list item, such as `- **Steps:**`, the list nested in that item is the part's, and an item of your own beside it, such as `- **Note:**`, is not.
+- **A part's list.** Items are read as Markdown reads a list, save that fenced code stays whole, up to its closing line, with the item it opens in. A wrapped line indented under an item's text stays in the item, even one that starts `2026.`. Not indented, a line that starts with a number and a full stop opens an item, as Markdown shows it. A line right below a label that starts `2.` continues the label's line, so start a list right below a label with `1.` or a bullet, or after a blank line. Under a label that opens a list item, such as `- **Steps:**`, the list nested in that item is the part's, and an item of your own beside it, such as `- **Note:**`, is not.
 - **What you add passes.** A label or a section of your own is never reported. It is content of the part it falls in, though. So text you add inside a part of the `sentence` form, such as *Goal*, counts toward its one sentence, unless it is an item of a list, which holds one sentence of its own. A form that reads a list judges only its items, so a lead line or a note of your own outside them passes.
 - **Code and comments.** A label in fenced code or in an HTML comment marks nothing. A comment is no content, so a part that holds only a comment is empty. A `<!--` inside a code span that closes on its own line opens no comment.
 - **A glossary entry** is read within the lines `pkit friction artefacts --json` gives as its section's `span`, the text friction compares as the entry. The glossary's head is its body above the first entry.
@@ -303,7 +303,7 @@ Each message gives the part's hint and example. How the check reads a body:
 
 - **What the rule binds.** The presence and the order of every part a kind ships, and the form of each part and front-matter field its structure gives one. A revalidation record or a withdrawn artefact is held to the structure in force when it was written or withdrawn. A hint binds nothing, so the voice a hint asks for is no part of the rule. The rule's *How* says where a sentence ends, for text of the `sentence` form.
 - **What it gates.** The check of each kind's structure, since a structure binds at the rule's status (DEC-001 point 1). While the rule is proposed, the check reports nothing of a structure (COR-051 point 4), and `pkit analysis validate --preview` shows what it would report ("Each body against its structure", above). A kind's schema checks the front matter of an artefact or a record whatever the rule's status.
-- **What the check settles.** `SAN` declares, under `checks`, what this capability's check, `software-analysis:validate`, enforces of the rule (COR-051 point 2). That command is the one `pkit validate` runs as its `software-analysis:artefacts` member. The declared part is what the rule binds, above, as far as the check holds it. It holds a withdrawn artefact to no part it lacks and to no form, and every record to the one structure declared so far. Whoever judges the rest of the rule leaves that part to the check, and `pkit rule-sets reach` lists the part wherever the rule binds.
+- **What the check settles.** `SAN` declares, under `checks`, what this capability's check, `software-analysis:validate`, enforces of the rule (COR-051 point 2). That command is the one `pkit validate` runs as its `software-analysis:artefacts` member. The declared part is what the rule binds, above, as far as the check holds it ("Each body against its structure", above). Whoever judges the rest of the rule leaves that part to the check, and `pkit rule-sets reach` lists the part wherever the rule binds.
 - **Its name and scope.** `SAN` takes no scope, as no method rule set does (COR-051 point 2). You never edit it (COR-051 point 6). Its name is reserved in your project. A rule set of yours named `SAN` clashes with it, and `pkit validate` fails on the clash (COR-051 point 3).
 
 ## Numbers another branch took: `pkit analysis check-numbers`
