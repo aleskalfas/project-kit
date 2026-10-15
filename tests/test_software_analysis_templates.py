@@ -666,3 +666,36 @@ def test_a_hint_is_one_marked_comment_with_its_example() -> None:
         "refer to themselves. Example: Export my report as a file. -->"
     )
     assert f"**Goal:** {RENDER.hint(goal)}\n" in _body("use-case")
+
+
+#: The front-matter fields the stamp leaves a writer to fill, by artefact template: each
+#: holds its declared hint (#1593). A revalidation record's stamp writes every field.
+FIELDS_LEFT = {"actor": {"needs"}, "glossary": {"definition"}, "use-case": set(), "journey": set()}
+
+
+@pytest.mark.parametrize("name", sorted(FIELDS_LEFT))
+def test_a_template_s_front_matter_shows_each_field_s_hint(name: str) -> None:
+    """Each front-matter field the stamp leaves a writer to fill holds the field's declared
+    hint, its placeholder, in the template's front matter, written by hand: the same text
+    the stamp writes (`render.fields_left`), held equal here (#1593)."""
+    front = _template(name)
+    entry = next(iter(front.values())) if name == "glossary" else front
+    left = RENDER.fields_left(_kind(name), entry)
+    assert set(left) == FIELDS_LEFT[name]
+    assert {field: entry[field] for field in left} == left
+    for field, value in left.items():
+        text = value[0] if isinstance(value, list) else value
+        example = next(f.example for f in _kind(name).fields if f.name == field)
+        assert STRUCTURE.field_hint(text).endswith(f"Example: {example}")
+
+
+def test_a_field_s_hint_is_one_marked_line_found_by_its_mark() -> None:
+    """A field's hint is one marked line, the comment a part's hint is, which a YAML parse
+    reads as text. The check finds it by its mark, and not inside a code span (#1593)."""
+    (needs,) = [f for f in STRUCTURE.read_kinds()["actor"].fields if f.name == "needs"]
+    hint = RENDER.field_hint(needs)
+    assert hint.startswith(MARK) and hint.endswith(CLOSE) and "\n" not in hint
+    assert load(f"needs:\n  - '{hint}'\n") == {"needs": [hint]}
+    assert STRUCTURE.field_hint(hint) == hint[len(MARK) : -len(CLOSE)]
+    assert STRUCTURE.field_hint(f"Quote `{hint}` as code.") is None
+    assert STRUCTURE.field_hint("Export my report as a file.") is None

@@ -49,7 +49,9 @@ from tests.analysis_repo import (
     stamped,
 )
 
-_CHECK, _MODEL, _STRUCTURE, _FORMS = load_lib("check", "model", "structure", "forms")
+_CHECK, _MODEL, _STRUCTURE, _FORMS, _RENDER = load_lib(
+    "check", "model", "structure", "forms", "render"
+)
 C: Any = _CHECK
 M: Any = _MODEL
 S: Any = _STRUCTURE
@@ -652,10 +654,17 @@ WRITTEN = {
 }
 OPENING = "Whoever runs the project's tests."
 
-#: The front-matter placeholders a person writes over, and what with.
+
+def _field_hint(kind: str, name: str) -> str:
+    """A front-matter field's hint as the stamp writes it, its placeholder (#1593)."""
+    declared = _STRUCTURE.read_kinds()[kind]
+    return _RENDER.field_hint(next(f for f in declared.fields if f.name == name))
+
+
+#: The front-matter fields' hints a person writes over, and what with.
 FIELDS = {
-    "<what this actor needs from the system, in one sentence>": "Run the suite.",
-    "<what the term means, in one sentence>": "set of tests run together",
+    _field_hint("actor", "needs"): "Run the suite.",
+    _field_hint("term", "definition"): "set of tests run together",
 }
 
 _HINTED = re.compile(r"(?:\*\*(?P<label>[^*\n]+):\*\* )?<!-- pkit:hint .*? -->")
@@ -671,10 +680,9 @@ def _written(text: str) -> str:
         content = WRITTEN[label]
         return f"**{label}:**" + (content if not content or content[0] == "\n" else f" {content}")
 
-    text = _HINTED.sub(part, text)
     for placeholder, words in FIELDS.items():
         text = text.replace(placeholder, words)
-    return text
+    return _HINTED.sub(part, text)
 
 
 def test_every_kind_stamped_and_filled_carries_its_structure(

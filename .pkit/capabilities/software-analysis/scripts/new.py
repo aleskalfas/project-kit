@@ -235,17 +235,26 @@ def _revalidation_arguments(record: argparse.ArgumentParser) -> None:
 
 def _gap(value: str) -> revalidation.Gap:
     """`<ids>: <gap> => <resolution>`: the ids of the artefacts a gap affects, the gap, and
-    what resolved it, given as one so none can be matched with another's."""
+    what resolved it, given as one so none can be matched with another's. What comes
+    before the first colon is ids alone, so a gap written without them, whose own text
+    holds a colon, is refused for its form, naming what is no id."""
     gap, sep, resolved = value.partition(GAP_SEPARATOR)
     labelled, colon, found = gap.partition(IDS_SEPARATOR)
     ids = tuple(i.strip() for i in labelled.split(","))
-    if not (sep and colon and all(ids) and found.strip() and resolved.strip()):
+    no_id = [i for i in ids if i and not _artefact_id(i)] if colon else []
+    if not (sep and colon and all(ids) and not no_id and found.strip() and resolved.strip()):
+        named = f" ({', '.join(map(repr, no_id))} is no artefact's id)" if no_id else ""
         raise stamp.Refused(
-            f'--gap {value!r} is not "<ids>: <gap> => <resolution>": the ids of the artefacts '
-            f"it affects, separated by commas, then the gap found, then what resolved it — the "
-            f"defect reported, or the artefact written (DEC-001 point 6)"
+            f'--gap {value!r} is not "<ids>: <gap> => <resolution>"{named}: the ids of the '
+            f"artefacts it affects, separated by commas, then the gap found, then what "
+            f"resolved it — the defect reported, or the artefact written (DEC-001 point 6)"
         )
     return revalidation.Gap(ids, found.strip(), resolved.strip())
+
+
+def _artefact_id(text: str) -> bool:
+    """Whether `text` has the shape of an artefact's id, of any kind."""
+    return any(schemas.id_pattern(kind).match(text) for kind in (ACTOR, TERM, USE_CASE, JOURNEY))
 
 
 def _stamp_record(args: argparse.Namespace) -> stamp.Stamped:

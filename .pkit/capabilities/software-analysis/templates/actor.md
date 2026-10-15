@@ -5,17 +5,17 @@
 # Stamp it, never copy it: `pkit analysis new actor <slug>` writes
 # `ACT-<slug>.md` with its id, its name and its anchors. Its heading is its id
 # and name, as the front matter gives them. Its body is rendered from the
-# actor's declared structure (`schemas/artefact-kinds.yaml`). Each part holds
-# its hint until you write in its place what it asks for. An actor anchors to
-# where the software or a decision embodies it. One that nothing embodies
-# carries `unanchored-because:` in its friction block instead of anchors
-# (--unanchored-because). Its own fields' shape is `schemas/actor.schema.json`,
-# and the friction block is the core's.
+# actor's declared structure (`schemas/artefact-kinds.yaml`). Each part, and
+# each of its needs, holds its hint until you write in its place what it asks
+# for. An actor anchors to where the software or a decision embodies it. One
+# that nothing embodies carries `unanchored-because:` in its friction block
+# instead of anchors (--unanchored-because). Its own fields' shape is
+# `schemas/actor.schema.json`, and the friction block is the core's.
 id: ACT-actor                     # stamped from the slug, and never reused
 name: <Display name>              # --name. The heading below repeats it after the id.
 status: active                    # or withdrawn: the file stays and its id is never reused
-needs:
-  - <what this actor needs from the system, in one sentence>
+needs:                            # each need's hint is its placeholder, as a part's is
+  - "<!-- pkit:hint What the actor needs from the system, each in one sentence in their own voice. Start with the verb, or with *Never* and the verb, with *I* and *my* where they refer to themselves. Example: Export my report as a file. -->"
 pkit:
   friction:
     anchors:

@@ -21,9 +21,10 @@
 # - `form`: a check on a part's content, from the closed list the schema
 #   gives. In a list, each item holds it.
 # - `front-matter`: the fields a writer fills, each with its hint, its example
-#   and any form. The kind's companion schema checks each field's shape. A
-#   field's hint is for the placeholder the template's front matter, written
-#   by hand, gives the field. A body part's hint is for the stamp to write.
+#   and any form. The kind's companion schema checks each field's shape. Where
+#   the stamp leaves a field to fill, it writes the field's hint as its
+#   placeholder, as it writes a body part's. The template's front matter,
+#   written by hand, shows the same hint.
 # - `head`: a collection's file head, which the stamp writes once when it
 #   creates the file. The glossary is the one collection. So `term` declares
 #   the file's head in `head`, and each entry's section in `sections`.
