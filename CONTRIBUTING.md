@@ -21,7 +21,7 @@ pkit:
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
       artefact: [.pkit/decisions/README.md]
     revalidated:
-      at: 2026-10-14T20:02:11Z
+      at: 2026-10-15T08:25:02Z
       outcome: updated
 ---
 
@@ -129,7 +129,7 @@ To fix a copy, run `.pkit/adapters/claude-code/deploy-agents.sh` and commit what
 
 **Installing `pkit` for multi-checkout development — one install, no separate router.** If you work on several project-kit source checkouts *and* adopter projects at once, the single global install picks the right `pkit` automatically per directory: the installed binary is CWD- and pin-aware (per [ADR-039](tech-docs/architecture/decisions/ADR-039-pkit-entry-point-router.md)). Inside any project-kit source checkout it runs **that checkout's working tree** (delegating to its `.pkit/cli/pkit` dispatcher); in an adopter that pins a version different from the running binary it runs that **pinned version** under `uvx`; everywhere else it runs itself. It's a real executable on PATH, so it works in non-interactive agent shells too (a directory-env hook does *not* — testing confirmed mise's `[env]` venv-activation never applies in those shells). There is no separate shim to install and keep on PATH.
 
-1. **Install** — `mise run pkit:pinned-install` (or `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git` directly). Installs/refreshes the global release and puts `pkit` on PATH via `uv tool dir --bin`.
+1. **Install** — `mise run pkit:pinned-install` (or `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git` directly). Installs/refreshes the global pkit from main's head and puts `pkit` on PATH via `uv tool dir --bin`. That is the development install, which no version vouches for ([PRJ-004](.pkit/decisions/project/PRJ-004-distribution-channel.md)). To run a release outside your checkouts instead, add its tag, `@v<version>`.
 2. **Verify** — `command -v pkit` should resolve to that bin dir; `mise run pkit:which` reports the active binary, its version, and what bare `pkit` runs from this checkout (route 1).
 
 Routing happens *before* the CLI loads, so the common path (running self, or execing a checkout) stays cheap. An adopter pin that can't be resolved (offline, missing tag, missing auth, no `uvx`) **degrades loudly to running self** — it never hard-fails a routine command. When the binary it runs is older than the pin, the notice says so. `pkit upgrade` refuses a binary older than the project rather than take the project back to it (#1212), and under that degrade it refuses any binary, older or newer, rather than move the pin to a version it did not resolve. `pkit sync` stops under any binary that is not the project's version, naming the remedy for the fallback first ([ADR-065](tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) points 7 to 9). Escape hatches: `PKIT_NO_ROUTE=1` forces in-process execution; `PKIT_ROUTED=1` is the internal loop guard.
