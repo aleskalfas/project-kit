@@ -612,6 +612,25 @@ def test_accepted_a_departure_fails_and_an_entry_is_read_within_its_span(
     assert code == 1
 
 
+def test_the_stamp_refuses_a_declaration_whose_hint_is_no_one_line_comment(
+    project: AdopterRepo, pkit_on_path: Path
+) -> None:
+    """A hint is written as one comment on one line, so a hint that would close its comment
+    early leaves the stamp nothing to render: it refuses, writing nothing, and says the
+    declaration is the capability's own to restore (DEC-001 point 1)."""
+    declaration = f"{SA.as_posix()}/schemas/artefact-kinds.yaml"
+    stamped(project, "actor", "tester")
+    text = (project.root / declaration).read_text(encoding="utf-8")
+    broken = text.replace("hint: The event that starts", "hint: The event --> that starts", 1)
+    assert broken != text
+    project.write({declaration: broken})
+    completed = run_script(project, NEW, "use-case", "run-suite", "--actor", "ACT-tester")
+    assert completed.returncode == 1, completed.stdout
+    assert "\nrefused: the kinds' structures cannot be read: " in f"\n{completed.stderr}"
+    assert "restore it as the capability ships it" in completed.stderr
+    assert not (project.root / ANALYSIS / "use-case-model" / "use-cases").exists()
+
+
 #: What a person writes in place of each part's hint, by the part's label: a list, below
 #: its label, starts on a line of its own. A journey's step lines are the stamp's, so its
 #: *Steps* take nothing more. An actor's opening has no label.

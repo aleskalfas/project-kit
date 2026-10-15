@@ -74,8 +74,9 @@ STALE = "analysis-stale"
 #: What parts a source's title, version and link in `--reviewed-against`.
 SOURCE_SEPARATOR = " @ "
 
-#: The front-matter field a planned record names its sources in.
-REVIEWED = "reviewed-against"
+#: The front-matter field a planned record names its sources in, one home with the
+#: pointer check's.
+REVIEWED = pointers.FIELD
 
 #: How a source is written on the command line, for the messages.
 SOURCE_FORMS = (
@@ -153,6 +154,7 @@ def stamp_record(
     _something_to_say(request, outcomes)
     because = _because(request.because, outcomes)
     _no_placeholder(request)
+    _one_line(request)
     if request.by and request.by_agent:
         raise Refused("name who performed it once: --by for a person, or --by-agent for an agent")
     if request.by_agent and not request.confirmed_by:
@@ -281,6 +283,20 @@ def _no_placeholder(request: RecordRequest) -> None:
             raise Refused(
                 f"{flag} still holds the placeholder {placeholder!r}: write in its place what "
                 f"it asks for — the record's words are the person's"
+            )
+
+
+def _one_line(request: RecordRequest) -> None:
+    """Each text the body writes on a line of its own — the subject in the heading, an
+    outcome's justification, a gap — holds no line break, which would split its line."""
+    texts: list[tuple[str, str | None]] = [("--title", request.title)]
+    texts += [(f"--because {i}", text) for i, text in request.because]
+    texts += [("--gap", gap.given) for gap in request.gaps]
+    for flag, text in texts:
+        if text is not None and ("\n" in text or "\r" in text):
+            raise Refused(
+                f"{flag} {text!r} holds a line break: the record writes it on one line, so "
+                f"write it as one"
             )
 
 

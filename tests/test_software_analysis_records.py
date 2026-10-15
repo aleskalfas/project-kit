@@ -213,8 +213,9 @@ def test_a_planned_revalidation_is_something_to_say_and_names_its_sources(
     """A planned revalidation leaves a record even when everything holds (DEC-001 point
     6), and the record names each source of the design it reviewed in
     `reviewed-against`, one `--reviewed-against` each (#1366): a title and a version, then
-    a link outside this repository. A time and a commit are written quoted, so YAML reads
-    each back as the text written. A commit the default branch holds draws no warning."""
+    a link outside this repository. A time is written quoted, as is any value YAML would
+    read as something other than text, so each reads back as the text written. A commit
+    the default branch holds draws no warning."""
     held = project.head()
     sources = (
         "--reviewed-against",
@@ -499,6 +500,29 @@ WHY = ("--because", "UC-001=The suite still runs as described.")
             ),
             "the gaps break the form `gaps-match-outcomes`: UC-002's outcome is "
             "`code-regressed`, and no gap names it",
+        ),
+        (
+            (
+                "--trigger",
+                "scheduled",
+                "--outcome",
+                "UC-001=gap-found",
+                *WHY,
+                "--gap",
+                "UC-001: An export goes nowhere.\n\nNothing says so. => defect #46 reported",
+            ),
+            "holds a line break: the record writes it on one line",
+        ),
+        (
+            (
+                "--trigger",
+                "planned",
+                "--outcome",
+                "UC-001=holds",
+                "--because",
+                "UC-001=The suite still runs.\nAs described.",
+            ),
+            "--because UC-001 'The suite still runs.\\nAs described.' holds a line break",
         ),
         (
             ("--trigger", "planned", "--outcome", "UC-001=holds", "--outcome", "JRN-001=holds"),

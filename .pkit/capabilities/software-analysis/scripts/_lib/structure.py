@@ -367,13 +367,22 @@ def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
 def _without_comments(line: str, in_comment: bool) -> tuple[str, bool]:
     """The line with the text of HTML comments left out, and whether a comment is still
     open at its end."""
+    visible, still_open, _openings = _scan(line, in_comment)
+    return visible, still_open
+
+
+def _scan(line: str, in_comment: bool) -> tuple[str, bool, list[int]]:
+    """The one reading of a line's comments: the line with their text left out, whether
+    a comment is still open at its end, and where each comment that opens on it opens.
+    A comment still open from an earlier line hides what comes before its end."""
     kept: list[str] = []
+    openings: list[int] = []
     at = 0
     while at <= len(line):
         if in_comment:
             end = line.find(_COMMENT_CLOSE, at)
             if end == -1:
-                return "".join(kept), True
+                return "".join(kept), True, openings
             at, in_comment = end + len(_COMMENT_CLOSE), False
         else:
             start = _comment_opening(line, at)
@@ -381,8 +390,9 @@ def _without_comments(line: str, in_comment: bool) -> tuple[str, bool]:
                 kept.append(line[at:])
                 break
             kept.append(line[at:start])
+            openings.append(start)
             at, in_comment = start + len(_COMMENT_OPEN), True
-    return "".join(kept), in_comment
+    return "".join(kept), in_comment, openings
 
 
 def _comment_opening(line: str, at: int) -> int:
@@ -419,37 +429,16 @@ def hints(lines: Sequence[Line]) -> list[tuple[int, str]]:
                 fence = None
             continue
         started_in_comment = in_comment
-        visible, in_comment = _without_comments(line, in_comment)
+        visible, in_comment, openings = _scan(line, in_comment)
         opening = None if started_in_comment else _FENCE.match(visible)
         if opening is not None and not (
             opening.group(1).startswith("`") and "`" in opening.group(2)
         ):
             fence = (opening.group(1)[0], len(opening.group(1)))
             continue
-        found += [(number, said) for said in _hints_on(line, started_in_comment)]
+        marked = (_HINT.match(line, start) for start in openings)
+        found += [(number, hint["said"].strip()) for hint in marked if hint is not None]
     return found
-
-
-def _hints_on(line: str, in_comment: bool) -> list[str]:
-    """What each hint that opens on `line` says, the line read as `_without_comments`
-    reads it: a comment still open from an earlier line hides what comes before its end."""
-    said: list[str] = []
-    at = 0
-    while at <= len(line):
-        if in_comment:
-            end = line.find(_COMMENT_CLOSE, at)
-            if end == -1:
-                break
-            at, in_comment = end + len(_COMMENT_CLOSE), False
-            continue
-        start = _comment_opening(line, at)
-        if start == -1:
-            break
-        marked = _HINT.match(line, start)
-        if marked is not None:
-            said.append(marked["said"].strip())
-        at, in_comment = start + len(_COMMENT_OPEN), True
-    return said
 
 
 def comparable(text: str) -> str:

@@ -521,7 +521,9 @@ def _step_lines(kind: structure.Kind, steps: Sequence[str], analysis: Analysis) 
     """A journey's step lines, one per use case of its steps, numbered from 1, each its id
     and its title as the use case states it: what the form of the journey's steps part
     asks (`_lib/forms.py`), keyed by that part's id."""
-    part = next(e for e in kind.sections if e.form == forms.STEPS_MATCH)
+    part = next((e for e in kind.sections if e.form == forms.STEPS_MATCH), None)
+    if part is None:
+        return {}
     lines: list[str] = []
     for number, step in enumerate(steps, 1):
         use_case = analysis.of(step, USE_CASE)
@@ -534,15 +536,20 @@ def _step_lines(kind: structure.Kind, steps: Sequence[str], analysis: Analysis) 
 
 def declared(kind: str) -> structure.Kind:
     """A kind's declared structure, or a refusal: the declaration is the capability's own,
-    so one that cannot be read is restored, never edited."""
+    so one that cannot be read, or whose hints cannot each be one comment on one line, is
+    restored, never edited."""
     try:
-        return structure.read_kinds()[kind]
-    except structure.Unreadable as exc:
+        declared_kind = structure.read_kinds()[kind]
+        for element in declared_kind.sections:
+            if element.filled:
+                render.hint(element)
+    except (structure.Unreadable, ValueError) as exc:
         raise Refused(
             f"the kinds' structures cannot be read: {exc}. A body is rendered from its kind's "
             f"structure, so nothing is stamped until they can: the file is {CAPABILITY}'s own "
             f"— restore it as the capability ships it (DEC-001 point 1)"
         ) from exc
+    return declared_kind
 
 
 def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Request) -> str:

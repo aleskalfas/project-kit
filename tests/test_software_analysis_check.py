@@ -789,7 +789,12 @@ def test_a_time_written_unquoted_is_told_to_be_quoted(seeded: AdopterRepo) -> No
     good = _record_text()
     unquoted = good.replace('version: "2026-01-05T10:00:00Z"', "version: 2026-01-05T10:00:00Z")
     assert unquoted != good
-    seeded.write({f"{RECORDS}/2026-10-01-planned.md": unquoted})
+    # A field that holds no time is told only to quote it, in the form the field takes.
+    dated = good.replace('date: "2026-01-05"', "date: 2026-01-05T10:00:00Z")
+    assert dated != good
+    seeded.write(
+        {f"{RECORDS}/2026-10-01-planned.md": unquoted, f"{RECORDS}/2026-10-02-dated.md": dated}
+    )
     assert errors(check(seeded)) == [
         (
             f"{RECORDS}/2026-10-01-planned.md:/reviewed-against/0/version",
@@ -797,7 +802,13 @@ def test_a_time_written_unquoted_is_told_to_be_quoted(seeded: AdopterRepo) -> No
             "'2026-01-05T10:00:00+00:00', not as written: quote it, a time in UTC such as "
             '"2026-01-05T10:00:00Z", as a revalidation\'s `at` is written '
             "(`schemas/revalidation-record.schema.json`)",
-        )
+        ),
+        (
+            f"{RECORDS}/2026-10-02-dated.md:/date",
+            "YAML reads this value as a time, since it is not quoted, and gives it back as "
+            "'2026-01-05T10:00:00+00:00', not as written: quote it, in the form the field "
+            "takes (`schemas/revalidation-record.schema.json`)",
+        ),
     ]
 
 

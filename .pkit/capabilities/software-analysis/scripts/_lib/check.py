@@ -133,6 +133,7 @@ refuses beside anchors (COR-050 points 1, 8 and 12; DEC-001 point 9).
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
@@ -631,7 +632,7 @@ def _record_findings(
             continue
         for pointer, message in schemas.errors(schemas.RECORD, data):
             if pointer in times:
-                message = _unquoted_time(times[pointer])
+                message = _unquoted_time(pointer, times[pointer])
             found.append(Finding(ERROR, at(rel, pointer), message))
         found += _cited(rel, data.get("outcomes"), analysis)
         record_found, record_copies = _evidence_in_record(
@@ -643,15 +644,26 @@ def _record_findings(
     return found, copies, read
 
 
-def _unquoted_time(read_as: str) -> str:
+#: Where in a record a time of day is written: a source's version, the time its text
+#: was read.
+_A_TIME = re.compile(r"^/reviewed-against/[0-9]+/version$")
+
+
+def _unquoted_time(pointer: str, read_as: str) -> str:
     """Why a time written unquoted fails its record's schema: YAML reads it as a time,
-    not as the text written, and gives it back otherwise."""
-    return (
+    not as the text written, and gives it back otherwise. Where the field holds a time,
+    the message gives its form. Elsewhere it gives the field's form in the schema."""
+    said = (
         f"YAML reads this value as a time, since it is not quoted, and gives it back as "
-        f"{read_as!r}, not as written: quote it, a time in UTC such as "
-        f'"2026-01-05T10:00:00Z", as a revalidation\'s `at` is written '
-        f"(`schemas/revalidation-record.schema.json`)"
+        f"{read_as!r}, not as written: quote it"
     )
+    if _A_TIME.match(pointer):
+        return (
+            f"{said}, a time in UTC such as "
+            f'"2026-01-05T10:00:00Z", as a revalidation\'s `at` is written '
+            f"(`schemas/revalidation-record.schema.json`)"
+        )
+    return f"{said}, in the form the field takes (`schemas/revalidation-record.schema.json`)"
 
 
 def _cited(rel: str, outcomes: object, analysis: Analysis) -> list[Finding]:
