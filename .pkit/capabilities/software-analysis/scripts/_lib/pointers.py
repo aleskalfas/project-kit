@@ -15,7 +15,9 @@ commit on the default branch:
   default branch. It is unknown when that history stops short in a shallow
   clone, since the commit may lie beyond the cut. It is the one way of placing
   a commit: the stamp is to place a planned record's commit with it, to warn
-  while the record is written (#1366);
+  while the record is written. Whether the cut stops short is asked once per
+  process, so a caller that fetches between two placements reads the first
+  answer;
 - **where it looks**: the default branch alone, at the commit the backbone
   resolves it to (`pkit repository base --json`, its `default_branch`; COR-054
   point 5), never a run's base. It reads the clone's history, and asks no
@@ -107,8 +109,9 @@ class Source:
 
 @dataclass(frozen=True)
 class Placed:
-    """A source placed: whether the change adds its record, where its commit sits, and
-    whether this clone holds the commit at all."""
+    """A source placed: whether the change adds its record and where its commit sits.
+    For a commit not held, `in_clone` says whether this clone holds it at all; for any
+    other placement it is true, and asked of nothing."""
 
     source: Source
     added: bool
@@ -181,7 +184,7 @@ def check(root: Path, ref: str | None = None) -> Checked:
                 raise CannotCheck(
                     f"whether {base.ref} held {source.record} where this branch left it, at "
                     f"{fork[: backbone.SHORT]}, could not be read from this clone: {exc}. Nothing "
-                    f"is fetched here: a partial clone must hold that commit's tree"
+                    f"is fetched here, so a partial clone must hold that commit's tree"
                 ) from exc
         try:
             placement = place(root, source.commit, tip)

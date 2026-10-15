@@ -16,9 +16,12 @@ body: >
   is reported and never fails, since a record is never rewritten, and so is
   an unknown. Commits are placed on the default branch alone, as `pkit
   repository base` resolves it. The base, `--base`, else `$PKIT_CHECK_BASE`,
-  else the default branch, says only which records the change adds. A tree
-  with no planned record reads no base and says so, and a default branch that
-  resolves nowhere fails it. `--json` lists each source placed under
+  else the default branch, says only which records the change adds: those
+  whose file the merge-base does not hold at its path, so a record the change
+  moves reads as added. It asks no remote, so a partial clone that lacks the
+  merge-base's tree fails rather than fetch it. A tree with no planned record
+  reads no base and says so, and a default branch that resolves nowhere fails
+  it. `--json` lists each source placed under
   `pointers`. It reads history, so it is a check-gate line of its own beside
   `pkit analysis check-numbers`, not a member of `pkit validate`. The
   capability's README, "Commits off the default branch", says how to wire it

@@ -170,6 +170,27 @@ def test_with_no_planned_record_it_reads_nothing_and_says_so(project: AdopterRep
     assert completed.stdout.splitlines() == [nothing]
 
 
+def test_a_records_folder_the_backbone_skips_is_said_to_hold_nothing(
+    project: AdopterRepo,
+) -> None:
+    """A project place equal to the records' folder oversteps its bounds (COR-050 point
+    1), so the backbone skips it: no record is read, and the summary says why rather
+    than show none as if there were none."""
+    branch_commit = {"title": "a design", "version": NOWHERE}
+    project.write(
+        {
+            CONFIG: f"docs:\n  internal: tech-docs\nfriction:\n  places: [{RECORDS}]\n",
+            NEW: record(branch_commit),
+        }
+    )
+    completed = pointers(project, "--base", "nowhere")
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.splitlines() == [
+        "pointers: the records' folder holds nothing — the backbone skipped it (overlap); "
+        "`pkit validate` says why; nothing to place, no base read."
+    ]
+
+
 def test_this_change_and_a_source_with_a_url_are_not_placed(project: AdopterRepo) -> None:
     """`this change` names the commit the record lands in, found from the history; a
     source with a `url` lies outside this repository. Neither is placed, so a record
@@ -373,7 +394,7 @@ def test_a_partial_clone_fetches_nothing(designed: AdopterRepo, tmp_path: Path) 
         "could not be read from this clone: "
     )
     assert completed.stderr.rstrip().endswith(
-        "Nothing is fetched here: a partial clone must hold that commit's tree"
+        "Nothing is fetched here, so a partial clone must hold that commit's tree"
     )
 
 

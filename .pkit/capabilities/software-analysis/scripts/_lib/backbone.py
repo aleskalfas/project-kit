@@ -430,11 +430,11 @@ def is_shallow(root: Path) -> bool:
     return _git(root, "rev-parse", "--is-shallow-repository") == "true"
 
 
-#: Git's environment and setting for a reading that must stay offline: a partial clone
-#: fetches an object it lacks from its remote unless told not to. Git 2.44 and later
-#: read the variable; the setting refuses every transport to an older git as well.
-_OFFLINE = {"GIT_NO_LAZY_FETCH": "1"}
-_NO_TRANSPORT = ("-c", "protocol.allow=never")
+#: Git's environment for a reading that must stay offline: a partial clone fetches an
+#: object it lacks from its remote unless told not to. Git 2.44 and later read the
+#: first variable. The second allows only a protocol named `none`, which is none, and
+#: overrides any `protocol.*` setting, so an older git can reach no remote either.
+_OFFLINE = {"GIT_NO_LAZY_FETCH": "1", "GIT_ALLOW_PROTOCOL": "none"}
 
 
 def holds_commit(root: Path, name: str) -> bool:
@@ -496,7 +496,7 @@ def _offline(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     cannot be run."""
     try:
         return subprocess.run(
-            ["git", *_NO_TRANSPORT, *args],
+            ["git", *args],
             cwd=root,
             capture_output=True,
             text=True,
