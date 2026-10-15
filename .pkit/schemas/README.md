@@ -19,18 +19,8 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-13T20:06:19Z
-      outcome: unchanged
-      unchanged-because: COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056 and ADR-057 now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed. The front-matter shapes this page describes read as before, so it holds.
-      deferred:
-        - anchor:
-            kind: record
-            value: COR-050
-          reason: "COR-050 lets an artefact anchor name a document's section or its lead. The schemas reference gives the container's '#<part>' on the artefact kind, an anchor on its own section or lead as a cycle, and validation failing every dead, ambiguous or refused part anchor, with the code in #1423."
-        - anchor:
-            kind: record
-            value: COR-051
-          reason: "COR-051 point 3 says '#' also names a document's section or its lead in an anchor's value. The schemas reference gives that form with the schema change in #1423."
+      at: 2026-10-15T17:27:54Z
+      outcome: updated
 ---
 
 # Schemas

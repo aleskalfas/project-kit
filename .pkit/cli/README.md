@@ -54,17 +54,8 @@ pkit:
         - src/project_kit/artefact_parts.py
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, PRJ-001, PRJ-003, PRJ-004, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064]
     revalidated:
-      at: 2026-10-15T16:42:21Z
+      at: 2026-10-15T17:27:53Z
       outcome: updated
-      deferred:
-        - anchor:
-            kind: record
-            value: COR-050
-          reason: "COR-050 lets an artefact anchor name a document's section or its lead. The CLI reference describes them, an anchor on its own section or lead as a cycle, and the dead, ambiguous and refused part anchors validation fails, with the code that reads them in #1423."
-        - anchor:
-            kind: record
-            value: COR-051
-          reason: "COR-051 point 3 says '#' also names a document's section or its lead in an anchor's value. The CLI reference gives that form with the code that reads it in #1423."
 ---
 
 # Command-line interface
