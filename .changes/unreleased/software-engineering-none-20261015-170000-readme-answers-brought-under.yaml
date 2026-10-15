@@ -1,0 +1,8 @@
+component: software-engineering
+kind: none
+custom:
+  pr: "1579"
+body: >
+  Internal. The README's revalidation answers the records #1560 changes
+  (COR-024, COR-057, DEC-028, DEC-032): its text holds, so only its answer
+  is written. Nothing the capability ships, and nothing you run, changes.

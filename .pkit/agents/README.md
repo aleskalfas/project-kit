@@ -18,9 +18,8 @@ pkit:
         - .pkit/agents/core/rule-set-reviewer.md
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052]
     revalidated:
-      at: 2026-10-15T09:26:20Z
-      outcome: unchanged
-      unchanged-because: COR-050 is refined so an artefact anchor may name a document's section or its lead, and says where such an anchor is dead, ambiguous or refused. This README states who writes and who checks a change's answers (COR-050 point 3) and how agents cite rule ids, and neither changes.
+      at: 2026-10-15T15:54:01Z
+      outcome: updated
 ---
 
 # Agents
@@ -361,15 +360,16 @@ Per COR-014, the universal-applicability test governs what ships where:
 
 ## The rule-set reviewer
 
-The core agent `rule-set-reviewer` judges one change against the accepted rules that bind on each artefact the change alters. It reviews the diff, beside `convention-compliance-reviewer` in the reviewer stack (COR-024). Its contract, including the kinds of finding it gives, is [COR-057](../decisions/core/COR-057-rule-set-reviewer.md).
+The core agent `rule-set-reviewer` judges one change against the accepted rules that bind on each artefact the change alters or brings under a rule. It reviews the diff, beside `convention-compliance-reviewer` in the reviewer stack (COR-024). Its contract, including the kinds of finding it gives, is [COR-057](../decisions/core/COR-057-rule-set-reviewer.md).
 
 - **What it judges.** It reads the rules only from the rule sets, through `pkit rule-sets altered` (the CLI reference, "Rule-set commands"). It judges only the text the change owns, and only the parts of a rule that no check is there to enforce. Its body holds no rule.
+- **What a change brings under a rule.** A change that makes a rule bind on an artefact, such as by widening a set's scope, accepting a rule, updating a pin or typing a place, owns the whole artefact for that rule. The reviewer judges all of it under that rule, even where the change edits none of it. A break of that rule there is a settled break where the rule's text settles it, whatever brought the artefact under the rule, and [COR-060](../decisions/core/COR-060-brought-under-breaks.md) names the author's ways out of one. The answer names those rules on each artefact, and lists apart each artefact the change brings under a rule without altering it.
 - **Its form** comes from whoever invokes it: the verdict line, and the mark of each kind of finding. With none named, it states its verdict and each finding's kind in words.
 - **It is advisory.** Its verdict holds a change only where a gate requires it.
 
 To run it by hand on a change from a base to a head:
 
-1. Run `pkit rule-sets altered --base <base> --head <head>` to see what it will judge: each artefact the change alters, with the rules that bind on it. An artefact no rule binds on leaves it nothing to judge.
+1. Run `pkit rule-sets altered --base <base> --head <head>` to see what it will judge: each artefact the change alters, with the rules that bind on it, and each it brings under a rule. An artefact no rule binds on leaves it nothing to judge.
 2. Dispatch `rule-set-reviewer` through the harness, naming the same base and head, such as "review the change from the default branch to `HEAD`". Name the verdict line and the finding marks you want, or let it state them in words.
 
 ## Authoring an agent

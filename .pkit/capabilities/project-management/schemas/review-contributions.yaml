@@ -53,11 +53,13 @@ schema_version: 1
 #         (COR-051 point 7): adds it, removes it, or changes its content.
 #         A change to the declared places alone alters the artefacts it
 #         brings in or takes out. A change that only writes a revalidation,
-#         a move the pairing follows that keeps the content, or a change to
-#         the rules alone alters nothing. pm reads it from the backbone's
-#         `pkit rule-sets altered` for every pull request while a
-#         contribution in force names the floor. The not-code list does not
-#         narrow it.
+#         or a move the pairing follows that keeps the content, alters
+#         nothing. It also fires when the change brings an artefact under
+#         an accepted rule without altering it: a wider scope, an accepted
+#         rule, a raised pin, a typed place (COR-057 point 2). pm reads it
+#         from the backbone's `pkit rule-sets altered` for every pull
+#         request while a contribution in force names the floor. The
+#         not-code list does not narrow it.
 #     Any other non-empty floor name is accepted: a floor a later pm
 #     defines, or a misspelt one, requires its reviewer on every change
 #     rather than refusing the declaration, and `pre-check` names it.
@@ -126,7 +128,8 @@ contributions:
     reviewer: code-reviewer
 
   # Diff-property FLOOR on ruled artefacts: require `rule-set-reviewer`
-  # whenever the change alters a document an accepted rule binds on — a
-  # page, an analysis artefact — however the closing issue is classified.
+  # whenever the change alters a document an accepted rule binds on, or
+  # brings one under an accepted rule — a page, an analysis artefact —
+  # however the closing issue is classified.
   - floor: touches-ruled-artefact
     reviewer: rule-set-reviewer

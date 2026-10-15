@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-15T17:28:17Z
+      at: 2026-10-15T17:24:49Z
       outcome: unchanged
-      unchanged-because: The CLI reference and the schemas README now describe anchors on a document's section or its lead. This map gives each area's role and link, and no role or link moves, so the map holds.
+      unchanged-because: The CLI reference, the agents README, the lifecycle README and the schemas README say that pkit rule-sets altered, and the rule-set reviewer that reads it, also cover what a change brings under a rule. The map gives each area's role and link, and no role or link moves, so it holds.
 ---
 
 # project-kit

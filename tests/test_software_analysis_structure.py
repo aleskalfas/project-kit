@@ -43,6 +43,7 @@ from tests.analysis_repo import (
     SA,
     VALIDATE,
     actor_at,
+    field_hint,
     installed,
     load_lib,
     run_script,
@@ -652,10 +653,11 @@ WRITTEN = {
 }
 OPENING = "Whoever runs the project's tests."
 
-#: The front-matter placeholders a person writes over, and what with.
+
+#: The front-matter fields' hints a person writes over, and what with (#1593).
 FIELDS = {
-    "<what this actor needs from the system, in one sentence>": "Run the suite.",
-    "<what the term means, in one sentence>": "set of tests run together",
+    field_hint("actor", "needs"): "Run the suite.",
+    field_hint("term", "definition"): "set of tests run together",
 }
 
 _HINTED = re.compile(r"(?:\*\*(?P<label>[^*\n]+):\*\* )?<!-- pkit:hint .*? -->")
@@ -671,10 +673,9 @@ def _written(text: str) -> str:
         content = WRITTEN[label]
         return f"**{label}:**" + (content if not content or content[0] == "\n" else f" {content}")
 
-    text = _HINTED.sub(part, text)
     for placeholder, words in FIELDS.items():
         text = text.replace(placeholder, words)
-    return text
+    return _HINTED.sub(part, text)
 
 
 def test_every_kind_stamped_and_filled_carries_its_structure(

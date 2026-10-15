@@ -67,12 +67,14 @@ form judges only the part's list items, so a line a writer adds outside them
 never breaks it.
 
 **A hint left in** (`hints`) is a comment that opens with the hint's mark,
-`<!-- pkit:hint`, which the stamp writes as each part's placeholder
-(`_lib/render.py`). It is found as a comment is, outside fenced code and
-outside a code span that closes on its line, so a body may quote the mark. A
-mark inside another comment opens no hint. The placeholder check reports a
-hint left in whatever the format rule's status, as it reports any
-placeholder (DEC-001 point 1).
+`<!-- pkit:hint`, which the stamp writes as each part's placeholder, and as
+the text of each front-matter field a writer fills (`_lib/render.py`). It is
+found as a comment is, outside fenced code and outside a code span that
+closes on its line, so a body may quote the mark. A mark inside another
+comment opens no hint. A field's text is read the same way (`hint_in`).
+The placeholder check reports a hint left in whatever the format rule's
+status, as it reports any placeholder (DEC-001 point 1). So a field's text
+that still holds its hint is never judged against the field's form here.
 """
 
 from __future__ import annotations
@@ -441,6 +443,13 @@ def hints(lines: Sequence[Line]) -> list[tuple[int, str]]:
     return found
 
 
+def hint_in(text: str) -> str | None:
+    """What the first hint a front-matter field's `text` still holds says, found as
+    `hints` finds one in a body, or `None` when it holds none."""
+    found = hints(list(enumerate(text.splitlines(), 1)))
+    return found[0][1] if found else None
+
+
 def comparable(text: str) -> str:
     """A heading's or a label's text as it is compared: case, runs of white space and
     trailing punctuation ignored."""
@@ -574,8 +583,8 @@ def field_departures(fields: Mapping[str, Any], kind: Kind) -> list[FieldDepartu
             continue
         value = fields.get(field.name)
         for pointer, text in _texts(field.name, value):
-            if not text.strip():
-                continue
+            if not text.strip() or hint_in(text) is not None:
+                continue  # a hint left in is the placeholder check's
             breach = forms.field_breach(field.form, text, fields)
             if breach is not None:
                 how, detail = breach

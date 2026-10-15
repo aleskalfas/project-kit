@@ -29,9 +29,8 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-15T17:28:16Z
-      outcome: unchanged
-      unchanged-because: friction_discovery.py gives a document's artefact the line its body opens on, and lists an anchor on a document's section or lead among an artefact's part anchors in pkit friction artefacts --json. This README describes a component's friction places, held folders, types and kinds, and names the artefacts document as where artefacts are, and none of that changes.
+      at: 2026-10-15T17:24:37Z
+      outcome: updated
 ---
 
 # Lifecycle
@@ -451,7 +450,7 @@ The backbone runs the commands a component registers through one runner, `projec
   | `pkit friction artefacts --json` | where the artefacts are: the documentation roots, each place the project and every installed capability declares with the files it matches and the skips validation applies, every file read with its front matter's own fields, every artefact, and each folder of held documents a capability declares, with the files it holds (the CLI README, "friction artefacts") |
   | `pkit repository base --json` | settled state: the default branch as declared and resolved — its commit, or why it has none, and whether it has none yet (`unborn`) — and a comparison's base with where HEAD left it; and the history at hand: HEAD's commit, or that it has none yet (`unborn`), or why git cannot read it (the CLI README, "repository base"). A filler reads `head` for history and `default_branch` for the default branch, never `base`: no base override reaches a query, so the base it is shown is the default branch ([COR-054](../decisions/core/COR-054-default-branch.md) point 3), and the problem `default_branch` carries names no base as a fix |
   | `pkit rule-sets reach --json` | which accepted rules bind on each artefact, at the working tree or at a commit named with `--at`: each rule with the sets it binds through, the extension points it fills, the parts of it that checks enforce with whether each check is there, and its text, any conflict between routes, and the rules a pin behind its set holds back ([COR-051](../decisions/core/COR-051-rule-sets.md) point 7; the CLI README, "Rule-set commands") |
-  | `pkit rule-sets altered --json` | which artefacts a change altered between a base and a head, paired as the change check pairs them, with the rules that bind on each at the base and at the head (the CLI README, "Rule-set commands") |
+  | `pkit rule-sets altered --json` | which artefacts a change altered between a base and a head, paired as the change check pairs them, and which it brought under a rule without altering them, with the rules that bind on each at the base and at the head and the rules the change brought it under (the CLI README, "Rule-set commands") |
 
   Each is read-only and needs no network, so a query may call it. The script applies the answer itself — the living-docs validator decides which of two places matching a file wins, and which space it serves — but never re-reads the declarations, lists the working tree or matches a path against a place, nor resolves a reference or computes a merge-base, nor walks a route to a rule set or judges a pin. The artefacts, rule-set and settled-state readings resolve no data point, so a filler may call them while a point it contributes to resolves; a filler never asks for a point. A query that calls one keeps the reading inside its own bound — a filler the reading starts inherits the query's deadline and the outermost run's process group ("A run inside a run" above) — and inside `pkit validate` a point the run has already resolved is read from its run cache ("Reading one point from a script" below).
 

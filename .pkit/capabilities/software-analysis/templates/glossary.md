@@ -5,17 +5,17 @@
 # that id. Stamp entries, never copy them: `pkit analysis new term <slug>` adds
 # `TERM-<slug>` and its section, creating the file the first time with the
 # head below. The head and each section are rendered from the term's declared
-# structure (`schemas/artefact-kinds.yaml`). Each part holds its hint until
-# you write in its place what it asks for. Renaming a term keeps its id: write
-# the new `name`, and put the old one first in `replaces:`. A term anchors to
-# where the software or a decision embodies it; one nothing embodies carries
-# `unanchored-because:` in its friction block instead of anchors
-# (--unanchored-because). Each entry's own fields' shape is
+# structure (`schemas/artefact-kinds.yaml`). Each part, and each entry's
+# definition, holds its hint until you write in its place what it asks for.
+# Renaming a term keeps its id: write the new `name`, and put the old one
+# first in `replaces:`. A term anchors to where the software or a decision
+# embodies it; one nothing embodies carries `unanchored-because:` in its
+# friction block instead of anchors (--unanchored-because). Each entry's own fields' shape is
 # `schemas/term.schema.json`.
 TERM-term:
   name: <Term>                    # as it is written today; may change, the id does not
   status: active                  # or withdrawn: the entry stays and its id is never reused
-  definition: <what the term means, in one sentence>
+  definition: "<!-- pkit:hint What the term means, in a phrase of the same part of speech that could replace it. Start with its broader kind, with no article, then say what sets it apart. End with no full stop, and never repeat the term. Example: layout an administrator publishes, from which an analyst builds a report -->"
   pkit:
     friction:
       anchors:

@@ -468,6 +468,46 @@ WHY = ("--because", "UC-001=The suite still runs as described.")
             'is not "<ids>: <gap> => <resolution>": the ids of the artefacts it affects',
         ),
         (
+            # Written without its ids, a gap whose own text holds a colon is refused for
+            # its form, naming what is no id, rather than as a gap of no outcome.
+            (
+                "--trigger",
+                "scheduled",
+                "--outcome",
+                "UC-001=gap-found",
+                *WHY,
+                "--gap",
+                "Step 2: export fails => #9",
+            ),
+            "--gap 'Step 2: export fails => #9' is not \"<ids>: <gap> => <resolution>\" "
+            "('Step 2' is no artefact's id): the ids of the artefacts it affects",
+        ),
+        (
+            (
+                "--trigger",
+                "scheduled",
+                "--outcome",
+                "UC-001=gap-found",
+                *WHY,
+                "--gap",
+                "Step 2, step 3: export fails => #9",
+            ),
+            "('Step 2', 'step 3' are no artefacts' ids)",
+        ),
+        (
+            # The skill's command pasted as shown: its placeholders are what to fill first.
+            (
+                "--trigger",
+                "scheduled",
+                "--outcome",
+                "UC-001=gap-found",
+                *WHY,
+                "--gap",
+                "<ids>: <what was found> => <the defect reported, or the artefact written>",
+            ),
+            "--gap still holds the placeholder '<what was found>'",
+        ),
+        (
             (
                 "--trigger",
                 "scheduled",

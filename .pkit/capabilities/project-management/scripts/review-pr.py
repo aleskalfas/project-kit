@@ -916,9 +916,9 @@ FINDING_TAGS = (
     "reading left to choose. It withholds your approval: request changes exactly when you "
     "have one.\n"
     "- `[person]` — a finding for the person who authorises the merge. It cites by id an "
-    "accepted rule that binds on an artefact the change alters, and judges a passage the "
-    "change owns where that rule needs a reading it does not settle, or a fact it does not "
-    "name. It withholds no approval.\n"
+    "accepted rule that binds on an artefact the change alters or brings under a rule, and "
+    "judges a passage the change owns where that rule needs a reading it does not settle, "
+    "or a fact it does not name. It withholds no approval.\n"
     "- `[advisory]` — any other finding: a defect the change does not own, written "
     "`[advisory] (pre-existing: <reason>)`, a point your remit settles as not blocking, or "
     "a point of taste. It withholds and holds nothing. A finding with no tag counts as "
@@ -1261,7 +1261,10 @@ def _resolution_error_message(resolution: Resolution) -> str:
         lines.append(f"  → {error.message}")
         lines.append("  Remediation: transient gh failure reading the PR's changed files — retry.")
     elif error.kind == ERROR_RULED_ARTEFACTS:
-        lines.append(f"  → which ruled artefacts the PR alters cannot be read: {error.message}")
+        lines.append(
+            "  → which ruled artefacts the PR alters or brings under a rule cannot be read: "
+            f"{error.message}"
+        )
         lines.append(
             "  Remediation: fix what the reason names — fetch the full history, "
             "upgrade pkit — and retry."

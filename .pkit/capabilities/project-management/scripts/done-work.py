@@ -2569,7 +2569,7 @@ def _closing_issue_unresolvable_refusal(reason: str) -> str:
 
 
 def _ruled_artefacts_unresolvable_refusal(reason: str) -> str:
-    """Refusal text when the ruled artefacts the PR altered cannot be read
+    """Refusal text when the ruled artefacts the PR altered or brought under a rule cannot be read
     (DEC-032 D1, #1386).
 
     Reached only while a contribution names `touches-ruled-artefact`: without
@@ -2581,7 +2581,7 @@ def _ruled_artefacts_unresolvable_refusal(reason: str) -> str:
     return "\n".join(
         [
             "[refused] agent-mode approval gate cannot be resolved — which ruled "
-            "artefacts the PR alters cannot be read.",
+            "artefacts the PR alters or brings under a rule cannot be read.",
             f"            → {reason}",
             "            A reviewer of the touches-ruled-artefact floor may be required, so "
             "the gate refuses rather than merge on a possibly-incomplete set "

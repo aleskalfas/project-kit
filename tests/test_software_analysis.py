@@ -55,6 +55,7 @@ from tests.analysis_repo import (
     VALIDATE,
     actor_at,
     below_floor,
+    field_hint,
     front,
     installed,
     load,
@@ -324,7 +325,8 @@ def test_an_actor_is_a_file_of_its_own_its_needs_beside_its_description(
         "id": "ACT-tester",
         "name": "Tester",
         "status": "active",
-        "needs": ["<what this actor needs from the system, in one sentence>"],
+        # Its needs hold the field's declared hint as their placeholder (#1593).
+        "needs": [field_hint("actor", "needs")],
         "pkit": {"friction": {"anchors": {"path": ["src/**"]}}},
     }
     assert front(project, actor_at("ACT-sponsor"))["pkit"] == {
@@ -343,6 +345,8 @@ def test_an_actor_is_a_file_of_its_own_its_needs_beside_its_description(
     # A term is still an entry of the glossary, a collection (#1346).
     stamped(project, "term", "suite")
     assert list(front(project, GLOSSARY)) == ["TERM-suite"]
+    # Its definition holds the field's declared hint as its placeholder (#1593).
+    assert front(project, GLOSSARY)["TERM-suite"]["definition"] == field_hint("term", "definition")
 
 
 def test_every_stamped_artefact_passes_the_core_s_friction_pass(seeded: AdopterRepo) -> None:

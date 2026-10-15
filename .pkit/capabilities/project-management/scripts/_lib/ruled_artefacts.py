@@ -10,15 +10,20 @@ change check does, so an artefact is altered when it is added, removed, or its
 content differs — never by a move the pairing follows that keeps the
 content, nor by a change that only writes a revalidation. A change to the
 declared places alone alters the artefacts it brings in or takes out, though
-it touches none of their files, so no path of a change says the question may
-be skipped (DEC-032 D1). This module runs the command and reads its answer:
+it touches none of their files. A change to the rules or to a place's type
+alone brings artefacts under a rule without altering them, and the floor
+counts those too: the answer lists them apart, under `brought_unaltered`
+(DEC-032 D1, COR-057 point 2). So no path of a change says the question may
+be skipped. This module runs the command and reads its answer:
 
   * `ruled_altered(base, head)` — each altered artefact, with how it was
     altered, its file at each state that holds it, and whether an accepted
-    rule binds on it at the base or at the head. A rule a pin behind its set
-    holds back (the answer's `held`) binds nothing, so it makes no artefact
-    ruled. Or why the answer cannot be read, which is never an answer naming
-    nothing.
+    rule binds on it at the base or at the head; then each artefact the
+    change brought under a rule without altering it, as `unaltered`. A rule a
+    pin behind its set holds back (the answer's `held`) binds nothing, so it
+    makes no artefact ruled. Or why the answer cannot be read, which is never
+    an answer naming nothing. An answer without `brought_unaltered` comes from
+    a backbone older than this capability needs, and cannot be read.
 
 What it needs locally, each failing with its own reason (DEC-032 D1):
 
@@ -69,17 +74,22 @@ PACKAGE = Path(__file__).resolve().parents[2] / "package.yaml"
 #: How the backbone says an artefact was altered.
 ADDED, REMOVED, CHANGED = "added", "removed", "changed"
 CHANGES = (ADDED, REMOVED, CHANGED)
+#: How the backbone lists an artefact the change brought under a rule without
+#: altering it, under the answer's `brought_unaltered`.
+UNALTERED = "unaltered"
 
 
 @dataclass(frozen=True)
 class AlteredArtefact:
-    """One artefact a change altered, as the backbone lists it.
+    """One artefact a change altered, or brought under a rule, as the
+    backbone lists it.
 
     `location` is the artefact at the head, or at the base for one removed.
-    `change` is `added`, `removed` or `changed`. `paths` are its file at each
-    state that holds it. `ruled` says an accepted rule binds on it at the base
-    or at the head: its `rules` are not empty at one of them. A held rule
-    never counts.
+    `change` is `added`, `removed` or `changed`, or `unaltered` for one the
+    change brought under a rule without altering it. `paths` are its file at
+    each state that holds it. `ruled` says an accepted rule binds on it at the
+    base or at the head: its `rules` are not empty at one of them, as they
+    always are for one brought under a rule. A held rule never counts.
     """
 
     location: str
@@ -92,7 +102,8 @@ class AlteredArtefact:
 class RuledAlteration:
     """The artefacts a change altered, or why they cannot be read.
 
-    `artefacts` is every altered artefact, ruled or not. `ok` is False when
+    `artefacts` is every altered artefact, ruled or not, then every one the
+    change brought under a rule without altering it. `ok` is False when
     `error` is set; `artefacts` is then empty and means nothing — a consumer
     reads `error` first.
     """
@@ -106,13 +117,17 @@ class RuledAlteration:
 
     @property
     def locations(self) -> tuple[str, ...]:
-        """The altered artefacts an accepted rule binds on, at either state."""
+        """The artefacts the floor counts: each altered one an accepted rule
+        binds on, at either state, and each one the change brought under an
+        accepted rule (DEC-032 D1)."""
         return tuple(artefact.location for artefact in self.artefacts if artefact.ruled)
 
     @property
     def altered(self) -> tuple[str, ...]:
         """Every altered artefact, ruled or not."""
-        return tuple(artefact.location for artefact in self.artefacts)
+        return tuple(
+            artefact.location for artefact in self.artefacts if artefact.change != UNALTERED
+        )
 
 
 # `(base, head) -> RuledAlteration`, as `ruled_altered`.
@@ -127,7 +142,8 @@ def ruled_altered(
     run: Callable[..., subprocess.CompletedProcess] = subprocess.run,
 ) -> RuledAlteration:
     """The artefacts the change from `base` to `head` altered, each with
-    whether an accepted rule binds on it at either state.
+    whether an accepted rule binds on it at either state, then those it
+    brought under a rule without altering them.
 
     `base` is compared as the backbone compares a base: the change is the one
     from where `head` left it. See the module docstring for what is read
@@ -169,6 +185,8 @@ def ruled_altered(
     entries = _entries(proc.stdout or "")
     if isinstance(entries, str):
         return RuledAlteration(error=f"{command}: {entries}")
+    if entries is None:
+        return RuledAlteration(error=f"{command}: {_backbone_lists_nothing_brought()}")
     return RuledAlteration(
         artefacts=tuple(
             AlteredArtefact(
@@ -182,10 +200,12 @@ def ruled_altered(
     )
 
 
-def _entries(stdout: str) -> list[tuple[str, list[Mapping[str, Any]]]] | str:
+def _entries(stdout: str) -> list[tuple[str, list[Mapping[str, Any]]]] | str | None:
     """Each altered artefact's change and states — the base's, the head's,
-    those that hold it — from the command's document, or why the document
-    cannot be read."""
+    those that hold it — then each artefact's the change brought under a rule
+    without altering it, from the command's document; or why the document
+    cannot be read; or `None` for a document without `brought_unaltered`,
+    which a backbone older than this capability needs gives."""
     try:
         document = json.loads(stdout)
     except ValueError:
@@ -198,12 +218,17 @@ def _entries(stdout: str) -> list[tuple[str, list[Mapping[str, Any]]]] | str:
     artefacts = document.get("artefacts")
     if not isinstance(artefacts, list):
         return "its document lists no artefacts"
+    if "brought_unaltered" not in document:
+        return None
+    brought = document["brought_unaltered"]
+    if not isinstance(brought, list):
+        return "its document's `brought_unaltered` is not a list"
     out: list[tuple[str, list[Mapping[str, Any]]]] = []
-    for entry in artefacts:
+    for entry, known in [*((e, CHANGES) for e in artefacts), *((e, (UNALTERED,)) for e in brought)]:
         if not isinstance(entry, dict):
             return "it lists an artefact that is not a mapping"
         change = entry.get("change")
-        if change not in CHANGES:
+        if change not in known:
             return f"it lists an artefact altered as {change!r}, which this does not read"
         sides = [entry.get("base"), entry.get("head")]
         present = [side for side in sides if side is not None]
@@ -234,6 +259,22 @@ def _backbone_lacks_the_command() -> str:
     return (
         "the backbone's `pkit` has no `pkit rule-sets altered` command, which the "
         f"touches-ruled-artefact floor reads. project-management needs {needs}: upgrade pkit"
+    )
+
+
+def _backbone_lists_nothing_brought() -> str:
+    """Why an answer without `brought_unaltered` cannot be read: the floor
+    counts what a change brings under a rule, and that backbone does not say."""
+    required = _required_backbone()
+    needs = (
+        f"a backbone {required} (project-management's `requires_backbone`)"
+        if required
+        else "a backbone that lists them"
+    )
+    return (
+        "its answer does not list the artefacts the change brings under a rule "
+        "(`brought_unaltered`), which the touches-ruled-artefact floor counts. "
+        f"project-management needs {needs}: upgrade pkit"
     )
 
 
