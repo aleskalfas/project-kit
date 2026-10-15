@@ -175,25 +175,14 @@ def test_a_part_of_the_sentence_form_holds_one_sentence() -> None:
     )
 
 
-def test_in_a_list_each_item_of_a_sentence_part_holds_one_sentence() -> None:
-    """As in a front-matter list, each top-level item of a `sentence` part, its marker
-    left out, holds the form on its own, and so does any text before the first."""
+def test_a_sentence_part_is_read_as_one_text_a_list_in_it_included() -> None:
+    """A body part is one text, so a list in a `sentence` part counts as one text too:
+    how a form reads a list's items in a body part comes with the list forms."""
     goal = "**Goal:** Export my report as a file."
-    listed = "**Goal:** Two things:\n\n- Export my report.\n- Share it with the team."
-    assert _found(USE_CASE.replace(goal, listed)) == []
-    numbered = "**Goal:**\n\n1. Export my report.\n2. Share it."
-    assert _found(USE_CASE.replace(goal, numbered)) == []
-    two = "**Goal:**\n\n- Export my report. Then share it.\n- Keep it."
-    assert _found(USE_CASE.replace(goal, two)) == [("goal", "not-a-sentence", 3)]
-    # A list nested under a label that opens a list item splits too.
-    nested = "- **Goal:**\n  - Export my report.\n  - Share it."
-    assert _found(USE_CASE.replace(goal, nested)) == []
-    # Text after the list, past a blank line, is judged on its own, not with the last item.
-    after = "**Goal:**\n\n- Export my report.\n- Share it.\n\nBoth today."
-    assert _found(USE_CASE.replace(goal, after)) == []
-    # A wrapped line that starts with a number other than 1 continues its paragraph.
-    wrapped = "**Goal:** Export my report by the end of\n2026. Then share it."
-    assert _found(USE_CASE.replace(goal, wrapped)) == [("goal", "not-a-sentence", 3)]
+    listed = "**Goal:**\n\n- Export my report.\n- Share it."
+    assert _found(USE_CASE.replace(goal, listed)) == [("goal", "not-a-sentence", 3)]
+    wrapped = "**Goal:** Export my report by the end of\n2026 as a file."
+    assert _found(USE_CASE.replace(goal, wrapped)) == []
 
 
 def test_what_a_writer_adds_inside_a_sentence_part_counts_toward_it() -> None:

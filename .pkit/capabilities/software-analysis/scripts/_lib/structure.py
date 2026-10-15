@@ -51,11 +51,12 @@ How a body departs from its kind's structure:
 - **`None.` refused:** a part whose content is `None.` and nothing else, where
   its element does not allow it.
 - **not one sentence:** text of the `sentence` form, in a part or in each item
-  of a front-matter field, in which a sentence ends before its last word. In a
-  part that holds a list, each item holds the form on its own, and so do the
-  text before the list and the text after it. A sentence ends at a full stop, a
-  question mark or an exclamation mark, only where a space, a line end or the
-  text's end follows it, and never inside a code span (RS-SAN-001's *How*).
+  of a front-matter field, in which a sentence ends before its last word. A
+  part is read as one text, a list in it included: how a form reads the items
+  of a list in a body part comes with the list forms. A sentence ends at a full
+  stop, a question mark or an exclamation mark, only where a space, a line end
+  or the text's end follows it, and never inside a code span (RS-SAN-001's
+  *How*).
 
 Labels and sections a writer adds are never reported: the check judges only
 the declared elements. What a writer adds inside a part is that part's
@@ -109,7 +110,6 @@ _QUOTED = r"[ \t]*(?:>[ \t]*)*"
 _FENCE = re.compile(
     rf"^{_QUOTED}(?:(?:[-+*]|[0-9]{{1,9}}[.)])[ \t]+(?:>[ \t]*)*)*(`{{3,}}|~{{3,}})(.*)$"
 )
-_ITEM = re.compile(r"^[ \t]*(?:(?P<bullet>[-+*])|(?P<number>[0-9]{1,9})[.)])(?:[ \t]+|$)")
 _LABEL = re.compile(r"^(?:(?:[-+*]|[0-9]{1,9}[.)])[ \t]+)?\*\*(?P<text>[^*\n]+?)\*\*(?P<rest>.*)$")
 _COMMENT_OPEN, _COMMENT_CLOSE = "<!--", "-->"
 _TRAILING = re.compile(r"[\s.,:;!?]+$")
@@ -453,36 +453,9 @@ def judged(text: str, element: Element) -> str | None:
         return EMPTY
     if flat == NONE:
         return None if element.allows_none else NONE_REFUSED
-    if element.form == SENTENCE and not all(one_sentence(item) for item in _items(text)):
+    if element.form == SENTENCE and not one_sentence(text):
         return NOT_A_SENTENCE
     return None
-
-
-def _items(text: str) -> list[str]:
-    """A part's text as a form reads it: where it holds a list, each item, nested ones
-    included, its marker left out, and the text before the list and after it, each on its
-    own; otherwise the whole text.
-
-    A line opens an item where it starts with a marker after a blank line, within a list,
-    or with a bullet or the number 1, which may interrupt a paragraph. So a wrapped line
-    that starts `2026. ` continues its paragraph. Text after a blank line that opens with
-    no marker and no indentation ends the list."""
-    chunks: list[list[str]] = [[]]
-    listed, blank = False, True
-    for line in text.split("\n"):
-        marker = _ITEM.match(line)
-        if marker is not None and (
-            blank or listed or marker["bullet"] is not None or int(marker["number"]) == 1
-        ):
-            chunks.append([line[marker.end() :]])
-            listed = True
-        elif listed and blank and line.strip() and not line[0].isspace():
-            chunks.append([line])
-            listed = False
-        else:
-            chunks[-1].append(line)
-        blank = not line.strip()
-    return ["\n".join(chunk) for chunk in chunks if "".join(chunk).strip()]
 
 
 def one_sentence(text: str) -> bool:

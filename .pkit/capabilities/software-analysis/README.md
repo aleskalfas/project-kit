@@ -270,7 +270,7 @@ Where the format rule, `RS-SAN-001`, is accepted, the check holds each body to t
 
 - **a declared part that is missing, out of order or empty;**
 - **`None.` in a part that may not read it**, such as a use case's *Trigger*, which always has something to say;
-- **text of the `sentence` form that is not one sentence**, in a part such as a use case's *Goal*, or in each of an actor's `needs`. In a part written as a list, each item holds one sentence, and so does any text before or after the list. Where a sentence ends is the rule's *How*: at a full stop, a question mark or an exclamation mark before a space or a line end, and never inside a code span.
+- **text of the `sentence` form that is not one sentence**, in a part such as a use case's *Goal*, or in each of an actor's `needs`. A part is read as one text, so a list in a part of this form counts as one text too. Where a sentence ends is the rule's *How*: at a full stop, a question mark or an exclamation mark before a space or a line end, and never inside a code span.
 
 Each message gives the part's hint and example. How the check reads a body:
 

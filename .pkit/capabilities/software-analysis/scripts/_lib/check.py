@@ -95,15 +95,15 @@ And at the format rule's status:
   spans it, and the collection file's head — and every record's, against the
   structure its kind declares (`_lib/structure.py`): a declared part missing,
   out of order or empty, `None.` where the part may not read it, and text of
-  the `sentence` form, in a part or a front-matter field, that is not one
-  sentence, each item of a list on its own. A part or a label a writer adds
-  is never reported, though what it holds is content of the part it falls in. A withdrawn
-  artefact is never failed for a part it lacks, since a part may be required
-  after its withdrawal. A record is held to the structure declared now, the
-  only one declared so far: holding it to the structure in force on its day
-  comes with the first change to a structure (DEC-001's Implications). A
-  document's missing title heading is the heading
-  check's, above, which holds it whatever the rule's status. The structure
+  the `sentence` form, in a part or in each item of a front-matter field,
+  that is not one sentence. A part or a label a writer adds is never
+  reported, though what it holds is content of the part it falls in. A
+  withdrawn artefact is never failed for a part it lacks, since a part may be
+  required after its withdrawal. A record is held to the structure declared
+  now, the only one declared so far: holding it to the structure in force on
+  its day comes with the first change to a structure (DEC-001's
+  Implications). A document's missing title heading is the heading check's,
+  above, which holds it whatever the rule's status. The structure
   binds at the rule's status (COR-051 point 4): accepted, each departure is an
   error; under any other status the check reports none of it. On request
   (`preview`), a proposed rule is previewed as accepted: each departure is a
