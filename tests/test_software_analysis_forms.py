@@ -243,6 +243,22 @@ def test_a_writer_s_item_beside_a_label_s_item_is_no_item_of_its_list() -> None:
     assert _found(USE_CASE.replace(goal, twice)) == [("goal", "not-a-sentence", 4)]
 
 
+def test_a_list_beside_a_label_s_item_is_told_to_indent_under_it() -> None:
+    """A list at the label's own indentation is no part of the label's item, as Markdown
+    reads it, so the message says to indent it; `None.` with a note beside it reads
+    more than `None.`."""
+    labelled = "**Main path:**\n\n" + MAIN_PATH
+    beside = USE_CASE.replace(labelled, "- **Main path:**\n\n" + MAIN_PATH)
+    (detail,) = _details(beside)
+    assert detail.startswith("it holds no numbered step")
+    assert "indent the list under the label's own list item" in detail
+    noted = USE_CASE.replace(
+        "**Variants:**\n\n" + VARIANT, "- **Variants:** None.\n- **Note:** none yet."
+    )
+    (detail,) = _details(noted)
+    assert detail.startswith("it holds no variant, and reads more than `None.`, which stands alone")
+
+
 def test_a_line_a_quote_in_an_item_runs_on_to_stays_its_text() -> None:
     (item,) = F.read_list([F.Row(1, "  1) "), F.Row(2, "     > q"), F.Row(3, "    2026. y")]).items
     assert " ".join(item.text.split()) == "> q 2026. y"
@@ -439,6 +455,10 @@ def test_a_record_s_gaps_name_its_regressed_and_gap_found_outcomes() -> None:
         "the gap's label, `**UC-007,:**`, leaves an id out between its commas: name each "
         "id once, separated by commas"
     ]
+    blank = RECORD.replace("**UC-007:**", "** :**")
+    assert _details(blank, "revalidation-record", fields=OUTCOMES)[0] == (
+        "the gap's label names no id: name each id"
+    )
     unknown = RECORD.replace("**UC-007:**", "**UC-007, UC-001:**")
     assert _details(unknown, "revalidation-record", fields=OUTCOMES) == [
         "the gap names `UC-001`, which `outcomes` does not list: a gap names artefacts the "
