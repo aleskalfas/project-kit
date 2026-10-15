@@ -1913,8 +1913,8 @@ def rule_sets_reach_command(at: str | None, as_json: bool) -> None:
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
 def rule_sets_altered_command(base_ref: str | None, head_rev: str | None, as_json: bool) -> None:
-    """Which artefacts a change altered, with the accepted rules that bind on each at the
-    base and at the head (COR-051 point 7).
+    """Which artefacts a change altered or brought under a rule, with the accepted rules
+    that bind on each at the base and at the head (COR-051 point 7).
 
     The head is the working tree (uncommitted changes included) or, with
     --head, commit REV; the base is the merge-base of REF with it, as the

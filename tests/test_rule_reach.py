@@ -902,7 +902,7 @@ def test_altered_reads_a_named_head_and_the_cli_gives_the_document(repo: Adopter
     named = json.loads(_cli("altered", "--base", "main", "--head", "feature", "--json").stdout)
     assert named["head"]["working_tree"] is False and len(named["artefacts"]) == 1
     human = _cli("altered", "--base", "main")
-    assert human.exit_code == 0 and f"changed  {GUIDES}/c.md" in human.output
+    assert human.exit_code == 0 and f"changed   {GUIDES}/c.md" in human.output
 
 
 def test_the_change_check_and_the_command_share_one_pairing(

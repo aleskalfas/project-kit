@@ -410,7 +410,7 @@ def _altered_lines(entry: Mapping[str, Any]) -> list[str]:
     """One artefact of the change: how it was altered, the rules that bind on it at the
     base and at the head, and the rules the change brings it under."""
     shown = entry["head"] if entry["head"] is not None else entry["base"]
-    lines = [f"  {entry['change']:<8} {shown['location']}"]
+    lines = [f"  {entry['change']:<9} {shown['location']}"]
     for side in ("base", "head"):
         if entry[side] is None:
             continue
