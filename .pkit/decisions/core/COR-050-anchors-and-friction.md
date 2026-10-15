@@ -236,18 +236,17 @@ A change to any of them can change what a point means without touching its text,
 
 **Why some part anchors are refused.** Each refused anchor names text that has a name already, or text that is no unit of its own.
 - **A collection file's** entries are artefacts, each named by its id. A slug on the file would name an entry a second way, by a heading that can be renamed.
-- **A collection entry** is cited whole, by its id, and an anchor names nothing finer than what people cite (Alternatives considered). An extension point names what a rule offers, not a part of its text (COR-051 point 3).
+- **A collection entry** is cited whole, by its id, and an anchor names nothing finer than what people cite (Alternatives considered). An extension point names what a rule offers, not a section of its text (COR-051 point 3).
 - **A record** a place holds is an artefact too. Its units are its points, and a record anchor names each point, or the record whole.
   - A slug on a point's heading would name the point a second way, by a slug that changes with the point's title. It would also stand on other ground than the point does (point 5). It would stand on all the record's own fields, and on none of its preamble, Summary or Decision text outside the point.
   - A record's other sections and its preamble are no unit the record decides by. A dependant that rests on one rests on the record whole.
-  - A record in list form has numbers no anchor can rely on until it is converted (COR-058 point 9).
   - The whole record keeps both anchors, a record anchor and an artefact anchor, each on its own ground (point 5). Refusing either would fail anchors that projects hold.
 
-**Why validation fails a part anchor that is dead, ambiguous or refused.** The project can always mend such an anchor where it is written.
+**Why validation fails a part anchor that is dead, ambiguous or refused.** The project can always mend such an anchor.
 - **The anchor** sits in an artefact in a place, the project's or a component's, never in a synced tree (point 14). So it can be mended where it is written, as every finding validation owns can (point 12).
 - **A point** of a record a project receives by sync is retired, not dropped, where its authors run the numbering check (COR-058 point 8). So a sync seldom kills such an anchor.
 - **A section** belongs to a document in a place too. So the change that renames its heading is the project's own, and validation fails it, whatever the friction mode.
-- **Whatever made it dead,** its artefact gone included, a part anchor fails validation. Every other dead anchor is the checks' finding, which the friction mode governs (Alternatives considered).
+- **A dead part anchor** fails validation whatever made it dead, its artefact gone included. Every other dead anchor is the checks' finding, which the friction mode governs (Alternatives considered).
 
 The cost is that a heading rename which leaves an anchor dead fails validation in warning mode too. Two changes may each pass alone, one anchoring a section and the other renaming its heading. Merged, they leave the default branch failing validation until someone re-points the anchor. Up-to-date branches, or a merge queue, prevent it (point 6).
 
@@ -276,7 +275,7 @@ The cost is that a heading rename which leaves an anchor dead fails validation i
 - **A section or the lead of a record a place holds, read as the record's point,** by its heading's slug or by the point's id. Not taken. The slug follows the point's title, which a refinement may change, while the point's id is permanent. A section that is no point would have no point to be read as. Read by its id, the anchor would name one point by two kinds, on different ground (point 5). A record anchor names every point already.
 - **Numbering a second heading with one slug, as some tools do.** Rejected. A heading added above would shift the numbers, and the anchor would name another section silently.
 - **Cycles and truth-chain order judged between sections.** Rejected. An artefact is revalidated whole, so its sections give no order of revalidation.
-- **Every dead anchor failing validation, whole ones included.** Rejected. It would fail, in every mode, a dead whole anchor that a project keeps in warning mode.
+- **Every dead anchor failing validation, whole ones included.** Not taken. It would fail, in every mode, a dead whole anchor that a project keeps in warning mode.
 - **Storing each artefact's current-or-stale state as truth.** Rejected. Stored state duplicates what git already answers, and it drifts from git whenever a change bypasses the check. The tool-written status is a dated snapshot, not truth.
 - **A commit identifier or a content hash as the marker.** Rejected; see Rationale.
 - **Reading the answer from the pull-request description.** Rejected; see Rationale.
