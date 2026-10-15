@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-15T09:52:44Z
+      at: 2026-10-15T15:59:39Z
       outcome: unchanged
-      unchanged-because: The CLI reference's new decision entry now says where a record's number comes from. The map gives each area's role and link, and no role or link moves, so the map holds.
+      unchanged-because: The CLI reference, the agents README, the lifecycle README and the schemas README say that pkit rule-sets altered, and the rule-set reviewer that reads it, also cover what a change brings under a rule. The map gives each area's role and link, and no role or link moves, so it holds.
 ---
 
 # project-kit

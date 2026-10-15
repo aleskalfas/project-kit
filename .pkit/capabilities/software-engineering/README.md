@@ -13,8 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-15T09:04:00Z
-      outcome: updated
+      at: 2026-10-15T15:55:58Z
+      outcome: unchanged
+      unchanged-because: COR-024 and COR-057 widen the rule-set reviewer to what a change brings under a rule, COR-060 decides the kind of a break there, and DEC-028 and DEC-032 count those artefacts on the ruled-artefact floor and its freshness. This page names the rule-set reviewer only as a member of the stack, and describes the panel's touches-code floor, its tags and its freshness, none of which changed, so it holds.
 ---
 
 # software-engineering capability

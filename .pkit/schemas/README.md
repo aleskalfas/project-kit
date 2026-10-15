@@ -19,9 +19,8 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-13T20:06:19Z
-      outcome: unchanged
-      unchanged-because: COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056 and ADR-057 now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed. The front-matter shapes this page describes read as before, so it holds.
+      at: 2026-10-15T15:55:30Z
+      outcome: updated
 ---
 
 # Schemas

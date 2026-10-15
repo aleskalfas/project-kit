@@ -18,9 +18,8 @@ pkit:
         - .pkit/agents/core/rule-set-reviewer.md
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052]
     revalidated:
-      at: 2026-10-14T08:57:35Z
-      outcome: unchanged
-      unchanged-because: COR-049, COR-050, COR-057, ADR-051 and ADR-052 now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed. So the points this page cites, COR-049 points 4 and 5 and COR-050 points 3 and 10, name the same text, and it holds.
+      at: 2026-10-15T15:54:01Z
+      outcome: updated
 ---
 
 # Agents
