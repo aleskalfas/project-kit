@@ -866,6 +866,8 @@ _ITEM_END = re.compile(
 #: spaces: the indent, the bullet or number, and the whitespace after it.
 _ITEM_OPENING = re.compile(r"^( {0,3})([-*+]|\d{1,9}[.)])([ \t]+|$)")
 _THEMATIC_BREAK = re.compile(_BREAK)
+#: An ATX heading, of any level, indented by at most three spaces.
+_HEADING = re.compile(r"^ {0,3}#{1,6}(?:[ \t]|$)")
 #: An HTML comment's opening at the start of a line: the lines up to its
 #: closing do not render, so nothing in them is read.
 _COMMENT_OPENING = re.compile(r"^[ \t]*<!--")
@@ -893,8 +895,9 @@ def _read_sentences(body: str) -> tuple[dict[str, str], list[Unread]]:
     warning names exactly the items the reading leaves out. The list a command
     wrote reads as a blank line, so its lines keep their numbers. An item is at
     the list's top level unless it is indented as far as the content of the
-    top-level item above it, in the same list; a heading, an HTML comment, a
-    thematic break or a fence, or a paragraph after a blank line, ends the list."""
+    top-level item above it, in the same list. A heading, an HTML comment, a
+    thematic break, a fence, or a paragraph after a blank line, indented less
+    than that content, ends the list."""
     lines_ = _split(provenance.strip_footer(body))
     listed = {index for span in _spans(lines_) for index in range(span.first, span.last + 1)}
     found: dict[str, str] = {}
@@ -924,10 +927,13 @@ def _read_sentences(body: str) -> tuple[dict[str, str], list[Unread]]:
         if comment:
             comment = "-->" not in line
             continue
+        # A line indented less than the content of the top-level item above it,
+        # that is no item of the list, ends the list.
+        outdented = nest is not None and len(line) - len(line.lstrip()) < nest
         opened = _FENCE.match(line)
         if opened is not None or _COMMENT_OPENING.match(line):
             close()
-            nest = None
+            nest = None if outdented else nest
             if opened is not None:
                 fence = opened.group(1)
             else:
@@ -957,12 +963,12 @@ def _read_sentences(body: str) -> tuple[dict[str, str], list[Unread]]:
             unread_.append(Unread(number, shown(line)))
         elif not line.strip() or _ITEM_END.match(line):
             close()
-            if line.startswith("#") or _THEMATIC_BREAK.match(line):
-                nest = None  # a heading or a thematic break ends the list
+            if outdented and (_HEADING.match(line) or _THEMATIC_BREAK.match(line)):
+                nest = None
         elif current is not None:
             current.append(line.strip())
-        elif blank and not line.startswith((" ", "\t")):
-            nest = None  # a paragraph of its own ends the list
+        elif blank and outdented:
+            nest = None  # a paragraph of its own
         if opening is not None and not nested:
             nest = _nest(opening)
         blank = not line.strip()

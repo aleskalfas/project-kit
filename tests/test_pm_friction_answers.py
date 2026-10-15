@@ -1140,6 +1140,26 @@ FORM = "- `path`: sentence"
             {"docs/a.md": "The intro."},
             [7],
         ),
+        # A paragraph or a heading indented less than the item's content ends the list.
+        (
+            ["1. `docs/a.md`: A.", "", "  para", "   - **b**", "  ### H", " - **c**"],
+            {"docs/a.md": "A."},
+            [6, 8],
+        ),
+        # A comment or a fence inside an item's content leaves the list open.
+        (
+            [
+                "- `docs/a.md`: A.",
+                "  <!-- note -->",
+                "  - nested",
+                "  ```",
+                "  x",
+                "  ```",
+                "  - too",
+            ],
+            {"docs/a.md": "A."},
+            [],
+        ),
         # Nothing inside an HTML comment renders, so nothing there is read or named.
         (["<!--", "- **docs/a.md:** An example.", "- `docs/b.md`: Another. -->"], {}, []),
         # A paragraph and an item under another heading are not the section's items.
@@ -1155,6 +1175,8 @@ FORM = "- `path`: sentence"
         "nested",
         "sibling",
         "new list",
+        "outdented",
+        "inside an item",
         "comment",
         "not an item",
     ],
