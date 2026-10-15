@@ -9,7 +9,7 @@ Write one when an actor's real goal spans use cases — onboarding, a first rele
 ## 2. Name the actor and the steps
 
 - **The actor** — the one who takes the whole path; in the analysis and in force.
-- **The steps** — the use cases it passes through, in order, at least two, each in force. A use case may appear more than once. Stamp missing use cases first (`use-case.md`).
+- **The steps** — the use cases it passes through, in order, at least two, each in force and each the actor's own: its `actor` is the journey's. A use case the actor only takes part in is another actor's, and the stamp and the check refuse it as a step. A use case may appear more than once. Stamp missing use cases first (`use-case.md`).
 
 ## 3. Choose the slug and the title
 
