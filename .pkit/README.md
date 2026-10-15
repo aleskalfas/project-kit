@@ -17,9 +17,9 @@ pkit:
         - .pkit/scratchpad/README.md
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-14T21:45:30Z
+      at: 2026-10-15T08:25:04Z
       outcome: unchanged
-      unchanged-because: The CLI reference and the lifecycle README now say that capabilities install and upgrade stop wherever sync stops, and that capabilities upgrade refuses a capability its bundle ships older. The map gives each area's role and link, and no role or link moves, so the map holds.
+      unchanged-because: The CLI reference now recommends the tagged install of pkit, and the lifecycle README says the version guard vouches for content only under it. The map gives each area's role and link, and no role or link moves, so the map holds.
 ---
 
 # project-kit
