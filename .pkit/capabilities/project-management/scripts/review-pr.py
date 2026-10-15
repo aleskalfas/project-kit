@@ -1102,7 +1102,10 @@ def _resolution_error_message(resolution: Resolution) -> str:
         lines.append(f"  → {error.message}")
         lines.append("  Remediation: transient gh failure reading the PR's changed files — retry.")
     elif error.kind == ERROR_RULED_ARTEFACTS:
-        lines.append(f"  → which ruled artefacts the PR alters cannot be read: {error.message}")
+        lines.append(
+            "  → which ruled artefacts the PR alters or brings under a rule cannot be read: "
+            f"{error.message}"
+        )
         lines.append(
             "  Remediation: fix what the reason names — fetch the full history, "
             "upgrade pkit — and retry."

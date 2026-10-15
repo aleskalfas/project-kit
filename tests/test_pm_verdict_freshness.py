@@ -1121,9 +1121,10 @@ def test_a_backbone_that_cannot_answer_stales_the_approval_with_its_reason(
     rule = _ruled_rule(vf, ad, repo, "this checkout is shallow", asked)
     assessed = rule.assess(_verdict(av, RULES, reviewed))
     assert not assessed.fresh
-    assert "whether it alters a ruled artefact cannot be read: this checkout is shallow" in (
-        assessed.reason
-    )
+    assert (
+        "whether it alters a ruled artefact, or brings one under a rule, cannot be read: "
+        "this checkout is shallow"
+    ) in assessed.reason
 
 
 def test_a_rejection_on_the_ruled_floor_goes_stale_on_any_change(av, ad, vf, repo) -> None:

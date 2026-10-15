@@ -182,8 +182,8 @@ def _ruled_artefacts(
     ruled_altered: Callable[..., RuledAlteration],
 ) -> tuple[str, ...] | _Unresolvable:
     """The artefacts PR `pr_number`'s change altered that an accepted rule
-    binds on — from where it left the base branch's head to its head — or why
-    they cannot be read (DEC-032 D1)."""
+    binds on, and those it brought under an accepted rule — from where it left
+    the base branch's head to its head — or why they cannot be read (DEC-032 D1)."""
     commits = pr_base_and_head(pr_number, config, gh_run=gh_run)
     if isinstance(commits, _Unresolvable):
         return commits

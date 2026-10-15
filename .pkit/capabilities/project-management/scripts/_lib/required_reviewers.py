@@ -493,7 +493,8 @@ def resolve_required_local_reviewers(
     reported as itself rather than as an opt-out naming nothing), then
     closing-issue resolution, then — only when a contribution names
     `touches-code` — changed-files resolution, then — only when one names
-    `touches-ruled-artefact` — the ruled artefacts the change altered. Any
+    `touches-ruled-artefact` — the ruled artefacts the change altered or brought
+    under a rule. Any
     failing yields a non-ok `Resolution`. A collection with no `touches-code`
     rule never fetches the diff, so it pays no extra `gh` round-trip and
     cannot fail on a diff it does not consult, and one with no

@@ -1702,5 +1702,8 @@ def test_resolution_error_ruled_artefacts_names_the_cause(rpr) -> None:
     )
     msg = rpr._resolution_error_message(resolution)
     assert "fail-closed" in msg
-    assert "which ruled artefacts the PR alters cannot be read: this checkout is shallow" in msg
+    assert (
+        "which ruled artefacts the PR alters or brings under a rule cannot be read: "
+        "this checkout is shallow" in msg
+    )
     assert "fetch the full history" in msg.split("Remediation:")[1]

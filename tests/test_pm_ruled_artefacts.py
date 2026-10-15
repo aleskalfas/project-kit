@@ -756,3 +756,23 @@ def test_a_push_that_brings_a_page_under_a_rule_stales_the_approval(
     assert not assessed.fresh
     assert f"ruled artefacts altered or brought under a rule: {N}" in assessed.reason
     assert assessed.reason.endswith("reaches its touches-ruled-artefact floor")
+
+
+def test_a_push_that_only_takes_pages_out_from_under_a_rule_keeps_the_approval(
+    pm: tuple, repo: AdopterRepo
+) -> None:
+    """Approved on a guide edit; the author then narrows DOC's scope off the guides.
+    The push alters no document and brings none under a rule, so the approval stands
+    (DEC-028)."""
+    base = _start(repo)
+    reviewed = repo.commit("change b", {B: page("B", "A new body.")})
+    narrowed = _set_text("DOC", {"paths": [f"{GUIDES}/none/**"]}, rules("RS-DOC-001"))
+    head = repo.commit("narrow DOC", {f"{SETS}/doc.md": narrowed})
+    _pr_review, _rc, _ad, av = pm
+    review = _resolve(pm, repo, [B, f"{SETS}/doc.md"], base, head)
+    assert review.resolution.ok, review.resolution.error
+    assert review.resolution.required_local == ("pm-reviewer", RULES)
+    rule = review.freshness_rule({"headRefOid": head, "baseRefOid": base, "commits": []})
+    assessed = rule.assess(_approval(av, reviewed))
+    assert assessed.fresh, assessed.reason
+    assert assessed.reason.endswith("reaches none of its floors (touches-ruled-artefact)")

@@ -201,7 +201,8 @@ class FreshnessRule:
         if isinstance(found, _Unresolvable):
             return Freshness(
                 False,
-                f"{changed} — whether it alters a ruled artefact cannot be read: {found.reason}",
+                f"{changed} — whether it alters a ruled artefact, or brings one under a rule, "
+                f"cannot be read: {found.reason}",
             )
         reached = sorted(found)
         if reached:
