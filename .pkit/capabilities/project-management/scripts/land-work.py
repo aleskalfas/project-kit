@@ -75,7 +75,9 @@ It stops at the first step that cannot go on, and its last line says why.
           friction settings it alters, derived at the pinned head against the
           PR's base (`_lib.friction_answers`), each `updated` document with the
           sentence its author wrote under the description's `## What changed
-          in each updated document`, printed in full, in the plain words of
+          in each updated document` — each item there it cannot read draws a
+          `warn:` line naming its line and the form a sentence takes —
+          printed in full, in the plain words of
           the description's `## Documentation this change affects` section,
           and written into the PR's description, last before its footer, where
           it is not there already; its lines begin `documents this change
@@ -969,6 +971,7 @@ def _answers(
         )
     body = _read_body(head, config)
     if not derived.listed:
+        _warn_unread(friction_answers.strip(body))
         return _no_answers(args, head, body, config, capability_root)
     if derived.outdated:
         _refuse_moved_base(derived, head)
@@ -1014,6 +1017,7 @@ def _answers(
                 f"`land-work {issue}` again. Nothing was written",
             )
     section = friction_answers.render(document, head.oid, settings, sentences)
+    _warn_unread(body if friction_answers.current(body, section) else friction_answers.strip(body))
     for line in friction_answers.lines(document, settings, sentences):
         print(f"  {line}")
     count = friction_answers.documents(derived.answers)
@@ -1162,6 +1166,15 @@ def _read_body(head: _Head, config: dict[str, Any]) -> str:
         f"{STEP}: PR #{pr_number}'s description could not be read: {problem}. Nothing was "
         f"merged; run `land-work {head.issue}` again",
     )
+
+
+def _warn_unread(description: str) -> None:
+    """A warning for each item under the description's sentences heading that gives
+    no sentence, naming its line in `description` — the description as this run
+    leaves it, the list moved last where the run writes it — and the form a
+    sentence takes."""
+    for item in friction_answers.unread(description):
+        print(f"  warn: {friction_answers.unread_warning(item)}")
 
 
 def _stamped(body: str, section: str | None, capability_root: Path) -> str:
