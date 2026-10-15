@@ -12,7 +12,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 Under this record `pkit sync` keeps a project at the release it records, and stops when the running pkit is another release. `pkit upgrade` is the one command that moves a project to a new release, and every migration runs inside it. It records where it is going before it writes anything, and records that it arrived only after its last migration. So the next upgrade finishes an interrupted one.
 
-This record realises [COR-059](../../../.pkit/decisions/core/COR-059-version-transition.md) in project-kit's code, and #1458 to #1465 and #1572 build it. Its points say where each version is recorded, the order an upgrade runs in, and the remedy each stop names.
+This record realises [COR-059](../../../.pkit/decisions/core/COR-059-version-transition.md) in project-kit's code, and #1458 to #1465 and #1572 build it. Its points say where each version is recorded, the order an upgrade runs in, and the remedy each stop names. They also stop a transition and sync on a clash of area names, and hold new core areas and adapters until #1600.
 
 ## Context
 
@@ -38,7 +38,7 @@ The code today:
 - how the target stays readable before the manifest-schema migrations run (point 3)
 - who writes each project-owned path, and who owns each piece of derivable state (point 11)
 - how a transition reports the replay (point 5)
-- how a transition meets a project's area whose name a core area takes (point 13)
+- how a transition meets a clash of area names among published releases (point 13)
 
 [ADR-049](ADR-049-per-project-version-pin.md), [ADR-063](ADR-063-upgrade-updates-the-tool.md) and [ADR-064](ADR-064-upgrade-pins-by-default.md) say how upgrade and the pin work today. #1457 refines them in place where this record changes what they say.
 
@@ -53,7 +53,7 @@ The points that follow:
 - **Point 6** says how a transition settles a new collision and the dependency gates before it writes.
 - **Points 7 to 9** say which commands stop, the remedy each stop names, and how a pinned project's upgrade moves.
 - **Points 10 to 12** retire `sync --force`, name the writers of project-owned paths, and tie a version to a tagged install.
-- **Point 13** says where a transition and sync's copy stop on a clash of area names, before they write.
+- **Point 13** stops a transition and sync's copy on a clash of area names, and holds new core areas and adapters until #1600.
 
 ### 1. Sync's propagation step has two callers
 
@@ -144,7 +144,11 @@ A transition of the backbone runs after upgrade's own checks, which depend on th
 
 A project already current returns after these checks, before step 1, and only writes or raises its pin (ADR-064 point 1). Otherwise these steps run in this order:
 
-1. **Compatibility and collisions:** the refusal of a component its bundle ships older (point 7), the refusal of a clash of area names (point 13), compatibility resolution (COR-010), the dependency gates and the collision flow (point 6). Each may refuse, and none writes.
+1. **Compatibility and collisions.** Each may refuse, and none writes:
+   - the refusal of a component its bundle ships older (point 7)
+   - the refusal of a clash of area names (point 13)
+   - compatibility resolution (COR-010)
+   - the dependency gates and the collision flow (point 6)
 2. **The target is recorded:** `backbone_version` becomes the target. `completed_version` keeps its value, or stays missing. Then each capability manifest still at its root moves under `project/` (point 2). Each skip chosen in step 1 is recorded in its capability's manifest (point 6).
 3. **Propagation at the target,** through the propagation step: the backbone's trees, every adapter, and every shipped capability with its skips. An adapter the target adds is registered here. Then `.pkit/.gitignore` is rendered, so a migration reads the target's render.
 4. **Backbone migrations,** from `completed_version`, or every one when it is missing (point 5).
@@ -206,8 +210,8 @@ A project already current returns after these checks, before step 1, and only wr
   - **a core skill or agent a release adds.** A project artefact of the same name suspends it, by deploy's name precedence (COR-001 and the agents README).
   - **a clash between two artefacts one release ships,** which is the release's to prevent
   - **a collision with externally-sourced content,** which surfaces, as COR-041 sets
-  - **a core area a release adds, where the project already has something at `.pkit/<name>` that point 13 does not count as held.** Every project has every area, so none can be skipped (COR-011). It stops the transition as a clash of area names (point 13).
-  - **a core adapter a release adds, whose name an adapter of the project's own takes,** which point 13 leaves to a follow-up
+  - **a core area whose name a project's own area takes.** Every project has every area, so none can be skipped (COR-011). Point 13 says how the transition meets it.
+  - **a core adapter whose name an adapter of the project's own takes,** which point 13's hold keeps a release from adding until #1600
 - **A capability the target no longer ships** stays installed, with COR-017's no-longer-shipped warning.
 - **The gates run as `pkit capabilities upgrade` runs them,** over the set the transition would leave. That set holds every shipped capability at its bundled version, and every other at its installed version. A conflict therefore involves a capability that does not move: an incubated, externally-sourced or no-longer-shipped one.
   - **A moving capability whose dependency does not move and is out of range** refuses, with a hint (COR-030). The project controls that dependency.
@@ -292,7 +296,6 @@ The core layer writes a project-owned path only through a writer a record names 
 | `.claude/settings.json` and `CLAUDE.md` | merge delivery, run by init, sync, a transition and `pkit merge` (COR-002) | none asked, in the auto-add tier |
 | `.claude/settings.json.pre-pkit` | first install, backing up a settings file that predates it | the command's own |
 | a project artefact a capability's artefact collides with | the collision flow's override, in a capability's install or a transition (COR-017) | the person's answer |
-| a project's own area that point 13's table counts as held | a transition's copy of the target (point 13) | choosing the target. The transition cannot tell such an area from a core one, so it asks nothing. |
 | the seed paths below | first install, a capability's install for its own `project/` folder, and a transition of the backbone where one is missing (COR-059 point 8) | choosing the target (COR-059 point 4), or the command's own |
 | `.pkit/agents/project/overlay.yaml` | also `pkit agents reconcile --write`, where the overlay is missing (COR-013) | its own `--write` |
 | any file a migration writes | a migration, inside a transition, within what the owning record allows, such as COR-048 point 5 for the configuration file | choosing the target |
@@ -304,6 +307,7 @@ The core layer writes a project-owned path only through a writer a record names 
   - each shipped capability's `project/` folder
 - **A deleted overlay is repaired by the command that needs it.** `pkit agents reconcile --write` creates a missing overlay from the same seed. It is the one writer outside the lifecycle that the table names, since it creates a seed path. Whether it stops under a version mismatch is the open question of point 7.
 - **Other writers outside the lifecycle,** such as `pkit new` or `pkit config set`, are not listed here. A full inventory of every command's writes is outside COR-059's frame.
+- **A write with no named writer, until #1600:** a transition's copy over a project's own area that point 13's test cannot tell apart.
 
 | Derivable state | Regenerated by |
 |---|---|
@@ -322,45 +326,35 @@ The core layer writes a project-owned path only through a writer a record names 
 - **An untagged install, from main, is vouched for by no version.** Its `VERSION` names the last release, while its files may be newer. The guard compares its version like any other, so the comparison vouches for nothing.
 - **A release that moves only a component** cuts no tag (the release README). Under a tagged install it reaches a project with the next backbone release, through that release's transition.
 
-### 13. A transition and sync stop on a clash of area names
+### 13. A transition and sync stop on a clash of area names, and no core area is added until #1600
 
-A project may create its own area at `.pkit/<name>/` (COR-011). A later release may ship a core area of the same name. Its copy would write over the project's area, so the copy stops first.
+A project may create its own area at `.pkit/<name>/` (COR-011). A later release may ship a core area of the same name, and its copy would write over the project's area. Among published releases one such clash can happen, and a test of the area's content stops the copy on that clash before writing. A hold keeps a release from adding another until #1600 builds the full check.
 
-- **The two kinds of area:**
-  - a core area is any tree under `.pkit/` that a release's list of areas ships, whether or not its README declares an area
-  - a project's own area is one the project created at `.pkit/<name>/` (COR-011)
-- **The list** sits at `.pkit/cli/areas.yaml`, in every release from the one that first ships it. `cli` is the dispatcher's home, which no project makes its own, so no project file can pass as the list. The list also names the areas a release retired, apart from those it ships.
-- **A core area counts as held** in any of three cases, tested in this order:
-  - the project's copy of the list ships it
-  - the table below contains it
-  - the path matches. Every file in it outside the paths the copy never writes, Python caches aside, is a file the bundle ships for that area, with the same content. The copy then loses nothing the project wrote.
-- **The paths the copy never writes** for an area are its `project/` folder, and for some areas more, such as the scratchpad's state folders and `rules/project.md`. A test holds the match rule to the copy's own set.
-- **What never matches:** a file or a symlink at the path. An empty folder matches.
-- **A clash of area names:** the running pkit ships a core area that does not count as held, and something already sits at `.pkit/<name>`.
+- **The clash that can happen:** a project's own area at `.pkit/lifecycle/`, made at a release before v1.149.0, which first shipped the core `lifecycle` area. Every other area a release propagates is in `install.PROPAGATED_AREAS` at the v1.134.0 tag, the first published release.
+- **How the test tells the two apart:** the core `lifecycle` area holds `ownership.py`. A project's own area holds it only by chance, the first case below. The file came with the area's first propagation, in commit `3440f2a8`, and the core area has held it since.
+- **A clash of area names:** the running pkit ships the core area, and something other than a folder holding the file `ownership.py` sits at `.pkit/lifecycle`. A link at that path is a clash too. An empty folder is no clash.
+- **Every copy keeps the test true:** first install's copy and the propagation step write `ownership.py` first in that area. So an interrupted copy leaves the folder empty, or holding the file.
 - **Where the test runs:**
   - a transition, in step 1, before anything is written
-  - the propagation step, before it writes the methodology's trees. So sync meets it too, on an untagged install as well (point 12).
+  - the propagation step, before it writes the methodology's trees. So sync meets the test too, on an untagged install as well (point 12).
 - **A clash of area names stops the command.** It stops whether or not a person can answer, and under `--dry-run` too. It takes no override.
-- **The message names each clash of area names,** with the path and the release that ships a core area of that name. It names the ways on:
+- **The message** names the path, and the running release, which ships the core area. It names the ways on:
   - **To move on:** move the project's area to another name, with what refers to it. Then run the command again.
-  - **Where the path holds the methodology's own content,** as after a lost list or a rollback: remove what it holds outside the paths the copy never writes, then run again. The path then matches, and the project's content stays. For a lost list, restoring `.pkit/cli/areas.yaml` from git is enough. Either way is the project's own act on its own tree, not an override.
-  - **To stay:** an unpinned project pins its recorded release with `pkit pin`, point 8's Stay remedy. A pinned project installs its pin's tagged release. The router then runs that release, sync included.
-- **How the list is kept:**
-  - The propagation step and first install walk the areas the bundle's list ships. So the list is the one definition of what propagates. A test holds that the bundle carries each area the list ships.
-  - Both write the list before any area, atomically: a temporary file renamed into place. The copy of `cli` leaves the list out, so every write of it is atomic. Otherwise a resumed transition could find a half-copied area beside an older list, and stop on it.
-  - The code that reads the list reads every format a release has shipped. The format leaves room for adapters.
-- **A release never ships an area under a name an earlier release retired,** such as `workflow`, since a retiring migration may leave the project's content there. A test refuses a list that ships a retired name again, or that ships `project` or `capabilities`.
-- **The table** contains the areas of the releases before the first that ships the list. It is fixed when the list first ships, and a test holds each of its areas among those the list ships.
-  - **the eleven areas v1.134.0 ships,** the first published release: `decisions`, `skills`, `cli`, `adapters`, `scratchpad`, `agents`, `schemas`, `permissions`, `rules`, `process` and `migrations`. Each counts as held, whatever version the project records.
-  - **`lifecycle`,** first shipped in v1.149.0. It counts as held where `.pkit/lifecycle/ownership.py` exists, a file the core area has carried since it first shipped.
-- **What the table cannot tell apart:** a transition's copy writes over a project's own area that the table counts as held, as point 11 names. It arises in two cases only:
-  - a project's own area under one of the eleven names, in a project still at a release before core shipped that name, so below v1.134.0
+  - **To stay,** after a transition's stop: an unpinned project pins its recorded release with `pkit pin`, point 8's Stay remedy. A project pinned at that release needs nothing, since the transition did not move its pin. The message names no way to stay for any other project, or after sync's stop, since sync already runs the recorded release.
+  - **Where the folder is the methodology's own area and has lost `ownership.py`:** restore that file from git. Where git holds no copy of it, remove the folder, which holds none of the project's content. Then run the command again.
+- **What the test cannot tell apart, until #1600:** a transition's copy writes over a project's own area in two cases:
   - a project's own `lifecycle` area that holds a file named `ownership.py`
+  - a project's own area under a name core shipped before v1.134.0, in a project still at a release before core shipped that name
 
-  Sync never meets either case, since its guard keeps it at its recorded release, which already holds the core area under each of those names.
-- **`pkit capabilities install` and `pkit capabilities upgrade`** copy one capability and no area, so they meet no clash of area names.
-- **An adapter of the project's own,** made by `pkit new adapter`, is not covered. A release that ships a core adapter of that name copies over it. Step 3 would register the project's adapter as the core one. Point 7 would read its manifest as the core adapter's recorded version. Until a follow-up settles it, no release adds a core adapter, and a test fixes the set of adapters the bundle ships.
-- **Its rollout:** the test binds only code that carries it. A routed child finishing a pin older than that code copies without it, as point 9's rollout has it.
+  This is a limit of this point, which #1600 removes. Sync meets neither case. Its guard keeps it at the release the project records, and a project at a release that carries the test already holds every core area.
+- **The hold:** no release adds a core area or a core adapter until #1600 builds the full check. A test holds it, and its message names #1600. It fails on any change, a removal included, to these:
+  - the areas a release propagates
+  - the core adapters it ships
+  - `ownership.py` in the core `lifecycle` area
+- **Why the hold covers adapters:** a project's own adapter, made by `pkit new adapter`, meets the same overwrite under a core adapter of its name.
+- **What the hold leaves to #1600:** other names core writes under `.pkit/`, such as `capabilities`, which a capability's install creates.
+- **Commands that meet no clash of area names:** `pkit capabilities install` and `pkit capabilities upgrade` copy one capability and no area. An install may create `capabilities`, as above. First install refuses a project that already holds `.pkit/`.
+- **Its rollout:** the test binds only code that carries it. A transition run by a release without it copies without it, whatever path reaches that release.
 
 ## Rationale
 
@@ -380,13 +374,15 @@ A project may create its own area at `.pkit/<name>/` (COR-011). A later release 
 
 **Why a new skip is recorded before the copy.** Recorded at the restamp, a skip is lost when a migration stops the transition. The next upgrade would then ask again, and with nobody to answer it would refuse its own recovery.
 
-**Why a clash of area names stops the copy, with no choice offered.** Of COR-017's three choices, inspect only shows a diff and asks again. A skip does not fit an area, since every project has every area (COR-011). Nor does an override. COR-001 lets the copy write a project-owned path only where a record names it the writer. Named one for a clash it can see, the copy would write a whole tree over the project's, and the content would still have to move. That leaves the outcome COR-059 point 7 gives a collision nobody answers: stop before writing, and name the way on. Only the project can move its area. A rewrite of words known to be the project's needs a person to review its diff, which choosing a target cannot give (COR-059 point 10).
+**Why a clash of area names stops the copy, with no choice offered.** Of COR-017's choices, inspect only asks again, and a skip does not fit an area, since every project has every area (COR-011). An override would make the copy the writer of a whole tree it knows is the project's, and that content would still have to move. So the copy stops before writing, the outcome COR-059 point 7 gives a collision nobody answers.
 
-**Why each release lists its areas in its own content.** The running pkit knows only the areas it ships, and the project records none. Which areas a release ships is a fact its content holds, and the project holds a copy of that content. COR-010 keeps such a fact out of the manifest. The test reads content, not versions, so the propagation step can run it. Sync then meets it on an untagged install, where a version vouches for nothing (point 12).
+**Why `lifecycle` alone, told by `ownership.py`.** Every other area a release propagates has shipped since v1.134.0, so a project at a published release already holds it as core. `lifecycle` first shipped in v1.149.0, and `ownership.py` came with it. A file tells it apart, not a version, since an install from main held the area before v1.149.0 was tagged (point 12).
 
-**Why a matching path counts as held.** Where every file outside the paths the copy never writes is the bundle's own, the copy loses nothing the project wrote. So sync at the recorded release still repairs a deleted core file or a lost list, as reconciliation must (COR-059's Rationale). A rollback followed by the same upgrade passes too.
+**Why two cases wait for #1600.** Telling them apart needs two things no release records: which areas each earlier release shipped, and what core wrote in them. Releases before v1.134.0 had adopters, and their history is not published. A stop on the names core shipped then would stop such a project on core content, with no override.
 
-**Why a table, and the write it names.** Releases before the list ship none. Releases before v1.134.0 had adopters, and their history is not published. A stop on the eleven areas would then stop such a project on core content, with no override. So the table counts them as held, and point 11 names the transition's copy as the writer of what it cannot tell apart. Choosing the target is consent enough there, since the copy reads the area as core content, not as the project's words. `lifecycle` shipped later, and an install from main held it before v1.149.0 was tagged. So a file it has always carried tells it apart, not a version.
+**Why a hold, and not the full check now.** The full check tells every core area apart under every release, and #1600 settles COR-011 and COR-001 with it. Only `lifecycle` can clash among published releases, so the stop covers it, and the hold keeps the case from widening. Its test fails on any change to the areas, the core adapters or the file, so whoever makes one meets the hold first.
+
+**Why the hold's test fails on a removal, and on the file.** A release that moved `ownership.py` would stop every project on its own core area. A removed name could come back over content a retiring migration left there.
 
 **Why `--force` names the gates' override.** COR-030 names the override `--force`, and `pkit capabilities upgrade --force` already overrides the same two gates. One name for one override across both transitions is learned once. Scoped to those gates, the flag loosens no stop that takes no override.
 
@@ -414,12 +410,10 @@ A project may create its own area at `.pkit/<name>/` (COR-011). A later release 
 - **A new skip recorded at the restamp.** Rejected: an interrupted transition would ask again, and with nobody to answer would refuse its own recovery.
 - **COR-017's flow for a clash of area names.** Rejected: every project has every area (COR-011). An override would make the copy a writer over a whole tree it knows is the project's (COR-001).
 - **The transition renames the project's area.** Rejected: a rewrite of the project's own words needs a person to review its diff (COR-059 point 10).
-- **A table in the code of the release each area first ships in.** Not taken for areas to come: a version vouches for nothing on an untagged install (point 12). The list reads the content the project holds.
-- **The areas recorded in the backbone manifest.** Rejected: they are a fact the release's content holds, which COR-010 keeps out of the manifest.
-- **A mark in each core area's folder.** Not taken for areas to come. A release before the mark leaves its areas unmarked, and a mark copied into a project's own area would hide a clash. Only `lifecycle`, a frozen entry of the table, is told by a file it has always carried.
-- **The list in `lifecycle`.** Rejected: before v1.149.0 a project could make its own `lifecycle` area. A list file of its own there would read as the held list.
-- **The test in a transition alone.** Rejected: sync on an untagged install would copy a new area over the project's, and write a list that names it as held. No later transition would see the clash.
-- **Sync stops when the bundle's list differs from the project's at the same version.** Not taken: it would stop every untagged install whose list moved, with or without a clash.
+- **The full check now:** each release lists its areas in its own content, with a table for the releases before the list. Not taken, as the maintainer decided for #1572 on 15 October. Only `lifecycle` can clash among published releases, and the hold keeps it so. #1600 builds the check before a release adds a core area.
+- **`lifecycle` told by the version the project records.** Rejected: an install from main held the core area while it recorded v1.148.x (point 12).
+- **The test in a transition alone.** Rejected: sync's copy on an untagged install meets the same case (point 12). Every copy passes the propagation step, so a test there meets each caller.
+- **The transition's copy named the writer of what the test cannot tell apart (point 11).** Not taken: its consent would rest on what the copy reads, not on a person (COR-059 point 4). #1600 removes the two cases instead.
 - **A development version stamped on untagged builds.** Rejected, as the maintainer decided for #1429 on 11 October.
 
 ## Implications
@@ -434,15 +428,13 @@ A project may create its own area at `.pkit/<name>/` (COR-011). A later release 
   - that `pkit pin` refuses with the seed-the-manifest posture `upgrade` uses (ADR-049 point 3). Pin still refuses there, and names `pkit upgrade`.
 - **PRJ-007 is refined in place** (#1459): the release step writes both keys. Its sentence that install and upgrade write `backbone_version` when an adopter syncs names the transition instead.
 - **PRJ-004 is refined in place** (#1465): its canonical install names a release tag, `@v<version>` (point 12). `pkit init` ends by printing that install with its own version.
-- **COR-011 and COR-001 need a change of their own,** on two claims:
-  - Each says a project's names cannot collide with core's. That holds when a project creates an area, not for a name a later release adds.
-  - COR-011 says a project's area is never touched by sync and never propagated. COR-001's extension contract lets only a named writer write it. The change states at core that a transition may write over what it cannot tell from a core area, as point 11 names here.
-
-  That change decides whether COR-011 is refined or superseded, since its rejection of a `project/` umbrella rests on the first claim. Until it lands, this record and those two disagree.
+- **Where COR-011 and COR-001 do not hold, until #1600 settles them:**
+  - COR-011 says an adopter cannot create an area under a name core already ships, so no project's area collides with a core one. COR-001 says an extension's names do not collide with core's. `lifecycle` collided when a later release shipped it. Point 13 stops on that clash, and its hold keeps a release from adding another.
+  - COR-011 says sync never touches a project's own area, and a transition copies through sync's propagation step (point 1). COR-001 lets the core layer write a project-owned path only through a writer a record names. In the two cases point 13's test cannot tell apart, a transition's copy writes over a project's own area. No record names that copy as their writer.
 - **This record supersedes nothing.**
 - **Conversions stay out of the transition** (COR-059 point 10). #1433 realises them.
 - **Docs:** each issue updates the lifecycle README and the CLI reference where it changes what they say.
-- **Migrations:** ignoring `sync --force` and removing it each ship one (point 10). The new key, the manifest's move and the list of areas need none.
+- **Migrations:** ignoring `sync --force` and removing it each ship one (point 10). The new key and the manifest's move need none.
 - **Where the code differs** from this record, beyond what the Context lists, at the time of writing:
   - `run_upgrade`'s early return compares `backbone_version` alone.
   - `install._install_adapter` leaves out `permission-enforcement.yaml`.
@@ -454,5 +446,6 @@ A project may create its own area at `.pkit/<name>/` (COR-011). A later release 
   - Under the router's fallback, upgrade raises the pin to the installed version.
   - `pkit agents reconcile --write` stops on a missing overlay, and names `pkit init`.
   - The install code's override copies the capability's artefact and leaves the project's in place, unlike point 6's. How the install code comes into line is an open question for a follow-up.
-  - `sync.propagate` and `pkit init` walk `install.PROPAGATED_AREAS`, and no release ships a list of its areas. The propagation step writes a core area over a project's area of the same name.
-- **Stands on** COR-001, COR-002, COR-004, COR-010, COR-011, COR-013, COR-017, COR-030, COR-031, COR-041, COR-048, COR-053, COR-059, ADR-009, ADR-033, ADR-039, ADR-049, ADR-059, ADR-063, ADR-064, PRJ-004 and PRJ-007, all accepted.
+- **Stands on these records, all accepted:**
+  - COR-001, COR-002, COR-004, COR-010, COR-011, COR-013, COR-017, COR-030, COR-031, COR-041, COR-048, COR-053 and COR-059
+  - ADR-009, ADR-033, ADR-039, ADR-049, ADR-059, ADR-063, ADR-064, PRJ-004 and PRJ-007
