@@ -59,7 +59,7 @@ pkit:
         - anchor:
             kind: record
             value: COR-050
-          reason: "COR-050 lets an artefact anchor name a document's section or its lead. The CLI reference describes them, and the refused and dead part anchors validation fails, with the code that reads them in #1423."
+          reason: "COR-050 lets an artefact anchor name a document's section or its lead. The CLI reference describes them, an anchor on its own section or lead as a cycle, and the dead, ambiguous and refused part anchors validation fails, with the code that reads them in #1423."
         - anchor:
             kind: record
             value: COR-051
