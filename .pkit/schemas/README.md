@@ -26,7 +26,7 @@ pkit:
         - anchor:
             kind: record
             value: COR-050
-          reason: "COR-050 lets an artefact anchor name a document's section or its lead. The schemas reference gives the container's '#<part>' on the artefact kind with the schema change in #1423."
+          reason: "COR-050 lets an artefact anchor name a document's section or its lead. The schemas reference gives the container's '#<part>' on the artefact kind, an anchor on its own section as a cycle, and validation failing every dead, ambiguous or refused part anchor, with the code in #1423."
         - anchor:
             kind: record
             value: COR-051
