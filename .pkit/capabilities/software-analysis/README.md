@@ -13,13 +13,13 @@ pkit:
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053]
       artefact: [RS-SAN-001]
     revalidated:
-      at: 2026-10-14T23:51:22Z
+      at: 2026-10-15T08:25:15Z
       outcome: updated
       deferred:
         - anchor:
             kind: record
             value: software-analysis:DEC-001
-          reason: "DEC-001 refines ahead of the code. The capability now declares each kind's structure and a planned record's reviewed-against, and this page describes both. Its check holds each body to its structure's parts and to the sentence form, and this page describes that too. It does not yet check the other forms a structure gives, or render the templates from it. Nor does it stamp a planned record's sources, check where their commits sit, take a project's additions to a structure, keep steps append-only, or write the new anchors. So this page describes the check, the stamp and the anchors it ships: a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #1547 that apply the rest: #1365 checks the other forms, the definition form among them, which the template round's note gives #1365 (its section on the glossary term, 'The definition's form, which #1365 builds'), #1366 renders the templates and stamps the sources, #1367 takes a project's additions, #1375 keeps steps append-only, #1448 checks the commits, and #1507 writes the new anchors."
+          reason: "DEC-001 refines ahead of the code. The capability now declares each kind's structure and a planned record's reviewed-against, and this page describes both. Its check holds each body and front matter to its structure's parts and forms, and this page describes that too. It does not yet render the templates from the structure. Nor does it stamp a planned record's sources, check where their commits sit, take a project's additions to a structure, keep steps append-only, or write the new anchors. Among those anchors is a journey's list of the use cases it relies on, which its schema does not take yet, so a hand-over from outside a journey cannot pass its form until it does. So this page describes the check, the stamp and the anchors it ships: a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #1547 that apply the rest: #1366 renders the templates and stamps the sources, #1367 takes a project's additions, #1375 keeps steps append-only, #1448 checks the commits, and #1507 writes the new anchors."
 ---
 
 # software-analysis capability
@@ -230,7 +230,7 @@ The forms, each described in the schema:
 
 **What binds it.** The structure is the checkable part of the format rule, `RS-SAN-001`, and binds at that rule's status, which is proposed ("The method rule set: `SAN`", below). A kind's companion schema still checks its front matter whatever the rule's status.
 
-**What reads it.** The check, `pkit analysis validate`, holds each body to it, once the format rule is accepted, and previews it before ("Each body against its structure", below). Of the forms, it reads `sentence` so far. A test holds the file to its schema. The templates are not yet rendered from it. So the templates, and the use case, journey and actor described above, still show each kind's earlier parts: what the stamp writes today.
+**What reads it.** The check, `pkit analysis validate`, holds each body and each front matter to it, every part and every form, once the format rule is accepted, and previews it before ("Each body against its structure", below). A test holds the file to its schema. The templates are not yet rendered from it. So the templates, and the use case, journey and actor described above, still show each kind's earlier parts: what the stamp writes today.
 
 ## Checking: `pkit analysis validate`
 
@@ -270,16 +270,24 @@ Where the format rule, `RS-SAN-001`, is accepted, the check holds each body to t
 
 - **a declared part that is missing, out of order or empty;**
 - **`None.` in a part that may not read it**, such as a use case's *Trigger*, which always has something to say;
-- **text of the `sentence` form that is not one sentence**, in a part such as a use case's *Goal*, or in each of an actor's `needs`. A part is read as one text, so a list in a part of this form counts as one text too. Where a sentence ends is the rule's *How*: at a full stop, a question mark or an exclamation mark before a space or a line end, and never inside a code span.
+- **text of the `sentence` form that is not one sentence**, in a part such as a use case's *Goal*, or in each of an actor's `needs`. In a list, each item holds one sentence, a nested item apart from the item it sits in, and so does the rest of the part, taken as one text. Where a sentence ends is the rule's *How*: at a full stop, a question mark or an exclamation mark before a space or a line end, and never inside a code span.
+- **a part or a field that breaks another form its structure gives it:**
+  - `numbered-steps`, a use case's *Main path*: no numbered step, a step that opens with no number, or a number used twice. A step's number is its list marker, `2.`, or the number its text opens with, `**2.**`. Numbers need not run in sequence, since steps are only ever added.
+  - `variants`, a use case's or a journey's *Variants*: neither `None.` nor a list, or a variant that does not open with a step's number and a letter, `2a.` or `**2a.**`, or that names a step the use case's *Main path* or the journey's *Steps* does not number.
+  - `steps-match-front-matter`, a journey's *Steps*: not one numbered item for each of its `steps`, in order and numbered from 1, each reading `<id> — <title>` with that use case's title exactly. Under a step, each hand-over opens a line with `**Needs from step 1 (UC-005):**`, an earlier step's number and id, or with `**Needs from UC-009 (outside this journey):**`, a use case the journey's `relies-on` lists and none of its steps, and text follows. Each use case in `relies-on` has a hand-over.
+  - `outcomes-match-front-matter`, a record's *Outcomes*: not one item for each of its `outcomes`, in order, each opening `**<id> — <outcome>.**` exactly with its reason after it.
+  - `gaps-match-outcomes`, a record's *Gaps*: neither `None.` nor one item for each gap, each opening with a bold label of the ids it affects, such as `**UC-001, JRN-001:**`, every id one of `outcomes`, and holding `**Resolution:**` with text after it. Each `code-regressed` or `gap-found` artefact is named by a gap, so *Gaps* reads `None.` only where none is.
+  - `definition`, a term's `definition`: a phrase that opens with an article, `a`, `an` or `the`, ends with a full stop, or holds a whole word of the term's `name`, in any case.
 
 Each message gives the part's hint and example. How the check reads a body:
 
 - **What marks a part.** A heading, or a bold label such as `**Goal:**` that opens a line or a top-level list item. Only a label the kind declares marks a part, so a variant's `**2a.**` is content.
 - **Where a part ends.** A label sits one level below the heading it follows. Its part runs to the next declared label, or to a heading of its level or above. So under a use case's `#` heading, a `##` section ends the part above it, and a `###` one stays inside it.
-- **What you add passes.** A label or a section of your own is never reported. It is content of the part it falls in, though. So text you add inside a part of the `sentence` form, such as *Goal*, counts toward its one sentence.
+- **A part's list.** Items are read as Markdown reads a list. A wrapped line indented under an item's text stays in the item, even one that starts `2026.`. Not indented, a line that starts with a number and a full stop opens an item, as Markdown shows it. A line right below a label that starts `2.` continues the label's line, so start a list right below a label with `1.` or a bullet, or after a blank line. Under a label that opens a list item, such as `- **Steps:**`, the list nested under it is the part's.
+- **What you add passes.** A label or a section of your own is never reported. It is content of the part it falls in, though. So text you add inside a part of the `sentence` form, such as *Goal*, counts toward its one sentence. A form that reads a list judges only its items, so a lead line or a note of your own outside them passes.
 - **Code and comments.** A label in fenced code or in an HTML comment marks nothing. A comment is no content, so a part that holds only a comment is empty. A `<!--` inside a code span that closes on its own line opens no comment.
 - **A glossary entry** is read within the lines `pkit friction artefacts --json` gives as its section's `span`, the text friction compares as the entry. The glossary's head is its body above the first entry.
-- **A withdrawn artefact** is never failed for a part it lacks, since a part may be required after its withdrawal. The parts it carries are checked.
+- **A withdrawn artefact** is never failed for a part it lacks, or for a form, since either may have come after its withdrawal. The parts it carries are still checked for order, for content, and for `None.` where it may not stand.
 - **A revalidation record** is held to the structure declared now, the only one the capability has declared. Holding a record to the structure in force on its day comes with the first change to a structure (DEC-001's Implications).
 - **A missing heading** of an actor, a use case or a journey is the heading check's, above, which reports it whatever the rule's status.
 
@@ -295,7 +303,7 @@ Each message gives the part's hint and example. How the check reads a body:
 
 - **What the rule binds.** The presence and the order of every part a kind ships, and the form of each part and front-matter field its structure gives one. A revalidation record or a withdrawn artefact is held to the structure in force when it was written or withdrawn. A hint binds nothing, so the voice a hint asks for is no part of the rule. The rule's *How* says where a sentence ends, for text of the `sentence` form.
 - **What it gates.** The check of each kind's structure, since a structure binds at the rule's status (DEC-001 point 1). While the rule is proposed, the check reports nothing of a structure (COR-051 point 4), and `pkit analysis validate --preview` shows what it would report ("Each body against its structure", above). A kind's schema checks the front matter of an artefact or a record whatever the rule's status.
-- **What the check settles.** `SAN` declares, under `checks`, what this capability's check, `software-analysis:validate`, enforces of the rule (COR-051 point 2). That command is the one `pkit validate` runs as its `software-analysis:artefacts` member. The declared part is what the rule binds, above. Whoever judges the rest of the rule leaves that part to the check, and `pkit rule-sets reach` lists the part wherever the rule binds.
+- **What the check settles.** `SAN` declares, under `checks`, what this capability's check, `software-analysis:validate`, enforces of the rule (COR-051 point 2). That command is the one `pkit validate` runs as its `software-analysis:artefacts` member. The declared part is what the rule binds, above, as far as the check holds it. It holds a withdrawn artefact to no part it lacks and to no form, and every record to the one structure declared so far. Whoever judges the rest of the rule leaves that part to the check, and `pkit rule-sets reach` lists the part wherever the rule binds.
 - **Its name and scope.** `SAN` takes no scope, as no method rule set does (COR-051 point 2). You never edit it (COR-051 point 6). Its name is reserved in your project. A rule set of yours named `SAN` clashes with it, and `pkit validate` fails on the clash (COR-051 point 3).
 
 ## Numbers another branch took: `pkit analysis check-numbers`
