@@ -360,8 +360,6 @@ def main() -> int:
     body = friction_answers.strip(body)
     versions = provenance.read_versions(capability_root)
     sentences = friction_answers.sentences(body)
-    for item in friction_answers.unread(body):
-        print(f"warn: {friction_answers.unread_warning(item)}", file=sys.stderr)
     answers = _fitting(body, _friction_answers(branch, base, sentences), versions)
     doc_impact_note = None
     if args.doc_impact_from_friction:
@@ -370,6 +368,9 @@ def main() -> int:
         body = friction_answers.stamp(body, answers.section)
     # Seam: stamp exactly one provenance footer onto the PR body (ADR-037).
     body = provenance.stamp(body, versions)
+    # Each item no sentence is read from, by its line in the description opened.
+    for item in friction_answers.unread(body):
+        print(f"warn: {friction_answers.unread_warning(item)}", file=sys.stderr)
 
     # Validate-at-ready (#569): a non-draft PR goes straight to ready-for-review,
     # so its body must pass the checks the merge gate enforces (DEC-031 empty

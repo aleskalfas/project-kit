@@ -2064,6 +2064,33 @@ def test_an_item_it_cannot_read_draws_a_warning_naming_its_line_and_the_form(
     assert told in lines
 
 
+@pytest.mark.parametrize("current", [True, False], ids=["list kept", "list rewritten"])
+def test_the_line_named_is_the_line_in_the_description_the_run_leaves(
+    world, capsys, current
+) -> None:
+    """With the list above the sentences, a run that keeps the description names the
+    line where it is, and a run that writes the list again — last — names the line
+    the item moves up to."""
+    run = world()
+    run.written = [UPDATED_INSTALL, UPDATED_GUIDE, DEFERRED]
+    item = "- **docs/guide.md:** The guide names the new flag."
+    run.github.body = f"{_SAID}{item}\n"
+    assert run.run(capsys=capsys)[0] == run.land.EXIT_READY
+    region = run.land.friction_answers.find(run.github.bodies[-1])
+    said = _SAID.removeprefix(_PR_BODY)
+    if not current:  # the author's sentence changed since the list was written
+        said = said.replace("name the renamed flag", "keep the old flag")
+    before = f"{_PR_BODY}\n{_HEADING}\n\n{region}\n{said}{item}\n"
+    run.github.body = before
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert ("(written now)" in out) is not current
+    left = (before if current else run.github.bodies[-1]).split("\n").index(item) + 1
+    assert (left == before.split("\n").index(item) + 1) is current
+    (warned,) = [line for line in out.splitlines() if "is not read as a sentence" in line]
+    assert warned.startswith(f"  warn: line {left} of the description, ")
+
+
 def test_a_sentence_edited_in_the_description_is_written_again(world, capsys) -> None:
     run = world()
     run.written = [UPDATED_INSTALL]

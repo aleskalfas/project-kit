@@ -970,9 +970,8 @@ def _answers(
             f"(`pkit validate` names the problem), push, and run `land-work {issue}` again",
         )
     body = _read_body(head, config)
-    for item in friction_answers.unread(body):
-        print(f"  warn: {friction_answers.unread_warning(item)}")
     if not derived.listed:
+        _warn_unread(friction_answers.strip(body))
         return _no_answers(args, head, body, config, capability_root)
     if derived.outdated:
         _refuse_moved_base(derived, head)
@@ -1018,6 +1017,7 @@ def _answers(
                 f"`land-work {issue}` again. Nothing was written",
             )
     section = friction_answers.render(document, head.oid, settings, sentences)
+    _warn_unread(body if friction_answers.current(body, section) else friction_answers.strip(body))
     for line in friction_answers.lines(document, settings, sentences):
         print(f"  {line}")
     count = friction_answers.documents(derived.answers)
@@ -1166,6 +1166,15 @@ def _read_body(head: _Head, config: dict[str, Any]) -> str:
         f"{STEP}: PR #{pr_number}'s description could not be read: {problem}. Nothing was "
         f"merged; run `land-work {head.issue}` again",
     )
+
+
+def _warn_unread(description: str) -> None:
+    """A warning for each item under the description's sentences heading that gives
+    no sentence, naming its line in `description` — the description as this run
+    leaves it, the list moved last where the run writes it — and the form a
+    sentence takes."""
+    for item in friction_answers.unread(description):
+        print(f"  warn: {friction_answers.unread_warning(item)}")
 
 
 def _stamped(body: str, section: str | None, capability_root: Path) -> str:

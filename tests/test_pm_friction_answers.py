@@ -1132,6 +1132,16 @@ FORM = "- `path`: sentence"
             {"docs/a.md": "The intro."},
             [],
         ),
+        # An item indented less than the content of the item above is its sibling.
+        (["- `docs/a.md`: The intro.", " - **docs/b.md:** B."], {"docs/a.md": "The intro."}, [4]),
+        # A paragraph after a blank line ends the list: an indented item opens another.
+        (
+            ["- `docs/a.md`: The intro.", "", "Also:", "", "  - **docs/b.md:** B."],
+            {"docs/a.md": "The intro."},
+            [7],
+        ),
+        # Nothing inside an HTML comment renders, so nothing there is read or named.
+        (["<!--", "- **docs/a.md:** An example.", "- `docs/b.md`: Another. -->"], {}, []),
         # A paragraph and an item under another heading are not the section's items.
         (["One sentence each:", "", "## Notes", "", "- **x**"], {}, []),
     ],
@@ -1143,6 +1153,9 @@ FORM = "- `path`: sentence"
         "no words",
         "indented",
         "nested",
+        "sibling",
+        "new list",
+        "comment",
         "not an item",
     ],
 )

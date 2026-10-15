@@ -862,10 +862,13 @@ _ITEM_END = re.compile(
     r"|[ \t]*<!--"
     rf"|{_BREAK}"
 )
-#: A list item that opens at a list's top level: indented by at most three
-#: spaces. The thematic breaks a bullet's character can open are not items.
-_ITEM_OPENING = re.compile(r"^( {0,3})(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)")
+#: A list item that opens at a list's top level, indented by at most three
+#: spaces: the indent, the bullet or number, and the whitespace after it.
+_ITEM_OPENING = re.compile(r"^( {0,3})([-*+]|\d{1,9}[.)])([ \t]+|$)")
 _THEMATIC_BREAK = re.compile(_BREAK)
+#: An HTML comment's opening at the start of a line: the lines up to its
+#: closing do not render, so nothing in them is read.
+_COMMENT_OPENING = re.compile(r"^[ \t]*<!--")
 
 
 @dataclass(frozen=True)
@@ -877,20 +880,30 @@ class Unread:
     text: str
 
 
+def _nest(opening: re.Match[str]) -> int:
+    """The column an item's content starts in: an item indented that far, or
+    further, is nested under it."""
+    indent, marker, space = opening.groups()
+    return len(indent) + len(marker) + (min(len(space), 4) if space else 1)
+
+
 def _read_sentences(body: str) -> tuple[dict[str, str], list[Unread]]:
     """The sentences the author wrote under `SENTENCES_HEADING`, and each list item
     there that gives none (`sentences`, `unread`). One reading for both, so a
     warning names exactly the items the reading leaves out. The list a command
-    wrote reads as a blank line, so its lines keep their numbers."""
+    wrote reads as a blank line, so its lines keep their numbers. An item is at
+    the list's top level unless it is indented as far as the content of the
+    top-level item above it, in the same list; a heading, an HTML comment, a
+    thematic break or a fence, or a paragraph after a blank line, ends the list."""
     lines_ = _split(provenance.strip_footer(body))
     listed = {index for span in _spans(lines_) for index in range(span.first, span.last + 1)}
     found: dict[str, str] = {}
     unread_: list[Unread] = []
-    inside = False
+    inside = comment = blank = False
     fence: str | None = None
     current: list[str] | None = None
     key, at = "", 0
-    first_column = False
+    nest: int | None = None
 
     def close() -> None:
         nonlocal current
@@ -908,14 +921,21 @@ def _read_sentences(body: str) -> tuple[dict[str, str], list[Unread]]:
         if fence is not None:
             fence = None if _closes(line, fence) else fence
             continue
+        if comment:
+            comment = "-->" not in line
+            continue
         opened = _FENCE.match(line)
-        if opened is not None:
+        if opened is not None or _COMMENT_OPENING.match(line):
             close()
-            fence = opened.group(1)
+            nest = None
+            if opened is not None:
+                fence = opened.group(1)
+            else:
+                comment = "-->" not in line.split("<!--", 1)[1]
             continue
         if _SENTENCES_LINE.match(line):
             close()
-            inside, first_column = True, False
+            inside, nest = True, None
             continue
         if _SECTION_END.match(line):
             close()
@@ -924,22 +944,28 @@ def _read_sentences(body: str) -> tuple[dict[str, str], list[Unread]]:
         if not inside:
             continue
         item = _SENTENCE_ITEM.match(line)
+        opening = None if _THEMATIC_BREAK.match(line) else _ITEM_OPENING.match(line)
+        if opening is not None and opening.group(1) and nest is not None:
+            nested = len(opening.group(1)) >= nest
+        else:
+            nested = False
         if item is not None:
             close()
             key, at, current = item.group(2).strip(), number, [item.group(3)]
-            first_column = True
+        elif opening is not None and not nested:
+            close()
+            unread_.append(Unread(number, shown(line)))
         elif not line.strip() or _ITEM_END.match(line):
             close()
-            opening = _ITEM_OPENING.match(line)
-            if opening is None or _THEMATIC_BREAK.match(line):
-                continue
-            # An item in the first column is a document's; an indented one is
-            # taken as nested under such an item, where one came before it.
-            if not opening.group(1) or not first_column:
-                unread_.append(Unread(number, shown(line)))
-            first_column = first_column or not opening.group(1)
+            if line.startswith("#") or _THEMATIC_BREAK.match(line):
+                nest = None  # a heading or a thematic break ends the list
         elif current is not None:
             current.append(line.strip())
+        elif blank and not line.startswith((" ", "\t")):
+            nest = None  # a paragraph of its own ends the list
+        if opening is not None and not nested:
+            nest = _nest(opening)
+        blank = not line.strip()
     close()
     return found, unread_
 
@@ -947,19 +973,20 @@ def _read_sentences(body: str) -> tuple[dict[str, str], list[Unread]]:
 def sentences(body: str) -> dict[str, str]:
     """The sentences the change's author wrote under `SENTENCES_HEADING`, by the
     document each names — its location, as the list names it. Read from `body`
-    without the list, its provenance footer, and fenced code blocks. An item runs
-    on over the lines under it up to a blank line, another list item, a heading,
-    an HTML comment, a thematic break or a fence, its whitespace folded. Of two
-    items for one document, the first."""
+    without the list, its provenance footer, fenced code blocks and HTML comments.
+    An item runs on over the lines under it up to a blank line, another list item,
+    a heading, an HTML comment, a thematic break or a fence, its whitespace
+    folded. Of two items for one document, the first."""
     return _read_sentences(body)[0]
 
 
 def unread(body: str) -> list[Unread]:
     """Each list item under `SENTENCES_HEADING` in `body` that `sentences` reads no
-    sentence from, in order: a top-level item not in the form `SENTENCE_FORM` —
-    one naming its document in bold, or with no code span — one indented with no
-    item in the line's first column before it, and one that names a document but
-    gives no words. An item nested under a document's item is not one."""
+    sentence from, in order: a top-level item that does not start in the line's
+    first column with its document in a code span — one naming it in bold, or with
+    no code span, or one in a list indented whole — and one that names a document
+    but gives no words. An item nested under another is not one, nor is anything
+    inside an HTML comment."""
     return _read_sentences(body)[1]
 
 
