@@ -29,8 +29,9 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-15T17:24:37Z
-      outcome: updated
+      at: 2026-10-15T17:58:36Z
+      outcome: unchanged
+      unchanged-because: friction_discovery.py gives a document's artefact the line its body opens on, and lists an anchor on a document's section or lead among an artefact's part anchors in pkit friction artefacts --json. This README describes a component's friction places, held folders, types and kinds, and names the artefacts document as where artefacts are, and none of that changes.
 ---
 
 # Lifecycle
