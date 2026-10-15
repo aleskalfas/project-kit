@@ -1,0 +1,25 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit analysis check-pointers` places on the default branch each commit a
+  planned revalidation record names in `reviewed-against` (DEC-001 point 6,
+  #1448). It reads each source without a `url` whose `version` is a commit's
+  full id, and skips `this change`. A commit is held when the default
+  branch's history reaches it. It is not held when that history does not and
+  the clone holds all of it, a commit missing from a full clone included. It
+  is unknown when a shallow clone's history of the branch stops short. The
+  command fails on a commit the default branch does not hold in a record the
+  change adds, naming the record and the source: a squash merge leaves a
+  branch's commits off it. The same in a record the merge-base already holds
+  is reported and never fails, since a record is never rewritten, and so is
+  an unknown. Commits are placed on the default branch alone, as `pkit
+  repository base` resolves it. The base, `--base`, else `$PKIT_CHECK_BASE`,
+  else the default branch, says only which records the change adds. A tree
+  with no planned record reads no base and says so, and a default branch that
+  resolves nowhere fails it. `--json` lists each source placed under
+  `pointers`. It reads history, so it is a check-gate line of its own beside
+  `pkit analysis check-numbers`, not a member of `pkit validate`. The
+  capability's README, "Commits off the default branch", says how to wire it
+  in.

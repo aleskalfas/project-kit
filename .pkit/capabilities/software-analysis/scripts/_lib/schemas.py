@@ -123,6 +123,19 @@ def config_errors(config: object) -> list[tuple[str, str]]:
 
 
 @functools.cache
+def commit_pattern() -> re.Pattern[str]:
+    """A commit's full id, as the shared schema defines it: what a planned record's source
+    in this repository names as its version, unless it names the change itself."""
+    return re.compile(definition("commit")["pattern"])
+
+
+def this_change() -> str:
+    """The version a source names when its design lands in the change that adds the
+    record, `this change`, as the record's schema words it (DEC-001 point 6)."""
+    return str(_schemas()[RECORD]["$defs"]["this-change"]["const"])
+
+
+@functools.cache
 def commit_id_pattern() -> re.Pattern[str]:
     """The pattern a commit the project configuration names has: its full id."""
     return re.compile(_schemas()[CONFIG]["$defs"]["commit-id"]["pattern"])
