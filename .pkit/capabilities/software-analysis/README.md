@@ -13,13 +13,13 @@ pkit:
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053]
       artefact: [RS-SAN-001]
     revalidated:
-      at: 2026-10-15T08:45:07Z
+      at: 2026-10-15T08:54:26Z
       outcome: updated
       deferred:
         - anchor:
             kind: record
             value: software-analysis:DEC-001
-          reason: "DEC-001 refines ahead of the code. The capability now declares each kind's structure and a planned record's reviewed-against, and this page describes both. Its check holds each body and front matter to its structure's parts and forms, and this page describes that too. It does not yet render the templates from the structure. Nor does it stamp a planned record's sources, check where their commits sit, take a project's additions to a structure, keep steps append-only, or write the new anchors. Among those anchors is a journey's list of the use cases it relies on, which its schema does not take yet, so a journey with a hand-over from outside it cannot pass the check until it does. So this page describes the check, the stamp and the anchors it ships: a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #1547 that apply the rest: #1366 renders the templates and stamps the sources, #1367 takes a project's additions, #1375 keeps steps append-only, #1448 checks the commits, and #1507 writes the new anchors."
+          reason: "DEC-001 refines ahead of the code. The capability now declares each kind's structure and a planned record's reviewed-against, and this page describes both. Its check holds each body and front matter to its structure's parts and forms, and this page describes that too. It does not yet render the templates from the structure. Nor does it stamp a planned record's sources, check where their commits sit, take a project's additions to a structure, keep steps append-only, or write the new anchors. Among those anchors is a journey's list of the use cases it relies on, which its schema does not take yet, so a journey with a hand-over from outside it cannot pass the check, once the format rule binds, until it does. So this page describes the check, the stamp and the anchors it ships: a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #1547 that apply the rest: #1366 renders the templates and stamps the sources, #1367 takes a project's additions, #1375 keeps steps append-only, #1448 checks the commits, and #1507 writes the new anchors."
 ---
 
 # software-analysis capability
