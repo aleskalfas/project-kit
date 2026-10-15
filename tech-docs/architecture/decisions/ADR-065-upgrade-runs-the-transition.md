@@ -372,7 +372,7 @@ The core layer writes a project-owned path only through a writer a record names 
   - that upgrade stops on a `.pkit/` with no manifest (ADR-063 point 5). It writes the manifest at its target instead (point 2).
   - that `pkit pin` refuses with the seed-the-manifest posture `upgrade` uses (ADR-049 point 3). Pin still refuses there, and names `pkit upgrade`.
 - **PRJ-007 is refined in place** (#1459): the release step writes both keys. Its sentence that install and upgrade write `backbone_version` when an adopter syncs names the transition instead.
-- **PRJ-004** names an untagged install as its canonical install path. Point 12 holds whichever install PRJ-004 names. Its refinement to the tagged install, as the maintainer decided for #1429, comes with #1465, and so does init's printed install.
+- **PRJ-004 is refined in place** (#1465): its canonical install names a release tag, `@v<version>` (point 12). `pkit init` ends by printing that install with its own version.
 - **This record supersedes nothing.**
 - **Conversions stay out of the transition** (COR-059 point 10). #1433 realises them.
 - **Docs:** each issue updates the lifecycle README and the CLI reference where it changes what they say.

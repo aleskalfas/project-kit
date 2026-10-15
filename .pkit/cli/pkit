@@ -14,11 +14,11 @@
 #      bundle, validate, new, status, version, ...).
 #
 # `uv` and Python 3.11+ are required (per PRJ-003). The recommended
-# install is `uv tool install git+ssh://git@github.com/aleskalfas/
-# project-kit.git` (per PRJ-004), which puts a binary on PATH that doesn't
-# need this proxy at all. This proxy stays useful for the project-kit
-# source tree (where `uv run` resolves the in-tree Python via uv's
-# `--project` flag) and for adopters running pre-install bootstrap.
+# install names a release tag, `uv tool install git+ssh://git@github.com/
+# aleskalfas/project-kit.git@v<version>` (per PRJ-004), and puts a binary
+# on PATH that doesn't need this proxy at all. This proxy stays useful for
+# the project-kit source tree (where `uv run` resolves the in-tree Python
+# via uv's `--project` flag) and for adopters running pre-install bootstrap.
 #
 # Older bash command implementations were removed during the Python port
 # step 3 (umbrella #28). See git history for archaeology.
@@ -95,8 +95,9 @@ Error: pkit requires `uv` (per PRJ-003 + PRJ-004). Install uv via:
    curl -LsSf https://astral.sh/uv/install.sh | sh
 or:
    brew install uv
-Then either retry this command or install pkit globally:
-   uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git
+Then either retry this command or install a release of pkit globally:
+   uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@v<version>
+<version> is the latest release: see .pkit/cli/README.md, "Installing pkit on PATH".
 EOF
     exit 1
 fi
@@ -106,9 +107,11 @@ if [ ! -f "$SOURCE_REPO/pyproject.toml" ]; then
 Error: source kit at $SOURCE_REPO has no pyproject.toml.
        This dispatcher needs to resolve to a project-kit source tree
        with the Python package present. If you're running from an
-       adopter project's local copy of this script, install pkit
-       globally instead:
-         uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git
+       adopter project's local copy of this script, install a release
+       of pkit globally instead:
+         uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@v<version>
+       <version> is the latest release: see .pkit/cli/README.md,
+       "Installing pkit on PATH".
 EOF
     exit 1
 fi
