@@ -11,9 +11,9 @@ pkit:
         - src/project_kit/install.py
       record: [COR-001, COR-014]
     revalidated:
-      at: 2026-10-15T08:25:03Z
+      at: 2026-10-15T16:42:38Z
       outcome: unchanged
-      unchanged-because: This change has pkit init print the install of its own release, with a tag, where it printed the URL with no tag. The page says core.md is refreshed on every sync and that sync never touches project.md. The copy of the rules area does not change, so both still hold and the page holds.
+      unchanged-because: This change stops a transition and sync on a project's own lifecycle area, and has the copy of the lifecycle area write ownership.py first. The copy of the rules area does not change, so the page's word that sync refreshes core.md and never touches project.md still holds, and the page holds.
 ---
 
 # Rules

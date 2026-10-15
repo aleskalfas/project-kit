@@ -17,8 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-15T08:25:00Z
-      outcome: updated
+      at: 2026-10-15T16:42:30Z
+      outcome: unchanged
+      unchanged-because: This change stops an upgrade, and sync's copy, before they write the core lifecycle area over a project's own area of that name, and the copy writes ownership.py first in that area. The page says pkit never overwrites the files a project writes, which the stop keeps true, and it names no area and no stop, so the page holds.
 ---
 
 # project-kit
