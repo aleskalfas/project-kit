@@ -9,8 +9,8 @@ started: 2026-10-15
 The rule-set reviewer was run by hand on ten merged changes, and this note records how it judged them (#1418). It is the trial of the design's slicing issue 8 (#1396, PR #1390). COR-057 point 8 asks for this evidence before a component contributes the reviewer to a gate.
 
 - **The threshold:** at most one wrong `[block]` across the ten. The gate's contribution (#1420) waits on it.
-- **What the maintainer does:** he says, for each `[block]` in "The blocks" below, whether he agrees that the passage breaks the rule. He answers through the project manager, in the table's last column.
-- **Where the trial stands:** the ten reviews are done, and the maintainer's answers are open. The threshold is judged once he has answered, so this note stays in `active/`.
+- **What the maintainer did:** he said, for each `[block]` in "The blocks" below, whether he agrees that the passage breaks the rule. He answered through the project manager on 15 October, in the table's last column.
+- **Where the trial stands:** the ten reviews are done and judged, and the threshold is not met ("The result"). A second trial (#1599) continues this note, so it stays in `active/`.
 - **Outcome:** 27 `[block]`, 32 `[person]` and 6 `[info]`. The reviewer withheld approval of seven changes and approved three.
 
 ## Set-up
@@ -258,33 +258,33 @@ The rules the blocks cite, in their words:
 
 | Id | Change | Rule | The passage | The trial agent's reading | Maintainer agrees |
 |---|---|---|---|---|---|
-| B1 | #1545 | RS-LDOC-002 | The CLI row for `decisions check-diff` (line 144) and the decisions README (lines 204 to 220) give the same fail, warn and skip lists. | Breaks. Two pages state the lists, and the row's link does not replace them: "stated once, and other pages link to it". | |
-| B2 | #1545 | RS-LDOC-002 | The command's base is given in the row (line 144) and the decisions README (line 202), both added. Line 450, which predates the change, gains the command's name. | Breaks: one fact on two pages, "stated once". The rows for `friction check` and `release check` already stated their base, so the change follows the page's pattern. The rule makes no exception for a pattern. | |
-| B3 | #1558 | RS-LDOC-001 | "Exit `0` when answered, with no artefact when no rule binds" (CLI reference, line 1312). | Breaks. The change's code now lists an artefact whose only rule is held back. So the anchored code contradicts the sentence, which is not "grounded by the page's anchors". The text predates the change. At the base it was already false for an artefact listed only for a conflict. The change's edit widened that to held rules, so the break is the change's (COR-057 point 2). | |
-| B4 | #1553 | RS-LDOC-002 | That the not-code list narrows only the code floor, at lines 805, 837 and 871 of one page. | Breaks if "stated once" reaches within a page, as its plain words read. The reviewer left that reading to a person in #1573 and #1569. | |
-| B5 | #1553 | RS-LDOC-002 | Line 807 repeats three facts from lines 868 and 873 of the same page. | As B4: breaks within a page, on the same reading. | |
-| B6 | #1568 | RS-LDOC-002 | The order of `backbone_version` and `completed_version`, in the CLI (lines 214 and 288) and lifecycle (lines 779, 783 and 794) READMEs. | Breaks. Both pages state it, and neither links to the other: "stated once, and other pages link to it". | |
-| B7 | #1568 | RS-LDOC-002 | The interrupted upgrade and the rollback, CLI line 290 and lifecycle lines 791 and 792. | Breaks, as B6. The two are nearly word for word. | |
-| B8 | #1568 | RS-LDOC-002 | The replay, CLI lines 291 and 292 and lifecycle lines 798 to 803. | Breaks, as B6. | |
-| B9 | #1568 | RS-LDOC-002 | An adapter's recorded version, CLI line 293 and lifecycle lines 164 to 168. | Breaks, as B6. | |
-| B10 | #1568 | RS-LDOC-002 | "Already current", CLI line 294 and lifecycle line 785. | Breaks, as B6. The two are nearly word for word. | |
-| B11 | #1568 | RS-LDOC-002 | The release step writes `completed_version`, in the release README (lines 350 to 352) and the lifecycle README (line 121). | Breaks: one fact on two pages. Which page keeps it is the `[person]` finding on RS-LDOC-003. | |
-| B12 | #1571 | RS-LDOC-002 | Sync's guard, in the CLI (lines 269 to 287), lifecycle (811 to 822) and decisions (90) pages, all added. `CONTRIBUTING.md` (135) widens an older sentence to say it. | Breaks. The lifecycle README links to the CLI reference, yet states the conditions and remedies again: not "stated once". | |
-| B13 | #1571 | RS-LDOC-002 | What sync writes, in the decisions (84 to 90) and CLI (245 to 251) READMEs, both added. The decisions README also restates its older line 82 on merge delivery, at lines 88 and 96. | Breaks across the two pages. The within-page half rests on B4's reading. | |
-| B14 | #1571 | RS-LDOC-002 | A capability by its version, and `--force` ignored, in the CLI (261 to 263, 291) and lifecycle (872 to 876) READMEs. | Breaks, as B6. | |
-| B15 | #1571 | RS-LDOC-002 | What upgrade does with each capability, CLI line 321 and lifecycle lines 179, 779 and 878. | Breaks, as B6. | |
-| B16 | #1571 | RS-LDOC-002 | The list of seed paths, three times in the CLI README and on the lifecycle and decisions pages. | Breaks, as B6. | |
-| B17 | #1571 | RS-LDOC-002 | `pkit agents reconcile --write` repairs the overlay, on the agents, CLI (twice) and lifecycle pages. | Breaks, as B6. | |
-| B18 | #1571 | RS-LDOC-001 | The decisions README's lines 36 and 84 to 92 on what sync writes, its guard and `.gitkeep`. | Breaks. Line 36's `.gitkeep` and line 87's list of derived state rest on code no anchor reaches. No record the page anchors or cites says them. The rest rests on COR-059, which the page cites but does not anchor, and on COR-001, which grounds part. That half is a reading, which the reviewer left to a person in #1545 and #1569. | |
-| B19 | #1571 | RS-LDOC-001 | The lifecycle README's "Seed paths" paragraph, line 787. | Breaks for the `reconcile --write` sentence, whose code no anchor reaches. The list of seed paths is reached through `upgrade.py`, an anchor that calls the seeding. That half is a reading, which the reviewer left to a person in #1574. | |
-| B20 | #1574 | RS-LDOC-002 | The transition's order and steps, CLI lines 316 to 335 and lifecycle lines 771 to 788. | Breaks. The CLI copy names the lifecycle README as its source, then states the order again, and the two copies already differ. | |
-| B21 | #1574 | RS-LDOC-002 | A new collision, CLI lines 336 and 417 and lifecycle lines 796 to 809. | Breaks, as B6, and twice within the CLI README. | |
-| B22 | #1574 | RS-LDOC-002 | The dependency gates and `--force`, CLI lines 337 and 427 and lifecycle lines 811 to 818 and 894. | Breaks, as B6. | |
-| B23 | #1574 | RS-LDOC-002 | The report and the dry run, CLI line 338 and lifecycle lines 792 and 820 to 822. | Breaks, as B6. | |
-| B24 | #1574 | RS-LDOC-002 | `pkit capabilities upgrade`'s five steps, CLI lines 403 to 419 and lifecycle lines 862 to 872. | Breaks, as B6. The two copies already word step 5 differently. | |
-| B25 | #1574 | RS-LDOC-001 | "A release's changelog names each widening too", lifecycle line 822. | Breaks. No anchor, record or code of the page says so. Its only source is an answer in a scratchpad note. | |
-| B26 | #1578 | RS-LDOC-002 | "What binds it" (line 231), which the change added, repeats two facts that the `SAN` section (line 276) already stated at the base. | As B4: breaks within a page. | |
-| B27 | #1578 | RS-LDOC-002 | That no check reads the structures yet, at line 233, which the change added, and line 276, whose fact predates it. | As B4: breaks within a page. | |
+| B1 | #1545 | RS-LDOC-002 | The CLI row for `decisions check-diff` (line 144) and the decisions README (lines 204 to 220) give the same fail, warn and skip lists. | Breaks. Two pages state the lists, and the row's link does not replace them: "stated once, and other pages link to it". | Yes: one fact on two pages. |
+| B2 | #1545 | RS-LDOC-002 | The command's base is given in the row (line 144) and the decisions README (line 202), both added. Line 450, which predates the change, gains the command's name. | Breaks: one fact on two pages, "stated once". The rows for `friction check` and `release check` already stated their base, so the change follows the page's pattern. The rule makes no exception for a pattern. | Yes, as B1. |
+| B3 | #1558 | RS-LDOC-001 | "Exit `0` when answered, with no artefact when no rule binds" (CLI reference, line 1312). | Breaks. The change's code now lists an artefact whose only rule is held back. So the anchored code contradicts the sentence, which is not "grounded by the page's anchors". The text predates the change. At the base it was already false for an artefact listed only for a conflict. The change's edit widened that to held rules, so the break is the change's (COR-057 point 2). | Yes. |
+| B4 | #1553 | RS-LDOC-002 | That the not-code list narrows only the code floor, at lines 805, 837 and 871 of one page. | Breaks if "stated once" reaches within a page, as its plain words read. The reviewer left that reading to a person in #1573 and #1569. | No. RS-LDOC-002 is about copies on different pages. A repeat within a page is for a person. |
+| B5 | #1553 | RS-LDOC-002 | Line 807 repeats three facts from lines 868 and 873 of the same page. | As B4: breaks within a page, on the same reading. | No, as B4. |
+| B6 | #1568 | RS-LDOC-002 | The order of `backbone_version` and `completed_version`, in the CLI (lines 214 and 288) and lifecycle (lines 779, 783 and 794) READMEs. | Breaks. Both pages state it, and neither links to the other: "stated once, and other pages link to it". | Yes, as B1. |
+| B7 | #1568 | RS-LDOC-002 | The interrupted upgrade and the rollback, CLI line 290 and lifecycle lines 791 and 792. | Breaks, as B6. The two are nearly word for word. | Yes, as B1. |
+| B8 | #1568 | RS-LDOC-002 | The replay, CLI lines 291 and 292 and lifecycle lines 798 to 803. | Breaks, as B6. | Yes, as B1. |
+| B9 | #1568 | RS-LDOC-002 | An adapter's recorded version, CLI line 293 and lifecycle lines 164 to 168. | Breaks, as B6. | Yes, as B1. |
+| B10 | #1568 | RS-LDOC-002 | "Already current", CLI line 294 and lifecycle line 785. | Breaks, as B6. The two are nearly word for word. | Yes, as B1. |
+| B11 | #1568 | RS-LDOC-002 | The release step writes `completed_version`, in the release README (lines 350 to 352) and the lifecycle README (line 121). | Breaks: one fact on two pages. Which page keeps it is the `[person]` finding on RS-LDOC-003. | Yes, as B1. |
+| B12 | #1571 | RS-LDOC-002 | Sync's guard, in the CLI (lines 269 to 287), lifecycle (811 to 822) and decisions (90) pages, all added. `CONTRIBUTING.md` (135) widens an older sentence to say it. | Breaks. The lifecycle README links to the CLI reference, yet states the conditions and remedies again: not "stated once". | Yes, as B1. |
+| B13 | #1571 | RS-LDOC-002 | What sync writes, in the decisions (84 to 90) and CLI (245 to 251) READMEs, both added. The decisions README also restates its older line 82 on merge delivery, at lines 88 and 96. | Breaks across the two pages. The within-page half rests on B4's reading. | Yes across the two pages. The repeats within the decisions README are for a person, as B4. |
+| B14 | #1571 | RS-LDOC-002 | A capability by its version, and `--force` ignored, in the CLI (261 to 263, 291) and lifecycle (872 to 876) READMEs. | Breaks, as B6. | Yes, as B1. |
+| B15 | #1571 | RS-LDOC-002 | What upgrade does with each capability, CLI line 321 and lifecycle lines 179, 779 and 878. | Breaks, as B6. | Yes, as B1. |
+| B16 | #1571 | RS-LDOC-002 | The list of seed paths, three times in the CLI README and on the lifecycle and decisions pages. | Breaks, as B6. | Yes, as B1. |
+| B17 | #1571 | RS-LDOC-002 | `pkit agents reconcile --write` repairs the overlay, on the agents, CLI (twice) and lifecycle pages. | Breaks, as B6. | Yes, as B1. |
+| B18 | #1571 | RS-LDOC-001 | The decisions README's lines 36 and 84 to 92 on what sync writes, its guard and `.gitkeep`. | Breaks. Line 36's `.gitkeep` and line 87's list of derived state rest on code no anchor reaches. No record the page anchors or cites says them. The rest rests on COR-059, which the page cites but does not anchor, and on COR-001, which grounds part. That half is a reading, which the reviewer left to a person in #1545 and #1569. | Yes, in full. Only what a page anchors grounds a statement. A record it cites but does not anchor grounds nothing. |
+| B19 | #1571 | RS-LDOC-001 | The lifecycle README's "Seed paths" paragraph, line 787. | Breaks for the `reconcile --write` sentence, whose code no anchor reaches. The list of seed paths is reached through `upgrade.py`, an anchor that calls the seeding. That half is a reading, which the reviewer left to a person in #1574. | Yes, in full, as B18. Code reached only because an anchored file calls it grounds nothing. |
+| B20 | #1574 | RS-LDOC-002 | The transition's order and steps, CLI lines 316 to 335 and lifecycle lines 771 to 788. | Breaks. The CLI copy names the lifecycle README as its source, then states the order again, and the two copies already differ. | Yes, as B1. |
+| B21 | #1574 | RS-LDOC-002 | A new collision, CLI lines 336 and 417 and lifecycle lines 796 to 809. | Breaks, as B6, and twice within the CLI README. | Yes across the pages. The two within the CLI README are for a person, as B4. |
+| B22 | #1574 | RS-LDOC-002 | The dependency gates and `--force`, CLI lines 337 and 427 and lifecycle lines 811 to 818 and 894. | Breaks, as B6. | Yes, as B1. |
+| B23 | #1574 | RS-LDOC-002 | The report and the dry run, CLI line 338 and lifecycle lines 792 and 820 to 822. | Breaks, as B6. | Yes, as B1. |
+| B24 | #1574 | RS-LDOC-002 | `pkit capabilities upgrade`'s five steps, CLI lines 403 to 419 and lifecycle lines 862 to 872. | Breaks, as B6. The two copies already word step 5 differently. | Yes, as B1. |
+| B25 | #1574 | RS-LDOC-001 | "A release's changelog names each widening too", lifecycle line 822. | Breaks. No anchor, record or code of the page says so. Its only source is an answer in a scratchpad note. | Yes. |
+| B26 | #1578 | RS-LDOC-002 | "What binds it" (line 231), which the change added, repeats two facts that the `SAN` section (line 276) already stated at the base. | As B4: breaks within a page. | No, as B4. |
+| B27 | #1578 | RS-LDOC-002 | That no check reads the structures yet, at line 233, which the change added, and line 276, whose fact predates it. | As B4: breaks within a page. | No, as B4. |
 
 ## What the trial shows so far
 
@@ -313,12 +313,27 @@ COR-057's Rationale names one cost of trying the reviewer by hand: the evidence 
 - **A held rule, a fill, or a conflict** in the answer.
 - **The analysis in depth:** two changes, with one added name, eight new `id` fields and raised headings, and six term switches.
 
+## The result
+
+The maintainer judged the 27 blocks on 15 October. 23 are right and 4 are wrong, so **the threshold, at most one wrong block, is not met.**
+
+- **His readings:**
+  - RS-LDOC-002 is about copies on different pages. A fact a page states twice is a passage for a person, not a break.
+  - A change that leaves two statements of one fact disagreeing, on one page or two, is a break.
+  - Only what a page anchors grounds a statement (RS-LDOC-001). A record the page mentions but does not anchor grounds nothing. Nor does code reached only because an anchored file calls it. A change to either flags no page.
+- **What the reviewer judged wrong:**
+  - **A repeat within a page, as a break.** The four wrong blocks, B4, B5, B26 and B27, rest on that alone. B13 and B21 also blocked on such a part, and their parts across pages are right. So four runs blocked on that reading: #1553 and #1578 wholly, #1571 and #1574 in part.
+  - **Two kinds for one question.** The rules left two questions open: a repeat within a page, and grounding. On each, some runs settled it and others left it to a person. Within a page, the `[person]` findings of #1569 and #1573 were the right kind, and the blocks the wrong one. On grounding, B18 and B19 settled it as he reads it, and the `[person]` findings of #1545, #1569 and #1574 left it open. The threshold counts only the wrong blocks.
+- **Why the fix is in the rules' text, not the reviewer:** the reviewer holds no rules of its own (COR-057 point 1). It reads each rule's text, and where the text leaves a reading open, two runs can choose it differently, as these did. So living-docs, which owns the rules, writes the readings into them. Written into the reviewer instead, they would be rules of its own.
+- **The follow-ups:**
+  - **#1596:** living-docs' rules state these readings. Each fact has one home, and a summary on another page links to it and anchors to its section. A repeat within a page goes to a person, and two disagreeing statements are a break. Only anchors ground a statement. It waits for #1423.
+  - **#1597:** the facts of the 19 blocks on copies across pages, B1, B2, B6 to B17 and B20 to B24, each get one home, after #1596.
+  - **#1599:** the second trial, on changes made after #1596. It continues this note, and #1420 now waits for it.
+
 ## Still to do
 
-- The maintainer answers the last column of "The blocks", through the project manager.
-- **The threshold:** at most one block he disagrees with, across the ten.
-  - If it is met, this note retires into #1420.
-  - If it is not, this note names what the reviewer judged wrong. A follow-up revises the reviewer and runs a second trial, and #1420 waits for it.
-- **Whether RS-LDOC-002 reaches within a page** is for living-docs, which owns the rule, to say in it. Until it does, the reviewer may split on it at a gate too, whatever the maintainer answers on B4.
-- **Whether a source a page cites or reaches, but does not anchor, grounds a statement** is for living-docs to say in RS-LDOC-001 too.
+- **The follow-ups** in "The result": #1596 first, then #1597 and #1599.
+- **The second trial** (#1599) adds its section to this note, so the note stays in `active/`.
+  - If that trial meets the threshold, the note retires into #1420.
+  - If it does not, the note names what the reviewer judged wrong, and the next follow-up is filed.
 - **The full reviews** were left in the trial's agent workspace, which is never committed. This note is the record that remains of them.
