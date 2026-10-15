@@ -6,5 +6,7 @@ body: >
   A journey is one actor's path across use cases, and the check and the stamp
   now hold it. `pkit analysis validate` fails a journey in force whose step is
   a use case of another actor, and its message names the step and both actors.
+  To clear it, name a use case of the journey's actor in the step's place, or
+  correct the use case's actor.
   `pkit analysis new journey` refuses the same journey, writing nothing. A
   withdrawn journey is history, so its steps are not compared.
