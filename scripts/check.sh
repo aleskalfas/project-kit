@@ -173,6 +173,7 @@ run "record numbering"   uv run pkit decisions check-diff
 run "friction check"     uv run pkit friction check
 run "prose lint"         uv run python scripts/prose_lint.py
 run "analysis numbers"   uv run pkit analysis check-numbers
+run "analysis pointers"  uv run pkit analysis check-pointers
 run "doc check"          uv run pkit pm check-doc-mapping
 run "changelog lint"     uv run pkit release lint
 
