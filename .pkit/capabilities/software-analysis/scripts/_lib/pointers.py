@@ -14,10 +14,10 @@ commit on the default branch:
   the clone lacks included, since a full clone holds every commit of the
   default branch. It is unknown when that history stops short in a shallow
   clone, since the commit may lie beyond the cut. It is the one way of placing
-  a commit: the stamp is to place a planned record's commit with it, to warn
-  while the record is written. Whether the cut stops short is asked once per
-  process, so a caller that fetches between two placements reads the first
-  answer;
+  a commit: the record stamp places a planned record's commits with it, to warn
+  while the record is written (`_lib/revalidation.py`). Whether the cut stops
+  short is asked once per process, so a caller that fetches between two
+  placements reads the first answer;
 - **where it looks**: the default branch alone, at the commit the backbone
   resolves it to (`pkit repository base --json`, its `default_branch`; COR-054
   point 5), never a run's base. It reads the clone's history, and asks no
@@ -62,8 +62,7 @@ from ruamel.yaml.error import YAMLError
 
 from _lib import backbone, markdown, schemas
 from _lib.findings import ERROR, REPORT, Finding, Outcome, at
-from _lib.model import Analysis, Unreadable
-from _lib.revalidation import PLANNED
+from _lib.model import PLANNED, Analysis, Unreadable
 
 #: The version of the `--json` document.
 SCHEMA_VERSION = 1

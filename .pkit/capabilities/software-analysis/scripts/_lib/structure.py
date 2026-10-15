@@ -65,6 +65,14 @@ the declared elements. What a writer adds inside a part is that part's
 content, though, so it counts toward a `sentence` part's one sentence. A list
 form judges only the part's list items, so a line a writer adds outside them
 never breaks it.
+
+**A hint left in** (`hints`) is a comment that opens with the hint's mark,
+`<!-- pkit:hint`, which the stamp writes as each part's placeholder
+(`_lib/render.py`). It is found as a comment is, outside fenced code and
+outside a code span that closes on its line, so a body may quote the mark. A
+mark inside another comment opens no hint. The placeholder check reports a
+hint left in whatever the format rule's status, as it reports any
+placeholder (DEC-001 point 1).
 """
 
 from __future__ import annotations
@@ -112,6 +120,7 @@ _LABEL = re.compile(
     r"^(?P<item>(?:[-+*]|[0-9]{1,9}[.)])[ \t]+)?\*\*(?P<text>[^*\n]+?)\*\*(?P<rest>.*)$"
 )
 _COMMENT_OPEN, _COMMENT_CLOSE = "<!--", "-->"
+_HINT = re.compile(r"<!--[ \t]*pkit:hint\b(?P<said>.*?)(?:-->|$)")
 _TRAILING = re.compile(r"[\s.,:;!?]+$")
 _PLACEHOLDER = re.compile(r"<[^<>]*>")
 _CODE_SPAN = re.compile(r"(`+)(.+?)\1", re.DOTALL)
@@ -358,13 +367,22 @@ def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
 def _without_comments(line: str, in_comment: bool) -> tuple[str, bool]:
     """The line with the text of HTML comments left out, and whether a comment is still
     open at its end."""
+    visible, still_open, _openings = _scan(line, in_comment)
+    return visible, still_open
+
+
+def _scan(line: str, in_comment: bool) -> tuple[str, bool, list[int]]:
+    """The one reading of a line's comments: the line with their text left out, whether
+    a comment is still open at its end, and where each comment that opens on it opens.
+    A comment still open from an earlier line hides what comes before its end."""
     kept: list[str] = []
+    openings: list[int] = []
     at = 0
     while at <= len(line):
         if in_comment:
             end = line.find(_COMMENT_CLOSE, at)
             if end == -1:
-                return "".join(kept), True
+                return "".join(kept), True, openings
             at, in_comment = end + len(_COMMENT_CLOSE), False
         else:
             start = _comment_opening(line, at)
@@ -372,8 +390,9 @@ def _without_comments(line: str, in_comment: bool) -> tuple[str, bool]:
                 kept.append(line[at:])
                 break
             kept.append(line[at:start])
+            openings.append(start)
             at, in_comment = start + len(_COMMENT_OPEN), True
-    return "".join(kept), in_comment
+    return "".join(kept), in_comment, openings
 
 
 def _comment_opening(line: str, at: int) -> int:
@@ -394,6 +413,32 @@ def _comment_opening(line: str, at: int) -> int:
 def _closes(line: str, fence: tuple[str, int]) -> bool:
     char, length = fence
     return re.match(rf"^{_QUOTED}{re.escape(char)}{{{length},}}[ \t]*$", line) is not None
+
+
+def hints(lines: Sequence[Line]) -> list[tuple[int, str]]:
+    """Each hint left in a body's `lines`: the line it opens on, and what it says. A hint
+    is a comment that opens with the hint's mark, found as `_read` finds a comment:
+    outside fenced code, and outside a code span that closes on its line. A mark
+    inside another comment opens none."""
+    found: list[tuple[int, str]] = []
+    fence: tuple[str, int] | None = None
+    in_comment = False
+    for number, line in lines:
+        if fence is not None:
+            if _closes(line, fence):
+                fence = None
+            continue
+        started_in_comment = in_comment
+        visible, in_comment, openings = _scan(line, in_comment)
+        opening = None if started_in_comment else _FENCE.match(visible)
+        if opening is not None and not (
+            opening.group(1).startswith("`") and "`" in opening.group(2)
+        ):
+            fence = (opening.group(1)[0], len(opening.group(1)))
+            continue
+        marked = (_HINT.match(line, start) for start in openings)
+        found += [(number, hint["said"].strip()) for hint in marked if hint is not None]
+    return found
 
 
 def comparable(text: str) -> str:

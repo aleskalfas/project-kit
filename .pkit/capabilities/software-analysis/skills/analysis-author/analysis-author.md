@@ -59,7 +59,7 @@ Judging whether existing artefacts still hold after a change is the capability's
 
 ### Stamp, never copy
 
-The stamp gives a use case or journey the next free number — on the default branch and in the working tree — refuses an actor's or term's id already held, puts each artefact in its place, writes the anchors the rule asks for, adds a collection entry where its id sorts, and records the analysis location the first time. A copied template gets none of that right. The body keeps the template's `<…>` placeholders for you to fill.
+The stamp gives a use case or journey the next free number — on the default branch and in the working tree — refuses an actor's or term's id already held, puts each artefact in its place, writes the anchors the rule asks for, adds a collection entry where its id sorts, and records the analysis location the first time. A copied template gets none of that right. Each part of the body holds its hint, a one-line comment `<!-- pkit:hint … -->` that says what goes there and gives an example. An actor's needs and a term's definition hold the template's `<…>` placeholders.
 
 ### Choosing the slug
 
@@ -86,7 +86,7 @@ An actor or term that no code and no decision embodies — a sponsor, an outside
 
 ### After stamping
 
-1. **Fill the body** — every `<…>` placeholder, and an actor's `needs` or a term's `definition`.
+1. **Fill the body** — write in each hint's place what it asks for, and delete the hint. A part with nothing to say reads `None.`, where its hint says so. Write an actor's `needs` or a term's `definition` in place of its `<…>` placeholder.
 2. **Check it** — `pkit analysis validate`, the capability's check (it runs inside `pkit validate` too), then `pkit friction check`, the core's change check: an artefact new in a change counts as revalidated, and an anchor that resolves to nothing fails.
    - **Its structure.** Once the format rule, `RS-SAN-001`, is accepted, the check holds the body to its kind's structure: each part present, in order, not empty, and of its form. A goal or a need is one sentence, steps are numbered, variants lettered after a step, a journey's step lines match its `steps`, a record's outcomes and gaps match its `outcomes`, and a term's definition is a phrase. While the rule is proposed it reports nothing of that, so run `pkit analysis validate --preview` as well. It lists what would break once the rule binds, each with the part's hint and example, and never fails.
 3. **Before merging a use case or journey** — `pkit analysis check-numbers`: a number the default branch gave another file since your branch left it is renumbered, and the stamp gives the next free one.
