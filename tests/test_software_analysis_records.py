@@ -329,7 +329,9 @@ def test_a_commit_off_the_default_branch_is_written_with_a_warning(project: Adop
 def test_a_commit_the_stamp_cannot_place_says_nothing(project: AdopterRepo, tmp_path: Path) -> None:
     """A commit beyond a shallow clone's cut cannot be placed, and draws no warning: the
     pointers are provenance, and `pkit analysis check-pointers` reports it as unknown
-    (#1448). A clone one commit deep holds the analysis, and not the commit before it."""
+    (#1448). A clone one commit deep holds the analysis, and not the commit before it. A
+    clone holds no `user.name` of its own, so the record names who performed it with
+    `--by`, and the test does not depend on the machine's git configuration."""
     project.commit("the analysis")
     before = project.git("rev-parse", "HEAD~1").stdout.strip()
     shallow = tmp_path / "shallow"
@@ -337,7 +339,13 @@ def test_a_commit_the_stamp_cannot_place_says_nothing(project: AdopterRepo, tmp_
     clone = AdopterRepo(shallow, source_kit=project.source_kit)
     sign_nothing(shallow)
     completed = _record(
-        clone, "report-redesign", *PLANNED, "--reviewed-against", f"the redesign note @ {before}"
+        clone,
+        "report-redesign",
+        *PLANNED,
+        "--reviewed-against",
+        f"the redesign note @ {before}",
+        "--by",
+        "Sam",
     )
     assert completed.returncode == 0, completed.stderr
     assert _source_warnings(completed) == []
