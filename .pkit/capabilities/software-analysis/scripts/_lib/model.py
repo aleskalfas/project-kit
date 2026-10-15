@@ -119,6 +119,10 @@ KIND_OF_PLACE = {
 #: this path. A test holds this to the package.
 REVALIDATIONS = "revalidations"
 
+#: The trigger of a revalidation planned before code (DEC-001 point 5), whose record
+#: names the sources of the design it reviewed (point 6).
+PLANNED = "planned"
+
 #: The methodology's front-matter container, and the friction block's keys that
 #: lead to an artefact's revalidation marker (COR-050 points 1 and 3).
 CONTAINER = "pkit"

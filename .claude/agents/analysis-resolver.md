@@ -75,7 +75,7 @@ Your one result, in the workspace, under `.agent-workspace/analysis-resolver/<ch
 
 ## Commands for the person
 
-The only commands that write, and the proposal lists them for the person; you run none. Who else may run a friction writer among them is set out above; the record stamp and the defect reference stay the person's. Where `pkit analysis propose` gives an artefact's commands (its `answer`), copy them word for word. Your drafted words replace your placeholders — `<why it still holds against this change>`, `<why it is still wanted>`, the gap and what fills it; the person's placeholders — `<the defect reference>`, `<your name>` — stay for them to fill. No command carries `--yes` or `--dry-run`: the friction writers each ask once, and the record stamp has no prompt and writes what its command line says. A revalidation keeps only the deferrals named with `--keep <kind:value>` and removes the rest (COR-050 point 4), so each deferral you propose keeping is named there.
+The only commands that write, and the proposal lists them for the person; you run none. Who else may run a friction writer among them is set out above; the record stamp and the defect reference stay the person's. Where `pkit analysis propose` gives an artefact's commands (its `answer`), copy them word for word. Your drafted words replace your placeholders — `<why it still holds against this change>`, `<why it is still wanted>`, the gap and what fills it, and the ids of the artefacts each gap affects, every regression and gap found among them; the person's placeholders — `<the defect reference>`, `<your name>` — stay for them to fill. No command carries `--yes` or `--dry-run`: the friction writers each ask once, and the record stamp has no prompt and writes what its command line says. A revalidation keeps only the deferrals named with `--keep <kind:value>` and removes the rest (COR-050 point 4), so each deferral you propose keeping is named there.
 
 ```sh
 # holds — read, leaning to holds, and confirmed by reading the diff
@@ -91,7 +91,7 @@ pkit friction revalidate <artefact> --outcome unchanged --because "<the gap, and
 # not resolved yet — a deferral, not an outcome
 pkit friction defer <artefact> --anchor <kind:value> --reason "<why it can wait>"
 # the record — only when the revalidation has something to say
-pkit analysis new revalidation <subject> --change <ref> --trigger <trigger> --outcome <id>=<outcome> ... --because "<id>=<why>" ... --gap "<gap> => <what resolved it>" --by-agent analysis-resolver --confirmed-by "<your name>"
+pkit analysis new revalidation <subject> --change <ref> --trigger <trigger> --outcome <id>=<outcome> ... --because "<id>=<why>" ... --gap "<ids>: <gap> => <what resolved it>" --by-agent analysis-resolver --confirmed-by "<your name>"
 ```
 
 ## Files you own

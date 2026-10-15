@@ -88,8 +88,11 @@ FIRST_RUN = f"{JOURNEYS}/JRN-001-first-run.md"
 
 #: A file under `src/generated`, which `friction.exclude` leaves out of the actor's `src/**`.
 GENERATED = "src/generated/stub.py"
-#: The placeholder the stamp leaves in an actor's body.
-WHO = "<Who this is, when they come to the system, and what they bring with them.>"
+#: The hint the stamp leaves as an actor's opening, its first part (#1366).
+WHO = re.compile(r"^<!-- pkit:hint What this role is.*? -->$", re.MULTILINE)
+
+#: The hint the stamp leaves after a use case's `**Main path:**` label (#1366).
+MAIN_PATH = re.compile(r"\*\*Main path:\*\* <!-- pkit:hint .*? -->")
 
 
 # --- the rules, on their own ---------------------------------------------------------------
@@ -289,7 +292,7 @@ def _flag(repo: AdopterRepo) -> None:
     seed(repo, filled=False)
     text = (repo.root / RUN_SUITE).read_text(encoding="utf-8")
     step = "1. The tester starts `run_suite`, passing `fast` for a quick pass."
-    repo.write({RUN_SUITE: text.replace("1. <what the actor or the system does>", step)})
+    repo.write({RUN_SUITE: MAIN_PATH.sub(lambda _m: f"**Main path:**\n\n{step}", text, 1)})
     repo.commit("docs(analysis): the tester, the suite and the first run")
 
 
@@ -540,8 +543,9 @@ def test_a_quote_surviving_only_under_an_excluded_path_is_gone(
     seed(repo, filled=False)
     tester = actor_at("ACT-tester")
     text = (repo.root / tester).read_text(encoding="utf-8")
-    assert WHO in text
-    repo.write({tester: text.replace(WHO, "The tester starts `run_suite` to check a change.")})
+    assert WHO.search(text)
+    starts = "The tester starts `run_suite` to check a change."
+    repo.write({tester: WHO.sub(lambda _m: starts, text, 1)})
     repo.commit("docs(analysis): the tester and the suite")
     change = {RUN: "def execute(fast=False):\n    print('run')\n"}
     carried_in = {GENERATED: "def run_suite(fast=False):\n    print('run')\n"}
@@ -581,7 +585,11 @@ def test_an_upstream_artefact_changed_is_read_never_regressed(flagged: AdopterRe
     text = (flagged.root / RUN_SUITE).read_text(encoding="utf-8")
     flagged.commit(
         "docs(analysis): the suite reports its time",
-        {RUN_SUITE: text.replace("**Done when:** <", "**Done when:** the time is shown; <")},
+        {
+            RUN_SUITE: text.replace(
+                "**Postconditions:** <", "**Postconditions:** the time is shown. <"
+            )
+        },
     )
     document = _propose(flagged, "JRN-001")
     assert (document["verdict"], document["rule"]) == ("read", "nothing-decides")
