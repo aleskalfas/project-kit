@@ -1,7 +1,7 @@
 ---
 id: COR-060
 title: A break in text a change brings under a rule is settled where the rule settles it, whatever brought the text there
-status: proposed
+status: accepted
 date: 2026-10-15
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
