@@ -1173,10 +1173,11 @@ def test_software_analysis_refuses_a_reading_it_cannot_read(
 
 # --- no reader resolves on its own -----------------------------------------------------------
 
-#: What resolving a base by hand takes, in a script's code.
+#: What resolving a base by hand takes, in a script's code. `git merge-base --is-ancestor`
+#: asks whether one commit is in another's history and computes no base, so it is not one.
 _BASE_TOKENS = {
     r"environ\b[^\n]*CHECK_BASE|getenv\(": "reading $PKIT_CHECK_BASE",
-    r"['\"]merge-base['\"]": "computing a merge-base",
+    r"['\"]merge-base['\"](?!\s*,\s*['\"]--is-ancestor['\"])": "computing a merge-base",
     r"\.\.\.HEAD": "diffing from a merge-base git computes",
     r"f?['\"]origin/": "naming a remote-tracking reference",
     r"['\"]\.pkit/project/config\.yaml['\"]|\.get\(\s*['\"]default-branch['\"]": (
@@ -1204,6 +1205,11 @@ def test_the_guard_recognises_a_base_resolved_by_hand() -> None:
         "naming a remote-tracking reference",
     ]
     assert _base_tokens('"""PKIT_CHECK_BASE, merge-base and origin/main, in prose."""\n') == []
+    ancestry = "on_tip = git('merge-base', '--is-ancestor', commit, tip)\n"
+    assert _base_tokens(ancestry) == []
+    assert _base_tokens(ancestry + "fork = git('merge-base', tip, 'HEAD')\n") == [
+        "computing a merge-base"
+    ]
 
 
 @pytest.mark.parametrize("capability", [SA, PM], ids=["software-analysis", "project-management"])

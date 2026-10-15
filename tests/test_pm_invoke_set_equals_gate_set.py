@@ -273,7 +273,8 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
 
     Exercises the REAL invoke loop (`main()`'s `for name in required_local:`),
     not `_resolve_review` in isolation. Returns the list of reviewer
-    names `review-pr` actually invoked, in order.
+    names `review-pr` actually invoked, in no order: the reviewers run at
+    once (#1594).
     """
     refs_rc = _stub_closing_resolution(
         rpr,
@@ -333,6 +334,7 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
         base=None,
         head="HEAD",
         sha="",
+        say=None,
     ):
         invoked.append(name)
         return "APPROVED", "body"
@@ -523,7 +525,7 @@ def test_opted_out_reviewer_neither_invoked_nor_required(
         labels=labels,
         opt_outs=opt_outs,
     )
-    assert invoked == ["reviewer", "design-reviewer"]
+    assert sorted(invoked) == ["design-reviewer", "reviewer"]
 
     gate = _run_gate(
         dw,

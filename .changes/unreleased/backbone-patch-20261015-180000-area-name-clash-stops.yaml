@@ -1,0 +1,18 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+  pr: "1589"
+body: >
+  `pkit upgrade` and `pkit sync` no longer copy the core `lifecycle` area over a
+  project's own area of that name. A project at a release before v1.149.0,
+  which first shipped the core area, could create its own at
+  `.pkit/lifecycle/`. Both commands now stop before they write anything, under
+  `--dry-run` too, and nothing overrides the stop, `--force` included. The core
+  area holds `ownership.py`, and a project's own area does not, which is how
+  the two are told apart. The message names the path, the running release and
+  the ways on. Move the project's area to another name, then run the command
+  again. After an upgrade's stop, an unpinned project can stay at its release
+  with `pkit pin`. Where the core area has lost `ownership.py`, restore that
+  file from git. Until #1600 builds the full check, no release adds a core area
+  or a core adapter.

@@ -8,9 +8,11 @@
 # ///
 """software-analysis capability — new: stamp an artefact or a revalidation record (DEC-001).
 
-Writes one artefact from its kind's template under the analysis location — the
-`analysis` sub-path of the internal documentation root, recorded the first
-time an artefact is placed there (COR-049 point 5):
+Writes one artefact under the analysis location — the `analysis` sub-path of
+the internal documentation root, recorded the first time an artefact is placed
+there (COR-049 point 5). Its front matter comes from its kind's template, and
+its body is rendered from its kind's declared structure, each part holding its
+hint until a person writes it (DEC-001 point 1):
 
 - a use case, `use-case-model/use-cases/[<area>/]UC-NNN-<slug>.md`, with its
   actor and the actor anchor;
@@ -32,8 +34,9 @@ It also writes a revalidation record, `revalidations/<date>-<slug>.md`, and only
 one with something to say — a planned revalidation, one that found a
 regression or a gap (point 6), or one where a person decided an artefact was
 stale (point 5); `_lib/revalidation.py` states the rules. A planned record names
-the sources of the design it reviewed, which the stamp does not take yet, so it
-refuses one, as the record's schema requires them.
+each source of the design it reviewed, one `--reviewed-against` each, and the
+stamp warns of a commit the default branch does not hold. Each gap names the
+artefacts it affects.
 
 Usage:
   pkit analysis new use-case <slug> --actor <ACT-id> [--area <area>] [--title <text>]
@@ -44,11 +47,12 @@ Usage:
 
   pkit analysis new revalidation <slug> --change <ref> --trigger <trigger>
       --outcome <id>=<outcome>... --because <id>=<text>...
-      [--gap "<gap> => <resolution>"]... [--by <who> | --by-agent <name>]
+      [--reviewed-against "<title> @ <version> [@ <link>]"]...
+      [--gap "<ids>: <gap> => <resolution>"]... [--by <who> | --by-agent <name>]
       [--confirmed-by <who>] [--title <text>]
 
 Exit codes:
-  0  stamped
+  0  stamped, with any warning on standard error
   1  refused — the message says why
   2  a usage error
 """
@@ -67,8 +71,10 @@ from _lib.model import ACTOR, JOURNEY, TERM, USE_CASE
 #: The kind a revalidation record is stamped as.
 REVALIDATION = "revalidation"
 
-#: What parts a gap from what resolved it, in `--gap "<gap> => <resolution>"`.
+#: What parts a gap from what resolved it, in `--gap "<ids>: <gap> => <resolution>"`,
+#: and the ids of the artefacts it affects from the gap.
 GAP_SEPARATOR = " => "
+IDS_SEPARATOR = ":"
 
 
 def _pair(value: str) -> tuple[str, str]:
@@ -149,9 +155,8 @@ def _parser() -> argparse.ArgumentParser:
     help_text = (
         "A revalidation record, kept only when there is something to say: a planned "
         "revalidation, one that found a regression or a gap, or one where a person decided "
-        "an artefact was stale. A planned record names the sources of the design it "
-        "reviewed in `reviewed-against`, which this stamp does not take yet, so it refuses "
-        "a planned record."
+        "an artefact was stale. A planned record names each source of the design it "
+        "reviewed with --reviewed-against."
     )
     _revalidation_arguments(kinds.add_parser(REVALIDATION, help=help_text, description=help_text))
     return parser
@@ -164,10 +169,24 @@ def _revalidation_arguments(record: argparse.ArgumentParser) -> None:
         "--change",
         required=True,
         metavar="REF",
-        help="The change that carried it: a work item, a pull request or a range of commits.",
+        help="The change that carried it: a work item, a pull request, or a range of commits "
+        "on the default branch.",
     )
     record.add_argument(
         "--trigger", required=True, choices=schemas.record_triggers(), help="What triggered it."
+    )
+    record.add_argument(
+        "--reviewed-against",
+        dest="reviewed_against",
+        action="append",
+        default=[],
+        metavar="TITLE @ VERSION [@ LINK]",
+        help="A source of the design a planned revalidation reviewed, once for each, and "
+        "only on a planned record: its title, then its version, then its link where it lies "
+        "outside this repository. A version in this repository is a commit's full id on the "
+        "default branch, or `this change` when the design lands with the record. Outside it, "
+        "it is the time the text was read, such as 2026-01-05T10:00:00Z, or a commit's full "
+        "id.",
     )
     record.add_argument(
         "--outcome",
@@ -192,9 +211,11 @@ def _revalidation_arguments(record: argparse.ArgumentParser) -> None:
         dest="gaps",
         action="append",
         default=[],
-        metavar="GAP => RESOLUTION",
-        help="A gap found — behaviour nothing describes, or a description with no behaviour — "
-        "and what resolved it — the defect reported, the artefact written (repeatable).",
+        metavar="IDS: GAP => RESOLUTION",
+        help="A gap found, after the ids of the artefacts it affects, separated by commas, "
+        "each one an --outcome gives: behaviour nothing describes, or a description with no "
+        "behaviour. Then what resolved it: the defect reported, or the artefact written. "
+        "Repeatable. Each regression and each gap found is named among a gap's ids.",
     )
     who = record.add_mutually_exclusive_group()
     who.add_argument(
@@ -212,16 +233,19 @@ def _revalidation_arguments(record: argparse.ArgumentParser) -> None:
     )
 
 
-def _gap(value: str) -> tuple[str, str]:
-    """`<gap> => <resolution>`: a gap and what resolved it, given as one pair so
-    neither can be matched with another's."""
+def _gap(value: str) -> revalidation.Gap:
+    """`<ids>: <gap> => <resolution>`: the ids of the artefacts a gap affects, the gap, and
+    what resolved it, given as one so none can be matched with another's."""
     gap, sep, resolved = value.partition(GAP_SEPARATOR)
-    if not sep or not gap.strip() or not resolved.strip():
+    labelled, colon, found = gap.partition(IDS_SEPARATOR)
+    ids = tuple(i.strip() for i in labelled.split(","))
+    if not (sep and colon and all(ids) and found.strip() and resolved.strip()):
         raise stamp.Refused(
-            f'--gap {value!r} is not "<gap> => <resolution>": the gap found, then what '
-            f"resolved it — the defect reported, or the artefact written"
+            f'--gap {value!r} is not "<ids>: <gap> => <resolution>": the ids of the artefacts '
+            f"it affects, separated by commas, then the gap found, then what resolved it — the "
+            f"defect reported, or the artefact written (DEC-001 point 6)"
         )
-    return gap.strip(), resolved.strip()
+    return revalidation.Gap(ids, found.strip(), resolved.strip())
 
 
 def _stamp_record(args: argparse.Namespace) -> stamp.Stamped:
@@ -236,6 +260,7 @@ def _stamp_record(args: argparse.Namespace) -> stamp.Stamped:
         title=args.title,
         because=tuple(args.because),
         gaps=tuple(_gap(value) for value in args.gaps),
+        reviewed_against=tuple(args.reviewed_against),
     )
     return revalidation.stamp_record(backbone.project_root(), request)
 
@@ -264,6 +289,8 @@ def main() -> int:
         return 1
     for note in stamped.notes:
         print(note)
+    for warning in stamped.warnings:
+        print(f"warning: {warning}", file=sys.stderr)
     print(f"stamped {stamped.id} at {stamped.location}")
     return 0
 

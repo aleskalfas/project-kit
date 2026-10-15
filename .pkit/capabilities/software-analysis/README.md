@@ -13,14 +13,13 @@ pkit:
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053]
       artefact: [RS-SAN-001]
     revalidated:
-      at: 2026-10-15T09:45:30Z
-      outcome: unchanged
-      unchanged-because: COR-050 lets an artefact anchor name a document's section or its lead, and refuses a section or the lead of a collection file or entry. This README, as main's stamped-forms change left it, has its artefacts anchor code, decisions, and whole actors and use cases, and what it says of the friction block, revalidation and rule sets holds.
+      at: 2026-10-15T14:06:58Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
             value: software-analysis:DEC-001
-          reason: "DEC-001 refines ahead of the code. The capability now declares each kind's structure and a planned record's reviewed-against, and this page describes both. Its check holds each body and front matter to its structure's parts and forms, and this page describes that too. It does not yet render the templates from the structure. Nor does it stamp a planned record's sources, check where their commits sit, take a project's additions to a structure, keep steps append-only, or write the new anchors. Among those anchors is a journey's list of the use cases it relies on, which its schema does not take yet, so a journey with a hand-over from outside it cannot pass the check, once the format rule binds, until it does. So this page describes the check, the stamp and the anchors it ships: a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #1547 that apply the rest: #1366 renders the templates and stamps the sources, #1367 takes a project's additions, #1375 keeps steps append-only, #1448 checks the commits, and #1507 writes the new anchors."
+          reason: "DEC-001 refines ahead of the code. The capability now declares each kind's structure and a planned record's reviewed-against, and this page describes both. Its check holds each body and front matter to its structure's parts and forms, and this page describes that too. It also checks where the commits a planned record names sit, and this page describes that check. Its stamp renders each body from the structure, as each template's body is rendered, and writes a planned record's sources, and this page describes both. The stamp does not yet write a front-matter field's hint as its placeholder. It does not yet take a project's additions to a structure, keep steps append-only, or write the new anchors. Among those anchors is a journey's list of the use cases it relies on, which its schema does not take yet, so a journey with a hand-over from outside it cannot pass the check, once the format rule binds, until it does. So this page describes the check, the stamp and the anchors it ships: a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #1547 that apply the rest. #1593 writes each field's hint as its placeholder, #1367 takes a project's additions, #1375 keeps steps append-only, and #1507 writes the new anchors."
 ---
 
 # software-analysis capability
@@ -84,15 +83,16 @@ Create artefacts with the stamp, never by copying a template by hand: it gives e
 | `pkit analysis new term <slug> [--name <text>] [--unanchored-because <text>]` | the entry `TERM-<slug>` of `glossary.md`, with its section |
 | `pkit analysis new use-case <slug> --actor <ACT-id> [--area <area>] [--title <text>]` | `use-case-model/use-cases/[<area>/]UC-NNN-<slug>.md`, its actor anchored |
 | `pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> … [--title <text>]` | `use-case-model/journeys/JRN-NNN-<slug>.md`, its steps anchored |
-| `pkit analysis new revalidation <slug> --change <ref> --trigger <trigger> --outcome <id>=<outcome> … --because <id>=<why> … [--gap "<gap> => <resolution>"]…` | a revalidation record, `revalidations/<date>-<slug>.md` — only one with something to say ("Revalidation records" below) |
+| `pkit analysis new revalidation <slug> --change <ref> --trigger <trigger> --outcome <id>=<outcome> … --because <id>=<why> … [--reviewed-against "<title> @ <version> [@ <link>]"]… [--gap "<ids>: <gap> => <resolution>"]…` | a revalidation record, `revalidations/<date>-<slug>.md` — only one with something to say ("Revalidation records" below) |
 
 Every artefact form also takes `--path <glob>` and `--record <id>`, each repeatable: the code that makes the artefact true and the decisions it relies on, written as its path and record anchors. Without them an actor or term is stamped unanchored — the core reports that, and never fails on it. An actor or term nothing embodies takes `--unanchored-because <why>` instead: the reason is written as `unanchored-because` in its friction block — the core's key (COR-050 point 1), so the core's unanchored measure lists the artefact apart, with its reason, rather than counting it — and the stamp refuses it beside `--path` or `--record`.
 
 - **Ids.** A slug is a word: a lowercase letter, then lowercase letters, digits and hyphens. An actor is `ACT-<slug>` and a term `TERM-<slug>`; the stamp refuses an id already held, withdrawn or not, since an id is never used again. A use case or journey takes the **next free number**: one past the highest the working tree and the default branch hold, and past every number the default branch's history ever gave a file of its place — one deleted since included; when the history's number is the one it follows, the stamp says which file it was given to. Only your numbering setting frees a number ("Configuration" below): an id it frees is not counted, and the stamp says so, naming the commit, when it is the number it would have followed. A file's number is read from its front matter and from its name (`UC-007-<slug>.md`, as the stamp names it), so a file whose id can't be read still holds its number. The history counts the files the tree reading counts: one `git log` lists the paths ever added under the kind's place, and a path past the tree's highest number counts unless the core's reading at the commit that added it, the place then where it is now, held it as no file of the place — not a Markdown file there, or left out by `friction.exclude` — so a diagram named `UC-800-flow.svg`, or an excluded example, raises nothing, while a Markdown note named `UC-2026-notes.md` held its number while it was there and still does. A file never named after its number, and deleted since, is the one it can't count. In a shallow clone the history stops where the clone does, and the stamp says so; `git fetch --unshallow` reads it all. An actor's or term's id is a slug a person chooses, not a number the stamp gives, and point 3 keeps a withdrawn one in its file or its glossary entry, where the stamp refuses it — so no history is read for one, and a slug deleted against the rule is not caught. A number has one spelling — three digits below 1000 (`UC-007`), no leading zero from 1000 on (`UC-1000`); the check refuses another (`UC-0007`), and both the stamp and the duplicate check read it as the number it spells, so it is never a second id. What the stamp numbers past is the default branch — `repository.default-branch` in the backbone configuration, `main` when undeclared, read as its upstream or `origin/<name>`, and as the local branch only in a clone with no remote (COR-054) — and, when you name one, the base `--base <ref>` names too; the stamp never reads `$PKIT_CHECK_BASE`, the base a pipeline sets for its checks, so a pipeline's base never moves where it numbers from (COR-054 point 3). When the default branch or the base names no commit here, the stamp refuses with the core's reason and fix — fetch it, declare the right one — rather than number from the working tree alone. A number another branch takes after yours is `pkit analysis check-numbers`' to report (below).
-- **What it writes.** The artefact's own fields from its template, its title or name (the slug, capitalised, by default) — a use case's or journey's title, and an actor's name, in its front matter and in its heading after the id — and the friction block with the anchors the decision asks for: a use case anchors to its actor, and a journey to the use cases of its steps. What only you can write it leaves as the template's placeholders, `<…>` — an actor's needs, a term's definition, a body's goal and steps — and `pkit analysis validate` fails until you have filled each.
-- **The glossary, a collection file.** A new term is added to the file's front matter, and its section to the body, each where its id sorts among those already there; every other byte stays as it was — the file's last line ending and blank lines included, when the section goes last — and the stamp checks the result reads back as the file plus the new entry before writing. Kept sorted, two branches adding different entries touch different places of the file and merge without a conflict unless their ids are neighbours. The file is created from the template the first time. Its line endings are kept too: a file whose every line ends CRLF — as a checkout with `core.autocrlf` writes it — is edited as LF and written back CRLF, the entry's and the section's lines included; a file with mixed line endings is refused, saying so, since which ending the new lines take cannot be told.
+- **What it writes.** The artefact's own fields from its template, its title or name (the slug, capitalised, by default) — a use case's or journey's title, and an actor's name, in its front matter and in its heading after the id — and the friction block with the anchors the decision asks for: a use case anchors to its actor, and a journey to the use cases of its steps. Its body is rendered from its kind's structure, every part in its order, each holding its hint ("Templates and hints" below). Under a journey's *Steps* it writes one line for each of its `steps`, the use case's id and title, as the part's form asks.
+- **What it leaves for you.** An actor's needs and a term's definition stay the template's placeholders, `<…>`, in the front matter. Each part of the body holds its hint, a one-line comment `<!-- pkit:hint … -->` that says what goes there and gives an example. Write in its place what it asks for, and delete the hint. `pkit analysis validate` fails until you have written each placeholder and deleted each hint.
+- **The glossary, a collection file.** A new term is added to the file's front matter, and its section to the body, each where its id sorts among those already there; every other byte stays as it was — the file's last line ending and blank lines included, when the section goes last — and the stamp checks the result reads back as the file plus the new entry before writing. Kept sorted, two branches adding different entries touch different places of the file and merge without a conflict unless their ids are neighbours. The file is created the first time, with the heading and the opening the glossary's structure gives its head: its first sentence says what the file holds. Its line endings are kept too: a file whose every line ends CRLF — as a checkout with `core.autocrlf` writes it — is edited as LF and written back CRLF, the entry's and the section's lines included; a file with mixed line endings is refused, saying so, since which ending the new lines take cannot be told.
 - **Written whole, or not at all.** Every file the stamp writes — the glossary included — goes to a temporary file beside it and is then moved over it, keeping its mode, so a failure halfway never leaves it half-written. The location is recorded only once the file is written, and only while it is not recorded yet: a write that fails leaves `docs-locations.yaml` untouched, a recording that fails puts the file back as it was, so a refused stamp writes nothing, and a stamp that needs no recording never runs it. A file or folder reached through a link is refused and the link left as it is: the core's discovery reads no link as a document, nor anything beneath a linked folder, so what the stamp wrote there would be no part of the analysis — and a file written whole would replace the link.
-- **What it refuses**, writing nothing: an actor, or a step, that is not in the analysis or is withdrawn — the check holds every use case and journey in force to the same; a journey with fewer than two steps; a slug or area that is not a word; an id already held; a use case or journey while your numbering setting has an entry the stamp cannot honour ("Configuration" below); a file or folder reached through a link; a `--title`, `--name` or `--unanchored-because` still holding a placeholder the templates or the skill's commands shipped (`<Title>`, `<why>`), matched exactly — words of your own in angle brackets are yours to write.
+- **What it refuses**, writing nothing: an actor, or a step, that is not in the analysis or is withdrawn — the check holds every use case and journey in force to the same; a journey with fewer than two steps; a journey with a step that is a use case of another actor, since a journey is one actor's path across use cases — the check holds every journey in force to the same; a slug or area that is not a word; an id already held; a use case or journey while your numbering setting has an entry the stamp cannot honour ("Configuration" below); a file or folder reached through a link; a `--title`, `--name` or `--unanchored-because` still holding a placeholder the templates or the skill's commands shipped (`<Title>`, `<why>`), matched exactly — words of your own in angle brackets are yours to write.
 - **Only an actor or a term is ever unanchored.** A use case always anchors to its actor and a journey to its steps' use cases (DEC-001 point 4), so neither is ever without anchors, and the reason an unanchored artefact carries (point 9) never applies to them: `--unanchored-because` is an actor's and a term's alone.
 
 The stamp reads the analysis through the core's reading command, `pkit friction artefacts` — the working tree's, and with `--at` the default branch's, at the commit `pkit repository base` resolves it to (COR-054 point 5) — and records the location through `pkit docs record-location` once the artefact is written; it never walks the folders itself. The value recorded is the one already in use, so running the stamp is the consent and nothing is asked (COR-049 point 5) — the `--yes` it passes is accepted and not needed — and it prints what the command says: what was recorded, the root it was derived from, and where to change it. For the default branch's history it asks git one question — every path ever added under the place the core's reading names, and the commit that added it — and the core's reading at that commit whether the path was a file of the place, only for a number past the tree's highest.
@@ -122,16 +122,33 @@ pkit:
 
 # UC-003 — Run a test suite against a sandbox
 
-**Goal:** …
-**Starts when:** …
-**Main path:** 1. … 2. …
-**Variants:** 1a. …
-**Done when:** …
+**Goal:** Run my suite against a clean sandbox.
+
+**Other actors:** None.
+
+**Preconditions:** None.
+
+**Assumptions:** None.
+
+**Trigger:** The tester asks to run the suite.
+
+**Main path:**
+
+1. The tester starts a run with `--sandbox`.
+2. The system builds a sandbox, runs the suite in it and shows the result.
+
+**Variants:**
+
+- **2a.** The sandbox cannot be built. The system says why and runs nothing, and the use case ends.
+
+**Postconditions:** The tester holds the suite's result.
+
+**Minimal guarantees:** A failed run leaves no sandbox behind (ADR-006).
 ```
 
-The heading is the id and the `title`, `# <id> — <title>`, and the check requires the two to agree: whoever reads only the front matter sees the title the page shows. The title may change; the id does not. Steps are numbered and variants lettered after the step they branch from; both are only ever added, since journeys and evidence cite them.
+The heading is the id and the `title`, `# <id> — <title>`, and the check requires the two to agree: whoever reads only the front matter sees the title the page shows. The title may change; the id does not. Steps are numbered and variants lettered after the step they branch from; both are only ever added, since journeys and evidence cite them. The parts, their order and their forms are the use case's structure ("Each kind's structure" below).
 
-**Journey** (`schemas/journey.schema.json`) — the same fields, `title` and heading included, plus `steps`: the use cases it passes through, in order, at least two. `steps` is the source; the stamp writes its use cases into the artefact anchors, and the check requires the two to match. Add the code at the seams as path anchors. The body gives where it starts, the ordered steps, the **seams to watch** between them, and when it is done.
+**Journey** (`schemas/journey.schema.json`) — the same fields, `title` and heading included, plus `steps`: the use cases it passes through, in order, at least two, each a use case of its `actor`. `steps` is the source; the stamp writes its use cases into the artefact anchors, and the check requires the two to match. Add the code at the seams as path anchors. The body gives its goal, its steps with each step's hand-overs under it, its variants, its postconditions and its minimal guarantees.
 
 **Actor** (`schemas/actor.schema.json`) — a file of its own, `use-case-model/actors/ACT-<slug>.md`. Its needs sit in its front matter, a few lines above the description its body gives, so a tool reads them as data and never from the body (DEC-001 point 1):
 
@@ -151,7 +168,11 @@ pkit:
 
 # ACT-tester — Test author
 
-Whoever writes and runs the project's tests. They come with every change, and bring the suite and a sandbox to run it in.
+Whoever writes and runs the project's tests.
+
+**Occasions:** With every change.
+
+**Context:** The suite, and a sandbox to run it in.
 ```
 
 The heading is the id and the `name`, `# <id> — <name>`, and the check requires the two to agree, as it does a use case's title. The id is the slug the file is named by, and never changes.
@@ -171,7 +192,7 @@ pkit:
     unanchored-because: No code or decision embodies it; it funds the project.
 ```
 
-**Revalidation record** (`schemas/revalidation-record.schema.json`) — no friction block; stamped by `pkit analysis new revalidation` from `templates/revalidation-record.md` as `revalidations/<date>-<subject>.md` ("Revalidation records" below):
+**Revalidation record** (`schemas/revalidation-record.schema.json`) — no friction block; stamped by `pkit analysis new revalidation` as `revalidations/<date>-<subject>.md` ("Revalidation records" below). Its template, `templates/revalidation-record.md`, shows a planned record whole. A record of drift has this front matter:
 
 ```yaml
 change: "#123"                  # the work item, pull request or range of commits on the default branch that carried it
@@ -191,7 +212,7 @@ evidence:                       # optional: the executed results drawn on, each 
     ran: tests/test_run.py::test_sandbox
 ```
 
-The body gives each artefact's outcome with its justification, then the gaps and what resolved each. Evidence supports an outcome and never stands in for one: each artefact the record draws evidence for has its outcome. The record **copies** each entry of the evidence point it draws on, whole and in the point's shape (Connections, below), rather than naming it by id: a record is permanent history, while the point holds what its fillers report now, so an id alone would point at nothing once a filler stops reporting that commit. The copy is the evidence the record shows. A planned record also names the sources of the design it reviewed, in `reviewed-against` ("Revalidation records" below).
+The body gives each artefact's outcome with its justification, then the gaps, each labelled with the artefacts it affects and holding its resolution. Evidence supports an outcome and never stands in for one: each artefact the record draws evidence for has its outcome. The record **copies** each entry of the evidence point it draws on, whole and in the point's shape (Connections, below), rather than naming it by id: a record is permanent history, while the point holds what its fillers report now, so an id alone would point at nothing once a filler stops reporting that commit. The copy is the evidence the record shows. A planned record also names the sources of the design it reviewed, in `reviewed-against` ("Revalidation records" below).
 
 ## Each kind's structure: `schemas/artefact-kinds.yaml`
 
@@ -231,7 +252,26 @@ The forms, each described in the schema:
 
 **What binds it.** The structure is the checkable part of the format rule, `RS-SAN-001`, and binds at that rule's status, which is proposed ("The method rule set: `SAN`", below). A kind's companion schema still checks its front matter whatever the rule's status.
 
-**What reads it.** The check, `pkit analysis validate`, holds each body and each front matter to it, every part and every form, once the format rule is accepted, and previews it before ("Each body against its structure", below). A test holds the file to its schema. The templates are not yet rendered from it. So the templates, and the use case, journey and actor described above, still show each kind's earlier parts: what the stamp writes today.
+**What reads it.** The check, `pkit analysis validate`, holds each body and each front matter to it, every part and every form, once the format rule is accepted, and previews it before ("Each body against its structure", below). The stamp renders each body from it, and each template's body is the same rendering (below). A test holds the file to its schema.
+
+### Templates and hints
+
+Each kind's template in `templates/` is its structure rendered, so it shows exactly the structure: every part, in its order. Nothing reads a structure out of a template (DEC-001 point 1).
+
+- **The front matter** is written by hand, and a test holds it to the kind's schema.
+- **The body** is rendered from the declaration, and a test holds the committed template equal to the rendering. The stamp renders each body the same way, and never copies a template's lines.
+- **A part's hint is its placeholder.** Where you write a part, the stamp leaves its hint in its place: one line, a comment marked `pkit:hint`, with the part's example after it.
+
+  ```markdown
+  **Goal:** <!-- pkit:hint What the actor wants from this use case, in one sentence in their own voice. Start with the verb, or with *Never* and the verb, with *I* and *my* where they refer to themselves. Example: Export my report as a file. -->
+  ```
+
+- **A front-matter field's placeholder is not yet its hint.** The stamp writes an actor's `needs` and a term's `definition` as the template's `<…>` text. The structure declares each field's hint, and [#1593](https://github.com/aleskalfas/project-kit/issues/1593) makes the stamp write it.
+- **A hint left in** is refused by the placeholder check whatever the format rule's status, and the message repeats the hint. The mark is matched outside code spans and fenced code, so a body may quote it.
+- **A hint is advice.** What binds is a part's presence, its order and its form. A hint names no style.
+- **A collection file's head,** the glossary's heading and its opening, is written once, when the stamp creates the file. The opening's first sentence says what the file holds. After that it is yours to reword.
+- **A revalidation record carries no hints,** since its stamp writes every part from its command line. Its template shows each part's example, as one planned record.
+- **What the shipped hints and examples hold to:** short sentences, no semicolons, and no project's style. Each example is plain. So they suit any project's writing rules. A test holds every hint and example to that floor: no sentence over 25 words, and no semicolon.
 
 ## Checking: `pkit analysis validate`
 
@@ -240,11 +280,13 @@ The forms, each described in the schema:
 - **a file in a place that is not its kind's shape** — a file without front matter, or whose front matter does not parse, a glossary that is not a collection, an actor, use-case or journey file holding entries. What such a file holds can't be read, its ids included, and an id is never used again, so it is never skipped: the stamp counts the number a use case's or journey's name carries;
 - **missing required parts** — an artefact's own fields against its schema, and a collection entry whose key is not its kind's id;
 - **a placeholder left unfilled** — what the stamp leaves for you to write is no part of the analysis until you write it: an own field, or an actor's or term's `unanchored-because` in its friction block, still holding a placeholder the templates or the skill's commands ever shipped (`<Title>`, an actor's `<what this actor needs …>`, a term's placeholder `definition`), or a body — an actor's, a use case's or a journey's, or a term's section with its heading — still holding one of the templates'. Each is matched against those texts exactly, and the capability keeps every one it ever shipped, so a reworded template never hides an old placeholder, and words of your own in angle brackets — `maps <user id> to a session`, code a body quotes — are never taken for one;
+- **a hint left in** — a body, or a term's section, still holding a part's hint, `<!-- pkit:hint … -->`, outside code spans and fenced code. The message gives the line and repeats the hint. Like a placeholder, it needs no rule;
 - **an actor, a use case or a journey whose heading is not its id and its title or name** — `# UC-003 — <title>`, the `title` its front matter gives, or an actor's `# ACT-tester — <name>`, its `name`;
 - **duplicate ids** — two artefacts holding one id;
 - **a use case or journey whose name carries a number its front matter doesn't give** — `UC-007-<slug>.md` with no `id`, or with `id: UC-008`: the stamp counts the number the name carries, so the front matter says the same — write the id, or name the file after it;
 - **an actor whose file's name is not its id** — `ACT-tester.md` holding `id: ACT-other`: an actor's id names its file (DEC-001 point 3), so the two say the same — name the file after its id, or correct `id`;
 - **a use case or journey naming what the stamp would refuse** — an actor, or a journey's step, that is not in the analysis, or that is withdrawn while the use case or journey is in force. A withdrawn artefact may name withdrawn ones: it is history;
+- **a journey with a step that is a use case of another actor** — a journey is one actor's path across use cases, so each step's use case has the journey's `actor` as its own. The message names the step and both actors. The stamp refuses the same. A withdrawn journey is history, so its steps are not compared;
 - **a use case not anchored to its actor**, so a changed actor would not flag it;
 - **a journey whose use-case anchors do not match its steps** — the message names the anchors to write;
 - **a revalidation record** whose front matter does not fit its schema, or whose outcomes cite an id that is no artefact of the analysis (withdrawn ones are fine);
@@ -262,6 +304,8 @@ It warns, and never fails, on:
 It says nothing of an id the point no longer holds, or of a point that does not resolve: the record's copy is the evidence, and a filler that stops reporting an old commit is ordinary. It reads the point, through `pkit connections resolve`, only when some record copies evidence — so a project with no such record sees neither warning on the point's own entries.
 
 It reports, and never fails on, **an open regression**: a record's `code-regressed` artefact that has not been revalidated since the record — its `at` falls on no later day (UTC) than the record's date. The defect the record names is still open, or its fix was never revalidated against the artefact. It is worked out from the records and the artefacts each time, never kept in a ledger.
+
+A time written unquoted in a record's front matter, such as a source's `version` in `reviewed-against`, is read by YAML as a time and not as the text written. The check says so, and asks you to quote it.
 
 Friction itself, dead anchors and the friction block's own shape are the core's checks (`pkit validate`'s `friction` member and `pkit friction check`), which report front matter that does not parse too; an unanchored artefact is the core's measure, never an error. So is `unanchored-because` beside anchors: the reason says why an actor or term has none, so one that has anchors says two things at once. The stamp refuses the pair, and a hand edit that writes it fails `pkit validate`'s `friction` member (`unanchored-beside-anchors`, COR-050 point 12).
 
@@ -286,7 +330,7 @@ Each message gives the part's hint and example. How the check reads a body:
 - **Where a part ends.** A label sits one level below the heading it follows. Its part runs to the next declared label, or to a heading of its level or above. So under a use case's `#` heading, a `##` section ends the part above it, and a `###` one stays inside it.
 - **A part's list.** Items are read as Markdown reads a list, save that fenced code stays whole, up to its closing line, with the item it opens in. A wrapped line indented under an item's text stays in the item, even one that starts `2026.`. Not indented, a line that starts with a number and a full stop opens an item, as Markdown shows it. A line right below a label that starts `2.` continues the label's line, so start a list right below a label with `1.` or a bullet, or after a blank line. Under a label that opens a list item, such as `- **Steps:**`, the list nested in that item is the part's, and an item of your own beside it, such as `- **Note:**`, is not.
 - **What you add passes.** A label or a section of your own is never reported. It is content of the part it falls in, though. So text you add inside a part of the `sentence` form, such as *Goal*, counts toward its one sentence, unless it is an item of a list, which holds one sentence of its own. A form that reads a list judges only its items, so a lead line or a note of your own outside them passes.
-- **Code and comments.** A label in fenced code or in an HTML comment marks nothing. A comment is no content, so a part that holds only a comment is empty. A `<!--` inside a code span that closes on its own line opens no comment.
+- **Code and comments.** A label in fenced code or in an HTML comment marks nothing. A comment is no content, so a part that holds only a comment, such as its hint, is empty, and an opening that holds only its hint is missing. A `<!--` inside a code span that closes on its own line opens no comment.
 - **A glossary entry** is read within the lines `pkit friction artefacts --json` gives as its section's `span`, the text friction compares as the entry. The glossary's head is its body above the first entry.
 - **A withdrawn artefact** is never failed for a part it lacks, or for a form, since either may have come after its withdrawal. The parts it carries are still checked for order, for content, and for `None.` where it may not stand.
 - **A revalidation record** is held to the structure declared now, the only one the capability has declared. Holding a record to the structure in force on its day comes with the first change to a structure (DEC-001's Implications).
@@ -335,6 +379,43 @@ It reads the default branch — its tip, where your branch left it, and its hist
 - a **depth-1 clone** — the default of `actions/checkout` — holds no merge-base, and may hold no `origin/<default-branch>` at all, so this line fails, as the friction check does, rather than pass without comparing. Fetch the history back to where your branch left the default branch: `fetch-depth: 0` on `actions/checkout`, or `git fetch --unshallow origin` (`git fetch --deepen=<n>` until `git merge-base origin/<default-branch> HEAD` answers).
 
 `--json` prints `{schema_version, base, freed, summary, findings}`: `base` is `{ref, tip, commit, outdated}` (`commit` is the merge-base), or `null` when nothing was compared; `freed` lists each file whose number your numbering setting frees, `{id, path, added_by, freed_by}`, and is empty without one. It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
+
+## Commits off the default branch: `pkit analysis check-pointers`
+
+`pkit analysis check-pointers [--base <ref>] [--json]` checks where each commit a planned record names sits (DEC-001 point 6). A planned record names the design it reviewed in `reviewed-against` ("Revalidation records" below). A source in this repository names a commit, or `this change`. Whoever reads the record later returns to the design through that commit. A commit the default branch holds stays reachable after a squash merge. A commit of the design's branch does not.
+
+It reads each source without a `url` whose `version` is a commit's full id, and places the commit on the default branch:
+
+| The commit | Placed as | In a record your change adds | In a record the merge-base holds |
+|---|---|---|---|
+| on the default branch's history | held | passes | passes |
+| off it, in a clone that holds all of that history: a branch's commit a squash merge left behind, or one missing from a full clone | not held | **an error**, naming the record and the source | reported, never an error |
+| not reached, in a shallow clone whose history of the default branch stops short, whether the clone holds it or not | unknown | reported, never an error | reported, never an error |
+
+- **What it skips.** A source naming `this change` is not placed, since its commit is found from the history. A source with a `url` lies outside this repository. A record of another trigger is not read.
+- **The stamp places a commit the same way.** `pkit analysis new revalidation` warns, as it writes a planned record, of a commit the default branch does not hold ("Revalidation records" below).
+- **Why only a record your change adds fails.** A record is history and is never rewritten. A history rewrite on the default branch, such as removing a secret, takes every older pointer off it, and failing on those would fail every change for good. The change that adds a record is the one place its pointer can still be fixed. Name the commit where the design landed on the default branch, or `this change` when the design lands with the record.
+- **Why unknown never fails.** The pointers are provenance, not a gate (DEC-001 point 6). A shallow clone cannot tell where a commit beyond its history sits. `git fetch --unshallow` lets it tell.
+
+**Where it looks.** It places every commit on the default branch alone, as the core resolves it for every reader (COR-054 point 5), and never on a run's base. The base says only which records your change adds:
+
+- **The base** is `--base <ref>`, else `$PKIT_CHECK_BASE`, else the default branch, as for `check-numbers`.
+- **A record your change adds** is one whose file the merge-base of that base does not hold at its path. So a record your change moves reads as added. The working tree is read, uncommitted changes included.
+- **The default branch and the base** both come from `pkit repository base --json`. Git answers the rest from your clone's history, offline, and no remote is asked. A partial clone that lacks the merge-base's tree fails, rather than fetch it.
+- **Nothing to place.** A tree with no planned record, or whose planned records name no commit of this repository, reads no base and says so. A source in this repository that names neither a commit's full id nor `this change` is counted and not placed: `pkit analysis validate` fails its form.
+- **It fails** when no default branch resolves, or when the base names no commit or shares no history with `HEAD`. It gives the core's reason and fix (COR-054 point 4).
+
+**Wiring it in.** It answers about a change and reads history beyond the working tree, so it is not a member of `pkit validate` (COR-055 points 1 and 2). Run it as a line of its own in your check gate, beside `pkit analysis check-numbers` and `pkit friction check`, with the same base. It binds only where you wire it in. In CI:
+
+- a **`pull_request` checkout is GitHub's test merge** of your branch into the default branch. The records your branch adds are the ones the default branch lacks, so the line checks them there too.
+- a **depth-1 clone**, the default of `actions/checkout`, holds no merge-base, and may hold no `origin/<default-branch>` at all. So this line fails, as `check-numbers` does, whenever it has a commit to place. Fetch the whole history with `fetch-depth: 0`. A clone deep enough to hold the merge-base but still shallow reports what it cannot place as unknown.
+
+`--json` prints `{schema_version, default_branch, base, summary, findings, pointers}`:
+
+- `default_branch` is `{name, ref, commit}`, and `base` is `{ref, tip, commit}`, where `commit` is the merge-base. Both are `null` when nothing was placed.
+- `pointers` lists each source placed as `{record, source, title, commit, added, placement}`. `source` is the source's place in `reviewed-against`, and `added` says whether your change adds the record. `placement` is `held`, `not-held` or `unknown`.
+
+It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
 
 ## Configuration: `project/config.yaml`
 
@@ -413,7 +494,7 @@ Friction you choose not to resolve yet is not an outcome but a deferral: `pkit f
 
 ### Revalidation records
 
-`pkit analysis new revalidation <slug> --change <ref> --trigger <trigger> --outcome <id>=<outcome> … --because <id>=<why> … [--gap "<gap> => <resolution>"]… [--by <who> | --by-agent <name>] [--confirmed-by <who>] [--title <text>]` writes `revalidations/<date>-<slug>.md` under the analysis location, **only when there is something to say**:
+`pkit analysis new revalidation <slug> --change <ref> --trigger <trigger> --outcome <id>=<outcome> … --because <id>=<why> … [--reviewed-against "<title> @ <version> [@ <link>]"]… [--gap "<ids>: <gap> => <resolution>"]… [--by <who> | --by-agent <name>] [--confirmed-by <who>] [--title <text>]` writes `revalidations/<date>-<slug>.md` under the analysis location, **only when there is something to say**:
 
 | The revalidation | A record? |
 |---|---|
@@ -422,9 +503,20 @@ Friction you choose not to resolve yet is not an outcome but a deferral: `pkit f
 | found an artefact **stale** where a person decided the change was meant — `analysis-stale`, with `--confirmed-by` naming them | yes: the decision point 5 leaves to a person is kept |
 | found every artefact **holds**, or updated artefacts because the change was plainly meant | no: each artefact's own revalidation is its record (point 6) |
 
-- **It writes** the front matter — the change that carried it (a work item, a pull request, or a range of commits on the default branch, as DEC-001 point 6 says), the trigger, the day in UTC (as a revalidation's `at` is), who performed it and who confirmed an agent's outcomes — and a body giving each outcome with its justification and each gap with what resolved it, or "None found." Who performed it is git's user name unless `--by` names another person; an agent that performed it is `--by-agent <name>`, which needs `--confirmed-by`: an agent proposes, a person decides.
-- **Every word is the person's.** Each `--outcome` has its `--because`, and each gap is written as one pair with what resolved it, `--gap "<gap> => <resolution>"`, so no justification is left as the template's placeholder and no gap is matched with another's resolution. A text still holding a placeholder — words in angle brackets, as a command shown for you writes what you supply (`<the defect reference>`) — is refused, as the friction writers refuse one.
-- **It refuses**, writing nothing: a record with nothing to say; a regression or gap that names no gap; a `--gap` that is not `<gap> => <resolution>`; an outcome without its `--because`, or with two; an agent without the person who confirmed it; a placeholder left unfilled; no outcome, an outcome that is not one of the four, or two for one artefact; an artefact that is not in the analysis (withdrawn ones are fine); a subject already recorded that day; and, for now, a planned record, whose sources it does not take yet (below).
+- **It writes** the front matter — the change that carried it (a work item, a pull request, or a range of commits on the default branch, as DEC-001 point 6 says), the trigger, a planned record's sources (below), the day in UTC (as a revalidation's `at` is), who performed it and who confirmed an agent's outcomes. Who performed it is git's user name unless `--by` names another person; an agent that performed it is `--by-agent <name>`, which needs `--confirmed-by`: an agent proposes, a person decides.
+- **It writes every part of the body,** rendered from the record's structure with no hints: each outcome with its justification under *Outcomes*, and each gap under *Gaps*, or `None.`. A gap's line opens with the ids of the artefacts it affects as its bold label, then the gap, then its `**Resolution:**`, each ended with a full stop where you wrote none: `- **UC-007:** a read-only folder makes the export write nothing. **Resolution:** variant 2b written.`
+- **Every word is the person's.** Each `--outcome` has its `--because`, and each gap is written as one with the artefacts it affects and what resolved it, `--gap "<ids>: <gap> => <resolution>"`, the ids separated by commas. So no justification is left as a placeholder, and no gap is matched with another's resolution. A text still holding a placeholder — words in angle brackets, as a command shown for you writes what you supply (`<the defect reference>`) — is refused, as the friction writers refuse one.
+- **It refuses**, writing nothing:
+  - a record with nothing to say, or a regression or gap that names no gap
+  - a `--gap` that is not `<ids>: <gap> => <resolution>`
+  - gaps the form `gaps-match-outcomes` refuses: a gap naming an artefact the record gives no outcome, or a regression or a gap no gap names
+  - an outcome without its `--because`, or with two
+  - an agent without the person who confirmed it
+  - a placeholder left unfilled
+  - no outcome, an outcome that is not one of the four, or two for one artefact
+  - an artefact that is not in the analysis, though withdrawn ones are fine
+  - a subject already recorded that day
+  - a planned record without `--reviewed-against`, the flag on a record of any other trigger, and a source the record's schema refuses (below)
 
 **What a planned record reviewed: `reviewed-against`.** A planned record names where the design it reviewed stood, one source at a time (DEC-001 point 6). The record's schema requires the field when `trigger` is `planned`, and refuses it on a record of any other trigger. `pkit analysis validate` applies that schema, so it checks the field's form whatever the format rule's status.
 
@@ -443,7 +535,14 @@ reviewed-against:
 - **A source outside this repository** has an absolute `url`, which names no tracker. Its `version` is the time its text was read, or a commit's full id in another repository.
 - **A time** is a UTC timestamp, as a revalidation's `at` is. **A commit** is its full id, since an abbreviation can come to name two commits as the history grows. Quote both: YAML reads a time, or a commit id of digits alone, as something other than text.
 - **Not a pointer** (DEC-001 point 6): a pull request's head, since a rebase loses a head reviewed mid-way. Nor is any commit the default branch does not hold, since a squash leaves a branch's commits off it.
-- **The stamp does not take the sources yet,** so it refuses a planned record, naming the missing field.
+- **Where a named commit is checked.** Validation checks a source's form alone. `pkit analysis check-pointers` places each commit a source in this repository names on the default branch. It fails a change that adds a record naming one the default branch does not hold ("Commits off the default branch" above).
+- **The stamp takes each source with `--reviewed-against`,** once for each, and only on a planned record. A source in this repository is `"<title> @ <version>"`, and one outside it `"<title> @ <version> @ <link>"`. The last part is the link when it holds `://`, so a title may hold ` @ `. The stamp writes each as a mapping with `title`, `version` and, where given, `url`. It quotes a value YAML would read as something other than text, as it would a time. It refuses a source the record's schema refuses, saying how it read the value.
+
+  ```sh
+  pkit analysis new revalidation export-folder --change "#42" --trigger planned --outcome UC-007=gap-found --because "UC-007=The redesign lets the analyst choose the folder." --reviewed-against "#42's body @ 2026-01-05T10:00:00Z @ https://tracker.example/issues/42" --reviewed-against "the redesign note @ this change" --gap "UC-007: a read-only folder makes the export write nothing => variant 2b written"
+  ```
+
+- **A commit off the default branch is written with a warning.** The stamp places each commit a source in this repository names, as `check-pointers` places it. Where the default branch does not hold it, the stamp writes the record all the same, and warns that `check-pointers` will fail the change until the source names a commit the default branch holds, or `this change`. A branch's commit is the usual case: a squash merge leaves it off the default branch. Refusing would leave no way to write the record while the design's pull request is open. The stamp says nothing of a commit it cannot place, such as one beyond a shallow clone's history.
 
 The record never clears friction itself: commit it in the same change as the answers on the artefacts it covers. `pkit analysis validate` holds it to its schema and to the artefacts it cites. It finds the records as the files the core says the held folder holds (`pkit friction artefacts --json`): every Markdown file beneath `revalidations/`, sub-folders included — a record there was once skipped, and is checked now — from the files git sees, so a draft you keep git-ignored in the folder is not checked. If the core skips the folder — another declaration overlapping it, say — the check's summary says the folder holds nothing, and `pkit validate` says why. A record carries no friction block: it is not an artefact, and `pkit validate` refuses one written into it.
 
