@@ -19,9 +19,8 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-13T20:06:19Z
-      outcome: unchanged
-      unchanged-because: COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056 and ADR-057 now write their points as headings carrying the same numbers, word for word. No point's text, number or citation changed. The front-matter shapes this page describes read as before, so it holds.
+      at: 2026-10-15T15:55:30Z
+      outcome: updated
 ---
 
 # Schemas
@@ -580,7 +579,7 @@ Unknown keys are refused at every level, each with the nearest known key. The sh
 - **A fill** binds only where the rule it fills binds through the filling set, and only while both are accepted. Where the offering rule binds through several sets whose scopes select the artefact, the most specific of them decide the point: those that no other of them inherits. Where they bring different fills, a fill against none included, no fill binds, the answer names the conflict, and validation fails. Each brings the fill its chain holds, whatever the chain's pins, where that fill binds through the filling set. A rule that fills binds only as a fill, so one whose fill names no point an inherited rule offers binds nowhere.
 - **Two routes that pin one set at different majors** fail validation too, and the answer names that conflict.
 
-`pkit rule-sets reach` gives the answer at the working tree, or at a commit. `pkit rule-sets altered` gives it at the base and at the head for each artefact a change altered (the CLI README, "Rule-set commands"). The rule-set files are read at that state, through the tree discovery reads it by.
+`pkit rule-sets reach` gives the answer at the working tree, or at a commit. `pkit rule-sets altered` gives it at the base and at the head for each artefact a change altered, and for each it brought under a rule without altering it, with the rules the change brought it under (the CLI README, "Rule-set commands"). The rule-set files are read at that state, through the tree discovery reads it by.
 
 A tree without the rule-set schema — one recorded before it landed — skips the kind and says so (ADR-056 point 1).
 

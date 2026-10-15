@@ -45,9 +45,9 @@ consumers share:
     both who is required and whose approval survives a change.
   * reading the floors one way for every consumer (`reached_floors`):
     `touches-code` from the paths, `touches-ruled-artefact` from the
-    backbone's answer on which ruled artefacts the change altered (#1386),
-    read for every change while a contribution names it, and a floor this pm
-    does not know as reached by every change.
+    backbone's answer on which ruled artefacts the change altered (#1386) or
+    brought under a rule (#1560), read for every change while a contribution
+    names it, and a floor this pm does not know as reached by every change.
   * naming which required reviewers' whole remit is their diff floors, and
     those floors (`Resolution.floors_by_reviewer`, #1179) — what the verdict
     freshness rule (`_lib.verdict_freshness`) keys on.
@@ -409,12 +409,14 @@ IssueLabelsFn = Callable[[int], "list | None"]
 ChangedFilesFn = Callable[[int], "list[str] | _Unresolvable"]
 # Type of the injected ruled-artefacts reader, given the PR number. Returns
 # the locations of the artefacts the PR's change altered that an accepted rule
-# binds on at the base or at the head — the backbone's answer
+# binds on at the base or at the head, and of those it brought under an
+# accepted rule without altering them — the backbone's answer
 # (`_lib.ruled_artefacts`) — or an `_Unresolvable` naming why it could not be
 # read. Called for every PR while a contribution in force names
 # `touches-ruled-artefact` (DEC-032 D1): a change to the declared places alone
-# alters artefacts whose files it does not touch, so no changed path says the
-# question may be skipped.
+# alters artefacts whose files it does not touch, and a change to the rules or
+# a place's type alone brings such artefacts under a rule, so no changed path
+# says the question may be skipped.
 RuledArtefactsFn = Callable[[int], "tuple[str, ...] | _Unresolvable"]
 
 
@@ -491,7 +493,8 @@ def resolve_required_local_reviewers(
     reported as itself rather than as an opt-out naming nothing), then
     closing-issue resolution, then — only when a contribution names
     `touches-code` — changed-files resolution, then — only when one names
-    `touches-ruled-artefact` — the ruled artefacts the change altered. Any
+    `touches-ruled-artefact` — the ruled artefacts the change altered or brought
+    under a rule. Any
     failing yields a non-ok `Resolution`. A collection with no `touches-code`
     rule never fetches the diff, so it pays no extra `gh` round-trip and
     cannot fail on a diff it does not consult, and one with no
@@ -675,10 +678,12 @@ def reached_floors(
 
       * `touches-code`: the paths the not-code list leaves touch code
         (`satisfied_floors`).
-      * `touches-ruled-artefact`: `ruled_artefacts()` names an altered
-        artefact the floor counts. It is asked whatever the paths, since a
-        change to the declared places alone alters artefacts whose files it
-        does not touch. The not-code list does not narrow it.
+      * `touches-ruled-artefact`: `ruled_artefacts()` names an artefact the
+        floor counts, altered or brought under a rule. It is asked whatever
+        the paths, since a change to the declared places alone alters
+        artefacts whose files it does not touch, and a change to the rules or
+        a place's type alone brings such artefacts under a rule. The not-code
+        list does not narrow it.
       * a floor this pm does not know: every change reaches it.
 
     Returns `_RuledArtefactsUnresolvable`, with the reason, when

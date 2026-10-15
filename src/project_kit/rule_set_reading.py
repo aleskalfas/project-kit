@@ -17,7 +17,10 @@ walk routes or judge pins itself (ADR-057 point 1):
   `friction_check.pair_artefacts`), so an artefact is altered when it is
   added or removed, or its content differs. A move the pairing follows,
   keeping the content, alters nothing, and so does a change that only writes
-  a revalidation.
+  a revalidation. Each artefact also carries the rules the change brings it
+  under, which bind on it at the head and did not at the base, and an
+  artefact the change brings under a rule without altering it is listed
+  apart (COR-057 point 2).
 
 Each artefact carries its span and each rule its text, read at that state,
 so a reader whose checkout is elsewhere has what it needs. Each part of a rule
@@ -227,11 +230,16 @@ def altered_document(
       working tree changes beyond it, or the commit named with none;
       `working_tree` says which.
     - `artefacts`: each artefact the change altered, in the head's walk order, then
-      those it removed in the base's: `{change, base, head}`, `change` being
-      `added`, `removed` or `changed`, and `base` and `head` the artefact at that
-      state with the walk's answer there (`artefact_entry`) — `null` where that
-      state does not hold it. An artefact with no binding rule at either state is
-      listed too, with no rules.
+      those it removed in the base's: `{change, base, head, brought_under}`,
+      `change` being `added`, `removed` or `changed`, and `base` and `head` the
+      artefact at that state with the walk's answer there (`artefact_entry`) —
+      `null` where that state does not hold it. An artefact with no binding rule at
+      either state is listed too, with no rules. `brought_under` lists the rules
+      the change brings it under (`brought_under`).
+    - `brought_unaltered`: each artefact the change brought under a rule without
+      altering it, in the head's walk order, in the same form, `change` being
+      `unaltered`: a scope widened, a rule accepted, a pin updated or a place typed,
+      or a move the pairing follows into a set's paths.
 
     Raises `FrictionCheckError` when the base cannot be compared, as the change check does.
     """
@@ -247,6 +255,34 @@ def altered_document(
     head_presence = rs.CheckPresence(target_root, None if named is None else head_tree)
     pairing = fc.pair_artefacts(base_discovery, head_discovery, diff)
     head = fc.HeadState(fc.head_commit(target_root), diff.uncommitted) if named is None else named
+
+    def brought(before: fd.Artefact | None, after: fd.Artefact | None) -> list[str]:
+        return brought_under(
+            None if before is None else base_reach.of(before.location),
+            None if after is None else head_reach.of(after.location),
+        )
+
+    def entry(
+        change: str, before: fd.Artefact | None, after: fd.Artefact | None, rules: list[str]
+    ) -> dict[str, Any]:
+        return {
+            "change": change,
+            "base": None
+            if before is None
+            else artefact_entry(before, base_reach.of(before.location), base_presence),
+            "head": None
+            if after is None
+            else artefact_entry(after, head_reach.of(after.location), head_presence),
+            "brought_under": rules,
+        }
+
+    # Most unaltered artefacts are brought under nothing, so only those that are get an
+    # entry, with the rule texts it carries.
+    unaltered = [
+        (before, after, rules)
+        for before, after in pairing.unaltered
+        if (rules := brought(before, after))
+    ]
     return {
         "schema_version": ALTERED_SCHEMA_VERSION,
         "base": {
@@ -261,22 +297,41 @@ def altered_document(
             "working_tree": named is None,
         },
         "artefacts": [
-            {
-                "change": alteration.kind,
-                "base": None
-                if alteration.before is None
-                else artefact_entry(
-                    alteration.before, base_reach.of(alteration.before.location), base_presence
-                ),
-                "head": None
-                if alteration.after is None
-                else artefact_entry(
-                    alteration.after, head_reach.of(alteration.after.location), head_presence
-                ),
-            }
+            entry(
+                alteration.kind,
+                alteration.before,
+                alteration.after,
+                brought(alteration.before, alteration.after),
+            )
             for alteration in pairing.altered
         ],
+        "brought_unaltered": [
+            entry(UNALTERED, before, after, rules) for before, after, rules in unaltered
+        ],
     }
+
+
+#: How `altered_document` lists an artefact the change brought under a rule without
+#: altering it, beside `added`, `removed` and `changed`.
+UNALTERED = "unaltered"
+
+
+def brought_under(base: rs.ArtefactReach | None, head: rs.ArtefactReach | None) -> list[str]:
+    """The rules a change brings one artefact under (COR-057 point 2): each accepted rule
+    that binds on it at the head and did not bind on it at the base, as cited, in the
+    head's order. `base` is the walk's answer for the artefact at the base, `None` where
+    the base does not hold it, so an added artefact is brought under every rule that
+    binds on it. `head` is `None` for a removed artefact, brought under none. A rule a pin
+    behind its set held back at the base bound nothing there, so a pin updated to reach
+    it brings the artefact under it."""
+    if head is None:
+        return []
+    before: set[str] = set() if base is None else {_cited(b) for b in base.bindings}
+    return [cited for cited in dict.fromkeys(map(_cited, head.bindings)) if cited not in before]
+
+
+def _cited(binding: rs.Binding) -> str:
+    return binding.rule_set.cite(binding.rule.id)
 
 
 # --- rendering ---------------------------------------------------------------------------
@@ -327,26 +382,46 @@ def render_altered_human(document: Mapping[str, Any]) -> str:
             )
         )
     artefacts = document["artefacts"]
+    brought = document["brought_unaltered"]
     if not artefacts:
         lines.append("  the change altered no artefact")
     for entry in artefacts:
-        shown = entry["head"] if entry["head"] is not None else entry["base"]
-        lines.append(f"  {entry['change']:<8} {shown['location']}")
-        for side in ("base", "head"):
-            if entry[side] is None:
-                continue
-            if not entry[side]["rules"] and not entry[side]["conflicts"]:
-                lines.append(f"    at the {side}: no rule binds")
-            else:
-                lines.append(f"    at the {side}:")
-            lines.extend(_answer_lines(entry[side], "      "))
+        lines.extend(_altered_lines(entry))
+    if brought:
+        lines.extend(["", "  Brought under a rule, unaltered:"])
+    for entry in brought:
+        lines.extend(_altered_lines(entry))
     ruled = sum(
         1
         for entry in artefacts
         if any(entry[side] is not None and entry[side]["rules"] for side in ("base", "head"))
     )
-    lines.extend(["", f"{len(artefacts)} artefact(s) altered, {ruled} with a binding rule."])
+    lines.extend(
+        [
+            "",
+            f"{len(artefacts)} artefact(s) altered, {ruled} with a binding rule; "
+            f"{len(brought)} brought under a rule unaltered.",
+        ]
+    )
     return "\n".join(lines) + "\n"
+
+
+def _altered_lines(entry: Mapping[str, Any]) -> list[str]:
+    """One artefact of the change: how it was altered, the rules that bind on it at the
+    base and at the head, and the rules the change brings it under."""
+    shown = entry["head"] if entry["head"] is not None else entry["base"]
+    lines = [f"  {entry['change']:<9} {shown['location']}"]
+    for side in ("base", "head"):
+        if entry[side] is None:
+            continue
+        if not entry[side]["rules"] and not entry[side]["conflicts"]:
+            lines.append(f"    at the {side}: no rule binds")
+        else:
+            lines.append(f"    at the {side}:")
+        lines.extend(_answer_lines(entry[side], "      "))
+    if entry["brought_under"]:
+        lines.append(f"    brought under: {', '.join(entry['brought_under'])}")
+    return lines
 
 
 def _answer_lines(artefact: Mapping[str, Any], indent: str) -> list[str]:

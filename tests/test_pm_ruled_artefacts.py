@@ -254,7 +254,7 @@ def _side(location: str, *, rules: list | None = None, held: list | None = None)
 
 
 def test_the_command_runs_unrouted_with_both_commits_named(ra: ModuleType) -> None:
-    document = {"schema_version": 1, "artefacts": []}
+    document = {"schema_version": 1, "artefacts": [], "brought_unaltered": []}
     seen, run = _answering(0, json.dumps(document))
     assert ra.ruled_altered(BASE, HEAD, run=run) == ra.RuledAlteration()
     assert seen[-1] == ["pkit", "rule-sets", "altered", "--json", "--base", BASE, "--head", HEAD]
@@ -285,6 +285,7 @@ def test_a_backbone_without_the_command_names_the_backbone_needed(ra: ModuleType
                 {
                     "schema_version": 1,
                     "artefacts": [{"change": "added", "base": None, "head": None}],
+                    "brought_unaltered": [],
                 }
             ),
             "without a readable location",
@@ -295,6 +296,7 @@ def test_a_backbone_without_the_command_names_the_backbone_needed(ra: ModuleType
                 {
                     "schema_version": 1,
                     "artefacts": [{"change": "added", "base": None, "head": {"location": A}}],
+                    "brought_unaltered": [],
                 }
             ),
             "without a readable location",
@@ -307,9 +309,39 @@ def test_a_backbone_without_the_command_names_the_backbone_needed(ra: ModuleType
                     "artefacts": [
                         {"change": "moved", "base": None, "head": _side(A, rules=[])},
                     ],
+                    "brought_unaltered": [],
                 }
             ),
             "altered as 'moved', which this does not read",
+        ),
+        (
+            0,
+            json.dumps({"schema_version": 1, "artefacts": [], "brought_unaltered": {}}),
+            "`brought_unaltered` is not a list",
+        ),
+        (
+            0,
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "artefacts": [],
+                    "brought_unaltered": [
+                        {"change": "added", "base": None, "head": _side(A, rules=[{}])},
+                    ],
+                }
+            ),
+            "altered as 'added', which this does not read",
+        ),
+        (
+            0,
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "artefacts": [],
+                    "brought_unaltered": [{"change": "unaltered", "base": {}, "head": None}],
+                }
+            ),
+            "without a readable location",
         ),
     ],
 )
@@ -331,11 +363,44 @@ def test_an_artefact_whose_rules_are_all_held_back_is_not_ruled(ra: ModuleType) 
             {"change": "changed", "base": _side(A, held=held), "head": _side(A, held=held)},
             {"change": "added", "base": None, "head": _side(B, rules=[{"rule": "RS-DOC-001"}])},
         ],
+        "brought_unaltered": [],
     }
     _seen, run = _answering(0, json.dumps(document))
     found = ra.ruled_altered(BASE, HEAD, run=run)
     assert found.ok, found.error
     assert found.altered == (A, B) and found.locations == (B,)
+
+
+def test_an_answer_that_lists_nothing_brought_names_the_backbone_needed(ra: ModuleType) -> None:
+    """A backbone older than the one that lists what a change brings under a rule
+    answers without `brought_unaltered`. The floor counts those artefacts, so the
+    answer cannot be read, never read as bringing nothing (DEC-032 D1)."""
+    _seen, run = _answering(0, json.dumps({"schema_version": 1, "artefacts": []}))
+    found = ra.ruled_altered(BASE, HEAD, run=run)
+    assert not found.ok and found.locations == ()
+    assert "does not list the artefacts the change brings under a rule" in found.error
+    assert "project-management's `requires_backbone`" in found.error
+    assert "upgrade pkit" in found.error
+
+
+def test_an_artefact_brought_under_a_rule_unaltered_is_counted_apart(ra: ModuleType) -> None:
+    """An artefact the change brings under a rule without altering it is counted
+    by the floor, and is no altered artefact (DEC-032 D1)."""
+    ruled = [{"rule": "RS-DOC-001"}]
+    document = {
+        "schema_version": 1,
+        "artefacts": [{"change": "changed", "base": _side(B), "head": _side(B)}],
+        "brought_unaltered": [
+            {"change": "unaltered", "base": _side(A), "head": _side(A, rules=ruled)},
+        ],
+    }
+    _seen, run = _answering(0, json.dumps(document))
+    found = ra.ruled_altered(BASE, HEAD, run=run)
+    assert found.ok, found.error
+    assert found.altered == (B,) and found.locations == (A,)
+    assert found.artefacts[-1] == ra.AlteredArtefact(
+        location=A, change="unaltered", paths=(A,), ruled=True
+    )
 
 
 def test_pkit_missing_from_path_fails(ra: ModuleType) -> None:
@@ -558,6 +623,156 @@ def test_a_place_the_base_brings_in_keeps_the_approval(pm: tuple, repo: AdopterR
     assert review.resolution.ok, review.resolution.error
     assert review.resolution.required_local == ("pm-reviewer", RULES)
     rule = review.freshness_rule({"headRefOid": head, "baseRefOid": tip, "commits": []})
+    assessed = rule.assess(_approval(av, reviewed))
+    assert assessed.fresh, assessed.reason
+    assert assessed.reason.endswith("reaches none of its floors (touches-ruled-artefact)")
+
+
+# --- what a change brings under a rule counts for the floor (#1560) --------------------------
+#
+# The maintainer's answer of 13 October (question 18 on #1386): widening a set's
+# scope, accepting a rule, raising a pin and retyping a place each bring pages
+# under a rule. None edits the page, and the floor counts it (DEC-032 D1).
+
+
+def _set_text(name: str, scope: Any, entries: dict, **front: Any) -> str:
+    return rule_set_text(
+        {"rule-set": name, "version": "1.0.0", "scope": scope, "rules": entries, **front}
+    )
+
+
+NOTE_SET = f"{SETS}/note.md"
+CMN_SET = f"{SETS}/cmn.md"
+NOTES_SCOPE = {"paths": [f"{NOTES}/**"]}
+TYPED_NOTES: Any = {"path": NOTES, "type": "note"}
+
+#: Each way of bringing the note under a rule: the files the base adds, the files
+#: the change writes, and the rule it brings the note under.
+BRINGING: dict[str, tuple[dict[str, str], dict[str, str], str]] = {
+    "a wider scope": (
+        {},
+        {
+            f"{SETS}/doc.md": _set_text(
+                "DOC", {"paths": [f"{GUIDES}/**", f"{NOTES}/**"]}, rules("RS-DOC-001")
+            )
+        },
+        "RS-DOC-001",
+    ),
+    "an accepted rule": (
+        {NOTE_SET: _set_text("NOTE", NOTES_SCOPE, rules("RS-NOTE-001", status="proposed"))},
+        {NOTE_SET: _set_text("NOTE", NOTES_SCOPE, rules("RS-NOTE-001"))},
+        "RS-NOTE-001",
+    ),
+    "a raised pin": (
+        {
+            CMN_SET: rule_set_text(
+                {"rule-set": "CMN", "version": "2.0.0", "rules": rules("RS-CMN-001")}
+            ),
+            NOTE_SET: _set_text(
+                "NOTE", NOTES_SCOPE, rules("RS-NOTE-001", status="proposed"), inherits=["CMN@1"]
+            ),
+        },
+        {
+            NOTE_SET: _set_text(
+                "NOTE", NOTES_SCOPE, rules("RS-NOTE-001", status="proposed"), inherits=["CMN@2"]
+            )
+        },
+        "RS-CMN-001",
+    ),
+    "a retyped place": (
+        {NOTE_SET: _set_text("NOTE", {"types": ["note"]}, rules("RS-NOTE-001"))},
+        {CONFIG: friction_config(places=(GUIDES, TYPED_NOTES))},
+        "RS-NOTE-001",
+    ),
+}
+
+
+def _bring(repo: AdopterRepo, case: str) -> tuple[str, str]:
+    """The base on `main`, with the note under no rule; then branch `feature`, and
+    a commit that brings the note under one without touching it. Returns the base
+    and the head."""
+    at_base, change, _rule = BRINGING[case]
+    repo.write(at_base)
+    base = _start(repo)
+    head = repo.commit(f"bring the note under a rule by {case}", change)
+    return base, head
+
+
+@pytest.mark.parametrize("case", sorted(BRINGING))
+def test_a_change_that_brings_a_page_under_a_rule_lists_it_unaltered(
+    ra: ModuleType, repo: AdopterRepo, case: str
+) -> None:
+    """The note is no altered artefact, and the floor counts it. A rule the change
+    accepts is an entry whose status it alters, ruled by nothing here."""
+    base, head = _bring(repo, case)
+    found = ra.ruled_altered(base, head)
+    assert found.ok, found.error
+    assert N not in found.altered and found.locations == (N,)
+    assert found.artefacts[-1] == ra.AlteredArtefact(
+        location=N, change="unaltered", paths=(N,), ruled=True
+    )
+
+
+@pytest.mark.parametrize("case", sorted(BRINGING))
+def test_the_gate_requires_the_reviewer_for_a_page_a_change_brings_under_a_rule(
+    pm: tuple, repo: AdopterRepo, case: str
+) -> None:
+    """Each of the four changes only a rule set or the configuration, and requires the
+    reviewer of the rules for the note it brings under a rule (DEC-032 D1)."""
+    base, head = _bring(repo, case)
+    review = _resolve(pm, repo, list(BRINGING[case][1]), base, head)
+    assert review.resolution.ok, review.resolution.error
+    assert review.resolution.required_local == ("pm-reviewer", RULES)
+
+
+def test_a_change_that_takes_pages_out_from_under_a_rule_requires_no_reviewer(
+    pm: tuple, repo: AdopterRepo
+) -> None:
+    """Narrowing DOC's scope off the guides alters nothing and brings nothing under a
+    rule, so the floor does not fire (DEC-032 D1)."""
+    base = _start(repo)
+    narrowed = _set_text("DOC", {"paths": [f"{GUIDES}/none/**"]}, rules("RS-DOC-001"))
+    head = repo.commit("narrow DOC", {f"{SETS}/doc.md": narrowed})
+    review = _resolve(pm, repo, [f"{SETS}/doc.md"], base, head)
+    assert review.resolution.ok, review.resolution.error
+    assert review.resolution.required_local == ("pm-reviewer",)
+
+
+def test_a_push_that_brings_a_page_under_a_rule_stales_the_approval(
+    pm: tuple, repo: AdopterRepo
+) -> None:
+    """Approved on a guide edit; the author then widens DOC's scope over the notes. The
+    note it brings under the rule was never judged, so the approval goes stale, and the
+    reason names it (DEC-028)."""
+    base = _start(repo)
+    reviewed = repo.commit("change b", {B: page("B", "A new body.")})
+    widened = _set_text("DOC", {"paths": [f"{GUIDES}/**", f"{NOTES}/**"]}, rules("RS-DOC-001"))
+    head = repo.commit("widen DOC", {f"{SETS}/doc.md": widened})
+    _pr_review, _rc, _ad, av = pm
+    review = _resolve(pm, repo, [B, f"{SETS}/doc.md"], base, head)
+    assert review.resolution.ok, review.resolution.error
+    rule = review.freshness_rule({"headRefOid": head, "baseRefOid": base, "commits": []})
+    assessed = rule.assess(_approval(av, reviewed))
+    assert not assessed.fresh
+    assert f"ruled artefacts altered or brought under a rule: {N}" in assessed.reason
+    assert assessed.reason.endswith("reaches its touches-ruled-artefact floor")
+
+
+def test_a_push_that_only_takes_pages_out_from_under_a_rule_keeps_the_approval(
+    pm: tuple, repo: AdopterRepo
+) -> None:
+    """Approved on a guide edit; the author then narrows DOC's scope off the guides.
+    The push alters no document and brings none under a rule, so the approval stands
+    (DEC-028)."""
+    base = _start(repo)
+    reviewed = repo.commit("change b", {B: page("B", "A new body.")})
+    narrowed = _set_text("DOC", {"paths": [f"{GUIDES}/none/**"]}, rules("RS-DOC-001"))
+    head = repo.commit("narrow DOC", {f"{SETS}/doc.md": narrowed})
+    _pr_review, _rc, _ad, av = pm
+    review = _resolve(pm, repo, [B, f"{SETS}/doc.md"], base, head)
+    assert review.resolution.ok, review.resolution.error
+    assert review.resolution.required_local == ("pm-reviewer", RULES)
+    rule = review.freshness_rule({"headRefOid": head, "baseRefOid": base, "commits": []})
     assessed = rule.assess(_approval(av, reviewed))
     assert assessed.fresh, assessed.reason
     assert assessed.reason.endswith("reaches none of its floors (touches-ruled-artefact)")

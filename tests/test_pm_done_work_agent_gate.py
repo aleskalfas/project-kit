@@ -1492,6 +1492,9 @@ def test_unreadable_ruled_artefacts_refuse_with_the_reason(dw) -> None:
     )
     result = dw._resolution_refusal(resolution)
     assert result.passed is False
-    assert "which ruled artefacts the PR alters cannot be read" in result.refusal_message
+    assert (
+        "which ruled artefacts the PR alters or brings under a rule cannot be read"
+        in result.refusal_message
+    )
     assert "has no `pkit rule-sets altered` command" in result.refusal_message
     assert 'done-work --bypass "<reason>"' in result.refusal_message
