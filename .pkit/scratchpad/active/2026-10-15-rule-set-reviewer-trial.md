@@ -275,7 +275,7 @@ The rules the blocks cite, in their words:
 | B15 | #1571 | RS-LDOC-002 | What upgrade does with each capability, CLI line 321 and lifecycle lines 179, 779 and 878. | Breaks, as B6. | |
 | B16 | #1571 | RS-LDOC-002 | The list of seed paths, three times in the CLI README and on the lifecycle and decisions pages. | Breaks, as B6. | |
 | B17 | #1571 | RS-LDOC-002 | `pkit agents reconcile --write` repairs the overlay, on the agents, CLI (twice) and lifecycle pages. | Breaks, as B6. | |
-| B18 | #1571 | RS-LDOC-001 | The decisions README's lines 36 and 84 to 92 on what sync writes, its guard and `.gitkeep`. | Breaks. Line 36's `.gitkeep` and line 87's list of derived state rest on code no anchor reaches. No record the page anchors or cites says them. The rest rests on COR-059, which the page cites but does not anchor, and on COR-001, which grounds part. That half is a reading, which the reviewer left to a person in #1545 and #1574. | |
+| B18 | #1571 | RS-LDOC-001 | The decisions README's lines 36 and 84 to 92 on what sync writes, its guard and `.gitkeep`. | Breaks. Line 36's `.gitkeep` and line 87's list of derived state rest on code no anchor reaches. No record the page anchors or cites says them. The rest rests on COR-059, which the page cites but does not anchor, and on COR-001, which grounds part. That half is a reading, which the reviewer left to a person in #1545 and #1569. | |
 | B19 | #1571 | RS-LDOC-001 | The lifecycle README's "Seed paths" paragraph, line 787. | Breaks for the `reconcile --write` sentence, whose code no anchor reaches. The list of seed paths is reached through `upgrade.py`, an anchor that calls the seeding. That half is a reading, which the reviewer left to a person in #1574. | |
 | B20 | #1574 | RS-LDOC-002 | The transition's order and steps, CLI lines 316 to 335 and lifecycle lines 771 to 788. | Breaks. The CLI copy names the lifecycle README as its source, then states the order again, and the two copies already differ. | |
 | B21 | #1574 | RS-LDOC-002 | A new collision, CLI lines 336 and 417 and lifecycle lines 796 to 809. | Breaks, as B6, and twice within the CLI README. | |
@@ -309,7 +309,7 @@ These observations hold whatever the maintainer answers. They do not judge the t
 COR-057's Rationale names one cost of trying the reviewer by hand: the evidence comes from the rules it was tried on. "What the rules reached" says which those were. The cases a change can hold are a second limit, and these ten held none of the following.
 
 - **A rule the change moves.** No change moved one. #1554 was picked for that case, and it edits rule-set files only in their containers and prose.
-- **An added or a removed artefact.** Every artefact in the ten answers was `changed`, so none was judged under the base's rules.
+- **An added or a removed artefact.** Every artefact in the ten answers was `changed`. So none was judged as added, and none under the base's rules.
 - **A held rule, a fill, or a conflict** in the answer.
 - **The analysis in depth:** two changes, with one added name, eight new `id` fields and raised headings, and six term switches.
 
@@ -320,5 +320,5 @@ COR-057's Rationale names one cost of trying the reviewer by hand: the evidence 
   - If it is met, this note retires into #1420.
   - If it is not, this note names what the reviewer judged wrong. A follow-up revises the reviewer and runs a second trial, and #1420 waits for it.
 - **Whether RS-LDOC-002 reaches within a page** is for living-docs, which owns the rule, to say in it. Until it does, the reviewer may split on it at a gate too, whatever the maintainer answers on B4.
-- **Whether a decision a page cites but does not anchor grounds a statement** is for living-docs to say in RS-LDOC-001, for the same reason.
+- **Whether a source a page cites or reaches, but does not anchor, grounds a statement** is for living-docs to say in RS-LDOC-001 too.
 - **The full reviews** were left in the trial's agent workspace, which is never committed. This note is the record that remains of them.
