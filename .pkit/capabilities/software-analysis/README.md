@@ -13,13 +13,13 @@ pkit:
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053]
       artefact: [RS-SAN-001]
     revalidated:
-      at: 2026-10-15T11:46:44Z
+      at: 2026-10-15T12:20:35Z
       outcome: updated
       deferred:
         - anchor:
             kind: record
             value: software-analysis:DEC-001
-          reason: "DEC-001 refines ahead of the code. The capability now declares each kind's structure and a planned record's reviewed-against, and this page describes both. Its check holds each body and front matter to its structure's parts and forms, and this page describes that too. It also checks where the commits a planned record names sit, and this page describes that check. Its stamp renders each body from the structure, as each template's body is rendered, and writes a planned record's sources, and this page describes both. It does not yet take a project's additions to a structure, keep steps append-only, or write the new anchors. Among those anchors is a journey's list of the use cases it relies on, which its schema does not take yet, so a journey with a hand-over from outside it cannot pass the check, once the format rule binds, until it does. So this page describes the check, the stamp and the anchors it ships: a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #1547 that apply the rest: #1367 takes a project's additions, #1375 keeps steps append-only, and #1507 writes the new anchors."
+          reason: "DEC-001 refines ahead of the code. The capability now declares each kind's structure and a planned record's reviewed-against, and this page describes both. Its check holds each body and front matter to its structure's parts and forms, and this page describes that too. It also checks where the commits a planned record names sit, and this page describes that check. Its stamp renders each body from the structure, as each template's body is rendered, and writes a planned record's sources, and this page describes both. The stamp does not yet write a front-matter field's hint as its placeholder. It does not yet take a project's additions to a structure, keep steps append-only, or write the new anchors. Among those anchors is a journey's list of the use cases it relies on, which its schema does not take yet, so a journey with a hand-over from outside it cannot pass the check, once the format rule binds, until it does. So this page describes the check, the stamp and the anchors it ships: a use case anchored to its actor, and a journey to its steps' use cases. It changes, and is revalidated against the record, with the Tasks under EPIC #1547 that apply the rest. #1593 writes each field's hint as its placeholder, #1367 takes a project's additions, #1375 keeps steps append-only, and #1507 writes the new anchors."
 ---
 
 # software-analysis capability
@@ -260,12 +260,13 @@ Each kind's template in `templates/` is its structure rendered, so it shows exac
 
 - **The front matter** is written by hand, and a test holds it to the kind's schema.
 - **The body** is rendered from the declaration, and a test holds the committed template equal to the rendering. The stamp renders each body the same way, and never copies a template's lines.
-- **A hint is the placeholder.** Where you write a part, the stamp leaves its hint in its place: one line, a comment marked `pkit:hint`, with the part's example after it.
+- **A part's hint is its placeholder.** Where you write a part, the stamp leaves its hint in its place: one line, a comment marked `pkit:hint`, with the part's example after it.
 
   ```markdown
   **Goal:** <!-- pkit:hint What the actor wants from this use case, in one sentence in their own voice. Start with the verb, or with *Never* and the verb, with *I* and *my* where they refer to themselves. Example: Export my report as a file. -->
   ```
 
+- **A front-matter field's placeholder is not yet its hint.** The stamp writes an actor's `needs` and a term's `definition` as the template's `<…>` text. The structure declares each field's hint, and [#1593](https://github.com/aleskalfas/project-kit/issues/1593) makes the stamp write it.
 - **A hint left in** is refused by the placeholder check whatever the format rule's status, and the message repeats the hint. The mark is matched outside code spans and fenced code, so a body may quote it.
 - **A hint is advice.** What binds is a part's presence, its order and its form. A hint names no style.
 - **A collection file's head,** the glossary's heading and its opening, is written once, when the stamp creates the file. The opening's first sentence says what the file holds. After that it is yours to reword.
