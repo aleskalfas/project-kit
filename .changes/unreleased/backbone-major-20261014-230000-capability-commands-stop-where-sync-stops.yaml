@@ -1,0 +1,25 @@
+component: backbone
+kind: major
+custom:
+  category: Changed
+  pr: "1580"
+body: >
+  `pkit capabilities install` and `pkit capabilities upgrade` now stop wherever
+  `pkit sync` stops. Each copies the capability the running pkit
+  ships, so each stops, before it reads or writes anything, when the running
+  pkit is not the release the project records, when the last upgrade is
+  incomplete, when the manifest is missing or its version is no version, or
+  when the pin is newer than the running pkit. Each stops under `--dry-run`
+  too, and `install` under `--plan` too. Nothing overrides the stop, `--force`
+  included, and its message names sync's remedies for the state it finds, with
+  the command as you would run it again. A project upgraded before this release
+  has no recorded completion, so both stop and name `pkit upgrade` until its
+  first upgrade under this release. With a pkit newer than the project, pin the
+  project or upgrade it before you install or upgrade a capability. A project
+  that pins no version, run by a pkit that moves to each new release, meets the
+  stop at every release until it pins. `pkit capabilities register` copies
+  nothing and runs as before. **`pkit capabilities upgrade` refuses a capability
+  the running pkit ships older than the project records,** where it used to copy
+  it and record the older version. Nothing overrides the refusal. Its message
+  names both versions, and `pkit upgrade` run by a pkit that ships the recorded
+  version or newer.

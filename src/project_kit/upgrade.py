@@ -459,14 +459,28 @@ def component_moves(
                 moves.append(ComponentMove("adapter", entry.name, recorded, package[0]))
         elif entry.kind == "capability" and entry.origin == ORIGIN_KIT_SHIPPED:
             source = caps.find_capability_in_source(source_kit, entry.name)
-            if source is None or as_recorded_version(source.package.version) is None:
+            if source is None:
                 continue
             recorded = caps.read_capability_record(target_root, entry.name).version
-            if not _same_version(recorded, source.package.version):
-                moves.append(
-                    ComponentMove("capability", entry.name, recorded, source.package.version)
-                )
+            move = capability_move(entry.name, recorded, source.package.version)
+            if move is not None:
+                moves.append(move)
     return moves
+
+
+def capability_move(name: str, recorded: str | None, bundled: str) -> ComponentMove | None:
+    """Capability *name*'s move from *recorded* to *bundled*, the version the
+    running pkit's bundle ships, or None when it records that version already, or
+    the bundled version is no version, which moves nothing (ADR-065 point 2).
+
+    The transition of the backbone reads it for each shipped capability
+    (`component_moves`), and the transition of one capability for its own
+    (`pkit capabilities upgrade`). A move *ahead* of the bundle is refused by
+    either (`refuse_components_bundled_older`). Read-only.
+    """
+    if as_recorded_version(bundled) is None or _same_version(recorded, bundled):
+        return None
+    return ComponentMove("capability", name, recorded, bundled)
 
 
 def _same_version(recorded: str | None, bundled: str) -> bool:
@@ -590,22 +604,33 @@ def _report_component_moves(moves: Sequence[ComponentMove]) -> None:
     click.echo()
 
 
-def refuse_components_bundled_older(moves: Sequence[ComponentMove]) -> None:
+def refuse_components_bundled_older(
+    moves: Sequence[ComponentMove], *, command: str | None = None
+) -> None:
     """Refuse a transition whose bundle ships an adapter or a capability older than
     the project records (ADR-065 point 7).
 
     Copying it would move its recorded version down, under migrations that run
     forward only (COR-010). Skipping it would leave the project at two releases
     (COR-059 point 7). So the transition refuses in its step 1, before it writes
-    anything. No flag overrides it, `pkit upgrade --force` included. The message
-    names each component, both versions, and a pkit whose bundle ships that
-    version or newer.
+    anything. No flag overrides it, `--force` included. The message names each
+    component, both versions, and a pkit whose bundle ships that version or
+    newer.
+
+    *command* is None for the transition of the backbone, `pkit upgrade`. For
+    the transition of one capability it is that command as the operator runs
+    it, `capabilities upgrade <name>`, as sync's guard takes it. That transition
+    runs only where this pkit is the release the project records (sync's guard,
+    point 7), so its remedy is `pkit upgrade`, run by a pkit whose bundle ships
+    the capability at the recorded version or newer.
     """
     ahead = [move for move in moves if move.ahead]
     if not ahead:
         return
+    backbone = command is None
+    opening = "refusing to upgrade" if backbone else f"refusing to run `pkit {command}`"
     lines = [
-        f"refusing to upgrade: this pkit's bundle ships {move.kind} {move.name!r} at "
+        f"{opening}: this pkit's bundle ships {move.kind} {move.name!r} at "
         f"{move.bundled}, older than the {move.recorded} this project records."
         for move in ahead
     ]
@@ -613,11 +638,20 @@ def refuse_components_bundled_older(moves: Sequence[ComponentMove]) -> None:
         "A transition never moves a recorded version down: migrations run forward only "
         "(COR-010, ADR-065 point 7). Nothing was written, and no flag overrides this refusal."
     )
-    lines.extend(
-        f"Run the upgrade with a pkit whose bundle ships {move.kind} {move.name!r} at "
-        f"{move.recorded} or newer."
-        for move in ahead
-    )
+    if backbone:
+        lines.extend(
+            f"Run the upgrade with a pkit whose bundle ships {move.kind} {move.name!r} at "
+            f"{move.recorded} or newer."
+            for move in ahead
+        )
+    else:
+        lines.extend(
+            f"Run `pkit upgrade` with a pkit whose bundle ships {move.kind} {move.name!r} at "
+            f"{move.recorded} or newer: it moves the project to that pkit's release. "
+            f"`pkit {command}` moves a capability only to the version the project's "
+            "release ships."
+            for move in ahead
+        )
     raise click.ClickException("\n       ".join(lines))
 
 
