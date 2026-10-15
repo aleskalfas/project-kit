@@ -88,7 +88,7 @@ An actor or term that no code and no decision embodies — a sponsor, an outside
 
 1. **Fill the body** — every `<…>` placeholder, and an actor's `needs` or a term's `definition`.
 2. **Check it** — `pkit analysis validate`, the capability's check (it runs inside `pkit validate` too), then `pkit friction check`, the core's change check: an artefact new in a change counts as revalidated, and an anchor that resolves to nothing fails.
-   - **Its structure.** Once the format rule, `RS-SAN-001`, is accepted, the check holds the body to its kind's structure: each part present, in order, not empty, and a goal or a need one sentence. While the rule is proposed it reports nothing of that, so run `pkit analysis validate --preview` as well. It lists what would break once the rule binds, each with the part's hint and example, and never fails.
+   - **Its structure.** Once the format rule, `RS-SAN-001`, is accepted, the check holds the body to its kind's structure: each part present, in order, not empty, and of its form. A goal or a need is one sentence, steps are numbered, variants lettered after a step, a journey's step lines match its `steps`, a record's outcomes and gaps match its `outcomes`, and a term's definition is a phrase. While the rule is proposed it reports nothing of that, so run `pkit analysis validate --preview` as well. It lists what would break once the rule binds, each with the part's hint and example, and never fails.
 3. **Before merging a use case or journey** — `pkit analysis check-numbers`: a number the default branch gave another file since your branch left it is renumbered, and the stamp gives the next free one.
 4. **Commit** per COR-008, one artefact or one revalidation per commit where you can.
 
