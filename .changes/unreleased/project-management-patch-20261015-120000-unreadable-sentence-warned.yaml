@@ -1,0 +1,17 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A sentence the author wrote in a form the commands cannot read is reported
+  as unreadable, not passed over in silence (#1523). Under a pull request's
+  `## What changed in each updated document`, the commands read a sentence
+  only from a top-level list item that names its document in a code span,
+  ``- `path`: sentence``. An item in another form, such as the document in
+  bold, gave no sentence without a word. `edit-pr` said "validation: clean",
+  and `land-work` told the person who authorises the merge that the author
+  had not said what changed. `open-pr`, `edit-pr` and `land-work` now warn of
+  each such item, naming its line in the description as the command leaves
+  it, and the form a sentence takes. In `edit-pr` the warning is a `warning`
+  finding of its validation, which still writes the edit. Nothing inside an
+  HTML comment is read as a sentence any more, since it does not render.

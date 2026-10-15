@@ -30,7 +30,10 @@ list carried gives the sentence on what changed in it as the edited body's
 there is none; the check's words are carried unchanged. A sentence that
 reads as a closing reference or holds an HTML comment's delimiter is not
 copied: the list keeps the sentences it had, with a warning, and land-work
-refuses until it is reworded.
+refuses until it is reworded. Each item under that heading the commands
+cannot read — the document in bold, say, or with no code span — is a
+`warning` finding of the validation, naming its line and the form a
+sentence takes.
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/edit-pr.py 99 --append "Additional notes..."
@@ -73,6 +76,7 @@ from _lib.membership import (
 )
 
 SEVERITY_HARD_REJECT = "hard-reject"
+SEVERITY_WARNING = "warning"
 CLOSING_KEYWORD_RE = re.compile(r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE)
 
 
@@ -373,6 +377,10 @@ def _validate(*, title: str, body: str, titles: dict) -> list[Finding]:
                 "body.doc-impact",
                 "PR body is missing the `## Doc impact` section.",
             )
+        )
+    for item in friction_answers.unread(body):
+        findings.append(
+            Finding(SEVERITY_WARNING, "body.sentences", friction_answers.unread_warning(item))
         )
     return findings
 
