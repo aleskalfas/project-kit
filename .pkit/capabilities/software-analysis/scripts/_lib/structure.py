@@ -27,8 +27,8 @@ What a body is made of, precisely:
   before it, or opens a top-level list item (`-`, `*`, `+`, or a number and
   `.` or `)`), and whose text the kind declares. Only a declared label is
   one: a bold run the kind does not declare, such as a variant's `**2a.**`, is
-  content. The lines below a label that opens a list item are read less that
-  item's indentation, so the list nested under it is the part's list.
+  content. Below a label that opens a list item, the part's list is the one
+  nested in that item (`_lib/forms.py`).
 - **Text is compared** ignoring case, runs of white space and trailing
   punctuation, as living-docs compares a heading.
 - **A part's extent.** A label sits one level below the heading it follows. Its
@@ -469,28 +469,22 @@ def _part(
         texts = [k for k in extent if body.content[k].strip()]
         if not texts:
             return None
-        return forms.Part(body.numbers[texts[0]], _rows(body, extent, 0))
+        return forms.Part(body.numbers[texts[0]], _rows(body, extent))
     if i not in at:
         return None
     mark = body.marks[at[i]]
     line = body.numbers[mark.index]
     lead = forms.Row(line, mark.rest) if mark.type == LABEL else None
-    return forms.Part(line, _rows(body, _extent(mark, body), mark.offset), lead)
+    item = body.content[mark.index] if mark.offset else ""
+    return forms.Part(line, _rows(body, _extent(mark, body)), lead, item)
 
 
-def _rows(body: _Body, extent: range, offset: int) -> tuple[forms.Row, ...]:
-    """The lines of `extent` as a part's rows, each less `offset` columns of indentation
-    where it has as many: the lines below a label that opens a list item."""
-    rows: list[forms.Row] = []
-    for k in extent:
-        text = body.content[k]
-        fence = body.fences[k] if body.fences else 0
-        if offset:
-            expanded = text.expandtabs(4)
-            if len(expanded) - len(expanded.lstrip(" ")) >= offset:
-                text = expanded[offset:]
-        rows.append(forms.Row(body.numbers[k], text, fence))
-    return tuple(rows)
+def _rows(body: _Body, extent: range) -> tuple[forms.Row, ...]:
+    """The lines of `extent` as a part's rows, each with its fence mark."""
+    return tuple(
+        forms.Row(body.numbers[k], body.content[k], body.fences[k] if body.fences else 0)
+        for k in extent
+    )
 
 
 def _context(

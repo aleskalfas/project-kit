@@ -227,6 +227,28 @@ def test_under_a_label_that_opens_a_list_item_the_nested_list_is_the_part_s() ->
     assert _found(repeated) == [("main-path", "breaks-its-form", 15)]
 
 
+def test_a_writer_s_item_beside_a_label_s_item_is_no_item_of_its_list() -> None:
+    """A `- **Note:**` at the label's own indentation is the outer list's next item, as
+    Markdown reads it, so no list form judges it."""
+    labelled = "**Main path:**\n\n" + MAIN_PATH
+    noted = "- **Main path:**\n  1. a\n  2. b\n- **Note:** export is rare."
+    assert _found(USE_CASE.replace(labelled, noted)) == []
+    variants = "- **Variants:**\n  - **2a.** The disk is full.\n- **Why:** disks fill up."
+    assert _found(USE_CASE.replace("**Variants:**\n\n" + VARIANT, variants)) == []
+    # The `sentence` form judges such an item as its own text.
+    goal = "**Goal:** Export my report as a file."
+    beside = "- **Goal:** Export my report as a file.\n- **Note:** asked by sales."
+    assert _found(USE_CASE.replace(goal, beside)) == []
+    twice = beside.replace("sales.", "sales. Twice.")
+    assert _found(USE_CASE.replace(goal, twice)) == [("goal", "not-a-sentence", 4)]
+
+
+def test_a_line_a_quote_in_an_item_runs_on_to_stays_its_text() -> None:
+    (item,) = F.read_list([F.Row(1, "  1) "), F.Row(2, "     > q"), F.Row(3, "    2026. y")]).items
+    assert " ".join(item.text.split()) == "> q 2026. y"
+    assert F.nested(item).items == ()
+
+
 # --- numbered-steps -------------------------------------------------------------------------
 
 
@@ -363,6 +385,17 @@ def test_a_hand_over_written_below_its_step_line_without_a_bullet_counts() -> No
     assert _journey(bare) == []
 
 
+def test_a_step_s_line_runs_on_over_a_wrapped_line_that_opens_no_item() -> None:
+    """A wrapped line that starts `*final*` or `-based` opens no item, so it is still the
+    step's line, which matches the title it completes."""
+    titles = {**TITLES, "UC-007": "Export the *final* report as a file"}
+    wrapped = JOURNEY.replace(
+        "2. UC-007 — Export the report as a file",
+        "2. UC-007 — Export the\n   *final* report as a file",
+    )
+    assert _found(wrapped, "journey", fields=JOURNEY_FIELDS, titles=titles) == []
+
+
 # --- outcomes-match-front-matter ------------------------------------------------------------
 
 
@@ -401,6 +434,11 @@ def test_a_record_s_gaps_name_its_regressed_and_gap_found_outcomes() -> None:
     ]
     several = RECORD.replace("**UC-007:**", "**UC-007, JRN-003:**")
     assert _record(several) == []
+    hollow = RECORD.replace("**UC-007:**", "**UC-007,:**")
+    assert _details(hollow, "revalidation-record", fields=OUTCOMES) == [
+        "the gap's label, `**UC-007,:**`, leaves an id out between its commas: name each "
+        "id once, separated by commas"
+    ]
     unknown = RECORD.replace("**UC-007:**", "**UC-007, UC-001:**")
     assert _details(unknown, "revalidation-record", fields=OUTCOMES) == [
         "the gap names `UC-001`, which `outcomes` does not list: a gap names artefacts the "

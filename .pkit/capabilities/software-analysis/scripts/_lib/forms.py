@@ -27,23 +27,31 @@ judges what a reader sees as an item. The rules it keeps:
   the item, even one that starts `2026.`, and one not indented that starts
   `2026. ` opens an item, as a reader sees it. A line that is no paragraph,
   such as a heading, indented code or a line of `=` or `-` under a paragraph,
-  leaves nothing to continue.
+  leaves nothing to continue. These rules are kept for an item's own lines and
+  for the items nested in it, one level deep. A line inside a list nested
+  deeper is read as text of the nested item it falls in, so a heading or an
+  underline there may let a later, less indented line run on into the item.
 - **An item may not interrupt a paragraph** outside a list unless it is a
   bullet or the number 1, and holds text: a line that starts `2.` right below
   a paragraph continues it. A part's label line is a paragraph, so a list
   right below it opens with a bullet or `1.`, or after a blank line. Below a
   block quote, any item opens.
-- **Fenced code** goes with its opening line, into an item or not, and no line
-  inside it opens an item or ends one, as the body reader hides it from the
-  marks to its closing line. Here the reading departs from CommonMark, which
-  ends an item at a line inside the fence indented less than the item.
-  Comments are already left out.
+- **Fenced code** is what the body reader takes for it (`structure.py`): a
+  fence opens at any indentation, and runs to its closing line. It goes with
+  its opening line, into an item or not, and no line inside it opens an item
+  or ends one. Here the reading departs from CommonMark, which ends an item,
+  and the fence with it, at a line inside the fence indented less than the
+  item, and reads a line indented four spaces or more outside an item as code
+  or text, never a fence. Comments are already left out.
 - **The rest of a part** is the text outside its list: its label's line, and
   the lines in no item, such as a lead sentence or a writer's note.
 
 The **items of a part** are its list's top-level items. Under a label that
-opens a list item, `- **Steps:**`, they are the items nested under it, as the
-part's lines are read less that item's indentation (`structure.py`).
+opens a list item, `- **Steps:**`, they are the items of the list nested in
+that item. The label's item ends where Markdown ends it, so what follows it,
+such as a writer's `- **Note:**` beside it, is no item of the part's list.
+That item, and the items of any other list in the part, are judged by the
+`sentence` form alone, each as its own text.
 
 A **list form** judges only the items, so a line a writer adds outside them
 never breaks it. It holds at least one item, or `None.` where its part allows
@@ -136,10 +144,10 @@ OPENS_FENCE, IN_FENCE = 1, 2
 
 @dataclass(frozen=True)
 class Row:
-    """One line of a part: its number in the file, its text — comments left out, and
-    less the indentation of a list item its label opens — whether fenced code opens on
-    it (`OPENS_FENCE`) or holds it (`IN_FENCE`), and whether it is `lazy`: a line an
-    item's text ran on to, less indented than the item, which only continues text."""
+    """One line of a part: its number in the file, its text — comments left out —
+    whether fenced code opens on it (`OPENS_FENCE`) or holds it (`IN_FENCE`), and
+    whether it is `lazy`: a line an item's text ran on to, less indented than the item,
+    which only continues text."""
 
     number: int
     text: str
@@ -151,11 +159,14 @@ class Row:
 class Part:
     """A part's content: the text after its label on the label's line, `lead`, which is
     paragraph text, and the lines below it, `rows`. `line` is where the part is shown:
-    its label's or heading's line, or an opening's first line of text."""
+    its label's or heading's line, or an opening's first line of text. `item` is the
+    label's whole line where the label opens a list item, `- **Steps:**`, and empty
+    otherwise."""
 
     line: int
     rows: tuple[Row, ...]
     lead: Row | None = None
+    item: str = ""
 
     @property
     def text(self) -> str:
@@ -179,10 +190,13 @@ class Item:
 
 @dataclass(frozen=True)
 class Listing:
-    """A part's list: its top-level items, and the rows in none of them."""
+    """A part's list: its top-level items, the rows in none of them, and the items of
+    any other list the part holds (`others`): those beside the list item its label
+    opens, which a form that reads the part's list does not judge."""
 
     items: tuple[Item, ...]
     outside: tuple[Row, ...]
+    others: tuple[Item, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -253,7 +267,7 @@ def read_list(rows: Sequence[Row], *, after_paragraph: bool = False) -> Listing:
                 outside.append(row)
             paragraph, blank, quoted = NO_PARAGRAPH, True, False
             continue
-        if row.lazy and paragraph and not blank:
+        if row.lazy and (paragraph or quoted) and not blank:
             # A line an item's text ran on to only continues text, read again or not.
             (current.rows if current is not None else outside).append(row)
             continue
@@ -385,11 +399,21 @@ def _leaves_paragraph(row: Row, text: str, above: int) -> int:
 
 
 def listing(part: Part) -> Listing:
-    """A part's list, its label's line among the rows outside it."""
-    found = read_list(part.rows, after_paragraph=part.lead is not None)
-    if part.lead is None:
-        return found
-    return Listing(found.items, (part.lead, *found.outside))
+    """A part's list, its label's line among the rows outside it. Under a label that
+    opens a list item, the part's list is the one nested in that item, and what follows
+    the item, such as a writer's `- **Note:**` beside it, is outside the list."""
+    if not part.item:
+        found = read_list(part.rows, after_paragraph=part.lead is not None)
+        lead = (part.lead,) if part.lead is not None else ()
+        return Listing(found.items, (*lead, *found.outside))
+    outer = read_list((Row(part.line, part.item), *part.rows))
+    if not outer.items or outer.items[0].line != part.line:
+        return listing(Part(part.line, part.rows, part.lead))
+    own, others = outer.items[0], outer.items[1:]
+    nested_list = read_list(own.rows[1:], after_paragraph=True)
+    lead = (part.lead,) if part.lead is not None else ()
+    outside = sorted((*nested_list.outside, *outer.outside), key=lambda row: row.number)
+    return Listing(nested_list.items, (*lead, *outside), others)
 
 
 def nested(item: Item) -> Listing:
@@ -447,21 +471,19 @@ def step_numbers(part: Part) -> frozenset[int]:
 
 
 def _sentence(part: Part) -> list[Breach]:
-    found = listing(part)
-    if not found.items:
-        return [] if one_sentence(part.text) else [Breach(NOT_A_SENTENCE, part.line)]
     return [
         Breach(NOT_A_SENTENCE, line, IN_AN_ITEM if line != part.line else "")
-        for line, text in _texts(found, part.line)
+        for line, text in _texts(listing(part), part.line)
         if text.strip() and not one_sentence(text)
     ]
 
 
 def _texts(found: Listing, line: int) -> Iterator[tuple[int, str]]:
-    """Each text a `sentence` part holds in a list: the rows outside its items, taken as
-    one, and each item's own text, apart from the items nested in it."""
+    """Each text a `sentence` part holds: the rows outside its lists, taken as one, and
+    each item's own text, apart from the items nested in it — an item of the part's
+    list or of another list in the part alike."""
     yield line, "\n".join(row.text for row in found.outside)
-    for item in found.items:
+    for item in (*found.items, *found.others):
         yield from _texts(nested(item), item.line)
 
 
@@ -473,7 +495,9 @@ def _numbered_steps(part: Part) -> list[Breach]:
                 BREAKS_FORM,
                 part.line,
                 "it holds no numbered step: write each step as a numbered list item, "
-                "such as `1. The analyst chooses Export.`",
+                "such as `1. The analyst chooses Export.`, and start the list with `1.` or "
+                "after a blank line, since a line that opens `2.` right below a paragraph "
+                "continues it",
             )
         ]
     found: list[Breach] = []
@@ -656,10 +680,17 @@ def _step_text(item: Item) -> str:
     _number_of, first = _numbered(item)
     lines = [first]
     for row in item.rows[1:]:
-        if not row.text.strip() or _MARKER.match(row.text) or _HANDOVER.match(row.text.strip()):
+        text = row.text.expandtabs(4)
+        if not text.strip() or _opens_item(text) or _HANDOVER.match(text.strip()):
             break
-        lines.append(row.text)
+        lines.append(text)
     return " ".join(" ".join(lines).split())
+
+
+def _opens_item(text: str) -> bool:
+    """Whether a line below a paragraph opens an item: a bullet, or the number 1, with a
+    space after it — so a wrapped line that starts `-based` or `2026.` does not."""
+    return _marker(text, interrupting=True) is not None
 
 
 def _handovers(item: Item) -> Iterator[tuple[int, str, str]]:
@@ -675,7 +706,7 @@ def _handovers(item: Item) -> Iterator[tuple[int, str, str]]:
         said = [label[closed.end() :] if closed else ""]
         for later in rows[index + 1 :]:
             text = later.text.strip()
-            if not text or _MARKER.match(text) or _HANDOVER.match(text):
+            if not text or _opens_item(text) or _HANDOVER.match(text):
                 break
             said.append(text)
         yield row.number, label, " ".join(said)
@@ -831,8 +862,17 @@ def _gaps_match(part: Part, context: Context) -> list[Breach]:
             )
         else:
             ids = [piece.strip() for piece in label["ids"].split(",")]
-            unknown = [i for i in ids if i not in known]
+            unknown = [i for i in ids if i and i not in known]
             named.update(i for i in ids if i in known)
+            if not all(ids):
+                found.append(
+                    Breach(
+                        BREAKS_FORM,
+                        item.line,
+                        f"the gap's label, `**{label['ids']}:**`, leaves an id out between "
+                        f"its commas: name each id once, separated by commas",
+                    )
+                )
             if unknown:
                 found.append(
                     Breach(
