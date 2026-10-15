@@ -186,6 +186,17 @@ def test_this_change_and_a_source_with_a_url_are_not_placed(project: AdopterRepo
         "place, no base read.",
         "pointers: not placed: 1 source naming `this change` and 1 source outside this repository.",
     ]
+    # A source in this repository of neither form — an abbreviated id — is counted, not
+    # placed: validation fails its form.
+    abbreviated = {"title": "a design", "version": NOWHERE[:12]}
+    project.write({NEW: record(*sources, abbreviated)})
+    completed = pointers(project, "--base", "nowhere")
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.splitlines()[1] == (
+        "pointers: not placed: 1 source naming `this change`, 1 source outside this repository "
+        "and 1 source naming neither a commit's full id nor `this change` (`pkit analysis "
+        "validate` says why)."
+    )
 
 
 # --- where each commit sits (DEC-001 point 6) -------------------------------------------------
@@ -334,6 +345,36 @@ def test_a_shallow_clone_cut_off_the_default_branch_places_as_a_full_one(
     assert pointers_lib.place(full, sha(designed, "design"), tip) == "not-held"
     assert pointers_lib.place(full, side, tip) == "not-held"
     assert pointers_lib.place(full, NOWHERE, tip) == "not-held"
+
+
+def test_a_partial_clone_fetches_nothing(designed: AdopterRepo, tmp_path: Path) -> None:
+    """A clone without trees holds every commit, so it places each, and asks no remote
+    for a tree it lacks: when the merge-base's is one, it fails, saying so, rather than
+    fetch it."""
+    designed.git("config", "uploadpack.allowFilter", "true")
+    treeless = tmp_path / "treeless"
+    source = f"file://{designed.root}"
+    designed.git("clone", "-q", "--filter=tree:0", "--no-single-branch", source, str(treeless))
+    clone = AdopterRepo(treeless, source_kit=designed.source_kit)
+    sign_nothing(treeless)
+    clone.checkout("mine", create=True)
+    clone.write({NEW: record({"title": "the design", "version": sha(designed, "landed")})})
+    placed = pointers(clone, "--json")
+    assert placed.returncode == 0, placed.stderr
+    assert [p["placement"] for p in document(placed)["pointers"]] == ["not-held", "held"]
+    # Against the design branch, the merge-base is the commit the design landed in, whose
+    # tree the clone never fetched.
+    fork = sha(designed, "landed")
+    completed = pointers(clone, "--base", "origin/design")
+    assert completed.returncode == 1
+    assert completed.stdout == ""
+    assert completed.stderr.startswith(
+        f"error: whether origin/design held {OLD} where this branch left it, at {fork[:12]}, "
+        "could not be read from this clone: "
+    )
+    assert completed.stderr.rstrip().endswith(
+        "Nothing is fetched here: a partial clone must hold that commit's tree"
+    )
 
 
 # --- the default branch and the base (COR-054) ------------------------------------------------

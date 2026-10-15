@@ -345,7 +345,7 @@ It reads each source without a `url` whose `version` is a commit's full id, and 
 |---|---|---|---|
 | on the default branch's history | held | passes | passes |
 | off it, in a clone that holds all of that history: a branch's commit a squash merge left behind, or one missing from a full clone | not held | **an error**, naming the record and the source | reported, never an error |
-| not found, in a shallow clone whose history of the default branch stops short | unknown | reported, never an error | reported, never an error |
+| not reached, in a shallow clone whose history of the default branch stops short, whether the clone holds it or not | unknown | reported, never an error | reported, never an error |
 
 - **What it skips.** A source naming `this change` is not placed, since its commit is found from the history. A source with a `url` lies outside this repository. A record of another trigger is not read.
 - **Why only a record your change adds fails.** A record is history and is never rewritten. A history rewrite on the default branch, such as removing a secret, takes every older pointer off it, and failing on those would fail every change for good. The change that adds a record is the one place its pointer can still be fixed. Name the commit where the design landed on the default branch, or `this change` when the design lands with the record.
@@ -354,15 +354,15 @@ It reads each source without a `url` whose `version` is a commit's full id, and 
 **Where it looks.** It places every commit on the default branch alone, as the core resolves it for every reader (COR-054 point 5), and never on a run's base. The base says only which records your change adds:
 
 - **The base** is `--base <ref>`, else `$PKIT_CHECK_BASE`, else the default branch, as for `check-numbers`.
-- **A record your change adds** is one whose file the merge-base of that base does not hold. The working tree is read, uncommitted changes included.
-- **Both readings** come from `pkit repository base --json`. Git answers the rest from your clone's history, offline, and no remote is asked.
-- **Nothing to place.** A tree with no planned record, or whose planned records name no commit of this repository, reads no base and says so.
+- **A record your change adds** is one whose file the merge-base of that base does not hold at its path. So a record your change moves reads as added. The working tree is read, uncommitted changes included.
+- **The default branch and the base** both come from `pkit repository base --json`. Git answers the rest from your clone's history, offline, and no remote is asked. A partial clone that lacks the merge-base's tree fails, rather than fetch it.
+- **Nothing to place.** A tree with no planned record, or whose planned records name no commit of this repository, reads no base and says so. A source in this repository that names neither a commit's full id nor `this change` is counted and not placed: `pkit analysis validate` fails its form.
 - **It fails** when no default branch resolves, or when the base names no commit or shares no history with `HEAD`. It gives the core's reason and fix (COR-054 point 4).
 
 **Wiring it in.** It answers about a change and reads history beyond the working tree, so it is not a member of `pkit validate` (COR-055 points 1 and 2). Run it as a line of its own in your check gate, beside `pkit analysis check-numbers` and `pkit friction check`, with the same base. It binds only where you wire it in. In CI:
 
 - a **`pull_request` checkout is GitHub's test merge** of your branch into the default branch. The records your branch adds are the ones the default branch lacks, so the line checks them there too.
-- a **depth-1 clone**, the default of `actions/checkout`, holds no merge-base, and may hold no `origin/<default-branch>` at all. So this line fails, as `check-numbers` does. Fetch the whole history with `fetch-depth: 0`. A clone deep enough to hold the merge-base but still shallow reports what it cannot place as unknown.
+- a **depth-1 clone**, the default of `actions/checkout`, holds no merge-base, and may hold no `origin/<default-branch>` at all. So this line fails, as `check-numbers` does, whenever it has a commit to place. Fetch the whole history with `fetch-depth: 0`. A clone deep enough to hold the merge-base but still shallow reports what it cannot place as unknown.
 
 `--json` prints `{schema_version, default_branch, base, summary, findings, pointers}`:
 

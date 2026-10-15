@@ -55,9 +55,9 @@ and which the default branch holds, so a number the default branch took by
 landing this branch's own work is told from one it took for another
 (`blobs_written`, `blob_of`); for the check of a planned record's pointers,
 whether the clone holds a commit, whether the default branch's history reaches
-it, and whether a shallow clone's history of that branch stops short, each
-asked of the clone alone, never a remote, and whether the merge-base holds a
-record's file (`holds_commit`, `reaches`, `history_cut`, `blob_of`;
+it, whether a shallow clone's history of that branch stops short, and whether
+the merge-base holds a record's file, each asked of the clone alone, never a
+remote (`holds_commit`, `reaches`, `history_cut`, `holds_path`;
 `_lib/pointers.py`); and, for the
 proposal, which files held a piece of code at a commit — anywhere in the tree,
 or among files the caller names — where files were renamed to between two
@@ -391,7 +391,8 @@ def _listing(listed: str | None) -> list[tuple[str, str]]:
 
 def is_ancestor(root: Path, commit: str, of: str) -> bool:
     """Whether `commit` is `of` or in its history — no commit of `commit`'s history lies
-    outside `of`'s; `False` when git cannot answer."""
+    outside `of`'s; `False` when git cannot answer. `reaches` asks the same offline, and
+    raises when git cannot answer."""
     if not commit or not of or commit.startswith("-") or of.startswith("-"):
         return False
     argv = ["git", "rev-list", "-n", "1", commit, f"^{of}", "--"]
@@ -429,9 +430,11 @@ def is_shallow(root: Path) -> bool:
     return _git(root, "rev-parse", "--is-shallow-repository") == "true"
 
 
-#: Git's environment for a reading that must stay offline: a partial clone fetches an
-#: object it lacks from its remote unless told not to.
+#: Git's environment and setting for a reading that must stay offline: a partial clone
+#: fetches an object it lacks from its remote unless told not to. Git 2.44 and later
+#: read the variable; the setting refuses every transport to an older git as well.
 _OFFLINE = {"GIT_NO_LAZY_FETCH": "1"}
+_NO_TRANSPORT = ("-c", "protocol.allow=never")
 
 
 def holds_commit(root: Path, name: str) -> bool:
@@ -443,10 +446,24 @@ def holds_commit(root: Path, name: str) -> bool:
     return proc.returncode == 0
 
 
+def holds_path(root: Path, commit: str, path: str) -> bool:
+    """Whether `commit` holds an entry at `path`, read from this clone alone — `git
+    ls-tree`, asking no remote, the path matched exactly. Raises `GitFailed` when git
+    cannot answer: a partial clone that lacks the commit's tree, say."""
+    if not commit or commit.startswith("-"):
+        raise GitFailed(f"{commit!r} names no commit")
+    proc = _offline(root, "ls-tree", "-z", "--full-tree", "--name-only", commit, "--", path)
+    if proc.returncode != 0:
+        detail = [line for line in proc.stderr.strip().splitlines() if line]
+        raise GitFailed(detail[-1] if detail else f"git ls-tree exited {proc.returncode}")
+    return path in proc.stdout.split("\0")
+
+
 def reaches(root: Path, commit: str, tip: str) -> bool:
     """Whether `commit` is `tip` or in its history, as this clone holds that history —
     `git merge-base --is-ancestor`, asking no remote. Raises `GitFailed` when git cannot
-    answer: a name that is no commit here, say."""
+    answer: a name that is no commit here, say. `is_ancestor` asks the same and reads a
+    failure as no; a reading that must stay offline and tell a failure apart asks this."""
     if not commit or not tip or commit.startswith("-") or tip.startswith("-"):
         raise GitFailed(f"{commit!r} or {tip!r} names no commit")
     proc = _offline(root, "merge-base", "--is-ancestor", commit, tip)
@@ -479,7 +496,7 @@ def _offline(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     cannot be run."""
     try:
         return subprocess.run(
-            ["git", *args],
+            ["git", *_NO_TRANSPORT, *args],
             cwd=root,
             capture_output=True,
             text=True,

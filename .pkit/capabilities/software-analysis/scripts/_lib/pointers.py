@@ -13,17 +13,19 @@ commit on the default branch:
   that history does not reach it and the clone holds the whole of it, a commit
   the clone lacks included, since a full clone holds every commit of the
   default branch. It is unknown when that history stops short in a shallow
-  clone, since the commit may lie beyond the cut. The stamp places a planned
-  record's commit the same way, to warn while the record is written;
+  clone, since the commit may lie beyond the cut. It is the one way of placing
+  a commit: the stamp is to place a planned record's commit with it, to warn
+  while the record is written (#1366);
 - **where it looks**: the default branch alone, at the commit the backbone
   resolves it to (`pkit repository base --json`, its `default_branch`; COR-054
   point 5), never a run's base. It reads the clone's history, and asks no
-  remote for anything;
+  remote for anything: a partial clone that lacks a tree it reads fails rather
+  than fetch it;
 - **which records the change adds**: each record whose file the merge-base
-  does not hold, the merge-base of the run's base and HEAD — `--base`, else
-  `$PKIT_CHECK_BASE`, else the default branch — as the same reading gives it
-  (COR-054 point 3). The working tree is read, uncommitted changes included. The
-  base says only which records are new;
+  does not hold at its path, the merge-base of the run's base and HEAD —
+  `--base`, else `$PKIT_CHECK_BASE`, else the default branch — as the same
+  reading gives it (COR-054 point 3). The working tree is read, uncommitted
+  changes included. The base says only which records are new;
 - **what it finds**: a commit the default branch does not hold, in a record the
   change adds, is an error naming the record and the source. The change that
   adds a record is the one place its pointer can still be fixed. In a record
@@ -43,11 +45,12 @@ point 2), and DEC-001 point 6 keeps it out of validation, since the pointers
 are provenance (COR-055 point 1): `pkit analysis check-pointers` runs it, a
 line of its own in a project's check gate. A source's form — its keys, a
 commit's full id, `this change` — is the record's schema's, which validation
-applies. A mapping not of that form is not placed here.
+applies. A mapping not of that form is not placed here, and is counted.
 """
 
 from __future__ import annotations
 
+import functools
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -57,7 +60,8 @@ from ruamel.yaml.error import YAMLError
 
 from _lib import backbone, markdown, schemas
 from _lib.findings import ERROR, REPORT, Finding, Outcome, at
-from _lib.model import Unreadable
+from _lib.model import Analysis, Unreadable
+from _lib.revalidation import PLANNED
 
 #: The version of the `--json` document.
 SCHEMA_VERSION = 1
@@ -65,8 +69,7 @@ SCHEMA_VERSION = 1
 #: Where a commit sits on the default branch (DEC-001 point 6).
 HELD, NOT_HELD, UNKNOWN = "held", "not-held", "unknown"
 
-#: The trigger of a record that names what it reviewed, and the field it names it in.
-PLANNED = "planned"
+#: The field a planned record names what it reviewed in.
 FIELD = "reviewed-against"
 
 
@@ -80,7 +83,11 @@ def place(root: Path, commit: str, tip: str) -> str:
     asks no remote. Raises `backbone.GitFailed` when git cannot answer."""
     if backbone.holds_commit(root, commit) and backbone.reaches(root, commit, tip):
         return HELD
-    return UNKNOWN if backbone.history_cut(root, tip) else NOT_HELD
+    return UNKNOWN if _history_cut(root, tip) else NOT_HELD
+
+
+#: Whether a clone's history of a commit stops short, asked once per clone and commit.
+_history_cut = functools.cache(backbone.history_cut)
 
 
 @dataclass(frozen=True)
@@ -100,11 +107,13 @@ class Source:
 
 @dataclass(frozen=True)
 class Placed:
-    """A source placed: whether the change adds its record, and where its commit sits."""
+    """A source placed: whether the change adds its record, where its commit sits, and
+    whether this clone holds the commit at all."""
 
     source: Source
     added: bool
     placement: str
+    in_clone: bool = True
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -153,12 +162,7 @@ def check(root: Path, ref: str | None = None) -> Checked:
         raise CannotCheck(f"the analysis could not be read: {exc}") from exc
     read = _read(root, analysis.records)
     if not read.sources:
-        line = (
-            f"pointers: {_count(len(read.planned), 'planned record')} here, naming no commit of "
-            f"this repository; nothing to place, no base read."
-            if read.planned
-            else "pointers: no planned revalidation record here; nothing to place, no base read."
-        )
+        line = f"pointers: {_nothing(analysis, read)}; nothing to place, no base read."
         return Checked(None, None, (), Outcome([line, *_skipped(read)], list(read.unread)))
 
     try:
@@ -171,19 +175,27 @@ def check(root: Path, ref: str | None = None) -> Checked:
     placed: list[Placed] = []
     for source in read.sources:
         if source.record not in held_before:
-            held_before[source.record] = backbone.blob_of(root, fork, source.record) is not None
+            try:
+                held_before[source.record] = backbone.holds_path(root, fork, source.record)
+            except backbone.GitFailed as exc:
+                raise CannotCheck(
+                    f"whether {base.ref} held {source.record} where this branch left it, at "
+                    f"{fork[: backbone.SHORT]}, could not be read from this clone: {exc}. Nothing "
+                    f"is fetched here: a partial clone must hold that commit's tree"
+                ) from exc
         try:
             placement = place(root, source.commit, tip)
+            in_clone = placement != NOT_HELD or backbone.holds_commit(root, source.commit)
         except backbone.GitFailed as exc:
             raise CannotCheck(
                 f"{source.commit}, named at {source.location}, could not be placed on "
                 f"{branch.ref}: {exc}"
             ) from exc
-        placed.append(Placed(source, not held_before[source.record], placement))
+        placed.append(Placed(source, not held_before[source.record], placement, in_clone))
 
     findings = [*read.unread]
     for one in placed:
-        found = _finding(root, one, branch, base)
+        found = _finding(one, branch, base)
         if found is not None:
             findings.append(found)
     summary = [*_summary(placed, branch, base), *_skipped(read)]
@@ -196,12 +208,14 @@ def check(root: Path, ref: str | None = None) -> Checked:
 @dataclass(frozen=True)
 class _Read:
     """The planned records, the sources naming a commit of this repository, how many
-    sources name `this change` and how many lie outside, and the records not read."""
+    sources name `this change`, how many lie outside, how many in this repository give
+    neither form, and the records not read."""
 
     planned: tuple[str, ...]
     sources: tuple[Source, ...]
     this_change: int
     outside: int
+    unformed: int
     unread: tuple[Finding, ...]
 
 
@@ -211,7 +225,7 @@ def _read(root: Path, records: Iterable[str]) -> _Read:
     planned: list[str] = []
     sources: list[Source] = []
     unread: list[Finding] = []
-    this_change = outside = 0
+    this_change = outside = unformed = 0
     commit = schemas.commit_pattern()
     for rel in records:
         try:
@@ -234,17 +248,32 @@ def _read(root: Path, records: Iterable[str]) -> _Read:
         planned.append(rel)
         given = data.get(FIELD)
         for index, source in enumerate(given if isinstance(given, list) else []):
-            if not isinstance(source, Mapping):
-                continue
-            version = source.get("version")
-            if "url" in source:
+            version = source.get("version") if isinstance(source, Mapping) else None
+            if isinstance(source, Mapping) and "url" in source:
                 outside += 1
             elif version == schemas.this_change():
                 this_change += 1
-            elif isinstance(version, str) and commit.match(version):
+            elif isinstance(source, Mapping) and isinstance(version, str) and commit.match(version):
                 title = source.get("title")
                 sources.append(Source(rel, index, title if isinstance(title, str) else "", version))
-    return _Read(tuple(planned), tuple(sources), this_change, outside, tuple(unread))
+            else:
+                unformed += 1
+    return _Read(tuple(planned), tuple(sources), this_change, outside, unformed, tuple(unread))
+
+
+def _nothing(analysis: Analysis, read: _Read) -> str:
+    """Why there is nothing to place: the records' folder holds nothing, no record is
+    planned, or the planned records name no commit of this repository."""
+    if analysis.records_unheld is not None:
+        return (
+            f"the records' folder holds nothing — {analysis.records_unheld}; `pkit validate` "
+            f"says why"
+        )
+    if not read.planned:
+        return "no planned revalidation record here"
+    return (
+        f"{_count(len(read.planned), 'planned record')} here, naming no commit of this repository"
+    )
 
 
 # --- what is settled -------------------------------------------------------------------------
@@ -277,9 +306,7 @@ def _base(base: backbone.Base) -> tuple[backbone.Base, str]:
 # --- what is said ----------------------------------------------------------------------------
 
 
-def _finding(
-    root: Path, placed: Placed, branch: backbone.Branch, base: backbone.Base
-) -> Finding | None:
+def _finding(placed: Placed, branch: backbone.Branch, base: backbone.Base) -> Finding | None:
     """What a source placed says: nothing when the default branch holds its commit; an
     error when it does not and the change adds the record; else a report."""
     source = placed.source
@@ -297,7 +324,7 @@ def _finding(
         )
     lacking = (
         ""
-        if backbone.holds_commit(root, source.commit)
+        if placed.in_clone
         else ", and this clone, which holds all of that branch's history, holds no such commit"
     )
     off = f"{named}, which the default branch, {branch.ref}, does not hold{lacking}"
@@ -338,14 +365,22 @@ def _summary(placed: list[Placed], branch: backbone.Branch, base: backbone.Base)
 
 
 def _skipped(read: _Read) -> list[str]:
-    """A line for the sources not placed: those naming the change itself, and those
-    outside this repository."""
-    parts = []
+    """A line for the sources not placed: those naming the change itself, those outside
+    this repository, and those in it naming neither a commit's full id nor the change."""
+    parts: list[str] = []
     if read.this_change:
         parts.append(f"{_count(read.this_change, 'source')} naming `{schemas.this_change()}`")
     if read.outside:
         parts.append(f"{_count(read.outside, 'source')} outside this repository")
-    return [f"pointers: not placed: {' and '.join(parts)}."] if parts else []
+    if read.unformed:
+        parts.append(
+            f"{_count(read.unformed, 'source')} naming neither a commit's full id nor "
+            f"`{schemas.this_change()}` (`pkit analysis validate` says why)"
+        )
+    if not parts:
+        return []
+    listed = parts[0] if len(parts) == 1 else f"{', '.join(parts[:-1])} and {parts[-1]}"
+    return [f"pointers: not placed: {listed}."]
 
 
 def _count(number: int, noun: str) -> str:
