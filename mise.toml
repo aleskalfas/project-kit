@@ -49,14 +49,14 @@ description = "Run all checks (lint + format:check + typecheck + test)"
 depends = ["lint", "format:check", "typecheck", "test"]
 
 # --- pkit install + routing (one install for everyone) ----------------------
-# There is ONE install: the global pkit release (PRJ-004). It routes itself per
+# There is ONE install: the global pkit (PRJ-004). It routes itself per
 # CWD and pin (ADR-039) — inside a project-kit source checkout it runs THAT
 # checkout's working tree (via the PRJ-001 dispatcher); in an adopter that pins
 # a different version it runs that pinned wheel; otherwise it runs itself. No
 # separate router shim to install. `pkit:which` diagnoses the wiring.
 
 [tasks."pkit:pinned-install"]
-description = "Install/refresh the global pkit release (PRJ-004) — routes natively per ADR-039"
+description = "Install/refresh the global pkit from main, the development install (PRJ-004) — routes natively per ADR-039"
 quiet = true
 run = '''
 set -euo pipefail
