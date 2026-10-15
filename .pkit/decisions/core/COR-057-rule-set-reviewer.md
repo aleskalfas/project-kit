@@ -6,6 +6,8 @@ date: 2026-10-11
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [COR-060](COR-060-brought-under-breaks.md).** A break in text a change brings under a rule takes its kind as any other break the change owns, whatever brings the text under the rule. Overturned: the half of point 3's paragraph "A rule the change itself moves" where the change makes a rule bind, with the paragraph's last sentence. Also overturned: the Rationale's case of a change that accepts a rule and adds text beside it, and the premise that whoever reviews that change of the rules is placed to judge the text it brings under the rule. Among what stands: the three kinds of finding, the half where the change makes a rule stop binding, and what a change owns. COR-060's "What this overturns, and what stands" lists each passage.
+
 ## Context
 
 A project keeps its rules in rule sets (COR-051). The backbone gives one answer to which accepted rules bind on each artefact, and writers, checks and reviewers all read that answer (COR-051 point 7). A check enforces the part of a rule that the rule's owner declares as the check's (COR-051 point 2). The rest of the rule needs judgement.
