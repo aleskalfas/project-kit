@@ -24,12 +24,13 @@ to (COR-050 point 12). `_lib/check.py` states every check and the record point
 it applies.
 
 Each body is checked against its kind's declared structure too — a part
-missing, out of order or empty, `None.` where a part may not read it, and text
-of the `sentence` form that is not one sentence — at the status of the format
-rule, RS-SAN-001 (DEC-001 point 1): accepted, as errors; under any other status,
-not at all. `--preview` previews a proposed rule as if it were accepted: each
-departure is a report whose message opens `preview:`, so the exit is the normal
-check's. The backbone runs the normal check, with no preview.
+missing, out of order or empty, `None.` where a part may not read it, and a
+part or a front-matter field that breaks the form its structure gives it
+(`_lib/forms.py`) — at the status of the format rule, RS-SAN-001 (DEC-001
+point 1): accepted, as errors; under any other status, not at all.
+`--preview` previews a proposed rule as if it were accepted: each departure is
+a report whose message opens `preview:`, so the exit is the normal check's.
+The backbone runs the normal check, with no preview.
 
 The backbone runs it as this capability's validator, the
 `software-analysis:artefacts` member of `pkit validate` (ADR-058): from the

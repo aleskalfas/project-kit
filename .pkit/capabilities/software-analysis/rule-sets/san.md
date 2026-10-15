@@ -16,12 +16,12 @@ checks:
   RS-SAN-001:
     - check: "software-analysis:validate"
       part: >-
-        Every part its kind ships is present, in the order the structure gives. A
-        part with nothing to say reads `None.`, where the structure allows it. A part
-        or a front-matter field that the structure gives a form holds that form, in
-        each item of a list. A revalidation record is held to the structure in force
-        when it was written. A withdrawn artefact is held to no part or form that
-        came after its withdrawal.
+        Every part its kind ships is present, in the order the structure gives,
+        save a part a withdrawn artefact lacks. A part with nothing to say reads
+        `None.`, where the structure allows it. A part or a front-matter field that
+        the structure gives a form holds that form, in each item of a list, save on
+        a withdrawn artefact. A revalidation record is held to the structure
+        declared now, the only one declared so far.
 ---
 
 # SAN — the software-analysis method
