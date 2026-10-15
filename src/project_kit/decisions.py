@@ -34,11 +34,12 @@ one resolution (`default_branch.resolve`), and its files are read from git
 objects (`friction_git.CommitTree`), so nothing is checked out. The variable a
 pipeline sets for its checks never reaches it, and the command takes no base
 of its own. Where the default branch resolves to no commit, or its files
-cannot be read, the stamp says so on standard error, with the backbone's
-reason and fixes, and numbers past the working tree alone (point 4). A default
-branch with no commit yet holds nothing, and nothing is said of it. A default
-branch read from the local branch, and a declaration read as the default, are
-said as every reader says them (`DefaultBranch.warnings`).
+cannot be read, the stamp says so on standard error and numbers past the
+working tree alone (point 4). It gives the reason, and the fixes the
+backbone names, if any. A default branch with no
+commit yet holds nothing, and nothing is said of it. A default branch read
+from the local branch, and a declaration read as the default, are said as
+every reader says them (`DefaultBranch.warnings`).
 """
 
 from __future__ import annotations
@@ -56,7 +57,7 @@ from ruamel.yaml import YAML
 
 from project_kit import agents_overlay, default_branch, docs_roots
 from project_kit.capability_namespace import resolve_capability_dir
-from project_kit.friction_git import SHORT, CommitTree
+from project_kit.friction_git import SHORT, CommitTree, run_git
 
 # The three fixed namespaces. A `new decision` namespace argument that is none
 # of these is interpreted as a capability name (DEC id-space).
@@ -381,35 +382,52 @@ class _Settled:
 
 def _settled_names(target_root: Path, decisions_dir: Path) -> _Settled:
     """The file names the default branch holds directly in `decisions_dir`, read from git
-    objects at the commit the backbone resolves it to (COR-054 points 2 and 3). The
-    branch is read as a standing value reads it: no base reaches it, so its problem
-    names the fetch and the declaration as fixes, never a base. A branch with no commit
-    yet holds nothing; a folder outside the project holds nothing the branch can."""
+    objects at the commit the backbone resolves it to (COR-054 points 2 and 3).
+
+    The branch is read as a standing value reads it: no base reaches it, so its problem
+    names the fetch and the declaration as fixes, never a base. Where git cannot read
+    HEAD either — no repository here, or no git to run — that is the reason given, since
+    no fix to the branch would help. A branch with no commit yet holds nothing, and so
+    does a folder outside the repository. The folder is placed from the repository's top,
+    so a project root below it, or an ADR folder beside it, is read all the same."""
     branch = default_branch.resolve(target_root, standing=True)
     warnings = tuple(branch.warnings)
     if branch.unborn:
         return _Settled(warnings=warnings)
     if branch.commit is None:
-        problem = branch.problem or f"the default branch {branch.name!r} resolves to no commit."
-        return _Settled(warnings=warnings, problem=problem)
-    try:
-        folder = PurePosixPath(
-            decisions_dir.resolve().relative_to(target_root.resolve()).as_posix()
+        head = default_branch.head(target_root)
+        problem = (
+            f"the default branch {branch.name!r} cannot be read: {head.problem}."
+            if head.problem is not None
+            else branch.problem or f"the default branch {branch.name!r} resolves to no commit."
         )
+        return _Settled(warnings=warnings, problem=problem)
+    unread = f"the default branch {branch.name!r} ({branch.ref} at {branch.commit[:SHORT]})"
+    try:
+        top = _repository_top(target_root)
+    except click.ClickException as exc:
+        return _Settled(warnings=warnings, problem=f"{unread} could not be read: {_said(exc)}.")
+    try:
+        folder = PurePosixPath(decisions_dir.resolve().relative_to(top).as_posix())
     except ValueError:
         return _Settled(warnings=warnings)
     try:
-        files = CommitTree(target_root, branch.commit).files()
+        files = CommitTree(top, branch.commit).files()
     except click.ClickException as exc:
-        return _Settled(
-            warnings=warnings,
-            problem=(
-                f"the default branch {branch.name!r} ({branch.ref} at "
-                f"{branch.commit[:SHORT]}) could not be read: {exc.message.rstrip('.')}."
-            ),
-        )
+        return _Settled(warnings=warnings, problem=f"{unread} could not be read: {_said(exc)}.")
     names = tuple(PurePosixPath(rel).name for rel in files if PurePosixPath(rel).parent == folder)
     return _Settled(names=names, warnings=warnings)
+
+
+def _repository_top(target_root: Path) -> Path:
+    """The top of the repository the project is in, resolved. A commit's files are listed
+    from there, each by its path from the top."""
+    listed = run_git(target_root, "rev-parse", "--show-toplevel").stdout
+    return Path(listed.decode("utf-8", "surrogateescape").strip()).resolve()
+
+
+def _said(exc: click.ClickException) -> str:
+    return exc.message.rstrip(".")
 
 
 def _resolve_author() -> str:

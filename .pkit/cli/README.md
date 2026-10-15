@@ -952,7 +952,7 @@ Scaffolds a new decision-record stub per the schema in `.pkit/decisions/README.m
 
 **Where the number comes from.** The number is one past the highest that the namespace's folder holds, in the working tree or on the default branch. Each is read from a record's file name. A branch cut before another branch's record merged numbers past that record, so the two never take one number ([COR-054](../decisions/core/COR-054-default-branch.md) point 3). The default branch is resolved as "The `repository` key" says, and its files are read from git objects at its commit. `$PKIT_CHECK_BASE` never reaches the command, and the command takes no base of its own. What it says of the default branch goes to standard error, as `warning: <message>`:
 
-- **The default branch cannot be read.** It resolves to no commit, or git cannot read its files. The command gives the reason and the fixes, which are to fetch it or to declare the right name. It numbers past the working tree alone (point 4).
+- **The default branch cannot be read.** It resolves to no commit, git cannot read its files, or git cannot read the repository at all. The command gives the reason. Where the branch resolves to no commit in a repository git can read, it also gives the fixes, such as fetching the branch or declaring the right name. It numbers past the working tree alone (point 4).
 - **The default branch was read from the local branch**, in a repository with no remote (point 2).
 - **The declared name is read as the default**, because it is not a branch name.
 

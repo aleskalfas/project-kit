@@ -286,9 +286,10 @@ def declared(target_root: Path) -> tuple[str, str, str | None]:
 def resolve(target_root: Path, *, standing: bool = False) -> DefaultBranch:
     """The default branch: declared, then resolved as point 2 orders it.
 
-    `standing` asks for it as a standing value reads it — a data point's filler,
-    which no base reaches (COR-054 point 3) — so a problem names the fetch and
-    the declaration as its fixes, and never a base."""
+    `standing` asks for it as a reader that no base reaches reads it — a data
+    point's filler, or a command that allocates past it and takes no base of its
+    own, such as `pkit new decision` (COR-054 point 3) — so a problem names the
+    fetch and the declaration as its fixes, and never a base."""
     declaration = declared(target_root)
     refs = _branch_refs(target_root, declaration[0])
     return _default_branch(target_root, declaration, refs, standing=standing)

@@ -9,6 +9,6 @@ body: >
   merged no longer takes that record's number again. This holds for every
   namespace: core, project, ADR and each capability's DEC. `$PKIT_CHECK_BASE`
   never changes the number. Where the default branch cannot be read, the
-  command says so on standard error, with the reason and the fixes, and numbers
+  command says so on standard error, with the reason and any fixes, and numbers
   past the working tree alone. It also says when it read the default branch
   from the local branch, in a repository with no remote.
