@@ -407,6 +407,11 @@ def refuse_version_mismatch(target_root: Path, source_kit: Path, *, command: str
     (`_mismatch_lines`). The pin otherwise only chooses the message, and so
     does the router's fallback mark.
 
+    Every command that copies methodology content calls it at its entry, in
+    both directions, with *command* as the operator would re-run it: the sync
+    command, `pkit capabilities install <name>` and `pkit capabilities upgrade
+    <name>`. `pkit capabilities register` copies nothing and does not call it.
+
     The methodology's source repository is exempt (ADR-059): where sync's test
     recognises it, sync runs the self-host branch; where only the markers do,
     the refusal in the gap stops the command with its own message. A pkit that

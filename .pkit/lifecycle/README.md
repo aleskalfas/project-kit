@@ -29,13 +29,8 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
     revalidated:
-      at: 2026-10-14T20:02:13Z
+      at: 2026-10-14T21:45:23Z
       outcome: updated
-      deferred:
-        - anchor:
-            kind: record
-            value: COR-010
-          reason: "COR-010 has a version transition record its target first and its completion last, run every migration inside it in its order, and move a shipped component alone only to the version its recorded release ships. This page states that order, and pkit capabilities upgrade as a transition of one capability. Its per-component upgrade moves a capability to the version the running pkit's bundle ships, which is the recorded release's only while that pkit is the project's version, as the code still does. It follows with #1463, which stops pkit capabilities upgrade under any other pkit."
 ---
 
 # Lifecycle
@@ -690,7 +685,9 @@ The backbone manifest's `components` list is the canonical install record.
 
 ### Install pre-flight checks
 
-Before placing files, `pkit capabilities install` runs five checks in order. `--plan` runs after the first — an installed capability has no install plan — and stops there, writing nothing: what the backbone, dependency and mandatory-connection checks would refuse on is among what the plan says the capability needs ("Discovery: what a capability would connect to"), and a range an installed capability declares on it is among the findings the plan adds.
+**The version check comes first: sync's guard** ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 7). The install copies the capability the running pkit's bundle ships. So it runs only where that pkit is the release the project records, over a finished upgrade, and stops in each state that stops `pkit sync` ("Sync's guard" below). It stops before anything is read or written, under `--dry-run` and `--plan` too, since under another pkit both would preview another release's capability. Nothing overrides it, and its message names sync's remedies for the state it finds. The methodology's source is exempt, as for sync.
+
+Then, before placing files, `pkit capabilities install` runs five checks in order. `--plan` runs after the first — an installed capability has no install plan — and stops there, writing nothing: what the backbone, dependency and mandatory-connection checks would refuse on is among what the plan says the capability needs ("Discovery: what a capability would connect to"), and a range an installed capability declares on it is among the findings the plan adds.
 
 1. **Already installed?** Refuse with a hint to use `upgrade`.
 2. **Backbone compatibility** — the capability's `requires_backbone` range must include the current backbone version. This is the shared backbone-satisfaction gate (COR-007 pattern-extraction): the *same* check runs from both capability-entry paths — `install` (kit-source copy) and `register` (in-repo incubated) — so neither path can activate a capability the current backbone cannot support.
@@ -704,7 +701,7 @@ Before placing files, `pkit capabilities install` runs five checks in order. `--
 
 ### Register pre-flight checks (incubated; COR-031)
 
-`pkit capabilities register` shares the install pre-flights that still apply (backbone-satisfaction, capability-dependencies in both directions with the same `--force`, mandatory process connections, collision detection against *other* installed content) and skips "exists in kit source" (the in-repo tree *is* the source). Adopting an already-registered capability in place moves no version, so it skips the check of the ranges declared on it. Register adds one check the install path doesn't need:
+`pkit capabilities register` shares the install pre-flights that still apply (backbone-satisfaction, capability-dependencies in both directions with the same `--force`, mandatory process connections, collision detection against *other* installed content) and skips "exists in kit source" (the in-repo tree *is* the source). It copies nothing, so it skips sync's guard too, and runs under any pkit. Adopting an already-registered capability in place moves no version, so it skips the check of the ranges declared on it. Register adds one check the install path doesn't need:
 
 - **Self-consistency validation (COR-031 D1)** — the adopter hand-authored this capability; nothing upstream validated it. Before activation, its own `package.yaml` (run through the same package validator `pkit validate` uses — the schema and the repository checks in "Validation" above; only its errors refuse — an unknown key among them, "Strict on unknown keys" above), required layout (`README.md`), and own schema pairs (validated by the same validator `pkit schemas validate` runs) are checked against the working tree, which is its spec. Refuse with the structural problems listed. This is *self-validation*, not source-reconciliation — origin suppresses the latter (below), never the former.
 
@@ -844,8 +841,9 @@ With no `completed_version`, the project's backbone migration history is unknown
 The content a sync writes, and the target of a backbone upgrade, is the running pkit's own version: a release's content is tied to its code (ADR-033). That version can be another than the project's. A pin raise leaves the installed tool where it was, an installed tool moves on its own, and when the entry-point router cannot fetch a project's pin it runs the installed tool instead (ADR-039). One guard keeps such a pkit from writing its release over the project's ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 7, COR-059 point 9). It reads the backbone manifest's two recorded states and the pin (`.pkit/version-pin`), and compares them with the running pkit's version.
 
 - **`sync` calls it in both directions,** at its entry, before anything is written. It stops when the manifest is missing or its `backbone_version` is no version, when the running pkit is not `backbone_version`, when `completed_version` differs from `backbone_version` or is missing, or when the pin is newer than the running pkit. A sync at another version would copy another release's content: an older one over newer content, or a newer one without the migrations between the two. Sync runs no migration, so stopping is what keeps a migration from being passed over.
+- **`capabilities install` and `capabilities upgrade` call it in both directions too,** at their entry, before they read or write anything. Each copies the capability the running pkit's bundle ships, so each stops in sync's states, with sync's remedies, the command named as the operator would run it again. So every shipped file a project holds comes from the release its backbone records, wherever a version names one content: under a tagged install (ADR-065 point 12). `capabilities register` copies nothing and does not call it.
 - **`upgrade` calls it in the older direction only,** before it writes anything: it refuses a running pkit older than the newest of `backbone_version`, `completed_version` and the pin. Upgrade moves the project to the running version, so a newer pkit is what it is for. It calls the propagation step, never the sync command, so the sync command's guard never stops it.
-- **How it stops:** exit non-zero, name the state found and its remedy, and write nothing: no content, no manifest, no pin. No flag overrides it, `sync --force` included, and a dry run stops too.
+- **How it stops:** exit non-zero, name the state found and its remedy, and write nothing: no content, no manifest, no pin. No flag overrides it, `sync --force` and the capability commands' `--force` included, and a dry run stops too.
 - **The remedies,** the first that matches winning:
   - under the router's fallback: reconnecting, or the pin's version
   - with no manifest, or no version: `pkit upgrade`
@@ -864,17 +862,22 @@ Only an unambiguous order is compared: a pin that is not a version blocks nothin
 
 `pkit capabilities upgrade <name>` is a transition of one capability ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 4, COR-010). It runs in the transition's order for that capability alone, at the recorded backbone, and writes neither of the backbone's two recorded versions:
 
-1. **Its checks,** each of which may refuse and none of which writes: its new version's `requires_backbone` against the recorded backbone, the dependency check in both directions (below), its mandatory process connections, and the collision flow. A new collision is asked about only under `--interactive`. Without the flag the command refuses and names it.
+1. **Its checks,** each of which may refuse and none of which writes:
+   - sync's guard, first, which stops the command wherever `pkit sync` stops ("Sync's guard", above)
+   - the refusal of a capability the running pkit's bundle ships older than the project records, with no override: copying it would move its recorded version down. The message names both versions, and `pkit upgrade` run by a pkit whose bundle ships the recorded version or newer, since the running pkit ships the project's own release.
+   - its new version's `requires_backbone` against the recorded backbone
+   - the dependency check in both directions (below), and its mandatory process connections
+   - the collision flow. A new collision is asked about only under `--interactive`. Without the flag the command refuses and names it.
 2. **Its manifest,** still at the capability's root, moves under its `project/`, each skip chosen in step 1 is recorded there, and each project artefact an override chose to replace is removed, all before the copy.
 3. **Its copy,** with its skips, then `.pkit/.gitignore` rendered, so a migration reads the new version's render. It creates no seed path.
 4. **Its migrations,** after the copy, from the version it records, then its restamp at the version it ships. One with no readable version runs none.
 5. **Its derivable state:** merge delivery and deploy, its query commands' provisioning, and `.pkit/.gitignore` rendered again.
 
-It finishes a capability an interrupted transition or an untagged install left behind. It moves the capability to the version the running pkit's bundle ships, which is the version the project's recorded release ships only while that pkit is the project's version. Sync's guard stops `pkit sync` under any other pkit, and #1463 has it stop `pkit capabilities upgrade` there too.
+It finishes a capability that an interrupted transition of that capability, or an untagged install, left behind. Over an interrupted transition of the backbone, sync's guard stops it and names `pkit upgrade`, which finishes that transition. It moves the capability to the version the running pkit's bundle ships. Sync's guard stops it under any pkit but the project's version, so that is the version the project's recorded release ships (COR-010), wherever a version names one content: under a tagged install (ADR-065 point 12).
 
 #### Upgrading an incubated capability (COR-031 D1/D4)
 
-`pkit capabilities upgrade <name>` is **origin-aware**. For an `incubated-in-repo` capability there is no kit source to resolve against — the working tree *is* the source — so the command **must not** route through the kit-source resolution path. Doing so would mislabel the capability "no longer ships from source" and steer the adopter toward the destructive uninstall. Instead, "upgrade" for an incubated capability **re-applies deploy from the in-repo tree** (mirroring the sync skip-branch below): any newly-authored skills/agents re-materialise in the harness, and source-reconciliation stays suppressed. If the in-repo subtree has gone missing, the command reports that plainly — never as a kit-source orphan, and never suggesting uninstall. A `kit-shipped` capability's upgrade path is the transition of one capability above.
+`pkit capabilities upgrade <name>` is **origin-aware**. For an `incubated-in-repo` capability there is no kit source to resolve against — the working tree *is* the source — so the command **must not** route through the kit-source resolution path. Doing so would mislabel the capability "no longer ships from source" and steer the adopter toward the destructive uninstall. Instead, "upgrade" for an incubated capability **re-applies deploy from the in-repo tree** (mirroring the sync skip-branch below): any newly-authored skills/agents re-materialise in the harness, and source-reconciliation stays suppressed. If the in-repo subtree has gone missing, the command reports that plainly — never as a kit-source orphan, and never suggesting uninstall. Sync's guard runs at the command's entry, before the origin is read. So this re-deploy stops under another pkit too, as `pkit sync`'s re-deploy of it does. A `kit-shipped` capability's upgrade path is the transition of one capability above.
 
 In the methodology's source repository, run by its own code ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)), a `kit-shipped` capability's kit source *is* its subtree, so its upgrade re-applies deploy in place the same way: the deploy primitives re-run and its query commands are provisioned, with nothing copied, no receipt restamped and no migration run — migrations carry an adopter's copy forward, and there is no copy. It is sync's self-host path for one capability.
 
@@ -919,7 +922,7 @@ A `kit-shipped` capability's copy replaces its subtree wholesale. On its own tha
 - **source version > installed version:** skip it too, reported `pending`: moving a capability is `pkit upgrade`'s, with its migrations.
 - **equal:** copy it, with no migration and no stamp.
 
-A version that cannot be read on the installed side skips the capability, so none of its migrations runs anywhere. One the bundle's package does not name skips it as well. The incubated skip-branch above is unchanged (no kit source to compare against), and so is the "no longer ships from source" orphan case. `pkit upgrade`, the transition of the backbone, refuses a capability its bundle ships older, in its step 1, before it writes anything ("The upgrade flow", above). `pkit capabilities upgrade` does not refuse it yet, and #1463 adds that refusal. Before any capability is reached, sync's guard has already stopped a running pkit at another version than the project's ("Sync's guard" above).
+A version that cannot be read on the installed side skips the capability, so none of its migrations runs anywhere. One the bundle's package does not name skips it as well. The incubated skip-branch above is unchanged (no kit source to compare against), and so is the "no longer ships from source" orphan case. `pkit upgrade`, the transition of the backbone, refuses a capability its bundle ships older, in its step 1, before it writes anything ("The upgrade flow", above). So does `pkit capabilities upgrade`, the transition of one capability ("Per-component upgrade", above). Before any capability is reached, sync's guard has already stopped a running pkit at another version than the project's, in `sync` and in both capability commands ("Sync's guard" above).
 
 ### The ownership predicates (`ownership.py`)
 
