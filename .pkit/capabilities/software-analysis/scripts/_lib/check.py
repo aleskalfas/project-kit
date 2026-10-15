@@ -24,7 +24,10 @@ What is checked, each against the record's words:
   still holding one of the templates', is an error. Matched exactly against those texts
   (`_lib/placeholder.py`), so a capitalised one (`<Title>`) is caught and
   words of the artefact's own in angle brackets — code a body quotes — never
-  are.
+  are. A hint the stamp wrote as a part's placeholder, still in a body or a
+  section, is an error too: a comment that opens with its mark, `<!--
+  pkit:hint`, outside fenced code and code spans (`structure.hints`). The
+  message repeats the hint. Neither needs a rule.
 - **A document's heading** is its id and its front matter's title — an
   actor's name — `# UC-NNN — <title>`, `# ACT-<slug> — <name>`: what a reader
   of the front matter alone sees — a data point publishing `{id, title,
@@ -42,6 +45,10 @@ What is checked, each against the record's words:
   force names none withdrawn. The stamp refuses the same (`Analysis.unfit`),
   so the check never accepts what the stamp would not write; a withdrawn
   artefact may name withdrawn ones.
+- **One actor's journey** (point 1): each step of a journey in force is a use
+  case of the journey's actor, since a journey is one actor's path across use
+  cases. The stamp refuses the same (`Analysis.another_actor`). A withdrawn
+  journey is history, so its steps are not compared.
 - **A use case anchors to its actor** (point 4), as an artefact anchor, so a
   changed actor flags it.
 - **A journey's anchors match its steps** (point 4): the use cases among its
@@ -130,6 +137,7 @@ refuses beside anchors (COR-050 points 1, 8 and 12; DEC-001 point 9).
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
@@ -160,6 +168,7 @@ from _lib.model import (
     Unreadable,
     id_in_name,
     identity,
+    one_actor,
     with_article,
 )
 from _lib.placeholder import IN_TEMPLATES, left_in
@@ -216,6 +225,7 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _duplicates(analysis)
     outcome.findings += _named_otherwise(analysis)
     outcome.findings += _references(analysis)
+    outcome.findings += _journeys_of_one_actor(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
     record_findings, copies, read = _record_findings(root, records, analysis)
@@ -292,7 +302,8 @@ def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
     or its section of a collection file, heading included. Matched exactly
     (`_lib/placeholder.py`), so words of the
     artefact's own in angle brackets — `maps <user id> to a session`, code a body
-    quotes — are never taken for one."""
+    quotes — are never taken for one. A hint left in a body or a section is one too
+    (`_hints_left`)."""
     texts: dict[str, str | None] = {}
     found: list[Finding] = []
     for artefact in analysis.artefacts:
@@ -316,6 +327,8 @@ def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
         text = texts[artefact.path]
         if text is None:
             continue  # the core reports a file it cannot read
+        where = "its section" if artefact.entry else "its body"
+        found += _hints_left(text, artefact, where)
         _front, body = markdown.split(text)
         if artefact.entry and artefact.id is not None:
             body = markdown.section(body, artefact.id)
@@ -323,7 +336,6 @@ def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
         if not held:
             continue
         more = f" and {len(held) - 1} more" if len(held) > 1 else ""
-        where = "its section" if artefact.entry else "its body"
         found.append(
             Finding(
                 ERROR,
@@ -333,6 +345,33 @@ def _placeholders(root: Path, analysis: Analysis) -> list[Finding]:
             )
         )
     return found
+
+
+def _hints_left(text: str, artefact: Artefact, where: str) -> list[Finding]:
+    """A hint the stamp wrote as a part's placeholder, still in the artefact's body or its
+    section, outside fenced code and code spans (`structure.hints`): an error whatever
+    the format rule's status, as any placeholder is, the message repeating the first
+    hint (DEC-001 point 1). An entry is read within the span the backbone gives it, and
+    one with no section holds no hint."""
+    if artefact.entry:
+        if artefact.span is None:
+            return []
+        lines = structure.span_lines(text, artefact.span)
+    else:
+        lines = structure.body_lines(text)
+    left = structure.hints(lines)
+    if not left:
+        return []
+    (line, said), more = left[0], len(left) - 1
+    others = f", and {more} more below it" if more else ""
+    return [
+        Finding(
+            ERROR,
+            artefact.location,
+            f"{where} still holds a hint at line {line}{others}: write in its place what it "
+            f"asks for, and delete the hint (DEC-001 point 1). The hint: {said}",
+        )
+    ]
 
 
 def _strings(value: object, pointer: str = "") -> list[tuple[str, str]]:
@@ -514,6 +553,37 @@ def _references(analysis: Analysis) -> list[Finding]:
     return found
 
 
+def _journeys_of_one_actor(analysis: Analysis) -> list[Finding]:
+    """A journey in force whose step is a use case of another actor than the journey's:
+    a journey is one actor's path across use cases (DEC-001 point 1), and the stamp
+    refuses the same (`Analysis.another_actor`). A withdrawn journey is history, and
+    its steps' actors may have changed since. A journey whose actor is no actor of the
+    analysis is `_references`' to report, and a step that is no use case of it too."""
+    found: list[Finding] = []
+    for journey in analysis.of_kind(JOURNEY):
+        actor, steps = journey.fields.get("actor"), journey.fields.get("steps")
+        if (
+            journey.withdrawn
+            or not isinstance(actor, str)
+            or analysis.of(actor, ACTOR) is None
+            or not isinstance(steps, list)
+        ):
+            continue
+        for index, step in enumerate(steps):
+            other = analysis.another_actor(step, actor) if isinstance(step, str) else None
+            if other is None:
+                continue
+            found.append(
+                Finding(
+                    ERROR,
+                    at(journey.location, f"/steps/{index}"),
+                    f"{one_actor(index + 1, step, other, actor)} — name one of {actor}'s in "
+                    f"its place, or correct the use case's actor (DEC-001 point 1)",
+                )
+            )
+    return found
+
+
 # --- anchors -------------------------------------------------------------------------------
 
 
@@ -578,6 +648,7 @@ def _record_findings(
         try:
             front, _body = markdown.split((root / rel).read_text(encoding="utf-8"))
             data = markdown.load(front) if front is not None else None
+            times = markdown.unquoted_times(front) if front is not None else {}
         except (OSError, UnicodeDecodeError) as exc:
             found.append(Finding(ERROR, rel, f"cannot be read: {exc}"))
             continue
@@ -597,6 +668,8 @@ def _record_findings(
             )
             continue
         for pointer, message in schemas.errors(schemas.RECORD, data):
+            if pointer in times:
+                message = _unquoted_time(pointer, times[pointer])
             found.append(Finding(ERROR, at(rel, pointer), message))
         found += _cited(rel, data.get("outcomes"), analysis)
         record_found, record_copies = _evidence_in_record(
@@ -606,6 +679,28 @@ def _record_findings(
         copies += record_copies
         read.append((rel, data))
     return found, copies, read
+
+
+#: Where in a record a time of day is written: a source's version, the time its text
+#: was read.
+_A_TIME = re.compile(r"^/reviewed-against/[0-9]+/version$")
+
+
+def _unquoted_time(pointer: str, read_as: str) -> str:
+    """Why a time written unquoted fails its record's schema: YAML reads it as a time,
+    not as the text written, and gives it back otherwise. Where the field holds a time,
+    the message gives its form. Elsewhere it gives the field's form in the schema."""
+    said = (
+        f"YAML reads this value as a time, since it is not quoted, and gives it back as "
+        f"{read_as!r}, not as written: quote it"
+    )
+    if _A_TIME.match(pointer):
+        return (
+            f"{said}, a time in UTC such as "
+            f'"2026-01-05T10:00:00Z", as a revalidation\'s `at` is written '
+            f"(`schemas/revalidation-record.schema.json`)"
+        )
+    return f"{said}, in the form the field takes (`schemas/revalidation-record.schema.json`)"
 
 
 def _cited(rel: str, outcomes: object, analysis: Analysis) -> list[Finding]:

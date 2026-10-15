@@ -9,7 +9,7 @@ Write one when an actor's real goal spans use cases — onboarding, a first rele
 ## 2. Name the actor and the steps
 
 - **The actor** — the one who takes the whole path; in the analysis and in force.
-- **The steps** — the use cases it passes through, in order, at least two, each in force. A use case may appear more than once. Stamp missing use cases first (`use-case.md`).
+- **The steps** — the use cases it passes through, in order, at least two, each in force and each the actor's own: its `actor` is the journey's. A use case the actor only takes part in is another actor's, and the stamp and the check refuse it as a step. A use case may appear more than once. Stamp missing use cases first (`use-case.md`).
 
 ## 3. Choose the slug and the title
 
@@ -27,10 +27,13 @@ pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> 
 
 ## 6. Fill it
 
-- **Starts** — where the actor begins, and what they want by the end.
-- **Steps** — one line per step, what the actor achieves in that use case.
-- **Seams to watch** — for each pair of steps, what must carry over and how it could break.
-- **Done when** — the state that shows the whole path succeeded.
+Each part holds its hint, which says what goes there and gives an example. Write in its place what it asks for, and delete the hint. The stamp writes the step lines under **Steps**, one for each use case of `steps`.
+
+- **Goal** — what the actor wants from the whole path, in one sentence in their own voice.
+- **Steps** — under each step line, one line for each hand-over the step needs: what it receives, and how that can break.
+- **Variants** — each branch of the whole path, lettered after the step it leaves, or `None.`.
+- **Postconditions** — the state that shows the whole path succeeded.
+- **Minimal guarantees** — what still holds when the path stops before its end, or `None.`.
 
 Then run the checks in the shared framing's "After stamping", including `pkit analysis check-numbers` before merging.
 

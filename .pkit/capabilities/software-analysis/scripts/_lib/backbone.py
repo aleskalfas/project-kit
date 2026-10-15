@@ -53,7 +53,12 @@ one of the setting; for the
 number comparison, which versions of those files a branch's own history wrote,
 and which the default branch holds, so a number the default branch took by
 landing this branch's own work is told from one it took for another
-(`blobs_written`, `blob_of`); and, for the
+(`blobs_written`, `blob_of`); for the check of a planned record's pointers,
+whether the clone holds a commit, whether the default branch's history reaches
+it, whether a shallow clone's history of that branch stops short, and whether
+the merge-base holds a record's file, each asked of the clone alone, never a
+remote (`holds_commit`, `reaches`, `history_cut`, `holds_path`;
+`_lib/pointers.py`); and, for the
 proposal, which files held a piece of code at a commit — anywhere in the tree,
 or among files the caller names — where files were renamed to between two
 commits, and a commit's message. Which files an anchor stands on is never
@@ -64,6 +69,7 @@ taken literally, never as a pattern.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from collections.abc import Callable, Iterable, Mapping
@@ -385,7 +391,8 @@ def _listing(listed: str | None) -> list[tuple[str, str]]:
 
 def is_ancestor(root: Path, commit: str, of: str) -> bool:
     """Whether `commit` is `of` or in its history — no commit of `commit`'s history lies
-    outside `of`'s; `False` when git cannot answer."""
+    outside `of`'s; `False` when git cannot answer. `reaches` asks the same offline, and
+    raises when git cannot answer."""
     if not commit or not of or commit.startswith("-") or of.startswith("-"):
         return False
     argv = ["git", "rev-list", "-n", "1", commit, f"^{of}", "--"]
@@ -421,6 +428,83 @@ def removed(root: Path, commit: str) -> list[str]:
 def is_shallow(root: Path) -> bool:
     """Whether this clone is shallow: its history stops before the first commit."""
     return _git(root, "rev-parse", "--is-shallow-repository") == "true"
+
+
+#: Git's environment for a reading that must stay offline: a partial clone fetches an
+#: object it lacks from its remote unless told not to. Git 2.44 and later read the
+#: first variable. The second allows only a protocol named `none`, which is none, and
+#: overrides any `protocol.*` setting, so an older git can reach no remote either.
+_OFFLINE = {"GIT_NO_LAZY_FETCH": "1", "GIT_ALLOW_PROTOCOL": "none"}
+
+
+def holds_commit(root: Path, name: str) -> bool:
+    """Whether this clone holds the commit `name` names, asking no remote for it.
+    Raises `GitFailed` when git cannot be run."""
+    if not name or name.startswith("-"):
+        return False
+    proc = _offline(root, "cat-file", "-e", f"{name}^{{commit}}")
+    return proc.returncode == 0
+
+
+def holds_path(root: Path, commit: str, path: str) -> bool:
+    """Whether `commit` holds an entry at `path`, read from this clone alone — `git
+    ls-tree`, asking no remote, the path matched exactly. Raises `GitFailed` when git
+    cannot answer: a partial clone that lacks the commit's tree, say."""
+    if not commit or commit.startswith("-"):
+        raise GitFailed(f"{commit!r} names no commit")
+    proc = _offline(root, "ls-tree", "-z", "--full-tree", "--name-only", commit, "--", path)
+    if proc.returncode != 0:
+        detail = [line for line in proc.stderr.strip().splitlines() if line]
+        raise GitFailed(detail[-1] if detail else f"git ls-tree exited {proc.returncode}")
+    return path in proc.stdout.split("\0")
+
+
+def reaches(root: Path, commit: str, tip: str) -> bool:
+    """Whether `commit` is `tip` or in its history, as this clone holds that history —
+    `git merge-base --is-ancestor`, asking no remote. Raises `GitFailed` when git cannot
+    answer: a name that is no commit here, say. `is_ancestor` asks the same and reads a
+    failure as no; a reading that must stay offline and tell a failure apart asks this."""
+    if not commit or not tip or commit.startswith("-") or tip.startswith("-"):
+        raise GitFailed(f"{commit!r} or {tip!r} names no commit")
+    proc = _offline(root, "merge-base", "--is-ancestor", commit, tip)
+    if proc.returncode in (0, 1):
+        return proc.returncode == 0
+    detail = [line for line in proc.stderr.strip().splitlines() if line]
+    raise GitFailed(detail[-1] if detail else f"git merge-base exited {proc.returncode}")
+
+
+def history_cut(root: Path, tip: str) -> bool:
+    """Whether this clone's history of `tip` stops short: the clone is shallow, and a
+    commit whose parents it does not hold lies on that history. A full clone, or a
+    shallow one whose cut lies elsewhere, holds every commit of `tip`'s history; when
+    git cannot list the cut of a shallow clone, the history is taken as cut. Raises
+    `GitFailed` when git cannot answer."""
+    if not is_shallow(root):
+        return False
+    listed = _git(root, "rev-parse", "--git-path", "shallow")
+    if listed is None:
+        return True
+    try:
+        cut = (root / listed).read_text(encoding="utf-8").split()
+    except OSError:
+        return True
+    return any(holds_commit(root, commit) and reaches(root, commit, tip) for commit in cut)
+
+
+def _offline(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    """Git's answer, with no remote asked for what the clone lacks; `GitFailed` when git
+    cannot be run."""
+    try:
+        return subprocess.run(
+            ["git", *args],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, **_OFFLINE},
+        )
+    except OSError as exc:
+        raise GitFailed(f"git could not be run ({exc})") from exc
 
 
 def blobs_written(root: Path, since: str, folders: Iterable[str]) -> set[str]:

@@ -151,6 +151,9 @@ def front(repo: AdopterRepo, rel: str) -> dict[str, Any]:
 #: A text in angle brackets, as a template writes a placeholder.
 _PLACEHOLDER = re.compile(r"<([^<>\n]+)>")
 
+#: A part's hint as the stamp writes it, its example after it (#1366).
+HINT = re.compile(r"<!-- pkit:hint .*? Example: (?P<example>.*?) -->")
+
 #: The writing rules whose mechanical parts the text the capability ships keeps to
 #: (#1351): no sentence over 25 words, and no semicolon. They are a floor any project's
 #: rules accept, and carry none of one project's style.
@@ -170,11 +173,12 @@ def below_floor(text: str) -> list[str]:
 
 def fill(repo: AdopterRepo) -> None:
     """Every placeholder the stamp left in the analysis written over with its own words,
-    as a person fills each — the check fails an artefact still holding one."""
+    as a person fills each — the check fails an artefact still holding one. Each part's
+    hint is written over with its example."""
     for path in sorted((repo.root / ANALYSIS).rglob("*.md")):
         if (repo.root / RECORDS) in path.parents:
             continue
-        text = path.read_text(encoding="utf-8")
+        text = HINT.sub(r"\g<example>", path.read_text(encoding="utf-8"))
         path.write_text(_PLACEHOLDER.sub(r"\1", text), encoding="utf-8")
 
 

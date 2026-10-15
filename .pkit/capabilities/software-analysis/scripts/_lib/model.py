@@ -119,6 +119,10 @@ KIND_OF_PLACE = {
 #: this path. A test holds this to the package.
 REVALIDATIONS = "revalidations"
 
+#: The trigger of a revalidation planned before code (DEC-001 point 5), whose record
+#: names the sources of the design it reviewed (point 6).
+PLANNED = "planned"
+
 #: The methodology's front-matter container, and the friction block's keys that
 #: lead to an artefact's revalidation marker (COR-050 points 1 and 3).
 CONTAINER = "pkit"
@@ -284,6 +288,29 @@ class Analysis:
         if in_force and found.withdrawn:
             return f"{NOUN[kind]} {artefact_id} is withdrawn ({found.location})"
         return None
+
+    def another_actor(self, step: str, actor: str) -> str | None:
+        """The actor whose use case `step` is, when it is not `actor`: a journey of
+        `actor` cannot pass through it. A journey is one actor's path across use cases
+        (DEC-001 point 1), so each of its steps is a use case of the journey's actor. A
+        step that is no use case of the analysis, or whose actor is not written, is
+        `None`: `unfit` and the use case's schema say what is wrong with it. A withdrawn
+        step is compared too, since being another actor's is a second fault beside the
+        one `unfit` names. One rule for the stamp and the check, as `unfit` is."""
+        found = self.of(step, USE_CASE)
+        own = found.fields.get("actor") if found is not None else None
+        return own if isinstance(own, str) and own != actor else None
+
+
+def one_actor(number: int, step: str, other: str, actor: str) -> str:
+    """What a journey of `actor` breaks when its step `number`, the use case `step`, is a
+    use case of `other` (`Analysis.another_actor`), as the check and the stamp say it.
+    Each adds the fix that fits what it reads."""
+    return (
+        f"step {number}, {step}, is a use case of {other}, and the journey is {actor}'s: a "
+        f"journey is one actor's path across use cases, so each step is a use case of the "
+        f"journey's actor"
+    )
 
 
 def analysis_of(document: Mapping[str, Any]) -> Analysis:

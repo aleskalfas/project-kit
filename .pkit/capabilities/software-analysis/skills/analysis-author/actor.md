@@ -30,7 +30,7 @@ The stamp writes `ACT-<slug>.md` in the actors' folder, headed `# ACT-<slug> —
 ## 5. Fill it
 
 - **`needs`** — in the front matter, what the actor needs from the system, one line each, replacing the placeholder. A tool reads them from there, so they never go in the body.
-- **The body** — under the heading, who this is, when they come to the system, and what they bring with them.
+- **The body** — each part as its hint says, the hint deleted: under the heading, what the role is and does with the system, then *Occasions* and *Context*, each `None.` when there is none.
 
 Then run the checks in the shared framing's "After stamping".
 

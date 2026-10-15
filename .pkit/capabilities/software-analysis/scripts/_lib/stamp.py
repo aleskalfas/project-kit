@@ -1,7 +1,9 @@
-"""Stamping the analysis artefacts (DEC-001 points 2 to 4).
+"""Stamping the analysis artefacts (DEC-001 points 1 to 4).
 
-A stamp writes one artefact from its kind's template in `templates/`, where
-the capability's places put it under the analysis location:
+A stamp writes one artefact, where the capability's places put it under the
+analysis location. Its front matter comes from its kind's template in
+`templates/`, and its body is rendered from its kind's declared structure
+(`_lib/render.py`), never copied from the template:
 
 - a **use case** or a **journey** is a new file, `UC-NNN-<slug>.md` or
   `JRN-NNN-<slug>.md`, numbered with the next free number — one past the
@@ -23,8 +25,8 @@ the capability's places put it under the analysis location:
   description its body gives;
 - a **term** is a new entry, `TERM-<slug>`, of the glossary, a collection file
   — added to its front matter, and its section to the body, each where its id
-  sorts, every other byte left as it was — the file created from the template
-  the first time.
+  sorts, every other byte left as it was — the file created the first time,
+  its head as the declaration gives it.
 
 It writes the anchors DEC-001 point 4 asks for: a use case's actor, and a
 journey's use cases from its steps, beside the paths and records it is given.
@@ -33,11 +35,16 @@ An actor or a term nothing embodies is stamped with the reason instead, its
 core's, which the unanchored measure reads (COR-050 points 1 and 8). A
 revalidation record is not an artefact and
 is stamped by `_lib/revalidation.py`.
-What only a person can write the stamp leaves as the template's placeholders —
-an actor's need, a term's definition, a body's goal and steps — which the
-check fails until each is filled; a title, a name or a reason given to it
-still holding one the templates or the skill's commands shipped it refuses
-(`_lib/placeholder.py`).
+What only a person can write the stamp leaves for them: an actor's needs and
+a term's definition as the template's front-matter placeholders, and each
+body part as its hint (point 1). The check fails each until it is written.
+It writes a journey's step lines under *Steps*, each use case's id and title
+as the form asks, and leaves the part's hint above them for the hand-overs.
+It refuses a journey with a step that is a use case of another actor: a
+journey is one actor's path across use cases (point 1), and the check holds a
+journey in force to the same.
+A title, a name or a reason given to it still holding a placeholder the
+templates or the skill's commands shipped it refuses (`_lib/placeholder.py`).
 While the analysis location is not recorded yet, the stamp records it through
 the backbone (COR-049 point 5) once the artefact is written — so a write that
 fails leaves the recorded locations untouched, and a recording that fails puts
@@ -74,16 +81,16 @@ import stat
 import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from _lib import backbone, history, markdown, numbering, schemas
+from _lib import backbone, forms, history, markdown, numbering, render, schemas, structure
 from _lib.model import (
     ACTOR,
+    CAPABILITY,
     COLLECTIONS,
     CONTAINER,
     JOURNEY,
@@ -97,6 +104,7 @@ from _lib.model import (
     Unreadable,
     identity,
     number_of,
+    one_actor,
     with_article,
 )
 from _lib.placeholder import left_in
@@ -109,13 +117,6 @@ TEMPLATE_OF = {
     ACTOR: "actor.md",
     TERM: "glossary.md",
 }
-
-#: The placeholder a document template's title is written as.
-TITLE = "<Title>"
-
-#: A journey template's step and seam lines, rewritten from the steps.
-_STEP_LINE = re.compile(r"^\d+\. UC-\d+ — (?P<rest>.*)$")
-_SEAM_LINE = re.compile(r"^- \*\*UC-\d+ → UC-\d+:\*\* (?P<rest>.*)$")
 
 #: A collection entry's section heading, `## <id> — <name>`.
 _SECTION = re.compile(r"^## (?P<id>\S+)")
@@ -142,11 +143,13 @@ class Request:
 
 @dataclass(frozen=True)
 class Stamped:
-    """What was written: the new id, where, and what else the stamp has to say."""
+    """What was written: the new id, where, what else the stamp has to say, and what it
+    warns of, written all the same."""
 
     id: str
     location: str  # the file, or `file#id` for an entry
     notes: tuple[str, ...]
+    warnings: tuple[str, ...] = ()
 
 
 Recorder = Callable[[Path], str | None]
@@ -211,7 +214,7 @@ def stamp(
         refuse_links(root, target, location)
         if target.exists():
             raise Refused(f"{location} exists already")
-        text = _document(kind, new_id, request)
+        text = _document(kind, new_id, request, analysis)
 
     recorded = write_and_record(root, target, location, text, record)
     if recorded:
@@ -360,7 +363,8 @@ def _check_unanchored(request: Request) -> None:
 def _check_references(analysis: Analysis, request: Request) -> None:
     """A use case's and a journey's actor, and a journey's steps, are artefacts in force:
     what it stamps is in force, and the check holds it to the same rule
-    (`Analysis.unfit`)."""
+    (`Analysis.unfit`). Each of a journey's steps is a use case of its actor, as the
+    check holds a journey in force (`Analysis.another_actor`)."""
     if request.kind in NUMBERED:
         if request.actor is None:
             raise Refused(f"{with_article(request.kind)} is one actor's: name it with --actor")
@@ -373,6 +377,13 @@ def _check_references(analysis: Analysis, request: Request) -> None:
             )
         for step in request.steps:
             _in_force(analysis, step, USE_CASE)
+        for number, step in enumerate(request.steps, 1):
+            other = analysis.another_actor(step, str(request.actor))
+            if other is not None:
+                raise Refused(
+                    f"{one_actor(number, step, other, str(request.actor))} — name one of "
+                    f"{request.actor}'s in its place"
+                )
 
 
 def _in_force(analysis: Analysis, artefact_id: str, kind: str) -> None:
@@ -493,79 +504,86 @@ def _new_id(kind: str, slug: str, held: set[str], base: str) -> str:
 # --- rendering -------------------------------------------------------------------------------
 
 
-def _document(kind: str, new_id: str, request: Request) -> str:
-    """A use case's, a journey's or an actor's file, from its template: its id, and its
-    title — an actor's name — in its front matter and in its heading after the id."""
-    front, body = _template(kind)
+def _document(kind: str, new_id: str, request: Request, analysis: Analysis) -> str:
+    """A use case's, a journey's or an actor's file: its front matter from its template,
+    with its id and its title — an actor's name — and its body rendered from its kind's
+    structure, headed by the id and the title (`_lib/render.py`)."""
+    front, _body = _template(kind)
     data = dict(markdown.load(front))
-    template_id = str(data["id"])
     data["id"] = new_id
+    written: dict[str, str] = {}
     if kind == ACTOR:
-        placeholder = str(data["name"])
         data["name"] = _title(request)
         anchored: list[str] = []
     else:
-        placeholder = TITLE
         data["title"] = _title(request)
         data["actor"] = request.actor
         if kind == JOURNEY:
             data["steps"] = list(request.steps)
             anchored = list(dict.fromkeys(request.steps))
+            written = _step_lines(declared(kind), request.steps, analysis)
         else:
             anchored = [str(request.actor)]
     data[CONTAINER] = _container(request, anchored)
-    body = body.replace(template_id, new_id).replace(placeholder, _title(request))
-    if kind == JOURNEY:
-        body = _journey_body(body, request.steps)
+    body = render.body(declared(kind), f"{new_id} — {_title(request)}", written)
     return f"---\n{dump(data)}---\n\n{body}"
 
 
-def _journey_body(body: str, steps: Sequence[str]) -> str:
-    """The template's step and seam lines, one per step and one per pair of steps."""
+def _step_lines(kind: structure.Kind, steps: Sequence[str], analysis: Analysis) -> dict[str, str]:
+    """A journey's step lines, one per use case of its steps, numbered from 1, each its id
+    and its title as the use case states it: what the form of the journey's steps part
+    asks (`_lib/forms.py`), keyed by that part's id."""
+    part = next((e for e in kind.sections if e.form == forms.STEPS_MATCH), None)
+    if part is None:
+        return {}
+    lines: list[str] = []
+    for number, step in enumerate(steps, 1):
+        use_case = analysis.of(step, USE_CASE)
+        title = use_case.fields.get("title") if use_case is not None else None
+        lines.append(
+            f"{number}. {step} — {title}" if isinstance(title, str) else f"{number}. {step}"
+        )
+    return {part.id: "\n".join(lines)}
 
-    def rewrite(lines: list[str], pattern: re.Pattern[str], make: Callable[[str], list[str]]):
-        out: list[str] = []
-        done = False
-        for line in lines:
-            match = pattern.match(line)
-            if match is None:
-                out.append(line)
-            elif not done:
-                out += make(match["rest"])
-                done = True
-        return out
 
-    lines = body.split("\n")
-    lines = rewrite(
-        lines, _STEP_LINE, lambda rest: [f"{n}. {s} — {rest}" for n, s in enumerate(steps, 1)]
-    )
-    lines = rewrite(
-        lines,
-        _SEAM_LINE,
-        lambda rest: [f"- **{a} → {b}:** {rest}" for a, b in pairwise(steps)],
-    )
-    return "\n".join(lines)
+def declared(kind: str) -> structure.Kind:
+    """A kind's declared structure, or a refusal: the declaration is the capability's own,
+    so one that cannot be read, or whose hints cannot each be one comment on one line, is
+    restored, never edited."""
+    try:
+        declared_kind = structure.read_kinds()[kind]
+        for element in declared_kind.sections:
+            if element.filled:
+                render.hint(element)
+    except (structure.Unreadable, ValueError) as exc:
+        raise Refused(
+            f"the kinds' structures cannot be read: {exc}. A body is rendered from its kind's "
+            f"structure, so nothing is stamped until they can: the file is {CAPABILITY}'s own "
+            f"— restore it as the capability ships it (DEC-001 point 1)"
+        ) from exc
+    return declared_kind
 
 
 def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Request) -> str:
     """The collection file `place` with the new entry: its front matter gains the
     entry and its body the entry's section, each where the id sorts among those
-    already there, every other byte as it was; the file from the template when it
-    is new. Sorted rather than appended, so two lines of work adding different
-    entries write to different places of the file and merge cleanly unless their
-    ids are neighbours — as the core keeps deferrals sorted (COR-050 point 4)."""
-    front, body = _template(kind)
-    ((template_id, example),) = dict(markdown.load(front)).items()
+    already there, every other byte as it was. A new file gains the head its kind
+    declares, which the stamp writes once. The entry's own fields come from the
+    template's front matter, and its section is rendered from its kind's structure
+    (`_lib/render.py`). Sorted rather than appended, so two lines of work adding
+    different entries write to different places of the file and merge cleanly unless
+    their ids are neighbours — as the core keeps deferrals sorted (COR-050 point 4)."""
+    front, _body = _template(kind)
+    ((_template_id, example),) = dict(markdown.load(front)).items()
     name = _title(request)
     entry = {key: value for key, value in example.items() if key != CONTAINER}
     entry["name"] = name
     entry[CONTAINER] = _container(request, [])
-    heading = body.find(f"## {template_id}")
-    preamble, section = body[:heading], body[heading:]
-    section = section.replace(template_id, new_id).replace(str(example["name"]), name)
+    structured = declared(kind)
+    section = render.body(structured, f"{new_id} — {name}")
     added = dump({new_id: entry})
     if not target.exists():
-        return f"---\n{added}---\n\n{preamble}{section}"
+        return f"---\n{added}---\n\n{render.head(structured)}\n{section}"
 
     try:
         written = target.read_bytes().decode("utf-8")  # as written: no line ending translated
