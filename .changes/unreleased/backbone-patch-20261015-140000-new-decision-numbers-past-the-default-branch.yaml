@@ -2,6 +2,7 @@ component: backbone
 kind: patch
 custom:
   category: Fixed
+  pr: "1590"
 body: >
   `pkit new decision` numbers a new record past every record the default
   branch holds in the namespace's folder, as well as past the working tree's,
