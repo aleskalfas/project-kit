@@ -172,13 +172,21 @@ def propagate(ctx: install.InstallContext, capabilities: Sequence[CapabilityPlan
     refreshed in place, and each capability in *capabilities* is copied from
     its bundled source, leaving out the artefacts its record skips. The step
     checks no version, runs no migration, writes no manifest and creates no
-    seed path (ADR-065 point 1). Project-owned content is never overwritten.
-    Under `--dry-run` it writes nothing. A capability is copied only where its
-    disposition is one a copy may take (`COPIES`): never an incubated, an
-    externally sourced, a no-longer-shipped one, or one bundled older.
+    seed path (ADR-065 point 1). Before it writes the methodology's trees, it
+    stops on a clash of area names (`refuse_area_name_clash`, point 13).
+    Project-owned content is never overwritten. Under `--dry-run` it writes nothing. A capability is
+    copied only where its disposition is one a copy may take (`COPIES`): never
+    an incubated, an externally sourced, a no-longer-shipped one, or one
+    bundled older.
     """
     from project_kit import capabilities as caps
 
+    # A clash of area names stops the step before it writes the methodology's
+    # trees, under `--dry-run` too (ADR-065 point 13). So sync's copy meets it
+    # as a transition does, on an untagged install as well (point 12). A
+    # transition has refused it in its step 1 already, and nothing it writes
+    # before this step makes one, so only sync meets the refusal here.
+    refuse_area_name_clash(ctx.target_root, ctx.source_kit, command="sync")
     for area in install.PROPAGATED_AREAS:
         src = ctx.source_kit / area
         if src.is_dir():
@@ -190,6 +198,97 @@ def propagate(ctx: install.InstallContext, capabilities: Sequence[CapabilityPlan
             continue
         skipped = plan.record.skipped if plan.record is not None else ()
         caps.copy_shipped_capability(ctx.target_root, plan.source, skipped)
+
+
+# --- A clash of area names (ADR-065 point 13) ------------------------------------
+
+
+def area_name_clash(target_root: Path, source_kit: Path) -> Path | None:
+    """The project's own area that the running pkit's copy would write over, or None.
+
+    Among published releases one such clash can happen (ADR-065 point 13): a
+    project's own area at `.pkit/lifecycle/`, made at a release before v1.149.0,
+    which first shipped the core area of that name. The core area holds
+    `ownership.py` (`install.LIFECYCLE_MARK`), as it has since it first shipped,
+    and a project's own area does not. So, while the running pkit ships the core
+    area, the clash is anything at `.pkit/lifecycle` other than a folder, not a
+    link, that holds that file. An empty folder is no clash: every copy writes
+    the file first, so an interrupted copy leaves the folder empty or holding
+    it. Every other area a release propagates has shipped since v1.134.0, and no
+    release adds a core area until #1600 builds the full check. Read-only.
+    """
+    area = install.LIFECYCLE_AREA
+    if area not in install.PROPAGATED_AREAS or not (source_kit / area).is_dir():
+        return None
+    path = target_root / ".pkit" / area
+    if not os.path.lexists(path):
+        return None
+    if path.is_dir() and not path.is_symlink():
+        if (path / install.LIFECYCLE_MARK).is_file() or not any(path.iterdir()):
+            return None
+    return path
+
+
+def refuse_area_name_clash(target_root: Path, source_kit: Path, *, command: str) -> None:
+    """Stop a command whose copy would write a core area over the project's own.
+
+    A transition calls it in its step 1, and the propagation step before it
+    writes the methodology's trees, so sync's copy meets it too (ADR-065 point
+    13). It writes nothing, stops whether or not a person can answer and under
+    `--dry-run` too, and takes no override. Its message names the path, the
+    release that ships the core area, and the ways on: move the project's area,
+    stay at the release the project records (after a transition's stop alone,
+    since sync already runs that release), or restore a core area that lost its
+    file. The methodology's source never reaches it: its sync and its upgrade
+    run the self-host branch, which copies nothing.
+    """
+    path = area_name_clash(target_root, source_kit)
+    if path is None:
+        return
+    running = read_kit_version(source_kit)
+    shown = f".pkit/{path.name}/"
+    mark = install.LIFECYCLE_MARK
+    lines = [
+        f"refusing to run `pkit {command}`: {shown} is the project's own area, and pkit "
+        f"{running} ships a core area of that name, which its copy would write over "
+        "(ADR-065 point 13).",
+        f"The core area holds {mark}, and this one does not. Nothing was written, and no "
+        "flag overrides this refusal.",
+        f"To move on: move the project's area to another name, with what refers to it, "
+        f"then run `pkit {command}` again.",
+        *(_area_clash_stay_lines(target_root) if command == "upgrade" else []),
+        f"If {shown} is the methodology's own area and has lost {mark}: restore that file "
+        f"from git (`git checkout -- {shown}{mark}`). Where git holds no copy of it, remove "
+        f"the folder, which holds none of the project's content. Then run `pkit {command}` "
+        "again.",
+    ]
+    raise click.ClickException("\n       ".join(lines))
+
+
+def _area_clash_stay_lines(target_root: Path) -> list[str]:
+    """How a project stays at its release after a transition's stop on a clash of
+    area names (ADR-065 point 13).
+
+    An unpinned project pins the release it records, point 8's Stay remedy. A
+    pinned project at its pin needs nothing: the transition moved no pin, and the
+    router goes on running that release. Otherwise no way to stay is named.
+    """
+    manifest = read_backbone_manifest(target_root)
+    recorded = manifest.backbone_version if manifest is not None else None
+    if _parse_version(recorded) is None:
+        return []
+    pin = read_version_pin(target_root)
+    if pin is None:
+        return [
+            f"To stay at {recorded}: run `pkit pin`. It pins the project at {recorded}, and "
+            "the router then runs that version here."
+        ]
+    if _parse_version(pin) == _parse_version(recorded):
+        return [
+            f"To stay at {pin}: do nothing. This upgrade moved no pin, and the router goes "
+            f"on running pkit {pin} here."
+        ]
+    return []
 
 
 # --- Each capability, by the version it records (ADR-065 point 1) ---------------

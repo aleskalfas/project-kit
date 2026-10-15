@@ -771,6 +771,7 @@ The upgrade command transitions an adopter project to a target backbone version.
 
 1. **Compatibility and collisions.** Each check may refuse, and none writes.
    - **A component its bundle ships older:** an adapter or a capability the running pkit's bundle ships older than the version the project records refuses the transition. Copying it would move its recorded version down, under migrations that run forward only. The refusal names the component, both versions, and a pkit whose bundle ships that version or newer. No flag overrides it.
+   - **A clash of area names:** a project's own area at `.pkit/lifecycle/` refuses the transition ("A clash of area names", below). No flag overrides it.
    - **Compatibility resolution:** each installed component's post-upgrade `requires_backbone` must admit the target. It is read from the bundle where the bundle ships the component, and from the installed copy where it does not. Conflicts are surfaced so the adopter can address them: upgrade specific components, pin the backbone, or remove an incompatible component.
    - **The dependency gates** run over the set the transition would leave ("The dependency gates", below).
    - **The collision flow** asks about each new naming collision, or refuses ("A new collision", below).
@@ -804,6 +805,24 @@ A new collision is a skill or agent name that a shipped capability's target vers
   - a core skill or agent a release adds, which a project artefact of the same name suspends by deploy's name precedence
   - a clash between two artefacts one release ships, core's or a shipped capability's, which is the release's to prevent
   - a collision with externally-sourced content, which surfaces as COR-041 sets
+  - a core area whose name a project's own area takes, which stops the upgrade instead ("A clash of area names", below)
+
+### A clash of area names
+
+A project may create its own area at `.pkit/<name>/` (COR-011). A release that later ships a core area of the same name would copy over it, so the upgrade stops first ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 13).
+
+- **The one clash among published releases:** a project's own area at `.pkit/lifecycle/`, made at a release before v1.149.0, which first shipped the core `lifecycle` area.
+- **How it is told apart:** the core area holds `ownership.py`, and a project's own area does not. So anything else at `.pkit/lifecycle` is a clash: a folder without that file, a file, or a link. An empty folder is not.
+- **Where it stops:** the upgrade, in step 1, and the propagation step, before it writes the methodology's trees. So `pkit sync` stops on it too. The stop writes nothing, stops under `--dry-run` too, and takes no override, `--force` included.
+- **The message** names the path, and the running release, which ships the core area. It names the ways on:
+  - move the project's area to another name, with what refers to it, and run the command again
+  - after the upgrade's stop, to stay at the release the project records: `pkit pin` in an unpinned project. A project pinned at that release needs nothing, since its pin did not move.
+  - where the methodology's own area has lost `ownership.py`: restore it from git, or remove the folder where git holds no copy of it
+- **The copy writes `ownership.py` first** in that area. So an interrupted copy leaves the folder empty or holding the file, never a clash.
+- **What the test cannot tell apart,** and the upgrade's copy writes over until #1600:
+  - a project's own `lifecycle` area that holds a file named `ownership.py`
+  - a project's own area under a name core shipped before v1.134.0, in a project still at a release before core shipped that name
+- **No release adds a core area or a core adapter** until #1600 builds the full check. A test holds the areas a release propagates, the adapters it ships, and the core area's `ownership.py` to what they are today.
 
 ### The dependency gates
 
@@ -811,7 +830,7 @@ The gates run as `pkit capabilities upgrade` runs them (COR-030, COR-053 point 6
 
 - **A moving capability** refuses, with a hint, when a dependency its new version requires is not installed, or is out of the range it declares. So does one whose new version carries a mandatory process connection the set leaves unmet. The project controls that dependency, and no flag overrides the refusal. An optional dependency that is not installed passes.
 - **A moving dependency** warns when its new version falls outside the range a capability that does not move declares for it, naming each such dependent. So does one that leaves such a capability's mandatory connection unmet. The upgrade proceeds only under `pkit upgrade --force`, so neither is a hard block.
-- **`--force` overrides those two warnings and nothing else.** It overrides no guard, no compatibility refusal, no refusal of a component bundled older, and no collision.
+- **`--force` overrides those two warnings and nothing else.** It overrides no guard, no compatibility refusal, no refusal of a component bundled older, no collision, and no clash of area names.
 - **Not the upgrade's to judge:** a pair in which neither side moves, and a mandatory connection of a capability that does not move, already unmet before the upgrade.
 
 ### What the settings merge widens

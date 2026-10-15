@@ -1319,6 +1319,62 @@ def test_force_overrides_no_refusal_of_a_component_bundled_older(
         upgrade.run_upgrade(installed_target, force=True)
 
 
+# --- A clash of area names (ADR-065 point 13) ------------------------------------
+
+
+def _own_lifecycle_area(target: Path) -> None:
+    """Replace the core `lifecycle` area with a project's own, as one made before v1.149.0."""
+    area = target / ".pkit" / "lifecycle"
+    shutil.rmtree(area)
+    area.mkdir()
+    (area / "README.md").write_text("# Our lifecycle\n", encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("dry_run", "force"),
+    [(False, False), (True, False), (False, True)],
+    ids=["run", "dry-run", "force"],
+)
+def test_a_transition_stops_on_the_projects_own_lifecycle_area_in_step_1(
+    installed_target: Path, dry_run: bool, force: bool
+) -> None:
+    """Step 1 refuses before anything is written, under `--dry-run` too, and
+    `--force` overrides nothing of it."""
+    _content_behind(installed_target)
+    _own_lifecycle_area(installed_target)
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target, dry_run=dry_run, force=force)
+
+    message = " ".join(excinfo.value.message.split())
+    assert "refusing to run `pkit upgrade`: .pkit/lifecycle/ is the project's own area" in message
+    assert "no flag overrides this refusal" in message
+    assert "To stay at 0.1.0: run `pkit pin`" in message
+    assert _tree_bytes(installed_target) == before
+
+
+def test_a_transition_over_the_core_lifecycle_area_proceeds(installed_target: Path) -> None:
+    _content_behind(installed_target)
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert _recorded_version(installed_target) != "0.1.0"
+    assert (installed_target / ".pkit" / "lifecycle" / "ownership.py").is_file()
+
+
+def test_a_transition_into_a_project_with_no_lifecycle_area_brings_the_core_one(
+    installed_target: Path,
+) -> None:
+    """A project from before v1.149.0 that made no area of that name meets no clash."""
+    _content_behind(installed_target)
+    shutil.rmtree(installed_target / ".pkit" / "lifecycle")
+
+    upgrade.run_upgrade(installed_target, pin=False)
+
+    assert (installed_target / ".pkit" / "lifecycle" / "ownership.py").is_file()
+
+
 def test_backbone_upgrade_succeeds_when_cap_deps_satisfied(
     installed_target: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

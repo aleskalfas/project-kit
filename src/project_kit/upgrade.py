@@ -16,10 +16,11 @@ as `completed_version`, and every migration runs inside it, in COR-010's order
 
   1. Compatibility and collisions, each of which may refuse and none of which
      writes: the refusal of an adapter or capability its bundle ships older
-     than the project records (point 7), every component's post-upgrade
-     `requires_backbone` against the target, the dependency gates over the set
-     the transition would leave (COR-030, COR-053 point 6), and the collision
-     flow, which asks at a terminal and refuses without one (point 6).
+     than the project records (point 7), the refusal of a clash of area names
+     (point 13), every component's post-upgrade `requires_backbone` against the
+     target, the dependency gates over the set the transition would leave
+     (COR-030, COR-053 point 6), and the collision flow, which asks at a
+     terminal and refuses without one (point 6).
   2. Record the target, move each capability manifest still at its root under
      its `project/`, record each skip chosen in step 1, and remove each project
      artefact an override replaces.
@@ -104,6 +105,7 @@ from project_kit.sync import (
     fallback_remedies,
     plan_capabilities,
     propagate,
+    refuse_area_name_clash,
     refuse_content_downgrade,
     regenerate_derivable_state,
     report_incubated_capability,
@@ -135,9 +137,10 @@ def run_upgrade(
     (ADR-065 point 4). *force* (`pkit upgrade --force`) overrides the two
     warnings of the dependency gates, for a capability that does not move, and
     nothing else: no guard, no compatibility refusal, no refusal of a
-    component bundled older, no collision and no refusal under the router's
-    fallback (point 6). A pinned upgrade that hands over to a newer release
-    passes it, and *dry_run*, to that release's upgrade (point 9).
+    component bundled older, no collision, no clash of area names and no
+    refusal under the router's fallback (point 6). A pinned upgrade that hands
+    over to a newer release passes it, and *dry_run*, to that release's upgrade
+    (point 9).
 
     **Pins by default** (ADR-064): an **un-pinned** project is pinned at the
     version its content just synced to, so pinning is the norm and a project
@@ -272,12 +275,14 @@ def run_upgrade(
     moves = component_moves(target_root, source_kit, manifest) if manifest is not None else []
     _report_component_moves(moves)
 
-    # Step 1: compatibility and collisions (ADR-065 points 4, 6 and 7). Each may
-    # refuse, and none writes: the refusal of a component its bundle ships older,
-    # compatibility resolution against the post-upgrade (bundled) versions, the
-    # dependency gates over the set the transition would leave, and the
-    # collision flow, which asks a person or refuses.
+    # Step 1: compatibility and collisions (ADR-065 points 4, 6, 7 and 13). Each
+    # may refuse, and none writes: the refusal of a component its bundle ships
+    # older, the refusal of a clash of area names, compatibility resolution
+    # against the post-upgrade (bundled) versions, the dependency gates over the
+    # set the transition would leave, and the collision flow, which asks a person
+    # or refuses.
     refuse_components_bundled_older(moves)
+    refuse_area_name_clash(target_root, source_kit, command="upgrade")
     _resolve_compatibility(components, target_root, source_kit, target_version)
     _check_capability_dep_conflicts_for_upgrade(target_root, plans, force=force)
     answers = _settle_new_collisions(target_root, plans, dry_run=dry_run)
