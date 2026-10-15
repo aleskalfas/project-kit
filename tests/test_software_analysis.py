@@ -292,8 +292,9 @@ def test_use_cases_and_journeys_are_numbered_in_order_with_their_anchors(
     assert journey["pkit"] == {"friction": {"anchors": {"artefact": ["UC-001", "UC-002"]}}}
     body = (seeded.root / JOURNEYS / "JRN-001-first-run.md").read_text(encoding="utf-8")
     assert "# JRN-001 — First run\n" in body
-    assert "1. UC-001 — " in body and "2. UC-002 — " in body and "UC-000" not in body
-    assert "- **UC-001 → UC-002:** " in body
+    # The step lines, each use case's id and title as the form of *Steps* asks (#1366).
+    assert "\n\n1. UC-001 — Run suite\n2. UC-002 — Read report\n\n**Variants:** " in body
+    assert "UC-000" not in body
     title = ("--title", "Export: the report as a file")
     area = stamped(
         seeded, "use-case", "export", "--actor", "ACT-tester", "--area", "reports", *title
@@ -331,10 +332,11 @@ def test_an_actor_is_a_file_of_its_own_its_needs_beside_its_description(
     }
     text = (project.root / tester).read_text(encoding="utf-8")
     _front, body = text.split("\n---\n\n", 1)
-    assert body == (
-        "# ACT-tester — Tester\n\n"
-        "<Who this is, when they come to the system, and what they bring with them.>\n"
-    )
+    # The body the template renders, its heading the actor's id and name (#1366).
+    template = (CAPABILITY / "templates" / "actor.md").read_text(encoding="utf-8")
+    shown = template.split("\n---\n\n", 1)[1]
+    assert body == shown.replace("# ACT-actor — <Display name>\n", "# ACT-tester — Tester\n")
+    assert body.startswith("# ACT-tester — Tester\n\n<!-- pkit:hint What this role is")
     # The needs sit about ten lines above the description, never far from it.
     lines = text.splitlines()
     assert lines.index("# ACT-tester — Tester") - lines.index("needs:") <= 10
@@ -406,9 +408,11 @@ def test_what_the_stamp_writes_holds_no_semicolon_and_no_long_sentence(
     assert found == {rel: [] for rel in files}
 
 
-def _placeholder_line() -> str:
+def _section_parts() -> str:
+    """A term's section below its heading, as the template renders it: each part with its
+    hint (#1366)."""
     template = (CAPABILITY / "templates" / "glossary.md").read_text(encoding="utf-8")
-    return template.rsplit("\n\n", 1)[1]
+    return template.split("## TERM-term — <Term>\n\n", 1)[1]
 
 
 _SESSION_ONLY = (
@@ -436,7 +440,7 @@ def test_an_entry_is_added_to_a_collection_leaving_every_other_byte(project: Ado
     closing = _SESSION_ONLY.index("---\n", 4)
     assert text.startswith(_SESSION_ONLY[:closing])
     assert text[closing:].startswith("TERM-suite:\n  name: test suite\n")
-    assert text.endswith("Ends at logout.\n\n## TERM-suite — test suite\n\n" + _placeholder_line())
+    assert text.endswith("Ends at logout.\n\n## TERM-suite — test suite\n\n" + _section_parts())
     assert list(front(project, GLOSSARY)) == ["TERM-session", "TERM-suite"]
 
 
@@ -449,7 +453,7 @@ def test_an_entry_is_added_where_its_id_sorts(project: AdopterRepo) -> None:
     comment = "---\n# The project's own comment, kept.\n"
     entry = text[len(comment) : text.index("TERM-session:\n")]
     assert entry.startswith("TERM-build:\n  name: build\n")
-    section = "## TERM-build — build\n\n" + _placeholder_line()
+    section = "## TERM-build — build\n\n" + _section_parts()
     rest = _SESSION_ONLY[len(comment) :].replace("# Glossary\n\n", f"# Glossary\n\n{section}\n")
     assert text == comment + entry + rest
     assert list(front(project, GLOSSARY)) == ["TERM-build", "TERM-session"]
@@ -472,7 +476,7 @@ def test_an_entry_added_last_keeps_the_file_s_ending(
     text = (project.root / GLOSSARY).read_text(encoding="utf-8")
     closing = original.index("---\n", 4)
     assert text.startswith(original[:closing] + "TERM-suite:\n  name: test suite\n")
-    section = "## TERM-suite — test suite\n\n" + _placeholder_line()
+    section = "## TERM-suite — test suite\n\n" + _section_parts()
     assert text.endswith(original[closing:] + between + section)
 
 

@@ -36,7 +36,9 @@
 #     8), the friction change check, the prose lint (the mechanical parts of
 #     the writing rules, in the text the change adds: `scripts/prose_lint.py`,
 #     #1415), software-analysis' number check (a use case or journey number the
-#     base took first), the documentation check (project-management's
+#     base took first), its pointer check (a commit off the default branch,
+#     named by a planned revalidation record the change adds — the base says
+#     only which records are new), the documentation check (project-management's
 #     `check-doc-mapping`, the obligations of the doc-check point against the
 #     diff) and the changelog lint read a base ref and answer about the CHANGE,
 #     not the tree. They are not validators and stay their own lines; a
@@ -55,7 +57,7 @@ set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 # The diff-scoped checks (migration coverage, record numbering, friction, the
-# prose lint, analysis numbers, doc check) and the type check's guard on its
+# prose lint, analysis numbers and pointers, doc check) and the type check's guard on its
 # baseline each read their base themselves, one way (COR-054): $PKIT_CHECK_BASE
 # when it is set — CI sets it to the pull request's target — else the project's
 # default branch, as `pkit repository base` shows it. So no line here passes
@@ -173,6 +175,7 @@ run "record numbering"   uv run pkit decisions check-diff
 run "friction check"     uv run pkit friction check
 run "prose lint"         uv run python scripts/prose_lint.py
 run "analysis numbers"   uv run pkit analysis check-numbers
+run "analysis pointers"  uv run pkit analysis check-pointers
 run "doc check"          uv run pkit pm check-doc-mapping
 run "changelog lint"     uv run pkit release lint
 

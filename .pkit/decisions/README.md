@@ -14,8 +14,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058]
     revalidated:
-      at: 2026-10-13T20:06:15Z
-      outcome: updated
+      at: 2026-10-15T09:52:39Z
+      outcome: unchanged
+      unchanged-because: The README says the command stamps a record numbered in its namespace and leaves the command to the CLI reference. It does not say where the number comes from, which is all this change alters, so each statement holds.
 ---
 
 # Decision records

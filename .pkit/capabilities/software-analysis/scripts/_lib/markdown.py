@@ -101,6 +101,27 @@ def load(yaml_text: str) -> Any:
     return _dated(_safe.load(io.StringIO(yaml_text)))
 
 
+def unquoted_times(yaml_text: str) -> dict[str, str]:
+    """Each value the YAML reads as a time of day, not as text, since it is written
+    unquoted — by the JSON Pointer to it, with the text `load` gives it back as, its
+    zone spelt `+00:00` where it was written `Z`. Raises ruamel's YAMLError when it
+    does not parse."""
+    found: dict[str, str] = {}
+
+    def walk(value: Any, pointer: str) -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                walk(item, f"{pointer}/{str(key).replace('~', '~0').replace('/', '~1')}")
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                walk(item, f"{pointer}/{index}")
+        elif isinstance(value, datetime.datetime):
+            found[pointer] = value.isoformat()
+
+    walk(_safe.load(io.StringIO(yaml_text)), "")
+    return found
+
+
 def _dated(value: Any) -> Any:
     if isinstance(value, dict):
         return {key: _dated(item) for key, item in value.items()}

@@ -315,7 +315,8 @@ class _Run:
     land: ModuleType
     work: Path
     github: _FakeGitHub
-    #: Each reviewer invocation: (reviewer, the head it was shown).
+    #: Each reviewer invocation: (reviewer, the head it was shown), in no order:
+    #: the reviewers run at once (#1594).
     invoked: list[tuple[str, str]] = field(default_factory=list)
     #: What each reviewer answers: (verdict, body), or None for a failed run.
     answers: dict[str, tuple[str, str] | None] = field(default_factory=dict)
@@ -568,7 +569,7 @@ def test_green_checks_two_reviewers_and_a_merge_one_line_each(world, capsys) -> 
     assert run.derived == [(head, "main")]
     assert run.github.bodies == []
     # Every reviewer was shown the pinned head, and the merge was pinned to it.
-    assert run.invoked == [(name, head) for name in PANEL]
+    assert sorted(run.invoked) == sorted((name, head) for name in PANEL)
     subject = ["--subject", "feat(pm): land it"]
     assert run.github.merges == [
         ["pr", "merge", str(PR), "--squash", *subject, "--match-head-commit", head]
@@ -662,7 +663,7 @@ def test_a_green_run_on_an_older_head_does_not_count(world, capsys) -> None:
     assert f"  ci: no check has been reported for {_short(new)} yet" in out
     assert run.sleeps == [20.0]
     assert _steps(out)[1].startswith(f"ci: passed on {_short(new)}")
-    assert run.invoked == [(name, new) for name in PANEL]
+    assert sorted(run.invoked) == sorted((name, new) for name in PANEL)
 
 
 def test_a_failed_check_stops_before_the_review(world, capsys) -> None:
@@ -897,7 +898,7 @@ def test_a_rerun_waits_for_nothing_and_re_runs_no_fresh_verdict(world, capsys) -
     run = world()
     run.answers["code-reviewer"] = None
     assert run.run("--yes", capsys=capsys)[0] == 6
-    assert run.invoked == [(name, run.github.head) for name in PANEL]
+    assert sorted(run.invoked) == sorted((name, run.github.head) for name in PANEL)
     run.invoked.clear()
     del run.answers["code-reviewer"]
     rc, out, err = run.run("--yes", capsys=capsys)
@@ -918,7 +919,7 @@ def test_a_rerun_after_changes_requested_reviews_the_fix(world, capsys) -> None:
     rc, out, err = run.run("--yes", capsys=capsys)
     assert rc == 0, out + err
     # A change since makes both verdicts stale: both review the fix.
-    assert run.invoked == [(name, fixed) for name in PANEL]
+    assert sorted(run.invoked) == sorted((name, fixed) for name in PANEL)
     assert out.splitlines()[-1] == f"merge: merged as {'c' * 7}"
 
 
@@ -929,7 +930,7 @@ def test_a_rerun_after_the_head_moved_lands_the_new_head(world, capsys) -> None:
     run.github.checks[run.github.head] = [_GREEN]
     rc, out, err = run.run("--yes", capsys=capsys)
     assert rc == 0, out + err
-    assert run.invoked == [(name, run.github.head) for name in PANEL]
+    assert sorted(run.invoked) == sorted((name, run.github.head) for name in PANEL)
 
 
 def test_a_rerun_after_the_queue_merged_completes_the_issue(world, capsys) -> None:
@@ -1011,7 +1012,7 @@ def test_a_lookup_that_fails_then_answers_never_merges_unpinned(world, capsys) -
     rc, out, err = run.run("--yes", capsys=capsys)
     assert rc == 0, out + err
     head = run.github.head
-    assert run.invoked == [(name, head) for name in PANEL]
+    assert sorted(run.invoked) == sorted((name, head) for name in PANEL)
     assert [merge[-1] for merge in run.github.merges] == [head]
 
 
@@ -1199,9 +1200,10 @@ def test_review_pr_raising_still_ends_with_a_step_line(world, capsys, monkeypatc
 # ---- a head that moves --------------------------------------------------------
 
 
-def test_a_head_that_moves_during_a_review_stops_after_that_review(world, capsys) -> None:
-    """The first reviewer's verdict is the pinned head's and is posted; no
-    further reviewer is shown a head that moved, and nothing merges."""
+def test_a_head_that_moves_during_the_reviews_posts_their_verdicts_and_stops(world, capsys) -> None:
+    """The reviewers ran at once on the pinned head (#1594), and the PR moved
+    while they ran: each verdict is the pinned head's and is posted, and
+    nothing merges."""
     run = world()
     pinned = run.github.head
 
@@ -1211,8 +1213,9 @@ def test_a_head_that_moves_during_a_review_stops_after_that_review(world, capsys
     run.github.before(_nth(tips, 2), lambda: run.push_new_head("during.txt"))
     rc, out, _err = run.run("--yes", capsys=capsys)
     assert rc == run.land.EXIT_HEAD_MOVED
-    assert run.invoked == [(PANEL[0], pinned)]
-    assert f"sha={pinned}" in run.github.comments[0]["body"]
+    assert sorted(run.invoked) == sorted((name, pinned) for name in PANEL)
+    assert len(run.github.comments) == len(PANEL)
+    assert all(f"sha={pinned}" in comment["body"] for comment in run.github.comments)
     assert run.github.merges == []
     assert out.splitlines()[-1] == (
         f"review: stopped — PR #{PR}'s head is {_short(run.github.head)}, not "
@@ -1293,7 +1296,7 @@ def test_a_head_review_pr_cannot_read_stops_unreadable_not_moved(world, capsys) 
     assert rc == run.land.EXIT_UNREADABLE
     assert run.invoked == []
     assert out.splitlines()[-1] == (
-        f"review: stopped — PR #{PR}'s head could not be read before reviewer's review, so "
+        f"review: stopped — PR #{PR}'s head could not be read before the reviews, so "
         f"whether it is {_short(head)}, the head this review was asked to review, cannot "
         "be told"
     )
@@ -1404,7 +1407,7 @@ def test_without_yes_it_stops_ready_and_merges_nothing(world, capsys) -> None:
     )
     assert run.github.merges == []
     assert run.after_merge == []
-    assert run.invoked == [(name, head) for name in PANEL]
+    assert sorted(run.invoked) == sorted((name, head) for name in PANEL)
     run.invoked.clear()
     rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
     assert rc == 0, out + err
@@ -2026,6 +2029,69 @@ def test_the_list_gives_each_updated_document_its_author_s_sentence(world, capsy
     rc, out, _err = run.run(capsys=capsys)
     assert rc == run.land.EXIT_READY and len(run.github.bodies) == 1
     assert f"{_STEP}: 3, {_IN_THE_DESCRIPTION}" in out.splitlines()
+
+
+@pytest.mark.parametrize(
+    ("item", "unread"),
+    [
+        ("- **docs/guide.md:** The guide names the new flag.", True),
+        ("- docs/guide.md: The guide names the new flag.", True),
+        ("- `docs/guide.md`: The guide names the new flag.", False),
+    ],
+    ids=["bold path", "no code span", "read form"],
+)
+def test_an_item_it_cannot_read_draws_a_warning_naming_its_line_and_the_form(
+    world, capsys, item, unread
+) -> None:
+    """As on PR #1519: a sentence in bold reads as none, and the person is told the
+    author has not said. The warning above the list names its line in the
+    description and the form a sentence takes; the read form draws none."""
+    run = world()
+    run.written = [UPDATED_INSTALL, UPDATED_GUIDE, DEFERRED]
+    run.github.body = f"{_SAID}{item}\n"
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    lines = out.splitlines()
+    warned = [line for line in lines if "is not read as a sentence" in line]
+    told = "  What changed in docs/guide.md: the pull request's author has not said"
+    if not unread:
+        assert warned == [] and told not in lines
+        return
+    assert run.github.body.split("\n")[17] == item  # line 18 of the description
+    assert warned == [
+        "  warn: line 18 of the description, under `## What changed in each updated document`, "
+        f'is not read as a sentence: "{item}" — write it as "- `path`: sentence", starting in '
+        "the line's first column, the document in a code span as the list names it"
+    ]
+    assert lines.index(warned[0]) < lines.index("  " + run.land.friction_answers.QUESTION)
+    assert told in lines
+
+
+@pytest.mark.parametrize("current", [True, False], ids=["list kept", "list rewritten"])
+def test_the_line_named_is_the_line_in_the_description_the_run_leaves(
+    world, capsys, current
+) -> None:
+    """With the list above the sentences, a run that keeps the description names the
+    line where it is, and a run that writes the list again — last — names the line
+    the item moves up to."""
+    run = world()
+    run.written = [UPDATED_INSTALL, UPDATED_GUIDE, DEFERRED]
+    item = "- **docs/guide.md:** The guide names the new flag."
+    run.github.body = f"{_SAID}{item}\n"
+    assert run.run(capsys=capsys)[0] == run.land.EXIT_READY
+    region = run.land.friction_answers.find(run.github.bodies[-1])
+    said = _SAID.removeprefix(_PR_BODY)
+    if not current:  # the author's sentence changed since the list was written
+        said = said.replace("name the renamed flag", "keep the old flag")
+    before = f"{_PR_BODY}\n{_HEADING}\n\n{region}\n{said}{item}\n"
+    run.github.body = before
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert ("(written now)" in out) is not current
+    left = (before if current else run.github.bodies[-1]).split("\n").index(item) + 1
+    assert (left == before.split("\n").index(item) + 1) is current
+    (warned,) = [line for line in out.splitlines() if "is not read as a sentence" in line]
+    assert warned.startswith(f"  warn: line {left} of the description, ")
 
 
 def test_a_sentence_edited_in_the_description_is_written_again(world, capsys) -> None:

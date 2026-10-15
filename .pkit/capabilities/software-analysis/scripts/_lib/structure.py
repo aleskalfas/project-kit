@@ -27,7 +27,8 @@ What a body is made of, precisely:
   before it, or opens a top-level list item (`-`, `*`, `+`, or a number and
   `.` or `)`), and whose text the kind declares. Only a declared label is
   one: a bold run the kind does not declare, such as a variant's `**2a.**`, is
-  content.
+  content. Below a label that opens a list item, the part's list is the one
+  nested in that item (`_lib/forms.py`).
 - **Text is compared** ignoring case, runs of white space and trailing
   punctuation, as living-docs compares a heading.
 - **A part's extent.** A label sits one level below the heading it follows. Its
@@ -50,18 +51,28 @@ How a body departs from its kind's structure:
   A heading the stamp writes has no hint, and no content of its own.
 - **`None.` refused:** a part whose content is `None.` and nothing else, where
   its element does not allow it.
-- **not one sentence:** text of the `sentence` form, in a part or in each item
-  of a front-matter field, in which a sentence ends before its last word. A
-  part is read as one text, a list in it included: how a form reads the items
-  of a list in a body part comes with the list forms. A sentence ends at a full
-  stop, a question mark or an exclamation mark, only where a space, a line end
-  or the text's end follows it, and never inside a code span (RS-SAN-001's
-  *How*).
+- **not one sentence:** text of the `sentence` form, in a part or in a
+  front-matter field, in which a sentence ends before its last word. In a
+  list, each item holds it, and so does the rest of the part, taken as one
+  text.
+- **breaks its form:** a part or a front-matter field that does not hold any
+  other form its element names, such as `numbered-steps` or `definition`. Each
+  breach is its own departure, at the line of the item it is in.
 
+What each form reads, and how a part's list is read, is `_lib/forms.py`'s.
 Labels and sections a writer adds are never reported: the check judges only
 the declared elements. What a writer adds inside a part is that part's
-content, though, so it counts toward a `sentence` part's one sentence. The
-other forms the declaration names are not read here yet.
+content, though, so it counts toward a `sentence` part's one sentence. A list
+form judges only the part's list items, so a line a writer adds outside them
+never breaks it.
+
+**A hint left in** (`hints`) is a comment that opens with the hint's mark,
+`<!-- pkit:hint`, which the stamp writes as each part's placeholder
+(`_lib/render.py`). It is found as a comment is, outside fenced code and
+outside a code span that closes on its line, so a body may quote the mark. A
+mark inside another comment opens no hint. The placeholder check reports a
+hint left in whatever the format rule's status, as it reports any
+placeholder (DEC-001 point 1).
 """
 
 from __future__ import annotations
@@ -77,6 +88,9 @@ from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 from ruamel.yaml.error import MarkedYAMLError, YAMLError
 
+from _lib import forms
+from _lib.forms import BREAKS_FORM, NONE, NOT_A_SENTENCE
+
 #: Where each kind's structure is declared, and the schema the declaration fits.
 SCHEMAS = Path(__file__).resolve().parents[2] / "schemas"
 KINDS_FILE = SCHEMAS / "artefact-kinds.yaml"
@@ -85,21 +99,13 @@ KINDS_SCHEMA = SCHEMAS / "artefact-kinds.schema.json"
 #: The kind of a revalidation record, which has no type of its own (DEC-001 point 2).
 RECORD = "revalidation-record"
 
-#: An element's types, and the form this module reads.
+#: An element's types.
 HEADING, LABEL, OPENING = "heading", "label", "opening"
-SENTENCE = "sentence"
 
-#: What a part with nothing to say reads, where its element allows it.
-NONE = "None."
-
-#: How a body departs from its kind's structure.
-MISSING, OUT_OF_ORDER, EMPTY, NONE_REFUSED, NOT_A_SENTENCE = (
-    "missing",
-    "out-of-order",
-    "empty",
-    "none-refused",
-    "not-a-sentence",
-)
+#: How a body departs from its kind's structure: its parts, and then their forms
+#: (`_lib/forms.py`), the `sentence` form's own breach and every other form's.
+MISSING, OUT_OF_ORDER, EMPTY, NONE_REFUSED = ("missing", "out-of-order", "empty", "none-refused")
+FORM_BREACHES = frozenset({NOT_A_SENTENCE, BREAKS_FORM})
 
 #: One line of a body: its number in the file, counted from 1, and its text.
 Line = tuple[int, str]
@@ -110,13 +116,14 @@ _QUOTED = r"[ \t]*(?:>[ \t]*)*"
 _FENCE = re.compile(
     rf"^{_QUOTED}(?:(?:[-+*]|[0-9]{{1,9}}[.)])[ \t]+(?:>[ \t]*)*)*(`{{3,}}|~{{3,}})(.*)$"
 )
-_LABEL = re.compile(r"^(?:(?:[-+*]|[0-9]{1,9}[.)])[ \t]+)?\*\*(?P<text>[^*\n]+?)\*\*(?P<rest>.*)$")
+_LABEL = re.compile(
+    r"^(?P<item>(?:[-+*]|[0-9]{1,9}[.)])[ \t]+)?\*\*(?P<text>[^*\n]+?)\*\*(?P<rest>.*)$"
+)
 _COMMENT_OPEN, _COMMENT_CLOSE = "<!--", "-->"
+_HINT = re.compile(r"<!--[ \t]*pkit:hint\b(?P<said>.*?)(?:-->|$)")
 _TRAILING = re.compile(r"[\s.,:;!?]+$")
 _PLACEHOLDER = re.compile(r"<[^<>]*>")
 _CODE_SPAN = re.compile(r"(`+)(.+?)\1", re.DOTALL)
-_SENTENCE_END = re.compile(r"[.?!](?=\s|$)")
-_WORD = re.compile(r"\w")
 _FRONT_MATTER_FENCE = re.compile(r"^---[ \t]*$")
 
 
@@ -180,22 +187,25 @@ class Kind:
 @dataclass(frozen=True)
 class Departure:
     """A declared element a body lacks, carries out of order, leaves empty, fills with
-    `None.` where it may not, or fills with more than one sentence where its form is
-    `sentence` — at `line` of the file, where the body carries it."""
+    `None.` where it may not, or fills with what breaks its form — at `line` of the
+    file, where the body carries it, and with what exactly the form found (`detail`)."""
 
     element: Element
     how: str
     line: int | None = None
+    detail: str = ""
 
 
 @dataclass(frozen=True)
 class FieldDeparture:
-    """A front-matter field's text that does not hold the field's form, at `pointer`."""
+    """A front-matter field's text that does not hold the field's form, at `pointer`,
+    and what exactly it breaks (`detail`)."""
 
     field: Field
     how: str
     pointer: str
     text: str
+    detail: str = ""
 
 
 def read_kinds(path: Path = KINDS_FILE, schema: Path = KINDS_SCHEMA) -> dict[str, Kind]:
@@ -286,27 +296,33 @@ def _lines(text: str) -> list[str]:
 
 @dataclass(frozen=True)
 class _Mark:
-    """A heading, or a declared label, at `index` among a body's lines."""
+    """A heading, or a declared label, at `index` among a body's lines — a label with
+    the text after it on its line, `rest`, and the indentation of the list item it
+    opens, `offset`, 0 where it opens a line."""
 
     index: int
     type: str
     level: int
     text: str
     rest: str = ""
+    offset: int = 0
 
 
 @dataclass(frozen=True)
 class _Body:
     """A body read: each line's number and its content — the line with comments left out,
-    a fenced line whole — and its marks, in order."""
+    a fenced line whole — whether fenced code opens on it or holds it (`forms.OPENS_FENCE`,
+    `forms.IN_FENCE`), and its marks, in order."""
 
     numbers: tuple[int, ...]
     content: tuple[str, ...]
     marks: tuple[_Mark, ...]
+    fences: tuple[int, ...] = ()
 
 
 def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
     content: list[str] = []
+    fences: list[int] = []
     marks: list[_Mark] = []
     fence: tuple[str, int] | None = None
     in_comment = False
@@ -314,12 +330,14 @@ def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
     for index, (_number, line) in enumerate(lines):
         if fence is not None:
             content.append(line)
+            fences.append(forms.IN_FENCE)
             if _closes(line, fence):
                 fence = None
             continue
         started_in_comment = in_comment
         visible, in_comment = _without_comments(line, in_comment)
         content.append(visible)
+        fences.append(0)
         if started_in_comment:
             continue
         opening = _FENCE.match(visible)
@@ -328,6 +346,7 @@ def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
         ):
             fence = (opening.group(1)[0], len(opening.group(1)))
             content[-1] = line
+            fences[-1] = forms.OPENS_FENCE
             continue
         atx = _ATX.match(visible)
         if atx is not None:
@@ -339,20 +358,31 @@ def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
         if label is not None and comparable(label["text"]) in labels:
             rest = label["rest"]
             rest = rest[1:] if rest.startswith(":") else rest
-            marks.append(_Mark(index, LABEL, heading_level + 1, label["text"], rest))
-    return _Body(tuple(n for n, _ in lines), tuple(content), tuple(marks))
+            offset = len((label["item"] or "").expandtabs(4))
+            marks.append(_Mark(index, LABEL, heading_level + 1, label["text"], rest, offset))
+    numbers = tuple(n for n, _ in lines)
+    return _Body(numbers, tuple(content), tuple(marks), tuple(fences))
 
 
 def _without_comments(line: str, in_comment: bool) -> tuple[str, bool]:
     """The line with the text of HTML comments left out, and whether a comment is still
     open at its end."""
+    visible, still_open, _openings = _scan(line, in_comment)
+    return visible, still_open
+
+
+def _scan(line: str, in_comment: bool) -> tuple[str, bool, list[int]]:
+    """The one reading of a line's comments: the line with their text left out, whether
+    a comment is still open at its end, and where each comment that opens on it opens.
+    A comment still open from an earlier line hides what comes before its end."""
     kept: list[str] = []
+    openings: list[int] = []
     at = 0
     while at <= len(line):
         if in_comment:
             end = line.find(_COMMENT_CLOSE, at)
             if end == -1:
-                return "".join(kept), True
+                return "".join(kept), True, openings
             at, in_comment = end + len(_COMMENT_CLOSE), False
         else:
             start = _comment_opening(line, at)
@@ -360,8 +390,9 @@ def _without_comments(line: str, in_comment: bool) -> tuple[str, bool]:
                 kept.append(line[at:])
                 break
             kept.append(line[at:start])
+            openings.append(start)
             at, in_comment = start + len(_COMMENT_OPEN), True
-    return "".join(kept), in_comment
+    return "".join(kept), in_comment, openings
 
 
 def _comment_opening(line: str, at: int) -> int:
@@ -384,6 +415,32 @@ def _closes(line: str, fence: tuple[str, int]) -> bool:
     return re.match(rf"^{_QUOTED}{re.escape(char)}{{{length},}}[ \t]*$", line) is not None
 
 
+def hints(lines: Sequence[Line]) -> list[tuple[int, str]]:
+    """Each hint left in a body's `lines`: the line it opens on, and what it says. A hint
+    is a comment that opens with the hint's mark, found as `_read` finds a comment:
+    outside fenced code, and outside a code span that closes on its line. A mark
+    inside another comment opens none."""
+    found: list[tuple[int, str]] = []
+    fence: tuple[str, int] | None = None
+    in_comment = False
+    for number, line in lines:
+        if fence is not None:
+            if _closes(line, fence):
+                fence = None
+            continue
+        started_in_comment = in_comment
+        visible, in_comment, openings = _scan(line, in_comment)
+        opening = None if started_in_comment else _FENCE.match(visible)
+        if opening is not None and not (
+            opening.group(1).startswith("`") and "`" in opening.group(2)
+        ):
+            fence = (opening.group(1)[0], len(opening.group(1)))
+            continue
+        marked = (_HINT.match(line, start) for start in openings)
+        found += [(number, hint["said"].strip()) for hint in marked if hint is not None]
+    return found
+
+
 def comparable(text: str) -> str:
     """A heading's or a label's text as it is compared: case, runs of white space and
     trailing punctuation ignored."""
@@ -393,16 +450,25 @@ def comparable(text: str) -> str:
 # --- departures -----------------------------------------------------------------------------
 
 
-def departures(lines: Sequence[Line], kind: Kind, *, head: bool = False) -> list[Departure]:
+def departures(
+    lines: Sequence[Line],
+    kind: Kind,
+    *,
+    head: bool = False,
+    fields: Mapping[str, Any] | None = None,
+    titles: Mapping[str, str] | None = None,
+) -> list[Departure]:
     """How a body with `lines` departs from `kind`'s structure — its file head's, with
-    `head` — in declared order, each element once at most: missing or out of order,
-    and otherwise what its content breaks."""
+    `head` — in declared order: an element missing or out of order, once, and otherwise
+    what its content breaks, each breach of its form at its own line. A form that
+    matches the front matter reads `fields`, the artefact's or record's own, and a
+    journey's steps read each use case's title in `titles`, by id."""
     elements = kind.head if head else kind.sections
     body = _read(lines, kind.labels)
     marked = [i for i, e in enumerate(elements) if e.type != OPENING]
     taken = _taken(body.marks, elements, marked)
-    found: dict[int, Departure] = {
-        i: Departure(elements[i], MISSING)
+    found: dict[int, list[Departure]] = {
+        i: [Departure(elements[i], MISSING)]
         for i in marked
         if i not in taken and elements[i].required
     }
@@ -418,67 +484,102 @@ def departures(lines: Sequence[Line], kind: Kind, *, head: bool = False) -> list
             )
             if nxt is None:
                 line = body.numbers[body.marks[at[i]].index]
-                found[i] = Departure(elements[i], OUT_OF_ORDER, line)
+                found[i] = [Departure(elements[i], OUT_OF_ORDER, line)]
             else:
                 at[i], after = nxt, nxt + 1
+    parts = {i: part for i in range(len(elements)) if (part := _part(i, elements, at, body))}
+    context = _context(elements, parts, fields, titles)
     for i, element in enumerate(elements):
         if i in found or not element.filled:
             continue
-        if element.type == OPENING:
-            start = _after_previous(i, elements, at, body)
-            extent = _until_next_mark(start, body)
-            text = _text(body, extent)
-            if not text.strip():
-                if element.required:
-                    found[i] = Departure(element, MISSING)
-                continue
-            line = body.numbers[next(k for k in extent if body.content[k].strip())]
-        elif i in at:
-            mark = body.marks[at[i]]
-            line = body.numbers[mark.index]
-            text = "\n".join((mark.rest, _text(body, _extent(mark, body))))
-        else:
+        part = parts.get(i)
+        if part is None:
+            if element.type == OPENING and element.required:
+                found[i] = [Departure(element, MISSING)]
             continue
-        how = judged(text, element)
-        if how is not None:
-            found[i] = Departure(element, how, line)
-    return [found[i] for i in sorted(found)]
+        breaches = judged(part, element, context)
+        if breaches:
+            found[i] = [Departure(element, b.how, b.line, b.detail) for b in breaches]
+    return [departure for i in sorted(found) for departure in found[i]]
 
 
-def judged(text: str, element: Element) -> str | None:
+def _part(
+    i: int, elements: Sequence[Element], at: Mapping[int, int], body: _Body
+) -> forms.Part | None:
+    """The part of the element at `i` that the body carries: a label's or a heading's
+    lines, the label's line first, or an opening's, which holds text; `None` where the
+    body carries none."""
+    if elements[i].type == OPENING:
+        extent = _until_next_mark(_after_previous(i, elements, at, body), body)
+        texts = [k for k in extent if body.content[k].strip()]
+        if not texts:
+            return None
+        return forms.Part(body.numbers[texts[0]], _rows(body, extent))
+    if i not in at:
+        return None
+    mark = body.marks[at[i]]
+    line = body.numbers[mark.index]
+    lead = forms.Row(line, mark.rest) if mark.type == LABEL else None
+    item = body.content[mark.index] if mark.offset else ""
+    return forms.Part(line, _rows(body, _extent(mark, body)), lead, item)
+
+
+def _rows(body: _Body, extent: range) -> tuple[forms.Row, ...]:
+    """The lines of `extent` as a part's rows, each with its fence mark."""
+    return tuple(
+        forms.Row(body.numbers[k], body.content[k], body.fences[k] if body.fences else 0)
+        for k in extent
+    )
+
+
+def _context(
+    elements: Sequence[Element],
+    parts: Mapping[int, forms.Part],
+    fields: Mapping[str, Any] | None,
+    titles: Mapping[str, str] | None,
+) -> forms.Context:
+    """What the forms read besides each part: the front matter, the use cases' titles, and
+    the steps a variant branches from, those of the part whose form lists steps. A steps
+    part with no numbered step is reported itself, so no variant is held to it."""
+    steps: frozenset[int] | None = None
+    named = "the steps"
+    for i, element in enumerate(elements):
+        if element.form in forms.STEP_FORMS and i in parts:
+            steps = forms.step_numbers(parts[i]) or None
+            named = f"`**{element.text}:**`" if element.type == LABEL else f"`{element.text}`"
+            break
+    return forms.Context(fields or {}, titles or {}, steps, named)
+
+
+def judged(part: forms.Part, element: Element, context: forms.Context) -> list[forms.Breach]:
     """What a part's content breaks — empty, `None.` where its element refuses it, or
-    not one sentence where its form is `sentence` — or `None` when it holds."""
-    flat = " ".join(text.split())
+    its form — each breach at its line; none when it holds."""
+    flat = " ".join(part.text.split())
     if not flat:
-        return EMPTY
+        return [forms.Breach(EMPTY, part.line)]
     if flat == NONE:
-        return None if element.allows_none else NONE_REFUSED
-    if element.form == SENTENCE and not one_sentence(text):
-        return NOT_A_SENTENCE
-    return None
-
-
-def one_sentence(text: str) -> bool:
-    """Whether `text` is one sentence: no sentence ends before its last word. A sentence
-    ends at a full stop, a question mark or an exclamation mark, only where a space, a
-    line end or the text's end follows the mark; a mark inside a code span ends none
-    (RS-SAN-001's *How*). So "e.g." ends one wherever a space follows it."""
-    plain = _CODE_SPAN.sub("code", text)
-    return not any(_WORD.search(plain, end.end()) for end in _SENTENCE_END.finditer(plain))
+        if not element.allows_none:
+            return [forms.Breach(NONE_REFUSED, part.line)]
+        return forms.judge_none(element.form, part, context)
+    return forms.judge(element.form, part, context)
 
 
 def field_departures(fields: Mapping[str, Any], kind: Kind) -> list[FieldDeparture]:
     """Each text of a front-matter field that does not hold the field's form: the field's
-    own text, or each item of a list. Only the `sentence` form is read; a value of
-    another shape is the kind's schema's to report."""
+    own text, or each item of a list. A value of another shape is the kind's schema's
+    to report."""
     found: list[FieldDeparture] = []
     for field in kind.fields:
-        if field.form != SENTENCE:
+        if field.form is None:
             continue
         value = fields.get(field.name)
         for pointer, text in _texts(field.name, value):
-            if text.strip() and not one_sentence(text):
-                found.append(FieldDeparture(field, NOT_A_SENTENCE, pointer, text))
+            if not text.strip():
+                continue
+            breach = forms.field_breach(field.form, text, fields)
+            if breach is not None:
+                how, detail = breach
+                found.append(FieldDeparture(field, how, pointer, text, detail))
     return found
 
 
@@ -540,7 +641,3 @@ def _after_previous(i: int, elements: Sequence[Element], at: Mapping[int, int], 
 def _until_next_mark(start: int, body: _Body) -> range:
     end = next((m.index for m in body.marks if m.index >= start), len(body.content))
     return range(start, end)
-
-
-def _text(body: _Body, extent: range) -> str:
-    return "\n".join(body.content[k] for k in extent)

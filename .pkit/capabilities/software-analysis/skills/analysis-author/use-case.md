@@ -33,11 +33,15 @@ It takes the next free number on the default branch and in the working tree.
 
 ## 6. Fill it
 
-- **Goal** — what the actor wants, in one sentence.
-- **Starts when** — what triggers it.
+Each part holds its hint, which says what goes there and gives an example. Write in its place what it asks for, and delete the hint.
+
+- **Goal** — what the actor wants, in one sentence in their own voice.
+- **Other actors**, **Preconditions** and **Assumptions** — each as its hint says, or `None.`.
+- **Trigger** — the event that starts it.
 - **Main path** — numbered steps, each what the actor or the system does. Quote in backticks the commands, flags, functions and messages a step names.
-- **Variants** — each lettered after the step it branches from (`2a`, `2b`): the condition, what happens instead, and where the path rejoins or ends.
-- **Done when** — the state that shows the goal is met.
+- **Variants** — each lettered after the step it branches from (`2a`, `2b`): the condition, what happens instead, and where the path rejoins or ends. `None.` when there is none.
+- **Postconditions** — the state that shows the goal is met.
+- **Minimal guarantees** — what the system still guarantees when the use case ends early or fails, or `None.`.
 
 Then run the checks in the shared framing's "After stamping", including `pkit analysis check-numbers` before merging.
 

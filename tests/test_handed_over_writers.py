@@ -198,12 +198,11 @@ def test_a_record_stamp_as_handed_over_writes_nothing(analysed: AdopterRepo, com
 
 @_each(DRAFTED_RECORDS)
 def test_a_record_stamp_waits_for_the_person_s_words(analysed: AdopterRepo, command: str) -> None:
-    """Its ids bound here, a record holding only the person's placeholders is refused
+    """Its ids bound here, wherever a token names one — an outcome, a justification, a
+    gap's label (#1366) — a record holding only the person's placeholders is refused
     for one of them."""
-    argv = [
-        "=".join([IDS.get(head, head), *tail])
-        for head, *tail in (token.split("=", 1) for token in shlex.split(command))
-    ]
+    named = re.compile("|".join(rf"\b{re.escape(i)}\b" for i in IDS))
+    argv = [named.sub(lambda m: IDS[m[0]], token) for token in shlex.split(command)]
     completed = run_script(analysed, NEW, *argv[3:])
     assert completed.returncode == 1, completed.stderr
     assert "still holds the placeholder" in completed.stderr

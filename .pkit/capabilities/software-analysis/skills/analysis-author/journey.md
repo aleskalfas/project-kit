@@ -27,10 +27,13 @@ pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> 
 
 ## 6. Fill it
 
-- **Starts** — where the actor begins, and what they want by the end.
-- **Steps** — one line per step, what the actor achieves in that use case.
-- **Seams to watch** — for each pair of steps, what must carry over and how it could break.
-- **Done when** — the state that shows the whole path succeeded.
+Each part holds its hint, which says what goes there and gives an example. Write in its place what it asks for, and delete the hint. The stamp writes the step lines under **Steps**, one for each use case of `steps`.
+
+- **Goal** — what the actor wants from the whole path, in one sentence in their own voice.
+- **Steps** — under each step line, one line for each hand-over the step needs: what it receives, and how that can break.
+- **Variants** — each branch of the whole path, lettered after the step it leaves, or `None.`.
+- **Postconditions** — the state that shows the whole path succeeded.
+- **Minimal guarantees** — what still holds when the path stops before its end, or `None.`.
 
 Then run the checks in the shared framing's "After stamping", including `pkit analysis check-numbers` before merging.
 

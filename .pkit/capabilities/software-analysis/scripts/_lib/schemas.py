@@ -98,6 +98,20 @@ def _evidence_entry() -> Draft202012Validator:
     )
 
 
+@functools.cache
+def _source() -> Draft202012Validator:
+    return Draft202012Validator(
+        {"$ref": f"{_schemas()[RECORD]['$id']}#/$defs/source"}, registry=_registry()
+    )
+
+
+def source_errors(value: object) -> list[str]:
+    """Each way `value` falls short of one source of a planned record's
+    `reviewed-against`, as the record's schema defines it (DEC-001 point 6)."""
+    errors = sorted(_source().iter_errors(value), key=lambda e: _pointer(e.absolute_path))
+    return [error.message for error in errors]
+
+
 def is_evidence(value: object) -> bool:
     """Whether `value` is one entry of the evidence point, in its companion's shape
     (DEC-001 point 7) — as a record copies it."""
@@ -120,6 +134,19 @@ def config_errors(config: object) -> list[tuple[str, str]]:
     return sorted(
         (_pointer(error.absolute_path), error.message) for error in checker.iter_errors(config)
     )
+
+
+@functools.cache
+def commit_pattern() -> re.Pattern[str]:
+    """A commit's full id, as the shared schema defines it: what a planned record's source
+    in this repository names as its version, unless it names the change itself."""
+    return re.compile(definition("commit")["pattern"])
+
+
+def this_change() -> str:
+    """The version a source names when its design lands in the change that adds the
+    record, `this change`, as the record's schema words it (DEC-001 point 6)."""
+    return str(_schemas()[RECORD]["$defs"]["this-change"]["const"])
 
 
 @functools.cache

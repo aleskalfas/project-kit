@@ -1,0 +1,31 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Changed
+body: >
+  `pkit analysis new` renders each body from its kind's declared structure,
+  `schemas/artefact-kinds.yaml`, and no longer copies template lines
+  (DEC-001 point 1, #1366). Every part is written, in its order, each holding
+  its hint as its placeholder: a one-line comment
+  `<!-- pkit:hint … -->` with the part's example. Each template's body is the
+  same rendering, and its front matter stays written by hand. A use case's
+  and a journey's parts are now those the structure declares, so the old
+  *Starts when*, *Done when*, *Starts* and *Seams to watch* are gone. A
+  journey's step lines under *Steps* are written for each of its `steps`.
+  `pkit analysis validate` refuses a hint left in a body, outside code spans
+  and fenced code, whatever the format rule's status, and repeats the hint.
+  Every placeholder a template shipped before is still caught while unfilled.
+  The revalidation record's stamp writes no hints. Its `--gap` now names the
+  artefacts each gap affects, `--gap "<ids>: <gap> => <resolution>"`, written
+  as the gap's bold label with a `**Resolution:**`, and the stamp refuses what
+  the form `gaps-match-outcomes` refuses. It writes `None.` where it wrote
+  `None found.`. A planned record takes `--reviewed-against` once for each
+  source, `"<title> @ <version>"` or `"<title> @ <version> @ <link>"`, and only
+  a planned record takes it. A commit the default branch does not hold is
+  written with a warning that `pkit analysis check-pointers` will fail the
+  change. `--change` names a range of commits on the default branch. A time
+  written unquoted in a record's front matter gets a message that says to
+  quote it. This breaks a `--gap` written without its ids, and a command or
+  script that expects the old parts. The segment is `minor`, as semver allows
+  a breaking change before 1.0.0, and the capability is installed only in
+  project-kit's own clones.

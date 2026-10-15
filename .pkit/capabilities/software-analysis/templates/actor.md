@@ -4,9 +4,11 @@
 # location. Its needs sit in this front matter, beside the description below.
 # Stamp it, never copy it: `pkit analysis new actor <slug>` writes
 # `ACT-<slug>.md` with its id, its name and its anchors. Its heading is its id
-# and name, as the front matter gives them. An actor anchors to where the
-# software or a decision embodies it. One that nothing embodies carries
-# `unanchored-because:` in its friction block instead of anchors
+# and name, as the front matter gives them. Its body is rendered from the
+# actor's declared structure (`schemas/artefact-kinds.yaml`). Each part holds
+# its hint until you write in its place what it asks for. An actor anchors to
+# where the software or a decision embodies it. One that nothing embodies
+# carries `unanchored-because:` in its friction block instead of anchors
 # (--unanchored-because). Its own fields' shape is `schemas/actor.schema.json`,
 # and the friction block is the core's.
 id: ACT-actor                     # stamped from the slug, and never reused
@@ -23,4 +25,8 @@ pkit:
 
 # ACT-actor — <Display name>
 
-<Who this is, when they come to the system, and what they bring with them.>
+<!-- pkit:hint What this role is, and what it does with the system. Example: Someone who builds reports from their team's figures. -->
+
+**Occasions:** <!-- pkit:hint On what occasions the actor comes to the system. Write `None.` when there is none. Example: At the end of each week, and whenever a manager asks for figures. -->
+
+**Context:** <!-- pkit:hint What the actor comes with, such as data, authority or a limit. Write `None.` when there is none. Example: A spreadsheet of their team's figures, and no right to publish a template. -->

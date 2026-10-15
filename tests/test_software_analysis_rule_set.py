@@ -110,11 +110,13 @@ def test_the_format_rule_declares_the_part_the_capability_s_check_enforces() -> 
     assert "checks" not in data["rules"][RULE]
     (declared,) = data["checks"][RULE]
     assert declared["check"] == "software-analysis:validate"
-    # The parts a kind ships, the forms its structure gives, and the structure a
-    # record or a withdrawn artefact is held to (DEC-001 point 1).
+    # The parts a kind ships and the forms its structure gives, as far as the check
+    # holds them: a withdrawn artefact to neither a part it lacks nor a form, and a
+    # record to the one structure declared so far (DEC-001 point 1, #1365).
     assert declared["part"].startswith("Every part its kind ships is present,")
     assert "front-matter field that the structure gives a form" in declared["part"]
-    assert "structure in force when it was written" in declared["part"]
+    assert "in each item of a list, save on a withdrawn artefact" in declared["part"]
+    assert "held to the structure declared now" in declared["part"]
     package = _yaml.load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
     assert package["validators"]["artefacts"]["command"] == "validate"
     assert "validate" in package["commands"]
