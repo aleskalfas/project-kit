@@ -143,7 +143,11 @@ def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled
     assert document == {
         "summary": [
             "analysis at tech-docs/analysis: 2 actor(s), 1 term(s), 3 use case(s), "
-            "1 journey(s); 0 revalidation record(s)."
+            "1 journey(s); 0 revalidation record(s).",
+            # The format rule is proposed, so no body is held to its kind's structure yet.
+            "structure (RS-SAN-001, proposed): not checked — the rule binds nothing until it "
+            "is accepted (COR-051 point 4); `pkit analysis validate --preview` shows what it "
+            "would report.",
         ],
         "findings": [],
     }
