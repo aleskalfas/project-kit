@@ -484,3 +484,38 @@ def test_the_docs_reviewer_s_answers_check_raises_findings_not_a_verdict_line():
     intro = _answers_check()[0]
     assert "Each failure below is a `[block]` finding in your verdict" in intro
     assert "never a verdict line of its own" in intro
+
+
+def test_the_docs_reviewer_reads_the_sentences_as_the_commands_read_them():
+    """On PR #1519 the reviewer found four sentences in bold present and matching,
+    while the commands read none and told the person the author had not said (#1523).
+    The reviewer judges such a sentence missing, and gives the form the commands
+    read — the one their warning names. What the text says the commands read is
+    held to what they do read, so a change to the reader fails here first."""
+    answers = _load("se_panel_friction_answers", PM_SCRIPTS_DIR / "_lib" / "friction_answers.py")
+    lead = "- **Each `updated` document needs its sentence, and the sentence must match.**"
+    (item,) = [line for line in _answers_check() if line.startswith(lead)]
+    for words in (
+        "Read that section as the commands that write the list read it",
+        '"Where the sentences live" of `.pkit/capabilities/project-management/README.md`',
+        "starts in the line's first column with the document in a code span",
+        f"The form to write is ``{answers.SENTENCE_FORM}``.",
+        "one naming the document in bold, with no code span, or after other words",
+        "Of two items for one document, they read only the first.",
+        "whose only sentence the commands cannot read has no sentence, and that is a `[block]`",
+        "gives the form it needs",
+    ):
+        assert words in item, words
+    heading = "## What changed in each updated document\n\n"
+    # The form to write is read; the separator after the code span is not required.
+    for said in (answers.SENTENCE_FORM, "- `path` sentence", "1. `path` — sentence"):
+        assert answers.sentences(heading + said) == {"path": "sentence"}, said
+        assert answers.unread(heading + said) == [], said
+    # The document in bold, with no code span, after other words, or indented whole.
+    for unread in ("- **path:** sentence", "- path: sentence", "- In `path`: sentence"):
+        assert answers.sentences(heading + unread) == {}, unread
+        assert [found.text for found in answers.unread(heading + unread)] == [unread]
+    assert answers.sentences(heading + "  - `path`: sentence") == {}
+    # Of two items for one document, the first.
+    two = heading + "- `path`: First.\n- `path`: Second.\n"
+    assert answers.sentences(two) == {"path": "First."}
