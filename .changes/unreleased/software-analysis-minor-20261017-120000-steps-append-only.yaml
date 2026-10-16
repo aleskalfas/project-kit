@@ -1,0 +1,21 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit analysis check-numbers` keeps a use case's steps and variants
+  append-only (DEC-001 point 3, #1375). Journeys and evidence cite a step by
+  its number and a variant by its step's number and its letter, so the check
+  compares each use case with the same use case, by id, where the branch left
+  its base, and reports a step or a variant renumbered or removed, naming the
+  use case and the number or letter. One added, whatever new number or letter
+  it takes, and a use case new in the change, pass, and so does a step
+  reworded under its own number. It binds where the format rule, RS-SAN-001,
+  binds, as `pkit rule-sets reach` reads it, and at its status: accepted, an
+  error; proposed, nothing is compared. The new `--preview` flag compares
+  where `pkit rule-sets reach --preview` says the rule would bind, each
+  finding a report opening `preview:` that never fails. It reads the base
+  `check-numbers` already reads, so a shallow clone that lacks it fails
+  rather than passing. `pkit analysis validate` never runs it. The
+  capability's README, "Steps and variants stay append-only", says what it
+  reports.
