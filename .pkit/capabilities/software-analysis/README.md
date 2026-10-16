@@ -13,8 +13,9 @@ pkit:
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053]
       artefact: [RS-SAN-001]
     revalidated:
-      at: 2026-10-15T17:14:15Z
-      outcome: updated
+      at: 2026-10-15T17:58:38Z
+      outcome: unchanged
+      unchanged-because: COR-050 lets an artefact anchor name a document's section or its lead, and refuses a section or the lead of a collection file, an entry or a record. COR-051 point 3 lets '#' name them. This README, as main left it, has its artefacts anchor code, decisions, and whole actors and use cases, and what it says of the friction block, revalidation and rule sets holds.
       deferred:
         - anchor:
             kind: record

@@ -125,6 +125,31 @@ def pointed_record(
     )
 
 
+#: A document with a lead and sections, for anchors on one section or the lead (COR-050
+#: point 2).
+MANUAL = "docs/manual.md"
+
+#: Its sections, in written order: heading and text.
+SECTIONS: tuple[tuple[str, str], ...] = (
+    ("Installing", "Run the installer."),
+    ("Using", "Run the tool."),
+    ("Troubleshooting", "Ask for help."),
+)
+
+
+def manual(
+    sections: tuple[tuple[str, str], ...] = SECTIONS,
+    *,
+    title: str = "A manual",
+    lead: str = "What the manual is for.",
+) -> str:
+    """`docs/manual.md`, id `manual`: a first-level title, its lead, then each section as a
+    second-level heading. It carries no friction block of its own."""
+    front = {"id": "manual", "title": title}
+    sections_text = "".join(f"## {heading}\n\n{text}\n\n" for heading, text in sections)
+    return f"---\n{json.dumps(front, indent=2)}\n---\n\n# Manual\n\n{lead}\n\n{sections_text}"
+
+
 #: A project record not yet converted, its points a numbered list (COR-058 point 2).
 LISTED = ".pkit/decisions/project/PRJ-910-listed.md"
 

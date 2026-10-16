@@ -59,7 +59,7 @@ An artefact is in the scope when `paths` and `types` both select it and `exclude
 
 ### 3. Identifiers
 
-A rule's id is `RS-<SET>-NNN`: the family prefix, the rule set's name, and a number. Ids are permanent. A rule is never renumbered, and a retired id is never reused. Rule-set names must be unique among rule sets. Because every rule id carries the `RS` family prefix, rule ids cannot collide with other identifier families. An **extension point** a rule offers is named with `#`, as in `RS-CMN-003#cause-location`, so that it never clashes with the colon that separates a namespace in a citation. In a record anchor's value, `#` also names one point of the record, as in `COR-058#4` (COR-050 point 2). An extension point is no anchor value: an anchor names a rule by its id alone.
+A rule's id is `RS-<SET>-NNN`: the family prefix, the rule set's name, and a number. Ids are permanent. A rule is never renumbered, and a retired id is never reused. Rule-set names must be unique among rule sets. Because every rule id carries the `RS` family prefix, rule ids cannot collide with other identifier families. An **extension point** a rule offers is named with `#`, as in `RS-CMN-003#cause-location`, so that it never clashes with the colon that separates a namespace in a citation. In a record or artefact anchor's value, `#` also names one part of what the anchor names (COR-050 point 2). It names a point of a record, as in `COR-058#4`, or a section of a document, as in `docs/guide.md#installing`. After a document, a bare `#` names its lead, as in `docs/guide.md#`. An extension point is no anchor value: an anchor names a rule by its id alone.
 
 ### 4. Statuses and the gate
 

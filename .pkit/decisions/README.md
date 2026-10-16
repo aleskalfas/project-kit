@@ -14,9 +14,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-019, COR-025, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058]
     revalidated:
-      at: 2026-10-15T09:52:39Z
+      at: 2026-10-15T17:28:13Z
       outcome: unchanged
-      unchanged-because: The README says the command stamps a record numbered in its namespace and leaves the command to the CLI reference. It does not say where the number comes from, which is all this change alters, so each statement holds.
+      unchanged-because: "COR-050 point 2 lets an artefact anchor name a document's section or its lead, and point 7 says when such an anchor is dead or ambiguous. COR-051 point 3 says '#' names them. record_points.py changes only two docstrings, which name the reading of artefact anchors. This README names a record's point as COR-050#11 in an anchor's value, says a list-form record holds no point an anchor can name, and cites a rule's extension point, and all of it holds."
 ---
 
 # Decision records

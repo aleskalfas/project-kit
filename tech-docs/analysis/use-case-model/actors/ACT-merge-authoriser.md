@@ -13,9 +13,9 @@ pkit:
       record:
         - COR-050#3
     revalidated:
-      at: 2026-10-14T18:58:46Z
+      at: 2026-10-15T09:26:31Z
       outcome: unchanged
-      unchanged-because: COR-050's points are now headings, so the anchor names point 3, which the Core line cites for being told what a change updated before its merge or direct commit. Point 3's text is unchanged, so the actor holds.
+      unchanged-because: COR-050's Decision lead, which every point stands on, now lists what an anchor stands on, a document's section or lead among them. Point 3, on being told what a change updated before its merge, is unchanged, so the actor holds.
 ---
 
 # ACT-merge-authoriser — Merge authoriser
