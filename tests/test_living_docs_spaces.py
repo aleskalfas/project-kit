@@ -864,6 +864,67 @@ def test_a_page_left_unanchored_counts_unless_its_block_gives_an_accepted_reason
     assert lines[accepted + 1] == f"  docs/sponsor.md — {reason}"
 
 
+def test_a_page_anchored_only_on_parts_is_anchored(project: AdopterRepo) -> None:
+    """A part anchor is an anchor (COR-050 point 2): a page whose only anchors name a
+    record's point, another page's section or its lead is anchored, and onboarding
+    leaves it out of the pages still to anchor (DEC-001 point 8). Each anchor names a
+    live part, as the backbone resolves it, so validation fails none of them."""
+
+    def page(anchors: str) -> str:
+        return (
+            "---\nreader: user\nkind: signpost\npkit:\n  friction:\n"
+            f"    anchors: {anchors}\n---\n\n# Page\n"
+        )
+
+    project.write(
+        {
+            "docs/cli.md": (
+                "---\nreader: user\nkind: signpost\npkit:\n  friction:\n"
+                "    anchors: {path: [README.md]}\n---\n\n# CLI\n\nThe lead.\n\n"
+                "## Output\n\nWhere it writes.\n"
+            ),
+            "docs/section.md": page('{artefact: ["docs/cli.md#output"]}'),
+            "docs/lead.md": page('{artefact: ["docs/cli.md#"]}'),
+            "docs/point.md": page('{record: ["living-docs:DEC-001#3"]}'),
+        }
+    )
+    document = run(project)
+    assert errors(document) == []
+    (line,) = [line for line in document["summary"] if line.startswith("pages unanchored:")]
+    assert line.startswith("pages unanchored: 3 without an accepted reason,")
+    human = subprocess.run(
+        [sys.executable, str(project.root / SCRIPT)],
+        cwd=project.root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert human.returncode == 0, human.stderr
+    lines = human.stdout.splitlines()
+    forgotten = lines.index(
+        "page(s) unanchored without an accepted reason, for onboarding to anchor or accept (3):"
+    )
+    assert lines[forgotten + 1 : forgotten + 4] == [
+        "  README.md",
+        "  docs/guide.md",
+        "  tech-docs/README.md",
+    ]
+    # The backbone reads each as a live part: the one reading of a part anchor.
+    listed = json.loads(CliRunner().invoke(main, ["friction", "artefacts", "--json"]).output)[
+        "artefacts"
+    ]
+    parts = {
+        artefact["path"]: [(part["kind"], part["value"]) for part in artefact["part_anchors"]]
+        for artefact in listed
+        if artefact["path"] in {"docs/section.md", "docs/lead.md", "docs/point.md"}
+    }
+    assert parts == {
+        "docs/section.md": [("artefact", "docs/cli.md#output")],
+        "docs/lead.md": [("artefact", "docs/cli.md#")],
+        "docs/point.md": [("record", "living-docs:DEC-001#3")],
+    }
+
+
 # --- definitions (DEC-001 point 2) -------------------------------------------------------
 
 

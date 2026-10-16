@@ -10,9 +10,9 @@ pkit:
         - .pkit/capabilities/living-docs/agents/**
         - .pkit/capabilities/living-docs/templates/**
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
-      artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
+      artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block"]
     revalidated:
-      at: 2026-10-16T11:38:54Z
+      at: 2026-10-16T12:31:26Z
       outcome: updated
 ---
 
@@ -43,6 +43,8 @@ pkit:
 ```
 
 `reader` and `kind` are each a word (`[a-z][a-z0-9-]*`); their shape is `schemas/page.schema.json`, which the validator below applies: to `kind` on every page, and to `reader` where `RS-LDOC-003` binds. The friction block is the core's, and `pkit validate` checks it under `friction`. A document in a space's places that is no page, no decision record and no rule-set file, and that no other owner claims, is an *unclassified document*: counted for onboarding to classify, never failed. A document that names a reader but declares no kind is one.
+
+**Anchoring one part.** A page that rests on one part of a record or of another document may anchor that part, so that a change to another point or section of it asks the page nothing (COR-050 point 5). How an anchor names a part is in [the schemas reference, "The friction block"](../../schemas/README.md#the-friction-block): a record's point as `COR-050#2`, a document's section by its heading's slug as `docs/cli.md#output`, and its lead as `docs/cli.md#`. A path and a `source` name no part. An anchor on one part grounds only what that part stands on (`RS-LDOC-001`), and a summary of a fact whose home is another page anchors the home's section (`RS-LDOC-002`).
 
 **A kind's structure.** Pages of a kind follow one format (`RS-LDOC-004`). A kind's template is the starting shape you fill in; the part of the format the validator checks is the kind's *structure*: the sections every page of the kind carries, in order where order matters. Each kind this capability ships declares its structure once, in `schemas/page-kinds.yaml`, and that file is where to read what a kind's pages must carry: each section is a heading level and, where the kind fixes the wording, its text, in the order listed unless the kind sets `ordered: false`. A structure names only what every page of the kind must carry, so a template may show more, and a page may carry other sections.
 
@@ -229,7 +231,7 @@ The checks above tell you *that* a page drifted and *which* documents are not pa
 
 | Ask it to… | It reads | It gives you |
 |---|---|---|
-| **fix a stale or deferred page** | `pkit friction explain <page>`: the anchors that changed and the commits behind them; then those commits and the page | a diff of the page and a pull-request body, citing each commit and the anchor it changed, and naming the answer you give once it is applied (`pkit friction revalidate … --outcome updated`). When nothing in the page needs to change, it proposes the `unchanged` answer with a draft reason for you to confirm. For a page `explain` reports `unresolved`, it says why from the anchor's finding and proposes nothing for the prose: for `no-answer`, run again, then `pkit sync`, or the resolver needs mending; for `unresolved-kind`, where the kind misspells a registered one (`pkit validate` names the nearest), a one-line anchor correction with the revalidation a changed anchor list needs, otherwise the capability to install or the registration to mend. |
+| **fix a stale or deferred page** | `pkit friction explain <page>`: the anchors that changed and the commits behind them; then those commits and the page | a diff of the page and a pull-request body, citing each commit and the anchor it changed, and naming the answer you give once it is applied (`pkit friction revalidate … --outcome updated`). An anchor it re-points or adds names the one part a statement rests on, where it rests on one. When nothing in the page needs to change, it proposes the `unchanged` answer with a draft reason for you to confirm. For a page `explain` reports `unresolved`, it says why from the anchor's finding and proposes nothing for the prose: for `no-answer`, run again, then `pkit sync`, or the resolver needs mending; for `unresolved-kind`, where the kind misspells a registered one (`pkit validate` names the nearest), a one-line anchor correction with the revalidation a changed anchor list needs, otherwise the capability to install or the registration to mend. |
 | **review a page as its reader** | the page's `reader`, resolved through `pkit::documentation:readers`; the rules that bind on the page, `LDOC`'s and its space's own, from `pkit rule-sets reach` | a findings record, each finding citing the rule the page breaks (`RS-LDOC-003`, or the space's own rule) and quoting the passage, and each passage a rule leaves to your judgement, such as a fact the page repeats, listed as a question — **only when something was found**. Nothing found: one line, no file. As a pull-request comment if you ask for one. |
 | **onboard existing documentation** | the validator's unclassified documents and findings, the friction check's measures, your code-to-doc mapping if you keep one | one plan behind one approval gate (below) |
 
@@ -253,7 +255,7 @@ On a project that already has documentation, nothing is anchored yet, so onboard
 2. **Ask the agent to onboard.** It drafts **one plan**, each line citing its evidence, in four parts:
    - **spaces** — which space each unclassified document becomes a page of, with its `reader` and `kind`, or why the spaces' rules do not govern it; roots still shared are separated, and a space with no definition gets one from the template, with the scope that selects its pages;
    - **splits and rewrites** — pages that serve two readers, or that state another page's fact with no link to its home or no anchor on the home's section (`RS-LDOC-002`), split, merged or rewritten for their reader;
-   - **anchors** — the anchors each page's statements need, and the statements nothing grounds, raised as questions rather than kept;
+   - **anchors** — the anchors each page's statements need, each on the one part a statement rests on where it rests on one ("Anchoring one part", in Pages above), and the statements nothing grounds, raised as questions rather than kept;
    - **mapping** — if you keep a code-to-doc mapping (the project-management capability's, read through the work-tracking role's documentation-check point), which of its rules become path anchors on the pages they name, narrowed where an anchor would match most of the repository. Retiring the mapping is a separate change, for whoever owns it.
 3. **Review the plan at its single gate**: approve, revise, or reject. Nothing is drafted before you approve; a revision comes back to the gate; a rejection drafts nothing.
 4. **Review the changes it drafts.** On approval it writes one reviewable change per step into `.agent-workspace/living-docs/onboarding/` — diffs and pull-request bodies — and stops. You apply them and open the pull requests. A page new in its change counts as revalidated there, so it needs no writer.
