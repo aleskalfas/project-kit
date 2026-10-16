@@ -1058,6 +1058,54 @@ def test_a_rule_the_walk_without_a_preview_binds_is_never_marked(repo: AdopterRe
     assert (conflict.point, conflict.previewed) == ("RS-CMN-001#where", True)
 
 
+def test_a_fill_the_walk_without_a_preview_binds_is_never_marked_down_a_chain(
+    repo: AdopterRepo,
+) -> None:
+    """The test above, one level down. RS-MID-001 fills RS-CMN-001#where, where only the
+    preview finds a conflict, so the preview loses it. RS-DOC-001 fills a point RS-MID-001
+    offers, and RS-GUIDE-001 a point RS-DOC-001 offers. Both bind without a preview, so
+    neither is marked where the preview binds it, through RS-CMN-003#x or otherwise
+    (ADR-057 point 2). The double fill is a validation error, read here for the walk."""
+    cmn = rule_set(
+        "CMN",
+        entries={**rules("RS-CMN-001", offers=["where"]), "RS-CMN-003": {"offers": ["x"]}},
+    )
+    mid = rules("RS-MID-001", offers=["how"], **_filling())
+    doc = {
+        **rules(
+            "RS-DOC-001",
+            offers=["r"],
+            fills=["RS-MID-001#how", "RS-CMN-003#x"],
+            **anchored_to("RS-MID-001"),
+        ),
+        "RS-DOC-002": _filling(origin=QUOTE),  # proposed
+    }
+    guide = rules("RS-GUIDE-001", fills=["RS-DOC-001#r"], **anchored_to("RS-DOC-001"))
+    lay_out(
+        repo,
+        {
+            "cmn": cmn,
+            "mid": rule_set("MID", inherits=["CMN@1"], entries=mid),
+            "doc": rule_set("DOC", inherits=["MID@1"], scope=scoped(f"{GUIDES}/**"), entries=doc),
+            "guide": rule_set(
+                "GUIDE", inherits=["DOC@1"], scope=scoped(f"{GUIDES}/**"), entries=guide
+            ),
+        },
+        a=page(),
+    )
+    assert binding(repo, "RS-DOC-001").fills == ("RS-MID-001#how",)
+    assert binding(repo, "RS-GUIDE-001").fills == ("RS-DOC-001#r",)
+    answer = rs.reach_at(repo.root, preview=True)[2].of(A)
+    fills = {b.rule.id: (b.fills, b.previewed) for b in answer.bindings if b.rule.fills}
+    assert fills == {
+        "RS-DOC-001": (("RS-CMN-003#x",), False),
+        "RS-GUIDE-001": (("RS-DOC-001#r",), False),
+    }
+    (conflict,) = answer.conflicts
+    assert isinstance(conflict, rs.FillConflict)
+    assert (conflict.point, conflict.previewed) == ("RS-CMN-001#where", True)
+
+
 def test_the_command_gives_the_preview_and_validation_reads_none(repo: AdopterRepo) -> None:
     lay_out(
         repo,

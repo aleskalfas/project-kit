@@ -2111,6 +2111,14 @@ class _Walk:
                         found.append(_Filler(rule_set, rule, target_set, target, reference.point))
         return tuple(found)
 
+    @cached_property
+    def fills_of(self) -> dict[int, tuple[_Filler, ...]]:
+        """The fills of each rule that fills, by the rule, in the order of `fillers`."""
+        found: dict[int, list[_Filler]] = {}
+        for filler in self.fillers:
+            found.setdefault(id(filler.rule), []).append(filler)
+        return {rule: tuple(fills) for rule, fills in found.items()}
+
     def answer(self, selecting: frozenset[str]) -> ArtefactReach:
         if selecting not in self._answers:
             self._answers[selecting] = _Routes(self, selecting).answer()
@@ -2289,15 +2297,17 @@ class _Routes:
     def _point(self, key: tuple[int, str]) -> _Decided | None:
         """Which fill of one extension point binds on the artefact, and which binds
         without a preview, or the conflict between its most specific sets (COR-051
-        point 7). `None` for a point whose decision waits on its own: fills that fill
-        each other along an inheritance cycle, which validation fails, bind nothing.
+        point 7). `None` while the point's decision waits on its own, which only an
+        inheritance cycle makes. Validation fails the cycle. The walk ends there, and
+        what it binds there is no answer to rely on.
 
         A fill binds only where the rule it fills binds (`_offers`). Without a preview,
         each most specific set brings the accepted fills among those it brings in a
         preview, and which sets are most specific depends on no status. So the walk
         without a preview decides each point from the same sets, with the proposed
-        fills left out, and only where the rule it fills binds without a preview. A
-        conflict stands only under a preview where that decision finds none."""
+        fills left out, wherever the rule it fills binds without a preview, whether or
+        not it binds in this walk. A conflict stands only under a preview where that
+        decision finds none."""
         if key in self._decided:
             return self._decided[key]
         self._decided[key] = None  # until decided
@@ -2306,7 +2316,7 @@ class _Routes:
         point = f"{offering_set.cite(offering.id)}#{fillers[0].point}"
         binds, offered = self._offers(offering)
         decided = _Decided(point)
-        if binds:
+        if binds or offered:
             through = [s for s in self.starts if offering_set.path in self.clean(s)]
             specific = [
                 s
@@ -2322,11 +2332,11 @@ class _Routes:
             ]
             if offered and not _disagree(plain) and plain and plain[0][1]:
                 decided = replace(decided, plain=plain[0][1][0][1])
-            if _disagree(brought):
+            if binds and _disagree(brought):
                 previewed = not (offered and _disagree(plain))
                 conflict = FillConflict(point, tuple(brought), previewed)
                 decided = replace(decided, conflict=conflict)
-            elif brought and brought[0][1]:
+            elif binds and brought and brought[0][1]:
                 decided = replace(decided, bound=brought[0][1][0][1])
         self._decided[key] = decided
         return decided
@@ -2340,8 +2350,7 @@ class _Routes:
             return self.walk.binds(rule), not _previewed(rule)
         decided = [
             self._point((id(filler.offering), filler.point))
-            for filler in self.walk.fillers
-            if filler.rule is rule
+            for filler in self.walk.fills_of.get(id(rule), ())
         ]
         return (
             any(d is not None and d.bound is rule for d in decided),
