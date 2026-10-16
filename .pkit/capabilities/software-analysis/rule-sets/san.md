@@ -8,6 +8,9 @@ rules:
     pkit:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
+        revalidated:
+          at: 2026-10-16T21:18:56Z
+          outcome: updated
 # The part of the format rule that this capability's check enforces (COR-051
 # point 2 and DEC-001 point 1): the parts each kind ships, and the forms its
 # declared structure gives. The check enforces it only where the rule binds,
