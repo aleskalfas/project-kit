@@ -412,8 +412,8 @@ def test_no_git_is_an_answer_without_commits(tmp_path: Path) -> None:
 def test_no_repository_is_said_in_plain_words(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Outside any repository the problem says that git finds none, with git's own
-    reason, and names no fix to the branch: no remote, branch or base would help."""
+    """Outside any repository the problem says that git cannot read the branches here,
+    with git's own reason in place of the fixes: no remote, branch or base would help."""
     plain = tmp_path / "plain"
     plain.mkdir()
     monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))  # no repository above it
@@ -421,18 +421,34 @@ def test_no_repository_is_said_in_plain_words(
     assert (branch.commit, branch.unborn) == (None, False)
     assert branch.problem is not None
     assert branch.problem.startswith(
-        "the default branch 'main' cannot be read: git finds no repository here that it "
-        "can read (git says: "
+        "the default branch 'main' cannot be read: git cannot read the branches here (git says: "
     ), branch.problem
     for misleading in ("no remote", "no local branch", "declare", "--base"):
         assert misleading not in branch.problem
     assert db.base(plain).problem == branch.problem
 
 
+def test_a_damaged_reference_is_never_called_no_repository(tmp_path: Path) -> None:
+    """In a repository git can read, a reference naming a missing object fails the
+    listing too: the problem gives git's reason and never says there is no repository."""
+    repo = _repo(tmp_path)
+    missing = "1234567890abcdef1234567890abcdef12345678"
+    tracking = repo.root / ".git" / "refs" / "remotes" / "origin" / "main"
+    tracking.parent.mkdir(parents=True)
+    tracking.write_text(f"{missing}\n", encoding="utf-8")
+    problem = db.resolve(repo.root).problem
+    assert problem is not None
+    assert problem.startswith(
+        "the default branch 'main' cannot be read: git cannot read the branches here (git says: "
+    ), problem
+    assert "repository" not in problem.split("(git says: ")[0]
+    assert db.head(repo.root).problem is None  # HEAD reads: the repository is readable
+
+
 def test_no_git_to_run_is_said_in_plain_words(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Where git cannot run at all, the problem says so, and names no fix to the branch."""
+    """Where git cannot run at all, the problem says so, in place of the fixes."""
     monkeypatch.setenv("PATH", str(tmp_path / "empty"))  # no git on it
     branch = db.resolve(tmp_path)
     assert (branch.commit, branch.unborn) == (None, False)
@@ -447,7 +463,7 @@ def test_a_repository_without_the_branch_keeps_its_fixes(tmp_path: Path) -> None
     problem = db.resolve(repo.root).problem
     assert problem is not None
     assert "there is no remote and no local branch 'main'" in problem
-    assert "git finds no repository" not in problem
+    assert "git cannot read the branches" not in problem
 
 
 # --- the base of a comparison (point 3) --------------------------------------------------------
