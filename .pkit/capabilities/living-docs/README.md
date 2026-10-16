@@ -9,7 +9,7 @@ pkit:
         - .pkit/capabilities/living-docs/schemas/**
         - .pkit/capabilities/living-docs/agents/**
         - .pkit/capabilities/living-docs/templates/**
-      record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
+      record: ["living-docs:DEC-001", COR-023, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block"]
     revalidated:
       at: 2026-10-16T12:31:26Z
