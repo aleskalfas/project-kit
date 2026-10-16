@@ -30,9 +30,8 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, "COR-059#2", "COR-059#8", ADR-056, ADR-057, ADR-059, ADR-065]
     revalidated:
-      at: 2026-10-16T14:21:40Z
-      outcome: unchanged
-      unchanged-because: This change anchors COR-059 point 8 and ADR-065, which the 'Seed paths' and 'The steps of a transition' sections already cite. It changes neither record and no statement on this page, so each statement still holds.
+      at: 2026-10-16T15:17:06Z
+      outcome: updated
 ---
 
 # Lifecycle

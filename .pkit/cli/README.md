@@ -72,7 +72,7 @@ pkit:
         - .pkit/lifecycle/README.md#where-a-capabilitys-manifest-lives
         - .pkit/lifecycle/README.md#the-downgrade-guard-on-capability-refresh-issue-524
     revalidated:
-      at: 2026-10-16T14:21:39Z
+      at: 2026-10-16T15:17:09Z
       outcome: updated
 ---
 
