@@ -707,10 +707,13 @@ def test_proposed_the_forms_report_nothing_and_the_preview_lists_each_breach(
         0,
         [("report", "no rule of software-analysis")],
     )
-    found = found[1:]
     code, found = _said(project, "--preview")
     assert code == 0
-    found = found[1:]
+    # The report that no rule of `SAN` binds stands in the preview too; the rest is the
+    # preview's.
+    unbound = [f for f in found if f[2].startswith("no rule of software-analysis:SAN binds")]
+    assert [severity for severity, _l, _m in unbound] == ["report"]
+    found = [f for f in found if f not in unbound]
     assert sorted((severity, location) for severity, location, _m in found) == [
         ("report", f"{GLOSSARY}#TERM-template:/definition"),
         ("report", uc_rel),

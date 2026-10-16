@@ -76,11 +76,12 @@ def errors(document: Mapping[str, Any]) -> list[tuple[str, str]]:
 def beside_record_bodies(found: list[tuple[str, str]]) -> list[tuple[str, str]]:
     """`found` without what a record's body breaks of the record's structure, which the
     capability holds always (DEC-001 point 1): a test of a record's front matter edits
-    the front matter alone, so its body no longer matches."""
+    the front matter alone, so its body no longer matches. A structure's finding cites the
+    record point and repeats the part's hint, so any other finding citing the point stays."""
     return [
         (location, message)
         for location, message in found
-        if not (location.startswith(RECORDS) and "(DEC-001 point 1). " in message)
+        if not (location.startswith(RECORDS) and "(DEC-001 point 1). What goes there: " in message)
     ]
 
 
