@@ -908,6 +908,80 @@ def test_the_filler_contributes_page_friction_and_uncovered_surface(
     assert result.exit_code == 0, result.output
 
 
+def test_a_page_anchored_on_a_part_owes_only_when_that_part_changes(
+    tracked_project: AdopterRepo,
+) -> None:
+    """Through the backbone, which reads each part anchor as the friction checks do
+    (COR-050 points 2 and 5): a page anchored on one section of another page, on its
+    lead, or on one point of a record owes an answer only when that part changed. A
+    change elsewhere in the same page or record asks the others nothing, and the
+    obligation names the part anchor that changed."""
+    repo = tracked_project
+    page: dict[str, Any] = {"reader": "user", "kind": "signpost"}
+    record = repo.root / LD / "decisions" / "DEC-001-living-docs-discipline.md"
+    text = record.read_text(encoding="utf-8")
+    heading = "### 3. What the shared rules require\n\n"
+    assert heading in text
+    repo.write(
+        {
+            "src/a.py": "A = 1\n",
+            "docs/cli.md": friction_document(
+                None,
+                anchors={"path": ["src/a.py"]},
+                body=(
+                    "# CLI\n\nThe lead.\n\n## Output\n\nWhere it writes.\n\n"
+                    "## Timeout\n\nThirty seconds.\n"
+                ),
+                **page,
+            ),
+            "docs/output.md": friction_document(
+                None, anchors={"artefact": ["docs/cli.md#output"]}, **page
+            ),
+            "docs/timeout.md": friction_document(
+                None, anchors={"artefact": ["docs/cli.md#timeout"]}, **page
+            ),
+            "docs/lead.md": friction_document(None, anchors={"artefact": ["docs/cli.md#"]}, **page),
+            "docs/point-3.md": friction_document(
+                None, anchors={"record": ["living-docs:DEC-001#3"]}, **page
+            ),
+            "docs/point-4.md": friction_document(
+                None, anchors={"record": ["living-docs:DEC-001#4"]}, **page
+            ),
+        }
+    )
+    repo.commit("base")
+    edited = text.replace(heading, f"{heading}A sentence added to point 3.\n\n", 1)
+    repo.commit(
+        "change one section and one point",
+        {
+            "docs/cli.md": friction_document(
+                None,
+                anchors={"path": ["src/a.py"]},
+                body=(
+                    "# CLI\n\nThe lead.\n\n## Output\n\nWhere it writes.\n\n"
+                    "## Timeout\n\nSixty seconds.\n"
+                ),
+                **page,
+            ),
+            f"{LD.as_posix()}/decisions/DEC-001-living-docs-discipline.md": edited,
+        },
+    )
+
+    resolved, ours = _living_docs_entries(repo)
+    assert resolved["resolved"], resolved["why"]
+    assert [(o["document"], o["description"]) for o in ours] == [
+        (
+            "docs/point-3.md",
+            "stale: record living-docs:DEC-001#3 changed — pkit friction explain docs/point-3.md",
+        ),
+        (
+            "docs/timeout.md",
+            "stale: artefact docs/cli.md#timeout changed — pkit friction explain docs/timeout.md",
+        ),
+    ]
+    assert list(_schema(PM_CAPABILITY, "doc-check.schema.json").iter_errors(ours)) == []
+
+
 def _track(repo: AdopterRepo, config: str) -> None:
     """project-management's configuration, and the stamp its check's gate reads."""
     repo.write(
