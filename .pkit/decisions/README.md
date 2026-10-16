@@ -19,9 +19,9 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-16T15:17:15Z
+      at: 2026-10-16T22:17:44Z
       outcome: unchanged
-      unchanged-because: "This change adds a preview to the reach walk in src/project_kit/rule_sets.py: where rules would bind if every proposed rule were accepted, which binds nothing and which validation never reads. What this page says of rules still holds: a proposed rule binds nothing, accepting one is a reviewed change, and validation checks every rule set as before."
+      unchanged-because: "This change makes the reach walk in src/project_kit/rule_sets.py bind a fill only where the rule it fills binds, also when that rule is itself a fill. What this page says of rules still holds: a proposed rule binds nothing, accepted rules bind, and accepting one is a reviewed change. It says nothing of where a fill binds."
 ---
 
 # Decision records
