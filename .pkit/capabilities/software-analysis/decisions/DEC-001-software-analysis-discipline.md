@@ -1,7 +1,7 @@
 ---
 id: DEC-001
 title: Software analysis keeps actors, use cases, journeys and terms true as the software changes
-status: proposed
+status: accepted
 date: 2026-09-27
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
