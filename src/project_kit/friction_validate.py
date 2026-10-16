@@ -70,13 +70,23 @@ settings that declare them, this pass reports:
   at the registration, in the packages pass. This pass runs no resolver;
 - **a cycle between artefacts** through `anchors.artefact`, with the cycle's
   path — a cycle has no order in which its members could be revalidated
-  (COR-050 point 5);
+  (COR-050 point 5). An anchor on a document's section or its lead counts as
+  one on the document (`artefact_parts.whole_target`), so one on a part of its
+  own artefact is a cycle, said so;
 - **a dead or ambiguous anchor on a record's point** (`_PointAnchors`), an
   error: its record does not resolve, holds no point with the id, writes its
   points as a list, or holds two with the id (COR-050 points 7 and 12) — and
   **an anchor on a retired point**, a warning naming the point's successors,
   until it is re-pointed. Each record is read from the working tree through
-  `record_points`, the one reading of a record's points (ADR-057 point 2).
+  `record_points`, the one reading of a record's points (ADR-057 point 2);
+- **a dead, ambiguous or refused anchor on a document's section or its lead**
+  (`_part_anchor_findings`), an error whatever made it so, its artefact gone
+  included: no artefact by its name, no heading with its slug — a renamed
+  heading's anchor among them — two headings with it, or a part COR-050
+  point 2 refuses, a section or the lead of a collection file, a collection
+  entry or a record, naming the anchor to use (COR-050 points 2, 7 and 12).
+  Read from the working tree's discovery through `artefact_parts`, the one
+  reading of an artefact anchor's part.
 
 These fail validation in either mode, because the project can fix them. A
 rule-set file is claimed before the container rule (ADR-056 point 2): its
@@ -94,7 +104,7 @@ place that leaves the repository, nor a synced copy a declared place matches.
 Without the tree's ownership module no match can be told a synced copy; that
 is a report, not an error. What it does not do either: compute friction, resolve
 path anchors against git, run a registered kind's resolver, or report a dead
-path, whole-record or artefact anchor — those are the two checks' findings
+path, whole-record or whole-artefact anchor — those are the two checks' findings
 (COR-050 points 6 and 7). What the
 container validator reports rather than judges — a role block whose role has no
 active provider, a point block the active provider's point does not match — is
@@ -110,7 +120,7 @@ it cannot parse or that carries a friction block.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -118,7 +128,8 @@ from typing import Any, cast
 
 from project_kit import backbone_schemas as bs
 from project_kit import connections, validators
-from project_kit.friction_check import point_problem, record_file
+from project_kit.artefact_parts import PartState, anchored_part, whole_target
+from project_kit.friction_check import point_problem, record_file, record_naming
 from project_kit.friction_discovery import (
     CORE_ANCHOR_KINDS,
     FRICTION_KEY,
@@ -181,6 +192,11 @@ class FrictionFindingKind(Enum):
     DEAD_POINT_ANCHOR = "dead-point-anchor"  # an anchor on a record's point that names none
     AMBIGUOUS_POINT_ANCHOR = "ambiguous-point-anchor"  # an id two live points of a record share
     RETIRED_POINT_ANCHOR = "retired-point-anchor"  # an anchor on a point its record retires
+    DEAD_SECTION_ANCHOR = "dead-section-anchor"  # a section or lead anchor that names none
+    AMBIGUOUS_SECTION_ANCHOR = "ambiguous-section-anchor"  # a slug two headings share
+    REFUSED_SECTION_ANCHOR = (
+        "refused-section-anchor"  # a section or lead anchor COR-050 point 2 refuses
+    )
     CONTAINER_REPORT = "container-report"  # an orphaned role block, an inert point block
     SCHEMA_UNAVAILABLE = "schema-unavailable"  # the tree ships no readable container schema
 
@@ -528,6 +544,12 @@ def _artefact_findings(target_root: Path, discovery: Discovery) -> list[Friction
     wiring = connections.container_wiring(target_root)
     registry = registered_anchor_kinds(target_root)  # read once for the pass
     points = _PointAnchors(target_root)
+    named: dict[str, str | None] = {}
+
+    def record_named(path: str) -> str | None:
+        if path not in named:
+            named[path] = record_naming(target_root, path)
+        return named[path]
 
     for artefact in discovery.with_container:
         if schema is not None and artefact.rule_set is None:  # a rule's: the rule-set pass's
@@ -537,6 +559,7 @@ def _artefact_findings(target_root: Path, discovery: Discovery) -> list[Friction
         findings.extend(_duplicate_deferrals(artefact))
         findings.extend(_unresolved_kinds(artefact, registry))
         findings.extend(points.findings(artefact))
+        findings.extend(_part_anchor_findings(artefact, discovery, record_named))
 
     findings.extend(_cycles(discovery))
     return findings
@@ -763,7 +786,7 @@ class _PointAnchors:
         self._records: dict[str, RecordPoints | None] = {}
 
     def findings(self, artefact: Artefact) -> Iterable[FrictionFinding]:
-        for index, value in _record_anchors(artefact):
+        for index, value in _written_anchors(artefact, "record"):
             record, point = split_anchor(value)
             if point is None:
                 continue
@@ -837,16 +860,60 @@ class _PointAnchors:
         return FrictionFinding(artefact.location, pointer, severity, kind, message)
 
 
-def _record_anchors(artefact: Artefact) -> list[tuple[int, str]]:
-    """Each record anchor the block writes as text, with its index in the list as written,
-    so a finding points at it even beside an entry that is not text."""
+def _part_anchor_findings(
+    artefact: Artefact, discovery: Discovery, record_named: Callable[[str], str | None]
+) -> Iterable[FrictionFinding]:
+    """The findings on each anchor on a document's section or its lead (COR-050 points 2,
+    7 and 12), each an error, whatever made it so — its artefact gone included:
+
+    - **a dead anchor**: no artefact by its name, or no heading of the document
+      with its slug, as a renamed heading leaves it;
+    - **an ambiguous anchor**: two headings of the document share its slug;
+    - **a refused anchor**: a section or the lead of a collection file, a
+      collection entry, an extension point among them, or a record, with the
+      anchor to use where there is one.
+
+    A whole anchor that names nothing is the checks' to judge. The anchor is read
+    as both checks read it (`artefact_parts.anchored_part`), against the working
+    tree's discovery.
+    """
+    for index, value in _written_anchors(artefact, "artefact"):
+        found = anchored_part(discovery, value, record_named)
+        problem = found.problem
+        if not found.names_part or problem is None:
+            continue
+        pointer = f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/anchors/artefact/{index}"
+        if found.state is PartState.AMBIGUOUS:
+            kind = FrictionFindingKind.AMBIGUOUS_SECTION_ANCHOR
+            message = (
+                f"artefact anchor {value!r} {problem}: rename one of the headings, or anchor "
+                f"another part (COR-050 point 7)."
+            )
+        elif found.state is PartState.REFUSED:
+            kind = FrictionFindingKind.REFUSED_SECTION_ANCHOR
+            message = f"artefact anchor {value!r} {problem} (COR-050 point 2)."
+        else:
+            kind = FrictionFindingKind.DEAD_SECTION_ANCHOR
+            mend = (
+                " A renamed heading leaves its anchors dead: re-point the anchor, which a "
+                "revalidation records."
+                if found.target is not None
+                else ""
+            )
+            message = f"artefact anchor {value!r} is dead: {problem} (COR-050 point 7).{mend}"
+        yield FrictionFinding(artefact.location, pointer, Severity.ERROR, kind, message)
+
+
+def _written_anchors(artefact: Artefact, kind: str) -> list[tuple[int, str]]:
+    """Each anchor of `kind` the block writes as text, with its index in the list as
+    written, so a finding points at it even beside an entry that is not text."""
     friction = artefact.friction
     if not isinstance(friction, Mapping):
         return []
     anchors = cast("Mapping[str, Any]", friction).get("anchors")
     if not isinstance(anchors, Mapping):
         return []
-    written = cast("Mapping[str, Any]", anchors).get("record")
+    written = cast("Mapping[str, Any]", anchors).get(kind)
     if not isinstance(written, list):
         return []
     values = cast("list[Any]", written)
@@ -863,19 +930,25 @@ def _cycles(discovery: Discovery) -> list[FrictionFinding]:
 
     Edges go from an artefact to every artefact its `anchors.artefact`
     values name (a value naming nothing is a dead anchor — the checks' finding,
-    not this pass's). A depth-first walk in discovery order finds each cycle
-    the first time it closes; the cycle is rotated to start at its smallest
-    member so the same cycle reached from two sides is reported once.
+    not this pass's). An anchor on a document's section or its lead is an edge
+    to the document (`artefact_parts.whole_target`), so one on a part of its own
+    artefact is a cycle (COR-050 point 5). A depth-first walk in discovery order
+    finds each cycle the first time it closes; the cycle is rotated to start at
+    its smallest member so the same cycle reached from two sides is reported
+    once.
     """
     order = list(discovery.artefacts)
     edges: dict[int, list[int]] = {}
+    own: dict[int, list[str]] = {}  # each artefact's anchors on itself, whole or a part
     index_of = {id(a): i for i, a in enumerate(order)}
     for i, artefact in enumerate(order):
         targets: list[int] = []
         for reference in artefact.anchors_of_kind("artefact"):
-            target = discovery.find(reference)
+            target = whole_target(discovery, reference)
             if target is not None:
                 targets.append(index_of[id(target)])
+                if target is artefact:
+                    own.setdefault(i, []).append(reference)
         edges[i] = targets
 
     WHITE, GREY, BLACK = 0, 1, 2
@@ -900,7 +973,10 @@ def _cycles(discovery: Discovery) -> list[FrictionFinding]:
                 canonical = _rotate_to_smallest(cycle, order)
                 if canonical not in seen_cycles:
                     seen_cycles.add(canonical)
-                    findings.append(_cycle_finding([order[i] for i in canonical]))
+                    selves = own.get(canonical[0], []) if len(canonical) == 1 else []
+                    findings.append(
+                        _cycle_finding([order[i] for i in canonical], selves, discovery)
+                    )
             elif colour[child] == WHITE:
                 colour[child] = GREY
                 path.append(child)
@@ -917,8 +993,27 @@ def _rotate_to_smallest(cycle: list[int], order: list[Artefact]) -> tuple[int, .
     return tuple(cycle[pivot:] + cycle[:pivot])
 
 
-def _cycle_finding(members: list[Artefact]) -> FrictionFinding:
+def _cycle_finding(
+    members: list[Artefact], selves: list[str], discovery: Discovery
+) -> FrictionFinding:
+    """The finding on one cycle. An artefact that anchors a section or the lead of itself
+    is told so, with each anchor on itself it writes, whole or a part (`selves`)."""
     head = members[0]
+    pointer = f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/anchors/artefact"
+    if any(discovery.find(value) is None for value in selves):
+        named = ", ".join(repr(value) for value in selves)
+        whole = "" if all(discovery.find(value) is None for value in selves) else "itself, and "
+        return FrictionFinding(
+            location=head.location,
+            pointer=pointer,
+            severity=Severity.ERROR,
+            kind=FrictionFindingKind.CYCLE,
+            message=(
+                f"the artefact anchors {whole}a section or the lead of itself ({named}), which "
+                f"is a cycle: its own edits would flag it, and so would its own revalidation — "
+                f"anchor what lies outside it (COR-050 point 5)."
+            ),
+        )
     shown = " -> ".join(a.id for a in members) + f" -> {head.id}"
     what = "anchors to itself" if len(members) == 1 else "form a cycle through anchors.artefact"
     return FrictionFinding(

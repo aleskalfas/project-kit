@@ -211,7 +211,9 @@ class PointGround:
 @dataclass(frozen=True)
 class Standing:
     """What an anchor on one point stands on at one state, as the friction checks and the
-    debt listing compare it (COR-050 point 5).
+    debt listing compare it (COR-050 point 5). An anchor on a document's section or its
+    lead is read in the same shape (`artefact_parts.part_standing`): the document's own
+    fields, the part's text as `section`, and nothing `shared`.
 
     - `fields`: those of `GROUND_FIELDS` the record writes, each as YAML reads
       it, written out as JSON with its keys sorted, so a reformatted field is
@@ -511,7 +513,8 @@ def split_anchor(value: str) -> tuple[str, str | None]:
     """A record anchor's value as the record it names and the point, if it names one:
     `("COR-050", "11")` for `COR-050#11`, and `("COR-050", None)` for the whole record
     (COR-050 point 2). The value splits at its last `#`, the mark COR-051 point 3 gives
-    a part of a record."""
+    a part of a record or an artefact. An artefact anchor's value splits the same way,
+    `("docs/guide.md", "")` for the lead `docs/guide.md#` (`artefact_parts`)."""
     record, mark, point = value.rpartition(POINT_MARK)
     return (record, point) if mark else (value, None)
 

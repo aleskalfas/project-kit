@@ -28,10 +28,11 @@ Artefact discovery cuts a collection entry's section with it
 with it (`rule_sets`). The home of a record's points reads a record's
 Decision with it (`record_points`).
 
-Whether an anchor may name a section by its slug, or a document's lead, is the
-anchors-and-friction record's to decide (COR-050). No anchor names one yet, so
-nothing reads `sections_by_slug` or `lead` for an anchor. When COR-050 lets an
-anchor name them, they are found here (ADR-057 point 2).
+An artefact anchor may name a document's section by its heading's slug, or its
+lead by a bare `#` (COR-050 point 2). The one reading of such an anchor
+(`artefact_parts`) finds the section by `sections_by_slug` and the lead by
+`lead`, here, so the checks, validation and the artefacts document cut the same
+part (ADR-057 point 2).
 """
 
 from __future__ import annotations

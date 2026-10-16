@@ -40,9 +40,10 @@ never the working tree, as the check does; neither writes anything.
   and at HEAD, matched as the check decides a dead anchor, `friction.exclude`
   applied, and the files it leaves out; each commit's paths behind its
   finding, what the check read as the change (`fr.CommitBehind`); where a
-  dead path anchor's files went; for a stale anchor on a record's point, the
-  point's diff alone — what it stands on, from the revalidation point to HEAD
-  (COR-050 point 13); and the artefact's body as discovery reads it — for a
+  dead path anchor's files went; for a stale anchor on a record's point, or on
+  a document's section or its lead, the part's diff alone — what it stands on,
+  from the revalidation point to HEAD (COR-050 point 13); and the artefact's
+  body as discovery reads it — for a
   collection entry, the section headed by its id.
 """
 
@@ -464,10 +465,11 @@ class ExplainedAnchor:
     `files`, for a path anchor, are the files it stands on at the revalidation
     point and at HEAD, as the check decides a dead anchor, and those its glob
     covers at HEAD that `friction.exclude` leaves out (`fr.AnchorFiles`);
-    `None` for another kind. `diff`, for a stale anchor on a record's point, is
-    what changed in what the point stands on from the revalidation point to
-    HEAD, a unified diff's lines, and nothing else of the record (COR-050
-    point 13); `None` for any other anchor.
+    `None` for another kind. `diff`, for a stale anchor on a record's point, or
+    on a document's section or its lead, is what changed in what the part
+    stands on from the revalidation point to HEAD, a unified diff's lines, and
+    nothing else of the record or the document (COR-050 point 13); `None` for
+    any other anchor.
     """
 
     anchor: Anchor
@@ -880,6 +882,14 @@ def _anchor_lines(explanation: Explanation) -> list[str]:
     return lines
 
 
+def _part_noun(anchor: Anchor | None) -> str:
+    """What a part anchor's diff is of: a record's `point`, a document's `lead` (a bare
+    `#`), or its `section` (COR-050 point 2)."""
+    if anchor is None or anchor.kind == "record":
+        return "point"
+    return "lead" if anchor.value.endswith("#") else "section"
+
+
 def _finding_lines(explanation: Explanation, now: datetime) -> list[str]:
     lines = [
         cli_render.style("heading", "FINDINGS")
@@ -908,7 +918,9 @@ def _finding_lines(explanation: Explanation, now: datetime) -> list[str]:
         anchor = finding.anchor
         diff = diffs.get(anchor, ()) if finding.kind is _Kind.STALE and anchor is not None else ()
         if diff:
-            lines.append("    what the point stands on, from its revalidation point to HEAD:")
+            lines.append(
+                f"    what the {_part_noun(anchor)} stands on, from its revalidation point to HEAD:"
+            )
             lines.extend(f"      {line}" for line in diff)
         if explained.answers:
             lines.append(f"    clears it — {explained.clears}:")

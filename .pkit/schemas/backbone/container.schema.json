@@ -79,7 +79,7 @@
           "$ref": "#/$defs/record-anchor-values"
         },
         "artefact": {
-          "description": "Other artefacts, by id.",
+          "description": "Other artefacts, by id, a document also by its repository-relative path; and one part of a document (COR-050 point 2): `<artefact>#<heading slug>` one section, such as `docs/guide.md#installing`, and `<artefact>#` its lead, the body before its first heading. A value that names an artefact whole, `#` included, is read whole; otherwise it splits at its last `#`. A slug is a heading's title in lower case, with every character but letters, digits, spaces and hyphens dropped, and each space made a hyphen. Whether such a part exists, is shared by two headings, or is refused — a section or the lead of a collection file, a collection entry or a record — is validation's finding, not this schema's.",
           "$ref": "#/$defs/anchor-values"
         }
       }
