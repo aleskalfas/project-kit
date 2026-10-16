@@ -1,8 +1,9 @@
 ---
 # A signpost page (living-docs DEC-001 point 3; RS-LDOC-005): an index-like
 # file that tells its reader what a folder holds and where to go, never a
-# summary of what the files say. Copy it into the folder it signposts —
-# usually as its README.md — and fill it in.
+# summary of what the files say. Stamp it into the folder it signposts —
+# usually as its README.md — with `pkit living-docs new page <file> --kind
+# signpost …`, and fill it in.
 reader: user                      # who the page is for: an id of the readers point (user, maintainer, or one the project adds)
 kind: signpost                    # the page's kind: this template's
 pkit:

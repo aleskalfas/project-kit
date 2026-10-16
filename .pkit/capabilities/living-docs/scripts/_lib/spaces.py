@@ -189,9 +189,16 @@ ERROR, REPORT = "error", "report"
 
 @dataclass(frozen=True)
 class Finding:
+    """One finding: its severity, where it lies and what it says, and the check that
+    made it. The check is a stable name, kept out of the findings document. The
+    authoring stamps compare errors by it, with the severity and the location, to
+    tell an error a write brings from one there before (`stamp`): a message names
+    what the state holds, so it is no identity."""
+
     severity: str
     location: str
     message: str
+    check: str = ""
 
     def as_json(self) -> dict[str, str]:
         return {"severity": self.severity, "location": self.location, "message": self.message}
@@ -389,6 +396,67 @@ class _Walk:
     untold: dict[str, list[Place]] = field(default_factory=dict)
 
 
+#: The checks whose error says that something the check reads could not be read —
+#: the places, where the rules bind, the readers point, the kinds' structures — so
+#: it judged less than the whole. An authoring stamp refuses on one (`stamp`).
+UNREAD = frozenset(
+    {"places-unreadable", "binding-unreadable", "readers-unresolved", "structures-unreadable"}
+)
+
+
+@dataclass(frozen=True)
+class Standing:
+    """What one path is to the spaces, as the check classified it: the space whose
+    page it is, or why it is no page of any space."""
+
+    space: str | None = None
+    why: str | None = None
+
+
+@dataclass(frozen=True)
+class Checked:
+    """The check's outcome, with what it read and how it classified each document:
+    the declarations and the walk, `None` when the places cannot be read. The
+    authoring stamps read one path's standing from it, never a second reading."""
+
+    outcome: Outcome
+    decl: Declarations | None = None
+    walk: _Walk | None = None
+
+    def standing(self, rel: str) -> Standing:
+        """Whether `rel` is a page, of which space, or why not, by the walk's own
+        classification (DEC-001 points 1, 2 and 4)."""
+        decl, walk = self.decl, self.walk
+        if decl is None or walk is None:
+            return Standing(why="the documentation places cannot be read")
+        if rel in walk.pages:
+            space = walk.pages[rel]
+            if space is not None:
+                return Standing(space=space)
+            return Standing(
+                why="it belongs to no space: its place is unassigned, or both documentation "
+                "roots are one folder"
+            )
+        if rel in walk.claims:
+            return Standing(why=f"it is {walk.claims[rel].described()}, never a page")
+        if rel in walk.untold:
+            return Standing(why="its places of the spaces cannot be told apart")
+        if rel in walk.space_of:
+            return Standing(
+                why="the place that gives it its space does not give it the page type, so it "
+                "is an unclassified document"
+            )
+        if rel not in decl.documents:
+            return Standing(
+                why="the backbone's discovery does not list it: it lies in no declared place, "
+                "or git ignores it"
+            )
+        return Standing(
+            why="it lies in no place of any space: under neither documentation root, and in "
+            "no project place of `friction.places`"
+        )
+
+
 def check(
     root: Path,
     read: Callable[[], Readers] = read_readers,
@@ -399,10 +467,19 @@ def check(
     RS-LDOC-003 binds, and `reach` where the rules bind, asked only when there is
     a page. When the backbone gives no reading of the places, that is the one
     finding."""
+    return checked(root, read, reach).outcome
+
+
+def checked(
+    root: Path,
+    read: Callable[[], Readers] = read_readers,
+    reach: Callable[[Path], Binding] = read_binding,
+) -> Checked:
+    """The check, as `check` runs it, with the declarations and the walk it read."""
     try:
         decl, refused, walk, outcome = _classify(root)
     except Unreadable as exc:
-        return _unreadable(exc)
+        return Checked(_unreadable(exc))
     binding = _binding(root, walk, reach, outcome)
     _field_findings(walk, binding, outcome)
     _assignment_findings(decl, refused, walk, outcome)
@@ -416,7 +493,9 @@ def check(
     format_note = _format_findings(root, decl, walk, binding, outcome)
     captured = sources.check(root, decl.artefacts)
     outcome.findings.extend(
-        Finding(ERROR if problem.error else REPORT, problem.location, problem.message)
+        Finding(
+            ERROR if problem.error else REPORT, problem.location, problem.message, check="sources"
+        )
         for problem in captured.problems
     )
     outcome.summary = _summary(
@@ -427,7 +506,7 @@ def check(
         (reader_note, format_note, captured.summary, scope_note),
         outcome,
     )
-    return outcome
+    return Checked(outcome, decl, walk)
 
 
 def pages(root: Path) -> list[str]:
@@ -466,6 +545,7 @@ def _unreadable(exc: Unreadable) -> Outcome:
             f"checked until they can: {CAPABILITY} reads the roots, the places and the "
             f"documents in them through the backbone's `pkit friction artefacts --json` "
             f"(DEC-001 point 1).",
+            check="places-unreadable",
         )
     )
     outcome.summary = ["places unreadable: no space checked.", "1 error(s), 0 report(s)."]
@@ -497,6 +577,7 @@ def _refused_places(decl: Declarations, outcome: Outcome) -> set[int]:
                 f"{' and '.join(enclosed)}; a root is already a default place of its space, "
                 f"which {CAPABILITY} declares, so a project place never equals or encloses one "
                 f"— narrow it to the documents it means, or remove it (DEC-001 point 1).",
+                check="place-refused",
             )
         )
     return refused
@@ -648,6 +729,7 @@ def _record_finding(rel: str, record: str, typed: bool) -> Finding:
         f"{rel} is a decision record ({record}), an anchor target (COR-050), and declares a "
         f"page kind in `{KIND_FIELD}`, {would}: a decision record is never a page — remove "
         f"`{KIND_FIELD}` (DEC-001 point 4).",
+        check="record-page",
     )
 
 
@@ -686,6 +768,7 @@ def _binding(
                 f"structure or reader is checked until it can: {CAPABILITY} checks each part of a "
                 f"rule only where the rule binds, read through the backbone's `pkit rule-sets "
                 f"reach --json` (DEC-001 point 3; COR-051 point 7).",
+                check="binding-unreadable",
             )
         )
         return None
@@ -720,6 +803,7 @@ def _field_findings(walk: _Walk, binding: Binding | None, outcome: Outcome) -> N
                     f"{rel} names no reader, and {READER_RULE} binds on it: the page names its "
                     f"reader in its `reader` field, a word that names a reader the readers point "
                     f"holds — add `reader: <id>` (DEC-001 point 3; {READER_RULE}).",
+                    check="reader-missing",
                 )
             )
         elif isinstance(reader, str) and "reader" not in invalid:
@@ -747,6 +831,7 @@ def _page_findings(
                 f"{error.message} — a page names its kind, and its reader where "
                 f"{READER_RULE} binds on it, each a word (`[a-z][a-z0-9-]*`), in the fields "
                 f"{CAPABILITY}'s schema fixes (schemas/page.schema.json; DEC-001 point 4).",
+                check="page-fields",
             )
         )
     return findings, invalid
@@ -785,6 +870,7 @@ def _reader_findings(
                 f"checked until "
                 f"the point resolves; `pkit validate` names the fix under `connections` "
                 f"(DEC-001 point 7; COR-052 point 6).",
+                check="readers-unresolved",
             )
         )
         return f"readers unresolved: {len(walk.readers)} page reader(s) not checked{beyond}."
@@ -800,6 +886,7 @@ def _reader_findings(
                 f"{READERS_POINT} holds {list(readers.ids)} — name one of them, or add "
                 f"{reader!r} to the point in the project's filler, "
                 f"{filler_path(decl.internal_root)} (DEC-001 points 4 and 7).",
+                check="reader-unknown",
             )
         )
     return (
@@ -843,6 +930,7 @@ def _format_findings(
                 f"until the page kinds' structures can be read: the file is {CAPABILITY}'s own, "
                 f"never the project's to edit — restore it as the capability ships it "
                 f"(DEC-001 point 3).",
+                check="structures-unreadable",
             )
         )
         return "page formats: structures unreadable, so no page's body is checked."
@@ -857,17 +945,26 @@ def _format_findings(
             text = (root / rel).read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             unreadable += 1
-            outcome.findings.append(Finding(ERROR, rel, _unread_message(rel, kind, exc)))
+            outcome.findings.append(
+                Finding(ERROR, rel, _unread_message(rel, kind, exc), check="body-unreadable")
+            )
             continue
         checked += 1
         found = formats.departures(formats.headings(text), structure)
         departing += 1 if found else 0
         outcome.findings.extend(
-            Finding(ERROR, rel, _departure_message(rel, kind, structure, departure))
+            Finding(
+                ERROR, rel, _departure_message(rel, kind, structure, departure), check="structure"
+            )
             for departure in found
         )
     outcome.findings.extend(
-        Finding(REPORT, f"{rels[0]}:/kind", _undeclared_message(kind, rels, sorted(structures)))
+        Finding(
+            REPORT,
+            f"{rels[0]}:/kind",
+            _undeclared_message(kind, rels, sorted(structures)),
+            check="kind-undeclared",
+        )
         for kind, rels in sorted(undeclared.items())
     )
     unchecked = sum(len(rels) for rels in undeclared.values())
@@ -953,6 +1050,7 @@ def _assignment_findings(
                 f"a document nothing else claims ({held}), but {LIVING_DOCS_CONFIG} assigns it to "
                 f"no space: add `{place.written}: <space>` under `places` there, naming one of "
                 f"{spaces} (DEC-001 point 1).",
+                check="assignment-missing",
             )
         )
     declared = {place.path for place in decl.project_places}
@@ -969,6 +1067,7 @@ def _assignment_findings(
                     f"{first[assignment.path]!r}: both name {assignment.path!r} once normalised, "
                     f"and a place is assigned to exactly one space — keep one entry (DEC-001 "
                     f"point 1).",
+                    check="assignment-twice",
                 )
             )
             continue
@@ -981,6 +1080,7 @@ def _assignment_findings(
                     f"assigns {written!r}, which `friction.places` in {BACKBONE_CONFIG} does not "
                     f"declare; a place is declared there and assigned here, joined by its path — "
                     f"declare it, or remove the assignment (DEC-001 point 1).",
+                    check="assignment-undeclared",
                 )
             )
         if space not in spaces:
@@ -991,6 +1091,7 @@ def _assignment_findings(
                     f"assigns {written!r} to space {space!r}, which is not a space of this project "
                     f"(spaces: {spaces}); declare it under `spaces`, or assign the place to one of "
                     f"them (DEC-001 point 1).",
+                    check="assignment-unknown-space",
                 )
             )
 
@@ -1009,6 +1110,7 @@ def _tie_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> None:
                 f"project places {a.written!r} and {b.written!r} both claim {files[0]}{more} at "
                 f"equal rank in the backbone's order of places (COR-056 point 3), so no one "
                 f"place gives it a space; narrow one of the declarations (DEC-001 point 1).",
+                check="tie",
             )
         )
 
@@ -1031,6 +1133,7 @@ def _untold_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> None:
                     f"nothing else claims: whichever of them holds it, that place needs an "
                     f"assignment — assign every one of them to the same space under `places` "
                     f"there, or give the file front matter (DEC-001 point 1).",
+                    check="untold-unassigned",
                 )
             )
             continue
@@ -1042,6 +1145,7 @@ def _untold_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> None:
                 f"backbone's answer ranks none of its places ({named}), and which of them "
                 f"gives it a space cannot be told: no place holds it and no space counts it "
                 f"until it carries front matter (DEC-001 point 1; COR-056 point 6).",
+                check="untold",
             )
         )
 
@@ -1113,6 +1217,7 @@ def _scope_findings(decl: Declarations, refused: set[int], walk: _Walk, outcome:
                 f"type, but it {gives}, so that scope misses its pages; give it the page type, "
                 f"written `{{path: {place.written}, type: {PAGE_TYPE}}}` in `friction.places` "
                 f"(DEC-001 point 1; COR-056 point 2).",
+                check="scope-untyped",
             )
         )
     outside: dict[tuple[str, str], list[str]] = {}
@@ -1142,6 +1247,7 @@ def _scope_findings(decl: Declarations, refused: set[int], walk: _Walk, outcome:
                 f"{definition}, does not cover: a place assigned to a space lies in that space "
                 f"definition's scope — widen the scope to the place, or assign the place to the "
                 f"space whose definition covers it (DEC-001 point 1).",
+                check="scope-outside",
             )
         )
     for (path, other), files in sorted(inside.items()):
@@ -1156,6 +1262,7 @@ def _scope_findings(decl: Declarations, refused: set[int], walk: _Walk, outcome:
                 f"{definition}, also covers: a place assigned to a space lies in no other "
                 f"space definition's scope — leave the place out of that scope with its "
                 f"`exclude`, or assign the place to that space (DEC-001 point 1).",
+                check="scope-inside",
             )
         )
     _left_out_findings(decl, walk, scopes, outcome)
@@ -1202,6 +1309,7 @@ def _left_out_findings(
                 f"placeholder such as `<root>` names nothing — or move them to the space they "
                 f"belong to. A scope may leave pages out on purpose, with `exclude`, so this is "
                 f"reported, never failed (DEC-001 point 2).",
+                check="scope-left-out",
             )
         )
 
@@ -1262,6 +1370,7 @@ def _entry_point_findings(
                     f"the entry point of space {space!r}, {config.entry_point!r}, {problem}; a "
                     f"space's entry point is a page of that space, under its root or in a place "
                     f"assigned to it (DEC-001 point 1).",
+                    check="entry-point",
                 )
             )
             notes[space] = f"entry point {entry} (unresolved)"
@@ -1278,7 +1387,7 @@ def _definition_findings(decl: Declarations, outcome: Outcome) -> dict[str, str]
     Returns a note per space."""
     notes: dict[str, str] = {}
     folder = f"{decl.definitions}/{RULE_SETS}" if decl.definitions is not None else None
-    pin = f"{CAPABILITY}:LDOC@{_ldoc_major(decl)}"
+    pin = f"{CAPABILITY}:LDOC@{ldoc_major(decl)}"
     for space in known_spaces(decl):
         config = decl.spaces.get(space)
         if config is None or config.definition is None:
@@ -1288,10 +1397,10 @@ def _definition_findings(decl: Declarations, outcome: Outcome) -> dict[str, str]
                     REPORT,
                     f"{LIVING_DOCS_CONFIG}:/spaces/{pointer_token(space)}",
                     f"space {space!r} has no definition yet: its rules — a project rule set "
-                    f"inheriting {pin}, scoped to the space's pages, {where} — are written on "
-                    f"first use, from "
-                    f"{CAPABILITIES_DIR}/{CAPABILITY}/templates/space-definition.md, and named "
-                    f"as the space's `definition` (DEC-001 point 2).",
+                    f"inheriting {pin}, scoped to the space's pages, {where} — are written when "
+                    f"the space is created, by `pkit {CAPABILITY} new space {space}`, which "
+                    f"names it as the space's `definition` (DEC-001 point 2).",
+                    check="definition-missing",
                 )
             )
             notes[space] = "no definition yet"
@@ -1319,6 +1428,7 @@ def _definition_findings(decl: Declarations, outcome: Outcome) -> dict[str, str]
                     location,
                     f"the definition of space {space!r}, {config.definition!r}, {problem} "
                     f"(DEC-001 point 2).",
+                    check="definition-problem",
                 )
             )
             notes[space] = f"definition {definition} (unresolved)"
@@ -1327,7 +1437,12 @@ def _definition_findings(decl: Declarations, outcome: Outcome) -> dict[str, str]
         fields = decl.documents[definition].fields or {}
         if "scope" not in fields:
             outcome.findings.append(
-                Finding(REPORT, definition, _no_scope_message(space, definition, decl))
+                Finding(
+                    REPORT,
+                    definition,
+                    _no_scope_message(space, definition, decl),
+                    check="definition-unscoped",
+                )
             )
         elif placeholders := _placeholders(fields.get("scope")):
             outcome.findings.append(
@@ -1335,6 +1450,7 @@ def _definition_findings(decl: Declarations, outcome: Outcome) -> dict[str, str]
                     REPORT,
                     definition,
                     _placeholder_message(space, definition, placeholders, decl),
+                    check="definition-placeholder",
                 )
             )
     return notes
@@ -1363,7 +1479,7 @@ def _placeholder_message(
 ) -> str:
     """A scope copied with the template's placeholder: it names no file, so the
     rules reach none of the space's pages through it (DEC-001 point 2)."""
-    paths, exclude = _space_paths(space, decl)
+    paths, exclude = space_paths(space, decl)
     named = ", ".join(f"`{path}`" for path in placeholders)
     fix = (
         f" — `paths: [{', '.join(paths)}]`"
@@ -1384,7 +1500,7 @@ def _no_scope_message(space: str, definition: str, decl: Declarations) -> str:
     """A definition with no scope selects no page, so no rule binds through it
     (COR-051 points 2 and 7): reported, naming the scope that selects the space's
     pages (DEC-001 point 2)."""
-    paths, exclude = _space_paths(space, decl)
+    paths, exclude = space_paths(space, decl)
     if paths:
         left_out = f", exclude: [{', '.join(exclude)}]" if exclude else ""
         scope = f"`scope: {{paths: [{', '.join(paths)}]{left_out}, types: [{PAGE_TYPE}]}}`"
@@ -1417,12 +1533,14 @@ def _no_scope_message(space: str, definition: str, decl: Declarations) -> str:
     )
 
 
-def _space_paths(space: str, decl: Declarations) -> tuple[list[str], list[str]]:
+def space_paths(space: str, decl: Declarations) -> tuple[list[str], list[str]]:
     """The paths that select a space's pages, as a scope writes them, and those it
     leaves out: the space's root, everything beneath it, unless the two roots are
     one folder, then each place assigned to the space outside that root, a root
     nested in it counting as outside. Left out are a root nested in it and each
-    place in it assigned to another space."""
+    place in it assigned to another space. A root that is the repository itself is
+    written `**`. The validator names this scope for a definition without one, and
+    `new space` writes it (`stamp`), so the two never differ."""
     root = next(
         (
             path
@@ -1431,13 +1549,13 @@ def _space_paths(space: str, decl: Declarations) -> tuple[list[str], list[str]]:
         ),
         None,
     )
-    paths = [f"{root}/**"] if root is not None else []
+    paths = [_beneath(root)] if root is not None else []
     nested = [
         other
         for other in decl.roots().values()
         if root is not None and other != root and is_within(other, root)
     ]
-    exclude = [f"{other}/**" for other in nested]
+    exclude = [_beneath(other) for other in nested]
     for assignment in decl.assignments:
         prefix = literal_prefix(assignment.path)
         inside = (
@@ -1452,6 +1570,12 @@ def _space_paths(space: str, decl: Declarations) -> tuple[list[str], list[str]]:
     return paths, exclude
 
 
+def _beneath(folder: str) -> str:
+    """Everything beneath `folder`, as a scope's path writes it, normalised: the
+    repository's own `./**` is written `**`."""
+    return normalise(f"{folder}/**")
+
+
 def _inherits_ldoc(front: Mapping[str, Any] | None) -> bool:
     inherits = front.get("inherits") if front is not None else None
     return isinstance(inherits, list) and any(
@@ -1459,7 +1583,7 @@ def _inherits_ldoc(front: Mapping[str, Any] | None) -> bool:
     )
 
 
-def _ldoc_major(decl: Declarations) -> str:
+def ldoc_major(decl: Declarations) -> str:
     """The shared method's major, from its own rule-set file: what a definition pins."""
     version = decl.ldoc_version
     match = re.match(r"(0|[1-9][0-9]*)\.", version) if version is not None else None
@@ -1483,6 +1607,7 @@ def _separation_findings(decl: Declarations, outcome: Outcome) -> None:
             f"{state}, so the user and technical spaces are not separate yet: user-facing "
             f"navigation must never lead into technical material, and neither root lies inside "
             f"the other — onboarding separates them (DEC-001 points 1 and 8).",
+            check="separation",
         )
     )
 

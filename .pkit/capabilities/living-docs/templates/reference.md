@@ -3,8 +3,8 @@
 # describes one surface — an area, a capability, an adapter, a command set —
 # to the reader who uses it: what it is for, how it is used, and what holds.
 # A page that only points into a folder is a signpost instead (RS-LDOC-005).
-# Copy it beside the surface it describes — usually as its README.md — and
-# fill it in.
+# Stamp it beside the surface it describes — usually as its README.md — with
+# `pkit living-docs new page <file> --kind reference …`, and fill it in.
 reader: user                      # who the page is for: an id of the readers point (user, maintainer, or one the project adds)
 kind: reference                   # the page's kind: this template's
 pkit:
