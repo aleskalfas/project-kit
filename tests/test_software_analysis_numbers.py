@@ -137,7 +137,8 @@ def test_a_number_the_default_branch_took_first_fails(project: AdopterRepo) -> N
     assert document(merged)["summary"][0].startswith("numbers: this branch contains main (")
     fill(project)
     validated = json.loads(run_script(project, VALIDATE, "--json").stdout)
-    assert [f["message"].split(":")[0] for f in validated["findings"]] == [
+    errors = [f for f in validated["findings"] if f["severity"] == "error"]
+    assert [f["message"].split(":")[0] for f in errors] == [
         f"the id UC-002 is also held by {USE_CASES}/UC-002-mine.md"
     ]
 

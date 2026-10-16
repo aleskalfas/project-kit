@@ -29,9 +29,11 @@ backbone through its commands:
   anchor stands on, and the commits behind each finding with the paths behind
   it, which the proposal reads;
 - **where an accepted rule binds** — `pkit rule-sets reach --json` (COR-051
-  point 7), the one reading of it (ADR-057 point 2): the check reads which of
-  the project's own rules bind on each artefact, where a project's tightening
-  of a kind's structure applies (DEC-001 point 1). A preview reads it with
+  point 7), the one reading of it (ADR-057 point 2): the check reads where the
+  format rule, `software-analysis:RS-SAN-001`, and every other rule of this
+  capability's method set binds, and which of the project's own rules bind on
+  each artefact, where a project's tightening of a kind's structure applies
+  (DEC-001 point 1). A preview reads it with
   `--preview`: where they would bind if every proposed rule were accepted,
   each marked when it binds only under the preview. The script never walks a
   rule set's scope or inheritance itself;
@@ -237,10 +239,11 @@ REACH_VERSION = 1
 def reach(
     root: Path, run: Runner = subprocess.run, *, preview: bool = False
 ) -> dict[str, dict[str, bool]]:
-    """Which rules of the project's own rule sets bind on each artefact in the working
-    tree, by the artefact's location — `pkit rule-sets reach --json` (COR-051 point 7),
-    the backbone's one reading of where a rule binds (ADR-057 point 2). Each rule is its
-    bare id, as a project rule is cited, with whether it binds there only under the
+    """Which rules bind on each artefact in the working tree, by the artefact's
+    location — `pkit rule-sets reach --json` (COR-051 point 7), the backbone's one
+    reading of where a rule binds (ADR-057 point 2). Each rule is as it is cited: a
+    project rule by its bare id, a method rule with its component in front, such as
+    `software-analysis:RS-SAN-001`. Each comes with whether it binds there only under the
     preview. With `preview`, the reading takes every proposed rule as accepted
     (`--preview`); without it, every rule is accepted and none is previewed. An artefact
     on which none binds is not there. Raises Unreadable when there is no document to
@@ -277,13 +280,13 @@ def reach(
         if not isinstance(artefact, Mapping) or not isinstance(artefact.get("location"), str):
             continue
         rules = [r for r in artefact.get("rules") or [] if isinstance(r, Mapping)]
-        bare = {
+        cited = {
             str(r["rule"]): r.get("previewed") is True
             for r in rules
-            if isinstance(r.get("rule"), str) and ":" not in r["rule"]
+            if isinstance(r.get("rule"), str)
         }
-        if bare:
-            found[artefact["location"]] = bare
+        if cited:
+            found[artefact["location"]] = cited
     return found
 
 

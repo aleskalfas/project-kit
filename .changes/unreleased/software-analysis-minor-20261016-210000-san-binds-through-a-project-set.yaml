@@ -1,0 +1,24 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Changed
+body: >
+  `SAN` binds only through a rule set of the project's own that inherits it
+  (DEC-001 point 1, #1475). `pkit analysis validate` holds an artefact's body,
+  and a glossary's head, to its structure only where `pkit rule-sets reach`
+  says the format rule, `RS-SAN-001`, binds, and `--preview` only where `pkit
+  rule-sets reach --preview` says it would. An artefact no such set selects is
+  not checked. The summary counts the artefacts no rule of `SAN` binds on.
+  Where it binds on none of the analysis, the check reports it while no rule
+  of `SAN` is accepted, and warns once one is, and neither fails `pkit
+  validate`. A revalidation record is a held document, which no rule binds on,
+  so the check holds its body to the record's structure always, whatever any
+  rule's status, citing DEC-001 and no longer the format rule. `RS-SAN-001`
+  covers the analysis artefacts only. `project/structures.yaml` refuses a
+  `tighten` on the record's kind, saying why. A record that breaks its
+  structure, or a file that tightens the record's kind, now fails a check that
+  passed before. The segment is `minor`, as semver allows a breaking change
+  before 1.0.0, and the capability is installed only in project-kit's own
+  clones, which hold no record and no such file. Installing creates no project
+  set yet, so a project writes its own, as the README's "Where `SAN` binds"
+  shows.

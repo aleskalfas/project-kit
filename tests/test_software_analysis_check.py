@@ -73,6 +73,35 @@ def errors(document: Mapping[str, Any]) -> list[tuple[str, str]]:
     return [(f["location"], f["message"]) for f in document["findings"] if f["severity"] == "error"]
 
 
+def beside_record_bodies(found: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """`found` without what a record's body breaks of the record's structure, which the
+    capability holds always (DEC-001 point 1): a test of a record's front matter edits
+    the front matter alone, so its body no longer matches. A structure's finding cites the
+    record point and repeats the part's hint, so any other finding citing the point stays."""
+    return [
+        (location, message)
+        for location, message in found
+        if not (location.startswith(RECORDS) and "(DEC-001 point 1). What goes there: " in message)
+    ]
+
+
+#: What the check says while no rule of `SAN` is accepted, of an analysis of `n`
+#: artefacts: a report, at the analysis, since no rule of the method set binds on any of
+#: them (DEC-001 point 1).
+def unbound(n: int) -> dict[str, str]:
+    return {
+        "severity": "report",
+        "location": "tech-docs/analysis",
+        "message": (
+            f"no rule of software-analysis:SAN binds on any of the analysis's {n} artefact(s): "
+            f"none is accepted, so none binds whatever the project's rule sets say (COR-051 "
+            f"point 4). Once one is, it binds only through a set of the project's own whose "
+            f"scope selects the analysis, such as by the capability's types, and that "
+            f"inherits software-analysis:SAN (COR-051 point 7; DEC-001 point 1)"
+        ),
+    }
+
+
 # --- in the check gate ----------------------------------------------------------------------
 
 
@@ -166,12 +195,14 @@ def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled
         "summary": [
             "analysis at tech-docs/analysis: 2 actor(s), 1 term(s), 3 use case(s), "
             "1 journey(s); 0 revalidation record(s).",
-            # The format rule is proposed, so no body is held to its kind's structure yet.
+            # The format rule is proposed, so no body is held to its kind's structure yet,
+            # and no rule of `SAN` binds on any artefact: the check says so, as a report.
             "structure (RS-SAN-001, proposed): not checked — the rule binds nothing until it "
             "is accepted (COR-051 point 4); `pkit analysis validate --preview` shows what it "
-            "would report.",
+            "would report. No rule of software-analysis:SAN binds on any of the 7 "
+            "artefact(s), since none is accepted.",
         ],
-        "findings": [],
+        "findings": [unbound(7)],
     }
 
 
@@ -356,7 +387,7 @@ def test_the_validator_reads_the_working_tree_alone(
         monkeypatch.setenv(BASE_ENV, base)
         answers.append(check(project))
     assert answers == [answers[0]] * 3
-    assert answers[0]["findings"] == []
+    assert answers[0]["findings"] == [unbound(2)]
     completed = run_script(project, VALIDATE, "--json", "--base", MAIN)
     assert completed.returncode == 2
     assert "unrecognized arguments: --base main" in completed.stderr
@@ -766,7 +797,7 @@ def test_a_record_cites_artefacts_of_the_analysis_withdrawn_ones_included(
     )
     rel = f"{RECORDS}/2026-10-01-first-run.md"
     seeded.write({rel: cited})
-    assert errors(check(seeded)) == [
+    assert beside_record_bodies(errors(check(seeded))) == [
         (
             f"{rel}:/outcomes/UC-009",
             "no artefact UC-009 in the analysis: a record's outcomes cite artefacts of the "
@@ -1023,7 +1054,7 @@ def test_revalidation_records_are_held_to_their_schema(seeded: AdopterRepo) -> N
     )
     document = check(seeded)
     assert "; 3 revalidation record(s)." in document["summary"][0]
-    assert errors(document) == [
+    assert beside_record_bodies(errors(document)) == [
         (f"{whim}:/outcomes", "'UC-1' is not valid under any of the given schemas"),
         (
             f"{whim}:/outcomes/UC-1",

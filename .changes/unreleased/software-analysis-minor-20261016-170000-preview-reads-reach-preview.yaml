@@ -16,6 +16,5 @@ body: >
   group as not previewed, and on an artefact it reads a fill's chain from the
   backbone alone. So a group whose accepted rule binds on no artefact of its
   kind, because a rule it fills is proposed, is reported as binding on none,
-  the report naming that cause. A group of the record's kind binds as it did.
-  The preview reads `pkit rule-sets reach --preview`, which only the backbone
+  the report naming that cause. The preview reads `pkit rule-sets reach --preview`, which only the backbone
   this release ships has, so the capability requires it.

@@ -101,29 +101,50 @@ And a finding that never fails:
   from the records and the artefacts in the working tree each time, never
   kept in a ledger (COR-050 point 9).
 
-And at the format rule's status:
+Always, whatever any rule's status:
 
-- **Each body against its kind's structure** (point 1; RS-SAN-001): every
-  artefact's body — a collection entry's section, as the backbone's reading
-  spans it, and the collection file's head — and every record's, against the
-  structure its kind declares (`_lib/structure.py`): a declared part missing,
-  out of order or empty, `None.` where the part may not read it, and a part or
-  a front-matter field that does not hold the form its element names
-  (`_lib/forms.py`), in each item of a list. A journey's steps read each use
-  case's title, and a record's outcomes and gaps its front matter. A part or a
+- **Each record's body against the record's structure** (point 1): a record
+  is a held document, which no route leads from, so no rule binds on it, and
+  the capability holds it to its structure itself, as its schema holds its
+  front matter. The structure is the record kind's as the project's
+  `project/structures.yaml` relabels it, and a record may predate a relabel,
+  so a part is found by its shipped label too. A record is held to the
+  structure declared now, the only one declared so far: holding it to the
+  structure in force on its day comes with the first change to a structure
+  (DEC-001's Implications). Its outcomes and gaps are read against its front
+  matter.
+
+And where the format rule binds, at its status:
+
+- **Each artefact's body against its kind's structure** (point 1;
+  RS-SAN-001): an artefact's body — a collection entry's section, as the
+  backbone's reading spans it — against the structure its kind declares
+  (`_lib/structure.py`): a declared part missing, out of order or empty,
+  `None.` where the part may not read it, and a part or a front-matter field
+  that does not hold the form its element names (`_lib/forms.py`), in each
+  item of a list. A journey's steps read each use case's title. A part or a
   label a writer adds is never reported, though what it holds is content of
   the part it falls in, and a list form judges only the part's list items. A
   withdrawn artefact is never failed for a part it lacks or for a form, since
-  either may have come after its withdrawal. A record is held to the structure declared
-  now, the only one declared so far: holding it to the structure in force on
-  its day comes with the first change to a structure (DEC-001's
-  Implications). A document's missing title heading is the heading check's,
-  above, which holds it whatever the rule's status. The structure
-  binds at the rule's status (COR-051 point 4): accepted, each departure is an
-  error; under any other status the check reports none of it. On request
-  (`preview`), a proposed rule is previewed as accepted: each departure is a
-  report, its message opening `preview:`, so the exit is the normal check's.
-  A superseded or withdrawn rule binds nothing in a preview either.
+  either may have come after its withdrawal. A document's missing title
+  heading is the heading check's, above, which holds it whatever the rule's
+  status.
+- **Where the rule binds.** `SAN` takes no scope, so its rules bind only
+  through a set of the project's own that inherits it, as the backbone's one
+  reading of where rules bind says (`pkit rule-sets reach`, COR-051 point 7).
+  An artefact that reading leaves out is not checked. A glossary's head
+  belongs to no term but is part of the term kind's structure, so it is held
+  where the rule binds on a term of its file. The structure binds at the
+  rule's status (COR-051 point 4): accepted, each departure is an error;
+  under any other status the check reports none of it. On request
+  (`preview`), a proposed rule is previewed as accepted, where `pkit
+  rule-sets reach --preview` says it would bind: each departure is a report,
+  its message opening `preview:`, so the exit is the normal check's. A
+  superseded or withdrawn rule binds nothing in a preview either.
+- **Never silent** (point 1): the summary counts the artefacts no rule of
+  `SAN` binds on. Where it binds on none of the analysis, a finding says so,
+  and why: a report while no rule of `SAN` is accepted, since none could
+  bind, and a warning once one is.
 - **A project's own structures** (point 1): the structure is the kind's as the
   project's `project/structures.yaml` relabels it, tightened by each of the
   project's groups that binds on the body (`_lib/project_structure.py`). A
@@ -133,21 +154,18 @@ And at the format rule's status:
   every proposed rule were accepted (`--preview`), and takes from that
   reading only what holds under the preview alone: what a group finds there
   is a preview's report, and what binds still comes from the reading
-  without the preview. No reading of
-  where rules bind reaches a record, so a group of the record's kind binds
-  on every record at the status of its rule's chain, the rule and each rule
-  whose extension point it fills, and a preview takes that chain as
-  accepted. A rule that binds on no artefact of its group's kind is
-  reported. A record, and a
-  withdrawn artefact, may predate the project's changes: a relabelled part is
-  found by its shipped label too, a closed list reports nothing, and a part a
-  group adds is never missing from either.
+  without the preview. A rule that binds on no artefact of its group's kind
+  is reported. A withdrawn artefact may predate the project's changes: a
+  relabelled part is found by its shipped label too, a closed list reports
+  nothing, and a part a group adds is never missing from it. The record's
+  kind takes no group: its schema refuses one, since no rule binds on a
+  record.
 
 And whatever any rule's status, the project's own structures themselves: a file
-its schema or the shipped structure refuses, and a group naming no rule of the
-project's own rule sets, are errors, the project mending its own file (COR-055
-point 1). A group whose rule is superseded or withdrawn binds nothing, and is
-reported.
+its schema or the shipped structure refuses, a tightening of the record's kind
+among them, and a group naming no rule of the project's own rule sets, are
+errors, the project mending its own file (COR-055 point 1). A group whose rule
+is superseded or withdrawn binds nothing, and is reported.
 
 It reads the working tree — and, when a record copies evidence, the evidence
 point — so the same tree gets the same answer as long as the evidence fillers
@@ -170,7 +188,7 @@ from __future__ import annotations
 import dataclasses
 import re
 from collections import defaultdict
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -272,8 +290,11 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _open_regressions(root, read, analysis)
     own = _own(root)
     outcome.findings += _own_findings(analysis, own)
-    summary, departing = _structure(root, analysis, read, preview=preview, own=own)
+    summary, departing = _structure(root, analysis, preview=preview, own=own)
     outcome.summary.append(summary)
+    outcome.findings += departing
+    said, departing = _record_structure(root, read, own)
+    outcome.summary += [said] if said else []
     outcome.findings += departing
     return outcome
 
@@ -1055,25 +1076,62 @@ ACCEPTED, PROPOSED = "accepted", "proposed"
 SUPERSEDED, WITHDRAWN = "superseded", "withdrawn"
 
 
+#: The format rule and the method set as the backbone's reading of where rules bind
+#: cites them: with the capability's name in front (COR-051 point 6).
+CITED_FORMAT_RULE = f"{CAPABILITY}:{FORMAT_RULE}"
+CITED_SET = f"{CAPABILITY}:{METHOD_SET}"
+
+
+class _Reach:
+    """The backbone's reading of where rules bind, read at most once with the preview and
+    once without, whoever asks: the format rule, the method set's other rules and the
+    project's groups all read the one answer (COR-051 point 7; ADR-057 point 2). A
+    reading that fails raises Unreadable each time it is asked for. It is called as
+    `backbone.reach` is, so it stands in for it, and reads at the root it was made for."""
+
+    def __init__(self, root: Path, reach: Callable[..., Mapping[str, Mapping[str, bool]]]):
+        self.root = root
+        self.reach = reach
+        self.answers: dict[bool, Mapping[str, Mapping[str, bool]] | Unreadable] = {}
+
+    def __call__(self, _root: Path, *, preview: bool = False) -> Mapping[str, Mapping[str, bool]]:
+        if preview not in self.answers:
+            try:
+                self.answers[preview] = self.reach(self.root, preview=preview)
+            except Unreadable as exc:
+                self.answers[preview] = exc
+        answer = self.answers[preview]
+        if isinstance(answer, Unreadable):
+            raise answer
+        return answer
+
+
 def _structure(
     root: Path,
     analysis: Analysis,
-    records: list[Record],
     *,
     preview: bool,
     own: project_structure.Own | None = None,
     reach: Callable[..., Mapping[str, Mapping[str, bool]]] = backbone.reach,
 ) -> tuple[str, list[Finding]]:
-    """Each artefact's body, each collection file's head and each record's body against
-    the structure its kind declares, at the format rule's status (DEC-001 point 1): an
-    error where the rule is accepted, a report opening `preview:` where it is proposed
-    and a preview is asked for, and nothing otherwise. The structure is the kind's as
-    the project's own structures, `own`, relabel it, tightened by each of the project's
-    groups that binds on the body (`_bound`), where `reach` says the project's rules
-    bind. In a preview, a body is also held to the groups that bind on it only under
-    the preview, and what that adds to what the body breaks is a preview's report, so
-    the findings are the normal check's and the exit is too. Returns the summary's line
-    about it, and the findings."""
+    """Each artefact's body and each glossary's head against the structure its kind
+    declares, where the format rule binds and at its status (DEC-001 point 1): an error
+    where the rule is accepted, a report opening `preview:` where it is proposed and a
+    preview is asked for, and nothing otherwise. Where the rule binds is the backbone's
+    one answer (`reach`): `SAN` takes no scope, so its rules bind only through a set of
+    the project's own (COR-051 point 7). A preview reads where the proposed rule would
+    bind (`--preview`). A glossary's head is held where the rule binds on a term of its
+    file. The structure is the kind's as the project's own structures, `own`, relabel
+    it, tightened by each of the project's groups that binds on the body (`_bound`). In
+    a preview, a body is also held to the groups that bind on it only under the preview,
+    and what that adds to what the body breaks is a preview's report, so the findings
+    are the normal check's and the exit is too.
+
+    Never silent (`_unbound`): the summary counts the artefacts no rule of `SAN` binds
+    on, and where it binds on none of the analysis, a finding says so. Returns the
+    summary's line about it, and the findings."""
+    reached = _Reach(root, reach)
+    unbound, silence = _unbound(analysis, reached)
     rules = analysis.method_rules
     status = None if rules is None else rules.get(FORMAT_RULE)
     if status == ACCEPTED:
@@ -1081,33 +1139,47 @@ def _structure(
     elif status == PROPOSED and preview:
         severity, label = REPORT, PREVIEW
     else:
-        return _unchecked(status, rules is None, preview), []
+        return _unchecked(status, rules is None, preview) + unbound, silence
     declaration = _shown(structure.KINDS_FILE, root)
     try:
         kinds = structure.read_kinds()
     except structure.Unreadable as exc:
         return (
-            f"structure ({FORMAT_RULE}, {status}): not checked — the declaration cannot be read.",
+            f"structure ({FORMAT_RULE}, {status}): not checked — the declaration cannot be "
+            f"read.{unbound}",
             [
+                *silence,
                 Finding(
                     severity,
                     declaration,
-                    f"{label}the kinds' structures cannot be read: {exc}. No body is checked "
-                    f"against its structure until they can: the file is {CAPABILITY}'s own, "
-                    f"never the project's to edit — restore it as the capability ships it "
+                    f"{label}the kinds' structures cannot be read: {exc}. No artefact's body is "
+                    f"checked against its structure until they can: the file is {CAPABILITY}'s "
+                    f"own, never the project's to edit — restore it as the capability ships it "
                     f"(DEC-001 point 1)",
-                )
+                ),
             ],
         )
     own = own if own is not None else project_structure.read(root, kinds)
     if own.problems:
         return (
             f"structure ({FORMAT_RULE}, {status}): not checked — the project's own structures, "
-            f"{project_structure.FILE}, cannot be read; the findings there say why.",
-            [],
+            f"{project_structure.FILE}, cannot be read; the findings there say why.{unbound}",
+            silence,
         )
+    try:
+        at = reached(root, preview=status != ACCEPTED) if analysis.artefacts else {}
+    except Unreadable as exc:
+        # Under an accepted rule, `_unbound` may have said so already, as an error.
+        told = status == ACCEPTED and any(f.severity == ERROR for f in silence)
+        said = [] if told else [_unreadable_reach(exc, analysis, preview=status != ACCEPTED)]
+        return (
+            f"structure ({FORMAT_RULE}, {status}): not checked — where the rule binds cannot "
+            f"be read.{unbound}",
+            silence + said,
+        )
+    binding = frozenset(location for location, bound in at.items() if CITED_FORMAT_RULE in bound)
     kinds = {name: project_structure.relabelled(kind, own) for name, kind in kinds.items()}
-    bound = _bound(root, analysis, own, preview=preview, reach=reach)
+    bound = _bound(root, analysis, own, preview=preview, reach=reached, binding=binding)
     found: list[Finding] = []
     previewing: list[Finding] = []  # a group's that binds only because of the preview
     texts: dict[str, str | None] = {}
@@ -1115,8 +1187,10 @@ def _structure(
     checked = 0
     for artefact in analysis.artefacts:
         kind = kinds.get(artefact.kind)
+        if artefact.location not in binding or kind is None:
+            continue
         text = _cached(root, artefact.path, texts)
-        if kind is None or text is None:
+        if text is None:
             continue  # the core reports a file it cannot read
         checked += 1
         held_to = bound.kind(kind, artefact.location, as_written=artefact.withdrawn)
@@ -1132,31 +1206,9 @@ def _structure(
                 )
                 if key not in seen
             ]
-    heads, headed = _heads(root, analysis, kinds, texts)
+    heads, headed = _heads(root, analysis, kinds, texts, binding)
     found += heads
     checked += headed
-    record = kinds.get(structure.RECORD)
-    for rel, data in records:
-        text = _cached(root, rel, texts)
-        if record is None or text is None:
-            continue
-        checked += 1
-        subject = "a revalidation record"
-        held = bound.kind(record, None, as_written=True)
-        lines = structure.body_lines(text)
-        departs = [d for d in structure.departures(lines, held, fields=data) if not _added_later(d)]
-        found += [
-            Finding(ERROR, rel, _departure_message(d, held.sections, subject)) for d in departs
-        ]
-        fuller = bound.kind(record, None, as_written=True, preview=True)
-        if fuller != held:
-            seen = {_key(d) for d in departs}
-            previewing += [
-                Finding(ERROR, rel, _departure_message(d, fuller.sections, subject))
-                for d in structure.departures(lines, fuller, fields=data)
-                if not _added_later(d) and _key(d) not in seen
-            ]
-        found += _field_findings(rel, data, held, subject)
     found = [Finding(severity, f.location, label + f.message) for f in found]
     found += [Finding(REPORT, f.location, PREVIEW + f.message) for f in previewing]
     bound_found = [
@@ -1166,17 +1218,164 @@ def _structure(
     departing = len({f.location.split(":/", 1)[0] for f in found})
     previewed = ", previewed as accepted" if label else ""
     never = ", reported and never failing" if label else ""
+    where = "would bind, as `pkit rule-sets reach --preview` reads it" if label else "binds"
     return (
-        f"structure ({FORMAT_RULE}, {status}{previewed}): {checked} artefact(s), record(s) and "
-        f"file head(s) checked against the structure their kind declares in {declaration}"
-        f"{bound.said}; {departing} of them departing from it{never}.",
-        found + bound_found,
+        f"structure ({FORMAT_RULE}, {status}{previewed}): {checked} artefact(s) and file "
+        f"head(s) checked, where the rule {where}, against the structure their kind declares "
+        f"in {declaration}{bound.said}; {departing} of them departing from it{never}.{unbound}",
+        silence + found + bound_found,
     )
 
 
-#: Where groups bind: on the artefacts at the locations given, or, for a group of the
-#: record's kind, on every record (`None`).
-_Where = Mapping[project_structure.Group, frozenset[str] | None]
+def _unbound(analysis: Analysis, reached: _Reach) -> tuple[str, list[Finding]]:
+    """What the summary says of the artefacts no rule of `SAN` binds on, and, where it
+    binds on none of the analysis, the finding that says so, and why (DEC-001 point 1):
+    a report while no rule of `SAN` is accepted, since none could bind, and a warning once
+    one is. Where `SAN` binds is the backbone's one answer, read only once a rule of `SAN`
+    is accepted. Which sets the project lacks, or which pin holds a rule back, the
+    capability never works out itself: the finding names each cause the answer cannot
+    tell apart, and the fix (COR-051 point 7)."""
+    total = len(analysis.artefacts)
+    if not total or analysis.method_rules is None:
+        return "", []
+    accepted = {
+        f"{CAPABILITY}:{rule}"
+        for rule, status in analysis.method_rules.items()
+        if status == ACCEPTED
+    }
+    if not accepted:
+        return (
+            f" No rule of {CITED_SET} binds on any of the {total} artefact(s), since none is "
+            f"accepted.",
+            [
+                Finding(
+                    REPORT,
+                    analysis.location or ".",
+                    f"no rule of {CITED_SET} binds on any of the analysis's {total} "
+                    f"artefact(s): none is accepted, so none binds whatever the project's rule "
+                    f"sets say (COR-051 point 4). Once one is, it binds only through a set of the "
+                    f"project's own whose scope selects the analysis, such as by the "
+                    f"capability's types, and that inherits {CITED_SET} (COR-051 point 7; "
+                    f"DEC-001 point 1)",
+                )
+            ],
+        )
+    try:
+        at = reached(reached.root, preview=False)
+    except Unreadable as exc:
+        return "", [_unreadable_reach(exc, analysis, preview=False)]
+    bound = sum(
+        1 for artefact in analysis.artefacts if accepted & set(at.get(artefact.location) or ())
+    )
+    if bound == total:
+        return "", []
+    said = f" No rule of {CITED_SET} binds on {total - bound} of the {total} artefact(s)."
+    if bound:
+        return said, []
+    return said, [
+        Finding(
+            WARNING,
+            analysis.location or ".",
+            f"no rule of {CITED_SET} binds on any of the analysis's {total} artefact(s), as "
+            f"`pkit rule-sets reach` reads it, so none is held to its structure: no set of the "
+            f"project's own whose scope selects them inherits {CITED_SET}, or a pin behind "
+            f"its set holds it back (COR-051 point 7). Write a set of your own whose scope "
+            f"selects the analysis, such as by the capability's types, and that inherits "
+            f"{CITED_SET} at its current major, or review the new major and update the pin "
+            f"(DEC-001 point 1)",
+        )
+    ]
+
+
+def _unreadable_reach(exc: Unreadable, analysis: Analysis, *, preview: bool) -> Finding:
+    """Where `SAN`'s rules bind cannot be read, said at the analysis: an error without the
+    preview, so the normal check fails as it would, and a preview's report with it, which
+    never fails."""
+    location = analysis.location or "."
+    if preview:
+        return Finding(
+            REPORT,
+            location,
+            f"{PREVIEW}where {FORMAT_RULE} would bind cannot be read: {exc}. No artefact is "
+            f"previewed against its structure until it can (COR-051 point 7)",
+        )
+    return Finding(
+        ERROR,
+        location,
+        f"where the rules of {CITED_SET} bind cannot be read: {exc}. No artefact is held to "
+        f"its structure until it can (COR-051 point 7)",
+    )
+
+
+def _record_structure(
+    root: Path, records: list[Record], own: project_structure.Own | None = None
+) -> tuple[str | None, list[Finding]]:
+    """Each revalidation record's body and front matter against the record's structure, as
+    the project's own structures relabel it, always, as its schema checks its front
+    matter (DEC-001 point 1). A record is a held document, which no route leads from, so
+    no rule binds on one and the capability holds it itself. A record may predate a
+    relabel, so a part is found by its shipped label too. Returns the summary's line
+    about it, none where there is no record, and the findings, each an error."""
+    if not records:
+        return None, []
+    declaration = _shown(structure.KINDS_FILE, root)
+    try:
+        kinds = structure.read_kinds()
+    except structure.Unreadable as exc:
+        return (
+            "records' structure: not checked — the declaration cannot be read.",
+            [
+                Finding(
+                    ERROR,
+                    declaration,
+                    f"the kinds' structures cannot be read: {exc}. No revalidation record is "
+                    f"checked against its structure until they can: the file is {CAPABILITY}'s "
+                    f"own, never the project's to edit — restore it as the capability ships it "
+                    f"(DEC-001 point 1)",
+                )
+            ],
+        )
+    shipped = kinds.get(structure.RECORD)
+    if shipped is None:
+        return f"records' structure: not checked — {declaration} declares no record kind.", []
+    own = own if own is not None else project_structure.read(root, kinds)
+    if own.problems:
+        return (
+            f"records' structure: not checked — the project's own structures, "
+            f"{project_structure.FILE}, cannot be read; the findings there say why.",
+            [],
+        )
+    record = dataclasses.replace(project_structure.relabelled(shipped, own), as_written=True)
+    subject = "a revalidation record"
+    found: list[Finding] = []
+    texts: dict[str, str | None] = {}
+    checked = 0
+    for rel, data in records:
+        text = _cached(root, rel, texts)
+        if text is None:
+            continue
+        checked += 1
+        found += [
+            Finding(ERROR, rel, _departure_message(d, record.sections, subject, RECORD_POINT))
+            for d in structure.departures(structure.body_lines(text), record, fields=data)
+        ]
+        found += _field_findings(rel, data, record, subject, RECORD_POINT)
+    departing = len({f.location.split(":/", 1)[0] for f in found})
+    return (
+        f"records' structure, held always: {checked} revalidation record(s) checked against "
+        f"the structure their kind declares in {declaration}; {departing} of them departing "
+        f"from it.",
+        found,
+    )
+
+
+#: What a record's structure is held by, cited in its findings: the record point, since
+#: no rule binds on a record.
+RECORD_POINT = "DEC-001 point 1"
+
+
+#: Where groups bind: on the artefacts at the locations given.
+_Where = Mapping[project_structure.Group, frozenset[str]]
 
 
 @dataclass(frozen=True)
@@ -1198,29 +1397,24 @@ class _Binding:
     def kind(
         self,
         kind: structure.Kind,
-        location: str | None,
+        location: str,
         *,
         as_written: bool = False,
         preview: bool = False,
     ) -> structure.Kind:
-        """`kind` tightened by the groups that bind on the artefact at `location`, or on a
-        record where `location` is `None`, and with `preview` by those that bind there
-        only under the preview too. `as_written` holds a body that may predate the
-        project's changes: a record's, or a withdrawn artefact's (`Kind.as_written`)."""
+        """`kind` tightened by the groups that bind on the artefact at `location`, and with
+        `preview` by those that bind there only under the preview too. `as_written` holds a
+        body that may predate the project's changes, a withdrawn artefact's
+        (`Kind.as_written`)."""
         groups = self.own.of(kind.name)
         applying = [
             group
             for group in groups
-            if _binds(self.where, group, location)
-            or (preview and _binds(self.previewing, group, location))
+            if location in self.where.get(group, ())
+            or (preview and location in self.previewing.get(group, ()))
         ]
         tightened = project_structure.tightened(kind, groups, applying, self.standing)
         return dataclasses.replace(tightened, as_written=True) if as_written else tightened
-
-
-def _binds(where: _Where, group: project_structure.Group, location: str | None) -> bool:
-    """Whether `where` has the group bind on the artefact at `location`, or on a record."""
-    return group in where and ((reached := where[group]) is None or location in reached)
 
 
 def _key(departure: structure.Departure) -> tuple[object, ...]:
@@ -1236,28 +1430,24 @@ def _bound(
     *,
     preview: bool,
     reach: Callable[..., Mapping[str, Mapping[str, bool]]],
+    binding: frozenset[str],
 ) -> _Binding:
     """Where each of the project's groups of tightenings binds, once the format rule binds
-    or is previewed (DEC-001 point 1).
-
-    - **On an artefact:** the group binds on each artefact its rule binds on, as the
-      backbone's reading of where a rule binds says (`pkit rule-sets reach`). That
-      reading judges the rule's chain too: a fill binds only while the rule it fills is
-      accepted as well (COR-051 point 7). So a proposed rule's group binds nothing, and
-      nothing asks where. An accepted rule that binds on none of the analysis's
-      artefacts of the kind is reported. A preview also reads where the rule would bind
-      if every proposed rule were accepted (`--preview`), and takes from it only the
-      bindings marked as holding only under the preview, since a preview can also lose
-      a binding (ADR-057 point 2). A rule that would bind on none even then is a
-      preview's report.
-    - **On a record:** no reading of where rules bind reaches a record, which lies in no
-      place a scope names. So a group of the record's kind binds on every record at the
-      status of its rule's chain, the rule and each rule whose extension point it fills.
-      A preview takes that chain as accepted.
-    - **A superseded or withdrawn rule, or none of the project's:** the group binds
-      nothing (`_own_findings`)."""
-    where: dict[project_structure.Group, frozenset[str] | None] = {}
-    previewing: dict[project_structure.Group, frozenset[str] | None] = {}
+    or is previewed (DEC-001 point 1). A group binds on each artefact its rule binds on,
+    as the backbone's reading of where a rule binds says (`pkit rule-sets reach`), and
+    applies there only where the format rule binds too, at the locations in `binding`:
+    the summary counts a group only where it applies. That reading judges the rule's
+    chain as well: a fill binds only while the rule it fills is accepted too (COR-051
+    point 7). So a proposed rule's group binds nothing, and nothing asks where. An
+    accepted rule that binds on none of the analysis's artefacts of the kind is
+    reported. A preview also reads where the rule would bind if every proposed rule
+    were accepted (`--preview`), and takes from it only the bindings marked as holding
+    only under the preview, since a preview can also lose a binding (ADR-057 point 2). A
+    rule that would bind on none even then is a preview's report. A superseded or
+    withdrawn rule, or none of the project's, binds nothing (`_own_findings`). No group
+    binds on a record: its schema refuses a tightening of the record's kind."""
+    where: dict[project_structure.Group, frozenset[str]] = {}
+    previewing: dict[project_structure.Group, frozenset[str]] = {}
     findings: list[Finding] = []
     ruled: list[project_structure.Group] = []
     standing: set[project_structure.Group] = set()
@@ -1266,16 +1456,8 @@ def _bound(
         if rule is None or rule.status not in (ACCEPTED, PROPOSED):
             continue
         standing.add(group)
-        if group.kind != structure.RECORD:
-            if preview or rule.status == ACCEPTED:
-                ruled.append(group)
-            continue
-        waiting = [] if rule.status == ACCEPTED else [group.rule]
-        waiting += [cited for cited in rule.fills if analysis.rule_statuses.get(cited) != ACCEPTED]
-        if not waiting:
-            where[group] = None
-        elif preview:
-            previewing[group] = None
+        if preview or rule.status == ACCEPTED:
+            ruled.append(group)
     accepted = [g for g in ruled if analysis.project_rules[g.rule].status == ACCEPTED]
     plain = _read_reach(root, accepted, reach, preview=False, findings=findings)
     only = _read_reach(root, ruled, reach, preview=True, findings=findings) if preview else {}
@@ -1296,12 +1478,12 @@ def _bound(
             for location, bound in only.items()
             if bound.get(group.rule) is True
             and location in of_kind
-            and location not in (where.get(group) or ())
+            and location not in where.get(group, ())
         )
         if not where.get(group) and not previewing[group] and of_kind and group not in accepted:
             findings.append(Finding(REPORT, group.where, PREVIEW + _bound_on_none(group, True)))
-    bind = [group for group in where if where[group] is None or where[group]]
-    bind += [g for g in previewing if g not in bind and (previewing[g] is None or previewing[g])]
+    bind = [group for group in where if where[group] & binding]
+    bind += [g for g in previewing if g not in bind and previewing[g] & binding]
     said = (
         f", tightened where {len(bind)} of the project's group(s) in {project_structure.FILE} bind"
         if bind
@@ -1353,13 +1535,6 @@ def _bound_on_none(group: project_structure.Group, preview: bool) -> str:
         f"there, or the sets whose scopes select one bring different fills for a point it "
         f"fills (COR-051 point 7)"
     )
-
-
-def _added_later(departure: structure.Departure) -> bool:
-    """A part a project adds that a revalidation record lacks: the part may have come after
-    the record was written, and a record is held to the structure in force on its day
-    (DEC-001 point 1). A part the record carries is held to its content and its form."""
-    return departure.element.added and departure.how == structure.MISSING
 
 
 def _own(root: Path) -> project_structure.Own | None:
@@ -1515,11 +1690,14 @@ def _heads(
     analysis: Analysis,
     kinds: Mapping[str, structure.Kind],
     texts: dict[str, str | None],
+    binding: Collection[str],
 ) -> tuple[list[Finding], int]:
     """Each collection file's head — its body above its first entry's section, as the
     backbone's reading spans the entries — against its kind's declared head, and how
-    many heads were checked. A file whose front matter does not parse, or that is no
-    collection, is reported as such, so its head is not checked."""
+    many heads were checked. The head belongs to no entry, but is part of the entries'
+    structure, so it is held where the format rule binds on an entry of its file, one
+    whose location is in `binding` (DEC-001 point 1). A file whose front matter does not
+    parse, or that is no collection, is reported as such, so its head is not checked."""
     found: list[Finding] = []
     checked = 0
     failed = set(analysis.unreadable) | {stray.path for stray in analysis.strays}
@@ -1528,6 +1706,8 @@ def _heads(
         if kind_name not in COLLECTIONS or kind is None or not kind.head or path in failed:
             continue
         entries = [a for a in analysis.artefacts if a.path == path and a.entry]
+        if not any(a.location in binding for a in entries):
+            continue
         text = _cached(root, path, texts)
         if text is None or any(not a.span_read for a in entries):
             continue  # an entry reports a backbone that gives no span
@@ -1545,9 +1725,14 @@ def _heads(
 
 
 def _field_findings(
-    location: str, fields: Mapping[str, Any], kind: structure.Kind, subject: str
+    location: str,
+    fields: Mapping[str, Any],
+    kind: structure.Kind,
+    subject: str,
+    because: str = FORMAT_RULE,
 ) -> list[Finding]:
-    """Each front-matter text that does not hold its field's form. A text that is still a
+    """Each front-matter text that does not hold its field's form, citing `because`: the
+    format rule for an artefact, the record point for a record. A text that is still a
     placeholder a template shipped is the placeholder check's, so no form reports it."""
     found: list[Finding] = []
     for departure in structure.field_departures(fields, kind):
@@ -1570,28 +1755,32 @@ def _field_findings(
             Finding(
                 ERROR,
                 at(location, departure.pointer),
-                f"{problem} ({FORMAT_RULE}). {_advice(field.hint, field.example)}",
+                f"{problem} ({because}). {_advice(field.hint, field.example)}",
             )
         )
     return found
 
 
 def _departure_message(
-    departure: structure.Departure, elements: Sequence[structure.Element], subject: str
+    departure: structure.Departure,
+    elements: Sequence[structure.Element],
+    subject: str,
+    because: str = FORMAT_RULE,
 ) -> str:
-    """What a departure breaks, where, and what goes in the part: its hint and example. A
-    part a project adds, or makes required, cites the project rule that asks for it beside
-    the format rule."""
+    """What a departure breaks, where, and what goes in the part: its hint and example,
+    citing `because`: the format rule for an artefact, the record point for a record, on
+    which no rule binds. A part a project adds, or makes required, cites the project rule
+    that asks for it beside the format rule."""
     element = departure.element
     line = f", at line {departure.line}," if departure.line is not None else ""
     if departure.how == structure.UNDECLARED:
         return (
             f"`**{element.text}:**`{line} is no label the kind declares: {departure.detail} "
             f"closes its list of labels, so write the text under a declared label, or move it "
-            f"into a part with a form ({departure.detail}, {FORMAT_RULE})"
+            f"into a part with a form ({departure.detail}, {because})"
         )
     named = _named(element, elements)
-    cited = f"{element.rule}, {FORMAT_RULE}" if element.rule else FORMAT_RULE
+    cited = f"{element.rule}, {because}" if element.rule else because
     if departure.how == structure.MISSING and element.rule:
         problem = (
             f"{named} is missing, {_place(element, elements)}: the project's rule "

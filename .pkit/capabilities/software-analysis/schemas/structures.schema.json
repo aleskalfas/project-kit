@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "structures.schema.json",
   "title": "A project's own structures — software-analysis capability",
-  "description": "Formal shape of the project's `.pkit/capabilities/software-analysis/project/structures.yaml`: what a project changes of each analysis kind's shipped structure, keyed by kind (software-analysis DEC-001 point 1). A project relabels a shipped part and replaces the hint and example of a part or a front-matter field, with no rule. It tightens a structure only by naming the project rule that asks for it: it adds labels and sections, makes a shipped optional part required, or closes the kind's list of labels. Nothing here drops, loosens or reorders a shipped part, invents a form or adds a kind: no key says any of those. The capability's README, \"A project's own structures\", says how each entry is placed and when it binds. This schema checks the shape only. The check and the stamp hold each entry to the shipped structure in `artefact-kinds.yaml`. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
+  "description": "Formal shape of the project's `.pkit/capabilities/software-analysis/project/structures.yaml`: what a project changes of each analysis kind's shipped structure, keyed by kind (software-analysis DEC-001 point 1). A project relabels a shipped part and replaces the hint and example of a part or a front-matter field, with no rule. It tightens an artefact kind's structure only by naming the project rule that asks for it: it adds labels and sections, makes a shipped optional part required, or closes the kind's list of labels. It tightens no revalidation record's: a record is a held document, which no rule binds on, so no tightening of it could bind. Nothing here drops, loosens or reorders a shipped part, invents a form or adds a kind: no key says any of those. The capability's README, \"A project's own structures\", says how each entry is placed and when it binds. This schema checks the shape only. The check and the stamp hold each entry to the shipped structure in `artefact-kinds.yaml`. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
   "type": "object",
   "required": [
     "schema_version"
@@ -30,6 +30,11 @@
       "type": "object",
       "propertyNames": {
         "$ref": "artefact-kinds.schema.json#/$defs/word"
+      },
+      "properties": {
+        "revalidation-record": {
+          "$ref": "#/$defs/record-kind"
+        }
       },
       "additionalProperties": {
         "$ref": "#/$defs/kind"
@@ -83,12 +88,27 @@
           }
         },
         "tighten": {
-          "description": "What the project requires beyond the shipped structure, in groups. Each group names the project rule that asks for it, and binds once that rule and the capability's format rule are accepted, on an artefact the rule binds on (DEC-001 point 1).",
+          "description": "What the project requires beyond the shipped structure, in groups. Each group names the project rule that asks for it, and binds once that rule and the capability's format rule are accepted, on an artefact both bind on (DEC-001 point 1). Not on the revalidation record (`record-kind`).",
           "type": "array",
           "minItems": 1,
           "items": {
             "$ref": "#/$defs/tightening"
           }
+        }
+      }
+    },
+    "record-kind": {
+      "title": "What the project changes of the revalidation record",
+      "description": "A relabel and a field's hint, as for any kind, and no tightening. A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself, always, and a tightening of it could never bind. The record's kind takes none until a rule set can reach a held document (DEC-001 point 1).",
+      "allOf": [
+        {
+          "$ref": "#/$defs/kind"
+        }
+      ],
+      "properties": {
+        "tighten": {
+          "description": "Refused: any group is one too many, since a tightening of a revalidation record could never bind.",
+          "maxItems": 0
         }
       }
     },
