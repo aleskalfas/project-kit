@@ -381,13 +381,13 @@ def render_reach_human(document: Mapping[str, Any]) -> str:
         lines.append(f"  {artefact['location']}")
         lines.extend(_answer_lines(artefact, "    "))
     rules = {rule["rule"] for artefact in artefacts for rule in artefact["rules"]}
-    previewed = {
+    binding = {
         rule["rule"]
         for artefact in artefacts
         for rule in artefact["rules"]
-        if rule.get("previewed")
+        if not rule.get("previewed")
     }
-    only = f", {len(previewed)} only under the preview" if preview else ""
+    only = f", {len(rules - binding)} only under the preview" if preview else ""
     lines.extend(["", f"{len(artefacts)} artefact(s), {len(rules)} rule(s) binding{only}."])
     return "\n".join(lines) + "\n"
 
