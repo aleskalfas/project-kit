@@ -12,9 +12,8 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-15T09:26:32Z
-      outcome: unchanged
-      unchanged-because: "COR-050 lets an artefact anchor name a document's section or its lead, and COR-051 point 3 lets '#' name them. This README says what a page anchors, by kind, and how sources resolve, and none of it changes. The agent and checks learn part anchors in #1424."
+      at: 2026-10-16T11:38:54Z
+      outcome: updated
 ---
 
 # living-docs capability
@@ -25,7 +24,7 @@ Keep your documentation **true for the people who read it**, even when an agent 
 
 - **Spaces.** A user space and a technical space, kept separate: neither root lies inside the other. You can add others. New pages go under each space's root. A space can also include places the project declares — inside a root, where they inherit that root's space, or outside every root, such as the repo's top-level README, where the capability's project configuration assigns them to a space. Where places nest, the backbone's order of places decides which one gives a page its space. A page is a document of this capability's page type ([Pages](#pages)). Decision records, rule sets, templates and anything another owner claims — by its type, by its place, or by a folder of documents it holds, such as an analysis capability's revalidation records — are anchor targets or their owner's, never pages. Each space's *definition* (its rules) lives in the technical space.
 - **Rules.** The shared method rule set, `LDOC`, ships with this capability. Each space's definition inherits it, adds its own rules, and carries a scope that selects the space's pages. `LDOC`'s rules bind on a page only through such a scope (core rule sets, COR-051).
-- **Anchors and friction.** Each page's anchors (code, decisions, [sources](#sources), analysis artefacts) must ground everything it says. The core friction check (COR-050) flags a page when any of those changed and nobody revalidated it. When two branches revalidate the same page, its block conflicts on merge, and whoever resolves the conflict revalidates the page as merged: when you merge the check's base into your branch and the conflict lies only in the block, `pkit friction resolve` takes the base side's answer, keeps both sides' deferrals, and names the revalidation still owed (the CLI README, "friction resolve").
+- **Anchors and friction.** Each page's anchors (code, decisions, [sources](#sources), analysis artefacts, the home of each fact it summarises) must ground everything it says. The core friction check (COR-050) flags a page when any of those changed and nobody revalidated it. When two branches revalidate the same page, its block conflicts on merge, and whoever resolves the conflict revalidates the page as merged: when you merge the check's base into your branch and the conflict lies only in the block, `pkit friction resolve` takes the base side's answer, keeps both sides' deferrals, and names the revalidation still owed (the CLI README, "friction resolve").
 - **Proposals, never blind edits.** The agent, `living-docs` ("The agent" below), proposes each fix with its evidence, and a person reviews it.
 - **Reader-review.** The agent reads a page as its declared reader and reports what that reader would miss or wouldn't need.
 
@@ -112,8 +111,8 @@ Write nothing else. The file is bound to its shape (`schemas/source.schema.json`
 
 | Rule | Statement |
 |---|---|
-| `RS-LDOC-001` | A page's anchors ground every statement it makes. |
-| `RS-LDOC-002` | Each fact is stated once, and other pages link to it. |
+| `RS-LDOC-001` | A page's anchors ground every statement it makes, and only what the page anchors grounds one. |
+| `RS-LDOC-002` | Each fact has one home. Another page states it only as a summary that links to the home and anchors to the home's section. |
 | `RS-LDOC-003` | Each page names its reader and says only what that reader needs. |
 | `RS-LDOC-004` | Pages of a kind follow one format, with a template per kind. |
 | `RS-LDOC-005` | An index-like file is a signpost to what a folder holds, never a summary of its contents. |
@@ -198,7 +197,7 @@ A definition with no scope selects nothing itself, so nothing is held to it. The
 
 It reports, without failing: a `source` anchor, or a rule origin citing a `source`, that no captured file answers (the whole-repository check reports it dead); a captured source nothing anchors or cites; a captured source carrying `schema_version` or `binds_to`, which its shape permits only for its own carrier; a file in the sources folder whose name does not end in `.yaml` — notes, an editor's backup — which captures nothing; a space with no definition yet, a definition with no scope, or with the template's placeholder in its scope, naming the scope to give it, the pages of a space its definition's scope leaves out, a file without front matter whose places cannot be told apart, unless every one of them is an unassigned place outside every root, which fails (above), roots that are the same folder or nested (onboarding separates them), each kind that declares no structure, with the pages that name it where `RS-LDOC-004` binds and the kinds that do declare one, and — in its summary — the unclassified documents and the documents of a type of your own, whether each entry point is a page yet, the spaces whose definitions carry a scope, the readers each page's reader was checked against, how many pages were checked against their kind's structure and how many were not because their kind declares none, how many pages each check left out because its rule does not bind on them, and the pages left unanchored: those without an accepted reason, onboarding's work still to do, and apart from them those whose friction block gives one as `unanchored-because` (DEC-001 point 8; COR-050 point 1). The human view lists both, each accepted page with its reason; an excluded page is in neither. A synced tree declared as a place is the core's `synced-place` finding, under `friction` (above).
 
-**Pages are checked** for their front matter — `kind`, and `reader` against the readers point where `RS-LDOC-003` binds, and the friction block, which `pkit validate` checks under `friction` — and for their body's structure, against the structure their kind declares, where `RS-LDOC-004` binds. Everything else a page owes `LDOC` is judgment, left to the agent's reader-review (below): whether each section says what its kind's template asks, whether the anchors ground every statement, whether each fact is stated once, and whether the page says only what its reader needs.
+**Pages are checked** for their front matter — `kind`, and `reader` against the readers point where `RS-LDOC-003` binds, and the friction block, which `pkit validate` checks under `friction` — and for their body's structure, against the structure their kind declares, where `RS-LDOC-004` binds. Everything else a page owes `LDOC` is judgment, left to the agent's reader-review (below): whether each section says what its kind's template asks, whether the anchors ground every statement, whether each fact has one home, and whether the page says only what its reader needs.
 
 ## Connections
 
@@ -231,7 +230,7 @@ The checks above tell you *that* a page drifted and *which* documents are not pa
 | Ask it to… | It reads | It gives you |
 |---|---|---|
 | **fix a stale or deferred page** | `pkit friction explain <page>`: the anchors that changed and the commits behind them; then those commits and the page | a diff of the page and a pull-request body, citing each commit and the anchor it changed, and naming the answer you give once it is applied (`pkit friction revalidate … --outcome updated`). When nothing in the page needs to change, it proposes the `unchanged` answer with a draft reason for you to confirm. For a page `explain` reports `unresolved`, it says why from the anchor's finding and proposes nothing for the prose: for `no-answer`, run again, then `pkit sync`, or the resolver needs mending; for `unresolved-kind`, where the kind misspells a registered one (`pkit validate` names the nearest), a one-line anchor correction with the revalidation a changed anchor list needs, otherwise the capability to install or the registration to mend. |
-| **review a page as its reader** | the page's `reader`, resolved through `pkit::documentation:readers`; the rules that bind on the page, `LDOC`'s and its space's own, from `pkit rule-sets reach` | a findings record, each finding citing the rule the page breaks (`RS-LDOC-003`, or the space's own rule) and quoting the passage — **only when something was found**. Nothing found: one line, no file. As a pull-request comment if you ask for one. |
+| **review a page as its reader** | the page's `reader`, resolved through `pkit::documentation:readers`; the rules that bind on the page, `LDOC`'s and its space's own, from `pkit rule-sets reach` | a findings record, each finding citing the rule the page breaks (`RS-LDOC-003`, or the space's own rule) and quoting the passage, and each passage a rule leaves to your judgement, such as a fact the page repeats, listed as a question — **only when something was found**. Nothing found: one line, no file. As a pull-request comment if you ask for one. |
 | **onboard existing documentation** | the validator's unclassified documents and findings, the friction check's measures, your code-to-doc mapping if you keep one | one plan behind one approval gate (below) |
 
 What it will not do:
@@ -253,7 +252,7 @@ On a project that already has documentation, nothing is anchored yet, so onboard
 1. **Declare where your documentation lives** — the roots and any places outside them, each assigned to a space ("Declaring your spaces" above) — until `pkit living-docs validate` reports no errors. Its summary counts the **unclassified documents**: documents in your spaces' places that are not pages yet. They are the onboarding's input.
 2. **Ask the agent to onboard.** It drafts **one plan**, each line citing its evidence, in four parts:
    - **spaces** — which space each unclassified document becomes a page of, with its `reader` and `kind`, or why the spaces' rules do not govern it; roots still shared are separated, and a space with no definition gets one from the template, with the scope that selects its pages;
-   - **splits and rewrites** — pages that serve two readers, or state a fact another page states, split, merged or rewritten for their reader;
+   - **splits and rewrites** — pages that serve two readers, or that state another page's fact with no link to its home or no anchor on the home's section (`RS-LDOC-002`), split, merged or rewritten for their reader;
    - **anchors** — the anchors each page's statements need, and the statements nothing grounds, raised as questions rather than kept;
    - **mapping** — if you keep a code-to-doc mapping (the project-management capability's, read through the work-tracking role's documentation-check point), which of its rules become path anchors on the pages they name, narrowed where an anchor would match most of the repository. Retiring the mapping is a separate change, for whoever owns it.
 3. **Review the plan at its single gate**: approve, revise, or reject. Nothing is drafted before you approve; a revision comes back to the gate; a rejection drafts nothing.

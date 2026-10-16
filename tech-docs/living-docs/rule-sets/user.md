@@ -14,9 +14,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-13T20:06:25Z
+          at: 2026-10-16T11:38:52Z
           outcome: unchanged
-          unchanged-because: "living-docs DEC-001's points are now headings, so the anchor names point 3, which states this rule: the user space adds that reader paths stay unbroken. Point 3's text is unchanged, so the rule holds."
+          unchanged-because: living-docs DEC-001 point 3 refines the rules on a fact's home and on grounding, and says a fact both spaces state has its home on the user space's page, as the spaces' separation asks. Its sentence that the user space adds one rule, that reader paths stay unbroken, is as it was, so this rule holds.
 ---
 
 # The user space's definition

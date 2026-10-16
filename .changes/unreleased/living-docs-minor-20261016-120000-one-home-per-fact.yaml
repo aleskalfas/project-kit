@@ -1,0 +1,10 @@
+component: living-docs
+kind: minor
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  A page may now give another page's fact as a summary that links to that page
+  and anchors to the section stating it, a fact repeated within one page is
+  left to a person while two statements of a fact that disagree break the
+  rule, and only what a page anchors grounds what it says.
