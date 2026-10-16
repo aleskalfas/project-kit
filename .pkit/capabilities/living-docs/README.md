@@ -9,11 +9,12 @@ pkit:
         - .pkit/capabilities/living-docs/schemas/**
         - .pkit/capabilities/living-docs/agents/**
         - .pkit/capabilities/living-docs/templates/**
-      record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
+      record: ["living-docs:DEC-001", COR-023, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block"]
     revalidated:
-      at: 2026-10-16T12:31:26Z
-      outcome: updated
+      at: 2026-10-16T14:21:41Z
+      outcome: unchanged
+      unchanged-because: This change anchors COR-023, COR-052 point 4 and COR-056, which the page already cites for a captured source's schema binding, two fillers' results for one check, and how places rank and type a document. It changes none of those records and no statement on this page, so each statement still holds.
 ---
 
 # living-docs capability

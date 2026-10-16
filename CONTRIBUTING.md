@@ -24,8 +24,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-16T13:01:54Z
-      outcome: updated
+      at: 2026-10-16T14:21:49Z
+      outcome: unchanged
+      unchanged-because: The decisions README now says that pkit new decision numbers a record and that check-diff finds a number another change landed meanwhile, that a record overturning another only in part sets no supersedes, and it links the lifecycle README for the merge tier that asks nothing. CONTRIBUTING names that README as the record spec and links its numbering check, which did not change, so it holds.
 ---
 
 # Contributing to project-kit

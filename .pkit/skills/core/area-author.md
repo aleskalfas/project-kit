@@ -43,7 +43,7 @@ The current dependencies:
 
 Kebab-case, single noun or short noun phrase naming the domain. Examples: `research`, `deployment`, `compliance`, `risk-assessment`. The name becomes the directory name (`.pkit/<name>/`).
 
-Refuses on collision with a core-shipped area name (the no-shared-files invariant — adopters cannot reuse `decisions`, `skills`, `cli`, `adapters`, `lifecycle`, `rules`, `migrations`).
+Refuses where `.pkit/<name>/` already exists, as each core area does in an installed project (the no-shared-files invariant). So adopters cannot reuse a core area's name: `decisions`, `skills`, `cli`, `adapters`, `scratchpad`, `agents`, `schemas`, `permissions`, `rules`, `process`, `lifecycle` or `migrations`, the areas `install.PROPAGATED_AREAS` lists.
 
 ### 2. Pick the variant
 
