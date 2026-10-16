@@ -16,11 +16,11 @@ pkit:
         - .pkit/adapters/claude-code/deploy-agents.sh
         - .pkit/adapters/claude-code/_resolve_agent.py
         - .pkit/agents/core/rule-set-reviewer.md
-      record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052]
+      record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
+      artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-15T17:58:31Z
-      outcome: unchanged
-      unchanged-because: COR-050 is refined so an artefact anchor may name a document's section or its lead, and says where such an anchor is dead, ambiguous or refused. This README states who writes and who checks a change's answers (COR-050 point 3) and how agents cite rule ids. It says the rule-set reviewer judges what a change alters or brings under a rule, and what alters an artefact is still its whole content. So it holds.
+      at: 2026-10-16T13:01:50Z
+      outcome: updated
 ---
 
 # Agents
@@ -276,7 +276,9 @@ Four rules apply to a write-carrying category:
 - Override entries for non-existent default categories produce a warning (likely typo / dead config).
 - Override entries for non-existent agents produce a warning.
 
-**Diagnosing + repairing the overlay (per COR-013):**
+### Diagnosing + repairing the overlay
+
+Three commands diagnose and repair the overlay (COR-013):
 
 - `pkit agents` reports, per kit-shipped agent, whether it is *deployable* or *SKIPPED* and which categories are undefined — the discoverable surface for "why didn't my agent show up?" (deployment happens in `sync`; this is the read-only diagnostic).
 - `pkit agents adopt <agent> [--yes]` is the **one-command path** for agents whose categories reference well-known conventional directories. For each undefined category the agent references, it:
@@ -295,7 +297,7 @@ Four rules apply to a write-carrying category:
   5. **Commented stub already present**: reconcile does not append a duplicate; its guidance splits by channel. A **hard** stub reports "uncomment + set real paths" as *action needed* (the agent is skipped until then) — or run `pkit agents adopt <agent>` to create the conventional layout and deploy it. An **optional** stub reports the same uncomment-to-enrich guidance but framed as optional — the agent already deploys.
   6. **Defined** (uncommented entry with paths, or an explicit `[]`): nothing is written; an adopter-set value is never overwritten.
 
-  **A missing overlay** is repaired here too: with `--write`, reconcile creates `overlay.yaml` from the seed first install writes, and writes nothing else in that run, and the dry run says it would. The next dry run shows each category the seed does not define, so `--write` never records one you were not shown. Sync creates no seed path, so a deleted overlay otherwise returns only at the next `pkit upgrade` to a new release ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 11). `pkit agents adopt` names this repair where the overlay is missing.
+  **A missing overlay** is repaired here too: with `--write`, reconcile creates `overlay.yaml` from the seed first install writes, and writes nothing else in that run, and the dry run says it would. The next dry run shows each category the seed does not define, so `--write` never records one you were not shown. Sync creates no seed path, so a deleted overlay otherwise returns only at the next `pkit upgrade` to a new release ([the lifecycle README, "Seed paths"](../lifecycle/README.md#seed-paths)). Reconcile is the one writer outside the lifecycle that creates a seed path ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 11). `pkit agents adopt` names this repair where the overlay is missing.
 
   This is the path for an adopter whose overlay predates a newly-shipped agent's categories — the repair is an explicit, idempotent gesture rather than an automatic sync mutation. Dry-run by default: the preview shows each auto-fill as `category = path` with the agents that reach it once recorded — the same lines `adopt`'s question shows. **`--write` is the confirmation** (COR-049 point 5): for a command that only shows what it would record until it is told to write, the option that tells it to write is the confirmation flag, so `--write` records an auto-fill over a directory that already holds documents with no prompt, and each recording prints the root its path was derived from and where to change it.
 

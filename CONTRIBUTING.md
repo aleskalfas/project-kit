@@ -19,11 +19,13 @@ pkit:
         - tests/README.md
         - src/project_kit/router.py
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
-      artefact: [.pkit/decisions/README.md]
+      artefact:
+        - .pkit/decisions/README.md
+        - .pkit/decisions/README.md#checking-a-changes-numbering
+        - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-15T17:28:14Z
-      outcome: unchanged
-      unchanged-because: COR-050 is refined so an artefact anchor may name a document's section or its lead. This guide's friction gate says what fails the change check, how to answer, and how a reviewer checks the answers, and leaves the rules to the CLI reference's Friction checks section. A dead, ambiguous or refused part anchor fails as a dead anchor, which the guide names, so nothing it says changes.
+      at: 2026-10-16T13:01:54Z
+      outcome: updated
 ---
 
 # Contributing to project-kit
@@ -36,7 +38,7 @@ If you have a project that has *adopted* project-kit and you want to record deci
 
 ## Running checks
 
-There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the numbering check of decision records (`pkit decisions check-diff` — a point renumbered, reused or dropped without being retired, or a point or record id the base took first), the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first), software-analysis' pointer check (`pkit analysis check-pointers` — a commit the default branch does not hold, named by a planned revalidation record the change adds), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Between `pkit validate` and the diff-scoped checks, it runs the deployed agents' check (`uv run python scripts/check_deployed_agents.py`, "The deployed agents' check" below). Run it any time:
+There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the numbering check of decision records (`pkit decisions check-diff` — a point renumbered, reused or dropped without being retired, or a point or record id the base took first: [the decisions README, "Checking a change's numbering"](.pkit/decisions/README.md#checking-a-changes-numbering)), the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first), software-analysis' pointer check (`pkit analysis check-pointers` — a commit the default branch does not hold, named by a planned revalidation record the change adds), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Between `pkit validate` and the diff-scoped checks, it runs the deployed agents' check (`uv run python scripts/check_deployed_agents.py`, "The deployed agents' check" below). Run it any time:
 
 ```
 ./scripts/check.sh
@@ -133,7 +135,7 @@ To fix a copy, run `.pkit/adapters/claude-code/deploy-agents.sh` and commit what
 1. **Install** — `mise run pkit:pinned-install` (or `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git` directly). Installs/refreshes the global pkit from main's head and puts `pkit` on PATH via `uv tool dir --bin`. That is the development install, which no version vouches for ([PRJ-004](.pkit/decisions/project/PRJ-004-distribution-channel.md)). To run a release outside your checkouts instead, add its tag, `@v<version>`.
 2. **Verify** — `command -v pkit` should resolve to that bin dir; `mise run pkit:which` reports the active binary, its version, and what bare `pkit` runs from this checkout (route 1).
 
-Routing happens *before* the CLI loads, so the common path (running self, or execing a checkout) stays cheap. An adopter pin that can't be resolved (offline, missing tag, missing auth, no `uvx`) **degrades loudly to running self** — it never hard-fails a routine command. When the binary it runs is older than the pin, the notice says so. `pkit upgrade` refuses a binary older than the project rather than take the project back to it (#1212), and under that degrade it refuses any binary, older or newer, rather than move the pin to a version it did not resolve. `pkit sync` stops under any binary that is not the project's version, naming the remedy for the fallback first ([ADR-065](tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) points 7 to 9). Escape hatches: `PKIT_NO_ROUTE=1` forces in-process execution; `PKIT_ROUTED=1` is the internal loop guard.
+Routing happens *before* the CLI loads, so the common path (running self, or execing a checkout) stays cheap. An adopter pin that can't be resolved (offline, missing tag, missing auth, no `uvx`) **degrades loudly to running self** — it never hard-fails a routine command. When the binary it runs is older than the pin, the notice says so. `pkit upgrade` refuses a binary older than the project rather than take the project back to it (#1212), and under that degrade it refuses any binary, older or newer, rather than move the pin to a version it did not resolve. `pkit sync` stops under any binary that is not the project's version. Both are set out in [the lifecycle README, "Sync's guard"](.pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over) ([ADR-065](tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) points 7 to 9). Escape hatches: `PKIT_NO_ROUTE=1` forces in-process execution; `PKIT_ROUTED=1` is the internal loop guard.
 
 > **Retiring the old `pkit-router` shim.** Earlier setups installed a separate `scripts/pkit-router` shim at `~/.pkit/shim/pkit` and put it ahead of the pinned binary on PATH. That shim is gone — the binary now routes natively. If you have one, remove it (`rm ~/.pkit/shim/pkit`) and drop the `export PATH="$HOME/.pkit/shim:$PATH"` line from your shell profile so bare `pkit` resolves to the global install.
 

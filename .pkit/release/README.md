@@ -12,11 +12,13 @@ pkit:
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
       record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
+      artefact:
+        - .pkit/lifecycle/README.md#backbone-manifest-projectpkitmanifestyaml
+        - .pkit/lifecycle/README.md#the-replay-a-missing-completion
       source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-15T08:24:58Z
-      outcome: unchanged
-      unchanged-because: PRJ-004 now names a release tag in its canonical install, and says the release step cuts the tag matching .pkit/VERSION on each release that moves it, as PRJ-002 says. The guide says the release step tags the committed backbone VERSION, that a component-only release cuts no tag, and that install stays the git URL at a tag. All three still hold, so the guide holds.
+      at: 2026-10-16T13:01:48Z
+      outcome: updated
 ---
 
 # Release flow — changesets + the release step
@@ -349,10 +351,10 @@ PR** a human merges — it is *not* auto-run on every merge.
 
 `apply` in order: writes each tier's version (`.pkit/VERSION` for the backbone,
 and with it the self-host `.pkit/manifest.yaml`'s `backbone_version:` and
-`completed_version:` lines, the second added beside the first where the
-manifest has none,
-[PRJ-007](../decisions/project/PRJ-007-release-maintains-self-host-manifest.md);
-the `version:` line in a component's `package.yaml`); **broadens**
+`completed_version:` lines, as
+[the lifecycle README's "Backbone manifest"](../lifecycle/README.md#backbone-manifest-projectpkitmanifestyaml)
+and [PRJ-007](../decisions/project/PRJ-007-release-maintains-self-host-manifest.md)
+say; the `version:` line in a component's `package.yaml`); **broadens**
 `requires_backbone` (see below); **raises the declared floors** (below);
 prepends a `CHANGELOG.md` entry from the notes, stating each raised floor; and
 deletes the consumed changesets. `plan` shows each floor it will raise under
@@ -361,8 +363,9 @@ the component's bump.
 ### A replay may restore a removed default
 
 A version transition may run every backbone migration again, over a project
-whose migration history is unknown (COR-010; the lifecycle README, "The
-replay"). A backbone migration that adds a missing default then restores one
+whose migration history is unknown (COR-010;
+[the lifecycle README, "The replay"](../lifecycle/README.md#the-replay-a-missing-completion)).
+A backbone migration that adds a missing default then restores one
 the project removed after the migration first ran. COR-010 has the release's
 notes say so. No command checks it: before `apply`, whoever runs the release
 checks that a pending changeset says it, naming the default, in each of two

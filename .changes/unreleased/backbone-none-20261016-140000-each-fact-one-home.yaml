@@ -1,0 +1,7 @@
+component: backbone
+kind: none
+body: >
+  Documentation only. The CLI, lifecycle, decisions, agents and release
+  READMEs state each fact of an upgrade, sync and its guard, and of
+  `decisions check-diff`, on one page, and summarise it on the others with a
+  link to that page's section. No command, file layout or output changes.

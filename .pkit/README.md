@@ -19,8 +19,9 @@ pkit:
         - .pkit/scratchpad/README.md#
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-16T11:09:46Z
-      outcome: updated
+      at: 2026-10-16T13:02:03Z
+      outcome: unchanged
+      unchanged-because: The decisions README's 'The no-shared-files invariant' now gives what sync writes as a summary that links to the lifecycle README, and the CLI README's 'Authoring commands' links 'decisions check-diff' to the decisions README in the new decision entry. This index only points a newcomer to the invariant, which still governs the other areas, and an author to the authoring commands, which still cover areas, adapters, capabilities and migrations, so it holds.
 ---
 
 # project-kit

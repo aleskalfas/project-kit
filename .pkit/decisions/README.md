@@ -12,11 +12,15 @@ pkit:
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
-      record: [COR-001, COR-019, COR-025, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058]
+      record: [COR-001, COR-019, COR-025, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3"]
+      artefact:
+        - .pkit/lifecycle/README.md#the-steps-of-a-transition
+        - .pkit/lifecycle/README.md#seed-paths
+        - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
+        - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-15T17:28:13Z
-      outcome: unchanged
-      unchanged-because: "COR-050 point 2 lets an artefact anchor name a document's section or its lead, and point 7 says when such an anchor is dead or ambiguous. COR-051 point 3 says '#' names them. record_points.py changes only two docstrings, which name the reading of artefact anchors. This README names a record's point as COR-050#11 in an anchor's value, says a list-form record holds no point an anchor can name, and cites a rule's extension point, and all of it holds."
+      at: 2026-10-16T13:01:52Z
+      outcome: updated
 ---
 
 # Decision records
@@ -28,7 +32,7 @@ This directory holds your project's architectural-decision record: why each sign
 | Directory | Prefix | Owner | Lifecycle |
 |---|---|---|---|
 | `core/` | **COR** | project-kit | Maintained by project-kit; refreshed on sync; **do not edit** |
-| `project/` | **PRJ** | Your project | Yours. project-kit creates the folder, with an empty `.gitkeep`, where it is missing, at first install and in `pkit upgrade`, and never writes your records |
+| `project/` | **PRJ** | Your project | Yours. project-kit creates the folder where it is missing, as a [seed path](../lifecycle/README.md#seed-paths), and never writes your records |
 
 The two namespaces have **independent numbering**. `core/COR-001` and `project/PRJ-001` are separate decisions about separate things; neither blocks the other.
 
@@ -77,15 +81,11 @@ This invariant is what makes the namespace split above operationally safe. proje
 
 Sync reads from your side what it needs, such as the versions your project records. It writes into a file of yours through merge delivery's tier that asks nothing. That tier adds the kit's entries and never removes one you wrote (COR-002). Sync **cannot** produce a conflict, and it cannot break anything you wrote.
 
-Sync runs at the versions your project records, and moves none of them ([COR-059](core/COR-059-version-transition.md)). It writes three kinds of thing, and no other:
+Sync runs at the versions your project records, and moves none of them ([COR-059](core/COR-059-version-transition.md)). It writes the methodology's content at those versions, the state derived from your own declarations, and your project-owned paths through merge delivery only, and nothing else. It runs no migration, and writes no recorded version, no manifest and no seed path ([the lifecycle README, "What sync writes"](../lifecycle/README.md#what-sync-writes)).
 
-- **The methodology's content** at the versions your project records, a capability's included only where the running pkit ships it at its recorded version.
-- **State derived from your own declarations:** the deployed skills and agents, `.pkit/.gitignore`, the agent workspace and its line in your clone's local exclude file, and the query commands' environments.
-- **Your project-owned paths, through merge delivery only,** in its tier that asks nothing.
+Under a pkit at another version than your project records, or over an unfinished upgrade, sync stops before it writes anything, and its message names the command that gets you on ([the lifecycle README, "Sync's guard"](../lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over)).
 
-It runs no migration, and writes no recorded version, no manifest and no seed path. Under a pkit at another version than your project records, or over an unfinished upgrade, it stops and writes nothing, and names the command that gets you on.
-
-`pkit upgrade` is the command that moves your project to another release. It also creates each seed path that is missing, such as the agents overlay, `.pkit/agents/project/overlay.yaml`, or the `project/` folder of an area or a capability, never over one that exists. Every migration runs inside it, and a migration changes a file of yours only within what the record that owns the file allows.
+`pkit upgrade` is the command that moves your project to another release. It also creates each seed path that is missing, such as the agents overlay, never over one that exists ([the lifecycle README, "Seed paths"](../lifecycle/README.md#seed-paths)). Every migration runs inside it ([the lifecycle README, "The steps of a transition"](../lifecycle/README.md#the-steps-of-a-transition)), and a migration changes a file of yours only within what the record that owns the file allows.
 
 The same `core/` / `project/` pattern (and the same invariant) governs other kit areas in your project — `.pkit/agents/`, `.pkit/rules/`, and so on. To extend kit-shipped content, add sibling files in the matching `project/` directory; never edit a kit-owned file.
 
