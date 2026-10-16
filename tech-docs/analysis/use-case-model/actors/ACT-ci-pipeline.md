@@ -26,9 +26,9 @@ pkit:
 
 A project's continuous integration, acting on the system from outside. It is an actor because it starts work on its own trigger with no person in the session.
 
-- **Comes:** on every pull request, queued merge and push to the default branch, and on a schedule.
-- **Brings:** a clean checkout, a base to compare with, and no person to answer a prompt.
-- **In the model:** its needs are what the system must give an unattended runner. The goals its runs serve belong to people:
+- **Occasions:** on every pull request, queued merge and push to the default branch, and on a schedule.
+- **Context:** a clean checkout, a base to compare with, and no person to answer a prompt.
+- **Place in the model:** its needs are what the system must give an unattended runner. The goals its runs serve belong to people:
   - The change check serves the developer and the merge authoriser.
   - The whole-repository report serves the developer (a change to what a document rests on reaches them).
   - A release tag serves the methodology maintainer.

@@ -27,14 +27,14 @@ pkit:
 
 Someone who extends the system with a component (a capability or an adapter) rather than only using it.
 
-- **Can be:**
+- **Role holders:**
   - an adopter growing a discipline in their own repository
   - an organisation that keeps private methodology in one repository for its others
   - whoever adapts the system to a new harness
-- **Comes:**
+- **Occasions:**
   - when a pattern recurs often enough to package
   - at each release of their component
   - when a new harness arrives
-- **Brings:** the component's decisions, schemas, skills, agents and process definitions. They own its compatibility claim.
+- **Context:** the component's decisions, schemas, skills, agents and process definitions. They own its compatibility claim.
 - **Core:** the capability pattern, its origins, connection points, the process engine and the harness requirements are the extension points this role uses. They exist before any capability is installed.
 - **Note:** in project-kit's source repository the methodology maintainer plays this part for the capabilities and the adapter project-kit ships.

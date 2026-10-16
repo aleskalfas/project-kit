@@ -24,8 +24,8 @@ pkit:
 
 Whoever maintains a distribution of the methodology.
 
-- **Can be:** project-kit's maintainers, or a fork's.
-- **Does:** work in the distribution's source repository, on the core records, the backbone and the releases adopters upgrade to.
-- **Comes:** for every change to the methodology and every backbone release.
-- **Brings:** the methodology's disciplines (CONTRIBUTING.md). They are the first adopter of what they ship.
+- **Role holders:** project-kit's maintainers, or a fork's.
+- **Activities:** work in the distribution's source repository, on the core records, the backbone and the releases adopters upgrade to.
+- **Occasions:** for every change to the methodology and every backbone release.
+- **Context:** the methodology's disciplines (CONTRIBUTING.md). They are the first adopter of what they ship.
 - **Core:** the source repository, its release policy and its report inbox exist for this role.

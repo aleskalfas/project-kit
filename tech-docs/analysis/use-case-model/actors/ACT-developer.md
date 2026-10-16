@@ -26,7 +26,7 @@ pkit:
 
 The person who builds: decisions, rules, notes, code and its documentation, one change at a time.
 
-- **Comes:** for every change, and again when some work recurs often enough to deserve tooling of its own.
-- **Brings:** the change. They direct agents to make it.
+- **Occasions:** for every change, and again when some work recurs often enough to deserve tooling of its own.
+- **Context:** the change. They direct agents to make it.
 - **Core:** whatever tracks the work, every change passes the acceptance gate and the friction check, and lands as COR-009 sets out. That the backbone itself lands pull requests is provisional (ADR-061 point 3, raised as #1222).
 - **Note:** a work tracker's view of this role (project-management's "Implementer") comes with that capability.
