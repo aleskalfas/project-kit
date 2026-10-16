@@ -60,6 +60,15 @@
           "type": "boolean",
           "default": true
         },
+        "retired": {
+          "description": "The ids of elements the kind shipped and retired. An id is permanent once shipped: a retired element is listed here, never renamed, and its id is never given to another element (DEC-001 point 1). A project's addition that names a retired element is an error.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/word"
+          }
+        },
         "head": {
           "description": "A collection kind's file head, in order: the elements its file carries once, before the first entry's section. The stamp writes each when it creates the file, and the project may reword it afterwards. A kind with a head is a collection, and its `sections` give each entry's section.",
           "type": "array",

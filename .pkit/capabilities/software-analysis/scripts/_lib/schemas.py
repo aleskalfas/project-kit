@@ -8,8 +8,10 @@ stamp that gives an id and the check that judges one never disagree. A record
 copies the evidence it draws on in the evidence point's own entry shape, so
 the point's companion, `revalidation-evidence`, is loaded beside them, and so
 is the project configuration's, `config`, which the numbering setting is read
-against (`_lib/numbering.py`). The friction block beside the own fields is the
-core's shape, validated by the backbone, and never here.
+against (`_lib/numbering.py`), and the project's own structures', `structures`,
+with the kinds' declaration it refers to (`_lib/project_structure.py`). The
+friction block beside the own fields is the core's shape, validated by the
+backbone, and never here.
 """
 
 from __future__ import annotations
@@ -36,6 +38,8 @@ SHARED = "analysis"
 RECORD = "revalidation-record"
 EVIDENCE = "revalidation-evidence"
 CONFIG = "config"
+STRUCTURES = "structures"
+KINDS = "artefact-kinds"
 
 #: Each kind's schema, by file stem.
 SCHEMA_OF = {ACTOR: "actor", TERM: "term", USE_CASE: "use-case", JOURNEY: "journey", RECORD: RECORD}
@@ -48,7 +52,7 @@ ID_DEF = {ACTOR: "actor-id", TERM: "term-id", USE_CASE: "use-case-id", JOURNEY: 
 def _schemas() -> dict[str, dict[str, Any]]:
     return {
         stem: json.loads((SCHEMAS / f"{stem}.schema.json").read_text(encoding="utf-8"))
-        for stem in (SHARED, EVIDENCE, CONFIG, *SCHEMA_OF.values())
+        for stem in (SHARED, EVIDENCE, CONFIG, STRUCTURES, KINDS, *SCHEMA_OF.values())
     }
 
 
@@ -133,6 +137,15 @@ def config_errors(config: object) -> list[tuple[str, str]]:
     checker = Draft202012Validator(_schemas()[CONFIG], registry=_registry())
     return sorted(
         (_pointer(error.absolute_path), error.message) for error in checker.iter_errors(config)
+    )
+
+
+def structures_errors(structures: object) -> list[tuple[str, str]]:
+    """Each way a project's own structures fall short of their companion: a JSON Pointer
+    into them and the message, in a stable order."""
+    checker = Draft202012Validator(_schemas()[STRUCTURES], registry=_registry())
+    return sorted(
+        (_pointer(error.absolute_path), error.message) for error in checker.iter_errors(structures)
     )
 
 

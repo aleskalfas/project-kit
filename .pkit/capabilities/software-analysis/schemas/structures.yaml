@@ -1,0 +1,34 @@
+# A project's own structures: what a project changes of each analysis kind's
+# shipped structure (software-analysis DEC-001 point 1). The capability's
+# README describes it, in its section "A project's own structures".
+#
+# - keyed by kind, never by file: `actor`, `use-case`, `journey`, `term` and
+#   `revalidation-record`, as `artefact-kinds.yaml` declares them
+# - `relabel` and `front-matter`: a shipped part's label, hint and example, and
+#   a shipped field's hint and example, replaced with no rule
+# - `tighten`: groups, each naming the project rule that asks for it, which add
+#   parts `after` a named element, make a shipped optional part required, or
+#   close the kind's list of labels
+#
+# Nothing here drops, loosens or reorders a shipped part, invents a form or
+# adds a kind. The check (`pkit analysis validate`) and the stamp (`pkit
+# analysis new`) read the file with the shipped structure.
+#
+# Document-shaped: the file IS the resource. The body below is the minimal
+# reference instance — valid, the schema's self-test, and the starting point
+# a project edits. Adopter-owned: it lives in the capability's `project/`
+# tier, which sync never touches; uninstalling the capability from a project
+# removes the tier, this file with it.
+
+schema_version: 1
+
+# Adopter-data binding (COR-023). The glob carries the distinguishing segments,
+# as the settings file's does.
+binds_to:
+  - "**/software-analysis/project/structures.yaml"
+
+pkit_schema: software-analysis:structures
+
+# --- reference instance -------------------------------------------------
+
+kinds: {}

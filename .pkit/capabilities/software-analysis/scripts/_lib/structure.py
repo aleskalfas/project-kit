@@ -58,6 +58,14 @@ How a body departs from its kind's structure:
 - **breaks its form:** a part or a front-matter field that does not hold any
   other form its element names, such as `numbered-steps` or `definition`. Each
   breach is its own departure, at the line of the item it is in.
+- **an undeclared label:** where a project's rule closes the kind's list of
+  labels (`Kind.closed`, `_lib/project_structure.py`), a bold run ending in a
+  colon that opens a line or a top-level list item, and that no element
+  declares, outside a part with a form, fenced code and comments.
+
+The elements are the kind's as it ships them, or as a project's own structure
+relabels and tightens them (`_lib/project_structure.py`): an element a project
+adds, or makes required, names the rule that asks for it (`Element.rule`).
 
 What each form reads, and how a part's list is read, is `_lib/forms.py`'s.
 Labels and sections a writer adds are never reported: the check judges only
@@ -107,6 +115,9 @@ HEADING, LABEL, OPENING = "heading", "label", "opening"
 #: How a body departs from its kind's structure: its parts, and then their forms
 #: (`_lib/forms.py`), the `sentence` form's own breach and every other form's.
 MISSING, OUT_OF_ORDER, EMPTY, NONE_REFUSED = ("missing", "out-of-order", "empty", "none-refused")
+
+#: A label the kind does not declare, where a project's rule closes its list of labels.
+UNDECLARED = "undeclared-label"
 FORM_BREACHES = frozenset({NOT_A_SENTENCE, BREAKS_FORM})
 
 #: One line of a body: its number in the file, counted from 1, and its text.
@@ -137,7 +148,11 @@ class Unreadable(Exception):
 class Element:
     """One element a kind declares: a heading, a label or an opening, with what a writer
     is told of it. A collection's file head declares no hint, so its `example` is the
-    words the stamp writes."""
+    words the stamp writes. `rule` is the project rule that adds the element, or makes
+    it required (`_lib/project_structure.py`); `None` for a part as the kind ships it.
+    `added` says the project added the element, rather than requiring a shipped one.
+    `aliases` are the texts a project relabelled it from, which a body written before
+    the relabel may carry (`Kind.as_written`)."""
 
     id: str
     type: str
@@ -148,6 +163,9 @@ class Element:
     form: str | None = None
     hint: str | None = None
     example: str | None = None
+    rule: str | None = None
+    added: bool = False
+    aliases: tuple[str, ...] = ()
 
     @property
     def filled(self) -> bool:
@@ -169,21 +187,36 @@ class Field:
 @dataclass(frozen=True)
 class Kind:
     """One kind's declared structure: its body's elements — a collection entry's
-    section's — in order, whether that order binds, a collection file's head, and the
-    front-matter fields a writer fills."""
+    section's — in order, whether that order binds, a collection file's head, the
+    front-matter fields a writer fills, and the ids of the elements it retired.
+
+    A project's own structure changes it (`_lib/project_structure.py`). `closed` names
+    the rules that close its list of labels. `delimiting` are the labels of parts a
+    project adds that do not bind on the body, which still end the part before them, so
+    a part that binds nothing never makes another fail. `as_written` holds a body that
+    may predate the project's changes, a record's or a withdrawn artefact's: a relabelled
+    part is found by its earlier text too, and a closed list reports nothing."""
 
     name: str
     sections: tuple[Element, ...]
     ordered: bool = True
     head: tuple[Element, ...] = ()
     fields: tuple[Field, ...] = ()
+    retired: frozenset[str] = frozenset()
+    closed: tuple[str, ...] = ()
+    delimiting: frozenset[str] = frozenset()
+    as_written: bool = False
 
     @property
     def labels(self) -> frozenset[str]:
-        """The texts of the labels the kind declares, as they are compared."""
-        return frozenset(
-            comparable(e.text) for e in (*self.sections, *self.head) if e.type == LABEL and e.text
-        )
+        """The texts of the labels that mark a part, as they are compared: those the kind
+        declares, and those `delimiting` gives — with `as_written`, each relabelled
+        label's earlier text too."""
+        declared = [e for e in (*self.sections, *self.head) if e.type == LABEL and e.text]
+        texts = {comparable(e.text or "") for e in declared}
+        if self.as_written:
+            texts |= {comparable(alias) for e in declared for alias in e.aliases}
+        return frozenset(texts | self.delimiting)
 
 
 @dataclass(frozen=True)
@@ -244,6 +277,7 @@ def _kind(name: str, entry: Mapping[str, Any]) -> Kind:
             Field(field, value["hint"], value["example"], value.get("form"))
             for field, value in fields.items()
         ),
+        retired=frozenset(entry.get("retired") or ()),
     )
 
 
@@ -475,7 +509,7 @@ def departures(
     elements = kind.head if head else kind.sections
     body = _read(lines, kind.labels)
     marked = [i for i, e in enumerate(elements) if e.type != OPENING]
-    taken = _taken(body.marks, elements, marked)
+    taken = _taken(body.marks, elements, marked, kind.as_written)
     found: dict[int, list[Departure]] = {
         i: [Departure(elements[i], MISSING)]
         for i in marked
@@ -488,7 +522,11 @@ def departures(
             if i not in taken:
                 continue
             nxt = next(
-                (m for m in range(after, len(body.marks)) if _matches(elements[i], body.marks[m])),
+                (
+                    m
+                    for m in range(after, len(body.marks))
+                    if _matches(elements[i], body.marks[m], kind.as_written)
+                ),
                 None,
             )
             if nxt is None:
@@ -509,7 +547,40 @@ def departures(
         breaches = judged(part, element, context)
         if breaches:
             found[i] = [Departure(element, b.how, b.line, b.detail) for b in breaches]
-    return [departure for i in sorted(found) for departure in found[i]]
+    undeclared = [] if head else _undeclared(body, kind, elements, parts)
+    return [departure for i in sorted(found) for departure in found[i]] + undeclared
+
+
+def _undeclared(
+    body: _Body, kind: Kind, elements: Sequence[Element], parts: Mapping[int, forms.Part]
+) -> list[Departure]:
+    """Where a project's rule closes the kind's list of labels (`kind.closed`), each bold
+    run ending in a colon that opens a line or a top-level list item and that no element
+    declares, outside fenced code and comments, as a label is read. A part with a form
+    is not read for it, so a step's or a seam's bold run stays content."""
+    if not kind.closed or kind.as_written:
+        return []
+    formed = {
+        number
+        for i, part in parts.items()
+        if elements[i].form is not None
+        for number in (part.line, *(row.number for row in part.rows))
+    }
+    found: list[Departure] = []
+    for k, content in enumerate(body.content):
+        if body.fences and body.fences[k]:
+            continue
+        label = _LABEL.match(content)
+        if label is None or body.numbers[k] in formed:
+            continue
+        text = label["text"]
+        if not (text.rstrip().endswith(":") or label["rest"].startswith(":")):
+            continue
+        if comparable(text) in kind.labels:
+            continue
+        shown = Element("", LABEL, text=text.rstrip().rstrip(":").strip(), rule=kind.closed[0])
+        found.append(Departure(shown, UNDECLARED, body.numbers[k], ", ".join(kind.closed)))
+    return found
 
 
 def _part(
@@ -553,7 +624,7 @@ def _context(
     steps: frozenset[int] | None = None
     named = "the steps"
     for i, element in enumerate(elements):
-        if element.form in forms.STEP_FORMS and i in parts:
+        if element.form in forms.STEP_FORMS and not element.added and i in parts:
             steps = forms.step_numbers(parts[i]) or None
             named = f"`**{element.text}:**`" if element.type == LABEL else f"`{element.text}`"
             break
@@ -601,25 +672,32 @@ def _texts(name: str, value: object) -> Iterator[tuple[str, str]]:
                 yield f"/{name}/{index}", item
 
 
-def _matches(element: Element, mark: _Mark) -> bool:
+def _matches(element: Element, mark: _Mark, as_written: bool = False) -> bool:
+    """Whether `mark` is the element's: its text, or, `as_written`, an earlier text."""
+    texts = {comparable(element.text or "")}
+    if as_written:
+        texts |= {comparable(alias) for alias in element.aliases}
     if element.type == LABEL:
-        return mark.type == LABEL and comparable(mark.text) == comparable(element.text or "")
+        return mark.type == LABEL and comparable(mark.text) in texts
     if element.type != HEADING or mark.type != HEADING or mark.level != element.level:
         return False
     if element.text is None:
         return bool(mark.text) and _PLACEHOLDER.fullmatch(mark.text) is None
-    return comparable(mark.text) == comparable(element.text)
+    return comparable(mark.text) in texts
 
 
 def _taken(
-    marks: Sequence[_Mark], elements: Sequence[Element], marked: Sequence[int]
+    marks: Sequence[_Mark],
+    elements: Sequence[Element],
+    marked: Sequence[int],
+    as_written: bool = False,
 ) -> dict[int, int]:
     """The mark each element takes, by index — one of its own, elements with fixed text
     choosing first, as they match fewer; an element no mark is left for takes none."""
     taken: dict[int, int] = {}
     for i in sorted(marked, key=lambda i: elements[i].text is None):
         free = (m for m in range(len(marks)) if m not in taken.values())
-        chosen = next((m for m in free if _matches(elements[i], marks[m])), None)
+        chosen = next((m for m in free if _matches(elements[i], marks[m], as_written)), None)
         if chosen is not None:
             taken[i] = chosen
     return taken

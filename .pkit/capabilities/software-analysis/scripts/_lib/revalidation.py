@@ -179,7 +179,7 @@ def stamp_record(
         pointer, message = problems[0]
         raise Refused(f"the record would not fit its schema at {pointer or '/'}: {message}")
 
-    kind = declared(structure.RECORD)
+    kind = declared(structure.RECORD, root)
     text = f"---\n{dump(data)}---\n\n{_body(request, outcomes, because, kind)}"
     _gaps_hold(text, kind, data, request.gaps)
     location = f"{analysis.location}/{REVALIDATIONS}/{request.date}-{request.slug}.md"

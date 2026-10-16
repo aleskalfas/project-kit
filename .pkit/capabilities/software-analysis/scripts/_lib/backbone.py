@@ -28,6 +28,11 @@ backbone through its commands:
   (COR-050 point 13): its state and body, its anchors with the files each path
   anchor stands on, and the commits behind each finding with the paths behind
   it, which the proposal reads;
+- **where an accepted rule binds** — `pkit rule-sets reach --json` (COR-051
+  point 7), the one reading of it (ADR-057 point 2): the check reads which of
+  the project's own rules bind on each artefact, where a project's tightening
+  of a kind's structure applies (DEC-001 point 1). The script never walks a
+  rule set's scope or inheritance itself;
 - **one data point as it resolves** — `pkit connections resolve <address>
   --json`: the check reads the evidence point the capability defines
   (DEC-001 point 7) through it. The command exits 1 on a point that does not
@@ -221,6 +226,50 @@ def explain(root: Path, artefact: str, run: Runner = subprocess.run) -> Mapping[
             f"this capability reads {EXPLAIN_VERSION}"
         )
     return document
+
+
+#: The version of `pkit rule-sets reach --json` this reading understands.
+REACH_VERSION = 1
+
+
+def reach(root: Path, run: Runner = subprocess.run) -> dict[str, frozenset[str]]:
+    """Which rules of the project's own rule sets bind on each artefact in the working
+    tree, by the artefact's location — `pkit rule-sets reach --json` (COR-051 point 7),
+    the backbone's one reading of where an accepted rule binds (ADR-057 point 2). Each
+    rule is its bare id, as a project rule is cited. An artefact on which none binds
+    is not there. Raises Unreadable when there is no document to read — from a
+    backbone that predates the command, too, saying so — or one of a version this
+    reading does not understand."""
+    argv = ["pkit", "rule-sets", "reach", "--json"]
+    proc = _run(root, argv, run)
+    if proc.returncode != 0 and "No such command" in (proc.stderr or ""):
+        raise Unreadable(
+            f"`{' '.join(argv)}` is not a command of the installed backbone, which predates "
+            f"it — upgrade it (`pkit upgrade`)"
+        )
+    try:
+        document = json.loads(proc.stdout or "") if proc.returncode == 0 else None
+    except ValueError:
+        document = None
+    if not isinstance(document, Mapping):
+        raise Unreadable(_failed(argv, proc))
+    version = document.get("schema_version")
+    if version != REACH_VERSION:
+        raise Unreadable(
+            f"`pkit rule-sets reach` answered schema_version {version!r}; this capability "
+            f"reads {REACH_VERSION}"
+        )
+    found: dict[str, frozenset[str]] = {}
+    for artefact in document.get("artefacts") or []:
+        if not isinstance(artefact, Mapping) or not isinstance(artefact.get("location"), str):
+            continue
+        rules = [r for r in artefact.get("rules") or [] if isinstance(r, Mapping)]
+        bare = frozenset(
+            str(r["rule"]) for r in rules if isinstance(r.get("rule"), str) and ":" not in r["rule"]
+        )
+        if bare:
+            found[artefact["location"]] = bare
+    return found
 
 
 def files_holding(
