@@ -1,0 +1,1 @@
+../../../.pkit/capabilities/living-docs/skills/docs-author/space.md
