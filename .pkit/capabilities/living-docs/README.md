@@ -9,7 +9,8 @@ pkit:
         - .pkit/capabilities/living-docs/schemas/**
         - .pkit/capabilities/living-docs/agents/**
         - .pkit/capabilities/living-docs/templates/**
-      record: ["living-docs:DEC-001", COR-023, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056]
+        - .pkit/capabilities/living-docs/skills/**
+      record: ["living-docs:DEC-001", COR-005, COR-023, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block"]
     revalidated:
       at: 2026-10-16T14:21:41Z
@@ -136,9 +137,11 @@ The agent's reader-review leaves those parts to the validator and judges the res
 
 `templates/` holds the writers' tools:
 
-- **`space-definition.md`** — a space's definition: a project rule set that inherits `LDOC`, carries a scope that selects the space's pages, and holds the space's own rules, each carrying its friction block in its own container. Copy it to `<definitions>/rule-sets/<space>.md` (below), rename the set, write the scope's paths, and name the file as the space's `definition`. The paths are the space's root, everything beneath it, and each place assigned to the space outside that root. The scope selects by the page type too, `types: [living-docs:page]`, so the definitions, records and rules under the root stay outside it. The user space adds one rule of its own: its readers' paths stay unbroken (DEC-001 point 3).
+- **`space-definition.md`** — a space's definition: a project rule set that inherits `LDOC`, carries a scope that selects the space's pages, and holds the space's own rules, each carrying its friction block in its own container. `pkit living-docs new space` writes it to `<definitions>/rule-sets/<space>.md` (below), with the set named and the scope's paths written, and names the file as the space's `definition` ([Authoring](#authoring-the-docs-author-skill)). The paths are the space's root, everything beneath it, and each place assigned to the space outside that root. The scope selects by the page type too, `types: [living-docs:page]`, so the definitions, records and rules under the root stay outside it. The user space adds one rule of its own: its readers' paths stay unbroken (DEC-001 point 3).
 - **`signpost.md`** — the page template for the one page kind the decision names: an index-like file that says what a folder holds and where to go (`RS-LDOC-005`). A page of another kind arrives with its template and its declared structure.
 - **`reference.md`** — the page template for a reference page: the page that describes one surface — an area, a capability, an adapter — to the reader who uses it, anchored to the code and decisions it describes.
+
+`pkit living-docs new page` stamps a page from its kind's template. A page of a kind your project adds is written by hand from that kind's template.
 
 A template you copy into the definitions location takes the template type there, so it is never a page ([Types](#types)).
 
@@ -175,7 +178,47 @@ A place inside a root belongs to that root's space; list it under `places` only 
 
 A definition with no scope selects nothing itself, so nothing is held to it. The places assigned to its space are checked only against the scopes of the other spaces' definitions. A space with no definition yet is checked the same way. The validator's summary names the spaces whose definitions carry a scope.
 
-**What the capability declares for you**, in its package metadata: the two roots, as the default places of their spaces (everything under each), each giving the page type, and its **definitions location**, `living-docs/` under the internal root — `docs/living-docs/` with the default root — which gives the template type. The spaces' definitions go in its `rule-sets/` folder, where the core reads them as your project's rule sets. When you place the first definition there, record the location in `.pkit/capabilities/living-docs/project/docs-locations.yaml` (`locations: {definitions: docs/living-docs}`), so changing a root later moves nothing already written (COR-049 point 5): `pkit docs record-location living-docs definitions` records where it lies now and says so — what it recorded, the root it was derived from, and where to change it.
+**What the capability declares for you**, in its package metadata: the two roots, as the default places of their spaces (everything under each), each giving the page type, and its **definitions location**, `living-docs/` under the internal root — `docs/living-docs/` with the default root — which gives the template type. The spaces' definitions go in its `rule-sets/` folder, where the core reads them as your project's rule sets. The location is recorded the first time a definition is placed there, in `.pkit/capabilities/living-docs/project/docs-locations.yaml` (`locations: {definitions: docs/living-docs}`). So changing a root later moves nothing already written (COR-049 point 5). `pkit living-docs new space` records it. For a definition you write by hand, `pkit docs record-location living-docs definitions` records it. It says what it recorded, the root it was derived from, and where to change it.
+
+## Authoring: the `docs-author` skill
+
+`pkit living-docs new` stamps a page or a space's definition. The `docs-author` skill pairs with it (COR-005). It walks you through the choices the command does not make. `pkit sync` deploys it with the other skills, in Claude Code as `.claude/skills/docs-author/`.
+
+```
+pkit living-docs new space <space> [--set <NAME>] [--dry-run]
+pkit living-docs new page <file> --space <space> --kind <kind> --reader <id> --title "<Title>"
+    [--path <glob>]... [--record <id>]... [--artefact <id>]... [--source <name>]... [--dry-run]
+```
+
+**One check decides.** Each command runs the validator's own check before and after it writes. That is the check `pkit living-docs validate` runs.
+
+- **A write that breaks validation is put back.** When the write brings an error your project did not have, the command puts back every file it wrote, refuses and quotes the error. So what it stamps passes `pkit living-docs validate` wherever your project passed it before.
+- **What the check cannot read refuses too.** That is your places, where the rules bind, the readers point, or the kinds' structures.
+- **`--dry-run`** makes the checks before the write, prints each file it would write and writes nothing.
+
+**`new space`** makes the three writes of creating a space (DEC-001 point 2):
+
+- **The definition,** `<definitions>/rule-sets/<space>.md`. It is a project rule set that inherits `LDOC` at its current major. Its scope selects the space's pages, the scope `pkit living-docs validate` names for a definition without one. The set is named after the space in upper case, unless you name it with `--set`.
+- **Its path,** as the space's `definition` in `.pkit/capabilities/living-docs/project/config.yaml`. Every other byte of the file is kept. The entry declares a space your project adds. Without the file, the command creates it.
+- **The definitions location,** recorded the first time.
+
+The user space's definition carries its one rule, `RS-<SET>-001`, reader paths stay unbroken. It is written accepted, so the review of the change that carries it accepts it (COR-051 point 4).
+
+- **It refuses** a space that has a definition, and a set name another rule set has. It refuses a space no scope can select yet, with no root of its own and no place assigned to it.
+- **It refuses a write that breaks validation,** such as a place outside every root, assigned to the space, that gives no page type.
+- **It reports, without refusing,** each page of the space that the space's rules fail once they bind.
+- **It writes nothing else:** nothing of the backbone configuration, and no other space's definition.
+
+**`new page`** writes one new page into a space of your project, from the template of a kind this capability declares, `signpost` or `reference`.
+
+- **Its front matter** names the reader and the kind. Its friction block lists the anchors you give, and is empty with none: the page then counts as unanchored for onboarding.
+- **Its anchors:** code by `--path`, decisions and their points by `--record`, and captured sources by `--source`. `--artefact` takes rules, analysis artefacts and the home section of a fact it summarises.
+- **Its body** is the template's. The title fills the level-1 heading. The command lists the lines that still hold the template's other placeholders.
+- **It refuses** an unknown space or kind, a file that exists, and a path that is no Markdown file of the repository. It refuses a path reached through a link, a reader that is not a word, and an empty or placeholder title.
+- **It refuses a file the check does not read as a page of the space you named.**
+- **It warns** when the space has no definition yet, since no rule binds on the page then.
+
+**A fresh project.** Both roots default to `docs/`. Two roots that are one folder give no space (DEC-001 point 1). So until you separate them, `new space` finds no scope for the user or technical space. Nor does `new page` write a page under them. Separate the roots first, as onboarding's first step says.
 
 ## Validation
 
@@ -254,7 +297,7 @@ On a project that already has documentation, nothing is anchored yet, so onboard
 
 1. **Declare where your documentation lives** — the roots and any places outside them, each assigned to a space ("Declaring your spaces" above) — until `pkit living-docs validate` reports no errors. Its summary counts the **unclassified documents**: documents in your spaces' places that are not pages yet. They are the onboarding's input.
 2. **Ask the agent to onboard.** It drafts **one plan**, each line citing its evidence, in four parts:
-   - **spaces** — which space each unclassified document becomes a page of, with its `reader` and `kind`, or why the spaces' rules do not govern it; roots still shared are separated, and a space with no definition gets one from the template, with the scope that selects its pages;
+   - **spaces** — which space each unclassified document becomes a page of, with its `reader` and `kind`, or why the spaces' rules do not govern it; roots still shared are separated, and a space with no definition gets one from `pkit living-docs new space`, which you run, with the scope that selects its pages;
    - **splits and rewrites** — pages that serve two readers, or that state another page's fact with no link to its home or no anchor on the home's section (`RS-LDOC-002`), split, merged or rewritten for their reader;
    - **anchors** — the anchors each page's statements need, each on the one part a statement rests on where it rests on one ("Anchoring one part", in Pages above), and the statements nothing grounds, raised as questions rather than kept;
    - **mapping** — if you keep a code-to-doc mapping (the project-management capability's, read through the work-tracking role's documentation-check point), which of its rules become path anchors on the pages they name, narrowed where an anchor would match most of the repository. Retiring the mapping is a separate change, for whoever owns it.
@@ -266,7 +309,7 @@ From then on, the friction check flags pages as their anchors change, and the ag
 
 ## What's shipped now, what's next
 
-Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the page and template types they give, the validator, the `LDOC` rule set with the parts the validator enforces where they bind, the space-definition template with its scope and the signpost and reference page templates with the page's schema and each page kind's declared structure, the connections (the readers and reading-evidence points, and the contribution to the documentation check), the `source` anchor kind with its resolver and the shape of a captured source, and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation.
+Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the page and template types they give, the validator, the `LDOC` rule set with the parts the validator enforces where they bind, the space-definition template with its scope and the signpost and reference page templates with the page's schema and each page kind's declared structure, the connections (the readers and reading-evidence points, and the contribution to the documentation check), the `source` anchor kind with its resolver and the shape of a captured source, and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation. Shipped too: the authoring command for a page and a space, `pkit living-docs new`, with its `docs-author` skill.
 
 ## Citing this capability's decisions
 
