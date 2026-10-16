@@ -101,7 +101,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -114,7 +113,7 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, session_guard
+from _lib import bootstrap_gate, issue_branch, session_guard
 from _lib.agent_verdicts import PATH_LOCAL, gate_candidates, stamp_verdict
 from _lib.audit import short_sha
 from _lib.author_delta import author_delta, base_kept
@@ -338,7 +337,12 @@ def main() -> int:
     return review().exit_code
 
 
-def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun:
+def review(
+    argv: list[str] | None = None,
+    *,
+    pinned_head: str = "",
+    branch_reading: issue_branch.Reading | None = None,
+) -> ReviewRun:
     """Run review-pr on `argv` (default: the command line).
 
     `pinned_head` is for a verb that composes this one (`land-work`, #1203): the
@@ -350,6 +354,10 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
     none runs either (exit 2, `ReviewRun.reason`). When it is found at
     another head after the reviews, the verdicts they made are posted against
     the pinned head, and the run exits 3 with `ReviewRun.moved_to` set.
+
+    `branch_reading` is the issue's branch as that verb read it
+    (`_lib.issue_branch`, #1608), so the run neither reads it again nor finds
+    another.
     """
     parser = argparse.ArgumentParser(
         description=(
@@ -407,6 +415,10 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
     )
     session_guard.add_override_argument(parser)
     args = parser.parse_args(argv)
+    if branch_reading is not None and branch_reading.issue != args.issue_number:
+        raise ValueError(
+            f"branch_reading is #{branch_reading.issue}'s branch, not #{args.issue_number}'s"
+        )
 
     try:
         agent_timeout = _resolve_agent_timeout(args.timeout, os.environ)
@@ -453,8 +465,16 @@ def review(argv: list[str] | None = None, *, pinned_head: str = "") -> ReviewRun
             "Add an entry pointing at a deployed agent in .claude/agents/.",
         )
 
-    # Find the issue's branch + PR.
-    branch = _find_issue_branch(args.issue_number)
+    # Find the issue's branch + PR. Of several local branches, the one with the
+    # issue's open PR (#1608); a composing verb hands its reading on.
+    reading = (
+        branch_reading
+        if branch_reading is not None
+        else issue_branch.read(args.issue_number, config)
+    )
+    if reading.refusal:
+        return _stopped(2, f"error: {reading.refusal}")
+    branch = reading.branch
     if branch is None:
         return _stopped(2, f"error: no local branch matching `*/{args.issue_number}-*` found.")
 
@@ -1288,26 +1308,6 @@ def _get_local_registered(config: dict) -> list[dict]:
         return []
     local = agents.get("local_registered") or []
     return [e for e in local if isinstance(e, dict) and e.get("name")]
-
-
-def _find_issue_branch(issue_number: int) -> str | None:
-    try:
-        proc = subprocess.run(
-            ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except FileNotFoundError:
-        return None
-    if proc.returncode != 0:
-        return None
-    pattern = re.compile(rf"^[a-z]+/{issue_number}-[a-z0-9-]+$")
-    for line in proc.stdout.splitlines():
-        line = line.strip()
-        if pattern.match(line):
-            return line
-    return None
 
 
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:

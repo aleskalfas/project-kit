@@ -549,6 +549,129 @@ def test_a_rule_whose_fill_names_no_offered_point_binds_nowhere(repo: AdopterRep
     assert errors(repo, Kind.UNDECLARED_FILL)
 
 
+def _fill_of_a_fill(offering_status: str | None = None) -> dict[str, dict[str, Any]]:
+    """CMN's RS-CMN-001 offers `where`, proposed unless `offering_status` is given. The
+    shared MID's accepted RS-MID-001 fills that point and offers `how`. DOC, scoped to
+    the guides, holds the accepted RS-DOC-001, which fills RS-MID-001#how."""
+    offering = _offering()
+    if offering_status is None:
+        del offering["rules"]["RS-CMN-001"]["status"]
+    else:
+        offering["rules"]["RS-CMN-001"]["status"] = offering_status
+    return {
+        "cmn": offering,
+        "mid": rule_set(
+            "MID", inherits=["CMN@1"], entries=rules("RS-MID-001", offers=["how"], **_filling())
+        ),
+        "doc": rule_set(
+            "DOC",
+            inherits=["MID@1"],
+            scope=scoped(f"{GUIDES}/**"),
+            entries=rules("RS-DOC-001", fills=["RS-MID-001#how"], **anchored_to("RS-MID-001")),
+        ),
+    }
+
+
+def test_a_fill_of_a_rule_that_binds_nowhere_binds_nowhere(repo: AdopterRepo) -> None:
+    """RS-MID-001 is accepted and fills a proposed rule, so it binds nowhere. A fill binds
+    only where the rule it fills binds (COR-051 point 7), so RS-DOC-001, which fills a
+    point RS-MID-001 offers, binds nowhere either (#1616). The preview takes RS-CMN-001 as
+    accepted, and then all three bind, each only under the preview."""
+    lay_out(repo, _fill_of_a_fill(), a=page())
+    assert bound(repo) == ["RS-CMN-002"]
+    assert previewed(repo) == [
+        ("RS-CMN-001", True),
+        ("RS-CMN-002", False),
+        ("RS-DOC-001", True),
+        ("RS-MID-001", True),
+    ]
+    answer = rs.reach_at(repo.root, preview=True)[2].of(A)
+    assert {b.rule.id: b.fills for b in answer.bindings if b.rule.fills} == {
+        "RS-DOC-001": ("RS-MID-001#how",),
+        "RS-MID-001": ("RS-CMN-001#where",),
+    }
+    assert not rs.validate_rule_sets(repo.root).errors
+    # Once the rule at the head of the chain is accepted, each fill binds, unmarked.
+    lay_out(repo, _fill_of_a_fill("accepted"), a=page())
+    assert bound(repo) == ["RS-CMN-001", "RS-CMN-002", "RS-DOC-001", "RS-MID-001"]
+    assert binding(repo, "RS-DOC-001").fills == ("RS-MID-001#how",)
+    assert [rule for rule, marked in previewed(repo) if marked] == []
+    # Withdrawn, it binds nothing in a preview either, and neither does a fill below it.
+    lay_out(repo, _fill_of_a_fill("withdrawn"), a=page())
+    assert previewed(repo) == [("RS-CMN-002", False)]
+
+
+def test_the_command_gives_a_fill_only_where_the_rule_it_fills_binds(repo: AdopterRepo) -> None:
+    """What the reading command gives, a gate's and a component's script's one source of
+    where rules bind (ADR-057 point 2)."""
+    lay_out(repo, _fill_of_a_fill(), a=page())
+    (entry,) = json.loads(_cli("reach", "--json").output)["artefacts"]
+    assert [r["rule"] for r in entry["rules"]] == ["RS-CMN-002"]
+    (entry,) = json.loads(_cli("reach", "--preview", "--json").output)["artefacts"]
+    fill = next(r for r in entry["rules"] if r["rule"] == "RS-DOC-001")
+    assert (fill["fills"], fill["previewed"]) == (["RS-MID-001#how"], True)
+
+
+def test_a_fill_conflict_at_a_point_of_a_rule_that_binds_nowhere_fails_no_validation(
+    repo: AdopterRepo,
+) -> None:
+    """USER and DOC both inherit MID and select the artefact, and neither inherits the
+    other. DOC fills RS-MID-001#how and USER does not. RS-MID-001 binds nowhere, so no fill
+    of its point binds and none conflicts: validation's `rule-sets` member, which reads
+    the walk, fails nothing. The preview names the conflict, marked."""
+    sets = _fill_of_a_fill()
+    sets["user"] = rule_set("USER", inherits=["MID@1"], scope=scoped(f"{GUIDES}/**"))
+    lay_out(repo, sets, a=page())
+    assert rs.reach_at(repo.root)[2].of(A).conflicts == ()
+    assert errors(repo, Kind.FILL_CONFLICT) == []
+    (conflict,) = rs.reach_at(repo.root, preview=True)[2].of(A).conflicts
+    assert isinstance(conflict, rs.FillConflict)
+    assert (conflict.point, conflict.previewed) == ("RS-MID-001#how", True)
+    # With RS-CMN-001 accepted, RS-MID-001 binds, and the conflict stands without a preview.
+    sets["cmn"] = _offering()
+    lay_out(repo, sets, a=page())
+    (conflict,) = rs.reach_at(repo.root, preview=True)[2].of(A).conflicts
+    assert isinstance(conflict, rs.FillConflict) and not conflict.previewed
+    assert [f.location for f in errors(repo, Kind.FILL_CONFLICT)] == [A]
+    assert "RS-DOC-001" not in bound(repo) and "RS-MID-001" in bound(repo)
+
+
+def test_fills_that_fill_each_other_end_the_walk(repo: AdopterRepo) -> None:
+    """Two sets inherit each other, and each one's rule fills a point the other's offers.
+    Validation fails the cycle, and the walk ends. Closed on itself, as here, the cycle
+    binds neither fill."""
+    lay_out(
+        repo,
+        {
+            "one": rule_set(
+                "ONE",
+                inherits=["TWO@1"],
+                scope=scoped(f"{GUIDES}/**"),
+                entries=rules(
+                    "RS-ONE-001",
+                    offers=["p"],
+                    fills=["RS-TWO-001#q"],
+                    **anchored_to("RS-TWO-001"),
+                ),
+            ),
+            "two": rule_set(
+                "TWO",
+                inherits=["ONE@1"],
+                entries=rules(
+                    "RS-TWO-001",
+                    offers=["q"],
+                    fills=["RS-ONE-001#p"],
+                    **anchored_to("RS-ONE-001"),
+                ),
+            ),
+        },
+        a=page(),
+    )
+    assert bound(repo) == []
+    assert previewed(repo) == []
+    assert errors(repo, Kind.INHERITANCE_CYCLE)
+
+
 # --- the declared check parts (COR-051 point 2) ------------------------------------------
 
 
@@ -931,6 +1054,54 @@ def test_a_rule_the_walk_without_a_preview_binds_is_never_marked(repo: AdopterRe
     answer = rs.reach_at(repo.root, preview=True)[2].of(A)
     (fill,) = [b for b in answer.bindings if b.rule.id == "RS-DOC-001"]
     assert (fill.fills, fill.previewed) == (("RS-CMN-003#how",), False)
+    (conflict,) = answer.conflicts
+    assert isinstance(conflict, rs.FillConflict)
+    assert (conflict.point, conflict.previewed) == ("RS-CMN-001#where", True)
+
+
+def test_a_fill_the_walk_without_a_preview_binds_is_never_marked_down_a_chain(
+    repo: AdopterRepo,
+) -> None:
+    """The test above, one level down. RS-MID-001 fills RS-CMN-001#where, where only the
+    preview finds a conflict, so the preview loses it. RS-DOC-001 fills a point RS-MID-001
+    offers, and RS-GUIDE-001 a point RS-DOC-001 offers. Both bind without a preview, so
+    neither is marked where the preview binds it, through RS-CMN-003#x or otherwise
+    (ADR-057 point 2). The double fill is a validation error, read here for the walk."""
+    cmn = rule_set(
+        "CMN",
+        entries={**rules("RS-CMN-001", offers=["where"]), "RS-CMN-003": {"offers": ["x"]}},
+    )
+    mid = rules("RS-MID-001", offers=["how"], **_filling())
+    doc = {
+        **rules(
+            "RS-DOC-001",
+            offers=["r"],
+            fills=["RS-MID-001#how", "RS-CMN-003#x"],
+            **anchored_to("RS-MID-001"),
+        ),
+        "RS-DOC-002": _filling(origin=QUOTE),  # proposed
+    }
+    guide = rules("RS-GUIDE-001", fills=["RS-DOC-001#r"], **anchored_to("RS-DOC-001"))
+    lay_out(
+        repo,
+        {
+            "cmn": cmn,
+            "mid": rule_set("MID", inherits=["CMN@1"], entries=mid),
+            "doc": rule_set("DOC", inherits=["MID@1"], scope=scoped(f"{GUIDES}/**"), entries=doc),
+            "guide": rule_set(
+                "GUIDE", inherits=["DOC@1"], scope=scoped(f"{GUIDES}/**"), entries=guide
+            ),
+        },
+        a=page(),
+    )
+    assert binding(repo, "RS-DOC-001").fills == ("RS-MID-001#how",)
+    assert binding(repo, "RS-GUIDE-001").fills == ("RS-DOC-001#r",)
+    answer = rs.reach_at(repo.root, preview=True)[2].of(A)
+    fills = {b.rule.id: (b.fills, b.previewed) for b in answer.bindings if b.rule.fills}
+    assert fills == {
+        "RS-DOC-001": (("RS-CMN-003#x",), False),
+        "RS-GUIDE-001": (("RS-DOC-001#r",), False),
+    }
     (conflict,) = answer.conflicts
     assert isinstance(conflict, rs.FillConflict)
     assert (conflict.point, conflict.previewed) == ("RS-CMN-001#where", True)

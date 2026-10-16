@@ -14,8 +14,10 @@ flipping a draft PR to ready) and assigning reviewers. Per DEC-026:
 
 Gates per DEC-026:
   - Membership (open-mode degrades to no-op).
-  - Current branch matches `<type>/<N>-<slug>` AND `<type>` matches
-    issue's `type:*` label per DEC-013.
+  - The issue's branch is a local one matching `<type>/<N>-<slug>` AND its
+    `<type>` matches the issue's `type:*` label per DEC-013. Of several
+    matching, the one with the issue's open PR; with none or more than one
+    open, it refuses, naming each (`_lib/issue_branch`, #1608).
   - Issue's current state can move to Review per workflow.yaml (or is
     already there, so a re-run works). Checked before any PR is opened or
     flipped ready and before reviewers are requested, so a refused move
@@ -51,7 +53,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -65,6 +66,7 @@ from _lib import (
     classification_rules,
     composed_move,
     default_branch,
+    issue_branch,
     issue_position,
     pr_validation,
     session_guard,
@@ -169,8 +171,12 @@ def main() -> int:
     if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
-    # Find local branch for issue + validate shape.
-    branch = _find_issue_branch(args.issue_number)
+    # Find the issue's local branch (#1608): of several, the one with its open PR.
+    reading = issue_branch.read(args.issue_number, config)
+    if reading.refusal:
+        print(f"error: {reading.refusal}", file=sys.stderr)
+        return 2
+    branch = reading.branch
     if branch is None:
         print(
             f"error: no local branch matching `*/{args.issue_number}-*` found.",
@@ -357,26 +363,6 @@ def main() -> int:
 
 
 # ---- helpers -----------------------------------------------------------
-
-
-def _find_issue_branch(issue_number: int) -> str | None:
-    try:
-        proc = subprocess.run(
-            ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except FileNotFoundError:
-        return None
-    if proc.returncode != 0:
-        return None
-    pattern = re.compile(rf"^[a-z]+/{issue_number}-[a-z0-9-]+$")
-    for line in proc.stdout.splitlines():
-        line = line.strip()
-        if pattern.match(line):
-            return line
-    return None
 
 
 def _derive_branch_prefix(
