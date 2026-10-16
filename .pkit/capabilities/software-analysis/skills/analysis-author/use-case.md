@@ -55,6 +55,6 @@ Steps and variants are **only ever added**, never renumbered or removed: journey
 - **A new step** takes the next free number, even when it goes between two steps. The path keeps its order, and no number moves.
 - **A new variant** takes the next free letter of its step.
 - **A step that no longer happens** stays in place, its number kept, marked withdrawn. A variant does the same.
-- **The check.** `pkit analysis check-numbers` compares each use case with the same use case where your branch left the default branch, and fails on a step or a variant renumbered or removed. It fails only where the format rule, `RS-SAN-001`, is accepted and binds. While that rule is proposed, run it with `--preview`: it reports what it would fail, and never fails.
+- **The check.** `pkit analysis check-numbers` compares each use case with the same use case where your branch left its base, the default branch unless you name another, and fails on a step or a variant renumbered or removed. It fails only where the format rule, `RS-SAN-001`, is accepted and binds. While that rule is proposed, run it with `--preview`: it reports what it would fail, and never fails.
 
 A use case no actor pursues any more is withdrawn, never deleted.

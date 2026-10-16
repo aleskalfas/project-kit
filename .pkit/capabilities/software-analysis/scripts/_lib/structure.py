@@ -509,12 +509,12 @@ def departures(
     elements = kind.head if head else kind.sections
     body = _read(lines, kind.labels)
     found, at = _located(body, elements, kind)
-    parts = {i: part for i in range(len(elements)) if (part := _part(i, elements, at, body))}
-    context = _context(elements, parts, fields, titles)
+    carried = {i: part for i in range(len(elements)) if (part := _part(i, elements, at, body))}
+    context = _context(elements, carried, fields, titles)
     for i, element in enumerate(elements):
         if i in found or not element.filled:
             continue
-        part = parts.get(i)
+        part = carried.get(i)
         if part is None:
             if element.type == OPENING and element.required:
                 found[i] = [Departure(element, MISSING)]
@@ -522,15 +522,15 @@ def departures(
         breaches = judged(part, element, context)
         if breaches:
             found[i] = [Departure(element, b.how, b.line, b.detail) for b in breaches]
-    undeclared = [] if head else _undeclared(body, kind, elements, parts)
+    undeclared = [] if head else _undeclared(body, kind, elements, carried)
     return [departure for i in sorted(found) for departure in found[i]] + undeclared
 
 
 def parts(lines: Sequence[Line], kind: Kind) -> list[tuple[Element, forms.Part]]:
     """Each part of `kind`'s body that a body with `lines` carries, with its element, in
-    declared order, found as `departures` finds it. The append-only check reads a use
-    case's steps and variants here (`_lib/append_only.py`), so the two never read a body
-    apart."""
+    declared order, found as `departures` finds it for the same kind. The append-only
+    check reads a use case's steps and variants here (`_lib/append_only.py`), with a kind
+    of its own making (`append_only._kind`)."""
     elements = kind.sections
     body = _read(lines, kind.labels)
     _found, at = _located(body, elements, kind)

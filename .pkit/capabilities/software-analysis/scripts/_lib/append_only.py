@@ -18,12 +18,15 @@ changes meaning.
   in the change, has nothing to compare, and passes.
 - **What it reads.** A use case's steps are the numbered items of the part
   whose form lists steps, its *Main path*, and its variants the lettered items
-  of its *Variants* part. Both are read as the structure check reads a body
-  (`structure.parts`, `_lib/forms.py`), as the project's own structures relabel
-  the kind, a label any of the project's groups adds ending the part before it.
-  A step is known by its number, a variant by its step's number and its letter,
-  in either case. Its text is what follows, white space folded. The text at the
-  merge-base is read from the clone alone (`backbone.text_at`).
+  of its *Variants* part. Both are found as the structure check finds a part
+  and reads its list (`structure.parts`, `_lib/forms.py`), with a use-case kind
+  of this check's making (`_kind`): the shipped one as the project's own
+  structures relabel it, a part found by its shipped label too, and a label any
+  of the project's groups adds, whatever its rule, ending the part before it.
+  Both sides are read with that one kind. A step is known by its number, a
+  variant by its step's number and its letter, in either case. Its text is what
+  follows, white space folded. The text at the merge-base is read from the
+  clone alone (`backbone.text_at`).
 - **What it reports,** for each step or variant the merge-base held:
   - **renumbered:** its text stands under another number or letter, one the
     merge-base did not give that text, and no longer under its own;
@@ -33,7 +36,10 @@ changes meaning.
   letter it takes, after the last or between two. So does one whose number now
   holds other text and whose own text stands nowhere else: an edit, since the
   check cannot tell a reworded step from another one. A step that no longer
-  happens stays, its number kept, marked withdrawn.
+  happens stays, its number kept, marked withdrawn. The check matches text
+  alone, so it misses a step renumbered and reworded at once whose number still
+  holds a step. And it reads a new step that repeats, word for word, the old
+  text of a step this change rewords as that step renumbered.
 - **Where it binds.** Where the format rule, RS-SAN-001, binds on the use case
   in the working tree, and at its status, as the structure check holds a body
   (`_lib/check.py`): the backbone's one reading of where a rule binds, `pkit
@@ -169,9 +175,8 @@ def compare(
             then = backbone.text_at(root, fork, was.path)
         except backbone.GitFailed as exc:
             raise Unreadable(
-                f"{was.path}, as {ref} held it where this branch left it at {fork_short}, could "
-                f"not be read from this clone: {exc}. Nothing is fetched here, so a partial clone "
-                f"must hold that file"
+                f"this clone lacks {was.path} where this branch left it, at {fork_short}: {exc}. "
+                f"Nothing is fetched here, so a partial clone must hold that file"
             ) from exc
         changed = _changes(use_case, read(then, kind), read(now, kind), ref, fork_short)
         departing += bool(changed)

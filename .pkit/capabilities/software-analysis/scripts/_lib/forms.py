@@ -467,7 +467,7 @@ def judge_none(form: str | None, part: Part, context: Context) -> list[Breach]:
 
 def step_numbers(part: Part) -> frozenset[int]:
     """The numbers of a steps part's items, as a variant names them."""
-    return frozenset(n for n, _rest in (_numbered(item) for item in listing(part).items) if n)
+    return frozenset(number for number, _item, _text in steps(part) if number)
 
 
 def steps(part: Part) -> list[tuple[int, Item, str]]:
@@ -488,14 +488,22 @@ def variants(part: Part) -> list[tuple[str, Item, str]]:
     and its text after the label, white space folded."""
     found: list[tuple[str, Item, str]] = []
     for item in listing(part).items:
-        first = item.rows[0].text if item.rows else ""
-        opening = _VARIANT.match(first)
-        if opening is None:
-            continue
-        step = int(opening["bold"] or opening["plain"])
-        letter = (opening["b"] or opening["p"]).lower()
-        found.append((f"{step}{letter}", item, _after(first[opening.end() :], item)))
+        lettered = _lettered(item)
+        if lettered is not None:
+            step, letter, rest = lettered
+            found.append((f"{step}{letter.lower()}", item, _after(rest, item)))
     return found
+
+
+def _lettered(item: Item) -> tuple[int, str, str] | None:
+    """A variant's step number and letter, `2a.` or `**2a.**`, as its item opens with
+    them, and its first row's text after them; `None` for an item that does not open so."""
+    first = item.rows[0].text if item.rows else ""
+    opening = _VARIANT.match(first)
+    if opening is None:
+        return None
+    step = int(opening["bold"] or opening["plain"])
+    return step, opening["b"] or opening["p"], first[opening.end() :]
 
 
 def _after(rest: str, item: Item) -> str:
@@ -614,8 +622,8 @@ def _variants(part: Part, context: Context) -> list[Breach]:
         ]
     found: list[Breach] = []
     for item in items:
-        opening = _VARIANT.match(item.rows[0].text if item.rows else "")
-        if opening is None:
+        lettered = _lettered(item)
+        if lettered is None:
             found.append(
                 Breach(
                     BREAKS_FORM,
@@ -624,9 +632,9 @@ def _variants(part: Part, context: Context) -> list[Breach]:
                 )
             )
             continue
-        step = int(opening["bold"] or opening["plain"])
+        step, letter, _rest = lettered
         if context.steps is not None and step not in context.steps:
-            label = f"{step}{opening['b'] or opening['p']}"
+            label = f"{step}{letter}"
             found.append(
                 Breach(
                     BREAKS_FORM,

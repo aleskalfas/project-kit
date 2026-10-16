@@ -26,6 +26,7 @@ from tests.analysis_repo import (
     ANALYSIS_SET,
     MAIN,
     NUMBERS,
+    SA,
     SAN_REL,
     USE_CASES,
     VALIDATE,
@@ -39,6 +40,7 @@ from tests.analysis_repo import (
 )
 
 RUN = f"{USE_CASES}/UC-001-run-suite.md"
+STRUCTURES = f"{SA.as_posix()}/project/structures.yaml"
 
 #: UC-001's main path and variants, as the default branch holds them.
 STEPS = (
@@ -321,6 +323,21 @@ def test_it_binds_only_through_a_set_of_the_project_s_own(branched: AdopterRepo)
     assert steps_line(answer) == (
         "steps (RS-SAN-001, accepted): nothing compared. The rule does not bind on 1 of the 1 "
         "use case(s) here, so they are not compared."
+    )
+
+
+def test_project_structures_it_cannot_read_fail_rather_than_pass(branched: AdopterRepo) -> None:
+    """The project's own structures relabel the parts it reads: while they cannot be read,
+    nothing is compared, and the check fails where the rule binds, saying why."""
+    rewrite(branched, SWAPPED, VARIANTS)
+    branched.write({STRUCTURES: "kinds: 3\n"})
+    completed = numbers(branched, "--base", MAIN, "--json")
+    assert completed.returncode == 1, completed.stdout + completed.stderr
+    answer = document(completed)
+    assert [(f["severity"], f["location"]) for f in answer["findings"]] == [("error", STRUCTURES)]
+    assert steps_line(answer).startswith(
+        f"steps (RS-SAN-001, accepted): not checked — the project's own structures, {STRUCTURES}, "
+        "cannot be read;"
     )
 
 
