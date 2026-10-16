@@ -20,6 +20,7 @@ pkit:
         - src/project_kit/friction_discovery.py
         - src/project_kit/process_dependencies.py
         - src/project_kit/migrations.py
+        - src/project_kit/install.py
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
         - src/project_kit/treecopy.py
@@ -790,7 +791,9 @@ The upgrade command transitions an adopter project to a target backbone version.
 
 **The report and the dry run** name the target, each component's move, and the replay where no completion is recorded. They list each component's migrations and each collision the upgrade asks about. `--dry-run` asks nothing and writes nothing.
 
-**Seed paths.** One seeding step creates the paths a project is seeded with: each area's `project/` folder, the scratchpad's state folders, the agents overlay (`.pkit/agents/project/overlay.yaml`), each adapter's `settings/project/settings.json`, and each shipped capability's `project/` folder ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 11). First install and a version transition run it, and create each one that is missing, never over one that exists. Sync runs none, so a seed the project deleted on purpose returns only at the next transition (COR-059 point 8). `pkit agents reconcile --write` also creates a missing overlay, the one writer outside the lifecycle that creates a seed path.
+### Seed paths
+
+One seeding step creates the paths a project is seeded with: each area's `project/` folder, the scratchpad's state folders, the agents overlay (`.pkit/agents/project/overlay.yaml`), each adapter's `settings/project/settings.json`, and each shipped capability's `project/` folder ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 11). Each folder it creates holds an empty `.gitkeep`. First install and a version transition run it, and create each one that is missing, never over one that exists. Sync runs none, so a seed the project deleted on purpose returns only at the next transition (COR-059 point 8).
 
 ### A new collision
 
@@ -864,13 +867,6 @@ The content a sync writes, and the target of a backbone upgrade, is the running 
 - **`capabilities install` and `capabilities upgrade` call it in both directions too,** at their entry, before they read or write anything. Each copies the capability the running pkit's bundle ships, so each stops in sync's states, with sync's remedies, the command named as the operator would run it again. So every shipped file a project holds comes from the release its backbone records, wherever a version names one content: under a tagged install, the one the CLI README recommends ("Installing pkit on PATH", ADR-065 point 12). `capabilities register` copies nothing and does not call it.
 - **`upgrade` calls it in the older direction only,** before it writes anything: it refuses a running pkit older than the newest of `backbone_version`, `completed_version` and the pin. Upgrade moves the project to the running version, so a newer pkit is what it is for. It calls the propagation step, never the sync command, so the sync command's guard never stops it.
 - **How it stops:** exit non-zero, name the state found and its remedy, and write nothing: no content, no manifest, no pin. No flag overrides it, `sync --force` and the capability commands' `--force` included, and a dry run stops too.
-- **The remedies,** the first that matches winning:
-  - under the router's fallback: reconnecting, or the pin's version
-  - with no manifest, or no version: `pkit upgrade`
-  - under an older pkit: the pkit the project needs (#1212)
-  - over an incomplete upgrade: `pkit upgrade`
-  - with the content behind the pin, under the pin's code: `pkit upgrade`
-  - unpinned, under a newer pkit: `pkit upgrade` to move, or `pkit pin` to stay
 
   The CLI README's `sync` entry carries the wording, and the router's notice when it runs a pkit other than the pin.
 - **No path down:** migrations are forward-only (COR-010) and a pin is never moved down (ADR-049), so a project is rolled back with git (`git checkout <ref> -- .pkit/`), which restores kit-owned and project-owned state, both recorded versions included, together.
