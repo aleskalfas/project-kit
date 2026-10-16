@@ -1,0 +1,1 @@
+../../../.pkit/capabilities/living-docs/skills/docs-author/docs-author.md
