@@ -19,9 +19,8 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-15T17:28:13Z
-      outcome: unchanged
-      unchanged-because: "COR-050 point 2 lets an artefact anchor name a document's section or its lead, and point 7 says when such an anchor is dead or ambiguous. COR-051 point 3 says '#' names them. record_points.py changes only two docstrings, which name the reading of artefact anchors. This README names a record's point as COR-050#11 in an anchor's value, says a list-form record holds no point an anchor can name, and cites a rule's extension point, and all of it holds."
+      at: 2026-10-16T13:01:52Z
+      outcome: updated
 ---
 
 # Decision records

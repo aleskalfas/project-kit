@@ -24,9 +24,8 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-15T17:28:14Z
-      outcome: unchanged
-      unchanged-because: COR-050 is refined so an artefact anchor may name a document's section or its lead. This guide's friction gate says what fails the change check, how to answer, and how a reviewer checks the answers, and leaves the rules to the CLI reference's Friction checks section. A dead, ambiguous or refused part anchor fails as a dead anchor, which the guide names, so nothing it says changes.
+      at: 2026-10-16T13:01:54Z
+      outcome: updated
 ---
 
 # Contributing to project-kit

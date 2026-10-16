@@ -17,9 +17,8 @@ pkit:
         - .pkit/lifecycle/README.md#the-replay-a-missing-completion
       source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-15T08:24:58Z
-      outcome: unchanged
-      unchanged-because: PRJ-004 now names a release tag in its canonical install, and says the release step cuts the tag matching .pkit/VERSION on each release that moves it, as PRJ-002 says. The guide says the release step tags the committed backbone VERSION, that a component-only release cuts no tag, and that install stays the git URL at a tag. All three still hold, so the guide holds.
+      at: 2026-10-16T13:01:48Z
+      outcome: updated
 ---
 
 # Release flow — changesets + the release step

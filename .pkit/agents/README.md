@@ -19,9 +19,8 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-15T17:58:31Z
-      outcome: unchanged
-      unchanged-because: COR-050 is refined so an artefact anchor may name a document's section or its lead, and says where such an anchor is dead, ambiguous or refused. This README states who writes and who checks a change's answers (COR-050 point 3) and how agents cite rule ids. It says the rule-set reviewer judges what a change alters or brings under a rule, and what alters an artefact is still its whole content. So it holds.
+      at: 2026-10-16T13:01:50Z
+      outcome: updated
 ---
 
 # Agents
