@@ -79,7 +79,7 @@ Every file has exactly one owner — kit or project — and they never share a p
 
 This invariant is what makes the namespace split above operationally safe. project-kit's sync operation copies a fixed set of kit-owned paths. There is no conflict UI, no marker comments, no include-with-substitution mechanism.
 
-Sync reads from your side what it needs, such as the versions your project records. It writes into a file of yours only through merge delivery's tier that asks nothing, which adds the kit's entries and never removes one you wrote ([the lifecycle README, "What sync writes"](../lifecycle/README.md#what-sync-writes)). Sync **cannot** produce a conflict, and it cannot break anything you wrote.
+Sync reads from your side what it needs, such as the versions your project records. It writes into a file of yours only through merge delivery's tier that asks nothing. That tier adds the kit's entries and never removes one you wrote ([the lifecycle README, "What sync writes"](../lifecycle/README.md#what-sync-writes)). Sync **cannot** produce a conflict, and it cannot break anything you wrote.
 
 Sync runs at the versions your project records, and moves none of them ([COR-059](core/COR-059-version-transition.md)). It writes the methodology's content at those versions, the state derived from your own declarations, and your project-owned paths through merge delivery only, and nothing else. It runs no migration, and writes no recorded version, no manifest and no seed path ([the lifecycle README, "What sync writes"](../lifecycle/README.md#what-sync-writes)).
 
@@ -206,7 +206,7 @@ To refine a record in place:
 
 The commit message says what changed and why.
 
-**To supersede**, write a new record that sets `supersedes:` to the old record's id. In the old record, set `status: superseded`, put a *Superseded by …* line at the top of its body, and leave the rest of the body as it stood; if it is an ADR, also set `superseded_by:` in its front matter (the ADR schema in COR-025). A record that a later one overturns only in part stays `accepted`, and its top line reads *Partially superseded by …* instead — that line is its superseded-by line. The later record sets no `supersedes:` for it, since that field names only a record it replaces whole.
+**To supersede**, write a new record that sets `supersedes:` to the old record's id. In the old record, set `status: superseded`, put a *Superseded by …* line at the top of its body, and leave the rest of the body as it stood; if it is an ADR, also set `superseded_by:` in its front matter (the ADR schema in COR-025). A record that a later one overturns only in part stays `accepted`, and its top line reads *Partially superseded by …* instead — that line is its superseded-by line. The later record sets no `supersedes:` for the earlier record, since that field names only a record the later one replaces whole.
 
 Two in-body markers are *not* narration of a revision and are correct to keep: the **superseded-by** line, whole or partial, and a **forward refinement pointer** naming a later record that extends this one — `(refinement per <record>)` on the sub-section heading, decision point or sentence it extends. Both point at another record rather than at a discarded belief.
 
@@ -277,7 +277,7 @@ The same command stamps the other id-spaces by passing a different namespace: `c
 
 If you prefer to author by hand, the procedure is:
 
-1. Pick the next available number in `project/`. `pkit new decision` numbers a record for you. A number picked by hand can be one another change has landed on the default branch since your branch left it, and `pkit decisions check-diff` finds that ("Checking a change's numbering" above).
+1. Pick the next available number in `project/`. `pkit new decision` numbers a record for you. A number picked by hand can be one another change has landed on the default branch since your branch left it. `pkit decisions check-diff` finds that ("Checking a change's numbering" above).
 2. Create `PRJ-NNN-slug.md` with the frontmatter and the four sections above. Leave out the example's `retired-points` and its stub, and number your points from 1 with no gap.
 3. Open it as `proposed` if it is still under discussion, `accepted` once agreed.
 
