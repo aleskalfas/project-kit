@@ -638,7 +638,8 @@ def test_a_fill_conflict_at_a_point_of_a_rule_that_binds_nowhere_fails_no_valida
 
 def test_fills_that_fill_each_other_end_the_walk(repo: AdopterRepo) -> None:
     """Two sets inherit each other, and each one's rule fills a point the other's offers.
-    Validation fails the cycle. The walk ends, and neither fill binds."""
+    Validation fails the cycle, and the walk ends. Closed on itself, as here, the cycle
+    binds neither fill."""
     lay_out(
         repo,
         {
