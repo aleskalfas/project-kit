@@ -470,6 +470,40 @@ def step_numbers(part: Part) -> frozenset[int]:
     return frozenset(n for n, _rest in (_numbered(item) for item in listing(part).items) if n)
 
 
+def steps(part: Part) -> list[tuple[int, Item, str]]:
+    """Each item of a steps part that opens with its step's number, as `numbered-steps`
+    reads it, in order: the number, the item, and its text after the number, white space
+    folded."""
+    found: list[tuple[int, Item, str]] = []
+    for item in listing(part).items:
+        number, rest = _numbered(item)
+        if number is not None:
+            found.append((number, item, _after(rest, item)))
+    return found
+
+
+def variants(part: Part) -> list[tuple[str, Item, str]]:
+    """Each item of a variants part that opens with a step's number and a letter, as
+    `variants` reads it, in order: the label, `2a`, its letter in lower case, the item,
+    and its text after the label, white space folded."""
+    found: list[tuple[str, Item, str]] = []
+    for item in listing(part).items:
+        first = item.rows[0].text if item.rows else ""
+        opening = _VARIANT.match(first)
+        if opening is None:
+            continue
+        step = int(opening["bold"] or opening["plain"])
+        letter = (opening["b"] or opening["p"]).lower()
+        found.append((f"{step}{letter}", item, _after(first[opening.end() :], item)))
+    return found
+
+
+def _after(rest: str, item: Item) -> str:
+    """An item's text after its number or label, `rest` on its first row: every row, white
+    space folded."""
+    return " ".join(" ".join([rest, *(row.text for row in item.rows[1:])]).split())
+
+
 def _sentence(part: Part) -> list[Breach]:
     return [
         Breach(NOT_A_SENTENCE, line, IN_AN_ITEM if line != part.line else "")

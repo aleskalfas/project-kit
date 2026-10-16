@@ -508,6 +508,46 @@ def departures(
     journey's steps read each use case's title in `titles`, by id."""
     elements = kind.head if head else kind.sections
     body = _read(lines, kind.labels)
+    found, at = _located(body, elements, kind)
+    parts = {i: part for i in range(len(elements)) if (part := _part(i, elements, at, body))}
+    context = _context(elements, parts, fields, titles)
+    for i, element in enumerate(elements):
+        if i in found or not element.filled:
+            continue
+        part = parts.get(i)
+        if part is None:
+            if element.type == OPENING and element.required:
+                found[i] = [Departure(element, MISSING)]
+            continue
+        breaches = judged(part, element, context)
+        if breaches:
+            found[i] = [Departure(element, b.how, b.line, b.detail) for b in breaches]
+    undeclared = [] if head else _undeclared(body, kind, elements, parts)
+    return [departure for i in sorted(found) for departure in found[i]] + undeclared
+
+
+def parts(lines: Sequence[Line], kind: Kind) -> list[tuple[Element, forms.Part]]:
+    """Each part of `kind`'s body that a body with `lines` carries, with its element, in
+    declared order, found as `departures` finds it. The append-only check reads a use
+    case's steps and variants here (`_lib/append_only.py`), so the two never read a body
+    apart."""
+    elements = kind.sections
+    body = _read(lines, kind.labels)
+    _found, at = _located(body, elements, kind)
+    return [
+        (elements[i], part)
+        for i in range(len(elements))
+        if (part := _part(i, elements, at, body)) is not None
+    ]
+
+
+def _located(
+    body: _Body, elements: Sequence[Element], kind: Kind
+) -> tuple[dict[int, list[Departure]], dict[int, int]]:
+    """Where a body carries each element that a mark opens, by its index among `elements`:
+    the mark it takes, and, in an ordered structure, the first after the element listed
+    ahead of it. Returns the elements missing or out of order, with their departure, and
+    the mark each element takes."""
     marked = [i for i, e in enumerate(elements) if e.type != OPENING]
     taken = _taken(body.marks, elements, marked, kind.as_written)
     found: dict[int, list[Departure]] = {
@@ -534,21 +574,7 @@ def departures(
                 found[i] = [Departure(elements[i], OUT_OF_ORDER, line)]
             else:
                 at[i], after = nxt, nxt + 1
-    parts = {i: part for i in range(len(elements)) if (part := _part(i, elements, at, body))}
-    context = _context(elements, parts, fields, titles)
-    for i, element in enumerate(elements):
-        if i in found or not element.filled:
-            continue
-        part = parts.get(i)
-        if part is None:
-            if element.type == OPENING and element.required:
-                found[i] = [Departure(element, MISSING)]
-            continue
-        breaches = judged(part, element, context)
-        if breaches:
-            found[i] = [Departure(element, b.how, b.line, b.detail) for b in breaches]
-    undeclared = [] if head else _undeclared(body, kind, elements, parts)
-    return [departure for i in sorted(found) for departure in found[i]] + undeclared
+    return found, at
 
 
 def _undeclared(

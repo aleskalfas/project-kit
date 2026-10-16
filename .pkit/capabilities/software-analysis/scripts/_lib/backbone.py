@@ -33,7 +33,8 @@ backbone through its commands:
   format rule, `software-analysis:RS-SAN-001`, and every other rule of this
   capability's method set binds, and which of the project's own rules bind on
   each artefact, where a project's tightening of a kind's structure applies
-  (DEC-001 point 1). A preview reads it with
+  (DEC-001 point 1); the check of a use case's steps and variants reads where
+  the format rule binds the same way (`_lib/append_only.py`). A preview reads it with
   `--preview`: where they would bind if every proposed rule were accepted,
   each marked when it binds only under the preview. The script never walks a
   rule set's scope or inheritance itself;
@@ -67,7 +68,9 @@ whether the clone holds a commit, whether the default branch's history reaches
 it, whether a shallow clone's history of that branch stops short, and whether
 the merge-base holds a record's file, each asked of the clone alone, never a
 remote (`holds_commit`, `reaches`, `history_cut`, `holds_path`;
-`_lib/pointers.py`); and, for the
+`_lib/pointers.py`); for the check of a use case's steps and variants, the
+text its file held where this branch left the base, asked of the clone alone
+too (`text_at`; `_lib/append_only.py`); and, for the
 proposal, which files held a piece of code at a commit — anywhere in the tree,
 or among files the caller names — where files were renamed to between two
 commits, and a commit's message. Which files an anchor stands on is never
@@ -524,6 +527,30 @@ def holds_path(root: Path, commit: str, path: str) -> bool:
         detail = [line for line in proc.stderr.strip().splitlines() if line]
         raise GitFailed(detail[-1] if detail else f"git ls-tree exited {proc.returncode}")
     return path in proc.stdout.split("\0")
+
+
+def text_at(root: Path, commit: str, path: str) -> str:
+    """The text the file at `path` holds at `commit`, read from this clone alone — `git
+    cat-file`, asking no remote, the path taken literally — as UTF-8, a byte it cannot
+    decode replaced. Raises `GitFailed` when git cannot answer: no such file there, or a
+    partial clone that lacks it, say."""
+    if not commit or commit.startswith("-"):
+        raise GitFailed(f"{commit!r} names no commit")
+    try:
+        proc = subprocess.run(
+            ["git", "cat-file", "blob", f"{commit}:{path}"],
+            cwd=root,
+            capture_output=True,
+            check=False,
+            env={**os.environ, **_OFFLINE},
+        )
+    except OSError as exc:
+        raise GitFailed(f"git could not be run ({exc})") from exc
+    if proc.returncode != 0:
+        said = proc.stderr.decode("utf-8", errors="replace").strip().splitlines()
+        detail = [line for line in said if line]
+        raise GitFailed(detail[-1] if detail else f"git cat-file exited {proc.returncode}")
+    return proc.stdout.decode("utf-8", errors="replace")
 
 
 def reaches(root: Path, commit: str, tip: str) -> bool:
