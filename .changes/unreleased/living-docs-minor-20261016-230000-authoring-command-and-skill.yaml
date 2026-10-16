@@ -1,0 +1,20 @@
+component: living-docs
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit living-docs new` stamps a page, or a space's definition, paired with
+  the new `docs-author` skill (DEC-001 points 2 and 4; COR-005). `new space
+  <space>` writes the definition under the definitions location's
+  `rule-sets/`, inheriting `living-docs:LDOC` at its current major and scoped
+  to the space's pages by the page type, with the user space's own rule
+  written accepted. It names the file as the space's `definition` in the
+  capability's project configuration, keeping every other byte, and records
+  the definitions location on first use. `new page <file> --space <space>
+  --kind <kind> --reader <id> --title <text>` writes a page from its kind's
+  template, with its reader, its kind and the anchors given. Each runs the
+  validator's own check before and after its write, and puts back what it
+  wrote and refuses when the write brings an error the project did not have.
+  `--dry-run` writes nothing. The validator's report of a space with no
+  definition now names `pkit living-docs new space`, and a definition's
+  scope for a root that is the repository itself is written `**`.
