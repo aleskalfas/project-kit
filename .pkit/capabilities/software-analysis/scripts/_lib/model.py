@@ -56,6 +56,11 @@ NUMBERED = frozenset({USE_CASE, JOURNEY})
 NOUN = {ACTOR: "actor", TERM: "term", USE_CASE: "use case", JOURNEY: "journey"}
 ID_SHAPE = {ACTOR: "ACT-<slug>", TERM: "TERM-<slug>", USE_CASE: "UC-NNN", JOURNEY: "JRN-NNN"}
 
+#: The front-matter fields DEC-001 point 4 adds to what a use case and a journey name:
+#: a use case's other actors, and the use cases outside a journey that a step relies on.
+OTHER_ACTORS = "other-actors"
+RELIES_ON = "relies-on"
+
 #: A use case's or journey's id with its number in any number of digits — the
 #: spellings the id schema refuses included.
 _NUMBER = rf"(?P<prefix>{PREFIX[USE_CASE]}|{PREFIX[JOURNEY]})-(?P<number>[0-9]+)"

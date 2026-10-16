@@ -1,0 +1,14 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Changed
+body: >
+  A journey anchors to its actor, as DEC-001 point 4 asks, so a changed actor
+  flags its journeys as well as its use cases (#1507). The stamp writes the
+  anchor, and `pkit analysis validate` requires it. This breaks a journey
+  stamped before the change, which has no anchor to its actor: the check now
+  fails it, withdrawn ones included, until its actor is added to its artefact
+  anchors. The segment is `minor`, as semver allows a breaking change before
+  1.0.0, and the capability has never been released. Only a clone that tracks
+  project-kit's default branch can hold such a journey, and project-kit's own
+  analysis holds none yet.
