@@ -59,7 +59,12 @@ Reading is forgiving (COR-048 point 4): a configuration that does not parse, or
 a value that is not a branch name, reads as the default; the value is kept in
 `DefaultBranch.warning` for a reading command to print, and `pkit validate`
 reports the file. Git is asked, never written to, and a git that cannot run is
-an answer without commits — for HEAD, one that says so — never an exception.
+an answer without commits — for HEAD, and for a branch, one that says so — never
+an exception. Where git cannot run, or cannot list a branch's references here —
+no repository, one it refuses, or a reference naming a missing object — and
+nothing else answers, the problem of the default branch, and of a branch
+`resolve_branch` resolves, says that in plain words, with git's own reason, in
+place of the fixes. A base named for a run keeps its own refusal (`_named`).
 """
 
 from __future__ import annotations
@@ -375,6 +380,10 @@ def _resolve_listed(
         return Resolved(
             name, None, None, None, f"{what} has no commit yet: commit first.", unborn=True
         )
+    if refs.unread is not None:
+        # Git could not list the references — no git, no repository it can read, or a
+        # damaged reference — so git's reason, in plain words, stands for the fixes.
+        return Resolved(name, None, None, None, f"{what} cannot be read: {refs.unread}.")
     return Resolved(
         name,
         None,
@@ -598,11 +607,13 @@ class _BranchRefs:
     """What this repository holds of the branch `name`: the commit each of its
     references names — the local branch, `origin/<name>` and the local branch's
     upstream, those that name one — and that upstream, in full, with its remote
-    (`None` when it tracks none, or tracks a local branch)."""
+    (`None` when it tracks none, or tracks a local branch). `unread` says why git
+    could not list them, in plain words (`None` when it listed them)."""
 
     name: str
     commits: Mapping[str, str]
     upstream: tuple[str, str] | None
+    unread: str | None = None
 
     @property
     def local(self) -> str:
@@ -632,6 +643,7 @@ def _branch_refs(target_root: Path, name: str) -> _BranchRefs:
     local, tracking = f"refs/heads/{name}", f"refs/remotes/{REMOTE}/{name}"
     completed = _git(target_root, "for-each-ref", f"--format={_LISTING}", local, tracking)
     listed = completed.stdout if completed is not None and completed.returncode == 0 else ""
+    unread = _unlisted(completed)
     commits: dict[str, str] = {}
     upstream: tuple[str, str] | None = None
     for line in listed.splitlines():
@@ -647,7 +659,22 @@ def _branch_refs(target_root: Path, name: str) -> _BranchRefs:
         commit = commit_of(target_root, upstream[0])
         if commit is not None:
             commits[upstream[0]] = commit
-    return _BranchRefs(name, commits, upstream)
+    return _BranchRefs(name, commits, upstream, unread)
+
+
+def _unlisted(completed: subprocess.CompletedProcess[str] | None) -> str | None:
+    """Why a listing of references failed, in plain words, or `None` when it ran. A
+    listing fails where git cannot run, or cannot read the references here: no
+    repository, one it refuses, or a reference naming a missing object. One that
+    matches nothing still succeeds. Git's own line says which, since its messages are
+    translated and never parsed here."""
+    if completed is None:
+        return "git could not be run here"
+    if completed.returncode == 0:
+        return None
+    said = [line.strip() for line in completed.stderr.splitlines() if line.strip()]
+    detail = said[0] if said else f"exit status {completed.returncode}"
+    return f"git cannot read the branches here (git says: {detail})"
 
 
 def head(target_root: Path) -> Head:

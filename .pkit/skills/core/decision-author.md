@@ -123,4 +123,4 @@ The record lands as `proposed`. Acceptance is a separate gesture (status flip + 
 ## Variations
 
 - **Refining an existing accepted record** — not this skill's work: this skill authors new records. A refinement that introduces no new decision is an edit in place, made as `.pkit/decisions/README.md` → "Refining an accepted record" says.
-- **Superseding an existing record** — this skill authors the superseding record; set `supersedes: COR-NNN` in its frontmatter. The edit to the superseded record is a separate step, made as `.pkit/decisions/README.md` → "Refining an accepted record" says.
+- **Superseding an existing record** — this skill authors the superseding record; set `supersedes: COR-NNN` in its frontmatter for a record it replaces whole. A record that overturns another only in part sets none. The edit to the superseded record is a separate step, made as `.pkit/decisions/README.md` → "Refining an accepted record" says.
