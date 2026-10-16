@@ -31,12 +31,12 @@ These are the rules project-kit's analysis follows: two rules of its own, and th
 - **What it inherits:** the accepted rules of both sets bind on the analysis through this set (COR-051 point 7).
   - `WRITE`, project-kit's general writing rules, pinned at `WRITE@1`.
   - `software-analysis:SAN`, the software-analysis method, pinned at `SAN@0`. `SAN` takes no scope, so its rules bind on project-kit's analysis only through this set (software-analysis DEC-001 point 1).
-  - **The pins after an acceptance:** accepting RS-SAN-001 gives `SAN` a new major, and accepting RS-WRITE-002 gives `WRITE` one. The same change re-pins this set, which gives it a new major too (COR-051 point 7).
+  - **The pins:** a rule accepted in an inherited set gives that set a new major. The same change re-pins this set, which gives it a new major too (COR-051 point 7).
 - **The set's own rules:** the actor's voice in needs and goals (RS-ANA-001), and each kind's list of labels (RS-ANA-002), which fills `RS-WRITE-002#labels`.
-  - Both are proposed. The maintainer accepts them together with RS-WRITE-002.
   - That a need or a goal is one sentence is the method's, through the `sentence` form of RS-SAN-001. So RS-ANA-001 leaves it out.
-  - software-analysis asks for the actor's voice only in its hints, and a hint binds nothing (software-analysis DEC-001 point 1). RS-ANA-001 makes the voice bind on project-kit's analysis.
-- **The labels as data:** the labels project-kit adds to a kind, and the kind's closed list, are in project-kit's own structures (`.pkit/capabilities/software-analysis/project/structures.yaml`). Each group there names RS-ANA-002, and binds once RS-ANA-002, RS-WRITE-002 and RS-SAN-001 are all accepted.
+  - software-analysis asks for the actor's voice only in its hints, and a hint binds nothing (software-analysis DEC-001 point 1). A project that wants the voice to bind adds a rule of its own, as the maintainer decided on 9 October (PR #1391). RS-ANA-001 is that rule.
+  - RS-WRITE-002 lets a section leave out a label it has nothing for. Where RS-SAN-001 binds, every part a kind ships is still present, so only an addition is left out.
+- **The labels as data:** the labels project-kit adds to a kind, and a closed list of a kind's labels, are data in project-kit's own structures (`.pkit/capabilities/software-analysis/project/structures.yaml`). RS-ANA-002 authorises both. When they bind is software-analysis's (DEC-001 point 1).
 - **How a rule reads:** as in `WRITE`, a statement, then *How*, then examples. A rule's reason is the `why` of its origin (COR-051 point 5).
   - Each example names its source in brackets after the quote.
   - RS-ANA-002 has no examples of its own, since RS-WRITE-002's quote the list it fills.
@@ -68,4 +68,4 @@ A kind's list of labels is that of its declared structure, with project-kit's ad
 - **How:**
   - **No copy:** the list stays in the data the check reads, the kind's declared structure and project-kit's own structures. This rule holds no copy of it.
   - **Authorised tightenings:** two tightenings of a kind in project-kit's own structures. They are labels added to the kind, each optional, and a closed list of the kind's labels.
-  - **The rest of RS-WRITE-002** holds as written. It lets a section leave out a label it has nothing for. Here that label is an addition, since a part its kind ships is never left out (software-analysis DEC-001 point 1).
+  - This rule fills `RS-WRITE-002#labels`, and the rest of RS-WRITE-002 holds as written.

@@ -4,10 +4,8 @@
 # it binds (software-analysis DEC-001 point 1).
 #
 # The actors' labels: seven optional labels around the shipped Occasions and
-# Context, and a closed list, as RS-ANA-002 in ANA asks
-# (tech-docs/rule-sets/analysis.md). The group binds once RS-ANA-002,
-# RS-WRITE-002 and RS-SAN-001 are all accepted. Until then only
-# `pkit analysis validate --preview` shows it.
+# Context, and a closed list, which RS-ANA-002 in ANA authorises
+# (tech-docs/rule-sets/analysis.md).
 
 pkit_schema: software-analysis:structures
 schema_version: 1
