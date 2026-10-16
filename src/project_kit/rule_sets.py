@@ -40,7 +40,10 @@ This module:
 - answers which accepted rules bind on each artefact of one state (`reach`,
   COR-051 point 7): the one home of that answer (ADR-057 point 2), which
   validation reads for the conflicts between routes, and the `rule-sets`
-  reading commands give (`rule_set_reading`).
+  reading commands give (`rule_set_reading`). On request, the same walk
+  previews where rules would bind if every proposed rule were accepted
+  (`PREVIEW`), marking what holds only under the preview. Validation never
+  reads a preview.
 
 Deterministic: the same repository state gives the same findings in the same
 order — files by path, each file's checks in a fixed order, then the
@@ -118,6 +121,11 @@ STATUSES: tuple[str, ...] = (PROPOSED, ACCEPTED, SUPERSEDED, WITHDRAWN)
 #: A rule without a status is proposed, and binds nothing.
 DEFAULT_STATUS = PROPOSED
 RETIRED_STATUSES: frozenset[str] = frozenset({SUPERSEDED, WITHDRAWN})
+#: The statuses under which a rule binds (COR-051 point 4): the reach walk's default.
+BINDING: frozenset[str] = frozenset({ACCEPTED})
+#: The statuses a preview takes as binding: every proposed rule as if it were accepted.
+#: A superseded or withdrawn rule binds nothing, in a preview too.
+PREVIEW: frozenset[str] = frozenset({ACCEPTED, PROPOSED})
 
 # The quote form of an origin; the alternative is a `decision` (COR-051 point 5).
 QUOTE_FIELDS: tuple[str, ...] = ("date", "by", "why")
@@ -1840,12 +1848,16 @@ class Binding:
     it behind its set, in path order. `fills` are the extension points the
     rule binds on the artefact as the fill of, each as cited
     (`[<component>:]RS-<SET>-NNN#<point>`), and empty for a rule that fills none.
+    `previewed` says that the rule binds on the artefact only under a preview: the
+    walk without one binds it there nowhere, since it is proposed, or binds only
+    as the fill of points the walk without a preview fills otherwise or not at all.
     """
 
     rule: Rule
     rule_set: RuleSet
     covering: tuple[RuleSet, ...]
     fills: tuple[str, ...] = ()
+    previewed: bool = False
 
 
 @dataclass(frozen=True)
@@ -1866,13 +1878,16 @@ class FillConflict:
     extension point, a fill against none included (COR-051 point 7).
 
     `point` is the extension point as cited; `brought` is each most specific
-    set, in path order, with the accepted fills its chain brings for the point,
-    each with the set holding it (none, one, or more where a chain fills it
-    twice). No fill binds while it stands.
+    set, in path order, with the fills its chain brings for the point, each with
+    the set holding it (none, one, or more where a chain fills it twice): the
+    accepted fills, and in a preview the proposed ones too. No fill binds while
+    it stands. `previewed` says that the conflict
+    stands only under a preview, which validation never reads.
     """
 
     point: str
     brought: tuple[tuple[RuleSet, tuple[tuple[RuleSet, Rule], ...]], ...]
+    previewed: bool = False
 
 
 Conflict = PinConflict | FillConflict
@@ -1888,11 +1903,13 @@ class HeldRule:
     break of it, as a finding that informs (COR-057 point 1). `pins` are the pins
     behind their sets that lead towards the rule's set from the artefact's routes: the
     set that pins, the pin's index in that set's `inherits`, and the pin, in path order.
+    `previewed` says that the rule is proposed, so it is held back only under a preview.
     """
 
     rule: Rule
     rule_set: RuleSet
     pins: tuple[tuple[RuleSet, int, Pin], ...]
+    previewed: bool = False
 
 
 @dataclass(frozen=True)
@@ -1913,15 +1930,19 @@ _NO_REACH = ArtefactReach()
 class Reach:
     """The walk's answer for one state (`reach`): each artefact on which a rule binds,
     whose routes conflict, or from which a pin behind its set holds a rule back, by
-    location. Any other artefact has no binding rule."""
+    location. Any other artefact has no binding rule. `preview` says that the answer
+    takes every proposed rule as accepted (`PREVIEW`)."""
 
     by_location: Mapping[str, ArtefactReach]
+    preview: bool = False
 
     def of(self, location: str) -> ArtefactReach:
         return self.by_location.get(location, _NO_REACH)
 
 
-def reach(discovery: fd.Discovery, rule_sets: RuleSetDiscovery) -> Reach:
+def reach(
+    discovery: fd.Discovery, rule_sets: RuleSetDiscovery, binding: frozenset[str] = BINDING
+) -> Reach:
     """Which accepted rules bind on each artefact of one state (COR-051 point 7).
 
     The one home of that answer (ADR-057 point 2), over the artefacts
@@ -1954,9 +1975,19 @@ def reach(discovery: fd.Discovery, rule_sets: RuleSetDiscovery) -> Reach:
     fill its chain holds, whatever its pins, where the fill binds through
     the filling set. Both read states validation fails. Runs no query: git,
     through discovery, is its only cost.
+
+    `binding` are the statuses under which a rule binds, in each of the four
+    places the walk asks: the rules that bind, the rules held back, the rule
+    a fill offers and the rule that fills it. Accepted alone by default.
+    `PREVIEW` takes every proposed rule as accepted, and a superseded or
+    withdrawn rule still binds nothing. Pins are judged as written, so a
+    preview assumes each inheritor re-pins in the change that accepts, and a
+    pin already behind its set stays behind. Each binding, rule held back and
+    fill conflict that holds only under the preview is marked `previewed`.
+    Validation reads only the default (`validate_rule_sets`).
     """
     covering = fd.covering_rule_sets(discovery)
-    walk = _Walk(rule_sets)
+    walk = _Walk(rule_sets, binding)
     found: dict[str, ArtefactReach] = {}
     for artefact in discovery.artefacts:
         selecting = frozenset(covering.get(artefact.location, ()))
@@ -1965,18 +1996,19 @@ def reach(discovery: fd.Discovery, rule_sets: RuleSetDiscovery) -> Reach:
         answer = walk.answer(selecting)
         if answer.bindings or answer.conflicts or answer.held:
             found[artefact.location] = answer
-    return Reach(found)
+    return Reach(found, preview=binding != BINDING)
 
 
 def reach_at(
-    target_root: Path, tree: fd.RepositoryTree | None = None
+    target_root: Path, tree: fd.RepositoryTree | None = None, *, preview: bool = False
 ) -> tuple[fd.Discovery, RuleSetDiscovery, Reach]:
     """The walk at one state: the working tree, or the commit `tree` holds — its
-    settings, its artefacts and its rule sets, each read through the same tree."""
+    settings, its artefacts and its rule sets, each read through the same tree. With
+    `preview`, every proposed rule is taken as accepted (`PREVIEW`)."""
     settings = fd.read_friction_settings(target_root, tree)
     discovery = fd.discover_artefacts(target_root, settings, tree)
     rule_sets = discover_rule_sets(target_root, settings, tree)
-    return discovery, rule_sets, reach(discovery, rule_sets)
+    return discovery, rule_sets, reach(discovery, rule_sets, PREVIEW if preview else BINDING)
 
 
 @dataclass(frozen=True)
@@ -1992,7 +2024,7 @@ class _Edge:
 
 @dataclass(frozen=True)
 class _Filler:
-    """An accepted rule that fills an extension point an inherited rule offers."""
+    """A rule that fills an extension point an inherited rule offers, whatever its status."""
 
     rule_set: RuleSet
     rule: Rule
@@ -2005,11 +2037,13 @@ class _Walk:
     """The routes of one state's rule sets, followed for each set of selecting scopes.
 
     What an artefact's answer depends on is which sets' scopes select it, so
-    artefacts that share those sets share one answer, computed once.
+    artefacts that share those sets share one answer, computed once. `binding` are
+    the statuses under which a rule binds.
     """
 
-    def __init__(self, rule_sets: RuleSetDiscovery) -> None:
+    def __init__(self, rule_sets: RuleSetDiscovery, binding: frozenset[str] = BINDING) -> None:
         self.rule_sets = rule_sets
+        self.binding = binding
         self._edges: dict[str, tuple[_Edge, ...]] = {}
         self._ancestors: dict[str, frozenset[str]] = {}
         self._answers: dict[frozenset[str], ArtefactReach] = {}
@@ -2040,9 +2074,14 @@ class _Walk:
             self._ancestors[rule_set.path] = frozenset(seen)
         return self._ancestors[rule_set.path]
 
+    def binds(self, rule: Rule) -> bool:
+        """Whether the rule's status is one under which it binds, in this walk."""
+        return rule.status in self.binding
+
     @cached_property
     def fillers(self) -> tuple[_Filler, ...]:
-        """Every accepted rule's fill of a point a rule of a set it inherits offers."""
+        """Every rule's fill of a point a rule of a set it inherits offers, whatever the
+        status of either: the places that ask whether a rule binds judge both."""
         found: list[_Filler] = []
         for rule_set in self.rule_sets.rule_sets:
             ancestors = self.ancestors(rule_set)
@@ -2121,7 +2160,7 @@ class _Routes:
         if not self.starts:
             return _NO_REACH
         conflicts: list[Conflict] = [*self._pin_conflicts()]
-        bound, fill_conflicts = self._fills()
+        bound, plain, fill_conflicts = self._fills()
         conflicts.extend(fill_conflicts)
         filling = {
             id(rule) for s in self.walk.rule_sets.rule_sets for rule in s.rules if rule.fills
@@ -2132,21 +2171,22 @@ class _Routes:
             if not covering:
                 continue
             for rule in rule_set.rules:
-                if not rule.binds:
+                if not self.walk.binds(rule):
                     continue
                 if id(rule) in filling:
                     points = bound.get(id(rule))
                     if points:
-                        bindings.append(Binding(rule, rule_set, covering, tuple(points)))
+                        previewed = id(rule) not in plain  # it binds as no fill without one
+                        bindings.append(Binding(rule, rule_set, covering, tuple(points), previewed))
                     continue
-                bindings.append(Binding(rule, rule_set, covering))
+                bindings.append(Binding(rule, rule_set, covering, previewed=_previewed(rule)))
         return ArtefactReach(tuple(bindings), tuple(conflicts), self._held())
 
     def _held(self) -> tuple[HeldRule, ...]:
-        """The accepted rules of each set that the routes reach only through a pin behind
-        its set, in path and written order, each with the pins behind their sets that lead
-        towards it (COR-051 point 7). A rule that fills binds only as a fill, so none is
-        held back as a rule."""
+        """The rules of each set that bind in this walk and that the routes reach only
+        through a pin behind its set, in path and written order, each with the pins behind
+        their sets that lead towards it (COR-051 point 7). A rule that fills binds only as
+        a fill, so none is held back as a rule."""
         anywhere = self.anywhere()
         reached = self.reached()
         behind = [
@@ -2166,9 +2206,9 @@ class _Routes:
                 if rule_set.path in beyond[id(edge)]
             )
             found.extend(
-                HeldRule(rule, rule_set, pins)
+                HeldRule(rule, rule_set, pins, _previewed(rule))
                 for rule in rule_set.rules
-                if rule.binds and not rule.fills  # a fill binds only as a fill
+                if self.walk.binds(rule) and not rule.fills  # a fill binds only as a fill
             )
         return tuple(found)
 
@@ -2202,18 +2242,26 @@ class _Routes:
             if len({pin.major for _set, _index, pin in found}) > 1
         ]
 
-    def _fills(self) -> tuple[dict[int, list[str]], list[FillConflict]]:
+    def _fills(self) -> tuple[dict[int, list[str]], frozenset[int], list[FillConflict]]:
         """Which fill binds for each extension point the routes reach, by the filling
-        rule, and the points whose most specific sets disagree (COR-051 point 7)."""
+        rule, the filling rules that bind as a fill without a preview, and the points
+        whose most specific sets disagree (COR-051 point 7).
+
+        Without a preview, each most specific set brings the accepted fills among those
+        it brings in a preview, and which sets are most specific depends on no status.
+        So the walk without a preview decides each point from the same sets, with the
+        proposed fills left out, and only where the rule it fills is accepted. A
+        conflict stands only under a preview where that decision finds none."""
         points: dict[tuple[int, str], list[_Filler]] = {}
         for filler in self.walk.fillers:
             points.setdefault((id(filler.offering), filler.point), []).append(filler)
         bound: dict[int, list[str]] = {}
+        plain_fills: set[int] = set()
         conflicts: list[FillConflict] = []
         for fillers in points.values():
             offering_set, offering = fillers[0].offering_set, fillers[0].offering
-            if not offering.binds:
-                continue  # a fill binds only while the rule it fills is accepted
+            if not self.walk.binds(offering):
+                continue  # a fill binds only while the rule it fills binds
             through = [s for s in self.starts if offering_set.path in self.clean(s)]
             specific = [
                 s
@@ -2223,35 +2271,55 @@ class _Routes:
                 )
             ]
             brought = [(s, self._brought(s, fillers)) for s in specific]
-            choices = {tuple(id(rule) for _held, rule in fills) for _s, fills in brought}
             point = f"{offering_set.cite(offering.id)}#{fillers[0].point}"
-            if len(choices) > 1 or any(len(fills) > 1 for _s, fills in brought):
-                conflicts.append(FillConflict(point, tuple(brought)))
+            plain = [
+                (s, tuple(fill for fill in fills if not _previewed(fill[1])))
+                for s, fills in brought
+            ]
+            offered = not _previewed(offering)  # the point is offered without a preview
+            if offered and not _disagree(plain) and plain and plain[0][1]:
+                plain_fills.add(id(plain[0][1][0][1]))
+            if _disagree(brought):
+                previewed = not (offered and _disagree(plain))
+                conflicts.append(FillConflict(point, tuple(brought), previewed))
             elif brought and brought[0][1]:
                 _held, rule = brought[0][1][0]
                 bound.setdefault(id(rule), []).append(point)
         conflicts.sort(key=lambda c: c.point)
-        return bound, conflicts
+        return bound, frozenset(plain_fills), conflicts
 
     def _brought(
         self, start: RuleSet, fillers: Sequence[_Filler]
     ) -> tuple[tuple[RuleSet, Rule], ...]:
-        """The accepted fills of one point that the chain of `start` holds, each with the
-        set holding it (COR-051 point 7). The chain is `start` and every set it inherits,
-        whatever its pins. A fill counts where it binds through the filling set: a route
-        with no pin behind its set reaches that set, and leads on from it to the
-        offering set."""
+        """The fills of one point that bind in this walk and that the chain of `start`
+        holds, each with the set holding it (COR-051 point 7). The chain is `start` and
+        every set it inherits, whatever its pins. A fill counts where it binds through the
+        filling set: a route with no pin behind its set reaches that set, and leads on
+        from it to the offering set."""
         chain = self.walk.ancestors(start) | {start.path}
         reached = self.reached()
         found: list[tuple[RuleSet, Rule]] = []
         for filler in fillers:
             path = filler.rule_set.path
-            if not filler.rule.binds or path not in chain or path not in reached:
+            if not self.walk.binds(filler.rule) or path not in chain or path not in reached:
                 continue
             fill = (filler.rule_set, filler.rule)
             if filler.offering_set.path in self.clean(filler.rule_set) and fill not in found:
                 found.append(fill)
         return tuple(found)
+
+
+def _previewed(rule: Rule) -> bool:
+    """Whether the rule binds only under a preview: its status is not one under which a
+    rule binds without one (`BINDING`)."""
+    return rule.status not in BINDING
+
+
+def _disagree(brought: Sequence[tuple[RuleSet, tuple[tuple[RuleSet, Rule], ...]]]) -> bool:
+    """Whether the most specific sets bring different fills for one point, a fill against
+    none included, or one of them brings two (COR-051 point 7)."""
+    choices = {tuple(id(rule) for _held, rule in fills) for _s, fills in brought}
+    return len(choices) > 1 or any(len(fills) > 1 for _s, fills in brought)
 
 
 def locate_rule(

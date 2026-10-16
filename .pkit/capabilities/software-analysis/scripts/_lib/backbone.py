@@ -31,7 +31,9 @@ backbone through its commands:
 - **where an accepted rule binds** — `pkit rule-sets reach --json` (COR-051
   point 7), the one reading of it (ADR-057 point 2): the check reads which of
   the project's own rules bind on each artefact, where a project's tightening
-  of a kind's structure applies (DEC-001 point 1). The script never walks a
+  of a kind's structure applies (DEC-001 point 1). A preview reads it with
+  `--preview`: where they would bind if every proposed rule were accepted,
+  each marked when it binds only under the preview. The script never walks a
   rule set's scope or inheritance itself;
 - **one data point as it resolves** — `pkit connections resolve <address>
   --json`: the check reads the evidence point the capability defines
@@ -232,19 +234,25 @@ def explain(root: Path, artefact: str, run: Runner = subprocess.run) -> Mapping[
 REACH_VERSION = 1
 
 
-def reach(root: Path, run: Runner = subprocess.run) -> dict[str, frozenset[str]]:
+def reach(
+    root: Path, run: Runner = subprocess.run, *, preview: bool = False
+) -> dict[str, dict[str, bool]]:
     """Which rules of the project's own rule sets bind on each artefact in the working
     tree, by the artefact's location — `pkit rule-sets reach --json` (COR-051 point 7),
-    the backbone's one reading of where an accepted rule binds (ADR-057 point 2). Each
-    rule is its bare id, as a project rule is cited. An artefact on which none binds
-    is not there. Raises Unreadable when there is no document to read — from a
-    backbone that predates the command, too, saying so — or one of a version this
-    reading does not understand."""
-    argv = ["pkit", "rule-sets", "reach", "--json"]
+    the backbone's one reading of where a rule binds (ADR-057 point 2). Each rule is its
+    bare id, as a project rule is cited, with whether it binds there only under the
+    preview. With `preview`, the reading takes every proposed rule as accepted
+    (`--preview`); without it, every rule is accepted and none is previewed. An artefact
+    on which none binds is not there. Raises Unreadable when there is no document to
+    read — from a backbone that predates the command or the preview, too, saying so — or
+    one of a version this reading does not understand."""
+    argv = ["pkit", "rule-sets", "reach", *(["--preview"] if preview else []), "--json"]
     proc = _run(root, argv, run)
-    if proc.returncode != 0 and "No such command" in (proc.stderr or ""):
+    stderr = proc.stderr or ""
+    if proc.returncode != 0 and ("No such command" in stderr or "No such option" in stderr):
+        what = "an option" if "No such option" in stderr else "a command"
         raise Unreadable(
-            f"`{' '.join(argv)}` is not a command of the installed backbone, which predates "
+            f"`{' '.join(argv)}` is not {what} of the installed backbone, which predates "
             f"it — upgrade it (`pkit upgrade`)"
         )
     try:
@@ -259,14 +267,21 @@ def reach(root: Path, run: Runner = subprocess.run) -> dict[str, frozenset[str]]
             f"`pkit rule-sets reach` answered schema_version {version!r}; this capability "
             f"reads {REACH_VERSION}"
         )
-    found: dict[str, frozenset[str]] = {}
+    if document.get("preview", False) is not preview:
+        raise Unreadable(
+            f"`{' '.join(argv)}` answered with `preview` {document.get('preview')!r}: the "
+            f"installed backbone predates the preview — upgrade it (`pkit upgrade`)"
+        )
+    found: dict[str, dict[str, bool]] = {}
     for artefact in document.get("artefacts") or []:
         if not isinstance(artefact, Mapping) or not isinstance(artefact.get("location"), str):
             continue
         rules = [r for r in artefact.get("rules") or [] if isinstance(r, Mapping)]
-        bare = frozenset(
-            str(r["rule"]) for r in rules if isinstance(r.get("rule"), str) and ":" not in r["rule"]
-        )
+        bare = {
+            str(r["rule"]): r.get("previewed") is True
+            for r in rules
+            if isinstance(r.get("rule"), str) and ":" not in r["rule"]
+        }
         if bare:
             found[artefact["location"]] = bare
     return found

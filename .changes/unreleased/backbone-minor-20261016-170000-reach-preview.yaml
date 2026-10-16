@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit rule-sets reach --preview` answers where rules would bind if every
+  proposed rule were accepted (ADR-057 point 2, #1607). It is the same walk,
+  with proposed taken as a status at which a rule binds wherever the walk asks:
+  a rule a route reaches, a rule a pin holds back, a rule that offers an
+  extension point and a rule that fills one. A superseded or withdrawn rule
+  binds nothing in a preview either. Sets keep their versions, so the preview
+  assumes each inheritor updates its pin in the change that accepts, and a pin
+  already behind its set stays behind. The document gains a top-level
+  `preview`, and each rule, held rule and conflict gains `previewed`: `true`
+  where it holds only under the preview, always `false` without it. Both are
+  added within `schema_version` 1. A preview can also lose a binding, where a
+  point's fills conflict only under it, so a reader that must know what binds
+  reads the answer without `--preview`. Validation's `rule-sets` member and
+  every gate read the answer without it, so a fill conflict only a preview finds
+  is no validation error. `rule-sets altered` has no preview.

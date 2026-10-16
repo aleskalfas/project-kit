@@ -1875,6 +1875,8 @@ def test_the_answer_of_where_rules_bind_reads_each_document_s_rules() -> None:
     for wrong in ({**answer, "schema_version": 2}, {"schema_version": 1}):
         with pytest.raises(binding.Unreadable):
             binding.binding_of(wrong)
+    # A gate reads where rules bind, never where they would bind (#1607, ADR-057 point 2).
+    assert "--preview" not in binding.ARGV
 
 
 @pytest.mark.parametrize(
