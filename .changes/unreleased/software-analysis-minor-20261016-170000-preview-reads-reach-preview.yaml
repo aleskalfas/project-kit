@@ -1,0 +1,21 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  `pkit analysis validate --preview` places a project's group whose rule, or a
+  rule it fills, is proposed where the rule would bind if every proposed rule
+  were accepted, as `pkit rule-sets reach --preview` reads it (DEC-001 point 1,
+  #1607). What binds still comes from `pkit rule-sets reach` without the
+  preview, and each body is held a second time with the preview's groups
+  added. Only what that adds is a report opening `preview:`, so the findings
+  and the exit stay the normal check's. A proposed rule that would bind on no
+  artefact of its kind even under the preview is a preview's report, and so is
+  a preview reading that cannot be read. The check no longer reports such a
+  group as not previewed, and on an artefact it reads a fill's chain from the
+  backbone alone. So a group whose accepted rule binds on no artefact of its
+  kind, because a rule it fills is proposed, is reported as binding on none,
+  the report naming that cause. A group of the record's kind binds as it did.
+  The preview reads `pkit rule-sets reach --preview`, which only the backbone
+  this release ships has, so the capability requires it.

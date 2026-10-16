@@ -18,10 +18,8 @@ body: >
   form, adds a kind, names a retired or unknown element or no rule of the
   project's, or places a part in a cycle. It reports a group whose rule is
   superseded or withdrawn, and a rule that binds on no artefact of the kind.
-  `--preview` takes a proposed rule's group as accepted on every record. It
-  cannot place one on any other kind, since the backbone's reading lists
-  accepted rules only, and says so. `pkit analysis
-  new` writes the project's labels, hints and parts, each added part's hint
+  `--preview` takes a proposed rule's group as accepted on every record. `pkit
+  analysis new` writes the project's labels, hints and parts, each added part's hint
   naming its rule. `schemas/artefact-kinds.yaml` may list a kind's `retired`
   element ids. The check reads `pkit rule-sets reach`, which only the backbone
   this release ships has, so the capability requires it.

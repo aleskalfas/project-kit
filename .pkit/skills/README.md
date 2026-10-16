@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-10-13T20:06:20Z
+      at: 2026-10-16T14:21:50Z
       outcome: unchanged
-      unchanged-because: The decision-author skill says that `pkit new decision` stamps a first point heading, and when to delete it. This page describes the skills area, how skills deploy and pair with commands, and nothing of what a skill drafts, so it holds.
+      unchanged-because: area-author now says its stamp refuses where the area's folder exists and names all twelve core areas, and decision-author sets supersedes only for a record replaced whole. This page lists each skill, its paired command and what it walks the author through, which neither change touches, so it holds.
 ---
 
 # Skills

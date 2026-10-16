@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Where git cannot run, or cannot read the branches here, such as outside a
+  git repository, every reader of the default branch says so in plain words:
+  the default branch cannot be read because git cannot read the branches
+  here, with git's own reason, or because git could not be run. It no longer
+  says there is no remote and no local branch, or offers to declare another
+  name or a base in their place. Only the message changes.
