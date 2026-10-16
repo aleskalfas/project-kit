@@ -63,6 +63,7 @@ pkit:
         - .pkit/lifecycle/README.md#seed-paths
         - .pkit/lifecycle/README.md#a-new-collision
         - .pkit/lifecycle/README.md#a-clash-of-area-names
+        - .pkit/capabilities/software-analysis/README.md#commits-off-the-default-branch-pkit-analysis-check-pointers
         - .pkit/lifecycle/README.md#the-dependency-gates
         - .pkit/lifecycle/README.md#two-recorded-states-and-an-interrupted-upgrade
         - .pkit/lifecycle/README.md#the-replay-a-missing-completion
@@ -510,7 +511,7 @@ Only errors fail the command. The same repository state always yields the same f
 
 - **Resolution** (point 2). The remote-tracking reference of the branch's upstream (`git branch --set-upstream-to`), else `origin/<name>`, when it names a commit; else, only when there is no remote — no upstream and no `origin` — the local branch, and every reader prints `warning: the default branch 'main' is read from the local branch 'main': …`. Each is looked up by its full reference, so a tag of the same name never stands in. A remote with another name is found only as the branch's upstream.
 - **A branch named as a base** (`--base develop`, `PKIT_CHECK_BASE=integration/x`) resolves the same way. A remote-tracking reference (`origin/main`) is read as named, and so is any other revision — a commit, a tag, or `refs/heads/<name>`, the way to compare with a local branch while a remote exists.
-- **The base of a comparison** (point 3): `--base`, else `$PKIT_CHECK_BASE`, else the default branch — for `friction check`, `migrations check-diff`, [`decisions check-diff`](../decisions/README.md#checking-a-changes-numbering), `release check`, software-analysis' `check-numbers` and `check-pointers`, and project-management's `check-doc-mapping`. A command that allocates from settled state reads the default branch, never `$PKIT_CHECK_BASE`. Software-analysis' stamp reads its own `--base` too, and [`new decision`](#new-decision-namespace-slug---yes) takes no base.
+- **The base of a comparison** (point 3): `--base`, else `$PKIT_CHECK_BASE`, else the default branch — for `friction check`, `migrations check-diff`, [`decisions check-diff`](../decisions/README.md#checking-a-changes-numbering), `release check`, software-analysis' `check-numbers` and [`check-pointers`](../capabilities/software-analysis/README.md#commits-off-the-default-branch-pkit-analysis-check-pointers), and project-management's `check-doc-mapping`. A command that allocates from settled state reads the default branch, never `$PKIT_CHECK_BASE`. Software-analysis' stamp reads its own `--base` too, and [`new decision`](#new-decision-namespace-slug---yes) takes no base.
 - **Nothing resolves** (point 4). The message names the references tried and the fixes — `git fetch <remote> <name>`, declare the right name, or name a base; a remote without its copy is never replaced by the local branch. Git may be unable to run, or to read the branches here, as outside a repository. Then the default branch's message says so in plain words, in place of the fixes, with git's own reason where git gives one. A comparison refuses (exit 1); one with nothing to compare reads no base.
 - **Reading is forgiving** (COR-048 point 4). A value that is not a branch name reads as `main`, with a `warning:` line from every reader; `pkit validate` fails on it.
 
@@ -904,8 +905,6 @@ Scaffolds a capability at `.pkit/capabilities/<name>/`. Stamps:
 - `decisions/`, `skills/`, `agents/`, `scripts/`, `schemas/` and `migrations/` — empty, each holding a `.gitkeep`.
 
 Unlike `new adapter`, it registers nothing. `pkit capabilities register <name>` brings the capability into the project once it is built ("Capabilities — two ways in" above). The name is kebab-case. The command refuses a capability that already exists. It also refuses each name its row under "Surface" lists, giving the reason for each.
-
-**Coordination with the `capability-author` skill.** The skill carries the name choice, the layout and the package metadata. The command is the stamp underneath.
 
 ### `new migration --tier <tier> [--component <name>] --version <X.Y.0> [--scope <scope>] --slug <kebab>`
 
