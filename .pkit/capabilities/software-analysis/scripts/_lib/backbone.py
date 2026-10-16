@@ -250,8 +250,9 @@ def reach(
     proc = _run(root, argv, run)
     stderr = proc.stderr or ""
     if proc.returncode != 0 and ("No such command" in stderr or "No such option" in stderr):
+        what = "an option" if "No such option" in stderr else "a command"
         raise Unreadable(
-            f"`{' '.join(argv)}` is not a command of the installed backbone, which predates "
+            f"`{' '.join(argv)}` is not {what} of the installed backbone, which predates "
             f"it — upgrade it (`pkit upgrade`)"
         )
     try:

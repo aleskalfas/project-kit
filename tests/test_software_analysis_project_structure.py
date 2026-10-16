@@ -657,11 +657,14 @@ def test_an_accepted_fill_of_a_proposed_rule_binds_where_the_preview_says(
         }
     )
     reach = _reach({}, {ACTOR_REL: {"RS-LOC-001": True}})
-    [(severity, location, message)] = _gate(tmp_path, analysis, reach=reach)[1]
+    [normal] = _gate(tmp_path, analysis, reach=reach)[1]
+    severity, location, message = normal
     assert (severity, location) == ("report", f"{FILE}:/kinds/actor/tighten/0")
     assert message.startswith("RS-LOC-001 binds on no actor of the analysis")
     assert "a rule it fills does not bind there" in message
-    [(severity, location, message)] = _gate(tmp_path, analysis, preview=True, reach=reach)[1]
+    # The preview gives the normal check's findings, and adds its own as reports.
+    [(severity, location, message), kept] = _gate(tmp_path, analysis, preview=True, reach=reach)[1]
+    assert kept == normal
     assert (severity, location) == ("report", ACTOR_REL)
     assert message.startswith("preview: `**Notes:**` is missing")
 
@@ -752,9 +755,81 @@ def test_a_reach_that_cannot_be_read_applies_the_group_nowhere_and_says_so(tmp_p
         preview=True,
         reach=unreadable,
     )
-    [(severity, location, message)] = found
+    [plain, previewed] = found
+    assert plain[:2] == previewed[:2] == ("report", f"{FILE}:/kinds/actor/tighten/0")
+    assert plain[2].startswith("preview: where RS-LOC-001 binds cannot be read")
+    assert previewed[2].startswith("preview: where RS-LOC-001 would bind cannot be read")
+
+
+def test_a_preview_reading_that_fails_keeps_the_normal_check_s_findings(tmp_path: Path) -> None:
+    """Where only the preview's reading cannot be read, the groups still bind where the
+    reading without it says, and the failure is a preview's report: it never fails."""
+    _write(tmp_path, NOTES_REQUIRED)
+    tester = _artefact(tmp_path, ACTOR_REL, SHIPPED_ACTOR)
+
+    def plain_only(_root: Path, *, preview: bool) -> dict[str, dict[str, bool]]:
+        if preview:
+            raise M.Unreadable("`pkit rule-sets reach --preview --json` exited 2")
+        return {ACTOR_REL: {"RS-LOC-001": False}}
+
+    analysis = _analysis("accepted", {"RS-LOC-001": "accepted"}, tester)
+    normal = _gate(tmp_path, analysis, reach=plain_only)[1]
+    assert [(f[0], f[1]) for f in normal] == [("error", ACTOR_REL)]
+    found = _gate(tmp_path, analysis, preview=True, reach=plain_only)[1]
+    assert found[0] == normal[0]
+    [(severity, location, message)] = found[1:]
     assert (severity, location) == ("report", f"{FILE}:/kinds/actor/tighten/0")
-    assert message.startswith("preview: where RS-LOC-001 binds cannot be read")
+    assert message.startswith("preview: where RS-LOC-001 would bind cannot be read")
+
+
+CLOSED_TWICE = """\
+schema_version: 1
+kinds:
+  actor:
+    tighten:
+      - rule: RS-NEW-001
+        closed: true
+      - rule: RS-OLD-001
+        closed: true
+"""
+
+SETUP_FIRST = """\
+schema_version: 1
+kinds:
+  actor:
+    tighten:
+      - rule: RS-NEW-001
+        add:
+          - {id: setup, label: The setup, after: opening, hint: Where., example: A lab.}
+"""
+
+
+def test_a_preview_reports_only_what_its_groups_add_whatever_part_it_is_about(
+    tmp_path: Path,
+) -> None:
+    """What a body breaks without the preview keeps its severity in a preview, and only
+    what the preview's groups add is a preview's report, though a finding may be about a
+    shipped part, or credited to a rule the preview adds. So the exit is the normal
+    check's."""
+    _write(tmp_path, CLOSED_TWICE)
+    tester = _artefact(tmp_path, ACTOR_REL, SHIPPED_ACTOR + "\n- **Extra:** something.")
+    analysis = _analysis("accepted", {"RS-NEW-001": "proposed", "RS-OLD-001": "accepted"}, tester)
+    reach = _reach(
+        {ACTOR_REL: {"RS-OLD-001": False}},
+        {ACTOR_REL: {"RS-OLD-001": False, "RS-NEW-001": True}},
+    )
+    normal = _gate(tmp_path, analysis, reach=reach)[1]
+    assert [f[0] for f in normal] == ["error"]
+    assert _gate(tmp_path, analysis, preview=True, reach=reach)[1] == normal
+    # A part a proposed group adds after the opening, carried last: the shipped parts
+    # then read as out of order, which only the preview finds.
+    _write(tmp_path, SETUP_FIRST)
+    tester = _artefact(tmp_path, ACTOR_REL, SHIPPED_ACTOR + "\n- **The setup:** a lab.")
+    analysis = _analysis("accepted", {"RS-NEW-001": "proposed"}, tester)
+    reach = _reach({}, {ACTOR_REL: {"RS-NEW-001": True}})
+    assert _gate(tmp_path, analysis, reach=reach)[1] == []
+    found = _gate(tmp_path, analysis, preview=True, reach=reach)[1]
+    assert found and all(f[0] == "report" and f[2].startswith("preview: ") for f in found)
 
 
 def test_a_relabelled_part_is_looked_for_by_its_new_label(tmp_path: Path) -> None:
@@ -1036,4 +1111,7 @@ def test_the_preview_reads_where_a_proposed_rule_would_bind_through_the_backbone
     _code, document = _validate(project, "--preview")
     said = [(f["severity"], f["location"]) for f in document["findings"]]
     assert said == [("report", f"{FILE}:/kinds/actor/tighten/0")]
-    assert "even with `--preview`" in document["findings"][0]["message"]
+    assert document["findings"][0]["message"].startswith(
+        "preview: RS-LOC-001 would bind on no actor of the analysis, as `pkit rule-sets "
+        "reach --preview` reads it"
+    )
