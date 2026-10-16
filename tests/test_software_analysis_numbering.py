@@ -297,6 +297,9 @@ def test_use_cases_and_journeys_restart_after_a_named_removal(piloted: AdopterRe
         f"project's numbering setting names (DEC-001 point 3).",
         f"numbering: {three_removed[:SHORT]} frees UC-003, as the project's numbering setting "
         f"names (DEC-001 point 3).",
+        "steps (RS-SAN-001, proposed): not checked — the rule binds nothing until it is "
+        "accepted (COR-051 point 4); `pkit analysis check-numbers --preview` shows what it "
+        "would report.",
     ]
     steps = ("--step", "UC-001", "--step", "UC-002")
     journey, notes = stamp(piloted, "journey", "again", "--actor", "ACT-tester", *steps)
