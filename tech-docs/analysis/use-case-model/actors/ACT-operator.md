@@ -12,6 +12,8 @@ needs:
 pkit:
   friction:
     anchors:
+      path:
+        - CONTRIBUTING.md
       record:
         - COR-028
         - COR-039

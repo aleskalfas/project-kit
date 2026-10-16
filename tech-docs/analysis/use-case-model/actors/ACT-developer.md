@@ -17,6 +17,7 @@ pkit:
     anchors:
       record:
         - COR-009
+        - ADR-061#3
     revalidated:
       at: 2026-10-14T09:21:17Z
       outcome: updated

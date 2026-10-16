@@ -11,6 +11,8 @@ needs:
 pkit:
   friction:
     anchors:
+      path:
+        - CONTRIBUTING.md
       record:
         - ADR-059
         - PRJ-002

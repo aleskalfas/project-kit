@@ -16,6 +16,7 @@ pkit:
       record:
         - COR-054
         - COR-050
+        - PRJ-002
     revalidated:
       at: 2026-10-15T09:26:30Z
       outcome: unchanged
