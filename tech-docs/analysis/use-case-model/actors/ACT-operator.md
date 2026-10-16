@@ -12,15 +12,15 @@ needs:
 pkit:
   friction:
     anchors:
-      path:
-        - CONTRIBUTING.md
       record:
         - COR-028
         - COR-039
+      artefact:
+        - CONTRIBUTING.md#running-checks
     revalidated:
-      at: 2026-10-16T23:29:55Z
+      at: 2026-10-16T23:38:17Z
       outcome: unchanged
-      unchanged-because: The actor now anchors CONTRIBUTING.md, which its Note already cites. CONTRIBUTING.md still calls whoever applies the repository's settings, its required status and its merge queue, the operator, so the Note holds.
+      unchanged-because: The actor now anchors the section of CONTRIBUTING.md its Note cites, "Running checks", in place of the whole file. That section still calls whoever applies the repository's settings, its required status and its merge queue, the operator. So the Note holds.
 ---
 
 # ACT-operator — Operator

@@ -11,15 +11,15 @@ needs:
 pkit:
   friction:
     anchors:
-      path:
-        - CONTRIBUTING.md
       record:
         - ADR-059
         - PRJ-002
+      artefact:
+        - CONTRIBUTING.md#adding-a-core-record-cor
     revalidated:
-      at: 2026-10-16T23:29:53Z
+      at: 2026-10-16T23:38:12Z
       outcome: unchanged
-      unchanged-because: The actor now anchors CONTRIBUTING.md, which its Context already cites for the methodology's disciplines. CONTRIBUTING.md still sets them out for whoever works on the methodology itself, so the actor holds.
+      unchanged-because: The actor now anchors the section of CONTRIBUTING.md its Context cites, "Adding a core record (COR)", in place of the whole file. That section still sets out the methodology's disciplines, such as the axiom discipline and project-neutrality. So the Context holds.
 ---
 
 # ACT-methodology-maintainer — Methodology maintainer
