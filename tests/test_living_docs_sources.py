@@ -321,8 +321,7 @@ def test_a_source_names_no_part_so_a_mark_in_its_value_names_no_source(
     """A source is a registered kind, which names no part (COR-050 point 2): the `#`
     in `keep-a-changelog#breaking` belongs to the value, so it names no part of the
     captured source and no source at all. The anchor is dead, the page is judged on
-    its other anchors, and the report says to anchor the whole source or capture the
-    part as a source of its own."""
+    its other anchors, and the report says to anchor the whole source."""
     marked = fd.Anchor("source", "keep-a-changelog#breaking")
     anchors = {"path": ["src/release/**"], "source": ["keep-a-changelog#breaking"]}
     repo.commit("rest the page on a part of a source", {PAGE: _page(anchors)})
@@ -339,8 +338,8 @@ def test_a_source_names_no_part_so_a_mark_in_its_value_names_no_source(
         "anchor `source: keep-a-changelog#breaking`, and no captured file answers it, so it "
         "is dead: a source names no part, so the `#` is part of the name, and no name holds "
         "one (a name is lower-case words of letters and digits joined by single hyphens, "
-        "starting with a letter, at most 64 characters) — anchor the whole source, or capture "
-        "the part you rely on as a source of its own (DEC-001 point 4; COR-050 point 2)."
+        "starting with a letter, at most 64 characters) — anchor the whole source by its name "
+        "(DEC-001 point 4; COR-050 point 2)."
     )
     # The captured source the value seemed to name is anchored by nothing.
     assert reports[KEEP].startswith("captured source `keep-a-changelog` is anchored by no artefact")
@@ -637,6 +636,22 @@ def _rule_set(value: str) -> str:
     return (
         f"---\n{json.dumps(front, indent=2)}\n---\n\n# Rules\n\n"
         "## RS-CMN-001 — Group entries by kind\n\nThe statement of RS-CMN-001.\n"
+    )
+
+
+def test_a_rule_s_origin_citing_a_part_of_a_source_is_told_to_cite_the_whole(
+    repo: AdopterRepo,
+) -> None:
+    """A rule's origin cites a source, never anchors one, so its report says to cite
+    the whole source: a `#` in the value names no part of it (COR-050 point 2)."""
+    repo.write({"tech-docs/rule-sets/cmn.md": _rule_set("keep-a-changelog#breaking")})
+    reports = dict(_findings(_validate(repo.root), "report"))
+    assert reports["tech-docs/rule-sets/cmn.md#RS-CMN-001:/origin/source"] == (
+        "the rule's origin cites source `keep-a-changelog#breaking`, and no captured file "
+        "answers it, so it is dead: a source names no part, so the `#` is part of the name, "
+        "and no name holds one (a name is lower-case words of letters and digits joined by "
+        "single hyphens, starting with a letter, at most 64 characters) — cite the whole "
+        "source by its name (DEC-001 point 4; COR-050 point 2)."
     )
 
 
