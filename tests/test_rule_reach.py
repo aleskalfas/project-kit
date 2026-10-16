@@ -753,6 +753,213 @@ def test_the_rule_set_reader_reads_a_commit_through_discovery_s_tree(repo: Adopt
     assert bound(repo) == ["RS-DOC-001"]  # the working tree's pin is behind CMN 2.0.0
 
 
+# --- a preview: as if every proposed rule were accepted (#1607) ----------------------------
+
+
+def previewed(repo: AdopterRepo, location: str = A) -> list[tuple[str, bool]]:
+    """The rules that would bind on the artefact at `location` if every proposed rule were
+    accepted, as cited, each with whether it binds only under the preview."""
+    answer = rs.reach_at(repo.root, preview=True)[2]
+    assert answer.preview
+    return [(b.rule_set.cite(b.rule.id), b.previewed) for b in answer.of(location).bindings]
+
+
+def test_a_preview_takes_a_proposed_rule_as_accepted_and_a_retired_one_binds_nothing(
+    repo: AdopterRepo,
+) -> None:
+    lay_out(
+        repo,
+        {
+            "doc": rule_set(
+                "DOC",
+                scope=scoped(f"{GUIDES}/**"),
+                entries={
+                    **rules("RS-DOC-001"),
+                    "RS-DOC-002": {},
+                    "RS-DOC-003": {"status": "withdrawn", "origin": QUOTE},
+                    "RS-DOC-004": {
+                        "status": "superseded",
+                        "successor": "RS-DOC-001",
+                        "origin": QUOTE,
+                    },
+                },
+            ),
+        },
+        a=page(),
+    )
+    assert bound(repo) == ["RS-DOC-001"]
+    assert previewed(repo) == [("RS-DOC-001", False), ("RS-DOC-002", True)]
+    assert not rs.reach_at(repo.root)[2].preview
+
+
+def test_a_preview_marks_an_accepted_rule_that_fills_a_proposed_one(repo: AdopterRepo) -> None:
+    """A fill binds only while both rules are accepted (COR-051 point 7), so an accepted
+    fill of a proposed rule binds nowhere until the preview takes that rule as accepted.
+    Both then bind, each only under the preview."""
+    offering = _offering()
+    del offering["rules"]["RS-CMN-001"]["status"]  # proposed
+    lay_out(
+        repo,
+        {
+            "cmn": offering,
+            "doc": rule_set(
+                "DOC",
+                inherits=["CMN@1"],
+                scope=scoped(f"{GUIDES}/**"),
+                entries=rules("RS-DOC-001", **_filling()),
+            ),
+        },
+        a=page(),
+    )
+    assert bound(repo) == ["RS-CMN-002"]
+    assert previewed(repo) == [("RS-CMN-001", True), ("RS-CMN-002", False), ("RS-DOC-001", True)]
+    fill = next(
+        b
+        for b in rs.reach_at(repo.root, preview=True)[2].of(A).bindings
+        if b.rule.id == "RS-DOC-001"
+    )
+    assert fill.fills == ("RS-CMN-001#where",)
+    # A proposed rule that fills an accepted one binds only under the preview too.
+    lay_out(
+        repo,
+        {
+            "cmn": _offering(),
+            "doc": rule_set(
+                "DOC",
+                inherits=["CMN@1"],
+                scope=scoped(f"{GUIDES}/**"),
+                entries={"RS-DOC-001": _filling(origin=QUOTE)},
+            ),
+        },
+        a=page(),
+    )
+    assert "RS-DOC-001" not in bound(repo)
+    assert ("RS-DOC-001", True) in previewed(repo)
+
+
+def test_a_preview_reads_pins_as_written(repo: AdopterRepo) -> None:
+    """Sets keep their versions, so a pin behind its set stays behind under the preview:
+    the proposed rule beyond it is held back, marked as held only under the preview."""
+    lay_out(
+        repo,
+        {
+            "cmn": rule_set("CMN", "2.0.0", entries={**rules("RS-CMN-001"), "RS-CMN-002": {}}),
+            "doc": rule_set("DOC", inherits=["CMN@1"], scope=scoped(f"{GUIDES}/**")),
+        },
+        a=page(),
+    )
+    assert held(repo) == [("RS-CMN-001", ["DOC pins CMN@1"])]
+    answer = rs.reach_at(repo.root, preview=True)[2].of(A)
+    assert [b.rule.id for b in answer.bindings] == ["RS-DOC-001"]
+    assert [(h.rule.id, h.previewed) for h in answer.held] == [
+        ("RS-CMN-001", False),
+        ("RS-CMN-002", True),
+    ]
+
+
+def test_a_fill_conflict_only_under_the_preview_is_named_and_fails_no_validation(
+    repo: AdopterRepo,
+) -> None:
+    """Two sets, neither inheriting the other, select one artefact. Without the preview
+    neither brings a fill. Under it, one brings its proposed fill against none: the
+    preview names the conflict, and validation, which reads only the answer without the
+    preview, fails nothing."""
+    lay_out(
+        repo,
+        {
+            "cmn": _offering(),
+            "tech": rule_set(
+                "TECH",
+                inherits=["CMN@1"],
+                scope=scoped(f"{GUIDES}/**"),
+                entries={**rules("RS-TECH-002"), "RS-TECH-001": _filling(origin=QUOTE)},
+            ),
+            "user": rule_set("USER", inherits=["CMN@1"], scope=scoped(f"{GUIDES}/**")),
+        },
+        a=page(),
+    )
+    assert rs.reach_at(repo.root)[2].of(A).conflicts == ()
+    assert errors(repo, Kind.FILL_CONFLICT) == []
+    (conflict,) = rs.reach_at(repo.root, preview=True)[2].of(A).conflicts
+    assert isinstance(conflict, rs.FillConflict) and conflict.previewed
+    assert "RS-TECH-001" not in [rule for rule, _previewed in previewed(repo)]
+    # A conflict that stands without the preview too is not marked.
+    repo.write(
+        {
+            f"{SETS}/tech.md": rule_set_text(
+                rule_set(
+                    "TECH",
+                    inherits=["CMN@1"],
+                    scope=scoped(f"{GUIDES}/**"),
+                    entries=rules("RS-TECH-001", **_filling()),
+                )
+            )
+        }
+    )
+    (conflict,) = rs.reach_at(repo.root, preview=True)[2].of(A).conflicts
+    assert isinstance(conflict, rs.FillConflict) and not conflict.previewed
+    assert [f.location for f in errors(repo, Kind.FILL_CONFLICT)] == [A]
+
+
+def test_a_rule_the_walk_without_a_preview_binds_is_never_marked(repo: AdopterRepo) -> None:
+    """A preview can lose a binding: a point whose fills conflict only under it binds no
+    fill there. A rule that binds without a preview is still not marked where the preview
+    binds it only through another point, so nothing marked overlaps what binds
+    (ADR-057 point 2). The double fill is a validation error, read here for the walk."""
+    offering = rule_set(
+        "CMN",
+        entries={
+            **rules("RS-CMN-001", offers=["where"]),
+            "RS-CMN-003": {"offers": ["how"]},  # proposed
+        },
+    )
+    both = {"fills": ["RS-CMN-001#where", "RS-CMN-003#how"], **anchored_to("RS-CMN-001")}
+    lay_out(
+        repo,
+        {
+            "cmn": offering,
+            "doc": rule_set(
+                "DOC",
+                inherits=["CMN@1"],
+                scope=scoped(f"{GUIDES}/**"),
+                entries={**rules("RS-DOC-001", **both), "RS-DOC-002": _filling(origin=QUOTE)},
+            ),
+        },
+        a=page(),
+    )
+    assert binding(repo, "RS-DOC-001").fills == ("RS-CMN-001#where",)
+    answer = rs.reach_at(repo.root, preview=True)[2].of(A)
+    (fill,) = [b for b in answer.bindings if b.rule.id == "RS-DOC-001"]
+    assert (fill.fills, fill.previewed) == (("RS-CMN-003#how",), False)
+    (conflict,) = answer.conflicts
+    assert isinstance(conflict, rs.FillConflict)
+    assert (conflict.point, conflict.previewed) == ("RS-CMN-001#where", True)
+
+
+def test_the_command_gives_the_preview_and_validation_reads_none(repo: AdopterRepo) -> None:
+    lay_out(
+        repo,
+        {"doc": rule_set("DOC", scope=scoped(f"{GUIDES}/**"), entries={"RS-DOC-001": {}})},
+        a=page(),
+    )
+    plain = json.loads(_cli("reach", "--json").output)
+    assert plain["preview"] is False and plain["artefacts"] == []
+    result = _cli("reach", "--preview", "--json")
+    assert result.exit_code == 0, result.output
+    document = json.loads(result.output)
+    assert document["preview"] is True and document["schema_version"] == 1
+    (entry,) = document["artefacts"]
+    [rule] = entry["rules"]
+    assert (rule["rule"], rule["status"], rule["previewed"]) == ("RS-DOC-001", "proposed", True)
+    human = _cli("reach", "--preview")
+    assert human.exit_code == 0
+    assert "every proposed rule taken as accepted" in human.output
+    assert "RS-DOC-001  (DOC)  through docs/rule-sets/doc.md  (previewed)" in human.output
+    # Validation's member reads the walk without the preview: a proposed rule is counted,
+    # never bound.
+    assert not rs.validate_rule_sets(repo.root).errors
+
+
 # --- the reading command at one state ------------------------------------------------------
 
 

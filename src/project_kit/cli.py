@@ -1858,9 +1858,17 @@ def _readable_configuration(target_root: Path, tree: friction_check.CommitTree |
     "from git objects instead of the working tree. Nothing is checked out.",
 )
 @click.option(
+    "--preview",
+    is_flag=True,
+    default=False,
+    help="Answer as if every proposed rule were accepted, marking what holds only under the "
+    "preview. A superseded or withdrawn rule still binds nothing, and pins are read as "
+    "written. Validation and every gate read the answer without it.",
+)
+@click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
-def rule_sets_reach_command(at: str | None, as_json: bool) -> None:
+def rule_sets_reach_command(at: str | None, preview: bool, as_json: bool) -> None:
     """Which accepted rules bind on each artefact, at one state (COR-051 point 7).
 
     The working tree by default, or commit REV with --at. Each artefact on
@@ -1870,9 +1878,11 @@ def rule_sets_reach_command(at: str | None, as_json: bool) -> None:
     of it checks enforce with whether each check is there, and its text;
     each conflict between routes — one set pinned at different majors, or
     the most specific sets bringing different fills for one extension point;
-    each rule held back, binding nothing, with the pins that hold it. Exit 0
-    when answered; 1 when the configuration cannot be read or REV names no
-    commit; 2 on a usage error.
+    each rule held back, binding nothing, with the pins that hold it. With
+    --preview, where rules would bind if every proposed rule were accepted,
+    each binding, rule held back and conflict that holds only under the
+    preview marked. Exit 0 when answered; 1 when the configuration cannot be
+    read or REV names no commit; 2 on a usage error.
     """
     from project_kit import rule_set_reading, validators
 
@@ -1887,7 +1897,9 @@ def rule_sets_reach_command(at: str | None, as_json: bool) -> None:
             raise click.ClickException(f"--at {at!r} names no commit of this repository.")
         tree = friction_check.CommitTree(target_root, commit)
     _readable_configuration(target_root, tree)
-    document = validators.as_one_run(lambda: rule_set_reading.reach_document(target_root, commit))
+    document = validators.as_one_run(
+        lambda: rule_set_reading.reach_document(target_root, commit, preview=preview)
+    )
     if as_json:
         click.echo(rule_set_reading.render_json(document), nl=False)
     else:

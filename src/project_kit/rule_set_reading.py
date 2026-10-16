@@ -7,7 +7,9 @@ walk routes or judge pins itself (ADR-057 point 1):
 - `pkit rule-sets reach` (`reach_document`): the walk at one state — the
   working tree, or a commit named with `--at`. It lists each artefact on
   which an accepted rule binds, whose routes conflict, or from which a pin
-  behind its set holds a rule back.
+  behind its set holds a rule back. With `--preview`, the walk takes every
+  proposed rule as accepted, and marks what holds only under the preview.
+  Validation and every gate read the answer without it.
 - `pkit rule-sets altered` (`altered_document`): the artefacts a change
   altered between a base and a head, with the walk's answer at each state
   that holds the artefact. The base is the change check's: the merge-base of
@@ -59,22 +61,26 @@ ALTERED_SCHEMA_VERSION = 1
 # --- one state -------------------------------------------------------------------------
 
 
-def reach_document(target_root: Path, commit: str | None = None) -> dict[str, Any]:
+def reach_document(
+    target_root: Path, commit: str | None = None, *, preview: bool = False
+) -> dict[str, Any]:
     """The walk at one state, as one stable document — what `pkit rule-sets reach --json`
     prints.
 
     - `commit`: the commit read, or `null` for the working tree.
-    - `artefacts`: in discovery's walk order, each artefact on which an accepted
-      rule binds, whose routes conflict, or from which a pin behind its set holds
-      a rule back (`artefact_entry`). Any other artefact has no binding rule at
-      this state.
+    - `preview`: whether the walk took every proposed rule as accepted
+      (`rule_sets.PREVIEW`). A superseded or withdrawn rule binds nothing either way.
+    - `artefacts`: in discovery's walk order, each artefact on which a rule binds,
+      whose routes conflict, or from which a pin behind its set holds a rule back
+      (`artefact_entry`). Any other artefact has no binding rule at this state.
     """
     tree = None if commit is None else CommitTree(target_root, commit)
-    discovery, _rule_sets, answer = rs.reach_at(target_root, tree)
+    discovery, _rule_sets, answer = rs.reach_at(target_root, tree, preview=preview)
     presence = rs.CheckPresence(target_root, tree)
     return {
         "schema_version": REACH_SCHEMA_VERSION,
         "commit": commit,
+        "preview": answer.preview,
         "artefacts": [
             artefact_entry(artefact, answer.of(artefact.location), presence)
             for artefact in discovery.artefacts
@@ -92,11 +98,11 @@ def artefact_entry(
       document names it (`pkit friction artefacts`).
     - `span`: for an entry, the lines of its file its section spans,
       `{first_line, last_line}`; `null` for a document.
-    - `rules`: each accepted rule that binds on it (`rule_entry`), in path and
-      written order.
+    - `rules`: each rule that binds on it (`rule_entry`), in path and written
+      order: an accepted one, and in a preview a proposed one too.
     - `conflicts`: each conflict between its routes (`conflict_entry`).
-    - `held`: each accepted rule a pin behind its set holds back from it
-      (`held_entry`), in path and written order. It binds nothing.
+    - `held`: each rule a pin behind its set holds back from it (`held_entry`), in
+      path and written order. It binds nothing.
     """
     span = artefact.span
     return {
@@ -117,7 +123,11 @@ def rule_entry(binding: rs.Binding, presence: rs.CheckPresence) -> dict[str, Any
     """One binding rule.
 
     - `rule`: its id as cited, the component in front for a method rule set;
-      `id`: the bare id; `status`: `accepted`.
+      `id`: the bare id; `status`: its written status, `accepted`, or in a
+      preview `proposed` too.
+    - `previewed`: whether it binds here only under the preview: the answer
+      without the preview does not bind it here. Always `false` without the
+      preview.
     - `rule_set`: its set as cited; `rule_set_path`: the set's file.
     - `covering`: the files of the project's own sets whose scope selects the
       artefact and from which a route reaches the rule's set.
@@ -133,6 +143,7 @@ def rule_entry(binding: rs.Binding, presence: rs.CheckPresence) -> dict[str, Any
         "status": rule.status,
         "rule_set": rule_set.citation,
         "rule_set_path": rule_set.path,
+        "previewed": binding.previewed,
         "covering": [covering.path for covering in binding.covering],
         "fills": list(binding.fills),
         "checks": [check_entry(part, presence) for part in rule.checks],
@@ -150,9 +161,10 @@ def check_entry(part: rs.CheckPart, presence: rs.CheckPresence) -> dict[str, Any
 
 
 def held_entry(held: rs.HeldRule) -> dict[str, Any]:
-    """One accepted rule a pin behind its set holds back (COR-051 point 7).
+    """One rule a pin behind its set holds back (COR-051 point 7).
 
-    - `rule`, `id`, `status`, `rule_set`, `rule_set_path`: as a binding rule's.
+    - `rule`, `id`, `status`, `rule_set`, `rule_set_path`, `previewed`: as a binding
+      rule's. A held rule is previewed when it is proposed.
     - `pins`: each pin behind its set that leads towards the rule's set,
       `{by, by_rule_set, pin}`.
     - `text`: its section, headed by its id: the statement.
@@ -164,6 +176,7 @@ def held_entry(held: rs.HeldRule) -> dict[str, Any]:
         "status": rule.status,
         "rule_set": rule_set.citation,
         "rule_set_path": rule_set.path,
+        "previewed": held.previewed,
         "pins": [
             {"by": by.path, "by_rule_set": by.citation, "pin": str(pin)}
             for by, _index, pin in held.pins
@@ -181,10 +194,13 @@ def conflict_entry(conflict: rs.Conflict) -> dict[str, Any]:
     - `{"kind": "fill", "point", "brought"}`: the most specific sets bring
       different fills for one extension point; `brought` lists each set,
       `{by, by_rule_set, fills}`, `fills` the fills it brings, as cited.
+    - `previewed`: whether the conflict stands only under the preview. A pin
+      conflict depends on no status, so it is never previewed.
     """
     if isinstance(conflict, rs.PinConflict):
         return {
             "kind": "pin",
+            "previewed": False,
             "rule_set": conflict.rule_set.citation,
             "rule_set_path": conflict.rule_set.path,
             "version": conflict.rule_set.version,
@@ -195,6 +211,7 @@ def conflict_entry(conflict: rs.Conflict) -> dict[str, Any]:
         }
     return {
         "kind": "fill",
+        "previewed": conflict.previewed,
         "point": conflict.point,
         "brought": [
             {
@@ -344,18 +361,34 @@ def render_json(document: Mapping[str, Any]) -> str:
 
 def render_reach_human(document: Mapping[str, Any]) -> str:
     """The read view of the walk at one state: each artefact with the rules that bind on
-    it and the sets whose scope it reaches them through."""
+    it and the sets whose scope it reaches them through. A preview says so in its title,
+    and marks what holds only under it."""
     commit = document["commit"]
+    preview = document.get("preview") is True
     state = "the working tree" if commit is None else f"commit {commit[:SHORT]}"
-    lines = [cli_render.style("title", "Rules that bind on each artefact") + f" — {state}", ""]
+    title = (
+        "Rules that would bind on each artefact, every proposed rule taken as accepted"
+        if preview
+        else "Rules that bind on each artefact"
+    )
+    lines = [cli_render.style("title", title) + f" — {state}", ""]
     artefacts = document["artefacts"]
     if not artefacts:
-        lines.append("  no accepted rule binds on any artefact")
+        lines.append(
+            f"  no {'accepted or proposed' if preview else 'accepted'} rule binds on any artefact"
+        )
     for artefact in artefacts:
         lines.append(f"  {artefact['location']}")
         lines.extend(_answer_lines(artefact, "    "))
     rules = {rule["rule"] for artefact in artefacts for rule in artefact["rules"]}
-    lines.extend(["", f"{len(artefacts)} artefact(s), {len(rules)} rule(s) binding."])
+    previewed = {
+        rule["rule"]
+        for artefact in artefacts
+        for rule in artefact["rules"]
+        if rule.get("previewed")
+    }
+    only = f", {len(previewed)} only under the preview" if preview else ""
+    lines.extend(["", f"{len(artefacts)} artefact(s), {len(rules)} rule(s) binding{only}."])
     return "\n".join(lines) + "\n"
 
 
@@ -429,7 +462,10 @@ def _answer_lines(artefact: Mapping[str, Any], indent: str) -> list[str]:
     for rule in artefact["rules"]:
         through = ", ".join(rule["covering"])
         fills = f", fills {', '.join(rule['fills'])}" if rule["fills"] else ""
-        lines.append(f"{indent}{rule['rule']}  ({rule['rule_set']}{fills})  through {through}")
+        lines.append(
+            f"{indent}{rule['rule']}  ({rule['rule_set']}{fills})  through {through}"
+            f"{_PREVIEWED if rule.get('previewed') else ''}"
+        )
         for part in rule["checks"]:
             missing = "" if part["there"] else f"  (not there: {part['problem']})"
             lines.append(f"{indent}  checked by {part['check']}: {part['part']}{missing}")
@@ -446,11 +482,16 @@ def _answer_lines(artefact: Mapping[str, Any], indent: str) -> list[str]:
             )
             lines.append(
                 f"{indent}conflict: different fills for {conflict['point']} ({brought}); "
-                f"no fill binds"
+                f"no fill binds{_PREVIEWED if conflict.get('previewed') else ''}"
             )
     for held in artefact["held"]:
         pins = ", ".join(f"{pin['by_rule_set']} pins {pin['pin']}" for pin in held["pins"])
         lines.append(
             f"{indent}{held['rule']}  ({held['rule_set']})  held back, binding nothing: {pins}"
+            f"{_PREVIEWED if held.get('previewed') else ''}"
         )
     return lines
+
+
+#: How the read view marks what holds only under a preview.
+_PREVIEWED = "  (previewed)"
