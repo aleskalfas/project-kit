@@ -409,6 +409,47 @@ def test_no_git_is_an_answer_without_commits(tmp_path: Path) -> None:
     assert db.base(tmp_path).problem is not None
 
 
+def test_no_repository_is_said_in_plain_words(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Outside any repository the problem says that git finds none, with git's own
+    reason, and names no fix to the branch: no remote, branch or base would help."""
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))  # no repository above it
+    branch = db.resolve(plain)
+    assert (branch.commit, branch.unborn) == (None, False)
+    assert branch.problem is not None
+    assert branch.problem.startswith(
+        "the default branch 'main' cannot be read: git finds no repository here that it "
+        "can read (git says: "
+    ), branch.problem
+    for misleading in ("no remote", "no local branch", "declare", "--base"):
+        assert misleading not in branch.problem
+    assert db.base(plain).problem == branch.problem
+
+
+def test_no_git_to_run_is_said_in_plain_words(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Where git cannot run at all, the problem says so, and names no fix to the branch."""
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))  # no git on it
+    branch = db.resolve(tmp_path)
+    assert (branch.commit, branch.unborn) == (None, False)
+    assert branch.problem == "the default branch 'main' cannot be read: git could not be run here."
+
+
+def test_a_repository_without_the_branch_keeps_its_fixes(tmp_path: Path) -> None:
+    """Only a listing git could not make reads as no repository: in a repository that
+    holds no such branch and no remote, the problem still names the declaration."""
+    repo = GitRepo.init(tmp_path / "elsewhere", branch="topic")
+    repo.commit("first", {"a.txt": "a\n"})
+    problem = db.resolve(repo.root).problem
+    assert problem is not None
+    assert "there is no remote and no local branch 'main'" in problem
+    assert "git finds no repository" not in problem
+
+
 # --- the base of a comparison (point 3) --------------------------------------------------------
 
 
