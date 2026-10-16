@@ -26,9 +26,16 @@ it applies.
 Each body is checked against its kind's declared structure too — a part
 missing, out of order or empty, `None.` where a part may not read it, and a
 part or a front-matter field that breaks the form its structure gives it
-(`_lib/forms.py`) — at the status of the format rule, RS-SAN-001 (DEC-001
-point 1): accepted, as errors; under any other status, not at all.
-`--preview` previews a proposed rule as if it were accepted: each departure is
+(`_lib/forms.py`). A revalidation record's always: it is a held document,
+which no rule binds on, so the capability holds it itself (DEC-001 point 1).
+An artefact's, and a glossary's head, only where the format rule,
+RS-SAN-001, binds, as `pkit rule-sets reach` reads it, and at its status:
+accepted, as errors; under any other status, not at all. `SAN` binds only
+through a set of the project's own that inherits it, so the summary counts the
+artefacts no rule of `SAN` binds on, and where it binds on none of the
+analysis, the check reports it while no rule of `SAN` is accepted and warns
+once one is. `--preview` previews a proposed rule as if it were accepted,
+where `pkit rule-sets reach --preview` says it would bind: each departure is
 a report whose message opens `preview:`, so the exit is the normal check's.
 The backbone runs the normal check, with no preview. The structure is the
 kind's as the project's own `project/structures.yaml` relabels it, tightened by
@@ -77,10 +84,10 @@ def main() -> int:
         description=(
             "Check the analysis artefacts (software-analysis DEC-001): shape and required "
             "parts, headings, duplicate ids, what an artefact names, actor and journey "
-            "anchors, revalidation records and the evidence they copy, and each body against "
-            "its kind's structure where the format rule, RS-SAN-001, is accepted. Read-only "
-            "and offline; the working tree, and the evidence point when a record copies "
-            "evidence."
+            "anchors, revalidation records and the evidence they copy, each record's body "
+            "against its structure, and each artefact's body against its kind's structure "
+            "where the format rule, RS-SAN-001, is accepted and binds. Read-only and offline; "
+            "the working tree, and the evidence point when a record copies evidence."
         ),
     )
     parser.add_argument(
@@ -93,9 +100,9 @@ def main() -> int:
         action="store_true",
         help=(
             "Preview each proposed rule as if it were accepted, the format rule, RS-SAN-001, "
-            "and a project rule that tightens a kind's structure: what each body would break "
-            "of its kind's structure, as reports opening `preview:`, which never change the "
-            "exit status."
+            "and a project rule that tightens a kind's structure, where `pkit rule-sets reach "
+            "--preview` says it would bind: what each body would break of its kind's "
+            "structure, as reports opening `preview:`, which never change the exit status."
         ),
     )
     args = parser.parse_args()

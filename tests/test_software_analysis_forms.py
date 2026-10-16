@@ -31,6 +31,8 @@ import pytest
 
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
+    ANALYSIS_SET,
+    ANALYSIS_SET_TEXT,
     GLOSSARY,
     USE_CASES,
     VALIDATE,
@@ -564,8 +566,15 @@ def _artefact(root: Path, rel: str, kind: str, text: str, **fields: Any) -> Any:
 
 
 def _messages(root: Path, *artefacts: Any, records: list[Any] | None = None) -> list[str]:
-    _summary, found = C._structure(root, _analysis(*artefacts), records or [], preview=False)
-    return [f.message for f in found]
+    """What the check says of `artefacts`, the format rule accepted and binding on each, as
+    through a set of the project's own that selects them all and inherits `SAN`, and of
+    `records`, which the capability holds always."""
+    bound = {a.location: {"software-analysis:RS-SAN-001": False} for a in artefacts}
+    _summary, found = C._structure(
+        root, _analysis(*artefacts), preview=False, reach=lambda _root, **_kw: bound
+    )
+    _said, held = C._record_structure(root, records or [])
+    return [f.message for f in found + held]
 
 
 UC_REL = "docs/analysis/use-case-model/use-cases/UC-007-export.md"
@@ -603,6 +612,7 @@ def test_a_record_s_forms_read_its_front_matter(tmp_path: Path) -> None:
     (tmp_path / rel).write_text(RECORD.replace(GAP, "None."), encoding="utf-8")
     [message] = _messages(tmp_path, records=[(rel, OUTCOMES)])
     assert message.startswith("the section `## Gaps`, at line 8, does not hold its form")
+    assert "(DEC-001 point 1)" in message  # no rule binds on a record, a held document
 
 
 def test_a_withdrawn_artefact_is_never_failed_for_a_form(tmp_path: Path) -> None:
@@ -683,11 +693,24 @@ def test_proposed_the_forms_report_nothing_and_the_preview_lists_each_breach(
         "## TERM-template — template\n\n**Example:** None.\n\n**Distinctions:** None.\n"
     )
     uc_rel = f"{USE_CASES}/UC-007-export.md"
-    project.write({actor_at("ACT-tester"): actor, uc_rel: use_case, GLOSSARY: glossary})
+    project.write(
+        {
+            actor_at("ACT-tester"): actor,
+            uc_rel: use_case,
+            GLOSSARY: glossary,
+            ANALYSIS_SET: ANALYSIS_SET_TEXT,
+        }
+    )
     code, found = _said(project)
-    assert (code, found) == (0, [])
+    # No rule of `SAN` is accepted, so none binds, which the check reports (DEC-001 point 1).
+    assert (code, [(s, m.split(":")[0]) for s, _l, m in found]) == (
+        0,
+        [("report", "no rule of software-analysis")],
+    )
+    found = found[1:]
     code, found = _said(project, "--preview")
     assert code == 0
+    found = found[1:]
     assert sorted((severity, location) for severity, location, _m in found) == [
         ("report", f"{GLOSSARY}#TERM-template:/definition"),
         ("report", uc_rel),

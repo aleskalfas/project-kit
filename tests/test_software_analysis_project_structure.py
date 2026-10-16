@@ -39,6 +39,7 @@ from tests.analysis_repo import (
     RECORDS,
     SA,
     VALIDATE,
+    accepting_san,
     actor_at,
     front,
     installed,
@@ -56,7 +57,6 @@ M: Any = _MODEL
 
 KINDS: dict[str, Any] = S.read_kinds()
 FILE = f"{SA.as_posix()}/project/structures.yaml"
-SAN_REL = f"{SA.as_posix()}/rule-sets/san.md"
 
 
 def _write(root: Path, text: str) -> None:
@@ -521,15 +521,34 @@ kinds:
 """
 
 
+#: The format rule as the backbone's reading of where rules bind cites it.
+SAN_RULE = "software-analysis:RS-SAN-001"
+
+
 def _gate(
-    root: Path, analysis: Any, *, preview: bool = False, reach: Any = None, records: Any = ()
+    root: Path, analysis: Any, *, preview: bool = False, reach: Any = None
 ) -> tuple[str, list[tuple[str, str, str]]]:
+    """The structure check's summary and findings, `reach` giving where the project's rules
+    bind. The format rule binds on every artefact, as through a set of the project's own
+    that selects them all and inherits `SAN`: once accepted, and under the preview while
+    it is proposed. The finding that says `SAN` binds on none is left out."""
     own = P.read(root, KINDS)
-    reached = reach if reach is not None else (lambda _root, **_kw: {})
-    summary, found = C._structure(
-        root, analysis, list(records), preview=preview, own=own, reach=reached
-    )
-    return summary, [(f.severity, f.location, f.message) for f in found]
+    given = reach if reach is not None else (lambda _root, **_kw: {})
+    san = (analysis.method_rules or {}).get("RS-SAN-001")
+
+    def reached(at: Path, *, preview: bool) -> dict[str, dict[str, bool]]:
+        answer = {location: dict(rules) for location, rules in given(at, preview=preview).items()}
+        if san == "accepted" or (preview and san == "proposed"):
+            for artefact in analysis.artefacts:
+                answer.setdefault(artefact.location, {})[SAN_RULE] = san != "accepted"
+        return answer
+
+    summary, found = C._structure(root, analysis, preview=preview, own=own, reach=reached)
+    return summary, [
+        (f.severity, f.location, f.message)
+        for f in found
+        if not f.message.startswith("no rule of software-analysis:SAN binds")
+    ]
 
 
 def test_a_tightening_binds_where_its_rule_binds_once_both_rules_are_accepted(
@@ -553,14 +572,17 @@ def test_a_tightening_binds_where_its_rule_binds_once_both_rules_are_accepted(
         "`**Notes:**` is missing, and it comes after `**Context:**`: the project's rule "
         "RS-LOC-001 requires it of an actor (RS-LOC-001, RS-SAN-001). What goes there: "
     )
-    assert asked == [(tmp_path, False)]  # the normal check never reads a preview
+    # Read once, for the format rule and the group alike; the normal check never reads a
+    # preview.
+    assert asked == [(tmp_path, False)]
     assert "tightened where 1 of the project's group(s)" in summary
-    # A proposed project rule binds nothing, and nothing asks where it binds.
+    # A proposed project rule binds nothing, and asks nothing more of the reading than
+    # where the format rule binds.
     asked.clear()
     _summary, found = _gate(
         tmp_path, _analysis("accepted", {"RS-LOC-001": "proposed"}, tester), reach=reach
     )
-    assert (found, asked) == ([], [])
+    assert (found, asked) == ([], [(tmp_path, False)])
 
 
 class _Reach:
@@ -616,8 +638,10 @@ def test_a_preview_places_a_proposed_rule_where_the_backbone_s_preview_says_it_b
         [(severity, location, message)] = found
         assert (severity, location) == ("report", ACTOR_REL)
         assert message.startswith("preview: `**Notes:**` is missing")
-    # A proposed rule asks nothing of the reading without the preview.
-    assert proposed.asked == [True, True]
+    # Each reading is asked once a run. A proposed format rule is placed by the preview
+    # alone; an accepted one by the reading without it, which a proposed project rule
+    # asks nothing more of.
+    assert proposed.asked == [True, False, True]
     # Without a preview, a proposed format rule reports nothing at all.
     assert _gate(tmp_path, _analysis("proposed", {"RS-LOC-001": "accepted"}, tester))[1] == []
 
@@ -711,8 +735,10 @@ def test_the_reading_of_where_rules_bind_asks_for_the_preview_only_when_previewi
         answer = {**document, "preview": "--preview" in argv}
         return subprocess.CompletedProcess(argv, 0, json.dumps(answer), "")
 
+    # A method rule comes with its component in front, as it is cited: the format rule is
+    # read from the same answer (DEC-001 point 1).
     assert backbone.reach(tmp_path, run, preview=True) == {
-        ACTOR_REL: {"RS-LOC-001": True, "RS-WRITE-001": False}
+        ACTOR_REL: {"RS-LOC-001": True, "RS-WRITE-001": False, SAN_RULE: True}
     }
     backbone.reach(tmp_path, run)
     assert argvs == [
@@ -741,12 +767,15 @@ def test_a_reach_that_cannot_be_read_applies_the_group_nowhere_and_says_so(tmp_p
     def unreadable(_root: Path, *, preview: bool) -> dict[str, dict[str, bool]]:
         raise M.Unreadable("`pkit rule-sets reach --json` exited 1")
 
-    _summary, found = _gate(
+    # Where no rule binds cannot be read, no artefact is checked at all: one error says so,
+    # at the analysis.
+    summary, found = _gate(
         tmp_path, _analysis("accepted", {"RS-LOC-001": "accepted"}, tester), reach=unreadable
     )
     [(severity, location, message)] = found
-    assert (severity, location) == ("error", f"{FILE}:/kinds/actor/tighten/0")
-    assert message.startswith("where RS-LOC-001 binds cannot be read")
+    assert (severity, location) == ("error", "docs/analysis")
+    assert message.startswith("where the rules of software-analysis:SAN bind cannot be read")
+    assert "not checked — where the rule binds cannot be read" in summary
     # In a preview of a proposed format rule, it is a report, and the exit stays the normal
     # check's.
     _summary, found = _gate(
@@ -755,10 +784,9 @@ def test_a_reach_that_cannot_be_read_applies_the_group_nowhere_and_says_so(tmp_p
         preview=True,
         reach=unreadable,
     )
-    [plain, previewed] = found
-    assert plain[:2] == previewed[:2] == ("report", f"{FILE}:/kinds/actor/tighten/0")
-    assert plain[2].startswith("preview: where RS-LOC-001 binds cannot be read")
-    assert previewed[2].startswith("preview: where RS-LOC-001 would bind cannot be read")
+    [(severity, location, message)] = found
+    assert (severity, location) == ("report", "docs/analysis")
+    assert message.startswith("preview: where RS-SAN-001 would bind cannot be read")
 
 
 def test_a_preview_reading_that_fails_keeps_the_normal_check_s_findings(tmp_path: Path) -> None:
@@ -881,19 +909,13 @@ def test_a_record_or_a_withdrawn_artefact_keeps_a_part_s_earlier_label(tmp_path:
     record.write_text(f"---\noutcomes: {{UC-001: holds}}\n---\n\n{body}\n\nNone.\n", "utf-8")
     data = {"outcomes": {"UC-001": "holds"}}
     analysis = _analysis("accepted", {}, withdrawn)
-    assert _gate(tmp_path, analysis, records=[(RECORD_REL, data)])[1] == []
+    assert _gate(tmp_path, analysis)[1] == []
+    said, found = C._record_structure(tmp_path, [(RECORD_REL, data)], P.read(tmp_path, KINDS))
+    assert found == []
+    assert "1 revalidation record(s) checked" in said
 
 
-def test_a_record_is_held_to_a_project_s_part_it_carries_and_never_failed_for_one_it_lacks(
-    tmp_path: Path,
-) -> None:
-    """A record lies in no place a scope names, so a group of the record's kind binds on
-    every record once its rule is accepted. A record is held to the structure in force on
-    its day, so a part a project adds is never missing from it, as from a withdrawn
-    artefact (DEC-001 point 1)."""
-    _write(
-        tmp_path,
-        """\
+RECORD_TIGHTENED = """\
 schema_version: 1
 kinds:
   revalidation-record:
@@ -902,31 +924,51 @@ kinds:
         add:
           - {id: notes, type: heading, level: 2, label: Notes, after: gaps, hint: Anything else.,
              example: None., required: true}
-""",
+"""
+
+
+def test_a_tightening_of_the_record_s_kind_is_refused_saying_why(tmp_path: Path) -> None:
+    """A record is a held document, which no rule binds on, so a tightening of its kind
+    could never bind: the schema refuses one, and the check says why (DEC-001 point 1)."""
+    own = _read(tmp_path, RECORD_TIGHTENED)
+    [problem] = own.problems
+    assert problem.location == f"{FILE}:/kinds/revalidation-record/tighten"
+    assert problem.message.startswith(
+        "a revalidation record's structure takes no tightening: a record is a held document, "
+        "which no rule binds on"
     )
-    body = (
-        "# 2026-10-01 — Export\n\n## Outcomes\n\n- **UC-001 — holds.** It holds.\n\n"
-        "## Gaps\n\nNone."
-    )
+    # The schema refuses it on its own, whatever the group holds.
+    from ruamel.yaml import YAML
+
+    schemas = load_lib("schemas")[0]
+    data = YAML(typ="safe").load(RECORD_TIGHTENED)
+    assert [pointer for pointer, _m in schemas.structures_errors(data)] == [
+        "/kinds/revalidation-record/tighten"
+    ]
+    # A relabel of the record's kind stays the project's to make.
+    relabel = "schema_version: 1\nkinds:\n  revalidation-record:\n    relabel: {gaps: {label: G}}\n"
+    assert _read(tmp_path, relabel).problems == ()
+
+
+def test_a_record_is_held_to_its_structure_always_whatever_the_format_rule(
+    tmp_path: Path,
+) -> None:
+    """No rule binds on a record, so the capability holds its body to the record's
+    structure itself, always, as its schema holds its front matter: a part missing fails
+    it whatever `SAN`'s status, and the finding cites the record point, not the format
+    rule (DEC-001 point 1)."""
     record = tmp_path / RECORD_REL
     record.parent.mkdir(parents=True)
     data = {"outcomes": {"UC-001": "holds"}}
-    record.write_text(f"---\noutcomes: {{UC-001: holds}}\n---\n\n{body}\n", encoding="utf-8")
-    analysis = _analysis("accepted", {"RS-LOC-002": "accepted"})
-    assert _gate(tmp_path, analysis, records=[(RECORD_REL, data)])[1] == []
-    record.write_text(f"---\noutcomes: {{UC-001: holds}}\n---\n\n{body}\n\n## Notes\n", "utf-8")
-    [(severity, location, message)] = _gate(tmp_path, analysis, records=[(RECORD_REL, data)])[1]
-    assert (severity, location) == ("error", RECORD_REL)
-    assert message.startswith("the section `## Notes`, at line 15, is empty")
-    # A proposed rule's group binds on no record, and a preview takes it as accepted. What
-    # it finds is a preview's report, whatever the format rule's status: it never fails.
-    proposed = _analysis("accepted", {"RS-LOC-002": "proposed"})
-    assert _gate(tmp_path, proposed, records=[(RECORD_REL, data)])[1] == []
-    [(severity, location, message)] = _gate(
-        tmp_path, proposed, preview=True, records=[(RECORD_REL, data)]
-    )[1]
-    assert (severity, location) == ("report", RECORD_REL)
-    assert message.startswith("preview: the section `## Notes`, at line 15, is empty")
+    body = "# 2026-10-01 — Export\n\n## Outcomes\n\n- **UC-001 — holds.** It holds.\n"
+    record.write_text(f"---\noutcomes: {{UC-001: holds}}\n---\n\n{body}", encoding="utf-8")
+    said, [found] = C._record_structure(tmp_path, [(RECORD_REL, data)])
+    assert (found.severity, found.location) == ("error", RECORD_REL)
+    assert found.message.startswith("the section `## Gaps` is missing")
+    assert "(DEC-001 point 1)" in found.message and "RS-SAN-001" not in found.message
+    assert said.startswith("records' structure, held always: 1 revalidation record(s) checked")
+    # No record, no line.
+    assert C._record_structure(tmp_path, []) == (None, [])
 
 
 def test_a_group_whose_rule_is_retired_or_missing_is_reported_or_refused(tmp_path: Path) -> None:
@@ -996,11 +1038,7 @@ def test_the_stamp_leaves_out_an_orphaned_group_and_writes_a_record_s_relabels_o
 ) -> None:
     project.write(
         {
-            FILE: SETUP
-            + "  revalidation-record:\n    relabel: {gaps: {label: Gaps found}}\n"
-            + "    tighten:\n      - rule: RS-LOC-001\n        add:\n"
-            + "          - {id: notes, type: heading, level: 2, label: Notes, after: gaps,"
-            + " hint: H., example: E.}\n",
+            FILE: SETUP + "  revalidation-record:\n    relabel: {gaps: {label: Gaps found}}\n",
             LOC: _rule_set("withdrawn"),
         }
     )
@@ -1056,14 +1094,7 @@ def test_the_check_reads_where_the_rule_binds_through_the_backbone(
     text = path.read_text(encoding="utf-8")
     filled = re.sub(r"<!-- pkit:hint .*? Example: (.*?) -->", r"\1", text)
     path.write_text(filled, encoding="utf-8")
-    san = (project.root / SAN_REL).read_text(encoding="utf-8")
-    project.write(
-        {
-            FILE: NOTES_REQUIRED,
-            LOC: _rule_set("accepted"),
-            SAN_REL: san.replace("status: proposed", "status: accepted", 1),
-        }
-    )
+    project.write({FILE: NOTES_REQUIRED, LOC: _rule_set("accepted"), **accepting_san(project)})
     code, document = _validate(project)
     said = [(f["severity"], f["location"], f["message"][:40]) for f in document["findings"]]
     assert said == [("error", actor_at("ACT-tester"), "`**Notes:**` is missing, and it comes af")]
@@ -1093,14 +1124,7 @@ def test_the_preview_reads_where_a_proposed_rule_would_bind_through_the_backbone
     path = project.root / actor_at("ACT-tester")
     text = path.read_text(encoding="utf-8")
     path.write_text(re.sub(r"<!-- pkit:hint .*? Example: (.*?) -->", r"\1", text), "utf-8")
-    san = (project.root / SAN_REL).read_text(encoding="utf-8")
-    project.write(
-        {
-            FILE: NOTES_REQUIRED,
-            LOC: _rule_set("proposed"),
-            SAN_REL: san.replace("status: proposed", "status: accepted", 1),
-        }
-    )
+    project.write({FILE: NOTES_REQUIRED, LOC: _rule_set("proposed"), **accepting_san(project)})
     _code, document = _validate(project)
     assert document["findings"] == []
     _code, document = _validate(project, "--preview")

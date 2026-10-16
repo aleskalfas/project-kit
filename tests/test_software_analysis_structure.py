@@ -37,11 +37,15 @@ from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ANALYSIS,
+    ANALYSIS_SET,
+    ANALYSIS_SET_TEXT,
     GLOSSARY,
     NEW,
     RECORDS,
     SA,
+    SAN_REL,
     VALIDATE,
+    accepting_san,
     actor_at,
     field_hint,
     installed,
@@ -58,7 +62,6 @@ F: Any = _FORMS
 
 KINDS: dict[str, Any] = S.read_kinds()
 RULE = "RS-SAN-001"
-SAN_REL = f"{SA.as_posix()}/rule-sets/san.md"
 
 USE_CASE = """\
 # UC-007 — Export the report as a file
@@ -392,9 +395,38 @@ ACTOR_REL = "docs/analysis/use-case-model/actors/ACT-tester.md"
 WITHOUT_CONTEXT = ACTOR_BODY.replace("\n- **Context:** the suite, and a sandbox to run it in.", "")
 
 
-def _structure(root: Path, status: str | None, *artefacts: Any, preview: bool = False) -> Any:
-    summary, found = C._structure(root, _analysis(root, status, *artefacts), [], preview=preview)
-    return summary, [(f.severity, f.location, f.message) for f in found]
+def _everywhere(analysis: Any) -> Any:
+    """The backbone's reading of where rules bind, as a set of the project's own that
+    selects every artefact and inherits `SAN` gives it: the format rule binds on each once
+    accepted, and the preview places it on each while it is proposed."""
+    status = (analysis.method_rules or {}).get(RULE)
+
+    def reach(_root: Path, *, preview: bool = False) -> dict[str, dict[str, bool]]:
+        if status == "accepted" or (preview and status == "proposed"):
+            cited = f"software-analysis:{RULE}"
+            return {a.location: {cited: status != "accepted"} for a in analysis.artefacts}
+        return {}
+
+    return reach
+
+
+#: What opens the finding that says no rule of `SAN` binds on the analysis (DEC-001
+#: point 1), said whenever none is accepted.
+UNBOUND = "no rule of software-analysis:SAN binds on any of the analysis's"
+
+
+def _structure(
+    root: Path, status: str | None, *artefacts: Any, preview: bool = False, reach: Any = None
+) -> Any:
+    """The structure check's summary and findings, `SAN` bound on every artefact unless
+    `reach` says otherwise, the finding that says it binds on none left out."""
+    analysis = _analysis(root, status, *artefacts)
+    summary, found = C._structure(
+        root, analysis, preview=preview, reach=reach or _everywhere(analysis)
+    )
+    return summary, [
+        (f.severity, f.location, f.message) for f in found if not f.message.startswith(UNBOUND)
+    ]
 
 
 def test_only_an_accepted_rule_binds_and_a_preview_shows_only_a_proposed_one(
@@ -415,7 +447,7 @@ def test_only_an_accepted_rule_binds_and_a_preview_shows_only_a_proposed_one(
     for status in ("superseded", "withdrawn"):
         summary, found = _structure(tmp_path, status, actor, preview=True)
         assert found == []
-        assert summary == (
+        assert summary.startswith(
             f"structure (RS-SAN-001, {status}): not checked — the rule binds nothing "
             f"(COR-051 point 4). A preview shows only a proposed rule."
         )
@@ -499,28 +531,137 @@ def test_an_entry_is_read_within_its_span_and_the_file_s_head_above_the_first(
         (f"{glossary}#TERM-a", "`**Distinctions:**` is missing"),
         (glossary, "its opening text is missing"),
     ]
-    assert "3 artefact(s), record(s) and file head(s) checked" in summary
+    assert "3 artefact(s) and file head(s) checked" in summary
     assert "2 of them departing" in summary
     # A glossary already failed as unreadable or as no collection has no head checked.
     unreadable = dataclasses.replace(
         _analysis(tmp_path, "accepted", a, b), unreadable={glossary: "it does not parse"}
     )
-    summary, found = C._structure(tmp_path, unreadable, [], preview=False)
+    summary, found = C._structure(
+        tmp_path, unreadable, preview=False, reach=_everywhere(unreadable)
+    )
     assert [f.location for f in found] == [f"{glossary}#TERM-a"]
-    assert "2 artefact(s), record(s) and file head(s) checked" in summary
+    assert "2 artefact(s) and file head(s) checked" in summary
     stray = dataclasses.replace(
         _analysis(tmp_path, "accepted", a, b),
         strays=(M.Stray("term", glossary, "it is no collection"),),
     )
-    assert [f.location for f in C._structure(tmp_path, stray, [], preview=False)[1]] == [
-        f"{glossary}#TERM-a"
-    ]
+    found = C._structure(tmp_path, stray, preview=False, reach=_everywhere(stray))[1]
+    assert [f.location for f in found] == [f"{glossary}#TERM-a"]
     no_section = _artefact(tmp_path, glossary, "term", text, entry="TERM-a")
     [(_s, location, message)] = _structure(tmp_path, "accepted", no_section)[1][:1]
     assert (location, message.split(":")[0]) == (
         f"{glossary}#TERM-a",
         "its `## ` heading is missing, and it comes first",
     )
+
+
+# --- where the format rule binds, and never silent (DEC-001 point 1, #1475) -----------------
+
+OTHER_REL = "docs/analysis/use-case-model/actors/ACT-other.md"
+
+
+def _bound_on(*locations: str) -> Any:
+    """The backbone's reading where a set of the project's own that inherits `SAN` selects
+    only the artefacts at `locations`: the format rule binds there and nowhere else."""
+
+    def reach(_root: Path, *, preview: bool = False) -> dict[str, dict[str, bool]]:
+        return {location: {f"software-analysis:{RULE}": False} for location in locations}
+
+    return reach
+
+
+def _all(root: Path, status: str, *artefacts: Any, reach: Any, preview: bool = False) -> Any:
+    """The structure check's summary and every finding, the never-silent one included."""
+    summary, found = C._structure(
+        root, _analysis(root, status, *artefacts), preview=preview, reach=reach
+    )
+    return summary, [(f.severity, f.location, f.message) for f in found]
+
+
+def test_an_artefact_outside_every_scope_is_not_held_to_its_structure(tmp_path: Path) -> None:
+    """`SAN` takes no scope, so the format rule binds only where a set of the project's own
+    makes it bind, as the backbone answers (COR-051 point 7). An actor no such set selects
+    is not checked, whatever it breaks, and the summary counts it."""
+    tester = _artefact(tmp_path, ACTOR_REL, "actor", f"---\nid: ACT-tester\n---\n{WITHOUT_CONTEXT}")
+    other = _artefact(tmp_path, OTHER_REL, "actor", f"---\nid: ACT-other\n---\n{WITHOUT_CONTEXT}")
+    summary, found = _all(tmp_path, "accepted", tester, other, reach=_bound_on(ACTOR_REL))
+    assert [(s, loc) for s, loc, _m in found] == [("error", ACTOR_REL)]
+    assert "1 artefact(s) and file head(s) checked, where the rule binds" in summary
+    assert summary.endswith("No rule of software-analysis:SAN binds on 1 of the 2 artefact(s).")
+    # Outside every scope, it is not checked at all, and neither is it in a preview of a
+    # proposed rule the preview does not place on it.
+    summary, found = _all(tmp_path, "accepted", tester, other, reach=_bound_on())
+    assert [(s, loc) for s, loc, _m in found] == [("warning", "docs/analysis")]
+    assert "0 artefact(s) and file head(s) checked" in summary
+    _summary, found = _all(
+        tmp_path, "proposed", tester, other, reach=_bound_on(OTHER_REL), preview=True
+    )
+    assert [(s, loc, m.split(":")[0]) for s, loc, m in found] == [
+        ("report", "docs/analysis", "no rule of software-analysis"),
+        ("report", OTHER_REL, "preview"),
+    ]
+
+
+def test_a_glossary_s_head_is_held_where_the_rule_binds_on_a_term_of_its_file(
+    tmp_path: Path,
+) -> None:
+    """The head belongs to no term but is part of the term kind's structure, so it is held
+    where the format rule binds on a term of its file, and nowhere else (DEC-001 point
+    1)."""
+    glossary = "docs/analysis/glossary.md"
+    text = (
+        "---\nTERM-a: {}\n---\n\n"  # lines 1 to 3; no heading and no opening above the entry
+        "## TERM-a — a\n\n**Example:** None.\n\n**Distinctions:** None.\n"  # lines 5 to 9
+    )
+    a = _artefact(tmp_path, glossary, "term", text, entry="TERM-a", span=(5, 9))
+    _summary, found = _all(tmp_path, "accepted", a, reach=_bound_on(f"{glossary}#TERM-a"))
+    assert [(loc, m.split(",")[0]) for _s, loc, m in found] == [
+        (glossary, "its `# ` heading is missing"),
+        (glossary, "its opening text is missing"),
+    ]
+    summary, found = _all(tmp_path, "accepted", a, reach=_bound_on())
+    assert [s for s, _loc, _m in found] == ["warning"]
+    assert "0 artefact(s) and file head(s) checked" in summary
+
+
+def test_where_no_rule_of_san_binds_the_check_reports_it_and_once_one_is_accepted_warns(
+    tmp_path: Path,
+) -> None:
+    """Never silent (DEC-001 point 1): where `SAN` binds on none of the analysis, the check
+    says so, at the analysis, and why. While no rule of `SAN` is accepted, none could bind,
+    so it reports it; once one is, it warns, naming the set that would make it bind."""
+    actor = _artefact(tmp_path, ACTOR_REL, "actor", f"---\nid: ACT-tester\n---\n{WITHOUT_CONTEXT}")
+    asked: list[bool] = []
+
+    def nowhere(_root: Path, *, preview: bool = False) -> dict[str, dict[str, bool]]:
+        asked.append(preview)
+        return {}
+
+    summary, [(severity, location, message)] = _all(tmp_path, "proposed", actor, reach=nowhere)
+    assert (severity, location) == ("report", "docs/analysis")
+    assert message.startswith(
+        "no rule of software-analysis:SAN binds on any of the analysis's 1 artefact(s): none is "
+        "accepted, so none binds whatever the project's rule sets say (COR-051 point 4)"
+    )
+    assert summary.endswith(
+        "No rule of software-analysis:SAN binds on any of the 1 artefact(s), since none is "
+        "accepted."
+    )
+    assert asked == []  # nothing is read while no rule of `SAN` could bind
+    summary, [(severity, location, message)] = _all(tmp_path, "accepted", actor, reach=nowhere)
+    assert (severity, location) == ("warning", "docs/analysis")
+    assert message.startswith(
+        "no rule of software-analysis:SAN binds on any of the analysis's 1 artefact(s), as "
+        "`pkit rule-sets reach` reads it, so none is held to its structure: no set of the "
+        "project's own whose scope selects them inherits software-analysis:SAN, or a pin "
+        "behind its set holds it back (COR-051 point 7)"
+    )
+    assert "inherits software-analysis:SAN at its current major" in message
+    assert asked == [False]  # read once, for the warning and the format rule alike
+    # Bound on every artefact, nothing is said; with no artefact, nothing either.
+    assert _all(tmp_path, "accepted", actor, reach=_bound_on(ACTOR_REL))[1][0][0] == "error"
+    assert C._structure(tmp_path, _analysis(tmp_path, "accepted"), preview=False)[1] == []
 
 
 # --- end to end, in an adopter ---------------------------------------------------------------
@@ -552,16 +693,26 @@ ACTOR_FRONT = (
 def test_proposed_the_check_reports_nothing_and_the_preview_never_changes_the_exit(
     project: AdopterRepo, pkit_on_path: Path
 ) -> None:
-    project.write({actor_at("ACT-tester"): ACTOR_FRONT + WITHOUT_CONTEXT + "\n"})
+    project.write(
+        {
+            actor_at("ACT-tester"): ACTOR_FRONT + WITHOUT_CONTEXT + "\n",
+            ANALYSIS_SET: ANALYSIS_SET_TEXT,
+        }
+    )
     code, document = _validate(project, "--json")
-    assert (code, _said(document)) == (0, [])
+    # No rule of `SAN` is accepted, so none binds, and the check reports it (DEC-001 point 1).
+    unbound = ("report", ANALYSIS, "no rule of software-analysis")
+    assert (code, [(s, loc, m.split(":")[0]) for s, loc, m in _said(document)]) == (0, [unbound])
     assert any(
         line.startswith("structure (RS-SAN-001, proposed): not checked")
         for line in document["summary"]
     )
+    # The preview places the rule where `pkit rule-sets reach --preview` says it would bind:
+    # through the set of the project's own that inherits `SAN`.
     code, document = _validate(project, "--json", "--preview")
     assert code == 0
     assert [(s, loc, m.split(":")[0]) for s, loc, m in _said(document)] == [
+        unbound,
         ("report", actor_at("ACT-tester"), "preview"),
         ("report", f"{actor_at('ACT-tester')}:/needs/1", "preview"),
     ]
@@ -582,7 +733,6 @@ def test_accepted_a_departure_fails_and_an_entry_is_read_within_its_span(
     """The rule's status and each entry's span come from the backbone's reading: the
     adopter's copy of `SAN` flipped to accepted, as a fixture, and a glossary whose
     first entry lacks *Distinctions* that the second entry carries."""
-    text = (project.root / SAN_REL).read_text(encoding="utf-8")
     glossary = (
         "---\nTERM-a:\n  name: a\n  status: active\n  definition: first word\n"
         "  pkit:\n    friction:\n      unanchored-because: No code embodies it.\n"
@@ -594,7 +744,7 @@ def test_accepted_a_departure_fails_and_an_entry_is_read_within_its_span(
     )
     project.write(
         {
-            SAN_REL: text.replace("status: proposed", "status: accepted", 1),
+            **accepting_san(project),
             actor_at("ACT-tester"): ACTOR_FRONT + ACTOR_BODY + "\n\n## Notes\n\n**Seen:** daily.\n",
             GLOSSARY: glossary,
         }
@@ -611,6 +761,80 @@ def test_accepted_a_departure_fails_and_an_entry_is_read_within_its_span(
     assert any("(RS-SAN-001, accepted)" in line for line in document["summary"])
     code, _output = _validate(project)
     assert code == 1
+
+
+def test_pkit_validate_reports_where_san_binds_on_none_and_warns_once_a_rule_is_accepted(
+    project: AdopterRepo, pkit_on_path: Path
+) -> None:
+    """Never silent, end to end (DEC-001 point 1): `pkit validate` reports that no rule of
+    `SAN` binds on the analysis while none is accepted. Once one is, and no set of the
+    project's own makes it bind there, it warns. A set that inherits `SAN` and selects the
+    analysis by its types makes the rule bind, and the check holds the actor to its
+    structure. Neither the report nor the warning fails validation."""
+    project.write({actor_at("ACT-tester"): ACTOR_FRONT + WITHOUT_CONTEXT + "\n"})
+    only = ["--color", "never", "validate", "--only", "software-analysis:artefacts"]
+    result = CliRunner().invoke(main, only)
+    assert result.exit_code == 0, result.output
+    assert "0 error(s), 0 warning(s), 0 info(s), 1 report(s)." in result.output
+    unbound = "no rule of software-analysis:SAN binds on any of the analysis's 1 artefact(s)"
+    assert f"{unbound}: none is accepted" in result.output
+    accepted = accepting_san(project)
+    project.write({SAN_REL: accepted[SAN_REL]})  # accepted, with no set of the project's own
+    result = CliRunner().invoke(main, only)
+    assert result.exit_code == 0, result.output
+    assert "0 error(s), 1 warning(s), 0 info(s), 0 report(s)." in result.output
+    assert "as `pkit rule-sets reach` reads it, so none is held to its structure" in result.output
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
+    result = CliRunner().invoke(main, only)
+    assert result.exit_code == 1, result.output
+    assert "`**Context:**` is missing" in result.output
+    assert "no rule of software-analysis:SAN binds" not in result.output
+
+
+def test_a_record_is_held_to_its_structure_while_the_format_rule_is_proposed(
+    project: AdopterRepo, pkit_on_path: Path
+) -> None:
+    """A record is a held document, which no rule binds on, so the capability checks its
+    structure itself, always: a record missing a part fails `pkit analysis validate` while
+    `RS-SAN-001` is proposed, and with no set of the project's own (DEC-001 point 1)."""
+    stamped(project, "actor", "tester", "--unanchored-because", "No code embodies it.")
+    record = run_script(
+        project,
+        NEW,
+        "revalidation",
+        "suite",
+        "--change",
+        "#45",
+        "--trigger",
+        "planned",
+        "--outcome",
+        "ACT-tester=holds",
+        "--because",
+        "ACT-tester=The role is as described.",
+        "--reviewed-against",
+        "the design @ this change",
+    )
+    assert record.returncode == 0, record.stderr
+    [written] = (project.root / RECORDS).glob("*.md")
+    rel = written.relative_to(project.root).as_posix()
+    code, document = _validate(project, "--json")
+    # The actor still holds the stamp's hints, which are not this test's.
+    on_records = [f for f in _said(document) if f[0] == "error" and f[1].startswith(RECORDS)]
+    assert (code, on_records) == (0, [])
+    assert any(
+        line.startswith("records' structure, held always: 1 revalidation record(s) checked")
+        for line in document["summary"]
+    ), document["summary"]
+    text = written.read_text(encoding="utf-8")
+    written.write_text(text.split("\n## Gaps\n", 1)[0] + "\n", encoding="utf-8")
+    _code, document = _validate(project, "--json")
+    [(severity, location, message)] = [
+        f for f in _said(document) if f[0] == "error" and f[1].startswith(RECORDS)
+    ]
+    assert (severity, location) == ("error", rel)
+    assert message.startswith("the section `## Gaps` is missing")
+    assert "(DEC-001 point 1)" in message
+    assert any("(RS-SAN-001, proposed): not checked" in line for line in document["summary"])
 
 
 def test_the_stamp_refuses_a_declaration_whose_hint_is_no_one_line_comment(
@@ -719,12 +943,14 @@ def test_every_kind_stamped_and_filled_carries_its_structure(
     for path in sorted((project.root / ANALYSIS).rglob("*.md")):
         if (project.root / RECORDS) not in path.parents:
             path.write_text(_written(path.read_text(encoding="utf-8")), encoding="utf-8")
-    text = (project.root / SAN_REL).read_text(encoding="utf-8")
-    project.write({SAN_REL: text.replace("status: proposed", "status: accepted", 1)})
+    project.write(accepting_san(project))
     code, document = _validate(project, "--json")
     assert (code, _said(document)) == (0, [])
     assert any(
-        "7 artefact(s), record(s) and file head(s) checked" in line
-        and "0 of them departing" in line
+        "6 artefact(s) and file head(s) checked" in line and "0 of them departing" in line
+        for line in document["summary"]
+    ), document["summary"]
+    assert any(
+        "1 revalidation record(s) checked" in line and "0 of them departing" in line
         for line in document["summary"]
     ), document["summary"]

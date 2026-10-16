@@ -31,8 +31,11 @@
 # - `ordered`: whether the elements come in the order listed. True unless set
 #   to false.
 #
-# The structure is the checkable part of the format rule, RS-SAN-001, and
-# binds at that rule's status (`rule-sets/san.md`).
+# An artefact kind's structure is the checkable part of the format rule,
+# RS-SAN-001, and binds where that rule binds and at its status
+# (`rule-sets/san.md`). The revalidation record's binds always: a record is a
+# held document, which no rule binds on, so the capability checks it itself
+# (DEC-001 point 1).
 
 schema_version: 1
 

@@ -82,9 +82,14 @@ def _record(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
 
 
 def _said(document: Mapping[str, Any], severity: str) -> list[tuple[str, str]]:
-    """The check's findings of one severity that never fails: `warning` or `report`."""
+    """The check's findings of one severity that never fails: `warning` or `report`. The
+    one that says no rule of `SAN` binds on the analysis is left out: it is said of every
+    analysis no set of the project's own makes `SAN` bind on (DEC-001 point 1)."""
     return [
-        (f["location"], f["message"]) for f in document["findings"] if f["severity"] == severity
+        (f["location"], f["message"])
+        for f in document["findings"]
+        if f["severity"] == severity
+        and not f["message"].startswith("no rule of software-analysis:SAN binds")
     ]
 
 

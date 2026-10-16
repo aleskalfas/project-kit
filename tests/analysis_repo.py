@@ -54,6 +54,30 @@ RECORDS = f"{ANALYSIS}/revalidations"
 #: The branch that stands for the default branch in these repositories.
 MAIN = "main"
 
+#: The method rule set, as the adopter holds it, and a set of the project's own through
+#: which it binds on the whole analysis: `SAN` takes no scope, so its rules bind only
+#: through such a set (DEC-001 point 1; COR-051 point 7).
+SAN_REL = f"{SA.as_posix()}/rule-sets/san.md"
+ANALYSIS_SET = "tech-docs/rule-sets/analysis.md"
+ANALYSIS_SET_TEXT = (
+    "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@0]\n"
+    "scope:\n  types: [software-analysis:actor, software-analysis:term, "
+    "software-analysis:use-case, software-analysis:journey]\nrules: {}\n---\n\n"
+    "# ANALYSIS — the project's rules for its analysis\n"
+)
+
+
+def accepting_san(repo: AdopterRepo) -> dict[str, str]:
+    """What to write so the format rule binds on the whole analysis: the adopter's copy of
+    `SAN` with its rule flipped to accepted, as a fixture and not the acceptance procedure,
+    and a set of the project's own that inherits it."""
+    text = (repo.root / SAN_REL).read_text(encoding="utf-8")
+    return {
+        SAN_REL: text.replace("status: proposed", "status: accepted", 1),
+        ANALYSIS_SET: ANALYSIS_SET_TEXT,
+    }
+
+
 _yaml: Any = YAML(typ="safe")
 
 

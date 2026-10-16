@@ -165,9 +165,22 @@ def _check(repo: AdopterRepo) -> dict[str, Any]:
     return json.loads(completed.stdout)
 
 
-def _findings(document: Mapping[str, Any], severity: str) -> list[tuple[str, str]]:
+def _beside_unbound(document: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """The findings beside the report that no rule of `SAN` binds on the analysis, said of
+    every analysis no set of the project's own makes it bind on (DEC-001 point 1)."""
     return [
-        (f["location"], f["message"]) for f in document["findings"] if f["severity"] == severity
+        f
+        for f in document["findings"]
+        if not f["message"].startswith("no rule of software-analysis:SAN binds")
+    ]
+
+
+def _findings(document: Mapping[str, Any], severity: str) -> list[tuple[str, str]]:
+    """The findings of one severity, beside the report that no rule of `SAN` binds."""
+    return [
+        (f["location"], f["message"])
+        for f in _beside_unbound(document)
+        if f["severity"] == severity
     ]
 
 
@@ -711,7 +724,15 @@ def _record(outcomes: Mapping[str, str], evidence: list[Any] | None = None) -> s
     }
     if evidence is not None:
         front["evidence"] = evidence
-    return f"---\n{json.dumps(front, indent=2)}\n---\n\n# 2026-10-01 — First run\n"
+    # A body that holds the record's structure, which the capability checks always
+    # (DEC-001 point 1): an item for each outcome, and a gap for each regression or gap.
+    said = "\n".join(f"- **{key} — {outcome}.** Reviewed." for key, outcome in outcomes.items())
+    flagged = [key for key, o in outcomes.items() if o in ("code-regressed", "gap-found")]
+    gaps = "\n".join(f"- **{key}:** a gap. **Resolution:** reported." for key in flagged)
+    return (
+        f"---\n{json.dumps(front, indent=2)}\n---\n\n# 2026-10-01 — First run\n\n"
+        f"## Outcomes\n\n{said}\n\n## Gaps\n\n{gaps or 'None.'}\n"
+    )
 
 
 def test_a_record_copies_evidence_as_support_for_an_outcome(seeded: AdopterRepo) -> None:
@@ -727,7 +748,7 @@ def test_a_record_copies_evidence_as_support_for_an_outcome(seeded: AdopterRepo)
     document = _check(seeded)
     # The evidence says nothing against the record; UC-002's regression is reported
     # open, as any is until its artefact is revalidated after the record.
-    assert [f for f in document["findings"] if f["severity"] != "report"] == []
+    assert [f for f in _beside_unbound(document) if f["severity"] != "report"] == []
     ((location, message),) = _findings(document, "report")
     assert location == f"{RECORD}:/outcomes/UC-002"
     assert message.startswith("UC-002's regression is open")
@@ -737,7 +758,7 @@ def test_a_record_copies_evidence_as_support_for_an_outcome(seeded: AdopterRepo)
     # The full entry, `steps`, `where` and `by` included, is a copy like any other.
     full = _keyed(EVIDENCE_ENTRY, artefact="UC-001")
     seeded.write({EVIDENCE_FILLER: _evidence(full), RECORD: _record({"UC-001": "holds"}, [full])})
-    assert _check(seeded)["findings"] == []
+    assert _beside_unbound(_check(seeded)) == []
 
 
 def test_evidence_never_replaces_an_outcome(seeded: AdopterRepo) -> None:
@@ -945,13 +966,13 @@ def test_a_copy_the_point_no_longer_holds_says_nothing(seeded: AdopterRepo) -> N
         {EVIDENCE_FILLER: _evidence(_entry("UC-001")), RECORD: _record({"UC-001": "holds"}, [old])}
     )
     document = _check(seeded)
-    assert document["findings"] == []
+    assert _beside_unbound(document) == []
     assert document["summary"][1] == (
         f"evidence ({EVIDENCE}): 1 held; 1 copied entry(ies) compared with it."
     )
     seeded.write({EVIDENCE_FILLER: None})
     document = _check(seeded)
-    assert document["findings"] == []
+    assert _beside_unbound(document) == []
     assert document["summary"][1] == (
         f"evidence ({EVIDENCE}) unresolved — unfilled: no filler is declared and the point has "
         "no default; 1 copied entry(ies) not compared."
@@ -978,9 +999,9 @@ def test_the_point_is_read_only_when_a_record_copies_evidence(
     seed(project)
     project.write({RECORD: _record({"UC-001": "holds"})})
     document = _check(project)
-    assert document["findings"] == []
+    assert _beside_unbound(document) == []
     assert [line for line in document["summary"] if line.startswith("evidence")] == []
     project.write({RECORD: _record({"UC-001": "holds"}, [_entry("UC-001")])})
     document = _check(project)
-    assert document["findings"] == []
+    assert _beside_unbound(document) == []
     assert f"`pkit connections resolve {EVIDENCE} --json` exited 3" in document["summary"][1]

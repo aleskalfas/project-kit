@@ -572,10 +572,11 @@ def declared(kind: str, root: Path, analysis: Analysis | None = None) -> structu
     tightenings add and require: every group whose rule is one of the project's and is
     proposed or accepted. A new artefact is in no reading of where a rule binds yet, so
     the stamp writes each such part, and a writer deletes an optional part they have
-    nothing for. A revalidation record is written whole, so a writer adds a project's
-    parts to it by hand. The declaration is the capability's own, so one that cannot be
-    read, or whose hints — a part's or a field's — cannot each be one comment on one
-    line, is restored, never edited. The project's own file is the project's to mend."""
+    nothing for. A revalidation record's kind takes no group, so the stamp writes a
+    record with the project's relabels alone. The declaration is the capability's own,
+    so one that cannot be read, or whose hints — a part's or a field's — cannot each be
+    one comment on one line, is restored, never edited. The project's own file is the
+    project's to mend."""
     try:
         kinds = structure.read_kinds()
         declared_kind = kinds[kind]

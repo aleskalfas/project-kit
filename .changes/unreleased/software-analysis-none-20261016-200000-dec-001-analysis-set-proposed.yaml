@@ -1,7 +1,0 @@
-component: software-analysis
-kind: none
-body: >
-  Internal. DEC-001 point 1 is refined, proposed: SAN would bind only through
-  a rule set of the project's own, which installing the capability creates.
-  The refinement waits for the maintainer, and nothing is built on it yet,
-  so nothing you run or read changes.

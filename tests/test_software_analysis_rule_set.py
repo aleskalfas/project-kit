@@ -82,9 +82,10 @@ def test_the_set_holds_the_format_rule_proposed_its_origin_dec_001() -> None:
     assert entry["origin"] == {"decision": "software-analysis:DEC-001"}
     assert entry["pkit"]["friction"]["anchors"] == {"record": ["software-analysis:DEC-001"]}
     statement = _section(body, RULE).split("\n\n")[1]
+    # An analysis artefact alone: no rule binds on a record, a held document, so the
+    # capability checks a record's structure itself (DEC-001 point 1, #1475).
     assert " ".join(statement.split()) == (
-        "An analysis artefact or a revalidation record carries its kind's declared "
-        "structure, and each kind has a template."
+        "An analysis artefact carries its kind's declared structure, and each kind has a template."
     )
 
 
@@ -111,12 +112,12 @@ def test_the_format_rule_declares_the_part_the_capability_s_check_enforces() -> 
     (declared,) = data["checks"][RULE]
     assert declared["check"] == "software-analysis:validate"
     # The parts a kind ships and the forms its structure gives, as far as the check
-    # holds them: a withdrawn artefact to neither a part it lacks nor a form, and a
-    # record to the one structure declared so far (DEC-001 point 1, #1365).
+    # holds them: a withdrawn artefact to neither a part it lacks nor a form (DEC-001
+    # point 1). A record is no part of the rule, which binds on artefacts alone (#1475).
     assert declared["part"].startswith("Every part its kind ships is present,")
     assert "front-matter field that the structure gives a form" in declared["part"]
     assert "in each item of a list, save on a withdrawn artefact" in declared["part"]
-    assert "held to the structure declared now" in declared["part"]
+    assert "record" not in declared["part"]
     package = _yaml.load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
     assert package["validators"]["artefacts"]["command"] == "validate"
     assert "validate" in package["commands"]

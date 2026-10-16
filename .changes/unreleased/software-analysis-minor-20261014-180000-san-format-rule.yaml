@@ -6,10 +6,10 @@ custom:
 body: >
   The capability ships its method rule set, `software-analysis:SAN`, in
   `rule-sets/san.md` (DEC-001 point 1). It takes no scope, as no method rule
-  set does. It holds the format rule, `RS-SAN-001`: an analysis artefact or a
-  revalidation record carries its kind's declared structure, and each kind has
-  a template. The rule is proposed, with DEC-001 as its origin, so it binds
-  nothing until it is accepted. Its *How* says where a sentence ends for text
+  set does. It holds the format rule, `RS-SAN-001`: an analysis artefact
+  carries its kind's declared structure, and each kind has a template. The
+  rule is proposed, with DEC-001 as its origin, so it binds nothing until it
+  is accepted. Its *How* says where a sentence ends for text
   of the `sentence` form. Under `checks`, the set declares what
   `software-analysis:validate` enforces of the rule: the parts a kind ships,
   their order and their forms. The set is at 0.1.0. The name `SAN` is now

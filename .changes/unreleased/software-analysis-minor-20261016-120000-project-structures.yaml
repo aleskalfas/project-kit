@@ -11,15 +11,14 @@ body: >
   replaces the hint and example of a part or a front-matter field, and the
   stamp writes the project's hint. Naming a rule of its own, it adds labels and
   sections `after` a named element, requires a shipped optional part, or closes
-  the kind's list of labels. A group binds once its rule, any rule it fills
-  and the format rule are accepted, on the artefacts `pkit rule-sets reach`
-  says its rule binds on, and on every record. `pkit analysis validate`
+  the kind's list of labels, of an artefact kind only. A group binds once its
+  rule, any rule it fills and the format rule are accepted, on the artefacts
+  `pkit rule-sets reach` says its rule binds on. `pkit analysis validate`
   refuses a file that drops, loosens or reorders a shipped part, invents a
   form, adds a kind, names a retired or unknown element or no rule of the
   project's, or places a part in a cycle. It reports a group whose rule is
   superseded or withdrawn, and a rule that binds on no artefact of the kind.
-  `--preview` takes a proposed rule's group as accepted on every record. `pkit
-  analysis new` writes the project's labels, hints and parts, each added part's hint
-  naming its rule. `schemas/artefact-kinds.yaml` may list a kind's `retired`
+  `pkit analysis new` writes the project's labels, hints and parts, each added
+  part's hint naming its rule. `schemas/artefact-kinds.yaml` may list a kind's `retired`
   element ids. The check reads `pkit rule-sets reach`, which only the backbone
   this release ships has, so the capability requires it.

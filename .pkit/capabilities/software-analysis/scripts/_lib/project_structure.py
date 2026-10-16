@@ -16,7 +16,9 @@ against, and the stamp writes:
   by the field's name. The stamp writes the project's hint as the field's
   placeholder.
 - Neither tightens anything, so neither names a rule (`relabelled`).
-- **A tightening** is a group that names the project rule that asks for it.
+- **A tightening** is a group that names the project rule that asks for it,
+  of an artefact kind. A revalidation record is a held document, which no rule
+  binds on, so the record's kind takes none, and its schema refuses one.
   It adds parts, each placed `after` an element. It makes a shipped optional
   part required (`require`), or closes the kind's list of labels (`closed`).
   An addition is optional unless it sets `required: true`. Which groups apply
@@ -34,6 +36,8 @@ project being the one to mend it (COR-055 point 1):
 
 - a shape its companion refuses, which leaves no key to drop, loosen or
   reorder a shipped part or to invent a form, and no label holding `*`
+- a tightening of the record's kind, which the companion refuses too, saying
+  why (`RECORD_TIGHTENING`)
 - a kind the capability does not ship, since a new kind needs a decision of
   its own (DEC-001 point 11)
 - a part, a field or an element `after` names that the kind does not hold, or
@@ -65,10 +69,13 @@ from ruamel.yaml.error import YAMLError
 
 from _lib import markdown, render, schemas
 from _lib.findings import ERROR, REPORT, Finding, at
-from _lib.structure import HEADING, LABEL, OPENING, Element, Field, Kind, comparable
+from _lib.structure import HEADING, LABEL, OPENING, RECORD, Element, Field, Kind, comparable
 
 #: The project's own structures, relative to the project root.
 FILE = ".pkit/capabilities/software-analysis/project/structures.yaml"
+
+#: Where a tightening of the record's kind would be, which the companion refuses.
+RECORD_TIGHTENING = f"/kinds/{RECORD}/tighten"
 
 
 @dataclass(frozen=True)
@@ -135,6 +142,7 @@ def read(root: Path, kinds: Mapping[str, Kind]) -> Own:
         data: Any = markdown.load(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, YAMLError) as exc:
         return Own(problems=(Finding(ERROR, FILE, _unparsed(exc)),), present=True)
+    errors = schemas.structures_errors(data)
     shaped = [
         Finding(
             ERROR,
@@ -143,8 +151,21 @@ def read(root: Path, kinds: Mapping[str, Kind]) -> Own:
             f"`schemas/structures.schema.json`, which has no key to drop, loosen or reorder "
             f"a shipped part, or to invent a form (DEC-001 point 1)",
         )
-        for pointer, message in schemas.structures_errors(data)
+        for pointer, message in errors
+        if not _under(pointer, RECORD_TIGHTENING)
     ]
+    if any(_under(pointer, RECORD_TIGHTENING) for pointer, _message in errors):
+        shaped.append(
+            Finding(
+                ERROR,
+                at(FILE, RECORD_TIGHTENING),
+                "a revalidation record's structure takes no tightening: a record is a held "
+                "document, which no rule binds on, so the capability checks its structure "
+                "itself, always, and a tightening of it could never bind. Relabel its parts "
+                "if you need to, and remove `tighten` here; `schemas/structures.schema.json` "
+                "refuses it until a rule set can reach a held document (DEC-001 point 1)",
+            )
+        )
     if shaped:
         return Own(problems=tuple(shaped), present=True)
     reading = _Reading(kinds)
@@ -159,6 +180,11 @@ def read(root: Path, kinds: Mapping[str, Kind]) -> Own:
         present=True,
         notes=tuple(reading.notes),
     )
+
+
+def _under(pointer: str, parent: str) -> bool:
+    """Whether the JSON Pointer `pointer` is `parent`, or lies beneath it."""
+    return pointer == parent or pointer.startswith(parent + "/")
 
 
 def _unparsed(exc: BaseException) -> str:
