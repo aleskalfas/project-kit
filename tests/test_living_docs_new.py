@@ -14,12 +14,17 @@ capability installed (the fixture of `test_living_docs_spaces.py`):
   file under the other root or in the definitions location, a place whose
   definition's scope misses it, a tie between two places, a reader the readers
   point does not hold;
+- **what the check cannot read** — where the rules bind unreadable before the
+  write refuses it, and after the write puts the page back; a failed recording
+  of the definitions location, and an interruption of the check, put a space's
+  files back;
 - **a space** — the user space's definition written with its one rule and the
   technical space's without, a space the project adds declared by its entry,
-  the configuration's every other byte kept, CRLF included, a missing
-  configuration created and the definitions location recorded the first time;
-  refused for a space that has a definition, a set name taken, roots that are
-  one folder, and, after the write, an untyped place outside the roots and a
+  the configuration's every other byte kept, CRLF and a byte-order mark
+  included, a missing configuration created and the definitions location
+  recorded the first time; refused for a space that has a definition, a set name
+  taken, roots that are one folder, a configuration the stamp cannot edit as
+  text, and, after the write, an untyped place outside the roots and a
   place of another space the new scope also covers; the pages the space's
   rules then fail reported, never refused;
 - **both, filled** — a space and a page the command created, once the page's
@@ -59,6 +64,52 @@ from tests.test_living_docs_spaces import (
 )
 
 NEW = LD / "scripts" / "new.py"
+
+#: Runs a stamp in-process with one of its readings made to fail, as the command
+#: would meet it, and prints how it ended. A capability's `_lib` is imported only in
+#: a process of its own, never beside another capability's.
+PROBE = """
+import sys
+from pathlib import Path
+
+sys.path.insert(0, sys.argv[1])
+from _lib import stamp
+from _lib.binding import Unreadable, read_binding
+
+case, root, calls = sys.argv[2], Path.cwd(), []
+
+
+def flaky(error):
+    def reach(at):
+        calls.append(at)
+        if error is not None and len(calls) > (0 if case == "unread-before" else 1):
+            raise error
+        return read_binding(at)
+
+    return reach
+
+
+def fail(_root):
+    raise stamp.NotRecorded("the backbone could not write it")
+
+
+page = stamp.PageRequest("docs/new.md", "user", "signpost", "user", "New")
+try:
+    if case in ("unread-before", "unread-after"):
+        stamp.stamp_page(root, page, reach=flaky(Unreadable("no answer")))
+    elif case == "interrupted":
+        stamp.stamp_space(root, stamp.SpaceRequest("user"), reach=flaky(KeyboardInterrupt()))
+    elif case == "record-fails":
+        stamp.stamp_space(
+            root, stamp.SpaceRequest("user"), record=fail, is_recorded=lambda _root: False
+        )
+except stamp.Refused as exc:
+    print(f"refused: {exc}")
+except KeyboardInterrupt:
+    print("interrupted")
+else:
+    print("stamped")
+"""
 LOCATIONS = f"{LD.as_posix()}/project/docs-locations.yaml"
 
 #: The top-level README as a place outside the roots that gives the page type, as a
@@ -118,6 +169,19 @@ def page(
     given = dict(zip(args[::2], args[1::2], strict=True))
     flags = [part for key, value in {**defaults, **given}.items() for part in (key, value)]
     return new(repo, "page", file, *flags, *(["--dry-run"] if dry_run else []))
+
+
+def probe(repo: AdopterRepo, case: str) -> str:
+    """How the stamp ended in `case` of `PROBE`."""
+    completed = subprocess.run(
+        [sys.executable, "-c", PROBE, str(repo.root / LD / "scripts"), case],
+        cwd=repo.root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    return completed.stdout.strip()
 
 
 def refused(completed: subprocess.CompletedProcess[str]) -> str:
@@ -308,6 +372,40 @@ def test_a_page_dry_run_writes_nothing_and_warns_of_a_space_with_no_definition(
     assert snapshot(fresh) == before
 
 
+# --- what the check cannot read ------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("case", ["unread-before", "unread-after"])
+def test_where_the_rules_bind_unread_refuses_the_page_and_puts_it_back(
+    fresh: AdopterRepo, case: str
+) -> None:
+    before = snapshot(fresh)
+    ended = probe(fresh, case)
+    when = "before" if case == "unread-before" else "after"
+    assert ended.startswith(f"refused: {when} the write, the check cannot read all it judges: ")
+    assert "`pkit rule-sets reach --json`" in ended
+    assert snapshot(fresh) == before
+
+
+@pytest.mark.parametrize(
+    ("case", "ended"),
+    [
+        (
+            "record-fails",
+            "refused: the definitions location could not be recorded: the backbone could not "
+            "write it; nothing is written",
+        ),
+        ("interrupted", "interrupted"),
+    ],
+)
+def test_a_failed_recording_or_an_interruption_puts_the_space_back(
+    fresh: AdopterRepo, case: str, ended: str
+) -> None:
+    before = snapshot(fresh)
+    assert probe(fresh, case) == ended
+    assert snapshot(fresh) == before
+
+
 # --- a space -------------------------------------------------------------------------------------
 
 
@@ -390,6 +488,37 @@ def test_the_configuration_keeps_every_other_byte_crlf_included(fresh: AdopterRe
         "README.md   # where users start\r\n",
         f"README.md   # where users start\r\n        definition: {DEFINITIONS}/user.md\r\n",
     ).encode("utf-8")
+
+
+def test_a_byte_order_mark_is_kept(fresh: AdopterRepo) -> None:
+    written = (fresh.root / LD_CONFIG).read_bytes()
+    (fresh.root / LD_CONFIG).write_bytes(b"\xef\xbb\xbf" + written)
+    stamped(new(fresh, "space", "technical"))
+    assert (fresh.root / LD_CONFIG).read_bytes().startswith(b"\xef\xbb\xbfpkit_schema:")
+
+
+@pytest.mark.parametrize(
+    ("written", "said"),
+    [
+        (
+            "pkit_schema: living-docs:config\nschema_version: 1\n"
+            "spaces: {user: {entry-point: README.md}}\n",
+            f"add `definition: {DEFINITIONS}/user.md` under `spaces.user` there by hand",
+        ),
+        (
+            "pkit_schema: living-docs:config\r\nschema_version: 1\n",
+            "it has mixed line endings",
+        ),
+        ("pkit_schema: living-docs:config\rschema_version: 1\r", "its lines end a lone CR"),
+    ],
+)
+def test_a_configuration_the_stamp_cannot_edit_as_text_is_refused(
+    fresh: AdopterRepo, written: str, said: str
+) -> None:
+    (fresh.root / LD_CONFIG).write_bytes(written.encode("utf-8"))
+    before = snapshot(fresh)
+    assert said in refused(new(fresh, "space", "user"))
+    assert snapshot(fresh) == before
 
 
 def test_a_missing_configuration_is_created(fresh: AdopterRepo) -> None:

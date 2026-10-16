@@ -207,6 +207,7 @@ The user space's definition carries its one rule, `RS-<SET>-001`, reader paths s
 - **It refuses** a space that has a definition, and a set name another rule set has. It refuses a space no scope can select yet, with no root of its own and no place assigned to it.
 - **It refuses a write that breaks validation,** such as a place outside every root, assigned to the space, that gives no page type.
 - **It reports, without refusing,** each page of the space that the space's rules fail once they bind.
+- **It refuses when the check cannot read what it judges** once the rules bind, such as a readers point that does not resolve while the space's pages name readers.
 - **It writes nothing else:** nothing of the backbone configuration, and no other space's definition.
 
 **`new page`** writes one new page into a space of your project, from the template of a kind this capability declares, `signpost` or `reference`.

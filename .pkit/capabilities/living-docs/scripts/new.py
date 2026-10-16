@@ -140,6 +140,9 @@ def main() -> int:
     except stamp.Refused as exc:
         print(f"refused: {exc}", file=sys.stderr)
         return 1
+    except OSError as exc:
+        print(f"refused: a file could not be read or written — {exc}", file=sys.stderr)
+        return 1
     if not stamped.written:
         for file in stamped.files:
             print(f"would write {file.path}:")

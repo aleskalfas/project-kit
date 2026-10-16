@@ -32,6 +32,8 @@ pkit living-docs new space <space> [--set <NAME>]
 
 It writes the definition, names it as the space's `definition` in the configuration, and records the definitions location the first time. It refuses a write that breaks validation, such as a place the scope would miss, and puts everything back. It then reports each page of the space that the space's rules fail. Fix those pages next.
 
+It refuses, too, when the check cannot read what it judges once the rules bind. An example is a readers point that does not resolve while the space's pages name readers. Mend that first: `pkit validate` names the fix under `connections`.
+
 For the user space, it writes the space's one rule of its own, reader paths stay unbroken, as accepted. Tell the person that merging the change accepts that rule (COR-051 point 4).
 
 ## 5. Add the space's own rules when they are needed

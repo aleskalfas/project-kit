@@ -65,7 +65,6 @@ from ruamel.yaml.error import YAMLError
 
 from _lib import formats, spaces
 from _lib.binding import Binding, read_binding
-from _lib.binding import Unreadable as Unbound
 from _lib.declarations import (
     CAPABILITY,
     DEFINITIONS_LOCATION,
@@ -379,18 +378,18 @@ def stamp_space(
             f"--set {set_name!r} is not a rule set's name: an upper-case letter, then upper-case "
             f"letters and digits (COR-051 point 3)"
         )
-    try:
-        bound = reach(root)
-    except Unbound as exc:
-        raise Refused(
-            f"where the rules bind cannot be read — {str(exc).rstrip('.')}. The stamp judges its "
-            f"write against where they bind, so it writes nothing until they can be read"
-        ) from exc
+    # Where the rules bind before the write, read as the check reads it: only when
+    # there is a page, and once. The check after the write judges against it.
+    bound: list[Binding] = []
 
-    def bound_before(_root: Path) -> Binding:
-        return bound
+    def bound_before(at: Path) -> Binding:
+        if not bound:
+            bound.append(reach(at))
+        return bound[0]
 
     before = _checked(root, read, bound_before, "before the write")
+    if not bound:
+        bound.append(Binding())
     decl = _decl(before)
     rel = _definition_path(root, decl, space)
     taken = _set_named(decl, set_name)
@@ -562,8 +561,9 @@ _BLOCK_KEY = r"^{key}:[ \t]*(?:#.*)?$"
 
 def _config_text(root: Path, space: str, definition: str) -> str:
     """The capability's project configuration with `definition` under `spaces.<space>`:
-    the line goes in as text, every other byte kept, line endings included, and the
-    file must read back as it was plus that entry. An absent file is created."""
+    the line goes in as text, every other byte kept, line endings and a byte-order mark
+    included, and the file must read back as it was plus that entry. An absent file is
+    created."""
     value = definition if re.fullmatch(r"[A-Za-z0-9._/-]+", definition) else json.dumps(definition)
     target = root / LIVING_DOCS_CONFIG
     refuse_links(root, target, LIVING_DOCS_CONFIG)
@@ -576,6 +576,8 @@ def _config_text(root: Path, space: str, definition: str) -> str:
         written = target.read_bytes().decode("utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         raise Refused(f"{LIVING_DOCS_CONFIG} could not be read: {exc}") from exc
+    bom = "\ufeff" if written.startswith("\ufeff") else ""
+    written = written[len(bom) :]
     crlf = _crlf(written)
     text = written.replace("\r\n", "\n") if crlf else written
     was = _load(text)
@@ -594,7 +596,7 @@ def _config_text(root: Path, space: str, definition: str) -> str:
             f"its `spaces` is not written as the stamp can edit it, a block mapping: add "
             f"`definition: {value}` under `spaces.{space}` there by hand, then stamp again"
         )
-    return updated.replace("\n", "\r\n") if crlf else updated
+    return bom + (updated.replace("\n", "\r\n") if crlf else updated)
 
 
 def _load(text: str) -> Mapping[str, Any]:
@@ -611,14 +613,19 @@ def _load(text: str) -> Mapping[str, Any]:
 
 def _crlf(text: str) -> bool:
     """Whether every line of `text` ends CRLF — the file is then edited as LF and
-    written back CRLF; mixed line endings are refused."""
+    written back CRLF. Lines that end a lone CR, or several endings, are refused."""
     if "\r" not in text:
         return False
     if text.count("\r\n") == text.count("\n") == text.count("\r"):
         return True
+    how = (
+        "its lines end a lone CR"
+        if "\n" not in text
+        else "it has mixed line endings, some lines CRLF, others LF or a lone CR"
+    )
     raise Refused(
-        f"{LIVING_DOCS_CONFIG} has mixed line endings: the stamp writes its line with the file's "
-        f"own ending, and this file has no one ending — make them one, then stamp again"
+        f"{LIVING_DOCS_CONFIG}: {how}. The stamp writes its line with the file's own ending, LF "
+        f"or CRLF — give the file one of them, then stamp again"
     )
 
 
@@ -699,7 +706,9 @@ def _decl(result: spaces.Checked) -> Declarations:
 
 def _key(finding: spaces.Finding) -> tuple[str, str, str]:
     """What tells one error from another: its severity, location and check — never its
-    message, which names what the state holds."""
+    message, which names what the state holds. So a second error of one check at one
+    location — a place whose pages another scope already covered, say — is no new
+    error: the project had that error before the write."""
     return finding.severity, finding.location, finding.check
 
 
@@ -765,7 +774,10 @@ class _Writes:
     def write(self, file: File) -> None:
         target = self.root / file.path
         refuse_links(self.root, target, file.path)
-        before = target.read_bytes() if target.is_file() else None
+        try:
+            before = target.read_bytes() if target.is_file() else None
+        except OSError as exc:
+            raise Refused(f"{file.path} could not be read: {exc}") from exc
         made = [folder for folder in (target.parent, *target.parent.parents) if not folder.exists()]
         self.done.append((target, before, made))
         try:
