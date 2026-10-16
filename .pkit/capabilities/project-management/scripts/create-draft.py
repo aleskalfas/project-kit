@@ -47,7 +47,7 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, default_branch, session_guard
+from _lib import bootstrap_gate, default_branch, issue_branch, session_guard
 from _lib import lifecycle_inference as infer
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
@@ -120,8 +120,13 @@ def main() -> int:
     if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
-    # Gate: branch matching `<type>/<N>-<slug>` exists locally.
-    branch = _find_issue_branch(args.issue_number)
+    # Gate: branch matching `<type>/<N>-<slug>` exists locally; of several, the
+    # one with the issue's open PR (#1608).
+    reading = issue_branch.read(args.issue_number, config)
+    if reading.refusal:
+        print(f"error: {reading.refusal}", file=sys.stderr)
+        return 2
+    branch = reading.branch
     if branch is None:
         print(
             f"error: no local branch matching `*/{args.issue_number}-*` found. "
@@ -207,27 +212,6 @@ def main() -> int:
 
 
 # ---- gates / inference -----------------------------------------------
-
-
-def _find_issue_branch(issue_number: int) -> str | None:
-    """Locate a local branch matching `<type>/<N>-<slug>`."""
-    try:
-        proc = subprocess.run(
-            ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except FileNotFoundError:
-        return None
-    if proc.returncode != 0:
-        return None
-    pattern = re.compile(rf"^[a-z]+/{issue_number}-[a-z0-9-]+$")
-    for line in proc.stdout.splitlines():
-        line = line.strip()
-        if pattern.match(line):
-            return line
-    return None
 
 
 def _resolve_base_ref(base: str) -> tuple[str | None, str | None]:

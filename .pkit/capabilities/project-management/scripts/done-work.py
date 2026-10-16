@@ -185,6 +185,13 @@ merge, the move ahead of the move to Done included, so any clone can complete
 it whatever its local branch holds. It refuses only when the issue was
 reopened after that merge: work since then needs a PR of its own.
 
+The issue's branch is read as every verb that finds it by name reads it
+(`_lib.issue_branch`, #1608): of several local branches matching
+`<type>/<N>-<slug>`, the one with the issue's open PR. With several and none
+open, the run looks for the merged PR from the issue's own closing references,
+as with no branch, and refuses naming each branch when there is none. With
+more than one open, or when gh does not say, it refuses before anything else.
+
 Exit codes:
   0  merged + done
   1  membership refusal / approval, checkbox or CI gate fails; a queue the
@@ -211,7 +218,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -221,7 +227,14 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, bootstrap_gate, merge_queue, pr_merge, session_guard
+from _lib import (
+    axis_labels,
+    bootstrap_gate,
+    issue_branch,
+    merge_queue,
+    pr_merge,
+    session_guard,
+)
 
 # The position and transition-table readers move-issue and start-work use, so
 # the move done-work makes ahead of the merge (#1162) and the move it leads to
@@ -462,6 +475,7 @@ def run(
     *,
     pinned_head: str | None = None,
     merged_only: bool = False,
+    branch_reading: issue_branch.Reading | None = None,
 ) -> DoneWorkRun:
     """Run done-work on `argv` (default: the command line), and say how it
     ended (`DoneWorkRun`) — for a verb that composes this one (`land-work`,
@@ -475,7 +489,9 @@ def run(
     found no open PR: the run only completes a PR that has merged, and is
     refused when it finds an open one, which the verb has not checked. Either
     way the PR lookups tell an answer of "none" from no answer, which ends the
-    run :data:`UNREADABLE` before anything is changed.
+    run :data:`UNREADABLE` before anything is changed. It may also hand over
+    `branch_reading`, the issue's branch as it read it (`_lib.issue_branch`,
+    #1608), so the run neither reads it again nor finds another.
     """
     if pinned_head is not None and not pinned_head:
         raise ValueError("pinned_head names no head: pass the PR head to land, or None")
@@ -628,7 +644,19 @@ def run(
         return _ended(REFUSED, 1, reason="the foreign-repository guard refused (see above)")
     confirmed = session_guard.confirmed(guard)
 
-    branch = _find_issue_branch(args.issue_number)
+    # The issue's local branch (#1608): of several, the one with its open PR. A
+    # composing verb hands its reading on. With several and none open, the run
+    # looks for a merged PR from the issue itself, as with no branch at all.
+    reading = (
+        branch_reading
+        if branch_reading is not None
+        else issue_branch.read(args.issue_number, config)
+    )
+    if reading.refusal and not reading.none_open:
+        if reading.unread:
+            return _ended(UNREADABLE, 2, f"error: {reading.refusal}")
+        return _ended(REFUSED, 2, f"error: {reading.refusal}")
+    branch = reading.branch
     if composed and branch is not None:
         # A composing verb decides on what this lookup finds, so "gh did not
         # answer" must not read as "no open PR" (#1203).
@@ -688,6 +716,12 @@ def run(
                 2,
                 f"error: no open PR is left for #{args.issue_number}, and whether a merged PR "
                 f"closes it could not be read: {issue_merges.problem}. Nothing was changed.",
+            )
+        if reading.none_open:
+            return _ended(
+                REFUSED,
+                2,
+                f"error: no merged PR closes #{args.issue_number}. {reading.refusal}",
             )
         if branch is None:
             return _ended(
@@ -3270,26 +3304,6 @@ def _lead_in_to_done(
 
 
 # ---- helpers -----------------------------------------------------------
-
-
-def _find_issue_branch(issue_number: int) -> str | None:
-    try:
-        proc = subprocess.run(
-            ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except FileNotFoundError:
-        return None
-    if proc.returncode != 0:
-        return None
-    pattern = re.compile(rf"^[a-z]+/{issue_number}-[a-z0-9-]+$")
-    for line in proc.stdout.splitlines():
-        line = line.strip()
-        if pattern.match(line):
-            return line
-    return None
 
 
 # The fields each PR lookup asks for: an open PR's, to gate and merge it; a

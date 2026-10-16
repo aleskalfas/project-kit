@@ -1,0 +1,20 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  An issue's branch is the one with its open pull request (#1608). The verbs
+  that find an issue's branch by name (`start-work`, `create-draft`,
+  `review-work`, `back-to-draft`, `review-pr`, `done-work` and `land-work`)
+  each took the first local branch matching `<type>/<N>-<slug>`. A stale branch
+  an earlier attempt left behind could take the place of the one carrying the
+  pull request, as on #1367, where `review-work` validated an empty branch and
+  refused on a body it never read. They now read it one way,
+  `_lib/issue_branch`. Of several matching branches, the one with the issue's
+  open pull request wins, read in one `gh` call. With none open, more than one
+  open, or no answer from `gh`, the verb refuses before it changes anything,
+  naming each branch and why. `done-work` and `land-work` still complete a pull
+  request that has merged, found from the issue itself. `land-work` hands the
+  branch it read to `review-pr` and `done-work`, so a run reads the open pull
+  requests once. `start-work` refuses a branch naming the issue in another
+  shape only when no branch of the right shape matches.

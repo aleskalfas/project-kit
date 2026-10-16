@@ -26,6 +26,7 @@ from typing import Any
 
 import pytest
 
+from tests import pm_issue_branch_support as issue_branch_support
 from tests import pull_request_backbone
 from tests.adopter_repo import sign_nothing
 
@@ -191,6 +192,10 @@ class _FakeGitHub:
             return _done(argv, json.dumps(issue))
         if argv[:2] == ["api", "user"]:
             return _done(argv, "octocat\n")
+        if issue_branch_support.is_open_prs_reading(argv):
+            # The open PRs of several local branches matching the issue (#1608).
+            open_on = {BRANCH: [PR]} if self.state == "OPEN" else {}
+            return _done(argv, issue_branch_support.answer(argv, open_on))
         if argv[:2] == ["api", "graphql"] and any(
             "closedByPullRequestsReferences" in a for a in argv
         ):
@@ -487,7 +492,7 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
         monkeypatch.setattr(settled, "_ask", ask)
 
         gh_module = sys.modules["_lib.gh"]
-        for module in (gh_module, land, land.done_work, land.review_pr):
+        for module in (gh_module, land, land.done_work, land.review_pr, land.issue_branch):
             monkeypatch.setattr(module, "gh_run", github.gh)
         now = [0.0]
 
@@ -946,6 +951,59 @@ def test_a_rerun_after_the_queue_merged_completes_the_issue(world, capsys) -> No
         f"merge: #{ISSUE} completed through its merged PR",
     ]
     assert run.after_merge == [f"move-issue #{ISSUE}", f"close-issue #{ISSUE}"]
+
+
+# ---- the issue's branch among several (#1608) --------------------------------
+
+#: A branch an earlier attempt left behind. It sorts before the PR's branch, so
+#: the first match in git's order was the stale one.
+_STALE = f"feat/{ISSUE}-a-stopped-attempt"
+
+
+def _open_pr_readings(run: _Run) -> int:
+    """How many times the open PRs of several branches were read."""
+    return sum(1 for call in run.github.calls if issue_branch_support.is_open_prs_reading(call))
+
+
+def test_a_stale_branch_does_not_take_the_place_of_the_pr_s(world, capsys) -> None:
+    run = world()
+    _git(run.work, "branch", _STALE, "main")
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+    assert _steps(out)[0] == f"head: {_short(run.github.head)} (PR #{PR}, {BRANCH})"
+    assert out.splitlines()[-1] == f"merge: merged as {'c' * 7}"
+    # Read once for the run: review-pr and done-work are handed land-work's reading.
+    assert _open_pr_readings(run) == 1
+
+
+def test_several_branches_none_open_completes_a_merged_pr_from_the_issue(world, capsys) -> None:
+    run = world()
+    _git(run.work, "branch", _STALE, "main")
+    run.github.state = "MERGED"
+    rc, out, err = run.run("--yes", capsys=capsys)
+    assert rc == 0, out + err
+    assert _steps(out) == [
+        f"head: no open PR on any of {_STALE}, {BRANCH} — done-work completes a PR that "
+        "has merged already",
+        f"merge: #{ISSUE} completed through its merged PR",
+    ]
+    assert run.after_merge == [f"move-issue #{ISSUE}", f"close-issue #{ISSUE}"]
+    assert _open_pr_readings(run) == 1
+
+
+def test_several_branches_gh_unanswered_stops_before_anything(world, capsys) -> None:
+    run = world()
+    _git(run.work, "branch", _STALE, "main")
+    run.github.fails.append(issue_branch_support.is_open_prs_reading)
+    rc, out, _err = run.run("--yes", capsys=capsys)
+    assert rc == 2
+    assert f"  2 local branches match `*/{ISSUE}-*` ({_STALE}, {BRANCH})" in out
+    assert "could not be read: HTTP 502: Bad Gateway" in out
+    assert out.splitlines()[-1] == (
+        f"head: stopped — which local branch is #{ISSUE}'s cannot be told (above). Nothing was done"
+    )
+    assert run.invoked == []
+    assert run.github.merges == []
 
 
 # ---- a dry run ----------------------------------------------------------------

@@ -646,7 +646,7 @@ def _wire_main(
         "check_membership",
         lambda members, invoker: SimpleNamespace(allowed=True, refusal_message=""),
     )
-    monkeypatch.setattr(rpr, "_find_issue_branch", lambda n: f"feat/{n}-x")
+    monkeypatch.setattr(rpr.issue_branch, "_local_branches", lambda: ("feat/147-x",))
     monkeypatch.setattr(
         rpr,
         "_find_pr_for_branch",

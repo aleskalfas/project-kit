@@ -15,6 +15,7 @@ from typing import Any, cast
 
 import pytest
 
+from tests import pm_issue_branch_support as issue_branch_support
 from tests import pull_request_backbone
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -1012,7 +1013,7 @@ def _wire_main_seams(
     # capability root above has no tree to stamp, so neutralise it here — the
     # same treatment the foreign-repo guard gets on the line above.
     monkeypatch.setattr(dw.bootstrap_gate, "enforce", lambda *a, **kw: True)
-    monkeypatch.setattr(dw, "_find_issue_branch", lambda n: "fix/42-slug")
+    monkeypatch.setattr(dw.issue_branch, "_local_branches", lambda: ("fix/42-slug",))
     monkeypatch.setattr(
         dw,
         "_find_pr_for_branch",
@@ -3267,7 +3268,7 @@ def _wire_second_run(
             "timelineItems": {"nodes": nodes},
         },
     )
-    monkeypatch.setattr(dw, "_find_issue_branch", lambda n: branch)
+    monkeypatch.setattr(dw.issue_branch, "_local_branches", lambda: (branch,) if branch else ())
     monkeypatch.setattr(dw, "_find_pr_for_branch", lambda branch, config: None)
     monkeypatch.setattr(dw, "_gh_get_issue", lambda n, config: issues.get(n))
 
@@ -3333,6 +3334,102 @@ def test_a_later_run_from_any_clone_completes_it_from_the_issue(
     out = capsys.readouterr().out
     assert rc == 0, out
     assert run.calls["order"] == _AFTER_THE_MERGE
+
+
+#: A branch an earlier attempt left behind beside the PR's, both matching #42 (#1608).
+_STALE = "fix/42-a-stopped-attempt"
+
+
+def _several_branches(
+    dw: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    open_on: dict[str, list[int]] | None,
+) -> list[list[str]]:
+    """Two local branches match #42; `gh` says which has an open PR (`open_on`),
+    or does not answer (None). Returns the readings' calls."""
+    calls: list[list[str]] = []
+    branches = (_STALE, "fix/42-slug")
+    monkeypatch.setattr(dw.issue_branch, "_local_branches", lambda: branches)
+    monkeypatch.setattr(dw.issue_branch, "gh_run", issue_branch_support.fake_gh(open_on, calls))
+    return calls
+
+
+def test_several_branches_none_open_completes_the_merged_pr_from_the_issue(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Which branch is the issue's cannot be told, but the merged PR is found
+    from the issue itself, so any clone completes it (DEC-026)."""
+    run = _wire_second_run(
+        dw,
+        tmp_path,
+        monkeypatch,
+        issues={42: _CLOSED_BY_THE_MERGE, 43: _CLOSED_BEFORE},
+        from_the_branch=False,
+    )
+    calls = _several_branches(dw, monkeypatch, open_on={})
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert run.calls["order"] == _AFTER_THE_MERGE
+    assert len(calls) == 1
+
+
+def test_several_branches_none_open_and_none_merged_refuses_naming_each(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    run = _wire_second_run(
+        dw, tmp_path, monkeypatch, issues={}, from_the_branch=False, from_the_issue=False
+    )
+    _several_branches(dw, monkeypatch, open_on={})
+    end = dw.run(["42", "--yes"])
+    err = capsys.readouterr().err
+    assert (end.kind, end.exit_code) == (dw.REFUSED, 2)
+    assert run.calls["order"] == []
+    assert (
+        "error: no merged PR closes #42. 2 local branches match `*/42-*`, and none has an "
+        "open pull request, so which is #42's branch cannot be told:"
+    ) in err
+    assert f"  - {_STALE}: no open pull request\n" in err
+    assert "  - fix/42-slug: no open pull request\n" in err
+
+
+@pytest.mark.parametrize(
+    ("open_on", "kind", "says"),
+    [
+        (
+            {_STALE: [495], "fix/42-slug": [496]},
+            "REFUSED",
+            "more than one has an open pull request",
+        ),
+        (None, "UNREADABLE", "could not be read: HTTP 502: Bad Gateway"),
+    ],
+    ids=["more-than-one-open", "gh-unanswered"],
+)
+def test_several_branches_it_cannot_choose_among_stop_it_before_anything(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    open_on: dict[str, list[int]] | None,
+    kind: str,
+    says: str,
+) -> None:
+    """Neither is read as "no open PR": the run looks for no merged PR either."""
+    run = _wire_second_run(dw, tmp_path, monkeypatch, issues={42: _CLOSED_BY_THE_MERGE})
+    _several_branches(dw, monkeypatch, open_on=open_on)
+    end = dw.run(["42", "--yes"])
+    err = capsys.readouterr().err
+    assert (end.kind, end.exit_code) == (getattr(dw, kind), 2)
+    assert says in err
+    assert run.calls["order"] == []
+    asked = run.gh() if run.log.exists() else []
+    assert not any("closedByPullRequestsReferences" in " ".join(c) for c in asked)
 
 
 def test_a_later_run_on_a_stale_local_branch_completes_it_and_keeps_the_branch(
