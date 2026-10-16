@@ -57,8 +57,13 @@ STAMPED = frozenset({"id", "title", "name", "status", "actor", "steps"})
 
 
 def hint(element: Element) -> str:
-    """The part's hint as its placeholder: one marked comment, its example after it."""
-    return _marked(element.id, element.hint or "", element.example)
+    """The part's hint as its placeholder: one marked comment, its example after it. A
+    part a project's rule adds, or requires, names the rule after its hint, so a writer
+    knows why it is there (`_lib/project_structure.py`)."""
+    said = element.hint or ""
+    if element.rule is not None:
+        said = f"{said} ({element.rule})"
+    return _marked(element.id, said, element.example)
 
 
 def field_hint(field: Field) -> str:

@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "structures.schema.json",
+  "title": "A project's own structures — software-analysis capability",
+  "description": "Formal shape of the project's `.pkit/capabilities/software-analysis/project/structures.yaml`: what a project changes of each analysis kind's shipped structure, keyed by kind (software-analysis DEC-001 point 1). A project relabels a shipped part and replaces the hint and example of a part or a front-matter field, with no rule. It tightens a structure only by naming the project rule that asks for it: it adds labels and sections, makes a shipped optional part required, or closes the kind's list of labels. Nothing here drops, loosens or reorders a shipped part, invents a form or adds a kind: no key says any of those. The capability's README, \"A project's own structures\", says how each entry is placed and when it binds. This schema checks the shape only. The check and the stamp hold each entry to the shipped structure in `artefact-kinds.yaml`. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "binds_to": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Repo-relative globs matching the adopter-data files this schema validates (COR-023 fallback binding). Present on the capability-side carrier; absent from a project's file."
+    },
+    "pkit_schema": {
+      "type": "string",
+      "description": "Self-describing adopter-data binding (COR-023). Expected value: `software-analysis:structures`."
+    },
+    "kinds": {
+      "description": "What the project changes of each kind's structure, keyed by a kind `artefact-kinds.yaml` declares: `actor`, `use-case`, `journey`, `term` or `revalidation-record`. A key that names no kind of the capability's is refused, since a new kind needs a decision of its own (DEC-001 point 11).",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "artefact-kinds.schema.json#/$defs/word"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/kind"
+      }
+    }
+  },
+  "$defs": {
+    "line": {
+      "description": "One line of text, not blank.",
+      "type": "string",
+      "pattern": "\\S",
+      "not": {
+        "pattern": "[\\r\\n]"
+      }
+    },
+    "label": {
+      "description": "A part's text: one line, with no `*`, since a label's bold marks are `*` and the check could never read one that holds it.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/line"
+        }
+      ],
+      "pattern": "^[^*]*$"
+    },
+    "kind": {
+      "title": "What the project changes of one kind",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "relabel": {
+          "description": "Shipped parts the project relabels, by element id, each with any of its label, its hint and its example. The part keeps its id, its place, its form and whether it is required. This tightens nothing, so it needs no rule.",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "$ref": "artefact-kinds.schema.json#/$defs/word"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/relabel"
+          }
+        },
+        "front-matter": {
+          "description": "Shipped front-matter fields whose hint and example the project replaces, by field name. A field keeps its form, and its companion schema still checks its shape. This tightens nothing, so it needs no rule. The stamp writes the project's hint as the field's placeholder.",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "$ref": "artefact-kinds.schema.json#/$defs/word"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/field"
+          }
+        },
+        "tighten": {
+          "description": "What the project requires beyond the shipped structure, in groups. Each group names the project rule that asks for it, and binds once that rule and the capability's format rule are accepted, on an artefact the rule binds on (DEC-001 point 1).",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/tightening"
+          }
+        }
+      }
+    },
+    "relabel": {
+      "title": "A shipped part, relabelled",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "label": {
+          "description": "The part's new text: a label's text without its bold marks and colon, or the text of a heading the kind fixes.",
+          "$ref": "#/$defs/label"
+        },
+        "hint": {
+          "description": "What goes in the part, for whoever fills it.",
+          "$ref": "#/$defs/line"
+        },
+        "example": {
+          "description": "An example of what the hint asks for.",
+          "$ref": "#/$defs/line"
+        }
+      }
+    },
+    "field": {
+      "title": "A shipped front-matter field, its hint replaced",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "hint": {
+          "description": "What goes in the field, for whoever fills it.",
+          "$ref": "#/$defs/line"
+        },
+        "example": {
+          "description": "An example of what the hint asks for.",
+          "$ref": "#/$defs/line"
+        }
+      }
+    },
+    "tightening": {
+      "title": "One group of tightenings, and the project rule that asks for it",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule"
+      ],
+      "minProperties": 2,
+      "properties": {
+        "rule": {
+          "description": "The project rule that asks for the group, by its id: a rule of one of the project's own rule sets.",
+          "type": "string",
+          "pattern": "^RS-[A-Z][A-Z0-9]*-[0-9]{3,}$"
+        },
+        "add": {
+          "description": "Parts the project adds, each placed right after the element it names.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/addition"
+          }
+        },
+        "require": {
+          "description": "Shipped optional parts the group makes required, by element id.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "artefact-kinds.schema.json#/$defs/word"
+          }
+        },
+        "closed": {
+          "description": "Whether the kind's list of labels is closed: a label no part declares is reported. A part that has a form is not read for it.",
+          "const": true
+        }
+      }
+    },
+    "addition": {
+      "title": "A part the project adds",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "after",
+        "hint",
+        "example"
+      ],
+      "properties": {
+        "id": {
+          "description": "The part's id, unique within its kind, the shipped parts and the project's other additions included.",
+          "$ref": "artefact-kinds.schema.json#/$defs/word"
+        },
+        "type": {
+          "description": "`label`, a bold label such as `**Notes:**` (the default), or `heading`, a heading of `level`.",
+          "enum": [
+            "label",
+            "heading"
+          ],
+          "default": "label"
+        },
+        "level": {
+          "description": "A heading's level: the number of `#`.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "label": {
+          "description": "The part's text: a label's text without its bold marks and colon, or a heading's text without its `#`.",
+          "$ref": "#/$defs/label"
+        },
+        "after": {
+          "description": "The id of the element the part comes right after: a shipped part, or another of the project's additions to the kind.",
+          "$ref": "artefact-kinds.schema.json#/$defs/word"
+        },
+        "required": {
+          "description": "Whether the part is required. False unless set to true.",
+          "type": "boolean",
+          "default": false
+        },
+        "allows-none": {
+          "description": "Whether the part may read `None.` and nothing else. False unless set to true.",
+          "type": "boolean",
+          "default": false
+        },
+        "form": {
+          "$ref": "artefact-kinds.schema.json#/$defs/form"
+        },
+        "hint": {
+          "description": "What goes in the part, for whoever fills it.",
+          "$ref": "#/$defs/line"
+        },
+        "example": {
+          "description": "An example of what the hint asks for.",
+          "$ref": "#/$defs/line"
+        }
+      },
+      "if": {
+        "properties": {
+          "type": {
+            "const": "heading"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "required": [
+          "level"
+        ]
+      },
+      "else": {
+        "properties": {
+          "level": false
+        }
+      }
+    }
+  }
+}

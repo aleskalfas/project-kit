@@ -30,7 +30,10 @@ part or a front-matter field that breaks the form its structure gives it
 point 1): accepted, as errors; under any other status, not at all.
 `--preview` previews a proposed rule as if it were accepted: each departure is
 a report whose message opens `preview:`, so the exit is the normal check's.
-The backbone runs the normal check, with no preview.
+The backbone runs the normal check, with no preview. The structure is the
+kind's as the project's own `project/structures.yaml` relabels it, tightened by
+each group of the project's whose rule binds on the body, as `pkit rule-sets
+reach` reads where a rule binds (`_lib/project_structure.py`).
 
 The backbone runs it as this capability's validator, the
 `software-analysis:artefacts` member of `pkit validate` (ADR-058): from the

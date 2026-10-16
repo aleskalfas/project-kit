@@ -1,0 +1,26 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  A project changes each analysis kind's structure in a file of its own,
+  `.pkit/capabilities/software-analysis/project/structures.yaml`, keyed by
+  kind, its shape `schemas/structures.schema.json` bound to it by its path
+  (DEC-001 point 1, #1367). With no rule, it relabels a shipped part and
+  replaces the hint and example of a part or a front-matter field, and the
+  stamp writes the project's hint. Naming a rule of its own, it adds labels and
+  sections `after` a named element, requires a shipped optional part, or closes
+  the kind's list of labels. A group binds once its rule, any rule it fills
+  and the format rule are accepted, on the artefacts `pkit rule-sets reach`
+  says its rule binds on, and on every record. `pkit analysis validate`
+  refuses a file that drops, loosens or reorders a shipped part, invents a
+  form, adds a kind, names a retired or unknown element or no rule of the
+  project's, or places a part in a cycle. It reports a group whose rule is
+  superseded or withdrawn, and a rule that binds on no artefact of the kind.
+  `--preview` cannot place a group whose rule is still proposed, since the
+  backbone's reading lists accepted rules only, and says so. `pkit analysis
+  new` writes the project's labels, hints and parts, each added part's hint
+  naming its rule. `schemas/artefact-kinds.yaml` may list a kind's `retired`
+  element ids. The check reads `pkit rule-sets reach`, which only the backbone
+  this release ships has, so the capability requires it.

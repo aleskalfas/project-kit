@@ -219,7 +219,7 @@ The body gives each artefact's outcome with its justification, then the gaps, ea
 Each kind's structure is declared once, as data, in `schemas/artefact-kinds.yaml` (DEC-001 point 1). It lists the parts of the kind's body in their order, and the forms and hints of the front-matter fields a writer fills. Its shape is `schemas/artefact-kinds.schema.json`, a strict superset of living-docs' `page-kinds.schema.json`.
 
 - **The kinds:** `actor`, `use-case`, `journey` and `term`, keyed by the types their places give, and `revalidation-record`, which has no type.
-- **Each element of a body** has an `id`, permanent once shipped, and a `type`:
+- **Each element of a body** has an `id`, permanent once shipped, and a `type`. A part a kind retires is listed under its `retired` ids, never renamed, and its id is never given again. No kind has retired one yet. The types:
   - `heading`: a heading's `level` and, where the kind fixes it, its `text`
   - `label`: a bold label, such as `**Goal:**`, that opens a paragraph or a top-level list item
   - `opening`: the text before the first label, such as an actor's description
@@ -252,7 +252,7 @@ The forms, each described in the schema:
 
 **What binds it.** The structure is the checkable part of the format rule, `RS-SAN-001`, and binds at that rule's status, which is proposed ("The method rule set: `SAN`", below). A kind's companion schema still checks its front matter whatever the rule's status.
 
-**What reads it.** The check, `pkit analysis validate`, holds each body and each front matter to it, every part and every form, once the format rule is accepted, and previews it before ("Each body against its structure", below). The stamp renders each body from it, and each template's body is the same rendering (below). A test holds the file to its schema.
+**What reads it.** The check, `pkit analysis validate`, holds each body and each front matter to it, every part and every form, once the format rule is accepted, and previews it before ("Each body against its structure", below). The stamp renders each body from it, and each template's body is the same rendering (below). Both read it as your own file changes it ("A project's own structures", below). A test holds the file to its schema.
 
 ### Templates and hints
 
@@ -278,6 +278,67 @@ Each kind's template in `templates/` is its structure rendered, so it shows exac
 - **A collection file's head,** the glossary's heading and its opening, is written once, when the stamp creates the file. The opening's first sentence says what the file holds. After that it is yours to reword.
 - **A revalidation record carries no hints,** since its stamp writes every part from its command line. Its template shows each part's example, as one planned record.
 - **What the shipped hints and examples hold to:** short sentences, no semicolons, and no project's style. Each example is plain. So they suit any project's writing rules. A test holds every hint and example to that floor: no sentence over 25 words, and no semicolon.
+
+## A project's own structures: `project/structures.yaml`
+
+You change each kind's shipped structure in a file of your own, `.pkit/capabilities/software-analysis/project/structures.yaml` (DEC-001 point 1). The file is yours, and sync never touches it. Its shape is `schemas/structures.schema.json`, bound to it by its path (COR-023), so `pkit validate` checks it with your other data. Without the file, each kind's structure stands as it ships.
+
+```yaml
+pkit_schema: software-analysis:structures
+schema_version: 1
+kinds:                    # keyed by kind, never by file
+  actor:
+    relabel:              # no rule: a shipped part's label, hint and example, by its id
+      occasions: {label: Comes, hint: "When the role comes to the system.", example: "Weekly."}
+    front-matter:         # no rule: a shipped field's hint and example, by its name
+      needs: {hint: "What the role needs, in one sentence.", example: "Export my report."}
+    tighten:              # each group names the rule of yours that asks for it
+      - rule: RS-LOC-001
+        closed: true
+        add:
+          - {id: setup, label: The setup, after: opening, hint: "Where the role works.", example: "A lab."}
+          - {id: notes, label: Notes, after: context, hint: "Anything else.", example: "None yet.", required: true}
+```
+
+**What you change with no rule.** Neither tightens anything, so each binds wherever the shipped structure binds.
+
+- **A part's label, hint and example** (`relabel`, by the part's id). A label is a label's text, or the text of a heading the kind fixes, such as a record's `## Gaps`. The part keeps its id, its place, its form and whether it is required. A project that writes in another language gives its own labels this way.
+- **A field's hint and example** (`front-matter`, by the field's name). The stamp writes your hint as the field's placeholder.
+
+**What you tighten, naming your rule.** Each group under `tighten` names, in `rule`, a rule of your own rule sets.
+
+- **`add`:** a part, a label by default or a `heading` with its `level`, placed `after` an element. It has a hint and an example, and may take `allows-none` and a `form` from the shipped list. It is optional unless it sets `required: true`.
+- **`require`:** a shipped optional part made required. Every part the capability ships is required today, so this changes nothing yet, and the check says so.
+- **`closed: true`:** the kind's list of labels is closed. A bold run that ends in a colon and opens a line or a top-level list item, and that no part declares, is reported. A part with a form is not read for it. Every other part is, such as a term's *Distinctions*, whose items open with the word they set apart. So close a kind only where its parts hold no labels of their own.
+
+**Where an addition goes.** Right after the element it names, before any shipped part that follows that element. Additions that name one element keep the file's order. An addition may name another addition, and comes right after it. So the sketch above puts *The setup* before the shipped *Occasions*.
+
+**What is refused**, as errors on the file whatever any rule's status, since the file is yours to mend:
+
+- a key the schema does not take, so no entry drops, loosens or reorders a shipped part, or invents a form
+- a kind the capability does not ship, since a new kind needs a decision of its own (DEC-001 point 11)
+- a part, a field or an `after` the kind does not hold, or one it retired (a kind's `retired` ids in `schemas/artefact-kinds.yaml`)
+- an id or a label two parts take, a label holding `*`, and a cycle of additions
+- a part placed between a title heading and the opening text below it, which would take the opening's lines: name `opening` instead
+- a heading no deeper than the kind's own heading, which would end the artefact's section
+- a label for a part with no text, and a hint for a heading the stamp writes
+- a hint or an example holding `-->` or a line break
+- a group whose `rule` is no rule of your own rule sets
+
+While any of these stands, none of the file applies: the check holds no body to a structure, and the stamp refuses. A group whose rule is superseded or withdrawn binds nothing, and is reported, with the rule that replaces it.
+
+**When a tightening binds.** At the status of its rule's chain, and at the format rule's (DEC-001 point 1). The chain is the rule and each rule whose extension point it fills, since a fill binds only while both are accepted (COR-051 point 7).
+
+- **The chain accepted:** the group binds on each artefact the rule binds on, as `pkit rule-sets reach` reads it, the backbone's one reading of where a rule binds. A rule that binds on no artefact of the kind is reported. A revalidation record lies in no place a scope names, so a group of the record's kind binds on every record.
+- **A rule of the chain proposed:** the group binds nothing. A label it adds still ends the part before it, so a part that binds nothing never makes another fail.
+- **The preview** (`--preview`) takes the format rule as accepted, and a group of the record's kind whose chain is proposed. It previews where an accepted chain binds exactly. It does not preview a group whose chain is proposed on any other kind: `pkit rule-sets reach` lists accepted rules only, so where such a rule would bind cannot be read yet. The preview reports each such group as not previewed.
+
+**What reads it.**
+
+- **The check** holds each body to the structure its kind ships, as your file relabels it, tightened by each group that binds on it. A message for a part a group adds or requires cites its rule beside `RS-SAN-001`.
+- **The stamp** writes each body the same way, with every group whose rule is yours and is proposed or accepted. A new artefact is in no reading of where a rule binds yet, so the stamp writes each such part, its hint naming the rule. Delete an optional part you have nothing for. The stamp writes a revalidation record whole, with your relabels and none of your parts, so add your parts to a record by hand.
+- **A record, and a withdrawn artefact,** may predate your changes. So a part you relabelled is found by its shipped label too, a closed list reports nothing, and neither is failed for a part you added that it lacks. A part a record carries is held to its content and its form.
+- **The committed templates** show the structure as it ships, never your changes.
 
 ## Checking: `pkit analysis validate`
 
@@ -317,7 +378,7 @@ Friction itself, dead anchors and the friction block's own shape are the core's 
 
 ### Each body against its structure
 
-Where the format rule, `RS-SAN-001`, is accepted, the check holds each body to the structure its kind declares ("Each kind's structure", above). That is the body of each actor, use case, journey and record, each glossary entry's section, and the glossary's head. It fails on:
+Where the format rule, `RS-SAN-001`, is accepted, the check holds each body to the structure its kind declares ("Each kind's structure", above), as your own file changes it ("A project's own structures", above). That is the body of each actor, use case, journey and record, each glossary entry's section, and the glossary's head. It fails on:
 
 - **a declared part that is missing, out of order or empty;**
 - **`None.` in a part that may not read it**, such as a use case's *Trigger*, which always has something to say;
@@ -329,6 +390,7 @@ Where the format rule, `RS-SAN-001`, is accepted, the check holds each body to t
   - `outcomes-match-front-matter`, a record's *Outcomes*: not one item for each of its `outcomes`, in order, each opening `**<id> — <outcome>.**` exactly with its reason after it.
   - `gaps-match-outcomes`, a record's *Gaps*: neither `None.` nor one item for each gap, each opening with a bold label of the ids it affects, such as `**UC-001, JRN-001:**`, every id one of `outcomes`, and holding `**Resolution:**` with text after it. Each `code-regressed` or `gap-found` artefact is named by a gap, so *Gaps* reads `None.` only where none is.
   - `definition`, a term's `definition`: a phrase that opens with an article, `a`, `an` or `the`, ends with a full stop, or holds a whole word of the term's `name`, in any case.
+- **a label no part declares**, where a rule of yours closes the kind's list of labels and binds on the body.
 
 Each message gives the part's hint and example. How the check reads a body:
 
@@ -340,7 +402,7 @@ Each message gives the part's hint and example. How the check reads a body:
 - **A field still holding its hint** is not judged against its form: the hint left in is the placeholder check's, above.
 - **A glossary entry** is read within the lines `pkit friction artefacts --json` gives as its section's `span`, the text friction compares as the entry. The glossary's head is its body above the first entry.
 - **A withdrawn artefact** is never failed for a part it lacks, or for a form, since either may have come after its withdrawal. The parts it carries are still checked for order, for content, and for `None.` where it may not stand.
-- **A revalidation record** is held to the structure declared now, the only one the capability has declared. Holding a record to the structure in force on its day comes with the first change to a structure (DEC-001's Implications).
+- **A revalidation record** is held to the structure declared now, the only one the capability has declared. Holding a record to the structure in force on its day comes with the first change to a structure (DEC-001's Implications). Your own changes may come after a record was written, so it is never failed for a part you added that it lacks, and a part you relabelled is found by its shipped label too.
 - **A missing heading** of an actor, a use case or a journey is the heading check's, above, which reports it whatever the rule's status.
 
 **While the rule is proposed**, as it is now, the check reports nothing of a structure, and its summary says so (COR-051 point 4). `pkit analysis validate --preview` previews the rule as if it were accepted. Each finding it would fail on is listed at the severity `report`, its message opening `preview:`, and the exit status stays the normal check's. `pkit validate` runs the normal check, with no preview. A superseded or withdrawn rule binds nothing, in a preview too.
@@ -425,6 +487,8 @@ It reads each source without a `url` whose `version` is a commit's full id, and 
 It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
 
 ## Configuration: `project/config.yaml`
+
+The capability's project tier, `.pkit/capabilities/software-analysis/project/`, holds three files of yours, which sync never touches: the settings file, `config.yaml`, the recorded location, `docs-locations.yaml`, and your own structures, `structures.yaml` ("A project's own structures", above).
 
 The settings of this capability you choose live in its settings file, `.pkit/capabilities/software-analysis/project/config.yaml`, beside the recorded location, `docs-locations.yaml`. The file is yours — sync never touches it — and has one shape, `schemas/config.schema.json`, which `pkit validate` checks it against with your other data (`pkit_schema: software-analysis:config`). Without the file, every setting is off. There is one setting:
 
@@ -667,7 +731,7 @@ An install plan predicts the wiring, not the data (COR-053 point 7): it shows th
 
 ## What's shipped now, what's next
 
-Shipped: the decision; the method rule set `SAN`, its format rule proposed; each kind's declared structure, `schemas/artefact-kinds.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each body to its kind's structure once the format rule is accepted, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
+Shipped: the decision; the method rule set `SAN`, its format rule proposed; each kind's declared structure, `schemas/artefact-kinds.yaml`, and a project's own changes to it, `project/structures.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each body to its kind's structure once the format rule is accepted, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
 
 ## Citing this capability's decisions
 
