@@ -11,9 +11,12 @@
 Checks each artefact's shape and own fields against its companion schema, a
 use case's or journey's heading against its id and title and an actor's
 against its id and name, an actor's file named after its id, ids two
-artefacts share, an actor or step the stamp would refuse, a use case not anchored to
-its actor, a journey whose use-case anchors do not match its steps, and the
-revalidation records' front matter, the artefacts they cite and the evidence
+artefacts share, an actor, other actor, step or use case relied on that the
+stamp would refuse, a use case's other actors naming its own actor and a
+journey's `relies-on` naming a step, a use case not anchored to each actor it
+involves or a journey not anchored to its actor, a journey whose use-case
+anchors do not match its steps and its `relies-on`, and the revalidation
+records' front matter, the artefacts they cite and the evidence
 they copy. Where it reads the evidence point, it warns on an entry whose `id`
 is not its own `<artefact>@<commit>#<check>`, and on a capability's entry whose
 check opens with another name than the capability's. It reports an open

@@ -650,11 +650,13 @@ def _lists_apart(analysis: Analysis) -> list[Finding]:
     found: list[Finding] = []
     for artefact in analysis.artefacts:
         if artefact.kind == USE_CASE:
-            field, own, what = OTHER_ACTORS, [artefact.fields.get("actor")], "its own actor"
+            field, own = OTHER_ACTORS, [artefact.fields.get("actor")]
+            what = "the use case's own actor"
             why = "the other actors are those who take part beside the actor whose goal it is"
         elif artefact.kind == JOURNEY:
             steps = artefact.fields.get("steps")
-            field, own, what = RELIES_ON, steps if isinstance(steps, list) else [], "a step"
+            field, own = RELIES_ON, steps if isinstance(steps, list) else []
+            what = "a step of the journey"
             why = "it lists the use cases outside the journey that a step relies on"
         else:
             continue
@@ -665,7 +667,7 @@ def _lists_apart(analysis: Analysis) -> list[Finding]:
                     Finding(
                         ERROR,
                         at(artefact.location, f"/{field}/{index}"),
-                        f"`{field}` names {value}, {what} of the {NOUN[artefact.kind]}: {why} "
+                        f"`{field}` names {value}, {what}: {why} "
                         f"— remove it from `{field}` (DEC-001 point 4)",
                     )
                 )

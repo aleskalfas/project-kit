@@ -364,8 +364,8 @@ def _check_placeholders(request: Request) -> None:
 def _check_unanchored(request: Request) -> None:
     """Only an actor or a term is kept unanchored with its reason, and never one
     given anchors: the reason says why it has none (DEC-001 points 4 and 9). A use
-    case always anchors to its actor and a journey to its steps' use cases (point
-    4), so neither is ever unanchored, and point 9's reason never applies to them."""
+    case always anchors to its actor, and a journey to its actor and its steps' use
+    cases (point 4), so neither is ever unanchored, and point 9's reason never applies to them."""
     if request.unanchored_because is None:
         return
     if request.kind in NUMBERED:
