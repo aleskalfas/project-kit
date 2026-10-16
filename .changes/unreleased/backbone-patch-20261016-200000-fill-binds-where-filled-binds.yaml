@@ -1,0 +1,15 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A rule that fills an extension point binds only where the rule it fills
+  binds, as COR-051 point 7 says, when that rule is itself a fill. Take an
+  accepted rule that fills a point of a proposed rule. It binds nowhere, so a
+  rule that fills a point it offers now binds nowhere either. Before, the walk
+  bound that second fill wherever its set was reached. The fix holds in
+  `pkit rule-sets reach`, with and without `--preview`, in `pkit rule-sets
+  altered`, and in validation's `rule-sets` member. Under `--preview` such a
+  fill now binds only where the rule it fills would bind, marked as previewed.
+  A fill conflict at a point of a rule that binds nowhere is no longer a
+  validation error.

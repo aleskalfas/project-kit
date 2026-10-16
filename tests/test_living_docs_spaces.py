@@ -75,6 +75,7 @@ from project_kit.manifest import (
     write_backbone_manifest,
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.test_rule_sets import anchored_to, rule_set_text, rules
 
 REPO = Path(__file__).resolve().parent.parent
 CAPABILITY = REPO / ".pkit" / "capabilities" / "living-docs"
@@ -1877,6 +1878,47 @@ def test_the_answer_of_where_rules_bind_reads_each_document_s_rules() -> None:
             binding.binding_of(wrong)
     # A gate reads where rules bind, never where they would bind (#1607, ADR-057 point 2).
     assert "--preview" not in binding.ARGV
+
+
+def test_the_validator_reads_a_fill_only_where_the_rule_it_fills_binds(
+    project: AdopterRepo,
+) -> None:
+    """The validator reads where rules bind from the backbone's one answer, so a fill
+    binds for it only where the rule it fills binds (COR-051 point 7; #1616). The shared
+    MID's accepted RS-MID-001 fills a point of the proposed RS-CMN-001, so it binds
+    nowhere, and neither does RS-GUIDE-001, which fills a point RS-MID-001 offers."""
+
+    def sets(status: str) -> dict[str, str]:
+        cmn = rules("RS-CMN-001", offers=["where"], status=status)
+        mid = rules(
+            "RS-MID-001",
+            offers=["how"],
+            fills=["RS-CMN-001#where"],
+            **anchored_to("RS-CMN-001"),
+        )
+        guide = rules("RS-GUIDE-001", fills=["RS-MID-001#how"], **anchored_to("RS-MID-001"))
+        fronts = {
+            "cmn": {"rule-set": "CMN", "version": "1.0.0", "rules": cmn},
+            "mid": {"rule-set": "MID", "version": "1.0.0", "inherits": ["CMN@1"], "rules": mid},
+            "guide": {
+                "rule-set": "GUIDE",
+                "version": "1.0.0",
+                "inherits": ["MID@1"],
+                "scope": ["docs/**"],
+                "rules": guide,
+            },
+        }
+        return {f"tech-docs/rule-sets/{key}.md": rule_set_text(f) for key, f in fronts.items()}
+
+    project.write(sets("proposed"))
+    read = binding.read_binding(project.root)
+    assert read.binds("docs/guide.md", "living-docs:RS-LDOC-003")
+    assert not read.binds("docs/guide.md", "RS-GUIDE-001")
+    assert not read.binds("docs/guide.md", "RS-MID-001")
+    project.write(sets("accepted"))
+    read = binding.read_binding(project.root)
+    assert read.binds("docs/guide.md", "RS-GUIDE-001")
+    assert read.binds("docs/guide.md", "RS-MID-001")
 
 
 @pytest.mark.parametrize(
