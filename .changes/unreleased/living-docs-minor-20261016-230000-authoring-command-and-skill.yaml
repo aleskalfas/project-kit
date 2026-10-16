@@ -2,6 +2,7 @@ component: living-docs
 kind: minor
 custom:
   category: Added
+  requires_backbone: release
 body: >
   `pkit living-docs new` stamps a page, or a space's definition, paired with
   the new `docs-author` skill (DEC-001 points 2 and 4; COR-005). `new space
