@@ -17,7 +17,7 @@ body: >
   word of its name. A part's list is read as Markdown reads one, and a form
   that reads a list judges only its items, so a line a writer adds outside
   them passes. A `sentence` part written as a list holds one sentence in each
-  item. A withdrawn artefact is never failed for a form. The forms bind at the
-  status of the format rule, RS-SAN-001, which is proposed, so the normal
-  check reports none of them, and `pkit analysis validate --preview` lists
-  each breach.
+  item. A withdrawn artefact is never failed for a form. An artefact's forms
+  bind at the status of the format rule, RS-SAN-001, which is proposed, so the
+  normal check reports none of them, and `pkit analysis validate --preview`
+  lists each breach. A revalidation record's bind always.

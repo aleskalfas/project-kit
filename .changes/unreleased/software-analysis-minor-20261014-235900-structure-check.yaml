@@ -12,11 +12,12 @@ body: >
   label the kind declares marks a part, so a label or a section a writer adds
   passes. A withdrawn artefact is never failed for a part it lacks. A glossary
   entry is read within the span `pkit friction artefacts --json` gives its
-  section, and the glossary's head above the first entry. The structure binds
-  at the status of the format rule, RS-SAN-001, which is proposed, so the
-  normal check reports none of it. `pkit analysis validate --preview` previews
-  the rule as if it were accepted: each finding is a report whose message
-  opens `preview:`, and the exit status stays the normal check's. `pkit
-  validate` runs the normal check. The check reads each
-  entry's `span` from the artefacts document, which only the backbone this
-  release ships gives, so the capability requires it.
+  section, and the glossary's head above the first entry. An artefact's
+  structure binds at the status of the format rule, RS-SAN-001, which is
+  proposed, so the normal check reports none of it. A revalidation record's
+  binds always. `pkit analysis validate --preview` previews the rule as if it
+  were accepted: each finding is a report whose message opens `preview:`, and
+  the exit status stays the normal check's. `pkit validate` runs the normal
+  check. The check reads each entry's `span` from the artefacts document,
+  which only the backbone this release ships gives, so the capability
+  requires it.
