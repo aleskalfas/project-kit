@@ -72,8 +72,9 @@ pkit:
         - .pkit/lifecycle/README.md#where-a-capabilitys-manifest-lives
         - .pkit/lifecycle/README.md#the-downgrade-guard-on-capability-refresh-issue-524
     revalidated:
-      at: 2026-10-16T15:17:09Z
-      outcome: updated
+      at: 2026-10-16T22:17:39Z
+      outcome: unchanged
+      unchanged-because: "This change makes the reach walk in src/project_kit/rule_sets.py bind a fill only where the rule it fills binds, also when that rule is itself a fill. The page already says what the walk now gives: a rule's fills are the points it binds on the artefact as the fill of, a rule marked previewed binds there only under the preview, a preview can lose a binding, and validation's rule-sets member reads its fill conflicts from the walk. No command, option or field changes."
 ---
 
 # Command-line interface
