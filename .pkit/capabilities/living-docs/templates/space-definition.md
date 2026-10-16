@@ -4,12 +4,14 @@
 # space's own rules on top. It is a project rule set (COR-051), so the
 # backbone validates it and checks the pin.
 #
-# To use it: copy it to `<definitions>/rule-sets/<space>.md` — `<definitions>`
-# is the location living-docs declares, `living-docs/` under the internal
+# `pkit living-docs new space <space>` writes it when the project creates the
+# space: to `<definitions>/rule-sets/<space>.md` — `<definitions>` is the
+# location living-docs declares, `living-docs/` under the internal
 # documentation root, recorded on first use in
-# `.pkit/capabilities/living-docs/project/docs-locations.yaml` — rename the
-# set, write the title and the scope's paths, and name the file as the space's
-# `definition` in `.pkit/capabilities/living-docs/project/config.yaml`.
+# `.pkit/capabilities/living-docs/project/docs-locations.yaml` — with the set
+# named, the scope's paths written and the space named in the title, and names
+# the file as the space's `definition` in
+# `.pkit/capabilities/living-docs/project/config.yaml`.
 #
 # The scope says where the rules bind. LDOC takes no scope, so its rules bind
 # on a page only through a set of the project's own whose scope selects the

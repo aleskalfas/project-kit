@@ -59,6 +59,8 @@ Core-shipped skills currently in `core/`:
 - **`schema`** — a composite skill (COR-020), paired with `pkit new schema`, `pkit schemas add` and `pkit schemas rename`: author a schema, extend or rename an entry, or distill schemas from an upstream. See `.pkit/skills/core/schema/schema.md`.
 - **`process`** — a composite skill (COR-020), paired with `pkit process new`, `couple` and `hand-off`: a process definition's shape. See `.pkit/skills/core/process/process.md`.
 
+A capability ships its own skills under its `skills/` folder, and its README describes them. The adapter deploys them beside the core ones, for each installed capability. An example is living-docs' `docs-author`, paired with `pkit living-docs new`.
+
 ## Frontmatter
 
 Every skill file starts with YAML frontmatter at minimum:
