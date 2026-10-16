@@ -659,8 +659,10 @@ READ_REPORT = f"{USE_CASES}/UC-002-read-report.md"
 
 
 def test_a_journey_s_actor_is_an_actor_of_the_analysis(seeded: AdopterRepo) -> None:
-    """A journey's actor is no anchor, so nothing else resolves it."""
+    """A journey's actor is in the analysis, as the stamp requires. Its anchor to the actor
+    follows it, and a dead anchor is the core's to report, not this check's."""
     _set(seeded, JOURNEY, "actor: ACT-tester", "actor: ACT-nobody")
+    _set(seeded, JOURNEY, "- ACT-tester", "- ACT-nobody")
     assert errors(check(seeded)) == [
         (
             f"{JOURNEY}:/actor",
@@ -801,10 +803,10 @@ def test_a_journey_whose_use_case_anchors_do_not_match_its_steps_is_reported(
     assert errors(check(seeded)) == [
         (
             f"{rel}:/pkit/friction/anchors/artefact",
-            "its use-case anchors (UC-001, UC-002) do not match its steps (UC-003, UC-001, "
-            "UC-002): the anchors are written from `steps`, so the friction check sees every "
-            "use case it passes through — anchor exactly [UC-003, UC-001, UC-002] (DEC-001 "
-            "point 4)",
+            "its use-case anchors (UC-001, UC-002) do not match its steps and the use cases "
+            "it relies on (UC-003, UC-001, UC-002): the anchors are written from `steps` and "
+            "`relies-on`, so the friction check sees every use case it passes through or "
+            "relies on — anchor exactly [UC-003, UC-001, UC-002] (DEC-001 point 4)",
         )
     ]
     # Order is the steps' business; a repeated step needs one anchor; other anchors are free.
@@ -815,6 +817,180 @@ def test_a_journey_whose_use_case_anchors_do_not_match_its_steps_is_reported(
             )
         }
     )
+    assert errors(check(seeded)) == []
+
+
+def test_a_use_case_with_another_actor_names_it_and_anchors_to_it(seeded: AdopterRepo) -> None:
+    """A use case lists each other actor it involves in `other-actors`, and anchors to each,
+    so a changed actor flags every use case it takes part in (DEC-001 point 4). The stamp
+    writes both. The check resolves each to an actor, refuses the use case's own actor,
+    and requires each anchor."""
+    stamped(seeded, "actor", "auditor")
+    stamped(seeded, "use-case", "audit", "--actor", "ACT-tester", "--other-actor", "ACT-auditor")
+    fill(seeded)
+    rel = f"{USE_CASES}/UC-003-audit.md"
+    written = front(seeded, rel)
+    assert written["other-actors"] == ["ACT-auditor"]
+    assert written["pkit"]["friction"]["anchors"]["artefact"] == ["ACT-tester", "ACT-auditor"]
+    assert errors(check(seeded)) == []
+    # The anchor dropped: a changed auditor would not flag the use case.
+    _set(seeded, rel, "        - ACT-auditor\n", "")
+    assert errors(check(seeded)) == [
+        (
+            f"{rel}:/pkit/friction/anchors/artefact",
+            "a use case anchors to each other actor it involves, so a changed actor flags it: "
+            "add ACT-auditor to its artefact anchors (DEC-001 point 4)",
+        )
+    ]
+    # An actor that is not in the analysis, and the use case's own actor, are refused.
+    _set(seeded, rel, "  - ACT-auditor\n", "  - ACT-nobody\n  - ACT-tester\n")
+    _set(seeded, rel, "        - ACT-tester\n", "        - ACT-tester\n        - ACT-nobody\n")
+    assert errors(check(seeded)) == [
+        (
+            f"{rel}:/other-actors/0",
+            "no actor ACT-nobody in the analysis: what a use case names is in the analysis "
+            "(DEC-001 point 3)",
+        ),
+        (
+            f"{rel}:/other-actors/1",
+            "`other-actors` names ACT-tester, the use case's own actor: the other actors are "
+            "those who take part beside the actor whose goal it is — remove it from "
+            "`other-actors` (DEC-001 point 4)",
+        ),
+    ]
+    # The stamp refuses the same.
+    own = new(seeded, "use-case", "own", "--actor", "ACT-tester", "--other-actor", "ACT-tester")
+    assert own.returncode == 1 and "is the use case's own actor" in own.stderr
+    nobody = new(seeded, "use-case", "x", "--actor", "ACT-tester", "--other-actor", "ACT-nobody")
+    assert nobody.returncode == 1 and "no actor ACT-nobody in the analysis" in nobody.stderr
+
+
+def test_a_journey_relying_on_a_use_case_outside_it_anchors_to_it(seeded: AdopterRepo) -> None:
+    """A journey lists in `relies-on` each use case outside it that a step relies on, and its
+    use-case anchors are written from `steps` and `relies-on` together, so a changed use
+    case flags the journeys that rely on it (DEC-001 point 4). Each has a hand-over under
+    the step that needs it, which the form of *Steps* holds once the format rule binds."""
+    stamped(seeded, "actor", "admin")
+    stamped(seeded, "use-case", "set-up", "--actor", "ACT-admin")
+    stamped(
+        seeded,
+        "journey",
+        "audited-run",
+        "--actor",
+        "ACT-tester",
+        "--step",
+        "UC-001",
+        "--step",
+        "UC-002",
+        "--relies-on",
+        "UC-003",
+    )
+    fill(seeded)
+    rel = f"{JOURNEYS}/JRN-002-audited-run.md"
+    written = front(seeded, rel)
+    assert written["relies-on"] == ["UC-003"]
+    assert written["pkit"]["friction"]["anchors"]["artefact"] == [
+        "ACT-tester",
+        "UC-001",
+        "UC-002",
+        "UC-003",
+    ]
+    assert errors(check(seeded)) == []
+    # A drifted anchor: the use case relied on is missing from the anchors.
+    _set(seeded, rel, "        - UC-003\n", "")
+    assert errors(check(seeded)) == [
+        (
+            f"{rel}:/pkit/friction/anchors/artefact",
+            "its use-case anchors (UC-001, UC-002) do not match its steps and the use cases it "
+            "relies on (UC-001, UC-002, UC-003): the anchors are written from `steps` and "
+            "`relies-on`, so the friction check sees every use case it passes through or "
+            "relies on — anchor exactly [UC-001, UC-002, UC-003] (DEC-001 point 4)",
+        )
+    ]
+    # A step is no use case outside the journey, and the journey anchors to its actor.
+    _set(seeded, rel, "relies-on:\n  - UC-003\n", "relies-on:\n  - UC-001\n")
+    _set(seeded, rel, "        - ACT-tester\n", "")
+    assert errors(check(seeded)) == [
+        (
+            f"{rel}:/relies-on/0",
+            "`relies-on` names UC-001, a step of the journey: it lists the use cases outside "
+            "the journey that a step relies on — remove it from `relies-on` (DEC-001 point 4)",
+        ),
+        (
+            f"{rel}:/pkit/friction/anchors/artefact",
+            "a journey anchors to its actor, so a changed actor flags it: add ACT-tester to its "
+            "artefact anchors (DEC-001 point 4)",
+        ),
+    ]
+    # The stamp refuses a step relied on outside the journey, and a use case not there.
+    steps = ("--actor", "ACT-tester", "--step", "UC-001", "--step", "UC-002")
+    inside = new(seeded, "journey", "inside", *steps, "--relies-on", "UC-002")
+    assert inside.returncode == 1 and "is a step of the journey" in inside.stderr
+    missing = new(seeded, "journey", "missing", *steps, "--relies-on", "UC-009")
+    assert missing.returncode == 1 and "no use case UC-009 in the analysis" in missing.stderr
+
+
+def test_what_a_use_case_or_journey_names_beside_its_actor_is_in_force(
+    seeded: AdopterRepo,
+) -> None:
+    """A use case's other actors, and the use cases a journey relies on outside it, are in
+    force for one in force, as its actor and its steps are (DEC-001 points 3 and 4). The
+    stamp refuses a withdrawn one, and a withdrawn artefact may name withdrawn ones."""
+    stamped(seeded, "actor", "auditor")
+    stamped(seeded, "use-case", "set-up", "--actor", "ACT-auditor")
+    stamped(seeded, "use-case", "audit", "--actor", "ACT-tester", "--other-actor", "ACT-auditor")
+    steps = ("--actor", "ACT-tester", "--step", "UC-001", "--step", "UC-002")
+    stamped(seeded, "journey", "audited-run", *steps, "--relies-on", "UC-003")
+    fill(seeded)
+    assert errors(check(seeded)) == []
+    set_up, audit = f"{USE_CASES}/UC-003-set-up.md", f"{USE_CASES}/UC-004-audit.md"
+    audited_run = f"{JOURNEYS}/JRN-002-audited-run.md"
+    _set(seeded, actor_at("ACT-auditor"), "status: active", "status: withdrawn")
+    _set(seeded, set_up, "status: active", "status: withdrawn")
+    rule = (
+        "rests only on artefacts in force, as the stamp requires — withdraw it too, or name another"
+    )
+    assert errors(check(seeded)) == [
+        (
+            f"{audit}:/other-actors/0",
+            f"actor ACT-auditor is withdrawn ({actor_at('ACT-auditor')}): a use case in force "
+            f"{rule} (DEC-001 point 3)",
+        ),
+        (
+            f"{audited_run}:/relies-on/0",
+            f"use case UC-003 is withdrawn ({set_up}): a journey in force {rule} (DEC-001 point 3)",
+        ),
+    ]
+    # The stamp refuses the same.
+    other = new(
+        seeded, "use-case", "later", "--actor", "ACT-tester", "--other-actor", "ACT-auditor"
+    )
+    assert other.returncode == 1 and "actor ACT-auditor is withdrawn" in other.stderr
+    relied = new(seeded, "journey", "later", *steps, "--relies-on", "UC-003")
+    assert relied.returncode == 1 and "use case UC-003 is withdrawn" in relied.stderr
+    # A withdrawn artefact may name withdrawn ones: it is history.
+    _set(seeded, audit, "status: active", "status: withdrawn")
+    _set(seeded, audited_run, "status: active", "status: withdrawn")
+    assert errors(check(seeded)) == []
+
+
+def test_a_journey_stamped_without_its_actor_anchor_fails_until_it_is_added(
+    seeded: AdopterRepo,
+) -> None:
+    """A journey stamped before its actor anchor was written (#1507) has no `relies-on` and
+    no anchor to its actor. The check fails it, a withdrawn one too, as it fails a use case
+    without its actor's anchor, and adding the actor to its artefact anchors clears it."""
+    _set(seeded, JOURNEY, "relies-on: []\n", "")
+    _set(seeded, JOURNEY, "        - ACT-tester\n", "")
+    finding = (
+        f"{JOURNEY}:/pkit/friction/anchors/artefact",
+        "a journey anchors to its actor, so a changed actor flags it: add ACT-tester to its "
+        "artefact anchors (DEC-001 point 4)",
+    )
+    assert errors(check(seeded)) == [finding]
+    _set(seeded, JOURNEY, "status: active", "status: withdrawn")
+    assert errors(check(seeded)) == [finding]
+    _set(seeded, JOURNEY, "        - UC-001\n", "        - ACT-tester\n        - UC-001\n")
     assert errors(check(seeded)) == []
 
 

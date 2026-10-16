@@ -3,10 +3,12 @@
 # one actor takes across several use cases, and the seams between them where
 # the path can break. Stamp it, never copy it: `pkit analysis new journey
 # <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> …` numbers it, writes
-# its title, `steps` and, from them, its use-case anchors and its step lines,
-# and writes it to `use-case-model/journeys/` under the analysis location.
-# `steps` is the source: `pkit analysis validate` requires the use-case anchors
-# to match it, and the heading to be the id and title the front matter gives.
+# its title, `steps`, `relies-on` (`--relies-on <UC-id>`, each), an anchor to
+# its actor, its use-case anchors from `steps` and `relies-on`, and its step
+# lines, and writes it to `use-case-model/journeys/` under the analysis
+# location. `steps` and `relies-on` are the source: `pkit analysis validate`
+# requires the use-case anchors to match them, and the heading to be the id and
+# title the front matter gives.
 # Its body is rendered from the journey's declared structure
 # (`schemas/artefact-kinds.yaml`). Each part holds its hint until you write in
 # its place what it asks for. Its own fields' shape is
@@ -16,11 +18,12 @@ title: <Title>                    # --title; the heading below repeats it after 
 status: active                    # or withdrawn: the file stays and its id is never reused
 actor: ACT-actor                  # the actor who takes the journey
 steps: [UC-000, UC-001]           # the actor's use cases it passes through, in order
+relies-on: []                     # --relies-on: each use case outside it that a step relies on
 pkit:
   friction:
     anchors:
       path: ["<code at a seam between two steps>"]   # --path
-      artefact: [UC-000, UC-001]                     # written from steps; never edit one without the other
+      artefact: [ACT-actor, UC-000, UC-001]          # its actor, and the use cases of steps and relies-on
 ---
 
 # JRN-000 — <Title>

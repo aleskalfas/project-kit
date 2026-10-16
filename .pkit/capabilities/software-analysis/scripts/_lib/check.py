@@ -42,20 +42,24 @@ What is checked, each against the record's words:
   give — no id, or another: the stamp counts the number its name carries, so
   the front matter says the same. An actor whose file is not named
   `<id>.md`: an actor's id names its file.
-- **What a use case or journey names** (points 1 and 3): its actor, and a
-  journey's steps, are an actor and use cases of the analysis; and one in
-  force names none withdrawn. The stamp refuses the same (`Analysis.unfit`),
-  so the check never accepts what the stamp would not write; a withdrawn
-  artefact may name withdrawn ones.
+- **What a use case or journey names** (points 1, 3 and 4): its actor, a use
+  case's other actors, and a journey's steps and the use cases outside it that
+  a step relies on, are actors and use cases of the analysis; and one in force
+  names none withdrawn. The stamp refuses the same (`Analysis.unfit`), so the
+  check never accepts what the stamp would not write; a withdrawn artefact may
+  name withdrawn ones. A use case's other actors leave out its own actor, and
+  what a journey relies on leaves out its steps.
 - **One actor's journey** (point 1): each step of a journey in force is a use
   case of the journey's actor, since a journey is one actor's path across use
   cases. The stamp refuses the same (`Analysis.another_actor`). A withdrawn
   journey is history, so its steps are not compared.
-- **A use case anchors to its actor** (point 4), as an artefact anchor, so a
-  changed actor flags it.
-- **A journey's anchors match its steps** (point 4): the use cases among its
-  artefact anchors are exactly those `steps` lists, so the friction check sees
-  every use case it passes through, and the two cannot drift apart.
+- **A use case anchors to each actor it involves** (point 4), as artefact
+  anchors: its actor and each of its `other-actors`, so a changed actor flags
+  it. A journey anchors to its actor the same way.
+- **A journey's anchors match its steps and what it relies on** (point 4): the
+  use cases among its artefact anchors are exactly those `steps` and
+  `relies-on` list, so the friction check sees every use case it passes
+  through or relies on, and the anchors and the lists cannot drift apart.
 - **Revalidation records** (points 5 and 6): each record's front matter
   against its schema, and the artefacts its outcomes cite are artefacts of the
   analysis, withdrawn ones included. The records are not anchored artefacts:
@@ -187,6 +191,8 @@ from _lib.model import (
     METHOD_SET,
     NOUN,
     NUMBERED,
+    OTHER_ACTORS,
+    RELIES_ON,
     REVALIDATED_AT,
     TERM,
     UNANCHORED_BECAUSE,
@@ -253,6 +259,7 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _duplicates(analysis)
     outcome.findings += _named_otherwise(analysis)
     outcome.findings += _references(analysis)
+    outcome.findings += _lists_apart(analysis)
     outcome.findings += _journeys_of_one_actor(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
@@ -562,17 +569,27 @@ def _actors_named_otherwise(analysis: Analysis) -> list[Finding]:
 # --- what an artefact names ----------------------------------------------------------------
 
 
+#: What each kind of artefact names in its front matter, beside its actor: each field
+#: listing artefacts, and the kind it lists (DEC-001 point 4).
+LISTED = {
+    USE_CASE: ((OTHER_ACTORS, ACTOR),),
+    JOURNEY: (("steps", USE_CASE), (RELIES_ON, USE_CASE)),
+}
+
+
 def _references(analysis: Analysis) -> list[Finding]:
-    """A use case's and a journey's actor, and a journey's steps: artefacts of the
-    analysis, and in force for one in force — what the stamp refuses otherwise."""
+    """A use case's and a journey's actor, a use case's other actors, and a journey's
+    steps and the use cases it relies on: artefacts of the analysis, and in force for
+    one in force — what the stamp refuses otherwise."""
     found: list[Finding] = []
     for artefact in analysis.artefacts:
         if artefact.kind not in (USE_CASE, JOURNEY):
             continue
         named: list[tuple[str, object, str]] = [("/actor", artefact.fields.get("actor"), ACTOR)]
-        steps = artefact.fields.get("steps") if artefact.kind == JOURNEY else None
-        if isinstance(steps, list):
-            named += [(f"/steps/{i}", step, USE_CASE) for i, step in enumerate(steps)]
+        for field, kind in LISTED[artefact.kind]:
+            listed = artefact.fields.get(field)
+            if isinstance(listed, list):
+                named += [(f"/{field}/{i}", value, kind) for i, value in enumerate(listed)]
         in_force = not artefact.withdrawn
         for pointer, value, kind in named:
             if not isinstance(value, str) or not schemas.id_pattern(kind).match(value):
@@ -626,35 +643,82 @@ def _journeys_of_one_actor(analysis: Analysis) -> list[Finding]:
     return found
 
 
+def _lists_apart(analysis: Analysis) -> list[Finding]:
+    """A use case's other actors leave out its own actor, and the use cases a journey
+    relies on outside it leave out its steps (DEC-001 point 4): each list names what
+    the use case or journey does not name already. The stamp refuses the same."""
+    found: list[Finding] = []
+    for artefact in analysis.artefacts:
+        if artefact.kind == USE_CASE:
+            field, own = OTHER_ACTORS, [artefact.fields.get("actor")]
+            what = "the use case's own actor"
+            why = "the other actors are those who take part beside the actor whose goal it is"
+        elif artefact.kind == JOURNEY:
+            steps = artefact.fields.get("steps")
+            field, own = RELIES_ON, steps if isinstance(steps, list) else []
+            what = "a step of the journey"
+            why = "it lists the use cases outside the journey that a step relies on"
+        else:
+            continue
+        listed = artefact.fields.get(field)
+        for index, value in enumerate(listed if isinstance(listed, list) else []):
+            if isinstance(value, str) and value in own:
+                found.append(
+                    Finding(
+                        ERROR,
+                        at(artefact.location, f"/{field}/{index}"),
+                        f"`{field}` names {value}, {what}: {why} "
+                        f"— remove it from `{field}` (DEC-001 point 4)",
+                    )
+                )
+    return found
+
+
 # --- anchors -------------------------------------------------------------------------------
 
 
 def _actor_anchors(analysis: Analysis) -> list[Finding]:
+    """Each actor a use case involves, its actor and each of its other actors, and a
+    journey's actor, among its artefact anchors (DEC-001 point 4), so a changed actor
+    flags every use case and journey that rests on it."""
+    pattern = schemas.id_pattern(ACTOR)
     found: list[Finding] = []
-    for use_case in analysis.of_kind(USE_CASE):
-        actor = use_case.fields.get("actor")
-        if not isinstance(actor, str) or not schemas.id_pattern(ACTOR).match(actor):
-            continue  # the schema reports it
-        if actor not in use_case.anchored_to("artefact"):
-            found.append(
-                Finding(
-                    ERROR,
-                    at(use_case.location, ARTEFACT_ANCHORS),
-                    f"a use case anchors to its actor, so a changed actor flags it: add {actor} "
-                    f"to its artefact anchors (DEC-001 point 4)",
+    for artefact in analysis.artefacts:
+        if artefact.kind not in (USE_CASE, JOURNEY):
+            continue
+        actors: list[tuple[str, object]] = [("its actor", artefact.fields.get("actor"))]
+        others = artefact.fields.get(OTHER_ACTORS) if artefact.kind == USE_CASE else None
+        if isinstance(others, list):
+            actors += [("each other actor it involves", other) for other in others]
+        anchored = artefact.anchored_to("artefact")
+        for which, actor in actors:
+            if not isinstance(actor, str) or not pattern.match(actor):
+                continue  # the schema reports it
+            if actor not in anchored:
+                found.append(
+                    Finding(
+                        ERROR,
+                        at(artefact.location, ARTEFACT_ANCHORS),
+                        f"{with_article(artefact.kind)} anchors to {which}, so a changed actor "
+                        f"flags it: add {actor} to its artefact anchors (DEC-001 point 4)",
+                    )
                 )
-            )
     return found
 
 
 def _journey_anchors(analysis: Analysis) -> list[Finding]:
+    """A journey's use-case anchors are exactly the use cases of its `steps` and its
+    `relies-on` (DEC-001 point 4): the two lists are the source, and the stamp writes
+    the anchors from them."""
     pattern = schemas.id_pattern(USE_CASE)
     found: list[Finding] = []
     for journey in analysis.of_kind(JOURNEY):
         steps = journey.fields.get("steps")
         if not isinstance(steps, list):
             continue  # the schema reports it
-        expected = _unique(s for s in steps if isinstance(s, str) and pattern.match(s))
+        relies_on = journey.fields.get(RELIES_ON)
+        listed = [*steps, *(relies_on if isinstance(relies_on, list) else [])]
+        expected = _unique(s for s in listed if isinstance(s, str) and pattern.match(s))
         anchored = _unique(a for a in journey.anchored_to("artefact") if pattern.match(a))
         if expected and set(expected) != set(anchored):
             found.append(
@@ -662,8 +726,9 @@ def _journey_anchors(analysis: Analysis) -> list[Finding]:
                     ERROR,
                     at(journey.location, ARTEFACT_ANCHORS),
                     f"its use-case anchors ({', '.join(anchored) or 'none'}) do not match its "
-                    f"steps ({', '.join(expected)}): the anchors are written from `steps`, so "
-                    f"the friction check sees every use case it passes through — anchor exactly "
+                    f"steps and the use cases it relies on ({', '.join(expected)}): the anchors "
+                    f"are written from `steps` and `relies-on`, so the friction check sees "
+                    f"every use case it passes through or relies on — anchor exactly "
                     f"[{', '.join(expected)}] (DEC-001 point 4)",
                 )
             )

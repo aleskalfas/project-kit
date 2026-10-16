@@ -6,9 +6,11 @@ A use case is one actor's goal and how the system fulfils it: when it starts, th
 
 Two actors with the same goal are two use cases, or the goal belongs to a third actor they both are. A goal that takes the actor through several use cases, with seams between them, is a journey over those use cases — write the use cases first.
 
-## 2. Name the actor
+## 2. Name the actor, and the other actors
 
 The actor must be in the analysis and in force; stamp it first (`actor.md`) if it is not. The stamp refuses an actor that is missing or withdrawn.
+
+Name each other actor who takes part with `--other-actor <ACT-id>`: one the use case serves, informs or must protect, never its own actor. Each is written in `other-actors` and anchored, so a change to that actor flags the use case. Each must be in the analysis and in force too.
 
 ## 3. Choose the slug, the title and the area
 
@@ -21,12 +23,12 @@ The actor must be in the analysis and in force; stamp it first (`actor.md`) if i
 - **`--path`** — the code the use case exercises: the entry point and the files doing the behaviour its steps describe.
 - **`--record`** — the decisions its steps rely on.
 
-The actor anchor is written by the stamp.
+The anchor to each actor is written by the stamp.
 
 ## 5. Stamp it
 
 ```
-pkit analysis new use-case <slug> --actor <ACT-id> [--title "<Title>"] [--area <area>] [--path <glob>]... [--record <id>]...
+pkit analysis new use-case <slug> --actor <ACT-id> [--other-actor <ACT-id>]... [--title "<Title>"] [--area <area>] [--path <glob>]... [--record <id>]...
 ```
 
 It takes the next free number on the default branch and in the working tree.
@@ -36,7 +38,8 @@ It takes the next free number on the default branch and in the working tree.
 Each part holds its hint, which says what goes there and gives an example. Write in its place what it asks for, and delete the hint.
 
 - **Goal** — what the actor wants, in one sentence in their own voice.
-- **Other actors**, **Preconditions** and **Assumptions** — each as its hint says, or `None.`.
+- **Other actors** — what the use case must protect for each actor of `other-actors`, or `None.` when it lists none.
+- **Preconditions** and **Assumptions** — each as its hint says, or `None.`.
 - **Trigger** — the event that starts it.
 - **Main path** — numbered steps, each what the actor or the system does. Quote in backticks the commands, flags, functions and messages a step names.
 - **Variants** — each lettered after the step it branches from (`2a`, `2b`): the condition, what happens instead, and where the path rejoins or ends. `None.` when there is none.

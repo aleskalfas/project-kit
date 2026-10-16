@@ -326,9 +326,16 @@ def test_the_actors_collection_template_is_retired_by_a_migration_that_changes_n
     assert after == before
 
 
-def test_the_journey_template_anchors_its_steps() -> None:
+def test_the_journey_template_anchors_its_actor_its_steps_and_what_it_relies_on() -> None:
     data = _template("journey")
-    assert data["pkit"]["friction"]["anchors"]["artefact"] == data["steps"]
+    anchored = [data["actor"], *data["steps"], *data["relies-on"]]
+    assert data["pkit"]["friction"]["anchors"]["artefact"] == anchored
+
+
+def test_the_use_case_template_anchors_each_actor() -> None:
+    data = _template("use-case")
+    anchored = [data["actor"], *data["other-actors"]]
+    assert data["pkit"]["friction"]["anchors"]["artefact"] == anchored
 
 
 def test_the_revalidation_record_template_is_no_anchored_artefact() -> None:
