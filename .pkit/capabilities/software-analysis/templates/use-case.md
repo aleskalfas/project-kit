@@ -1,8 +1,9 @@
 ---
 # A use case (software-analysis DEC-001 points 1, 3 and 4): one actor's goal
 # and how the system fulfils it. Stamp it, never copy it: `pkit analysis new
-# use-case <slug> --actor <ACT-id>` numbers it, fills its title, its actor and
-# the actor anchor, and writes it to `use-case-model/use-cases/` under the
+# use-case <slug> --actor <ACT-id>` numbers it, fills its title, its actor, its
+# other actors (`--other-actor <ACT-id>`, each) and an anchor to each actor,
+# and writes it to `use-case-model/use-cases/` under the
 # analysis location (`--area <area>` for a folder per functional area). Its
 # heading is its id and title, as the front matter gives them. Its body is
 # rendered from the use case's declared structure (`schemas/artefact-kinds.yaml`).
@@ -13,12 +14,13 @@ id: UC-000                        # stamped: the next free number, never reused
 title: <Title>                    # --title; the heading below repeats it after the id
 status: active                    # or withdrawn: the file stays and its id is never reused
 actor: ACT-actor                  # the actor whose goal this is
+other-actors: []                  # --other-actor: each other actor who takes part
 pkit:
   friction:
     anchors:
       path: ["<code it exercises>"]           # --path: a change there asks whether the use case still holds
       record: ["<decision it relies on>"]     # --record: a change to one asks the same
-      artefact: [ACT-actor]                   # its actor: a changed actor flags this use case
+      artefact: [ACT-actor]                   # its actor and other actors: a changed actor flags this use case
 ---
 
 # UC-000 — <Title>

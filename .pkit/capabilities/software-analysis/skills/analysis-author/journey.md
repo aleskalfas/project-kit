@@ -10,6 +10,7 @@ Write one when an actor's real goal spans use cases — onboarding, a first rele
 
 - **The actor** — the one who takes the whole path; in the analysis and in force.
 - **The steps** — the use cases it passes through, in order, at least two, each in force and each the actor's own: its `actor` is the journey's. A use case the actor only takes part in is another actor's, and the stamp and the check refuse it as a step. A use case may appear more than once. Stamp missing use cases first (`use-case.md`).
+- **What it relies on outside it** — each use case outside the journey that a step needs something from, of any actor, with `--relies-on <UC-id>`: one that set something up the path takes over, say. None of the steps is one. Each is written in `relies-on` and anchored, and each needs a hand-over under the step that relies on it.
 
 ## 3. Choose the slug and the title
 
@@ -17,12 +18,12 @@ The path's goal, verb first — `first-run`, `month-end-close` — with `--title
 
 ## 4. Decide what it rests on
 
-The use-case anchors are written from the steps by the stamp. Add as `--path` the code at the **seams**: where state passes from one use case to the next — a file one writes and the next reads, a session, a hand-over.
+The stamp writes the anchor to the actor, and the use-case anchors from the steps and `relies-on`. Add as `--path` the code at the **seams**: where state passes from one use case to the next — a file one writes and the next reads, a session, a hand-over.
 
 ## 5. Stamp it
 
 ```
-pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> [...] [--title "<Title>"] [--path <glob>]...
+pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> [...] [--relies-on <UC-id>]... [--title "<Title>"] [--path <glob>]...
 ```
 
 ## 6. Fill it
@@ -30,7 +31,7 @@ pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> 
 Each part holds its hint, which says what goes there and gives an example. Write in its place what it asks for, and delete the hint. The stamp writes the step lines under **Steps**, one for each use case of `steps`.
 
 - **Goal** — what the actor wants from the whole path, in one sentence in their own voice.
-- **Steps** — under each step line, one line for each hand-over the step needs: what it receives, and how that can break.
+- **Steps** — under each step line, one line for each hand-over the step needs: what it receives, and how that can break. A hand-over from an earlier step opens `**Needs from step N (<UC-id>):**`, and one from a use case of `relies-on` opens `**Needs from <UC-id> (outside this journey):**`.
 - **Variants** — each branch of the whole path, lettered after the step it leaves, or `None.`.
 - **Postconditions** — the state that shows the whole path succeeded.
 - **Minimal guarantees** — what still holds when the path stops before its end, or `None.`.
@@ -39,4 +40,4 @@ Then run the checks in the shared framing's "After stamping", including `pkit an
 
 ## Later
 
-`steps` is the source. To change them, edit `steps` and the use-case artefact anchors together; the check names the anchors to write when the two differ, so the friction check always sees every use case the journey passes through.
+`steps` and `relies-on` are the source. To change either, edit it and the use-case artefact anchors together; the check names the anchors to write when they differ, so the friction check always sees every use case the journey passes through or relies on.

@@ -74,7 +74,7 @@ An anchor says *if this changes, check me*. Anchor what makes the artefact true,
 
 - **`--path <glob>`** — the code that embodies it: the entry point and the files that do the behaviour, not a whole tree. An anchor matching more than half the tracked files is reported as over-broad, because it would make every change a revalidation.
 - **`--record <id>`** — a decision it relies on: an architecture decision, a capability's decision, a project record.
-- **Artefact anchors are the stamp's.** A use case anchors to its actor, and a journey to the use cases of its steps, so a changed actor flags its use cases and a changed use case the journeys through it. Never write them by hand.
+- **Artefact anchors are the stamp's.** A use case anchors to its actor and each other actor it involves, and a journey to its actor and to the use cases of its steps and its `relies-on`. So a changed actor flags its use cases and journeys, and a changed use case the journeys that pass through it or rely on it. Never write them by hand.
 
 **Quote the code you describe.** When a use case's step names a command, a flag, a function or a message, write it in backticks. What an artefact quotes from the code it anchors to is how a revalidation tells a change that leaves the description true from one that removes what it says — the resolver agent's first reading of a flagged artefact rests on it.
 

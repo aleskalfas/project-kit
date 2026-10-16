@@ -28,8 +28,10 @@ analysis location. Its front matter comes from its kind's template in
   sorts, every other byte left as it was — the file created the first time,
   its head as the declaration gives it.
 
-It writes the anchors DEC-001 point 4 asks for: a use case's actor, and a
-journey's use cases from its steps, beside the paths and records it is given.
+It writes the anchors DEC-001 point 4 asks for, beside the paths and records it
+is given: a use case's actor and each other actor it involves, written in its
+`other-actors`, and a journey's actor and the use cases of its steps and of
+its `relies-on`, those outside it that a step relies on.
 An actor or a term nothing embodies is stamped with the reason instead, its
 `unanchored-because` (point 9), written in its friction block: the key is the
 core's, which the unanchored measure reads (COR-050 points 1 and 8). A
@@ -47,7 +49,8 @@ It writes a journey's step lines under *Steps*, each use case's id and title
 as the form asks, and leaves the part's hint above them for the hand-overs.
 It refuses a journey with a step that is a use case of another actor: a
 journey is one actor's path across use cases (point 1), and the check holds a
-journey in force to the same.
+journey in force to the same. It refuses a use case naming its own actor among
+its other actors, and a journey relying outside it on one of its own steps.
 A title, a name or a reason given to it still holding a placeholder the
 templates or the skill's commands shipped it refuses (`_lib/placeholder.py`).
 While the analysis location is not recorded yet, the stamp records it through
@@ -111,7 +114,9 @@ from _lib.model import (
     JOURNEY,
     NOUN,
     NUMBERED,
+    OTHER_ACTORS,
     PREFIX,
+    RELIES_ON,
     TERM,
     UNANCHORED_BECAUSE,
     USE_CASE,
@@ -149,7 +154,9 @@ class Request:
     slug: str
     title: str | None = None  # a document's title, or an entry's name
     actor: str | None = None
+    other_actors: tuple[str, ...] = ()  # a use case's other actors
     steps: tuple[str, ...] = ()
+    relies_on: tuple[str, ...] = ()  # the use cases outside a journey a step relies on
     area: str | None = None
     paths: tuple[str, ...] = ()
     records: tuple[str, ...] = ()
@@ -362,7 +369,7 @@ def _check_unanchored(request: Request) -> None:
     if request.unanchored_because is None:
         return
     if request.kind in NUMBERED:
-        rests_on = "its actor" if request.kind == USE_CASE else "the use cases of its steps"
+        rests_on = "its actor" if request.kind == USE_CASE else "its actor and its steps"
         raise Refused(
             f"{with_article(request.kind)} anchors to {rests_on}, so it is never unanchored"
         )
@@ -376,15 +383,32 @@ def _check_unanchored(request: Request) -> None:
 
 
 def _check_references(analysis: Analysis, request: Request) -> None:
-    """A use case's and a journey's actor, and a journey's steps, are artefacts in force:
-    what it stamps is in force, and the check holds it to the same rule
-    (`Analysis.unfit`). Each of a journey's steps is a use case of its actor, as the
-    check holds a journey in force (`Analysis.another_actor`)."""
+    """A use case's and a journey's actor, a use case's other actors, and a journey's
+    steps and the use cases it relies on are artefacts in force: what it stamps is in
+    force, and the check holds it to the same rule (`Analysis.unfit`). Each of a
+    journey's steps is a use case of its actor, as the check holds a journey in force
+    (`Analysis.another_actor`). The other actors leave out the use case's own actor,
+    and what a journey relies on leaves out its steps, as the check holds both."""
     if request.kind in NUMBERED:
         if request.actor is None:
             raise Refused(f"{with_article(request.kind)} is one actor's: name it with --actor")
         _in_force(analysis, request.actor, ACTOR)
+    if request.kind == USE_CASE:
+        for other in request.other_actors:
+            if other == request.actor:
+                raise Refused(
+                    f"--other-actor {other} is the use case's own actor: name each other actor "
+                    f"who takes part, beside {other}"
+                )
+            _in_force(analysis, other, ACTOR)
     if request.kind == JOURNEY:
+        for outside in request.relies_on:
+            if outside in request.steps:
+                raise Refused(
+                    f"--relies-on {outside} is a step of the journey: name only the use cases "
+                    f"outside it that a step relies on"
+                )
+            _in_force(analysis, outside, USE_CASE)
         if len(request.steps) < 2:
             raise Refused(
                 "a journey passes through several use cases: name them in order, "
@@ -538,10 +562,12 @@ def _document(root: Path, kind: str, new_id: str, request: Request, analysis: An
         data["actor"] = request.actor
         if kind == JOURNEY:
             data["steps"] = list(request.steps)
-            anchored = list(dict.fromkeys(request.steps))
+            data[RELIES_ON] = list(dict.fromkeys(request.relies_on))
+            anchored = list(dict.fromkeys([str(request.actor), *request.steps, *request.relies_on]))
             written = _step_lines(structured, request.steps, analysis)
         else:
-            anchored = [str(request.actor)]
+            data[OTHER_ACTORS] = list(dict.fromkeys(request.other_actors))
+            anchored = list(dict.fromkeys([str(request.actor), *request.other_actors]))
     data[CONTAINER] = _container(request, anchored)
     body = render.body(structured, f"{new_id} — {_title(request)}", written)
     return f"---\n{dump(data)}---\n\n{body}"

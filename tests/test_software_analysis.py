@@ -283,6 +283,7 @@ def test_use_cases_and_journeys_are_numbered_in_order_with_their_anchors(
         "title": "Run suite",
         "status": "active",
         "actor": "ACT-tester",
+        "other-actors": [],
         "pkit": {"friction": {"anchors": {"path": ["src/run.py"], "artefact": ["ACT-tester"]}}},
     }
     body = (seeded.root / USE_CASES / "UC-001-run-suite.md").read_text(encoding="utf-8")
@@ -290,7 +291,11 @@ def test_use_cases_and_journeys_are_numbered_in_order_with_their_anchors(
     journey = front(seeded, f"{JOURNEYS}/JRN-001-first-run.md")
     assert journey["title"] == "First run"
     assert journey["steps"] == ["UC-001", "UC-002"]
-    assert journey["pkit"] == {"friction": {"anchors": {"artefact": ["UC-001", "UC-002"]}}}
+    assert journey["relies-on"] == []
+    # Its actor, and the use cases of its steps (DEC-001 point 4).
+    assert journey["pkit"] == {
+        "friction": {"anchors": {"artefact": ["ACT-tester", "UC-001", "UC-002"]}}
+    }
     body = (seeded.root / JOURNEYS / "JRN-001-first-run.md").read_text(encoding="utf-8")
     assert "# JRN-001 — First run\n" in body
     # The step lines, each use case's id and title as the form of *Steps* asks (#1366).
