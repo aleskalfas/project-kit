@@ -1,0 +1,23 @@
+component: living-docs
+kind: minor
+custom:
+  category: Changed
+body: >
+  `RS-LDOC-002` becomes "Each fact has one home": the one page that states the
+  fact in full, or the one page that states it at all. Another page may state
+  the fact as a summary that links to the home and anchors to the home's
+  section that states it, so a change to that section flags the summary. A
+  statement on another page without the link or the anchor breaks the rule,
+  and so do two statements of one fact that disagree, on one page or on two. A
+  fact a page states more than once, in agreement, is a passage for a person to
+  judge, not a settled break. A fact a page of the user space and a page of
+  the technical space both state has its home on the user space's page.
+  `RS-LDOC-001` says that only what a page anchors grounds a statement: a
+  record the page only mentions or cites, or code reached only through a call
+  from an anchored file, grounds nothing, and an anchor on one part grounds
+  only what that part stands on. living-docs DEC-001 points 3 and 4 state
+  both, and the `living-docs` agent's storyboard follows them. `LDOC` stays at
+  1.0.0: a statement on another page, or a repeat within a page, broke "each
+  fact is stated once" before, and a statement resting on what its page does
+  not anchor was not "grounded by the page's anchors", so no page the old text
+  passed fails the new one.
