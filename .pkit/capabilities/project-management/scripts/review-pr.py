@@ -415,6 +415,10 @@ def review(
     )
     session_guard.add_override_argument(parser)
     args = parser.parse_args(argv)
+    if branch_reading is not None and branch_reading.issue != args.issue_number:
+        raise ValueError(
+            f"branch_reading is #{branch_reading.issue}'s branch, not #{args.issue_number}'s"
+        )
 
     try:
         agent_timeout = _resolve_agent_timeout(args.timeout, os.environ)

@@ -365,3 +365,12 @@ def test_start_work_refuses_a_misshapen_branch_only_when_none_matches(
     _local(mod.issue_branch, monkeypatch, "fix/42", PR_BRANCH)
     assert mod.main() == 0
     assert f"  branch:    {PR_BRANCH}\n" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("verb", ["done-work", "review-pr"])
+def test_a_reading_handed_on_for_another_issue_is_refused(lib, verb: str) -> None:
+    """A composing verb hands on its reading of the same issue, or none."""
+    mod = _load(verb)
+    run = mod.run if verb == "done-work" else mod.review
+    with pytest.raises(ValueError, match="#7's branch, not #42's"):
+        run(["42"], branch_reading=lib.Reading(7, ("fix/7-other",)))

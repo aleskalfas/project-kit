@@ -3399,6 +3399,24 @@ def test_several_branches_none_open_and_none_merged_refuses_naming_each(
     assert "  - fix/42-slug: no open pull request\n" in err
 
 
+def test_several_branches_none_open_and_the_issue_unread_says_so(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """An issue whose merged PRs could not be read is not said to have none."""
+    run = _wire_second_run(dw, tmp_path, monkeypatch, issues={}, from_the_branch=False)
+    run.update(issue=None)
+    _several_branches(dw, monkeypatch, open_on={})
+    end = dw.run(["42", "--yes"])
+    err = capsys.readouterr().err
+    assert (end.kind, end.exit_code) == (dw.REFUSED, 2)
+    assert run.calls["order"] == []
+    assert "error: whether a merged PR closes #42 could not be read: " in err
+    assert "no merged PR closes" not in err
+
+
 @pytest.mark.parametrize(
     ("open_on", "kind", "says"),
     [

@@ -614,6 +614,10 @@ def run(
     parser.add_argument("--yes", action="store_true")
     session_guard.add_override_argument(parser)
     args = parser.parse_args(argv)
+    if branch_reading is not None and branch_reading.issue != args.issue_number:
+        raise ValueError(
+            f"branch_reading is #{branch_reading.issue}'s branch, not #{args.issue_number}'s"
+        )
 
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:
@@ -718,11 +722,13 @@ def run(
                 f"closes it could not be read: {issue_merges.problem}. Nothing was changed.",
             )
         if reading.none_open:
-            return _ended(
-                REFUSED,
-                2,
-                f"error: no merged PR closes #{args.issue_number}. {reading.refusal}",
+            merged = (
+                f"whether a merged PR closes #{args.issue_number} could not be read: "
+                f"{issue_merges.problem}"
+                if issue_merges.problem
+                else f"no merged PR closes #{args.issue_number}"
             )
+            return _ended(REFUSED, 2, f"error: {merged}. {reading.refusal}")
         if branch is None:
             return _ended(
                 REFUSED,

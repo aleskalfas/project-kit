@@ -134,8 +134,8 @@ def read(issue_number: int, config: dict[str, Any]) -> Reading:
 
 
 def _local_branches() -> tuple[str, ...]:
-    """The clone's local branches, in git's order. None when git cannot list
-    them."""
+    """The clone's local branches, in git's order. Empty when git cannot list
+    them, which reads as no branch matching, as it did for each verb before."""
     try:
         proc = subprocess.run(
             ["git", "branch", "--list", "--format=%(refname:short)"],
