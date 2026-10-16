@@ -28,7 +28,7 @@ pkit:
         - .pkit/schemas/backbone/package.schema.json
         - .pkit/schemas/backbone/filler.schema.json
         - hatch_build.py
-      record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, ADR-056, ADR-057, ADR-059]
+      record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, "COR-059#2", ADR-056, ADR-057, ADR-059]
     revalidated:
       at: 2026-10-15T17:58:36Z
       outcome: unchanged
@@ -769,6 +769,8 @@ Component migrations are tied to the component's version, not the backbone's. A 
 
 ## The upgrade flow
 
+### The steps of a transition
+
 The upgrade command transitions an adopter project to a target backbone version. It runs inside the backbone's two recorded states: it records its target first and its completion last (below). Every migration runs inside it, in COR-010's order ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 4):
 
 1. **Compatibility and collisions.** Each check may refuse, and none writes.
@@ -793,7 +795,7 @@ The upgrade command transitions an adopter project to a target backbone version.
 
 ### Seed paths
 
-One seeding step creates the paths a project is seeded with: each area's `project/` folder, the scratchpad's state folders, the agents overlay (`.pkit/agents/project/overlay.yaml`), each adapter's `settings/project/settings.json`, and each shipped capability's `project/` folder ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 11). Each folder it creates holds an empty `.gitkeep`. First install and a version transition run it, and create each one that is missing, never over one that exists. Sync runs none, so a seed the project deleted on purpose returns only at the next transition (COR-059 point 8).
+One seeding step creates the paths a project is seeded with: each area's `project/` folder, the scratchpad's state folders, the agents overlay (`.pkit/agents/project/overlay.yaml`), each adapter's `settings/project/settings.json`, and each shipped capability's `project/` folder ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 11). Each seed path that is a folder holds an empty `.gitkeep`. First install and a version transition run it, and create each one that is missing, never over one that exists. Sync runs none, so a seed the project deleted on purpose does not come back on a sync, and the next transition creates it again (COR-059 point 8).
 
 ### A new collision
 
@@ -921,6 +923,16 @@ Two commands consume the manifests differently for the same conceptual job — "
 - **`upgrade`** does the same comparison, then *applies* changes to bring reality into line (step 8 of the flow).
 
 Either way, the kit-side spec at the recorded version is the source of truth for what should exist; the manifest tracks only what the spec can't recover (recorded version, opaque IDs).
+
+### What sync writes
+
+`pkit sync` reconciles a project at the release it records, and moves no version (COR-059 point 2). Among the project's files it writes three kinds of thing, and no other:
+
+- **The methodology's content** at the recorded release: its trees, adapters included, and each installed capability the running pkit ships at the version the project records ("The downgrade guard on capability refresh", below). A project-owned path is never overwritten.
+- **Derivable state:** the deployed skills and agents, `.pkit/.gitignore`, the agent workspace and its line in the clone's local exclude file, and the query commands' environments.
+- **The project's own paths, through merge delivery only,** in its tier that asks nothing. For Claude Code it merges `.claude/settings.json` and `CLAUDE.md`, adding the methodology's entries and never removing one the project wrote. A tier that asks never runs in sync. Merge delivery may create its own target file where it is missing, such as `CLAUDE.md`, as merge, not as seeding.
+
+It writes no recorded version, no manifest and no seed path, and runs no migration.
 
 ### The incubated-origin skip-branch (COR-031 D1)
 

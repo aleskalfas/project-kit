@@ -12,11 +12,12 @@ pkit:
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
-      record: [COR-001, COR-019, COR-025, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#2", "COR-059#3"]
+      record: [COR-001, COR-019, COR-025, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3"]
       artefact:
+        - .pkit/lifecycle/README.md#the-steps-of-a-transition
         - .pkit/lifecycle/README.md#seed-paths
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
-        - .pkit/lifecycle/README.md#the-downgrade-guard-on-capability-refresh-issue-524
+        - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
       at: 2026-10-15T17:28:13Z
       outcome: unchanged
@@ -81,17 +82,11 @@ This invariant is what makes the namespace split above operationally safe. proje
 
 Sync reads from your side what it needs, such as the versions your project records. It writes into a file of yours through merge delivery's tier that asks nothing. That tier adds the kit's entries and never removes one you wrote (COR-002). Sync **cannot** produce a conflict, and it cannot break anything you wrote.
 
-Sync runs at the versions your project records, and moves none of them ([COR-059](core/COR-059-version-transition.md)). It writes three kinds of thing, and no other:
-
-- **The methodology's content** at the versions your project records, a capability's included only where the running pkit ships it at its recorded version ([the lifecycle README, "The downgrade guard on capability refresh"](../lifecycle/README.md#the-downgrade-guard-on-capability-refresh-issue-524)).
-- **State derived from your own declarations:** the deployed skills and agents, `.pkit/.gitignore`, the agent workspace and its line in your clone's local exclude file, and the query commands' environments.
-- **Your project-owned paths, through merge delivery only,** in its tier that asks nothing. A tier that asks never runs in sync. Merge delivery may create its own target file where it is missing, such as `CLAUDE.md`, as merge, not as seeding.
-
-It runs no migration, and writes no recorded version, no manifest and no seed path.
+Sync runs at the versions your project records, and moves none of them ([COR-059](core/COR-059-version-transition.md)). It writes the methodology's content at those versions, the state derived from your own declarations, and your project-owned paths through merge delivery only, and nothing else. It runs no migration, and writes no recorded version, no manifest and no seed path ([the lifecycle README, "What sync writes"](../lifecycle/README.md#what-sync-writes)).
 
 Under a pkit at another version than your project records, or over an unfinished upgrade, sync stops before it writes anything, and its message names the command that gets you on ([the lifecycle README, "Sync's guard"](../lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over)).
 
-`pkit upgrade` is the command that moves your project to another release. It also creates each seed path that is missing, such as the agents overlay, never over one that exists ([the lifecycle README, "Seed paths"](../lifecycle/README.md#seed-paths)). Every migration runs inside it, and a migration changes a file of yours only within what the record that owns the file allows.
+`pkit upgrade` is the command that moves your project to another release. It also creates each seed path that is missing, such as the agents overlay, never over one that exists ([the lifecycle README, "Seed paths"](../lifecycle/README.md#seed-paths)). Every migration runs inside it ([the lifecycle README, "The steps of a transition"](../lifecycle/README.md#the-steps-of-a-transition)), and a migration changes a file of yours only within what the record that owns the file allows.
 
 The same `core/` / `project/` pattern (and the same invariant) governs other kit areas in your project — `.pkit/agents/`, `.pkit/rules/`, and so on. To extend kit-shipped content, add sibling files in the matching `project/` directory; never edit a kit-owned file.
 
