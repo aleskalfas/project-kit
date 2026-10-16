@@ -8,7 +8,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Context
 
-A project that lets an agent write and maintain its documentation gets fluent text quickly. Without rules, it also gets fluent text that is wrong, repeated, aimed at nobody in particular, and quietly out of date after the next change. Documentation earns trust only if a reader can rely on it. That means it is true against something checkable. It says each fact once. It is written for a reader it actually serves. And it keeps the paths that reader takes unbroken.
+A project that lets an agent write and maintain its documentation gets fluent text quickly. Without rules, it also gets fluent text that is wrong, repeated, aimed at nobody in particular, and quietly out of date after the next change. Documentation earns trust only if a reader can rely on it. That means it is true against something checkable. It gives each fact one home. It is written for a reader it actually serves. And it keeps the paths that reader takes unbroken.
 
 Documentation serves two audiences who should not meet each other's material:
 - **Users** need to know *what* the system does and *how* to use it.
@@ -69,8 +69,8 @@ Each space has a *definition*: the rules its pages follow, and how its pages are
 ### 3. What the shared rules require
 
 The shared rule set turns these properties into checkable rules:
-- a page's **anchors ground every statement** it makes: code, decisions and rules, captured sources, analysis artefacts. Inline citations are optional where a page mixes sources;
-- each fact is **stated once**, and other pages link to it;
+- a page's **anchors ground every statement** it makes: code, decisions and rules, captured sources, analysis artefacts, and the home of each fact it summarises. Inline citations are optional where a page mixes sources;
+- each fact has **one home**, and another page states it only as a summary that links to the home and anchors to the home's section;
 - each page **names its reader** and says only what that reader needs;
 - pages of a kind follow **one format**, with a template per kind;
 - an index-like file is a **signpost** to what a folder holds, never a summary of its contents;
@@ -80,13 +80,28 @@ The user space adds one more: the **reader paths stay unbroken**.
 
 The shared set is named `LDOC`, and its origins record this capability's own reasons. The rules about how rules themselves are named, grounded and inherited are not in it, because the rule-set record (COR-051) provides them. The rules about where artefacts come from are carried by anchors: each page names what it rests on, and the anchor graph is the index of why each page exists. A project that already has documentation rules of its own keeps them as a project rule set that inherits `LDOC`. It withdraws any that duplicate what the core provides.
 
+**What grounds a statement.** Only what a page anchors grounds a statement. A change to anything else flags no page (COR-050 point 5).
+- **A record the page mentions or cites** but does not anchor grounds nothing. An inline citation tells the reader where a sentence's ground lies, and grounds the sentence only where the page anchors what it cites.
+- **Code reached only through a call** from a file the page anchors grounds nothing either.
+- **An anchor on one part** of a record or a document grounds only what that part stands on (COR-050 point 5).
+
+So a statement that rests on anything else breaks the rule on grounding until the page anchors what it rests on.
+
+**A fact's home.** Each fact that pages state has one home: the one page that states it in full. A fact that only one page states has that page as its home. A change to the fact is made at its home.
+- **A summary on another page** is allowed, so that each page stays useful on its own. It links to the home. Its page anchors to the home's section that states the fact (COR-050 point 2). A change to that section then flags the summary, and the change check asks it for an answer. An anchor on the whole home is not that anchor, since it would flag the summary on every edit of the home.
+- **A statement on another page** that lacks the link or the anchor breaks the rule on a fact's home. Whether one with both summarises the home, or states the fact in full again, is a passage for a person to judge.
+- **A fact stated more than once on one page,** each time in agreement, is a passage for a person to judge, not a settled break (COR-057 point 3). The rule leaves to that person whether the repeat serves the page's reader, as an opening summary or a recap may.
+- **Two statements of one fact that disagree** break the rule on a fact's home on each page that holds one of them, on one page or on two. Two statements disagree where one says what the other rules out. A statement that leaves out detail the other gives does not disagree with it.
+
+Two consequences follow from other rules. Anchors between artefacts form no cycle (COR-050 point 5), so two pages never summarise each other, directly or through other pages: all the facts they share have their homes on the same one of them. And user-facing navigation never leads into technical material (point 1), so a fact that a page of the user space and a page of the technical space both state has its home on the user space's page.
+
 **Where `LDOC` binds.** `LDOC`'s rules bind on a page only through a set of the project's own whose scope selects it, such as a space's definition (point 2). They do not bind through a pin that is behind its set (COR-051 point 7). A check enforces its part of an `LDOC` rule (point 6) only where the rule binds, as the backbone's one answer gives it. So validation checks a page's structure (RS-LDOC-004) and its reader (RS-LDOC-003) each only where its rule binds.
 
 **A kind's structure.** A kind's template is the starting shape a writer fills in. The part of a kind's format that a tool checks is its *structure*: the sections every page of the kind carries, in order where order matters. A structure is declared once, with the kind, in data whose schema this capability ships, and is never read out of the template's text; it names only what every page of the kind must carry, so a template may show more, and each template satisfies its kind's structure. The capability declares the structure of each kind it ships. Where the one-format rule binds on a page (above), a section the page lacks or carries out of order is a validation error. A page whose kind declares no structure — a kind the project adds, say — is reported with its kind and never failed. A structure is the checkable part of that rule, beside it as a schema is (COR-051 point 1), and no part of the rule's content: changing a structure leaves the rule set's version alone, and a change that fails a page it passed before is a breaking change of the component that owns the kind.
 
 ### 4. Pages are anchored and revalidated
 
-Every page is an artefact in the sense of the anchors-and-friction record (COR-050), in the places declared for its space. A page anchors to the code it describes, the decisions and rules it applies, the sources it quotes, and the analysis artefacts it builds on. Its front matter has a field for its **page kind** and one for its **reader**, in a schema this capability ships. A source is anchored through the `source` kind this capability registers (below). Because core anchors and registered kinds cover every kind of ground a page rests on, the capability needs no separate slot for anchors. Friction flags a page when any of those changed and the page was not revalidated. A page's reader and kind fields are the page's own; its friction block is the core's, in the methodology's container (COR-050, COR-053). Deciding what the change means for the page is judgment, which is what the capability's agent does next.
+Every page is an artefact in the sense of the anchors-and-friction record (COR-050), in the places declared for its space. A page anchors to the code it describes, the decisions and rules it applies, the sources it quotes, the analysis artefacts it builds on, and the home of each fact it summarises (point 3). Its front matter has a field for its **page kind** and one for its **reader**, in a schema this capability ships. A source is anchored through the `source` kind this capability registers (below). Because core anchors and registered kinds cover every kind of ground a page rests on, the capability needs no separate slot for anchors. Friction flags a page when any of those changed and the page was not revalidated. A page's reader and kind fields are the page's own; its friction block is the core's, in the methodology's container (COR-050, COR-053). Deciding what the change means for the page is judgment, which is what the capability's agent does next.
 
 **What a page is.** Not every document in a place is a page. A document is a page when it is of the capability's *page* type, `living-docs:page` (COR-056). It is also a page when it declares its page kind in a project place that lies outside every root and gives no type.
 - **The type.** The capability's type registry declares `page`, with `kind` as its kind field, and admits project places (COR-056 point 2). Each root gives the type, and a project may give it on its own places.
@@ -152,6 +167,10 @@ The cost falls on a page that no scoped set of the project's own reaches. No rul
 
 **Why every statement must be grounded by the page's anchors.** A statement nothing grounds cannot be judged true or false, and that is what makes fluent, unfounded text look reliable. Anchoring the page, not each sentence, keeps the cost bearable. The agent's and the reviewer's judgment connects each statement to the anchors. Anchors turn "is this still true?" into a question a tool can raise and a reviewer can answer.
 
+**Why only what a page anchors grounds it.** A change flags a page only through the page's anchors. A record the page only mentions or cites can change, and so can code an anchored file calls, and no tool asks whether the page still holds. A statement resting on either would look grounded and could turn false unseen.
+
+**Why each fact has one home, and a summary anchors to it.** A reader needs a fact on the page where they look, so another page may summarise it. The anchor keeps the statements together: a change to the home's section flags each summary of it, so the change check asks each one for an answer. An anchor on the home's section, not the whole home, asks only when that part changes. A statement on another page with no anchor drifts unseen. Within one page, both statements sit in one file, where whoever edits one has the other in front of them, and an opening summary or a recap may serve the reader. So whether a repeat earns its place is a person's call. Two statements that disagree never serve the reader, since one of them is false.
+
 **Why propose and never apply.** An agent that rewrites pages directly will eventually rewrite them wrongly: it will misjudge an ambiguous file's audience, or "fix" a page to match a regression. Proposals that cite their evidence, reviewed by a person, keep speed without giving up judgment.
 
 **Why reader-review is separate from change review.** Change review asks whether a change left documentation missing or contradicted. Reader-review asks whether the documentation serves its reader at all. They catch different failures, and merging them would blur both.
@@ -166,6 +185,9 @@ The cost falls on a page that no scoped set of the project's own reaches. No rul
 - **Every place assigned explicitly, including in-root ones.** Rejected: a place inside a root already says which audience it serves; asking twice invites drift, and the finding it enables is covered by the out-of-root case.
 - **A project place that gives no type holding no pages.** Not taken. Pages would then be exactly what the type selects. But every project with pages outside its roots would lose them until it typed its places, and an untyped place keeps its meaning (COR-056).
 - **An order of places of the capability's own for spaces, pinned to the backbone's by a test.** Rejected. Two orders would need keeping in step, and a document's type and its space could come from places ranked two ways.
+- **Each fact on one page only, other pages linking to it.** Rejected. A reader would follow a link for each fact, so a page would not serve on its own.
+- **A repeat within one page as a break.** Rejected. Both statements sit in one file, and an opening summary or a recap may be there on purpose.
+- **A record a page mentions or cites, or code reached through an anchored file, grounding a statement.** Rejected. A change to either flags no page.
 - **Each space written without a shared method.** Rejected. Rules would be re-derived per space and per project, and would drift.
 - **The checks enforcing `LDOC`'s parts on every page of the spaces.** Rejected, as COR-051 rejects it for every method rule set (COR-051 point 2). One requirement would be enforced two ways, and the rule's status and scope would no longer decide where its check applies.
 - **Agents applying fixes directly.** Rejected. See Rationale.

@@ -13,6 +13,9 @@ which judges HEAD against its history (COR-050):
   reports `deferred` gives none: its deferral is the answer (project-management
   DEC-053 point 4), and `pkit friction debt` reports it as debt — the check
   would otherwise refuse every later pull request that leaves the page alone.
+  A page anchored on one part — a record's point, a page's section or its lead
+  — is stale only when what that part stands on changed, as the check reads it
+  (COR-050 point 5), and the obligation names the anchor as the check gives it.
 - **`code-undocumented`** — one per path of the declared surface that nothing
   anchors (COR-050 point 8). Its `path` is the code, and it names no
   `document`: no page's change answers it, only a page anchoring the path.
