@@ -20,13 +20,15 @@ folder holds. A file the project's `friction.exclude` leaves out is no part of
 the analysis, as it is no part of friction (COR-050 point 7): the discovery
 marks it `excluded`, and the stamp, the checks and the filler read nothing of
 it — only its path is kept, so the history reading leaves it out too
-(`_lib/history.py`). The same answer gives each collection entry's span and
-the status of each rule of the capability's method set, at which a kind's
-declared structure binds (DEC-001 point 1).
+(`_lib/history.py`). The same answer gives each collection entry's span, the
+status of each rule of the capability's method set, at which a kind's declared
+structure binds, and the status of each rule of the project's own rule sets, at
+which a project's tightening of a structure binds (DEC-001 point 1).
 """
 
 from __future__ import annotations
 
+import dataclasses
 import re
 from collections import defaultdict
 from collections.abc import Mapping
@@ -170,6 +172,20 @@ class Unreadable(Exception):
 
 
 @dataclass(frozen=True)
+class ProjectRule:
+    """A rule of one of the project's own rule sets: its status — a rule without one is
+    proposed (COR-051 point 4) — the rule that replaces it, when it is superseded, the
+    file of its set, and the rules whose extension points it fills, each as its `fills`
+    cites it with the point left out: bare for a project rule, `<component>:<id>` for a
+    method rule."""
+
+    status: str
+    successor: str | None
+    rule_set: str
+    fills: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class Artefact:
     """One analysis artefact: its kind, its id (`None` for a document that names
     none), where it is — `path`, and `location`, the path or `path#id` of an
@@ -227,7 +243,10 @@ class Analysis:
     validation says why), or the reading declares no such folder.
     `method_rules` are the statuses of the rules of this capability's method
     set, `METHOD_SET`, by id, a rule without one `proposed` (COR-051 point 4);
-    `None` when the reading holds no such set.
+    `None` when the reading holds no such set. `project_rules` are the rules of
+    the project's own rule sets, by id, and `rule_statuses` the status of every rule
+    of every rule set the reading holds, by its id as cited: bare for a project
+    rule, `<component>:<id>` for a method rule.
     """
 
     location: str | None
@@ -240,6 +259,8 @@ class Analysis:
     records_unheld: str | None = None
     excluded: frozenset[str] = frozenset()
     method_rules: Mapping[str, str] | None = None
+    project_rules: Mapping[str, ProjectRule] = dataclasses.field(default_factory=dict)
+    rule_statuses: Mapping[str, str] = dataclasses.field(default_factory=dict)
 
     def held(self) -> set[str]:
         """Every id this state of the analysis holds, as `identity` spells it: each
@@ -417,6 +438,8 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
         records_unheld=unheld,
         excluded=frozenset(excluded),
         method_rules=_method_rules(document),
+        project_rules=_project_rules(document),
+        rule_statuses=_rule_statuses(document),
     )
 
 
@@ -455,6 +478,64 @@ def _method_rules(document: Mapping[str, Any]) -> dict[str, str] | None:
             for rule_id, rule in (rules.items() if isinstance(rules, Mapping) else [])
         }
     return None
+
+
+def _project_rules(document: Mapping[str, Any]) -> dict[str, ProjectRule]:
+    """Each rule of the project's own rule sets, by id, as the reading's files of them
+    give it: the files of every place of rule sets the reading gives no component
+    (`rule_sets: {component: null}`). A rule written twice keeps its first, and
+    validation reports the second."""
+    own = {
+        index
+        for index, place in enumerate(_mappings(document.get("places")))
+        if isinstance(place.get("rule_sets"), Mapping)
+        and place["rule_sets"].get("component") is None
+    }
+    found: dict[str, ProjectRule] = {}
+    for entry in _mappings(document.get("files")):
+        fields = entry.get("fields")
+        if not own.intersection(entry.get("places") or []) or not isinstance(fields, Mapping):
+            continue
+        rules = fields.get("rules")
+        for rule_id, rule in rules.items() if isinstance(rules, Mapping) else []:
+            successor = rule.get("successor") if isinstance(rule, Mapping) else None
+            fills = rule.get("fills") if isinstance(rule, Mapping) else None
+            found.setdefault(
+                str(rule_id),
+                ProjectRule(
+                    _status(rule),
+                    successor if isinstance(successor, str) else None,
+                    str(entry.get("path")),
+                    tuple(
+                        str(cited).split("#", 1)[0]
+                        for cited in (fills if isinstance(fills, list) else [])
+                        if isinstance(cited, str)
+                    ),
+                ),
+            )
+    return found
+
+
+def _rule_statuses(document: Mapping[str, Any]) -> dict[str, str]:
+    """The status of every rule of every rule set the reading holds, by its id as cited:
+    bare for a rule of the project's own sets, `<component>:<id>` for a method rule."""
+    component_of = {
+        index: place["rule_sets"].get("component")
+        for index, place in enumerate(_mappings(document.get("places")))
+        if isinstance(place.get("rule_sets"), Mapping)
+    }
+    found: dict[str, str] = {}
+    for entry in _mappings(document.get("files")):
+        fields = entry.get("fields")
+        places = [i for i in entry.get("places") or [] if i in component_of]
+        if not places or not isinstance(fields, Mapping):
+            continue
+        component = component_of[places[0]]
+        rules = fields.get("rules")
+        for rule_id, rule in rules.items() if isinstance(rules, Mapping) else []:
+            cited = f"{component}:{rule_id}" if component else str(rule_id)
+            found.setdefault(cited, _status(rule))
+    return found
 
 
 def _status(rule: Any) -> str:

@@ -35,7 +35,11 @@ An actor or a term nothing embodies is stamped with the reason instead, its
 core's, which the unanchored measure reads (COR-050 points 1 and 8). A
 revalidation record is not an artefact and
 is stamped by `_lib/revalidation.py`.
-What only a person can write the stamp leaves for them, each holding its
+The body is the kind's structure as the project's own `project/structures.yaml`
+changes it: its relabels and fields' hints, and each part a group of the
+project's adds whose rule is proposed or accepted, its hint naming the rule
+(`_lib/project_structure.py`). A file there that does not read refuses the
+stamp. What only a person can write the stamp leaves for them, each holding its
 hint as its placeholder (point 1): a front-matter field it does not write
 itself — an actor's needs, a term's definition — and each body part. The
 check fails each until it is written.
@@ -88,7 +92,17 @@ from typing import Any
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from _lib import backbone, forms, history, markdown, numbering, render, schemas, structure
+from _lib import (
+    backbone,
+    forms,
+    history,
+    markdown,
+    numbering,
+    project_structure,
+    render,
+    schemas,
+    structure,
+)
 from _lib.model import (
     ACTOR,
     CAPABILITY,
@@ -204,7 +218,7 @@ def stamp(
     if kind in COLLECTIONS:
         target = root / place
         refuse_links(root, target, place)
-        text = _added_entry(target, place, kind, new_id, request)
+        text = _added_entry(root, target, place, kind, new_id, request, analysis)
         location = f"{place}#{new_id}"
     else:
         folder = f"{place}/{request.area}" if request.area else place
@@ -215,7 +229,7 @@ def stamp(
         refuse_links(root, target, location)
         if target.exists():
             raise Refused(f"{location} exists already")
-        text = _document(kind, new_id, request, analysis)
+        text = _document(root, kind, new_id, request, analysis)
 
     recorded = write_and_record(root, target, location, text, record)
     if recorded:
@@ -505,13 +519,13 @@ def _new_id(kind: str, slug: str, held: set[str], base: str) -> str:
 # --- rendering -------------------------------------------------------------------------------
 
 
-def _document(kind: str, new_id: str, request: Request, analysis: Analysis) -> str:
+def _document(root: Path, kind: str, new_id: str, request: Request, analysis: Analysis) -> str:
     """A use case's, a journey's or an actor's file: its front matter from its template,
     with its id and its title — an actor's name — and each field a writer fills holding
     its hint, and its body rendered from its kind's structure, headed by the id and the
     title (`_lib/render.py`)."""
     front, _body = _template(kind)
-    structured = declared(kind)
+    structured = declared(kind, root, analysis)
     data = dict(markdown.load(front))
     data["id"] = new_id
     data.update(render.fields_left(structured, data))
@@ -536,8 +550,9 @@ def _document(kind: str, new_id: str, request: Request, analysis: Analysis) -> s
 def _step_lines(kind: structure.Kind, steps: Sequence[str], analysis: Analysis) -> dict[str, str]:
     """A journey's step lines, one per use case of its steps, numbered from 1, each its id
     and its title as the use case states it: what the form of the journey's steps part
-    asks (`_lib/forms.py`), keyed by that part's id."""
-    part = next((e for e in kind.sections if e.form == forms.STEPS_MATCH), None)
+    asks (`_lib/forms.py`), keyed by that part's id: the part the kind ships, never one a
+    project adds."""
+    part = next((e for e in kind.sections if e.form == forms.STEPS_MATCH and not e.added), None)
     if part is None:
         return {}
     lines: list[str] = []
@@ -550,12 +565,20 @@ def _step_lines(kind: structure.Kind, steps: Sequence[str], analysis: Analysis) 
     return {part.id: "\n".join(lines)}
 
 
-def declared(kind: str) -> structure.Kind:
-    """A kind's declared structure, or a refusal: the declaration is the capability's own,
-    so one that cannot be read, or whose hints — a part's or a field's — cannot each be
-    one comment on one line, is restored, never edited."""
+def declared(kind: str, root: Path, analysis: Analysis | None = None) -> structure.Kind:
+    """A kind's declared structure as the project's own structures at `root` change it,
+    or a refusal (DEC-001 point 1). The project's relabels and fields' hints always
+    apply. Given the `analysis`, so for an artefact, so do the parts its groups of
+    tightenings add and require: every group whose rule is one of the project's and is
+    proposed or accepted. A new artefact is in no reading of where a rule binds yet, so
+    the stamp writes each such part, and a writer deletes an optional part they have
+    nothing for. A revalidation record is written whole, so a writer adds a project's
+    parts to it by hand. The declaration is the capability's own, so one that cannot be
+    read, or whose hints — a part's or a field's — cannot each be one comment on one
+    line, is restored, never edited. The project's own file is the project's to mend."""
     try:
-        declared_kind = structure.read_kinds()[kind]
+        kinds = structure.read_kinds()
+        declared_kind = kinds[kind]
         for element in declared_kind.sections:
             if element.filled:
                 render.hint(element)
@@ -567,10 +590,38 @@ def declared(kind: str) -> structure.Kind:
             f"structure, so nothing is stamped until they can: the file is {CAPABILITY}'s own "
             f"— restore it as the capability ships it (DEC-001 point 1)"
         ) from exc
-    return declared_kind
+    own = project_structure.read(root, kinds)
+    if own.problems:
+        first = own.problems[0]
+        more = f", and {len(own.problems) - 1} more" if len(own.problems) > 1 else ""
+        raise Refused(
+            f"the project's own structures cannot be read — {first.location}: {first.message}"
+            f"{more}. A body is rendered from its kind's structure as the project changes it, "
+            f"so nothing is stamped until the file reads: `pkit analysis validate` lists "
+            f"each problem"
+        )
+    declared_kind = project_structure.relabelled(declared_kind, own)
+    if analysis is None:
+        return declared_kind
+    groups = own.of(kind)
+    standing = [
+        group
+        for group in groups
+        if (rule := analysis.project_rules.get(group.rule)) is not None
+        and rule.status in ("accepted", "proposed")
+    ]
+    return project_structure.tightened(declared_kind, groups, standing)
 
 
-def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Request) -> str:
+def _added_entry(
+    root: Path,
+    target: Path,
+    place: str,
+    kind: str,
+    new_id: str,
+    request: Request,
+    analysis: Analysis,
+) -> str:
     """The collection file `place` with the new entry: its front matter gains the
     entry and its body the entry's section, each where the id sorts among those
     already there, every other byte as it was. A new file gains the head its kind
@@ -583,7 +634,7 @@ def _added_entry(target: Path, place: str, kind: str, new_id: str, request: Requ
     front, _body = _template(kind)
     ((_template_id, example),) = dict(markdown.load(front)).items()
     name = _title(request)
-    structured = declared(kind)
+    structured = declared(kind, root, analysis)
     entry = {key: value for key, value in example.items() if key != CONTAINER}
     entry.update(render.fields_left(structured, entry))
     entry["name"] = name
