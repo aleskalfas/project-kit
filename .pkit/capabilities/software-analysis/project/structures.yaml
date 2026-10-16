@@ -1,0 +1,53 @@
+# project-kit's own structures for its analysis. Project-owned.
+# Shape: ../schemas/structures.schema.json. The capability's README, in its
+# section "A project's own structures", says where each addition goes and when
+# it binds (software-analysis DEC-001 point 1).
+#
+# The actors' labels: seven optional labels around the shipped Occasions and
+# Context, and a closed list, which RS-ANA-002 in ANA authorises
+# (tech-docs/rule-sets/analysis.md).
+
+pkit_schema: software-analysis:structures
+schema_version: 1
+
+kinds:
+  actor:
+    tighten:
+      - rule: RS-ANA-002
+        closed: true
+        add:
+          - id: setup
+            label: Setup
+            after: opening
+            hint: What this role keeps set up in the project.
+            example: "which checks the project's merges wait on (`ACT-adopter`)"
+          - id: human-role
+            label: Human role
+            after: setup
+            hint: Why no agent may play this role.
+            example: "a person's review turns a record or rule an agent drafted into a binding one (`ACT-merge-authoriser`)"
+          - id: role-holders
+            label: Role holders
+            after: human-role
+            hint: Who may play this role.
+            example: "project-kit's maintainers, or a fork's (`ACT-methodology-maintainer`)"
+          - id: activities
+            label: Activities
+            after: role-holders
+            hint: What this role does, where the opening is too short for it.
+            example: "choose how much the agents may do without asking (`ACT-operator`)"
+          - id: place-in-the-model
+            label: Place in the model
+            after: context
+            hint: How the role appears in the use cases, where its goals belong to others.
+            example: "its needs are what the system must give an unattended runner (`ACT-ci-pipeline`)"
+          - id: core
+            label: Core
+            after: place-in-the-model
+            hint: What in the core makes this role exist, with the records that say so.
+            example: "the checks bind once the project makes them a required status (COR-050 point 12) (`ACT-ci-pipeline`)"
+          - id: note
+            label: Note
+            after: core
+            hint: "Side matter: the reason for a name, or an overlap with another role."
+            example: 'the name is not "approver", because project-management uses that word for a reviewer agent (`ACT-merge-authoriser`)'

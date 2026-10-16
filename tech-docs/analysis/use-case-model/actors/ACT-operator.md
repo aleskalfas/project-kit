@@ -25,11 +25,11 @@ pkit:
 
 The person at the controls of a machine. The role is per machine and per clone.
 
-- **Does:**
+- **Activities:**
   - start agent sessions
   - choose how much the agents may do without asking
   - answer what the methodology gates
-- **Comes:** every working day, in every clone.
-- **Brings:** the machine, its credentials and sandbox, and the judgement the gates ask for.
+- **Occasions:** every working day, in every clone.
+- **Context:** the machine, its credentials and sandbox, and the judgement the gates ask for.
 - **Core:** the permission model, its sandbox and the cross-repository gate are this role's controls.
 - **Note:** the role is not whoever holds the repository's settings, since making merges wait on the checks is the adopter's. CONTRIBUTING.md also calls whoever holds those settings the operator.

@@ -1,0 +1,8 @@
+component: software-analysis
+kind: none
+body: >
+  project-kit's own structures (.pkit/capabilities/software-analysis/project/structures.yaml)
+  now declare its actors' labels, naming its own rule RS-ANA-002. The file is
+  in the capability's project tier, which is project-owned and which sync
+  never touches, so nothing reaches an adopter. The changeset guard counts any
+  change under the capability's folder as software-analysis's.

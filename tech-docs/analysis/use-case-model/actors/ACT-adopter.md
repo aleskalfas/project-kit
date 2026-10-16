@@ -27,13 +27,13 @@ pkit:
 
 The person who adopts the methodology for a project and keeps its setup.
 
-- **The setup:**
+- **Setup:**
   - what is installed, at which version
   - which of their own additions sit beside it
   - which checks the project's merges wait on
-- **Comes:**
+- **Occasions:**
   - at setup
   - at each upgrade
   - when the project needs a discipline
-- **Brings:** their project, its existing `CLAUDE.md` and settings, its repository settings, and the rules and grants they add.
+- **Context:** their project, its existing `CLAUDE.md` and settings, its repository settings, and the rules and grants they add.
 - **Core:** the split between methodology-owned and project-owned files, and the install and upgrade lifecycle, exist for this role. Installing a capability is itself a core act.
