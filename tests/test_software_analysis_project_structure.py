@@ -585,6 +585,27 @@ def test_a_tightening_binds_where_its_rule_binds_once_both_rules_are_accepted(
     assert (found, asked) == ([], [(tmp_path, False)])
 
 
+def test_a_group_whose_rule_binds_only_where_the_format_rule_does_not_tightens_nothing(
+    tmp_path: Path,
+) -> None:
+    """A group applies only where the format rule binds too, so where its rule binds only
+    elsewhere, it holds no artefact and the summary counts no group that binds."""
+    _write(tmp_path, NOTES_REQUIRED)
+    tester = _artefact(tmp_path, ACTOR_REL, SHIPPED_ACTOR)
+    other = _artefact(tmp_path, OTHER_REL, SHIPPED_ACTOR.replace("tester", "other"))
+
+    def reach(_root: Path, *, preview: bool) -> dict[str, dict[str, bool]]:
+        return {ACTOR_REL: {SAN_RULE: False}, OTHER_REL: {"RS-LOC-001": False}}
+
+    analysis = _analysis("accepted", {"RS-LOC-001": "accepted"}, tester, other)
+    summary, found = C._structure(
+        tmp_path, analysis, preview=False, own=P.read(tmp_path, KINDS), reach=reach
+    )
+    assert [(f.severity, f.location) for f in found] == []
+    assert "1 artefact(s) and file head(s) checked" in summary
+    assert "tightened where" not in summary
+
+
 class _Reach:
     """A reading of where rules bind: `plain` without the preview, `previewing` with it.
     `asked` records whether each call asked for the preview."""

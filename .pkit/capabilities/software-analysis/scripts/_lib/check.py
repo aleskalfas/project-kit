@@ -1021,20 +1021,21 @@ class _Reach:
     """The backbone's reading of where rules bind, read at most once with the preview and
     once without, whoever asks: the format rule, the method set's other rules and the
     project's groups all read the one answer (COR-051 point 7; ADR-057 point 2). A
-    reading that fails raises Unreadable each time it is asked for."""
+    reading that fails raises Unreadable each time it is asked for. It is called as
+    `backbone.reach` is, so it stands in for it, and reads at the root it was made for."""
 
     def __init__(self, root: Path, reach: Callable[..., Mapping[str, Mapping[str, bool]]]):
         self.root = root
         self.reach = reach
-        self.read: dict[bool, Mapping[str, Mapping[str, bool]] | Unreadable] = {}
+        self.answers: dict[bool, Mapping[str, Mapping[str, bool]] | Unreadable] = {}
 
     def __call__(self, _root: Path, *, preview: bool = False) -> Mapping[str, Mapping[str, bool]]:
-        if preview not in self.read:
+        if preview not in self.answers:
             try:
-                self.read[preview] = self.reach(self.root, preview=preview)
+                self.answers[preview] = self.reach(self.root, preview=preview)
             except Unreadable as exc:
-                self.read[preview] = exc
-        answer = self.read[preview]
+                self.answers[preview] = exc
+        answer = self.answers[preview]
         if isinstance(answer, Unreadable):
             raise answer
         return answer
@@ -1064,8 +1065,8 @@ def _structure(
     Never silent (`_unbound`): the summary counts the artefacts no rule of `SAN` binds
     on, and where it binds on none of the analysis, a finding says so. Returns the
     summary's line about it, and the findings."""
-    read = _Reach(root, reach)
-    unbound, silence = _unbound(analysis, read)
+    reached = _Reach(root, reach)
+    unbound, silence = _unbound(analysis, reached)
     rules = analysis.method_rules
     status = None if rules is None else rules.get(FORMAT_RULE)
     if status == ACCEPTED:
@@ -1101,7 +1102,7 @@ def _structure(
             silence,
         )
     try:
-        at = read(root, preview=status != ACCEPTED) if analysis.artefacts else {}
+        at = reached(root, preview=status != ACCEPTED) if analysis.artefacts else {}
     except Unreadable as exc:
         # Under an accepted rule, `_unbound` may have said so already, as an error.
         told = status == ACCEPTED and any(f.severity == ERROR for f in silence)
@@ -1113,7 +1114,7 @@ def _structure(
         )
     binding = frozenset(location for location, bound in at.items() if CITED_FORMAT_RULE in bound)
     kinds = {name: project_structure.relabelled(kind, own) for name, kind in kinds.items()}
-    bound = _bound(root, analysis, own, preview=preview, reach=read)
+    bound = _bound(root, analysis, own, preview=preview, reach=reached, binding=binding)
     found: list[Finding] = []
     previewing: list[Finding] = []  # a group's that binds only because of the preview
     texts: dict[str, str | None] = {}
@@ -1161,7 +1162,7 @@ def _structure(
     )
 
 
-def _unbound(analysis: Analysis, read: _Reach) -> tuple[str, list[Finding]]:
+def _unbound(analysis: Analysis, reached: _Reach) -> tuple[str, list[Finding]]:
     """What the summary says of the artefacts no rule of `SAN` binds on, and, where it
     binds on none of the analysis, the finding that says so, and why (DEC-001 point 1):
     a report while no rule of `SAN` is accepted, since none could bind, and a warning once
@@ -1195,7 +1196,7 @@ def _unbound(analysis: Analysis, read: _Reach) -> tuple[str, list[Finding]]:
             ],
         )
     try:
-        at = read(read.root, preview=False)
+        at = reached(reached.root, preview=False)
     except Unreadable as exc:
         return "", [_unreadable_reach(exc, analysis, preview=False)]
     bound = sum(
@@ -1364,11 +1365,13 @@ def _bound(
     *,
     preview: bool,
     reach: Callable[..., Mapping[str, Mapping[str, bool]]],
+    binding: frozenset[str],
 ) -> _Binding:
     """Where each of the project's groups of tightenings binds, once the format rule binds
     or is previewed (DEC-001 point 1). A group binds on each artefact its rule binds on,
     as the backbone's reading of where a rule binds says (`pkit rule-sets reach`), and
-    applies there only where the format rule binds too. That reading judges the rule's
+    applies there only where the format rule binds too, at the locations in `binding`:
+    the summary counts a group only where it applies. That reading judges the rule's
     chain as well: a fill binds only while the rule it fills is accepted too (COR-051
     point 7). So a proposed rule's group binds nothing, and nothing asks where. An
     accepted rule that binds on none of the analysis's artefacts of the kind is
@@ -1414,8 +1417,8 @@ def _bound(
         )
         if not where.get(group) and not previewing[group] and of_kind and group not in accepted:
             findings.append(Finding(REPORT, group.where, PREVIEW + _bound_on_none(group, True)))
-    bind = [group for group in where if where[group]]
-    bind += [g for g in previewing if g not in bind and previewing[g]]
+    bind = [group for group in where if where[group] & binding]
+    bind += [g for g in previewing if g not in bind and previewing[g] & binding]
     said = (
         f", tightened where {len(bind)} of the project's group(s) in {project_structure.FILE} bind"
         if bind
