@@ -17,6 +17,4 @@ body: >
   requires each actor anchor, and fails a journey whose use-case anchors differ
   from its `steps` and its `relies-on`. So a journey with a hand-over from a
   use case outside it can pass the check of its *Steps* once the format rule
-  binds. The templates show both fields. A journey stamped before this change
-  has no anchor to its actor, and `pkit analysis validate` now fails it,
-  withdrawn ones included: add its actor to its artefact anchors.
+  binds. The templates show both fields.
