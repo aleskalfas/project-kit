@@ -93,7 +93,8 @@ The one write outside the workspace is a reader-review's findings posted as a pu
 
 | Command | What you take from it |
 |---|---|
-| `pkit friction explain <page> --json` | one page: its state, anchors, findings, the commits behind each changed anchor (each with the `paths` the check read as the anchor's change), where a dead path anchor's files went, and the writer command that answers each (`answers`) |
+| `pkit friction explain <page> --json` | one page: its state, anchors, findings, the commits behind each changed anchor (each with the `paths` the check read as the anchor's change), where a dead path anchor's files went, and the writer command that answers each (`answers`). For an anchor on a part, it shows the change to that part alone (COR-050 point 13) |
+| `pkit friction artefacts --json` | each page's anchors, and under `part_anchors` each anchor that names a part, with the file and the lines that part spans: the text a part anchor grounds, read as the friction checks read it |
 | `pkit friction debt --json` | the stale and deferred debt, oldest first — which pages to take |
 | `pkit friction check --all --json` | the whole-repository check, upstream first; its measures (unanchored artefacts, uncovered surface) and over-broad anchors |
 | `pkit living-docs validate` | the spaces, their findings, and the unclassified documents — listed in the plain output, counted in the `--json` summary |
@@ -101,9 +102,18 @@ The one write outside the workspace is a reader-review's findings posted as a pu
 | `pkit connections resolve pkit::documentation:readers --json` | the readers: each entry an `id` and a description of who reads and what they need |
 | `pkit connections resolve pkit::work-tracking:doc-check --json` | a code-to-doc mapping, when a work-tracking provider keeps one: the entries whose `source` is `mapping`, each a `code` pattern and the `documents` it obliges |
 
-**You refuse a friction document of a version you do not read.** The `explain`, `debt` and `check --all` documents each carry `schema_version` at the top; you read version `1`. When one carries any other value, stop before reading it: say which command answered which version, that you read `1`, and that the capability and the backbone are out of step — never read it as if it were `1`, and propose nothing from it. A document without the key comes from a backbone that predates it: read it as version `1`.
+**You refuse a friction document of a version you do not read.** The `explain`, `debt`, `check --all` and `artefacts` documents each carry `schema_version` at the top; you read version `1`. When one carries any other value, stop before reading it: say which command answered which version, that you read `1`, and that the capability and the backbone are out of step — never read it as if it were `1`, and propose nothing from it. A document without the key comes from a backbone that predates it: read it as version `1`.
 
 What validation already judges — places and their assignment, the shape of a page's fields, a page's reader and its body against the structure its kind declares where their rules bind, entry points, definitions and their scopes, the friction block's shape, dead anchors — you do not judge a second time. When it fails, name the command and its finding instead of re-deriving it.
+
+## Proposing an anchor
+
+Every anchor you propose names what the statements resting on it rest on, and no more (COR-050 point 2).
+
+- **One part.** Where a page's statements rest on one part of a record or of another page, name that part. A record's point is named by its id, `record: COR-050#2`, or `living-docs:DEC-001#3` for a capability's record. A page's section is named by its heading's slug, `artefact: docs/cli.md#output`, and its lead by a bare `#`, `docs/cli.md#`. A change elsewhere in the target then asks the page nothing.
+- **The whole.** Where they rest on the whole record or page, or on more of its parts than a list would keep clear, anchor it whole. A page anchored whole that rests on one part is one to narrow.
+- **What names no part.** A path and a `source`, like any kind a capability registers, name no part: a `#` in their value belongs to the value. A record whose points are still a numbered list holds no point an anchor can name, so anchor it whole. A collection's entry, such as a rule, is named by its id alone.
+- **What a part grounds.** An anchor on one part grounds only what that part stands on (`[living-docs:RS-LDOC-001]`), and a summary of a fact whose home is another page anchors the home's section (`[living-docs:RS-LDOC-002]`). Read the lines a part spans from `part_anchors` in `pkit friction artefacts --json`, never by reading the value yourself. An anchor not listed there names no part: it names the whole, or it is dead, ambiguous or refused, which validation reports.
 
 ## How you work
 
@@ -117,7 +127,7 @@ Start from `pkit friction explain <page> --json`. Read every commit behind a cha
 
 - still true → untouched;
 - no longer true → rewritten to match;
-- its ground moved → the anchor re-pointed in the page's friction block;
+- its ground moved → the anchor re-pointed in the page's friction block, to the one part the statement rests on where it rests on one ("Proposing an anchor");
 - nothing grounds it any more → a new anchor, removal, or a question for the person. Never leave it standing as if it were true (DEC-001 point 5).
 
 When the change looks wrong rather than the page, do not rewrite the page to match a regression: say so, and leave the call to the person. When no statement needs to change, propose the `unchanged` answer with its evidence and a draft of its justification; the sentence is the person's to confirm or rewrite. One proposal per page; with several, follow the check's order, upstream first.
@@ -128,7 +138,7 @@ When the change looks wrong rather than the page, do not rewrite the page to mat
 
 ### 3. Reader-review
 
-First read the rules that bind on the page, `LDOC`'s and its space's own, as `pkit rule-sets reach --json` lists them for it. A page on which none binds is reached by no definition's scope, or only through a pin behind `LDOC`'s major: say so, name what validation reports of it, and judge it against no rule. Then resolve the page's `reader` against the readers point. If the point is not available yet, say so and read the page as the audience DEC-001 gives its space. Where `[living-docs:RS-LDOC-003]` binds and the point resolves but holds no entry with that id, that is validation's finding: name it and stop. Then read the page as that reader: does it answer their questions, only those, in a way they can follow? Judge it against the rules that bind on it. Of a kind's format (`[living-docs:RS-LDOC-004]`), validation judges the structure — whether the body carries the sections its kind declares — and you judge what validation does not: whether each section says what the kind's template asks of it. Each finding cites the rule it breaks — `[living-docs:RS-LDOC-003]` for a shared rule, the space's own id for a space rule — and quotes the passage. **Leave a record only when something was found** (DEC-001 point 6); with nothing found, say so in one line and write nothing.
+First read the rules that bind on the page, `LDOC`'s and its space's own, as `pkit rule-sets reach --json` lists them for it. A page on which none binds is reached by no definition's scope, or only through a pin behind `LDOC`'s major: say so, name what validation reports of it, and judge it against no rule. Then resolve the page's `reader` against the readers point. If the point is not available yet, say so and read the page as the audience DEC-001 gives its space. Where `[living-docs:RS-LDOC-003]` binds and the point resolves but holds no entry with that id, that is validation's finding: name it and stop. Then read the page as that reader: does it answer their questions, only those, in a way they can follow? Judge it against the rules that bind on it. A statement grounded only by an anchor on one part is grounded by what that part stands on, so read the lines the part spans ("Proposing an anchor"). Of a kind's format (`[living-docs:RS-LDOC-004]`), validation judges the structure — whether the body carries the sections its kind declares — and you judge what validation does not: whether each section says what the kind's template asks of it. Each finding cites the rule it breaks — `[living-docs:RS-LDOC-003]` for a shared rule, the space's own id for a space rule — and quotes the passage. **Leave a record only when something was found** (DEC-001 point 6); with nothing found, say so in one line and write nothing.
 
 ### 4. Onboarding
 
@@ -136,7 +146,7 @@ On a project that adopts the capability with documentation already, nothing is a
 
 - the space of each unclassified document, with its `reader` and `kind` — or why the space's rules do not govern it. A space with no definition gets one from the space-definition template, its scope written with it: the space's root and the places assigned to it, by the page type. A definition validation reports without a scope gets the scope the report names. So `LDOC` binds on the space's pages as soon as the definition exists (DEC-001 point 2). Once a document is a page, validation checks its body against its kind's structure, and reads a title only when it is written as `# Title` at the start of a line: where a document's title is underlined, written in HTML or missing, say so beside the `kind` you propose, and propose the title with the page's change;
 - how pages split, merge or are rewritten for their readers;
-- the anchors each page's statements need, and what of the declared surface stays uncovered;
+- the anchors each page's statements need, each on the one part a statement rests on where it rests on one ("Proposing an anchor"), and what of the declared surface stays uncovered;
 - which mapping rules become page anchors. Retiring a mapping is a separate change for whoever owns it.
 
 Show it once and wait at **the single approval gate**: approve, revise, or reject. Nothing is drafted before approval. A revision returns to the gate; a rejection drafts nothing. An approval produces the reviewable changes the plan names, and you stop there — a person reviews and opens them.
