@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-15T09:26:30Z
+      at: 2026-10-16T23:29:50Z
       outcome: unchanged
-      unchanged-because: COR-050 is refined so an artefact anchor may name a document's section or its lead. What the pipeline needs of COR-050, checks that run unattended and history deep enough for them, is unchanged, so the actor holds.
+      unchanged-because: The actor now anchors PRJ-002, which its Note already cites. PRJ-002 still has a pull request declare each surface change in a changeset, which a guard checks, and the release cut the tags. So the Note's two steps hold.
 ---
 
 # ACT-ci-pipeline — CI pipeline

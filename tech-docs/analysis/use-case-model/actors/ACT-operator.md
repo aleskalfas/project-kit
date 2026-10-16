@@ -18,9 +18,9 @@ pkit:
         - COR-028
         - COR-039
     revalidated:
-      at: 2026-10-14T18:58:47Z
+      at: 2026-10-16T23:29:55Z
       outcome: unchanged
-      unchanged-because: COR-028 and COR-039 now write their points as headings carrying the same numbers, word for word. COR-028's closing sentence, that the model is authoritative, and COR-039's paragraph on where its realization is recorded move into each record's opening, unchanged. The operator's needs, to know where confinement does not hold and to be asked before an agent changes another repository, rest on the same text, so the actor holds.
+      unchanged-because: The actor now anchors CONTRIBUTING.md, which its Note already cites. CONTRIBUTING.md still calls whoever applies the repository's settings, its required status and its merge queue, the operator, so the Note holds.
 ---
 
 # ACT-operator — Operator

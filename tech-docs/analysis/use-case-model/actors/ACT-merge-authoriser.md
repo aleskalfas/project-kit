@@ -14,9 +14,8 @@ pkit:
         - COR-050#3
         - project-management:DEC-028
     revalidated:
-      at: 2026-10-15T09:26:31Z
-      outcome: unchanged
-      unchanged-because: COR-050's Decision lead, which every point stands on, now lists what an anchor stands on, a document's section or lead among them. Point 3, on being told what a change updated before its merge, is unchanged, so the actor holds.
+      at: 2026-10-16T23:29:51Z
+      outcome: updated
 ---
 
 # ACT-merge-authoriser — Merge authoriser
