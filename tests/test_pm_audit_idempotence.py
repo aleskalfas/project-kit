@@ -530,7 +530,7 @@ _RED = [{"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}]
 def _wire_done_work(dw, monkeypatch) -> None:
     _allow_member(dw, monkeypatch)
     monkeypatch.setattr(dw, "resolve_capability_root", lambda arg: CAPABILITY_ROOT)
-    monkeypatch.setattr(dw, "_find_issue_branch", lambda n: "fix/42-slug")
+    monkeypatch.setattr(dw.issue_branch, "_local_branches", lambda: ("fix/42-slug",))
     monkeypatch.setattr(
         dw,
         "_find_pr_for_branch",

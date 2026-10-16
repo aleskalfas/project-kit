@@ -35,8 +35,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -44,7 +42,7 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, session_guard
+from _lib import bootstrap_gate, issue_branch, session_guard
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -97,7 +95,12 @@ def main() -> int:
     if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
-    branch = _find_issue_branch(args.issue_number)
+    # The issue's local branch (#1608): of several, the one with its open PR.
+    reading = issue_branch.read(args.issue_number, config)
+    if reading.refusal:
+        print(f"error: {reading.refusal}", file=sys.stderr)
+        return 2
+    branch = reading.branch
     if branch is None:
         print(
             f"error: no local branch matching `*/{args.issue_number}-*` found.",
@@ -142,26 +145,6 @@ def main() -> int:
 
 
 # ---- helpers -----------------------------------------------------------
-
-
-def _find_issue_branch(issue_number: int) -> str | None:
-    try:
-        proc = subprocess.run(
-            ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except FileNotFoundError:
-        return None
-    if proc.returncode != 0:
-        return None
-    pattern = re.compile(rf"^[a-z]+/{issue_number}-[a-z0-9-]+$")
-    for line in proc.stdout.splitlines():
-        line = line.strip()
-        if pattern.match(line):
-            return line
-    return None
 
 
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:

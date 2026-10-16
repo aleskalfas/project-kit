@@ -31,7 +31,11 @@ Each step prints one line; the verbs it composes print their detail above it.
 It stops at the first step that cannot go on, and its last line says why.
 
   head    The issue's branch and its open PR, found as `done-work` finds them
-          — "gh did not answer" is never read as "no open PR". The PR's head
+          — "gh did not answer" is never read as "no open PR". Of several
+          local branches matching the issue, the one with its open PR; with
+          more than one open, or when gh does not say, the run stops. The
+          branch read here is handed to `review-pr` and `done-work`, so the
+          open PRs are read once (`_lib.issue_branch`, #1608). The PR's head
           on GitHub is read once and pinned (`--expect-head` stops the run when
           it is not the head named). Refused when the local branch holds
           commits that head lacks (the line gives the push) or has diverged
@@ -134,6 +138,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import (
     bootstrap_gate,
     friction_answers,
+    issue_branch,
     merge_queue,
     pr_merge,
     provenance,
@@ -461,9 +466,12 @@ def _commit(value: str) -> str:
 
 
 def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Path) -> int:
-    head = _pin_head(args, config)
+    # The issue's branch, read once for the run and handed to the verbs it
+    # composes (#1608).
+    reading = issue_branch.read(args.issue_number, config)
+    head = _pin_head(args, config, reading)
     if head is None:
-        return _merge(args, None, config)
+        return _merge(args, None, config, reading)
     # What a run authorised up front found when it started: the hold on the
     # `[person]` findings is what it found then (DEC-055 point 3).
     found = _found_at_start(head, config) if args.yes and not args.dry_run else None
@@ -471,8 +479,8 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
         head, wait_seconds=_wait_seconds(args), dry_run=args.dry_run, config=config
     )
     if ci == _CI_PR_MERGED:
-        return _merge(args, None, config)
-    review = _review(args, head, config)
+        return _merge(args, None, config, reading)
+    review = _review(args, head, config, reading)
     # Before the answers: this step stops on what it cannot read, and a stop
     # here has written nothing.
     to_judge = _findings(args, head, config, capability_root, found)
@@ -484,22 +492,39 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
         )
         return EXIT_MERGED
     if args.dry_run:
-        return _merge(args, head, config)
+        return _merge(args, head, config, reading)
     if args.yes and to_judge.held is not None:
-        return _ready(args, head, review, config, answers, to_judge)
+        return _ready(args, head, review, config, answers, to_judge, reading)
     if not args.yes and not _interactive():
-        return _ready(args, head, review, config, answers, to_judge)
-    return _merge(args, head, config)
+        return _ready(args, head, review, config, answers, to_judge, reading)
+    return _merge(args, head, config, reading)
 
 
 # ---- head ----------------------------------------------------------------
 
 
-def _pin_head(args: argparse.Namespace, config: dict[str, Any]) -> _Head | None:
+def _pin_head(
+    args: argparse.Namespace, config: dict[str, Any], reading: issue_branch.Reading
+) -> _Head | None:
     """The PR head to land, pinned; None when gh answered that the branch has
-    no open PR (or there is no local branch to have one)."""
+    no open PR (or there is no local branch to have one). Of several local
+    branches, `reading` names the one with the issue's open PR (#1608)."""
     issue = args.issue_number
-    branch = done_work._find_issue_branch(issue)
+    if reading.refusal and not reading.none_open:
+        for line in reading.refusal.splitlines():
+            print(f"  {line}")
+        raise _Stop(
+            EXIT_UNREADABLE,
+            f"head: stopped — which local branch is #{issue}'s cannot be told (above). "
+            "Nothing was done",
+        )
+    branch = reading.branch
+    if branch is None and reading.none_open:
+        _say(
+            f"head: no open PR on any of {', '.join(reading.matching)} — done-work "
+            "completes a PR that has merged already"
+        )
+        return None
     if branch is None:
         _say(
             f"head: no local branch */{issue}-* — done-work completes a PR that has merged already"
@@ -821,13 +846,19 @@ def _duration(seconds: float) -> str:
 # ---- review ----------------------------------------------------------------
 
 
-def _review(args: argparse.Namespace, head: _Head, config: dict[str, Any]) -> _ReviewEnd:
+def _review(
+    args: argparse.Namespace,
+    head: _Head,
+    config: dict[str, Any],
+    reading: issue_branch.Reading,
+) -> _ReviewEnd:
     """Have the reviewers whose verdicts are not fresh review the pinned head.
 
     Returns how the review ended when the run goes on, and stops it otherwise.
     The stop is chosen in this order: the head moved; a CHANGES_REQUESTED;
     something could not be read; a reviewer could not be run — so one
-    reviewer's block is reported even when another timed out.
+    reviewer's block is reported even when another timed out. `review-pr` is
+    handed the issue's branch as this run read it (`reading`).
     """
     issue = head.issue
     labels = done_work._label_names(gh_get_issue(issue, config, fields="labels"))
@@ -847,7 +878,7 @@ def _review(args: argparse.Namespace, head: _Head, config: dict[str, Any]) -> _R
         return agents
     argv = [str(issue), *_passed_through(args, review=True)]
     try:
-        run = review_pr.review(argv, pinned_head=head.oid)
+        run = review_pr.review(argv, pinned_head=head.oid, branch_reading=reading)
     except (Exception, SystemExit) as exc:
         raise _Stop(
             EXIT_REVIEW_INCOMPLETE,
@@ -1429,6 +1460,7 @@ def _ready(
     config: dict[str, Any],
     answers: _AnswersEnd,
     to_judge: _FindingsEnd,
+    reading: issue_branch.Reading,
 ) -> int:
     """No authorisation to merge — none given, or a `--yes` the findings to judge
     above hold (DEC-055 point 3): run done-work's gates as a dry run on the
@@ -1440,7 +1472,7 @@ def _ready(
     out of date, with each deferral's words, and the friction settings changed."""
     argv = [str(head.issue), *_passed_through(args, review=False), "--dry-run"]
     try:
-        end = done_work.run(argv, pinned_head=head.oid)
+        end = done_work.run(argv, pinned_head=head.oid, branch_reading=reading)
     except (Exception, SystemExit) as exc:
         failure = _described(exc)
         raise _Stop(*_done_work_failed(failure, head.issue, head, config, merging=False)) from exc
@@ -1458,11 +1490,16 @@ def _ready(
     return EXIT_READY
 
 
-def _merge(args: argparse.Namespace, head: _Head | None, config: dict[str, Any]) -> int:
+def _merge(
+    args: argparse.Namespace,
+    head: _Head | None,
+    config: dict[str, Any],
+    reading: issue_branch.Reading,
+) -> int:
     """Hand over to done-work — to land the pinned head, or, with no open PR,
     only to complete a PR that has merged — and say in one line how it ended."""
     argv = [str(args.issue_number), *_passed_through(args, review=False)]
-    end = _run_done_work(argv, head, config, merging=not args.dry_run)
+    end = _run_done_work(argv, head, config, reading, merging=not args.dry_run)
     if end.kind == done_work.PLANNED:
         _say("merge: (dry-run) done-work's plan is above")
         return EXIT_MERGED
@@ -1472,14 +1509,20 @@ def _merge(args: argparse.Namespace, head: _Head | None, config: dict[str, Any])
 
 
 def _run_done_work(
-    argv: list[str], head: _Head | None, config: dict[str, Any], *, merging: bool
+    argv: list[str],
+    head: _Head | None,
+    config: dict[str, Any],
+    reading: issue_branch.Reading,
+    *,
+    merging: bool,
 ) -> Any:
-    """How done-work's run ended (`done_work.DoneWorkRun`). When it raised,
-    the run stops, with what GitHub reports of the PR."""
+    """How done-work's run ended (`done_work.DoneWorkRun`), handed the issue's
+    branch as this run read it. When it raised, the run stops, with what
+    GitHub reports of the PR."""
     try:
         if head is None:
-            return done_work.run(argv, merged_only=True)
-        return done_work.run(argv, pinned_head=head.oid)
+            return done_work.run(argv, merged_only=True, branch_reading=reading)
+        return done_work.run(argv, pinned_head=head.oid, branch_reading=reading)
     except (Exception, SystemExit) as exc:
         issue = int(argv[0])
         failed = _done_work_failed(_described(exc), issue, head, config, merging=merging)

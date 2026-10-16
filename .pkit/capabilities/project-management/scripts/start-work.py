@@ -21,7 +21,10 @@ Gates per DEC-026:
     state is read from the issue's labels and milestone
     (`_lib/issue_position`, shared with review-work, #1242); move-issue
     reads it itself when it moves.
-  - If a branch exists, matches `<type>/<N>-<slug>` (idempotent).
+  - If a branch exists, matches `<type>/<N>-<slug>` (idempotent). Of several
+    matching, the issue's is the one with its open PR; with none or more than
+    one open, it refuses, naming each (`_lib/issue_branch`, #1608). A branch
+    naming the issue in another shape is refused only when no branch matches.
 
 Side-effects:
   - Creates branch `<type>/<N>-<kebab-slug>` (type from issue's type:*
@@ -57,6 +60,7 @@ from _lib import (
     classification_rules,
     composed_move,
     default_branch,
+    issue_branch,
     issue_position,
     session_guard,
 )
@@ -182,22 +186,27 @@ def main() -> int:
     slug = _slug_from_title(title)
     branch_name = f"{prefix}/{args.issue_number}-{slug}"
 
-    # Idempotence: if a matching branch already exists locally, no-op.
-    existing = _existing_branch_for_issue(args.issue_number)
+    # Idempotence: if the issue's branch already exists locally, no-op. Of
+    # several matching, it is the one with the issue's open PR (#1608).
+    reading = issue_branch.read(args.issue_number, config)
+    if reading.refusal:
+        print(f"error: {reading.refusal}", file=sys.stderr)
+        return 2
+    existing = reading.branch
     if existing is not None:
         if existing == branch_name:
             print(f"  branch {branch_name!r} already exists; idempotent skip")
-        elif _branch_matches_shape(existing, args.issue_number):
+        else:
             print(f"  branch {existing!r} exists with valid shape; using it")
             branch_name = existing
-        else:
-            print(
-                f"error: branch {existing!r} exists for #{args.issue_number} "
-                f"but doesn't match the expected shape `<type>/{args.issue_number}-<slug>`. "
-                "Rename or delete the branch and re-run.",
-                file=sys.stderr,
-            )
-            return 2
+    elif reading.misshapen:
+        print(
+            f"error: branch {reading.misshapen[0]!r} exists for #{args.issue_number} "
+            f"but doesn't match the expected shape `<type>/{args.issue_number}-<slug>`. "
+            "Rename or delete the branch and re-run.",
+            file=sys.stderr,
+        )
+        return 2
 
     # Branch base (#835): the default branch, or a DEC-013 integration branch when
     # the issue is marked — never the incidental HEAD. Shared with the PR-opening
@@ -359,31 +368,6 @@ def _slug_from_title(title: str) -> str:
     cleaned = re.sub(r"[^a-zA-Z0-9]+", " ", title).strip().lower()
     words = cleaned.split()[:5]  # cap at 5 words
     return "-".join(words) if words else "untitled"
-
-
-def _existing_branch_for_issue(issue_number: int) -> str | None:
-    """Find a local branch matching `*/<N>-*` for the issue. Returns first match or None."""
-    try:
-        proc = subprocess.run(
-            ["git", "branch", "--list", "--format=%(refname:short)"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except FileNotFoundError:
-        return None
-    if proc.returncode != 0:
-        return None
-    pattern = re.compile(rf"^[a-z]+/{issue_number}(-|$)")
-    for line in proc.stdout.splitlines():
-        line = line.strip()
-        if pattern.match(line):
-            return line
-    return None
-
-
-def _branch_matches_shape(name: str, issue_number: int) -> bool:
-    return bool(re.match(rf"^[a-z]+/{issue_number}-[a-z0-9-]+$", name))
 
 
 def _create_branch(name: str, base: str) -> bool:

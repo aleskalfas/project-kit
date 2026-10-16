@@ -126,7 +126,7 @@ def test_start_work_cuts_the_branch_off_the_resolved_base(
     issue = {**_issue(body), "title": "[Task] do thing", "labels": ["state:backlog"]}
     _stub_gates(monkeypatch, mod, issue, ["start-work", "42", "--yes"])
     monkeypatch.setattr(mod, "_derive_branch_prefix", lambda *a: "fix")
-    monkeypatch.setattr(mod, "_existing_branch_for_issue", lambda _n: None)
+    monkeypatch.setattr(mod.issue_branch, "_local_branches", lambda: ())
     captured = {}
 
     def fake_create_branch(name, base):
@@ -161,7 +161,7 @@ def test_create_draft_targets_the_resolved_base(
 ) -> None:
     mod = verbs["create-draft"]
     _stub_gates(monkeypatch, mod, _issue(body), ["create-draft", "42", "--yes", *extra_argv])
-    monkeypatch.setattr(mod, "_find_issue_branch", lambda _n: BRANCH)
+    monkeypatch.setattr(mod.issue_branch, "_local_branches", lambda: (BRANCH,))
     monkeypatch.setattr(mod, "_find_pr_for_branch", lambda *a: None)
     captured = {}
 
@@ -197,7 +197,7 @@ def test_review_work_opens_its_pr_against_the_resolved_base(
         "labels": ["type:bug", "state:in-progress"],
     }
     _stub_gates(monkeypatch, mod, issue, ["review-work", "42", "--yes", *extra_argv])
-    monkeypatch.setattr(mod, "_find_issue_branch", lambda _n: BRANCH)
+    monkeypatch.setattr(mod.issue_branch, "_local_branches", lambda: (BRANCH,))
     monkeypatch.setattr(mod, "_find_pr_for_branch", lambda *a: None)
     monkeypatch.setattr(mod, "_ready_body_ok", lambda *a: True)
     captured = {}
@@ -265,21 +265,21 @@ def test_every_verb_refuses_when_the_backbone_cannot_say_the_default_branch(
     def prefix(*_a: Any) -> str:
         return "fix"
 
-    def no_branch(_n: int) -> None:
-        return None
-
     def the_branch(*_a: Any) -> str:
         return BRANCH
 
     seams: dict[str, Any] = {
         "_derive_branch_prefix": prefix,
-        "_existing_branch_for_issue": no_branch,
-        "_find_issue_branch": the_branch,
         "_current_branch": the_branch,
     }
     for name, seam in seams.items():
         if hasattr(mod, name):
             monkeypatch.setattr(mod, name, seam)
+    # start-work finds no branch and would cut one; the PR-opening verbs find
+    # the issue's branch.
+    if hasattr(mod, "issue_branch"):
+        local = () if verb == "start-work" else (BRANCH,)
+        monkeypatch.setattr(mod.issue_branch, "_local_branches", lambda: local)
 
     def acted(*_a: Any, **_k: Any) -> Any:
         raise AssertionError("acted on a guessed branch")
@@ -342,7 +342,7 @@ def test_create_draft_names_a_missing_base_instead_of_claiming_no_commits(
     mod = verbs["create-draft"]
     body = MARKED_BODY
     _stub_gates(monkeypatch, mod, _issue(body), ["create-draft", "42", "--yes"])
-    monkeypatch.setattr(mod, "_find_issue_branch", lambda _n: BRANCH)
+    monkeypatch.setattr(mod.issue_branch, "_local_branches", lambda: (BRANCH,))
     why = f"it does not resolve here: fetch it (e.g. `git fetch origin {INTEGRATION}`)"
 
     def unresolved(_base: str) -> tuple[None, str]:
