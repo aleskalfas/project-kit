@@ -7,7 +7,7 @@ body: >
   The capability ships its method rule set, `software-analysis:SAN`, in
   `rule-sets/san.md` (DEC-001 point 1). It takes no scope, as no method rule
   set does. It holds the format rule, `RS-SAN-001`: an analysis artefact
-  carries its kind's declared structure, and each kind has a template. The
+  carries its kind's declared structure. The
   rule is proposed, with DEC-001 as its origin, so it binds nothing until it
   is accepted. Its *How* says where a sentence ends for text
   of the `sentence` form. Under `checks`, the set declares what

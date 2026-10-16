@@ -281,7 +281,7 @@
       }
     },
     "form": {
-      "description": "A check on the content of a part or a front-matter field, from a closed list the capability implements. In a list, each item holds it. A list form judges only the part's list items, so a line a writer adds inside the part never breaks it.",
+      "description": "A check on the content of a part or a front-matter field, from a closed list the capability implements. A list form judges only the part's list items, so a line a writer adds inside the part never breaks it. Text of the `sentence` form holds one sentence in each item of a list.",
       "oneOf": [
         {
           "const": "sentence",

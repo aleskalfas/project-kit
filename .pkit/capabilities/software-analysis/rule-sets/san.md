@@ -12,18 +12,24 @@ rules:
           at: 2026-10-16T21:18:56Z
           outcome: updated
 # The part of the format rule that this capability's check enforces (COR-051
-# point 2 and DEC-001 point 1): the parts each kind ships, and the forms its
-# declared structure gives. The check enforces it only where the rule binds,
-# and whoever judges the rest of the rule leaves that part to it.
+# point 2 and DEC-001 point 1): the parts each artefact kind ships, the
+# glossary's head, and the forms the kinds' declared structure gives. The
+# check enforces it only where the rule binds, and whoever judges the rest of
+# the rule leaves that part to it.
 checks:
   RS-SAN-001:
     - check: "software-analysis:validate"
       part: >-
         Every part its kind ships is present, in the order the structure gives,
-        save a part a withdrawn artefact lacks. A part with nothing to say reads
-        `None.`, where the structure allows it. A part or a front-matter field that
-        the structure gives a form holds that form, in each item of a list, save on
-        a withdrawn artefact.
+        save a part a withdrawn artefact lacks. No part a writer fills is empty,
+        and a part reads `None.` only where the structure allows it. The glossary
+        carries its head wherever the rule binds on one of its terms. A part or a
+        front-matter field that the structure gives a form holds that form, save
+        on a withdrawn artefact. The forms are `sentence`, `numbered-steps`,
+        `variants`, `steps-match-front-matter` and `definition`, each as the
+        structure's schema describes it. Text of the `sentence` form holds one
+        sentence in each item of a list, a nested item apart, and in the rest of
+        its part.
 ---
 
 # SAN — the software-analysis method
@@ -34,14 +40,17 @@ A rule's statement and its *How* bind. Inside a *How*, a "such as" phrase and a 
 
 ## RS-SAN-001 — An analysis artefact carries its kind's structure
 
-An analysis artefact carries its kind's declared structure, and each kind has a template.
+An analysis artefact carries its kind's declared structure.
 
 - **How:**
   - **Parts.** Every part its kind ships is present, in the order the structure gives. A part with nothing to say reads `None.`, where its structure allows it. A part a project adds binds only where the project rule that asks for it binds too.
-  - **Forms.** A part or a front-matter field that the structure gives a form holds that form. In a list, each item holds it.
+  - **The glossary's head.** The term kind's structure also declares the head of the glossary, the file that holds the terms. The head belongs to no term, so the glossary carries it wherever this rule binds on one of its terms.
+  - **Forms.** A part or a front-matter field that the structure gives a form holds that form.
   - **Hints.** A hint binds nothing, so the voice a hint asks for is no part of this rule.
   - **History.** A withdrawn artefact is held to no part or form that came after its withdrawal.
   - **The `sentence` form.** Text of this form, such as an actor's need, holds one sentence: no sentence ends before the text's last word.
+    - In a list, each item holds one sentence of its own, and a nested item holds one apart from the item it sits in. The rest of the part, outside its lists, holds one sentence too.
+    - In a front-matter field that holds a list, such as an actor's needs, each item holds one sentence.
     - A sentence ends at a full stop, a question mark or an exclamation mark. It ends there only where a space, a line end or the end of the text follows the mark.
     - A mark inside a code span ends no sentence.
     - So an abbreviation that ends in a full stop, such as "e.g.", ends a sentence wherever a space or a line end follows it.
