@@ -68,16 +68,26 @@ which versions of the use-case and journey files this branch's history wrote
 since the merge-base, which the default branch's tip holds, and which files
 this branch's history added (`backbone.blobs_written`, `backbone.blob_of`,
 `backbone.added`).
+
+Beside it, the comparison runs a second check against the same base: each use
+case's steps and variants against the same use case where this branch left the
+base, reporting a step or a variant renumbered or removed (`_lib/append_only.py`).
+Both guard one promise, that a number, once given, never changes meaning. That
+check binds where the format rule, RS-SAN-001, binds and at its status, and a
+preview shows it under a proposed rule, so `preview` reaches it alone. It needs
+the base whenever a use case is numbered here, and fails as this one does when
+it has none.
 """
 
 from __future__ import annotations
 
+import functools
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from _lib import backbone, history, numbering
+from _lib import append_only, backbone, history, numbering
 from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome
 from _lib.model import NOUN, NUMBERED, Analysis, Unreadable, kind_numbered
 
@@ -135,10 +145,12 @@ class Theirs:
     held: bool
 
 
-def compare(root: Path, ref: str | None = None) -> Comparison:
+def compare(root: Path, ref: str | None = None, *, preview: bool = False) -> Comparison:
     """Compare the numbers in the working tree at `root` with the base `ref` — without
     one, the base the backbone names: `$PKIT_CHECK_BASE`, else the default branch
-    (COR-054). Raises CannotCompare when it cannot answer."""
+    (COR-054) — and each use case's steps and variants with the same use case where this
+    branch left the base (`_lib/append_only.py`), with `preview` where the format rule
+    would bind if it were accepted. Raises CannotCompare when it cannot answer."""
     try:
         analysis = backbone.read_analysis(root)
     except Unreadable as exc:
@@ -161,15 +173,23 @@ def compare(root: Path, ref: str | None = None) -> Comparison:
     if not ours:
         return Comparison(None, Outcome([f"{nothing}.", *said], problems), freeing.freed)
     base = _resolve(reading.base)
+    at_fork = functools.cache(lambda: backbone.read_analysis(root, at=base.commit))
+    try:
+        appended, departing = append_only.compare(
+            root, analysis, base.ref, base.commit, at_fork, preview=preview
+        )
+    except Unreadable as exc:
+        raise CannotCompare(f"{base.ref} could not be read: {exc}") from exc
     if not base.outdated:
         line = (
             f"numbers: this branch contains {base.ref} ({base.tip[: backbone.SHORT]}); nothing to "
             f"collide with."
         )
-        return Comparison(base, Outcome([line, *said], problems), freeing.freed)
+        outcome = Outcome([line, *said, *appended], [*problems, *departing])
+        return Comparison(base, outcome, freeing.freed)
     try:
         on_base = backbone.read_analysis(root, at=base.tip)
-        before = backbone.read_analysis(root, at=base.commit).held()
+        before = at_fork().held()
     except Unreadable as exc:
         raise CannotCompare(f"{base.ref} could not be read: {exc}") from exc
 
@@ -181,7 +201,7 @@ def compare(root: Path, ref: str | None = None) -> Comparison:
     folders = {a.places[k] for a in (analysis, on_base) for k in NUMBERED if k in a.places}
     theirs = _taken(root, base, analysis, on_base, before, folders, set(ours), freeing.files)
     findings = _collisions(root, base, ours, theirs, folders) if theirs else []
-    outcome = Outcome([line, *said], [outdated, *problems, *findings])
+    outcome = Outcome([line, *said, *appended], [outdated, *problems, *findings, *departing])
     return Comparison(base, outcome, freeing.freed)
 
 

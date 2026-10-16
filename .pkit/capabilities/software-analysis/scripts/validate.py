@@ -56,8 +56,9 @@ provision its dependencies in uv's cache. It reads the analysis in the working
 tree, through the backbone's discovery, `pkit friction artefacts`, and — when a
 record copies evidence — the evidence point, through `pkit connections
 resolve`, so the same tree gets the same answer as long as the evidence
-fillers read the tree alone; a number another branch took first reads a base,
-and is `pkit analysis check-numbers`' to report.
+fillers read the tree alone; a number another branch took first, and a use
+case's step or variant renumbered or removed, read a base, and are `pkit
+analysis check-numbers`' to report.
 
 Usage:
   pkit analysis validate             the summary and the findings
