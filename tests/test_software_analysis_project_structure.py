@@ -310,6 +310,21 @@ def _tighten(*additions: str, require: str = "") -> str:
             "/kinds/actor/tighten/0/add/0/level",
             "a heading of level 1 would end the actor's own section",
         ),
+        (
+            # A heading deeper than where the part before it ends would be its content.
+            _tighten(
+                "{id: more, type: heading, level: 3, label: More, after: context, hint: H.,"
+                " example: E.}"
+            ),
+            "/kinds/actor/tighten/0/add/0/level",
+            "a heading of level 3 would read as the content of the part before it",
+        ),
+        (
+            # A relabel that takes another part's text is reported where the relabel is.
+            "schema_version: 1\nkinds:\n  actor:\n    relabel: {occasions: {label: Context}}\n",
+            "/kinds/actor/relabel/occasions/label",
+            "`Context` is the text of `context` already",
+        ),
     ],
 )
 def test_a_tightening_that_has_no_place_or_clashes_is_refused(
@@ -638,6 +653,17 @@ def test_a_reach_that_cannot_be_read_applies_the_group_nowhere_and_says_so(tmp_p
     [(severity, location, message)] = found
     assert (severity, location) == ("error", f"{FILE}:/kinds/actor/tighten/0")
     assert message.startswith("where RS-LOC-001 binds cannot be read")
+    # In a preview of a proposed format rule, it is a report, and the exit stays the normal
+    # check's.
+    _summary, found = _gate(
+        tmp_path,
+        _analysis("proposed", {"RS-LOC-001": "accepted"}, tester),
+        preview=True,
+        reach=unreadable,
+    )
+    [(severity, location, message)] = found
+    assert (severity, location) == ("report", f"{FILE}:/kinds/actor/tighten/0")
+    assert message.startswith("preview: where RS-LOC-001 binds cannot be read")
 
 
 def test_a_relabelled_part_is_looked_for_by_its_new_label(tmp_path: Path) -> None:
@@ -726,6 +752,15 @@ kinds:
     [(severity, location, message)] = _gate(tmp_path, analysis, records=[(RECORD_REL, data)])[1]
     assert (severity, location) == ("error", RECORD_REL)
     assert message.startswith("the section `## Notes`, at line 15, is empty")
+    # A proposed rule's group binds on no record, and a preview takes it as accepted. What
+    # it finds is a preview's report, whatever the format rule's status: it never fails.
+    proposed = _analysis("accepted", {"RS-LOC-002": "proposed"})
+    assert _gate(tmp_path, proposed, records=[(RECORD_REL, data)])[1] == []
+    [(severity, location, message)] = _gate(
+        tmp_path, proposed, preview=True, records=[(RECORD_REL, data)]
+    )[1]
+    assert (severity, location) == ("report", RECORD_REL)
+    assert message.startswith("preview: the section `## Notes`, at line 15, is empty")
 
 
 def test_a_group_whose_rule_is_retired_or_missing_is_reported_or_refused(tmp_path: Path) -> None:

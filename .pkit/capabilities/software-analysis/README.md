@@ -320,7 +320,7 @@ kinds:                    # keyed by kind, never by file
 - a part, a field or an `after` the kind does not hold, or one it retired (a kind's `retired` ids in `schemas/artefact-kinds.yaml`)
 - an id or a label two parts take, a label holding `*`, and a cycle of additions
 - a part placed between a title heading and the opening text below it, which would take the opening's lines: name `opening` instead
-- a heading no deeper than the kind's own heading, which would end the artefact's section
+- a heading of any level but the one just below the kind's own heading: a shallower one would end the artefact's section, and a deeper one would read as the content of the part before it
 - a label for a part with no text, and a hint for a heading the stamp writes
 - a hint or an example holding `-->` or a line break
 - a group whose `rule` is no rule of your own rule sets

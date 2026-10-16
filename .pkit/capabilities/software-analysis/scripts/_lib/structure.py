@@ -150,6 +150,7 @@ class Element:
     is told of it. A collection's file head declares no hint, so its `example` is the
     words the stamp writes. `rule` is the project rule that adds the element, or makes
     it required (`_lib/project_structure.py`); `None` for a part as the kind ships it.
+    `added` says the project added the element, rather than requiring a shipped one.
     `aliases` are the texts a project relabelled it from, which a body written before
     the relabel may carry (`Kind.as_written`)."""
 
@@ -163,6 +164,7 @@ class Element:
     hint: str | None = None
     example: str | None = None
     rule: str | None = None
+    added: bool = False
     aliases: tuple[str, ...] = ()
 
     @property
@@ -622,7 +624,7 @@ def _context(
     steps: frozenset[int] | None = None
     named = "the steps"
     for i, element in enumerate(elements):
-        if element.form in forms.STEP_FORMS and element.rule is None and i in parts:
+        if element.form in forms.STEP_FORMS and not element.added and i in parts:
             steps = forms.step_numbers(parts[i]) or None
             named = f"`**{element.text}:**`" if element.type == LABEL else f"`{element.text}`"
             break

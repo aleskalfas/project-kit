@@ -41,8 +41,9 @@ project being the one to mend it (COR-055 point 1):
 - an id or a label two parts take, and a cycle of additions
 - a part placed between an element and the opening that follows it, which
   would take the opening's lines
-- a heading no deeper than the kind's own first heading, which would end the
-  artefact's or the entry's section
+- a heading of any level but the one just below the kind's own first heading:
+  a shallower one would end the artefact's or the entry's section, and a deeper
+  one would read as the content of the part before it
 - a label given to a part with no text, or a hint to a part no writer fills
 - a hint or an example that would not stay one comment on one line
 
@@ -272,11 +273,14 @@ class _Reading:
                 continue
             relabel = relabels.get(element.id)
             text = relabel.label if relabel is not None and relabel.label else element.text
-            if comparable(text) in texts:
+            other = texts.get(comparable(text))
+            if other is not None:
+                relabelled = element.id if relabel is not None and relabel.label else other
+                kept = other if relabelled == element.id else element.id
                 self.problem(
-                    f"/kinds/{kind.name}/relabel/{element.id}/label",
-                    f"`{text}` is the text of `{texts[comparable(text)]}` already: two parts of "
-                    f"one kind are told apart by their text",
+                    f"/kinds/{kind.name}/relabel/{relabelled}/label",
+                    f"`{text}` is the text of `{kept}` already: two parts of one kind are told "
+                    f"apart by their text",
                 )
             texts.setdefault(comparable(text), element.id)
         for group in groups:
@@ -293,12 +297,10 @@ class _Reading:
                     )
                     continue
                 added[element.id] = (group, index)
-                if element.type == HEADING and (element.level or 1) <= top:
+                if element.type == HEADING and (element.level or 1) != top + 1:
                     self.problem(
                         f"{here}/level",
-                        f"a heading of level {element.level} would end the {kind.name}'s "
-                        f"own section, whose heading is of level {top}: add a heading of level "
-                        f"{top + 1} or deeper",
+                        _level(kind.name, element.level or 1, top),
                     )
                 text = comparable(element.text or "")
                 if text in texts:
@@ -362,6 +364,20 @@ class _Reading:
             self.problem(here, f"{exc}: a hint or an example holds no `-->` and no line break")
 
 
+def _level(kind: str, level: int, top: int) -> str:
+    """Why an added heading of `level` has no place in a kind whose own heading is of
+    level `top`: each part of the kind ends at a heading of level `top + 1` or above."""
+    if level <= top:
+        return (
+            f"a heading of level {level} would end the {kind}'s own section, whose heading is "
+            f"of level {top}: add a heading of level {top + 1}"
+        )
+    return (
+        f"a heading of level {level} would read as the content of the part before it, which "
+        f"ends only at a heading of level {top + 1} or above: add a heading of level {top + 1}"
+    )
+
+
 def _added(item: Mapping[str, Any], rule: str) -> Element:
     kind = item.get("type", LABEL)
     return Element(
@@ -375,6 +391,7 @@ def _added(item: Mapping[str, Any], rule: str) -> Element:
         hint=item.get("hint"),
         example=item.get("example"),
         rule=rule,
+        added=True,
     )
 
 

@@ -1036,6 +1036,7 @@ def _structure(
     kinds = {name: project_structure.relabelled(kind, own) for name, kind in kinds.items()}
     bound = _bound(root, analysis, own, preview=preview, reach=reach)
     found: list[Finding] = []
+    previewing: list[Finding] = []  # a group's that binds only because of the preview
     texts: dict[str, str | None] = {}
     titles = _titles(analysis)
     checked = 0
@@ -1058,13 +1059,18 @@ def _structure(
         checked += 1
         subject = "a revalidation record"
         held = bound.kind(record, None, as_written=True)
-        found += [
-            Finding(ERROR, rel, _departure_message(d, held.sections, subject))
-            for d in structure.departures(structure.body_lines(text), held, fields=data)
-            if not _added_later(d)
-        ]
+        for d in structure.departures(structure.body_lines(text), held, fields=data):
+            if _added_later(d):
+                continue
+            finding = Finding(ERROR, rel, _departure_message(d, held.sections, subject))
+            (previewing if d.element.rule in bound.previewed else found).append(finding)
         found += _field_findings(rel, data, held, subject)
     found = [Finding(severity, f.location, label + f.message) for f in found]
+    found += [Finding(REPORT, f.location, PREVIEW + f.message) for f in previewing]
+    bound_found = [
+        Finding(severity, f.location, label + f.message) if f.severity == ERROR else f
+        for f in bound.findings
+    ]
     departing = len({f.location.split(":/", 1)[0] for f in found})
     previewed = ", previewed as accepted" if label else ""
     never = ", reported and never failing" if label else ""
@@ -1072,7 +1078,7 @@ def _structure(
         f"structure ({FORMAT_RULE}, {status}{previewed}): {checked} artefact(s), record(s) and "
         f"file head(s) checked against the structure their kind declares in {declaration}"
         f"{bound.said}; {departing} of them departing from it{never}.",
-        found + bound.findings,
+        found + bound_found,
     )
 
 
@@ -1083,13 +1089,16 @@ class _Binding:
     on every record (`None`). A group `where` does not hold binds nowhere. `standing`
     are the groups whose rule is the project's and is proposed or accepted: the labels
     they add mark a part wherever they do not bind. `findings` and `said` are what
-    reading it found, and what the summary says of it."""
+    reading it found, and what the summary says of it. `previewed` are the rules whose
+    groups bind only because a preview takes their chain as accepted, so what their
+    parts break is a preview's report, whatever the format rule's status."""
 
     own: project_structure.Own
     where: Mapping[project_structure.Group, frozenset[str] | None]
     standing: frozenset[project_structure.Group]
     findings: list[Finding]
     said: str = ""
+    previewed: frozenset[str] = frozenset()
 
     def kind(
         self, kind: structure.Kind, location: str | None, *, as_written: bool = False
@@ -1135,6 +1144,7 @@ def _bound(
     findings: list[Finding] = []
     ruled: list[project_structure.Group] = []
     standing: set[project_structure.Group] = set()
+    previewed: set[str] = set()
     for group in own.groups:
         rule = analysis.project_rules.get(group.rule)
         if rule is None or rule.status not in (ACCEPTED, PROPOSED):
@@ -1149,6 +1159,7 @@ def _bound(
                 ruled.append(group)
         elif preview and group.kind == structure.RECORD:
             where[group] = None
+            previewed.add(group.rule)
         elif preview:
             why = (
                 f"{group.rule} is proposed"
@@ -1204,14 +1215,14 @@ def _bound(
         if where
         else ""
     )
-    return _Binding(own, where, frozenset(standing), findings, said)
+    return _Binding(own, where, frozenset(standing), findings, said, frozenset(previewed))
 
 
 def _added_later(departure: structure.Departure) -> bool:
     """A part a project adds that a revalidation record lacks: the part may have come after
     the record was written, and a record is held to the structure in force on its day
     (DEC-001 point 1). A part the record carries is held to its content and its form."""
-    return departure.element.rule is not None and departure.how == structure.MISSING
+    return departure.element.added and departure.how == structure.MISSING
 
 
 def _own(root: Path) -> project_structure.Own | None:

@@ -552,7 +552,7 @@ def _step_lines(kind: structure.Kind, steps: Sequence[str], analysis: Analysis) 
     and its title as the use case states it: what the form of the journey's steps part
     asks (`_lib/forms.py`), keyed by that part's id: the part the kind ships, never one a
     project adds."""
-    part = next((e for e in kind.sections if e.form == forms.STEPS_MATCH and e.rule is None), None)
+    part = next((e for e in kind.sections if e.form == forms.STEPS_MATCH and not e.added), None)
     if part is None:
         return {}
     lines: list[str] = []
