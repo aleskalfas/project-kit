@@ -346,7 +346,7 @@ def run_main(rw, monkeypatch):
         monkeypatch.setattr(rw, "check_membership", lambda *a: SimpleNamespace(allowed=True))
         monkeypatch.setattr(rw.axis_labels, "load_substrate_map", lambda _r: None)
         monkeypatch.setattr(rw, "_gh_get_issue", lambda _n, _c: issue)
-        monkeypatch.setattr(rw, "_find_issue_branch", lambda _n: BRANCH)
+        monkeypatch.setattr(rw.issue_branch, "_local_branches", lambda: (BRANCH,))
         monkeypatch.setattr(rw, "_ready_body_ok", lambda *a: True)
         monkeypatch.setattr(rw, "gh_run", fake_gh_run)
         if move is None:

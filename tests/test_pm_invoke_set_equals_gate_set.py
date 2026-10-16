@@ -319,7 +319,7 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
         "check_membership",
         lambda members, invoker: SimpleNamespace(allowed=True, refusal_message=""),
     )
-    monkeypatch.setattr(rpr, "_find_issue_branch", lambda n: f"feat/{n}-x")
+    monkeypatch.setattr(rpr.issue_branch, "_local_branches", lambda: ("feat/99-x",))
     monkeypatch.setattr(rpr, "_find_pr_for_branch", lambda branch, config: {"number": 99})
 
     invoked: list[str] = []
@@ -588,7 +588,7 @@ def test_invoke_set_equals_gate_set_on_fail_closed(dw, rpr, rc, monkeypatch, tmp
         "check_membership",
         lambda members, invoker: SimpleNamespace(allowed=True, refusal_message=""),
     )
-    monkeypatch.setattr(rpr, "_find_issue_branch", lambda n: f"feat/{n}-x")
+    monkeypatch.setattr(rpr.issue_branch, "_local_branches", lambda: ("feat/99-x",))
     monkeypatch.setattr(rpr, "_find_pr_for_branch", lambda branch, config: {"number": 99})
     invoked: list[str] = []
 

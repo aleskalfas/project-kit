@@ -182,25 +182,31 @@ def test_branch_prefix_ignores_kit_type_label_under_a_remap(sw) -> None:
     )
 
 
-# ---- _branch_matches_shape --------------------------------------------
+# ---- the branch shape, read through the shared reading (#1608) ---------
 
 
-def test_branch_matches_shape_valid(sw) -> None:
-    assert sw._branch_matches_shape("feat/42-add-gh-helper", 42) is True
-    assert sw._branch_matches_shape("fix/177-membership-hostname", 177) is True
-    assert sw._branch_matches_shape("docs/29-branch-naming", 29) is True
+def _branch_of(sw, monkeypatch, name: str, issue: int) -> str | None:
+    """The issue's branch when `name` is the clone's only local branch."""
+    monkeypatch.setattr(sw.issue_branch, "_local_branches", lambda: (name,))
+    return sw.issue_branch.read(issue, {}).branch
 
 
-def test_branch_matches_shape_wrong_number(sw) -> None:
-    assert sw._branch_matches_shape("feat/42-foo", 99) is False
+def test_branch_matches_shape_valid(sw, monkeypatch) -> None:
+    assert _branch_of(sw, monkeypatch, "feat/42-add-gh-helper", 42) == "feat/42-add-gh-helper"
+    assert _branch_of(sw, monkeypatch, "fix/177-membership-hostname", 177) is not None
+    assert _branch_of(sw, monkeypatch, "docs/29-branch-naming", 29) is not None
 
 
-def test_branch_matches_shape_no_slug(sw) -> None:
-    assert sw._branch_matches_shape("feat/42", 42) is False
+def test_branch_matches_shape_wrong_number(sw, monkeypatch) -> None:
+    assert _branch_of(sw, monkeypatch, "feat/42-foo", 99) is None
 
 
-def test_branch_matches_shape_uppercase_rejected(sw) -> None:
-    assert sw._branch_matches_shape("Feat/42-foo", 42) is False
+def test_branch_matches_shape_no_slug(sw, monkeypatch) -> None:
+    assert _branch_of(sw, monkeypatch, "feat/42", 42) is None
+
+
+def test_branch_matches_shape_uppercase_rejected(sw, monkeypatch) -> None:
+    assert _branch_of(sw, monkeypatch, "Feat/42-foo", 42) is None
 
 
 # ---- type coverage against the REAL shipped classification.yaml -------
@@ -428,7 +434,7 @@ def run_main(sw: Any, monkeypatch: pytest.MonkeyPatch, backbone: Any) -> Any:
         monkeypatch.setattr(sw, "check_membership", lambda *a: SimpleNamespace(allowed=True))
         monkeypatch.setattr(sw.axis_labels, "load_substrate_map", lambda _r: None)
         monkeypatch.setattr(sw, "_gh_get_issue", lambda _n, _c: issue)
-        monkeypatch.setattr(sw, "_existing_branch_for_issue", lambda _n: None)
+        monkeypatch.setattr(sw.issue_branch, "_local_branches", lambda: ())
 
         def create_branch(name, base):
             mutations.append(("branch", name))
