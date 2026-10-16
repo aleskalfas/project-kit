@@ -33,7 +33,9 @@ a report whose message opens `preview:`, so the exit is the normal check's.
 The backbone runs the normal check, with no preview. The structure is the
 kind's as the project's own `project/structures.yaml` relabels it, tightened by
 each group of the project's whose rule binds on the body, as `pkit rule-sets
-reach` reads where a rule binds (`_lib/project_structure.py`).
+reach` reads where a rule binds (`_lib/project_structure.py`). A preview reads
+`pkit rule-sets reach --preview` too, so a group whose rule, or a rule it
+fills, is proposed is previewed where the rule would bind.
 
 The backbone runs it as this capability's validator, the
 `software-analysis:artefacts` member of `pkit validate` (ADR-058): from the
@@ -50,7 +52,7 @@ and is `pkit analysis check-numbers`' to report.
 Usage:
   pkit analysis validate             the summary and the findings
   pkit analysis validate --json      the findings document {summary, findings}
-  pkit analysis validate --preview   a proposed format rule's findings too, as reports
+  pkit analysis validate --preview   a proposed rule's findings too, as reports
 
 Exit codes:
   0  answered; without --json, also: no error found
@@ -90,9 +92,10 @@ def main() -> int:
         "--preview",
         action="store_true",
         help=(
-            "Preview the proposed format rule, RS-SAN-001, as if it were accepted: what each "
-            "body would break of its kind's structure, as reports opening `preview:`, which "
-            "never change the exit status."
+            "Preview each proposed rule as if it were accepted, the format rule, RS-SAN-001, "
+            "and a project rule that tightens a kind's structure: what each body would break "
+            "of its kind's structure, as reports opening `preview:`, which never change the "
+            "exit status."
         ),
     )
     args = parser.parse_args()

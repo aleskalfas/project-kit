@@ -123,13 +123,18 @@ And at the format rule's status:
 - **A project's own structures** (point 1): the structure is the kind's as the
   project's `project/structures.yaml` relabels it, tightened by each of the
   project's groups that binds on the body (`_lib/project_structure.py`). A
-  group binds at the status of its rule's chain — the rule, and each rule
-  whose extension point it fills — on each artefact the rule binds on, as the
-  backbone's reading of where a rule binds says (`pkit rule-sets reach`), and
-  on every record for the record's kind. A preview takes the chain as
-  accepted on a record, and reports a group whose chain is proposed on any
-  other kind as not previewed: the reading lists accepted rules only. A rule
-  that binds on no artefact of its group's kind is reported. A record, and a
+  group binds on each artefact its rule binds on, as the backbone's reading
+  of where a rule binds says (`pkit rule-sets reach`), which judges the
+  rule's chain of fills too. A preview also reads where it would bind if
+  every proposed rule were accepted (`--preview`), and takes from that
+  reading only what holds under the preview alone: what a group finds there
+  is a preview's report, and what binds still comes from the reading
+  without the preview. No reading of
+  where rules bind reaches a record, so a group of the record's kind binds
+  on every record at the status of its rule's chain, the rule and each rule
+  whose extension point it fills, and a preview takes that chain as
+  accepted. A rule that binds on no artefact of its group's kind is
+  reported. A record, and a
   withdrawn artefact, may predate the project's changes: a relabelled part is
   found by its shipped label too, a closed list reports nothing, and a part a
   group adds is never missing from either.
@@ -992,7 +997,7 @@ def _structure(
     *,
     preview: bool,
     own: project_structure.Own | None = None,
-    reach: Callable[[Path], Mapping[str, frozenset[str]]] = backbone.reach,
+    reach: Callable[..., Mapping[str, Mapping[str, bool]]] = backbone.reach,
 ) -> tuple[str, list[Finding]]:
     """Each artefact's body, each collection file's head and each record's body against
     the structure its kind declares, at the format rule's status (DEC-001 point 1): an
@@ -1000,7 +1005,8 @@ def _structure(
     and a preview is asked for, and nothing otherwise. The structure is the kind's as
     the project's own structures, `own`, relabel it, tightened by each of the project's
     groups that binds on the body (`_bound`), where `reach` says the project's rules
-    bind. Returns the summary's line about it, and the findings."""
+    bind. What a group finds where it binds only under the preview is a preview's
+    report. Returns the summary's line about it, and the findings."""
     rules = analysis.method_rules
     status = None if rules is None else rules.get(FORMAT_RULE)
     if status == ACCEPTED:
@@ -1047,7 +1053,10 @@ def _structure(
             continue  # the core reports a file it cannot read
         checked += 1
         held_to = bound.kind(kind, artefact.location, as_written=artefact.withdrawn)
-        found += _artefact_structure(artefact, held_to, text, titles)
+        departs = _artefact_structure(artefact, held_to, text, titles)
+        only = bound.previewed_at.get(artefact.location, frozenset())
+        for finding, rule in departs:
+            (previewing if rule is not None and rule in only else found).append(finding)
     heads, headed = _heads(root, analysis, kinds, texts)
     found += heads
     checked += headed
@@ -1089,9 +1098,10 @@ class _Binding:
     on every record (`None`). A group `where` does not hold binds nowhere. `standing`
     are the groups whose rule is the project's and is proposed or accepted: the labels
     they add mark a part wherever they do not bind. `findings` and `said` are what
-    reading it found, and what the summary says of it. `previewed` are the rules whose
-    groups bind only because a preview takes their chain as accepted, so what their
-    parts break is a preview's report, whatever the format rule's status."""
+    reading it found, and what the summary says of it. What a group's parts break where
+    it binds only under a preview is a preview's report, whatever the format rule's
+    status: `previewed` are the rules whose groups bind on records only so, and
+    `previewed_at` the rules that bind on the artefact at each location only so."""
 
     own: project_structure.Own
     where: Mapping[project_structure.Group, frozenset[str] | None]
@@ -1099,6 +1109,7 @@ class _Binding:
     findings: list[Finding]
     said: str = ""
     previewed: frozenset[str] = frozenset()
+    previewed_at: Mapping[str, frozenset[str]] = dataclasses.field(default_factory=dict)
 
     def kind(
         self, kind: structure.Kind, location: str | None, *, as_written: bool = False
@@ -1123,21 +1134,24 @@ def _bound(
     own: project_structure.Own,
     *,
     preview: bool,
-    reach: Callable[[Path], Mapping[str, frozenset[str]]],
+    reach: Callable[..., Mapping[str, Mapping[str, bool]]],
 ) -> _Binding:
     """Where each of the project's groups of tightenings binds, once the format rule binds
-    or is previewed (DEC-001 point 1). A group binds at the status of its rule's chain:
-    the rule, and each rule whose extension point it fills, since a fill binds only while
-    both are accepted (COR-051 point 7).
+    or is previewed (DEC-001 point 1).
 
-    - **The chain accepted:** the group binds on each artefact the rule binds on, as the
-      backbone's reading of where a rule binds says (`pkit rule-sets reach`), and, for
-      the record's kind, on every record, since a record lies in no place a scope names.
-      A rule that binds on none of the analysis's artefacts of the kind is reported.
-    - **A rule of the chain proposed:** the group binds nothing. A preview takes the
-      chain as accepted: on every record. Where else the rule would bind, the reading
-      cannot tell, since it lists accepted rules only, so the group is reported as not
-      previewed.
+    - **On an artefact:** the group binds on each artefact its rule binds on, as the
+      backbone's reading of where a rule binds says (`pkit rule-sets reach`). That
+      reading judges the rule's chain too: a fill binds only while the rule it fills is
+      accepted as well (COR-051 point 7). So a proposed rule's group binds nothing, and
+      nothing asks where. A preview reads too where the rule would bind if every
+      proposed rule were accepted (`--preview`), and takes from it only the bindings
+      marked as holding only under the preview: a preview can also lose a binding, so
+      what binds is read without it (ADR-057 point 2). A rule that binds on none of the
+      analysis's artefacts of the kind, with the preview or without, is reported.
+    - **On a record:** no reading of where rules bind reaches a record, which lies in no
+      place a scope names. So a group of the record's kind binds on every record at the
+      status of its rule's chain, the rule and each rule whose extension point it fills.
+      A preview takes that chain as accepted.
     - **A superseded or withdrawn rule, or none of the project's:** the group binds
       nothing (`_own_findings`)."""
     where: dict[project_structure.Group, frozenset[str] | None] = {}
@@ -1145,42 +1159,31 @@ def _bound(
     ruled: list[project_structure.Group] = []
     standing: set[project_structure.Group] = set()
     previewed: set[str] = set()
+    previewed_at: dict[str, set[str]] = defaultdict(set)
     for group in own.groups:
         rule = analysis.project_rules.get(group.rule)
         if rule is None or rule.status not in (ACCEPTED, PROPOSED):
             continue
         standing.add(group)
+        if group.kind != structure.RECORD:
+            if preview or rule.status == ACCEPTED:
+                ruled.append(group)
+            continue
         waiting = [] if rule.status == ACCEPTED else [group.rule]
         waiting += [cited for cited in rule.fills if analysis.rule_statuses.get(cited) != ACCEPTED]
         if not waiting:
-            if group.kind == structure.RECORD:
-                where[group] = None
-            else:
-                ruled.append(group)
-        elif preview and group.kind == structure.RECORD:
+            where[group] = None
+        elif preview:
             where[group] = None
             previewed.add(group.rule)
-        elif preview:
-            why = (
-                f"{group.rule} is proposed"
-                if waiting[0] == group.rule
-                else f"{group.rule} fills {waiting[0]}, which is not accepted"
-            )
-            findings.append(
-                Finding(
-                    REPORT,
-                    group.where,
-                    f"{PREVIEW}{why}. Where it would bind cannot be read until the backbone's "
-                    f"reading of where rules bind previews proposed ones: `pkit rule-sets "
-                    f"reach` lists accepted rules only. So its tightenings of the {group.kind} "
-                    f"kind are not previewed",
-                )
-            )
+    reading = "`pkit rule-sets reach` reads it" + (", even with `--preview`" if preview else "")
     if ruled:
+        accepted = any(analysis.project_rules[group.rule].status == ACCEPTED for group in ruled)
         try:
-            bindings: Mapping[str, frozenset[str]] | None = reach(root)
+            plain: Mapping[str, Mapping[str, bool]] = reach(root, preview=False) if accepted else {}
+            only: Mapping[str, Mapping[str, bool]] = reach(root, preview=True) if preview else {}
         except Unreadable as exc:
-            bindings = None
+            ruled_read: list[project_structure.Group] = []
             findings += [
                 Finding(
                     ERROR,
@@ -1190,24 +1193,33 @@ def _bound(
                 )
                 for group in ruled
             ]
-        for group in ruled if bindings is not None else ():
-            assert bindings is not None
+        else:
+            ruled_read = ruled
+        for group in ruled_read:
             of_kind = {artefact.location for artefact in analysis.of_kind(group.kind)}
-            reached = frozenset(
+            binds = {
                 location
-                for location, bound in bindings.items()
+                for location, bound in plain.items()
                 if group.rule in bound and location in of_kind
-            )
-            where[group] = reached
-            if not reached and of_kind:
+            }
+            previewing = {
+                location
+                for location, bound in only.items()
+                if bound.get(group.rule) is True and location in of_kind and location not in binds
+            }
+            where[group] = frozenset(binds | previewing)
+            for location in previewing:
+                previewed_at[location].add(group.rule)
+            if not where[group] and of_kind:
                 findings.append(
                     Finding(
                         REPORT,
                         group.where,
                         f"{group.rule} binds on no {NOUN[group.kind]} of the analysis, as "
-                        f"`pkit rule-sets reach` reads it, so its tightenings apply to none: "
-                        f"no scope of a set that reaches the rule selects one, or a pin behind "
-                        f"its set holds it back (COR-051 point 7)",
+                        f"{reading}, so its tightenings apply to none: no scope of a set that "
+                        f"reaches the rule selects one, a pin behind its set holds it back, a "
+                        f"rule it fills does not bind there, or the sets whose scopes select one "
+                        f"bring different fills for a point it fills (COR-051 point 7)",
                     )
                 )
     said = (
@@ -1215,7 +1227,15 @@ def _bound(
         if where
         else ""
     )
-    return _Binding(own, where, frozenset(standing), findings, said, frozenset(previewed))
+    return _Binding(
+        own,
+        where,
+        frozenset(standing),
+        findings,
+        said,
+        frozenset(previewed),
+        {location: frozenset(rules) for location, rules in previewed_at.items()},
+    )
 
 
 def _added_later(departure: structure.Departure) -> bool:
@@ -1307,19 +1327,23 @@ def _titles(analysis: Analysis) -> dict[str, str]:
 
 def _artefact_structure(
     artefact: Artefact, kind: structure.Kind, text: str, titles: Mapping[str, str]
-) -> list[Finding]:
+) -> list[tuple[Finding, str | None]]:
     """What an artefact's body — an entry's section — and its front matter break of its
-    kind's structure. A withdrawn artefact is never failed for a part it lacks or for a
-    form, and a document's missing title heading is `_headings`'."""
+    kind's structure, each with the project rule that adds or requires the part it is
+    about, or `None` for a shipped part. A withdrawn artefact is never failed for a part
+    it lacks or for a form, and a document's missing title heading is `_headings`'."""
     subject = with_article(artefact.kind)
     if artefact.entry and not artefact.span_read:
         return [
-            Finding(
-                ERROR,
-                artefact.location,
-                "its section is not checked against its kind's structure: the installed "
-                "backbone gives no entry's `span` in `pkit friction artefacts --json` — "
-                "upgrade it (`pkit upgrade`)",
+            (
+                Finding(
+                    ERROR,
+                    artefact.location,
+                    "its section is not checked against its kind's structure: the installed "
+                    "backbone gives no entry's `span` in `pkit friction artefacts --json` — "
+                    "upgrade it (`pkit upgrade`)",
+                ),
+                None,
             )
         ]
     if artefact.entry and artefact.span is None:
@@ -1331,14 +1355,18 @@ def _artefact_structure(
             else structure.body_lines(text)
         )
         departing = structure.departures(lines, kind, fields=artefact.fields, titles=titles)
-    found = [
-        Finding(ERROR, artefact.location, _departure_message(d, kind.sections, subject))
+    found: list[tuple[Finding, str | None]] = [
+        (
+            Finding(ERROR, artefact.location, _departure_message(d, kind.sections, subject)),
+            d.element.rule,
+        )
         for d in departing
         if not _exempt(d, artefact)
     ]
     if artefact.withdrawn:
         return found
-    return found + _field_findings(artefact.location, artefact.fields, kind, subject)
+    fields = _field_findings(artefact.location, artefact.fields, kind, subject)
+    return found + [(finding, None) for finding in fields]
 
 
 def _exempt(departure: structure.Departure, artefact: Artefact) -> bool:
