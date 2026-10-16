@@ -12,9 +12,8 @@ pkit:
       record: ["living-docs:DEC-001", COR-049, COR-050, COR-051, COR-053]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006]
     revalidated:
-      at: 2026-10-15T09:26:32Z
-      outcome: unchanged
-      unchanged-because: "COR-050 lets an artefact anchor name a document's section or its lead, and COR-051 point 3 lets '#' name them. This README says what a page anchors, by kind, and how sources resolve, and none of it changes. The agent and checks learn part anchors in #1424."
+      at: 2026-10-16T11:38:54Z
+      outcome: updated
 ---
 
 # living-docs capability

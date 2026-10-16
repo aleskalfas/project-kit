@@ -9,9 +9,8 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-13T20:06:25Z
-          outcome: unchanged
-          unchanged-because: living-docs DEC-001's points are now headings, so the anchor names point 3, which states this rule's property, that a page's anchors ground every statement. Point 3's text is unchanged, so the rule holds.
+          at: 2026-10-16T11:38:45Z
+          outcome: updated
   RS-LDOC-002:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -19,9 +18,8 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-13T20:06:26Z
-          outcome: unchanged
-          unchanged-because: living-docs DEC-001's points are now headings, so the anchor names point 3, which states this rule's property, that each fact is stated once. Point 3's text is unchanged, so the rule holds.
+          at: 2026-10-16T11:38:46Z
+          outcome: updated
   RS-LDOC-003:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -29,9 +27,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3", "living-docs:DEC-001#4"]}
         revalidated:
-          at: 2026-10-13T20:06:27Z
+          at: 2026-10-16T11:38:48Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001's points are now headings, so the anchors name point 3, which states that each page names its reader, and point 4, which gives a page its `reader` field. Their text is unchanged, so the rule holds.
+          unchanged-because: living-docs DEC-001 point 3 refines the rules on a fact's home and on grounding, and point 4 adds the home of each fact a page summarises to what a page anchors. Neither touches that each page names its reader in its reader field and says only what that reader needs, so this rule holds.
   RS-LDOC-004:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -39,9 +37,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3", "living-docs:DEC-001#4"]}
         revalidated:
-          at: 2026-10-13T20:06:28Z
+          at: 2026-10-16T11:38:49Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001's points are now headings, so the anchors name point 3, which states that pages of a kind follow one format and how a kind's structure is checked, and point 4, which gives a page its `kind` field. Their text is unchanged, so the rule holds.
+          unchanged-because: living-docs DEC-001 point 3 refines the rules on a fact's home and on grounding, and point 4 adds the home of each fact a page summarises to what a page anchors. Neither touches that pages of a kind follow one format with a template per kind, how a kind's structure is checked, or a page's kind field, so this rule holds.
   RS-LDOC-005:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -49,9 +47,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-13T20:06:29Z
+          at: 2026-10-16T11:38:50Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001's points are now headings, so the anchor names point 3, which states this rule's property, that an index-like file is a signpost. Point 3's text is unchanged, so the rule holds.
+          unchanged-because: living-docs DEC-001 point 3 refines the rules on a fact's home and on grounding. Its bullet that an index-like file is a signpost to what a folder holds, never a summary of its contents, is as it was, so this rule holds.
   RS-LDOC-006:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -59,9 +57,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-13T20:06:30Z
+          at: 2026-10-16T11:38:51Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001's points are now headings, so the anchor names point 3, which states this rule's property, that nothing is created ahead of the need for it. Point 3's text is unchanged, so the rule holds.
+          unchanged-because: living-docs DEC-001 point 3 refines the rules on a fact's home and on grounding. Its bullet that nothing is created ahead of the need for it is as it was, so this rule holds.
 # The parts of these rules that this capability's validation enforces (COR-051
 # point 2; DEC-001 point 6), each only where its rule binds: a reader-review
 # leaves them to it and judges the rest.
