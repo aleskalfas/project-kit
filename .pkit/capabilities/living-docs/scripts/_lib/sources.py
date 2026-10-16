@@ -20,7 +20,9 @@ What is checked:
   rule's origin citing a `source`, that no captured file answers: the
   whole-repository check reports the anchor dead, and rule-set validation
   fails the citation, so this only says where. And a captured source nothing
-  anchors or cites.
+  anchors or cites. A source names no part (COR-050 point 2): a `#` in its
+  value is part of the name, which no name holds, so the report says to anchor
+  the whole source or capture the part as a source of its own.
 
 The anchors and the rules' origins are read from the backbone's artefact
 discovery, the reading the space checks already hold (`artefacts`); where a
@@ -42,6 +44,11 @@ from _lib.declarations import load_yaml
 KIND = "source"
 
 ANCHOR_POINTER = f"/pkit/friction/anchors/{KIND}"
+
+#: The mark that names a part in a record or artefact anchor's value (COR-050 point
+#: 2). A source is a registered kind, which names no part, so in a source's value
+#: the mark is only a character no name holds.
+PART_MARK = "#"
 ORIGIN_POINTER = "/origin/source"
 
 #: The keys the shape of a captured source permits for its own carrier,
@@ -191,6 +198,14 @@ def _dead_message(citation: _Citation) -> str:
         if citation.origin
         else f"anchor `{KIND}: {citation.value}`"
     )
+    if PART_MARK in citation.value:
+        # A registered kind names no part: the `#` belongs to the value (COR-050 point 2).
+        return (
+            f"{named}, and no captured file answers it, so it is dead: a source names no "
+            f"part, so the `{PART_MARK}` is part of the name, and no name holds one (a name "
+            f"is {source_layout.GRAMMAR}) — anchor the whole source, or capture the part you "
+            f"rely on as a source of its own (DEC-001 point 4; COR-050 point 2)."
+        )
     return (
         f"{named}, and no captured file answers it ({where}; a name is "
         f"{source_layout.GRAMMAR}), so it is dead — capture the source there, or correct "

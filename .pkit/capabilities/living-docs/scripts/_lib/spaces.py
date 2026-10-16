@@ -44,7 +44,9 @@ What is checked, each against the record's words:
   lists no anchor is counted, and listed, unless the block gives the reason a
   person accepted it with none — its `unanchored-because`, the core's key
   (COR-050 point 1) — which is counted apart. Both as the backbone reads the
-  block; an excluded page is in neither (COR-050 point 7). Never failed.
+  block; an excluded page is in neither (COR-050 point 7). An anchor on one part
+  — a record's point, a page's section or its lead (COR-050 point 2) — is an
+  anchor like any other. Never failed.
 - **Where `LDOC` binds** (point 3). Each check of a part of an `LDOC` rule
   runs only on the pages where that rule binds (COR-051 point 2), read once from
   the backbone's one answer (`binding`, COR-051 point 7). `LDOC` binds only
