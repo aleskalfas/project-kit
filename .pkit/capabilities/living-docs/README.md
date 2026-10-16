@@ -197,7 +197,7 @@ pkit living-docs new page <file> --space <space> --kind <kind> --reader <id> --t
 
 **`new space`** makes the three writes of creating a space (DEC-001 point 2):
 
-- **The definition,** `<definitions>/rule-sets/<space>.md`. It is a project rule set that inherits `LDOC` at its current major. Its scope selects the space's pages, the scope `pkit living-docs validate` names for a definition without one. The set is named after the space in upper case, unless you name it with `--set`.
+- **The definition,** `<definitions>/rule-sets/<space>.md`. It is a project rule set that inherits `LDOC` at its current major. Its scope selects the space's pages, the scope `pkit living-docs validate` names for a definition without one. The set is named after the space in upper case, its hyphens dropped, unless you name it with `--set`.
 - **Its path,** as the space's `definition` in `.pkit/capabilities/living-docs/project/config.yaml`. Every other byte of the file is kept. The entry declares a space your project adds. Without the file, the command creates it.
 - **The definitions location,** recorded the first time.
 
