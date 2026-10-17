@@ -316,6 +316,52 @@ def test_install_writes_nothing_through_a_link(
     assert list(elsewhere.iterdir()) == []
 
 
+def test_install_creates_none_where_a_file_holds_the_set_s_folder_and_goes_on(
+    target: Path, source: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _stage(source)
+    (target / "docs").write_text("a file, not a folder\n", encoding="utf-8")
+    deployed: list[str] = []
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(
+        cli_mod, "_deploy_capability", lambda _root, _kit, name: deployed.append(name)
+    )
+
+    result = _cli("capabilities", "install", NAME)
+
+    assert result.exit_code == 0, result.output
+    assert "no project rule set created: docs is a file, where the set's folder would be" in (
+        result.output
+    )
+    assert deployed == [NAME]
+
+
+def test_a_write_that_fails_is_said_and_the_install_goes_on(
+    target: Path, source: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _stage(source)
+    from project_kit import cli as cli_mod
+
+    deployed: list[str] = []
+    monkeypatch.setattr(
+        cli_mod, "_deploy_capability", lambda _root, _kit, name: deployed.append(name)
+    )
+
+    def refuse(_root: Path, _planned: drs.Plan) -> Path:
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(drs, "create", refuse)
+
+    result = _cli("capabilities", "install", NAME)
+
+    assert result.exit_code == 0, result.output
+    assert f"no project rule set created: {CREATED} could not be written (Permission denied)" in (
+        result.output
+    )
+    assert deployed == [NAME]
+
+
 def test_register_creates_no_set(target: Path, source: Path) -> None:
     """Only install creates it: registering a capability authored in the project is no
     install (COR-001 names no other writer)."""
@@ -401,6 +447,8 @@ def test_uninstall_refuses_while_the_created_set_stands(target: Path, source: Pa
 
     assert refused.exit_code != 0
     assert f"{CREATED}: inherits demo:MTH@2" in refused.output
+    # Named once, for what it inherits, not again for the flow lists that name the capability.
+    assert "1 reference(s) found" in refused.output
 
 
 # --- the reading a migration takes ------------------------------------------------------------

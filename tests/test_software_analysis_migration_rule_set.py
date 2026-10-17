@@ -63,7 +63,15 @@ def test_the_migration_creates_the_set_install_would_create(
     assert (
         "[ok] created the project rule set ANALYSIS at docs/rule-sets/analysis.md" in result.stdout
     )
-    assert (project / CREATED).read_text(encoding="utf-8") == planned.text
+    text = (project / CREATED).read_text(encoding="utf-8")
+    assert text == planned.text
+    # The set the capability declares, as DEC-001's Implications give it.
+    assert text.startswith(
+        "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@1]\n"
+        "scope:\n  types: [software-analysis:actor, software-analysis:term, "
+        "software-analysis:use-case, software-analysis:journey]\nrules: {}\n---\n\n"
+        "# ANALYSIS — The project's rules for its analysis\n"
+    )
     discovery = rs.discover_rule_sets(project)
     assert [s.path for s in rs.inheritors(discovery, "software-analysis", "SAN")] == [CREATED]
 

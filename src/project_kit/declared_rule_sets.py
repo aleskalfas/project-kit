@@ -60,6 +60,11 @@ SCHEMA_VERSION = 1
 
 _yaml: Any = YAML(typ="safe")
 
+#: A component's type as a scope names it, `<component>:<type>`: the package
+#: schema's pattern for a declared type, so a declaration the packages check
+#: refuses is never written into a scope.
+_TYPE = re.compile(rf"{rs.COMPONENT_PATTERN}:[a-z][a-z0-9]*(?:-[a-z0-9]+)*")
+
 
 @dataclass(frozen=True)
 class Declaration:
@@ -127,9 +132,10 @@ def read_declaration(capability: str, component_dir: Path) -> Declaration | None
         and set_name.fullmatch(inherits)
         and isinstance(title, str)
         and title.strip()
+        and "\n" not in title
         and isinstance(types, list)
         and types
-        and all(isinstance(t, str) and t for t in cast("list[Any]", types))
+        and all(isinstance(t, str) and _TYPE.fullmatch(t) for t in cast("list[Any]", types))
     ):
         return None
     return Declaration(
@@ -228,8 +234,12 @@ def _blocked(
         return f"{path} exists already, and install never writes over a file"
     for parent in reversed(PurePosixPath(path).parents):
         folder = target_root / parent
-        if parent != PurePosixPath(".") and folder.is_symlink():
+        if parent == PurePosixPath("."):
+            continue
+        if folder.is_symlink():
             return f"{parent.as_posix()} is a link, and install writes nothing through one"
+        if folder.exists() and not folder.is_dir():
+            return f"{parent.as_posix()} is a file, where the set's folder would be"
     return None
 
 
@@ -276,25 +286,26 @@ def create(target_root: Path, planned: Plan) -> Path:
     return target
 
 
-def outcome_line(planned: Plan, *, dry_run: bool, created: bool = True) -> str:
-    """What install says of the declared set, in one line."""
+def outcome_line(planned: Plan, *, dry_run: bool, failed: str | None = None) -> str:
+    """What install says of the declared set, in one line. `failed` says why the write
+    of a planned set failed, where it did."""
     declaration = planned.declaration
     if planned.inherited_by:
         return (
             f"  no project rule set created: {', '.join(planned.inherited_by)} inherits "
             f"{declaration.method_set} already (COR-017)"
         )
-    if planned.creates and created:
+    if planned.creates and failed is None:
         verb = "would create" if dry_run else "created"
         return (
             f"  {verb} the project rule set {declaration.name} at {planned.path}, inheriting "
             f"{planned.pin} (COR-017): it is the project's own, to edit or remove"
         )
-    why = planned.blocked or f"{planned.path} appeared while install ran"
+    why = failed or planned.blocked or f"{planned.path} could not be written"
     return (
         f"  warning: no project rule set created: {why}. A set of the project's own that "
         f"inherits {planned.pin or declaration.method_set} makes its rules bind (COR-051 "
-        f"point 7); `pkit capabilities project-rule-set {declaration.capability}` shows the "
+        f"point 7). `pkit capabilities project-rule-set {declaration.capability}` shows the "
         f"set install declares"
     )
 

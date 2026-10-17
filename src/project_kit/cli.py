@@ -6354,13 +6354,17 @@ def _create_declared_rule_set(
     planned = declared_rule_sets.plan(target_root, capability_source.name, capability_source.path)
     if planned is None:
         return
-    created = True
+    failed = None
     if planned.creates and not dry_run:
+        # The capability is installed and registered already, so a write that fails
+        # is said and the install goes on to deploy it.
         try:
             declared_rule_sets.create(target_root, planned)
         except FileExistsError:
-            created = False
-    click.echo(declared_rule_sets.outcome_line(planned, dry_run=dry_run, created=created))
+            failed = f"{planned.path} appeared while install ran, and install never writes over it"
+        except OSError as exc:
+            failed = f"{planned.path} could not be written ({exc.strerror or exc})"
+    click.echo(declared_rule_sets.outcome_line(planned, dry_run=dry_run, failed=failed))
 
 
 def _refuse_collisions_in_place(target_root: Path, capability_source: CapabilitySource) -> None:

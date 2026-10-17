@@ -2028,6 +2028,9 @@ def find_references(target_root: Path, capability_name: str) -> list[tuple[Path,
     discovery = rule_sets.discover_rule_sets(target_root)
     for rule_set, pin in rule_sets.pins_on_component(discovery, capability_name):
         findings.append((target_root / rule_set.path, f"inherits {pin}"))
+    # A rule set reported for what it inherits is not reported again for the text
+    # that names it, such as a flow list read as a citation.
+    inheriting = {path.resolve() for path, _snippet in findings}
     citation_re = re.compile(rf"\[{re.escape(capability_name)}:[^\]]+\]")
     path_re = re.compile(rf"\.pkit/capabilities/{re.escape(capability_name)}/")
     self_path = (target_root / ".pkit" / "capabilities" / capability_name).resolve()
@@ -2052,6 +2055,8 @@ def find_references(target_root: Path, capability_name: str) -> list[tuple[Path,
         except OSError:
             continue
         if path.suffix not in {".md", ".yaml", ".yml", ".py", ".sh", ".txt", ".rst"}:
+            continue
+        if path.resolve() in inheriting:
             continue
         try:
             text = path.read_text(encoding="utf-8")
