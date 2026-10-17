@@ -60,9 +60,9 @@ matches is not of its schema's shape, which the schema reports. The forms,
 each with what it reads:
 
 - **`sentence`:** the text holds one sentence. No sentence ends before its
-  last word. A sentence ends at a full stop, a question mark or an exclamation
-  mark followed by white space and a capital letter, and at the text's end,
-  never inside a code span or a fenced block (RS-SAN-001's *How*). A
+  last word. A sentence ends at `.`, `?` or `!` followed by white space and a
+  capital letter, and at the text's end, never inside a code span or a fenced
+  block (RS-SAN-001's *How*). No other mark ends one. A
   character Unicode makes default-ignorable, such as a zero-width space or a
   variation selector, is read as nothing. A part of this form is one text,
   the whole of what it holds, and holds no Markdown list: an item of any list
@@ -1023,8 +1023,8 @@ _ARTICLES = frozenset({"a", "an", "the"})
 
 def one_sentence(text: str) -> bool:
     """Whether `text` is one sentence: no sentence ends before its last word. A sentence
-    ends at a full stop, a question mark or an exclamation mark followed by white space
-    and a capital letter, and at the text's end; a mark inside a code span ends none
+    ends at `.`, `?` or `!` followed by white space and a capital letter, and at the
+    text's end, no other mark ending one; a mark inside a code span ends none
     (RS-SAN-001's *How*). White space is any a reader sees as a space, a line end and a
     no-break space included, and a character Unicode makes default-ignorable, such as a
     zero-width space, is read as nothing (`_ignorable`). So "e.g. for" and "3. října" end
