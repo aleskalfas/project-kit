@@ -172,8 +172,10 @@ point — so the same tree gets the same answer as long as the evidence fillers
 read the tree alone.
 
 **Not here.** A number two branches took (point 3) is `pkit analysis
-check-numbers`' (`_lib/numbers.py`): it reads the default branch, so it answers
-about a change rather than the tree, and is not a validator (ADR-058 point 7).
+check-numbers`' (`_lib/numbers.py`), and so is a use case's step or variant
+renumbered or removed (`_lib/append_only.py`): each reads the default branch, so
+it answers about a change rather than the tree, and is not a validator (ADR-058
+point 7).
 The friction block — its shape, dead anchors, cycles, friction itself — is the
 core's (`pkit validate`'s `friction` member and `pkit friction check`), which
 also reports a front matter that does not parse, as this check does for a file
@@ -1139,7 +1141,7 @@ def _structure(
     elif status == PROPOSED and preview:
         severity, label = REPORT, PREVIEW
     else:
-        return _unchecked(status, rules is None, preview) + unbound, silence
+        return unchecked(status, rules is None, preview) + unbound, silence
     declaration = _shown(structure.KINDS_FILE, root)
     try:
         kinds = structure.read_kinds()
@@ -1585,24 +1587,33 @@ def _own_findings(analysis: Analysis, own: project_structure.Own | None) -> list
     return found
 
 
-def _unchecked(status: str | None, no_set: bool, preview: bool) -> str:
-    """The summary's line when the structure binds nothing, and why (COR-051 point 4)."""
+def unchecked(
+    status: str | None,
+    no_set: bool,
+    preview: bool,
+    *,
+    subject: str = "structure",
+    command: str = "pkit analysis validate",
+) -> str:
+    """The summary's line when the format rule binds nothing, and why (COR-051 point 4):
+    of the structure, or of another `subject` checked under the rule's gate, whose
+    preview `command` gives."""
     if no_set:
         return (
-            f"structure ({FORMAT_RULE}): not checked — the backbone's reading holds no "
+            f"{subject} ({FORMAT_RULE}): not checked — the backbone's reading holds no "
             f"{CAPABILITY}:{METHOD_SET}, so whether its format rule binds cannot be told."
         )
     if status is None:
-        return f"structure: not checked — {CAPABILITY}:{METHOD_SET} holds no {FORMAT_RULE}."
+        return f"{subject}: not checked — {CAPABILITY}:{METHOD_SET} holds no {FORMAT_RULE}."
     if status == PROPOSED:
         return (
-            f"structure ({FORMAT_RULE}, proposed): not checked — the rule binds nothing until "
-            f"it is accepted (COR-051 point 4); `pkit analysis validate --preview` shows what "
-            f"it would report."
+            f"{subject} ({FORMAT_RULE}, proposed): not checked — the rule binds nothing until "
+            f"it is accepted (COR-051 point 4); `{command} --preview` shows what it would "
+            f"report."
         )
     asked = " A preview shows only a proposed rule." if preview else ""
     return (
-        f"structure ({FORMAT_RULE}, {status}): not checked — the rule binds nothing "
+        f"{subject} ({FORMAT_RULE}, {status}): not checked — the rule binds nothing "
         f"(COR-051 point 4).{asked}"
     )
 
