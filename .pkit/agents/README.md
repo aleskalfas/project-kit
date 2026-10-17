@@ -19,9 +19,9 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-17T20:12:05Z
+      at: 2026-10-17T21:38:58Z
       outcome: unchanged
-      unchanged-because: ADR-065's Decision gains a line naming its new point 14, on which pkit a migration reaches, and every point stands on that text. Point 11's own text is unchanged, so the overlay's writers and reconcile's repair of a missing overlay, which this page describes, still hold.
+      unchanged-because: ADR-065 gains point 14, on which pkit a migration reaches, what it may ask it and which commands refuse inside it, and the Decision's list names it. Point 11's own text is unchanged, so the overlay's writers and reconcile's repair of a missing overlay, which this page describes, still hold.
 ---
 
 # Agents
