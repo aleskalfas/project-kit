@@ -78,6 +78,27 @@ def test_collect_environment_reads_a_capabilitys_manifest_as_its_record_is_read(
     assert ("project-management", "0.53.0") in collect_environment(tmp_path).capabilities
 
 
+def test_collect_environment_reads_a_capability_with_no_manifest_from_its_package(
+    tmp_path: Path,
+) -> None:
+    """A shipped capability with no manifest, as in the methodology's source (ADR-059),
+    reports its installed package's version, the last place every reader of its record
+    looks (ADR-065 point 2). With no package either, it reports "unknown"."""
+    _stage(tmp_path)
+    cap_dir = tmp_path / ".pkit" / "capabilities" / "project-management"
+    (cap_dir / "project" / "manifest.yaml").unlink()
+    assert ("project-management", "unknown") in collect_environment(tmp_path).capabilities
+
+    (cap_dir / "package.yaml").write_text(
+        "schema_version: 1\ncomponent:\n  kind: capability\n  name: project-management\n"
+        "  version: 0.54.0\n",
+        encoding="utf-8",
+    )
+    env = collect_environment(tmp_path)
+    assert ("project-management", "0.54.0") in env.capabilities
+    assert "project-management 0.54.0" in render_environment_block(env)
+
+
 def test_collect_environment_include_private(tmp_path: Path) -> None:
     _stage(tmp_path)
     env = collect_environment(tmp_path, include_private=True)
