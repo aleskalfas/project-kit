@@ -43,6 +43,8 @@ VALIDATE = SA / "scripts" / "validate.py"
 NUMBERS = SA / "scripts" / "check-numbers.py"
 CONFIG = ".pkit/project/config.yaml"
 RECORDED = f"{SA.as_posix()}/project/docs-locations.yaml"
+#: The project's own structures, in the capability's project tier (DEC-001 point 1).
+STRUCTURES = f"{SA.as_posix()}/project/structures.yaml"
 
 ANALYSIS = "tech-docs/analysis"
 ACTORS = f"{ANALYSIS}/use-case-model/actors"
