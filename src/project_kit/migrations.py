@@ -31,6 +31,7 @@ import os
 import re
 import shlex
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -204,13 +205,15 @@ def runner_pkit(target_root: Path, label: str) -> Generator[dict[str, str]]:
     The runner's `pkit` runs this pkit's code under this interpreter, with
     `-P`, so the project's root never shadows the package, and never enters
     the router. It lies in a fresh folder of its own inside `RUNNER_PARENT`,
-    which `.pkit/.gitignore` ignores. Where that folder cannot be made, or
-    its `pkit` does not answer, it lies in a fresh folder in the temporary
-    folder instead. Before the first script the runner asks its `pkit` for its
-    version, and an answer other than this pkit's, or none, in both places
-    stops the run before any script runs. The environment also holds `ROOT`
-    and the migration marker. Its folder is removed on every exit, and the
-    project folder too once it is empty.
+    which `.pkit/.gitignore` ignores. Before the first script the runner asks
+    a bare `pkit` for its version, as a script would. The answer counts only
+    when the runner's own `pkit` gave it, with this pkit's version. Where the
+    project folder cannot be made or written, or is not a folder only this
+    user can write, or its `pkit` gives no such answer, the runner makes its
+    folder in the temporary folder and asks again. A failure there too stops
+    the run before any script runs. The environment also holds `ROOT` and the
+    migration marker. Its folder is removed on every exit, and the project
+    folder too once it is empty.
     """
     project_parent = target_root / RUNNER_PARENT
     failures: list[str] = []
@@ -222,7 +225,7 @@ def runner_pkit(target_root: Path, label: str) -> Generator[dict[str, str]]:
             continue
         try:
             env = _scripts_environment(target_root, folder)
-            failed = _probe_runner_pkit(env, target_root)
+            failed = _probe_runner_pkit(env, target_root, folder)
             if failed is None:
                 yield env
                 return
@@ -244,9 +247,18 @@ def runner_pkit(target_root: Path, label: str) -> Generator[dict[str, str]]:
 def _make_runner_folder(parent: Path | None) -> Path:
     """A fresh folder holding the runner's `pkit`, in `parent`, or in the
     temporary folder when `parent` is None. The project folder is made only
-    inside an existing `.pkit/`."""
+    inside an existing `.pkit/`, and used only when it is a folder, not a
+    link, that this user owns and no one else can write."""
     if parent is not None:
-        parent.mkdir(exist_ok=True)
+        with contextlib.suppress(FileExistsError):
+            parent.mkdir(mode=0o700)
+        held = os.lstat(parent)
+        if (
+            not stat.S_ISDIR(held.st_mode)
+            or held.st_uid != os.getuid()
+            or held.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+        ):
+            raise OSError(f"not a folder that only this user owns and can write: {parent}")
     folder = Path(tempfile.mkdtemp(prefix=_RUNNER_PREFIX, dir=parent))
     try:
         shim = folder / "pkit"
@@ -272,26 +284,42 @@ def _scripts_environment(target_root: Path, folder: Path) -> dict[str, str]:
     return env
 
 
-def _probe_runner_pkit(env: dict[str, str], target_root: Path) -> str | None:
-    """None when a bare `pkit`, run as a script runs it, answers with this
-    pkit's version; otherwise what it answered, or why it could not run."""
+def _probe_runner_pkit(env: dict[str, str], target_root: Path, folder: Path) -> str | None:
+    """None when a bare `pkit`, run as a script runs it, is the runner's own in
+    `folder` and answers with this pkit's version; otherwise what it found or
+    answered, or why it could not run. A folder whose path holds the `PATH`
+    separator splits on `PATH`, so it never counts. Another `pkit` found first
+    is never run."""
+    shim = str(folder / "pkit")
+    if os.pathsep in str(folder):
+        return f"its path holds {os.pathsep!r}, which splits it on PATH"
     try:
-        probe = subprocess.run(
-            ["bash", "-c", "pkit --version"],
-            env=env,
-            cwd=target_root,
-            capture_output=True,
-            text=True,
-            timeout=_PROBE_TIMEOUT_SECONDS,
-            check=False,
-        )
+        found = _bash(env, target_root, "command -v pkit").stdout.strip()
+        if found != shim:
+            return f"a bare `pkit` is {found or 'not found'}, not the runner's {shim}"
+        probe = _bash(env, target_root, "pkit --version")
     except (OSError, subprocess.TimeoutExpired) as exc:
         return str(exc)
     answer = probe.stdout.strip()
     if probe.returncode == 0 and answer.split()[-1:] == [__version__]:
         return None
-    said = answer or probe.stderr.strip() or "nothing"
+    errors = probe.stderr.strip().splitlines()
+    said = answer or (errors[-1] if errors else "nothing")
     return f"`pkit --version` exited {probe.returncode} and said {said!r}, not {__version__}"
+
+
+def _bash(env: dict[str, str], target_root: Path, command: str) -> subprocess.CompletedProcess[str]:
+    """Run one probe command as a script's shell would: bash, the scripts'
+    environment, the project's root as the working folder."""
+    return subprocess.run(
+        ["bash", "-c", command],
+        env=env,
+        cwd=target_root,
+        capture_output=True,
+        text=True,
+        timeout=_PROBE_TIMEOUT_SECONDS,
+        check=False,
+    )
 
 
 def _remove_runner_folder(folder: Path, parent: Path | None) -> None:
@@ -306,7 +334,10 @@ def _display(path: Path | None, target_root: Path) -> str:
     """A folder as the stop names it: relative to the project where it lies
     inside it, and the temporary folder itself where none could be made there."""
     if path is None:
-        return tempfile.gettempdir()
+        try:
+            return tempfile.gettempdir()
+        except OSError:
+            return "the temporary folder, which cannot be found"
     try:
         return str(path.relative_to(target_root))
     except ValueError:

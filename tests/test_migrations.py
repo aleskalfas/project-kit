@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import os
+import shutil
+import sys
+import tempfile
 from pathlib import Path
 
 import click
 import pytest
+from click.testing import CliRunner
 
+from project_kit import __version__
+from project_kit import migrations as migrations_mod
+from project_kit.cli import main as pkit_main
 from project_kit.migrations import (
     execute_migration_scripts,
     parse_version_tuple,
@@ -219,17 +227,6 @@ def test_migration_skips_when_no_overlay(tmp_path: Path) -> None:
 
 # ---- the runner's `pkit` and the migration marker (ADR-065 point 14, #1652) ----
 
-import os  # noqa: E402
-import shutil  # noqa: E402
-import sys  # noqa: E402
-import tempfile  # noqa: E402
-
-from click.testing import CliRunner  # noqa: E402
-
-from project_kit import __version__  # noqa: E402
-from project_kit import migrations as migrations_mod  # noqa: E402
-from project_kit.cli import main as pkit_main  # noqa: E402
-
 _DECOY = '#!/bin/sh\necho "$0 $*" >> "{log}"\nexit 1\n'
 
 
@@ -369,31 +366,52 @@ def test_a_runner_pkit_that_cannot_run_stops_before_any_script(
     assert not (project / migrations_mod.RUNNER_PARENT).exists()
 
 
-@pytest.mark.parametrize("how", ["folder-blocked", "probe-fails"])
+@pytest.mark.parametrize("how", ["folder-blocked", "not-runnable", "others-can-write", "a-link"])
 def test_the_runner_falls_back_to_the_temporary_folder(
     decoyed: tuple[Path, Path, Path],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     how: str,
 ) -> None:
-    """Where the project folder cannot be made, or its `pkit` does not answer, the
-    runner's `pkit` lies in the temporary folder, and is removed from there too."""
+    """Where the project folder cannot be made, is not one only this user can
+    write, or its `pkit` cannot run, the runner's `pkit` lies in the temporary
+    folder, and is removed from there too. A `pkit` that cannot run is not
+    excused by another `pkit` further on the `PATH` that gives the same version."""
     project, log, scripts = decoyed
     temporary = tmp_path / "temporary"
     temporary.mkdir()
     monkeypatch.setattr(tempfile, "tempdir", str(temporary))
-    blocker = project / migrations_mod.RUNNER_PARENT
+    parent = project / migrations_mod.RUNNER_PARENT
     if how == "folder-blocked":
-        blocker.write_text("a file where the folder would be\n", encoding="utf-8")
+        parent.write_text("a file where the folder would be\n", encoding="utf-8")
+    elif how == "others-can-write":
+        parent.mkdir()
+        parent.chmod(0o777)
+    elif how == "a-link":
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir(mode=0o700)
+        parent.symlink_to(elsewhere, target_is_directory=True)
     else:
-        probe = migrations_mod._probe_runner_pkit
+        # A folder that forbids running files, as a noexec mount does, behind a
+        # `pkit` on the operator's `PATH` that answers with the same version.
+        same = tmp_path / "same-version"
+        same.mkdir()
+        impostor = same / "pkit"
+        impostor.write_text(
+            f'#!/bin/sh\necho impostor >> "{log}"\necho "pkit, version {__version__}"\n',
+            encoding="utf-8",
+        )
+        impostor.chmod(0o755)
+        monkeypatch.setenv("PATH", f"{same}{os.pathsep}{os.environ['PATH']}")
+        make = migrations_mod._make_runner_folder
 
-        def _fails_in_the_project(env: dict[str, str], target_root: Path) -> str | None:
-            if str(blocker) in env["PATH"].split(os.pathsep)[0]:
-                return "the project's folder forbids running files"
-            return probe(env, target_root)
+        def _not_runnable_in_the_project(where: Path | None) -> Path:
+            folder = make(where)
+            if where is not None:
+                (folder / "pkit").chmod(0o644)
+            return folder
 
-        monkeypatch.setattr(migrations_mod, "_probe_runner_pkit", _fails_in_the_project)
+        monkeypatch.setattr(migrations_mod, "_make_runner_folder", _not_runnable_in_the_project)
     script = _script(scripts, 'command -v pkit > "$ROOT/where"\npkit --version > "$ROOT/direct"\n')
 
     execute_migration_scripts([script], project, label="test")
@@ -403,10 +421,28 @@ def test_the_runner_falls_back_to_the_temporary_folder(
     assert (project / "direct").read_text(encoding="utf-8").strip() == (
         f"pkit, version {__version__}"
     )
-    assert not log.exists()
+    assert not log.exists(), log.read_text(encoding="utf-8")
     assert list(temporary.iterdir()) == []
-    if how == "probe-fails":
-        assert not blocker.exists()
+    if how == "not-runnable":
+        assert not parent.exists()
+
+
+def test_a_runner_pkit_of_another_version_stops_before_any_script(
+    decoyed: tuple[Path, Path, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The probe compares the answer with the running pkit's version: an answer
+    with another version, in both places, stops the run."""
+    project, _, scripts = decoyed
+    script = _script(scripts, 'touch "$ROOT/ran"\n')
+    monkeypatch.setattr(migrations_mod, "__version__", "0.0.0")
+
+    with pytest.raises(click.ClickException) as raised:
+        execute_migration_scripts([script], project, label="test")
+
+    message = raised.value.format_message()
+    assert f"said 'pkit, version {__version__}', not 0.0.0" in message
+    assert not (project / "ran").exists()
+    assert not (project / migrations_mod.RUNNER_PARENT).exists()
 
 
 _INSTALLATION_CHANGING = [
