@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-17T18:28:20Z
+          at: 2026-10-17T22:14:47Z
           outcome: unchanged
-          unchanged-because: This change adds to software-analysis DEC-001 two Context lines naming COR-057 and COR-030, a paragraph in point 10 on the review contribution, and a sentence on it in the Implications. The format rule rests on point 1 and each kind's declared structure, which the change leaves as they were, so it holds.
+          unchanged-because: DEC-001 changed in its Context, points 4 and 11, Rationale and Implications, on how the analysis anchors the decisions and views of the solution. Point 1, the kinds' declared structures this format rule carries, is unchanged, so the rule holds as written.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
@@ -25,6 +25,10 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#3", "software-analysis:DEC-001#4"]
+        revalidated:
+          at: 2026-10-17T22:14:48Z
+          outcome: unchanged
+          unchanged-because: "Point 4 changed only in what a use case anchors outside the analysis: the decisions that answer it and the views that realise it. Its anchors on its actor and its other actors, which this rule rests on, read as before, and points 1 and 3 are unchanged."
   RS-SAN-004:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -42,6 +46,10 @@ rules:
             - "software-analysis:DEC-001#4"
             - "software-analysis:DEC-001#9"
             - "COR-050#1"
+        revalidated:
+          at: 2026-10-17T22:14:49Z
+          outcome: unchanged
+          unchanged-because: Point 4 keeps the words this rule uses, the decisions a use case relies on, and says those that answer it are among them. It adds that a use case anchors the views that realise it, which this rule's list does not ask for. The rule asks no anchor point 4 forbids, and contradicts none it gives.
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
