@@ -93,6 +93,8 @@ A change that **alters an installed adopter's state observably and breaks agains
 
 Pure additions don't trigger migration: a new skill, a new schema, a new decision, a new bundle are observed only by adopters who move to a release that ships them, and their absence doesn't break against existing installed state. Documentation refinements, internal source refactors, and behavior-preserving fixes also don't trigger.
 
+Renaming or removing a section's heading in a document a component ships doesn't trigger migration either. A project that receives the document by sync cannot anchor its sections, since a synced tree is never a place (COR-050 point 14). Where the document is authored, the change that renames or removes the heading mends the anchors on it, as validation requires (COR-050 point 12). Changing a heading a component requires in a project's own documents is no such change: that heading is part of the component's contract.
+
 The rule applies symmetrically across tiers: backbone surface changes ship backbone migrations; bundle surface changes ship bundle migrations; adapter and capability surface changes ship their tier's migrations. The migration is idempotent (already-applied state is a no-op) so adopters can re-run safely.
 
 A backbone migration is also safe over any state. It acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown (COR-059 point 6). A missing default the migration adds counts as a positive sign. So running it again may restore a default the project removed after it first ran, and the release's notes say so.
