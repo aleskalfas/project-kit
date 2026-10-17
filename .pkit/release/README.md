@@ -227,8 +227,9 @@ runs_on_capabilities:
   project-management: release   # runs on the project-management this release writes
 ```
 
-- **`runs_on_capabilities`** maps each capability the component runs on the
-  version this release writes of to `release`, its only value. `pkit release
+- **`runs_on_capabilities`** names each capability whose new version the
+  component runs on. Each name maps to `release`, the field's only value: the
+  version this release writes for that capability. `pkit release
   apply` widens the upper bound of that capability's entry in the component's
   `requires_capabilities` to admit that version, up to the next major: `<2.0.0`
   for a capability this release writes at 1.0.0, `<1.0.0` for one at 0.55.0. It
@@ -241,16 +242,20 @@ runs_on_capabilities:
   release writes is a claim to run on it. A `release` floor raised past the
   bound widens it, and the changelog states both. An explicit floor names a
   release that has shipped, so it widens nothing: a floor at or above the bound
-  leaves a range that admits no version, which refuses the release.
+  the release leaves, after any widening, leaves a range that admits no
+  version, which refuses the release.
 - One changeset may carry both fields: an explicit floor on a release that has
   shipped, and the claim to run on the major this release writes.
 - **`release` needs the release to move the capability**, as for a floor: a
   release that does not move it writes no version to run on, so it refuses the
-  declaration.
-- It belongs on a **version-moving changeset** of a component whose
-  `requires_capabilities` lists that capability once with a range
-  `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`, double-quoted, since a wider bound changes
-  what the component claims to run on. The lint, `plan` and `apply` refuse it
+  declaration. A release can overtake the declaration, as it can a `release`
+  floor. The field has no explicit form to name the version that release
+  shipped, so drop the declaration: that release widened the range, or found it
+  wide enough.
+- It belongs on a **version-moving changeset**, since a wider bound changes
+  what the component claims to run on. The component's `requires_capabilities`
+  lists that capability once, with a range `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`,
+  double-quoted. The lint, `plan` and `apply` refuse it
   elsewhere, with any other value, and on a capability the component does not
   list, as for `requires_capabilities`. `--no-broaden` does not skip it: it
   was declared.
@@ -638,7 +643,7 @@ version this release writes for a capability (`runs_on_capabilities`, or a
 `release` floor; "Declaring that a capability runs on another capability's new
 version" above), `apply` widens the upper bound of that capability's entry.
 
-- **Declared, never automatic; widen-only.** The bound is computed on the entry
+- **Declared, never automatic, and widen-only.** The bound is computed on the entry
   as the floor raise leaves it. Where it excludes the version this release
   writes, it becomes the next major of that version, `<2.0.0` for 1.0.0. A
   bound that admits the version stays. `plan` says so for a
@@ -666,9 +671,11 @@ version" above), `apply` widens the upper bound of that capability's entry.
   dependent, its range, the capability and the version. For a version the
   release writes, it says what to declare. For a version the tree carries, no
   declaration helps, since the release does not move that capability, and
-  `pkit validate` reports the same pair. A dependency the tree carries no
-  component of is left to validation. The release-PR workflow then fails at
-  its plan step and opens no pull request.
+  `pkit validate` reports the same pair where both are installed. A dependency
+  the tree carries no component of is left to validation. The release-PR
+  workflow then fails at its plan step and opens no pull request. A release
+  that moves no version, only consuming `none` changesets, is not refused: it
+  writes nothing a range could exclude.
 - **Not the lint's.** `release lint` refuses a malformed declaration, but not a
   range that excludes a pending major. The lint refuses a declaration until the
   capability's change is pending, so refusing the range too would let the
