@@ -5,23 +5,27 @@
 # check `prose-lint` (COR-051 point 2). The lint applies an entry to an artefact
 # only where its rule binds and declares that part.
 #
-# Each entry has one of four types, and a new mechanical rule is an entry here,
+# Each entry has one of five types, and a new mechanical rule is an entry here,
 # not code:
 #
 #   count          at most `max` of a unit in a scope: `count` is `words` or
 #                  `sentences`, `in` is `sentence` or `paragraph`
 #   forbid         a pattern that may not appear: `pattern` is a regular
-#                  expression, `name` says what a finding found
+#                  expression, `name` says what a finding found, and `in` is
+#                  `prose`, the default, or `file`: every character of the
+#                  artefact, code, headings, front matter and comments included
 #   substitute     a word to replace with another: `replace` maps each word to
 #                  the word that replaces it
 #   link-resolves  a Markdown link's target exists in the repository
+#   nesting        a list item sits at most `max` levels deep
 #
-# Any entry may add `except`, the parts of the prose it does not read: `code`
-# (code spans), `quotes` (text in quotation marks or a block quote) and `cells`
-# (table cells).
+# An entry that reads prose may add `except`, the parts of the prose it does not
+# read: `code` (code spans), `quotes` (text in quotation marks or a block quote)
+# and `cells` (table cells). A `nesting` entry and a `forbid` entry with
+# `in: file` take none.
 #
-# CONTRIBUTING.md, "Running checks", says how the lint reads a sentence and a
-# paragraph, and how to add an entry.
+# CONTRIBUTING.md, "Running checks", says how the lint reads a sentence, a
+# paragraph and a list's levels, and how to add an entry.
 entries:
   - rule: RS-WRITE-005
     type: count
@@ -33,3 +37,13 @@ entries:
     pattern: ";"
     name: a semicolon
     except: [code, quotes]
+  - rule: RS-WRITE-017
+    type: nesting
+    max: 3
+  # Unicode's controls (Cc) but a tab and a line end, and its bidirectional
+  # formatting characters (Bidi_Control), written as escapes the pattern reads.
+  - rule: RS-WRITE-018
+    type: forbid
+    in: file
+    pattern: '[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]'
+    name: a control or bidirectional character
