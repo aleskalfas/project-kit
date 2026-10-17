@@ -13,13 +13,8 @@ pkit:
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053, COR-057]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005]
     revalidated:
-      at: 2026-10-17T14:39:32Z
+      at: 2026-10-17T15:21:04Z
       outcome: updated
-      deferred:
-        - anchor:
-            kind: record
-            value: software-analysis:DEC-001
-          reason: "DEC-001 refines ahead of the code. The capability now declares each kind's structure and a planned record's reviewed-against, and this page describes both. Its check holds each record's body to its structure always. It holds each artefact's body and front matter to its structure's parts and forms where the format rule binds. That rule binds through a set of the project's own that inherits SAN. This page describes those checks, and the set a project writes. It also checks where the commits a planned record names sit, and this page describes that check. Its stamp renders each body from the structure, as each template's body is rendered, and writes a planned record's sources, and this page describes both. The stamp also writes its hint in each front-matter field a writer fills, as in each body part, and this page says so. The check and the stamp take a project's own structures, which tighten no record, and this page describes that. Its preview places a project's group whose rule, or a rule it fills, is proposed where the rule would bind, and this page says so. The stamp writes, and the check requires, the anchors of point 4, and this page describes them. A use case anchors to its actor and to each other actor it involves. A journey anchors to its actor and to the use cases of its steps and of its relies-on. Its number check keeps a use case's steps and variants append-only, and this page describes that check. The capability does not yet create the project's set on install. So this page describes the check and the stamp it ships. It changes, and is revalidated against the record, with the Task that applies the rest. Under EPIC #1474, #1613 makes installing create the set."
 ---
 
 # software-analysis capability
@@ -39,7 +34,7 @@ Each artefact declares what makes it true — its anchors — and when it was la
 
 Install it with `pkit capabilities install software-analysis`. Then:
 
-1. **Write a rule set of your own that inherits `SAN`.** `SAN`'s rules bind on your analysis only through such a set. The preview reads it too ("Where `SAN` binds: a set of your own", below).
+1. **Review the rule set install created.** `SAN`'s rules bind on your analysis only through a rule set of your own that inherits it. Installing creates one, `ANALYSIS`, where none of your sets inherits `SAN` already. The preview reads it too ("Where `SAN` binds: a set of your own", below).
 2. **Choose each kind's parts,** which its template shows and the stamp writes. The shipped parts are a starting point you review, never a default you skip (DEC-001 point 1). For each kind:
    - review its shipped parts
    - fill a candidate with one of your own examples, and check it with `pkit analysis validate --preview`
@@ -560,7 +555,9 @@ Each message gives the part's hint and example. How the check reads a body:
 
 ### Where `SAN` binds: a set of your own
 
-`SAN` takes no scope, so its rules bind only through a rule set of your own that inherits it (COR-051 point 7). Where that set's scope selects an artefact, the check holds the artefact to `SAN`'s accepted rules, as `pkit rule-sets reach` answers. Installing the capability creates no such set yet: that waits on [project-kit#1613](https://github.com/aleskalfas/project-kit/issues/1613). So write it yourself, among your rule sets, by default in the `rule-sets` folder under your internal documentation root (COR-049):
+`SAN` takes no scope, so its rules bind only through a rule set of your own that inherits it (COR-051 point 7). Where that set's scope selects an artefact, the check holds the artefact to `SAN`'s accepted rules, as `pkit rule-sets reach` answers.
+
+**Installing creates the set.** The capability declares one project rule set in its package metadata, `ANALYSIS` (COR-017; DEC-001, Implications). `pkit capabilities install software-analysis` creates it in the `rule-sets` folder under your internal documentation root (COR-049), `tech-docs/rule-sets/analysis.md` with that root at `tech-docs/`:
 
 ```markdown
 ---
@@ -572,12 +569,16 @@ scope:
 rules: {}
 ---
 
-# ANALYSIS — our rules for the analysis
+# ANALYSIS — The project's rules for its analysis
 ```
 
+- **Only where none inherits `SAN`.** A set of yours that inherits `SAN`, directly or through another set, is your choice already, and install creates nothing.
+- **Never over your content.** Where a rule set of yours cannot be read, a set already takes the name `ANALYSIS`, or a file lies at the path, install creates nothing and says why. Write the set yourself then, in the shape above.
+- **It is yours.** Edit it, add rules to it, or remove it. Nothing creates it again while the capability stays installed. Uninstalling refuses while it stands, since it inherits `SAN`.
+- **An earlier install.** A project that installed the capability before 0.2.0 has no set from its install. The upgrade's migration creates it, on the same conditions. `pkit capabilities project-rule-set software-analysis` shows whether install would create it, and what it would write.
 - **Its scope** selects the analysis by the capability's types, so it reaches the artefacts wherever they lie. A revalidation record has no type, and no scope selects one. The capability checks a record's structure itself.
 - **Its pin,** `SAN@1`, decides when a new major of `SAN` starts binding. Accepting a rule of `SAN` gives `SAN` a new major. Your pin then falls behind, and no rule of `SAN` binds through it until you review the new major and update the pin (COR-051 point 7). `pkit rule-sets reach` lists each rule a pin behind its set holds back. `SAN` 1.0.0 accepted its format rule and its append-only rule, so a set pinned at `SAN@0` binds neither, and `pkit validate` fails on its pin, until you re-pin it.
-- **A set you have already** that selects the analysis may inherit `SAN` instead. Changing what a set inherits gives that set a new major.
+- **A set you have already** that selects the analysis may inherit `SAN` instead, before you install, and install then creates none. Changing what a set inherits gives that set a new major.
 - **Never silent.** The check's summary counts the artefacts no rule of `SAN` binds on. Where it binds on none of the analysis, the check says so, at the analysis's folder. It reports this while no rule of `SAN` is accepted, and warns once one is. Neither fails `pkit validate`. If you choose not to inherit `SAN`, you keep the warning.
 
 ## A number keeps its meaning: `pkit analysis check-numbers`

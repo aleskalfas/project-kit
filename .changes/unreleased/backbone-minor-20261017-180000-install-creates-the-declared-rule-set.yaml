@@ -1,0 +1,23 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A capability may declare one project rule set in its package metadata,
+  `project_rule_set`, and `pkit capabilities install` creates it (COR-017,
+  #1613). The set lands in `rule-sets/` under the internal documentation root.
+  It inherits the capability's method set at that set's major, with the
+  declared scope by the capability's own types. Install creates it once for
+  each install, only where no set of the project's own inherits the method
+  set, directly or not. It never writes over a file, takes a name another set
+  declares, writes through a link, or creates one while a project rule-set
+  file cannot be read. Then it says why in a warning line, and the install
+  goes on. Sync, a later install and an upgrade never write the set again.
+  `pkit capabilities project-rule-set <name> [--json]` reads the same
+  decision for an installed capability, for a capability's migration to
+  read. The package schema learns the key, and the packages check refuses a
+  declaration whose method set the capability does not ship, whose name one
+  of its own sets takes, or whose types it does not declare. `pkit
+  capabilities uninstall` now also refuses while a project rule set's
+  `inherits` names one of the capability's method sets, however the list is
+  written, unless `--force`.

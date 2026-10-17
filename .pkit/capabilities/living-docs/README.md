@@ -13,8 +13,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-005, COR-023, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block"]
     revalidated:
-      at: 2026-10-17T11:56:31Z
-      outcome: updated
+      at: 2026-10-17T15:21:34Z
+      outcome: unchanged
+      unchanged-because: "COR-051 point 6 now names a capability's install, and its migration for an earlier install, as writers of the one project rule set a capability declares. living-docs declares none: its spaces' definitions are written by its own command, as its DEC-001 point 2 names it, and this page describes that, unchanged."
 ---
 
 # living-docs capability

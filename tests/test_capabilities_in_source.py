@@ -280,6 +280,31 @@ def test_install_registers_an_authored_capability_without_copying(source_repo: P
     assert _snapshot(_cap_dir(source_repo)) == before
 
 
+def test_install_in_the_source_creates_the_declared_project_rule_set(source_repo: Path) -> None:
+    """The declared set is the project's file, not a copy of the capability, so install
+    creates it in the source as anywhere (COR-017)."""
+    cap = _cap_dir(source_repo)
+    (cap / "rule-sets").mkdir()
+    (cap / "rule-sets" / "hw.md").write_text(
+        "---\nrule-set: HW\nversion: 1.0.0\nrules: {}\n---\n\n# HW\n", encoding="utf-8"
+    )
+    with (cap / "package.yaml").open("a", encoding="utf-8") as package:
+        package.write(
+            "friction:\n  types:\n    task:\n      description: A task.\n"
+            "project_rule_set:\n  name: TASKS\n  inherits: HW\n"
+            f"  scope:\n    types: [{_NAME}:task]\n  title: The project's tasks\n"
+        )
+
+    result = CliRunner().invoke(main, ["capabilities", "install", _NAME])
+
+    assert result.exit_code == 0, result.output
+    created = source_repo / "docs" / "rule-sets" / "tasks.md"
+    assert (
+        f"created the project rule set TASKS at docs/rule-sets/tasks.md, inheriting {_NAME}:HW@1"
+    ) in result.output
+    assert f"inherits: [{_NAME}:HW@1]" in created.read_text(encoding="utf-8")
+
+
 def test_install_dry_run_in_the_source_writes_nothing(source_repo: Path) -> None:
     before = _snapshot(_cap_dir(source_repo))
 

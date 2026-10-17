@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-15T16:53:53Z
+      at: 2026-10-17T15:21:16Z
       outcome: unchanged
-      unchanged-because: This change stops an upgrade, and sync's copy, before they write the core lifecycle area over a project's own lifecycle area that lacks ownership.py, which the copy wrote over before. So the page's word that pkit never touches a project's files holds for that area too. The copy writes over the two cases ADR-065 point 13 leaves to issue 1600 as it did before, and this change adds none. The page's tree of areas does not move, so the page holds.
+      unchanged-because: COR-017 now lets a capability's install create the one project rule set it declares, and COR-001 names that install among the writers of project-owned paths. The set is a new file, written only where no file lies at its path and no set of the project's own inherits the capability's method set, and never written again while the capability stays installed. So this page's word that pkit never touches the files you write still holds, as does its account of capabilities as opt-in packages.
 ---
 
 # project-kit

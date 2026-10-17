@@ -2008,10 +2008,13 @@ def uninstall_capability(
 def find_references(target_root: Path, capability_name: str) -> list[tuple[Path, str]]:
     """Find references to the capability in the adopter's tree.
 
-    Two kinds of references count:
+    Three kinds of references count:
     - Citations: `[<name>:...]` tokens in .md / .yaml files.
     - Path references: literal `.pkit/capabilities/<name>/` strings in
       any text file (scripts, configs, prose).
+    - Inheritance: a project rule set that inherits one of the capability's
+      method sets, read as data from its `inherits` (COR-017), however the
+      list is written. The set the capability's install created is one.
 
     Returns a list of (file_path, snippet) pairs describing each match.
     Scans the project tree but skips `.pkit/capabilities/<name>/` itself
@@ -2019,6 +2022,15 @@ def find_references(target_root: Path, capability_name: str) -> list[tuple[Path,
     skips `.git/`, `.venv/`, `node_modules/`, etc.
     """
     findings: list[tuple[Path, str]] = []
+    # Imported here: the rule-set reader imports this module.
+    from project_kit import rule_sets
+
+    discovery = rule_sets.discover_rule_sets(target_root)
+    for rule_set, pin in rule_sets.pins_on_component(discovery, capability_name):
+        findings.append((target_root / rule_set.path, f"inherits {pin}"))
+    # A rule set reported for what it inherits is not reported again for the text
+    # that names it, such as a flow list read as a citation.
+    inheriting = {path.resolve() for path, _snippet in findings}
     citation_re = re.compile(rf"\[{re.escape(capability_name)}:[^\]]+\]")
     path_re = re.compile(rf"\.pkit/capabilities/{re.escape(capability_name)}/")
     self_path = (target_root / ".pkit" / "capabilities" / capability_name).resolve()
@@ -2043,6 +2055,8 @@ def find_references(target_root: Path, capability_name: str) -> list[tuple[Path,
         except OSError:
             continue
         if path.suffix not in {".md", ".yaml", ".yml", ".py", ".sh", ".txt", ".rst"}:
+            continue
+        if path.resolve() in inheriting:
             continue
         try:
             text = path.read_text(encoding="utf-8")

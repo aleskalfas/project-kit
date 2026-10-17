@@ -1825,6 +1825,60 @@ def resolve_pin(discovery: RuleSetDiscovery, pin: Pin) -> tuple[RuleSet | None, 
     )
 
 
+def inheritors(
+    discovery: RuleSetDiscovery, component: str | None, set_name: str
+) -> tuple[RuleSet, ...]:
+    """The project's own rule sets that inherit the set `[<component>:]<set_name>`,
+    directly or not (COR-051 point 7: a set's chain is the set and every set it
+    inherits), in path order.
+
+    A pin names the set when it is written with that component and name, at any
+    major: a pin behind its set still inherits it. The walk follows each other pin
+    to the set it resolves to (`resolve_pin`), project sets and method sets alike,
+    so a set that inherits the named one through another set, a component's
+    included, is found. A pin that resolves to nothing ends its line. The one
+    answer for whoever asks which project sets inherit a set: a capability's
+    install, the declared rule set's reading, never a walk of their own (ADR-057
+    point 2).
+    """
+
+    def inherits(start: RuleSet) -> bool:
+        seen = {id(start)}
+        stack = [start]
+        while stack:
+            for _index, pin in stack.pop().pins:
+                if pin.component == component and pin.set_name == set_name:
+                    return True
+                parent, _problem = resolve_pin(discovery, pin)
+                if parent is not None and id(parent) not in seen:
+                    seen.add(id(parent))
+                    stack.append(parent)
+        return False
+
+    return tuple(
+        rule_set
+        for rule_set in discovery.rule_sets
+        if rule_set.component is None and inherits(rule_set)
+    )
+
+
+def pins_on_component(
+    discovery: RuleSetDiscovery, component: str
+) -> tuple[tuple[RuleSet, Pin], ...]:
+    """Each pin of the project's own rule sets that names a rule set of `component`,
+    with the set that writes it, in path and written order. Read as data, never by
+    pattern, so a pin is found however its list is written. A project set that
+    inherits a component's set only through another project set writes no such pin:
+    that other set does."""
+    return tuple(
+        (rule_set, pin)
+        for rule_set in discovery.rule_sets
+        if rule_set.component is None
+        for _index, pin in rule_set.pins
+        if pin.component == component
+    )
+
+
 @dataclass(frozen=True)
 class PinCheck:
     """One inheritance pin that names an existing rule set: a version relation.

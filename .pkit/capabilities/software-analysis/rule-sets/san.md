@@ -9,8 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-16T21:18:56Z
-          outcome: updated
+          at: 2026-10-17T15:21:35Z
+          outcome: unchanged
+          unchanged-because: DEC-001 changes only its Implications, which now say that installing the capability creates its project rule set, inheriting SAN. The format rule rests on point 1, which is unchanged, and it binds where a set of the project's own that inherits SAN leads, as before.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
