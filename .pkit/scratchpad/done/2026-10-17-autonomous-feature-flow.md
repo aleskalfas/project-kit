@@ -2,6 +2,22 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-10-17
+retired: 2026-10-18
+produced:
+  - https://github.com/aleskalfas/project-kit/issues/1673
+  - https://github.com/aleskalfas/project-kit/issues/1667
+  - https://github.com/aleskalfas/project-kit/issues/1674
+  - https://github.com/aleskalfas/project-kit/issues/1675
+  - https://github.com/aleskalfas/project-kit/issues/1676
+  - https://github.com/aleskalfas/project-kit/issues/1677
+  - https://github.com/aleskalfas/project-kit/issues/1678
+  - https://github.com/aleskalfas/project-kit/issues/1679
+  - https://github.com/aleskalfas/project-kit/issues/1680
+  - https://github.com/aleskalfas/project-kit/issues/1681
+  - https://github.com/aleskalfas/project-kit/issues/1682
+  - https://github.com/aleskalfas/project-kit/issues/1683
+  - https://github.com/aleskalfas/project-kit/issues/1684
+  - https://github.com/aleskalfas/project-kit/issues/1685
 ---
 
 # A big feature through project-kit, ready for autonomous agents
@@ -12,7 +28,7 @@ The design round of #1648. A big feature should move through project-kit from it
 - **Starts from:** the project manager's sketch of 17 October, and this session's practice. Every claim of the sketch was checked. "What the sketch gets right, and what it gets wrong" lists the corrections.
 - **Governed by:** the anchors and friction record (COR-050), software-analysis DEC-001, living-docs DEC-001, and project-management's records on planning, the gate and landing (DEC-006, DEC-026, DEC-028, DEC-032, DEC-054, DEC-055).
 - **Reviewed:** by the critic and the architect. Their findings and the answers are in "Review", at the end.
-- **Decided:** nothing yet. No record changes here. The choices are in "For the maintainer".
+- **Decided:** the maintainer answered each choice on 17 October. His answers are in "For the maintainer", with the issues filed from them. No record changes here.
 
 ## The question
 
@@ -425,22 +441,41 @@ The journey waits for #1393, as the maintainer ordered on 17 October: the capabi
 
 ## For the maintainer
 
-One choice per line, the recommendation first, in the order they depend on each other. They go to the maintainer one at a time.
+One choice per line, the recommendation first, in the order they depend on each other. They went to the maintainer one at a time. His answer of 17 October is under each.
 
 1. **Attribution and acceptance (G2, G12):** one core record, each act attributed to its taker, an acceptance needing someone other than its author — or both left unwritten.
+   - **Answered:** accepting a record or a rule is always the person's act. Agents prepare it, the project manager brings edits in batches, and the commit records whose word it was and when. The identity part, G12, waits.
 2. **Delegation (G1):** the plan grants the work, decisions come batched, chains merge into the plan's integration branch — or a gate-checked delegation of decisions, needing choice 1.
+   - **Answered:** merges into main are his, in batches, each for the exact head he saw. A chain's links merge into the plan's integration branch without him, and the final merge into main is his. A written delegation the gate checks is looked at again once agents have identities of their own.
 3. **How an acceptance reaches you (G2):** given in conversation before the work that depends on it, then listed at the landing as a check — or a pull request for each.
+   - **Answered:** settled by choice 1. Acceptances come in batches, in conversation, before the work that depends on them.
 4. **The stop rules (G3):** each to its home among the permission profiles, the core rules, the pm skill and a PRJ record — or two agents' bodies — or briefs.
+   - **Answered:** each moves to its home. Never editing one's own instructions or settings, and never switching off signing, become deny rules in the permission profiles. Retrying once then stopping, and a recommendation with each question, go into the core rules. Building only on merged work, and stopping when a round outgrows its issue, go into the pm skill. Signing every commit goes into project-kit's project rules or a PRJ record.
 5. **Where a big feature's analysis lands (G4):** first on main, with a planned record naming each gap's task — or with the code, losing the plan's citations — or on an integration branch.
+   - **Answered:** first on main, with a planned record naming each gap's task. A marker a reader can see on a planned use case comes later.
 6. **Sources of what the system must do (G13):** each names its source as a rule's origin does, in the skill — or also as a rule in `SAN`.
+   - **Answered:** a judgement rule of `SAN`. Every new or changed goal, guarantee or requirement names its source, in any form: an anchored record, a *Rationale* or *Imposed by*, existing behaviour anchored to code, or a quoted decision with who made it and when. It is proposed beside RS-SAN-003 to 005 and a rule that a requirement contradicting the record it rests on breaks. All are accepted together, in the major of `SAN` that ships them. The `analysis-author` skill says the same.
 7. **From requirement to test (G5):** a rule of `SAN` with a declared check, shipped with #1393 — or a new signal in the core change check.
+   - **Answered:** settled in the requirements discussion below. #1659 rides on the general mechanism of #1667.
 8. **Test evidence (G6):** CI's test results fill the evidence point in project-kit — or later.
+   - **Answered:** later, as a task under EPIC #1643, once the first requirements carry *Verified by*.
 9. **What waits on you (G11):** a data point other components fill, read by one project-management view — or not yet.
+   - **Answered:** one project-management view, starting with ready merges and records awaiting acceptance. Other kinds come later.
 10. **Drift (G7):** each place's resolver declared beside it and dispatched, its proposals in choice 9's view — or by hand, as now.
+    - **Answered:** each kind of place declares its fixer, and the drift check dispatches it. Its proposals land in choice 9's view. It is built after the view, and after project-kit has its analysis and pages.
 11. **The segment (G8):** the author proposes, and you read it at the release, refining PRJ-002 — or D2 superseded.
+    - **Answered:** the agent proposes the segment with a one-line reason. The merge batch shows it, and he may change it there. The release changelog is the last read. This refines PRJ-002 D2.
 12. **The first journey:** "deliver a feature" under EPIC #1643, after #1393 — or drafted now without its requirements.
+    - **Answered:** settled. "Deliver a feature" is written under EPIC #1643 after #1393, as the worked example.
 
-G9, G10, G14 and G15 need no choice of direction. Each is filed as a task if the maintainer agrees.
+G9, G10, G14 and G15 need no choice of direction. Each is filed as a task if the maintainer agrees. They wait for his word, and none is filed yet.
+
+**Also decided in the requirements discussion of 17 October (#1393):**
+- **The direction of links is fixed.** The analysis points at the solution, never the reverse. This replaces the drivers on records: no record or view anchors an analysis artefact (#1447).
+- **A general core mechanism, #1667,** lets a kind of link declare that a change to its source revisits the targets it names.
+- **G5 rides on it,** through #1659.
+
+**Filed from it:** EPIC #1673, with #1674 to #1680, #1682 and #1684 under it. #1681 under #1547. #1683 and #1685 under #1643. And #1667 and #1659.
 
 ## Review
 
