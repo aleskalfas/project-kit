@@ -794,6 +794,7 @@ class _PointAnchors:
         self.tree = WorkingTree(target_root)
         self._files: frozenset[str] | None = None
         self._records: dict[str, RecordPoints | None] = {}
+        self._paths: dict[str, str | None] = {}
 
     def findings(self, artefact: Artefact) -> Iterable[FrictionFinding]:
         for index, value in _written_anchors(artefact, "record"):
@@ -855,9 +856,12 @@ class _PointAnchors:
 
     def record_path(self, value: str) -> str | None:
         """The file a record anchor's value names in the working tree, through the record
-        resolver (`friction_check.record_file`), whole or on a point; `None` where it names
-        no record."""
-        return record_file(self.root, self.files, split_anchor(value)[0])
+        resolver (`friction_check.record_file`), whole or on a point, resolved once per
+        record; `None` where it names no record."""
+        record = split_anchor(value)[0]
+        if record not in self._paths:
+            self._paths[record] = record_file(self.root, self.files, record)
+        return self._paths[record]
 
     def _read(self, rel: str) -> RecordPoints | None:
         if rel not in self._records:

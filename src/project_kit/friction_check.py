@@ -672,6 +672,7 @@ class Side(Listing):
         self.discovery = discovery
         self._records: dict[str, RecordPoints | None] = {}
         self._contents: dict[str, RecordContent | None] = {}
+        self._paths: dict[str, str | None] = {}
         self._parts: dict[str, AnchoredPart] = {}
         self._named: dict[str, str | None] = {}
 
@@ -741,12 +742,16 @@ class Side(Listing):
         return self._named[path]
 
     def record_path(self, value: str) -> str | None:
-        """The file a record anchor names here, through the record resolver, or None.
+        """The file a record anchor names here, through the record resolver, or None,
+        resolved once per record.
 
         An anchor on one of the record's points names the record's file too:
         the point is read from it (`point_of`).
         """
-        return record_file(self.root, self.files, split_anchor(value)[0])
+        record = split_anchor(value)[0]
+        if record not in self._paths:
+            self._paths[record] = record_file(self.root, self.files, record)
+        return self._paths[record]
 
     def record_points(self, rel: str) -> RecordPoints | None:
         """The record at `rel` here, its points read once (`record_points.read_points`),
