@@ -627,6 +627,106 @@ def _repository_findings(
             )
         )
 
+    declared_set = raw.get(PROJECT_RULE_SET_KEY)
+    if isinstance(declared_set, Mapping):
+        findings.extend(
+            _project_rule_set_findings(
+                raw,
+                cast("Mapping[Any, Any]", declared_set),
+                component_dir,
+                _component_name(raw, expected_name, component_dir),
+            )
+        )
+
+    return findings
+
+
+#: The key a capability declares its one project rule set under (COR-017), which
+#: `declared_rule_sets` reads.
+PROJECT_RULE_SET_KEY = "project_rule_set"
+
+
+def _project_rule_set_findings(
+    raw: Mapping[Any, Any], declared: Mapping[Any, Any], component_dir: Path, name: str
+) -> list[PackageFinding]:
+    """The project rule set a capability declares (COR-017), against what it ships.
+
+    Its install creates the set inheriting one of the capability's own method sets at
+    that set's major, so the set it names must be one the capability ships, with a
+    version that reads. The created set's name must be none of the capability's own
+    sets' names, or install would always find it taken (COR-051 point 3). Its scope
+    selects by the capability's own types, so each is one the capability declares
+    (COR-056 point 2). An adapter's declaration creates nothing: install is a
+    capability's."""
+    from project_kit import rule_sets  # the rule-set reader reads package metadata too
+
+    findings: list[PackageFinding] = []
+    _error = _error_appender(findings)
+    path = f"/{PROJECT_RULE_SET_KEY}"
+    component: Any = raw.get("component")
+    kind: Any = (
+        cast("Mapping[Any, Any]", component).get("kind") if isinstance(component, Mapping) else None
+    )
+    if kind == "adapter":
+        _error(
+            path,
+            "an adapter declares a project rule set: only a capability's install creates "
+            "one (COR-017), so this declaration creates nothing — declare it in a "
+            "capability's package metadata.",
+        )
+        return findings
+    shipped = {
+        rule_set.name: rule_set
+        for rule_set in rule_sets.component_rule_sets(name, component_dir).rule_sets
+        if rule_set.name is not None
+    }
+    inherits = declared.get("inherits")
+    if isinstance(inherits, str):
+        method = shipped.get(inherits)
+        if method is None:
+            listed = f" (it ships: {sorted(shipped)})." if shipped else " (it ships none)."
+            _error(
+                f"{path}/inherits",
+                f"the declared project rule set inherits {inherits!r}, which is no method rule "
+                f"set the capability ships under rule-sets/{listed}",
+            )
+        elif method.major is None:
+            _error(
+                f"{path}/inherits",
+                f"the declared project rule set inherits {inherits!r}, whose version in "
+                f"{method.path} does not read, so install cannot pin its major (COR-051 "
+                f"point 7).",
+            )
+    set_name = declared.get("name")
+    if isinstance(set_name, str) and set_name in shipped:
+        _error(
+            f"{path}/name",
+            f"the declared project rule set is named {set_name!r}, as one of the capability's "
+            f"own method sets is: rule-set names are unique (COR-051 point 3), so install "
+            f"would always find the name taken.",
+        )
+    friction = raw.get("friction")
+    registry: Any = (
+        cast("Mapping[Any, Any]", friction).get("types") if isinstance(friction, Mapping) else None
+    )
+    own: set[str] = (
+        {f"{name}:{t}" for t in cast("Mapping[Any, Any]", registry)}
+        if isinstance(registry, Mapping)
+        else set()
+    )
+    scope = declared.get("scope")
+    types: Any = (
+        cast("Mapping[Any, Any]", scope).get("types") if isinstance(scope, Mapping) else None
+    )
+    for index, type_name in enumerate(_items(types)):
+        if isinstance(type_name, str) and type_name not in own:
+            _error(
+                f"{path}/scope/types/{index}",
+                f"the declared project rule set selects type {type_name!r}, which is not one "
+                f"the capability declares under friction.types: a capability cannot know a "
+                f"project's paths or its other types, so the set's scope names its own types "
+                f"(COR-056 point 2).",
+            )
     return findings
 
 

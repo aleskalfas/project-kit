@@ -6036,6 +6036,39 @@ def show_capability_cmd(name: str, as_json: bool) -> None:
     click.echo(plans.to_json(view) if as_json else plans.render_show(view), nl=False)
 
 
+@capabilities.command("project-rule-set")
+@click.argument("name")
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def project_rule_set_cmd(name: str, as_json: bool) -> None:
+    """Show the project rule set an installed capability declares (COR-017).
+
+    Read from the project's installed copy of the capability: the set it declares,
+    the project's own sets that inherit its method set, directly or not, and,
+    where none does, whether its install creates the set, the file and the text,
+    or why it creates none. The answer a migration of the capability reads, for a
+    project that installed it before it declared the set (ADR-057 point 1). Writes
+    nothing, and runs under any pkit: no sync guard, as `capabilities show`.
+    Exit 0 when answered, a capability that declares no set included; 1 when the
+    capability is not installed or not in this project tree.
+    """
+    from project_kit import capabilities as caps
+    from project_kit import declared_rule_sets
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    if not caps.is_installed(target_root, name):
+        raise click.ClickException(f"capability {name!r} is not installed.")
+    component_dir = target_root / ".pkit" / "capabilities" / name
+    planned = declared_rule_sets.plan(target_root, name, component_dir)
+    if as_json:
+        click.echo(declared_rule_sets.to_json(name, planned), nl=False)
+    else:
+        click.echo(declared_rule_sets.render_human(name, planned), nl=False)
+
+
 def _plan_flags(plan: bool, as_json: bool) -> None:
     """`--json` is the machine form of a plan; alone it asks for nothing."""
     if as_json and not plan:
@@ -6253,6 +6286,7 @@ def install_capability_cmd(
             f"at {installed_path.relative_to(target_root)}/{skip_note}",
         )
     )
+    _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
 
     if not dry_run:
         # Re-run installed adapter primitives so the harness picks up
@@ -6301,9 +6335,32 @@ def _install_capability_in_source(
             f"repository, the methodology's source, so nothing {copied} copied (ADR-059).",
         )
     )
+    _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
 
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
+
+
+def _create_declared_rule_set(
+    target_root: Path, capability_source: CapabilitySource, *, dry_run: bool
+) -> None:
+    """Create the one project rule set the capability declares, once for this install
+    (COR-017): only where no set of the project's own inherits its method set,
+    directly or not, and never over a file or a name another set declares. Running
+    install is the consent. Says what it did, and why it created none. Read from the
+    copy being installed, which is the installed copy once the copy has run."""
+    from project_kit import declared_rule_sets
+
+    planned = declared_rule_sets.plan(target_root, capability_source.name, capability_source.path)
+    if planned is None:
+        return
+    created = True
+    if planned.creates and not dry_run:
+        try:
+            declared_rule_sets.create(target_root, planned)
+        except FileExistsError:
+            created = False
+    click.echo(declared_rule_sets.outcome_line(planned, dry_run=dry_run, created=created))
 
 
 def _refuse_collisions_in_place(target_root: Path, capability_source: CapabilitySource) -> None:

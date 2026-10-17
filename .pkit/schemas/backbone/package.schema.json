@@ -83,6 +83,9 @@
     },
     "friction": {
       "$ref": "#/$defs/friction"
+    },
+    "project_rule_set": {
+      "$ref": "#/$defs/project-rule-set"
     }
   },
   "$defs": {
@@ -672,6 +675,54 @@
         "project-places": {
           "description": "Whether a project may give this type to its own places, as `{path, type}` in its configuration. Default `false`: an entry that does not say admits no project place.",
           "type": "boolean"
+        }
+      }
+    },
+    "project-rule-set": {
+      "title": "The one project rule set a capability declares (COR-017)",
+      "description": "A capability that ships a method rule set may declare one project rule set, which its install creates once for each install, where no set of the project's own inherits the method set, directly or not. `name` is the set's name. `inherits` names one of the capability's own method sets, which the created set pins at its major. `scope.types` selects by the capability's own types, `<capability>:<type>`, since a capability cannot know a project's paths. `title` heads the created file. Python checks three things more: `inherits` names a method set the capability ships, whose version reads, `name` is none of the capability's own sets' names, and each type is one the capability declares.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "inherits",
+        "scope",
+        "title"
+      ],
+      "properties": {
+        "name": {
+          "description": "The created set's name, as a rule set's `rule-set` field takes it (COR-051 point 3).",
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9]*$"
+        },
+        "inherits": {
+          "description": "The name of one of the capability's own method rule sets, written bare.",
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9]*$"
+        },
+        "scope": {
+          "description": "The created set's scope: the capability's own types alone.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "types"
+          ],
+          "properties": {
+            "types": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z](?:[a-z0-9-]*[a-z0-9])?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+              }
+            }
+          }
+        },
+        "title": {
+          "description": "One line, what the set is for: the created file's heading follows its name with it.",
+          "type": "string",
+          "pattern": "^[^\\n]*\\S[^\\n]*$"
         }
       }
     },
