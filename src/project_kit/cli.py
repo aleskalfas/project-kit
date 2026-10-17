@@ -7596,14 +7596,13 @@ def new_schema(
 def new_capability(name: str) -> None:
     """Scaffold a new capability at .pkit/capabilities/<name>/ (per COR-017).
 
-    Stamps `package.yaml`, an adopter-facing `README.md`, and the five
-    standard subdirectories (decisions, skills, agents, scripts, schemas)
-    so the author has a complete skeleton to populate.
+    Stamps `package.yaml`, an adopter-facing `README.md`, and six empty
+    subdirectories (decisions, skills, agents, scripts, schemas,
+    migrations) so the author has a complete skeleton to populate.
 
-    Unlike `pkit new adapter`, capabilities are NOT registered
-    in the backbone manifest by the scaffolding step — they are
-    kit-shipped from the source-of-edit's perspective, and adopters
-    register them per-project via `pkit capabilities install <name>`.
+    Unlike `pkit new adapter`, it registers nothing. Once the capability is
+    built, `pkit capabilities register <name>` records it in the backbone
+    manifest with origin `incubated-in-repo` and deploys it (COR-031).
     """
     target_root = find_target_root()
     if target_root is None:

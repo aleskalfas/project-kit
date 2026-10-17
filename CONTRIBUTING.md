@@ -185,7 +185,7 @@ The `core/` corpus is treated as an axiom system. A record may use only:
 
 It must not lean on tooling, commands, or conventions that the kit itself has not yet recorded a decision about. Concretely: do not use `pkit sync`, `pkit init`, `pkit` or any other kit-internal command name inside core records until that name is decided in its own record. Use generic phrasing instead — "the kit's sync operation", "first-time install", "the kit's CLI" — or defer the discussion to a future record.
 
-When a record needs to reach for something not yet defined, the right move is either to introduce that concept in its own earlier record or to defer the topic to a future one. Forward-pointer "see also" references are fine for navigation, but no record should *depend* on a later one.
+When a record needs to reach for something not yet defined, the right move is either to introduce that concept in its own earlier record or to defer the topic to a future one. Forward-pointer "see also" references are fine for navigation, but no record should *depend* on a later one. A record refined in place is the exception: the refinement may cite records accepted before it was made, even when they came after the record.
 
 This keeps the corpus self-supporting: any reader can start at COR-001 and follow forward without needing to know what the kit's CLI eventually looks like, what its sync mechanism is named, or what its distribution channel will be.
 
