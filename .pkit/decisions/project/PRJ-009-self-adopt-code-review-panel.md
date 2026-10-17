@@ -30,7 +30,7 @@ Building and shipping the panel (released in v1.149.0) did not turn it on for pr
 
 - **project-kit's code-carrying PRs now require the panel.** A PR whose diff touches any non-documentation file resolves `code-reviewer` + `security-reviewer` + `docs-reviewer` into the required-reviewer set (the `touches-code` floor); `docs-reviewer` also rides the `type:*` wildcard for classified docs-only PRs. Each must post a fresh `APPROVED` verdict ([project-management:DEC-028]) — or be waived per-reviewer with an audited `--bypass-reviewer` ([project-management:DEC-050]) — before `done-work` passes.
 - **The panel agents deploy** via the claude-code adapter alongside the existing agents.
-- **Self-host:** in the methodology's source, `pkit capabilities upgrade` re-deploys a capability in place, and the source holds no installed record of a capability to refresh (ADR-059). Each capability there is read from its `package.yaml`, which the release step writes (PRJ-007).
+- **Self-host:** in the methodology's source, `pkit capabilities upgrade` re-deploys a capability in place, and the source holds no capability manifest to refresh (ADR-059). Each capability there is read from its `package.yaml`, which the release step writes (PRJ-007).
 - **Not an adopter surface change:** the capability and its behaviour shipped in v1.149.0; this only flips project-kit's own install-state, so it declares no changelog entry.
 
 ## Related
@@ -38,3 +38,4 @@ Building and shipping the panel (released in v1.149.0) did not turn it on for pr
 - EPIC #725 (the code-review discipline); report #715 (the gap this closes on our repo).
 - [software-engineering:DEC-002] — the panel; [project-management:DEC-032] — the reviewer-contribution socket; [project-management:DEC-050] — the per-reviewer override; [project-management:DEC-028] — the verdict grammar the gate consumes.
 - [COR-030] — capability dependencies; [COR-031] — in-repo capability registration.
+- [ADR-059] — the methodology's source repository; [PRJ-007] — the release step keeps the self-host backbone manifest current.
