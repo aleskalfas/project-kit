@@ -1,0 +1,15 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+  pr: "1642"
+body: >
+  A changeset can say that a capability needs a version of another capability:
+  `requires_capabilities` maps the capability it depends on to `release`, the
+  version this release writes for it, or to a version of it that has shipped.
+  `pkit release apply` raises the floor of that capability's entry in the
+  dependent's `requires_capabilities`, never lowers it, and states the new floor
+  in the changelog, as it does for a backbone floor. `release check` and
+  `release lint` refuse a declaration the release cannot write. `release plan`
+  and `release apply` also warn when a capability's range excludes the version
+  a release writes, or the tree carries, for a capability it depends on.

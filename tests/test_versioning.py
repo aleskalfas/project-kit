@@ -776,3 +776,136 @@ def test_is_at_or_below_orders_by_pep_440(version: str, ceiling: str, at_or_belo
 def test_is_at_or_below_refuses_what_is_not_a_version() -> None:
     with pytest.raises(click.ClickException, match="'latest' is not valid PEP 440"):
         versioning.is_at_or_below("latest", "1.5.0")
+
+
+# --- The floor on another capability (PRJ-002 D4) ---------------------------
+
+_DEPENDENT = (
+    "schema_version: 1\n"
+    "component:\n"
+    "  kind: capability\n"
+    "  name: software-engineering\n"
+    "  version: 0.2.0\n"
+    'requires_backbone: ">=1.0.0,<2.0.0"\n'
+    "# The panel folds through project-management's merge gate.\n"
+    "requires_capabilities:\n"
+    "  - name: project-management\n"
+    '    version: ">=0.54.0,<1.0.0"  # the type axis\n'
+    '  - version: ">=0.1.0"\n'
+    "    name: 'living-docs'\n"
+    "    optional: true\n"
+    "  - name: evidence\n"
+    '    version: "*"\n'
+    "description: After the block.\n"
+)
+
+
+def test_requires_capabilities_entries_reads_each_block_item() -> None:
+    """Each item's `name:` and `version:`, on the `- ` line or a line of its own;
+    a value of another shape has no floor to raise."""
+    entries = versioning.requires_capabilities_entries(_DEPENDENT)
+
+    assert [(e.name, e.range, e.floor) for e in entries] == [
+        ("project-management", ">=0.54.0,<1.0.0", "0.54.0"),
+        ("living-docs", ">=0.1.0", "0.1.0"),
+        ("evidence", None, None),
+    ]
+    assert versioning.requires_capability_entry(_DEPENDENT, "evidence") is None
+    assert versioning.requires_capability_entry(_DEPENDENT, "absent") is None
+
+
+def test_raise_capability_floor_rewrites_only_the_floor() -> None:
+    """The upper bound, the comment, `optional:` and every other line survive, and
+    the changed line is one the changeset guard admits in a release."""
+    raised = versioning.raise_requires_capability_floor(_DEPENDENT, "project-management", "0.55.0")
+
+    assert raised is not None
+    updated, changed = raised
+    assert changed == ">=0.54.0 -> >=0.55.0"
+    assert updated == _DEPENDENT.replace(">=0.54.0,<1.0.0", ">=0.55.0,<1.0.0")
+    (line,) = [
+        new
+        for old, new in zip(_DEPENDENT.splitlines(), updated.splitlines(), strict=True)
+        if old != new
+    ]
+    assert versioning.REQUIRES_CAPABILITIES_RELEASE_LINE.match(line)
+
+    optional = versioning.raise_requires_capability_floor(_DEPENDENT, "living-docs", "0.3.0")
+    assert optional is not None
+    assert "  - version: \">=0.3.0\"\n    name: 'living-docs'\n    optional: true\n" in optional[0]
+
+
+def test_raise_capability_floor_is_raise_only() -> None:
+    assert (
+        versioning.raise_requires_capability_floor(_DEPENDENT, "project-management", "0.54.0")
+        is None
+    )
+    assert (
+        versioning.raise_requires_capability_floor(_DEPENDENT, "project-management", "0.40.0")
+        is None
+    )
+
+
+@pytest.mark.parametrize(
+    ("text", "capability", "version"),
+    [
+        (_DEPENDENT, "evidence", "0.6.0"),  # a range of another shape
+        (_DEPENDENT, "absent", "0.1.0"),
+        (_DEPENDENT, "project-management", "0.55.0rc1"),  # not a release version
+        # A flow list is not read.
+        (
+            'requires_capabilities: [{name: project-management, version: ">=0.54.0"}]\n',
+            "project-management",
+            "0.55.0",
+        ),
+        # Listed twice: which entry the need is on cannot be told.
+        (
+            "requires_capabilities:\n"
+            '  - name: project-management\n    version: ">=0.54.0"\n'
+            '  - name: project-management\n    version: ">=0.50.0"\n',
+            "project-management",
+            "0.55.0",
+        ),
+    ],
+)
+def test_raise_capability_floor_refuses_an_entry_it_cannot_raise(
+    text: str, capability: str, version: str
+) -> None:
+    with pytest.raises(click.ClickException):
+        versioning.raise_requires_capability_floor(text, capability, version)
+
+
+def test_a_key_mentioned_in_a_comment_opens_no_block() -> None:
+    text = (
+        "# requires_capabilities:\n"
+        '#   - name: project-management\n#     version: ">=0.1.0"\n'
+        'requires_backbone: ">=1.0.0"\n'
+    )
+    assert versioning.requires_capabilities_entries(text) == []
+
+
+def test_a_lone_dash_item_and_a_column_zero_item_are_read_and_their_writes_admitted() -> None:
+    """Under a `-` alone on its line the keys sit at their own indent, and a list
+    may sit at the key's column: each is read and raised, and the line the raise
+    rewrites is one the changeset guard admits in a release."""
+    text = (
+        "requires_capabilities:\n"
+        "-\n"
+        "  name: project-management\n"
+        '  version: ">=0.54.0,<1.0.0"\n'
+        '- version: ">=0.1.0"\n'
+        "  name: living-docs\n"
+    )
+
+    assert [(e.name, e.floor) for e in versioning.requires_capabilities_entries(text)] == [
+        ("project-management", "0.54.0"),
+        ("living-docs", "0.1.0"),
+    ]
+    for capability, version, line in (
+        ("project-management", "0.55.0", '  version: ">=0.55.0,<1.0.0"'),
+        ("living-docs", "0.2.0", '- version: ">=0.2.0"'),
+    ):
+        raised = versioning.raise_requires_capability_floor(text, capability, version)
+        assert raised is not None
+        assert line in raised[0].splitlines()
+        assert versioning.REQUIRES_CAPABILITIES_RELEASE_LINE.match(line)
