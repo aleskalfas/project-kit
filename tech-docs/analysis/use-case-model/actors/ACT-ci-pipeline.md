@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-17T17:18:29Z
+      at: 2026-10-17T20:04:00Z
       outcome: unchanged
-      unchanged-because: PRJ-002 drops stale phrases on its first version, its promotion from the hybrid and the move past 1.0, and decides nothing new. A pull request declares each surface change in a changeset the guard checks, and the release cuts the tag, so the Note's two steps hold.
+      unchanged-because: COR-050 changes what a whole record anchor stands on and lets cycles and the upstream-first order follow record anchors. The actor's needs and its Core note rest on the checks running unattended and binding once required (point 12), which the change leaves as it was.
 ---
 
 # ACT-ci-pipeline — CI pipeline

@@ -74,6 +74,11 @@ pkit:
     revalidated:
       at: 2026-10-17T17:18:35Z
       outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "This page states the friction checks as the code runs them: a whole record anchor judged on the record's file, and findings ordered upstream first along artefact anchors only. COR-050 reads a whole record anchor on the record's content and follows record anchors too. The build round of #1647, which changes that code, updates this page."
 ---
 
 # Command-line interface

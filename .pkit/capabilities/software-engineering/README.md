@@ -13,9 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-17T14:56:31Z
+      at: 2026-10-17T20:03:49Z
       outcome: unchanged
-      unchanged-because: DEC-032 D2 lets a contributor name an agent core ships and declare project-management as an optional dependency. D5 makes a contribution active once the agent it names is deployed, reading no dependency edge, keeps a reviewer another contribution names, and lets opting out clear an undeployed agent. This README describes the software-engineering panel, whose agents the capability ships and whose project-management dependency is required, and the opt-out of one of its reviewers. Each holds under the refined record, so it holds.
+      unchanged-because: COR-050 changes what a whole record anchor stands on, the record's content without its container, and lets cycles and the upstream-first order follow record anchors. This page says how the docs-reviewer checks a change's answers under point 3, which the change leaves as it was.
 ---
 
 # software-engineering capability
