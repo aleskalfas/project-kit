@@ -9,8 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-16T21:18:56Z
-          outcome: updated
+          at: 2026-10-17T14:56:33Z
+          outcome: unchanged
+          unchanged-because: This change adds to software-analysis DEC-001 a paragraph on the review contribution in point 10, two Context lines naming COR-057 and COR-030, and an Implications sentence. The rule rests on each kind's declared structure, which the change leaves as it was, so it holds.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
