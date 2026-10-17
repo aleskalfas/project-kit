@@ -14,8 +14,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block"]
     revalidated:
-      at: 2026-10-17T18:28:12Z
-      outcome: updated
+      at: 2026-10-17T21:10:06Z
+      outcome: unchanged
+      unchanged-because: "COR-049 point 5 and COR-051 point 6 take the project's default rule-set folder, rule-sets directly under the internal root, out of recording on first use: a change of root declares the old folder as a place instead, and validation fails on a file a hand edit leaves behind. This page's space definitions lie in the capability's own definitions location, which COR-049 point 5 still records, so what it says of where definitions go and how a root change leaves them still holds."
 ---
 
 # living-docs capability

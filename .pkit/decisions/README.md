@@ -19,9 +19,9 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-17T15:21:30Z
+      at: 2026-10-17T21:10:02Z
       outcome: unchanged
-      unchanged-because: COR-051 point 6 now names a capability's install, and its migration for an earlier install, as the writers of the one project rule set the capability declares, and COR-001 names that install among the writers of project-owned paths. rule_sets.py gains the answer of which project sets inherit a set. This page's summary of rule sets, that a project rule set is the project's and cited bare, and of the no-shared-files invariant, still holds.
+      unchanged-because: "COR-051 point 6 adds what a change of the internal root does to the project's default rule-set folder: the backbone's configuration command declares the old folder as a place, and validation fails on a rule-set file a hand edit leaves behind. This page says a project rule set is the project's, cited bare, and lies under the internal documentation root by default, and lists what validation checks in every rule set. All of that still holds."
 ---
 
 # Decision records
