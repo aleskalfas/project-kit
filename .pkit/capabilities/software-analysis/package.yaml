@@ -7,11 +7,12 @@ description: Software analysis — actors, use cases, journeys and glossary kept
 requires_backbone: ">=1.149.0,<2.0.0"
 # The review contribution (`review-contributions.yaml`, DEC-001 point 10) names
 # project-management's floor on ruled artefacts, which an older release
-# refuses. So an installed project-management must have the floor. The
-# changeset that adds the contribution raises this floor to the release that
-# ships it, at that release (`requires_capabilities: {project-management:
-# release}`). The dependency is optional, since the capability works without
-# it (COR-030).
+# refuses. So an installed project-management must have the floor, and the
+# range starts at its first release with it once that release is made. A
+# change cannot name a version before it is released, so the release writes
+# that start, on the declaration of the changeset that adds the contribution
+# (`requires_capabilities: {project-management: release}`). The dependency is
+# optional, since the capability works without it (COR-030).
 requires_capabilities:
   - name: project-management
     version: ">=0.54.0,<1.0.0"
