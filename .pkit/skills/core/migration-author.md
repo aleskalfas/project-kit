@@ -80,7 +80,7 @@ The command stamps `<NNN>-<slug>.sh` in the right `<X.Y.0>/` directory, where `N
 
 ### 6. Implement the migration
 
-Open the stamped script and replace the TODO body with the actual change. Three requirements (per COR-010 / lifecycle spec's "Script contract"):
+Open the stamped script and replace the TODO body with the actual change. Four requirements (per COR-010 / lifecycle spec's "Script contract"):
 
 - **Idempotent** — detect already-applied state and exit cleanly. The stamped boilerplate shows the pattern:
 
@@ -96,7 +96,14 @@ Open the stamped script and replace the TODO body with the actual change. Three 
 
 - **Updates the affected resource.** For derivable resources (files in the core content directory, labels on a tracker), the migration mutates the resource directly — no manifest update. For non-derivable resources (opaque backend IDs in `backend_state`), the migration updates the manifest entry.
 
-Use only the dependencies the project ships with — `bash`, standard UNIX tools, `git`, `gh`, `yq` if YAML manipulation is needed.
+- **Calls `pkit` by its bare name, where it runs one.** It reaches the running pkit, the one that runs the transition. The migration runner puts a `pkit` first on the script's `PATH` that runs the running pkit's code and never enters the router. So neither the pin nor the operator's `PATH` decides which release answers.
+  - Set no variable that stops the router, `PKIT_NO_ROUTE` or `PKIT_ROUTED`. Commands read them too, so one would change what they do.
+  - Derive nothing from where `pkit` lives. The runner's `pkit` lies in a temporary folder, gone after the run.
+  - Need no `command -v pkit` check: inside a transition it always passes. A script may keep one for a run outside a transition, by hand or in a test.
+  - Read what the backbone computes through its reading commands, and apply the answer in the script.
+  - Never run a command that propagates, seeds or merges, moves a recorded version, writes the pin, or changes which components are installed. Examples are `sync`, `upgrade`, `pin` and `capabilities install`. The lifecycle spec's "Script contract" lists them, and review holds the rule.
+
+Use only the dependencies the project ships with — `bash`, standard UNIX tools, `pkit`, `git`, `gh`, `yq` if YAML manipulation is needed.
 
 ### 7. Self-check
 
@@ -107,9 +114,10 @@ Walk the script against the contract:
 - *Is it idempotent — would re-running on already-migrated state be a no-op?*
 - *For a backbone migration: does it act only on a positive sign that its change is needed, and never delete by a path's name or position alone?*
 - *Does it update the affected resource (or the relevant manifest entry, for non-derivable state)?*
+- *Does each `pkit` call use the bare name, with no routing variable and nothing taken from where `pkit` lives? Does it run no command the "Script contract" rules out?*
 - *Did you place it in the right tier × version × scope ordering?*
 
-Test the script locally if practical: on a fresh checkout and, for a backbone migration, on a state that never needed it and on one the project changed after it first ran.
+Test the script locally if practical: on a fresh checkout and, for a backbone migration, on a state that never needed it and on one the project changed after it first ran. Run by hand, a script's bare `pkit` is the shell's, routed by the project's pin if it has one. For such a run, put first on the `PATH` a `pkit` of the release that ships the migration.
 
 ### 8. Commit
 

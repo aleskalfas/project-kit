@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-10-16T14:21:50Z
+      at: 2026-10-17T20:12:02Z
       outcome: unchanged
-      unchanged-because: area-author now says its stamp refuses where the area's folder exists and names all twelve core areas, and decision-author sets supersedes only for a record replaced whole. This page lists each skill, its paired command and what it walks the author through, which neither change touches, so it holds.
+      unchanged-because: migration-author's step 6 now requires a script to call pkit by its bare name, under the rules of the lifecycle README's script contract, and its step 7 checks that. This page names the skill, its paired command and what it walks the author through, body drafting and self-checks among them, which still holds.
 ---
 
 # Skills
