@@ -894,6 +894,11 @@ def test_a_release_that_raises_a_capability_floor_is_a_release_diff(tmp_path: Pa
     assert 'version: ">=0.55.0,<1.0.0"' in living
     assert "Requires project-management >=0.55.0." in (repo / "CHANGELOG.md").read_text()
     assert release.is_release_diff(source_kit, "main")
+    # The raised floor rides on the declaration the release consumed (PRJ-002 D4).
+    result = release.check_changesets(source_kit, "main")
+    assert [e.capability for e in result.range_edits] == ["project-management"]
+    assert result.refused_ranges == []
+    assert result.ok
 
 
 def test_a_release_that_widens_a_capability_bound_is_a_release_diff(tmp_path: Path) -> None:
@@ -935,6 +940,8 @@ def test_a_release_that_widens_a_capability_bound_is_a_release_diff(tmp_path: Pa
     assert 'version: ">=0.54.0,<2.0.0"' in living
     assert "Runs on project-management <2.0.0." in (repo / "CHANGELOG.md").read_text()
     assert release.is_release_diff(source_kit, "main")
+    # The widened bound rides on the declaration the release consumed.
+    assert release.check_changesets(source_kit, "main").ok
 
 
 def test_a_runs_on_on_a_none_changeset_of_an_untouched_component_is_stray(
@@ -1032,6 +1039,305 @@ def test_release_check_refuses_a_capability_floor_field_it_cannot_read(
 
     assert result.exit_code == 1, result.output
     assert "`requires_capabilities` maps each capability the component needs" in result.output
+
+
+# --- A branch edits a range only to correct one that excludes a carried version
+# (PRJ-002 D1, #1663) -----------------------------------------------------------
+
+_LIVING_DOCS = ".pkit/capabilities/living-docs/package.yaml"
+_PROJECT_MANAGEMENT = ".pkit/capabilities/project-management/package.yaml"
+
+
+def _dependent(version_range: str, *, quote: str = '"', extra: str = "") -> str:
+    """living-docs's package file, its one entry on project-management at
+    `version_range`; `extra` adds entries after it."""
+    return (
+        _package("capability", "living-docs", "0.1.0", ">=1.0.0,<2.0.0")
+        + "requires_capabilities:\n"
+        + f"  - name: project-management\n    version: {quote}{version_range}{quote}\n"
+        + "    optional: true\n"
+        + extra
+    )
+
+
+def _range_base(source_kit: Path, carried: str, version_range: str) -> None:
+    """Land on `main` project-management at `carried` and living-docs depending on
+    it at `version_range`, then restart `feature` from it."""
+    repo = source_kit.parent
+    _git(repo, "checkout", "-q", "main")
+    _write_files(
+        repo,
+        {
+            _PROJECT_MANAGEMENT: _package(
+                "capability", "project-management", carried, ">=1.0.0,<2.0.0"
+            ),
+            _LIVING_DOCS: _dependent(version_range),
+        },
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "the dependency")
+    _git(repo, "checkout", "-q", "-B", "feature")
+
+
+def _branch_writes(source_kit: Path, files: dict[str, str]) -> None:
+    """Commit `files` on the branch with a `patch` changeset for each component
+    whose tree they touch, so only the range tie can fail."""
+    repo = source_kit.parent
+    _write_files(repo, files)
+    for path in files:
+        _add_changeset(source_kit, Path(path).parent.name, "patch")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "the branch")
+
+
+@pytest.mark.parametrize(
+    ("carried", "before", "after"),
+    [
+        # The upper bound excludes the carried major: raised to its next major...
+        ("1.0.0", ">=0.40.0,<1.0.0", ">=0.40.0,<2.0.0"),
+        # ...or less far, still above it.
+        ("1.0.0", ">=0.40.0,<1.0.0", ">=0.40.0,<1.0.1"),
+        ("0.55.0", ">=0.40.0,<0.55.0", ">=0.40.0,<1.0.0"),
+        # A floor above the carried version falls to it.
+        ("0.54.0", ">=0.60.0,<1.0.0", ">=0.54.0,<1.0.0"),
+        ("0.54.0", ">=0.60.0", ">=0.54.0"),
+    ],
+)
+def test_a_branch_may_correct_a_range_that_excludes_the_carried_version(
+    tmp_path: Path, carried: str, before: str, after: str
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    _range_base(source_kit, carried, before)
+    _branch_writes(source_kit, {_LIVING_DOCS: _dependent(after)})
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert [(e.dependent, e.capability, e.corrects) for e in result.range_edits] == [
+        ("living-docs", "project-management", True)
+    ]
+    assert result.refused_ranges == []
+    assert result.ok
+
+
+@pytest.mark.parametrize(
+    ("carried", "before", "after", "says"),
+    [
+        # The range admits the carried version: nothing to correct, so a floor or a
+        # bound moves only at the release, on declaration.
+        ("0.54.0", ">=0.40.0,<1.0.0", ">=0.40.0,<2.0.0", "admits project-management 0.54.0"),
+        ("0.54.0", ">=0.40.0,<1.0.0", ">=0.54.0,<1.0.0", "admits project-management 0.54.0"),
+        # A correction past what the carried version needs.
+        ("1.0.0", ">=0.40.0,<1.0.0", ">=0.40.0,<3.0.0", "to <2.0.0 at most"),
+        ("1.0.0", ">=0.40.0,<1.0.0", ">=0.40.0", "to <2.0.0 at most"),
+        ("0.54.0", ">=0.60.0,<1.0.0", ">=0.10.0,<1.0.0", "lower the floor to 0.54.0"),
+        # A correction that also moves the bound that admitted the carried version.
+        ("1.0.0", ">=0.40.0,<1.0.0", ">=0.50.0,<2.0.0", "change nothing else"),
+        ("0.54.0", ">=0.60.0,<1.0.0", ">=0.54.0,<2.0.0", "change nothing else"),
+        # Still excluding it is no correction.
+        ("1.0.0", ">=0.40.0,<0.90.0", ">=0.40.0,<1.0.0", "to <2.0.0 at most"),
+        # A range of another shape is not read as a correction.
+        ("1.0.0", ">=0.40.0,<1.0.0", ">=0.40,<2", '">=X.Y.Z,<A.B.C" or ">=X.Y.Z"'),
+    ],
+)
+def test_every_other_edit_of_a_range_is_refused(
+    tmp_path: Path, carried: str, before: str, after: str, says: str
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    _range_base(source_kit, carried, before)
+    _branch_writes(source_kit, {_LIVING_DOCS: _dependent(after)})
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.missing == []
+    [edit] = result.refused_ranges
+    assert edit.problem is not None
+    assert edit.problem.startswith(
+        f"living-docs: its range on project-management moves from {before!r} to {after!r}"
+    )
+    assert says in edit.problem
+    assert not result.ok
+
+
+def test_the_escape_hatch_does_not_waive_the_range_tie(tmp_path: Path) -> None:
+    source_kit = _make_repo(tmp_path)
+    _range_base(source_kit, "0.54.0", ">=0.40.0,<1.0.0")
+    _commit_change(source_kit, _LIVING_DOCS, _dependent(">=0.40.0,<2.0.0"))
+
+    result = release.check_changesets(source_kit, "main", skip=True)
+
+    assert result.surface_ok
+    assert len(result.refused_ranges) == 1
+    assert not result.ok
+
+
+@pytest.mark.parametrize(
+    "after",
+    [
+        _dependent(">=0.40.0,<1.0.0", quote="'"),  # re-quoted: YAML reads the same range
+        _dependent(  # an entry added beside it: the branch that adds a dependency writes it
+            ">=0.40.0,<1.0.0", extra='  - name: evidence\n    version: ">=0.5.0,<1.0.0"\n'
+        ),
+        _package("capability", "living-docs", "0.1.0", ">=1.0.0,<2.0.0"),  # entry removed
+    ],
+)
+def test_an_entry_added_removed_or_requoted_is_no_range_edit(tmp_path: Path, after: str) -> None:
+    source_kit = _make_repo(tmp_path)
+    _range_base(source_kit, "0.54.0", ">=0.40.0,<1.0.0")
+    _branch_writes(source_kit, {_LIVING_DOCS: after})
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.range_edits == []
+    assert result.ok
+
+
+def test_the_carried_version_is_the_one_the_base_carries(tmp_path: Path) -> None:
+    """A branch that moves the capability's version beside the range corrects
+    nothing: the range at the base admits the version the base carries."""
+    source_kit = _make_repo(tmp_path)
+    _range_base(source_kit, "0.54.0", ">=0.40.0,<1.0.0")
+    _branch_writes(
+        source_kit,
+        {
+            _PROJECT_MANAGEMENT: _package(
+                "capability", "project-management", "1.0.0", ">=1.0.0,<2.0.0"
+            ),
+            _LIVING_DOCS: _dependent(">=0.40.0,<2.0.0"),
+        },
+    )
+
+    [edit] = release.check_changesets(source_kit, "main").refused_ranges
+
+    assert edit.problem is not None
+    assert "admits project-management 0.54.0" in edit.problem
+
+
+def test_the_carried_version_is_read_from_the_manifest_of_record(tmp_path: Path) -> None:
+    """Where the project registers the capability, the version it carries is its
+    manifest's, as validation and the release read it, not its package file's."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _git(repo, "checkout", "-q", "main")
+    _write_files(
+        repo,
+        {
+            ".pkit/manifest.yaml": _SELF_HOST_MANIFEST.format(version="1.5.0")
+            + "  - kind: capability\n    name: project-management\n"
+            + "    manifest: .pkit/capabilities/project-management/manifest.yaml\n",
+            ".pkit/capabilities/project-management/manifest.yaml": (
+                "schema_version: 1\ncomponent:\n  kind: capability\n  name: project-management\n"
+                "  version: 1.0.0\n"
+            ),
+        },
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "register project-management")
+    _range_base(source_kit, "0.54.0", ">=0.40.0,<1.0.0")
+    _branch_writes(source_kit, {_LIVING_DOCS: _dependent(">=0.40.0,<2.0.0")})
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert [e.corrects for e in result.range_edits] == [True]
+    assert result.ok
+
+
+def test_a_capability_the_tree_does_not_carry_has_no_range_to_correct(tmp_path: Path) -> None:
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _range_base(source_kit, "0.54.0", ">=0.40.0,<1.0.0")
+    _git(repo, "checkout", "-q", "main")
+    _git(repo, "rm", "-q", _PROJECT_MANAGEMENT)
+    _git(repo, "commit", "-q", "-m", "the base carries no project-management")
+    _git(repo, "checkout", "-q", "-B", "feature")
+    _branch_writes(source_kit, {_LIVING_DOCS: _dependent(">=0.40.0,<2.0.0")})
+
+    [edit] = release.check_changesets(source_kit, "main").refused_ranges
+
+    assert edit.problem is not None
+    assert "The tree carries no release of project-management" in edit.problem
+
+
+def test_a_name_listed_twice_is_not_corrected(tmp_path: Path) -> None:
+    source_kit = _make_repo(tmp_path)
+    twice = '  - name: project-management\n    version: ">=0.40.0,<1.0.0"\n'
+    repo = source_kit.parent
+    _range_base(source_kit, "1.0.0", ">=0.40.0,<1.0.0")
+    _git(repo, "checkout", "-q", "main")
+    _commit_change(source_kit, _LIVING_DOCS, _dependent(">=0.40.0,<1.0.0", extra=twice))
+    _git(repo, "checkout", "-q", "-B", "feature")
+    _branch_writes(source_kit, {_LIVING_DOCS: _dependent(">=0.40.0,<2.0.0", extra=twice)})
+
+    [edit] = release.check_changesets(source_kit, "main").refused_ranges
+
+    assert edit.problem is not None
+    assert "lists project-management more than once" in edit.problem
+
+
+def test_a_renamed_package_file_is_read_under_its_old_path(tmp_path: Path) -> None:
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _range_base(source_kit, "0.54.0", ">=0.40.0,<1.0.0")
+    _git(repo, "mv", ".pkit/capabilities/living-docs", ".pkit/capabilities/docs")
+    _branch_writes(
+        source_kit, {".pkit/capabilities/docs/package.yaml": _dependent(">=0.40.0,<2.0.0")}
+    )
+
+    [edit] = release.check_changesets(source_kit, "main").refused_ranges
+
+    assert edit.dependent == "living-docs"
+
+
+def test_a_range_rewrite_alone_is_no_release(tmp_path: Path) -> None:
+    """A diff that only rewrites a range line reads as a release by its lines, but
+    consumes no declaration that would have the release write it, so the range tie
+    refuses it."""
+    source_kit = _make_repo(tmp_path)
+    _range_base(source_kit, "0.54.0", ">=0.54.0,<1.0.0")
+    _commit_change(source_kit, _LIVING_DOCS, _dependent(">=0.54.0,<2.0.0"))
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert release.is_release_diff(source_kit, "main")
+    assert result.release_exempt
+    assert len(result.refused_ranges) == 1
+    assert not result.ok
+
+
+def test_release_check_names_a_refused_range_edit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    _range_base(source_kit, "0.54.0", ">=0.40.0,<1.0.0")
+    _branch_writes(source_kit, {_LIVING_DOCS: _dependent(">=0.40.0,<2.0.0")})
+    monkeypatch.chdir(source_kit.parent)
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert result.exit_code == 1, result.output
+    assert "a range of an existing requires_capabilities entry edited on a branch" in result.output
+    assert (
+        "living-docs: its range on project-management moves from '>=0.40.0,<1.0.0' to "
+        "'>=0.40.0,<2.0.0'"
+    ) in result.output
+    assert "Correcting a range that excludes a carried version" in result.output
+    assert "surface change without a changeset" not in result.output
+
+
+def test_release_check_says_a_correction_passes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    _range_base(source_kit, "1.0.0", ">=0.40.0,<1.0.0")
+    _branch_writes(source_kit, {_LIVING_DOCS: _dependent(">=0.40.0,<2.0.0")})
+    monkeypatch.chdir(source_kit.parent)
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert result.exit_code == 0, result.output
+    assert (
+        "living-docs's range on project-management, '>=0.40.0,<1.0.0' -> '>=0.40.0,<2.0.0', "
+        "corrects a range that excludes the version the tree carries"
+    ) in result.stdout
 
 
 # --- The root the guard reads (#877): the working directory, not the checkout
