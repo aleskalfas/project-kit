@@ -24,8 +24,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-17T12:14:24Z
-      outcome: updated
+      at: 2026-10-17T20:03:58Z
+      outcome: unchanged
+      unchanged-because: COR-050 changes what a whole record anchor stands on and lets cycles follow record anchors. ADR-055 point 3 gains an interim caveat that no decision record carries a friction block until the checks do so. This guide's friction gate, whole-repository report and escape hatch rest on COR-050 point 12 and ADR-055 point 5, which neither change touches.
 ---
 
 # Contributing to project-kit

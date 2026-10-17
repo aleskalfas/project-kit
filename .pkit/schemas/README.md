@@ -21,6 +21,11 @@ pkit:
     revalidated:
       at: 2026-10-17T15:21:03Z
       outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "This page states validation as the code runs it: a cycle between artefacts is found through anchors.artefact only. COR-050 has the cycle check follow a record anchor to a record that is an artefact. The build round of #1647, which changes that code, updates this page."
 ---
 
 # Schemas

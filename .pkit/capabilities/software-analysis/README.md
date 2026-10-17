@@ -14,8 +14,9 @@ pkit:
       record: ["software-analysis:DEC-001", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, "project-management:DEC-032", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005]
     revalidated:
-      at: 2026-10-17T18:28:14Z
-      outcome: updated
+      at: 2026-10-17T20:04:20Z
+      outcome: unchanged
+      unchanged-because: COR-050 changes what a whole record anchor stands on, the record's content without its container, and lets cycles and the upstream-first order follow record anchors. This page says an artefact is flagged when an anchor changes and that its friction block sits in the container, which both still hold.
 ---
 
 # software-analysis capability

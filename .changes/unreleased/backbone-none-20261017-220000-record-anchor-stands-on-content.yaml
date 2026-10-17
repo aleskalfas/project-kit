@@ -1,0 +1,8 @@
+component: backbone
+kind: none
+body: >
+  COR-050 is refined in place for #1647: a whole record anchor stands on the
+  record's content, its methodology container left out, and cycles and the
+  upstream-first order follow a record anchor to a record that is an artefact.
+  Design-ahead, no tooling change yet: the build that changes the friction
+  checks declares its own changeset.
