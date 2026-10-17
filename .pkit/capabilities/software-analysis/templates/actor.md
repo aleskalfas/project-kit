@@ -1,7 +1,8 @@
 ---
 # An actor (software-analysis DEC-001 points 1, 3 and 4): a named role that
-# uses the system, one file each in `use-case-model/actors/` under the analysis
-# location. Its needs sit in this front matter, beside the description below.
+# uses the system, not a persona. Each actor is a file of its own in
+# `use-case-model/actors/` under the analysis location. Its needs sit in this
+# front matter, beside the description below.
 # Stamp it, never copy it: `pkit analysis new actor <slug>` writes
 # `ACT-<slug>.md` with its id, its name and its anchors. Its heading is its id
 # and name, as the front matter gives them. Its body is rendered from the
