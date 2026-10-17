@@ -19,9 +19,9 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-16T22:17:44Z
+      at: 2026-10-17T00:52:31Z
       outcome: unchanged
-      unchanged-because: "This change makes the reach walk in src/project_kit/rule_sets.py bind a fill only where the rule it fills binds, also when that rule is itself a fill. What this page says of rules still holds: a proposed rule binds nothing, accepted rules bind, and accepting one is a reviewed change. It says nothing of where a fill binds."
+      unchanged-because: "This change adds a reader in src/project_kit/rule_sets.py of the rule sets a capability ships, read before it is installed, and the install's refusal of one whose name a project rule set already declares. It moves discovery's read loop into one helper that finds the same files. What this page says of rule sets still holds: a separate id family, permanent ids, statuses, the acceptance gate, where sets live and what validation checks. It says nothing of install."
 ---
 
 # Decision records

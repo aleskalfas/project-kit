@@ -19,9 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-16T22:17:43Z
+      at: 2026-10-17T00:52:33Z
       outcome: unchanged
-      unchanged-because: "This change makes the reach walk in src/project_kit/rule_sets.py bind a fill only where the rule it fills binds, also when that rule is itself a fill. The page already says so in Rule-set files: a fill binds only where the rule it fills binds through the filling set, and a rule that fills binds only as a fill. The code now does what the page says. The schema and the checks validation runs are as before."
+      unchanged-because: "This change adds a reader in src/project_kit/rule_sets.py of the rule sets a capability ships, claimed and read as discovery claims and reads them once installed, and the install's refusal of one whose name a project rule set already declares. It moves discovery's read loop into one helper that finds the same files. Rule-set files still holds: where the files live, the signpost, unique set names and every check validation runs are as before. The page does not describe install."
 ---
 
 # Schemas
