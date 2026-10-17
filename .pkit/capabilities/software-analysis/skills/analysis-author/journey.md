@@ -28,15 +28,9 @@ pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> 
 
 ## 6. Fill it
 
-Each part holds its hint, which says what goes there and gives an example. Write in its place what it asks for, and delete the hint. The stamp writes the step lines under **Steps**, one for each use case of `steps`.
+Each part holds its hint, which says what goes there and gives an example. Fill each part as its hint says, and delete the hint. The stamp writes the step lines under **Steps**, one for each use case of `steps`: keep them as written, and add each hand-over under its step.
 
-- **Goal** — what the actor wants from the whole path, in one sentence in their own voice.
-- **Steps** — under each step line, one line for each hand-over the step needs: what it receives, and how that can break. A hand-over from an earlier step opens `**Needs from step N (<UC-id>):**`, and one from a use case of `relies-on` opens `**Needs from <UC-id> (outside this journey):**`.
-- **Variants** — each branch of the whole path, lettered after the step it leaves, or `None.`.
-- **Postconditions** — the state that shows the whole path succeeded.
-- **Minimal guarantees** — what still holds when the path stops before its end, or `None.`.
-
-Then run the checks in the shared framing's "After stamping", including `pkit analysis check-numbers` before merging.
+Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first, and `pkit analysis check-numbers` before merging. A hand-over the check refuses is named in its message, with the label it expects.
 
 ## Later
 
