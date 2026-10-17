@@ -875,6 +875,75 @@ def test_raise_capability_floor_refuses_an_entry_it_cannot_raise(
         versioning.raise_requires_capability_floor(text, capability, version)
 
 
+# --- The declared upper bound on another capability (PRJ-002 D4) -------------
+
+
+@pytest.mark.parametrize(
+    ("version", "bound"),
+    [
+        ("1.0.0", "<2.0.0"),  # a major past the bound: up to the next major
+        ("1.3.2", "<2.0.0"),
+        ("2.1.0", "<3.0.0"),
+    ],
+)
+def test_widen_capability_bound_rewrites_only_the_upper_bound(version: str, bound: str) -> None:
+    """The floor, the comment and every other line survive, and the changed line
+    is one the changeset guard admits in a release."""
+    widened = versioning.widen_requires_capability_bound(_DEPENDENT, "project-management", version)
+
+    assert widened is not None
+    updated, changed = widened
+    assert changed == f"<1.0.0 -> {bound}"
+    assert updated == _DEPENDENT.replace(">=0.54.0,<1.0.0", f">=0.54.0,{bound}")
+    entry = versioning.requires_capability_entry(updated, "project-management")
+    assert entry is not None and entry.upper == bound[1:]
+    (line,) = [
+        new
+        for old, new in zip(_DEPENDENT.splitlines(), updated.splitlines(), strict=True)
+        if old != new
+    ]
+    assert versioning.REQUIRES_CAPABILITIES_RELEASE_LINE.match(line)
+
+
+def test_widen_capability_bound_on_a_zero_major_stops_at_the_next_major() -> None:
+    text = 'requires_capabilities:\n  - name: evidence\n    version: ">=0.4.0,<0.6.0"\n'
+
+    widened = versioning.widen_requires_capability_bound(text, "evidence", "0.6.0")
+
+    assert widened is not None
+    assert widened[1] == "<0.6.0 -> <1.0.0"
+    assert '"' + ">=0.4.0,<1.0.0" + '"' in widened[0]
+
+
+@pytest.mark.parametrize(
+    ("capability", "version"),
+    [
+        ("project-management", "0.55.0"),  # the bound admits it: widen-only
+        ("project-management", "0.54.0"),
+        ("living-docs", "5.0.0"),  # no upper bound to widen
+    ],
+)
+def test_widen_capability_bound_leaves_a_bound_that_admits_the_version(
+    capability: str, version: str
+) -> None:
+    assert versioning.widen_requires_capability_bound(_DEPENDENT, capability, version) is None
+
+
+@pytest.mark.parametrize(
+    ("capability", "version"),
+    [
+        ("evidence", "1.0.0"),  # a range of another shape
+        ("absent", "1.0.0"),
+        ("project-management", "1.0.0rc1"),  # not a release version
+    ],
+)
+def test_widen_capability_bound_refuses_an_entry_it_cannot_rewrite(
+    capability: str, version: str
+) -> None:
+    with pytest.raises(click.ClickException):
+        versioning.widen_requires_capability_bound(_DEPENDENT, capability, version)
+
+
 def test_a_key_mentioned_in_a_comment_opens_no_block() -> None:
     text = (
         "# requires_capabilities:\n"

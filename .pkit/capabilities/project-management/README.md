@@ -13,9 +13,9 @@ pkit:
         - .pkit/capabilities/project-management/permissions/**
         - .pkit/capabilities/project-management/adapters/**
         - .pkit/capabilities/project-management/decisions/**
-      record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
+      record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, COR-053, COR-057, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-16T22:20:21Z
+      at: 2026-10-17T18:28:13Z
       outcome: updated
 ---
 
@@ -891,7 +891,8 @@ contributions:
 - **What it needs locally.** `review-pr`, `done-work`, `show-pr` and `land-work` read the PR's base and head commits. A commit your checkout lacks is fetched from origin by its object name. A shallow checkout, a failing command, or a backbone without `pkit rule-sets altered` or too old to list the documents a change brings under a rule, refuses with the reason. `git fetch --unshallow origin`, or an upgrade of pkit, fixes those. A base whose configuration cannot be read blocks the PR that repairs it: merge that one with `done-work --bypass "<reason>"`, or opt out of the contribution meanwhile.
 - **Freshness.** The reviewer's approval stands after a later push that alters no ruled document and brings none under a rule, such as a code fix or a revalidation. A push that edits a ruled document, brings one into the declared places, or brings one under a rule, stales it. A clean merge of the base keeps it, whatever the merge brings: an edit, a rule or a place. pm asks the backbone what your commits since the review altered, a run of them at a time between merges of the base. So an edit you undo within a run is no change, and an edit a later commit of the run brings under a rule counts. It asks about a merge of the base only when you changed something inside it, and then about all that merge altered, the base's changes included. A document counts when a rule binds on it at the start or the end of the run that alters it, or when the run brings it under a rule. A stale approval's reason names the ruled documents altered or brought under a rule, which may lie outside the files you changed. See "When a verdict stays fresh" above.
 - **A floor this pm does not know.** A contribution can name a floor a newer pm defines. This pm then requires its reviewer on every PR rather than refusing every PR. `pre-check` warns about each such floor, so a misspelt one is seen.
-- **A core reviewer not deployed.** A capability may contribute a reviewer that core ships. If its agent file is missing, the refusal tells you to run `pkit sync`.
+- **A reviewer that core ships.** A capability may contribute a reviewer that core ships, rather than one of its own, such as the core `rule-set-reviewer` with the one rule above (COR-057). Where several capabilities contribute it, it is required once. Your opt-out withdraws one capability's contribution, so list each of them to stop requiring it ("Opting out of a contributed reviewer" above). If its agent file is missing, the refusal tells you to run `pkit sync`.
+- **Its contributors' dependency on pm.** A contributor declares project-management in `requires_capabilities`, as a required dependency, or as an optional one where it works without project-management (COR-030). Either way, install and upgrade hold an installed project-management to its range, which starts at a release that knows the floors it names.
 
 #### Freeform comments — `comment-issue` / `comment-pr` (per [project-management:DEC-047-freeform-comment-verb])
 

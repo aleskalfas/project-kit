@@ -19,9 +19,8 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-17T00:52:33Z
-      outcome: unchanged
-      unchanged-because: "This change adds a reader in src/project_kit/rule_sets.py of the rule sets a capability ships, claimed and read as discovery claims and reads them once installed, and the install's refusal of one whose name a project rule set already declares. It moves discovery's read loop into one helper that finds the same files. Rule-set files still holds: where the files live, the signpost, unique set names and every check validation runs are as before. The page does not describe install."
+      at: 2026-10-17T15:21:03Z
+      outcome: updated
 ---
 
 # Schemas
@@ -492,7 +491,7 @@ A rule set ([COR-051](../decisions/core/COR-051-rule-sets.md)) is one Markdown f
 | `rule-sets/` under the internal documentation root (`docs/rule-sets/` by default, COR-049) | the project's rule sets | bare, `<SET>` |
 | any declared place — a `friction.places` entry of the project or of a capability — whose path has a `rule-sets` segment | more project rule sets, wherever the project keeps them | bare |
 
-Every Markdown file in or beneath such a folder is a rule-set file, except its `README.md`, which is the folder's signpost. A file two of them reach belongs to the first in the table's order. A file there with no front matter, or front matter that does not parse, is a finding, never skipped. Method rule sets are refreshed by sync with their component. Project rule sets are the project's: sync never reads or writes one, and uninstall never writes one (COR-051 point 6). A project never edits a method rule set: it inherits it.
+Every Markdown file in or beneath such a folder is a rule-set file, except its `README.md`, which is the folder's signpost. A file two of them reach belongs to the first in the table's order. A file there with no front matter, or front matter that does not parse, is a finding, never skipped. Method rule sets are refreshed by sync with their component. Project rule sets are the project's: sync never reads or writes one, and uninstall never writes one (COR-051 point 6). Beside the project's own edits, a capability's install creates the one project rule set the capability declares, in `rule-sets/` under the internal documentation root, and that capability's migration may create it for an earlier install (COR-017; the lifecycle README, "The declared project rule set"). A project never edits a method rule set: it inherits it.
 
 **The front matter.**
 

@@ -10,10 +10,11 @@ pkit:
         - .pkit/capabilities/living-docs/agents/**
         - .pkit/capabilities/living-docs/templates/**
         - .pkit/capabilities/living-docs/skills/**
-      record: ["living-docs:DEC-001", COR-005, COR-023, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056]
+        - .pkit/capabilities/living-docs/review-contributions.yaml
+      record: ["living-docs:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block"]
     revalidated:
-      at: 2026-10-17T11:56:31Z
+      at: 2026-10-17T18:28:12Z
       outcome: updated
 ---
 
@@ -269,6 +270,23 @@ A capability that keeps an analysis of the software can supply readers too, unde
 
 The work-tracking capability decides whether `friction` obligations block. With project-management they are advisory until you set `doc_check.sources.friction: enforcing`. A repository with no commit yet owes nothing. The command asks git nothing itself: whether HEAD has a commit it reads from the core (`head` in `pkit repository base --json`). If git cannot read a commit that is there — a repository git refuses as unsafe, or a missing object — the command gives no answer, never "nothing owed". If a page's friction lies beyond a shallow clone's history, the command gives no answer either: the check then reports itself unresolved rather than pass on fewer obligations, so fetch the full history. Nor does it answer for a page whose anchor's resolver gave no answer (`no-answer`, state `unresolved`), or a page in a state this capability does not know, which it never takes for current: `pkit friction explain <page>` says why. A page left unjudged only by an anchor of a kind nothing installed resolves (`unresolved-kind`) is different. That anchor is a declaration to mend — correct or remove it, install the capability that registers the kind, or mend a refused registration — not an obligation of this change. So the command answers for the page with what its other anchors owe, and names the anchor in its human view. `pkit validate` reports such an anchor under `friction`, and the change check fails it where a pull request adds it or takes its resolver away (COR-050 point 12). It gives none either when the friction check answers a `schema_version` other than 1, which it does not read; a document without the key, from a backbone before it, reads as 1 (the CLI README, "Friction checks"). `pkit living-docs fill-doc-check` lists the obligations, and `--json` prints what the backbone reads. The contribution is inert when no work-tracking capability is installed.
 
+## The review contribution
+
+Where the project-management capability is installed, this capability contributes the core `rule-set-reviewer` to its merge gate (DEC-001 point 9). The reviewer judges a change against the accepted rules that bind on what it alters or brings under a rule (COR-057). The contribution is `review-contributions.yaml`, with one rule:
+
+```yaml
+contributions:
+  - floor: touches-ruled-artefact
+    reviewer: rule-set-reviewer
+```
+
+When that floor requires the reviewer, and what it reads locally, is in [project-management's README](../project-management/README.md), "Documents the rules govern" ([project-management:DEC-032-conditional-reviewer-requirements] D1).
+
+- **What it covers.** Every artefact on which an accepted rule binds, a page or not, such as an analysis artefact. software-analysis contributes the same rule. With both installed, the reviewer is required once.
+- **Opting out.** An opt-out under `review.agents.contributed_opt_out` in project-management's configuration withdraws one capability's contribution. The reviewer stays required through any other, so list each capability that contributes it.
+- **The reviewer.** Core ships it, and `pkit sync` deploys it with the other agents. While it is not deployed, project-management refuses to resolve any pull request's reviewers.
+- **Not a connection.** The contribution names project-management's gate, not a role, so it is none of the connections above.
+
 ## The agent: `living-docs`
 
 The checks above tell you *that* a page drifted and *which* documents are not pages yet. Deciding what that means for a page is judgment, and the capability's agent, `living-docs`, does it — always as a proposal you review, never as an edit (DEC-001 points 5, 6 and 8). `pkit sync` deploys it with the other agents; in Claude Code it is `.claude/agents/living-docs.md`. Ask it in plain words; it picks one of three intents from what you ask:
@@ -309,7 +327,7 @@ From then on, the friction check flags pages as their anchors change, and the ag
 
 ## What's shipped now, what's next
 
-Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the page and template types they give, the validator, the `LDOC` rule set with the parts the validator enforces where they bind, the space-definition template with its scope and the signpost and reference page templates with the page's schema and each page kind's declared structure, the connections (the readers and reading-evidence points, and the contribution to the documentation check), the `source` anchor kind with its resolver and the shape of a captured source, and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation. Shipped too: the authoring command for a page and a space, `pkit living-docs new`, with its `docs-author` skill.
+Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the page and template types they give, the validator, the `LDOC` rule set with the parts the validator enforces where they bind, the space-definition template with its scope and the signpost and reference page templates with the page's schema and each page kind's declared structure, the connections (the readers and reading-evidence points, and the contribution to the documentation check), the `source` anchor kind with its resolver and the shape of a captured source, and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation. Shipped too: the authoring command for a page and a space, `pkit living-docs new`, with its `docs-author` skill. So is the contribution of the core rule-set reviewer to project-management's merge gate.
 
 ## Citing this capability's decisions
 
@@ -317,4 +335,6 @@ Shipped: the decision, the project configuration's schema, the declaration of th
 
 ## Dependencies
 
-None. It works without analysis, work-tracking or testing capabilities, and each can enrich it.
+None required. It works without analysis, work-tracking or testing capabilities, and each can enrich it.
+
+project-management is an optional dependency, from its first release with the floor `touches-ruled-artefact` (DEC-001 point 9). Install and upgrade hold an installed project-management to that range, so the floor never meets a release that does not know it (COR-030). Without project-management, nothing reads the review contribution.

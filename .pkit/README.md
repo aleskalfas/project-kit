@@ -19,9 +19,9 @@ pkit:
         - .pkit/scratchpad/README.md#
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-16T14:21:51Z
+      at: 2026-10-17T17:18:33Z
       outcome: unchanged
-      unchanged-because: The CLI reference's 'Authoring commands' gains a new capability entry, and the decisions README's 'The no-shared-files invariant' links the lifecycle README for the merge tier that asks nothing. This index only points to both sections, as where to start and how to author an area, adapter, capability or migration, so it holds.
+      unchanged-because: The CLI reference's Authoring commands opening says that new capability registers nothing and that capabilities register brings the capability in. This index only points to that section for authoring an area, adapter, capability or migration, so it holds.
 ---
 
 # project-kit

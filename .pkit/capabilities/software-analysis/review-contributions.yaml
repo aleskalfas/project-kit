@@ -1,0 +1,22 @@
+# The reviewer contribution of the software-analysis capability
+# ([software-analysis:DEC-001-software-analysis-discipline] point 10).
+#
+# It contributes the core rule-set reviewer (COR-057) to the merge gate of the
+# project-management capability, under the floor on ruled artefacts
+# ([project-management:DEC-032-conditional-reviewer-requirements] D1). pm reads
+# this file while software-analysis is registered in `.pkit/manifest.yaml`.
+# Without pm, nothing reads it.
+#
+# - What it covers: every artefact on which an accepted rule binds, of the
+#   analysis or not (COR-057 point 6). living-docs contributes the same rule,
+#   and pm requires the reviewer once. Opting out of one contribution leaves
+#   the reviewer required through the other.
+# - The reviewer: core ships it, and `pkit sync` deploys it. An undeployed
+#   reviewer fails the resolution of every pull request (DEC-032 D5).
+# - The format: pm's `schemas/review-contributions.{yaml,schema.json}`.
+
+schema_version: 1
+
+contributions:
+  - floor: touches-ruled-artefact
+    reviewer: rule-set-reviewer

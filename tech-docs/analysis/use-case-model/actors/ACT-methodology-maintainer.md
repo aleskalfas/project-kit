@@ -17,9 +17,9 @@ pkit:
       artefact:
         - CONTRIBUTING.md#adding-a-core-record-cor
     revalidated:
-      at: 2026-10-17T13:57:08Z
+      at: 2026-10-17T21:10:15Z
       outcome: unchanged
-      unchanged-because: PRJ-002 now lets a changeset declare a capability's floor and upper bound on another capability, and has the release refuse a range that excludes a dependency. The maintainer still releases the backbone from the source repository under that release policy, and adopters still learn what each change means from the changelog, so the actor's needs and its Core hold.
+      unchanged-because: The actor's goals and responsibilities are unchanged; the axiom discipline gains one stated exception for in-place refinements, which does not change what the maintainer does or answers for.
 ---
 
 # ACT-methodology-maintainer — Methodology maintainer
