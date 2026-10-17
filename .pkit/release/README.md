@@ -168,7 +168,9 @@ requires_capabilities:
   so add the field by hand after `changie new`. Once the entry exists, its
   floor and upper bound move only at the release, on a changeset's declaration
   (PRJ-002 D1): to raise an existing floor, declare it, and the release states
-  it in the changelog.
+  it in the changelog. The one exception is a range that excludes the version
+  the tree carries, which a branch corrects ("Correcting a range that excludes
+  a carried version" below).
   - **`release`** — the version this release writes for that capability. For
     a need on its surface that has not shipped yet — typically a change to it
     in the same pull request, or one merged beside it. The release must move
@@ -209,7 +211,8 @@ requires_capabilities:
 - The release states the raised floor in the component's changelog entry —
   *Requires project-management >=0.55.0.* — as for a backbone floor.
 - **The upper bound** moves only on declaration too (PRJ-002 D4): the next
-  section.
+  section. The same exception holds for a bound that excludes the version the
+  tree carries.
 
 ### Declaring that a capability runs on another capability's new version
 
@@ -266,6 +269,43 @@ runs_on_capabilities:
   dependent in the tree declares it runs on that major, or the major waits.
   The pull request that adds the major passes the lint: the dependents'
   declarations can land in their own pull requests once the major is pending.
+
+### Correcting a range that excludes a carried version
+
+A range can come to exclude the version the tree already carries for the
+capability it names. A branch written before a major merges after it, or a
+merge bypasses the queue. No declaration fixes that, since the release does
+not move a capability the tree already carries, so every release refuses
+until the range admits it. A branch corrects the range by hand (PRJ-002 D1):
+the version it then admits has shipped, so the branch predicts no number.
+
+```yaml
+requires_capabilities:
+  - name: project-management
+    version: ">=0.54.0,<2.0.0"   # was <1.0.0, which excludes the 1.0.0 the tree carries
+```
+
+- **Only the bound that excludes the version moves, and only as far as it
+  needs.** An upper bound at or below the carried version rises above it, to
+  the next major of that version at most, as the release widens a bound:
+  `<2.0.0` for 1.0.0, `<1.0.0` for 0.55.0. A floor above the carried version
+  falls to that version exactly. The other bound stays as it is. A bound past
+  the next major claims a major the tree does not carry, and a floor below the
+  carried version claims versions nothing in the tree vouches for.
+- **The carried version is the base's**: the one the branch's base carries
+  for that capability, read as the release reads it, from the capability's
+  manifest where the project registers it, else from its `package.yaml`.
+- **The range is one entry**, `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`, before and
+  after.
+- **The edit touches the dependent's tree**, so the pull request carries a
+  changeset for the dependent, as for any change there. Whether it moves the
+  dependent's version is a surface judgment (PRJ-002 D2).
+
+`pkit release check` refuses every other edit to the range of an entry the
+base already holds, with or without the `skip-changeset` label. A release
+diff's own range writes pass when it consumes a changeset of the dependent
+that declares that capability's floor or upper bound. Adding an entry, or
+removing one, is no edit to a range.
 
 ### Authoring a changeset
 
@@ -670,8 +710,10 @@ version" above), `apply` widens the upper bound of that capability's entry.
   `plan --json` included. The refusal lists every such range, naming the
   dependent, its range, the capability and the version. For a version the
   release writes, it says what to declare. For a version the tree carries, no
-  declaration helps, since the release does not move that capability, and
-  `pkit validate` reports the same pair where both are installed. A dependency
+  declaration helps, since the release does not move that capability. A
+  branch corrects the range instead ("Correcting a range that excludes a
+  carried version" above), and `pkit validate` reports the same pair where
+  both are installed. A dependency
   the tree carries no component of is left to validation. The release-PR
   workflow then fails at its plan step and opens no pull request. A release
   that moves no version, only consuming `none` changesets, is not refused: it
@@ -1062,6 +1104,14 @@ deletes changesets, so it declares no floor. A changeset whose
 `requires_capabilities` or `runs_on_capabilities` is not a mapping of
 capability names to single values cannot be read, so it fails the guard, as it
 fails every release command.
+
+**A branch edits a range only to correct it (PRJ-002 D1).** From the same
+diff, the guard reads each package file a component's tree changes, at the
+merge base and at HEAD, and fails a PR that edits the range of a
+`requires_capabilities` entry the base already holds. It passes the one
+correction D1 allows, and a release's own writes ("Correcting a range that
+excludes a carried version" above). A range is read as YAML reads it, so a
+re-quoting is no edit. No escape hatch waives this check either.
 
 **Escape hatches for the surface check** (so trivia / docs PRs aren't forced
 into ceremony):
