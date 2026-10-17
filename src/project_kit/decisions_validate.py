@@ -39,7 +39,8 @@ spaces that *do* resolve is unaffected.
 
 **A synced copy is not checked** (COR-055 point 1). In a project that is not
 the methodology's source, a core record and a kit-shipped capability's arrive
-as synced copies (`synced_record_test`). The project cannot mend them, since
+as synced copies, and an externally-sourced capability's do in any project
+(`synced_record_test`). The project cannot mend them, since
 the next sync overwrites an edit, so they are checked where they are authored.
 Here no issue is reported on one: neither its id against its filename, nor an
 id that only synced copies share. A synced copy is still read for its id. So a
@@ -264,8 +265,9 @@ def synced_record_test(target_root: Path) -> Callable[[str], bool]:
     """Whether a record, at its path relative to the root, arrives here as a synced copy.
 
     The tree's own predicate, `is_synced_copy` of `.pkit/lifecycle/ownership.py`,
-    loaded once through the backbone's one loader of it: a core record, or a
-    kit-shipped capability's, in a project that is not the methodology's source.
+    loaded once through the backbone's one loader of it: a core record or a
+    kit-shipped capability's, in a project that is not the methodology's
+    source, or an externally-sourced capability's, in any project.
     Every check of the `decisions` member leaves such a record out, the
     front-matter check in `validate` included (COR-055 point 1). A tree without
     that module has no synced copy, so every record is read.

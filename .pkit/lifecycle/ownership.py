@@ -19,7 +19,7 @@ deliberately distinct: the first additionally depends on capability
 *registration* and treats everything outside `.pkit/` as not-its, so a caller
 asking about tier must not read it off it. A third, *does this path arrive
 here as a synced copy?* (:func:`is_synced_copy`), is the one documentation
-places ask; it builds on the first. Each
+places ask; it asks a capability's origin, then builds on the first. Each
 answer has exactly one definition here; what matters is that no consumer
 re-derives either, not that there is only one question. It lives here (in-tree,
 propagated) rather than in `src/project_kit/`
@@ -364,8 +364,8 @@ def sync_managed_offences(target_root: Path | str, category: str, values: list[s
 # --- synced copies -----------------------------------------------------------
 #
 # A third question, beside the two above: *does this path arrive here as a
-# copy a sync makes?* — from the methodology's source, or from the external
-# source a capability is pinned to (COR-041). Documentation places ask it
+# copy?* — written by a sync from the methodology's source, or pulled whole
+# from the external source a capability is pinned to (COR-041). Documentation places ask it
 # (living-docs DEC-001 point 1): a synced copy is never a place, so that a sync
 # never shows up as friction in the project's own history. It is not the
 # write-authority question — in the methodology's own source repository the

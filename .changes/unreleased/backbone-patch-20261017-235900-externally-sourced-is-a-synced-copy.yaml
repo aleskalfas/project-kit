@@ -11,5 +11,5 @@ body: >
   repository that authors them. This holds in every repository, the
   methodology's source included, since such a capability is authored
   elsewhere. COR-010 says that renaming or removing a section's heading in a
-  document a component ships ships no migration, since no project that
-  receives the document can anchor its sections.
+  document the methodology or a component ships needs no migration, since no
+  project that receives the document can anchor its sections.
