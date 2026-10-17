@@ -16,6 +16,7 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
 
@@ -119,24 +120,29 @@ def test_the_how_says_where_a_sentence_ends_citing_no_project_s_rule() -> None:
 
 
 def test_the_how_reads_a_list_of_the_sentence_form_item_by_item() -> None:
-    """Each item of a list holds one sentence, a nested item apart, and so does the rest
-    of the part, as the check reads it (#1365). The reading belongs to the `sentence`
-    form alone: a form that reads a list is no item's (#1370)."""
+    """Each text of the form holds one sentence. In a list each item is one text, a nested
+    item apart, and so is the rest of the part, as the check reads it (#1365). The
+    reading belongs to the `sentence` form alone: no list form is held item by item, and
+    the form's schema description points to the rule rather than restating it (#1370)."""
     _data, body = _shipped()
     section = " ".join(_section(body, RULE).split())
+    assert "Each text of this form, such as an actor's need, holds one sentence" in section
     assert (
-        "In a list, each item holds one sentence of its own, and a nested item holds one "
-        "apart from the item it sits in."
+        "**One text.** In a list, each item is one text, and a nested item is one apart "
+        "from the item it sits in."
     ) in section
     # The rest of the part is one text, and a list in a block quote is part of it, as
     # the check's list reader leaves a quoted line outside every list (`_lib/forms.py`).
     assert (
-        "Any text the part holds outside its lists is taken as one text, and holds one "
-        "sentence too. A list inside a block quote is such text, not a list."
+        "What a part holds outside its lists is one text too, a list inside a block "
+        "quote included. In a front-matter field that holds a list, each item is one text."
     ) in section
-    assert "In a front-matter field that holds a list" in section
     forms = section.split("**Forms.**", 1)[1].split("**Hints.**", 1)[0]
     assert "each item" not in forms
+    schema = json.loads((CAPABILITY / "schemas" / "artefact-kinds.schema.json").read_text("utf-8"))
+    (sentence,) = [f for f in schema["$defs"]["form"]["oneOf"] if f["const"] == "sentence"]
+    assert "RS-SAN-001, says what one text is" in sentence["description"]
+    assert "block quote" not in sentence["description"]
 
 
 def test_the_how_holds_the_glossary_s_head_where_the_rule_binds_on_a_term() -> None:
@@ -165,15 +171,12 @@ def test_the_format_rule_declares_the_part_the_capability_s_check_enforces() -> 
     assert part.startswith("Every part its kind ships is present,")
     assert "The glossary carries its head wherever the rule binds on one of its terms." in part
     assert (
-        "front-matter field that the structure gives a form holds that form, "
-        "save on a withdrawn artefact"
+        "A shipped part or front-matter field that the structure gives a form holds that "
+        "form, save on a withdrawn artefact"
     ) in part
-    assert (
-        "one sentence in each item of a list, a nested item apart, and in any text of its "
-        "part outside its lists, a list in a block quote included."
-    ) in part
-    # A document's title heading is left out: the heading check holds it always.
-    assert "A document's title heading is left out" in part
+    # A missing title heading of a document kind is the heading check's, which holds it
+    # whatever the rule's status, so the part leaves it out.
+    assert "A missing title heading of an actor, a use case or a journey is left to" in part
     assert "record" not in part
     # It names each form an artefact kind's structure gives, and none that only a
     # record's gives: the check enforces those always, outside the rule.

@@ -11,28 +11,28 @@ rules:
         revalidated:
           at: 2026-10-16T21:18:56Z
           outcome: updated
-# The part of the format rule that this capability's check enforces (COR-051
-# point 2 and DEC-001 point 1): the parts each artefact kind ships, the
-# glossary's head, and the forms the kinds' declared structure gives. The
-# check enforces it only where the rule binds, and whoever judges the rest of
-# the rule leaves that part to it. What a project's own rule adds to a
-# structure is that rule's part, for the project's set to declare.
+# What this capability's check enforces of the format rule (COR-051 point 2;
+# DEC-001 point 1). It is the structure each artefact kind ships: its parts,
+# the glossary's head and its forms. The check enforces it only where the rule
+# binds. Whoever judges the rest of the rule leaves it to the check. Where a
+# project's rule tightens a structure, the project's set declares what the
+# check enforces of that rule.
 checks:
   RS-SAN-001:
     - check: "software-analysis:validate"
       part: >-
         Every part its kind ships is present, in the order the structure gives,
-        save a part a withdrawn artefact lacks. A document's title heading is
-        left out, since the check holds it whatever the rule's status. No part a
-        writer fills is empty, and a part reads `None.` only where the structure
-        allows it. The glossary carries its head wherever the rule binds on one
-        of its terms. A part or a front-matter field that the structure gives a
+        save a part a withdrawn artefact lacks. A missing title heading of an
+        actor, a use case or a journey is left to the heading check, which holds
+        it whatever the rule's status. No shipped part a writer fills is empty,
+        and a part reads `None.` only where the structure allows it.
+
+        The glossary carries its head wherever the rule binds on one of its
+        terms. A shipped part or front-matter field that the structure gives a
         form holds that form, save on a withdrawn artefact. The forms are
         `sentence`, `numbered-steps`, `variants`, `steps-match-front-matter` and
-        `definition`, each as `schemas/artefact-kinds.schema.json` describes it.
-        Text of the `sentence` form holds one sentence in each item of a list, a
-        nested item apart, and in any text of its part outside its lists, a list
-        in a block quote included.
+        `definition`, each as the schema of the kinds' declared structure
+        describes it.
 ---
 
 # SAN — the software-analysis method
@@ -51,10 +51,8 @@ An analysis artefact carries its kind's declared structure.
   - **Forms.** A part or a front-matter field that the structure gives a form holds that form.
   - **Hints.** A hint binds nothing, so the voice a hint asks for is no part of this rule.
   - **History.** A withdrawn artefact is held to no part or form that came after its withdrawal.
-  - **The `sentence` form.** Text of this form, such as an actor's need, holds one sentence: no sentence ends before the text's last word.
-    - In a list, each item holds one sentence of its own, and a nested item holds one apart from the item it sits in.
-    - Any text the part holds outside its lists is taken as one text, and holds one sentence too. A list inside a block quote is such text, not a list.
-    - In a front-matter field that holds a list, such as an actor's needs, each item holds one sentence.
+  - **The `sentence` form.** Each text of this form, such as an actor's need, holds one sentence: no sentence ends before the text's last word.
+    - **One text.** In a list, each item is one text, and a nested item is one apart from the item it sits in. What a part holds outside its lists is one text too, a list inside a block quote included. In a front-matter field that holds a list, each item is one text.
     - A sentence ends at a full stop, a question mark or an exclamation mark. It ends there only where a space, a line end or the end of the text follows the mark.
     - A mark inside a code span ends no sentence.
     - So an abbreviation that ends in a full stop, such as "e.g.", ends a sentence wherever a space or a line end follows it.

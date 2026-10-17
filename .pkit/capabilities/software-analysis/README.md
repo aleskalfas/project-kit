@@ -226,7 +226,7 @@ Each kind's structure is declared once, as data, in `schemas/artefact-kinds.yaml
   - `opening`: the text before the first label, such as an actor's description
 - **Every part is required.** A part with nothing to say reads `None.`, where its element sets `allows-none: true`.
 - **A hint and an example** go with each part and each front-matter field a writer fills, one line each. A hint says what goes there. A heading the stamp writes has an example and no hint.
-- **Forms:** a part or a front-matter field may name a form, a check on its content from a closed list. A form that reads a list judges only the part's list items. How the `sentence` form reads a list is below ("Each body against its structure").
+- **Forms:** a part or a front-matter field may name a form, a check on its content from a closed list. A list form, such as `numbered-steps`, judges only the part's list items. The `sentence` form judges the rest of the part too ("Each body against its structure", below).
 - **The glossary, a collection:** the `term` kind declares each entry's section, and the file's `head`. The head is the file's heading and opening, which the stamp writes once, when it creates the file.
 
 The parts each kind ships:
@@ -398,7 +398,7 @@ It fails on:
 
 - **a declared part that is missing, out of order or empty;**
 - **`None.` in a part that may not read it**, such as a use case's *Trigger*, which always has something to say;
-- **text of the `sentence` form that is not one sentence**, in a part such as a use case's *Goal*, or in each of an actor's `needs`. In a list, each item holds one sentence, a nested item apart from the item it sits in, and so does the rest of the part, taken as one text. A list inside a block quote is part of that rest, read as text. Where a sentence ends is the rule's *How*: at a full stop, a question mark or an exclamation mark before a space or a line end, and never inside a code span.
+- **text of the `sentence` form that is not one sentence**, in a part such as a use case's *Goal*, or in each of an actor's `needs`. In a list, each item holds one sentence, a nested item apart from the item it sits in, and so does the rest of the part, taken as one text. A list inside a block quote is part of that rest, read as text. Where a sentence ends is the rule's *How*: at a full stop, a question mark or an exclamation mark before a space, a line end or the text's end, and never inside a code span.
 - **a part or a field that breaks another form its structure gives it:**
   - `numbered-steps`, a use case's *Main path*: no numbered step, a step that opens with no number, or a number used twice. A step's number is its list marker, `2.`, or the number its text opens with, `**2.**`. Numbers need not run in sequence, since steps are only ever added, as `pkit analysis check-numbers` checks ("Steps and variants stay append-only", below).
   - `variants`, a use case's or a journey's *Variants*: neither `None.` nor a list, or a variant that does not open with a step's number and a letter, `2a.` or `**2a.**`, or that names a step the use case's *Main path* or the journey's *Steps* does not number.

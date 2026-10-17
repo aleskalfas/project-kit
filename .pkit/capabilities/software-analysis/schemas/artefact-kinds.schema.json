@@ -281,11 +281,11 @@
       }
     },
     "form": {
-      "description": "A check on the content of a part or a front-matter field, from a closed list the capability implements. A list form judges only the part's list items, so a line a writer adds inside the part never breaks it.",
+      "description": "A check on the content of a part or a front-matter field, from a closed list the capability implements. A list form, such as `numbered-steps`, judges only the part's list items, so a line a writer adds inside the part never breaks it. The `sentence` form is no list form: it judges the rest of the part too.",
       "oneOf": [
         {
           "const": "sentence",
-          "description": "One sentence: no sentence ends before the text's last word. In a list, each item holds one sentence of its own, a nested item apart from the item it sits in. Any text of the part outside its lists, a list in a block quote included, is one text and holds one sentence too. In a front-matter field that holds a list, each item holds one sentence. The format rule, RS-SAN-001, says where a sentence ends."
+          "description": "One sentence in each text: no sentence ends before the text's last word. The format rule, RS-SAN-001, says what one text is in a part or a field that holds a list, and where a sentence ends."
         },
         {
           "const": "numbered-steps",
