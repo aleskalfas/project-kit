@@ -30,6 +30,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+from collections import Counter
 from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date
@@ -37,6 +38,8 @@ from pathlib import Path
 from typing import Any, cast
 
 import click
+from packaging.specifiers import InvalidSpecifier, SpecifierSet
+from packaging.version import InvalidVersion, Version
 
 from project_kit import command_runner, pull_request_landing, session_guard, versioning
 from project_kit.changesets import (
@@ -2270,10 +2273,14 @@ def _text_at(repo_root: Path, rev: str, path: str) -> str | None:
 # range and refuses all but that correction and the release's own writes. No
 # escape hatch waives it, as none waives the floor tie.
 
-# A range the correction reads, as YAML reads an entry's `version:`: `>=X.Y.Z,<A.B.C`
-# or `>=X.Y.Z`, the shapes the release raises and widens. Group 1 is the floor,
-# group 2 the upper bound.
-_BOUNDED_RANGE_RE = re.compile(r">=(\d+\.\d+\.\d+)(?:,<(\d+\.\d+\.\d+))?")
+# A range a correction writes, as YAML reads an entry's `version:`: `>=X.Y.Z,<A.B.C`
+# or `>=X.Y.Z`, the shapes the release raises and widens.
+_BOUNDED_RANGE_RE = re.compile(r">=\d+\.\d+\.\d+(?:,<\d+\.\d+\.\d+)?")
+
+# How a range moves once its entry exists, which a refused edit ends with.
+_DECLARE_RANGE = (
+    "Its floor and upper bound move at the release, on a changeset's declaration (PRJ-002 D1, D4)."
+)
 
 
 @dataclass(frozen=True)
@@ -2300,9 +2307,12 @@ def range_edits(
 
     `files` is the diff's changed paths and `components` the tree's. Each changed
     package file of a component is read at the merge base, where git reports a
-    renamed one under its old path, and at HEAD, each entry's `version:` as YAML
-    reads it, so a re-quoting is no edit. An entry the diff adds or removes is no
-    edit either: D1 lets the branch that adds a dependency write its entry.
+    renamed one under its old path, and at HEAD. A capability's ranges are
+    compared as version ranges (`_range_key`), so a re-quoting or a respelling of
+    the same range is no edit. A capability the diff adds or removes is no edit
+    either: D1 lets the branch that adds a dependency write its entry. Nor is
+    dropping or reordering a capability's entries, which narrows nothing: a
+    capability listed twice is listed once by dropping one.
 
     An edit passes in two cases. It is the correction PRJ-002 D1 allows
     (`_correction_problem`). Or the diff is a release (`is_release_diff`) and
@@ -2331,7 +2341,7 @@ def range_edits(
         found.extend(
             (component.name, name, before[name], after[name])
             for name in sorted(before.keys() & after.keys())
-            if before[name] != after[name]
+            if not Counter(map(_range_key, after[name])) <= Counter(map(_range_key, before[name]))
         )
     if not found:
         return []
@@ -2374,6 +2384,36 @@ def _shown(ranges: Sequence[object]) -> str:
     return " and ".join("no range" if value is None else repr(value) for value in ranges)
 
 
+def _range_key(value: object) -> object:
+    """What a range is compared by: the version range it reads as, so a respelling
+    of the same range is the same key; the value as written when it reads as none."""
+    if isinstance(value, str):
+        try:
+            return SpecifierSet(value)
+        except InvalidSpecifier:
+            pass
+    return ("unread", repr(value))
+
+
+def _bounds(value: object) -> tuple[Version, Version | None] | None:
+    """The `>=` floor and the `<` upper bound, if any, of a range made of one `>=`
+    and at most one `<`, however spelled; None for any other value."""
+    if not isinstance(value, str):
+        return None
+    try:
+        specifiers = list(SpecifierSet(value))
+    except InvalidSpecifier:
+        return None
+    floors = [s.version for s in specifiers if s.operator == ">="]
+    uppers = [s.version for s in specifiers if s.operator == "<"]
+    if len(floors) != 1 or len(uppers) > 1 or len(specifiers) != len(floors) + len(uppers):
+        return None
+    try:
+        return Version(floors[0]), Version(uppers[0]) if uppers else None
+    except InvalidVersion:
+        return None
+
+
 def _correction_problem(
     dependent: str,
     capability: str,
@@ -2384,61 +2424,71 @@ def _correction_problem(
     """Why an edit of `dependent`'s range on `capability` is not the correction
     PRJ-002 D1 allows; None when it is.
 
-    The correction reads one entry for the capability, its range `>=X.Y.Z,<A.B.C`
-    or `>=X.Y.Z`, before and after. The range before excludes `carried`, the
-    version the merge base carries for the capability. Only the bound that
-    excludes it moves, and only as far as it needs. A floor above `carried` falls
-    to `carried`. An upper bound at or below it rises above it, to the next major
-    of `carried` at most, as the release widens a bound
-    (`versioning.next_major`). The other bound stays as it was. A bound past the
-    next major would claim a major the tree does not carry, and a floor below
-    `carried` would claim versions nothing in the tree vouches for."""
-    from project_kit.connections import range_admits
-
+    The correction writes one entry for the capability, its range `>=X.Y.Z,<A.B.C`
+    or `>=X.Y.Z`. It corrects an entry of the merge base whose range excludes
+    `carried`, the version the merge base carries for the capability, and is made
+    of one `>=` floor and at most one `<` upper bound. Only the bound that
+    excludes `carried` moves, and only as far as it needs. A floor above it falls
+    to it. An upper bound at or below it rises above it, to its next major at
+    most, as the release widens a bound (`versioning.next_major`). The other bound
+    stays as it was. A bound past the next major would claim a major the tree does
+    not carry, and a floor below `carried` would claim versions nothing in the
+    tree vouches for. Where the merge base lists the capability more than once,
+    the correction may correct any one of its entries and drop the others."""
     moved = f"{dependent}: its range on {capability} moves from {_shown(before)} to {_shown(after)}"
-    declare = (
-        "Its floor and upper bound move at the release, on a changeset's declaration "
-        "(PRJ-002 D1, D4)."
-    )
-    if len(before) != 1 or len(after) != 1:
+    if len(after) != 1:
         return f"{moved}, and {dependent} lists {capability} more than once: list it once."
     if carried is None or not versioning.is_release_version(carried):
         return (
             f"{moved}. The tree carries no release of {capability} the range could be "
-            f"corrected to admit. {declare}"
+            f"corrected to admit. {_DECLARE_RANGE}"
         )
-    old, new = before[0], after[0]
+    problems = [
+        _one_correction_problem(moved, capability, old, after[0], carried) for old in before
+    ]
+    if None in problems:
+        return None
+    return next(problem for problem in problems if problem is not None)
+
+
+def _one_correction_problem(
+    moved: str, capability: str, old: object, new: object, carried: str
+) -> str | None:
+    """Why `new` is not the correction of one range `old` of the merge base, for a
+    capability the merge base carries at `carried`; None when it is
+    (`_correction_problem`)."""
+    from project_kit.connections import range_admits
+
+    old_bounds = _bounds(old)
+    if old_bounds is None:
+        return (
+            f"{moved}. A correction moves a bound of a range made of one `>=` floor and at "
+            f"most one `<` upper bound, and {_shown([old])} is not one. {_DECLARE_RANGE}"
+        )
     if range_admits(old, carried) is not False:
         return (
             f"{moved}. A branch corrects only a range that excludes the version the tree "
-            f"carries, and {_shown(before)} admits {capability} {carried}. {declare}"
+            f"carries, and {_shown([old])} admits {capability} {carried}. {_DECLARE_RANGE}"
         )
-    old_bounds = _BOUNDED_RANGE_RE.fullmatch(old) if isinstance(old, str) else None
-    new_bounds = _BOUNDED_RANGE_RE.fullmatch(new) if isinstance(new, str) else None
-    if old_bounds is None or new_bounds is None:
-        return (
-            f'{moved}. A correction reads a range ">=X.Y.Z,<A.B.C" or ">=X.Y.Z", before and after.'
-        )
-    version = parse_version_tuple(carried)
-    old_floor, old_upper = old_bounds.groups()
-    new_floor, new_upper = new_bounds.groups()
-    if parse_version_tuple(old_floor) > version:
-        if new_floor == carried and new_upper == old_upper:
+    written = isinstance(new, str) and _BOUNDED_RANGE_RE.fullmatch(new) is not None
+    new_bounds = _bounds(new) if written else None
+    if new_bounds is None:
+        return f'{moved}. A correction writes a range ">=X.Y.Z,<A.B.C" or ">=X.Y.Z".'
+    version = Version(carried)
+    (old_floor, old_upper), (new_floor, new_upper) = old_bounds, new_bounds
+    if old_floor > version:
+        if new_floor == version and new_upper == old_upper:
             return None
         return (
-            f"{moved}. {_shown(before)} excludes {capability} {carried}, the version the "
+            f"{moved}. {_shown([old])} excludes {capability} {carried}, the version the "
             f"tree carries, by its floor: a branch may lower the floor to {carried} and "
             "change nothing else (PRJ-002 D1)."
         )
     ceiling = versioning.next_major(carried)
-    if (
-        new_floor == old_floor
-        and new_upper is not None
-        and version < parse_version_tuple(new_upper) <= parse_version_tuple(ceiling)
-    ):
+    if new_floor == old_floor and new_upper is not None and version < new_upper <= Version(ceiling):
         return None
     return (
-        f"{moved}. {_shown(before)} excludes {capability} {carried}, the version the tree "
+        f"{moved}. {_shown([old])} excludes {capability} {carried}, the version the tree "
         f"carries, by its upper bound: a branch may raise that bound above {carried}, to "
         f"<{ceiling} at most, and change nothing else (PRJ-002 D1)."
     )

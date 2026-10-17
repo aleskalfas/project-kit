@@ -2261,7 +2261,7 @@ def release_check(base: str | None, skip: bool | None) -> None:
     if result.skipped:
         click.echo(
             "changeset guard: surface check skipped (escape hatch active); "
-            "declared floors still checked."
+            "declared floors and range edits still checked."
         )
     elif result.release_exempt:
         click.echo(

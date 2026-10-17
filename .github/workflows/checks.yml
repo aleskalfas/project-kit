@@ -76,7 +76,10 @@ jobs:
       # self-host manifest's backbone_version, CHANGELOG, the changesets it
       # consumed — by its content, whatever the branch is called, and passes
       # its surface check. The floor tie runs on every PR; a release diff only
-      # deletes changesets, so it declares no floor.
+      # deletes changesets, so it declares no floor. So does the range tie: a PR
+      # edits the range of an existing requires_capabilities entry only to correct
+      # one that excludes the version the tree carries (PRJ-002 D1), and a release
+      # diff's range writes ride on the declarations it consumes.
       #
       # It does not run on the queue's merge: a merge group carries no pull
       # request labels to read the escape hatch from, and the guard has already

@@ -1101,6 +1101,8 @@ def _branch_writes(source_kit: Path, files: dict[str, str]) -> None:
         # A floor above the carried version falls to it.
         ("0.54.0", ">=0.60.0,<1.0.0", ">=0.54.0,<1.0.0"),
         ("0.54.0", ">=0.60.0", ">=0.54.0"),
+        # A range spelled another way is read as the range it is.
+        ("1.0.0", ">=0.40, <1.0", ">=0.40.0,<2.0.0"),
     ],
 )
 def test_a_branch_may_correct_a_range_that_excludes_the_carried_version(
@@ -1135,8 +1137,11 @@ def test_a_branch_may_correct_a_range_that_excludes_the_carried_version(
         ("0.54.0", ">=0.60.0,<1.0.0", ">=0.54.0,<2.0.0", "change nothing else"),
         # Still excluding it is no correction.
         ("1.0.0", ">=0.40.0,<0.90.0", ">=0.40.0,<1.0.0", "to <2.0.0 at most"),
-        # A range of another shape is not read as a correction.
-        ("1.0.0", ">=0.40.0,<1.0.0", ">=0.40,<2", '">=X.Y.Z,<A.B.C" or ">=X.Y.Z"'),
+        # A correction writes the shape the release rewrites.
+        ("1.0.0", ">=0.40.0,<1.0.0", ">=0.40,<2", 'writes a range ">=X.Y.Z,<A.B.C" or'),
+        # A range of no floor and upper bound has no bound to correct.
+        ("1.0.0", "garbage", ">=0.40.0,<2.0.0", "'garbage' is not one"),
+        ("1.0.0", "==0.9.0", ">=0.40.0,<2.0.0", "'==0.9.0' is not one"),
     ],
 )
 def test_every_other_edit_of_a_range_is_refused(
@@ -1174,6 +1179,7 @@ def test_the_escape_hatch_does_not_waive_the_range_tie(tmp_path: Path) -> None:
     "after",
     [
         _dependent(">=0.40.0,<1.0.0", quote="'"),  # re-quoted: YAML reads the same range
+        _dependent("<1.0.0, >=0.40"),  # respelled: the same version range
         _dependent(  # an entry added beside it: the branch that adds a dependency writes it
             ">=0.40.0,<1.0.0", extra='  - name: evidence\n    version: ">=0.5.0,<1.0.0"\n'
         ),
@@ -1188,6 +1194,43 @@ def test_an_entry_added_removed_or_requoted_is_no_range_edit(tmp_path: Path, aft
     result = release.check_changesets(source_kit, "main")
 
     assert result.range_edits == []
+    assert result.ok
+
+
+_TWICE = '  - name: project-management\n    version: ">=0.40.0,<1.0.0"\n'
+
+
+def _listed_twice(source_kit: Path, carried: str) -> None:
+    """Land on `main` living-docs listing project-management twice, then restart
+    `feature` from it."""
+    repo = source_kit.parent
+    _range_base(source_kit, carried, ">=0.40.0,<1.0.0")
+    _git(repo, "checkout", "-q", "main")
+    _commit_change(source_kit, _LIVING_DOCS, _dependent(">=0.40.0,<1.0.0", extra=_TWICE))
+    _git(repo, "checkout", "-q", "-B", "feature")
+
+
+def test_listing_a_capability_once_is_no_range_edit(tmp_path: Path) -> None:
+    """Dropping one of two entries narrows nothing: it is the remedy the release
+    gives for a capability listed twice."""
+    source_kit = _make_repo(tmp_path)
+    _listed_twice(source_kit, "0.54.0")
+    _branch_writes(source_kit, {_LIVING_DOCS: _dependent(">=0.40.0,<1.0.0")})
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.range_edits == []
+    assert result.ok
+
+
+def test_a_correction_may_list_a_capability_once(tmp_path: Path) -> None:
+    source_kit = _make_repo(tmp_path)
+    _listed_twice(source_kit, "1.0.0")
+    _branch_writes(source_kit, {_LIVING_DOCS: _dependent(">=0.40.0,<2.0.0")})
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert [e.corrects for e in result.range_edits] == [True]
     assert result.ok
 
 
@@ -1257,15 +1300,10 @@ def test_a_capability_the_tree_does_not_carry_has_no_range_to_correct(tmp_path: 
     assert "The tree carries no release of project-management" in edit.problem
 
 
-def test_a_name_listed_twice_is_not_corrected(tmp_path: Path) -> None:
+def test_a_correction_that_keeps_a_name_listed_twice_is_refused(tmp_path: Path) -> None:
     source_kit = _make_repo(tmp_path)
-    twice = '  - name: project-management\n    version: ">=0.40.0,<1.0.0"\n'
-    repo = source_kit.parent
-    _range_base(source_kit, "1.0.0", ">=0.40.0,<1.0.0")
-    _git(repo, "checkout", "-q", "main")
-    _commit_change(source_kit, _LIVING_DOCS, _dependent(">=0.40.0,<1.0.0", extra=twice))
-    _git(repo, "checkout", "-q", "-B", "feature")
-    _branch_writes(source_kit, {_LIVING_DOCS: _dependent(">=0.40.0,<2.0.0", extra=twice)})
+    _listed_twice(source_kit, "1.0.0")
+    _branch_writes(source_kit, {_LIVING_DOCS: _dependent(">=0.40.0,<2.0.0", extra=_TWICE)})
 
     [edit] = release.check_changesets(source_kit, "main").refused_ranges
 
