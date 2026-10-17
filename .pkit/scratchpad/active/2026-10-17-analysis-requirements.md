@@ -8,7 +8,7 @@ started: 2026-10-17
 
 The design round of #1393. software-analysis keeps actors, use cases, journeys and terms. This note designs the kind for what a use case does not hold: quality requirements and constraints. It works from real examples already stated in project-kit, as the maintainer decided on 17 October.
 
-- **Read from main at `43981938`:** the records, the code and the examples below.
+- **Read from main at `43981938`:** the records, the code and the examples below. #1370's acceptance of `SAN` landed after the reviews (`fceb363f`), and points 8 and 9 read it.
 - **Citations:** records and rules by permanent id and point. Code by file and line at `43981938`.
 - **Governed by:** software-analysis DEC-001, point 11 above all, which leaves this kind for a decision of its own. Points 1 to 4 give the shape every kind follows. #1447's rule links the analysis and the architecture.
 - **Reviewed:** by the critic and the architect. Their findings and the answers are in "Review", at the end.
@@ -411,8 +411,9 @@ Three cases. DEC-002 states them on its own, since the capability works with no 
 
 **No new rule.** RS-SAN-001 already says an analysis artefact carries its kind's declared structure, so it covers both kinds.
 
-- **What changes:** nothing in RS-SAN-001's content. Once #1370 lands, its `checks` part names the forms and the kinds that carry a title heading. The build adds the new kinds there. That part is no content of the rule, so `SAN`'s version stays (COR-051 point 2).
-- **Where it binds:** only where a set of the project's own selects the new types. project-kit's `ANA` selects four types today, so its scope gains two, versioned as COR-051 point 7 asks. Until a set selects them, no rule of `SAN` binds on them. The check counts them, as it counts any such artefact (DEC-001 point 1). The set that installing will create (#1613) selects all six.
+- **What changes:** nothing in RS-SAN-001's content. RS-SAN-001 is accepted since #1370, and `SAN` is at 1.0.0. Its `checks` part names the kinds that carry a title heading, and the build adds the new kinds there. That part is no content of the rule, so `SAN`'s version stays (COR-051 point 2).
+- **Not a breaking change.** Adding a kind fails no artefact the check passed before, since none of the new kinds exists yet (DEC-001 point 1).
+- **Where it binds:** only where a set of the project's own selects the new types. project-kit's `ANA`, at 4.0.0 and pinned at `SAN@1`, selects four types today. Its scope gains two, versioned as COR-051 point 7 asks. Until a set selects them, no rule of `SAN` binds on them. The check counts them, as it counts any such artefact (DEC-001 point 1). The set that installing will create (#1613) selects all six.
 - **Rules left as candidates,** to judge after project-kit writes its first area of requirements:
   - a requirement states one property of the problem, never the solution's mechanism
   - a requirement a record decides anchors to that record
@@ -431,7 +432,7 @@ Three cases. DEC-002 states them on its own, since the capability works with no 
   - point 4, a changed requirement flags the use cases that list it
   - point 11, quality requirements and constraints leave the scope boundary
 - **What stays.** Points 1 and 3 stay true of the kinds they name, and DEC-002 applies them to its own. The title stays, since it is still true. Every point anchor stands on the title, so changing it would flag each one.
-- **What the lead's edit costs.** Every point stands on the lead's text (COR-050 point 5). So each anchor on a point of DEC-001 is flagged once, such as RS-ANA-001's on point 1.
+- **What the lead's edit costs.** Every point stands on the lead's text (COR-050 point 5). So each anchor on a point of DEC-001 is flagged once, such as RS-ANA-001's on point 1 and RS-SAN-002's on point 3.
 - **The order, with #1447.** #1447's refinement of point 11 lands first. It is decided, and needs nothing from this kind. Its view rule exists only in a scratchpad note until then, so DEC-002 could not extend it under the acceptance gate. EPIC #1643's use cases need #1447's hint now too. Then DEC-002 refines point 11 once more, naming requirements beside use cases. Point 11 stays the one home of the link between the analysis and the architecture, and DEC-002 refers to it.
 
 ## Beyond this issue
@@ -495,7 +496,7 @@ Filed after the maintainer's answer, under EPIC #1547:
 
 ## Others at work
 
-- **#1370** accepts RS-SAN-001 and adds RS-SAN-002, for append-only steps. Neither changes this design. RS-SAN-002 reaches no requirement, which has no steps.
+- **#1370** accepted RS-SAN-001 and added RS-SAN-002, for append-only steps (`fceb363f`). Neither changes this design. RS-SAN-002 reaches no requirement, which has no steps.
 - **#1447** is open, and lands before DEC-002 (point 9). Point 4 extends its rule for views.
 - **#1613** creates a project's set on install. Its scope should select all six types.
 
@@ -528,7 +529,7 @@ The critic read the first draft, and the architect the second. Each finding is a
 - **A special-requirements part costs no migration with zero use cases.** Accepted: the reason given is now that the examples cut across use cases.
 - **The blur count was understated.** Fixed: about ten sit on a boundary, listed by boundary.
 - **Counter-alternatives.** Adopted: records stay targets, a shared *Verified by*, and a smaller start. Listed: a third kind for system-wide functional rules. Answered: cross-cutting assumptions (point 3).
-- **Factual errors.** Fixed: the `checks` part on main names no kinds, five examples have no record, arc42's split, and the SEI's scenario. The claims about core records as places, and about project-kit's ADRs carrying anchors, are gone.
+- **Factual errors.** Fixed: the `checks` part named no kinds at `43981938`, though it does since #1370. The note now counts five examples with no record, and names arc42's split and the SEI's scenario rightly. The claims about core records as places, and about project-kit's ADRs carrying anchors, are gone.
 
 ### The architect
 
