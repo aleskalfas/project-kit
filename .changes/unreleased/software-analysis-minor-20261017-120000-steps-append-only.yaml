@@ -10,8 +10,8 @@ body: >
   its base, and reports a step or a variant renumbered or removed, naming the
   use case and the number or letter. One added, whatever new number or letter
   it takes, and a use case new in the change, pass, and so does a step
-  reworded under its own number. It binds where the format rule, RS-SAN-001,
-  binds, as `pkit rule-sets reach` reads it, and at its status: accepted, an
+  reworded under its own number. It binds where the append-only rule,
+  RS-SAN-002, binds, as `pkit rule-sets reach` reads it, and at its status: accepted, an
   error; proposed, nothing is compared. The new `--preview` flag compares
   where `pkit rule-sets reach --preview` says the rule would bind, each
   finding a report opening `preview:` that never fails. It reads the base

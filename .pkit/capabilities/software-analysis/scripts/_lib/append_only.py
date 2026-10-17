@@ -36,19 +36,20 @@ changes meaning.
   letter it takes, after the last or between two. So does one whose number now
   holds other text and whose own text stands nowhere else: an edit, since the
   check cannot tell a reworded step from another one. A step that no longer
-  happens stays, its number kept, marked withdrawn. The check matches text
+  happens stays under its number, as RS-SAN-002 says. The check matches text
   alone, so it misses a step renumbered and reworded at once whose number still
   holds a step. And it reads a new step that repeats, word for word, the old
   text of a step this change rewords as that step renumbered.
-- **Where it binds.** Where the format rule, RS-SAN-001, binds on the use case
-  in the working tree, and at its status, as the structure check holds a body
-  (`_lib/check.py`): the backbone's one reading of where a rule binds, `pkit
-  rule-sets reach` (COR-051 point 7). Accepted, each finding is an error.
-  Under any other status nothing is compared, unless a preview is asked for and
-  the rule is proposed: then it is compared where `pkit rule-sets reach
-  --preview` says the rule would bind, and each finding is a report opening
-  `preview:`, which never fails. The summary counts the use cases the rule does
-  not bind on.
+- **Where it binds.** Where the append-only rule, RS-SAN-002, binds on the use
+  case in the working tree, and at its status, as the structure check holds a
+  body where the format rule binds (`_lib/check.py`): the backbone's one
+  reading of where a rule binds, `pkit rule-sets reach` (COR-051 point 7).
+  Accepted, each finding is an error. Under any other status nothing is
+  compared, unless a preview is asked for and the rule is proposed: then it is
+  compared where `pkit rule-sets reach --preview` says the rule would bind,
+  and each finding is a report opening `preview:`, which never fails. The
+  summary counts the use cases the rule does not bind on. `SAN` declares this
+  check under the rule's `checks` (COR-051 point 2).
 - **Not a validator.** It reads the base, so it answers about a change rather
   than the tree, and `pkit analysis validate` never runs it (COR-055 point 2).
 """
@@ -61,24 +62,38 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from _lib import backbone, forms, project_structure, structure
-from _lib.check import ACCEPTED, CITED_FORMAT_RULE, PREVIEW, PROPOSED, unchecked
+from _lib.check import ACCEPTED, PREVIEW, PROPOSED, unchecked
 from _lib.findings import ERROR, REPORT, Finding
-from _lib.model import FORMAT_RULE, USE_CASE, Analysis, Artefact, Unreadable, identity
+from _lib.model import (
+    CAPABILITY,
+    STEPS_RULE,
+    USE_CASE,
+    Analysis,
+    Artefact,
+    Unreadable,
+    identity,
+)
 
 #: What the summary line about this check opens with.
 SUBJECT = "steps"
+
+#: The append-only rule as the backbone's reading of where rules bind cites it, with
+#: the capability's name in front (COR-051 point 6).
+CITED_STEPS_RULE = f"{CAPABILITY}:{STEPS_RULE}"
 
 #: How a step or a variant the merge-base held departs from it.
 RENUMBERED, REMOVED = "renumbered", "removed"
 
 #: How a renumbered or removed step, or variant, is put right, as the check says it.
 _STEP_FIX = {
-    RENUMBERED: "give it back its number, and number a new step past the last",
-    REMOVED: "put it back under its number, marked withdrawn if it no longer happens",
+    RENUMBERED: (
+        "give it back its number, and number a new step higher than every number of its use case"
+    ),
+    REMOVED: "put it back under its number, even if it no longer happens",
 }
 _VARIANT_FIX = {
-    RENUMBERED: "give it back its label, and letter a new variant past the last of its step",
-    REMOVED: "put it back under its label, marked withdrawn if it no longer happens",
+    RENUMBERED: "give it back its label, and letter a new variant after every letter of its step",
+    REMOVED: "put it back under its label, even if it no longer happens",
 }
 
 
@@ -118,17 +133,22 @@ def compare(
     if not use_cases:
         return [f"{SUBJECT}: no use case here; nothing to compare."], []
     rules = analysis.method_rules
-    status = None if rules is None else rules.get(FORMAT_RULE)
+    status = None if rules is None else rules.get(STEPS_RULE)
     if status == ACCEPTED:
         severity, label = ERROR, ""
     elif status == PROPOSED and preview:
         severity, label = REPORT, PREVIEW
     else:
         said = unchecked(
-            status, rules is None, preview, subject=SUBJECT, command="pkit analysis check-numbers"
+            status,
+            rules is None,
+            preview,
+            subject=SUBJECT,
+            command="pkit analysis check-numbers",
+            rule=STEPS_RULE,
         )
         return [said], []
-    head = f"{SUBJECT} ({FORMAT_RULE}, {status}{', previewed as accepted' if label else ''})"
+    head = f"{SUBJECT} ({STEPS_RULE}, {status}{', previewed as accepted' if label else ''})"
     binds, binds_not = ("would bind", "would not bind") if label else ("binds", "does not bind")
     try:
         at = reach(root, preview=status != ACCEPTED)
@@ -137,11 +157,11 @@ def compare(
             Finding(
                 severity,
                 analysis.location or ".",
-                f"{label}where {FORMAT_RULE} {binds} cannot be read: {exc}. No use case's steps "
+                f"{label}where {STEPS_RULE} {binds} cannot be read: {exc}. No use case's steps "
                 f"and variants are compared until it can (COR-051 point 7)",
             )
         ]
-    bound = [u for u in use_cases if CITED_FORMAT_RULE in (at.get(u.location) or {})]
+    bound = [u for u in use_cases if CITED_STEPS_RULE in (at.get(u.location) or {})]
     unbound = len(use_cases) - len(bound)
     unbound_said = (
         f" The rule {binds_not} on {unbound} of the {len(use_cases)} use case(s) here, so they "

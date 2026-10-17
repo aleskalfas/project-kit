@@ -19,7 +19,8 @@
 # - `hint` and `example`: one line each. A hint says what goes in the part. A
 #   heading the stamp writes has no hint, and its example is the heading.
 # - `form`: a check on a part's content, from the closed list the schema
-#   gives. In a list, each item holds it.
+#   gives. The schema's description of each form says what it reads in a
+#   part that holds a list.
 # - `front-matter`: the fields a writer fills, each with its hint, its example
 #   and any form. The kind's companion schema checks each field's shape. Where
 #   the stamp leaves a field to fill, it writes the field's hint as its
