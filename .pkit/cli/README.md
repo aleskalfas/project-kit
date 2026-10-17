@@ -71,6 +71,7 @@ pkit:
         - .pkit/lifecycle/README.md#per-component-upgrade
         - .pkit/lifecycle/README.md#where-a-capabilitys-manifest-lives
         - .pkit/lifecycle/README.md#the-downgrade-guard-on-capability-refresh-issue-524
+        - .pkit/lifecycle/README.md#script-contract
     revalidated:
       at: 2026-10-17T17:18:35Z
       outcome: updated

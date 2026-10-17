@@ -29,7 +29,7 @@ pkit:
         - .pkit/schemas/backbone/package.schema.json
         - .pkit/schemas/backbone/filler.schema.json
         - hatch_build.py
-      record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, "COR-059#2", "COR-059#8", ADR-056, ADR-057, ADR-059, ADR-065]
+      record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, "COR-048#5", COR-052, COR-053, COR-055, "COR-059#2", "COR-059#3", "COR-059#8", ADR-056, ADR-057, ADR-059, ADR-065]
     revalidated:
       at: 2026-10-17T20:12:01Z
       outcome: updated
