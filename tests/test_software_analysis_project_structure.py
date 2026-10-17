@@ -37,7 +37,7 @@ from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     NEW,
     RECORDS,
-    SA,
+    STRUCTURES,
     VALIDATE,
     accepting_san,
     actor_at,
@@ -56,7 +56,7 @@ C: Any = _CHECK
 M: Any = _MODEL
 
 KINDS: dict[str, Any] = S.read_kinds()
-FILE = f"{SA.as_posix()}/project/structures.yaml"
+FILE = STRUCTURES
 
 
 def _write(root: Path, text: str) -> None:
