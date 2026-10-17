@@ -237,12 +237,10 @@ def test_a_writer_s_item_beside_a_label_s_item_is_no_item_of_its_list() -> None:
     assert _found(USE_CASE.replace(labelled, noted)) == []
     variants = "- **Variants:**\n  - **2a.** The disk is full.\n- **Why:** disks fill up."
     assert _found(USE_CASE.replace("**Variants:**\n\n" + VARIANT, variants)) == []
-    # The `sentence` form judges such an item as its own text.
+    # The `sentence` form refuses such an item: a list the part holds (#1370).
     goal = "**Goal:** Export my report as a file."
     beside = "- **Goal:** Export my report as a file.\n- **Note:** asked by sales."
-    assert _found(USE_CASE.replace(goal, beside)) == []
-    twice = beside.replace("sales.", "sales. Twice.")
-    assert _found(USE_CASE.replace(goal, twice)) == [("goal", "not-a-sentence", 4)]
+    assert _found(USE_CASE.replace(goal, beside)) == [("goal", "breaks-its-form", 4)]
 
 
 def test_a_part_with_no_list_is_told_where_its_list_must_stand() -> None:

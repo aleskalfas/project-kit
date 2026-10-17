@@ -165,6 +165,11 @@ SPAN = "span"
 METHOD_SET = "SAN"
 FORMAT_RULE = "RS-SAN-001"
 
+#: The append-only rule: a use case's steps and variants keep their numbers and
+#: letters (DEC-001 point 3). The check of a step or a variant renumbered or
+#: removed binds where it binds and at its status (`_lib/append_only.py`).
+STEPS_RULE = "RS-SAN-002"
+
 #: The key of the folders of held documents in that document, each declared as a
 #: place is, with the files it holds (COR-050 point 1), and of the files they
 #: hold, each saying whether `friction.exclude` leaves it out.

@@ -70,14 +70,25 @@ ANALYSIS_SET_TEXT = (
 
 
 def accepting_san(repo: AdopterRepo) -> dict[str, str]:
-    """What to write so the format rule binds on the whole analysis: the adopter's copy of
-    `SAN` with its rule flipped to accepted, as a fixture and not the acceptance procedure,
-    and a set of the project's own that inherits it."""
+    """What to write so `SAN`'s rules bind on the whole analysis, the format rule and the
+    append-only rule: the adopter's copy of `SAN` with each rule flipped to accepted, as a
+    fixture and not the acceptance procedure, and a set of the project's own that
+    inherits it."""
     text = (repo.root / SAN_REL).read_text(encoding="utf-8")
     return {
-        SAN_REL: text.replace("status: proposed", "status: accepted", 1),
+        SAN_REL: text.replace("status: proposed", "status: accepted"),
         ANALYSIS_SET: ANALYSIS_SET_TEXT,
     }
+
+
+def with_status(text: str, rule: str, status: str) -> str:
+    """A rule set's `text` with `rule`'s status set to `status`, the other rules as they
+    were: a fixture, not the acceptance procedure."""
+    changed, count = re.subn(
+        rf"(^  {re.escape(rule)}:\n    status: )[a-z]+$", rf"\g<1>{status}", text, flags=re.M
+    )
+    assert count == 1, f"no status of {rule} to set"
+    return changed
 
 
 _yaml: Any = YAML(typ="safe")

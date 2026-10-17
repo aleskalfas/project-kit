@@ -73,8 +73,8 @@ Beside it, the comparison runs a second check against the same base: each use
 case's steps and variants against the same use case where this branch left the
 base, reporting a step or a variant renumbered or removed (`_lib/append_only.py`).
 Both guard one promise, that a number, once given, never changes meaning. That
-check binds where the format rule, RS-SAN-001, binds and at its status, and a
-preview shows it under a proposed rule, so `preview` reaches it alone. It needs
+check binds where the append-only rule, RS-SAN-002, binds and at its status, and
+a preview shows it under a proposed rule, so `preview` reaches it alone. It needs
 the base whenever a use case is numbered here, and fails as this one does when
 it has none.
 """

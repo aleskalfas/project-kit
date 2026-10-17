@@ -164,9 +164,26 @@ def test_none_passes_only_where_the_part_allows_it() -> None:
         ("Export my report.\n", True),
         ("Export my report (as a file).", True),
         ("Export my report. Then share it.", False),
+        ("Export my report. Then email it.", False),
         ("Why export? To share it.", False),
-        ("Export it, e.g. as a file.", False),  # a space after "e.g." ends a sentence
         ("Export my report.\nShare it.", False),
+        # A mark followed by a lowercase letter ends no sentence (#1370).
+        ("Export it, e.g. for the auditor.", True),
+        ("Export it on 3. října.", True),
+        ("Export it, e.g. Then share it.", False),
+        # Several spaces, or a no-break space, count as a space; a zero-width space as
+        # nothing: no character a reader cannot see moves a sentence's end.
+        ("Export my report.  Then email it.", False),
+        ("Export my report.\u00a0Then email it.", False),
+        ("Export my report.\u200b Then email it.", False),
+        ("Export my report.\u200bThen email it.", True),
+        # Only a capital letter after the space ends one: a digit or a quote does not.
+        ("Export my report. 2 files follow.", True),
+        # A script without capital letters is never split.
+        ("レポートを書く。それを送る。", True),
+        ("تصدير التقرير. ثم إرساله.", True),
+        # A mark inside a code span ends none.
+        ("Run `make. Then` now.", True),
     ],
 )
 def test_where_a_sentence_ends_is_rs_san_001_s_how(text: str, one: bool) -> None:
@@ -185,32 +202,63 @@ def test_a_part_of_the_sentence_form_holds_one_sentence() -> None:
     )
 
 
-def test_in_a_list_each_item_of_a_sentence_part_holds_one_sentence() -> None:
-    """A `sentence` part written as a list holds the form in each item, as RS-SAN-001's
-    *How* says of a list: each item, a nested one apart from the item it sits in, and
-    the rest of the part taken as one text, each found at its own line (#1365)."""
+def test_a_sentence_part_is_one_text_and_holds_no_list() -> None:
+    """A `sentence` part is one text, the whole of what it holds, and holds no list, not
+    even inside a block quote, as RS-SAN-001's *How* says (#1370). The list breaks the
+    form at its first item's line. A list's markers are no text, so a part with a list is
+    not judged as a sentence too."""
     goal = "**Goal:** Export my report as a file."
-    listed = "**Goal:**\n\n- Export my report.\n- Share it."
-    assert _found(USE_CASE.replace(goal, listed)) == []
-    two = "**Goal:**\n\n- Export my report. Then share it.\n- Keep it."
-    assert _found(USE_CASE.replace(goal, two)) == [("goal", "not-a-sentence", 5)]
-    lead = "**Goal:** Two things. Both today.\n\n- Export my report.\n- Share it."
-    assert _found(USE_CASE.replace(goal, lead)) == [("goal", "not-a-sentence", 3)]
-    nested = "- **Goal:**\n  - Export my report.\n    - As a file.\n  - Share it."
-    assert _found(USE_CASE.replace(goal, nested)) == []
-    # A line wrapped under its item's text stays in the item, `2026.` and all.
-    wrapped = "**Goal:**\n\n- Export my report by the end of\n  2026. Then share it."
-    assert _found(USE_CASE.replace(goal, wrapped)) == [("goal", "not-a-sentence", 5)]
+    # A two-bullet goal: two needs written as one goal.
+    listed = "**Goal:**\n\n- Export my report.\n- Email it."
+    assert _found(USE_CASE.replace(goal, listed)) == [("goal", "breaks-its-form", 5)]
+    (departure,) = S.departures(_lines(USE_CASE.replace(goal, listed)), KINDS["use-case"])
+    assert departure.detail.startswith("it holds a list, where a part of this form is one")
+    numbered = "**Goal:**\n\n1. Export my report.\n2. Email it."
+    assert _found(USE_CASE.replace(goal, numbered)) == [("goal", "breaks-its-form", 5)]
+    one = "**Goal:**\n\n- Export my report."
+    assert _found(USE_CASE.replace(goal, one)) == [("goal", "breaks-its-form", 5)]
+    lead = "**Goal:** Two things:\n\n- Export my report.\n- Share it."
+    assert _found(USE_CASE.replace(goal, lead)) == [("goal", "breaks-its-form", 5)]
+    nested = "- **Goal:**\n  - Export my report.\n    - As a file."
+    assert _found(USE_CASE.replace(goal, nested)) == [("goal", "breaks-its-form", 4)]
+    # The item the label opens is no list the part holds.
+    labelled = "- **Goal:** Export my report as a file."
+    assert _found(USE_CASE.replace(goal, labelled)) == []
+    # Inside a block quote, a list is still one: refused, at its first item.
+    quoted = "**Goal:**\n\n> - Export my report.\n> - Share it."
+    assert _found(USE_CASE.replace(goal, quoted)) == [("goal", "breaks-its-form", 5)]
+    deeper = "**Goal:**\n\n> Two of them:\n> > 1. Export my report."
+    assert _found(USE_CASE.replace(goal, deeper)) == [("goal", "breaks-its-form", 6)]
+    # A quote with no list, and fenced code that looks like a list, hold none.
+    said = "**Goal:**\n\n> Export my report as a file."
+    assert _found(USE_CASE.replace(goal, said)) == []
+    fenced = "**Goal:** Export my report as a file.\n\n```\n> - not a list\n- nor this\n```"
+    assert _found(USE_CASE.replace(goal, fenced)) == []
     # Without a list the part is one text, and a wrapped `2026` continues it.
     paragraph = "**Goal:** Export my report by the end of\n2026 as a file."
     assert _found(USE_CASE.replace(goal, paragraph)) == []
-    # A line right below the label that opens with `2.` continues the label's paragraph.
+    # A line right below the label that opens with `2.` continues the label's paragraph,
+    # so it is no list; its capital after the full stop ends a sentence.
     continued = "**Goal:** Export my report.\n2. Then share it."
     assert _found(USE_CASE.replace(goal, continued)) == [("goal", "not-a-sentence", 3)]
-    # A list inside a block quote is text of the part, not a list, as the *How* says
-    # (#1370): its items are one text with the rest, which holds two sentences here.
-    quoted = "**Goal:**\n\n> - Export my report.\n> - Share it."
-    assert _found(USE_CASE.replace(goal, quoted)) == [("goal", "not-a-sentence", 3)]
+    wrapped = "**Goal:** Export my report.\nThen email it."
+    assert _found(USE_CASE.replace(goal, wrapped)) == [("goal", "not-a-sentence", 3)]
+
+
+def test_a_front_matter_list_of_the_sentence_form_is_one_text_per_item() -> None:
+    """An actor's `needs` stays a list, each item one text (#1370): a need of two
+    sentences breaks it at its own pointer, and "e.g. for" or "3. října" in a need
+    ends none."""
+    needs = {
+        "needs": [
+            "Run the suite, e.g. for a release.",
+            "Run it on 3. října.",
+            "Run the suite. Then email the report.",
+        ],
+        "name": "x",
+    }
+    (departure,) = S.field_departures(needs, KINDS["actor"])
+    assert (departure.pointer, departure.how) == ("/needs/2", "not-a-sentence")
 
 
 def test_what_a_writer_adds_inside_a_sentence_part_counts_toward_it() -> None:

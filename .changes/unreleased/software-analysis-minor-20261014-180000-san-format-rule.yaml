@@ -9,8 +9,8 @@ body: >
   set does. It holds the format rule, `RS-SAN-001`: an analysis artefact
   carries its kind's declared structure. The rule is proposed, with DEC-001
   as its origin, so it binds nothing until it is accepted. For text of the
-  `sentence` form, its *How* says what one text is in a list, and where a
-  sentence ends. Under `checks`, the set declares what
+  `sentence` form, its *How* says what one text is, and where a sentence
+  ends. Under `checks`, the set declares what
   `software-analysis:validate` enforces of the rule: the parts a kind ships,
   their order, the glossary's head and their forms. The set is at 0.1.0. The name `SAN` is now
   taken, so a rule set of your own named `SAN` fails `pkit validate`. Renaming
