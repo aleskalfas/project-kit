@@ -13,9 +13,8 @@ pkit:
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053]
       artefact: [RS-SAN-001]
     revalidated:
-      at: 2026-10-17T01:36:46Z
-      outcome: unchanged
-      unchanged-because: The change rewords only the head comments of the actor and journey templates, notes the stamp never writes. This page describes no head comment. It already says that an actor is not a persona, and that a journey is not a UX journey map.
+      at: 2026-10-17T01:59:37Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
