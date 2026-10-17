@@ -127,8 +127,9 @@ _LIST_ITEM_RE = re.compile(r"^([ \t]*)-(?:[ \t]+|$)")
 _ENTRY_KEY_RE = re.compile(r"^(name|version):[ \t]*(.*?)[ \t]*(?:#.*)?$")
 
 # A range whose floor the release raises, double-quoted, as an entry's `version:`
-# value: `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`. Group 1 is the range, group 2 its floor.
-_CAPABILITY_RANGE_RE = re.compile(r'"(>=(\d+\.\d+\.\d+)(?:,<\d+\.\d+\.\d+)?)"')
+# value: `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`. Group 1 is the range, group 2 its floor,
+# group 3 its upper bound, which the release widens on declaration.
+_CAPABILITY_RANGE_RE = re.compile(r'"(>=(\d+\.\d+\.\d+)(?:,<(\d+\.\d+\.\d+))?)"')
 
 # The `version:` line of a `requires_capabilities` entry, as the floor raise
 # leaves it. The changeset guard admits such a changed line in a release's
@@ -576,6 +577,8 @@ class CapabilityEntry:
     # (`_CAPABILITY_RANGE_RE`); None for any other value.
     floor_span: tuple[int, int] | None
     range: str | None  # that range without its quotes
+    # Where that range's `<A.B.C` upper bound sits; None when it has none.
+    upper_span: tuple[int, int] | None = None
 
     @property
     def floor(self) -> str | None:
@@ -583,6 +586,13 @@ class CapabilityEntry:
         if self.range is None:
             return None
         return self.range[2:].split(",", 1)[0]
+
+    @property
+    def upper(self) -> str | None:
+        """The `<A.B.C` upper bound of a range the release raises, else None."""
+        if self.range is None or ",<" not in self.range:
+            return None
+        return self.range.split(",<", 1)[1]
 
 
 def requires_capabilities_entries(package_text: str) -> list[CapabilityEntry]:
@@ -643,17 +653,21 @@ def _capability_entry(package_text: str, item: Mapping[str, tuple[str, int]]) ->
     name = item.get("name")
     version = item.get("version")
     span: tuple[int, int] | None = None
+    upper: tuple[int, int] | None = None
     found_range: str | None = None
     if version is not None:
         found = _CAPABILITY_RANGE_RE.fullmatch(version[0])
         if found is not None:
             span = (version[1] + found.start(2), version[1] + found.end(2))
+            if found.group(3) is not None:
+                upper = (version[1] + found.start(3), version[1] + found.end(3))
             found_range = found.group(1)
     return CapabilityEntry(
         name=name[0].strip("'\"") if name is not None else None,
         version=version[0] if version is not None else None,
         floor_span=span,
         range=found_range,
+        upper_span=upper,
     )
 
 
@@ -693,6 +707,58 @@ def raise_requires_capability_floor(
     start, end = entry.floor_span
     updated = package_text[:start] + version + package_text[end:]
     return updated, f">={entry.floor} -> >={version}"
+
+
+def widen_requires_capability_bound(
+    package_text: str, capability: str, version: str
+) -> tuple[str, str] | None:
+    """`package_text` with the upper bound of its `requires_capabilities` entry for
+    `capability` widened to admit `version`, up to the next major — `<2.0.0` for
+    `1.0.0`, `<1.0.0` for `0.55.0` — and the `<old -> <new` bound; None when the
+    bound already admits `version`, or the range has none.
+
+    **Widen-only**, and in place: the floor, `optional:` and comments survive.
+    Pure, like `raise_requires_capability_floor`, and raising as it does when there
+    is no one entry of a range it rewrites or `version` is not a release version."""
+    if not is_release_version(version):
+        raise click.ClickException(
+            f"{capability} version {version!r} is not a release version (expected "
+            "major.minor.patch, no leading zeros)"
+        )
+    entry = requires_capability_entry(package_text, capability)
+    if entry is None:
+        raise click.ClickException(
+            f"requires_capabilities has no one entry for {capability} with a range of the form "
+            f'">=X.Y.Z,<A.B.C" or ">=X.Y.Z" whose upper bound can be widened to admit {version}'
+        )
+    if entry.upper_span is None or entry.upper is None:
+        return None
+    if parse_version_tuple(entry.upper) > parse_version_tuple(version):
+        return None
+    major = parse_version_tuple(version)[0]
+    upper = f"{major + 1}.0.0"
+    start, end = entry.upper_span
+    updated = package_text[:start] + upper + package_text[end:]
+    return updated, f"<{entry.upper} -> <{upper}"
+
+
+def widen_component_requires_capability_bound(
+    pkg_file: Path, capability: str, version: str
+) -> str | None:
+    """Widen one component's upper bound on `capability` to admit `version`, through
+    `widen_requires_capability_bound`. Returns the `old -> new` bound when it
+    rewrote it, `None` when the bound already admitted `version`."""
+    try:
+        widened = widen_requires_capability_bound(
+            pkg_file.read_text(encoding="utf-8"), capability, version
+        )
+    except click.ClickException as exc:
+        raise click.ClickException(f"{pkg_file}: {exc.message}") from None
+    if widened is None:
+        return None
+    updated, changed = widened
+    pkg_file.write_text(updated, encoding="utf-8")
+    return changed
 
 
 def raise_component_requires_capability_floor(

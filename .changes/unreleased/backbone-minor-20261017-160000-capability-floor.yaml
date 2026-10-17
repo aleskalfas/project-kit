@@ -10,6 +10,4 @@ body: >
   `pkit release apply` raises the floor of that capability's entry in the
   dependent's `requires_capabilities`, never lowers it, and states the new floor
   in the changelog, as it does for a backbone floor. `release check` and
-  `release lint` refuse a declaration the release cannot write. `release plan`
-  and `release apply` also warn when a capability's range excludes the version
-  a release writes, or the tree carries, for a capability it depends on.
+  `release lint` refuse a declaration the release cannot write.

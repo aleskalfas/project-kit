@@ -117,30 +117,25 @@ jobs:
           git commit -m "${title}"
           git push --set-upstream origin "${branch}"
 
-          # PR body: the computed bumps, each with the requires_backbone floor and
-          # the requires_capabilities floors a changeset declared for it (the lines
-          # `pkit release plan` prints), any migration-dir prediction warnings
-          # (#465), each range on a capability that excludes the version the
-          # release writes or carries for it (PRJ-002 D4), and the freshly
-          # generated changelog entry (the top block of CHANGELOG.md) for review.
+          # PR body: the computed bumps, each with the requires_backbone floor, the
+          # requires_capabilities floors and the upper bounds on capabilities a
+          # changeset declared for it (the lines `pkit release plan` prints), any
+          # migration-dir prediction warnings (#465), and the freshly generated
+          # changelog entry (the top block of CHANGELOG.md) for review. A range on
+          # a capability that excludes a dependency's version never reaches here:
+          # the plan step refuses it (PRJ-002 D4).
           body="${RUNNER_TEMP}/pr-body.md"
           {
             echo "Automated release PR — review the version bumps and changelog, then merge."
             echo "Merging tags the backbone version post-merge (release-tag.yml). Do not squash away the version bump."
             echo
             echo "## Version bumps"
-            jq -r '.releases[] | "- \(.component): \(.old_version) → \(.new_version) (\(.segment))", (.requires_backbone_floor.lines[]? | "  - \(.)"), (.requires_capabilities_floors[]?.lines[]? | "  - \(.)")' "${plan}"
+            jq -r '.releases[] | "- \(.component): \(.old_version) → \(.new_version) (\(.segment))", (.requires_backbone_floor.lines[]? | "  - \(.)"), (.requires_capabilities_floors[]?.lines[]? | "  - \(.)"), (.requires_capabilities_bounds[]?.lines[]? | "  - \(.)")' "${plan}"
             warnings="$(jq -r '.migration_warnings[]?' "${plan}")"
             if [ -n "${warnings}" ]; then
               echo
               echo "## Migration-dir warnings (see #465)"
               printf '%s\n' "${warnings}" | sed 's/^/- /'
-            fi
-            dependency="$(jq -r '.dependency_warnings[]?' "${plan}")"
-            if [ -n "${dependency}" ]; then
-              echo
-              echo "## Ranges that exclude a dependency (PRJ-002 D4)"
-              printf '%s\n' "${dependency}" | sed 's/^/- /'
             fi
             echo
             echo "## Generated changelog"
