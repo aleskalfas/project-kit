@@ -8,7 +8,7 @@ started: 2026-10-17
 
 The design round of #1648. A big feature should move through project-kit from its assignment to its release, with every artefact kept in step. Agents should do most of the work. This note sets out that flow, compares it with established processes, and writes the version an autonomous agent can follow.
 
-- **Read from main at `65b7604e`:** the records, the guides and the code cited below.
+- **Read from main at `65b7604e`:** the records, the guides and the code cited below. `9bff1a6e` landed during the reviews, and step 2 reads it.
 - **Starts from:** the project manager's sketch of 17 October, and this session's practice. Every claim of the sketch was checked. "What the sketch gets right, and what it gets wrong" lists the corrections.
 - **Governed by:** the anchors and friction record (COR-050), software-analysis DEC-001, living-docs DEC-001, and project-management's records on planning, the gate and landing (DEC-006, DEC-026, DEC-028, DEC-032, DEC-054, DEC-055).
 - **Reviewed:** by the critic and the architect. Their findings and the answers are in "Review", at the end.
@@ -22,12 +22,12 @@ How does a big feature move from an assigned intent to a release and then stay t
 
 **Write what the system must do first, then decide how, then build and verify, then explain.** Each description anchors what makes it true, so a change flags every description resting on it. Each pull request answers those flags before it merges.
 
-**Agents do the work, and the person makes the decisions.** A person hands an agent the work of a plan, never a decision. The decisions stay one at a time, each for one pull request or one record, but an agent can bring the person several together.
+**Agents do the work, and the person makes the decisions.** A person hands an agent the work of a plan, never a decision. Each decision stays for one pull request or one record, but an agent can bring the person several together. A chain of tasks can merge into the plan's integration branch, so the person decides once, on the merge into main.
 
 - **The flow:** eight steps, from planning to drift. Most of the machinery exists. The gaps are in the analysis, in the trace from a requirement to its test, and in who may decide what.
 - **The comparison:** every established process put people in its roles, and the authority came with the role. Each kept its trace apart from the code. Each left independence and attention to people.
-- **The autonomous version:** a producer never judges its own work. A gate reads evidence, never the producer's account. An agent stops at every decision, at a judgement no rule settles, and before anything on the never-alone list.
-- **The largest gap:** this session merged pull requests and accepted records on standing delegations that no record holds. DEC-006, the pm skill and the project manager's own instructions all ask for the person's authorisation of each merge. And today nothing can tell an act of the person from an agent's.
+- **The autonomous version:** a producer never judges its own work. A gate reads evidence, never the producer's account. An agent stops at every decision on a closed list, at a judgement no rule settles, and before anything on the never-alone list.
+- **The largest gap:** this session merged pull requests and accepted records on standing delegations that no record holds. DEC-006, the pm skill and the project manager's own instructions all ask for the person's authorisation of each merge. And today nothing can tell an act of the person from an agent's. Attribution and acceptance are one core question (G2).
 - **Light where it can be:** each step runs only when its trigger holds. A fix, a record or a page change skips most of them.
 
 ## 1. The reference flow
@@ -36,9 +36,11 @@ How does a big feature move from an assigned intent to a release and then stay t
 
 The sketch says each later artefact anchors what it rests on, from use cases to requirements, decisions, code and docs. The anchors run another way.
 
-- **A description anchors what makes it true.** A use case anchors the code it exercises and the records it relies on (software-analysis DEC-001 point 4). A page anchors code, records, analysis artefacts and the home of each fact it summarises (living-docs DEC-001 point 4).
-- **What is described anchors nothing.** Code and tests carry no anchors. No decision record carries a friction block today, as the architect found on #1393 (PR #1646, "Beyond this issue").
-- **So a change flags descriptions only.** Changed code flags the use cases and pages anchored to it. A changed decision flags whatever anchors it. A changed use case flags the journeys and pages anchored to it, and no code and no test.
+- **Only an artefact carries anchors.** An artefact is a document, or a collection entry, in a place declared to hold them (COR-050 point 1).
+- **An artefact anchors what makes it true:** what it describes, and what it applies. A use case anchors the code it exercises and the records it relies on (software-analysis DEC-001 point 4). A page anchors code, records, analysis artefacts and the home of each fact it summarises (living-docs DEC-001 point 4). A rule that fills another anchors the rule it fills (COR-051).
+- **Code and tests are not artefacts, so they anchor nothing.** A decision record may anchor what it governs (COR-050, "Why it is core"). None does yet, as the architect found on #1393 (PR #1646, "Beyond this issue").
+- **So a change flags only the artefacts anchored to it.** Changed code flags the use cases and pages anchored to it. A changed decision flags whatever anchors it. A changed use case flags the journeys and pages anchored to it, and no code and no test.
+- **Friction lands only where an answer can be held.** The answer lives in the artefact, never in a pull request's description (COR-050). A test can hold none.
 - **The order of writing is not the order of anchors.** The analysis is written first, and anchors the code written after it. Friction carries a change from the code back to every description. Nothing carries a revised use case forward to the code: the plan that revised it does, by filing the tasks that build it. Planning reads the use cases only when an intent is planned (DEC-054).
 
 ### What keeps the steps in step
@@ -70,7 +72,7 @@ Each step says what happens, what exists today and what is missing.
   - quality requirements and constraints, designed in PR #1646 for #1393 and waiting for the maintainer
   - a way for a reader to tell a use case of planned behaviour from one of built behaviour (G4)
   - the planned revalidation as a lifecycle, which DEC-001 point 11 leaves for later
-  - a review of the analysis's content at the gate. The rule-set reviewer joins with #1420, and its judgement rules for the analysis come with #1577. No gate asks the person to review an analysis change, though EPIC #1643 plans that he does.
+  - a review of the analysis's content at the gate. The rule-set reviewer joins with #1420. Its judgement rules for the analysis landed with #1577 (`9bff1a6e`), proposed. They judge a use case's actor and goal, and whether anchors name what statements rest on. No gate asks the person to review an analysis change, though EPIC #1643 plans that he does.
 
 **3. Decide how.** A question too big for one decision goes to a scratchpad note (COR-012). A choice becomes a decision record, reviewed by the critic, the architect and the methodology-reviewer (COR-024), then accepted. A use case anchors the architecture records it rests on. A view, where one exists, anchors the use cases it realises (the maintainer's decision of 10 October, #1447).
 - *Exists:* notes, records, the acceptance gate, the reviewer stack, and a use case's anchor on a record.
@@ -89,11 +91,11 @@ Each step says what happens, what exists today and what is missing.
 
 **6. Merge.** `land-work` waits for CI, and has the required reviewers review the head in parallel (DEC-032). It prints the answers and each finding for a person, and stops ready (DEC-055). The person authorises one head. The merge goes through the queue where the base has one (DEC-026).
 - *Exists:* all of it. project-kit requires `pm-reviewer` on every pull request, the code, security and docs reviewers on code, and `docs-reviewer` on every classified pull request.
-- *Missing:* the rule-set reviewer at the gate (#1420). A trace of who authorised: an agent passes `--yes`, and the gate cannot tell on whose word (G12).
+- *Missing:* the rule-set reviewer at the gate (#1420). A trace of who authorised. The merge gate is a cross-authority gate (DEC-033 D2), and the engine checks that whoever merged is not the actor (COR-033 P4). But an agent passes `--yes` under the person's account, so the gate cannot tell on whose word (G12).
 
 **7. Release.** Changesets become versions and a changelog, and declared floors rise (PRJ-002). A weekly workflow opens the release pull request, and a person merges it.
 - *Exists:* all of it, the capability floor raised at `65b7604e` included.
-- *Missing:* #1645, which keeps the self-host manifests in step. And PRJ-002's wording of who reads the segment (G8).
+- *Missing:* #1645, which keeps the self-host manifests in step. And where the person reads the segment, which PRJ-002 D2 makes a person's read (G8).
 
 **8. Drift.** The whole-repository check runs on each push to main and daily, and keeps one tracking issue (`friction-report`). The `analysis-resolver` and the `living-docs` agent propose fixes, with the commands a person runs.
 - *Exists:* the check, the tracking issue and both agents.
@@ -114,7 +116,7 @@ The maintainer asked on 17 October that the process not be bureaucratic where it
 | 7. Release | a surface change, declared by a changeset (PRJ-002) |
 | 8. Drift | every push to main, and daily |
 
-- **Who judges a trigger:** the orchestrator proposes each issue's steps at the plan's gate, and the person corrects them there. DEC-054 point 5 already works so for "touches what users do".
+- **Who judges a trigger:** the orchestrator proposes each issue's steps at the plan's gate, and the person corrects them there. DEC-054 point 5 already works so for "touches what users do". Showing the steps at the gate refines what DEC-029's gate holds (G15).
 - **A fix** that restores described behaviour takes steps 4 and 6. Each use case it flags still holds, so its answer is `unchanged`, with no record (DEC-001 points 5 and 6).
 - **A change inside one use case** revises the use case in the code's pull request. That is a stale analysis updated, with no record (DEC-001 points 5 and 6). This drops "analysis first" on purpose: one use case is reviewed best beside its code.
 - **A record alone** takes steps 3 and 6. **A page alone** takes steps 5 and 6.
@@ -128,7 +130,7 @@ The sketch's eight steps, its known gaps and its account of the session hold, wi
 
 | The sketch says | What the records and the code say |
 |---|---|
-| Each later artefact anchors what it rests on | Each description anchors what makes it true. Code, tests and, today, records anchor nothing, so a changed use case flags no code |
+| Each later artefact anchors what it rests on | Each artefact anchors what makes it true. Code and tests are no artefacts and anchor nothing, so a changed use case flags no code |
 | Planning walks the use cases, and exists | It does, over an empty set: every plan touching users so far was planned without use cases |
 | The format check holds the analysis's structure | True since `SAN`'s format rule was accepted (`fceb363f`), through `ANA` |
 | The maintainer reviews the analysis change | No gate asks for it. It is EPIC #1643's plan |
@@ -233,20 +235,30 @@ Some of this practice lives only in the project manager's briefs. That is the ch
 
 ### The rules for every step
 
-Each rule names in brackets the record that holds it. A rule no record holds yet is marked *candidate*, with the gap that would make it one.
+Each rule names in brackets what holds it, in one of three ways.
+- **A record:** an id, such as (DEC-006). It changes only through the acceptance gate.
+- **A shipped skill or agent:** its name, such as (the pm skill). It holds the rule, but changes without passing the acceptance gate.
+- **Nothing yet:** marked *candidate*, with the gap that would make it one.
 
-1. **A producer never judges its own work.** A gate passes on a check, or on the act of an authority other than the actor it gates (COR-033 P4). A reviewer other than the agent checks the answers its change wrote (COR-050 point 3). The merge gate enforces this only on its remote path, where a reviewer has an account of its own. On the local path, the one project-kit runs, author exclusion is relaxed and the developer attests the verdict, an honour system (DEC-028). So here the rule is discipline, and the check of it is a *candidate* (G12).
-2. **A gate reads evidence, never the producer's account.** The answers' reviewer works from the change check's own list (COR-050 point 3). The capability writes that list into the pull request, with no word an agent composed (DEC-055 point 1). A verdict counts only with its marker, for the head its reviewer reviewed (DEC-028). A delegated agent's result reaches its dispatcher whole (COR-047, `delegated-result-complete`).
-3. **A judgement no rule settles goes to a person, and one a rule settles does not.** A reviewer's passage for a person withholds no approval, and waits for the person (COR-057 point 3, the `[person]` tag of DEC-028). A design fork the conventions do not settle is surfaced, never buried (the `software-engineer` agent). Stale versus regressed, when unclear, is a person's call (DEC-001 point 5).
+1. **A producer never judges its own work.** A gate passes on a check, or on an act of an authority other than the actor it gates (COR-033 P4). The merge gate is such a gate: the engine checks that whoever merged is not the actor (DEC-033 D2). A reviewer other than the agent checks the answers its change wrote (COR-050 point 3). The verdicts enforce this only on the remote path, where a reviewer has an account of its own. On the local path, the one project-kit runs, author exclusion is relaxed and the developer attests the verdict, an honour system (DEC-028). Under one shared account the rule is discipline, and its check is a *candidate* (G12).
+2. **A gate reads evidence, never the producer's account.** The answers' reviewer works from the change check's own list (COR-050 point 3). The capability writes that list into the pull request, every word the check's but the author's sentence on each updated document (DEC-055 point 1). A verdict counts only with its marker, while it stands for the head (DEC-028). A delegated agent's result reaches its dispatcher whole (COR-047, `delegated-result-complete`).
+3. **A judgement no rule settles goes to a person, and one a rule settles does not.** A reviewer's passage for a person withholds no approval, and waits for the person (COR-057 point 3, the `[person]` tag of DEC-028). Stale versus regressed, when unclear, is a person's call (DEC-001 point 5). A design fork the conventions do not settle is surfaced, never buried (the `software-engineer` agent).
 4. **An agent that cannot tell stops, and never reads silence as a pass.** A resolver that gives no answer leaves its artefact unjudged (COR-050 point 2). A reviewer that cannot judge does not approve (COR-057 point 3). Output with no verdict line posts no verdict (DEC-028). Use cases that cannot be read are reported as not checked, never as unknown (DEC-054 point 3). A step that fails again after one retry stops, as signing did (*candidate*, G3).
 5. **The person is asked one decision at a time, in plain words** (core rules 17 and 18). A recommendation with each question is practice only (*candidate*, G3).
-6. **A person hands over the work, never a decision, and the decisions can come together.** An agent may do all the work of a plan, up to each decision. Each decision stays the person's, shown with what the person must be told:
-   - a merge, authorised for one head. The person is first told what changed and what is left out of date (DEC-006, DEC-055 point 3, COR-050 point 3).
-   - an acceptance: a person's review accepts a rule an agent drafted (COR-051 point 4), and the same for a record is a *candidate* (G2)
-   - a finding for a person, and stale versus regressed when unclear (DEC-028, DEC-001 point 5)
+6. **A person hands over the work, never a decision, and the decisions can come together.** An agent may do all the work of a plan, up to each decision. Each decision is the person's, shown with what the person must be told. The list is closed, and the steps and the never-alone list below use the same one:
+   1. scheduling an issue, closing one as won't-do, and closing a parent (DEC-006)
+   2. what the system must do: a new or changed goal, guarantee or requirement (*candidate*, G13)
+   3. accepting a record or a rule. COR-051 point 4 holds it for a rule an agent drafted, where the path involves a person. For a record, and for a refinement of an accepted rule, it is a *candidate* (G2).
+   4. merging into the default branch, authorised for one head (DEC-006, DEC-055 point 3). The person is first told what changed and what is left out of date (COR-050 point 3). Merging the release pull request.
+   5. a finding for a person, and stale versus regressed when unclear (DEC-028, DEC-001 point 5)
+   6. an answer a change was not asked for, and a reason for having no anchors (COR-050 points 1 and 3)
+   7. freeing an id, and confirming candidates drawn from a brownfield project (software-analysis DEC-001 points 3 and 9)
+   8. bypassing a gate, with the reason on record (DEC-026, DEC-050). Whose reason it may be is a *candidate* (G1).
+   9. a destructive operation, and a change to another repository (core rules 8 and 19, COR-039)
 
    Several decisions may be put to the person in one message, each still for one head or one record. That batch is a *candidate* (G1).
 7. **Build on what has landed, or on the integration branch the plan names.** Work depends only on accepted records (the acceptance gate). A builder never builds on another builder's unmerged branch, as this session's chains did (*candidate*, G3). An integration branch is the plan's, reviewed as it is assembled (DEC-013).
+8. **An agent leaves its own bindings alone.** Within its own change, it never changes what binds it. That is its body, its brief, its permission grants, and the settings of a gate it must pass (*candidate*, G3 and G10).
 
 ### Step by step
 
@@ -255,27 +267,27 @@ For each step: who acts, what each decides alone, what makes it stop and ask, an
 **1. Plan**
 - **Acts:** the person states the intent. The orchestrator plans. The critic, and for a wide plan the architect, review the slicing (DEC-029).
 - **Decides alone:** the orchestrator decides the slicing, the order, the dependencies, each issue's classification and the use cases it serves. It starts work and asks for review (DEC-006). The reviewers decide their findings, which the gate shows (DEC-029).
-- **Stops and asks:** at the one approval gate, before it files (DEC-029). On the prerequisite task when no use case exists and the work touches what users do (DEC-054 point 5). Scheduling an issue is the person's commitment (DEC-006).
+- **Stops and asks:** at the one approval gate, before it files (DEC-029). On the prerequisite task when no use case exists and the work touches what users do (DEC-054 point 5). Scheduling an issue is the person's commitment, given per issue and in the session (DEC-006).
 - **Hands on:** the plan, with its use-case mapping, both kinds of gap and each issue's steps, checked by the person. Each body is validated as it is filed (DEC-010).
-- **May be handed over:** the work of the approved plan, issue by issue. The plan is the grant.
+- **May be handed over:** the work of the approved plan, issue by issue. The plan is the grant. The orchestrator schedules every planned issue at the gate, in the session, with the approval as its audited reason (`promote-issue --reason`, DEC-026). Scheduling one later "under the plan" would be the standing authorisation DEC-006 forbids.
 
 **2. Say what the system must do**
 - **Acts:** an author agent with the `analysis-author` skill, the checks, the rule-set reviewer once it is at the gate (#1420), and the person.
 - **Decides alone:** the author decides the wording, the parts within the format rule, the anchors, the numbers, and the outcomes it proposes in a planned record. A reviewer decides its findings under the rules that bind (COR-057).
 - **Stops and asks:** on a goal, a guarantee or a requirement that no person's statement, record or existing behaviour gives (*candidate*, G13). On candidates drawn from a brownfield project, which a person confirms (DEC-001 point 9). On freeing an id, which the project declares and no tool infers (DEC-001 point 3).
 - **Hands on:** the analysis change and its planned record, naming the design it was reviewed against (DEC-001 point 6). Checked by `pkit analysis validate`, `check-numbers` and `check-pointers`, the reviewers and the person.
-- **May be handed over:** the drafting. What the system must do is the person's decision.
+- **May be handed over:** the drafting. What the system must do is the person's decision. Today it has no gesture of its own. The person decides it by authorising the analysis change's merge, which the batch marks as such (G1, G13).
 
 **3. Decide how**
 - **Acts:** an author agent with the `scratchpad-author` or `decision-author` skill. The critic, then the architect, then the methodology-reviewer (COR-024). The person.
 - **Decides alone:** the author decides the drafting, the alternatives and the recommendation, and starts a note, which decides nothing (COR-012). The reviewers decide their findings, advisory (COR-024).
-- **Stops and asks:** on every choice the accepted records do not settle. On acceptance, which is the person's (point 6 above). On a round that outgrows its issue, after the architect's first recommendation (*candidate*, G3).
+- **Stops and asks:** on every choice the accepted records do not settle. On acceptance, which is the person's (rule 6, item 3). On a round that outgrows its issue, after the architect's first recommendation (*candidate*, G3).
 - **Hands on:** the note or the record, with each reviewer's finding answered in it. Checked by the reviewers, `pkit decisions validate` and the person.
 - **May be handed over:** the drafting and the reviews. Never the acceptance.
 
 **4. Build and verify**
 - **Acts:** a builder in an isolated worktree, CI, the reviewers the gate requires (DEC-032), and the answers' reviewer.
-- **Decides alone:** the builder decides the code within the conventions and the records, and the tests. It writes the answers its own change owes, each deferral naming an open follow-up (COR-050 point 3). It declares the changeset and its segment (G8). Each reviewer decides its verdict within its remit (DEC-028).
+- **Decides alone:** the builder decides the code within the conventions and the records, and the tests. It writes the answers its own change owes, each deferral naming an open follow-up (COR-050 point 3). It proposes the changeset's segment, which the person reads at the release (G8). Each reviewer decides its verdict within its remit (DEC-028).
 - **Stops and asks:** on a design fork nothing settles (the `software-engineer` agent). On stale versus regressed, when unclear (DEC-001 point 5). On an answer its change was not asked for (COR-050 point 3). On a test whose expectation the change must weaken (*candidate*, G9). Before a destructive operation (core rule 8).
 - **Hands on:** a draft pull request with signed commits, the changeset and the tests. The check's list of answers, with a sentence for each updated document. Each finding, fixed or left with why. Checked by CI, the required reviewers and the answers' reviewer (DEC-055 point 3).
 - **May be handed over:** all of it.
@@ -290,14 +302,14 @@ For each step: who acts, what each decides alone, what makes it stop and ask, an
 **6. Merge**
 - **Acts:** the orchestrator runs `land-work`, and the person authorises.
 - **Decides alone:** waiting, re-running a reviewer whose verdict went stale, and a signed merge of main into the branch. The revalidation of a combined state after a conflict (COR-050 point 3).
-- **Stops and asks:** before every merge, which is authorised for one head (DEC-006, `--yes --expect-head`, the pm skill's landing step). An authorisation given before the findings for a person were shown does not cover them (the pm skill). The landing command holds a run whose findings it did not find when it started (DEC-055 point 3). Each firm stop of DEC-055 point 3. Any bypass of a gate, whose reason is the person's (DEC-026, DEC-050).
+- **Stops and asks:** before every merge, which is authorised for one head (DEC-006, `--yes --expect-head`, the pm skill's landing step). An authorisation given before the findings for a person were shown does not cover them (the pm skill). The landing command holds a run whose findings it did not find when it started (DEC-055 point 3). Each firm stop of DEC-055 point 3. Any bypass of a gate (rule 6, item 8).
 - **Hands on:** the `ready:` line with the head, CI, the verdicts, the answers and the findings to judge. Checked by the person.
-- **May be handed over:** everything up to the `ready:` line. The authorisation stays the person's, though several can be given at once (G1).
+- **May be handed over:** everything up to the `ready:` line. The authorisation stays the person's, though several can be given at once (G1). For a chain, the merge of each link into the plan's integration branch could be handed over too. The final merge into main stays the person's (G1).
 
 **7. Release**
 - **Acts:** the release workflow and `pkit release`, then the person.
-- **Decides alone:** nothing new. The release is computed from the changesets, whose segments the builders declared in step 4 (PRJ-002).
-- **Stops and asks:** always. The workflow never merges the release pull request.
+- **Decides alone:** nothing new. The release is computed from the changesets, whose segments the builders proposed in step 4 (PRJ-002).
+- **Stops and asks:** always. The workflow never merges the release pull request. The person reads each segment there, which keeps it a person's read (PRJ-002 D2, G8).
 - **Hands on:** the release pull request, with its versions and its changelog. Checked by `pkit release check` and the person.
 - **May be handed over:** opening it. Never merging it.
 
@@ -312,64 +324,76 @@ For each step: who acts, what each decides alone, what makes it stop and ask, an
 
 **What the records say.**
 - The person holds both ends of the issue lifecycle: scheduling the work, and merging it. Authorisations are given per issue and in the session, and "no standing 'go ahead with everything' applies in a later turn" (DEC-006).
-- The approval signal comes from a human other than the agent (DEC-008).
-- The authorisation to merge is the person's, not the review approval an agent may give (DEC-055 point 3).
+- The authorisation to merge is the person's, not the review approval an agent may give (DEC-055 point 3). DEC-008 says the approval signal itself comes from a human other than the agent. That predates the agent approver of DEC-028, and is out of step with it.
 - The landing step runs `--yes` only on the user's authorisation, for that head (the pm skill). The project manager's own instructions refuse standing authorisations across sessions.
 - A person's review accepts a rule an agent drafted (COR-051 point 4).
 
-**What this session did.** The delegations under "This session as evidence" were given in conversation, carried into briefs, and used across sessions for a week. Merges ran under them, against all four of the first statements. So did refinements of accepted rules: `28f7314b` (#1596) and `17c3e0f4` (#1634) refined `LDOC`'s rules under the delegation, which sits against COR-051 point 4. Two whole sets went to the maintainer instead. He accepted `SAN`'s rules himself (`fceb363f`), and items of the `WRITE` draft (`43981938`).
+**What this session did.** The delegations under "This session as evidence" were given in conversation, carried into briefs, and used across sessions for a week. Merges ran under them, against all four statements above on merging. So did refinements of accepted rules: `28f7314b` (#1596) and `17c3e0f4` (#1634) refined `LDOC`'s rules under the delegation. Whether refining an accepted rule counts as accepting it, COR-051 point 4 does not settle (G2). Two whole sets went to the maintainer instead. He accepted `SAN`'s rules himself (`fceb363f`), and items of the `WRITE` draft (`43981938`).
 
 **What can be handed over, recommended** (*candidate*, G1):
-- **The work, granted in writing.** The approved plan is the grant (DEC-029's gate). It names the issues, so it scopes the work.
+- **The work, granted in writing.** The approved plan is the grant (DEC-029's gate). It names the issues, so it scopes the work. Each planned issue is scheduled at the gate, in the session (step 1).
 - **Passed down by issue.** A builder the orchestrator dispatches holds the work of its own issue, and nothing of the person's decisions.
 - **Ended in writing, where it was granted.** A stop point in the plan, or the person's word written on the EPIC, so the next session reads it. A word said only in conversation is lost with the session.
-- **Decisions, batched, never delegated.** The orchestrator brings the ready heads together, each with its findings for a person, its answers and its sentences. The person authorises them in one message, one head each. That meets DEC-006, DEC-055 and COR-050 point 3 as they stand, and needs no new record. It also removes most of the cost that led to the standing delegation.
-- **An acceptance travels with what the person sees.** It has a pull request of its own. Or the landing command lists each status the change flips, beside the answers, as it lists friction's settings (DEC-055 point 1).
+- **Decisions, batched, never delegated.** The orchestrator brings the ready heads together, each with its findings for a person, its answers and its sentences. It marks each head that carries a decision of substance: an analysis change, a record's status, a change to a gate. The person authorises them in one message, one head each. That meets DEC-006, DEC-055 and COR-050 point 3 as they stand.
+- **What a batch cannot do.** A head that moves, or meets a firm stop of DEC-055 point 3, drops out and returns in the next batch. And a chain still waits for each link's merge before the next link starts (rule 7).
+- **A chain through the plan's integration branch.** Agents merge each link of a chain into the integration branch the plan names (DEC-013). The person authorises the final merge into main, told every answer of the whole branch. COR-050 point 3 asks the telling only before a merge into the default branch, so this weakens nothing core holds. It refines project-management. DEC-006 gives a merge into an integration branch the same path to Done as one into main, the person's authorisation included. DEC-055 point 3 makes every merge authorisation the person's.
+- **An acceptance before the work that depends on it.** The acceptance gate asks that a record is accepted before work depends on it (the decision-record README). So an acceptance cannot be given by authorising the merge of a change that already builds on it. Two shapes fit:
+  - a pull request for each acceptance, which the person authorises
+  - acceptances the person gives in conversation, batched before the dependent work starts. The status change's commit names on whose word it was made.
 
-**The alternative: a delegation of decisions, recorded** (*candidate*, G1). If the maintainer wants merges without him, the record must change, and the gate must check the grant.
-- It partly supersedes DEC-006's sentence on standing authorisations, as COR-060 partly superseded COR-057.
-- The grant is an artefact the gate reads, so an authorisation leaves a trace of an authority other than the agent's (COR-033 P4).
-- Under a grant the landing command stops on every finding for a person and every bypass. It stops on every change to the analysis, a record's status or a gate. Those stay the person's.
-- The person is still told what each merge changed and left out of date. A digest after the merge, written where the grant is, would replace the telling before it, and that weakens COR-050 point 3.
-- The journal cannot hold the log: project-kit keeps it per clone and uncommitted (`.pkit/project/config.yaml`), and it records moves, not acceptances. The commit bodies hold the acceptances already.
+  The landing command can then list each status a change flips, as it lists friction's settings (DEC-055 point 1). That listing checks the acceptance was given. It is not the acceptance.
+
+**The alternative: a delegation of decisions, recorded** (*candidate*, G1). If the maintainer wants merges into main without him, records change in two namespaces, and the gate must check the grant.
+- **In project-management,** it overturns three passages. They are DEC-006's row for Review to Done, its sentence on per-issue authorisations in the session, and DEC-055 point 3's "the authorisation is the person's". A record that does so partly supersedes them, in COR-060's form: a section saying what it overturns and what stands. DEC-008's paragraph on the approval signal is refined first, and DEC-006's amendment blocks are folded into its text, as the refinement rules ask.
+- **In core,** a digest after the merge in place of the telling before it changes COR-050 point 3. A project-management record cannot supersede a core one, so that takes a core decision.
+- **The grant is an artefact the gate reads,** so an authorisation leaves a trace of an authority other than the agent's (COR-033 P4). That needs G12 first. Under one shared account, the engine's check that the merger is not the actor tells nothing (DEC-033 D2).
+- **Under a grant the landing command still stops** on every finding for a person and every bypass. It stops on every change to the analysis, a record's status or a gate. Those stay the person's.
+- **The log is not the journal.** project-kit keeps its journal per clone and uncommitted (`.pkit/project/config.yaml`), and it records moves, not acceptances. The commit bodies hold the acceptances already.
 
 ### What an agent never does alone
 
-- **Accept a decision record or a rule.** COR-051 point 4 holds it for a rule, and it is a *candidate* for a record (G2).
-- **Merge without the person's authorisation for that head** (DEC-006, DEC-055 point 3, the pm skill).
-- **Bypass a gate,** with `--bypass` or `--bypass-reviewer`, on a reason of its own (DEC-026, DEC-050 record the reason, and its owner is a *candidate*, G1).
-- **Write an answer its change was not asked for,** or a reason for having no anchors (COR-050 points 1 and 3, core rule 20).
-- **Invent what the system must do.** A goal, a guarantee or a requirement comes from a person, a record or existing behaviour (*candidate*, G13).
+- **Take any decision on rule 6's list,** each with what holds it there. Among them are accepting a record or a rule, and merging into main without the person's authorisation for that head. So are bypassing a gate on a reason of its own, and inventing what the system must do.
 - **Rewrite the analysis or a test to match broken code** (DEC-001 point 5 for the analysis, and a *candidate* for a test, G9).
 - **Apply a documentation fix nobody reviewed** (living-docs DEC-001 point 5).
-- **Run a destructive operation, or rewrite history** (core rule 8). The permission baseline denies destructive file operations, rewrites of history and escalation of privilege (the privilege catalog, ADR-002). This session's builders never rewrote a branch at all, which is stricter than the force-push policy (DEC-013).
-- **Change another repository** (COR-039, core rule 19).
+- **Rewrite history** (core rule 8). The permission baseline denies destructive file operations, rewrites of history and escalation of privilege (the privilege catalog, ADR-002). This session's builders never rewrote a branch at all, which is stricter than the force-push policy (DEC-013).
 - **Go around the permission model** (core rules 14 and 15), or switch off signing, which is practice only (*candidate*, G3).
-- **Change the instructions or settings that bind it** inside its own change. Those are its body, its brief and its permission grants (*candidate*, G3).
-- **Change a gate to pass its own work.** Changes to friction's settings are shown to the person (DEC-055 point 1). Yet a change may leave a file out of a rule's scope to pass, in view of its reviewers (COR-060 point 2). The rest of a gate's settings is a *candidate* (G10).
+- **Change what binds it, within its own change** (rule 8). A change may still leave a file out of a rule's scope to pass, in view of its reviewers (COR-060 point 2). Changes to friction's settings are shown to the person (DEC-055 point 1), and the rest of a gate's settings is a *candidate* (G10).
 
 ## 4. The gaps, each a candidate issue
 
 Each names what is missing, where it would go, and what it adds to the person's load. They are ordered by what it costs to leave them.
 
-- **G1. Decisions ran on standing delegations no record holds.** Recommended: the plan grants the work, and the orchestrator batches the decisions for the person, one head or one record each. That needs no record, only the batch in the pm skill and perhaps a verb. The alternative is a recorded, gate-checked delegation, which partly supersedes DEC-006. (project-management. Load: less than today's per-pull-request asks.)
-- **G2. Who accepts a decision record is unwritten.** The decision-record README asks that "everyone look at the record and agree". A rule has it: a person's review accepts it (COR-051 point 4). project-kit's own analysis already asks for it, in the merge authoriser's fourth need. Refine the acceptance gate: acceptance is the person's, and reaches the person as its own pull request or listed at the landing. (core, project-management. Load: one line per acceptance.)
-- **G3. Some stop rules live only in uncommitted briefs.** The chains, the retry-once rule, the stop when a round outgrows its issue, signing, a recommendation with each question, and never editing one's own instructions. Over two hundred briefs repeat them, which meets the recurrence test (COR-007). Move them into the `project-manager` and `software-engineer` agents' bodies, or into a builder's skill. (project-management, software-engineering. Load: none.)
-- **G4. Nothing tells a reader which use cases are not built yet.** A use case ahead of its code anchors its actor and its records, with no error. It says what is wanted, so its missing code is a gap. A planned record names that gap, and the task that fills it (DEC-001 points 5 and 6). Two things are missing. A reader of the use case cannot see that it is planned. And nothing makes the building change add the code anchor, beyond uncovered surface where a surface is declared. A `planned` status would have to map onto the use-case point's `active` and `withdrawn` (DEC-054 point 1). (software-analysis. Load: none.)
-- **G5. A tightened requirement signals no test.** In #1393's proposal a requirement anchors the test that verifies it. So an edit of the test already flags the requirement. A change to the requirement flags the use cases that list it, never that test. The change check could also name the tests a changed requirement anchors. That is a new signal against the anchors' direction, not friction, and it is the core check's to give. (core, with #1393's build. Load: none, the change's author answers it.)
+- **G1. Decisions ran on standing delegations no record holds.** Recommended: the plan grants the work, scheduled at the gate in the session. The orchestrator batches the decisions for the person, one head or one record each, marking the decisions of substance. A chain merges into the plan's integration branch, and the person authorises the merge into main. A bypass's reason is the person's. The batch needs the pm skill, and perhaps a verb. The integration-branch path refines DEC-006 and DEC-055 point 3. The alternative is a recorded, gate-checked delegation of decisions. It partly supersedes DEC-006 and DEC-055 point 3, needs a core decision on COR-050 point 3, and needs G2 first. (project-management. Load: less than today's per-pull-request asks.)
+- **G2. Attribution and acceptance are one core question.** G12 is its mechanism.
+  - **Acceptance:** who accepts a decision record is unwritten. The decision-record README asks that "everyone look at the record and agree". A rule has it: a person's review accepts it, where the path involves a person (COR-051 point 4). project-kit's own analysis asks it for records too, in the merge authoriser's fourth need. Nothing says whether refining an accepted rule or record counts as accepting it.
+  - **Attribution:** a gate cannot tell who acted (G12).
+  - **One core record could hold both.** Every act is attributed to the authority that took it. An acceptance needs an authority other than the author: where the path involves a person, that person's review. That carries COR-033 P4 from process transitions to the acceptance gates, and refines COR-051 point 4 without superseding it. DEC-028 already names decision-record acceptance as the second instance that would move its pattern to core.
+  - **Its realisations:** project-management's gate reads the identity and lists the acceptances. The adapter and the permission capability give agents credentials of their own. A project record names project-kit's person, the maintainer.
+
+  (core, then project-management, the adapter and the permission capability. Load: one decision per acceptance, which the person makes today in name.)
+- **G3. Some stop rules live only in uncommitted briefs.** Over two hundred briefs repeat them, which meets the recurrence test (COR-007). Each has a home of its own, by what kind of thing it is (COR-006):
+  - never editing one's own instructions or settings, and never switching off signing: deny rules in the permission profiles (COR-028). These then become guarantees, not discipline.
+  - retrying once then stopping, and a recommendation with each question: conduct for any agent, in the core rules
+  - building only on merged work, and stopping when a round outgrows its issue: procedures in the pm skill, beside batch planning and landing
+  - signing itself: a project-kit policy, in a PRJ record or the project rules
+
+  (core, project-management, the permission capability, project-kit. Load: none.)
+- **G4. Nothing tells a reader which use cases are not built yet.** This note takes the option with no new state. A use case ahead of its code anchors its actor and its records, with no error. It says what is wanted, so its missing code is a gap. A planned record names that gap, and the task that fills it (DEC-001 points 5 and 6). Two things stay missing. A reader of the use case cannot see that it is planned. And nothing makes the building change add the code anchor, beyond uncovered surface where a surface is declared. A `planned` state would be the lifecycle DEC-001 point 11 leaves to a decision of its own. It would also have to map onto the use-case point's `active` and `withdrawn` (DEC-054 point 1). (software-analysis. Load: none.)
+- **G5. A tightened requirement signals no test.** In #1393's proposal a requirement anchors the test that verifies it. So an edit of the test already flags the requirement. A change to the requirement flags the use cases that list it, never that test. A test can hold no answer, so this is no friction (the principle above). Recommended: a rule of `SAN` on requirements, shipped with #1393. A change to a requirement's statement revisits each test its *Verified by* names, or says why the test still verifies it. The rule-set reviewer judges it, reading the requirement's anchors (COR-057 point 1). A check can be declared as the rule's checkable part, listing the anchored tests (COR-051 point 2). Core moves only when a second kind needs a forward obligation (COR-007). (software-analysis, with #1393's build. Load: none, the change's author answers it.)
 - **G6. Test results reach no revalidation.** The evidence point is defined, and nothing fills it in project-kit. A filler from CI's test results. (project-kit, or a later testing capability. Load: none.)
-- **G7. Nothing dispatches the drift agents.** The tracking issue waits for a person. A routine that dispatches the `analysis-resolver` and the `living-docs` agent on each finding, and brings the person their proposals in one batch. (project-management. Load: the same answers, gathered.)
-- **G8. PRJ-002 D2 calls the segment a person's read.** Its reason is against inferring the segment from the commit type, and an agent's judged read meets that. So it may be a wording fix: a judged read, by the change's author, checked by a reviewer. (project-kit. Load: none.)
-- **G9. A test's expectation can change unseen, where no requirement names the test.** A test a requirement anchors is covered by G5's anchors. For the rest, a change that alters what a test expects says so, and a reviewer checks it against the analysis. (software-engineering's code review. Load: none, a reviewer checks it.)
-- **G10. Only friction's settings are shown as a change to the gate.** Show every change to what gates a merge, as friction's settings are shown (DEC-055 point 1). That covers the workflows, the required reviewers, the rule scopes and the permission profiles. A scope that leaves a file out (COR-060 point 2) is one such change. (project-management. Load: a line, on the rare change that alters a gate.)
-- **G11. What waits on the person is scattered.** A plan at its gate, a head ready to merge, a finding to judge, a proposal, a record to accept. One view of them, each with its question and a recommendation. It is a project-management view, outside the process engine, which never lists its subjects (COR-032). (project-management. Load: less, one place instead of several.)
-- **G12. Nothing tells an act of the person from an agent's.** Commits are signed with the person's key. Local verdicts post under the person's account (DEC-028). An agent passes `--yes`. So a gate cannot confirm an authorisation came from another authority than the actor (COR-033 P4), and code owners would not help. Agents acting under an account of their own, as DEC-028's remote path has, would leave the person's account to the person's acts. (project-management, the adapter. Load: none.)
-- **G13. Analysis first lets an agent invent what the system must do.** It is the riskiest act in the flow, since everything after builds on it. Each new or changed goal, guarantee and requirement names its source, a person's statement, a record or existing behaviour. The planned record's `reviewed-against` already names the design. (software-analysis's skill, and perhaps a rule in `SAN`. Load: the person reviews the analysis change, as EPIC #1643 plans.)
-- **G14. Reviewers share the builder's model, and were measured once.** The rule-set reviewer's trial is the one measure: the maintainer judged 23 of 27 blocks right, then 15 of 16 (COR-057 point 8). A periodic sample of each gating reviewer's blocks, judged by the person, would show a drift in their accuracy. (core. Load: a sample, now and then.)
+- **G7. Nothing dispatches the drift agents.** The tracking issue waits for a person. The resolver for a place could be declared beside that place (COR-050 point 1), so a dispatcher finds it without naming any capability. The note `2026-07-02-agent-dispatch-privilege-model` governs which agent may start it. Its proposals go to the person through G11's view. (core and project-management. Load: the same answers, gathered.)
+- **G8. The segment is a person's read, and the agents proposed it.** PRJ-002 D2 decides who reads it, so rewording it would supersede D2. Kept instead: the change's author proposes the segment, and the person reads it on merging the release pull request (step 7). That is a refinement of PRJ-002. (project-kit. Load: a read of the changelog the person merges anyway.)
+- **G9. A test's expectation can change unseen, where no requirement names the test.** A test a requirement anchors flags the requirement when it changes (G5). For the rest, a change that alters what a test expects says so. A reviewer checks it against the analysis, read through a data point. (software-engineering's code review. Load: none, a reviewer checks it.)
+- **G10. Only friction's settings are shown as a change to the gate.** Each component could declare which of its settings bear on a gate. Project-management then shows a change to any of them, as it shows friction's settings (DEC-055 point 1). That covers the workflows, the required reviewers, the rule scopes and the permission profiles. A scope that leaves a file out (COR-060 point 2) is one such change. (project-management, with each owner's declaration. Load: a line, on the rare change that alters a gate.)
+- **G11. What waits on the person is scattered.** A plan at its gate, a head ready to merge, a finding to judge, a proposal, a record to accept. One view of them, each with its question and a recommendation. Other components fill a data point of what waits on a person, and project-management reads it, as it reads the use cases (DEC-054). It stays outside the process engine, which never lists its subjects (COR-032). It is the first real case of the view across processes that the substrate leaves for later. Decide it after G1 and G2, which say what waits on the person, and before G7. (project-management. Load: less, one place instead of several.)
+- **G12. Nothing tells an act of the person from an agent's.** Commits are signed with the person's key. Local verdicts post under the person's account (DEC-028). An agent passes `--yes`. So the merge gate's cross-authority check cannot tell the person from the agent (DEC-033 D2, COR-033 P4), and code owners would not help. Agents acting under an account of their own, as DEC-028's remote path has, would leave the person's account to the person's acts. It stays optional: where agents have no identity, DEC-028's honour system holds. It is the mechanism of G2. (project-management, the adapter, the permission capability. Load: none.)
+- **G13. Analysis first lets an agent invent what the system must do.** It is the riskiest act in the flow, since everything after builds on it. Each new or changed goal, guarantee and requirement names its source, as a rule's origin does (COR-051 point 5). The source is when it was decided, by whom and why, in the decider's words. Or it is a cited record, or existing behaviour. The planned record's `reviewed-against` already names the design. The person's decision on it has no gesture of its own: it is the authorisation of the analysis change's merge, which G1's batch marks. (software-analysis's skill, and perhaps a rule in `SAN`. Load: the person reviews the analysis change, as EPIC #1643 plans.)
+- **G14. Reviewers share the builder's model, and were measured once.** COR-057 point 8 asks for evidence before a reviewer gates, and names no bar. The rule-set reviewer's trial is the one measure so far: the maintainer judged 23 of 27 blocks right, then 15 of 16 (`2026-10-15-rule-set-reviewer-trial`). A periodic sample of each gating reviewer's blocks, judged by the person, would show a drift in their accuracy. Which reviewers gate is project-management's choice (DEC-032), so the sample starts there or in a PRJ record. (project-management or project-kit. Load: a sample, now and then.)
+- **G15. The plan's gate shows no steps per issue.** "Light where it can be" has the orchestrator propose each issue's steps at the gate, and the person correct them. That adds to what DEC-029's gate holds. (project-management. Load: one column in a plan the person reads anyway.)
 
 Already filed, and part of the flow:
 - #1393, requirements, and #1447, the analysis and the architecture
-- #1420, the rule-set reviewer at the gate, and #1577, its judgement rules for the analysis
+- #1420, the rule-set reviewer at the gate. #1577 gave it judgement rules for the analysis, proposed, which the maintainer accepts or not.
 - #1645, the release's manifests
 - EPIC #1643, project-kit's analysis, and EPIC #234, its documentation
 
@@ -394,26 +418,29 @@ EPIC #1643 writes project-kit's own analysis. This flow becomes its first journe
 - **Variant:** the autonomous path. An agent takes each step, and the journey stops at the person exactly where part 3 says.
 
 Two things follow for the analysis.
-- **The never-alone list becomes assumptions, and a few guarantees.** Most items are discipline: nothing at run time stops an agent from breaking them (the agents README, "Friction writers"). So each is an assumption of a use case, naming the record that admits it (DEC-001 point 1). The few the system secures are minimal guarantees. "Land a change" guarantees that no head merges but the one authorised (`--expect-head`), and no list of answers but the merged head's (DEC-055 point 3).
+- **The never-alone list becomes assumptions, and a few guarantees.** Most items are discipline: nothing at run time stops an agent from breaking them (the agents README, "Friction writers"). So each is an assumption of a use case, naming the record that admits it (DEC-001 point 1). The few the system secures are minimal guarantees. "Land a change" guarantees that no head merges but the one authorised (`--expect-head`), and no list of answers but the merged head's (DEC-055 point 3). The permission baseline's denies are guarantees too. G3 would move more items there, and G12 would make the merge gate's check of who acted one.
 - **Some requirements rest on no record.** "The person is asked one decision at a time" rests on a core rule, and "a chain waits for each merge" on practice alone. As the maintainer said on 17 October, such a requirement arises beside the records. It is its own home until a record decides it (#1393's proposal, point 5).
 
 The journey waits for #1393, as the maintainer ordered on 17 October: the capability first, then project-kit's analysis. Its actors, use cases and steps could be drafted with today's kinds, and only its requirements wait. That would reverse his order, so it is not recommended.
 
 ## For the maintainer
 
-One choice per line, the recommendation first, in the order they depend on each other.
+One choice per line, the recommendation first, in the order they depend on each other. They go to the maintainer one at a time.
 
-1. **Delegation (G1):** the plan grants the work, and decisions come to you batched — or a recorded, gate-checked delegation of decisions, partly superseding DEC-006.
-2. **Acceptance (G2):** a person accepts a record too, each acceptance shown at the landing — or a pull request per acceptance — or left unwritten.
-3. **Who acted (G12):** agents act under an account of their own — or under yours, as now.
-4. **The stop rules (G3):** into the `project-manager` and `software-engineer` agents' bodies — or into a builder's skill — or left in briefs.
-5. **Where a big feature's analysis lands (G4):** first, on main, its planned record naming each gap's task — or with the code, losing the plan's citations — or on an integration branch.
-6. **Sources of what the system must do (G13):** each goal, guarantee and requirement names its source, in the skill — or also as a rule in `SAN`.
-7. **From requirement to test (G5, G6):** with #1393's build, the core change check names the tests a changed requirement anchors, and CI fills the evidence point — or later.
-8. **Drift (G7):** the project manager dispatches the drift agents and brings you their proposals in one batch — or by hand, as now.
-9. **What waits on you (G11):** one project-management view of every wait — or not yet.
-10. **The segment (G8):** PRJ-002 D2 reworded to a judged read, checked by a reviewer — or unchanged.
-11. **The first journey:** "deliver a feature" under EPIC #1643, after #1393 — or drafted now without its requirements.
+1. **Attribution and acceptance (G2, G12):** one core record, each act attributed to its taker, an acceptance needing someone other than its author — or both left unwritten.
+2. **Delegation (G1):** the plan grants the work, decisions come batched, chains merge into the plan's integration branch — or a gate-checked delegation of decisions, needing choice 1.
+3. **How an acceptance reaches you (G2):** given in conversation before the work that depends on it, then listed at the landing as a check — or a pull request for each.
+4. **The stop rules (G3):** each to its home among the permission profiles, the core rules, the pm skill and a PRJ record — or two agents' bodies — or briefs.
+5. **Where a big feature's analysis lands (G4):** first on main, with a planned record naming each gap's task — or with the code, losing the plan's citations — or on an integration branch.
+6. **Sources of what the system must do (G13):** each names its source as a rule's origin does, in the skill — or also as a rule in `SAN`.
+7. **From requirement to test (G5):** a rule of `SAN` with a declared check, shipped with #1393 — or a new signal in the core change check.
+8. **Test evidence (G6):** CI's test results fill the evidence point in project-kit — or later.
+9. **What waits on you (G11):** a data point other components fill, read by one project-management view — or not yet.
+10. **Drift (G7):** each place's resolver declared beside it and dispatched, its proposals in choice 9's view — or by hand, as now.
+11. **The segment (G8):** the author proposes, and you read it at the release, refining PRJ-002 — or D2 superseded.
+12. **The first journey:** "deliver a feature" under EPIC #1643, after #1393 — or drafted now without its requirements.
+
+G9, G10, G14 and G15 need no choice of direction. Each is filed as a task if the maintainer agrees.
 
 ## Review
 
@@ -433,7 +460,7 @@ The gaps it found, each answered:
 - **The three weights fitted only chosen cases:** replaced by each step's trigger, judged at the plan's gate. A fix's flagged use cases still hold, with no record.
 - **G4 overstated:** rewritten. A use case ahead of its code anchors its actor and records with no error. Uncovered surface joins the table.
 - **G11 against the engine:** G11 is a project-management view, outside the engine.
-- **G5's place:** the core check's, and a new signal, not friction.
+- **G5's place:** a new signal, not friction. The architect then moved it from core to software-analysis (A4).
 - **The overlap with #1393:** G5 and G9 say a test a requirement anchors already flags the requirement.
 - **The brief's sub-points per step:** each step gives the reviewers' decisions and what may be handed over. Step 7 names the segment.
 - **One model for all agents:** lesson 3 and G14.
@@ -463,3 +490,36 @@ Its counter-alternatives:
 One point answered without a change. The critic saw a tension between analysis first and `LDOC`'s "nothing ahead of its need". A use case written before its code serves a feature already planned, so its need has come. The rule is about pages, too.
 
 Readability: `LDOC` and the use-case point are explained, dense paragraphs split, and the choices ordered by what depends on what. They go to the maintainer one at a time.
+
+A confirmation round found all four red flags fixed, with no new one.
+
+### The architect
+
+The architect edited nothing. It found four concerns that need the maintainer's authorisation, four of fit, three of drift, and agreed with the rest. Each is answered in the note.
+
+Concerns for the maintainer:
+- **A1. Batching does not help a chain.** Each link of a chain waits for the person's authorisation before the next starts. A head that moves, or meets a firm stop, drops out of a batch. Answered: the delegation section says what a batch cannot do. It adds the third path the architect proposed: a chain merges into the plan's integration branch, and the person authorises the merge into main. COR-050 point 3 asks the telling only there, so only project-management records change.
+- **A2. Showing an acceptance at the landing conflicts with the acceptance gate.** Work that depends on a record is written after its acceptance, so a merge cannot be the acceptance of a record the change builds on. Answered: two shapes fit, a pull request per acceptance, or acceptances given in conversation before the dependent work. A listing at the landing only checks them. Choice 3.
+- **A3. The alternative to G1 reaches into core.** A digest after the merge changes COR-050 point 3, which a project-management record cannot supersede. In project-management it overturns more than one sentence of DEC-006, and needs COR-060's form. A grant the gate checks needs G12 first. Answered in the alternative, in G1 and in choice 2.
+- **A4. G5 belongs in software-analysis.** A test can hold no answer, so a signal to it is no friction. A rule of `SAN` on requirements, judged by the rule-set reviewer with a declared check, needs no change to core. Answered: G5 and choice 7. The principle now says friction lands only where an answer can be held.
+
+Fit:
+- **A5. G1, G2 and G12 are one concern.** DEC-028 already names decision-record acceptance as the second instance that would move its pattern to core. Answered: G2 is now attribution and acceptance, one core question, with G12 its mechanism. It keeps COR-051 point 4's condition, where the path involves a person. It asks whether refining an accepted rule or record counts as accepting it. Choices 1 and 3.
+- **A6. G3's rules have several homes, not two agent bodies.** Answered: G3 sorts each rule by what kind of thing it is (COR-006). Rule 8 and part 5 note that permission denies make guarantees of what is discipline now.
+- **A7. G7, G10 and G11 would have project-management read other components' state.** Answered: G11 reads a data point others fill, G7 finds resolvers declared beside their places, and G10 reads each owner's declaration. G11 comes before G7.
+- **A8. G14 belongs in project-management or a PRJ record, and cited the wrong source.** Answered in G14.
+
+Drift:
+- **A9. "The principle, corrected" named the wrong property.** Any artefact may carry anchors, records and rules included. Answered: the principle now says only artefacts carry anchors, and code and tests are not artefacts.
+- **A10. Several citations.** Answered:
+  - rule 1 cites DEC-033 D2
+  - rule 2 says the author writes a sentence per updated document, and that a verdict counts while it stands for the head
+  - rules held by a shipped skill or agent are marked apart from those a record holds
+  - rule 6's list of decisions is closed, and the steps and the never-alone list use it
+  - deciding what the system must do has its gesture named in G13
+  - the plan's grant schedules each issue at the gate, in the session, as DEC-006 asks
+  - showing each issue's steps at the gate is G15
+  - the bypass's owner is in G1
+- **A11. DEC-008's paragraph and DEC-006's amendment blocks are out of step.** Answered: the delegation section names both, for any record that builds on them.
+
+Its placement table changed G5, G7, G8, G11, G12 and G14 as above. G8 is no wording fix: PRJ-002 D2 stays, and the person reads the segment at the release. Its escalation flags are the alternative to G1, G2 with G12, G5 if kept in core, and G8 if D2 were changed. Each is a choice above.
