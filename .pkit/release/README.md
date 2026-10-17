@@ -441,6 +441,10 @@ deletes the consumed changesets. `plan` shows each floor it will raise under
 the component's bump, and warns of a range on a capability that excludes the
 version the release writes or carries for it.
 
+In project-kit's own source no capability has a manifest (ADR-059), so the
+`version:` line `apply` writes in a capability's `package.yaml` is the version
+`pkit validate` reads for it.
+
 ### A replay may restore a removed default
 
 A version transition may run every backbone migration again, over a project

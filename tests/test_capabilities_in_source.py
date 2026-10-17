@@ -373,3 +373,20 @@ def test_a_refresh_onto_itself_is_refused_before_anything_runs(source_repo: Path
 
     assert not (source_repo / "migration-ran").exists()
     assert _snapshot(_cap_dir(source_repo)) == before
+
+
+# --- the real tree: no capability manifest --------------------------------------
+
+
+def test_the_source_holds_no_capability_manifest() -> None:
+    """Nothing in the source stamps a capability's manifest (ADR-059), so the source
+    holds none, and each capability is read from the `package.yaml` the release writes
+    (ADR-065 point 2, PRJ-007 point 1). A stray manifest would freeze a version
+    nothing keeps in step."""
+    capabilities = Path(__file__).resolve().parent.parent / ".pkit" / "capabilities"
+    stray = sorted(
+        path.relative_to(capabilities).as_posix()
+        for pattern in ("*/manifest.yaml", "*/project/manifest.yaml")
+        for path in capabilities.glob(pattern)
+    )
+    assert stray == []

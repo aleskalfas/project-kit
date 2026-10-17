@@ -1,0 +1,7 @@
+component: project-management
+kind: none
+body: >
+  Internal. project-kit's own source drops the install receipt it kept for
+  project-management under the capability's `project/`, since nothing in the
+  source writes it (ADR-059). The file was project-kit's own state, never part
+  of the capability's bundle, so nothing you install or run changes.
