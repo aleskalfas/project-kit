@@ -3,7 +3,7 @@ id: ACT-merge-authoriser
 name: Merge authoriser
 status: active
 needs:
-  - Before I authorise a merge, be told what changed in each document the change updated, and which documents wait for which follow-up.
+  - Be told, before I authorise a merge, what changed in each document the change updated, and which documents wait for which follow-up.
   - Leave the check of an agent's answers to a reviewer other than that agent, and authorise the merge as I authorise any other.
   - Be told the same before an agent commits straight to the default branch for me.
   - Have a decision record or rule an agent drafted become binding only through my own review of it.
@@ -12,10 +12,10 @@ pkit:
     anchors:
       record:
         - COR-050#3
+        - project-management:DEC-028
     revalidated:
-      at: 2026-10-15T09:26:31Z
-      outcome: unchanged
-      unchanged-because: COR-050's Decision lead, which every point stands on, now lists what an anchor stands on, a document's section or lead among them. Point 3, on being told what a change updated before its merge, is unchanged, so the actor holds.
+      at: 2026-10-16T23:29:51Z
+      outcome: updated
 ---
 
 # ACT-merge-authoriser — Merge authoriser

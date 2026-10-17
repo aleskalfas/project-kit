@@ -1,0 +1,16 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  Adopting the capability includes choosing each kind's parts, a step never
+  skipped (DEC-001 point 1). The README gains its adoption steps: write a rule
+  set of your own that inherits `SAN`, choose each kind's parts, then write the
+  analysis. The `analysis-author` skill gains a sub-procedure,
+  `choose-templates.md`, that walks you through it one kind at a time: review
+  the kind's shipped parts, fill a candidate with one of your own examples and
+  check it with `pkit analysis validate --preview`, then keep the shipped parts
+  or write your relabels and additions in the capability's
+  `project/structures.yaml`. A shipped part you find wrong is a change you
+  propose to the capability, with `pkit report change-request`. No command,
+  schema, template or check changes.

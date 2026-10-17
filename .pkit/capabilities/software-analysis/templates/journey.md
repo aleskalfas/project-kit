@@ -1,7 +1,8 @@
 ---
-# A journey (software-analysis DEC-001 points 1, 3 and 4): an end-to-end path
-# one actor takes across several use cases, and the seams between them where
-# the path can break. Stamp it, never copy it: `pkit analysis new journey
+# A journey (software-analysis DEC-001 points 1, 3 and 4): a summary-level,
+# end-to-end path one actor takes across several use cases, with the seams
+# between them. The path can break at a seam. A journey is not a UX journey
+# map. Stamp it, never copy it: `pkit analysis new journey
 # <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> …` numbers it, writes
 # its title, `steps`, `relies-on` (`--relies-on <UC-id>`, each), an anchor to
 # its actor, its use-case anchors from `steps` and `relies-on`, and its step
