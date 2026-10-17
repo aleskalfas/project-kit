@@ -3,22 +3,27 @@ kind: minor
 custom:
   category: Changed
 body: >
-  The `sentence` form reads a sentence's end as the maintainer chose on
-  17 October (#1370). A `.`, `?` or `!` ends a sentence only where a space
-  and a capital letter follow it, and the text's end ends one. So "e.g. for" and "3. října" end none, and a text in
-  a script without capital letters is never split. Any white space counts
-  as a space, a character a reader cannot see as nothing, and a mark inside
-  a fenced block ends none. A body part of the form, such as a use case's
-  *Goal*, is one text and holds no Markdown list, not even inside a block
-  quote: `pkit analysis validate` fails on a
-  list there, at its first item, where it held each item to one sentence
-  before. An actor's `needs` stays one text per item. `SAN` holds a second
-  rule, proposed: `RS-SAN-002`, a use case's steps and variants keep their
-  numbers and letters (DEC-001 point 3). The check of a step or a variant
-  renumbered or removed, in `pkit analysis check-numbers`, binds where that
-  rule binds and at its status, no longer the format rule's, and `SAN`
-  declares it under the rule's `checks`. The segment is `minor`, as semver
-  allows a breaking change before 1.0.0: a goal written as a list, which
-  passed before, now fails where the format rule binds. The capability is
-  installed only in project-kit's own clones, whose analysis holds no use
-  case and no journey.
+  The `sentence` form reads a sentence's end as the maintainer chose on 17
+  October (#1370). A `.`, `?` or `!` ends a sentence only where a space
+  and a capital letter follow it, and the text's end ends one. So "e.g.
+  for" and "3. října" end none, and a text in a script without capital
+  letters is never split. Any white space counts as a space, a character a
+  reader cannot see as nothing, and a mark inside a fenced block ends
+  none. A body part of the form, such as a use case's *Goal*, is one text
+  and holds no Markdown list, not even inside a block quote: `pkit
+  analysis validate` fails on a list there, at its first item, where it
+  held each item to one sentence before. An actor's `needs` stays one text
+  per item. `SAN` holds a second rule, proposed: `RS-SAN-002`, a use
+  case's steps and variants keep their numbers and letters (DEC-001 point
+  3). The check of a step or a variant renumbered or removed, in `pkit
+  analysis check-numbers`, binds where that rule binds and at its status,
+  no longer the format rule's, and `SAN` declares it under the rule's
+  `checks`. Its message for a step or a variant removed says to put it
+  back under its number or letter even if it no longer happens, as
+  RS-SAN-002 says, no longer to mark it withdrawn, and for one renumbered,
+  that a new one takes a number or a letter after every one its use case
+  or step holds. The segment is `minor`, as semver allows a breaking
+  change before 1.0.0: a goal written as a list, which passed before, now
+  fails where the format rule binds. The capability is installed only in
+  project-kit's own clones, whose analysis holds no use case and no
+  journey.

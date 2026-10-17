@@ -36,7 +36,7 @@ changes meaning.
   letter it takes, after the last or between two. So does one whose number now
   holds other text and whose own text stands nowhere else: an edit, since the
   check cannot tell a reworded step from another one. A step that no longer
-  happens stays, its number kept, marked withdrawn. The check matches text
+  happens stays under its number, as RS-SAN-002 says. The check matches text
   alone, so it misses a step renumbered and reworded at once whose number still
   holds a step. And it reads a new step that repeats, word for word, the old
   text of a step this change rewords as that step renumbered.
@@ -86,12 +86,14 @@ RENUMBERED, REMOVED = "renumbered", "removed"
 
 #: How a renumbered or removed step, or variant, is put right, as the check says it.
 _STEP_FIX = {
-    RENUMBERED: "give it back its number, and number a new step past the last",
-    REMOVED: "put it back under its number, marked withdrawn if it no longer happens",
+    RENUMBERED: (
+        "give it back its number, and number a new step higher than every number of its use case"
+    ),
+    REMOVED: "put it back under its number, even if it no longer happens",
 }
 _VARIANT_FIX = {
-    RENUMBERED: "give it back its label, and letter a new variant past the last of its step",
-    REMOVED: "put it back under its label, marked withdrawn if it no longer happens",
+    RENUMBERED: "give it back its label, and letter a new variant after every letter of its step",
+    REMOVED: "put it back under its label, even if it no longer happens",
 }
 
 

@@ -146,8 +146,8 @@ def test_a_renumbered_step_or_variant_fails_naming_the_use_case_and_its_number(
     assert answer["findings"][0]["message"] == (
         f"UC-001's step 2, as main held it where this branch left it ({fork}), now stands as "
         f"step 3, at line {line + 1}: journeys and evidence cite a step by its number, so it is "
-        "never renumbered or removed — give it back its number, and number a new step past the "
-        "last (DEC-001 point 3)"
+        "never renumbered or removed — give it back its number, and number a new step higher "
+        "than every number of its use case (DEC-001 point 3)"
     )
     moved = [
         re.sub(r", at line \d+", "", f["message"]).split(":", 1)[0] for f in answer["findings"]
@@ -177,12 +177,12 @@ def test_a_removed_step_or_variant_fails(branched: AdopterRepo) -> None:
     assert [f["message"] for f in document(completed)["findings"]] == [
         f"UC-001's step 3, as main held it where this branch left it ({fork}), is gone: "
         "journeys and evidence cite a step by its number, so it is never renumbered or "
-        "removed — put it back under its number, marked withdrawn if it no longer happens "
+        "removed — put it back under its number, even if it no longer happens "
         "(DEC-001 point 3)",
         f"UC-001's variant 3a, as main held it where this branch left it ({fork}), is gone: "
         "journeys and evidence cite a variant by its step and letter, so it is never "
-        "renumbered or removed — put it back under its label, marked withdrawn if it no "
-        "longer happens (DEC-001 point 3)",
+        "renumbered or removed — put it back under its label, even if it no longer happens "
+        "(DEC-001 point 3)",
     ]
 
 

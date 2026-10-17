@@ -17,15 +17,16 @@ rules:
     pkit:
       friction:
         anchors: {record: ["software-analysis:DEC-001#3"]}
-# What this capability's checks enforce of each rule (COR-051 point 2). Of the
-# format rule, it is the structure each artefact kind ships: its parts, the
-# glossary's head and its forms (DEC-001 point 1). Of the append-only rule, it
-# is a comparison of each use case with the same use case where the change
-# left its base: the default branch, or the base the comparison names
+# What this capability's checks enforce of each rule (COR-051 point 2). Of
+# the format rule, it is the structure each artefact kind ships: its parts,
+# the glossary's head and its forms (DEC-001 point 1). Of the append-only
+# rule, it is a comparison of each use case with the same use case where the
+# change left its base: the default branch, or the base the comparison names
 # (DEC-001 point 3; COR-054 point 3). `pkit validate` never runs that check
 # (COR-055 point 2). A check enforces its part only where its rule binds.
-# Whoever judges the rest of a rule leaves that part to the check. Where a project's rule tightens a
-# structure, the project's set declares what the check enforces of that rule.
+# Whoever judges the rest of a rule leaves that part to the check. Where a
+# project's rule tightens a structure, the project's set declares what the
+# check enforces of that rule.
 checks:
   RS-SAN-001:
     - check: "software-analysis:validate"

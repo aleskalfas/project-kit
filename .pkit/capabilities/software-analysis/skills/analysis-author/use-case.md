@@ -43,9 +43,9 @@ Then run the checks in the shared framing's "After stamping", `pkit analysis val
 
 Steps and variants are **only ever added**, never renumbered or removed: journeys and evidence cite a step by its number, and a variant by its step's number and its letter.
 
-- **A new step** takes the next free number, even when it goes between two steps. The path keeps its order, and no number moves.
-- **A new variant** takes the next free letter of its step.
-- **A step that no longer happens** stays in place, its number kept, marked withdrawn. A variant does the same.
+- **A new step** takes a number higher than every number of its use case, even when it goes between two steps. The path keeps its order, and no number moves.
+- **A new variant** takes a letter after every letter of its step.
+- **A step that no longer happens** stays in place, under its number. A variant does the same, under its letter.
 - **The check.** `pkit analysis check-numbers` compares each use case with the same use case where your branch left its base, the default branch unless you name another, and fails on a step or a variant renumbered or removed. It fails only where the append-only rule, `RS-SAN-002`, is accepted and binds. While that rule is proposed, run it with `--preview`: it reports what it would fail, and never fails.
 
 A use case no actor pursues any more is withdrawn, never deleted.
