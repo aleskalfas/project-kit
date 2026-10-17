@@ -6,7 +6,10 @@ artefacts ([project-management:DEC-032-conditional-reviewer-requirements] D1).
 Each declares project-management as an optional dependency, from the release
 that has the floor, so neither stops standing alone
 ([living-docs:DEC-001-living-docs-discipline] point 9,
-[software-analysis:DEC-001-software-analysis-discipline] point 10).
+[software-analysis:DEC-001-software-analysis-discipline] point 10). A branch
+writes no floor above the project-management the tree carries (PRJ-002 D1), so
+each capability's changeset declares the floor as `release`, and the release
+that ships the floor raises the range to it (PRJ-002 D4).
 
 The tests parse the SHIPPED declarations with pm's own validator, and drive the
 REAL collector over a temporary tree that registers the capabilities, so the
@@ -26,6 +29,7 @@ from pathlib import Path
 import pytest
 from ruamel.yaml import YAML
 
+from project_kit import release, versioning
 from project_kit.connections import range_admits
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -41,10 +45,9 @@ BASELINE = "pm-reviewer"
 RULED_PAGE = "docs/guides/a.md"
 RULED_ACTOR = "tech-docs/analysis/use-case-model/actors/ACT-tester.md"
 
-# project-management's last release without the floor, and the release that
-# ships it, as pm's own migrations name it (`migrations/0.55.0/`).
+# project-management's last release without the floor.
 PM_WITHOUT_THE_FLOOR = "0.54.0"
-PM_WITH_THE_FLOOR = "0.55.0"
+PM = "project-management"
 
 
 def _load(module_name: str, path: Path):
@@ -147,13 +150,47 @@ def test_each_contributor_depends_on_pm_optionally(capability) -> None:
     assert _pm_dependency(capability).get("optional") is True
 
 
+@pytest.fixture(scope="module")
+def next_release():
+    """The next release over the tree as it stands: its pending changesets."""
+    return release.compute_release(REPO_ROOT / ".pkit")
+
+
+def _pm_range_after(plan, capability: str) -> str:
+    """The capability's range on pm as `plan` leaves it: the tree's, its floor
+    raised where a pending changeset of the capability declares it."""
+    text = (CAPABILITIES / capability / "package.yaml").read_text("utf-8")
+    for rel in plan.releases:
+        if rel.component.name != capability:
+            continue
+        for floor in rel.capability_floors:
+            if floor.capability == PM and floor.raises:
+                raised = versioning.raise_requires_capability_floor(text, PM, floor.new_floor)
+                assert raised is not None
+                text = raised[0]
+    entry = versioning.requires_capability_entry(text, PM)
+    assert entry is not None and entry.range is not None, f"{capability}: no range on {PM}"
+    return entry.range
+
+
 @pytest.mark.parametrize("capability", CONTRIBUTORS)
-def test_the_range_starts_at_the_pm_release_with_the_floor(capability) -> None:
+def test_the_range_admits_the_pm_the_tree_carries(capability, next_release) -> None:
+    """A branch writes no floor above it, or validation refuses the tree (PRJ-002 D1)."""
+    carried = next_release.versions.carries[PM]
+    assert range_admits(_pm_dependency(capability)["version"], carried) is True
+
+
+@pytest.mark.parametrize("capability", CONTRIBUTORS)
+def test_after_the_next_release_the_range_admits_no_pm_without_the_floor(
+    capability, next_release
+) -> None:
     """An older pm refuses the floor, so every pull request would fail closed
-    until it is upgraded. The range keeps that pm out at install and upgrade."""
-    version_range = _pm_dependency(capability)["version"]
-    assert range_admits(version_range, PM_WITHOUT_THE_FLOOR) is False
-    assert range_admits(version_range, PM_WITH_THE_FLOOR) is True
+    until it is upgraded. The range keeps that pm out at install and upgrade,
+    from the release that ships the floor: the tree's range already, or the
+    floor a pending changeset declares, raised by the release (PRJ-002 D4)."""
+    after = _pm_range_after(next_release, capability)
+    assert range_admits(after, PM_WITHOUT_THE_FLOOR) is False
+    assert range_admits(after, next_release.versions.after(PM)) is True
 
 
 @pytest.mark.parametrize("capability", CONTRIBUTORS)

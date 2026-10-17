@@ -8,10 +8,13 @@ requires_backbone: ">=1.149.0,<2.0.0"
 # The review contribution (`review-contributions.yaml`, DEC-001 point 10) names
 # project-management's floor on ruled artefacts, which an older release
 # refuses. So an installed project-management must have the floor. The
-# dependency is optional, since the capability works without it (COR-030).
+# changeset that adds the contribution raises this floor to the release that
+# ships it, at that release (`requires_capabilities: {project-management:
+# release}`). The dependency is optional, since the capability works without
+# it (COR-030).
 requires_capabilities:
   - name: project-management
-    version: ">=0.55.0,<1.0.0"
+    version: ">=0.54.0,<1.0.0"
     optional: true
 aliases:
   - analysis

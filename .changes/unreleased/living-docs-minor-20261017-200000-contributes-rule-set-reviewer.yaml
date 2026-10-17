@@ -3,6 +3,8 @@ kind: minor
 custom:
   category: Added
   requires_backbone: release
+  requires_capabilities:
+    project-management: release
 body: >
   Where project-management is installed, living-docs contributes the core
   `rule-set-reviewer` to its merge gate, under the floor
@@ -17,8 +19,8 @@ body: >
   `rule-set-reviewer` under `review.agents.contributed_opt_out` in
   project-management's configuration, once for each capability that
   contributes it. living-docs declares project-management as an optional
-  dependency, from its first release with the floor: it still works without
-  project-management, and install and upgrade hold an installed one to that
-  range.
-  The capability requires the backbone that ships the reviewer, the command
-  and optional dependencies.
+  dependency, from project-management's first release with the floor, which
+  ships with this one: living-docs still works without project-management,
+  and install and upgrade hold an installed one to that range. The capability
+  requires the backbone that ships the reviewer, the command and optional
+  dependencies.
