@@ -1945,9 +1945,24 @@ def test_a_range_that_excludes_the_version_the_tree_carries_refuses_the_release(
     assert (
         "excludes project-management 1.0.0, the version this release carries for it. No "
         "pending changeset moves project-management, so no declaration widens the range, and "
-        "`pkit validate` reports the pair out of range too."
+        "`pkit validate` reports the pair out of range where both are installed."
     ) in err.value.message
     assert "runs_on_capabilities" not in err.value.message
+
+
+def test_a_release_that_moves_no_version_is_not_refused_for_a_range(tmp_path: Path) -> None:
+    """Only `none` changesets: the release writes no version and no tag, so a
+    range out of step with the tree is left to validation, and the sweep runs."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "project-management", "1.0.0", ">=1.0.0,<2.0.0")
+    _write_dependent(source_kit, "software-engineering", "0.2.0", ">=0.54.0,<1.0.0")
+    _add(source_kit, "software-engineering", "none", "Docs only.", "a.yaml")
+
+    plan = release.compute_release(source_kit)
+
+    assert plan.is_empty
+    release.apply_release(source_kit, plan, tag=False)
+    assert list(changesets.unreleased_dir(tmp_path).glob("*.yaml")) == []
 
 
 def test_the_plan_json_carries_no_dependency_warnings(tmp_path: Path) -> None:

@@ -465,7 +465,8 @@ def compute_release(source_kit: Path) -> ReleasePlan:
     refused before `apply` writes anything. It also refuses a release that would
     leave a capability whose range excludes the version it writes or carries
     for a capability it depends on (`dependency_range_problems`, PRJ-002 D4), so
-    `plan` refuses it as `apply` does.
+    `plan` refuses it as `apply` does. A release that moves no version is not
+    refused for a range: it writes nothing a range could exclude.
     """
     components = {c.name: c for c in discover_components(source_kit)}
     changesets = load_changesets(source_kit.parent)
@@ -547,7 +548,9 @@ def compute_release(source_kit: Path) -> ReleasePlan:
         releases=releases, consumed=changesets, shipped_backbone=shipped, versions=versions
     )
     _refuse_empty_capability_ranges(plan)
-    excluded = dependency_range_problems(plan)
+    # A release that moves no version leaves nothing a range could exclude, and
+    # writes no tag: it only consumes `none` changesets.
+    excluded = [] if plan.is_empty else dependency_range_problems(plan)
     if excluded:
         raise click.ClickException(
             "cannot leave a capability whose range excludes the version of a capability it "
@@ -1121,7 +1124,9 @@ def capability_bound_problems(
         elif name not in versions.writes:
             problems.append(
                 f"says `{FLOOR_RELEASE}` for {name!r}, but no pending changeset moves {name} "
-                "(patch or above), so this release writes no version of it to run on."
+                "(patch or above), so this release writes no version of it to run on. If a "
+                f"release has already shipped the {name} {cs.component!r} runs on, drop the "
+                "declaration: that release widened the range, or found it wide enough."
             )
     return problems
 
@@ -1547,7 +1552,8 @@ def dependency_range_problems(plan: ReleasePlan) -> list[str]:
             else:
                 remedy = (
                     f"No pending changeset moves {dependency}, so no declaration widens the "
-                    "range, and `pkit validate` reports the pair out of range too."
+                    "range, and `pkit validate` reports the pair out of range where both are "
+                    "installed."
                 )
             leaves = "writes" if dependency in plan.versions.writes else "carries"
             problems.append(
@@ -1627,7 +1633,8 @@ def render_changelog_entry(
     component, at the end of the entry of the changeset that set it
     (`ComponentRelease.floor_entry`), so an adopter reads what the component now
     needs. A raised floor on a capability follows it, each in its own sentence,
-    in name order (`ComponentRelease.floor_sentences`). `pr` references become
+    and then the capability's widened upper bound, capabilities in name order
+    (`ComponentRelease.floor_sentences`). `pr` references become
     reference-style `([#N])` links, resolved in a
     block at the foot of the section (omitted when absent): a URL links as
     written, and a pull request's number links to that pull request of

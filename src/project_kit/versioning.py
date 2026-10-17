@@ -131,9 +131,9 @@ _ENTRY_KEY_RE = re.compile(r"^(name|version):[ \t]*(.*?)[ \t]*(?:#.*)?$")
 # group 3 its upper bound, which the release widens on declaration.
 _CAPABILITY_RANGE_RE = re.compile(r'"(>=(\d+\.\d+\.\d+)(?:,<(\d+\.\d+\.\d+))?)"')
 
-# The `version:` line of a `requires_capabilities` entry, as the floor raise
-# leaves it. The changeset guard admits such a changed line in a release's
-# package.yaml by this pattern (`release.release_writes`).
+# The `version:` line of a `requires_capabilities` entry, as the floor raise and
+# the upper-bound widening leave it. The changeset guard admits such a changed
+# line in a release's package.yaml by this pattern (`release.release_writes`).
 REQUIRES_CAPABILITIES_RELEASE_LINE: re.Pattern[str] = re.compile(
     r'^(?:[ \t]+|[ \t]*-[ \t]+)version:[ \t]*">=\d+\.\d+\.\d+(?:,<\d+\.\d+\.\d+)?"[ \t]*(?:#.*)?$'
 )
