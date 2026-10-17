@@ -24,8 +24,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-17T12:14:24Z
-      outcome: updated
+      at: 2026-10-17T21:38:04Z
+      outcome: unchanged
+      unchanged-because: COR-050 changes only point 14's synced-tree clause and one Rationale bullet, and this page cites its points 3, 4 and 12 on answers, deferrals and the required status, all unchanged. The decisions README adds an externally-sourced capability's records to the copies validation skips, and this page's account of it as the decision-record spec still holds.
 ---
 
 # Contributing to project-kit

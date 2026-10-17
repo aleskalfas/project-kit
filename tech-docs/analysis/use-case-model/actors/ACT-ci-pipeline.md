@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-17T17:18:29Z
+      at: 2026-10-17T21:38:13Z
       outcome: unchanged
-      unchanged-because: PRJ-002 drops stale phrases on its first version, its promotion from the hybrid and the move past 1.0, and decides nothing new. A pull request declares each surface change in a changeset the guard checks, and the release cuts the tag, so the Note's two steps hold.
+      unchanged-because: COR-050 changes only point 14's synced-tree clause and one Rationale bullet. This actor cites COR-050 point 12, that the checks bind once a project makes them a required status, which is unchanged.
 ---
 
 # ACT-ci-pipeline — CI pipeline

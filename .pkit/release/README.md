@@ -17,8 +17,9 @@ pkit:
         - .pkit/lifecycle/README.md#the-replay-a-missing-completion
       source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-17T17:18:34Z
-      outcome: updated
+      at: 2026-10-17T21:38:01Z
+      outcome: unchanged
+      unchanged-because: COR-010 gains a paragraph saying that renaming or removing a section's heading in a document the methodology or a component ships triggers no migration. This page cites COR-010 for the two tiers' version lines, forward-only and replayed backbone migrations, and migrations authored with their surface change, none of which the paragraph alters.
 ---
 
 # Release flow — changesets + the release step

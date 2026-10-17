@@ -19,9 +19,9 @@ pkit:
         - COR-001
         - COR-010
     revalidated:
-      at: 2026-10-17T15:21:33Z
+      at: 2026-10-17T21:38:12Z
       outcome: unchanged
-      unchanged-because: COR-001 now names a capability's install among the writers of project-owned paths, creating the one project rule set the capability declares as a new file the project then owns, never over a file. The adopter's needs, among them that its own files are left alone and that installing a capability is a core act, still hold.
+      unchanged-because: COR-010 gains a paragraph saying that renaming or removing a section's heading in a shipped document triggers no migration, since no project that receives it can anchor its sections. The adopter's need to upgrade like a dependency, with its migrations run for it and its own files left alone, still holds.
 ---
 
 # ACT-adopter — Adopter
