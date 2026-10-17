@@ -115,7 +115,7 @@ Write nothing else. The file is bound to its shape (`schemas/source.schema.json`
 | Rule | Statement |
 |---|---|
 | `RS-LDOC-001` | A page's anchors ground every statement it makes, and only what the page anchors grounds one. |
-| `RS-LDOC-002` | Each fact has one home. Another page states it only as a summary that links to the home and anchors to the home's section. |
+| `RS-LDOC-002` | Each fact has one home. For a page that anchors a decision record, the record is the home of the facts it decides. The page may state them with no link to another page. A page states a fact whose home is another page only as a summary that links to the home and anchors to its section, however short. A name that gives none of a thing's facts needs neither. |
 | `RS-LDOC-003` | Each page names its reader and says only what that reader needs. |
 | `RS-LDOC-004` | Pages of a kind follow one format, with a template per kind. |
 | `RS-LDOC-005` | An index-like file is a signpost to what a folder holds, never a summary of its contents. |

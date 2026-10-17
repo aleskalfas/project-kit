@@ -45,7 +45,7 @@ The title fills the page's level-1 heading. The stamp lists the lines that still
 
 Write in each placeholder's place what it asks for, and only what the reader needs.
 
-- **One home per fact** (RS-LDOC-002). A fact another page already states in full is stated here only as a summary that links to that page. Then anchor the home's section: add `<page>#<section-slug>` to the front matter's `artefact` anchors.
+- **One home per fact** (RS-LDOC-002). A fact a decision record decides needs no link where this page anchors the record, whole or in a part that stands on what decides it. Any other fact another page already states in full is stated here only as a summary that links to that page, however short. Then anchor the home's section: add `<page>#<section-slug>` to the front matter's `artefact` anchors.
 - **A statement nothing grounds** needs its anchor, or it goes.
 
 ## 8. Check and commit
