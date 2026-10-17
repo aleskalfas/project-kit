@@ -30,9 +30,8 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, "COR-059#2", "COR-059#8", ADR-056, ADR-057, ADR-059, ADR-065]
     revalidated:
-      at: 2026-10-17T13:57:06Z
-      outcome: unchanged
-      unchanged-because: The change adds installed_versions, which reads each registered component's version of record through _version_of_record for the release step. The wiring resolver, the capability dependency range relation and the order the version of record is read in, which this page describes, are unchanged.
+      at: 2026-10-17T15:14:26Z
+      outcome: updated
 ---
 
 # Lifecycle
