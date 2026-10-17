@@ -291,7 +291,10 @@ def test_the_judgement_rules_ship_proposed_from_dec_001_declaring_no_check() -> 
         assert entry["status"] == "proposed", rule_id
         assert entry["origin"] == {"decision": "software-analysis:DEC-001"}, rule_id
         assert entry["pkit"]["friction"]["anchors"] == {"record": anchors}, rule_id
-        assert "revalidated" not in entry["pkit"]["friction"], rule_id
+        # A change to a point it rests on asks for its revalidation, so it may carry
+        # one. It carries no deferral and no reason for having no anchors.
+        assert set(entry["pkit"]["friction"]) <= {"anchors", "revalidated"}, rule_id
+        assert "deferred" not in entry["pkit"]["friction"].get("revalidated", {}), rule_id
         assert rule_id not in data["checks"], rule_id
         assert "checks" not in entry, rule_id
         section = _section(body, rule_id)

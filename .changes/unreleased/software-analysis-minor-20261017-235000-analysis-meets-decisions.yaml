@@ -3,9 +3,9 @@ kind: minor
 custom:
   category: Added
 body: >
-  software-analysis DEC-001 point 11 says how the analysis and a project's
-  decisions and architecture point at each other, a convention your records
-  and views follow. The analysis always anchors the solution: a use case
+  Point 11 of software-analysis DEC-001 says how the analysis and a
+  project's decisions and architecture point at each other, a convention
+  your records and views follow. The analysis always anchors the solution: a use case
   anchors each record it rests on or that answers it, and each architecture
   view that realises it. No record and no view anchors the analysis, and a
   view names an analysis artefact only by its id. What a record serves is
