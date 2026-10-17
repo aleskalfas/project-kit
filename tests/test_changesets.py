@@ -197,6 +197,79 @@ def test_parse_changeset_reads_an_empty_floor_field_as_none(tmp_path: Path, layo
     assert changesets.parse_changeset(path).requires_backbone is None
 
 
+@pytest.mark.parametrize(
+    ("layout", "written"),
+    [
+        (
+            "requires_capabilities:\n  project-management: release\n",
+            (("project-management", "release"),),
+        ),
+        (
+            "custom:\n  requires_capabilities:\n    project-management: '0.54.0'\n",
+            (("project-management", "0.54.0"),),
+        ),
+        # YAML reads `0.54` as a number; the value is kept as written.
+        (
+            "requires_capabilities:\n  project-management: 0.54  # a typo\n"
+            "  living-docs: release\n",
+            (("project-management", "0.54"), ("living-docs", "release")),
+        ),
+        # Under `custom:` first, as for `requires_backbone`.
+        (
+            "custom:\n  requires_capabilities:\n    living-docs: release\n"
+            "requires_capabilities:\n  project-management: release\n",
+            (("living-docs", "release"),),
+        ),
+        # An empty value declares nothing for that capability.
+        ("requires_capabilities:\n  project-management:\n", ()),
+        ("requires_capabilities:\n", ()),
+    ],
+)
+def test_parse_changeset_reads_the_capability_floor_field_as_written(
+    tmp_path: Path, layout: str, written: tuple[tuple[str, str], ...]
+) -> None:
+    """`requires_capabilities` maps each capability to its value, top-level or under
+    `custom:`, each kept as written for the release step to judge."""
+    source_kit = _make_kit(tmp_path)
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / "cs.yaml"
+    path.write_text(
+        f"component: software-engineering\nkind: minor\nbody: A thing.\n{layout}",
+        encoding="utf-8",
+    )
+    cs = changesets.parse_changeset(path)
+    assert cs.requires_capabilities == written
+    assert cs.declares_floor is bool(written)
+    assert cs.requires_backbone is None
+
+
+@pytest.mark.parametrize(
+    "layout",
+    [
+        "requires_capabilities: release\n",
+        "requires_capabilities:\n  - project-management\n",
+        "requires_capabilities:\n  project-management:\n    - release\n",
+        "custom:\n  requires_capabilities:\n    project-management: {version: release}\n",
+    ],
+)
+def test_parse_changeset_refuses_a_capability_floor_field_it_cannot_read(
+    tmp_path: Path, layout: str
+) -> None:
+    """A field that is not a mapping of names to single values says no need it
+    can be read for, so every release command and the guard refuse it."""
+    source_kit = _make_kit(tmp_path)
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / "cs.yaml"
+    path.write_text(
+        f"component: software-engineering\nkind: minor\nbody: A thing.\n{layout}",
+        encoding="utf-8",
+    )
+    with pytest.raises(click.ClickException, match="requires_capabilities"):
+        changesets.parse_changeset(path)
+
+
 def test_parse_changeset_text_reads_a_changeset_from_another_revision(tmp_path: Path) -> None:
     cs = changesets.parse_changeset_text(
         "component: houseware\nkind: patch\nbody: Needs it.\nrequires_backbone: '1.4.0'\n",

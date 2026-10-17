@@ -39,6 +39,14 @@ lower bound up to the backbone a changeset says the component needs — the one
 the release ships, or an already-shipped one the changeset names. Nothing here
 raises a floor on its own.
 
+It raises a floor on another capability the same way, only on declaration:
+`raise_requires_capability_floor` moves the `>=` floor of one entry of a
+component's `requires_capabilities` (COR-030) up to the version a changeset says
+the component needs — the one this release writes for that capability, or an
+already-shipped one. Only a block list item under the top-level key is read and
+rewritten, its `name:` and `version:` on lines of their own or on the `- ` line,
+with a double-quoted range whose floor opens it.
+
 The `requires_backbone` rewrites use regex (not ruamel.yaml round-trip)
 to preserve quoting style, indentation, and trailing comments. Every one
 locates the range through one prefix — the top-level key at the start of a
@@ -53,6 +61,8 @@ from __future__ import annotations
 
 import re
 import subprocess
+from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -104,6 +114,27 @@ _REQUIRES_BACKBONE_FLOOR_RE = re.compile(
 REQUIRES_BACKBONE_RELEASE_LINES: tuple[re.Pattern[str], ...] = (
     _REQUIRES_BACKBONE_RE,
     _REQUIRES_BACKBONE_FLOOR_RE,
+)
+
+# The top-level `requires_capabilities:` key on a line of its own, which opens the
+# block list of a capability's dependencies (COR-030).
+_REQUIRES_CAPABILITIES_KEY_RE = re.compile(r"(?m)^requires_capabilities:[ \t]*(?:#[^\n]*)?$")
+
+# A list item of that block: its indent, and the key on the `- ` line, if any.
+_LIST_ITEM_RE = re.compile(r"^([ \t]*)-(?:[ \t]+|$)")
+
+# A `name:` or `version:` key of an entry, and its value up to a comment.
+_ENTRY_KEY_RE = re.compile(r"^(name|version):[ \t]*(.*?)[ \t]*(?:#.*)?$")
+
+# A range whose floor the release raises, double-quoted, as an entry's `version:`
+# value: `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`. Group 1 is the range, group 2 its floor.
+_CAPABILITY_RANGE_RE = re.compile(r'"(>=(\d+\.\d+\.\d+)(?:,<\d+\.\d+\.\d+)?)"')
+
+# The `version:` line of a `requires_capabilities` entry, as the floor raise
+# leaves it. The changeset guard admits such a changed line in a release's
+# package.yaml by this pattern (`release.release_writes`).
+REQUIRES_CAPABILITIES_RELEASE_LINE: re.Pattern[str] = re.compile(
+    r'^(?:[ \t]+|[ \t]*-[ \t]+)version:[ \t]*">=\d+\.\d+\.\d+(?:,<\d+\.\d+\.\d+)?"[ \t]*(?:#.*)?$'
 )
 
 
@@ -532,6 +563,155 @@ def requires_backbone_range(package_text: str) -> str | None:
     one whose floor the release raises (`requires_backbone_floor`); else None."""
     match = _REQUIRES_BACKBONE_FLOOR_RE.search(package_text)
     return match.group(1) if match else None
+
+
+@dataclass(frozen=True)
+class CapabilityEntry:
+    """One block list item of a package file's `requires_capabilities`, as the
+    floor raise reads it."""
+
+    name: str | None  # its `name:`, unquoted; None when the item has none
+    version: str | None  # its `version:` value as written, quotes kept
+    # Where the floor of a range the release raises sits in the package text
+    # (`_CAPABILITY_RANGE_RE`); None for any other value.
+    floor_span: tuple[int, int] | None
+    range: str | None  # that range without its quotes
+
+    @property
+    def floor(self) -> str | None:
+        """The `>=X.Y.Z` floor of a range the release raises, else None."""
+        if self.range is None:
+            return None
+        return self.range[2:].split(",", 1)[0]
+
+
+def requires_capabilities_entries(package_text: str) -> list[CapabilityEntry]:
+    """The block list items under a package file's top-level
+    `requires_capabilities:` key, in order; empty when there is no such block.
+
+    An item's `name:` and `version:` are read on the `- ` line or on lines of
+    their own at the item's key indent: the column after the `- `, or, under a
+    `-` alone on its line, the indent of the item's first key. A flow list, or
+    a value spread over several lines, is not read: the release raises no floor
+    in it."""
+    key = _REQUIRES_CAPABILITIES_KEY_RE.search(package_text)
+    if key is None:
+        return []
+    entries: list[CapabilityEntry] = []
+    item: dict[str, tuple[str, int]] | None = None
+    item_indent = -1  # the column of the item's `-`
+    key_indent: int | None = None  # None under a `-` alone, until its first key
+    offset = key.end() + 1
+    for line in package_text[offset:].splitlines(keepends=True):
+        start = offset
+        offset += len(line)
+        body = line.rstrip("\r\n")
+        stripped = body.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        listed = _LIST_ITEM_RE.match(body)
+        indent = len(body) - len(body.lstrip(" \t"))
+        if indent == 0 and listed is None:
+            break  # the next top-level key ends the block
+        if listed is not None and (item is None or len(listed.group(1)) <= item_indent):
+            if item is not None:
+                entries.append(_capability_entry(package_text, item))
+            item = {}
+            item_indent = len(listed.group(1))
+            if not body[listed.end() :].strip():
+                key_indent = None  # a `-` alone: its keys are on the lines below
+                continue
+            key_indent = listed.end()
+            column = listed.end()
+        elif item is not None and key_indent is None and indent > item_indent:
+            key_indent = column = indent
+        elif item is not None and indent == key_indent:
+            column = indent
+        else:
+            continue  # a nested value, or a line of an item this reader does not read
+        found = _ENTRY_KEY_RE.match(body[column:])
+        if found is not None and found.group(1) not in item:
+            item[found.group(1)] = (found.group(2), start + column + found.start(2))
+    if item is not None:
+        entries.append(_capability_entry(package_text, item))
+    return entries
+
+
+def _capability_entry(package_text: str, item: Mapping[str, tuple[str, int]]) -> CapabilityEntry:
+    """The entry an item's `name:` and `version:` values make, each with where it
+    starts in the package text."""
+    name = item.get("name")
+    version = item.get("version")
+    span: tuple[int, int] | None = None
+    found_range: str | None = None
+    if version is not None:
+        found = _CAPABILITY_RANGE_RE.fullmatch(version[0])
+        if found is not None:
+            span = (version[1] + found.start(2), version[1] + found.end(2))
+            found_range = found.group(1)
+    return CapabilityEntry(
+        name=name[0].strip("'\"") if name is not None else None,
+        version=version[0] if version is not None else None,
+        floor_span=span,
+        range=found_range,
+    )
+
+
+def requires_capability_entry(package_text: str, capability: str) -> CapabilityEntry | None:
+    """The one entry naming `capability` whose range the release raises; None when
+    no entry, or more than one, names it, or its value is another shape."""
+    named = [e for e in requires_capabilities_entries(package_text) if e.name == capability]
+    if len(named) != 1 or named[0].floor_span is None:
+        return None
+    return named[0]
+
+
+def raise_requires_capability_floor(
+    package_text: str, capability: str, version: str
+) -> tuple[str, str] | None:
+    """`package_text` with the floor of its `requires_capabilities` entry for
+    `capability` raised to `version`, and the `>=old -> >=new` floor; None when the
+    floor already admits nothing older.
+
+    **Raise-only**, like `raise_requires_backbone_floor`, and in place: the upper
+    bound, `optional:` and comments survive. Pure. Raises
+    `click.ClickException` when there is no one entry of a range it raises
+    (`requires_capability_entry`) or `version` is not a release version."""
+    if not is_release_version(version):
+        raise click.ClickException(
+            f"{capability} version {version!r} is not a release version (expected "
+            "major.minor.patch, no leading zeros)"
+        )
+    entry = requires_capability_entry(package_text, capability)
+    if entry is None or entry.floor_span is None or entry.floor is None:
+        raise click.ClickException(
+            f"requires_capabilities has no one entry for {capability} with a range of the form "
+            f'">=X.Y.Z,<A.B.C" or ">=X.Y.Z" whose floor can be raised to {version}'
+        )
+    if parse_version_tuple(entry.floor) >= parse_version_tuple(version):
+        return None
+    start, end = entry.floor_span
+    updated = package_text[:start] + version + package_text[end:]
+    return updated, f">={entry.floor} -> >={version}"
+
+
+def raise_component_requires_capability_floor(
+    pkg_file: Path, capability: str, version: str
+) -> str | None:
+    """Raise one component's floor on `capability` to `version`, through
+    `raise_requires_capability_floor`. Returns the `old -> new` floor when it
+    rewrote it, `None` when the floor already admitted nothing older."""
+    try:
+        raised = raise_requires_capability_floor(
+            pkg_file.read_text(encoding="utf-8"), capability, version
+        )
+    except click.ClickException as exc:
+        raise click.ClickException(f"{pkg_file}: {exc.message}") from None
+    if raised is None:
+        return None
+    updated, changed = raised
+    pkg_file.write_text(updated, encoding="utf-8")
+    return changed
 
 
 def raise_component_requires_backbone_floor(pkg_file: Path, backbone: str) -> str | None:
