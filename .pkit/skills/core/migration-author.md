@@ -102,10 +102,10 @@ Open the stamped script and replace the TODO body with the actual change. Four r
 
 - **Calls `pkit` by its bare name, where it runs one.** It reaches the running pkit, the one that runs the transition. The migration runner puts a `pkit` first on the script's `PATH` that runs the running pkit's code and never enters the router. So neither the pin nor the operator's `PATH` decides which release answers.
   - Set no variable that stops the router, `PKIT_NO_ROUTE` or `PKIT_ROUTED`. Commands read them too, so one would change what they do.
-  - Derive nothing from where `pkit` lives. The runner's `pkit` lies in a temporary folder, gone after the run.
+  - Derive nothing from where `pkit` lives. The runner's `pkit` lies in a folder of its own, gone after the run.
   - Need no `command -v pkit` check: inside a transition it always passes. A script may keep one for a run outside a transition, by hand or in a test.
-  - Read what the backbone computes through its reading commands, and apply the answer in the script.
-  - Never run a command that propagates, seeds or merges, moves a recorded version, writes the pin, or changes which components are installed. Examples are `sync`, `upgrade`, `pin` and `capabilities install`. The lifecycle spec's "Script contract" lists them, and review holds the rule.
+  - Ask the backbone about content alone, the release's and the project's own, through its reading commands, and apply the answer in the script. Never ask about a recorded version or the completion, as `pkit status` shows them: while the migrations run, they belong to two releases. A check that a component is installed is sound.
+  - Never run a command that propagates, seeds or merges, moves a recorded version, writes the pin, or changes which components are installed. Examples are `sync`, `upgrade`, `pin` and `capabilities install`, and the lifecycle spec's "Script contract" lists them all. Each refuses while `PKIT_MIGRATION` is set, which the runner sets for every script, so a script that runs one stops the transition. Never set or unset that marker.
 
 Use only the dependencies the project ships with — `bash`, standard UNIX tools, `pkit`, `python3` with its standard library only, `git`, `gh`, `yq` if YAML manipulation is needed.
 
@@ -118,10 +118,10 @@ Walk the script against the contract:
 - *Is it idempotent — would re-running on already-migrated state be a no-op?*
 - *For a backbone migration: does it act only on a positive sign that its change is needed, and never delete by a path's name or position alone?*
 - *Does it update the affected resource (or the relevant manifest entry, for non-derivable state)?*
-- *Does each `pkit` call use the bare name, with no routing variable and nothing taken from where `pkit` lives? Does it run no command the "Script contract" rules out?*
+- *Does each `pkit` call use the bare name, with no routing variable and nothing taken from where `pkit` lives? Does it ask about content alone, never a recorded version or the completion? Does it run no command the "Script contract" rules out, and leave `PKIT_MIGRATION` as the runner set it?*
 - *Did you place it in the right tier × version × scope ordering?*
 
-Test the script locally if practical: on a fresh checkout and, for a backbone migration, on a state that never needed it and on one the project changed after it first ran. Run by hand, a script's bare `pkit` is the shell's, routed by the project's pin if it has one. For such a run, put first on the `PATH` a `pkit` of the release that ships the migration.
+Test the script locally if practical: on a fresh checkout and, for a backbone migration, on a state that never needed it and on one the project changed after it first ran. Run by hand, a script's bare `pkit` is the shell's, routed by the project's pin if it has one. For such a run, put first on the `PATH` a `pkit` of the release that ships the migration, and set `PKIT_MIGRATION=1`, so a command the contract rules out refuses as it would in a transition.
 
 ### 8. Commit
 
