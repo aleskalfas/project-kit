@@ -493,6 +493,13 @@ A rule set ([COR-051](../decisions/core/COR-051-rule-sets.md)) is one Markdown f
 
 Every Markdown file in or beneath such a folder is a rule-set file, except its `README.md`, which is the folder's signpost. A file two of them reach belongs to the first in the table's order. A file there with no front matter, or front matter that does not parse, is a finding, never skipped. Method rule sets are refreshed by sync with their component. Project rule sets are the project's: sync never reads or writes one, and uninstall never writes one (COR-051 point 6). Beside the project's own edits, a capability's install creates the one project rule set the capability declares, in `rule-sets/` under the internal documentation root, and that capability's migration may create it for an earlier install (COR-017; the lifecycle README, "The declared project rule set"). A project never edits a method rule set: it inherits it.
 
+**When the internal root changes** (COR-051 point 6). The folder under the internal documentation root follows the root as it stands. A change made through the command keeps every set in that folder found. A change made by hand is caught by validation:
+
+- **`pkit config set docs.internal <path>`** declares the old folder as a place. Where the location rule would not claim a rule-set file of `<old root>/rule-sets/` under the new root, the same write adds that folder to `friction.places`. A declared place, the table's last row, then finds the sets where they are. The one consent names both changes.
+- **An edit of `docs.internal` by hand** runs no command, so nothing declares the folder. The `rule-sets` pass then fails on each file left behind, as `unfound-rule-set` (below).
+- **Moving the sets under the new root** is the project's own step: move the files, then remove the old folder from `friction.places`. Until then they stay found where they are (COR-049 point 6).
+- **Another rule-set folder under the root** is not declared by the change. A capability place whose location derives from the root moves with the root until that location is recorded (COR-049 point 5). A file left behind there is `unfound-rule-set` too.
+
 **The front matter.**
 
 ```yaml
@@ -556,6 +563,11 @@ Unknown keys are refused at every level, each with the nearest known key. The sh
 **What the pass checks.** Errors fail `pkit validate`; reports print under its `rule-sets` heading.
 
 - *The file* — unreadable, no front matter, front matter that does not parse or is not a mapping; a key written twice (a rule id written twice in `rules` is a duplicate id); the schema, with unknown keys suggested.
+- *A rule-set file left behind* (`unfound-rule-set`, COR-051 point 6) — an error on a Markdown file the location rule leaves unclaimed, though it reads as a set. It lies in or beneath a folder named `rule-sets`, is not that folder's `README.md`, and its front matter names a set (`rule-set:`). A root changed by hand leaves such files behind, and their rules bind nothing.
+  - *Where it looks.* In the one listing of the working tree that discovery reads, so an ignored file, such as an installed package's copy, is never read. It skips the folders the location rule names for method rule sets, `.pkit/rule-sets/` and `.pkit/capabilities/*/rule-sets/`, whether the capability is installed or not. In the methodology's source repository, a capability not installed keeps its method sets there.
+  - *The fixes it names.* Add the folder to `friction.places`, or move the file under the internal root's `rule-sets/`. For a file meant as no rule set, such as an example, move it out of a `rule-sets` folder, or remove its `rule-set:` key.
+  - *What it leaves out.* A file whose front matter does not parse, or names no set, is not reported. Nothing in it says it was meant as a set.
+  - *What it never does.* The front matter serves only to find the file. Where a file lies decides whether it is a rule set (ADR-056 point 2).
 - *The join* — every rule in `rules` has a section headed by its id, every section has an entry, no id heads two sections, and no heading opens like an id without being one.
 - *Ids and names* — every id is well formed and carries the file's set name; an id of an inherited set is a redefinition; no two rule sets share a name.
 - *The container* inside each rule — the container schema and rule, read against the active wiring, as for any artefact ("The container" above); an orphaned role block or an inert point block is a report.
