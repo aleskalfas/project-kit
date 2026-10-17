@@ -1,6 +1,6 @@
 # Adding a use case
 
-A use case is one actor's goal and how the system fulfils it: when it starts, the main path, the variants, and when it is done. It is a file, `UC-NNN-<slug>.md`, numbered within the project whatever area it sits in.
+A use case is one actor's goal and how the system fulfils it. It is a file, `UC-NNN-<slug>.md`, numbered within the project whatever area it sits in.
 
 ## 1. One actor, one goal
 
@@ -35,18 +35,9 @@ It takes the next free number on the default branch and in the working tree.
 
 ## 6. Fill it
 
-Each part holds its hint, which says what goes there and gives an example. Write in its place what it asks for, and delete the hint.
+Each part holds its hint, which says what goes there and gives an example. Fill each part as its hint says, and delete the hint. Where a step names a command, a flag, a function or a message, quote it in backticks (the shared framing's "Quote the code you describe").
 
-- **Goal** — what the actor wants, in one sentence in their own voice.
-- **Other actors** — what the use case must protect for each actor of `other-actors`, or `None.` when it lists none.
-- **Preconditions** and **Assumptions** — each as its hint says, or `None.`.
-- **Trigger** — the event that starts it.
-- **Main path** — numbered steps, each what the actor or the system does. Quote in backticks the commands, flags, functions and messages a step names.
-- **Variants** — each lettered after the step it branches from (`2a`, `2b`): the condition, what happens instead, and where the path rejoins or ends. `None.` when there is none.
-- **Postconditions** — the state that shows the goal is met.
-- **Minimal guarantees** — what the system still guarantees when the use case ends early or fails, or `None.`.
-
-Then run the checks in the shared framing's "After stamping", including `pkit analysis check-numbers` before merging.
+Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first, and `pkit analysis check-numbers` before merging.
 
 ## Later
 

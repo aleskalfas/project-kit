@@ -13,7 +13,7 @@ pkit:
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053]
       artefact: [RS-SAN-001]
     revalidated:
-      at: 2026-10-16T23:06:29Z
+      at: 2026-10-17T00:59:09Z
       outcome: updated
       deferred:
         - anchor:
@@ -99,9 +99,11 @@ The stamp reads the analysis through the core's reading command, `pkit friction 
 
 ## The artefacts
 
-Each anchored artefact's own fields sit beside the core friction block, which lives inside the `pkit:` container of its front matter (COR-050, COR-053) — the container of a document, or of each entry of a collection. Each kind's own fields have a companion schema in `schemas/`; unknown fields are refused, so a misspelt one is caught. The templates in `templates/` show the full shape.
+Each anchored artefact's own fields sit beside the core friction block, which lives inside the `pkit:` container of its front matter (COR-050, COR-053) — the container of a document, or of each entry of a collection. Each kind's own fields have a companion schema in `schemas/`; unknown fields are refused, so a misspelt one is caught.
 
-**Use case** (`schemas/use-case.schema.json`) — one actor's goal and how the system fulfils it:
+Each kind is shown below as its template renders it, filled. The template in `templates/` is the kind's structure rendered: every part in its order, each holding its hint ("Templates and hints" below). A part's hint is its one description, so this section describes no part. Write each part as its hint says.
+
+**Use case** (`schemas/use-case.schema.json`, `templates/use-case.md`) — one actor's goal and how the system fulfils it:
 
 ```markdown
 ---
@@ -147,11 +149,57 @@ pkit:
 **Minimal guarantees:** A failed run leaves no sandbox behind (ADR-006).
 ```
 
-`other-actors` lists each other actor who takes part, by id, never the use case's own `actor`, and *Other actors* in the body says what the use case must protect for each. Each is anchored as the use case's actor is, and the check requires each anchor, so a changed actor flags every use case it takes part in. The heading is the id and the `title`, `# <id> — <title>`, and the check requires the two to agree: whoever reads only the front matter sees the title the page shows. The title may change; the id does not. Steps are numbered and variants lettered after the step they branch from; both are only ever added, since journeys and evidence cite them. The parts, their order and their forms are the use case's structure ("Each kind's structure" below).
+- **`other-actors`** lists each other actor who takes part, by id, never the use case's own `actor`. Each is anchored as the use case's actor is, and the check requires each anchor. So a changed actor flags every use case it takes part in.
+- **The heading** is the id and the `title`, `# <id> — <title>`, and the check requires the two to agree. So whoever reads only the front matter sees the title the page shows. The title may change, and the id does not.
+- **Steps and variants** are only ever added, since journeys and evidence cite them ("Steps and variants stay append-only", below).
 
-**Journey** (`schemas/journey.schema.json`) — the same fields, `title` and heading included, plus `steps`: the use cases it passes through, in order, at least two, each a use case of its `actor`. `relies-on` lists each use case outside the journey that a step relies on, of any actor, and none of its steps. `steps` and `relies-on` are the source: the stamp writes their use cases into the artefact anchors, beside the journey's actor, and the check requires the use-case anchors to match the two and the actor anchor to be there. Add the code at the seams as path anchors. The body gives its goal, its steps with each step's hand-overs under it, its variants, its postconditions and its minimal guarantees.
+**Journey** (`schemas/journey.schema.json`, `templates/journey.md`) — one actor's end-to-end path across several of its use cases, with the seams between them where the path can break. It is a summary-level path through the system, not a UX journey map:
 
-**Actor** (`schemas/actor.schema.json`) — a file of its own, `use-case-model/actors/ACT-<slug>.md`. Its needs sit in its front matter, a few lines above the description its body gives, so a tool reads them as data and never from the body (DEC-001 point 1):
+```markdown
+---
+id: JRN-001
+title: Run the suite and read why it failed
+status: active
+actor: ACT-tester
+steps: [UC-003, UC-005]
+relies-on: []                   # each use case outside it that a step relies on, by id
+pkit:
+  friction:
+    anchors:
+      path:
+        - src/cli/log.py          # a seam: the run writes the log the next step reads
+      artefact:
+        - ACT-tester
+        - UC-003
+        - UC-005
+---
+
+# JRN-001 — Run the suite and read why it failed
+
+**Goal:** Run my suite and read why a test failed.
+
+**Steps:**
+
+1. UC-003 — Run a test suite against a sandbox
+2. UC-005 — Read a failure's cause
+   - **Needs from step 1 (UC-003):** the run's log. A run cut short writes no log, so no cause can be read.
+
+**Variants:**
+
+- **1a.** Every test passes. The path ends after step 1.
+
+**Postconditions:** The tester knows why each failed test failed.
+
+**Minimal guarantees:** None.
+```
+
+It has a use case's `id`, `title`, `status` and `actor`, and its heading, plus `steps` and `relies-on`:
+
+- **`steps`** are the use cases it passes through, in order, at least two, each a use case of its `actor`.
+- **`relies-on`** lists each use case outside the journey that a step relies on, of any actor, and none of its steps.
+- **Its anchors.** `steps` and `relies-on` are the source. The stamp writes their use cases into the artefact anchors, beside the journey's actor. The check requires the use-case anchors to match the two, and the actor anchor to be there. Add the code at the seams as path anchors.
+
+**Actor** (`schemas/actor.schema.json`, `templates/actor.md`) — a named role that uses the system, not a persona. It is a file of its own, `use-case-model/actors/ACT-<slug>.md`. Its needs sit in its front matter, a few lines above the description its body gives, so a tool reads them as data and never from the body (DEC-001 point 1):
 
 ```markdown
 ---
@@ -178,7 +226,36 @@ Whoever writes and runs the project's tests.
 
 The heading is the id and the `name`, `# <id> — <name>`, and the check requires the two to agree, as it does a use case's title. The id is the slug the file is named by, and never changes.
 
-**Glossary** (`schemas/term.schema.json`) — one collection file: its front matter maps each term's id to its entry, and its body has one `## <id> — <name>` section per entry. Each entry has a `name`, a `status`, a `definition` — a phrase that could stand in for the term, of the form `definition` ("Each kind's structure", below) — and on a rename the former names, newest first, in `replaces`. The id never changes. The glossary stays one collection file, serving everything (DEC-001 point 2).
+**Glossary** (`schemas/term.schema.json`, `templates/glossary.md`) — one collection file, serving everything (DEC-001 point 2):
+
+```markdown
+---
+TERM-sandbox:
+  name: sandbox
+  status: active
+  definition: throwaway environment a suite runs in, built for one run and removed after it
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/sandbox/**
+---
+
+# Glossary
+
+The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
+
+## TERM-sandbox — sandbox
+
+**Example:** the tester runs the suite in a sandbox, and the system removes it once the run ends.
+
+**Distinctions:**
+
+- **Workspace:** the tester's own checkout. The system builds a sandbox from it for one run, and leaves the workspace as it was.
+```
+
+- **Its front matter** maps each term's id to its entry. Each entry has a `name`, a `status` and a `definition`. The definition takes the form `definition` ("Each kind's structure", below). On a rename, the entry keeps the former names in `replaces`, newest first. The id never changes.
+- **Its body** opens with the file's head, which the stamp writes once. Then it has one `## <id> — <name>` section per entry.
 
 An actor or a term nothing embodies carries `unanchored-because:` in its friction block instead of anchors — the reason onboarding accepts it unanchored (DEC-001 point 9). The key is the core's, not one of the artefact's own fields (COR-050 point 1): `pkit friction check --all` lists the artefact apart with its reason and never counts it as unanchored, and `pkit validate` refuses the reason beside anchors.
 
@@ -187,15 +264,16 @@ id: ACT-sponsor
 name: Sponsor
 status: active
 needs:
-  - Sees what the project delivers for its funding
+  - See what the project delivers for my funding
 pkit:
   friction:
-    unanchored-because: No code or decision embodies it; it funds the project.
+    unanchored-because: No code or decision embodies it. It funds the project.
 ```
 
-**Revalidation record** (`schemas/revalidation-record.schema.json`) — no friction block; stamped by `pkit analysis new revalidation` as `revalidations/<date>-<subject>.md` ("Revalidation records" below). Its template, `templates/revalidation-record.md`, shows a planned record whole. A record of drift has this front matter:
+**Revalidation record** (`schemas/revalidation-record.schema.json`) — no friction block; stamped by `pkit analysis new revalidation` as `revalidations/<date>-<subject>.md` ("Revalidation records" below). Its template, `templates/revalidation-record.md`, shows a planned record whole. The stamp writes every part from its command line, with no hints. A record of drift reads:
 
-```yaml
+```markdown
+---
 change: "#123"                  # the work item, pull request or range of commits on the default branch that carried it
 trigger: drift                  # planned | drift | scheduled | close | onboarding
 date: 2026-10-02                # the day in UTC, as a revalidation's `at` is
@@ -211,9 +289,21 @@ evidence:                       # optional: the executed results drawn on, each 
     check: pytest-bridge.test-run.test-sandbox
     result: passed              # supports UC-003's `holds`
     ran: tests/test_run.py::test_sandbox
+---
+
+# 2026-10-02 — The run shows a failure's cause
+
+## Outcomes
+
+- **UC-003 — holds.** A run still builds its sandbox and shows the result, and the passing result the record copies supports it.
+- **JRN-001 — analysis-stale.** The run now shows a failure's cause itself, as #123 meant, so step 2 is stale. Sam confirmed it.
+
+## Gaps
+
+None.
 ```
 
-The body gives each artefact's outcome with its justification, then the gaps, each labelled with the artefacts it affects and holding its resolution. Evidence supports an outcome and never stands in for one: each artefact the record draws evidence for has its outcome. The record **copies** each entry of the evidence point it draws on, whole and in the point's shape (Connections, below), rather than naming it by id: a record is permanent history, while the point holds what its fillers report now, so an id alone would point at nothing once a filler stops reporting that commit. The copy is the evidence the record shows. A planned record also names the sources of the design it reviewed, in `reviewed-against` ("Revalidation records" below).
+Evidence supports an outcome and never stands in for one: each artefact the record draws evidence for has its outcome. The record **copies** each entry of the evidence point it draws on, whole and in the point's shape (Connections, below), rather than naming it by id: a record is permanent history, while the point holds what its fillers report now, so an id alone would point at nothing once a filler stops reporting that commit. The copy is the evidence the record shows. A planned record also names the sources of the design it reviewed, in `reviewed-against` ("Revalidation records" below).
 
 ## Each kind's structure: `schemas/artefact-kinds.yaml`
 
@@ -261,17 +351,17 @@ Each kind's template in `templates/` is its structure rendered, so it shows exac
 
 - **The front matter** is written by hand, and a test holds it to the kind's schema.
 - **The body** is rendered from the declaration, and a test holds the committed template equal to the rendering. The stamp renders each body the same way, and never copies a template's lines.
-- **A part's hint is its placeholder.** Where you write a part, the stamp leaves its hint in its place: one line, a comment marked `pkit:hint`, with the part's example after it.
+- **A part's hint is its placeholder.** Where you write a part, the stamp leaves its hint in its place: one line, a comment marked `pkit:hint`, with the part's example after it. Here is a use case's *Goal* as the stamp writes it, its hint and its example shortened to `…`. Their one home is the declaration. The template, rendered from it, shows them whole.
 
   ```markdown
-  **Goal:** <!-- pkit:hint What the actor wants from this use case, in one sentence in their own voice. Start with the verb, or with *Never* and the verb, with *I* and *my* where they refer to themselves. Example: Export my report as a file. -->
+  **Goal:** <!-- pkit:hint … Example: … -->
   ```
 
-- **A front-matter field's hint is its placeholder too.** Where the stamp leaves a field for you to fill, an actor's `needs` and a term's `definition`, it writes the field's hint as the field's text: the same marked comment, with the field's example after it. A field that takes a list holds one item, its hint. A YAML parse reads the hint as text, so the front matter stays valid while you fill it. The template's front matter, written by hand, shows the same hints, and a test holds the two equal.
+- **A front-matter field's hint is its placeholder too.** Where the stamp leaves a field for you to fill, an actor's `needs` and a term's `definition`, it writes the field's hint as the field's text: the same marked comment, with the field's example after it. A field that takes a list holds one item, its hint. A YAML parse reads the hint as text, so the front matter stays valid while you fill it. The template's front matter, written by hand, shows the same hints, and a test holds the two equal. An actor's `needs`, shortened in the same way:
 
   ```yaml
   needs:
-    - '<!-- pkit:hint What the actor needs from the system, each in one sentence in their own voice. Start with the verb, or with *Never* and the verb, with *I* and *my* where they refer to themselves. Example: Export my report as a file. -->'
+    - '<!-- pkit:hint … Example: … -->'
   ```
 
 - **A hint left in,** in a field or in the body, is refused by the placeholder check whatever the format rule's status, and the message repeats the hint. The mark is matched outside code spans and fenced code, so a text may quote it.
@@ -601,9 +691,13 @@ The capability's skills, deployed by `pkit sync` with the others (in Claude Code
 
 | Skill | Paired with | Use it to |
 |---|---|---|
-| `analysis-author` — composite: `actor`, `term`, `use-case`, `journey`, `revalidation-record` ([`skills/analysis-author/`](skills/analysis-author/analysis-author.md)) | `pkit analysis new` | write an actor, a term, a use case, a journey or a revalidation record: choose the slug, the area, the actor and the steps; decide what the artefact anchors to, or why an actor or term stays unanchored; fill the body; run the checks |
+| `analysis-author` — composite: `actor`, `term`, `use-case`, `journey`, `revalidation-record` ([`skills/analysis-author/`](skills/analysis-author/analysis-author.md)) | `pkit analysis new` | write an actor, a term, a use case, a journey or a revalidation record. Choose the slug, the area, the actor and the steps, and what the artefact anchors to, or why an actor or term stays unanchored. Fill each part as its hint says, then run `pkit analysis validate --preview` on what you wrote. |
 
-The command owns each file's correctness — its id, its place, the anchors the rule asks for — and the skill the choices behind it. One of those choices matters to revalidation later: **quote the code you describe** in backticks, since what an artefact quotes from its anchored code is the first thing the agent reads when that code changes ("The agent" below).
+The command owns each file's correctness — its id, its place, the anchors the rule asks for — and the skill the choices behind it.
+
+- **The skill lists no kind's parts.** You fill each part as its hint says, since the hint is the part's one description, in the kind's structure ("Templates and hints", above). The check's messages repeat it.
+- **The skill runs the check with `--preview`.** Where the format rule would bind, the preview shows what you wrote against its kind's structure, even while the rule is proposed. Its `preview:` reports never fail, and the check's own findings and exit status stand ("Each body against its structure", above).
+- **One choice matters to revalidation later:** **quote the code you describe** in backticks. What an artefact quotes from its anchored code is the first thing the agent reads when that code changes ("The agent" below).
 
 ## Revalidation: four outcomes, two answers
 
