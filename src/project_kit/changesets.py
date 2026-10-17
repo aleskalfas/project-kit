@@ -20,10 +20,13 @@ plain `changie new` writes exactly what this parser reads):
     category: Added              # optional Keep-a-Changelog group (see below)
     pr: 465                      # optional PR reference for the changelog link
     requires_backbone: release   # optional: raise the component's floor (see below)
+    requires_capabilities:       # optional: raise its floor on another capability
+      project-management: release
 
-`category`, `pr` and `requires_backbone` are optional and read from either the
-top level (a hand-written changeset) or a nested `custom:` map (what `changie
-new` writes via the `custom:` block in `.changie.yaml`). `category` is one of
+`category`, `pr`, `requires_backbone` and `requires_capabilities` are optional
+and read from either the top level (a hand-written changeset) or a nested
+`custom:` map (what `changie new` writes via the `custom:` block in
+`.changie.yaml`). `category` is one of
 the Keep-a-Changelog groups (`Added`, `Changed`, `Fixed`, `Removed`,
 `Deprecated`, `Security`); it is **orthogonal to the `kind` segment** (a
 `patch` may be `Fixed` or `Changed`) and defaults at render time when absent.
@@ -40,6 +43,16 @@ whatever was written — an unquoted number as its text in the file, and an empt
 value as no field at all; the release step and its lint refuse any other value,
 and the field on a changeset that cannot carry it
 (`project_kit.release.floor_problems`).
+
+`requires_capabilities` declares the same need one tier over: a mapping of each
+capability the component needs a version of to `release`, the version this
+release writes for that capability, or an explicit `X.Y.Z`, a release of it the
+tree records. The release step raises the `>=` floor of that capability's entry
+in the component's `requires_capabilities` (PRJ-002 D4). changie's prompts
+write single values, so the field is added by hand. A field that is not a
+mapping of names to single values cannot be read, and the parser refuses it;
+each value is kept as written, as for the backbone's, for the release step to
+judge (`project_kit.release.capability_floor_problems`).
 
 changie also writes a `time` field; it is ignored here. `none` is the escape
 hatch — a declared "this touched a component's tree but is not a surface
@@ -75,6 +88,11 @@ BACKBONE = "backbone"
 FLOOR_FIELD = "requires_backbone"
 FLOOR_RELEASE = "release"
 
+# The changeset field that raises a component's floor on another capability,
+# named after the package key whose entries it raises (COR-030; PRJ-002 D4). It
+# maps each capability to `FLOOR_RELEASE` or an explicit, already-shipped `X.Y.Z`.
+CAPABILITY_FLOOR_FIELD = "requires_capabilities"
+
 _yaml = YAML(typ="safe")
 
 # A filesystem-safe slug for the random-suffix filename scheme.
@@ -92,11 +110,19 @@ class Changeset:
     category: str | None = None  # optional Keep-a-Changelog group; defaulted at render
     pr: str | None = None  # optional PR reference for the changelog link
     requires_backbone: str | None = None  # the floor field as written; see FLOOR_FIELD
+    # Each capability the component needs a version of, and the value as written,
+    # in the order the changeset gives them; see CAPABILITY_FLOOR_FIELD.
+    requires_capabilities: tuple[tuple[str, str], ...] = ()
 
     @property
     def names_release(self) -> bool:
         """Whether the floor field names the backbone this release ships (`release`)."""
         return self.requires_backbone == FLOOR_RELEASE
+
+    @property
+    def declares_floor(self) -> bool:
+        """Whether the changeset declares a floor of either kind."""
+        return self.requires_backbone is not None or bool(self.requires_capabilities)
 
 
 @dataclass(frozen=True)
@@ -220,6 +246,7 @@ def parse_changeset_text(text: str, path: Path) -> Changeset:
         category=str(category).strip() if category else None,
         pr=str(pr).strip() if pr else None,
         requires_backbone=_floor_field(custom, data, text),
+        requires_capabilities=_capability_floors(custom, data, text, path),
     )
 
 
@@ -241,6 +268,60 @@ def _floor_field(custom: dict[str, Any], data: dict[str, Any], text: str) -> str
                 return value.strip()
             continue
         return _scalar_as_written(text, FLOOR_FIELD, nested=nested) or str(value)
+    return None
+
+
+def _capability_floors(
+    custom: dict[str, Any], data: dict[str, Any], text: str, path: Path
+) -> tuple[tuple[str, str], ...]:
+    """The capability floor field as written, under `custom:` first, then
+    top-level: each capability it names and its value, in the changeset's order.
+    Empty when neither carries the field, or the field or a value is empty.
+
+    The field is a mapping of names to single values, or it cannot say which
+    capability needs which version, so anything else is refused here — for every
+    release command and the changeset guard alike. A value that is not a string
+    is kept as its text in the file, as `_floor_field` keeps the backbone's."""
+    for source, nested in ((custom, True), (data, False)):
+        value: object = source.get(CAPABILITY_FLOOR_FIELD)
+        if value is None:
+            continue
+        if not isinstance(value, dict):
+            raise click.ClickException(
+                f"changeset {path.name}: `{CAPABILITY_FLOOR_FIELD}` maps each capability the "
+                f"component needs to `{FLOOR_RELEASE}` or a version, one value each; got "
+                f"{value!r}."
+            )
+        floors: list[tuple[str, str]] = []
+        for raw_name, raw_value in cast("dict[object, object]", value).items():
+            name = str(raw_name)
+            if isinstance(raw_value, (dict, list)):
+                raise click.ClickException(
+                    f"changeset {path.name}: `{CAPABILITY_FLOOR_FIELD}` gives {name!r} "
+                    f"{raw_value!r}; give it one value, `{FLOOR_RELEASE}` or a version."
+                )
+            if raw_value is None:
+                continue
+            if isinstance(raw_value, str):
+                if raw_value.strip():
+                    floors.append((name, raw_value.strip()))
+                continue
+            written = _entry_as_written(text, CAPABILITY_FLOOR_FIELD, name, nested=nested)
+            floors.append((name, written or str(raw_value)))
+        if floors:
+            return tuple(floors)
+    return ()
+
+
+def _entry_as_written(text: str, key: str, name: str, *, nested: bool) -> str | None:
+    """The text of `name`'s scalar value in the mapping under `key` — the key on
+    an indented line when `nested` (under `custom:`), else at the start of one."""
+    for match in re.finditer(rf"(?m)^([ \t]*){re.escape(key)}:", text):
+        if bool(match.group(1)) != nested:
+            continue
+        entry = rf"(?m)^[ \t]+{re.escape(name)}:[ \t]*([^\s#][^#\n]*?)[ \t]*(?:#[^\n]*)?$"
+        found = re.compile(entry).search(text, match.end())
+        return found.group(1) if found else None
     return None
 
 

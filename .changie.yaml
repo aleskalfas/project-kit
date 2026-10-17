@@ -51,7 +51,12 @@ kinds:
 # or below the current `.pkit/VERSION` (a capability or adapter's
 # version-moving changeset only; `pkit release lint` refuses it elsewhere, and
 # `pkit release check` refuses one a pull request declares for a component it
-# neither changes nor moves).
+# neither changes nor moves). `requires_capabilities` declares that the
+# component needs a version of another capability: a mapping of each such
+# capability to `release` or a shipped `X.Y.Z` of it, and the release raises the
+# floor of that capability's entry in the component's `requires_capabilities`.
+# changie prompts for single values only, so it has no prompt here: add it by
+# hand, under `custom:` or at the top level.
 custom:
   - key: category
     label: Category (Keep a Changelog)
