@@ -19,9 +19,9 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-17T00:52:31Z
+      at: 2026-10-17T15:21:30Z
       outcome: unchanged
-      unchanged-because: "This change adds a reader in src/project_kit/rule_sets.py of the rule sets a capability ships, read before it is installed, and the install's refusal of one whose name a project rule set already declares. It moves discovery's read loop into one helper that finds the same files. What this page says of rule sets still holds: a separate id family, permanent ids, statuses, the acceptance gate, where sets live and what validation checks. It says nothing of install."
+      unchanged-because: COR-051 point 6 now names a capability's install, and its migration for an earlier install, as the writers of the one project rule set the capability declares, and COR-001 names that install among the writers of project-owned paths. rule_sets.py gains the answer of which project sets inherit a set. This page's summary of rule sets, that a project rule set is the project's and cited bare, and of the no-shared-files invariant, still holds.
 ---
 
 # Decision records

@@ -11,9 +11,9 @@ pkit:
         - src/project_kit/install.py
       record: [COR-001, COR-014]
     revalidated:
-      at: 2026-10-15T16:42:38Z
+      at: 2026-10-17T15:21:31Z
       outcome: unchanged
-      unchanged-because: This change stops a transition and sync on a project's own lifecycle area, and has the copy of the lifecycle area write ownership.py first. The copy of the rules area does not change, so the page's word that sync refreshes core.md and never touches project.md still holds, and the page holds.
+      unchanged-because: COR-001 now names a capability's install among the writers of project-owned paths, for the project rule set the capability declares. This page's word that core.md is propagated and that sync never touches project.md is unchanged.
 ---
 
 # Rules

@@ -15,8 +15,9 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-039, COR-053, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-16T22:20:21Z
-      outcome: updated
+      at: 2026-10-17T15:21:45Z
+      outcome: unchanged
+      unchanged-because: COR-017 now lets a capability declare one project rule set that its install creates. project-management declares none, so what its install copies and does, as this page lists it, is unchanged.
 ---
 
 # project-management capability
