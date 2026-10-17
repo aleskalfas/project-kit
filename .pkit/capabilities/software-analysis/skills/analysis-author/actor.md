@@ -29,7 +29,7 @@ The stamp writes `ACT-<slug>.md` in the actors' folder, headed `# ACT-<slug> —
 
 ## 5. Fill it
 
-Fill each part as its hint says, and delete the hint: each part of the body, and `needs` in the front matter, whose one item holds its hint. The needs stay in the front matter, where a tool reads them, and never go in the body.
+Fill each part as its hint says, and delete the hint: each part of the body, and `needs` in the front matter. The needs stay in the front matter, where a tool reads them, and never go in the body.
 
 Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first.
 

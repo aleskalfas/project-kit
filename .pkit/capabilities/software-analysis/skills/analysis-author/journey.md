@@ -28,9 +28,9 @@ pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> 
 
 ## 6. Fill it
 
-Each part holds its hint, which says what goes there and gives an example. Fill each part as its hint says, and delete the hint. The stamp writes the step lines under **Steps**, one for each use case of `steps`: keep them as written, and add each hand-over under its step.
+Each part holds its hint, which says what goes there and gives an example. Fill each part as its hint says, and delete the hint. The stamp writes the step lines under **Steps**, one for each use case of `steps`. Keep them as written.
 
-Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first, and `pkit analysis check-numbers` before merging. A hand-over the check refuses is named in its message, with the label it expects.
+Then run the checks in the shared framing's "After stamping": `pkit analysis validate --preview` first, and `pkit analysis check-numbers` before merging. A hand-over the check refuses is named in its message, with the label it expects.
 
 ## Later
 

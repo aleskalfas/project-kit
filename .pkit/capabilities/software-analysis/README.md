@@ -153,11 +153,7 @@ pkit:
 - **The heading** is the id and the `title`, `# <id> — <title>`, and the check requires the two to agree. So whoever reads only the front matter sees the title the page shows. The title may change, and the id does not.
 - **Steps and variants** are only ever added, since journeys and evidence cite them ("Steps and variants stay append-only", below).
 
-**Journey** (`schemas/journey.schema.json`, `templates/journey.md`) — the same fields, `title` and heading included, plus `steps` and `relies-on`:
-
-- **`steps`** are the use cases it passes through, in order, at least two, each a use case of its `actor`.
-- **`relies-on`** lists each use case outside the journey that a step relies on, of any actor, and none of its steps.
-- **Its anchors.** `steps` and `relies-on` are the source. The stamp writes their use cases into the artefact anchors, beside the journey's actor. The check requires the use-case anchors to match the two, and the actor anchor to be there. Add the code at the seams as path anchors.
+**Journey** (`schemas/journey.schema.json`, `templates/journey.md`) — one actor's end-to-end path across several of its use cases, with the seams between them where the path can break. It is a summary-level path through the system, not a UX journey map:
 
 ```markdown
 ---
@@ -197,7 +193,13 @@ pkit:
 **Minimal guarantees:** None.
 ```
 
-**Actor** (`schemas/actor.schema.json`, `templates/actor.md`) — a file of its own, `use-case-model/actors/ACT-<slug>.md`. Its needs sit in its front matter, a few lines above the description its body gives, so a tool reads them as data and never from the body (DEC-001 point 1):
+It has a use case's `id`, `title`, `status` and `actor`, and its heading, plus `steps` and `relies-on`:
+
+- **`steps`** are the use cases it passes through, in order, at least two, each a use case of its `actor`.
+- **`relies-on`** lists each use case outside the journey that a step relies on, of any actor, and none of its steps.
+- **Its anchors.** `steps` and `relies-on` are the source. The stamp writes their use cases into the artefact anchors, beside the journey's actor. The check requires the use-case anchors to match the two, and the actor anchor to be there. Add the code at the seams as path anchors.
+
+**Actor** (`schemas/actor.schema.json`, `templates/actor.md`) — a named role that uses the system, not a persona. It is a file of its own, `use-case-model/actors/ACT-<slug>.md`. Its needs sit in its front matter, a few lines above the description its body gives, so a tool reads them as data and never from the body (DEC-001 point 1):
 
 ```markdown
 ---
@@ -226,9 +228,6 @@ The heading is the id and the `name`, `# <id> — <name>`, and the check require
 
 **Glossary** (`schemas/term.schema.json`, `templates/glossary.md`) — one collection file, serving everything (DEC-001 point 2):
 
-- **Its front matter** maps each term's id to its entry. Each entry has a `name`, a `status` and a `definition`, of the form `definition` ("Each kind's structure", below). On a rename, it keeps the former names in `replaces`, newest first. The id never changes.
-- **Its body** opens with the file's head, which the stamp writes once, and then has one `## <id> — <name>` section per entry.
-
 ```markdown
 ---
 TERM-sandbox:
@@ -255,6 +254,9 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Workspace:** the tester's own checkout. The system builds a sandbox from it for one run, and leaves the workspace as it was.
 ```
 
+- **Its front matter** maps each term's id to its entry. Each entry has a `name`, a `status` and a `definition`. The definition takes the form `definition` ("Each kind's structure", below). On a rename, the entry keeps the former names in `replaces`, newest first. The id never changes.
+- **Its body** opens with the file's head, which the stamp writes once. Then it has one `## <id> — <name>` section per entry.
+
 An actor or a term nothing embodies carries `unanchored-because:` in its friction block instead of anchors — the reason onboarding accepts it unanchored (DEC-001 point 9). The key is the core's, not one of the artefact's own fields (COR-050 point 1): `pkit friction check --all` lists the artefact apart with its reason and never counts it as unanchored, and `pkit validate` refuses the reason beside anchors.
 
 ```yaml
@@ -262,10 +264,10 @@ id: ACT-sponsor
 name: Sponsor
 status: active
 needs:
-  - Sees what the project delivers for its funding
+  - See what the project delivers for my funding
 pkit:
   friction:
-    unanchored-because: No code or decision embodies it; it funds the project.
+    unanchored-because: No code or decision embodies it. It funds the project.
 ```
 
 **Revalidation record** (`schemas/revalidation-record.schema.json`) — no friction block; stamped by `pkit analysis new revalidation` as `revalidations/<date>-<subject>.md` ("Revalidation records" below). Its template, `templates/revalidation-record.md`, shows a planned record whole. The stamp writes every part from its command line, with no hints. A record of drift reads:
@@ -349,7 +351,7 @@ Each kind's template in `templates/` is its structure rendered, so it shows exac
 
 - **The front matter** is written by hand, and a test holds it to the kind's schema.
 - **The body** is rendered from the declaration, and a test holds the committed template equal to the rendering. The stamp renders each body the same way, and never copies a template's lines.
-- **A part's hint is its placeholder.** Where you write a part, the stamp leaves its hint in its place: one line, a comment marked `pkit:hint`, with the part's example after it. Here is a use case's *Goal* as the stamp writes it. Its hint and its example are shortened to `…`, since their one home is the declaration, and the template shows them whole.
+- **A part's hint is its placeholder.** Where you write a part, the stamp leaves its hint in its place: one line, a comment marked `pkit:hint`, with the part's example after it. Here is a use case's *Goal* as the stamp writes it, its hint and its example shortened to `…`. Their one home is the declaration. The template, rendered from it, shows them whole.
 
   ```markdown
   **Goal:** <!-- pkit:hint … Example: … -->
@@ -693,8 +695,8 @@ The capability's skills, deployed by `pkit sync` with the others (in Claude Code
 
 The command owns each file's correctness — its id, its place, the anchors the rule asks for — and the skill the choices behind it.
 
-- **It lists no kind's parts.** You fill each part as its hint says, since the hint is the part's one description, in the kind's structure ("Templates and hints", above). The check's messages repeat it.
-- **It runs the check with `--preview`.** Where the format rule would bind, the preview shows what you wrote against its kind's structure, even while the rule is proposed. Its findings never fail ("Each body against its structure", above).
+- **The skill lists no kind's parts.** You fill each part as its hint says, since the hint is the part's one description, in the kind's structure ("Templates and hints", above). The check's messages repeat it.
+- **The skill runs the check with `--preview`.** Where the format rule would bind, the preview shows what you wrote against its kind's structure, even while the rule is proposed. Its `preview:` reports never fail, and the check's own findings and exit status stand ("Each body against its structure", above).
 - **One choice matters to revalidation later:** **quote the code you describe** in backticks. What an artefact quotes from its anchored code is the first thing the agent reads when that code changes ("The agent" below).
 
 ## Revalidation: four outcomes, two answers

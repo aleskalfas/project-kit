@@ -1,6 +1,6 @@
 # Adding a use case
 
-A use case is one actor's goal and how the system fulfils it: when it starts, the main path, the variants, and when it is done. It is a file, `UC-NNN-<slug>.md`, numbered within the project whatever area it sits in.
+A use case is one actor's goal and how the system fulfils it. It is a file, `UC-NNN-<slug>.md`, numbered within the project whatever area it sits in.
 
 ## 1. One actor, one goal
 
