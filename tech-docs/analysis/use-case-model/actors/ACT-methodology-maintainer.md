@@ -14,10 +14,12 @@ pkit:
       record:
         - ADR-059
         - PRJ-002
+      artefact:
+        - CONTRIBUTING.md#adding-a-core-record-cor
     revalidated:
-      at: 2026-10-14T18:58:47Z
+      at: 2026-10-17T00:00:20Z
       outcome: unchanged
-      unchanged-because: ADR-059 and PRJ-002 now write their points as headings carrying the same numbers and labels, word for word. PRJ-002's paragraph on what it leaves to the release-flow spec sits under a heading of its own, unchanged. The source repository and the release policy read as before, so the maintainer's needs to develop the methodology where no sync copies over their work, and to release the backbone, stand.
+      unchanged-because: The actor now anchors the section of CONTRIBUTING.md its Context cites, "Adding a core record (COR)". That section sets out the methodology's disciplines, such as the axiom discipline and project-neutrality. So the Context holds.
 ---
 
 # ACT-methodology-maintainer — Methodology maintainer
