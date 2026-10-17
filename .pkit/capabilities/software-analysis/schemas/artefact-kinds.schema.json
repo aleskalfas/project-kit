@@ -281,23 +281,23 @@
       }
     },
     "form": {
-      "description": "A check on the content of a part or a front-matter field, from a closed list the capability implements. In a list, each item holds it. A list form judges only the part's list items, so a line a writer adds inside the part never breaks it.",
+      "description": "A check on the content of a part or a front-matter field, from a closed list the capability implements. A list form, such as `numbered-steps`, judges only the part's list items, so a line a writer adds inside the part never breaks it. The `sentence` form is no list form: it judges the whole part as one text.",
       "oneOf": [
         {
           "const": "sentence",
-          "description": "One sentence: no sentence ends before the text's last word. The format rule, RS-SAN-001, says where a sentence ends."
+          "description": "One sentence in each text: no sentence ends before the text's last word. The format rule, RS-SAN-001, says what one text is, that a part of this form holds no list, and where a sentence ends."
         },
         {
           "const": "numbered-steps",
-          "description": "Each list item opens with a number, and no number repeats. Numbers need not run in sequence, since steps are append-only (DEC-001 point 3)."
+          "description": "The part holds at least one list item. Each item opens with a number, and no number repeats. Numbers need not run in sequence, since steps are append-only (DEC-001 point 3)."
         },
         {
           "const": "variants",
-          "description": "Each list item opens with the number of a step and a letter, such as `2a.`: a step of a use case's main path, or of a journey's steps. Or the part reads `None.`."
+          "description": "The part reads `None.`, or holds at least one list item. Each item opens with the number of a step and a letter, such as `2a.`: a step of a use case's main path, or of a journey's steps."
         },
         {
           "const": "steps-match-front-matter",
-          "description": "A journey's steps: one numbered item for each entry of the front matter's `steps`, in the same order and numbered from 1, each opening with its number, the use case's id, ` — ` and the use case's title, exactly. A hand-over sits under the step that needs it, and names an earlier step of the journey by its number and id, or a use case outside the journey that the journey relies on (DEC-001 point 4)."
+          "description": "A journey's steps: one numbered item for each entry of the front matter's `steps`, in the same order and numbered from 1, each opening with its number, the use case's id, ` — ` and the use case's title, exactly. A hand-over sits under the step that needs it, and names an earlier step of the journey by its number and id, or a use case outside the journey that the journey relies on (DEC-001 point 4). It opens a line with its bold label, `**Needs from step 2 (UC-005):**` or `**Needs from UC-009 (outside this journey):**`, and text follows it. A line that opens `**Needs from` is a hand-over. Each use case the journey relies on has a hand-over of its own."
         },
         {
           "const": "outcomes-match-front-matter",

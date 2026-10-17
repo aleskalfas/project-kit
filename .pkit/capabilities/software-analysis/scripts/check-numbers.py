@@ -25,10 +25,11 @@ The second is of a use case's steps and variants, which journeys and evidence
 cite by number and letter, so they stay append-only. Each use case in the
 working tree is compared with the same use case, by id, where this branch left
 the base, and a step or a variant renumbered or removed is reported. One added,
-and a use case new in the change, pass. It binds where the format rule,
-RS-SAN-001, binds and at its status, as the structure check does: accepted, an
-error; with `--preview`, a proposed rule's findings are reports opening
-`preview:`, which never fail. `_lib/append_only.py` states the rule.
+and a use case new in the change, pass. It binds where the append-only rule,
+RS-SAN-002, binds and at its status, as the structure check binds under the
+format rule: accepted, an error; with `--preview`, a proposed rule's findings
+are reports opening `preview:`, which never fail. `_lib/append_only.py` states
+the check.
 
 It reads a base, so it answers about a change rather than the tree: it is its
 own line of a project's check gate, beside `pkit friction check`, and not a
@@ -45,19 +46,19 @@ Usage:
   pkit analysis check-numbers [--base <ref>]            the summary and the findings
   pkit analysis check-numbers [--base <ref>] --json     {schema_version, base, freed, summary,
                                                          findings}
-  pkit analysis check-numbers [--base <ref>] --preview  a proposed format rule's findings too,
-                                                         as reports
+  pkit analysis check-numbers [--base <ref>] --preview  a proposed append-only rule's findings
+                                                         too, as reports
 
 The base is `--base`, else `$PKIT_CHECK_BASE`, else the project's default
 branch, as the backbone resolves it for every reader (COR-054).
 
 Exit codes:
   0  compared, and no number collides and no step or variant is renumbered or
-     removed where the format rule is accepted — a warning or a report never
-     fails — or the working tree numbers nothing; and the numbering setting,
-     if any, holds
+     removed where the append-only rule is accepted — a warning or a report
+     never fails — or the working tree numbers nothing; and the numbering
+     setting, if any, holds
   1  a number collides, a step or a variant is renumbered or removed where the
-     format rule is accepted and binds, or an entry of the numbering setting
+     append-only rule is accepted and binds, or an entry of the numbering setting
      names what is no commit of the default branch's history, or lists an id
      its commit does not free; or the numbers cannot be compared — the base
      names no commit, or shares no history with HEAD, or a use case's file
@@ -106,9 +107,9 @@ def main() -> int:
         "--preview",
         action="store_true",
         help=(
-            "Preview the format rule, RS-SAN-001, as if it were accepted, where `pkit rule-sets "
-            "reach --preview` says it would bind: each step or variant renumbered or removed, as "
-            "a report opening `preview:`, which never changes the exit status."
+            "Preview the append-only rule, RS-SAN-002, as if it were accepted, where `pkit "
+            "rule-sets reach --preview` says it would bind: each step or variant renumbered or "
+            "removed, as a report opening `preview:`, which never changes the exit status."
         ),
     )
     args = parser.parse_args()

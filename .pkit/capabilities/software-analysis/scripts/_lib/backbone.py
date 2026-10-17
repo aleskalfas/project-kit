@@ -34,7 +34,8 @@ backbone through its commands:
   capability's method set binds, and which of the project's own rules bind on
   each artefact, where a project's tightening of a kind's structure applies
   (DEC-001 point 1); the check of a use case's steps and variants reads where
-  the format rule binds the same way (`_lib/append_only.py`). A preview reads it with
+  the append-only rule, `software-analysis:RS-SAN-002`, binds the same way
+  (`_lib/append_only.py`). A preview reads it with
   `--preview`: where they would bind if every proposed rule were accepted,
   each marked when it binds only under the preview. The script never walks a
   rule set's scope or inheritance itself;

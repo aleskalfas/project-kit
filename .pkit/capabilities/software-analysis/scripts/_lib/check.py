@@ -121,8 +121,9 @@ And where the format rule binds, at its status:
   backbone's reading spans it — against the structure its kind declares
   (`_lib/structure.py`): a declared part missing, out of order or empty,
   `None.` where the part may not read it, and a part or a front-matter field
-  that does not hold the form its element names (`_lib/forms.py`), in each
-  item of a list. A journey's steps read each use case's title. A part or a
+  that does not hold the form its element names (`_lib/forms.py`), a part of
+  the `sentence` form that holds a list too. A journey's steps read each use
+  case's title. A part or a
   label a writer adds is never reported, though what it holds is content of
   the part it falls in, and a list form judges only the part's list items. A
   withdrawn artefact is never failed for a part it lacks or for a form, since
@@ -1594,26 +1595,27 @@ def unchecked(
     *,
     subject: str = "structure",
     command: str = "pkit analysis validate",
+    rule: str = FORMAT_RULE,
 ) -> str:
-    """The summary's line when the format rule binds nothing, and why (COR-051 point 4):
-    of the structure, or of another `subject` checked under the rule's gate, whose
-    preview `command` gives."""
+    """The summary's line when `rule` binds nothing, and why (COR-051 point 4): the
+    format rule, of the structure, or another rule of `SAN`, of the `subject` checked
+    under its gate, whose preview `command` gives."""
     if no_set:
         return (
-            f"{subject} ({FORMAT_RULE}): not checked — the backbone's reading holds no "
-            f"{CAPABILITY}:{METHOD_SET}, so whether its format rule binds cannot be told."
+            f"{subject} ({rule}): not checked — the backbone's reading holds no "
+            f"{CAPABILITY}:{METHOD_SET}, so whether {rule} binds cannot be told."
         )
     if status is None:
-        return f"{subject}: not checked — {CAPABILITY}:{METHOD_SET} holds no {FORMAT_RULE}."
+        return f"{subject}: not checked — {CAPABILITY}:{METHOD_SET} holds no {rule}."
     if status == PROPOSED:
         return (
-            f"{subject} ({FORMAT_RULE}, proposed): not checked — the rule binds nothing until "
+            f"{subject} ({rule}, proposed): not checked — the rule binds nothing until "
             f"it is accepted (COR-051 point 4); `{command} --preview` shows what it would "
             f"report."
         )
     asked = " A preview shows only a proposed rule." if preview else ""
     return (
-        f"{subject} ({FORMAT_RULE}, {status}): not checked — the rule binds nothing "
+        f"{subject} ({rule}, {status}): not checked — the rule binds nothing "
         f"(COR-051 point 4).{asked}"
     )
 
@@ -1754,8 +1756,8 @@ def _field_findings(
         if departure.how == structure.NOT_A_SENTENCE:
             problem = (
                 f"{departure.text!r} is more than one sentence: {subject}'s `{field.name}` "
-                f"holds one sentence{each}, and a sentence ends at a full stop, a question mark "
-                f"or an exclamation mark before a space or a line end"
+                f"holds one sentence{each}, and a sentence ends at `.`, `?` or `!` followed by a "
+                f"space and a capital letter"
             )
         else:
             problem = (
@@ -1816,17 +1818,11 @@ def _departure_message(
             f"always has something to say here"
         )
     elif departure.how == structure.NOT_A_SENTENCE:
-        ends = (
-            "a sentence ends at a full stop, a question mark or an exclamation mark before a "
-            "space or a line end, and one ends here before the text's last word"
+        problem = (
+            f"{named}{line} is more than one sentence: a sentence ends at `.`, `?` or `!` "
+            f"followed by a space and a capital letter, and one ends here before the text's "
+            f"last word"
         )
-        if departure.detail:  # an item of a list in the part
-            problem = (
-                f"an item of {named}{line} is more than one sentence: {departure.detail}, "
-                f"and {ends}"
-            )
-        else:
-            problem = f"{named}{line} is more than one sentence: {ends}"
     else:
         problem = f"{named}{line} does not hold its form, `{element.form}`: {departure.detail}"
     return f"{problem} ({cited}). {_advice(element.hint, element.example)}".rstrip()
