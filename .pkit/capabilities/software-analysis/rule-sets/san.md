@@ -20,12 +20,11 @@ rules:
 # What this capability's checks enforce of each rule (COR-051 point 2). Of the
 # format rule, it is the structure each artefact kind ships: its parts, the
 # glossary's head and its forms (DEC-001 point 1). Of the append-only rule, it
-# is a comparison of each use case with where the change left its base: the
-# default branch's, or the base the comparison names (DEC-001 point 3;
-# COR-054 point 3). `pkit validate` never runs that check, so a project runs
-# it in its check gate. A check
-# enforces its part only where its rule binds. Whoever judges the rest of a
-# rule leaves that part to the check. Where a project's rule tightens a
+# is a comparison of each use case with the same use case where the change
+# left its base: the default branch, or the base the comparison names
+# (DEC-001 point 3; COR-054 point 3). `pkit validate` never runs that check
+# (COR-055 point 2). A check enforces its part only where its rule binds.
+# Whoever judges the rest of a rule leaves that part to the check. Where a project's rule tightens a
 # structure, the project's set declares what the check enforces of that rule.
 checks:
   RS-SAN-001:
@@ -48,13 +47,15 @@ checks:
       part: >-
         Each step and each variant that a use case held where the change left
         its base, of a use case the working tree still holds, is neither
-        renumbered nor removed. It is renumbered where its text now stands
-        under another number or letter, one the base did not give that same
-        text, and no longer under its own. It is removed where its number or
-        letter is gone and it is not renumbered. A number or a letter that
-        holds other text passes as an edit. So a step replaced by another under
-        its number, and a step renumbered and reworded at once whose old number
-        holds another step, are left to whoever judges the rest of the rule.
+        renumbered nor removed. It is renumbered where its text stands in the
+        working tree under another number or letter, one the base did not give
+        that same text, and not under its own. It is removed where its number
+        or letter is gone and it is not renumbered. A number or a letter that
+        holds other text passes as an edit, and a step or a variant added
+        passes whatever number or letter it takes. Whoever judges the rest of
+        the rule judges these: a step replaced by another under its number, one
+        renumbered and reworded at once whose old number holds another step,
+        and the number or letter a new one takes.
 ---
 
 # SAN — the software-analysis method
@@ -75,9 +76,9 @@ An analysis artefact carries its kind's declared structure.
   - **History.** A withdrawn artefact is held to no part or form that came after its withdrawal.
   - **The `sentence` form.** Each text of this form, such as an actor's need, holds one sentence: no sentence ends before the text's last word.
     - **One text.** A body part of this form, such as a use case's *Goal*, is one text, and holds no Markdown list, not even inside a block quote. In a front-matter field that holds a list, such as an actor's `needs`, each item is one text.
-    - **Where a sentence ends.** At a full stop, a question mark or an exclamation mark followed by a space and a capital letter, and at the end of the text.
+    - **Where a sentence ends.** At `.`, `?` or `!` followed by a space and a capital letter, and at the end of the text. No other mark ends a sentence, such as `。`, `！` or the Greek question mark.
       - Any white space counts as a space, such as a line end, several spaces or a no-break space. A character a reader cannot see, such as a zero-width space, counts as nothing.
-      - A mark inside code, a code span or a fenced block, ends no sentence.
+      - A mark inside a code span or a fenced block ends no sentence.
       - So a mark followed by a lowercase letter, as in "e.g. for" or "3. října", ends no sentence. One followed by a capital does, as in "Dr. Smith" or "z. B. Rechnungen", so a writer rewords such a text.
     - **A script without capital letters,** such as Chinese or Arabic: a mark followed by one of its letters ends no sentence. So a text in such a script is never split.
 
@@ -88,5 +89,5 @@ A use case's steps and variants keep their numbers and letters.
 - **How:**
   - **Steps.** A change renumbers no step its use case held before the change, and removes none.
   - **Variants.** A change gives no variant its use case held before the change another step number or letter, and removes none.
-  - **New ones.** Steps and variants are append-only. A new step takes a number past the last of its use case, and a new variant a letter past the last of its step.
-  - So a step added between two others still takes the next free number, and a step that no longer happens stays under its number.
+  - **New ones.** Steps and variants are append-only. A new step takes a number higher than every number of its use case, and a new variant a letter after every letter of its step.
+  - So a step added between two others takes such a number too, and a step that no longer happens stays under its number.

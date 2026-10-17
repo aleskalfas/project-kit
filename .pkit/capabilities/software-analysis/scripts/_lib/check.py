@@ -1756,8 +1756,8 @@ def _field_findings(
         if departure.how == structure.NOT_A_SENTENCE:
             problem = (
                 f"{departure.text!r} is more than one sentence: {subject}'s `{field.name}` "
-                f"holds one sentence{each}, and a sentence ends at a full stop, a question mark "
-                f"or an exclamation mark followed by a space and a capital letter"
+                f"holds one sentence{each}, and a sentence ends at `.`, `?` or `!` followed by a "
+                f"space and a capital letter"
             )
         else:
             problem = (
@@ -1819,9 +1819,9 @@ def _departure_message(
         )
     elif departure.how == structure.NOT_A_SENTENCE:
         problem = (
-            f"{named}{line} is more than one sentence: a sentence ends at a full stop, a "
-            f"question mark or an exclamation mark followed by a space and a capital letter, "
-            f"and one ends here before the text's last word"
+            f"{named}{line} is more than one sentence: a sentence ends at `.`, `?` or `!` "
+            f"followed by a space and a capital letter, and one ends here before the text's "
+            f"last word"
         )
     else:
         problem = f"{named}{line} does not hold its form, `{element.form}`: {departure.detail}"

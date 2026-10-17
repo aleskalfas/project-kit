@@ -46,8 +46,8 @@ Usage:
   pkit analysis check-numbers [--base <ref>]            the summary and the findings
   pkit analysis check-numbers [--base <ref>] --json     {schema_version, base, freed, summary,
                                                          findings}
-  pkit analysis check-numbers [--base <ref>] --preview  a proposed format rule's findings too,
-                                                         as reports
+  pkit analysis check-numbers [--base <ref>] --preview  a proposed append-only rule's findings
+                                                         too, as reports
 
 The base is `--base`, else `$PKIT_CHECK_BASE`, else the project's default
 branch, as the backbone resolves it for every reader (COR-054).

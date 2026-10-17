@@ -4,9 +4,8 @@ custom:
   category: Changed
 body: >
   The `sentence` form reads a sentence's end as the maintainer chose on
-  17 October (#1370). A full stop, a question mark or an exclamation mark
-  ends a sentence only where a space and a capital letter follow it, and the
-  text's end ends one. So "e.g. for" and "3. října" end none, and a text in
+  17 October (#1370). A `.`, `?` or `!` ends a sentence only where a space
+  and a capital letter follow it, and the text's end ends one. So "e.g. for" and "3. října" end none, and a text in
   a script without capital letters is never split. Any white space counts
   as a space, a character a reader cannot see as nothing, and a mark inside
   a fenced block ends none. A body part of the form, such as a use case's

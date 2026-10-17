@@ -120,8 +120,8 @@ def test_the_how_says_where_a_sentence_ends_citing_no_project_s_rule() -> None:
     assert "**The `sentence` form.**" in section
     assert "holds one sentence: no sentence ends before the text's last word." in section
     assert (
-        "**Where a sentence ends.** At a full stop, a question mark or an exclamation mark "
-        "followed by a space and a capital letter, and at the end of the text."
+        "**Where a sentence ends.** At `.`, `?` or `!` followed by a space and a capital "
+        "letter, and at the end of the text. No other mark ends a sentence"
     ) in section
     assert (
         "Any white space counts as a space, such as a line end, several spaces or a no-break "
@@ -180,7 +180,7 @@ def test_the_append_only_rule_ships_proposed_from_dec_001_point_3() -> None:
     assert "A change renumbers no step its use case held before the change, and removes none." in (
         flat
     )
-    assert "A new step takes a number past the last of its use case" in flat
+    assert "A new step takes a number higher than every number of its use case" in flat
     assert re.findall(r"RS-[A-Z][A-Z0-9]*-\d{3}", section) == [STEPS_RULE]
 
 
@@ -196,7 +196,7 @@ def test_the_append_only_rule_declares_check_numbers_as_its_check() -> None:
         "Each step and each variant that a use case held where the change left its base, of a "
         "use case the working tree still holds, is neither renumbered nor removed."
     )
-    assert "left to whoever judges the rest of the rule" in part
+    assert "Whoever judges the rest of the rule judges these" in part
     assert [c["check"] for c in data["checks"][RULE]] == ["software-analysis:validate"]
     package = _yaml.load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
     assert "check-numbers" in package["commands"]

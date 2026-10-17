@@ -184,6 +184,7 @@ def test_none_passes_only_where_the_part_allows_it() -> None:
         ("Export my report.\u034f Then email it.", False),  # the grapheme joiner
         # Only a capital letter after the space ends one: a digit or a quote does not.
         ("Export my report. 2 files follow.", True),
+        ('Export my report. "Then" email it.', True),
         # A script without capital letters is never split.
         ("レポートを書く。それを送る。", True),
         ("تصدير التقرير. ثم إرساله.", True),
