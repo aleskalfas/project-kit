@@ -13,8 +13,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-14T08:38:48Z
-      outcome: updated
+      at: 2026-10-17T17:18:24Z
+      outcome: unchanged
+      unchanged-because: ADR-014 loses its revision-history narration and gains pointers to ADR-027 and ADR-030. It still decides that the permission hook runs under the system python3 because uv panics under Seatbelt, and that sandbox enable sets failIfUnavailable. Those are what this page cites ADR-014 for, so the page holds.
 ---
 
 # Claude Code adapter

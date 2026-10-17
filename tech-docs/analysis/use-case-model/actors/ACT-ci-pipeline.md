@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-17T16:32:28Z
+      at: 2026-10-17T17:18:29Z
       outcome: unchanged
-      unchanged-because: "PRJ-002 loses only an Implications bullet on an interim that this change ends: the release now widens a declared upper bound and refuses a range that excludes a dependency. A pull request still declares each surface change in a changeset the guard checks, and the release still cuts the tag, so the Note's two steps hold."
+      unchanged-because: PRJ-002 drops stale phrases on its first version, its promotion from the hybrid and the move past 1.0, and decides nothing new. A pull request declares each surface change in a changeset the guard checks, and the release cuts the tag, so the Note's two steps hold.
 ---
 
 # ACT-ci-pipeline — CI pipeline

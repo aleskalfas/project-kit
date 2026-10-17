@@ -19,9 +19,9 @@ pkit:
         - .pkit/scratchpad/README.md#
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-17T15:21:40Z
+      at: 2026-10-17T17:18:33Z
       outcome: unchanged
-      unchanged-because: COR-017 now lets a capability declare one project rule set that its install creates. This index only says that capabilities are opt-in, self-contained units beside the areas, with their own READMEs, which still holds.
+      unchanged-because: The CLI reference's Authoring commands opening says that new capability registers nothing and that capabilities register brings the capability in. This index only points to that section for authoring an area, adapter, capability or migration, so it holds.
 ---
 
 # project-kit
