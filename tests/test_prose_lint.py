@@ -167,10 +167,21 @@ def test_a_nested_item_is_reported_once_whatever_it_holds() -> None:
 
 
 def test_a_finding_shows_a_control_character_as_its_code_point() -> None:
-    """In a count's excerpt too, so the report itself is never reordered."""
+    """In every finding, so the report itself is never reordered: a context, a match a
+    finding quotes, a word to replace and a link's target. No pattern searches a link's
+    target, so the forbid finds the one in the prose alone."""
     rlo = chr(0x202E)
     assert found(f"Plain{rlo}; one.\n", [pl.load_entries()[1]]) == [
         '1 RS-WRITE-008: a semicolon: "Plain<U+202E>; one."'
+    ]
+    unnamed = pl.entry({"rule": "RS-X-001", "type": "forbid", "pattern": rlo})
+    term = pl.entry({"rule": "RS-X-002", "type": "substitute", "replace": {f"a{rlo}b": "c"}})
+    links = pl.entry({"rule": "RS-X-003", "type": "link-resolves"})
+    text = f"One a{rlo}b and [x](gone{rlo}.md).\n"
+    assert found(text, [unnamed, term, links], exists=lambda _rel: False) == [
+        '1 RS-X-001: "<U+202E>": "One a<U+202E>b and [x](gone<U+202E>.md)."',
+        '1 RS-X-002: "a<U+202E>b": write "c"',
+        '1 RS-X-003: the link target "gone<U+202E>.md" does not exist',
     ]
 
 

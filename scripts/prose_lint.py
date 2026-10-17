@@ -1152,14 +1152,15 @@ def _breaks(item: Entry, block: Block, path: str, exists: Exists) -> Iterable[tu
         name = item.fields.get("name")
         for match in re.finditer(item.fields["pattern"], view):
             if match.end() > match.start():
-                what = name or f'"{match.group()}"'
+                what = name or f'"{_visible(match.group())}"'
                 context = _context(block.text, match.start(), match.end())
                 yield match.start(), match.end(), f"{what}: {context}"
     else:
         for word, replacement in item.fields["replace"].items():
             pattern = r"(?<![\w-])" + r"\s+".join(map(re.escape, word.split())) + r"(?![\w-])"
             for match in re.finditer(pattern, view, re.IGNORECASE):
-                yield match.start(), match.end(), f'"{match.group()}": write "{replacement}"'
+                shown = _visible(match.group())
+                yield match.start(), match.end(), f'"{shown}": write "{replacement}"'
 
 
 def _links(item: Entry, block: Block, path: str, exists: Exists) -> Iterable[tuple[int, int, str]]:
@@ -1168,7 +1169,8 @@ def _links(item: Entry, block: Block, path: str, exists: Exists) -> Iterable[tup
     for match in (_LINK_DEFINITION if block.definition else _LINK).finditer(linkable):
         target = match.group(1)
         if not _resolves(target, path, exists):
-            yield match.start(), match.end(), f'the link target "{target}" does not exist'
+            shown = _visible(target)
+            yield match.start(), match.end(), f'the link target "{shown}" does not exist'
 
 
 def _count(item: Entry, block: Block, view: str) -> Iterable[tuple[int, int, str]]:
