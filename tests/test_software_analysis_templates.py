@@ -352,7 +352,7 @@ def _names_the_records_it_rests_on(line: str) -> bool:
     point 11)."""
     return (
         '"<record it rests on>"' in line
-        and "each decision it rests on, or that answers it" in line
+        and "each record it rests on, or that answers it" in line
         and "DEC-001 point 11" in line
     )
 
@@ -360,8 +360,8 @@ def _names_the_records_it_rests_on(line: str) -> bool:
 def test_the_use_case_template_hints_the_records_it_rests_on() -> None:
     """The use case's record anchor names the records it rests on, and the ones that
     answer it: the use case anchors both, and no record anchors it back (#1447). The
-    placeholder it replaced stays in the append-only list, so a use case that still
-    holds it is caught."""
+    placeholder it replaced stays in the append-only list, as every placeholder a
+    template shipped does."""
     text = (CAPABILITY / "templates" / "use-case.md").read_text(encoding="utf-8")
     front_matter, _body = document_parts.split_front_matter(text)
     assert front_matter is not None
@@ -373,13 +373,20 @@ def test_the_use_case_template_hints_the_records_it_rests_on() -> None:
     assert "<decision it relies on>" in _shipped("IN_TEMPLATES")
 
 
-def test_a_record_hint_that_omits_the_direction_is_caught() -> None:
-    """The hint the use case shipped before named a decision it relies on, and said
-    nothing of one that answers it, so the test above fails on it."""
-    earlier = (
-        'pkit:\n  friction:\n    anchors:\n      record: ["<decision it relies on>"]  # --record\n'
-    )
-    line = _record_hint(earlier)
+@pytest.mark.parametrize(
+    "hint",
+    [
+        # The hint the use case shipped before: a decision it relies on, and nothing of
+        # one that answers it.
+        'record: ["<decision it relies on>"]     # --record: a change to one asks the same',
+        # The placeholder alone, with a note that leaves out the records that answer it.
+        'record: ["<record it rests on>"]  # --record: a record it rests on (DEC-001 point 11)',
+    ],
+)
+def test_a_record_hint_that_omits_the_direction_is_caught(hint: str) -> None:
+    """A record anchor's hint that leaves out the records that answer the use case
+    fails the test above."""
+    line = _record_hint(f"pkit:\n  friction:\n    anchors:\n      {hint}\n")
     assert line is not None and not _names_the_records_it_rests_on(line)
 
 

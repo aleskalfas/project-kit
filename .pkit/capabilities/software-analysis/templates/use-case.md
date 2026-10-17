@@ -19,7 +19,7 @@ pkit:
   friction:
     anchors:
       path: ["<code it exercises>"]           # --path: a change there asks whether the use case still holds
-      record: ["<record it rests on>"]        # --record: each decision it rests on, or that answers it. A change to one asks the same (DEC-001 point 11)
+      record: ["<record it rests on>"]        # --record: each record it rests on, or that answers it. A change to one asks the same (DEC-001 point 11)
       artefact: [ACT-actor]                   # its actor and other actors: a changed actor flags this use case
 ---
 
