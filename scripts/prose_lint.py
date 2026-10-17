@@ -1,8 +1,8 @@
 """The prose lint (#1415): the mechanical parts of the writing rules, in the text a change adds.
 
 Each mechanical part of a writing rule is an entry in `scripts/prose-lint.yaml`,
-of one of four types: `count`, `forbid`, `substitute` and `link-resolves`. The
-entries are data, and a new mechanical rule is an entry, not code.
+of one of five types: `count`, `forbid`, `substitute`, `link-resolves` and
+`nesting`. The entries are data, and a new mechanical rule is an entry, not code.
 
 What the lint checks:
 
@@ -14,14 +14,19 @@ What the lint checks:
   declares the part under `checks`, naming the check `prose-lint` (COR-051
   point 2).
 - **Which text:** a finding is the change's when its unit holds text the change
-  adds or moves. The unit is a sentence or a paragraph for `count`, and the
-  match itself for the other types. A break the change only sits beside is not
-  the change's.
+  adds or moves. The unit is a sentence or a paragraph for `count`, a list item
+  for `nesting`, and the match itself for the other types. A list item is the
+  change's too when the change alters its marker's line, as an indent does. A
+  break the change only sits beside is not the change's.
+- **Prose or the whole file:** a `forbid` entry reads the prose, or with
+  `in: file` every character of the artefact: code, headings, front matter,
+  link targets, comments and the `pkit` container.
 
 How it reads text follows RS-WRITE-005's *How* (`tech-docs/rule-sets/writing.md`):
 
 - A word is a token between spaces that holds a letter or a digit, once bold
-  marks and backticks are removed.
+  marks and backticks are removed. A code span's own spaces split no token, so
+  a code span is at most one word.
 - A sentence ends at a full stop, a question mark or an exclamation mark before
   a space or a line end. Each block ends one too: a paragraph, a list item, a
   table cell and a front-matter value.
@@ -29,6 +34,10 @@ How it reads text follows RS-WRITE-005's *How* (`tech-docs/rule-sets/writing.md`
   "Breaks the rule" are not read, and nor is an HTML comment. For a count, a
   bare URL and an HTML entity are tokens like any other, and a link's target
   is part of its link's last token. No pattern searches them.
+
+How it reads a list's levels follows RS-WRITE-017's *How*: an item of a list
+that sits in no other list is at level one. An item is inside another while it
+is indented to that item's text.
 
 `lint_text` reads a given text whole, as a test of stamped template text calls
 it. From the repository root:
@@ -45,6 +54,7 @@ import argparse
 import re
 import sys
 import traceback
+import unicodedata
 from bisect import bisect_right
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -80,8 +90,11 @@ CONTAINER = "pkit"
 #: The label that marks a quoted example of a broken rule (WRITE, "How a rule reads").
 BROKEN_EXAMPLE = "Breaks the rule"
 
-TYPES = ("count", "forbid", "substitute", "link-resolves")
+TYPES = ("count", "forbid", "substitute", "link-resolves", "nesting")
 EXCEPTIONS = ("code", "quotes", "cells")
+
+#: What a `forbid` entry reads: the prose, its default, or every character of the artefact.
+READS = ("prose", "file")
 
 
 class LintError(Exception):
@@ -96,7 +109,7 @@ class Entry:
     """One mechanical part of a rule, as `scripts/prose-lint.yaml` writes it.
 
     - `rule`: the rule's id, bare or as cited.
-    - `type`: `count`, `forbid`, `substitute` or `link-resolves`.
+    - `type`: `count`, `forbid`, `substitute`, `link-resolves` or `nesting`.
     - `fields`: the type's own fields.
     - `exceptions`: the parts of the prose it does not read.
     """
@@ -106,13 +119,20 @@ class Entry:
     fields: Mapping[str, Any] = field(default_factory=dict[str, Any])
     exceptions: frozenset[str] = frozenset()
 
+    @property
+    def whole_file(self) -> bool:
+        """It reads every character of the artefact, not only its prose: `forbid`
+        with `in: file`."""
+        return self.type == "forbid" and self.fields.get("in") == "file"
+
 
 _RULE_ID = re.compile(r"^(?:[a-z][a-z0-9-]*:)?RS-[A-Z][A-Z0-9]*-\d{3,}$")
 _FIELDS: Mapping[str, frozenset[str]] = {
     "count": frozenset({"count", "in", "max"}),
-    "forbid": frozenset({"pattern", "name"}),
+    "forbid": frozenset({"pattern", "name", "in"}),
     "substitute": frozenset({"replace"}),
     "link-resolves": frozenset(),
+    "nesting": frozenset({"max"}),
 }
 
 
@@ -132,7 +152,15 @@ def entry(data: Mapping[str, Any]) -> Entry:
     if not isinstance(exceptions, list) or not all(e in EXCEPTIONS for e in exceptions):
         raise LintError(f"{where}: `except` lists only {', '.join(EXCEPTIONS)}")
     _check_fields(where, kind, own)
+    if exceptions and (kind == "nesting" or own.get("in") == "file"):
+        raise LintError(f"{where}: a {kind} entry that reads no prose takes no `except`")
     return Entry(rule, kind, own, frozenset(exceptions))
+
+
+def _check_max(where: str, own: Mapping[str, Any]) -> None:
+    limit = own.get("max")
+    if not isinstance(limit, int) or isinstance(limit, bool) or limit < 0:
+        raise LintError(f"{where}: `max` is a whole number")
 
 
 def _check_fields(where: str, kind: str, own: Mapping[str, Any]) -> None:
@@ -144,9 +172,9 @@ def _check_fields(where: str, kind: str, own: Mapping[str, Any]) -> None:
             raise LintError(f"{where}: `count` is words or sentences, `in` sentence or paragraph")
         if own["count"] == "sentences" and own["in"] == "sentence":
             raise LintError(f"{where}: a sentence holds one sentence")
-        limit = own.get("max")
-        if not isinstance(limit, int) or isinstance(limit, bool) or limit < 0:
-            raise LintError(f"{where}: `max` is a whole number")
+        _check_max(where, own)
+    elif kind == "nesting":
+        _check_max(where, own)
     elif kind == "forbid":
         pattern = own.get("pattern")
         if not isinstance(pattern, str) or not pattern:
@@ -157,6 +185,8 @@ def _check_fields(where: str, kind: str, own: Mapping[str, Any]) -> None:
             raise LintError(f"{where}: `pattern` does not compile: {exc}") from exc
         if "name" in own and not isinstance(own["name"], str):
             raise LintError(f"{where}: `name` is text")
+        if own.get("in", "prose") not in READS:
+            raise LintError(f"{where}: `in` is {' or '.join(READS)}")
     elif kind == "substitute":
         pairs = own.get("replace")
         if (
@@ -198,7 +228,8 @@ class Block:
     carries its offset in the source, and whether it lies in a code span, in
     quotation marks or in markup: a link's target, a bare URL or an HTML
     entity. A link definition is a block of its own, which only a link's check
-    reads.
+    reads. A list item has its `level`, 1 when it sits in no other list, and
+    the offset of its `marker` in the source; any other block has level 0.
     """
 
     text: str
@@ -208,6 +239,8 @@ class Block:
     markup: tuple[bool, ...]
     cell: bool = False
     definition: bool = False
+    level: int = 0
+    marker: int = -1
 
     def view(self, exceptions: frozenset[str], *, hide_markup: bool = False) -> str:
         """The text with the parts an entry does not read blanked out, and with
@@ -241,7 +274,7 @@ _FENCE_OPEN = re.compile(rf"^\s*(?:{_LIST_MARKER}\s+)?(`{{3,}}|~{{3,}})")
 _FENCE_CLOSE = re.compile(r"^\s*(`{3,}|~{3,})\s*$")
 _HEADING = re.compile(r"^\s{0,3}#{1,6}(\s|$)")
 _SETEXT_UNDERLINE = re.compile(r"^\s{0,3}(=+|-{2,})\s*$")
-_ITEM = re.compile(rf"^(\s*){_LIST_MARKER}(\s+|$)")
+_ITEM = re.compile(rf"^(\s*)({_LIST_MARKER})(\s+|$)")
 _THEMATIC_BREAK = re.compile(r"^\s{0,3}([-*_])(\s*\1){2,}\s*$")
 _QUOTE_PREFIX = re.compile(r"^\s{0,3}(>\s?)+")
 _TABLE_ROW = re.compile(r"^\s*\|")
@@ -269,15 +302,18 @@ def markdown_blocks(text: str) -> list[Block]:
     - **Block quotes:** a line is read without its `>` marks, and the text of a
       block quote is quoted. An unquoted line that goes on from a quoted one
       stays in its block.
+    - **Levels:** a list item's block carries its level (`_Levels`).
     """
     blocks: list[Block] = []
     current: list[tuple[int, int]] = []
     paragraph = False  # the current block opened as a paragraph, not as a list item
     quoted = False
+    levels = _Levels()
+    level, marker = 0, -1  # the current block's, when it opened as a list item
 
     def flush() -> None:
         if current:
-            blocks.append(block_of(text, current, quoted=quoted))
+            blocks.append(block_of(text, current, quoted=quoted, level=level, marker=marker))
             current.clear()
 
     fence: str | None = None
@@ -303,10 +339,15 @@ def markdown_blocks(text: str) -> list[Block]:
         opened = _FENCE_OPEN.match(rest)
         if opened is not None:
             flush()
+            if (item := _ITEM.match(rest)) is not None:
+                levels.open(item, quote is not None)  # an item that opens with a fence
+            else:
+                levels.start_block(rest, quote is not None)
             fence, fence_quoted = opened.group(1), quote is not None
             continue
         if rest.lstrip().startswith("<!--"):
             flush()
+            levels.start_block(rest, quote is not None)
             in_comment = "-->" not in line
             continue
         if current and quote is not None and not quoted:
@@ -315,25 +356,73 @@ def markdown_blocks(text: str) -> list[Block]:
             if _SETEXT_UNDERLINE.match(rest):
                 current.clear()  # the paragraph was a setext heading's text
                 continue
-        if not rest.strip() or any(p.match(rest) for p in _NO_PROSE):
+        if not rest.strip():
             flush()
+        elif any(p.match(rest) for p in _NO_PROSE):
+            flush()
+            levels.start_block(rest, quote is not None)
         elif _TABLE_ROW.match(rest):
             flush()
+            levels.start_block(rest, quote is not None)
             for cell in _table_cells(text, start + column, end):
                 blocks.append(block_of(text, [cell], quoted=quote is not None, cell=True))
         elif _LINK_DEFINITION.match(rest):
             flush()
+            levels.start_block(rest, quote is not None)
             blocks.append(block_of(text, [(start + column, end)], definition=True))
         elif (item := _ITEM.match(rest)) is not None:
             flush()
+            level = levels.open(item, quote is not None)
+            marker = start + column + len(item.group(1))
             current.append((start + column + item.end(), end))
             paragraph, quoted = False, quote is not None
         else:
             if not current:
+                levels.start_block(rest, quote is not None)
                 paragraph, quoted = True, quote is not None
+                level, marker = 0, -1
             current.append((start + column + len(rest) - len(rest.lstrip()), end))
     flush()
     return blocks
+
+
+def _width(indent: str) -> int:
+    """The columns a run of spaces and tabs takes, a tab reaching the next multiple of four."""
+    return len(indent.expandtabs(4))
+
+
+class _Levels:
+    """The list items open at a line, to give each new item its level (RS-WRITE-017's How).
+
+    - **Open items:** each keeps the column its text starts at: after its
+      marker and the spaces that follow it, or one space where more than four
+      or none follow.
+    - **Closing:** a line that starts a block closes each open item it is not
+      indented to, as a sibling's marker does. A line that goes on from a
+      block's line, as a lazy one does, closes none.
+    - **Block quotes:** a list in a block quote counts its levels afresh.
+    """
+
+    def __init__(self) -> None:
+        self._texts: list[int] = []
+        self._quoted = False
+
+    def start_block(self, rest: str, quoted: bool) -> None:
+        """A line `rest`, read without its `>` marks, starts a block."""
+        if quoted != self._quoted:
+            self._texts.clear()
+            self._quoted = quoted
+        indent = _width(rest[: len(rest) - len(rest.lstrip())])
+        while self._texts and indent < self._texts[-1]:
+            self._texts.pop()
+
+    def open(self, item: re.Match[str], quoted: bool) -> int:
+        """Open the list item `item` matched (`_ITEM`), and give its level."""
+        self.start_block(item.string, quoted)
+        gap = item.group(3)
+        spaces = len(gap) if 0 < len(gap) <= 4 and "\t" not in gap else 1
+        self._texts.append(_width(item.group(1)) + len(item.group(2)) + spaces)
+        return len(self._texts)
 
 
 def _table_cells(text: str, start: int, end: int) -> list[tuple[int, int]]:
@@ -385,6 +474,8 @@ def block_of(
     quoted: bool = False,
     cell: bool = False,
     definition: bool = False,
+    level: int = 0,
+    marker: int = -1,
 ) -> Block:
     """The block whose lines are `ranges` of `text`, read inline as the How reads it.
 
@@ -430,6 +521,8 @@ def block_of(
         markup=tuple(markup[i] for i in kept),
         cell=cell,
         definition=definition,
+        level=level,
+        marker=marker,
     )
 
 
@@ -534,7 +627,17 @@ def is_word(token: str) -> bool:
     return any(char.isalnum() for char in token)
 
 
-def word_count(text: str) -> int:
+def word_count(text: str, joined: Sequence[bool] = ()) -> int:
+    """The words of a text: its tokens between spaces that hold a letter or a digit.
+
+    A space where `joined` is true splits no token. A code span's own spaces are
+    joined, so a code span is at most one word (RS-WRITE-005's How).
+    """
+    if any(joined):
+        text = "".join(
+            "_" if i < len(joined) and joined[i] and char.isspace() else char
+            for i, char in enumerate(text)
+        )
     return sum(1 for token in text.split() if is_word(token))
 
 
@@ -542,15 +645,19 @@ def sentences(block: Block, view: str) -> list[Unit]:
     """The sentences of a block, each with its words; a run holding no word is none.
 
     A sentence ends at `.`, `?` or `!` before a space or the block's end, never
-    inside a code span. The block's end ends the last.
+    inside a code span. The block's end ends the last. A code span the view
+    keeps is at most one word, with the text joined to it up to a space.
     """
+    joined = [
+        code and seen == char for code, seen, char in zip(block.code, view, block.text, strict=True)
+    ]
     found: list[Unit] = []
     start = 0
     for i, char in enumerate(view):
         if char in _ENDS and not block.code[i] and (i + 1 == len(view) or view[i + 1].isspace()):
-            found.append(Unit(start, i + 1, word_count(view[start : i + 1])))
+            found.append(Unit(start, i + 1, word_count(view[start : i + 1], joined[start : i + 1])))
             start = i + 1
-    found.append(Unit(start, len(view), word_count(view[start:])))
+    found.append(Unit(start, len(view), word_count(view[start:], joined[start:])))
     return [unit for unit in found if unit.words]
 
 
@@ -562,10 +669,11 @@ class Source:
     """Text read from one file, and the file line each part of it is on.
 
     - `text`: Markdown, read in blocks; or, with `marks`, the front-matter
-      values, one a line, each a block of its own.
-    - `first_line`: for Markdown, the file line the text opens on.
-    - `marks`: for front-matter values, `(offset, line)` pairs in order: the
-      text from each offset on lies on that file line.
+      values, one a line, each a block of its own. An artefact's whole text
+      (`Sources.whole`) is read as characters, never in blocks.
+    - `first_line`: without `marks`, the file line the text opens on.
+    - `marks`: `(offset, line)` pairs in order: the text from each offset on
+      lies on that file line.
     """
 
     text: str
@@ -662,33 +770,75 @@ def _walk_values(node: Node | None, first_line: int, found: list[list[tuple[str,
 
 @dataclass(frozen=True)
 class Sources:
-    """An artefact's text: its front-matter values and its Markdown."""
+    """An artefact's text: its front-matter values, its Markdown, and its whole
+    text, every character of it, for an entry that reads the whole file."""
 
     values: Source
     body: Source
+    whole: Source
 
 
 EMPTY = Source("", marks=())
 
 
 def document_sources(text: str) -> Sources:
-    """A document's front-matter values and its body."""
+    """A document's front-matter values, its body, and the whole file."""
     text = universal_newlines(text)
     front_matter, body = split_front_matter(text)
     first = text.count("\n") - body.count("\n") + 1
     values = EMPTY if front_matter is None else front_matter_values(front_matter)
-    return Sources(values, Source(body, first_line=first))
+    return Sources(values, Source(body, first_line=first), Source(text))
 
 
 def entry_sources(text: str, key: str, span: Mapping[str, int] | None) -> Sources:
-    """A collection entry's values, read from its file's front matter, and its section."""
+    """A collection entry's values, read from its file's front matter, its section,
+    and its whole text: the lines of its data in the front matter, then its section's."""
     text = universal_newlines(text)
     front_matter, _body = split_front_matter(text)
     values = EMPTY if front_matter is None else front_matter_values(front_matter, key)
+    lines = text.split("\n")
+    numbers = [] if front_matter is None else _entry_lines(front_matter, key)
+    if span is not None:
+        numbers += range(span["first_line"], span["last_line"] + 1)
+    whole: list[str] = []
+    marks: list[tuple[int, int]] = []
+    offset = 0
+    for number in numbers:
+        marks.append((offset, number))
+        whole.append(lines[number - 1])
+        offset += len(lines[number - 1]) + 1
+    whole_text = Source("\n".join(whole), marks=tuple(marks))
     if span is None:
-        return Sources(values, Source(""))
-    lines = text.split("\n")[span["first_line"] - 1 : span["last_line"]]
-    return Sources(values, Source("\n".join(lines), first_line=span["first_line"]))
+        return Sources(values, Source(""), whole_text)
+    section = "\n".join(lines[span["first_line"] - 1 : span["last_line"]])
+    return Sources(values, Source(section, first_line=span["first_line"]), whole_text)
+
+
+def _entry_lines(front_matter: str, key: str, first_line: int = 2) -> list[int]:
+    """The file lines of entry `key` in a front matter: from its key's line to the
+    last line its data holds text on, the comments after it left out.
+    `first_line` is the file line the front matter opens on."""
+    try:
+        node = YAML(typ="safe", pure=True).compose(front_matter)
+    except YAMLError as exc:
+        raise LintError(f"the front matter does not parse: {exc}") from exc
+    if _value_of(node, "rule-set") is not None:
+        node = _value_of(node, "rules")
+    if not isinstance(node, MappingNode):
+        return []
+    for name, value in node.value:
+        if isinstance(name, ScalarNode) and name.value == key:
+            # The data ends where the next key starts, past any comment between them: a
+            # line no deeper than the key that opens with `#`.
+            held = front_matter[: value.end_mark.index].split("\n")
+            last = len(held) - 1
+            while last > name.start_mark.line and (
+                not held[last].strip()
+                or held[last][: name.start_mark.column + 1].lstrip().startswith("#")
+            ):
+                last -= 1
+            return list(range(first_line + name.start_mark.line, first_line + last + 1))
+    return []
 
 
 # --- the text a change adds -----------------------------------------------------------------
@@ -696,31 +846,44 @@ def entry_sources(text: str, key: str, span: Mapping[str, int] | None) -> Source
 
 _TOKEN = re.compile(r"\S+")
 
+#: A token of the whole text: split only at a space, a tab or a line break, so a control
+#: character that `\s` takes for a space is part of a token, and is added with it.
+WHOLE_TOKEN = re.compile(r"[^ \t\n]+")
 
-def added_mask(base: str | None, head: str) -> bytearray:
+
+def _line_diff(
+    base: str, head: str
+) -> tuple[list[str], list[str], list[int], Sequence[tuple[str, int, int, int, int]]]:
+    """The lines of both texts, the offset each head line starts at, and the
+    opcodes that turn the base's lines into the head's."""
+    base_lines, head_lines = base.split("\n"), head.split("\n")
+    starts = [0]
+    for line in head_lines:
+        starts.append(starts[-1] + len(line) + 1)
+    lines = SequenceMatcher(None, base_lines, head_lines, autojunk=False)
+    return base_lines, head_lines, starts, lines.get_opcodes()
+
+
+def added_mask(base: str | None, head: str, token: re.Pattern[str] = _TOKEN) -> bytearray:
     """For each character of `head`, 1 when it is in a token the change adds or moves.
 
     Lines are compared first, then the tokens of each run of lines that
     differs, so a paragraph written on one line is compared word by word. A
     token in a run of lines the base does not hold is added. A token moved
     within the text is added where the diff inserts it. Without a base,
-    everything is added.
+    everything is added. A token is a run of non-spaces, or a match of `token`.
     """
     if base is None:
         return everything(head)
     mask = bytearray(len(head))
-    base_lines, head_lines = base.split("\n"), head.split("\n")
-    starts = [0]
-    for line in head_lines:
-        starts.append(starts[-1] + len(line) + 1)
-    lines = SequenceMatcher(None, base_lines, head_lines, autojunk=False)
-    for tag, i1, i2, j1, j2 in lines.get_opcodes():
+    base_lines, head_lines, starts, opcodes = _line_diff(base, head)
+    for tag, i1, i2, j1, j2 in opcodes:
         if tag == "equal" or j1 == j2:
             continue
         offset = starts[j1]
         head_chunk = "\n".join(head_lines[j1:j2])
-        head_tokens = list(_TOKEN.finditer(head_chunk))
-        base_tokens = [m.group() for m in _TOKEN.finditer("\n".join(base_lines[i1:i2]))]
+        head_tokens = list(token.finditer(head_chunk))
+        base_tokens = [m.group() for m in token.finditer("\n".join(base_lines[i1:i2]))]
         words = SequenceMatcher(None, base_tokens, [m.group() for m in head_tokens], autojunk=False)
         for word_tag, _a1, _a2, b1, b2 in words.get_opcodes():
             if word_tag in ("insert", "replace"):
@@ -728,6 +891,20 @@ def added_mask(base: str | None, head: str) -> bytearray:
                     mask[offset + match.start() : offset + match.end()] = b"\x01" * len(
                         match.group()
                     )
+    return mask
+
+
+def altered_lines(base: str | None, head: str) -> bytearray:
+    """For each character of `head`, 1 when its line is one the change adds or
+    alters in any way, its indent included. Without a base, every line is."""
+    if base is None:
+        return everything(head)
+    mask = bytearray(len(head))
+    _base_lines, _head_lines, starts, opcodes = _line_diff(base, head)
+    for tag, _i1, _i2, j1, j2 in opcodes:
+        if tag != "equal" and j1 < j2:
+            end = min(starts[j2], len(head))
+            mask[starts[j1] : end] = b"\x01" * (end - starts[j1])
     return mask
 
 
@@ -780,19 +957,30 @@ def check_source(
     path: str,
     exists: Exists,
     location: str = "",
+    altered: bytearray | None = None,
 ) -> list[Finding]:
     """The findings of `entries` on one source, kept where their unit holds added text.
 
     `mask` marks the added text (`added_mask`). A finding names the line its
-    unit's first word is on.
+    unit's first word is on. A list item is the change's too where `altered`,
+    by default `mask`, marks its marker (`altered_lines`), and its finding names
+    its marker's line. An entry that reads the whole file is not read here
+    (`check_whole`).
     """
+    lines = mask if altered is None else altered
     found: list[Finding] = []
     for block in source.blocks():
         for item in entries:
-            if block.cell and "cells" in item.exceptions:
+            if item.whole_file or (block.cell and "cells" in item.exceptions):
                 continue
             for start, end, message in _breaks(item, block, path, exists):
-                if not any(mask[offset] for offset in block.offsets[start:end]):
+                ours = any(mask[offset] for offset in block.offsets[start:end])
+                if item.type == "nesting":
+                    if ours or lines[block.marker]:
+                        line = source.line(block.marker)
+                        found.append(Finding(path, line, item.rule, message, location or path))
+                    continue
+                if not ours:
                     continue
                 first = next((i for i in range(start, end) if not block.text[i].isspace()), start)
                 line = source.line(block.offsets[first])
@@ -800,13 +988,72 @@ def check_source(
     return found
 
 
+def check_whole(
+    entries: Sequence[Entry], source: Source, mask: bytearray, path: str, location: str = ""
+) -> list[Finding]:
+    """The findings of the entries that read the whole file (`Entry.whole_file`), on an
+    artefact's whole text (`Sources.whole`), kept where the match holds added text.
+
+    `mask` marks the added text, its tokens split only at a space, a tab or a line
+    break (`added_mask` with `WHOLE_TOKEN`). A finding names the line of its match.
+    It shows each character that shows nothing or reorders the text after it as
+    `<U+XXXX>`, so the report shows what the file holds.
+    """
+    found: list[Finding] = []
+    for item in entries:
+        if not item.whole_file:
+            continue
+        name = item.fields.get("name")
+        for match in re.finditer(item.fields["pattern"], source.text):
+            if match.end() == match.start() or not any(mask[match.start() : match.end()]):
+                continue
+            what = name or f'"{_visible(match.group())}"'
+            context = _whole_context(source.text, match.start(), match.end())
+            line = source.line(match.start())
+            found.append(Finding(path, line, item.rule, f"{what}: {context}", location or path))
+    return found
+
+
+def _visible(text: str) -> str:
+    """`text` with each control or format character (Unicode's Cc and Cf) written as
+    `<U+XXXX>`: a bidirectional one among them would reorder the report itself."""
+    return "".join(
+        f"<U+{ord(char):04X}>" if unicodedata.category(char) in ("Cc", "Cf") else char
+        for char in text
+    )
+
+
+def _whole_context(text: str, start: int, end: int) -> str:
+    """A match with up to four words of its line on either side, quoted, each control
+    or format character written as `<U+XXXX>` (`_visible`)."""
+    line_start = text.rfind("\n", 0, start) + 1
+    line_end = text.find("\n", end)
+    line = text[line_start : len(text) if line_end == -1 else line_end]
+    at, to = start - line_start, end - line_start
+    before = re.search(r"(?:[^ \t]+[ \t]+){0,4}[^ \t]*$", line[:at])
+    after = re.match(r"[^ \t]*(?:[ \t]+[^ \t]+){0,4}", line[to:])
+    shown = (before.group() if before else "") + text[start:end] + (after.group() if after else "")
+    spaced = _SPACES.sub(" ", shown).strip(" ")
+    return f'"{_visible(spaced)}"'
+
+
+_SPACES = re.compile(r"[ \t]+")
+
+
 def _breaks(item: Entry, block: Block, path: str, exists: Exists) -> Iterable[tuple[int, int, str]]:
     """Each break of one entry in one block: `(start, end, message)`, indexing the block.
 
-    A link definition is read by a link's check alone.
+    A link definition is read by a link's check alone. A list item past the
+    level a `nesting` entry allows is a break over its whole text.
     """
     if item.type == "link-resolves":
         yield from _links(item, block, path, exists)
+        return
+    if item.type == "nesting":
+        limit: int = item.fields["max"]
+        if block.level > limit:
+            shown = f": {_excerpt(block.text)}" if block.text.strip() else ""
+            yield 0, len(block.text), f"a list item {block.level} levels deep, over {limit}{shown}"
         return
     if block.definition:
         return
@@ -908,7 +1155,8 @@ def lint_text(
     path: str = "<text>",
     exists: Exists | None = None,
 ) -> list[Finding]:
-    """Every finding in a given text, read whole: its front-matter values and its body.
+    """Every finding in a given text, read whole: its front-matter values and its body,
+    and every character of it for an entry that reads the whole file.
 
     The text is read as a document. Every entry applies, `scripts/prose-lint.yaml`'s
     when `entries` is not given. A link resolves from `path` through `exists`, by
@@ -920,6 +1168,7 @@ def lint_text(
     found: list[Finding] = []
     for source in (sources.values, sources.body):
         found += check_source(chosen, source, everything(source.text), path, resolves)
+    found += check_whole(chosen, sources.whole, everything(sources.whole.text), path)
     return sorted(found, key=lambda f: f.line)
 
 
@@ -1005,11 +1254,20 @@ def lint_change(
         head_sources = _read_sources(head_text, head)
         exists = exists or tree_exists(head_tree.files())
         checked.append(head["location"])
+        nests = any(item.type == "nesting" for item in applied)
         for kind in ("values", "body"):
             source: Source = getattr(head_sources, kind)
             old = None if base_sources is None else getattr(base_sources, kind).text
             mask = added_mask(old, source.text)
-            found += check_source(applied, source, mask, head["path"], exists, head["location"])
+            altered = altered_lines(old, source.text) if nests else None
+            found += check_source(
+                applied, source, mask, head["path"], exists, head["location"], altered
+            )
+        if any(item.whole_file for item in applied):
+            whole = head_sources.whole
+            old = None if base_sources is None else base_sources.whole.text
+            mask = added_mask(old, whole.text, WHOLE_TOKEN)
+            found += check_whole(applied, whole, mask, head["path"], head["location"])
     return ChangeLint(
         base=document["base"],
         head=document["head"],

@@ -63,6 +63,12 @@ checks:
   RS-WRITE-008:
     - check: prose-lint
       part: Text a change adds or moves holds no semicolon outside code, quotation marks and the `pkit` container.
+  RS-WRITE-017:
+    - check: prose-lint
+      part: A list item that holds text a change adds or moves, or whose marker's line it alters, sits at most three levels deep.
+  RS-WRITE-018:
+    - check: prose-lint
+      part: Text a change adds or moves, anywhere in the artefact, holds none of the characters the statement forbids.
 ---
 
 # WRITE — project-kit's general writing rules

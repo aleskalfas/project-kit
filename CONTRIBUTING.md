@@ -96,15 +96,16 @@ Answer what it reports in a pull request like any friction (the friction gate, a
 **The prose lint** (#1415). The aggregator's `prose lint` line, `uv run python scripts/prose_lint.py`, checks the mechanical parts of the writing rules in the text a change adds or moves. It exits 0 when it finds nothing, 1 on a finding, and 2 when it cannot run. A finding names the file, the line, the rule's id and, for a collection entry, the entry.
 
 - **Where it looks:** in each artefact the change altered, where an accepted rule binds that declares the lint. It reads those artefacts, their rules and the base from `pkit rule-sets altered` (the CLI reference, "Rule-set commands"), and keeps no list of paths. Its base is the friction check's, and `--base REF` compares with another.
-- **What is the change's:** for a count, a sentence or a paragraph that holds text the change adds or moves. For the other types, the match itself. A break the change only sits beside is left alone, so a page not yet rewritten does not fail the gate.
+- **What is the change's:** for a count, a sentence or a paragraph that holds text the change adds or moves. For a nesting entry, a list item that holds such text, or whose marker's line the change alters, as an indent alone does. For the other types, the match itself. A break the change only sits beside is left alone, so a page not yet rewritten does not fail the gate.
   - **Moved text:** text the diff deletes in one place and inserts in another is the change's where it is inserted. Where two blocks of a file swap places, the diff keeps one in place, and only the other is the change's.
   - **A moved file:** a file moved with its content alters nothing in `pkit rule-sets altered`, so the lint does not read it. A file moved with edits is compared with its old self, so only the edits are the change's.
-  - **An entry:** the span `pkit rule-sets altered` gives holds the entry's section only. The lint also reads the entry's values from its file's front matter.
+  - **An entry:** the span `pkit rule-sets altered` gives holds the entry's section only. The lint also reads the entry's values from its file's front matter. An entry that reads the whole file reads the lines of the entry's data there.
   - **Joined paragraphs:** a change that only deletes the blank line between two paragraphs adds no text, so the lint does not report the paragraph it joins.
 - **How it reads:** words and sentences as RS-WRITE-005's *How* says (`tech-docs/rule-sets/writing.md`). Where the *How* is silent, it reads as follows:
   - A full stop before a space ends a sentence after an abbreviation or an initial too, as in "e.g.".
   - A full stop before a closing quotation mark or bracket ends nothing.
-  - A full stop inside a code span ends nothing, and a code span's tokens count as words.
+  - A full stop inside a code span ends nothing.
+  - A code span's own spaces split no token. So the text joined to a code span up to a space is part of its word, as in `` `pkit`'s ``.
   - Each block ends a sentence: a paragraph, a list item, a table cell and a front-matter value.
   - A bold label is bold text that opens a block and ends in a colon. A block that is only a label holds no sentence.
   - A quoted example of a broken rule runs from the first quotation mark to the last, in a block labelled "Breaks the rule".
@@ -112,9 +113,18 @@ Answer what it reports in a pull request like any friction (the friction gate, a
   - Only fenced code is a code block. A fence closes on a bare fence of its own character, at least as long as the one that opened it. A fence opened in a block quote closes there, or where the quote ends.
   - A block quote's words count, and its text is quoted, so RS-WRITE-008 exempts its semicolons.
   - An HTML comment is not read, and a setext heading is a heading. For a count, a bare URL and an HTML entity are tokens like any other. A link's target is part of its link's last token. No pattern searches them, so a URL holds no semicolon.
+- **How it counts levels:** a list's levels as RS-WRITE-017's *How* counts them. Where the *How* is silent, it counts as follows:
+  - An item is inside another while it is indented to that item's text. The text starts after the marker and the spaces that follow it, or after one space where none or more than four follow. A tab reaches the next multiple of four columns.
+  - A line that starts a block closes each item it is not indented to. So a paragraph, a heading, a table or a fence at the margin closes every item. A line that goes on from the line before it closes none, even at the margin.
+  - A list in a block quote counts its levels afresh.
+  - An item that opens with a fence is a level, and its code is not read. Front matter holds no list the lint counts.
+- **The whole file:** a `forbid` entry with `in: file` reads every character of an artefact. For a document, that is the whole file. For an entry, it is the lines of the entry's data and its section.
+  - It reads code, headings, front matter, link targets, comments and the `pkit` container too.
+  - A finding shows each control or format character as `<U+XXXX>`, so the report shows what the file holds.
+  - YAML refuses most control characters. One in an artefact's front matter fails `pkit validate` instead, and the lint does not read that artefact.
 - **On a given text:** `lint_text` reads a text whole, so a test of stamped template text calls it rather than counting again.
 
-Each mechanical part of a rule is an entry in `scripts/prose-lint.yaml`, of one of four types: `count`, `forbid`, `substitute` and `link-resolves`. The file's header gives each type's fields. A part gets an entry only when three things hold. It is deterministic with near-zero false alarms, an AI reviewer is unreliable at it, and its findings recur (COR-007). A part that fails any of the three stays with the reviewer. To add an entry for a rule:
+Each mechanical part of a rule is an entry in `scripts/prose-lint.yaml`, of one of five types: `count`, `forbid`, `substitute`, `link-resolves` and `nesting`. The file's header gives each type's fields. A part gets an entry only when three things hold. It is deterministic with near-zero false alarms, an AI reviewer is unreliable at it, and its findings recur (COR-007). A part that fails any of the three stays with the reviewer. To add an entry for a rule:
 
 1. Add the entry to `scripts/prose-lint.yaml`, naming the rule by its id.
 2. Declare the part beside the rule, under its set's `checks`, naming the check `prose-lint` (COR-051 point 2). A declaration changes no rule, so it flags nothing. Give the set the version COR-051 asks, and run `uv run pkit validate`.

@@ -1,9 +1,11 @@
 """The prose lint, `scripts/prose_lint.py` (#1415).
 
-- **Each type is an entry:** a test covers each of the four types with an
-  entry and no code of its own: `count`, `forbid`, `substitute`, `link-resolves`.
-- **The reading:** words and sentences as RS-WRITE-005's *How* reads them, each
-  choice where the *How* is silent pinned here.
+- **Each type is an entry:** a test covers each of the five types with an
+  entry and no code of its own: `count`, `forbid`, `substitute`, `link-resolves`
+  and `nesting`, and `forbid` reading the whole file.
+- **The reading:** words and sentences as RS-WRITE-005's *How* reads them, and
+  a list's levels as RS-WRITE-017's *How* counts them, each choice where a
+  *How* is silent pinned here.
 - **The change:** the lint reports a break in the text a change adds or moves,
   in an artefact a rule declaring the lint reaches. It leaves alone a break the
   change only sits beside. It reads reach and base from `pkit rule-sets altered`.
@@ -11,12 +13,17 @@
   declares the lint, and every declaration has an entry.
 
 The change tests run on the shared adopter-repository fixture. A rule set named
-`WRITE`, scoped to `docs/guides/`, declares the lint for RS-WRITE-005 and
-RS-WRITE-008, so the project's own entries apply there.
+`WRITE`, scoped to `docs/guides/`, declares the lint for RS-WRITE-005,
+RS-WRITE-008, RS-WRITE-017 and RS-WRITE-018, so the project's own entries apply
+there.
+
+No test here writes a control or bidirectional character as an escape in its
+source: each is built with `chr`, so the source holds none (RS-WRITE-018).
 """
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -57,11 +64,13 @@ def counted(text: str) -> list[int]:
 # --- each type is an entry --------------------------------------------------------------
 
 
-def test_the_data_file_holds_the_first_entries() -> None:
+def test_the_data_file_holds_its_entries() -> None:
     entries = pl.load_entries()
-    assert [(e.rule, e.type) for e in entries] == [
-        ("RS-WRITE-005", "count"),
-        ("RS-WRITE-008", "forbid"),
+    assert [(e.rule, e.type, e.whole_file) for e in entries] == [
+        ("RS-WRITE-005", "count", False),
+        ("RS-WRITE-008", "forbid", False),
+        ("RS-WRITE-017", "nesting", False),
+        ("RS-WRITE-018", "forbid", True),
     ]
 
 
@@ -138,6 +147,63 @@ def test_a_link_target_is_read_as_written() -> None:
     ]
 
 
+def test_nesting_is_an_entry() -> None:
+    """RS-WRITE-017: each list item past level three, named with its marker's line. A
+    label-only item is an item too, and an ordered list nests like any other."""
+    text = (
+        "- one\n"
+        "  - two\n"
+        "    - three\n"
+        "      - four\n"
+        "      - **Label:**\n"
+        "    - three again\n"
+        "- one again\n"
+        "  1. two\n"
+        "     1) three\n"
+        "        * four, in an ordered list\n"
+    )
+    assert found(text) == [
+        '4 RS-WRITE-017: a list item 4 levels deep, over 3: "four"',
+        "5 RS-WRITE-017: a list item 4 levels deep, over 3",
+        '10 RS-WRITE-017: a list item 4 levels deep, over 3: "four, in an ordered list"',
+    ]
+
+
+def test_forbid_in_the_whole_file_is_an_entry() -> None:
+    """RS-WRITE-018: a control or bidirectional character anywhere in the file, code,
+    headings, front matter, comments and the container included. A tab and a line
+    break are none, and a finding shows the character as its code point. YAML refuses
+    most controls, so the front matter holds bidirectional ones here."""
+    rlo, esc, lrm, lri, nel = chr(0x202E), chr(0x1B), chr(0x200E), chr(0x2066), chr(0x85)
+    text = (
+        "---\n"
+        f"title: A{lrm} title\n"
+        f'pkit: {{friction: {{unanchored-because: "No{lri} code."}}}}\n'
+        "---\n\n"
+        f"# Heading {rlo}\n\n"
+        "Tabs\tand line ends are fine.\n\n"
+        f"```\ncode{nel}here\n```\n\n"
+        f"<!-- a comment {esc}[2K -->\n"
+    )
+    assert found(text) == [
+        '2 RS-WRITE-018: a control or bidirectional character: "title: A<U+200E> title"',
+        "3 RS-WRITE-018: a control or bidirectional character: "
+        '"pkit: {friction: {unanchored-because: "No<U+2066> code."}}"',
+        '6 RS-WRITE-018: a control or bidirectional character: "# Heading <U+202E>"',
+        '11 RS-WRITE-018: a control or bidirectional character: "code<U+0085>here"',
+        '14 RS-WRITE-018: a control or bidirectional character: "<!-- a comment <U+001B>[2K -->"',
+    ]
+
+
+def test_a_whole_file_entry_reads_no_prose_and_a_prose_one_no_whole_file() -> None:
+    """A prose `forbid` leaves a code block alone, and a whole-file one reads it; each is
+    checked once."""
+    prose = pl.entry({"rule": "RS-X-001", "type": "forbid", "pattern": "x"})
+    whole = pl.entry({"rule": "RS-X-002", "type": "forbid", "pattern": "x", "in": "file"})
+    text = "```\nx\n```\n"
+    assert found(text, [prose, whole]) == ['2 RS-X-002: "x": "x"']
+
+
 @pytest.mark.parametrize(
     ("data", "says"),
     [
@@ -160,9 +226,34 @@ def test_a_link_target_is_read_as_written() -> None:
         ({"rule": "RS-WRITE-011", "type": "substitute", "replace": {}}, "`replace` maps"),
         ({"rule": "RS-WRITE-011", "type": "substitute", "replace": {" ": "x"}}, "`replace` maps"),
         ({"rule": "RS-WRITE-008", "type": "forbid", "pattern": ";", 3: "x"}, "takes no 3"),
+        ({"rule": "RS-WRITE-017", "type": "nesting"}, "`max` is a whole number"),
+        ({"rule": "RS-WRITE-017", "type": "nesting", "max": 3, "in": "list"}, "takes no in"),
+        (
+            {"rule": "RS-WRITE-017", "type": "nesting", "max": 3, "except": ["code"]},
+            "takes no `except`",
+        ),
+        ({"rule": "RS-WRITE-018", "type": "forbid", "pattern": "x", "in": "code"}, "`in` is"),
+        (
+            {"rule": "RS-WRITE-018", "type": "forbid", "pattern": "x", "in": "file", "except": []},
+            None,
+        ),
+        (
+            {
+                "rule": "RS-WRITE-018",
+                "type": "forbid",
+                "pattern": "x",
+                "in": "file",
+                "except": ["quotes"],
+            },
+            "takes no `except`",
+        ),
     ],
 )
-def test_a_malformed_entry_is_refused(data: Mapping[str, Any], says: str) -> None:
+def test_a_malformed_entry_is_refused(data: Mapping[str, Any], says: str | None) -> None:
+    """`None`: the entry is well formed, as an empty `except` is."""
+    if says is None:
+        pl.entry(data)
+        return
     with pytest.raises(pl.LintError, match=says):
         pl.entry(data)
 
@@ -174,6 +265,57 @@ def test_a_word_holds_a_letter_or_a_digit_once_bold_marks_and_backticks_are_remo
     """An id, a file name, a hyphenated word and a code span's token are each one word. A
     dash and a lone mark are none, and words in parentheses count."""
     assert counted("**Bold** `CLAUDE.md` and COR-050 — a well-known (aside 3) | + x.\n") == [9]
+
+
+def test_a_code_span_is_at_most_one_word() -> None:
+    """One word where it holds a letter or a digit, and none otherwise. Its spaces split
+    no token, so the text joined to it up to a space is part of its word. An entry that
+    leaves code out reads its spaces as spaces."""
+    assert counted("Takes `--path <glob>` and `--record <id>` here.\n") == [5]
+    assert counted("A `;` and a `--` and `` ` `` count none.\n") == [6]
+    assert counted("The `pkit`'s own `a b`/`c d` words.\n") == [5]
+    blank = pl.entry(
+        {"rule": "RS-X-001", "type": "count", "count": "words", "in": "sentence", "max": 1}
+    )
+    assert found("foo`a b`baz", [dataclasses.replace(blank, exceptions=frozenset({"code"}))]) == [
+        '1 RS-X-001: a sentence of 2 words, over 1: "fooa bbaz"'
+    ]
+
+
+def test_write_s_page_example_of_a_long_sentence_counts_30() -> None:
+    """RS-WRITE-005's *Breaks the rule on a page*, the software-analysis README's sentence:
+    two code spans of two tokens each are a word each."""
+    sentence = (
+        "Every artefact form also takes `--path <glob>` and `--record <id>`, each repeatable: "
+        "the code that makes the artefact true and the decisions it relies on, written as its "
+        "path and record anchors.\n"
+    )
+    assert counted(sentence) == [30]
+
+
+@pytest.mark.parametrize(
+    ("text", "levels"),
+    [
+        # A sibling closes the item before it, and a paragraph at the margin closes all.
+        ("- a\n  - b\n- c\n\nText.\n\n  - d\n", [1, 2, 1, 0, 1]),
+        # An item is inside another while it is indented to that item's text, not only
+        # past its marker.
+        ("1.  a\n    - b\n   - c\n", [1, 2, 1]),
+        # A lazy line closes nothing, and a fence's lines close nothing.
+        ("- a\n  - b\nlazy\n    - c\n", [1, 2, 3]),
+        ("- a\n  ```\ncode\n  ```\n  - b\n", [1, 2]),
+        # A paragraph indented to an item's text stays in it.
+        ("- a\n\n  More of a.\n\n  - b\n", [1, 0, 2]),
+        # A tab reaches the next multiple of four, and a block quote counts afresh.
+        ("- a\n\t- b\n\t\t- c\n", [1, 2, 3]),
+        ("- a\n  - b\n\n> - c\n>   - d\n", [1, 2, 1, 2]),
+        # A heading, a table and a fence at the margin close every item.
+        ("- a\n  - b\n# H\n- c\n", [1, 2, 1]),
+        ("- a\n  - b\n| x |\n- c\n", [1, 2, 0, 1]),
+    ],
+)
+def test_the_level_of_each_list_item(text: str, levels: list[int]) -> None:
+    assert [block.level for block in pl.markdown_blocks(text)] == levels
 
 
 @pytest.mark.parametrize(
@@ -189,8 +331,8 @@ def test_a_word_holds_a_letter_or_a_digit_once_bold_marks_and_backticks_are_remo
         ('He said "go." Then (it ended.) Then more.\n', [8]),
         # Bold marks are removed, so a full stop inside them ends a sentence.
         ("**Bold.** Then more.\n", [1, 2]),
-        # A full stop inside a code span ends nothing.
-        ("Run `a. b` now. Then stop.\n", [4, 2]),
+        # A full stop inside a code span ends nothing, and the span is one word.
+        ("Run `a. b` now. Then stop.\n", [3, 2]),
     ],
 )
 def test_where_a_sentence_ends(text: str, sentences: list[int]) -> None:
@@ -310,7 +452,7 @@ def test_the_quoted_example_of_a_broken_rule_is_not_read() -> None:
     assert counted(text) == [5, 27]
 
 
-#: RS-WRITE-005's own *Keeps the rule* example, as `WRITE` 1.1.0 writes it.
+#: RS-WRITE-005's own *Keeps the rule* example, as `WRITE` writes it.
 KEEPS_THE_RULE = (
     '- **Keeps the rule:** "the backbone ships no workflow. It ships only checks made to run '
     "unattended, and one base a pipeline names for all of them (COR-054 point 3). The checks "
@@ -365,19 +507,22 @@ def test_a_change_adds_the_tokens_the_diff_inserts_word_by_word() -> None:
 # --- the change ------------------------------------------------------------------------------
 
 
+#: The rules the project's own entries name, each declaring the lint in `write_set`.
+LINTED = ("RS-WRITE-005", "RS-WRITE-008", "RS-WRITE-017", "RS-WRITE-018")
+
+
 def write_set(*, checks: bool = True) -> str:
-    """A rule set `WRITE` scoped to the guides, declaring the lint for RS-WRITE-005 and
-    RS-WRITE-008 when `checks`."""
+    """A rule set `WRITE` scoped to the guides, declaring the lint for each rule of
+    `LINTED` when `checks`."""
     front: dict[str, Any] = {
         "rule-set": "WRITE",
         "version": "1.0.0",
         "scope": {"paths": [f"{GUIDES}/**"]},
-        "rules": rules("RS-WRITE-005", "RS-WRITE-008"),
+        "rules": rules(*LINTED),
     }
     if checks:
         front["checks"] = {
-            rule: [{"check": "prose-lint", "part": "The mechanical part."}]
-            for rule in ("RS-WRITE-005", "RS-WRITE-008")
+            rule: [{"check": "prose-lint", "part": "The mechanical part."}] for rule in LINTED
         }
     return rule_set_text(front)
 
@@ -472,6 +617,48 @@ def test_a_moved_file_alters_nothing(repo: AdopterRepo) -> None:
     repo.rename(A, f"{GUIDES}/moved.md")
     result = pl.lint_change(repo.root, "main")
     assert result.findings == () and result.checked == ()
+
+
+#: A list three levels deep, and an item at level four under it.
+THREE = "- one\n  - two\n    - three\n"
+FOUR = "      - four\n"
+
+
+def test_an_item_is_the_change_s_when_it_holds_added_text_or_its_line_changed(
+    repo: AdopterRepo,
+) -> None:
+    """An item indented to level four, its words unchanged, and an item whose words
+    change are the change's. A level-four item the change only sits beside is not."""
+    start(repo, {A: page(f"{THREE}    - three b\n\nGap.\n\n{THREE}{FOUR}")})
+    repo.write({A: page(f"{THREE}      - three b\n\nGap.\n\n{THREE}{FOUR}\nThen more.")})
+    assert lint(repo) == [f"{A}:10 RS-WRITE-017"]
+    repo.write({A: page(f"{THREE}    - three b\n\nGap.\n\n{THREE}      - four words\n")})
+    assert lint(repo) == [f"{A}:17 RS-WRITE-017"]
+
+
+def test_a_control_character_the_change_adds_anywhere_is_the_change_s(
+    repo: AdopterRepo,
+) -> None:
+    """In a code block, in the front matter and between two words; one the base held
+    stays the base's, and a whitespace-like control is added like any character."""
+    esc, rlo, lrm, form_feed = chr(0x1B), chr(0x202E), chr(0x200E), chr(0x0C)
+    base = f"---\ntitle: A guide{lrm}\n---\n\nKept{esc} here.\n"
+    start(repo, {A: base})
+    head = (
+        f"---\ntitle: A guide{lrm}\nnote: new{rlo}\n---\n\nKept{esc} here.\n\n"
+        f"```\ncode{esc}\n```\n\nOne {form_feed} two.\n"
+    )
+    repo.write({A: head})
+    assert lint(repo) == [f"{A}:3 RS-WRITE-018", f"{A}:9 RS-WRITE-018", f"{A}:12 RS-WRITE-018"]
+
+
+def test_an_entry_s_whole_text_is_its_data_and_its_section(repo: AdopterRepo) -> None:
+    """The lines of its data in the front matter, not the next entry's, and its
+    section; each finding names the entry."""
+    rlo = chr(0x202E)
+    start(repo, {ACTORS: actors()})
+    repo.write({ACTORS: actors(need=f"A need{rlo}.", section=f"The first{rlo} actor.")})
+    assert lint(repo) == [f"{ACTORS}#ACT-one:5 RS-WRITE-018", f"{ACTORS}#ACT-one:18 RS-WRITE-018"]
 
 
 def test_only_a_rule_declaring_the_lint_brings_its_entries(repo: AdopterRepo) -> None:
