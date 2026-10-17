@@ -1,9 +1,0 @@
-component: backbone
-kind: none
-body: >
-  Documentation only, for now. ADR-065 point 14 says a migration that runs
-  `pkit` reaches the running pkit, and the lifecycle README's script contract
-  and the migration-author skill say how a script calls it. The migration
-  runner that puts that `pkit` on a script's `PATH` is not built in this
-  change, so nothing you run changes yet. The change that builds it declares
-  its own changeset.

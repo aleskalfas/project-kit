@@ -215,3 +215,265 @@ def test_migration_skips_when_no_overlay(tmp_path: Path) -> None:
     result = _run_migration(tmp_path)
     assert result.returncode == 0
     assert "no .pkit/agents/project/overlay.yaml" in result.stdout
+
+
+# ---- the runner's `pkit` and the migration marker (ADR-065 point 14, #1652) ----
+
+import os  # noqa: E402
+import shutil  # noqa: E402
+import sys  # noqa: E402
+import tempfile  # noqa: E402
+
+from click.testing import CliRunner  # noqa: E402
+
+from project_kit import __version__  # noqa: E402
+from project_kit import migrations as migrations_mod  # noqa: E402
+from project_kit.cli import main as pkit_main  # noqa: E402
+
+_DECOY = '#!/bin/sh\necho "$0 $*" >> "{log}"\nexit 1\n'
+
+
+def _pinned_project(root: Path) -> Path:
+    """A project that pins a release no pkit here is: `.pkit/manifest.yaml` and
+    `.pkit/version-pin` = 0.0.1, so a routed `pkit` would run `uvx …@v0.0.1`."""
+    (root / ".pkit").mkdir(parents=True)
+    (root / ".pkit" / "manifest.yaml").write_text(
+        f"schema_version: 1\nbackbone_version: {__version__}\n"
+        f"completed_version: {__version__}\ncomponents: []\n",
+        encoding="utf-8",
+    )
+    (root / ".pkit" / "version-pin").write_text("0.0.1\n", encoding="utf-8")
+    return root
+
+
+def _decoys(bin_dir: Path, log: Path) -> Path:
+    """A `pkit` and a `uvx` that each log their run and exit 1."""
+    bin_dir.mkdir(parents=True)
+    for name in ("pkit", "uvx"):
+        decoy = bin_dir / name
+        decoy.write_text(_DECOY.format(log=log), encoding="utf-8")
+        decoy.chmod(0o755)
+    return bin_dir
+
+
+def _script(parent: Path, body: str) -> Path:
+    script = parent / "001-probe.sh"
+    script.write_text(f"#!/usr/bin/env bash\nset -euo pipefail\n{body}", encoding="utf-8")
+    script.chmod(0o755)
+    return script
+
+
+@pytest.fixture
+def decoyed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Path, Path]:
+    """A pinned project, and a decoy `pkit` and `uvx` first on the inherited
+    `PATH`. Returns the project, the decoys' log and the folder for scripts."""
+    project = _pinned_project(tmp_path / "project")
+    log = tmp_path / "decoys.log"
+    bin_dir = _decoys(tmp_path / "decoys", log)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    scripts = tmp_path / "scripts"
+    scripts.mkdir()
+    return project, log, scripts
+
+
+def test_a_bare_pkit_in_a_migration_reaches_the_running_pkit(
+    decoyed: tuple[Path, Path, Path],
+) -> None:
+    """Under a pin and behind a decoy `pkit` and `uvx`, a script's bare `pkit`,
+    and one in a process it starts, answer with the running pkit's version, from
+    the project folder of the runner; neither decoy runs, and the folder is gone."""
+    project, log, scripts = decoyed
+    script = _script(
+        scripts,
+        'pkit --version > "$ROOT/direct"\n'
+        "sh -c 'pkit --version' > \"$ROOT/nested\"\n"
+        'command -v pkit > "$ROOT/where"\n'
+        'printf %s "$PKIT_MIGRATION" > "$ROOT/marker"\n',
+    )
+
+    execute_migration_scripts([script], project, label="test")
+
+    expected = f"pkit, version {__version__}"
+    assert (project / "direct").read_text(encoding="utf-8").strip() == expected
+    assert (project / "nested").read_text(encoding="utf-8").strip() == expected
+    where = Path((project / "where").read_text(encoding="utf-8").strip())
+    assert where.parent.parent == project / migrations_mod.RUNNER_PARENT
+    assert (project / "marker").read_text(encoding="utf-8") == "1"
+    assert not log.exists(), log.read_text(encoding="utf-8")
+    assert not where.parent.exists()
+    assert not (project / migrations_mod.RUNNER_PARENT).exists()
+
+
+def test_the_console_script_in_the_same_project_reaches_the_decoy(
+    decoyed: tuple[Path, Path, Path],
+) -> None:
+    """The negative control: outside the runner, the installed `pkit` routes by
+    the pin and runs the decoy `uvx`, so the test above proves the runner's `pkit`."""
+    project, log, _ = decoyed
+    console = shutil.which("pkit", path=str(Path(sys.executable).parent))
+    if console is None:
+        pytest.skip("no installed `pkit` console script beside this interpreter")
+
+    subprocess.run([console, "--version"], cwd=project, capture_output=True, text=True, check=False)
+
+    assert "uvx" in log.read_text(encoding="utf-8")
+
+
+def test_a_failing_migration_leaves_no_folder(decoyed: tuple[Path, Path, Path]) -> None:
+    project, _, scripts = decoyed
+    script = _script(scripts, 'command -v pkit > "$ROOT/where"\nexit 3\n')
+
+    with pytest.raises(click.ClickException, match="exited with status 3"):
+        execute_migration_scripts([script], project, label="test")
+
+    where = Path((project / "where").read_text(encoding="utf-8").strip())
+    assert not where.parent.exists()
+    assert not (project / migrations_mod.RUNNER_PARENT).exists()
+
+
+def test_a_project_package_of_the_same_name_does_not_shadow_the_running_pkit(
+    decoyed: tuple[Path, Path, Path],
+) -> None:
+    """`-P` keeps the project's root off the import path: a `project_kit/` there
+    that raises on import is never imported."""
+    project, _, scripts = decoyed
+    shadow = project / "project_kit"
+    shadow.mkdir()
+    (shadow / "__init__.py").write_text("raise RuntimeError('shadowed')\n", encoding="utf-8")
+    (shadow / "__main__.py").write_text("raise RuntimeError('shadowed')\n", encoding="utf-8")
+    script = _script(scripts, 'pkit --version > "$ROOT/direct"\n')
+
+    execute_migration_scripts([script], project, label="test")
+
+    assert (project / "direct").read_text(encoding="utf-8").strip() == (
+        f"pkit, version {__version__}"
+    )
+
+
+def test_a_runner_pkit_that_cannot_run_stops_before_any_script(
+    decoyed: tuple[Path, Path, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project, _, scripts = decoyed
+    script = _script(scripts, 'touch "$ROOT/ran"\n')
+    monkeypatch.setattr(sys, "executable", str(project / "no-such-interpreter"))
+
+    with pytest.raises(click.ClickException) as raised:
+        execute_migration_scripts([script], project, label="test")
+
+    message = raised.value.format_message()
+    assert "no test migration ran" in message
+    assert "ADR-065 point 14" in message
+    assert migrations_mod.RUNNER_PARENT in message
+    assert "TMPDIR" in message
+    assert not (project / "ran").exists()
+    assert not (project / migrations_mod.RUNNER_PARENT).exists()
+
+
+@pytest.mark.parametrize("how", ["folder-blocked", "probe-fails"])
+def test_the_runner_falls_back_to_the_temporary_folder(
+    decoyed: tuple[Path, Path, Path],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    how: str,
+) -> None:
+    """Where the project folder cannot be made, or its `pkit` does not answer, the
+    runner's `pkit` lies in the temporary folder, and is removed from there too."""
+    project, log, scripts = decoyed
+    temporary = tmp_path / "temporary"
+    temporary.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(temporary))
+    blocker = project / migrations_mod.RUNNER_PARENT
+    if how == "folder-blocked":
+        blocker.write_text("a file where the folder would be\n", encoding="utf-8")
+    else:
+        probe = migrations_mod._probe_runner_pkit
+
+        def _fails_in_the_project(env: dict[str, str], target_root: Path) -> str | None:
+            if str(blocker) in env["PATH"].split(os.pathsep)[0]:
+                return "the project's folder forbids running files"
+            return probe(env, target_root)
+
+        monkeypatch.setattr(migrations_mod, "_probe_runner_pkit", _fails_in_the_project)
+    script = _script(scripts, 'command -v pkit > "$ROOT/where"\npkit --version > "$ROOT/direct"\n')
+
+    execute_migration_scripts([script], project, label="test")
+
+    where = Path((project / "where").read_text(encoding="utf-8").strip())
+    assert where.parent.parent == temporary
+    assert (project / "direct").read_text(encoding="utf-8").strip() == (
+        f"pkit, version {__version__}"
+    )
+    assert not log.exists()
+    assert list(temporary.iterdir()) == []
+    if how == "probe-fails":
+        assert not blocker.exists()
+
+
+_INSTALLATION_CHANGING = [
+    ["init", "--here", "--yes"],
+    ["sync"],
+    ["sync", "--dry-run"],
+    ["merge"],
+    ["upgrade"],
+    ["upgrade", "--dry-run"],
+    ["pin"],
+    ["pin", "9.9.9"],
+    ["unpin"],
+    ["agents", "adopt", "architect", "--yes"],
+    ["agents", "reconcile", "--write"],
+    ["capabilities", "install", "evidence"],
+    ["capabilities", "install", "evidence", "--dry-run"],
+    ["capabilities", "upgrade", "evidence"],
+    ["capabilities", "register", "evidence"],
+    ["capabilities", "uninstall", "evidence", "--yes"],
+]
+
+
+@pytest.mark.parametrize("argv", _INSTALLATION_CHANGING, ids=" ".join)
+def test_a_command_that_changes_the_installation_refuses_under_the_marker(
+    argv: list[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _pinned_project(tmp_path / "project")
+    before = sorted(p.relative_to(project) for p in project.rglob("*"))
+    monkeypatch.chdir(project)
+
+    result = CliRunner().invoke(pkit_main, argv, env={migrations_mod.MIGRATION_ENV: "1"})
+
+    assert result.exit_code == 1, result.output
+    assert f"refusing to run `pkit {argv[0]}" in result.output
+    assert f"inside a migration ({migrations_mod.MIGRATION_ENV} is set)" in result.output
+    assert "ADR-065 point 14" in result.output
+    assert sorted(p.relative_to(project) for p in project.rglob("*")) == before
+
+
+_READING = [
+    ["--version"],
+    ["version"],
+    ["status"],
+    ["agents", "reconcile"],
+    ["capabilities", "list"],
+    ["capabilities", "project-rule-set", "software-analysis", "--json"],
+]
+
+
+@pytest.mark.parametrize("argv", _READING, ids=" ".join)
+def test_a_reading_command_runs_under_the_marker(
+    argv: list[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _pinned_project(tmp_path / "project")
+    monkeypatch.chdir(project)
+
+    result = CliRunner().invoke(pkit_main, argv, env={migrations_mod.MIGRATION_ENV: "1"})
+
+    assert "inside a migration" not in result.output
+    assert "ADR-065 point 14" not in result.output
+
+
+def test_an_empty_marker_refuses_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    project = _pinned_project(tmp_path / "project")
+    monkeypatch.chdir(project)
+
+    result = CliRunner().invoke(pkit_main, ["unpin"], env={migrations_mod.MIGRATION_ENV: ""})
+
+    assert result.exit_code == 0, result.output
+    assert not (project / ".pkit" / "version-pin").exists()

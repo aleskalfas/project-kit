@@ -232,6 +232,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `connections providers set <role> <capability> [--yes \| --dry-run]` | select the provider of a role: write `connections.providers.<role>` through the consent-gated writer, after checking the capability is installed and declares the role; the diff first, `--dry-run` stops there. The fix a role conflict names. See "Connections commands" | yes | yes — the same selection writes nothing |
 | `connections resolve <address> [--json]` | resolve one data point (COR-052) and print it: its value — a `single` point's answer, or the entries of a `union` or `additive` point with their origins — how it resolved or why not, and every filler considered; `--json` is the stable document a capability's own script reads, which says how the resolution ended as one value from a closed set (`outcome`). Exit 1 when the point does not resolve or nothing defines it. See "Connections commands" | no | yes (read-only) |
 
+**Inside a migration, the commands that change the installation refuse.** The migration runner sets `PKIT_MIGRATION=1` in each migration script's environment. While it is set, each command that propagates, seeds or merges, moves a recorded version, writes the pin, or changes the installed components refuses before it reads or writes anything, under `--dry-run` too, and nothing overrides the refusal. Every other command runs. [The lifecycle README, "Script contract"](../lifecycle/README.md#script-contract), lists the commands that refuse ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 14).
+
 ## Lifecycle commands
 
 ### `init`
