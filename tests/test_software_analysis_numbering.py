@@ -297,9 +297,10 @@ def test_use_cases_and_journeys_restart_after_a_named_removal(piloted: AdopterRe
         f"project's numbering setting names (DEC-001 point 3).",
         f"numbering: {three_removed[:SHORT]} frees UC-003, as the project's numbering setting "
         f"names (DEC-001 point 3).",
-        "steps (RS-SAN-002, proposed): not checked — the rule binds nothing until it is "
-        "accepted (COR-051 point 4); `pkit analysis check-numbers --preview` shows what it "
-        "would report.",
+        # The append-only rule is accepted, and no set of this repository's own inherits
+        # `SAN`, so it binds on no use case here.
+        "steps (RS-SAN-002, accepted): nothing compared. The rule does not bind on 2 of the 2 "
+        "use case(s) here, so they are not compared.",
     ]
     steps = ("--step", "UC-001", "--step", "UC-002")
     journey, notes = stamp(piloted, "journey", "again", "--actor", "ACT-tester", *steps)

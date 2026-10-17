@@ -50,6 +50,7 @@ from tests.analysis_repo import (
     field_hint,
     installed,
     load_lib,
+    proposing_san,
     run_script,
     stamped,
 )
@@ -761,6 +762,8 @@ def test_proposed_the_check_reports_nothing_and_the_preview_never_changes_the_ex
         {
             actor_at("ACT-tester"): ACTOR_FRONT + WITHOUT_CONTEXT + "\n",
             ANALYSIS_SET: ANALYSIS_SET_TEXT,
+            # `SAN` ships its rules accepted: a proposed copy is this test's point.
+            **proposing_san(project),
         }
     )
     code, document = _validate(project, "--json")
@@ -795,7 +798,7 @@ def test_accepted_a_departure_fails_and_an_entry_is_read_within_its_span(
     project: AdopterRepo, pkit_on_path: Path
 ) -> None:
     """The rule's status and each entry's span come from the backbone's reading: the
-    adopter's copy of `SAN` flipped to accepted, as a fixture, and a glossary whose
+    adopter's copy of `SAN`, its rules accepted as it ships them, and a glossary whose
     first entry lacks *Distinctions* that the second entry carries."""
     glossary = (
         "---\nTERM-a:\n  name: a\n  status: active\n  definition: first word\n"
@@ -834,8 +837,11 @@ def test_pkit_validate_reports_where_san_binds_on_none_and_warns_once_a_rule_is_
     `SAN` binds on the analysis while none is accepted. Once one is, and no set of the
     project's own makes it bind there, it warns. A set that inherits `SAN` and selects the
     analysis by its types makes the rule bind, and the check holds the actor to its
-    structure. Neither the report nor the warning fails validation."""
-    project.write({actor_at("ACT-tester"): ACTOR_FRONT + WITHOUT_CONTEXT + "\n"})
+    structure. Neither the report nor the warning fails validation. `SAN` ships its rules
+    accepted, so a proposed copy stands for the time before."""
+    project.write(
+        {actor_at("ACT-tester"): ACTOR_FRONT + WITHOUT_CONTEXT + "\n", **proposing_san(project)}
+    )
     only = ["--color", "never", "validate", "--only", "software-analysis:artefacts"]
     result = CliRunner().invoke(main, only)
     assert result.exit_code == 0, result.output
@@ -860,7 +866,9 @@ def test_a_record_is_held_to_its_structure_while_the_format_rule_is_proposed(
 ) -> None:
     """A record is a held document, which no rule binds on, so the capability checks its
     structure itself, always: a record missing a part fails `pkit analysis validate` while
-    `RS-SAN-001` is proposed, and with no set of the project's own (DEC-001 point 1)."""
+    `RS-SAN-001` is proposed, and with no set of the project's own (DEC-001 point 1).
+    `SAN` ships the rule accepted, so a proposed copy is the fixture."""
+    project.write(proposing_san(project))
     stamped(project, "actor", "tester", "--unanchored-because", "No code embodies it.")
     record = run_script(
         project,

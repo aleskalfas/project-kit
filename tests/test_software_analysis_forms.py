@@ -39,6 +39,7 @@ from tests.analysis_repo import (
     actor_at,
     installed,
     load_lib,
+    proposing_san,
     run_script,
 )
 
@@ -697,6 +698,8 @@ def test_proposed_the_forms_report_nothing_and_the_preview_lists_each_breach(
             uc_rel: use_case,
             GLOSSARY: glossary,
             ANALYSIS_SET: ANALYSIS_SET_TEXT,
+            # `SAN` ships its rules accepted: a proposed copy is this test's point.
+            **proposing_san(project),
         }
     )
     code, found = _said(project)

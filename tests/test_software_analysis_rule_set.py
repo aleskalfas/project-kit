@@ -4,18 +4,20 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
 
 - the **set ships** under the name DEC-001 gives it, `SAN`, with no scope, as a
   method rule set takes none (COR-051 point 2);
-- it holds the **format rule**, `RS-SAN-001`, proposed, its origin and its anchor
+- it holds the **format rule**, `RS-SAN-001`, accepted, its origin and its anchor
   DEC-001, and its *How* says where a sentence ends for the `sentence` form, and
   that a part of that form holds no list, in its own words, citing no project's
   rule;
-- it holds the **append-only rule**, `RS-SAN-002`, proposed, its origin DEC-001 and
+- it holds the **append-only rule**, `RS-SAN-002`, accepted, its origin DEC-001 and
   its anchor DEC-001 point 3 (#1370);
+- both rules were **accepted together**, on 17 October (#1370), so the set is at 1.0.0;
 - each rule **declares the part a check enforces** beside it, under `checks`: the
   format rule names the command behind the `software-analysis:artefacts` member of
   `pkit validate`, and the append-only rule `check-numbers`;
 - **validation accepts the set**, and **it binds nothing while its rule is
-  proposed**, even where a project set with a scope inherits it. Accepted, the
-  same rule binds there, and its declared part is the check's.
+  proposed**, even where a project set with a scope inherits it: a proposed copy
+  shows it. Accepted, as shipped, the same rule binds there, and its declared part
+  is the check's.
 """
 
 from __future__ import annotations
@@ -88,16 +90,16 @@ def test_the_set_ships_under_dec_001_s_name_with_no_scope() -> None:
     assert data["rule-set"] == "SAN"
     assert "scope" not in data  # a method rule set takes none (COR-051 point 2)
     assert "inherits" not in data
-    # No accepted rule yet, so no major: accepting its first rule is a new major
-    # (COR-051 point 7), and the set reaches 1.0.0 with it.
-    assert data["version"].split(".")[0] == "0"
+    # Accepting its first rules was a new major (COR-051 point 7): the maintainer
+    # accepted both on 17 October (#1370), and the set reached 1.0.0 with them.
+    assert data["version"] == "1.0.0"
 
 
-def test_the_set_holds_the_format_rule_proposed_its_origin_dec_001() -> None:
+def test_the_set_holds_the_format_rule_accepted_its_origin_dec_001() -> None:
     data, body = _shipped()
     assert list(data["rules"]) == [RULE, STEPS_RULE]
     entry = data["rules"][RULE]
-    assert entry["status"] == "proposed"
+    assert entry["status"] == "accepted"
     assert entry["origin"] == {"decision": "software-analysis:DEC-001"}
     assert entry["pkit"]["friction"]["anchors"] == {"record": ["software-analysis:DEC-001"]}
     statement = _section(body, RULE).split("\n\n")[1]
@@ -162,12 +164,13 @@ def test_the_how_refuses_a_list_in_a_part_of_the_sentence_form() -> None:
     assert "block quote" not in sentence["description"]
 
 
-def test_the_append_only_rule_ships_proposed_from_dec_001_point_3() -> None:
-    """A rule of its own, as the maintainer chose on 17 October (#1370): a use case's
-    steps and variants keep their numbers and letters, which DEC-001 point 3 decides."""
+def test_the_append_only_rule_ships_accepted_from_dec_001_point_3() -> None:
+    """A rule of its own, as the maintainer chose and accepted on 17 October (#1370): a
+    use case's steps and variants keep their numbers and letters, which DEC-001 point 3
+    decides."""
     data, body = _shipped()
     entry = data["rules"][STEPS_RULE]
-    assert entry["status"] == "proposed"
+    assert entry["status"] == "accepted"
     assert entry["origin"] == {"decision": "software-analysis:DEC-001"}
     assert entry["pkit"]["friction"]["anchors"] == {"record": ["software-analysis:DEC-001#3"]}
     section = _section(body, STEPS_RULE)
@@ -259,7 +262,7 @@ def _with_an_actor_and_a_set_inheriting_san(project: AdopterRepo) -> None:
                 {
                     "rule-set": "ANALYSIS",
                     "version": "1.0.0",
-                    "inherits": ["software-analysis:SAN@0"],
+                    "inherits": ["software-analysis:SAN@1"],
                     "scope": {"types": ["software-analysis:actor"]},
                     "rules": {},
                 }
@@ -284,8 +287,11 @@ def test_validation_accepts_the_set_as_the_capability_s_method_set(project: Adop
 
 def test_the_set_binds_nothing_while_its_rule_is_proposed(project: AdopterRepo) -> None:
     """A project set whose scope selects an actor inherits `SAN`: the route is there,
-    yet a proposed rule binds nothing (COR-051 point 4)."""
+    yet a proposed rule binds nothing (COR-051 point 4). `SAN` ships its rules accepted,
+    so a proposed copy is the fixture."""
     _with_an_actor_and_a_set_inheriting_san(project)
+    text = (project.root / SAN_REL).read_text(encoding="utf-8")
+    project.write({SAN_REL: text.replace("status: accepted", "status: proposed")})
     assert not rs.validate_rule_sets(project.root).errors
     assert "software-analysis:" + RULE not in _bound(project)
     document = reading.reach_document(project.root)
@@ -293,13 +299,10 @@ def test_the_set_binds_nothing_while_its_rule_is_proposed(project: AdopterRepo) 
 
 
 def test_accepted_the_same_rule_binds_and_its_part_is_the_check_s(project: AdopterRepo) -> None:
-    """The control: the route above carries the rule once it is accepted, and the part
-    it declares names a check that is there, so a reviewer leaves it to the check."""
+    """The control: the route above carries the rule as `SAN` ships it, accepted, and
+    the part it declares names a check that is there, so a reviewer leaves it to the
+    check."""
     _with_an_actor_and_a_set_inheriting_san(project)
-    # A fixture, not the acceptance procedure: accepting the rule also takes the set
-    # to a new major (COR-051 point 7), which validation does not hold it to.
-    text = (project.root / SAN_REL).read_text(encoding="utf-8")
-    project.write({SAN_REL: text.replace("status: proposed", "status: accepted")})
     assert not rs.validate_rule_sets(project.root).errors
     assert _bound(project) == ["software-analysis:" + RULE, "software-analysis:" + STEPS_RULE]
     document = reading.reach_document(project.root)

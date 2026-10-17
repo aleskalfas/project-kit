@@ -1,9 +1,9 @@
 ---
 rule-set: SAN
-version: 0.1.0
+version: 1.0.0
 rules:
   RS-SAN-001:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
@@ -12,7 +12,7 @@ rules:
           at: 2026-10-16T21:18:56Z
           outcome: updated
   RS-SAN-002:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:

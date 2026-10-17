@@ -12,7 +12,7 @@ body: >
   `sentence` form, its *How* says what one text is, and where a sentence
   ends. Under `checks`, the set declares what
   `software-analysis:validate` enforces of the rule: the parts a kind ships,
-  their order, the glossary's head and their forms. The set is at 0.1.0. The name `SAN` is now
+  their order, the glossary's head and their forms. The name `SAN` is now
   taken, so a rule set of your own named `SAN` fails `pkit validate`. Renaming
   that set renames every rule id in it. The segment is `minor`, as semver
   allows a breaking change before 1.0.0, and the capability is installed only

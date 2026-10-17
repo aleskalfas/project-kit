@@ -1,0 +1,20 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Changed
+body: >
+  Both rules of `SAN` are accepted, as the maintainer decided on 17 October
+  (#1370): the format rule, `RS-SAN-001`, with its sentence end and its
+  refusal of a list in a part of the `sentence` form, and the append-only
+  rule, `RS-SAN-002`. Accepting them takes `SAN` to 1.0.0 (COR-051 point 7).
+  Where a set of the project's own that inherits `SAN@1` selects an
+  artefact, `pkit analysis validate`, and so `pkit validate`, fails on a body
+  or a front-matter field that departs from its kind's structure, and `pkit
+  analysis check-numbers` fails on a step or a variant renumbered or
+  removed. A set that still pins `SAN@0` binds neither rule until it is
+  re-pinned. Where no rule of `SAN` binds on any of the analysis, the check
+  now warns, where it reported before, and the warning does not fail `pkit
+  validate`. The README's example set pins `SAN@1`. The segment is `minor`,
+  as semver allows a breaking change before 1.0.0: the capability is
+  installed only in project-kit's own clones, whose set re-pins to `SAN@1`
+  in the same change and whose analysis breaks neither rule.

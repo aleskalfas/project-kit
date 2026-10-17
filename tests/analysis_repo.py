@@ -62,7 +62,7 @@ MAIN = "main"
 SAN_REL = f"{SA.as_posix()}/rule-sets/san.md"
 ANALYSIS_SET = "tech-docs/rule-sets/analysis.md"
 ANALYSIS_SET_TEXT = (
-    "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@0]\n"
+    "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@1]\n"
     "scope:\n  types: [software-analysis:actor, software-analysis:term, "
     "software-analysis:use-case, software-analysis:journey]\nrules: {}\n---\n\n"
     "# ANALYSIS — the project's rules for its analysis\n"
@@ -71,14 +71,22 @@ ANALYSIS_SET_TEXT = (
 
 def accepting_san(repo: AdopterRepo) -> dict[str, str]:
     """What to write so `SAN`'s rules bind on the whole analysis, the format rule and the
-    append-only rule: the adopter's copy of `SAN` with each rule flipped to accepted, as a
-    fixture and not the acceptance procedure, and a set of the project's own that
+    append-only rule: the adopter's copy of `SAN` with each rule accepted, as it ships
+    them since the maintainer accepted both (#1370), and a set of the project's own that
     inherits it."""
     text = (repo.root / SAN_REL).read_text(encoding="utf-8")
     return {
         SAN_REL: text.replace("status: proposed", "status: accepted"),
         ANALYSIS_SET: ANALYSIS_SET_TEXT,
     }
+
+
+def proposing_san(repo: AdopterRepo) -> dict[str, str]:
+    """What to write so each rule of `SAN` is proposed: the adopter's copy of `SAN` with
+    each rule set back to proposed, a fixture for a test of what a proposed rule does,
+    since `SAN` ships its rules accepted (#1370)."""
+    text = (repo.root / SAN_REL).read_text(encoding="utf-8")
+    return {SAN_REL: text.replace("status: accepted", "status: proposed")}
 
 
 def with_status(text: str, rule: str, status: str) -> str:
