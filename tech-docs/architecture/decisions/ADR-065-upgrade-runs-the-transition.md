@@ -12,7 +12,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 Under this record `pkit sync` keeps a project at the release it records, and stops when the running pkit is another release. `pkit upgrade` is the one command that moves a project to a new release, and every migration runs inside it. It records where it is going before it writes anything, and records that it arrived only after its last migration. So the next upgrade finishes an interrupted one.
 
-This record realises [COR-059](../../../.pkit/decisions/core/COR-059-version-transition.md) in project-kit's code, and #1458 to #1465 and #1572 build it. Its points say where each version is recorded, the order an upgrade runs in, and the remedy each stop names. They also stop a transition and sync on a clash of area names, and hold new core areas and adapters until #1600.
+This record realises [COR-059](../../../.pkit/decisions/core/COR-059-version-transition.md) in project-kit's code, and #1458 to #1465 and #1572 build it. Its points say where each version is recorded, the order an upgrade runs in, which `pkit` its migrations reach, and the remedy each stop names. They also stop a transition and sync on a clash of area names, and hold new core areas and adapters until #1600.
 
 ## Context
 
@@ -30,6 +30,7 @@ The code today:
 - **`pkit upgrade`** (`upgrade.run_upgrade`) returns early when `backbone_version` equals the running version. Otherwise it runs `run_sync`, which records the target, and then the backbone migrations and the adapters'.
 - **So backbone migrations strand** after a sync under a newer pkit, and after an upgrade interrupted during its migrations. Either way the next upgrade finds the project at its target and runs none. #1452's refusal (`sync.refuse_stranding_backbone_migrations`) stops the first case for now.
 - **No adopter has ever run an adapter migration.** `install._install_adapter` copies no `migrations/`, and no code writes an adapter's manifest.
+- **The migration runner** (`migrations.execute_migration_scripts`) gives a script `ROOT` and the environment it inherits. So a `pkit` the script runs is the first one on the `PATH`. That one routes by the project's pin, unless a variable the script inherits stops the router.
 - **A capability's manifest** sits at the capability's root. There each refresh deletes or overwrites it, before `capabilities.refresh_capability` writes it again. Its skips are written where `capabilities.read_prior_skipped_artifacts` never reads them.
 
 #1429's design sets the shape, and the maintainer decided its questions on 11 October. This record also settles five questions the design left open:
@@ -39,6 +40,8 @@ The code today:
 - who writes each project-owned path, and who owns each piece of derivable state (point 11)
 - how a transition reports the replay (point 5)
 - how a transition meets a clash of area names among published releases (point 13)
+
+It also settles a question the design did not raise: which `pkit` a migration reaches when it runs one (point 14).
 
 [ADR-049](ADR-049-per-project-version-pin.md), [ADR-063](ADR-063-upgrade-updates-the-tool.md) and [ADR-064](ADR-064-upgrade-pins-by-default.md) say how upgrade and the pin work today. #1457 refines them in place where this record changes what they say.
 
@@ -50,6 +53,7 @@ The points that follow:
 
 - **Points 1 to 3** say what each command does, where each version is recorded, and where the completion is recorded.
 - **Points 4 and 5** set a transition's order, and the replay that a missing completion runs.
+- **Point 14** says which `pkit` a migration reaches when it runs one.
 - **Point 6** says how a transition settles a new collision and the dependency gates before it writes.
 - **Points 7 to 9** say which commands stop, the remedy each stop names, and how a pinned project's upgrade moves.
 - **Points 10 to 12** retire `sync --force`, name the writers of project-owned paths, and tie a version to a tagged install.
@@ -195,6 +199,21 @@ A project already current returns after these checks, before step 1, and only wr
   - a project's own file under `.pkit/workflow/project/`, which survives
 - **What a replay may restore:** `1.54.0/001`, `1.150.0/001-keep-process-journal-logging` and `1.150.0/001-untrack-runtime-ignored-files` can re-add what a project removed after they ran. The changelog says so, as COR-010 requires.
 - **The report names the replay.** It says that no completion is recorded, so every backbone migration runs once, and lists them. The dry run says the same before anything runs.
+
+### 14. A migration that runs `pkit` reaches the running pkit
+
+The running pkit is the one that runs the transition. While the migrations run, its version is the `backbone_version` the manifest records. This holds in a transition of the backbone and in a transition of one capability. A migration reads the backbone's answers through the running pkit's reading commands (ADR-057 point 1).
+
+- **How it gets there:** the migration runner puts a `pkit` of its own first on each script's `PATH`. The runner's `pkit` runs the running pkit's code under the same interpreter, and never enters the router. So a bare `pkit` reaches the running pkit, in the script and in every process that inherits the script's `PATH`.
+- **When the runner's `pkit` cannot run:** before the first script, the runner asks its `pkit` for its version. An answer other than the running pkit's version, or none, stops the transition, as a failing migration does (point 4). Its message names the temporary folder and `TMPDIR`, which chooses where that folder lies. Without this check, a folder that forbids running files would send a bare `pkit` back to the operator's `PATH`.
+- **Not the pin's code:** the pin is written last (point 4, step 10). While the migrations run, it may still name the release the project is leaving, or none. That release's code would read the target's content, which it does not ship (ADR-033).
+- **Not the first `pkit` on the operator's `PATH`:** a transition may be run by a pkit the `PATH` does not find first. Examples are `python -m project_kit` and a second install. The first one may be another release, and it routes by the same pin.
+- **One release:** a transition runs no migration of an incubated capability, which no operation of the core layer moves (COR-059 point 1, COR-031). Nor does it run an externally-sourced capability's, which COR-059 point 3 leaves unplaced. So every script it runs comes from the running pkit's bundle (point 4), and needs no test for the runner's `pkit`. A record that places externally-sourced migrations says which `pkit` they reach.
+- **No variable that stops the router:** a script sets neither `PKIT_NO_ROUTE` nor `PKIT_ROUTED`. Commands read them too, not only the router, so one would change what a command does.
+- **Nothing from where `pkit` lives:** a script derives nothing from that path. The runner's `pkit` lies in a temporary folder beside no install, and is gone after the run. `1.93.0/001` derives a folder from `command -v pkit`, but no transition reaches that line, the replay included. Point 4's step 3 copies `.pkit/rules/core.md`, and the script exits on finding it.
+- **What it does not run:** a command that propagates, seeds or merges, moves a recorded version, writes the pin, or changes which components are installed. COR-004 makes a transition one operation, with propagation, migrations, seeding and merge as its parts. A migration that ran such a command would add another operation, or repeat a part, inside it (COR-059 point 3). A migration that the record owning some content specifies may still write it, as COR-048 point 5 allows for the configuration file.
+- **Review holds that rule, and no code enforces it.** Inside a transition, sync's guard stops some such commands for its own reason, and only while `completed_version` differs from `backbone_version` (point 7).
+- **Only migrations get the runner's `pkit`.** The primitives of point 4's step 8 get none, so none of them runs `pkit`. A bare `pkit` there would reach the pin's code, or the first `pkit` on the operator's `PATH`.
 
 ### 6. A transition settles its collisions and its dependency gates before it writes
 
@@ -368,6 +387,17 @@ A project may create its own area at `.pkit/<name>/` (COR-011). A later release 
 
 **Why seed paths fall between the migrations and derivable state.** Before the migrations, a migration that moves a project's file to a seed path would meet a fresh seed there. After derivable state, deploy and merge would read a missing overlay or a missing settings file. Between the two, neither happens.
 
+**Why a migration reaches the running pkit.** By the time the migrations run, point 4's step 3 has copied the target's content. Only the running pkit ships that content (ADR-033). Any other release's code would answer about content it does not ship. A writing command such as `pkit config set` would write in that release's format. A routed run may also fetch over the network.
+
+**Why the runner puts it there, rather than leaving it to the `PATH`.** Without the runner's `pkit`, a bare `pkit` reaches the running pkit on the common paths, but only by accident. Under a routed run or a raise, uv puts its environment first on the `PATH`, and an inherited variable stops the router. In an unpinned project, the running pkit is usually the first `pkit` on the `PATH`. Three cases fail:
+- a transition run by a pkit the `PATH` does not find first
+- a newer pkit run directly in a pinned project, where a bare `pkit` in its migrations routes to the pin
+- a uv release that stops putting its environment first on the `PATH`
+
+**Why a `pkit` on the `PATH`, and not a variable.** The runner's `pkit` serves every script as written: a bare `pkit`, a `command -v pkit` check, and every process that inherits the script's `PATH`. A variable a script must read serves only the scripts that remember it.
+
+**Why the router is unchanged.** ADR-049 point 4 keeps the router routing every command uniformly, with no carve-out by command kind. The runner's `pkit` adds no case to the router. It runs the running pkit outside the router, as a raise runs its target's upgrade through the bypass. ADR-049 counts that bypass as no router change (point 5, and "Why the escape is the operator gesture, not a router carve-out"). The loop guard `PKIT_ROUTED` likewise switches routing off for a process the router started (ADR-063, "Why a guard of its own"). The module entry point, `python -m project_kit`, never enters the router.
+
 **Why an adapter with no manifest runs no migration.** No adopter has run an adapter migration, and the one that exists repeats what merge does. So recording the bundled version loses nothing.
 
 **Why `1.32.0/001` is rewritten too.** #1429's audit judged it safe, since its path is retired. Accepted COR-010's rule has no such exception.
@@ -402,6 +432,9 @@ A project may create its own area at `.pkit/<name>/` (COR-011). A later release 
 - **The completion as a marker in a file of its own.** Rejected: an older pkit cannot read a marker it does not know (COR-059).
 - **A version bump of the manifest schema for the new key.** Not taken: the key is optional, and every released writer keeps it.
 - **Seed paths before the migrations, or at the end.** Rejected, for the reasons above.
+- **A variable that names the running pkit, for a script to call.** Rejected: a script that runs a bare `pkit`, or starts a process that does, still reaches the router.
+- **`PKIT_NO_ROUTE` in each script's environment.** Rejected: a bare `pkit` would still be the first on the operator's `PATH`, which may be another release. Point 14 says why a script sets no such variable.
+- **The running interpreter's folder of scripts first on the `PATH`, with `PKIT_NO_ROUTE`.** Not taken: every other program in that folder would shadow the operator's, `python3` among them. An install run as `python -m project_kit` may hold no `pkit` there.
 - **A name of its own for the gates' override on `pkit upgrade`, such as `--allow-desync`.** Not taken: one override would have two names, against COR-030's `--force`.
 - **Upgrade under the fallback raises the pin to the installed pkit.** Rejected: ADR-049 point 3 raises a pin to the latest release, not to whatever is installed.
 - **A capability with no readable version runs every migration it ships.** Rejected: the replay is the backbone's alone (COR-059 point 6). It would also run project-management's `0.54.0/001`, which grandfathers a bootstrap that may never have happened.
@@ -435,7 +468,7 @@ A project may create its own area at `.pkit/<name>/` (COR-011). A later release 
   - COR-011 says sync never touches a project's own area, and a transition copies through sync's propagation step (point 1). COR-001 lets the core layer write a project-owned path only through a writer a record names. In the two cases point 13's test cannot tell apart, a transition's copy writes over a project's own area. No record names that copy as their writer.
 - **This record supersedes nothing.**
 - **Conversions stay out of the transition** (COR-059 point 10). #1433 realises them.
-- **Docs:** each issue updates the lifecycle README and the CLI reference where it changes what they say.
+- **Docs:** each issue updates the lifecycle README, the CLI reference and the migration-authoring skill where it changes what they say.
 - **Migrations:** ignoring `sync --force` and removing it each ship one (point 10). The new key and the manifest's move need none.
 - **Where the code differs** from this record, beyond what the Context lists, at the time of writing:
   - `run_upgrade`'s early return compares `backbone_version` alone.
@@ -450,4 +483,4 @@ A project may create its own area at `.pkit/<name>/` (COR-011). A later release 
   - The install code's override copies the capability's artefact and leaves the project's in place, unlike point 6's. How the install code comes into line is an open question for a follow-up.
 - **Stands on these records, all accepted:**
   - COR-001, COR-002, COR-004, COR-010, COR-011, COR-013, COR-017, COR-030, COR-031, COR-041, COR-048, COR-053 and COR-059
-  - ADR-009, ADR-033, ADR-039, ADR-049, ADR-059, ADR-063, ADR-064, PRJ-004 and PRJ-007
+  - ADR-009, ADR-033, ADR-039, ADR-049, ADR-057, ADR-059, ADR-063, ADR-064, PRJ-004 and PRJ-007
