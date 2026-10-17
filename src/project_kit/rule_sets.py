@@ -19,6 +19,9 @@ This module:
 - discovers and parses every rule-set file (`discover_rule_sets`). A file
   that cannot be read, has no front matter, or whose front matter does not
   parse is kept as unreadable, so it is reported and never skipped;
+- reads a component's rule sets before it is installed (`component_rule_sets`),
+  and names each whose name a project rule set already declares
+  (`project_set_names_taken`, COR-051 point 3): the install refuses on it;
 - validates them (`validate_rule_sets`): the schema, strictly, with unknown
   keys through the shared renderer; the container inside each rule — the
   rule-set file is claimed before the container rule, so this pass and not
@@ -80,6 +83,7 @@ from project_kit import capabilities as caps
 from project_kit import document_parts, validators
 from project_kit import friction_discovery as fd
 from project_kit.decisions import resolve_adr_records_dir
+from project_kit.working_tree import FilesystemTree
 
 Severity = bs.Severity
 
@@ -490,7 +494,14 @@ def discover_rule_sets(
     settings = settings if settings is not None else fd.read_friction_settings(target_root, tree)
     places = fd.rule_set_places(target_root, settings, tree)
     listing = tree if tree is not None else fd.working_tree(target_root)
-    claimed = fd.rule_set_files(target_root, places, listing)
+    return _read_places(target_root, places, listing)
+
+
+def _read_places(
+    root: Path, places: tuple[fd.RuleSetPlace, ...], listing: fd.RepositoryTree
+) -> RuleSetDiscovery:
+    """Every rule-set file `places` claim in `listing`, read and parsed, in path order."""
+    claimed = fd.rule_set_files(root, places, listing)
     texts = fd.document_texts(listing, sorted(claimed))
     rule_sets: list[RuleSet] = []
     unreadable: list[UnreadableRuleSet] = []
@@ -504,6 +515,63 @@ def discover_rule_sets(
         else:
             unreadable.append(read)
     return RuleSetDiscovery(places=places, rule_sets=tuple(rule_sets), unreadable=tuple(unreadable))
+
+
+def component_rule_sets(component: str, component_dir: Path) -> RuleSetDiscovery:
+    """A component's method rule sets, read where its files are now, before it is installed.
+
+    The rule-set files its `rule-sets/` folder holds, claimed and read as discovery
+    claims and reads them once the folder is installed (`discover_rule_sets`): every
+    Markdown file beneath it but the signpost, and a link never read. The folder is
+    listed on disk (`FilesystemTree`), since a component's source need not lie in a
+    repository. Each path is relative to `component_dir`, as `rule-sets/<file>.md`.
+    """
+    rel = fd.RULE_SETS_SEGMENT
+    if not (component_dir / rel).is_dir():
+        return RuleSetDiscovery(places=(), rule_sets=(), unreadable=())
+    declaration = fd.SettingsPath(
+        value=rel, resolved=rel, file=rel, pointer="", source=f"capability:{component}"
+    )
+    place = fd.RuleSetPlace(fd.Place(pattern=rel, declaration=declaration), component)
+    return _read_places(component_dir, (place,), FilesystemTree(component_dir))
+
+
+@dataclass(frozen=True)
+class SetNameTaken:
+    """A rule set a component would bring whose name a project rule set declares.
+
+    Rule-set names are unique among a project's rule sets, and a set's name is in
+    each of its rule ids (COR-051 point 3), so the clash could not be undone once
+    the component's set is installed.
+    """
+
+    name: str  # the name both sets declare
+    component_file: str  # the component's set, relative to its folder
+    project_file: str  # the project's set, relative to the root
+
+
+def project_set_names_taken(
+    target_root: Path, component: str, component_dir: Path
+) -> tuple[SetNameTaken, ...]:
+    """Each of the component's rule sets (`component_rule_sets`) whose name a project
+    rule set of `target_root` declares, with both files, in the component's path order.
+
+    Only the project's own sets are compared (COR-051 point 6): another component's
+    set is not the project's to rename. A project set read from the component's own
+    file — a project place reaching into a subtree that is its source — is no clash.
+    """
+    project = discover_rule_sets(target_root)
+    taken: list[SetNameTaken] = []
+    for rule_set in component_rule_sets(component, component_dir).rule_sets:
+        if rule_set.name is None:
+            continue
+        own = (component_dir / rule_set.path).resolve()
+        taken.extend(
+            SetNameTaken(rule_set.name, rule_set.path, other.path)
+            for other in project.sets_named(rule_set.name)
+            if other.component is None and (target_root / other.path).resolve() != own
+        )
+    return tuple(taken)
 
 
 def _read_rule_set(

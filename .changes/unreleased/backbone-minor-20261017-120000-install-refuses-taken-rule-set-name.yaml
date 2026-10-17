@@ -1,0 +1,12 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit capabilities install` refuses a capability whose rule set takes a name
+  one of your project's rule sets already declares (COR-051 point 3, #1373).
+  Rule-set names are unique among a project's rule sets, and a set's name is in
+  each of its rule ids, so the clash could not be undone once installed. Until
+  now only `pkit validate` found it, after the install. The refusal comes before
+  anything is written, `--dry-run` included, and names the set, the
+  capability's file and your project's. Nothing is installed.

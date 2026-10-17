@@ -2697,6 +2697,102 @@ def test_cli_install_with_no_deps_unaffected(
     assert caps.is_installed(kit_target, "standalone")
 
 
+# --- install pre-flight: rule-set names (COR-051 point 3) ---
+
+
+def _rule_set(path: Path, name: str) -> None:
+    """A rule-set file at `path` declaring the set `name`."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"---\nrule-set: {name}\nversion: 1.0.0\nrules: {{}}\n---\n\n# {name}\n",
+        encoding="utf-8",
+    )
+
+
+@pytest.mark.parametrize("flags", [(), ("--dry-run",)])
+def test_cli_install_refuses_a_rule_set_name_a_project_set_declares(
+    kit_target: Path, kit_source: Path, monkeypatch, flags: tuple[str, ...]
+) -> None:
+    """The capability's SAN takes the name the project's own set declares: install
+    refuses before anything is written, naming the set and both files. A set of
+    the capability's with a free name is not named."""
+    cap_dir = _stage_capability_in_source(kit_source, "analysis", with_skills=("analyse",))
+    _rule_set(cap_dir / "rule-sets" / "san.md", "SAN")
+    _rule_set(cap_dir / "rule-sets" / "free.md", "FREE")
+    _rule_set(kit_target / "docs" / "rule-sets" / "ours.md", "SAN")
+    manifest = (kit_target / ".pkit" / "manifest.yaml").read_text(encoding="utf-8")
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    result = CliRunner().invoke(main, ["capabilities", "install", "analysis", *flags])
+    assert result.exit_code != 0
+    assert "ships 1 rule set(s) whose name a project rule set already declares" in result.output
+    assert (
+        "- SAN: the capability's rule-sets/san.md, and the project's docs/rule-sets/ours.md"
+        in result.output
+    )
+    assert "FREE" not in result.output
+    assert "Nothing was installed." in result.output
+    assert not caps.is_installed(kit_target, "analysis")
+    assert not (kit_target / ".pkit" / "capabilities" / "analysis").exists()
+    assert (kit_target / ".pkit" / "manifest.yaml").read_text(encoding="utf-8") == manifest
+
+
+def test_cli_install_takes_a_rule_set_whose_name_no_project_set_declares(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    cap_dir = _stage_capability_in_source(kit_source, "analysis")
+    _rule_set(cap_dir / "rule-sets" / "san.md", "SAN")
+    _rule_set(kit_target / "docs" / "rule-sets" / "ours.md", "ANA")
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    result = CliRunner().invoke(main, ["capabilities", "install", "analysis"])
+    assert result.exit_code == 0, result.output
+    assert "Installed capability 'analysis'" in result.output
+    assert caps.is_installed(kit_target, "analysis")
+    assert (kit_target / ".pkit" / "capabilities" / "analysis" / "rule-sets" / "san.md").is_file()
+
+
+def test_project_set_names_taken_compares_only_the_projects_own_sets(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """A method set of the same name is another component's, not the project's to
+    rename; the signpost and a file declaring no name are never compared."""
+    from project_kit import rule_sets
+
+    cap_dir = _stage_capability_in_source(kit_source, "analysis")
+    _rule_set(cap_dir / "rule-sets" / "san.md", "SAN")
+    _rule_set(cap_dir / "rule-sets" / "deep" / "ana.md", "ANA")
+    _rule_set(cap_dir / "rule-sets" / "README.md", "BASE")
+    (cap_dir / "rule-sets" / "nameless.md").write_text("# No front matter\n", encoding="utf-8")
+    _rule_set(kit_target / ".pkit" / "rule-sets" / "base.md", "BASE")
+    _rule_set(kit_target / ".pkit" / "rule-sets" / "san.md", "SAN")
+    _rule_set(kit_target / "docs" / "rule-sets" / "ana.md", "ANA")
+    owners = {s.path: s.component for s in rule_sets.discover_rule_sets(kit_target).rule_sets}
+    assert owners[".pkit/rule-sets/san.md"] == "backbone"
+    assert rule_sets.project_set_names_taken(kit_target, "analysis", cap_dir) == (
+        rule_sets.SetNameTaken("ANA", "rule-sets/deep/ana.md", "docs/rule-sets/ana.md"),
+    )
+
+
+def test_project_set_names_taken_passes_over_the_components_own_file(kit_target: Path) -> None:
+    """A project place reaching into the subtree that is the component's source reads
+    the component's own set as a project set: one file, no clash."""
+    from project_kit import rule_sets
+    from project_kit.project_config import project_config_path
+
+    cap_dir = kit_target / "lab" / "analysis"
+    _rule_set(cap_dir / "rule-sets" / "san.md", "SAN")
+    config = project_config_path(kit_target)
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text("friction:\n  places: [lab/analysis/rule-sets]\n", encoding="utf-8")
+    assert [s.path for s in rule_sets.discover_rule_sets(kit_target).rule_sets] == [
+        "lab/analysis/rule-sets/san.md"
+    ]
+    assert rule_sets.project_set_names_taken(kit_target, "analysis", cap_dir) == ()
+
+
 # --- find_declared_dependents ---
 
 

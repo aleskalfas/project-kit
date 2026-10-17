@@ -6081,6 +6081,10 @@ def install_capability_cmd(
     Installing a capability whose version falls outside a range an installed
     capability declares for it — required or optional — warns, naming each such
     dependent and its range, and refuses unless --force (COR-030).
+
+    A capability whose rule set takes a name a project rule set declares is
+    refused, naming the set and both files, and nothing is installed (COR-051
+    point 3).
     """
     from project_kit import capabilities as caps
 
@@ -6194,6 +6198,10 @@ def install_capability_cmd(
     # Pre-flight: mandatory process connections (COR-053 point 6). Refuse when an
     # upstream the capability marks mandatory is missing or incompatible.
     _refuse_unmet_mandatory_upstreams(target_root, capability_source)
+
+    # Pre-flight: rule-set names (COR-051 point 3). Refuse a capability whose rule
+    # set takes a name a project set declares, before the collision prompt asks.
+    _refuse_rule_set_names_taken(target_root, capability_source)
 
     # The methodology's source run by its own code (ADR-059 point 2): the tree the
     # capability would be copied from is its destination. Register it in place —
@@ -6727,6 +6735,35 @@ def _refuse_unmet_mandatory_upstreams(
         f"{len(unmet)} unmet mandatory process connection(s):\n"
         + "\n".join(_mandatory_line(u, carrier=False) for u in unmet)
         + "\nInstall or upgrade the upstream first, then retry (COR-053 point 6)."
+    )
+
+
+def _refuse_rule_set_names_taken(target_root: Path, capability_source: CapabilitySource) -> None:
+    """Refuse the capability whose rule set would take a name a project rule set
+    declares, naming the set and both files (COR-051 point 3).
+
+    Run by `install` before anything is written, `--dry-run` included. Only
+    validation would find the clash once installed, and a set's name is in each of
+    its rule ids, so it could not be undone.
+    """
+    from project_kit import rule_sets as rule_sets_mod
+
+    taken = rule_sets_mod.project_set_names_taken(
+        target_root, capability_source.name, capability_source.path
+    )
+    if not taken:
+        return
+    lines = [
+        f"    - {t.name}: the capability's {t.component_file}, and the project's {t.project_file}"
+        for t in taken
+    ]
+    raise click.ClickException(
+        f"capability {capability_source.name!r} v{capability_source.package.version} ships "
+        f"{len(taken)} rule set(s) whose name a project rule set already declares:\n"
+        + "\n".join(lines)
+        + "\nRule-set names are unique among a project's rule sets, and a set's name is in "
+        "each of its rule ids, so the clash could not be undone once the capability is "
+        "installed (COR-051 point 3). Nothing was installed."
     )
 
 
