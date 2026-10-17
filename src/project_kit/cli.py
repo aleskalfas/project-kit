@@ -6757,9 +6757,10 @@ def _refuse_rule_set_names_taken(target_root: Path, capability_source: Capabilit
         f"    - {t.name}: the capability's {t.component_file}, and the project's {t.project_file}"
         for t in taken
     ]
+    shipped = len({t.component_file for t in taken})
     raise click.ClickException(
         f"capability {capability_source.name!r} v{capability_source.package.version} ships "
-        f"{len(taken)} rule set(s) whose name a project rule set already declares:\n"
+        f"{shipped} rule set(s) whose name a project rule set already declares:\n"
         + "\n".join(lines)
         + "\nRule-set names are unique among a project's rule sets, and a set's name is in "
         "each of its rule ids, so the clash could not be undone once the capability is "

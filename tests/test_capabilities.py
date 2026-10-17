@@ -2738,6 +2738,28 @@ def test_cli_install_refuses_a_rule_set_name_a_project_set_declares(
     assert (kit_target / ".pkit" / "manifest.yaml").read_text(encoding="utf-8") == manifest
 
 
+def test_cli_install_counts_the_capabilitys_sets_and_names_each_project_file(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Two project sets already share the name the capability's one set takes: the
+    refusal counts one shipped set, and names both of the project's files."""
+    cap_dir = _stage_capability_in_source(kit_source, "analysis")
+    _rule_set(cap_dir / "rule-sets" / "san.md", "SAN")
+    _rule_set(kit_target / "docs" / "rule-sets" / "ours.md", "SAN")
+    _rule_set(kit_target / "docs" / "rule-sets" / "theirs.md", "SAN")
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    result = CliRunner().invoke(main, ["capabilities", "install", "analysis"])
+    assert result.exit_code != 0
+    assert "ships 1 rule set(s) whose name a project rule set already declares" in result.output
+    for project_file in ("docs/rule-sets/ours.md", "docs/rule-sets/theirs.md"):
+        assert f"- SAN: the capability's rule-sets/san.md, and the project's {project_file}" in (
+            result.output
+        )
+    assert not caps.is_installed(kit_target, "analysis")
+
+
 def test_cli_install_takes_a_rule_set_whose_name_no_project_set_declares(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
