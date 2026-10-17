@@ -2,6 +2,7 @@ component: living-docs
 kind: minor
 custom:
   category: Changed
+  requires_backbone: release
 body: >
   A page that anchors a decision record may state a fact the record decides
   with no link to another page, and any words stating another page's fact,
