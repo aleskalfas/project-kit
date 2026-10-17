@@ -11,12 +11,19 @@ rules:
         revalidated:
           at: 2026-10-16T21:18:56Z
           outcome: updated
-# What this capability's check enforces of the format rule (COR-051 point 2;
-# DEC-001 point 1). It is the structure each artefact kind ships: its parts,
-# the glossary's head and its forms. The check enforces it only where the rule
-# binds. Whoever judges the rest of the rule leaves it to the check. Where a
-# project's rule tightens a structure, the project's set declares what the
-# check enforces of that rule.
+  RS-SAN-002:
+    status: proposed
+    origin: {decision: "software-analysis:DEC-001"}
+    pkit:
+      friction:
+        anchors: {record: ["software-analysis:DEC-001#3"]}
+# What this capability's checks enforce of each rule (COR-051 point 2). Of the
+# format rule, it is the structure each artefact kind ships: its parts, the
+# glossary's head and its forms (DEC-001 point 1). Of the append-only rule, it
+# is a comparison of each use case with the base (DEC-001 point 3). A check
+# enforces its part only where its rule binds. Whoever judges the rest of a
+# rule leaves that part to the check. Where a project's rule tightens a
+# structure, the project's set declares what the check enforces of that rule.
 checks:
   RS-SAN-001:
     - check: "software-analysis:validate"
@@ -33,11 +40,22 @@ checks:
         `sentence`, `numbered-steps`, `variants`, `steps-match-front-matter` and
         `definition`, each as the schema of the kinds' declared structure
         describes it.
+  RS-SAN-002:
+    - check: "software-analysis:check-numbers"
+      part: >-
+        Each step and each variant that a use case held where the change left
+        its base is neither renumbered nor removed. It is renumbered where its
+        text now stands under another number or letter, one the base did not
+        give that text, and no longer under its own. It is removed where neither
+        its number or letter nor its text is left. A number or a letter that
+        holds other text passes as an edit, so a step replaced by another under
+        its number, and a step renumbered and reworded at once, are left to
+        whoever judges the rest of the rule.
 ---
 
 # SAN — the software-analysis method
 
-The rules for a project's analysis artefacts, whatever the project (software-analysis DEC-001 point 1). Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
+The rules for a project's analysis artefacts, whatever the project (software-analysis DEC-001 points 1 and 3). Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
 
 A rule's statement and its *How* bind. Inside a *How*, a "such as" phrase and a sentence that starts with "So" only illustrate.
 
@@ -52,7 +70,19 @@ An analysis artefact carries its kind's declared structure.
   - **Hints.** A hint binds nothing, so the voice a hint asks for is no part of this rule.
   - **History.** A withdrawn artefact is held to no part or form that came after its withdrawal.
   - **The `sentence` form.** Each text of this form, such as an actor's need, holds one sentence: no sentence ends before the text's last word.
-    - **One text.** In a list, each item is one text, and a nested item is one apart from the item it sits in. What a part holds outside its lists is one text too, a list inside a block quote included. In a front-matter field that holds a list, each item is one text.
-    - A sentence ends at a full stop, a question mark or an exclamation mark. It ends there only where a space, a line end or the end of the text follows the mark.
-    - A mark inside a code span ends no sentence.
-    - So an abbreviation that ends in a full stop, such as "e.g.", ends a sentence wherever a space or a line end follows it.
+    - **One text.** A body part of this form, such as a use case's *Goal*, is one text, and holds no list, not even inside a block quote. In a front-matter field that holds a list, such as an actor's `needs`, each item is one text.
+    - **Where a sentence ends.** At a full stop, a question mark or an exclamation mark followed by a space and a capital letter, and at the end of the text.
+      - A line end, several spaces or a no-break space counts as a space. A character a reader cannot see, such as a zero-width space, counts as nothing.
+      - A mark inside a code span ends no sentence.
+      - So a mark followed by a lowercase letter, as in "e.g. for" or "3. října", ends no sentence.
+    - **A script without capital letters,** such as Chinese or Arabic, is never split. A text in it ends its sentence only at its end.
+
+## RS-SAN-002 — A use case's steps and variants keep their numbers and letters
+
+A use case's steps and variants keep their numbers and letters.
+
+- **How:**
+  - **Steps.** A step the default branch holds keeps its number and stays in its use case. It is never renumbered or removed.
+  - **Variants.** A variant the default branch holds keeps its step's number and its letter, and stays in its use case too.
+  - **New ones.** A new step takes a number no step of its use case has had. A new variant takes a letter no variant of its step has had.
+  - So a step added between two others takes the next free number, and a step that no longer happens stays under its number, marked withdrawn.
