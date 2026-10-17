@@ -46,7 +46,7 @@ SAN = CAPABILITY / "rule-sets" / "san.md"
 SAN_REL = f"{SA.as_posix()}/rule-sets/san.md"
 RULE = "RS-SAN-001"
 STEPS_RULE = "RS-SAN-002"
-#: The judgement rules (#1577): each statement, and the DEC-001 points it anchors to.
+#: The judgement rules (#1577): each statement, and the record points it anchors to.
 JUDGEMENT_RULES = {
     "RS-SAN-003": (
         "A use case's actor is the one whose goal it is, and each other actor that takes "
@@ -322,7 +322,8 @@ def test_each_judgement_rule_leaves_the_checks_their_part_by_its_own_words() -> 
     # Unanchored is a state the core reports, never a failure (DEC-001 point 4), and the
     # rule judges it all the same. A reason for having none is a person's answer, never
     # judged here (COR-050 point 1; COR-057 point 1).
-    assert "no check fails on it. This rule still judges what its statements rest on." in (anchors)
+    unanchored = "no check fails on it. This rule still judges what its statements rest on."
+    assert unanchored in anchors
     assert "is not judged under this rule. The reason is a person's answer" in anchors
 
 
@@ -340,7 +341,7 @@ def test_each_judgement_rule_judges_an_artefact_in_force_alone() -> None:
 # --- validation and reach in an adopter (COR-051 points 4 and 7) ---------------------------
 
 
-def _with_an_actor_and_a_set_inheriting_san(project: AdopterRepo) -> None:
+def _with_an_actor_and_a_set_inheriting_san(project: AdopterRepo, *, major: int = 1) -> None:
     project.write(
         {
             ACTOR: "---\nid: ACT-tester\nname: Tester\nneeds: [Run a suite.]\n---\n\n"
@@ -349,7 +350,7 @@ def _with_an_actor_and_a_set_inheriting_san(project: AdopterRepo) -> None:
                 {
                     "rule-set": "ANALYSIS",
                     "version": "1.0.0",
-                    "inherits": ["software-analysis:SAN@1"],
+                    "inherits": [f"software-analysis:SAN@{major}"],
                     "scope": {"types": ["software-analysis:actor"]},
                     "rules": {},
                 }
@@ -406,8 +407,8 @@ def test_the_judgement_rules_bind_nothing_while_proposed(project: AdopterRepo) -
     judgement rule binds, since a proposed rule binds nothing (COR-051 point 4)."""
     _with_an_actor_and_a_set_inheriting_san(project)
     assert not rs.validate_rule_sets(project.root).errors
-    bound = _bound(project)
-    assert not [r for r in JUDGEMENT_RULES if "software-analysis:" + r in bound]
+    # The route binds the two accepted rules, so it is there, and nothing more.
+    assert _bound(project) == ["software-analysis:" + RULE, "software-analysis:" + STEPS_RULE]
 
 
 def test_accepted_each_judgement_rule_binds_with_no_check_to_leave(
@@ -415,12 +416,13 @@ def test_accepted_each_judgement_rule_binds_with_no_check_to_leave(
 ) -> None:
     """A copy with the judgement rules accepted, a fixture and not the acceptance: each
     binds on the route above, and the answer gives it no check's part, so a reviewer
-    judges the whole of it (COR-057 point 1)."""
-    _with_an_actor_and_a_set_inheriting_san(project)
+    judges the whole of it (COR-057 point 1). Accepting a rule gives `SAN` a new major,
+    and the set re-pins to it, as an acceptance would (COR-051 point 7)."""
+    _with_an_actor_and_a_set_inheriting_san(project, major=2)
     text = (project.root / SAN_REL).read_text(encoding="utf-8")
     for rule_id in JUDGEMENT_RULES:
         text = with_status(text, rule_id, "accepted")
-    project.write({SAN_REL: text})
+    project.write({SAN_REL: text.replace("version: 1.0.0", "version: 2.0.0", 1)})
     assert not rs.validate_rule_sets(project.root).errors
     assert _bound(project) == [
         "software-analysis:" + r for r in (RULE, STEPS_RULE, *JUDGEMENT_RULES)
