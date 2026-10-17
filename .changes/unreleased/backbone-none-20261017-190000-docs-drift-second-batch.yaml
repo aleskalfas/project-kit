@@ -6,5 +6,5 @@ body: >
   README says `new capability` registers nothing. The lifecycle README says a
   registry entry in the methodology's source names a manifest path that holds
   no file. The release README names `1.142.0` as the first release whose
-  changelog tags a capability's entry. No command, file layout or output
-  changes.
+  changelog tags a capability's entry. No command or file layout changes,
+  and no output beyond that help text.
