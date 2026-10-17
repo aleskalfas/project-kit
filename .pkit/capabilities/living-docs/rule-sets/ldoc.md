@@ -9,8 +9,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-16T11:38:45Z
-          outcome: updated
+          at: 2026-10-17T11:56:17Z
+          outcome: unchanged
+          unchanged-because: "living-docs DEC-001 point 3 refines the rule on a fact's home: a decision record a page anchors is the home of the facts it decides, words that give another page's fact state it however short, and a name that gives none of a thing's facts needs no link or anchor. Its paragraph on what grounds a statement is as it was, only what a page anchors grounds one, so this rule holds."
   RS-LDOC-002:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -18,7 +19,7 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-16T11:38:46Z
+          at: 2026-10-17T11:56:14Z
           outcome: updated
   RS-LDOC-003:
     status: accepted
@@ -27,9 +28,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3", "living-docs:DEC-001#4"]}
         revalidated:
-          at: 2026-10-16T11:38:48Z
+          at: 2026-10-17T11:56:20Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 3 refines the rules on a fact's home and on grounding, and point 4 adds the home of each fact a page summarises to what a page anchors. Neither touches that each page names its reader in its reader field and says only what that reader needs, so this rule holds.
+          unchanged-because: "living-docs DEC-001 point 3 refines the rule on a fact's home: a decision record a page anchors is the home of the facts it decides, and a name that gives none of a thing's facts needs no link or anchor. It does not touch that each page names its reader in its reader field and says only what that reader needs, so this rule holds."
   RS-LDOC-004:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -37,9 +38,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3", "living-docs:DEC-001#4"]}
         revalidated:
-          at: 2026-10-16T11:38:49Z
+          at: 2026-10-17T11:56:22Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 3 refines the rules on a fact's home and on grounding, and point 4 adds the home of each fact a page summarises to what a page anchors. Neither touches that pages of a kind follow one format with a template per kind, how a kind's structure is checked, or a page's kind field, so this rule holds.
+          unchanged-because: "living-docs DEC-001 point 3 refines the rule on a fact's home: a decision record a page anchors is the home of the facts it decides, and a name that gives none of a thing's facts needs no link or anchor. It does not touch that pages of a kind follow one format with a template per kind, how a kind's structure is checked, or a page's kind field, so this rule holds."
   RS-LDOC-005:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -47,9 +48,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-16T11:38:50Z
+          at: 2026-10-17T11:56:25Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 3 refines the rules on a fact's home and on grounding. Its bullet that an index-like file is a signpost to what a folder holds, never a summary of its contents, is as it was, so this rule holds.
+          unchanged-because: "living-docs DEC-001 point 3 refines the rule on a fact's home: a decision record a page anchors is the home of the facts it decides, and a name that gives none of a thing's facts needs no link or anchor. Its bullet that an index-like file is a signpost to what a folder holds, never a summary of its contents, is as it was, so this rule holds."
   RS-LDOC-006:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -57,9 +58,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-16T11:38:51Z
+          at: 2026-10-17T11:56:27Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 3 refines the rules on a fact's home and on grounding. Its bullet that nothing is created ahead of the need for it is as it was, so this rule holds.
+          unchanged-because: "living-docs DEC-001 point 3 refines the rule on a fact's home: a decision record a page anchors is the home of the facts it decides, and a name that gives none of a thing's facts needs no link or anchor. Its bullet that nothing is created ahead of the need for it is as it was, so this rule holds."
 # The parts of these rules that this capability's validation enforces (COR-051
 # point 2; DEC-001 point 6), each only where its rule binds: a reader-review
 # leaves them to it and judges the rest.
