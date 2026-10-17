@@ -13,7 +13,7 @@ pkit:
       record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053]
       artefact: [RS-SAN-001]
     revalidated:
-      at: 2026-10-16T23:06:29Z
+      at: 2026-10-17T00:59:09Z
       outcome: updated
       deferred:
         - anchor:
