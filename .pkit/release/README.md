@@ -11,7 +11,7 @@ pkit:
         - .changie.yaml
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
-      record: [COR-010, COR-041, PRJ-002, PRJ-004, ADR-040]
+      record: [COR-010, COR-030, COR-041, PRJ-002, PRJ-004, ADR-040]
       artefact:
         - .pkit/lifecycle/README.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/README.md#the-replay-a-missing-completion
@@ -141,6 +141,69 @@ custom:
   *Requires backbone >=X.Y.Z.* (below). Say in the changeset's body what the
   adopter must do — typically *upgrade the component together with the
   backbone*.
+
+### Declaring that a capability needs another capability's version
+
+A branch may add a capability's `requires_capabilities` entry, but the floor it
+writes there names no version above the one the tree carries for the
+capability depended on (PRJ-002 D1). In the tree where that capability is
+installed, `pkit validate` refuses a higher floor, since the range then
+excludes the installed version. Yet a branch can make a capability depend on
+another capability's unreleased surface. The branch says so in the dependent's
+changeset, and the release writes the floor:
+
+```yaml
+component: living-docs
+kind: minor
+body: The capability contributes the rule-set reviewer to the merge gate. Upgrade project-management with it.
+requires_capabilities:
+  project-management: release   # needs the project-management this release writes
+```
+
+- **`requires_capabilities`** maps each capability the component needs a
+  version of to one of two values. `pkit release apply` raises the `>=` floor
+  of that capability's entry in the component's `requires_capabilities` to it
+  (the capability floor raise, below). Top-level or under `custom:`, like
+  `requires_backbone`. changie's prompts write single values, not a mapping,
+  so add the field by hand after `changie new`. To raise an existing floor,
+  declare it rather than editing the entry, so the release states it in the
+  changelog.
+  - **`release`** — the version this release writes for that capability. For
+    a need on its surface that has not shipped yet — typically a change to it
+    in the same pull request, or one merged beside it. The release must move
+    that capability: a pending changeset of it is `patch` or above. A release
+    that does not move it writes no version for it, so it refuses the
+    declaration: name the version that shipped the surface instead.
+  - **An explicit `X.Y.Z`** — a release of that capability the tree records:
+    the `**<capability> X.Y.Z**` tag that opens a changelog entry in
+    `CHANGELOG.md`, or the version the tree carries for it. It is at or below
+    the version the tree carries. For a need an older release already meets.
+    Quote it, as for `requires_backbone`. The changelog tags components'
+    entries from `1.140.0` on, so a need an older release meets names the
+    first release it records.
+- **A release can overtake a `release` declaration.** The lint passes it on
+  the pull request while the capability's own changeset is pending. If a
+  release consumes that changeset before the pull request merges, the
+  declaration names nothing. Where `main` merges through a queue, the queue's
+  run of `pkit release lint` refuses it before it lands. A merge that bypasses
+  the queue lands it, and every later release refuses until it is fixed.
+  Either way, name the version that release shipped.
+- **In an adopter's repository** the capabilities the project depends on are
+  installed, not released there. The project writes no changeset for them,
+  since a release of one would rewrite files the project does not own (the
+  no-shared-files invariant), so no release there moves them and `release`
+  never names a version. The invariant, not the release step, keeps such a
+  changeset out. Its changelog records only the project's own components, so
+  the explicit version can name only the installed one.
+- It belongs on a **version-moving changeset** (`patch` / `minor` / `major`) of
+  a component whose `requires_capabilities` lists that capability **once**, its
+  `version` a range `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`, double-quoted. Add the
+  dependency itself on the branch, its floor no higher than the version the
+  tree carries, and declare the raise in the same pull request.
+- A raise that would leave the range admitting no version of the capability
+  depended on refuses the release before anything is written.
+- The release states the raised floor in the component's changelog entry —
+  *Requires project-management >=0.55.0.* — as for a backbone floor.
 
 ### Authoring a changeset
 
@@ -343,7 +406,7 @@ PR** a human merges — it is *not* auto-run on every merge.
 | Command | Writes? | What |
 |---|---|---|
 | `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). |
-| `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
+| `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors, on the backbone and on capabilities → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
 | `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. Runs the cross-repository guard first; `--allow-foreign-repo` confirms a merge in another repository than the session's anchor's. |
 | `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes without calling `gh`. Runs the cross-repository guard first; `--allow-foreign-repo` confirms publishing in another repository than the session's anchor's. |
 | `pkit release check` | no | The CI guard (below). |
@@ -355,7 +418,8 @@ and with it the self-host `.pkit/manifest.yaml`'s `backbone_version:` and
 [the lifecycle README's "Backbone manifest"](../lifecycle/README.md#backbone-manifest-projectpkitmanifestyaml)
 and [PRJ-007](../decisions/project/PRJ-007-release-maintains-self-host-manifest.md)
 say; the `version:` line in a component's `package.yaml`); **broadens**
-`requires_backbone` (see below); **raises the declared floors** (below);
+`requires_backbone` (see below); **raises the declared floors**, on the
+backbone and on capabilities (below);
 prepends a `CHANGELOG.md` entry from the notes, stating each raised floor; and
 deletes the consumed changesets. `plan` shows each floor it will raise under
 the component's bump.
@@ -466,6 +530,42 @@ capability's author owns
   plan `lines`, and the `changelog` sentence, null when the range does not
   change), which the release-PR workflow prints under the bump; the PR body's
   generated changelog shows the sentence in the component's entry.
+
+### The declared capability floor raise (PRJ-002 D4; COR-030)
+
+The same raise, one tier over: for each component the release moves whose
+changesets declare `requires_capabilities` ("Declaring that a capability needs
+another capability's version" above), `apply` raises the `>=` floor of each
+named capability's entry to the highest version the component's changesets
+name for it — for `release`, the version this release writes for that
+capability, and for an explicit version, that version.
+
+- **Declared, never automatic; raise-only.** As for the backbone: a component
+  that declared nothing keeps its floor, and a floor already at or above the
+  declared version is left as it is, which `plan` says.
+- **`release` needs the release to move the capability.** It never falls
+  back to the capability's current version: a release that does not move the
+  capability is refused before anything is written, by the lint, `plan` and
+  `apply` alike.
+- **No empty range.** Before anything is written `apply` computes each raised
+  range and refuses the release if one would not admit the floor it names
+  after the raise.
+- **The rewrite** touches the one `>=X.Y.Z` in the entry's `version:` line, in
+  place: the upper bound, `optional:` and comments survive. Only a block list
+  item under the top-level `requires_capabilities:` key is read, its `name:`
+  and `version:` on lines of their own or on the `- ` line.
+- **In the changelog**, on the entry of the changeset that set the floor — the
+  one naming the highest version, the first by file name among equals — after
+  any backbone sentence:
+  *Requires project-management >=0.55.0.* Each raised capability gets its own
+  sentence, in name order.
+- `pkit release plan --json` carries each raise under the component's release
+  as `requires_capabilities_floors`, a list (empty when none): the
+  `capability`, the floors `from` and `to`, whether it is `raised`, the
+  `declared` version and whether the declaration that set it `names_release`,
+  the capability's `version` after the release and whether it `moves`, the
+  plan `lines`, and the `changelog` sentence. The release-PR workflow prints
+  the lines under the bump.
 
 **Tagging is a separate, anchored step** (COR-004's each-step-its-own-command
 principle — the same reason `version bump` and `version tag` are distinct).
@@ -818,7 +918,8 @@ changeset not yet committed is not in it.
 
 **A declared floor rides on its component or a release of it (PRJ-002 D4).**
 From the same diff, the guard also fails a PR that declares a
-`requires_backbone` floor for a component it neither touches nor moves:
+`requires_backbone` or `requires_capabilities` floor for a component it neither
+touches nor moves:
 
 - **Declares** — the PR adds or edits a changeset, and the floor it carries
   differs from the one the file held at the merge base (added, or its value or
@@ -840,7 +941,9 @@ changeset may not carry a floor (check 3 below); what the guard adds is the
 pull request that declared it. **No escape
 hatch waives this check**: the `skip-changeset` label and the release-PR
 exemption below both waive the surface check only, and a release diff only
-deletes changesets, so it declares no floor.
+deletes changesets, so it declares no floor. A changeset whose
+`requires_capabilities` is not a mapping of capability names to single values
+cannot be read, so it fails the guard, as it fails every release command.
 
 **Escape hatches for the surface check** (so trivia / docs PRs aren't forced
 into ceremony):
@@ -853,7 +956,8 @@ into ceremony):
 **Release-PR exemption (automatic, no label).** A release PR *is*
 `pkit release apply`'s output — it bumps `.pkit/VERSION` and each moving
 `package.yaml`, rewrites `requires_backbone` lines (the broaden and any declared
-floor), moves the self-host `.pkit/manifest.yaml`'s `backbone_version` on a
+floor) and the `version:` line of a `requires_capabilities` entry whose floor a
+changeset declared, moves the self-host `.pkit/manifest.yaml`'s `backbone_version` on a
 backbone release, prepends `CHANGELOG.md`, and **deletes** the consumed
 `.changes/unreleased/*` changesets. That diff would trip the guard (VERSION and
 `package.yaml` are surface) while the changesets it would need are exactly the
@@ -863,7 +967,8 @@ against one list of what a release writes (`release_writes` in
 writes through — each file, the status the write leaves, and, for a file
 rewritten in place, the only lines it changes, through the patterns the
 writers rewrite them by (a `package.yaml`'s `version:` line and a
-`requires_backbone:` range the broaden widens or a declared floor raises, the
+`requires_backbone:` range the broaden widens or a declared floor raises, a
+`requires_capabilities` entry's `version:` range a declared floor raises, the
 manifest's `backbone_version:`). A diff that is *only* those writes, and more
 than the consumed changesets, is the release itself, not a new surface change,
 and passes the surface check with no `skip-changeset` label. The signal is the
@@ -944,6 +1049,21 @@ shared aggregator (`scripts/check.sh`), which both the local pre-push hook and
    when a changeset carries the field. **The escape hatch does not cover this
    check**: it is the release's own refusal, reported early, and an invalid
    field blocks every later release on `main` until it is fixed.
+
+   A `requires_capabilities` field is checked the same way, for each
+   capability it names: the value must say `release` — when a pending changeset
+   moves that capability — or name a release of that capability the tree
+   records (the `**<capability> X.Y.Z**` tag that opens a `CHANGELOG.md`
+   entry, or the version the tree carries for it) at or below the version the
+   tree carries, on a
+   version-moving changeset of a component whose `requires_capabilities` lists
+   that capability once with a range `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`. It
+   fails on the backbone, on a `none` changeset, on an unknown component, on a
+   name that is the backbone or no component the tree carries, on a capability
+   the component does not list or lists more than once or in another shape, and
+   on any other value. A field that is not a mapping of names to single values
+   is refused when the changeset is read, by every release command and the
+   guard alike. The escape hatch does not cover it either.
 4. **`CHANGELOG.md` structure** — release-section (`## `) headings match the
    generator's shape (`## <version> — <date>` or a date-only `## <date>`; the
    canonical KaC `## [<version>] - <date>` is also accepted), and every
