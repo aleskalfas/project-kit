@@ -50,8 +50,8 @@ The **items of a part** are its list's top-level items. Under a label that
 opens a list item, `- **Steps:**`, they are the items of the list nested in
 that item. The label's item ends where Markdown ends it, so what follows it,
 such as a writer's `- **Note:**` beside it, is no item of the part's list.
-That item, and the items of any other list in the part, are judged by the
-`sentence` form alone, each as its own text.
+The `sentence` form refuses that item, and the items of any other list in
+the part.
 
 A **list form** judges only the items, so a line a writer adds outside them
 never breaks it. It holds at least one item, or `None.` where its part allows
@@ -60,12 +60,16 @@ matches is not of its schema's shape, which the schema reports. The forms,
 each with what it reads:
 
 - **`sentence`:** the text holds one sentence. No sentence ends before its
-  last word. A sentence ends at a full stop, a question mark or an exclamation
-  mark, only where a space, a line end or the text's end follows it, and never
-  inside a code span (RS-SAN-001's *How*). In a part that holds a list, each
-  item holds it on its own, a nested item apart from the item it sits in, and
-  so does the rest of the part, taken as one text. In a front-matter field
-  that holds a list, each item holds it.
+  last word. A sentence ends at `.`, `?` or `!` followed by white space and a
+  capital letter, and at the text's end, never inside a code span or a fenced
+  block (RS-SAN-001's *How*). No other mark ends one. A
+  character Unicode makes default-ignorable, such as a zero-width space or a
+  variation selector, is read as nothing. A part of this form is one text,
+  the whole of what it holds, and holds no Markdown list: an item of any list
+  in it, one inside a block quote included, breaks the form, besides the item
+  its label opens. A part that holds a list is not judged as a sentence too,
+  since a list's markers are no text. In a front-matter field that holds a
+  list, each item is one text.
 - **`numbered-steps`:** each item opens with its step's number, and no number
   repeats. A number is an item's own marker, `2.`, or one its text opens with,
   `2.` or `**2.**`. The numbers need not run in sequence, since steps are
@@ -110,6 +114,7 @@ when what it rests on changes, and a person rereads it (DEC-001 point 4).
 from __future__ import annotations
 
 import re
+import unicodedata
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
@@ -132,8 +137,11 @@ NONE = "None."
 #: How a text breaks its form: the `sentence` form's own, and every other form's.
 NOT_A_SENTENCE, BREAKS_FORM = "not-a-sentence", "breaks-its-form"
 
-#: What a `sentence` breach in a list's item says of where it is.
-IN_AN_ITEM = "in a list, each item holds one sentence"
+#: What a `sentence` part that holds a list breaks (RS-SAN-001's *How*).
+HOLDS_A_LIST = (
+    "it holds a list, where a part of this form is one sentence and holds no list, not even "
+    "inside a block quote: write it as one sentence"
+)
 
 #: The outcomes a gap names (DEC-001 point 6).
 NAMED_BY_A_GAP = ("code-regressed", "gap-found")
@@ -513,20 +521,51 @@ def _after(rest: str, item: Item) -> str:
 
 
 def _sentence(part: Part) -> list[Breach]:
-    return [
-        Breach(NOT_A_SENTENCE, line, IN_AN_ITEM if line != part.line else "")
-        for line, text in _texts(listing(part), part.line)
-        if text.strip() and not one_sentence(text)
-    ]
+    """A `sentence` part: one text, the whole of what it holds, of one sentence, and no
+    list in it, not even inside a block quote (RS-SAN-001's *How*). A list breaks the form
+    at its first item's line, and its markers are no text to judge as a sentence, so the
+    sentence is judged, at the part's line, only where the part holds no list."""
+    listed = _first_item(part)
+    if listed is not None:
+        return [Breach(BREAKS_FORM, listed, HOLDS_A_LIST)]
+    rows = ((part.lead,) if part.lead else ()) + part.rows
+    text = "\n".join(_FENCED if row.fence else row.text for row in rows)
+    return [] if one_sentence(text) else [Breach(NOT_A_SENTENCE, part.line)]
 
 
-def _texts(found: Listing, line: int) -> Iterator[tuple[int, str]]:
-    """Each text a `sentence` part holds: the rows outside its lists, taken as one, and
-    each item's own text, apart from the items nested in it — an item of the part's
-    list or of another list in the part alike."""
-    yield line, "\n".join(row.text for row in found.outside)
-    for item in (*found.items, *found.others):
-        yield from _texts(nested(item), item.line)
+#: What a fenced block's line reads as in a `sentence` part: code, which ends no sentence.
+_FENCED = "code"
+
+
+def _first_item(part: Part) -> int | None:
+    """The line of the first list item a part holds, besides the item its label opens,
+    in a block quote or not; `None` where it holds none."""
+    found = listing(part)
+    lines = [item.line for item in (*found.items, *found.others)]
+    lines += [item.line for item in _quoted_items(found.outside)]
+    return min(lines, default=None)
+
+
+_QUOTE_MARKS = re.compile(r"^(?: {0,3}>[ ]?)+")
+
+
+def _quoted_items(rows: Sequence[Row]) -> list[Item]:
+    """The items of each list inside a block quote among `rows`: each run of lines that
+    open with a quote's `>`, read as a list once their marks are taken off, as Markdown
+    reads a quote's content. A fence's line in a run goes with it, so a line of fenced
+    code outside a quote never opens one."""
+    items: list[Item] = []
+    run: list[Row] = []
+    for row in (*rows, None):
+        marks = None if row is None else _QUOTE_MARKS.match(row.text.expandtabs(4))
+        if row is not None and marks is not None and (row.fence != IN_FENCE or run):
+            text = row.text.expandtabs(4)[marks.end() :]
+            run.append(Row(row.number, text, row.fence))
+            continue
+        if run:
+            items += read_list(run).items
+            run = []
+    return items
 
 
 def _where_a_list_goes(listed: Listing) -> str:
@@ -976,7 +1015,7 @@ def _gaps_match(part: Part, context: Context) -> list[Breach]:
 # --- a front-matter field's text ---------------------------------------------------------------
 
 _CODE_SPAN = re.compile(r"(`+)(.+?)\1", re.DOTALL)
-_SENTENCE_END = re.compile(r"[.?!](?=\s|$)")
+_SENTENCE_END = re.compile(r"[.?!]\s+")
 _WORD = re.compile(r"\w")
 _WORDS = re.compile(r"\w+")
 _ARTICLES = frozenset({"a", "an", "the"})
@@ -984,11 +1023,50 @@ _ARTICLES = frozenset({"a", "an", "the"})
 
 def one_sentence(text: str) -> bool:
     """Whether `text` is one sentence: no sentence ends before its last word. A sentence
-    ends at a full stop, a question mark or an exclamation mark, only where a space, a
-    line end or the text's end follows the mark; a mark inside a code span ends none
-    (RS-SAN-001's *How*). So "e.g." ends one wherever a space follows it."""
-    plain = _CODE_SPAN.sub("code", text)
-    return not any(_WORD.search(plain, end.end()) for end in _SENTENCE_END.finditer(plain))
+    ends at `.`, `?` or `!` followed by white space and a capital letter, and at the
+    text's end, no other mark ending one; a mark inside a code span ends none
+    (RS-SAN-001's *How*). White space is any a reader sees as a space, a line end and a
+    no-break space included, and a character Unicode makes default-ignorable, such as a
+    zero-width space, is read as nothing (`_ignorable`). So "e.g. for" and "3. října" end
+    none, and a text in a script without capital letters is one sentence."""
+    seen = "".join(c for c in text if not _ignorable(c))
+    plain = _CODE_SPAN.sub("code", seen)
+    return not any(
+        end.end() < len(plain) and _capital(plain[end.end()])
+        for end in _SENTENCE_END.finditer(plain)
+    )
+
+
+#: The code points Unicode makes default-ignorable that are no format character
+#: (`Default_Ignorable_Code_Point`, DerivedCoreProperties.txt): the combining grapheme
+#: joiner, the Hangul fillers, the Khmer inherent vowels, the Mongolian variation
+#: selectors and vowel separator, the variation selectors, and the tags plane.
+_IGNORABLE = (
+    (0x034F, 0x034F),
+    (0x115F, 0x1160),
+    (0x17B4, 0x17B5),
+    (0x180B, 0x180F),
+    (0x3164, 0x3164),
+    (0xFE00, 0xFE0F),
+    (0xFFA0, 0xFFA0),
+    (0xE0000, 0xE0FFF),
+)
+
+
+def _ignorable(character: str) -> bool:
+    """Whether a reader sees nothing of `character`: a format character, such as a
+    zero-width space or a soft hyphen, or another code point Unicode makes
+    default-ignorable, such as a variation selector."""
+    if unicodedata.category(character) == "Cf":
+        return True
+    point = ord(character)
+    return any(first <= point <= last for first, last in _IGNORABLE)
+
+
+def _capital(character: str) -> bool:
+    """Whether `character` is a capital letter, in any script that has them: an
+    uppercase or a titlecase letter."""
+    return unicodedata.category(character) in ("Lu", "Lt")
 
 
 def field_breach(form: str | None, text: str, fields: Mapping[str, Any]) -> tuple[str, str] | None:

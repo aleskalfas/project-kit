@@ -12,9 +12,9 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
         - .pkit/capabilities/software-analysis/review-contributions.yaml
       record: ["software-analysis:DEC-001", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, "project-management:DEC-032"]
-      artefact: [RS-SAN-001]
+      artefact: [RS-SAN-001, RS-SAN-002]
     revalidated:
-      at: 2026-10-17T01:59:37Z
+      at: 2026-10-17T13:18:27Z
       outcome: updated
       deferred:
         - anchor:
@@ -40,7 +40,7 @@ Each artefact declares what makes it true — its anchors — and when it was la
 
 Install it with `pkit capabilities install software-analysis`. Then:
 
-1. **Write a rule set of your own that inherits `SAN`.** The format rule binds on your analysis only through such a set. The preview reads it too ("Where `SAN` binds: a set of your own", below).
+1. **Write a rule set of your own that inherits `SAN`.** `SAN`'s rules bind on your analysis only through such a set. The preview reads it too ("Where `SAN` binds: a set of your own", below).
 2. **Choose each kind's parts,** which its template shows and the stamp writes. The shipped parts are a starting point you review, never a default you skip (DEC-001 point 1). For each kind:
    - review its shipped parts
    - fill a candidate with one of your own examples, and check it with `pkit analysis validate --preview`
@@ -332,7 +332,7 @@ Each kind's structure is declared once, as data, in `schemas/artefact-kinds.yaml
   - `opening`: the text before the first label, such as an actor's description
 - **Every part is required.** A part with nothing to say reads `None.`, where its element sets `allows-none: true`.
 - **A hint and an example** go with each part and each front-matter field a writer fills, one line each. A hint says what goes there. A heading the stamp writes has an example and no hint.
-- **Forms:** a part or a front-matter field may name a form, a check on its content from a closed list. In a list, each item holds it.
+- **Forms:** a part or a front-matter field may name a form, a check on its content from a closed list. A list form, such as `numbered-steps`, judges only the part's list items. The `sentence` form judges the whole part as one text, and refuses a list in it ("Each body against its structure", below).
 - **The glossary, a collection:** the `term` kind declares each entry's section, and the file's `head`. The head is the file's heading and opening, which the stamp writes once, when it creates the file.
 
 The parts each kind ships:
@@ -357,7 +357,7 @@ The forms, each described in the schema:
 | `gaps-match-outcomes` | a record's *Gaps* | one item for each gap, labelled with the ids it affects and holding its `**Resolution:**` |
 | `definition` | a term's `definition` | a phrase with no article first, no full stop last, and no word of the term's name |
 
-**What binds it.** An artefact kind's structure is the checkable part of the format rule, `RS-SAN-001`. It binds where that rule binds, through a rule set of your own, and at the rule's status, which is proposed ("The method rule set: `SAN`", below). The revalidation record's structure binds always. A record is a held document, which no rule binds on, so the capability checks it itself (DEC-001 point 1). A kind's companion schema still checks its front matter whatever the rule's status.
+**What binds it.** An artefact kind's structure is the checkable part of the format rule, `RS-SAN-001`. It binds where that rule binds, through a rule set of your own, and at the rule's status, which is accepted ("The method rule set: `SAN`", below). The revalidation record's structure binds always. A record is a held document, which no rule binds on, so the capability checks it itself (DEC-001 point 1). A kind's companion schema still checks its front matter whatever the rule's status.
 
 **What reads it.** The check, `pkit analysis validate`, holds each record's body to it always. It holds each artefact's body and front matter to it, every part and every form, where the format rule is accepted and binds, and previews it before ("Each body against its structure", below). The stamp renders each body from it, and each template's body is the same rendering (below). Both read it as your own file changes it ("A project's own structures", below). A test holds the file to its schema.
 
@@ -504,7 +504,8 @@ It fails on:
 
 - **a declared part that is missing, out of order or empty;**
 - **`None.` in a part that may not read it**, such as a use case's *Trigger*, which always has something to say;
-- **text of the `sentence` form that is not one sentence**, in a part such as a use case's *Goal*, or in each of an actor's `needs`. In a list, each item holds one sentence, a nested item apart from the item it sits in, and so does the rest of the part, taken as one text. Where a sentence ends is the rule's *How*: at a full stop, a question mark or an exclamation mark before a space or a line end, and never inside a code span.
+- **text of the `sentence` form that is not one sentence**, in a part such as a use case's *Goal*, or in each of an actor's `needs`. Where a sentence ends is the rule's *How*: at `.`, `?` or `!` followed by a space and a capital letter, and at the text's end. So "e.g. for" and "3. října" end none, while "Dr. Smith" ends one: reword such a text. A text in a script without capital letters, such as Chinese or Arabic, is never split. The *How* also says what counts as a space, and that code ends no sentence.
+- **a part of the `sentence` form that holds a Markdown list**, at the list's first item: the part is one text, and holds no list, not even inside a block quote. A front-matter list, such as an actor's `needs`, is no part: each of its items is one text.
 - **a part or a field that breaks another form its structure gives it:**
   - `numbered-steps`, a use case's *Main path*: no numbered step, a step that opens with no number, or a number used twice. A step's number is its list marker, `2.`, or the number its text opens with, `**2.**`. Numbers need not run in sequence, since steps are only ever added, as `pkit analysis check-numbers` checks ("Steps and variants stay append-only", below).
   - `variants`, a use case's or a journey's *Variants*: neither `None.` nor a list, or a variant that does not open with a step's number and a letter, `2a.` or `**2a.**`, or that names a step the use case's *Main path* or the journey's *Steps* does not number.
@@ -519,7 +520,7 @@ Each message gives the part's hint and example. How the check reads a body:
 - **What marks a part.** A heading, or a bold label such as `**Goal:**` that opens a line or a top-level list item. Only a label the kind declares marks a part, so a variant's `**2a.**` is content.
 - **Where a part ends.** A label sits one level below the heading it follows. Its part runs to the next declared label, or to a heading of its level or above. So under a use case's `#` heading, a `##` section ends the part above it, and a `###` one stays inside it.
 - **A part's list.** Items are read as Markdown reads a list, save that fenced code stays whole, up to its closing line, with the item it opens in. A wrapped line indented under an item's text stays in the item, even one that starts `2026.`. Not indented, a line that starts with a number and a full stop opens an item, as Markdown shows it. A line right below a label that starts `2.` continues the label's line, so start a list right below a label with `1.` or a bullet, or after a blank line. Under a label that opens a list item, such as `- **Steps:**`, the list nested in that item is the part's, and an item of your own beside it, such as `- **Note:**`, is not.
-- **What you add passes.** A label or a section of your own is never reported. It is content of the part it falls in, though. So text you add inside a part of the `sentence` form, such as *Goal*, counts toward its one sentence, unless it is an item of a list, which holds one sentence of its own. A form that reads a list judges only its items, so a lead line or a note of your own outside them passes.
+- **What you add passes.** A label or a section of your own is never reported. It is content of the part it falls in, though. So text you add inside a part of the `sentence` form, such as *Goal*, counts toward its one sentence, and a list you add there breaks the form. A list form judges only its items, so a lead line or a note of your own outside them passes.
 - **Code and comments.** A label in fenced code or in an HTML comment marks nothing. A comment is no content, so a part that holds only a comment, such as its hint, is empty, and an opening that holds only its hint is missing. A `<!--` inside a code span that closes on its own line opens no comment.
 - **A field still holding its hint** is not judged against its form: the hint left in is the placeholder check's, above.
 - **A glossary entry** is read within the lines `pkit friction artefacts --json` gives as its section's `span`, the text friction compares as the entry. The glossary's head is its body above the first entry.
@@ -527,19 +528,21 @@ Each message gives the part's hint and example. How the check reads a body:
 - **A revalidation record** is held to the structure declared now, the only one the capability has declared. Holding a record to the structure in force on its day comes with the first change to a structure (DEC-001's Implications). Your relabels may come after a record was written, so a part you relabelled is found by its shipped label too.
 - **A missing heading** of an actor, a use case or a journey is the heading check's, above, which reports it whatever the rule's status.
 
-**While the rule is proposed**, as it is now, the check reports nothing of an artefact's structure, and its summary says so (COR-051 point 4). A record's structure is checked all the same. `pkit analysis validate --preview` previews the rule as if it were accepted, where `pkit rule-sets reach --preview` says it would bind: through a set of yours that inherits `SAN`. Each finding it would fail on is listed at the severity `report`, its message opening `preview:`, and the exit status stays the normal check's. With no such set, it previews nothing. `pkit validate` runs the normal check, with no preview. A superseded or withdrawn rule binds nothing, in a preview too.
+**The rule is accepted**, so where it binds, each finding above is an error, and `pkit validate` fails on it. While a rule is proposed, the check reports nothing of what it binds, and its summary says so (COR-051 point 4). A record's structure is checked all the same. `pkit analysis validate --preview` previews a proposed rule as if it were accepted, where `pkit rule-sets reach --preview` says it would bind: through a set of yours that inherits `SAN`. Each finding it would fail on is listed at the severity `report`, its message opening `preview:`, and the exit status stays the normal check's. With no such set, it previews nothing. `pkit validate` runs the normal check, with no preview. A superseded or withdrawn rule binds nothing, in a preview too.
 
 ## The method rule set: `SAN`
 
-`rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds one rule, the format rule, proposed, with the decision as its origin and its anchor (DEC-001 point 1):
+`rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds two rules, each accepted, with the decision as its origin and its anchor: the format rule (DEC-001 point 1), and the append-only rule (DEC-001 point 3).
 
 | Rule | Status | Statement |
 |---|---|---|
-| `RS-SAN-001` | proposed | An analysis artefact carries its kind's declared structure, and each kind has a template. |
+| `RS-SAN-001` | accepted | An analysis artefact carries its kind's declared structure. |
+| `RS-SAN-002` | accepted | A use case's steps and variants keep their numbers and letters. |
 
-- **What the rule binds.** The presence and the order of every part an artefact kind ships, and the form of each part and front-matter field its structure gives one. A withdrawn artefact is held to no part or form that came after its withdrawal. A revalidation record is no artefact, so the rule does not cover it: the capability checks a record's structure itself, always. A hint binds nothing, so the voice a hint asks for is no part of the rule. The rule's *How* says where a sentence ends, for text of the `sentence` form.
-- **What it gates.** The check of each artefact kind's structure, since that structure binds at the rule's status (DEC-001 point 1). While the rule is proposed, the check reports nothing of an artefact's structure (COR-051 point 4), and `pkit analysis validate --preview` shows what it would report ("Each body against its structure", above). The check that keeps a use case's steps and variants append-only binds under the same gate, and `pkit analysis check-numbers --preview` shows it ("Steps and variants stay append-only", below). A kind's schema checks the front matter of an artefact or a record whatever the rule's status.
-- **What the check settles.** `SAN` declares, under `checks`, what this capability's check, `software-analysis:validate`, enforces of the rule (COR-051 point 2). That command is the one `pkit validate` runs as its `software-analysis:artefacts` member. The declared part is what the rule binds, above, as far as the check holds it ("Each body against its structure", above). Whoever judges the rest of the rule leaves that part to the check, and `pkit rule-sets reach` lists the part wherever the rule binds.
+- **What the format rule binds.** The presence and the order of every part an artefact kind ships, and the form of each part and front-matter field its structure gives one. It binds the glossary's head too, wherever it binds on a term of the glossary. A withdrawn artefact is held to no part or form that came after its withdrawal. A revalidation record is no artefact, so the rule does not cover it: the capability checks a record's structure itself, always. A hint binds nothing, so the voice a hint asks for is no part of the rule. For text of the `sentence` form, the rule's *How* says where a sentence ends, and that a part of that form holds no list.
+- **What the append-only rule binds.** A use case's steps and variants keep their numbers and letters across a change, and a new one goes past them, as the rule's *How* says.
+- **What each gates.** The format rule gates the check of each artefact kind's structure, since that structure binds at the rule's status (DEC-001 point 1). The append-only rule gates the check that keeps a use case's steps and variants append-only. Both rules are accepted, so each check fails on what it finds where its rule binds. While a rule is proposed, its check reports nothing (COR-051 point 4). `pkit analysis validate --preview` shows what the structure check would report ("Each body against its structure", above), and `pkit analysis check-numbers --preview` what the append-only check would ("Steps and variants stay append-only", below). A kind's schema checks the front matter of an artefact or a record whatever any rule's status.
+- **What the checks settle.** `SAN` declares, under `checks`, what this capability's checks enforce of each rule (COR-051 point 2). Of the format rule, `software-analysis:validate` enforces what the rule binds, above, as far as it holds it ("Each body against its structure", above). That command is the one `pkit validate` runs as its `software-analysis:artefacts` member. Of the append-only rule, `software-analysis:check-numbers` enforces that no step or variant the base held is renumbered or removed ("Steps and variants stay append-only", below). `pkit validate` never runs that command, so run it in your check gate, or that part of the rule goes unchecked ("A number keeps its meaning", below). Whoever judges the rest of a rule leaves that part to the check, and `pkit rule-sets reach` lists the part wherever the rule binds.
 - **Its name and scope.** `SAN` takes no scope, as no method rule set does (COR-051 point 2). You never edit it (COR-051 point 6). Its name is reserved in your project. A rule set of yours named `SAN` clashes with it, and `pkit validate` fails on the clash (COR-051 point 3).
 
 ### Where `SAN` binds: a set of your own
@@ -550,7 +553,7 @@ Each message gives the part's hint and example. How the check reads a body:
 ---
 rule-set: ANALYSIS
 version: 1.0.0
-inherits: [software-analysis:SAN@0]
+inherits: [software-analysis:SAN@1]
 scope:
   types: [software-analysis:actor, software-analysis:term, software-analysis:use-case, software-analysis:journey]
 rules: {}
@@ -560,7 +563,7 @@ rules: {}
 ```
 
 - **Its scope** selects the analysis by the capability's types, so it reaches the artefacts wherever they lie. A revalidation record has no type, and no scope selects one. The capability checks a record's structure itself.
-- **Its pin,** `SAN@0`, decides when a new major of `SAN` starts binding. Accepting a rule of `SAN` gives `SAN` a new major. Your pin then falls behind, and no rule of `SAN` binds through it until you review the new major and update the pin (COR-051 point 7). `pkit rule-sets reach` lists each rule a pin behind its set holds back.
+- **Its pin,** `SAN@1`, decides when a new major of `SAN` starts binding. Accepting a rule of `SAN` gives `SAN` a new major. Your pin then falls behind, and no rule of `SAN` binds through it until you review the new major and update the pin (COR-051 point 7). `pkit rule-sets reach` lists each rule a pin behind its set holds back. `SAN` 1.0.0 accepted both its rules, so a set pinned at `SAN@0` binds neither, and `pkit validate` fails on its pin, until you re-pin it.
 - **A set you have already** that selects the analysis may inherit `SAN` instead. Changing what a set inherits gives that set a new major.
 - **Never silent.** The check's summary counts the artefacts no rule of `SAN` binds on. Where it binds on none of the analysis, the check says so, at the analysis's folder. It reports this while no rule of `SAN` is accepted, and warns once one is. Neither fails `pkit validate`. If you choose not to inherit `SAN`, you keep the warning.
 
@@ -601,11 +604,11 @@ Journeys and evidence cite a use case's step by its number, and a variant by its
 | neither its number or letter is left, nor its text under another | **removed**, an error naming the use case and the number or letter |
 | its number or letter holds other text, and its own text stands nowhere else | an edit, which passes: the check cannot tell a reworded step from another one |
 
-- **What passes.** A step or a variant added passes, whatever new number or letter it takes. So a step added between two takes the next free number, and the path keeps its order. A use case new in your change has nothing to compare, and passes. A step that no longer happens stays, its number kept, marked withdrawn.
+- **What passes.** A step or a variant added passes, whatever new number or letter it takes. The rule gives a new step a number higher than every number of its use case, so one added between two takes such a number too, and the path keeps its order. The check leaves that number to judgement. A use case new in your change has nothing to compare, and passes. A step that no longer happens stays under its number, as the rule says.
 - **It matches text alone.** So it misses a step renumbered and reworded at once whose old number still holds a step. And a new step that repeats, word for word, the old text of a step you reword reads as that step renumbered: word the new step apart.
 - **What it reads.** A use case is known by its id, so one moved into an area is compared too. Its steps are the numbered items of its *Main path*, and its variants the lettered items of its *Variants*. Both are read as the structure check reads them, with your own structures' labels. A step's text is what follows its number, white space aside.
 - **Which base.** The number check's base, read where your branch left it, as the friction change check reads a change. So what the default branch did since is not your change's. A clone that lacks the base, or where your branch left it, fails as above, rather than passing.
-- **Where it binds.** Where the format rule, `RS-SAN-001`, binds, and at its status, as the structure check holds a body ("Each body against its structure", above). Accepted, each finding is an error. While the rule is proposed, nothing is compared, and the summary says so. `--preview` compares where `pkit rule-sets reach --preview` says the rule would bind, and each finding is a report opening `preview:`, which never fails. The summary counts the use cases the rule does not bind on.
+- **Where it binds.** Where the append-only rule, `RS-SAN-002`, binds, and at its status, as the structure check holds a body where the format rule binds ("Each body against its structure", above). Accepted, as the rule is, each finding is an error. While a rule is proposed, nothing is compared, and the summary says so. `--preview` compares where `pkit rule-sets reach --preview` says the rule would bind, and each finding is a report opening `preview:`, which never fails. The summary counts the use cases the rule does not bind on.
 - **Not in `pkit validate`.** It reads the base, so it answers about your change rather than the tree (COR-055 point 2). `pkit analysis validate` never runs it.
 
 `--json` prints `{schema_version, base, freed, summary, findings}`, the findings of both checks together: `base` is `{ref, tip, commit, outdated}` (`commit` is the merge-base), or `null` when nothing was compared; `freed` lists each file whose number your numbering setting frees, `{id, path, added_by, freed_by}`, and is empty without one. It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
@@ -914,7 +917,7 @@ When that floor requires the reviewer, and what it reads locally, is in [project
 
 ## What's shipped now, what's next
 
-Shipped: the decision; the method rule set `SAN`, its format rule proposed; each kind's declared structure, `schemas/artefact-kinds.yaml`, and a project's own changes to it, `project/structures.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each record's body to its structure always, and each artefact's where the format rule is accepted and binds through a set of the project's own, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own, which also keeps a use case's steps and variants append-only; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`; and the contribution of the core rule-set reviewer to project-management's merge gate. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
+Shipped: the decision; the method rule set `SAN`, its format rule and its append-only rule accepted; each kind's declared structure, `schemas/artefact-kinds.yaml`, and a project's own changes to it, `project/structures.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each record's body to its structure always, and each artefact's where the format rule is accepted and binds through a set of the project's own, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own, which also keeps a use case's steps and variants append-only; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`; and the contribution of the core rule-set reviewer to project-management's merge gate. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
 
 ## Citing this capability's decisions
 

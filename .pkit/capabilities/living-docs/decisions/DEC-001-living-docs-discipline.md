@@ -78,7 +78,7 @@ Each space has a *definition*: the rules its pages follow, and how its pages are
 
 The shared rule set turns these properties into checkable rules:
 - a page's **anchors ground every statement** it makes: code, decisions and rules, captured sources, analysis artefacts, and the home of each fact it summarises. Inline citations are optional where a page mixes sources;
-- each fact has **one home**, and another page states it only as a summary that links to the home and anchors to the home's section;
+- each fact has **one home**: the decision record that decides it, for a page that anchors what decides it, and otherwise one page. A page states a fact whose home is another page only as a summary that links to the home and anchors to the home's section;
 - each page **names its reader** and says only what that reader needs;
 - pages of a kind follow **one format**, with a template per kind;
 - an index-like file is a **signpost** to what a folder holds, never a summary of its contents;
@@ -95,13 +95,16 @@ The shared set is named `LDOC`, and its origins record this capability's own rea
 
 So a statement that rests on anything else breaks the rule on grounding until the page anchors what it rests on.
 
-**A fact's home.** Each fact that pages state has one home: the one page that states it in full. A fact that only one page states has that page as its home. A change to the fact is made at its home.
-- **A summary on another page** is allowed, so that each page stays useful on its own. It links to the home. Its page anchors to the home's section that states the fact (COR-050 point 2). A change to that section then flags the summary, and the change check asks it for an answer. An anchor on the whole home is not that anchor, since it would flag the summary on every edit of the home.
-- **A statement on another page** that lacks the link or the anchor breaks the rule on a fact's home. Whether one with both summarises the home, or states the fact in full again, is a passage for a person to judge.
+**A fact's home.** Each fact a page states has one home for that page. A change to a fact is made at the record that decides it, or else at its home among the pages.
+- **A fact a decision record decides** has the record as its home for a page that anchors the record. The anchor may be on the whole record, or on a part that stands on what decides the fact (COR-050 point 5). The page may state the fact. It needs no link to another page that states it, and no anchor on one.
+- **Every other fact a page states** has its home among the pages: the one page that states it in full, or for a decided fact, a page that states it in full. A fact that only one page states has that page as its home.
+- **A summary of a fact whose home is a page,** on another page, is allowed, so that each page stays useful on its own. It links to the home. Its page anchors to the home's section that states the fact (COR-050 point 2). A change to that section then flags the summary, and the change check asks it for an answer. An anchor on the whole home is not that anchor, since it would flag the summary on every edit of the home.
+- **A statement of such a fact on another page** that lacks the link or the anchor breaks the rule on a fact's home, however short it is. Words that give the fact state it, a phrase as much as a clause. Whether one with both summarises the home, or states the fact in full again, is a passage for a person to judge.
+- **A name,** such as a command's, a page's or a record's, needs no link to a home and no anchor on one. That holds where the name gives none of the named thing's facts.
 - **A fact stated more than once on one page,** each time in agreement, is a passage for a person to judge, not a settled break (COR-057 point 3). The rule leaves to that person whether the repeat serves the page's reader, as an opening summary or a recap may.
 - **Two statements of one fact that disagree** break the rule on a fact's home on each page that holds one of them, on one page or on two. Two statements disagree where one says what the other rules out. A statement that leaves out detail the other gives does not disagree with it.
 
-Two consequences follow from other rules. Anchors between artefacts form no cycle (COR-050 point 5), so two pages never summarise each other, directly or through other pages: all the facts they share have their homes on the same one of them. And user-facing navigation never leads into technical material (point 1), so a fact that a page of the user space and a page of the technical space both state has its home on the user space's page.
+Two consequences follow from other rules. Anchors between artefacts form no cycle (COR-050 point 5), so two pages never summarise each other, directly or through other pages. And user-facing navigation never leads into technical material (point 1), so a page of the user space never has a fact's home on a page of the technical space.
 
 **Where `LDOC` binds.** `LDOC`'s rules bind on a page only through a set of the project's own whose scope selects it, such as a space's definition (point 2). They do not bind through a pin that is behind its set (COR-051 point 7). A check enforces its part of an `LDOC` rule (point 6) only where the rule binds, as the backbone's one answer gives it. So validation checks a page's structure (RS-LDOC-004) and its reader (RS-LDOC-003) each only where its rule binds.
 
@@ -187,6 +190,10 @@ The cost falls on a page that no scoped set of the project's own reaches. No rul
 
 **Why each fact has one home, and a summary anchors to it.** A reader needs a fact on the page where they look, so another page may summarise it. The anchor keeps the statements together: a change to the home's section flags each summary of it, so the change check asks each one for an answer. An anchor on the home's section, not the whole home, asks only when that part changes. A statement on another page with no anchor drifts unseen. Within one page, both statements sit in one file, where whoever edits one has the other in front of them, and an opening summary or a recap may serve the reader. So whether a repeat earns its place is a person's call. Two statements that disagree never serve the reader, since one of them is false.
 
+**Why a decision record a page anchors is the home of the facts it decides.** A change to what decides the fact flags every page that anchors it, and each page's statement is held to what it anchors. So a decided fact stays true on each such page with no link between pages. The page anchors the record to ground the statement anyway, so the record as home adds no flag. A page that does not anchor the record needs a home among the pages, since nothing else flags that page when the fact changes.
+
+**Why a name needs nothing and a short statement needs both.** A name that gives none of a thing's facts turns false only when the thing is renamed or removed. An anchor on every name would flag a page on each edit of everything it names. A phrase that gives a fact drifts with the fact as a sentence does, and only the anchor on the home's section flags it.
+
 **Why propose and never apply.** An agent that rewrites pages directly will eventually rewrite them wrongly: it will misjudge an ambiguous file's audience, or "fix" a page to match a regression. Proposals that cite their evidence, reviewed by a person, keep speed without giving up judgment.
 
 **Why reader-review is separate from change review.** Change review asks whether a change left documentation missing or contradicted. Reader-review asks whether the documentation serves its reader at all. They catch different failures, and merging them would blur both.
@@ -203,6 +210,9 @@ The cost falls on a page that no scoped set of the project's own reaches. No rul
 - **An order of places of the capability's own for spaces, pinned to the backbone's by a test.** Rejected. Two orders would need keeping in step, and a document's type and its space could come from places ranked two ways.
 - **Each fact on one page only, other pages linking to it.** Rejected. A reader would follow a link for each fact, so a page would not serve on its own.
 - **A repeat within one page as a break.** Rejected. Both statements sit in one file, and an opening summary or a recap may be there on purpose.
+- **A link and an anchor to a page, for a decided fact on a page that anchors its record.** Rejected. The record already flags the page. The anchor would add a second flag on one fact, and the link would send the reader away for it.
+- **A short statement of another page's fact left to a person.** Rejected. No length marks where words start to state a fact. So one passage could be judged a break one time and left to a person the next.
+- **Any other artefact a page anchors as the home of what it says, such as a rule, an analysis artefact or code.** Not taken yet. It waits for a page that needs it. Until then, a fact no record decides, such as what a command does, has its home among the pages.
 - **A record a page mentions or cites, or code reached through an anchored file, grounding a statement.** Rejected. A change to either flags no page.
 - **Each space written without a shared method.** Rejected. Rules would be re-derived per space and per project, and would drift.
 - **The checks enforcing `LDOC`'s parts on every page of the spaces.** Rejected, as COR-051 rejects it for every method rule set (COR-051 point 2). One requirement would be enforced two ways, and the rule's status and scope would no longer decide where its check applies.

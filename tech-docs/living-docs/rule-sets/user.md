@@ -14,9 +14,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-16T11:38:52Z
+          at: 2026-10-17T11:56:30Z
           outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 3 refines the rules on a fact's home and on grounding, and says a fact both spaces state has its home on the user space's page, as the spaces' separation asks. Its sentence that the user space adds one rule, that reader paths stay unbroken, is as it was, so this rule holds.
+          unchanged-because: "living-docs DEC-001 point 3 refines the rule on a fact's home, and states the consequence of the spaces' separation as: a page of the user space never has a fact's home on a page of the technical space. Its sentence that the user space adds one rule, that reader paths stay unbroken, is as it was, so this rule holds."
 ---
 
 # The user space's definition

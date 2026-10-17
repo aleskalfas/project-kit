@@ -6,18 +6,18 @@ custom:
 body: >
   `pkit analysis validate` checks each analysis body against its kind's
   declared structure (DEC-001 point 1, #1364). It reports a declared part
-  missing, out of order or empty, `None.` in a part that may not read it, and
-  text of the `sentence` form that is not one sentence, in a part or in each of
-  an actor's `needs`. Each message gives the part's hint and example. Only a
-  label the kind declares marks a part, so a label or a section a writer adds
-  passes. A withdrawn artefact is never failed for a part it lacks. A glossary
-  entry is read within the span `pkit friction artefacts --json` gives its
-  section, and the glossary's head above the first entry. An artefact's
-  structure binds at the status of the format rule, RS-SAN-001, which is
-  proposed, so the normal check reports none of it. A revalidation record's
-  binds always. `pkit analysis validate --preview` previews the rule as if it
-  were accepted: each finding is a report whose message opens `preview:`, and
-  the exit status stays the normal check's. `pkit validate` runs the normal
-  check. The check reads each entry's `span` from the artefacts document,
-  which only the backbone this release ships gives, so the capability
-  requires it.
+  missing, out of order or empty, `None.` in a part that may not read it,
+  and text of the `sentence` form that is not one sentence, in a part or in
+  each of an actor's `needs`. Each message gives the part's hint and
+  example. Only a label the kind declares marks a part, so a label or a
+  section a writer adds passes. A withdrawn artefact is never failed for a
+  part it lacks. A glossary entry is read within the span `pkit friction
+  artefacts --json` gives its section, and the glossary's head above the
+  first entry. An artefact's structure binds at the status of the format
+  rule, RS-SAN-001: while it is proposed, the normal check reports none of
+  it. A revalidation record's binds always. `pkit analysis validate
+  --preview` previews the rule as if it were accepted: each finding is a
+  report whose message opens `preview:`, and the exit status stays the
+  normal check's. `pkit validate` runs the normal check. The check reads
+  each entry's `span` from the artefacts document, which only the backbone
+  this release ships gives, so the capability requires it.

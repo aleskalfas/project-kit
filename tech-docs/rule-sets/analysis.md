@@ -1,7 +1,7 @@
 ---
 rule-set: ANA
-version: 2.0.0
-inherits: [WRITE@1, software-analysis:SAN@0]
+version: 4.0.0
+inherits: [WRITE@2, software-analysis:SAN@1]
 scope:
   types: [software-analysis:actor, software-analysis:term, software-analysis:use-case, software-analysis:journey]
 rules:
@@ -29,8 +29,8 @@ These are the rules project-kit's analysis follows: two rules of its own, and th
 - **What it selects:** every actor, glossary term, use case and journey, by the four types software-analysis declares (software-analysis DEC-001 point 2). The scope names no paths, so it selects the analysis wherever software-analysis places it.
 - **What it does not select:** a revalidation record. A revalidation record is a held document, never an artefact, so no scope selects it. Whoever writes one still follows `WRITE`, through project-kit's operational rules (`.pkit/rules/project.md`).
 - **What it inherits:** the accepted rules of both sets bind on the analysis through this set (COR-051 point 7).
-  - `WRITE`, project-kit's general writing rules, pinned at `WRITE@1`.
-  - `software-analysis:SAN`, the software-analysis method, pinned at `SAN@0`. `SAN` takes no scope, so its rules bind on project-kit's analysis only through this set (software-analysis DEC-001 point 1).
+  - `WRITE`, project-kit's general writing rules, pinned at `WRITE@2`.
+  - `software-analysis:SAN`, the software-analysis method, pinned at `SAN@1`. `SAN` takes no scope, so its rules bind on project-kit's analysis only through this set (software-analysis DEC-001 point 1).
   - **The pins:** a rule accepted in an inherited set gives that set a new major. The same change re-pins this set, which gives it a new major too (COR-051 point 7).
 - **The set's own rules:** the actor's voice in needs and goals (RS-ANA-001), and each kind's list of labels (RS-ANA-002), which fills `RS-WRITE-002#labels`.
   - That a need or a goal is one sentence is the method's, through the `sentence` form of RS-SAN-001. So RS-ANA-001 leaves it out.

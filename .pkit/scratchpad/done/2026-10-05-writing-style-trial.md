@@ -251,11 +251,15 @@ The rules were then tried on two reference pages, on the branch `docs/1348-write
 
 - **Gains:** lists, the sentence limit and the paragraph limit helped most. Table cells read more easily too. The text grew by 6.5% and 3.7%, against 16% in the trial's plain rewrite.
 - **Costs:**
-  - The key lists of `--json` nested four levels deep.
+  - The key lists of `--json` nested four levels deep, and so did the flags of an answer's line.
   - A code span counts as words, so a quoted message filled a sentence alone. The fix added sentences that carry nothing.
   - Splits moved pronouns away from their nouns. Each noun named is a reading that the author must confirm. Twelve other spots stayed as written, for the author.
   - RS-WRITE-002 did not fit. The command sections differ too much for one list of labels.
-  - Three slips were caught: two moves broke a pointer each, and an editing tool wrote a bidi control character.
+  - Three slips were caught:
+    - A move took the file history out from under the label *The three answers*, which *What it compares* points at. The grouping was put back.
+    - A move put a sentence that says "this limit" after a different limit.
+    - An editing tool wrote U+202E itself where the CLI reference names its escape, `\u202e`. Only a scan of the bytes found it.
+- **Cells:** many cells of the CLI reference start with their verb, such as "Writes only with consent". The try-out's splits made more of them do so, such as "Exits 1 only in enforcing mode".
 - **What reference pages need:** these exceptions, before the spaces inherit the set:
   - a code span counts as one word
   - command synopses are exempt
