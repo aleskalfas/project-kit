@@ -207,6 +207,10 @@ def test_in_a_list_each_item_of_a_sentence_part_holds_one_sentence() -> None:
     # A line right below the label that opens with `2.` continues the label's paragraph.
     continued = "**Goal:** Export my report.\n2. Then share it."
     assert _found(USE_CASE.replace(goal, continued)) == [("goal", "not-a-sentence", 3)]
+    # A list inside a block quote is text of the part, not a list, as the *How* says
+    # (#1370): its items are one text with the rest, which holds two sentences here.
+    quoted = "**Goal:**\n\n> - Export my report.\n> - Share it."
+    assert _found(USE_CASE.replace(goal, quoted)) == [("goal", "not-a-sentence", 3)]
 
 
 def test_what_a_writer_adds_inside_a_sentence_part_counts_toward_it() -> None:

@@ -121,8 +121,9 @@ And where the format rule binds, at its status:
   backbone's reading spans it — against the structure its kind declares
   (`_lib/structure.py`): a declared part missing, out of order or empty,
   `None.` where the part may not read it, and a part or a front-matter field
-  that does not hold the form its element names (`_lib/forms.py`), in each
-  item of a list. A journey's steps read each use case's title. A part or a
+  that does not hold the form its element names (`_lib/forms.py`), text of
+  the `sentence` form in each item of a list too. A journey's steps read each
+  use case's title. A part or a
   label a writer adds is never reported, though what it holds is content of
   the part it falls in, and a list form judges only the part's list items. A
   withdrawn artefact is never failed for a part it lacks or for a form, since

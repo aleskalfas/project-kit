@@ -126,8 +126,13 @@ def test_the_how_reads_a_list_of_the_sentence_form_item_by_item() -> None:
     section = " ".join(_section(body, RULE).split())
     assert (
         "In a list, each item holds one sentence of its own, and a nested item holds one "
-        "apart from the item it sits in. The rest of the part, outside its lists, holds "
-        "one sentence too."
+        "apart from the item it sits in."
+    ) in section
+    # The rest of the part is one text, and a list in a block quote is part of it, as
+    # the check's list reader leaves a quoted line outside every list (`_lib/forms.py`).
+    assert (
+        "Any text the part holds outside its lists is taken as one text, and holds one "
+        "sentence too. A list inside a block quote is such text, not a list."
     ) in section
     assert "In a front-matter field that holds a list" in section
     forms = section.split("**Forms.**", 1)[1].split("**Hints.**", 1)[0]
@@ -140,7 +145,9 @@ def test_the_how_holds_the_glossary_s_head_where_the_rule_binds_on_a_term() -> N
     _data, body = _shipped()
     section = " ".join(_section(body, RULE).split())
     assert "**The glossary's head.**" in section
-    assert "carries it wherever this rule binds on one of its terms." in section
+    assert "Where this rule binds on a term, the glossary that holds it carries its head." in (
+        section
+    )
 
 
 def test_the_format_rule_declares_the_part_the_capability_s_check_enforces() -> None:
@@ -162,12 +169,16 @@ def test_the_format_rule_declares_the_part_the_capability_s_check_enforces() -> 
         "save on a withdrawn artefact"
     ) in part
     assert (
-        "one sentence in each item of a list, a nested item apart, and in the rest of its part"
+        "one sentence in each item of a list, a nested item apart, and in any text of its "
+        "part outside its lists, a list in a block quote included."
     ) in part
+    # A document's title heading is left out: the heading check holds it always.
+    assert "A document's title heading is left out" in part
     assert "record" not in part
     # It names each form an artefact kind's structure gives, and none that only a
     # record's gives: the check enforces those always, outside the rule.
-    named = set(re.findall(r"`([a-z-]+)`", part.split("The forms are", 1)[1].split(".")[0]))
+    forms = part.split("The forms are", 1)[1].split(", each as", 1)[0]
+    named = set(re.findall(r"`([a-z-]+)`", forms))
     artefact_forms, record_forms = _forms_by_owner()
     assert named == artefact_forms
     assert not named & (record_forms - artefact_forms)
