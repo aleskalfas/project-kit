@@ -21,7 +21,7 @@ The core layer supplies the machinery this needs:
 - artefact types, which name what an artefact is, so a rule set can select it (COR-056);
 - connection points, through which components exchange knowledge and signals without depending on each other: data slots (COR-052) as one kind, addressed by role (COR-053).
 
-This record decides what the capability keeps, in what shape, where, and how it stays true.
+This record decides what the capability keeps, in what shape, where, how it stays true, and how it meets the project's decisions and architecture.
 
 ## Decision
 
@@ -82,10 +82,10 @@ Use cases and journeys are numbered within the project (`UC-NNN`, `JRN-NNN`), in
 
 ### 4. Every artefact says what makes it true
 
-Each carries anchors and a revalidation in the sense of the anchors-and-friction record (COR-050). Among the analysis's own artefacts, anchors run in one direction only, so they never form a cycle there. Point 11 says which way an anchor runs between an artefact and a decision:
+Each carries anchors and a revalidation in the sense of the anchors-and-friction record (COR-050). Anchors run in one direction only, so they never form a cycle. The analysis anchors the decisions it relies on and the architecture views that realise it. Neither a decision nor a view anchors the analysis (point 11). Each kind anchors as follows:
 - Actors and terms anchor to where the software or a decision embodies them. An actor with no such anchor is reported as unanchored, which is not an error.
-- Use cases anchor to their actor and to each other actor they involve, as artefact anchors. They also anchor the code they exercise and the decisions point 11 says they anchor. The other actors are listed in the use case's front matter, so a check resolves each to an actor.
-- Journeys anchor to their actor; to the use cases they pass through, and to each use case outside the journey that a step relies on; and to the code and decisions at the seams between them. A journey anchors a decision only as point 11 says. A journey's ordered list of steps, and its list of the use cases it relies on, are the source. Its use-case anchors are written into its anchor field from the two by the capability's stamp and check, and validation requires them to match, so the friction check sees them and they cannot drift apart.
+- Use cases anchor to their actor and to each other actor they involve, as artefact anchors. They also anchor to the code they exercise and the decisions they rely on, those that answer them included (point 11). They anchor to each architecture view that realises them too. The other actors are listed in the use case's front matter, so a check resolves each to an actor.
+- Journeys anchor to their actor; to the use cases they pass through, and to each use case outside the journey that a step relies on; and to the code and decisions at the seams between them. A journey's ordered list of steps, and its list of the use cases it relies on, are the source. Its use-case anchors are written into its anchor field from the two by the capability's stamp and check, and validation requires them to match, so the friction check sees them and they cannot drift apart.
 
 A changed actor flags the use cases and journeys that anchor to it, and a changed use case flags the journeys that pass through it or rely on it. Friction is reported in that order. Revalidation is this capability's name for the act the core record calls by the same name; recording it on the artefact — its `at`, its outcome and any deferrals — is what clears friction (COR-050).
 
@@ -149,29 +149,32 @@ The capability works with no work-tracking component and no testing component in
 
 ### 11. Scope boundary, and how the analysis meets the solution
 
+The analysis keeps to the requirements, and points at the solution by anchors, never the reverse. Some needs are left to decisions of their own.
+
 **Outside this record.** Each of these needs its own decision when a real need arrives:
 - lifecycles on the process substrate (a planned revalidation, onboarding)
 - further kinds of analysis artefact (constraints and quality requirements)
 - executable use cases
 - evidence kept on the artefact itself
 
-**The analysis apart from the solution.** The analysis describes the requirements: what the system must do, and for whom. A project's decisions and its architecture describe the solution: how the system is built to do it, and why. The two stay apart, so an architecture view is no part of the analysis. Each points at the other by anchors (COR-050).
-- **One direction for each pair, by where the obligation started.** A pair is one analysis artefact and one decision.
-  - **The decision created the obligation:** the analysis artefact anchors the decision, since a change to the decision can make the artefact false. So a statement that the system needs git anchors the decision to use git.
-  - **The obligation came first, and the decision answers it:** the decision anchors the use case or requirement as its driver. A change to the obligation can leave the decision answering nothing. So a decision to cache anchors the obligation that the status answers within two seconds.
-  - **Never both.** The two anchors would form a cycle, which has no order in which the two could be revalidated (COR-050 point 5). Nor may a longer chain of anchors close one.
-- **A record that ships carries no driver.** Between the analysis and a record that ships, a core record or a capability's, the record is only ever anchored. It never anchors an analysis artefact.
-- **A project's own records may carry drivers,** such as its project and architecture records. Drivers wait for what [project-kit#1647](https://github.com/aleskalfas/project-kit/issues/1647) carries:
-  - the checks find a cycle that runs through a record anchor
-  - a record's own friction block is no part of what a whole anchor on that record stands on
-- **Views.** An architecture view, where a project keeps one, anchors to the use cases and requirements it realises. A context view names the analysis's actors by their ids, and does not describe them again.
+**The analysis apart from the solution.** The analysis describes the requirements: what the system must do, and for whom. A project's decisions and its architecture describe the solution: how the system is built to do it, and why. The two stay apart, so an architecture view is no part of the analysis. They meet by anchors (COR-050), and in one direction only.
+- **The analysis points at the solution.** A use case anchors:
+  - **each decision record it rests on or is answered by.** The record may be a core record, a capability's record or the project's own, such as an architecture record. A record anchor names it whole, or names one of its points.
+  - **each architecture view that realises it,** where the project keeps one. A view a place holds takes an artefact anchor, and any other view takes a path anchor on its file.
+- **For example,** a use case that runs on git anchors the decision to use git, which it rests on. One that must export a report as a file anchors the decision to write the report as CSV, which answers it.
+- **Every kind the same way.** Actors, terms and journeys anchor the decisions point 4 gives them, and so will any kind a later decision adds. Within the analysis, anchors run as point 4 gives.
+- **The solution never points back.** No decision record and no architecture view anchors an analysis artefact. So no cycle runs between the two, and a record that ships needs no exception.
+- **Kept by its writers.** Whoever writes a record or a view keeps to this direction, since no check finds such an anchor in general. This capability's check reads only the analysis. Validation reports one only where it closes a cycle of artefact anchors, such as from a view a place holds (COR-050 points 5 and 12).
+- **What a view says of the analysis.** A view, one kept as a documentation page included, builds on no analysis artefact. It names one only by its id and states none of its facts, so it has nothing there to anchor.
+- **A context view** shows the system among the people and systems around it. Where the project keeps one, it names the analysis's actors by their ids, in its text only, and does not describe them again.
+- **The reverse is computed, never stored.** A page that shows a record or a view may show what anchors it, such as "Serves: UC-003", worked out from the analysis's anchors. Neither the record nor the view holds it.
 
 **Where a statement belongs.** Each piece of content has one home (COR-006), and three kinds of statement are told apart:
 - **A decision** holds the choice and why it was made.
 - **A rule in a rule set** says what must hold of an artefact, such as how its text is written (COR-051 point 1).
 - **A requirement** says what must hold of the system: a checkable obligation and, where it has them, its measure and what verifies it.
 
-So a decision names a requirement rather than restating its measure, and the requirement is the measure's one home.
+So a decision names a requirement rather than restating its measure, and the analysis artefact that states the requirement is the measure's one home.
 
 ## Rationale
 
@@ -209,16 +212,26 @@ So a decision names a requirement rather than restating its measure, and the req
 
 **Why a person decides stale versus regressed.** The distinction is intent: was the change meant? An agent can propose it from the change's context, but when intent is unclear, only a person knows. Getting it wrong either rewrites the truth to match a bug, or reports a defect for an intended change.
 
-**Why the analysis and the solution stay apart, and point at each other.** The analysis says what the system must do, and the decisions and the architecture say how it is built to do it. Established practice keeps the two apart and links them:
-- requirements engineering keeps the problem space apart from the solution space
-- Kruchten's 4+1 view model ties its four views together through scenarios, its "+1"
-- arc42 has decisions answer the system's quality goals
+**Why the analysis and the solution stay apart, and are linked.** The analysis says what the system must do, and the decisions and the architecture say how it is built to do it. Established practice keeps the two apart and links them. Requirements engineering keeps the problem space apart from the solution space. Kruchten's 4+1 view model ties its four views together through scenarios, its "+1".
 
-Kept apart, each side changes at its own pace and keeps one owner. Anchors carry a change across, so neither side goes stale unseen.
+Kept apart, each side changes at its own pace and keeps one owner. The analysis's anchors carry a change in the solution across, so the analysis does not go stale unseen.
 
-**Why one direction for each pair, by where the obligation started.** An anchor names what an artefact rests on. An obligation that a decision created rests on that decision, since a change to the decision can make the obligation false. A decision that answers an obligation rests on the obligation, since a change to the obligation can leave the decision answering nothing. Anchors both ways would form a cycle, and a cycle has no order in which its artefacts could be revalidated (COR-050 point 5). Where an artefact does not anchor the decision that answers it, the artefact still anchors the code that carries the decision out. Whether the system still meets the obligation is a question for the evidence, not for revalidation (point 7).
+**Why one fixed direction, from the analysis to the solution.** A direction that is the same for every pair is predictable. A writer never judges which way one link runs, and a reader finds every link on the analysis's side.
 
-**Why a record that ships carries no driver.** It ships the same text to every project that installs its component. A driver in it would name one project's artefact in every project, which universal applicability rules out (COR-014). In an adopting project it would not even be read, since a synced tree is never a place (COR-050 point 14). A project may not edit the record either, since every file has one owner (COR-001). So only the project's side can carry an anchor between the two.
+Anchors both ways would form a cycle, and a cycle has no order in which its artefacts could be revalidated (COR-050 point 5). With one direction, no cycle can run between the two, so no rule is needed for which anchor gives way.
+
+Only this direction works for a record that ships, which could never anchor a project's analysis:
+- **One text for every project.** It ships the same text to every project that installs its component. An anchor in it would name one project's artefact in every project, which universal applicability rules out (COR-014).
+- **Never read there.** In an adopting project the anchor would not be read, since a synced tree is never a place (COR-050 point 14).
+- **Not the project's to edit.** Every file has one owner, so a project may not add the anchor to the record (COR-001).
+
+So the direction from the analysis treats a record that ships as it treats the project's own, with no exception.
+
+**What the direction costs.** A changed use case flags no record that answers it, and no view that realises it, since no anchor runs that way. Nor does a changed actor flag a context view that names it. A signal against a link's direction would serve every component's links alike. So it is the core's to give, for every kind of link at once ([project-kit#1667](https://github.com/aleskalfas/project-kit/issues/1667)).
+
+**Why the reverse is computed, never stored.** A reader of a record or a view still wants to know what it serves. Stored on the record or the view, that list would be a second home for each link, which drifts from the first (COR-006). It would also point the solution back at the analysis. Worked out from the analysis's anchors, it is always as true as they are.
+
+**Why a view names analysis artefacts by id, and never anchors them.** A view is part of the solution, so an anchor from it would point back at the analysis. A name states none of the named artefact's facts, so a view that only names one builds on nothing it must anchor. The roles a context view shows using the system are the analysis's actors. Naming them by id keeps one description of each role (COR-006).
 
 **Why a decision names a requirement rather than restating it.** A measure stated in two places drifts. The requirement holds the measure and what verifies it, so it is the measure's one home. A decision cites it, since each piece of content has one home (COR-006).
 
@@ -256,10 +269,12 @@ Kept apart, each side changes at its own pace and keeps one owner. Anchors carry
 - **A marker in the history, such as a line in a commit message.** Rejected. It cannot be added to a commit already merged, and it is not reviewed as an act of its own.
 - **Inferring which deletions free their ids.** Rejected. Deleting an artefact would become a legitimate way to free its id, the deletion the append-only rule exists to prevent.
 - **Architecture views inside the analysis, beside the use cases or as a kind of their own.** Rejected. The solution would sit among the requirements, with two owners and two paces in one place.
-- **Anchors both ways for each pair of an analysis artefact and a decision.** Rejected. Each such pair would be a cycle, which has no order of revalidation.
-- **One direction for every pair, the analysis always anchoring the decisions.** Rejected. A change to an obligation would never reach the decision that answers it.
-- **One direction for every pair, the decisions always anchoring the analysis.** Rejected. A record that ships could carry none, and a change to a decision would never reach the obligation it created.
-- **A direction fixed by the artefact's kind.** Rejected. A kind does not say where an obligation started: a constraint a customer imposed came before any decision.
+- **Anchors both ways between an analysis artefact and a decision.** Rejected. Each such pair would be a cycle, which has no order of revalidation.
+- **The solution always pointing at the analysis, a decision anchoring the obligation it answers.** Rejected. A record that ships could carry no such anchor, and a change to a decision would never reach the analysis that rests on it.
+- **Anchors only to the decisions an artefact rests on, and none to those that answer it.** Rejected. A changed decision would never flag the use case it was made to meet. Yet the change can leave the use case untrue of the system.
+- **A direction for each pair, by which came first, the obligation or the decision.** Rejected. A writer would judge the history of every link. A record that ships would need an exception. A chain of anchors could still close a cycle.
+- **A stored reverse, such as a list on each record of what it serves.** Rejected. It is a second home for each link, and it points the solution back at the analysis.
+- **A view that anchors the analysis artefacts it names, a context view its actors among them.** Rejected. The solution would point back at the analysis.
 - **A context view that describes the actors again.** Rejected. Two descriptions of one role drift apart.
 
 ## Implications
@@ -270,6 +285,7 @@ Kept apart, each side changes at its own pace and keeps one owner. Anchors carry
   - A migration creates it, on the same condition, for a project that installed the capability before it declared the set.
   - From then on the set's pin decides when a new major of `SAN` binds (point 1).
 - **Projects** keep their analysis under their internal documentation root, choose each kind's parts when they adopt the capability, keep their own additions in its project tier, and wire the core friction check into their continuous integration if they want it enforced.
+- **A project's use cases** anchor the records they rest on or are answered by, and the views that realise them. The project's records and views carry no anchor on the analysis (point 11).
 - **A change to a kind's structure** carries the migration of the live artefacts with it, and settles how a part it adds is answered and what friction the migration raises on their dependants.
 - **History kept as it was written:** the way a record, or a withdrawn artefact, is checked against the structure in force when it was written or withdrawn comes with the first change to a kind's structure that needs it.
 - **Documentation disciplines** can read actors and their needs through the readers point, without any dependency.
