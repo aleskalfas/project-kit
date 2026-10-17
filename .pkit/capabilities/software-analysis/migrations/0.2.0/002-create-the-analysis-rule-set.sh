@@ -55,8 +55,9 @@ fi
 answer="$(cd "$ROOT" && pkit capabilities project-rule-set "$CAPABILITY" --json 2>/dev/null)" || answer=""
 
 # The answer is read with the standard library only: a migration acquires no
-# runtime dependency at upgrade time.
-result="$(ANSWER="$answer" python3 - "$ROOT" <<'PYEOF'
+# runtime dependency at upgrade time. `-I` keeps the project's root, the working
+# folder, off the import path, so no file there shadows a standard module.
+result="$(ANSWER="$answer" python3 -I - "$ROOT" <<'PYEOF'
 import json
 import os
 import sys
