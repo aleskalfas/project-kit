@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-10-16T14:21:50Z
+      at: 2026-10-17T21:10:12Z
       outcome: unchanged
-      unchanged-because: area-author now says its stamp refuses where the area's folder exists and names all twelve core areas, and decision-author sets supersedes only for a record replaced whole. This page lists each skill, its paired command and what it walks the author through, which neither change touches, so it holds.
+      unchanged-because: The README lists the skills and what each is for; a sentence added to two skills' axiom discipline leaves each skill's purpose and the list as they were.
 ---
 
 # Skills
