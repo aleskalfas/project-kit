@@ -67,6 +67,8 @@ Required fields: `schema_version`, `component.kind`, `component.name`, `componen
 
 Capability content is not enumerated in the manifest — the directory layout convention defines what files exist (mirrors how bundles and adapters work). Adding a new skill to a capability does not require manifest churn.
 
+**A declared project rule set.** A capability may ship a method rule set: rules of its own, which bind in a project only through a rule set of the project's (COR-051 points 6 and 7). Such a capability may declare one project rule set in its manifest, for its install to create (below). The declaration gives the set's name and scope, and names the capability's own method rule set that the set inherits. The field's layout is the package-metadata reference's.
+
 ### Naming convention for capability artifacts
 
 Filenames inside a capability follow the kit's existing per-type conventions:
@@ -96,9 +98,17 @@ Capabilities have an explicit install / sync / uninstall lifecycle, in contrast 
 
 **Install** (`pkit capabilities install <name>`) copies the capability subtree from kit source into the adopter's `.pkit/capabilities/<name>/`, registers it in `.pkit/manifest.yaml`'s `components` list, and re-runs deploy primitives so the harness picks up the capability's skills and agents. Three pre-flight checks must pass before any files are touched: the capability exists in kit source; the kit version satisfies the capability's `requires_backbone`; no naming collisions exist with already-installed content. On collision, the install flow is interactive — for each colliding artifact the adopter chooses to override (replace; the prior content recovers via git), skip (the colliding artifact is omitted; the rest of the capability installs partially with the decision recorded in the manifest), or inspect (show a unified diff inline, then re-prompt with the same three choices).
 
+**The declared project rule set.** Install also creates the project rule set the capability declares, once for each install. Running install is the consent.
+- **Where none inherits.** It creates the set only where no rule set of the project's own inherits the capability's method set, directly or not.
+- **At the method set's major.** The created set pins the method set's major when the set is created (COR-051 point 7).
+- **Never over the project's content.** Install never writes over a file (COR-001), nor takes a name another rule set declares (COR-051 point 3). Where it cannot create the set, it creates none, and says why.
+- **The project's from then on.** The file is project-owned (COR-001's extension), as any set the project wrote. While the capability stays installed, nothing creates it again. The project may edit or remove it.
+- **Earlier installs.** A migration of the capability may create the set, on the same conditions, for a project that installed the capability before it declared one. Choosing the upgrade's target is the consent (COR-059 point 4).
+- **No seed path.** Install writes the set by the seed operation (COR-004), but the set is no declared seed path. So no transition creates it where it is missing (COR-059 point 8).
+
 **Sync** (`pkit sync`) auto-upgrades installed capabilities along with the rest of kit content. When the kit no longer ships a capability the adopter has installed, sync warns but does not auto-uninstall (adopter must explicitly remove). When sync would introduce a new collision (e.g., the upgraded capability now ships a skill that matches one the adopter authored project-side after install), sync refuses to upgrade that specific capability and instructs the adopter to run `pkit capabilities upgrade X --interactive` to resolve.
 
-**Uninstall** (`pkit capabilities uninstall <name>`) refuses by default if references to the capability's content (citations of `[<name>:...]`, path references to the capability's scripts/schemas) exist in the adopter's tree. The adopter cleans references first, then re-runs uninstall. A `--force` flag overrides the safety check for adopters who explicitly accept dangling references (typical use cases: scripted migrations, replacing one capability with another).
+**Uninstall** (`pkit capabilities uninstall <name>`) refuses by default if references to the capability's content (citations of `[<name>:...]`, path references to the capability's scripts/schemas) exist in the adopter's tree. A project rule set that inherits one of the capability's method sets is such a reference. This includes the set that install created. The adopter cleans references first, then re-runs uninstall. A `--force` flag overrides the safety check for adopters who explicitly accept dangling references (typical use cases: scripted migrations, replacing one capability with another).
 
 ### Collision prevention
 
@@ -131,6 +141,16 @@ Capabilities collaborate with other primitives via the kit's existing hook + ref
 
 **Why interactive collision resolution rather than refusal.** Capability install could simply refuse on any collision (adopter must rename project content before retrying). Rejected because adopters legitimately have project-side content with names that overlap a capability's content, and the right resolution is per-collision: sometimes the adopter wants the capability's version, sometimes their own. Per-artifact interactive choice gives that agency. The skipped-artifact records persist in the manifest so sync respects them without re-prompting on each subsequent sync.
 
+**Why install may create one project rule set.** A method rule set takes no scope. So its rules bind only through a rule set of the project's own that inherits it (COR-051 point 7). Without one, a capability's shipped rules enforce nothing until the project learns to write such a set. Installing is the project's choice to take up the capability's discipline, so install creates the one set through which that discipline binds. The project keeps the choice not to inherit the method set: the file is its own to edit or remove.
+- **Only one set,** since one set of the project's own is all a method set's rules need to bind.
+- **Only where none inherits,** so a project that already chose where the method set binds keeps its choice. A second route to the method set could also pin it at another major on an artefact both reach, which validation fails (COR-051 point 7).
+- **Once for each install,** so a set the project removed on purpose stays removed while the capability stays installed.
+
+**What the set costs.** Validation may then fail where it passed, since the method set's accepted rules bind on artefacts written before they did. Validation reports them, as for any rule set. Three more costs remain:
+- **Uninstall refuses while the set stands,** since the set cites the capability. Uninstall never writes a project rule set (COR-051 point 6), so the project removes the set, or forces the uninstall.
+- **The migration for earlier installs creates a set a project may have chosen not to have.** The upgrade's target is the consent to it (COR-059 point 4), and the release's notes say so. The project may remove the set again. A capability's migrations run from the version its manifest records (COR-059 point 6), so once the upgrade completes, the migration does not run again.
+- **An externally-sourced capability** (COR-041) runs none of its migrations until a record places them (COR-059 point 3). Until then the migration never reaches it.
+
 **Why uninstall refuses with references rather than auto-cleaning.** Cleaning references is adopter content work — the kit's general disposition is "never edit adopter prose." Refusing forces the adopter to do the cleanup themselves, which preserves their authorship. A `--force` escape hatch handles legitimate cases (migrations, replacing one capability with another) without making the destructive path the default.
 
 ### Alternatives considered
@@ -147,6 +167,16 @@ Capabilities collaborate with other primitives via the kit's existing hook + ref
 
 - **Strip references automatically on uninstall.** Rejected — editing adopter prose violates the kit's "never touch adopter content" disposition. Adopter cleans references at their own pace.
 
+- **The declared project rule set as a seed path, created wherever it is missing.** Rejected. A transition of the backbone creates every missing seed path (COR-059 point 8). So a set the project removed on purpose would come back with the next upgrade.
+
+- **No project rule set from install, so the project writes its own.** Rejected. The capability's shipped rules would enforce nothing until the project learned to write a set.
+
+- **A command of the capability that writes the set when the project asks.** Rejected. Install is the moment the project chooses the discipline, and a separate step is one the project must first learn of.
+
+- **Install asking whether to create the set.** Rejected. Installing is already the choice, and a run with nobody to answer would take it silently where a person is asked (COR-059 point 4).
+
+- **A step of the version transition that creates the set for earlier installs.** Rejected. A transition step cannot tell an install that predates the declaration from one whose set the project removed, so it would bring a removed set back, as a seed path would. A capability's migrations run only above the version its manifest records, so a migration tells the two apart. The step would also add a write to every transition (COR-059 point 3), though only a capability's earlier installs need it.
+
 - **Defer the concept entirely until a second example forces it.** Rejected this time — three concrete grounded cases exist already (evidence-management designed in example-adopter; product-manager + orchestrator agents shipped as core but mis-classified; storyboard-authoring skill similarly mis-classified). COR-007's recurrence threshold is met.
 
 ## Implications
@@ -158,11 +188,13 @@ Capabilities collaborate with other primitives via the kit's existing hook + ref
 - **`pkit refs validate`** extension — walks `.pkit/capabilities/*/decisions/`, `.../skills/`, `.../agents/`; new citation regex for `[<capability>:<filename-stem>]`.
 - **Deploy primitives extension** — `deploy-skills.sh` and `deploy-agents.sh` walk capability subtrees in addition to area-core and area-project.
 - **Sync extension** — refreshes installed capabilities; surfaces no-longer-shipped capabilities; refuses upgrade on new collisions.
+- **The declared project rule set** — the manifest field, install's creation of the set, and a migration that creates it for earlier installs.
 
 ### Refinements to existing records
 
 - **COR-011 (areas first-class)** gains a refinement noting capabilities exist as a sibling top-level concept; the area variant taxonomy is unchanged.
 - **COR-010 (resource lifecycle)** may gain a refinement noting capabilities slot into the existing install / upgrade / uninstall framework as another component class.
+- **COR-001 (content mechanisms)** names a capability's install among the writers of project-owned paths, for the project rule set the capability declares. **COR-051 (rule sets)** names it, and the capability's migration for an earlier install, among the writers of a project rule set (point 6).
 - **COR-005 (bundle pattern)** is unchanged. The adapter-generalization-beyond-harnesses idea (sketched in the original handoff note) is deferred until a concrete capability surfaces that needs swappable backends.
 
 ### Variants within a capability
@@ -184,4 +216,4 @@ A future `pkit new capability <name>` command, paired (per COR-005) with a `capa
 
 ### Migration
 
-No migration is needed for existing adopters. Capabilities are a new opt-in concept; existing kit-shipped content (CORs, area skills / agents) is unaffected unless and until reclassification work moves specific artifacts. When reclassification happens, each affected artifact gets a migration script per COR-010's framework.
+Introducing capabilities needs no migration for existing adopters. Capabilities are a new opt-in concept; existing kit-shipped content (CORs, area skills / agents) is unaffected unless and until reclassification work moves specific artifacts. When reclassification happens, each affected artifact gets a migration script per COR-010's framework.
