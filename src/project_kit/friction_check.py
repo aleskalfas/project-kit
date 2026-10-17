@@ -65,12 +65,17 @@ cut is named (`history.cut`).
 so an edit undone within the change is none: a *path* anchor when a changed
 path matches it that both sides leave in — each side read under its own
 `friction.exclude` (point 7) — the artefact's own file ignored; a *record*
-anchor when the record's file changed (a pure rename keeps its content), and
-one on a record's point (`COR-058#4`) only when what the point stands on
-differs between the two sides — its section, the record's status,
-supersession and title fields, its preamble and Summary, and the Decision's
-text outside every point and stub, read through `record_points`; a point
-missing at a side, or retired there, stands on nothing (`point_changed`); an
+anchor when the record's **content** differs between the two sides — its
+body compared textually and its own fields compared parsed, never the
+methodology's container, read by discovery's one reading
+(`friction_discovery.record_content`) whether or not a place holds the
+record, and its whole file where its front matter does not parse to a
+mapping — followed across a rename; one on a record's point (`COR-058#4`)
+only when what the point stands on differs between the two sides — its
+section, the record's status, supersession and title fields, its preamble
+and Summary, and the Decision's text outside every point and stub, read
+through `record_points`; a point missing at a side, or retired there, stands
+on nothing (`record_changed`); an
 *artefact* anchor when the target's **content** changed — its body compared
 textually and its own fields compared parsed, never the methodology's
 container — and one on a document's section or its lead
@@ -108,7 +113,10 @@ anchor kind no installed component resolves, separately, where the diff added
 the anchor or took the kind's resolver away; an anchor whose resolver gave no
 answer; a widening
 that asks nothing; an outdated base; front matter that does not parse.
-Findings run upstream first along artefact anchors (truth-chain order).
+Findings run upstream first along the anchors between artefacts (truth-chain
+order): artefact anchors, and record anchors on a record whose file is an
+artefact, read from the one edge set the cycle check reads too
+(`upstream_artefacts`).
 
 **What it lists** (COR-050 point 3 and Implications): every answer the change
 wrote — each revalidation, deferral and reason for having no anchors, word for
@@ -181,6 +189,7 @@ from project_kit.friction_discovery import (
     Deferral,
     Discovery,
     FrictionSettings,
+    RecordContent,
     RepositoryTree,
     ResolverCommand,
     content,
@@ -189,6 +198,7 @@ from project_kit.friction_discovery import (
     entry_reason,
     parsed_at,
     pattern_matcher,
+    record_content,
     refuse_resolver_without_query_contract,  # noqa: F401 — re-exported: the check's public surface
     registered_anchor_kinds,
     revalidated_field,
@@ -661,6 +671,7 @@ class Side(Listing):
         self.tree = tree
         self.discovery = discovery
         self._records: dict[str, RecordPoints | None] = {}
+        self._contents: dict[str, RecordContent | None] = {}
         self._parts: dict[str, AnchoredPart] = {}
         self._named: dict[str, str | None] = {}
 
@@ -745,6 +756,14 @@ class Side(Listing):
             self._records[rel] = None if raw is None else read_points_bytes(raw)
         return self._records[rel]
 
+    def record_content(self, rel: str) -> RecordContent | None:
+        """The record at `rel` here, its content read once (`friction_discovery.
+        record_content`, COR-050 point 5), or `None` when this state holds no such file."""
+        if rel not in self._contents:
+            raw = self.tree.read_bytes([rel]).get(rel) if rel in self.files else None
+            self._contents[rel] = None if raw is None else record_content(raw)
+        return self._contents[rel]
+
     def point_of(self, anchor: Anchor, rel: str) -> AnchoredPoint | None:
         """What an anchor on a point of the record at `rel` finds there (COR-050 point 7),
         or `None` for an anchor on the whole record. A record that does not read holds no
@@ -763,6 +782,14 @@ class Side(Listing):
         id, or no point with the id."""
         found = None if rel is None else self.point_of(anchor, rel)
         return None if found is None else found.standing
+
+    def record_standing(self, anchor: Anchor, rel: str | None) -> Standing | RecordContent | None:
+        """What a record anchor stands on here, the record at `rel` (COR-050 point 5): the
+        record's content for an anchor on the whole record (`record_content`), what the
+        point stands on for one on a point (`standing`); `None` where there is no file."""
+        if split_anchor(anchor.value)[1] is not None:
+            return self.standing(anchor, rel)
+        return None if rel is None else self.record_content(rel)
 
 
 def record_file(root: Path, files: Collection[str], record: str) -> str | None:
@@ -955,22 +982,23 @@ def _has_own_id(artefact: Artefact) -> bool:
     return isinstance(own, str) and bool(own)
 
 
-def point_standings(
+def record_standings(
     anchor: Anchor, head: Side, base: Side, entry: DiffEntry
-) -> tuple[Standing | None, Standing | None]:
-    """What an anchor on a record's point stood on at the base and stands on at head
-    (COR-050 point 5), the record's file being `entry` of the diff: read at the base under
-    its name there, and as nothing where the diff added the file."""
+) -> tuple[Standing | RecordContent | None, Standing | RecordContent | None]:
+    """What a record anchor stood on at the base and stands on at head (COR-050 point 5),
+    the record's file being `entry` of the diff: read at the base under its name there,
+    and as nothing where the diff added the file (`Side.record_standing`)."""
     before = None if entry.status == "A" else (entry.old_path or entry.path)
-    return base.standing(anchor, before), head.standing(anchor, entry.path)
+    return base.record_standing(anchor, before), head.record_standing(anchor, entry.path)
 
 
-def point_changed(anchor: Anchor, head: Side, base: Side, entry: DiffEntry) -> bool:
-    """Whether what an anchor on a record's point stands on differs between the base and
-    head (COR-050 points 5 and 6): its section, the record's status, supersession and title
-    fields, its preamble and Summary, or the Decision's text outside every point and stub.
-    A point that is not there, or a retired one, stands on nothing."""
-    before, after = point_standings(anchor, head, base, entry)
+def record_changed(anchor: Anchor, head: Side, base: Side, entry: DiffEntry) -> bool:
+    """Whether what a record anchor stands on differs between the base and head (COR-050
+    points 5 and 6). An anchor on the whole record: the record's content, never its
+    container. One on a point: the point's section, the record's status, supersession and
+    title fields, its preamble and Summary, or the Decision's text outside every point and
+    stub. A point that is not there, or a retired one, stands on nothing."""
+    before, after = record_standings(anchor, head, base, entry)
     return before != after
 
 
@@ -1178,11 +1206,13 @@ def _anchor_changed(
 
     A path anchor, when a changed path it stands on at both sides — each read
     under its own exclusions — is not its own file (`_path_reading`). A record
-    anchor, when the diff changed the record's file, followed across a rename;
-    one on a record's point, then only when what the point stands on differs
-    between the two sides (`point_changed`). An artefact anchor, when the
-    target's content differs; one on a document's section or its lead, only
-    when what the part stands on differs (`part_changed`).
+    anchor, when the diff changed the record's file, followed across a rename,
+    and what the anchor stands on differs between the two sides
+    (`record_changed`): the record's content for the whole record, so an edit
+    to its container alone changes nothing; what the point stands on for one on
+    a point. An artefact anchor, when the target's content differs; one on a
+    document's section or its lead, only when what the part stands on differs
+    (`part_changed`).
     """
     if anchor.kind == "path":
         return bool(_path_reading(anchor, own, head, base, diff).changed)
@@ -1191,7 +1221,7 @@ def _anchor_changed(
         entry = diff.by_path.get(rel) if rel is not None else None
         if entry is None or not entry.changes_content:
             return False
-        return split_anchor(anchor.value)[1] is None or point_changed(anchor, head, base, entry)
+        return record_changed(anchor, head, base, entry)
     if head.part_of(anchor.value).names_part:
         return part_changed(anchor, head, base)
     target = head.find(anchor.value)
@@ -2139,25 +2169,77 @@ def _written_answers(
 # --- order ---------------------------------------------------------------------
 
 
-def truth_chain_order(discovery: Discovery) -> list[int]:
-    """Artefact indices upstream first along artefact anchors (COR-050 point 11).
+@dataclass(frozen=True)
+class Upstream:
+    """One anchor by which an artefact rests on an artefact (COR-050 points 5 and 11):
+    `index`, the artefact it counts as one on, by its place in discovery's walk — the
+    artefact carrying it, for an anchor on itself or on a part of itself."""
+
+    index: int
+    anchor: Anchor
+
+
+def upstream_artefacts(
+    discovery: Discovery, record_path: Callable[[str], str | None]
+) -> tuple[tuple[Upstream, ...], ...]:
+    """Each artefact's anchors on artefacts, in walk order, each anchor in written order:
+    the one edge set of the cycle check and of truth-chain order (COR-050 points 5 and
+    11; ADR-057 point 2).
+
+    - **An artefact anchor** counts as one on the artefact it names, an anchor on
+      a document's section or its lead as one on the document
+      (`artefact_parts.whole_target`).
+    - **A record anchor**, whole or on a point, counts as one on the record, where
+      the record's file is an artefact: `record_path` gives the file the anchor
+      names, through the record resolver, and the document artefact at that path
+      is the record. A record no place holds is no artefact, so no edge reaches it.
+    - **A path anchor, and an anchor of a registered kind,** name files, so neither
+      is followed.
+
+    An anchor naming nothing gives no edge: it is a dead anchor, the checks' finding.
+    """
+    artefacts = discovery.artefacts
+    position = {id(a): i for i, a in enumerate(artefacts)}
+    documents: dict[str, int] = {}
+    for index, artefact in enumerate(artefacts):
+        if artefact.kind is ArtefactKind.DOCUMENT:
+            documents.setdefault(artefact.path, index)
+    edges: list[tuple[Upstream, ...]] = []
+    for artefact in artefacts:
+        found: list[Upstream] = []
+        for anchor in anchors_of(artefact):
+            target: int | None = None
+            if anchor.kind == "artefact":
+                named = whole_target(discovery, anchor.value)  # a part counts as its artefact
+                target = None if named is None else position[id(named)]
+            elif anchor.kind == "record":
+                rel = record_path(anchor.value)  # a point counts as its record
+                target = None if rel is None else documents.get(rel)
+            if target is not None:
+                found.append(Upstream(target, anchor))
+        edges.append(tuple(found))
+    return tuple(edges)
+
+
+def truth_chain_order(discovery: Discovery, record_path: Callable[[str], str | None]) -> list[int]:
+    """Artefact indices upstream first along the anchors between artefacts (COR-050
+    point 11), read from the one edge set (`upstream_artefacts`): artefact anchors, a
+    section or the lead counting as its artefact, and record anchors, whole or on a
+    point, on a record whose file is an artefact. `record_path` gives the file a record
+    anchor names at the state ordered (`Side.record_path`).
 
     A target comes before every artefact anchored to it; ties keep walk order.
-    An anchor on a document's section or its lead counts as one on the document
-    (`artefact_parts.whole_target`).
     Members of a cycle — a validation error — and what hangs below them follow
     in walk order, so the order is total and stable either way.
     """
     artefacts = discovery.artefacts
-    position = {id(a): i for i, a in enumerate(artefacts)}
     upstream: dict[int, set[int]] = {i: set() for i in range(len(artefacts))}
     downstream: dict[int, set[int]] = {i: set() for i in range(len(artefacts))}
-    for index, artefact in enumerate(artefacts):
-        for reference in artefact.anchors_of_kind("artefact"):
-            target = whole_target(discovery, reference)  # a part counts as its artefact
-            if target is not None and position[id(target)] != index:
-                upstream[index].add(position[id(target)])
-                downstream[position[id(target)]].add(index)
+    for index, edges in enumerate(upstream_artefacts(discovery, record_path)):
+        for edge in edges:
+            if edge.index != index:
+                upstream[index].add(edge.index)
+                downstream[edge.index].add(index)
     waiting = {i: len(ups) for i, ups in upstream.items()}
     ready = [i for i, count in waiting.items() if count == 0]
     heapq.heapify(ready)
@@ -2343,7 +2425,7 @@ def run_change_check(
             ((head_discovery.artefacts[index], before) for index, before in counterparts.items()),
             diff,
         )
-        for index in truth_chain_order(head_discovery):
+        for index in truth_chain_order(head_discovery, head.record_path):
             artefact = head_discovery.artefacts[index]
             if artefact.has_friction_block:
                 before = counterparts.get(index)
@@ -2514,7 +2596,7 @@ def render_human(result: ChangeCheck) -> str:
     lines.append("")
     lines.append(
         cli_render.style("heading", "FINDINGS")
-        + cli_render.style("muted", " — upstream first along artefact anchors")
+        + cli_render.style("muted", " — upstream first along the anchors between artefacts")
     )
     if not rows and not unreadable:
         lines.append("  nothing anchored changed in this diff")

@@ -21,7 +21,20 @@ from project_kit import friction_discovery as fd
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.anchor_kind_capabilities import ASKED, register_kinds
-from tests.friction_documents import CONFIG, SOURCE, T1, T2, document, friction_config, guide
+from tests.friction_documents import (
+    ADR,
+    ADR_OVERLAY,
+    CONFIG,
+    POINTED,
+    SOURCE,
+    T1,
+    T2,
+    adr,
+    document,
+    friction_config,
+    guide,
+    pointed_record,
+)
 
 
 @pytest.fixture
@@ -661,6 +674,118 @@ def test_a_capability_decision_resolves_as_a_record(make_adopter_repo: MakeAdopt
     adopter.commit("amend it", {rel: decisions[0].read_text(encoding="utf-8") + "\nMore.\n"})
     assert _summary(_run(adopter)) == [
         ("friction", "docs/guide.md", f"record:evidence:{number}", None)
+    ]
+
+
+# --- a whole record anchor stands on the record's content (#1647, COR-050 point 5) -----------
+
+ON_ADR = guide(anchors={"record": ["ADR-007"]})
+ON_PRJ = guide(anchors={"record": ["PRJ-900"]})
+REVALIDATED = adr(at=T2, outcome="unchanged", because="the engine is still one module")
+
+#: `PRJ-900`, a record no place holds, whose front matter no longer parses.
+UNPARSABLE = pointed_record().replace('"status": "accepted"', '"status": @accepted')
+
+
+def _with_container(record: str) -> str:
+    """The record with a methodology container in its front matter."""
+    author = '"author": "A. Author <a@example.com>"'
+    block = '"pkit": {"friction": {"unanchored-because": "a record received as written"}}'
+    return record.replace(author, f"{author},\n  {block}")
+
+
+def test_a_record_s_content_is_read_as_its_artefact_s_is(repo: AdopterRepo) -> None:
+    """One reading gives an artefact's content and a record's (ADR-057 point 2), line
+    endings read universally; a record whose front matter does not parse is its whole
+    file."""
+    repo.write({CONFIG: friction_config(), **ADR_OVERLAY, ADR: adr()})
+    found = fd.discover_artefacts(repo.root).find("ADR-007")
+    assert found is not None
+    assert fd.record_content(adr().encode()) == fd.content(found)
+    assert fd.record_content(adr().replace("\n", "\r\n").encode()) == fd.content(found)
+    assert fd.record_content(UNPARSABLE.replace("\n", "\r\n").encode()) == (UNPARSABLE, None)
+
+
+def test_a_record_s_revalidation_alone_flags_no_whole_record_anchor(repo: AdopterRepo) -> None:
+    """The record is an artefact a place holds: revalidating it writes only its container,
+    which is no part of what a whole record anchor stands on."""
+    _start(repo, {**ADR_OVERLAY, ADR: adr(), "docs/guide.md": ON_ADR})
+    repo.commit(
+        "the engine changed; the record still holds",
+        {"src/core/engine.py": "ENGINE = 2\n", ADR: REVALIDATED},
+    )
+    assert _summary(_run(repo)) == [("answered", ADR, "path:src/core/**", "unchanged")]
+
+
+@pytest.mark.parametrize(
+    "edit",
+    [
+        pytest.param({"body": "## Decision\n\nThe engine splits in two.\n"}, id="body"),
+        pytest.param({"status": "superseded"}, id="status"),
+    ],
+)
+def test_an_edit_to_a_record_s_content_flags_a_whole_record_anchor(
+    repo: AdopterRepo, edit: dict[str, Any]
+) -> None:
+    _start(repo, {**ADR_OVERLAY, ADR: adr(), "docs/guide.md": ON_ADR})
+    repo.commit("edit the record", {ADR: adr(**edit)})
+    assert _summary(_run(repo)) == [("friction", "docs/guide.md", "record:ADR-007", None)]
+
+
+def test_front_matter_that_stops_parsing_flags_a_whole_record_anchor(repo: AdopterRepo) -> None:
+    _start(repo, {POINTED: pointed_record(), "docs/guide.md": ON_PRJ})
+    repo.commit("break the record's front matter", {POINTED: UNPARSABLE})
+    assert _summary(_run(repo)) == [("friction", "docs/guide.md", "record:PRJ-900", None)]
+
+
+def test_a_record_whose_front_matter_does_not_parse_is_compared_as_its_whole_file(
+    repo: AdopterRepo,
+) -> None:
+    """Its whole file, line endings read universally: a change of line endings alone is
+    none, and any other edit is one."""
+    _start(repo, {POINTED: UNPARSABLE, "docs/guide.md": ON_PRJ})
+    repo.commit("the record, with CRLF", {POINTED: UNPARSABLE.replace("\n", "\r\n")})
+    assert _summary(_run(repo)) == []
+
+    repo.commit("edit the record", {POINTED: UNPARSABLE.replace("Why this way.", "Another way.")})
+    assert _summary(_run(repo)) == [("friction", "docs/guide.md", "record:PRJ-900", None)]
+
+
+def test_a_container_edit_on_a_record_outside_every_place_flags_nothing(repo: AdopterRepo) -> None:
+    """A record no place holds is read as one a place holds: its container is no part of
+    its content, so a record received by sync with its source's block flags nothing."""
+    _start(repo, {POINTED: pointed_record(), "docs/guide.md": ON_PRJ})
+    repo.commit("the record gains a container", {POINTED: _with_container(pointed_record())})
+    assert _summary(_run(repo)) == []
+
+    redated = _with_container(pointed_record()).replace("2026-10-13", "2026-10-14")
+    repo.commit("and a field of its own changes", {POINTED: redated})
+    assert _summary(_run(repo)) == [("friction", "docs/guide.md", "record:PRJ-900", None)]
+
+
+def test_a_record_reports_before_its_record_anchored_dependants_and_a_path_orders_nothing(
+    repo: AdopterRepo,
+) -> None:
+    """Truth-chain order follows a record anchor to a record that is an artefact (COR-050
+    point 11). A path anchor on the record's file names a file, so it orders nothing: its
+    artefact keeps its place in the walk, ahead of the record."""
+    by_path = document("by-path", anchors={"path": [ADR]}, at=T1, outcome="updated")
+    by_record = document("by-record", anchors={"record": ["ADR-007"]}, at=T1, outcome="updated")
+    _start(
+        repo,
+        {**ADR_OVERLAY, ADR: adr(), "docs/a-by-path.md": by_path, "docs/a-by-record.md": by_record},
+    )
+    repo.commit(
+        "the engine changed and the record was updated",
+        {
+            "src/core/engine.py": "ENGINE = 2\n",
+            ADR: adr(at=T2, body="## Decision\n\nThe engine splits in two.\n"),
+        },
+    )
+    assert _summary(_run(repo)) == [
+        ("friction", "docs/a-by-path.md", f"path:{ADR}", None),
+        ("answered", ADR, "path:src/core/**", "updated"),
+        ("friction", "docs/a-by-record.md", "record:ADR-007", None),
     ]
 
 

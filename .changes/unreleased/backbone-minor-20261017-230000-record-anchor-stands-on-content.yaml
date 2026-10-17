@@ -1,0 +1,24 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+  pr: 1660
+body: >
+  A whole record anchor stands on the record's content, read as an artefact's
+  content is, and the cycle check and the upstream-first order follow record
+  anchors (COR-050 points 5, 11 and 12; #1647). The content is the record's
+  body as text and its own fields compared parsed, never anything inside the
+  `pkit` container. It is read so whether or not a place holds the record.
+  Where the front matter does not parse to a mapping, it is the whole file,
+  line endings aside. So `pkit friction check`, `check --all`, `debt` and
+  `explain` flag fewer anchors. A revalidation of a record a place holds no
+  longer flags a whole anchor on it, nor does a container a sync brings into a
+  record, nor a change to the record file's mode. A commit that wrote only the
+  container no longer dates the anchor's debt, and `explain` lists none. In the
+  other direction, `pkit validate`'s `friction` member fails a cycle through a
+  record anchor, whole or on a point, on a record whose file is an artefact,
+  where it found none before. A record's anchor on itself or on one of its own
+  points is such a cycle. The finding sits under `anchors.record` where a record
+  anchor leads from the cycle's first member. Both checks report a record
+  before what anchors it. A path anchor, and an anchor of a registered kind,
+  name files and still close no cycle.
