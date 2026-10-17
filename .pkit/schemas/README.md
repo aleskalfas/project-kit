@@ -19,13 +19,8 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-17T15:21:03Z
+      at: 2026-10-17T21:34:48Z
       outcome: updated
-      deferred:
-        - anchor:
-            kind: record
-            value: COR-050
-          reason: "This page states validation as the code runs it: a cycle between artefacts is found through anchors.artefact only. COR-050 has the cycle check follow a record anchor to a record that is an artefact. The build round of #1647, which changes that code, updates this page."
 ---
 
 # Schemas
