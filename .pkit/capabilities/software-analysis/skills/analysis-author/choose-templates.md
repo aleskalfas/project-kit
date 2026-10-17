@@ -58,7 +58,7 @@ Your entries go in `.pkit/capabilities/software-analysis/project/structures.yaml
 Do this if you wrote any entry in step 4.
 
 1. **Check the file** with `pkit validate`, and mend each error it reports on it.
-2. **Set the first candidate aside.** Move it out of the analysis, to a file you do not commit, so you can compare the two. Out of the analysis, a candidate never committed holds no id.
+2. **Set the first candidate aside.** Move it out of the analysis, to a file you do not commit, such as one in the agent workspace. You compare the two below. Out of the analysis, a candidate never committed holds no id.
    - **A term** is an entry of the glossary. Copy the entry out, then delete it, or the glossary itself where its stamp created the file.
 3. **Stamp the candidate again**, as before. The stamp writes your parts, each added part's hint naming its rule. An actor or a term gets the same id. A use case or a journey gets the next free number.
 4. **Fill it, and check it** with `pkit analysis validate --preview`. The preview places a part whose rule is still proposed where that rule would bind.
