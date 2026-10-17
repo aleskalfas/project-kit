@@ -1,0 +1,6 @@
+component: claude-code
+kind: none
+body: >
+  Documentation only. The README's revalidation records that it still holds
+  after the backbone's runtime-ignore patterns gained the migration runner's
+  folder. Nothing you run changes.
